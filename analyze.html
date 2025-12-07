@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Tool</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; }
+        .controls { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="date"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0052a3; }
+        #results { margin-top: 20px; }
+        .stock-list { display: flex; flex-wrap: wrap; gap: 10px; }
+        .stock-item { background: #e1f0ff; color: #0066cc; padding: 5px 10px; border-radius: 15px; font-weight: bold; text-decoration: none; display: inline-block; transition: background 0.2s; }
+        .stock-item:hover { background: #cce0ff; }
+        .error { color: red; margin-top: 10px; }
+        .info { color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Stock Analysis Tool</h1>
+    
+    <div class="controls">
+        <div class="form-group">
+            <label>Quick Select:</label>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" onclick="setDateRange(1)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Today (今天)</button>
+                <button type="button" onclick="setDateRange(2)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 2 Days (近2天)</button>
+                <button type="button" onclick="setDateRange(3)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 3 Days (近3天)</button>
+                <button type="button" onclick="setDateRange(5)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 5 Days (近5天)</button>
+                <button type="button" onclick="setDateRange(6)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 6 Days (近6天)</button>
+                <button type="button" onclick="setDateRange(7)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 7 Days (近7天)</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate">
+        </div>
+        <div class="form-group">
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate">
+        </div>
+        <div class="form-group">
+            <label for="dayRange">Ranking Duration:</label>
+            <select id="dayRange" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white;">
+                <option value="1">1 Day (1日)</option>
+                <option value="2">2 Days (2日)</option>
+                <option value="3">3 Days (3日)</option>
+                <option value="4">4 Days (4日)</option>
+                <option value="5">5 Days (5日)</option>
+                <option value="10">10 Days (10日)</option>
+                <option value="20">20 Days (20日)</option>
+                <option value="30">30 Days (30日)</option>
+            </select>
+        </div>
+        <button onclick="analyzeStocks()">Analyze</button>
+        <div id="status" class="info"></div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // Set default dates (last 7 days)
+        const today = new Date();
+        const lastWeek = new Date(today);
+        lastWeek.setDate(today.getDate() - 7);
+        
+        document.getElementById('endDate').valueAsDate = today;
+        document.getElementById('startDate').valueAsDate = lastWeek;
+
+        function setDateRange(days) {
+            const end = new Date();
+            const start = new Date();
+            // If days=1, start is today. If days=2, start is yesterday.
+            start.setDate(end.getDate() - (days - 1));
+            
+            document.getElementById('endDate').valueAsDate = end;
+            document.getElementById('startDate').valueAsDate = start;
+        }
+
+        async function analyzeStocks() {
+            const startDateStr = document.getElementById('startDate').value.replace(/-/g, '');
+            const endDateStr = document.getElementById('endDate').value.replace(/-/g, '');
+            const days = document.getElementById('dayRange').value;
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            if (!startDateStr || !endDateStr) {
+                statusDiv.innerHTML = '<span class="error">Please select both dates.</span>';
+                return;
+            }
+
+            const searchString = `上市主力買超${days}日排行`;
+            statusDiv.textContent = `Fetching file list for '${searchString}'...`;
+            resultsDiv.innerHTML = '';
+
+            try {
+                // 1. Get list of files
+                const response = await fetch('/api/files');
+                const files = await response.json();
+                
+                // 2. Filter files
+                const targetFiles = files.filter(file => {
+                    // Format: fubon_YYYYMMDD_上市主力買超X日排行.csv
+                    if (!file.includes(searchString)) return false;
+                    
+                    const match = file.match(/fubon_(\d{8})_/);
+                    if (!match) return false;
+                    
+                    const fileDate = match[1];
+                    return fileDate >= startDateStr && fileDate <= endDateStr;
+                });
+
+                if (targetFiles.length === 0) {
+                    statusDiv.innerHTML = '<span class="error">No files found in this date range.</span>';
+                    return;
+                }
+
+                statusDiv.textContent = `Found ${targetFiles.length} files. Analyzing...`;
+
+                // 3. Fetch and process each file
+                const stockSets = [];
+                
+                for (const file of targetFiles) {
+                    const res = await fetch(`/data/${file}`);
+                    const text = await res.text();
+                    const rows = text.split('\n').map(r => r.trim()).filter(r => r);
+                    
+                    // Parse CSV (assuming header is first row)
+                    const headers = rows[0].split(',');
+                    const stockIndex = headers.findIndex(h => h.includes('Stock') || h.includes('股票名稱'));
+                    
+                    if (stockIndex === -1) {
+                        console.warn(`Could not find Stock column in ${file}`);
+                        continue;
+                    }
+
+                    const stocks = new Set();
+                    // Start from index 1 to skip header
+                    for (let i = 1; i < rows.length; i++) {
+                        // Handle potential quotes in CSV
+                        const cols = parseCSVRow(rows[i]);
+                        if (cols[stockIndex]) {
+                            stocks.add(cols[stockIndex].trim());
+                        }
+                    }
+                    stockSets.push({ file, stocks });
+                }
+
+                // 4. Find intersection
+                if (stockSets.length === 0) {
+                    statusDiv.innerHTML = '<span class="error">Could not parse any files.</span>';
+                    return;
+                }
+
+                // Start with the first file's stocks
+                let commonStocks = new Set(stockSets[0].stocks);
+                
+                for (let i = 1; i < stockSets.length; i++) {
+                    const currentSet = stockSets[i].stocks;
+                    commonStocks = new Set([...commonStocks].filter(x => currentSet.has(x)));
+                }
+
+                // 5. Display results
+                statusDiv.textContent = `Analyzed ${targetFiles.length} files from ${startDateStr} to ${endDateStr}.`;
+                
+                let html = `<h3>Common Stocks (${commonStocks.size})</h3>`;
+                if (commonStocks.size > 0) {
+                    html += '<div class="stock-list">';
+                    Array.from(commonStocks).sort().forEach(stock => {
+                        // Extract stock code (assuming format "Code Name" e.g. "2330 台積電")
+                        const match = stock.match(/^(\d+)/);
+                        const code = match ? match[1] : '';
+                        
+                        if (code) {
+                            const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${code}.djhtm`;
+                            html += `<a href="${url}" target="_blank" class="stock-item">${stock}</a>`;
+                        } else {
+                            html += `<span class="stock-item">${stock}</span>`;
+                        }
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<p>No common stocks found across all selected dates.</p>';
+                }
+                
+                html += '<h4>Files Analyzed:</h4><ul>';
+                targetFiles.sort().forEach(f => {
+                    html += `<li>${f}</li>`;
+                });
+                html += '</ul>';
+
+                resultsDiv.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        }
+
+        // Simple CSV parser to handle quotes
+        function parseCSVRow(row) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < row.length; i++) {
+                const char = row[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result;
+        }
+    </script>
+</body>
+</html>

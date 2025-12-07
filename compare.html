@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Comparison Tool</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; }
+        .controls { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        button { background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0052a3; }
+        #results { margin-top: 20px; }
+        .stock-list { display: flex; flex-wrap: wrap; gap: 10px; }
+        .stock-item { background: #e1f0ff; color: #0066cc; padding: 5px 10px; border-radius: 15px; font-weight: bold; text-decoration: none; display: inline-block; transition: background 0.2s; }
+        .stock-item:hover { background: #cce0ff; }
+        .error { color: red; margin-top: 10px; }
+        .info { color: #666; margin-top: 10px; }
+        .summary { font-size: 1.1em; margin-bottom: 15px; padding: 10px; background: #e8f5e9; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Stock Comparison Tool (Fubon vs TWSE)</h1>
+    
+    <div class="controls">
+        <p>Finds stocks present in both Fubon (10-day ranking) and TWSE Warrant ranking for the latest available common date.</p>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Fubon Rank Limit (前幾名): <input type="number" id="fubonLimit" value="50" min="1" style="width: 80px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></label>
+            <label style="margin-left: 20px;">TWSE Rank Limit (前幾名): <input type="number" id="twseLimit" value="50" min="1" style="width: 80px; padding: 5px; border: 1px solid #ddd; border-radius: 4px;"></label>
+        </div>
+
+        <button onclick="compareStocks()">Compare Latest Data</button>
+        <div id="status" class="info"></div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        async function compareStocks() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const fubonLimit = parseInt(document.getElementById('fubonLimit').value) || Infinity;
+            const twseLimit = parseInt(document.getElementById('twseLimit').value) || Infinity;
+            
+            statusDiv.textContent = 'Fetching file lists...';
+            resultsDiv.innerHTML = '';
+
+            try {
+                // 1. Fetch file lists
+                const [fubonFiles, twseFiles] = await Promise.all([
+                    fetch('/api/files?source=fubon').then(r => r.json()),
+                    fetch('/api/files?source=twse').then(r => r.json())
+                ]);
+
+                // 2. Extract dates
+                // Fubon: fubon_YYYYMMDD_上市主力買超10日排行.csv
+                // TWSE: YYYYMMDD發行之標的證券排行.csv
+                
+                const fubonDates = new Set();
+                fubonFiles.forEach(f => {
+                    if (f.includes('上市主力買超10日排行')) {
+                        const match = f.match(/fubon_(\d{8})_/);
+                        if (match) fubonDates.add(match[1]);
+                    }
+                });
+
+                const twseDates = new Set();
+                twseFiles.forEach(f => {
+                    const match = f.match(/^(\d{8})發行之標的證券排行\.csv$/);
+                    if (match) twseDates.add(match[1]);
+                });
+
+                // 3. Find latest common date
+                // Or latest available date in each? User said: "抓取目前最新的一天資料(例如現在是 12/7, 但資料最新只到 12/05 則以 12/05 為主)"
+                // This implies finding the MAX date that exists in BOTH.
+                
+                const commonDates = [...fubonDates].filter(d => twseDates.has(d)).sort().reverse();
+                
+                if (commonDates.length === 0) {
+                    statusDiv.innerHTML = '<span class="error">No common dates found between Fubon and TWSE data.</span>';
+                    return;
+                }
+
+                const targetDate = commonDates[0];
+                statusDiv.textContent = `Found latest common date: ${targetDate}. Analyzing...`;
+
+                // 4. Fetch files for that date
+                const fubonFile = fubonFiles.find(f => f.includes(targetDate) && f.includes('上市主力買超10日排行'));
+                const twseFile = twseFiles.find(f => f.includes(targetDate));
+
+                const [fubonContent, twseContent] = await Promise.all([
+                    fetch(`/data/fubon/${fubonFile}`).then(r => r.text()),
+                    fetch(`/data/twse/${twseFile}`).then(r => r.text())
+                ]);
+
+                // 5. Parse and intersect
+                const fubonStocks = extractStocks(fubonContent, 'fubon', fubonLimit);
+                const twseStocks = extractStocks(twseContent, 'twse', twseLimit);
+
+                // Intersect based on stock code
+                // Fubon format: "2330 台積電" (Code Name)
+                // TWSE format: Rank, Code, Name, Count -> "2330" (Code), "台積電" (Name)
+                
+                // Let's normalize to Code
+                const commonCodes = new Set([...fubonStocks.keys()].filter(code => twseStocks.has(code)));
+
+                // 6. Display results
+                let html = `<div class="summary">
+                    <strong>Date:</strong> ${targetDate}<br>
+                    <strong>Fubon File:</strong> ${fubonFile} (Top ${fubonLimit}, found ${fubonStocks.size} stocks)<br>
+                    <strong>TWSE File:</strong> ${twseFile} (Top ${twseLimit}, found ${twseStocks.size} stocks)<br>
+                    <strong>Intersection:</strong> ${commonCodes.size} stocks
+                </div>`;
+
+                if (commonCodes.size > 0) {
+                    html += '<div class="stock-list">';
+                    Array.from(commonCodes).sort().forEach(code => {
+                        const name = fubonStocks.get(code) || twseStocks.get(code); // Get name from map
+                        const displayName = `${code} ${name}`;
+                        const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${code}.djhtm`;
+                        html += `<a href="${url}" target="_blank" class="stock-item">${displayName}</a>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<p>No common stocks found.</p>';
+                }
+
+                resultsDiv.innerHTML = html;
+                statusDiv.textContent = 'Analysis complete.';
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        }
+
+        function extractStocks(csvContent, type, limit) {
+            const rows = csvContent.split('\n').map(r => r.trim()).filter(r => r);
+            const stocks = new Map(); // Code -> Name
+            let count = 0;
+
+            if (type === 'fubon') {
+                // Header: Rank,Stock,Price...
+                // Stock col: "2330 台積電"
+                const headers = parseCSVRow(rows[0]);
+                const stockIdx = headers.findIndex(h => h.includes('Stock') || h.includes('股票名稱'));
+                
+                for (let i = 1; i < rows.length; i++) {
+                    if (count >= limit) break;
+                    
+                    const cols = parseCSVRow(rows[i]);
+                    if (cols[stockIdx]) {
+                        const val = cols[stockIdx]; // "2330 台積電"
+                        const match = val.match(/^(\d+)\s+(.+)/);
+                        if (match) {
+                            stocks.set(match[1], match[2]);
+                            count++;
+                        } else {
+                            // Maybe just code?
+                            stocks.set(val, '');
+                            count++;
+                        }
+                    }
+                }
+            } else if (type === 'twse') {
+                // Header: 排行,權證標的代號,權證標的名稱,發行檔數
+                // Code idx: 1, Name idx: 2
+                for (let i = 1; i < rows.length; i++) {
+                    if (count >= limit) break;
+
+                    const cols = parseCSVRow(rows[i]);
+                    if (cols.length >= 3) {
+                        const code = cols[1];
+                        const name = cols[2];
+                        stocks.set(code, name);
+                        count++;
+                    }
+                }
+            }
+            return stocks;
+        }
+
+        function parseCSVRow(row) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < row.length; i++) {
+                const char = row[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result;
+        }
+    </script>
+</body>
+</html>

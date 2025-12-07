@@ -1,0 +1,229 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e5]:
+        - link "玩股網" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img "玩股網" [ref=e8]
+        - navigation [ref=e9]:
+          - list [ref=e10]:
+            - listitem [ref=e11]:
+              - link "首頁" [ref=e12] [cursor=pointer]:
+                - /url: /
+                - generic [ref=e13]: 首頁
+            - listitem [ref=e14]:
+              - link "社團" [ref=e15] [cursor=pointer]:
+                - /url: /club/promotion
+                - generic [ref=e16]: 社團
+            - listitem [ref=e17]:
+              - link "老鳥說" [ref=e18] [cursor=pointer]:
+                - /url: /laojiao
+                - generic [ref=e19]: 老鳥說
+            - listitem [ref=e20]:
+              - link "台股" [ref=e21] [cursor=pointer]:
+                - /url: /stock
+                - generic [ref=e22]: 台股
+            - listitem [ref=e23]:
+              - link "國際" [ref=e24] [cursor=pointer]:
+                - /url: /global
+                - generic [ref=e25]: 國際
+            - listitem [ref=e26]:
+              - link "選股" [ref=e27] [cursor=pointer]:
+                - /url: /screener
+                - generic [ref=e28]: 選股
+            - listitem [ref=e29]:
+              - link "網誌" [ref=e30] [cursor=pointer]:
+                - /url: /blog
+                - generic [ref=e31]: 網誌
+            - listitem [ref=e32]:
+              - link "動態牆" [ref=e33] [cursor=pointer]:
+                - /url: /social-wall
+                - generic [ref=e34]: 動態牆
+            - listitem [ref=e35]:
+              - link "新聞" [ref=e36] [cursor=pointer]:
+                - /url: /news
+                - generic [ref=e37]: 新聞
+            - listitem [ref=e38]:
+              - link "商城" [ref=e39] [cursor=pointer]:
+                - /url: /mall
+                - generic [ref=e40]: 商城
+            - listitem [ref=e41]:
+              - link "APP N" [ref=e42] [cursor=pointer]:
+                - /url: /app
+                - generic [ref=e43]: APP
+                - generic [ref=e45]: "N"
+        - generic [ref=e46]:
+          - textbox "輸入搜尋字串.." [ref=e50]
+          - link [ref=e52] [cursor=pointer]:
+            - /url: /member/login?returnUrl=%2Fstock%2Fmajor-investors%2Fnet-buy-sell-rank%3Fmarket%3DListed%26orderByDays%3D15
+    - list [ref=e55]:
+      - listitem [ref=e56]:
+        - link "玩股網" [ref=e57] [cursor=pointer]:
+          - /url: /
+      - listitem [ref=e58]:
+        - text: /
+        - link "台股" [ref=e59] [cursor=pointer]:
+          - /url: /stock
+      - listitem [ref=e60]:
+        - text: /
+        - link "主力進出" [ref=e61] [cursor=pointer]:
+          - /url: /major-investors/net-buy-sell-rank
+      - listitem [ref=e62]: / 主力進出買賣超排行
+    - link "站內廣告" [ref=e64] [cursor=pointer]:
+      - /url: https://www.facebook.com/WGmadchu
+      - img "站內廣告" [ref=e65]
+    - main [ref=e66]:
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - tablist [ref=e70]:
+            - listitem [ref=e71]:
+              - tab "漲跌幅" [selected] [ref=e72] [cursor=pointer]
+            - listitem [ref=e73]:
+              - tab "成交量" [ref=e74] [cursor=pointer]
+            - listitem [ref=e75]:
+              - tab "法人" [ref=e76] [cursor=pointer]
+            - listitem [ref=e77]:
+              - tab "資券" [ref=e78] [cursor=pointer]
+            - listitem [ref=e79]:
+              - tab "主力" [ref=e80] [cursor=pointer]
+            - listitem [ref=e81]:
+              - tab "獲利" [ref=e82] [cursor=pointer]
+            - listitem [ref=e83]:
+              - tab "成長" [ref=e84] [cursor=pointer]
+            - listitem [ref=e85]:
+              - tab "價值" [ref=e86] [cursor=pointer]
+          - tabpanel "主力" [ref=e88]:
+            - navigation [ref=e89]:
+              - link "主力買賣超" [ref=e90] [cursor=pointer]:
+                - /url: /stock/major-investors/net-buy-sell-rank?market=Listed&orderByDays=15
+              - link "官股買賣超" [ref=e91] [cursor=pointer]:
+                - /url: /stock/public-bank/buy-sell?market=Listed&orderByDays=15
+        - generic [ref=e93]:
+          - heading "主力進出買賣超排行" [level=1] [ref=e94]
+          - link "" [ref=e95] [cursor=pointer]:
+            - /url: /blog/98845/post/211
+            - generic [ref=e96]: 
+          - combobox [ref=e98]
+          - combobox [ref=e100]
+          - combobox [ref=e102]:
+            - option "近1日" [selected]
+            - option "近15日"
+          - generic [ref=e103]:
+            - time
+            - text: 單位：張
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - generic:
+              - heading [level=5]:
+                - link:
+                  - /url: "#"
+          - text: 
+        - table [ref=e108]:
+          - rowgroup [ref=e109]:
+            - row "排序 股票 淨買超 收盤價 漲跌% 成交量" [ref=e110]:
+              - columnheader "排序" [ref=e111]
+              - columnheader "股票" [ref=e112]
+              - columnheader "淨買超" [ref=e113]
+              - columnheader "收盤價" [ref=e114]
+              - columnheader "漲跌%" [ref=e115]
+              - columnheader "成交量" [ref=e116]
+            - row "當日 累計15日" [ref=e117]:
+              - columnheader "當日" [ref=e118]
+              - columnheader "累計15日" [ref=e119]
+          - rowgroup [ref=e120]:
+            - row [ref=e121]:
+              - cell [ref=e122]
+              - cell [ref=e123]:
+                - link:
+                  - /url: "#"
+              - cell [ref=e124]
+              - cell [ref=e125]
+              - cell [ref=e126]
+              - cell [ref=e127]
+              - cell [ref=e128]
+        - table [ref=e130]:
+          - rowgroup [ref=e131]:
+            - row "排序 股票 淨賣超 收盤價 漲跌% 成交量" [ref=e132]:
+              - columnheader "排序" [ref=e133]
+              - columnheader "股票" [ref=e134]
+              - columnheader "淨賣超" [ref=e135]
+              - columnheader "收盤價" [ref=e136]
+              - columnheader "漲跌%" [ref=e137]
+              - columnheader "成交量" [ref=e138]
+            - row "當日 累計15日" [ref=e139]:
+              - columnheader "當日" [ref=e140]
+              - columnheader "累計15日" [ref=e141]
+          - rowgroup [ref=e142]:
+            - row [ref=e143]:
+              - cell [ref=e144]
+              - cell [ref=e145]:
+                - link:
+                  - /url: "#"
+              - cell [ref=e146]
+              - cell [ref=e147]
+              - cell [ref=e148]
+              - cell [ref=e149]
+              - cell [ref=e150]
+    - insertion [ref=e152]:
+      - iframe [ref=e154]:
+        - iframe [ref=f34e3]:
+          - generic [ref=f42e2] [cursor=pointer]:
+            - link [ref=f42e4]:
+              - /url: https://privacy.as.criteo.com/adchoices?cppv=3&cpp=LNXtJOlt3wm6uOQt3G6Vo8cuLLZXCor6sUlfgluBV9iwASfkALOR7JD99w5dsZSdLv0GtpD3HeZDgBSociTUCk_6FfGrqPxx2xc1mnbXFT04TNNipSK-GsruMz07rYu3gvXtSbhmfecfGD5SW4B2HN4YjhA
+              - img [ref=f42e5]
+            - img [ref=f42e7]
+            - generic [ref=f42e12]:
+              - link [ref=f42e13]:
+                - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=d7W3hET4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ01R_Y62Dpz0m-9g-HYSj2rqy0e645vC632g5s1N84kUgVHFg7y_cNLqr-JZbk1QDG52R_xAHIK4EA9NGGootUwdT3gRPxDmQYGnlM0a5qksi1zO8QY79UaP5G2YQ4freORuk5Jm49acRVHjm1hTEbZxaDF6eqSqqTj5x7nlxcdn3cL35xZS9SV0KDH1LvY6-5qh3VY102sPqyXozmyKvj-tiH4EANsIdLpDePuAtDASXzNvp4b9nLTNvDChJpc1izjL1kGpJ5Z1G-USoMapGlF7QN7ZYTyTD4wjVqti4dhc1Ic7Gw1p9PXTb7FRBtBIZY1hHmPFoGVccGlY0sx_Ih7huY8BtOvkIr4N3ac08tQTvDjWx44DCPBtBMwu3tVBp9LEPMrniyYIZOgxyaOUopcbSSWaVzuPcFYZV7ROiYY0kD3D_KGfABOzwy3r_qyx4QrZltCeVqIhbC9tMnmp919cD5eZgt7L_wKqGEjwqKneg&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fmain%2FMain.jsp%3Fosm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3DvTS1gQpGAACbLuGrahdGSQ
+              - generic [ref=f42e23]:
+                - link [ref=f42e25]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=1E_3EUT4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZB6LyCBs55f_PofiBkhtI-hd_QzVXmZeOGdb2qpb5zPSMom4PoSDtSzeE75d2Jn24OIBX8-8rBcpjQhSNCzDgiwysiuTZk4h4mR1KNoKZ1BecXA6iq2-TfvjKXE4F3Sx0Bc9xDsFqsZLGZiDLfJkyTY72_y9KM1FLoFtk6in4sh1wmnz37XhVKiMzPlvIsPV_cCDrptH2Fkf4rOLvPFZNd1IKLPJcUp3HCRTUh7yOx05zswUjzZ2WHNY6KDYDUeE3NuSYRSOzHqPl8RDO4QEquduZ649u7rBLxvVIY7kin55E8NX1G5NI4spyZz0Op_92PFSZknjc6AJCr7aHTo7peHHQkkChONg90pn_6ASeR1vnLcSz3ajtiR-oJamxGJjSC5NZOGJOYGqXZhKriZ-htkLJS150VODXRGSL2_y9UedJezmk_tL8iChDyzHhv65mKf6mA6Yf6L4E0l89M_UZQ-ZGqQDM6O3B3BO68uT7VqoY&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D13536473%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3DkeTcEQpGAADcmJ-aPkikIA
+                - link [ref=f42e46]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=fiBwJkT4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZBRPBzX6Kl8SLEU8gb3eKP8oh-aj-Lmn5lPIMAYSlw6DZu7QrnW-jxIPU8vEk5ioMyUZO8yww2Jg5uI4xL67p2DNgruPofEO11r4MYqDrnq4P2xEVSvPYYDF838gkI7cmRYAcydv-rnHZeF5b1TVAJwBYwLSmGo4fPdHJHGtvoHAKfliCz9Yh13cNoHrs0d3BaKCjfFt9n_upUBpm0f5tSHGYmZ-GuxGCvEcsfu_Zi3Z0EmtTc4MPkhLfteg56euCyFnAVBtyIo05bVgzGRksVNd6x9jWOKJHQeftCtO24k07YjLI5xXJBINyZL_oQAOOgO1bRfxvVLYJHVB8Rc6f3vyRowOgt_5ie7EUGRtsFs0G7v4Mm_-Spx9dRBktKF8x0JkNkfsglHVVG_drKSo3UmqRh6bIPj6DT_TwBA2fG6QvcdE8JiPCYC9wlE5LhEOk5nLWQhWyZ-JjeNCKmWrFkrVkwNFROg2lGi-q2f0hJDtA&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D14564004%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3DkuMv9wpGAADjddJp_dojlw
+                - link [ref=f42e67]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=zy3iGUT4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZBwnXj5GejXk11DaexKx4Yf6RUk3uWqFHVOyFRgr8SvtySyGpu-aSdJHJLNEZH-LYzR2-4bBshI84F-NqAm1WXkGphnezU2JAWQUGw5uECqoz9T6xeKEYHclX9I4IfNi1LXyJoZlbjQo6HLoK8tL8CsCFLQlmRaOkJRjuS745cMXFJfSXEHepw4fmPBo87GIJMiQFHYbAUx3sQq1zopB4PMgdxatfPOm8S_FQest_uMmoze9Ifs7-9ND3zXk3r2Rvbw38odIz8C87E-FYrISb60wKbhPmKyIgyHd0Y2Ojfld1JTOw0TBY7NJhikefoaYp5RMse_G0oXVfcsy5GedS5HSHGL-trOLW4HkNe1wEqZWpnAwlCOtSw-0H1IMvXIbEde0t-tIs7HXKA9RgcLgr8FFP5qW4yGg-6U0o6ovFt8jX4bB8dCUvNHd2l4YKGQD3XIGRwRMmmYoC8TL0m3trmC_-bXGcvish2ub41g37q2n0&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D14652631%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3DnkDIUApGAABiBcpgtqQ4nw
+                - link "-55%" [ref=f42e88]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=EY7axET4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZBiuRC-GUYGiZWL3-smfJ8Bk5q1hD3OvyuzszQt70Rn_85tw_3HIuUmvAgGQ6pjq4Ru44-wM0WADLHPxtUXL85Ya-IKg4nriSWUoCAY7iM3oDdNi_-ZKlgWzQ1qhZbddDdj9Pe3AB4AfaKzWxCWF9F9GlIZ2Yhh7DSXyjezmq_Ekz3RSG3PdnRAUoXe31uSRTfgAWnJVA3yJDYSiEClGb6__U0X-3aA4zHyheeUM_jCn0GsKimTxA7J56hovwDrZIOnY8OPF1KrMnApvIciAc_Bw3nKhGQj-qfEhVoRlWtwbfiDW_bi0kc4Y57DnYUFtBjGZrdz9XE59hxdqsyRbxUMz8qzkwgirezAtR1Haa4--sT9ADrJjQDcUjeUujbtllBe3iUIxaiSWwWBcDTYK2z6bOZDi7QLyJz6au2f5TeljAHFyNfuG1arslBNIqa90CxqlxX07slDiHVbnJwD-rJzTpI8iwa5GqcNXwFB8PObRs&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D14563682%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3D7TdfHwpGAABRqAUdpV_qog
+                  - generic [ref=f42e108]: "-55%"
+                - link [ref=f42e111]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=GiK67kT4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZBixLhK4D0jrik5a5fKdnW3eApiyg_BIZNVSPaBFw16610BdfRrVdIDiWNi5To9WaiXS1u4lOpcJLTvybwNWL0cxSnea5cuVZSCS4wk0t8Uvl2H6P-X2aBcf_mNFpYk1x8mnPFdqgludLHVFX69EzN5kAitg_wS20OrEUIzebxptr6TKv-XV6wVUckS_e2h-aMa6kut4mjSCJexFQQtnx_E3mMNiisBpTv6rzK-ThNWk16g0a-sa8z2wexmRostOMiMgWs82o1iYvuZMLOwVC4ZpP1Vpi5ukz5AfMVBR9cAQHAV3SehmOgjC5Op3RrMSWhTUnNL5RYT37c6EwLH5feJRxdUQegbJn6a7TOQoIgCSusMw6U2xXruNaRTdEZg-Y3pSAGmacSzlUdDTE6VTHSZpDImvqi57eePg-gq5SCOPF9Q6idrd5qeoVm_pTisCoUVQc_wQoUPq5hyWVk0EO-TqddEnAuNFtoDSg0oakK8zo&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D14220304%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3D24OlWgpGAADoC92AMEielQ
+                - link "-10%" [ref=f42e132]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=l8GdrUT4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZBuSE5Ur3DcjKeY7Su7vyKSpJPdU00B6MJHMNj82sd8zmWqn82Z74R8AV0UGmAjyUwFTQED0HhkAqb01efiMDaft5FyzXNJ73fbj119fwh9_a35Xt3Gj2TW2FimjhriSUsZ_iTvSX10BRGeT8O8MEZoEadFxnijXkHH4pXuufXHMx4miPb54kTTaXbPSKOCUBMFWgQn9126m5xZeNY_17t7-SjAmGHuIpxsHRKtsxomzA2XuN3y9qitJBGK0len648CoL_-jglmQA6jJgdnoYBVbJlDSlYvZzgldXp-P4QRtyO_VflUHiskUpRsTVZZe45PejvKAg2G9Zd-xgkEaZncLhSiPZgRzTO5JFEiT8QQ0SlN2rlk-UrJsddj4bS29mzIMlhDi6tFRWj7AWnwCHYatA80C_E0-lG_0p1m9qKKEnvM9VMbIBzdR1-TWZEmpMtCHgDXazJJE8f3EBF7yMLp8sAhMwqOoGbIiffkwAW7-E&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D12998586%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3Dxi8UFApGAAAEIrb9CSf99g
+                  - generic [ref=f42e152]: "-10%"
+                - link [ref=f42e155]:
+                  - /url: https://cat.sg1.as.criteo.com/delivery/ck.php?cppv=3&cpp=Bqe66UT4t5yiKVpZd2IFxYXuG9_hrazBCwfEia5gBRY3huoDYIKxdFSo5pXtfOLU1pJphgwyCuV6Otummcn_OwDSwqy9ly0T1THaqAoauG8ad-yvGsKlDYdG-eSlpY4QdCs6MP1TXUXqBeMGCB0Yj4R4zZ1qmZM9rA0PKdI69kuiiMZBLjPvQpreuZTPpDVOI_xCKe3QU5u7iKKjn-vf9ULwvQ2yyXSqultQthfD4av5Ci6Qui_PJYcOJwtxAZGmeX-p9_h0E94_Sr_GQrKKwUusOUawKTwn9WBFlWuuTkJHSm4GTQm0zub_DIrLTBvkQCckL1yuumXtARA2elq_5pfsAC8MnLyQLK11GwGP2q5WJaIeaa_vYJqRfJ3vxyZoI5KFH7dEKVHnnVHlbfXUyYQCONux005KLsd2vxg10Mve9DbB6yEnz9oYcJKoIkEWKpyZXLqKPB3OkSmfHzXGJu5h48pdshO5ZE9EU3SYqbraCRAGxEHrpLqenTmzxmhXt0Aiptk9i4g_SgKs-Zs9wd_3eKtJZAmOxUJcZYZCes-ZwBhcE8VawmEcUKfkjn3kE-lbBsaUIxhO2cjm7nrTlgb5e_Y0KEqeo--zeda_iz3gfSeyeJzTtLX_TZVes5dFGdTglpAw9CypPGuj2Mj_5CbaZO8&maxdest=https%3A%2F%2Fwww.momoshop.com.tw%2Fgoods%2FGoodsDetail.jsp%3Fi_code%3D14564003%26osm%3Dcriteo%26utm_source%3Dcriteo%26utm_medium%3Dcv_visitor_co%26utm_id%3D439606%26cto_pld%3D5o0FwApGAAB-gKxKkLeXIg
+    - generic [ref=e157]: 資訊來源：臺灣證券交易所 TWSE、財團法人中華民國證券櫃檯買賣中心 GTSM、台灣期貨交易所及本資訊內容係經玩股網有限公司處理提供。使用者須遵守台灣證券交易所「交易資訊使用管理辦法」等交易資訊管理相關規定，所有資訊以台灣證券交易所公告資料為主。本網站提供之資料僅供參考，對資訊正確、延遲或傳輸中斷不負任何責任，如使用者依本資料交易發生損失需自行負責。
+    - contentinfo [ref=e158]:
+      - generic [ref=e159]:
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - link "關於玩股網" [ref=e162] [cursor=pointer]:
+              - /url: /about
+            - link "服務條款" [ref=e163] [cursor=pointer]:
+              - /url: /terms-and-policies
+            - link "隱私政策" [ref=e164] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "常見問題" [ref=e165] [cursor=pointer]:
+              - /url: https://wantgoo.tawk.help/
+          - generic [ref=e166]:
+            - generic [ref=e167]: 玩股網有限公司統編：24211075
+            - generic [ref=e168]:
+              - text: © 2010-2025
+              - link "WantGoo" [ref=e169] [cursor=pointer]:
+                - /url: /
+        - generic [ref=e171]:
+          - link [ref=e172] [cursor=pointer]:
+            - /url: https://www.facebook.com/wantgoo.fans/
+          - link [ref=e174] [cursor=pointer]:
+            - /url: https://t.me/wantgoo
+          - link [ref=e176] [cursor=pointer]:
+            - /url: https://www.youtube.com/c/WantGooYT
+          - link [ref=e178] [cursor=pointer]:
+            - /url: https://podcasts.apple.com/podcast/id1540541794
+  - iframe [ref=e180]:
+    - button "Chat widget" [ref=f38e4] [cursor=pointer]:
+      - img "Opens Chat This icon Opens the chat window." [ref=f38e7]
+```
