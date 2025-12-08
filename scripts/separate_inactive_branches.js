@@ -2,10 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 const INACTIVE_DATE = '20251207';
-const DATA_DIR = path.join(__dirname, 'data_fubon_brokers_trade');
-const BRANCHES_FILE = path.join(__dirname, 'broker_branches.json');
-const NAMES_FILE = path.join(__dirname, 'broker_names.json');
-const INACTIVE_FILE = path.join(__dirname, 'inactive_broker_branches.json');
+const DATA_DIR = path.join(__dirname, '../data_fubon_brokers_trade');
+const BRANCHES_FILE = path.join(__dirname, '../config/broker_branches.json');
+const NAMES_FILE = path.join(__dirname, '../config/broker_names.json');
+const INACTIVE_FILE = path.join(__dirname, '../config/inactive_broker_branches.json');
 
 // Load data
 const branchesMap = JSON.parse(fs.readFileSync(BRANCHES_FILE, 'utf8'));

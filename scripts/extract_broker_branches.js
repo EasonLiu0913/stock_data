@@ -12,8 +12,8 @@ const path = require('path');
     });
     const page = await context.newPage();
 
-    const outputFile = path.join(__dirname, 'broker_branches.json');
-    const nameMapFile = path.join(__dirname, 'broker_names.json');
+    const outputFile = path.join(__dirname, '../config/broker_branches.json');
+    const nameMapFile = path.join(__dirname, '../config/broker_names.json');
     const result = {};
     const nameMap = {};
 

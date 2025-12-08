@@ -14,7 +14,7 @@ const server = http.createServer((req, res) => {
 
     if (req.url === '/') {
         // Serve the analyze.html file
-        fs.readFile(path.join(__dirname, 'analyze.html'), (err, content) => {
+        fs.readFile(path.join(__dirname, 'web/analyze.html'), (err, content) => {
             if (err) {
                 res.writeHead(500);
                 res.end('Error loading analyze.html');
@@ -25,7 +25,7 @@ const server = http.createServer((req, res) => {
         });
     } else if (req.url === '/compare') {
         // Serve the compare.html file
-        fs.readFile(path.join(__dirname, 'compare.html'), (err, content) => {
+        fs.readFile(path.join(__dirname, 'web/compare.html'), (err, content) => {
             if (err) {
                 res.writeHead(500);
                 res.end('Error loading compare.html');

@@ -7,8 +7,8 @@ const DELAY_MS = 10000; // 10 seconds delay as requested
 
 (async () => {
     // Load JSON maps
-    const branchesMap = JSON.parse(fs.readFileSync(path.join(__dirname, 'broker_branches.json'), 'utf8'));
-    const namesMap = JSON.parse(fs.readFileSync(path.join(__dirname, 'broker_names.json'), 'utf8'));
+    const branchesMap = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/broker_branches.json'), 'utf8'));
+    const namesMap = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/broker_names.json'), 'utf8'));
 
     // Output setup
     // Configuration for optional date argument (YYYYMMDD) and --force flag
@@ -25,7 +25,7 @@ const DELAY_MS = 10000; // 10 seconds delay as requested
     console.log(`Target date: ${targetY}-${targetM}-${targetD}`);
     console.log(`Force download: ${forceDownload}`);
     // Base output directory (date subfolder will be created later)
-    const baseOutputDir = path.join(__dirname, 'data_fubon_brokers_trade');
+    const baseOutputDir = path.join(__dirname, '../data_fubon_brokers_trade');
     if (!fs.existsSync(baseOutputDir)) {
         fs.mkdirSync(baseOutputDir);
     }

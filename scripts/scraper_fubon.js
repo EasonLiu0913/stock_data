@@ -98,7 +98,7 @@ const path = require('path');
                     dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 }
 
-                const dirPath = path.join(__dirname, 'data_fubon');
+                const dirPath = path.join(__dirname, '../data_fubon');
                 if (!fs.existsSync(dirPath)) {
                     fs.mkdirSync(dirPath);
                 }

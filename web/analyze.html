@@ -100,7 +100,7 @@
 
             try {
                 // 1. Get list of files
-                const response = await fetch('/api/files');
+                const response = await fetch('/api/files?source=fubon');
                 const files = await response.json();
                 
                 // 2. Filter files
@@ -126,7 +126,7 @@
                 const stockSets = [];
                 
                 for (const file of targetFiles) {
-                    const res = await fetch(`/data/${file}`);
+                    const res = await fetch(`/data/fubon/${file}`);
                     const text = await res.text();
                     const rows = text.split('\n').map(r => r.trim()).filter(r => r);
                     
