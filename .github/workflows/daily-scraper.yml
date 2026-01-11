@@ -1,45 +1,62 @@
 name: Daily Stock Data Scraper
 
 on:
-  schedule:
-    # Run at 1:00 AM UTC (9:00 AM Taiwan Time, UTC+8)
-    - cron: '0 1 * * *'
-  workflow_dispatch: # Allow manual trigger
+    schedule:
+        # Run at 1:00 AM UTC (9:00 AM Taiwan Time, UTC+8)
+        - cron: '0 1 * * *'
+    workflow_dispatch: # Allow manual trigger
 
 jobs:
-  scrape-data:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      
-      - name: Install dependencies
-        run: |
-          npm install playwright
-          npx playwright install chromium
-      
-      - name: Run Fubon scraper
-        run: node scripts/scraper_fubon.js
-        continue-on-error: true
-      
-      - name: Run TWSE warrant extractor
-        run: node scripts/extract_warrant_data.js
-        continue-on-error: true
-      
-      - name: Commit and push data
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add data_fubon/ data_twse/
-          git diff --staged --quiet || git commit -m "chore: update stock data $(date +'%Y-%m-%d')"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    scrape-data:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+
+            - name: Install dependencies
+              run: |
+                  npm ci
+                  npx playwright install --with-deps chromium
+
+            - name: Run Fubon scraper (主力買超排行)
+              run: |
+                  echo "🚀 開始執行 scraper_fubon.js..."
+                  node scripts/scraper_fubon.js
+              continue-on-error: true
+
+            - name: Run Fubon scraper other (值增/值縮/量增/量縮排行)
+              run: |
+                  echo "🚀 開始執行 scraper_fubon_other.js..."
+                  node scripts/scraper_fubon_other.js
+              continue-on-error: true
+
+            - name: Run stock data extractor (從 CSV 提取股票資料)
+              run: |
+                  echo "🚀 開始執行 test_extract_stock_data.js..."
+                  node scripts/test_extract_stock_data.js
+              continue-on-error: true
+
+            - name: Run TWSE warrant extractor
+              run: |
+                  echo "🚀 開始執行 extract_warrant_data.js..."
+                  node scripts/extract_warrant_data.js
+              continue-on-error: true
+
+            - name: Commit and push data
+              run: |
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+                  git add data_fubon/ data_twse/
+                  git diff --staged --quiet || git commit -m "chore: update stock data $(date +'%Y-%m-%d %H:%M:%S')"
+                  git push
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              continue-on-error: true
