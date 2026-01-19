@@ -1,39 +1,115 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Analysis Tool</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
-        h1 { color: #333; }
-        .controls { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="date"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background: #0052a3; }
-        #results { margin-top: 20px; }
-        .stock-list { display: flex; flex-wrap: wrap; gap: 10px; }
-        .stock-item { background: #e1f0ff; color: #0066cc; padding: 5px 10px; border-radius: 15px; font-weight: bold; text-decoration: none; display: inline-block; transition: background 0.2s; }
-        .stock-item:hover { background: #cce0ff; }
-        .error { color: red; margin-top: 10px; }
-        .info { color: #666; margin-top: 10px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .controls {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0052a3;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .stock-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stock-item {
+            background: #e1f0ff;
+            color: #0066cc;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .stock-item:hover {
+            background: #cce0ff;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .info {
+            color: #666;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <h1>Stock Analysis Tool</h1>
-    
+
     <div class="controls">
         <div class="form-group">
             <label>Quick Select:</label>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button type="button" onclick="setDateRange(1)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Today (今天)</button>
-                <button type="button" onclick="setDateRange(2)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 2 Days (近2天)</button>
-                <button type="button" onclick="setDateRange(3)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 3 Days (近3天)</button>
-                <button type="button" onclick="setDateRange(5)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 5 Days (近5天)</button>
-                <button type="button" onclick="setDateRange(6)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 6 Days (近6天)</button>
-                <button type="button" onclick="setDateRange(7)" style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 7 Days (近7天)</button>
+                <button type="button" onclick="setDateRange(1)"
+                    style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Today (今天)</button>
+                <button type="button" onclick="setDateRange(2)"
+                    style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 2 Days (近2天)</button>
+                <button type="button" onclick="setDateRange(3)"
+                    style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 3 Days (近3天)</button>
+                <button type="button" onclick="setDateRange(5)"
+                    style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 5 Days (近5天)</button>
+                <button type="button" onclick="setDateRange(6)"
+                    style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 6 Days (近6天)</button>
+                <button type="button" onclick="setDateRange(7)"
+                    style="background: #6c757d; font-size: 14px; padding: 5px 10px;">Last 7 Days (近7天)</button>
             </div>
         </div>
         <div class="form-group">
@@ -57,6 +133,12 @@
                 <option value="30">30 Days (30日)</option>
             </select>
         </div>
+        <div class="form-group">
+            <label for="rankLimit">Rank Limit (排名限制，前幾名):</label>
+            <input type="number" id="rankLimit" value="50" min="1"
+                style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100px;">
+            <span style="color: #666; margin-left: 10px;">只處理排名在此數字以內的股票</span>
+        </div>
         <button onclick="analyzeStocks()">Analyze</button>
         <div id="status" class="info"></div>
     </div>
@@ -68,7 +150,7 @@
         const today = new Date();
         const lastWeek = new Date(today);
         lastWeek.setDate(today.getDate() - 7);
-        
+
         document.getElementById('endDate').valueAsDate = today;
         document.getElementById('startDate').valueAsDate = lastWeek;
 
@@ -77,7 +159,7 @@
             const start = new Date();
             // If days=1, start is today. If days=2, start is yesterday.
             start.setDate(end.getDate() - (days - 1));
-            
+
             document.getElementById('endDate').valueAsDate = end;
             document.getElementById('startDate').valueAsDate = start;
         }
@@ -86,9 +168,10 @@
             const startDateStr = document.getElementById('startDate').value.replace(/-/g, '');
             const endDateStr = document.getElementById('endDate').value.replace(/-/g, '');
             const days = document.getElementById('dayRange').value;
+            const rankLimit = parseInt(document.getElementById('rankLimit').value) || Infinity;
             const statusDiv = document.getElementById('status');
             const resultsDiv = document.getElementById('results');
-            
+
             if (!startDateStr || !endDateStr) {
                 statusDiv.innerHTML = '<span class="error">Please select both dates.</span>';
                 return;
@@ -100,17 +183,53 @@
 
             try {
                 // 1. Get list of files
-                const response = await fetch('/api/files?source=fubon');
-                const files = await response.json();
-                
+                const apiUrl = '/api/files?source=fubon';
+                console.log('Fetching:', apiUrl);
+
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText.substring(0, 200)}`);
+                }
+
+                // Get response text first to check if it's JSON
+                const responseText = await response.text();
+                console.log('Response text (first 200 chars):', responseText.substring(0, 200));
+
+                // Check if response starts with HTML (error page)
+                if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+                    throw new Error(`Server returned HTML instead of JSON. Response: ${responseText.substring(0, 200)}`);
+                }
+
+                // Try to parse as JSON
+                let files;
+                try {
+                    files = JSON.parse(responseText);
+                    console.log('Parsed files count:', files.length);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    throw new Error(`Failed to parse JSON. Response: ${responseText.substring(0, 200)}`);
+                }
+
                 // 2. Filter files
                 const targetFiles = files.filter(file => {
                     // Format: fubon_YYYYMMDD_上市主力買超X日排行.csv
                     if (!file.includes(searchString)) return false;
-                    
+
                     const match = file.match(/fubon_(\d{8})_/);
                     if (!match) return false;
-                    
+
                     const fileDate = match[1];
                     return fileDate >= startDateStr && fileDate <= endDateStr;
                 });
@@ -124,16 +243,17 @@
 
                 // 3. Fetch and process each file
                 const stockSets = [];
-                
+
                 for (const file of targetFiles) {
                     const res = await fetch(`/data/fubon/${file}`);
                     const text = await res.text();
                     const rows = text.split('\n').map(r => r.trim()).filter(r => r);
-                    
+
                     // Parse CSV (assuming header is first row)
-                    const headers = rows[0].split(',');
+                    const headers = parseCSVRow(rows[0]);
                     const stockIndex = headers.findIndex(h => h.includes('Stock') || h.includes('股票名稱'));
-                    
+                    const rankIndex = headers.findIndex(h => h.includes('Rank') || h.includes('排行') || h.includes('排名'));
+
                     if (stockIndex === -1) {
                         console.warn(`Could not find Stock column in ${file}`);
                         continue;
@@ -144,6 +264,15 @@
                     for (let i = 1; i < rows.length; i++) {
                         // Handle potential quotes in CSV
                         const cols = parseCSVRow(rows[i]);
+
+                        // Check rank limit if rank column exists
+                        if (rankIndex >= 0 && cols[rankIndex]) {
+                            const rank = parseInt(cols[rankIndex].trim());
+                            if (isNaN(rank) || rank > rankLimit) {
+                                continue; // Skip this stock if rank exceeds limit
+                            }
+                        }
+
                         if (cols[stockIndex]) {
                             stocks.add(cols[stockIndex].trim());
                         }
@@ -159,24 +288,39 @@
 
                 // Start with the first file's stocks
                 let commonStocks = new Set(stockSets[0].stocks);
-                
+
                 for (let i = 1; i < stockSets.length; i++) {
                     const currentSet = stockSets[i].stocks;
                     commonStocks = new Set([...commonStocks].filter(x => currentSet.has(x)));
                 }
 
                 // 5. Display results
-                statusDiv.textContent = `Analyzed ${targetFiles.length} files from ${startDateStr} to ${endDateStr}.`;
-                
+                const rankLimitText = rankLimit === Infinity ? '無限制' : `前 ${rankLimit} 名`;
+                statusDiv.textContent = `Analyzed ${targetFiles.length} files from ${startDateStr} to ${endDateStr} (Rank Limit: ${rankLimitText}).`;
+
                 let html = `<h3>Common Stocks (${commonStocks.size})</h3>`;
                 if (commonStocks.size > 0) {
                     html += '<div class="stock-list">';
                     Array.from(commonStocks).sort().forEach(stock => {
-                        // Extract stock code (assuming format "Code Name" e.g. "2330 台積電")
-                        const match = stock.match(/^(\d+)/);
-                        const code = match ? match[1] : '';
-                        
-                        if (code) {
+                        // Extract stock code: 數字+英文的組合，直到空格或中文字出現為止
+                        // 例如：'00637L元大滬深300正2' → '00637L'
+                        //      '009813貝萊德標普卓越50' → '009813'
+                        //      '00983A主動中信ARK創新' → '00983A'
+                        const allMatches = stock.match(/[\d]+[A-Za-z]*/g);
+                        let code = null;
+
+                        if (allMatches && allMatches.length > 0) {
+                            // 優先選擇包含字母的匹配（股票代碼通常有字母，排名沒有）
+                            const withLetter = allMatches.find(m => /[A-Za-z]/.test(m));
+                            if (withLetter) {
+                                code = withLetter;
+                            } else {
+                                // 如果沒有包含字母的，選擇最長的（股票代碼通常是4-6位，排名是1-2位）
+                                code = allMatches.reduce((a, b) => a.length > b.length ? a : b);
+                            }
+                        }
+
+                        if (code && /^\d+/.test(code)) {
                             const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${code}.djhtm`;
                             html += `<a href="${url}" target="_blank" class="stock-item">${stock}</a>`;
                         } else {
@@ -187,7 +331,7 @@
                 } else {
                     html += '<p>No common stocks found across all selected dates.</p>';
                 }
-                
+
                 html += '<h4>Files Analyzed:</h4><ul>';
                 targetFiles.sort().forEach(f => {
                     html += `<li>${f}</li>`;
@@ -207,7 +351,7 @@
             const result = [];
             let current = '';
             let inQuotes = false;
-            
+
             for (let i = 0; i < row.length; i++) {
                 const char = row[i];
                 if (char === '"') {
@@ -224,4 +368,5 @@
         }
     </script>
 </body>
+
 </html>

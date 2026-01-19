@@ -11,8 +11,14 @@ const DIRS = {
 const server = http.createServer((req, res) => {
     // Enable CORS just in case
     res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    // Log request for debugging
+    console.log(`${req.method} ${req.url}`);
 
-    if (req.url === '/') {
+    // Remove query string for path matching
+    const urlPath = req.url.split('?')[0];
+
+    if (urlPath === '/' || urlPath === '') {
         // Serve the analyze.html file
         fs.readFile(path.join(__dirname, 'web/analyze.html'), (err, content) => {
             if (err) {
@@ -23,7 +29,7 @@ const server = http.createServer((req, res) => {
                 res.end(content);
             }
         });
-    } else if (req.url === '/compare') {
+    } else if (urlPath === '/compare') {
         // Serve the compare.html file
         fs.readFile(path.join(__dirname, 'web/compare.html'), (err, content) => {
             if (err) {
@@ -34,9 +40,41 @@ const server = http.createServer((req, res) => {
                 res.end(content);
             }
         });
-    } else if (req.url.startsWith('/api/files')) {
+    } else if (urlPath.startsWith('/web/')) {
+        // Serve files from web directory
+        // /web/compare.html or /web/analyze.html
+        const fileName = urlPath.replace('/web/', '');
+        const filePath = path.join(__dirname, 'web', fileName);
+        
+        // Security check: ensure file is within web directory
+        const webDir = path.join(__dirname, 'web');
+        if (!filePath.startsWith(webDir)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
+        
+        // Determine content type based on file extension
+        let contentType = 'text/html; charset=utf-8';
+        if (fileName.endsWith('.css')) {
+            contentType = 'text/css';
+        } else if (fileName.endsWith('.js')) {
+            contentType = 'application/javascript';
+        }
+        
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content);
+            }
+        });
+    } else if (urlPath.startsWith('/api/files')) {
         // /api/files?source=fubon or /api/files?source=twse
-        const urlParams = new URLSearchParams(req.url.split('?')[1]);
+        const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
+        const urlParams = new URLSearchParams(queryString);
         const source = urlParams.get('source') || 'fubon';
         const targetDir = DIRS[source];
 
@@ -57,9 +95,9 @@ const server = http.createServer((req, res) => {
                 res.end(JSON.stringify(csvFiles));
             }
         });
-    } else if (req.url.startsWith('/data/')) {
+    } else if (urlPath.startsWith('/data/')) {
         // /data/fubon/filename.csv or /data/twse/filename.csv
-        const parts = req.url.split('/');
+        const parts = urlPath.split('/');
         // parts: ['', 'data', 'source', 'filename']
         if (parts.length < 4) {
             res.writeHead(400);
@@ -91,7 +129,14 @@ const server = http.createServer((req, res) => {
                 res.writeHead(404);
                 res.end('File not found');
             } else {
-                res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+                // Determine content type based on file extension
+                let contentType = 'text/plain; charset=utf-8';
+                if (fileName.endsWith('.csv')) {
+                    contentType = 'text/csv; charset=utf-8';
+                } else if (fileName.endsWith('.json')) {
+                    contentType = 'application/json; charset=utf-8';
+                }
+                res.writeHead(200, { 'Content-Type': contentType });
                 res.end(content);
             }
         });

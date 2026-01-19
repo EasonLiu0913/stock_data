@@ -3,23 +3,23 @@ const fs = require('fs');
 const path = require('path');
 
 (async () => {
-    // 計算今天與前一天的日期（格式：YYYYMMDD）
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}${month}${day}`;
-    };
-
+    // 計算今天和前一天的日期（格式：YYYYMMDD）
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-
+    
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    };
+    
     const todayStr = formatDate(today);
     const yesterdayStr = formatDate(yesterday);
     const dateStrs = [todayStr, yesterdayStr];
-
-    console.log(`📅 使用日期（今天、前一天）: ${todayStr}, ${yesterdayStr}\n`);
+    
+    console.log(`📅 使用日期（今天和前一天）: ${todayStr}, ${yesterdayStr}\n`);
 
     // 簡單的 CSV 解析函數
     function parseCSVLine(line) {
@@ -43,124 +43,120 @@ const path = require('path');
         return result;
     }
 
+    // 掃描 data_fubon 目錄，找出所有包含今天或前一天日期的 CSV 檔案
     const dataDir = path.join(__dirname, '../data_fubon');
     const allFiles = fs.readdirSync(dataDir);
+    const csvFiles = allFiles.filter(file => 
+        file.endsWith('.csv') && (file.includes(todayStr) || file.includes(yesterdayStr))
+    );
+
+    console.log(`📁 找到 ${csvFiles.length} 個符合日期的 CSV 檔案:`);
+    csvFiles.forEach(file => console.log(`   - ${file}`));
+    console.log('');
+
+    // 從所有 CSV 檔案中提取股票代碼
+    const stockNumbersSet = new Set();
+    
+    for (const csvFile of csvFiles) {
+        const csvFilePath = path.join(dataDir, csvFile);
+        const csvContent = fs.readFileSync(csvFilePath, 'utf8');
+        const lines = csvContent.split('\n');
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const parts = parseCSVLine(line);
+            if (parts.length < 2) continue;
+            
+            const stockField = parts[1].trim();
+            const cleanStockField = stockField.replace(/^"|"$/g, '');
+            
+            // 提取股票代碼：數字+英文的組合，直到空格或中文字出現為止
+            // 例如：'36,00637L元大滬深300正2' → '00637L'
+            //      '37,009813貝萊德標普卓越50' → '009813'
+            //      '46,00983A主動中信ARK創新' → '00983A'
+            // 找到所有符合「數字+可選英文字母」模式的匹配
+            const allMatches = cleanStockField.match(/[\d]+[A-Za-z]*/g);
+            let stockNumber = null;
+            
+            if (allMatches && allMatches.length > 0) {
+                // 優先選擇包含字母的匹配（股票代碼通常有字母，排名沒有）
+                const withLetter = allMatches.find(m => /[A-Za-z]/.test(m));
+                if (withLetter) {
+                    stockNumber = withLetter;
+                } else {
+                    // 如果沒有包含字母的，選擇最長的（股票代碼通常是4-6位，排名是1-2位）
+                    stockNumber = allMatches.reduce((a, b) => a.length > b.length ? a : b);
+                }
+            }
+            
+            if (stockNumber && /^\d+/.test(stockNumber)) {
+                stockNumbersSet.add(stockNumber);
+            }
+        }
+    }
+
+    // 轉換為陣列並排序
+    let stockNumbers = Array.from(stockNumbersSet).sort();
+    console.log(`📊 從所有 CSV 中提取到 ${stockNumbers.length} 個不重複的股票代碼\n`);
+
+    // 讀取現有的 JSON 檔案（如果存在），檢查哪些股票已經有資料
+    // 使用今天的日期作為輸出檔名
+    const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${todayStr}_stock_data.json`);
+    let existingData = {};
+    
+    if (fs.existsSync(outputFilePath)) {
+        try {
+            const existingContent = fs.readFileSync(outputFilePath, 'utf8');
+            existingData = JSON.parse(existingContent);
+            const existingCount = Object.keys(existingData).filter(key => 
+                existingData[key] && Object.keys(existingData[key]).length > 0
+            ).length;
+            console.log(`📋 發現現有資料檔案，已有 ${existingCount} 個股票的資料\n`);
+        } catch (e) {
+            console.log(`⚠️  讀取現有資料檔案失敗，將重新建立\n`);
+        }
+    }
+
+    // 過濾掉已經有資料的股票
+    const stockNumbersToProcess = stockNumbers.filter(stock => {
+        const hasData = existingData[stock] && Object.keys(existingData[stock]).length > 0;
+        return !hasData;
+    });
+
+    const skippedCount = stockNumbers.length - stockNumbersToProcess.length;
+    if (skippedCount > 0) {
+        console.log(`⏭️  跳過 ${skippedCount} 個已有資料的股票\n`);
+    }
+
+    console.log(`🚀 開始處理 ${stockNumbersToProcess.length} 個股票...\n`);
+
+    // 如果沒有需要處理的股票，直接結束
+    if (stockNumbersToProcess.length === 0) {
+        console.log('✅ 所有股票都已有資料，無需處理！');
+        return;
+    }
 
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
 
-    async function processDate(dateStr) {
-        console.log(`\n==============================`);
-        console.log(`📅 開始處理日期: ${dateStr}`);
-        console.log(`==============================\n`);
-
-        // 掃描 data_fubon 目錄，找出所有包含指定日期的 CSV 檔案
-        const csvFiles = allFiles.filter(file =>
-            file.endsWith('.csv') && file.includes(dateStr)
-        );
-
-        console.log(`📁 找到 ${csvFiles.length} 個符合日期的 CSV 檔案:`);
-        csvFiles.forEach(file => console.log(`   - ${file}`));
-        console.log('');
-
-        // 從所有 CSV 檔案中提取股票代碼
-        const stockNumbersSet = new Set();
-
-        for (const csvFile of csvFiles) {
-            const csvFilePath = path.join(dataDir, csvFile);
-            const csvContent = fs.readFileSync(csvFilePath, 'utf8');
-            const lines = csvContent.split('\n');
-
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-
-                const parts = parseCSVLine(line);
-                if (parts.length < 2) continue;
-
-                const stockField = parts[1].trim();
-                const cleanStockField = stockField.replace(/^"|"$/g, '');
-
-                // 提取股票代碼：數字+英文的組合，直到空格或中文字出現為止
-                // 例如：'36,00637L元大滬深300正2' → '00637L'
-                //      '37,009813貝萊德標普卓越50' → '009813'
-                //      '46,00983A主動中信ARK創新' → '00983A'
-                const allMatches = cleanStockField.match(/[\d]+[A-Za-z]*/g);
-                let stockNumber = null;
-
-                if (allMatches && allMatches.length > 0) {
-                    // 優先選擇包含字母的匹配（股票代碼通常有字母，排名沒有）
-                    const withLetter = allMatches.find(m => /[A-Za-z]/.test(m));
-                    if (withLetter) {
-                        stockNumber = withLetter;
-                    } else {
-                        // 如果沒有包含字母的，選擇最長的（股票代碼通常是4-6位，排名是1-2位）
-                        stockNumber = allMatches.reduce((a, b) => a.length > b.length ? a : b);
-                    }
-                }
-
-                if (stockNumber && /^\d+/.test(stockNumber)) {
-                    stockNumbersSet.add(stockNumber);
-                }
-            }
-        }
-
-        // 轉換為陣列並排序
-        const stockNumbers = Array.from(stockNumbersSet).sort();
-        console.log(`📊 從所有 CSV 中提取到 ${stockNumbers.length} 個不重複的股票代碼\n`);
-
-        // 讀取現有的 JSON 檔案（如果存在），檢查哪些股票已經有資料
-        const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${dateStr}_stock_data.json`);
-        let existingData = {};
-
-        if (fs.existsSync(outputFilePath)) {
-            try {
-                const existingContent = fs.readFileSync(outputFilePath, 'utf8');
-                existingData = JSON.parse(existingContent);
-                const existingCount = Object.keys(existingData).filter(key =>
-                    existingData[key] && Object.keys(existingData[key]).length > 0
-                ).length;
-                console.log(`📋 發現現有資料檔案，已有 ${existingCount} 個股票的資料\n`);
-            } catch (e) {
-                console.log(`⚠️  讀取現有資料檔案失敗，將重新建立\n`);
-            }
-        }
-
-        // 過濾掉已經有資料的股票
-        const stockNumbersToProcess = stockNumbers.filter(stock => {
-            const hasData = existingData[stock] && Object.keys(existingData[stock]).length > 0;
-            return !hasData;
-        });
-
-        const skippedCount = stockNumbers.length - stockNumbersToProcess.length;
-        if (skippedCount > 0) {
-            console.log(`⏭️  跳過 ${skippedCount} 個已有資料的股票\n`);
-        }
-
-        console.log(`🚀 開始處理 ${stockNumbersToProcess.length} 個股票...\n`);
-
-        // 如果沒有需要處理的股票，直接結束（但仍會保留輸出檔案）
-        if (stockNumbersToProcess.length === 0) {
-            console.log('✅ 所有股票都已有資料，無需處理！');
-            return;
-        }
-
-        // 從現有資料開始
-        const result = { ...existingData };
-
-        // 統計變數（在 try 區塊外定義，以便在外部也能存取）
-        let successCount = 0;
-        let failCount = 0;
-        const failedStocks = []; // 失敗清單
-
-        try {
-            const total = stockNumbersToProcess.length;
-            let processed = 0;
-
-            for (const stockNumber of stockNumbersToProcess) {
-                processed++;
-                const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stockNumber}.djhtm`;
-                console.log(`[${processed}/${total}] 正在處理: ${stockNumber} - ${url}...`);
+    // 從現有資料開始
+    const result = { ...existingData };
+    
+    // 統計變數（在 try 區塊外定義，以便在外部也能存取）
+    let successCount = 0;
+    let failCount = 0;
+    const failedStocks = []; // 失敗清單
+    
+    try {
+        const total = stockNumbersToProcess.length;
+        let processed = 0;
+        
+        for (const stockNumber of stockNumbersToProcess) {
+            processed++;
+            const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stockNumber}.djhtm`;
+            console.log(`[${processed}/${total}] 正在處理: ${stockNumber} - ${url}...`);
 
             try {
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -345,51 +341,43 @@ const path = require('path');
                 });
             }
 
-                // 等待 3 秒後再處理下一個股票（避免請求過快）
-                if (processed < total) {
-                    console.log(`  ⏳ 等待 3 秒後繼續處理下一個股票...`);
-                    await page.waitForTimeout(3000);
-                }
+            // 等待 3 秒後再處理下一個股票（避免請求過快）
+            if (processed < total) {
+                console.log(`  ⏳ 等待 3 秒後繼續處理下一個股票...`);
+                await page.waitForTimeout(3000);
             }
-
-        } catch (error) {
-            console.error('整體錯誤:', error);
         }
 
-        // 輸出統計資訊
-        console.log('\n\n=== 處理完成 ===');
-        console.log(`📅 日期: ${dateStr}`);
-        console.log(`✅ 成功: ${successCount} 個`);
-        console.log(`❌ 失敗: ${failCount} 個`);
-        console.log(`⏭️  跳過: ${skippedCount} 個（已有資料）`);
-        console.log(`📊 總計: ${stockNumbers.length} 個股票\n`);
-
-        // 如果有失敗的股票，輸出失敗清單
-        if (failedStocks && failedStocks.length > 0) {
-            console.log('=== 失敗清單 ===');
-            failedStocks.forEach((item, index) => {
-                console.log(`${index + 1}. ${item.stock} - ${item.url}`);
-                console.log(`   錯誤: ${item.error}`);
-            });
-            console.log('');
-
-            // 儲存失敗清單到檔案
-            const failedListFile = path.join(__dirname, `../data_fubon/fubon_${dateStr}_stock_data_failedList.json`);
-            fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8');
-            console.log(`📋 失敗清單已儲存到: ${failedListFile}\n`);
-        }
-
-        // 儲存結果到檔案（使用日期作為檔名）
-        fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
-        console.log(`💾 結果已儲存到: ${outputFilePath}`);
-    }
-
-    try {
-        for (const dateStr of dateStrs) {
-            await processDate(dateStr);
-        }
+    } catch (error) {
+        console.error('整體錯誤:', error);
     } finally {
         await browser.close();
     }
+
+    // 輸出統計資訊
+    console.log('\n\n=== 處理完成 ===');
+    console.log(`✅ 成功: ${successCount} 個`);
+    console.log(`❌ 失敗: ${failCount} 個`);
+    console.log(`⏭️  跳過: ${skippedCount} 個（已有資料）`);
+    console.log(`📊 總計: ${stockNumbers.length} 個股票\n`);
+
+    // 如果有失敗的股票，輸出失敗清單
+    if (failedStocks && failedStocks.length > 0) {
+        console.log('=== 失敗清單 ===');
+        failedStocks.forEach((item, index) => {
+            console.log(`${index + 1}. ${item.stock} - ${item.url}`);
+            console.log(`   錯誤: ${item.error}`);
+        });
+        console.log('');
+
+        // 儲存失敗清單到檔案
+        const failedListFile = path.join(__dirname, `../data_fubon/fubon_${todayStr}_stock_data_failedList.json`);
+        fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8');
+        console.log(`📋 失敗清單已儲存到: ${failedListFile}\n`);
+    }
+
+    // 儲存結果到檔案（使用日期作為檔名）
+    fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
+    console.log(`💾 結果已儲存到: ${outputFilePath}`);
 
 })();
