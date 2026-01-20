@@ -31,7 +31,7 @@ const path = require('path');
 
     console.log(
         `📅 系統日期: 今天=${todayStr}, 昨天=${yesterdayStr}；目前時間=${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}，` +
-        `本次擷取的「交易日期」檔名將使用: ${targetDateStr}\n`
+        `本次擷取的「交易日期」將使用: ${targetDateStr}\n`
     );
 
     // 簡單的 CSV 解析函數
@@ -56,14 +56,14 @@ const path = require('path');
         return result;
     }
 
-    // 掃描 data_fubon 目錄，找出所有包含今天或前一天日期的 CSV 檔案
+    // 掃描 data_fubon 目錄，找出所有包含「交易日期」的 CSV 檔案
     const dataDir = path.join(__dirname, '../data_fubon');
     const allFiles = fs.readdirSync(dataDir);
-    const csvFiles = allFiles.filter(file => 
-        file.endsWith('.csv') && (file.includes(todayStr) || file.includes(yesterdayStr))
+    const csvFiles = allFiles.filter(file =>
+        file.endsWith('.csv') && file.includes(targetDateStr)
     );
 
-    console.log(`📁 找到 ${csvFiles.length} 個符合日期的 CSV 檔案:`);
+    console.log(`📁 找到 ${csvFiles.length} 個符合交易日期 (${targetDateStr}) 的 CSV 檔案:`);
     csvFiles.forEach(file => console.log(`   - ${file}`));
     console.log('');
 

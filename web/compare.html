@@ -129,7 +129,8 @@
             dateSelect.innerHTML = '<option value="">載入中...</option>';
 
             try {
-                const response = await fetch('/api/files?source=twse');
+                // 以 Fubon 的檔案日期為主建立下拉選單
+                const response = await fetch('/api/files?source=fubon');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -139,43 +140,37 @@
                     throw new Error('Server returned HTML instead of JSON');
                 }
 
-                const twseFiles = JSON.parse(responseText);
+                const fubonFiles = JSON.parse(responseText);
 
-                // Extract dates from TWSE files
-                // Format: YYYYMMDD發行之標的證券排行.csv
-                const dates = [];
-                twseFiles.forEach(f => {
-                    const match = f.match(/^(\d{8})發行之標的證券排行\.csv$/);
+                // 從 Fubon 檔名萃取日期
+                // Format: fubon_YYYYMMDD_排行類型.csv
+                const dateSet = new Set();
+                fubonFiles.forEach(f => {
+                    const match = f.match(/fubon_(\d{8})_/);
                     if (match) {
-                        const dateStr = match[1];
-                        // Format date for display: YYYYMMDD -> YYYY/MM/DD
-                        const year = dateStr.substring(0, 4);
-                        const month = dateStr.substring(4, 6);
-                        const day = dateStr.substring(6, 8);
-                        dates.push({
-                            value: dateStr,
-                            display: `${year}/${month}/${day}`
-                        });
+                        dateSet.add(match[1]);
                     }
                 });
 
-                // Sort dates descending (newest first)
-                dates.sort((a, b) => b.value.localeCompare(a.value));
+                const dates = Array.from(dateSet).sort().reverse(); // 新到舊
 
                 // Populate dropdown
                 dateSelect.innerHTML = '<option value="">請選擇日期...</option>';
-                dates.forEach(date => {
+                dates.forEach(dateStr => {
+                    const year = dateStr.substring(0, 4);
+                    const month = dateStr.substring(4, 6);
+                    const day = dateStr.substring(6, 8);
                     const option = document.createElement('option');
-                    option.value = date.value;
-                    option.textContent = date.display;
+                    option.value = dateStr;
+                    option.textContent = `${year}/${month}/${day}`;
                     dateSelect.appendChild(option);
                 });
 
                 // Auto-select latest date
                 if (dates.length > 0) {
-                    dateSelect.value = dates[0].value;
+                    dateSelect.value = dates[0];
                     // Load ranking types for the selected date (no previous ranking on initial load)
-                    await loadAvailableRankings(dates[0].value, null);
+                    await loadAvailableRankings(dates[0], null);
                 }
 
                 // Add event listener for date change
@@ -348,9 +343,48 @@
                     })
                 ]);
 
-                // 2. Find files for selected date and ranking type
+                // 2. Find Fubon file for selected date and ranking type
                 const fubonFile = fubonFiles.find(f => f.includes(selectedDate) && f.includes(selectedRanking));
-                const twseFile = twseFiles.find(f => f.includes(selectedDate));
+
+                // 2b. Find TWSE file (只允許同日或前一天 fallback):
+                //     - 若有與 selectedDate 相同的日期，就用那一天
+                //     - 若沒有，且有前一天的檔案，就以前一天為主
+                //     - 以上都沒有才顯示錯誤
+                let twseFile = null;
+                let twseDateUsed = null;
+                const twseMap = new Map(); // date -> file
+                twseFiles.forEach(f => {
+                    const m = f.match(/^(\d{8})發行之標的證券排行\.csv$/);
+                    if (m) {
+                        twseMap.set(m[1], f);
+                    }
+                });
+
+                const toDateObj = (yyyymmdd) => {
+                    const y = parseInt(yyyymmdd.substring(0, 4), 10);
+                    const m = parseInt(yyyymmdd.substring(4, 6), 10);
+                    const d = parseInt(yyyymmdd.substring(6, 8), 10);
+                    return new Date(y, m - 1, d);
+                };
+                const toYYYYMMDD = (dateObj) => {
+                    const y = dateObj.getFullYear();
+                    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const d = String(dateObj.getDate()).padStart(2, '0');
+                    return `${y}${m}${d}`;
+                };
+
+                const selectedDateObj = toDateObj(selectedDate);
+                const prevDateObj = new Date(selectedDateObj);
+                prevDateObj.setDate(prevDateObj.getDate() - 1);
+                const prevDate = toYYYYMMDD(prevDateObj);
+
+                if (twseMap.has(selectedDate)) {
+                    twseDateUsed = selectedDate;
+                    twseFile = twseMap.get(selectedDate);
+                } else if (twseMap.has(prevDate)) {
+                    twseDateUsed = prevDate;
+                    twseFile = twseMap.get(prevDate);
+                }
 
                 if (!fubonFile) {
                     statusDiv.innerHTML = `<span class="error">找不到 Fubon 資料檔案 (日期: ${selectedDate}, 排行類型: ${selectedRanking})</span>`;
@@ -358,11 +392,15 @@
                 }
 
                 if (!twseFile) {
-                    statusDiv.innerHTML = `<span class="error">找不到 TWSE 資料檔案 (日期: ${selectedDate})</span>`;
+                    statusDiv.innerHTML = `<span class="error">找不到 TWSE 資料檔案 (日期: ${selectedDate} 或前一天 ${prevDate})</span>`;
                     return;
                 }
 
-                statusDiv.textContent = `Found files for ${selectedDate}. Analyzing...`;
+                if (twseDateUsed && twseDateUsed !== selectedDate) {
+                    statusDiv.textContent = `Found Fubon date ${selectedDate}，TWSE 最新可用資料為 ${twseDateUsed}，以該日期權證資料分析中...`;
+                } else {
+                    statusDiv.textContent = `Found files for ${selectedDate}. Analyzing...`;
+                }
 
                 // 3. Fetch files for selected date
                 const [fubonContent, twseContent] = await Promise.all([
@@ -415,11 +453,25 @@
                 const day = selectedDate.substring(6, 8);
                 const displayDate = `${year}/${month}/${day}`;
 
+                let twseDisplay = '';
+                if (twseDateUsed) {
+                    const ty = twseDateUsed.substring(0, 4);
+                    const tm = twseDateUsed.substring(4, 6);
+                    const td = twseDateUsed.substring(6, 8);
+                    const twseDisplayDate = `${ty}/${tm}/${td}`;
+                    if (twseDateUsed === selectedDate) {
+                        twseDisplay = `${twseDisplayDate} (${twseDateUsed})`;
+                    } else {
+                        twseDisplay = `${twseDisplayDate} (${twseDateUsed}, 使用最近可用資料)`;
+                    }
+                }
+
                 let html = `<div class="summary">
                     <strong>日期 (Date):</strong> ${displayDate} (${selectedDate})<br>
                     <strong>Fubon 排行類型 (Ranking Type):</strong> ${selectedRanking}<br>
                     <strong>Fubon File:</strong> ${fubonFile} (Top ${fubonLimit}, found ${fubonStocks.size} stocks)<br>
                     <strong>TWSE File:</strong> ${twseFile} (Top ${twseLimit}, found ${twseStocks.size} stocks)<br>
+                    ${twseDisplay ? `<strong>TWSE 日期 (Warrant Date):</strong> ${twseDisplay}<br>` : ''}
                     <strong>交集 (Intersection):</strong> ${commonCodes.size} stocks
                 </div>`;
 
