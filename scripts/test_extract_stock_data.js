@@ -7,19 +7,32 @@ const path = require('path');
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const formatDate = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}${month}${day}`;
     };
-    
+
     const todayStr = formatDate(today);
     const yesterdayStr = formatDate(yesterday);
-    const dateStrs = [todayStr, yesterdayStr];
-    
-    console.log(`📅 使用日期（今天和前一天）: ${todayStr}, ${yesterdayStr}\n`);
+
+    // 根據執行時間決定「交易日期」：
+    // - 每天下午 14:00（含）之後，到隔天早上 08:59 之前，都算前一個交易日
+    //   例如：1/19 14:00 ~ 1/20 08:59 → 使用 1/19 當作檔名日期
+    // - 其他時間（09:00 ~ 13:59）可以視需要調整，目前邏輯也視為「昨天」
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // 簡化規則：如果現在時間 < 14:00，就用昨天；否則用今天
+    const targetDateStr = currentHour < 14 ? yesterdayStr : todayStr;
+
+    console.log(
+        `📅 系統日期: 今天=${todayStr}, 昨天=${yesterdayStr}；目前時間=${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}，` +
+        `本次擷取的「交易日期」檔名將使用: ${targetDateStr}\n`
+    );
 
     // 簡單的 CSV 解析函數
     function parseCSVLine(line) {
@@ -102,8 +115,8 @@ const path = require('path');
     console.log(`📊 從所有 CSV 中提取到 ${stockNumbers.length} 個不重複的股票代碼\n`);
 
     // 讀取現有的 JSON 檔案（如果存在），檢查哪些股票已經有資料
-    // 使用今天的日期作為輸出檔名
-    const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${todayStr}_stock_data.json`);
+    // 檔名依「交易日期」決定（targetDateStr）
+    const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_stock_data.json`);
     let existingData = {};
     
     if (fs.existsSync(outputFilePath)) {
@@ -370,8 +383,8 @@ const path = require('path');
         });
         console.log('');
 
-        // 儲存失敗清單到檔案
-        const failedListFile = path.join(__dirname, `../data_fubon/fubon_${todayStr}_stock_data_failedList.json`);
+        // 儲存失敗清單到檔案（同樣使用交易日期作為檔名日期）
+        const failedListFile = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_stock_data_failedList.json`);
         fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8');
         console.log(`📋 失敗清單已儲存到: ${failedListFile}\n`);
     }
