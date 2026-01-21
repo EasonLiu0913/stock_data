@@ -119,6 +119,11 @@
     <div id="results"></div>
 
     <script>
+        // Environment detection
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        const repoName = 'stock_data';
+        const basePath = isGitHubPages ? `/${repoName}` : '..';
+
         // Load available dates on page load
         window.addEventListener('DOMContentLoaded', async () => {
             await loadAvailableDates();
@@ -130,17 +135,13 @@
 
             try {
                 // 以 Fubon 的檔案日期為主建立下拉選單
-                const response = await fetch('/api/files?source=fubon');
+                const response = await fetch(`${basePath}/data_fubon/files.json`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const responseText = await response.text();
-                if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-                    throw new Error('Server returned HTML instead of JSON');
-                }
-
-                const fubonFiles = JSON.parse(responseText);
+                // Get files list directly (it's already JSON)
+                const fubonFiles = await response.json();
 
                 // 從 Fubon 檔名萃取日期
                 // Format: fubon_YYYYMMDD_排行類型.csv
@@ -203,17 +204,12 @@
             rankingSelect.innerHTML = '<option value="">載入中...</option>';
 
             try {
-                const response = await fetch('/api/files?source=fubon');
+                const response = await fetch(`${basePath}/data_fubon/files.json`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const responseText = await response.text();
-                if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-                    throw new Error('Server returned HTML instead of JSON');
-                }
-
-                const fubonFiles = JSON.parse(responseText);
+                const fubonFiles = await response.json();
 
                 // Extract ranking types for the selected date
                 // Format: fubon_YYYYMMDD_排行類型.csv
@@ -327,19 +323,13 @@
             try {
                 // 1. Fetch file lists
                 const [fubonFiles, twseFiles] = await Promise.all([
-                    fetch('/api/files?source=fubon').then(r => {
+                    fetch(`${basePath}/data_fubon/files.json`).then(r => {
                         if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
-                        return r.text().then(text => {
-                            if (text.trim().startsWith('<!DOCTYPE')) throw new Error('Server returned HTML');
-                            return JSON.parse(text);
-                        });
+                        return r.json();
                     }),
-                    fetch('/api/files?source=twse').then(r => {
+                    fetch(`${basePath}/data_twse/files.json`).then(r => {
                         if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
-                        return r.text().then(text => {
-                            if (text.trim().startsWith('<!DOCTYPE')) throw new Error('Server returned HTML');
-                            return JSON.parse(text);
-                        });
+                        return r.json();
                     })
                 ]);
 
@@ -404,11 +394,11 @@
 
                 // 3. Fetch files for selected date
                 const [fubonContent, twseContent] = await Promise.all([
-                    fetch(`/data/fubon/${fubonFile}`).then(r => {
+                    fetch(`${basePath}/data_fubon/${fubonFile}`).then(r => {
                         if (!r.ok) throw new Error(`Failed to fetch Fubon file: ${r.status}`);
                         return r.text();
                     }),
-                    fetch(`/data/twse/${twseFile}`).then(r => {
+                    fetch(`${basePath}/data_twse/${twseFile}`).then(r => {
                         if (!r.ok) throw new Error(`Failed to fetch TWSE file: ${r.status}`);
                         return r.text();
                     })
@@ -434,7 +424,7 @@
                 // 5. Fetch stock data JSON for SMA20 values
                 let stockData = {};
                 try {
-                    const stockDataResponse = await fetch(`/data/fubon/fubon_${selectedDate}_stock_data.json`);
+                    const stockDataResponse = await fetch(`${basePath}/data_fubon/fubon_${selectedDate}_stock_data.json`);
                     if (stockDataResponse.ok) {
                         const stockDataText = await stockDataResponse.text();
                         if (!stockDataText.trim().startsWith('<!DOCTYPE')) {

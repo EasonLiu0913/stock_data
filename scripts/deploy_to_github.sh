@@ -18,20 +18,27 @@ fi
 
 echo "✅ 股票資料提取完成"
 
-# 2. 取得當前日期
+# 2. 產生檔案列表 (for GitHub Pages static access)
+echo "📑 正在產生檔案列表..."
+node scripts/generate_file_lists.js
+
+# 3. 取得當前日期
 TODAY=$(date +%Y%m%d)
 echo "📅 日期: $TODAY"
 
-# 3. 檢查是否有變更
-if git diff --quiet data_fubon/fubon_${TODAY}_stock_data.json; then
+# 4. 檢查是否有變更
+if git diff --quiet data_fubon/fubon_${TODAY}_stock_data.json && git diff --quiet data_fubon/files.json && git diff --quiet public/; then
     echo "ℹ️  資料無變更，跳過提交"
     exit 0
 fi
 
-# 4. 提交變更到 Git
+# 5. 提交變更到 Git
 echo "📝 正在提交變更到 Git..."
 git add data_fubon/fubon_${TODAY}_stock_data.json
-git add public/foreign.html
+git add data_fubon/files.json
+git add data_twse/files.json
+git add public/*.html
+git add scripts/generate_file_lists.js
 
 # 建立提交訊息
 COMMIT_MSG="Update stock data for ${TODAY}"

@@ -182,45 +182,28 @@
             resultsDiv.innerHTML = '';
 
             try {
-                // 1. Get list of files
-                const apiUrl = '/api/files?source=fubon';
-                console.log('Fetching:', apiUrl);
+                // Determine base path for GitHub Pages or Local
+                const isGitHubPages = window.location.hostname.includes('github.io');
+                const repoName = 'stock_data';
+                const basePath = isGitHubPages ? `/${repoName}` : '..';
 
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                // 1. Get list of files
+                const filesUrl = `${basePath}/data_fubon/files.json`;
+                console.log('Fetching:', filesUrl);
+                statusDiv.textContent = 'Fetching file list...';
+
+                const response = await fetch(filesUrl);
 
                 console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
 
                 // Check if response is OK
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Error response:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText.substring(0, 200)}`);
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                // Get response text first to check if it's JSON
-                const responseText = await response.text();
-                console.log('Response text (first 200 chars):', responseText.substring(0, 200));
-
-                // Check if response starts with HTML (error page)
-                if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-                    throw new Error(`Server returned HTML instead of JSON. Response: ${responseText.substring(0, 200)}`);
-                }
-
-                // Try to parse as JSON
-                let files;
-                try {
-                    files = JSON.parse(responseText);
-                    console.log('Parsed files count:', files.length);
-                } catch (parseError) {
-                    console.error('JSON parse error:', parseError);
-                    throw new Error(`Failed to parse JSON. Response: ${responseText.substring(0, 200)}`);
-                }
+                // Get files list
+                const files = await response.json();
+                console.log('Parsed files count:', files.length);
 
                 // 2. Filter files
                 const targetFiles = files.filter(file => {
@@ -245,7 +228,7 @@
                 const stockSets = [];
 
                 for (const file of targetFiles) {
-                    const res = await fetch(`/data/fubon/${file}`);
+                    const res = await fetch(`${basePath}/data_fubon/${file}`);
                     const text = await res.text();
                     const rows = text.split('\n').map(r => r.trim()).filter(r => r);
 
