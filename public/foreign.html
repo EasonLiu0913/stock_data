@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外資連續買超股票</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f7fafc;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        td {
+            padding: 1rem 1.2rem;
+            color: #2d3748;
+        }
+
+        .stock-code {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+
+        .stock-code a {
+            color: #667eea;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .stock-code a:hover {
+            color: #764ba2;
+            border-bottom: 2px solid #764ba2;
+        }
+
+        .positive {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        .negative {
+            color: #38a169;
+            font-weight: 600;
+        }
+
+        .neutral {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .day-values {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .day-value {
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .sort-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sort-container label {
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .sort-container select {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            color: #2d3748;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .sort-container select:hover {
+            border-color: #667eea;
+        }
+
+        .sort-container select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.8rem;
+            }
+
+            .day-values {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 外資連續買超股票</h1>
+            <p class="subtitle">篩選條件：外資近 4 天連續買超（前四個數字都是正數）</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalStocks">-</div>
+                <div class="stat-label">符合條件股票數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalBuy">-</div>
+                <div class="stat-label">4日累計買超（張）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgBuy">-</div>
+                <div class="stat-label">平均每日買超（張）</div>
+            </div>
+        </div>
+
+        <div class="sort-container">
+            <label for="sortSelect">排序方式：</label>
+            <select id="sortSelect" onchange="sortStocks()">
+                <option value="total">4日累計（從多到少）</option>
+                <option value="growth">第1天→第2天成長率（從大到小）</option>
+                <option value="three-days">四天中有三天在買（4日累計從大到小）</option>
+            </select>
+        </div>
+
+        <div class="table-container">
+            <div id="loading" class="loading">載入中...</div>
+            <div id="error" style="display: none;"></div>
+            <table id="stockTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>股票代號</th>
+                        <th>股票名稱</th>
+                        <th>第1天</th>
+                        <th>第2天</th>
+                        <th>第3天</th>
+                        <th>第4天</th>
+                        <th>4日累計</th>
+                        <th>平均每日</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allFilteredStocks = []; // 儲存所有符合條件的股票資料
+
+        async function loadData() {
+            try {
+                // 自動偵測環境：GitHub Pages 或本地開發
+                // GitHub Pages: /stock_data/data_fubon/...
+                // 本地: ../data_fubon/...
+                const isGitHubPages = window.location.hostname.includes('github.io');
+                const basePath = isGitHubPages ? '/stock_data' : '..';
+                const dataPath = `${basePath}/data_fubon/fubon_20260121_stock_data.json`;
+                
+                const response = await fetch(dataPath);
+                if (!response.ok) {
+                    throw new Error('無法載入資料');
+                }
+                
+                const data = await response.json();
+                
+                // 載入所有有 ForeignInvestors 資料的股票（至少 4 天）
+                allFilteredStocks = [];
+                
+                for (const [stockCode, stockData] of Object.entries(data)) {
+                    const foreignInvestors = stockData.ForeignInvestors;
+                    
+                    // 檢查是否有 ForeignInvestors 資料且至少有 4 天
+                    if (foreignInvestors && foreignInvestors.length >= 4) {
+                        const firstFour = foreignInvestors.slice(0, 4);
+                        const total = firstFour.reduce((sum, val) => sum + val, 0);
+                        const average = Math.round(total / 4);
+                        
+                        // 計算第1天到第2天的成長率
+                        const growthRate = firstFour[1] !== 0 
+                            ? ((firstFour[0] - firstFour[1]) / Math.abs(firstFour[1]) * 100)
+                            : 0;
+                        
+                        allFilteredStocks.push({
+                            code: stockCode,
+                            name: stockData.StockName || '',
+                            day1: firstFour[0],
+                            day2: firstFour[1],
+                            day3: firstFour[2],
+                            day4: firstFour[3],
+                            total: total,
+                            average: average,
+                            growthRate: growthRate
+                        });
+                    }
+                }
+                
+                // 初始排序（按 4 日累計）
+                sortStocks();
+                
+                // 更新統計資訊
+                updateStats();
+                
+                // 顯示表格，隱藏載入中
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('stockTable').style.display = 'table';
+                
+            } catch (error) {
+                console.error('載入資料時發生錯誤:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.style.display = 'block';
+                errorDiv.className = 'error';
+                errorDiv.textContent = '載入資料時發生錯誤: ' + error.message;
+            }
+        }
+
+        function sortStocks() {
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            let stocksToDisplay = [];
+            
+            if (sortBy === 'total') {
+                // 篩選出前四天都是正數的股票
+                stocksToDisplay = allFilteredStocks.filter(stock => {
+                    return stock.day1 > 0 && stock.day2 > 0 && stock.day3 > 0 && stock.day4 > 0;
+                });
+                // 按照 4 日累計排序（由大到小）
+                stocksToDisplay.sort((a, b) => b.total - a.total);
+            } else if (sortBy === 'growth') {
+                // 篩選出前四天都是正數的股票
+                stocksToDisplay = allFilteredStocks.filter(stock => {
+                    return stock.day1 > 0 && stock.day2 > 0 && stock.day3 > 0 && stock.day4 > 0;
+                });
+                // 按照成長率排序（由大到小）
+                stocksToDisplay.sort((a, b) => b.growthRate - a.growthRate);
+            } else if (sortBy === 'three-days') {
+                // 篩選出四天中至少有三天是正數的股票
+                stocksToDisplay = allFilteredStocks.filter(stock => {
+                    const positiveDays = [stock.day1, stock.day2, stock.day3, stock.day4].filter(val => val > 0).length;
+                    return positiveDays >= 3;
+                });
+                // 按照 4 日累計排序（由大到小）
+                stocksToDisplay.sort((a, b) => b.total - a.total);
+            }
+            
+            // 重新渲染表格
+            renderTable(stocksToDisplay);
+            
+            // 更新統計資訊
+            updateStats(stocksToDisplay);
+        }
+
+        function renderTable(stocks = allFilteredStocks) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            // 根據數值決定顏色類別的函數
+            const getColorClass = (value) => {
+                if (value > 0 && value < 1000) {
+                    return 'neutral';  // 正數但小於 1000，用黑色
+                } else if (value > 0) {
+                    return 'positive'; // 正數且 >= 1000，用紅色
+                } else if (value < 0) {
+                    return 'negative'; // 負數，用綠色
+                } else {
+                    return '';         // 0，無特殊顏色
+                }
+            };
+            
+            stocks.forEach(stock => {
+                const row = document.createElement('tr');
+                
+                // 根據數值正負設定顏色類別
+                const day1Class = getColorClass(stock.day1);
+                const day2Class = getColorClass(stock.day2);
+                const day3Class = getColorClass(stock.day3);
+                const day4Class = getColorClass(stock.day4);
+                const totalClass = getColorClass(stock.total);
+                const avgClass = getColorClass(stock.average);
+                
+                row.innerHTML = `
+                    <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
+                    <td>${stock.name}</td>
+                    <td class="${day1Class}">${stock.day1.toLocaleString()}</td>
+                    <td class="${day2Class}">${stock.day2.toLocaleString()}</td>
+                    <td class="${day3Class}">${stock.day3.toLocaleString()}</td>
+                    <td class="${day4Class}">${stock.day4.toLocaleString()}</td>
+                    <td class="${totalClass}" style="font-weight: bold;">${stock.total.toLocaleString()}</td>
+                    <td class="${avgClass}">${stock.average.toLocaleString()}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateStats(stocks = allFilteredStocks) {
+            const totalBuy = stocks.reduce((sum, stock) => sum + stock.total, 0);
+            const avgBuy = stocks.length > 0 ? Math.round(totalBuy / stocks.length) : 0;
+            
+            document.getElementById('totalStocks').textContent = stocks.length;
+            document.getElementById('totalBuy').textContent = totalBuy.toLocaleString();
+            document.getElementById('avgBuy').textContent = avgBuy.toLocaleString();
+        }
+        
+        // 頁面載入時執行
+        loadData();
+    </script>
+</body>
+</html>

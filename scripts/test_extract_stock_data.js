@@ -39,10 +39,10 @@ const path = require('path');
         const result = [];
         let current = '';
         let inQuotes = false;
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
-            
+
             if (char === '"') {
                 inQuotes = !inQuotes;
             } else if (char === ',' && !inQuotes) {
@@ -67,9 +67,9 @@ const path = require('path');
     csvFiles.forEach(file => console.log(`   - ${file}`));
     console.log('');
 
-    // 從所有 CSV 檔案中提取股票代碼
-    const stockNumbersSet = new Set();
-    
+    // 從所有 CSV 檔案中提取股票代碼和名稱
+    const stockInfoMap = new Map(); // 儲存 { 股票代號: 股票名稱 }
+
     for (const csvFile of csvFiles) {
         const csvFilePath = path.join(dataDir, csvFile);
         const csvContent = fs.readFileSync(csvFilePath, 'utf8');
@@ -78,55 +78,81 @@ const path = require('path');
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
-            
+
             const parts = parseCSVLine(line);
             if (parts.length < 2) continue;
-            
+
             const stockField = parts[1].trim();
             const cleanStockField = stockField.replace(/^"|"$/g, '');
-            
-            // 提取股票代碼：數字+英文的組合，直到空格或中文字出現為止
-            // 例如：'36,00637L元大滬深300正2' → '00637L'
-            //      '37,009813貝萊德標普卓越50' → '009813'
-            //      '46,00983A主動中信ARK創新' → '00983A'
-            // 找到所有符合「數字+可選英文字母」模式的匹配
-            const allMatches = cleanStockField.match(/[\d]+[A-Za-z]*/g);
+
+            // 提取股票代碼和名稱
+            // 格式範例：'00940 元大台灣價值高息' 或 '2303 聯電'
+            const spaceIndex = cleanStockField.indexOf(' ');
             let stockNumber = null;
-            
-            if (allMatches && allMatches.length > 0) {
-                // 優先選擇包含字母的匹配（股票代碼通常有字母，排名沒有）
-                const withLetter = allMatches.find(m => /[A-Za-z]/.test(m));
-                if (withLetter) {
-                    stockNumber = withLetter;
-                } else {
-                    // 如果沒有包含字母的，選擇最長的（股票代碼通常是4-6位，排名是1-2位）
-                    stockNumber = allMatches.reduce((a, b) => a.length > b.length ? a : b);
+            let stockName = '';
+
+            if (spaceIndex > 0) {
+                // 有空格，分割代號和名稱
+                stockNumber = cleanStockField.substring(0, spaceIndex).trim();
+                stockName = cleanStockField.substring(spaceIndex + 1).trim();
+            } else {
+                // 沒有空格，嘗試用舊方法提取代號
+                const allMatches = cleanStockField.match(/[\d]+[A-Za-z]*/g);
+                if (allMatches && allMatches.length > 0) {
+                    const withLetter = allMatches.find(m => /[A-Za-z]/.test(m));
+                    if (withLetter) {
+                        stockNumber = withLetter;
+                    } else {
+                        stockNumber = allMatches.reduce((a, b) => a.length > b.length ? a : b);
+                    }
+                }
+                // 嘗試提取名稱（移除代號後的部分）
+                if (stockNumber) {
+                    stockName = cleanStockField.replace(stockNumber, '').trim();
                 }
             }
-            
+
             if (stockNumber && /^\d+/.test(stockNumber)) {
-                stockNumbersSet.add(stockNumber);
+                // 如果已經有這個股票代號，保留較長的名稱
+                if (!stockInfoMap.has(stockNumber) || stockName.length > stockInfoMap.get(stockNumber).length) {
+                    stockInfoMap.set(stockNumber, stockName);
+                }
             }
         }
     }
 
     // 轉換為陣列並排序
-    let stockNumbers = Array.from(stockNumbersSet).sort();
+    let stockNumbers = Array.from(stockInfoMap.keys()).sort();
     console.log(`📊 從所有 CSV 中提取到 ${stockNumbers.length} 個不重複的股票代碼\n`);
 
     // 讀取現有的 JSON 檔案（如果存在），檢查哪些股票已經有資料
     // 檔名依「交易日期」決定（targetDateStr）
     const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_stock_data.json`);
     let existingData = {};
-    
+
     if (fs.existsSync(outputFilePath)) {
         try {
             const existingContent = fs.readFileSync(outputFilePath, 'utf8');
             existingData = JSON.parse(existingContent);
-            const existingCount = Object.keys(existingData).filter(key => 
+            const existingCount = Object.keys(existingData).filter(key =>
                 existingData[key] && Object.keys(existingData[key]).length > 0
             ).length;
             console.log(`📋 發現現有資料檔案，已有 ${existingCount} 個股票的資料\n`);
+
+            // 檢查並補充缺少的股票名稱
+            let updatedCount = 0;
+            for (const stockCode of Object.keys(existingData)) {
+                if (existingData[stockCode] && !existingData[stockCode].StockName && stockInfoMap.has(stockCode)) {
+                    existingData[stockCode] = {
+                        StockName: stockInfoMap.get(stockCode),
+                        ...existingData[stockCode]
+                    };
+                    updatedCount++;
+                }
+            }
+            if (updatedCount > 0) {
+                console.log(`✏️  補充了 ${updatedCount} 個股票的名稱\n`);
+            }
         } catch (e) {
             console.log(`⚠️  讀取現有資料檔案失敗，將重新建立\n`);
         }
@@ -145,9 +171,15 @@ const path = require('path');
 
     console.log(`🚀 開始處理 ${stockNumbersToProcess.length} 個股票...\n`);
 
-    // 如果沒有需要處理的股票，直接結束
+    // 如果沒有需要處理的股票，檢查是否有更新股票名稱，如果有則儲存
     if (stockNumbersToProcess.length === 0) {
         console.log('✅ 所有股票都已有資料，無需處理！');
+
+        // 儲存更新後的資料（如果有補充股票名稱）
+        if (Object.keys(existingData).length > 0) {
+            fs.writeFileSync(outputFilePath, JSON.stringify(existingData, null, 2), 'utf8');
+            console.log(`💾 已更新資料到: ${outputFilePath}`);
+        }
         return;
     }
 
@@ -156,27 +188,27 @@ const path = require('path');
 
     // 從現有資料開始
     const result = { ...existingData };
-    
+
     // 統計變數（在 try 區塊外定義，以便在外部也能存取）
     let successCount = 0;
     let failCount = 0;
     const failedStocks = []; // 失敗清單
-    
+
     try {
         const total = stockNumbersToProcess.length;
         let processed = 0;
-        
+
         for (const stockNumber of stockNumbersToProcess) {
             processed++;
             const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stockNumber}.djhtm`;
             console.log(`[${processed}/${total}] 正在處理: ${stockNumber} - ${url}...`);
 
             try {
-                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
                 // 等待頁面完全載入，特別是圖表部分
                 await page.waitForTimeout(3000);
-                
+
                 // 檢查是否有 iframe，並嘗試切換到 iframe
                 let targetFrame = page;
                 try {
@@ -206,7 +238,7 @@ const path = require('path');
                     // 方法1: 使用 ID 選擇器（最穩定）
                     const sysJustWebGraphDIV = document.querySelector('#SysJustWebGraphDIV');
                     if (!sysJustWebGraphDIV) {
-                        return { 
+                        return {
                             error: '找不到 #SysJustWebGraphDIV',
                             debug: '請檢查頁面是否完全載入'
                         };
@@ -218,7 +250,7 @@ const path = require('path');
                         fgTxt = sysJustWebGraphDIV.querySelector('div[class*="FgTxt"]');
                     }
                     if (!fgTxt) {
-                        return { 
+                        return {
                             error: '找不到 div.FgTxt',
                             debug: {
                                 sysJustWebGraphDIVExists: !!sysJustWebGraphDIV,
@@ -238,7 +270,7 @@ const path = require('path');
                         const allDivs = Array.from(fgTxt.querySelectorAll('div'));
                         fg0 = allDivs.find(div => div.innerText && div.innerText.includes('SMA5'));
                         if (!fg0) {
-                            return { 
+                            return {
                                 error: '找不到 div#fg0 或包含 SMA5 的元素',
                                 debug: {
                                     fgTxtHTML: fgTxt.innerHTML.substring(0, 500)
@@ -262,7 +294,7 @@ const path = require('path');
                     // 提取所有 span 的文字
                     const spans = Array.from(targetDiv.querySelectorAll('span'));
                     let spanTexts = spans.map(span => span.innerText.trim()).filter(text => text);
-                    
+
                     // 如果沒有找到 span，嘗試從 div 的文字內容中解析
                     if (spanTexts.length === 0) {
                         const divText = targetDiv.innerText.trim();
@@ -285,7 +317,7 @@ const path = require('path');
 
                     // 組織成鍵值對格式
                     const dataObj = {};
-                    
+
                     // 如果資料是成對出現（標籤和值），則組織成物件
                     if (spanTexts.length % 2 === 0 && spanTexts.length > 0) {
                         for (let i = 0; i < spanTexts.length; i += 2) {
@@ -309,7 +341,7 @@ const path = require('path');
                             value = removeCommas(value);
                             dataObj[key] = value;
                         }
-                        
+
                         // 如果還是沒有資料，返回原始文字
                         if (Object.keys(dataObj).length === 0) {
                             dataObj._raw = spanTexts.map(removeCommas);
@@ -338,8 +370,130 @@ const path = require('path');
                         error: data.error
                     });
                 } else {
-                    console.log(`  ✅ [${processed}/${total}] ${stockNumber}: 成功提取資料`);
-                    result[stockNumber] = data.data;
+                    console.log(`  ✅ [${processed}/${total}] ${stockNumber}: 成功提取 SMA 資料`);
+                    result[stockNumber] = {
+                        StockName: stockInfoMap.get(stockNumber) || '',
+                        ...data.data
+                    };
+
+                    // 第二步：爬取機構投資人資料
+                    console.log(`  🔄 [${processed}/${total}] ${stockNumber}: 開始提取機構投資人資料...`);
+                    const institutionalUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stockNumber}&b=2`;
+
+                    try {
+                        await page.goto(institutionalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+                        await page.waitForTimeout(3000);
+
+                        const institutionalData = await page.evaluate(() => {
+                            try {
+                                // 找所有 table.t01
+                                const allT01Tables = document.querySelectorAll('table.t01');
+
+                                // 嘗試找到包含資料的表格
+                                let targetTable = null;
+
+                                // 先嘗試找 td.t0 下的 table.t01
+                                const allT0Cells = document.querySelectorAll('td.t0');
+                                for (const t0Cell of allT0Cells) {
+                                    const t01 = t0Cell.querySelector('table.t01');
+                                    if (t01) {
+                                        const rows = t01.querySelectorAll('tbody tr');
+                                        if (rows.length > 10) {
+                                            targetTable = t01;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // 如果還沒找到，直接找第一個 table.t01
+                                if (!targetTable && allT01Tables.length > 0) {
+                                    targetTable = allT01Tables[0];
+                                }
+
+                                if (!targetTable) {
+                                    return { error: '找不到目標表格' };
+                                }
+
+                                const tbody = targetTable.querySelector('tbody');
+                                if (!tbody) {
+                                    return { error: '找不到 tbody' };
+                                }
+
+                                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                                // 找到標題行（包含「日期」和「外資」「投信」「自營商」的那一行）
+                                // 注意：不能只找「外資」「投信」「自營商」，因為可能有其他行也包含這些詞（如：外資持股、投信持股等）
+                                let headerIndex = -1;
+                                for (let i = 0; i < rows.length; i++) {
+                                    const rowText = rows[i].innerText;
+                                    // 必須同時包含「日期」和「外資」，這樣才能確保是資料表的標題行
+                                    if (rowText.includes('日期') && rowText.includes('外資') && rowText.includes('投信') && rowText.includes('自營商')) {
+                                        headerIndex = i;
+                                        break;
+                                    }
+                                }
+
+                                if (headerIndex === -1) {
+                                    return { error: '找不到標題行' };
+                                }
+
+                                // 初始化資料陣列
+                                const foreignInvestors = [];  // 外資
+                                const investmentTrust = [];   // 投信
+                                const dealers = [];           // 自營商
+                                const dailyTotal = [];        // 單日合計
+
+                                // 從標題行的下一行開始，取10行資料
+                                for (let i = headerIndex + 1; i < Math.min(headerIndex + 11, rows.length); i++) {
+                                    const row = rows[i];
+                                    const rowText = row.innerText.trim();
+                                    const values = rowText.split(/\s+/);
+
+                                    if (values.length >= 5) {
+                                        // 提取數字，移除千位符號
+                                        const parseNumber = (text) => {
+                                            const cleaned = text.trim().replace(/,/g, '');
+                                            const num = parseInt(cleaned, 10);
+                                            return isNaN(num) ? 0 : num;
+                                        };
+
+                                        // values[0] 是日期
+                                        foreignInvestors.push(parseNumber(values[1]));
+                                        investmentTrust.push(parseNumber(values[2]));
+                                        dealers.push(parseNumber(values[3]));
+                                        dailyTotal.push(parseNumber(values[4]));
+                                    }
+                                }
+
+                                return {
+                                    success: true,
+                                    ForeignInvestors: foreignInvestors,
+                                    InvestmentTrust: investmentTrust,
+                                    Dealers: dealers,
+                                    DailyTotal: dailyTotal
+                                };
+                            } catch (e) {
+                                return { error: e.message };
+                            }
+                        });
+
+                        if (institutionalData.error) {
+                            console.log(`  ⚠️  [${processed}/${total}] ${stockNumber}: 機構投資人資料提取失敗 - ${institutionalData.error}`);
+                        } else {
+                            console.log(`  ✅ [${processed}/${total}] ${stockNumber}: 成功提取機構投資人資料 (${institutionalData.ForeignInvestors.length} 天)`);
+                            // 合併到現有資料
+                            result[stockNumber] = {
+                                ...result[stockNumber],
+                                ForeignInvestors: institutionalData.ForeignInvestors,
+                                InvestmentTrust: institutionalData.InvestmentTrust,
+                                Dealers: institutionalData.Dealers,
+                                DailyTotal: institutionalData.DailyTotal
+                            };
+                        }
+                    } catch (error) {
+                        console.log(`  ⚠️  [${processed}/${total}] ${stockNumber}: 機構投資人資料提取錯誤 - ${error.message}`);
+                    }
+
                     successCount++;
                 }
 

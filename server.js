@@ -11,7 +11,7 @@ const DIRS = {
 const server = http.createServer((req, res) => {
     // Enable CORS just in case
     res.setHeader('Access-Control-Allow-Origin', '*');
-    
+
     // Log request for debugging
     console.log(`${req.method} ${req.url}`);
 
@@ -40,12 +40,23 @@ const server = http.createServer((req, res) => {
                 res.end(content);
             }
         });
+    } else if (urlPath === '/foreign') {
+        // Serve the foreign.html file (short URL)
+        fs.readFile(path.join(__dirname, 'public/foreign.html'), (err, content) => {
+            if (err) {
+                res.writeHead(500);
+                res.end('Error loading foreign.html');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(content);
+            }
+        });
     } else if (urlPath.startsWith('/web/')) {
         // Serve files from web directory
         // /web/compare.html or /web/analyze.html
         const fileName = urlPath.replace('/web/', '');
         const filePath = path.join(__dirname, 'web', fileName);
-        
+
         // Security check: ensure file is within web directory
         const webDir = path.join(__dirname, 'web');
         if (!filePath.startsWith(webDir)) {
@@ -53,7 +64,7 @@ const server = http.createServer((req, res) => {
             res.end('Forbidden');
             return;
         }
-        
+
         // Determine content type based on file extension
         let contentType = 'text/html; charset=utf-8';
         if (fileName.endsWith('.css')) {
@@ -61,13 +72,54 @@ const server = http.createServer((req, res) => {
         } else if (fileName.endsWith('.js')) {
             contentType = 'application/javascript';
         }
-        
+
         fs.readFile(filePath, (err, content) => {
             if (err) {
                 res.writeHead(404);
                 res.end('File not found');
             } else {
                 res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content);
+            }
+        });
+    } else if (urlPath.startsWith('/public/')) {
+        // Serve files from public directory
+        const fileName = urlPath.replace('/public/', '');
+        const filePath = path.join(__dirname, 'public', fileName);
+
+        // Security check: ensure file is within public directory
+        const publicDir = path.join(__dirname, 'public');
+        if (!filePath.startsWith(publicDir)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
+
+        // Determine content type based on file extension
+        let contentType = 'text/html; charset=utf-8';
+        if (fileName.endsWith('.css')) {
+            contentType = 'text/css';
+        } else if (fileName.endsWith('.js')) {
+            contentType = 'application/javascript';
+        }
+
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content);
+            }
+        });
+    } else if (urlPath === '/foreign.html') {
+        // Direct access to foreign.html
+        fs.readFile(path.join(__dirname, 'public/foreign.html'), (err, content) => {
+            if (err) {
+                res.writeHead(500);
+                res.end('Error loading foreign.html');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(content);
             }
         });
