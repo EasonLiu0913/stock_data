@@ -2,8 +2,8 @@ name: Daily Stock Data Scraper
 
 on:
     schedule:
-        # Run at 1:00 AM UTC (9:00 AM Taiwan Time, UTC+8)
-        - cron: '0 1 * * *'
+        # Run at 9:00 AM UTC (5:00 PM Taiwan Time, UTC+8) - 確保這時候已有當日資料
+        - cron: '0 9 * * *'
     workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -48,6 +48,12 @@ jobs:
               run: |
                   echo "🚀 開始執行 extract_warrant_data.js..."
                   node scripts/extract_warrant_data.js
+              continue-on-error: true
+
+            - name: Generate static file lists (for GitHub Pages)
+              run: |
+                  echo "📑 正在產生檔案列表..."
+                  node scripts/generate_file_lists.js
               continue-on-error: true
 
             - name: Commit and push data
