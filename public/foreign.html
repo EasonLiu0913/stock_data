@@ -259,6 +259,7 @@
         <div class="header">
             <h1>🎯 外資連續買超股票</h1>
             <p class="subtitle">篩選條件：外資近 4 天連續買超（前四個數字都是正數）</p>
+            <p class="subtitle" id="dataDate" style="color: #667eea; font-weight: 600; margin-top: 0.5rem;"></p>
         </div>
 
         <div class="stats" id="stats">
@@ -324,6 +325,14 @@
                     throw new Error('無法載入資料');
                 }
                 
+                // 從檔名提取日期 (假設格式: ...fubon_YYYYMMDD_stock_data.json)
+                const dateMatch = dataPath.match(/fubon_(\d{8})_stock_data\.json/);
+                if (dateMatch && dateMatch[1]) {
+                    const dateStr = dateMatch[1];
+                    const formattedDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
+                    document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
+                }
+
                 const data = await response.json();
                 
                 // 載入所有有 ForeignInvestors 資料的股票（至少 4 天）
