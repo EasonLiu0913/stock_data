@@ -12,10 +12,16 @@
 
 ### 2. 訪問網站
 
-部署完成後，可以通過以下網址訪問：
-```
-https://你的用戶名.github.io/stock_data/public/foreign.html
-```
+部署完成後，可以通過以下網址訪問您的工具：
+
+- **外資連續買超 (Foreign Investors)**:
+  `https://你的用戶名.github.io/stock_data/public/foreign.html`
+
+- **股票分析工具 (Analyze Tool)**:
+  `https://你的用戶名.github.io/stock_data/public/analyze.html`
+
+- **富邦/證交所比對 (Compare Tool)**:
+  `https://你的用戶名.github.io/stock_data/public/compare.html`
 
 ## 使用自動部署腳本
 
