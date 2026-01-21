@@ -56,74 +56,41 @@ const path = require('path');
         return result;
     }
 
-    // 掃描 data_fubon 目錄，找出所有包含「交易日期」的 CSV 檔案
-    const dataDir = path.join(__dirname, '../data_fubon');
-    const allFiles = fs.readdirSync(dataDir);
-    const csvFiles = allFiles.filter(file =>
-        file.endsWith('.csv') && file.includes(targetDateStr)
-    );
-
-    console.log(`📁 找到 ${csvFiles.length} 個符合交易日期 (${targetDateStr}) 的 CSV 檔案:`);
-    csvFiles.forEach(file => console.log(`   - ${file}`));
-    console.log('');
-
-    // 從所有 CSV 檔案中提取股票代碼和名稱
+    // 讀取 TWSE 產業分類 CSV 檔案
+    const twseIndustryCsvPath = path.join(__dirname, '../data_twse/twse_industry.csv');
     const stockInfoMap = new Map(); // 儲存 { 股票代號: 股票名稱 }
 
-    for (const csvFile of csvFiles) {
-        const csvFilePath = path.join(dataDir, csvFile);
-        const csvContent = fs.readFileSync(csvFilePath, 'utf8');
+    if (fs.existsSync(twseIndustryCsvPath)) {
+        console.log(`📁 讀取股票清單: ${twseIndustryCsvPath}`);
+        const csvContent = fs.readFileSync(twseIndustryCsvPath, 'utf8');
         const lines = csvContent.split('\n');
 
+        // 第一行是標題 (Code,Name,Industry)，從第二行開始讀取
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
 
             const parts = parseCSVLine(line);
-            if (parts.length < 2) continue;
+            if (parts.length >= 2) {
+                const stockCode = parts[0];
+                const stockName = parts[1];
 
-            const stockField = parts[1].trim();
-            const cleanStockField = stockField.replace(/^"|"$/g, '');
-
-            // 提取股票代碼和名稱
-            // 格式範例：'00940 元大台灣價值高息' 或 '2303 聯電'
-            const spaceIndex = cleanStockField.indexOf(' ');
-            let stockNumber = null;
-            let stockName = '';
-
-            if (spaceIndex > 0) {
-                // 有空格，分割代號和名稱
-                stockNumber = cleanStockField.substring(0, spaceIndex).trim();
-                stockName = cleanStockField.substring(spaceIndex + 1).trim();
-            } else {
-                // 沒有空格，嘗試用舊方法提取代號
-                const allMatches = cleanStockField.match(/[\d]+[A-Za-z]*/g);
-                if (allMatches && allMatches.length > 0) {
-                    const withLetter = allMatches.find(m => /[A-Za-z]/.test(m));
-                    if (withLetter) {
-                        stockNumber = withLetter;
-                    } else {
-                        stockNumber = allMatches.reduce((a, b) => a.length > b.length ? a : b);
-                    }
-                }
-                // 嘗試提取名稱（移除代號後的部分）
-                if (stockNumber) {
-                    stockName = cleanStockField.replace(stockNumber, '').trim();
-                }
-            }
-
-            if (stockNumber && /^\d+/.test(stockNumber)) {
-                // 如果已經有這個股票代號，保留較長的名稱
-                if (!stockInfoMap.has(stockNumber) || stockName.length > stockInfoMap.get(stockNumber).length) {
-                    stockInfoMap.set(stockNumber, stockName);
+                // 只處理有效的股票代號
+                if (stockCode && /^\d+/.test(stockCode)) {
+                    stockInfoMap.set(stockCode, stockName);
                 }
             }
         }
+    } else {
+        console.error(`❌ 找不到股票清單檔案: ${twseIndustryCsvPath}`);
+        console.error('請先執行 scripts/extract_twse_industry.js 產生該檔案');
+        process.exit(1);
     }
 
     // 轉換為陣列並排序
     let stockNumbers = Array.from(stockInfoMap.keys()).sort();
-    console.log(`📊 從所有 CSV 中提取到 ${stockNumbers.length} 個不重複的股票代碼\n`);
+    console.log(`📊 從 CSV 中提取到 ${stockNumbers.length} 個股票代碼\n`);
+
 
     // 讀取現有的 JSON 檔案（如果存在），檢查哪些股票已經有資料
     // 檔名依「交易日期」決定（targetDateStr）
