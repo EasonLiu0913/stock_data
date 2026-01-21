@@ -87,11 +87,14 @@
             border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            overflow-x: auto; /* Allow horizontal scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px; /* Ensure table doesn't get too squeezed */
         }
 
         thead {
@@ -229,15 +232,53 @@
 
         @media (max-width: 768px) {
             body {
-                padding: 1rem;
+                padding: 1rem 0.5rem; /* Reduce side padding on mobile */
+            }
+
+            .container {
+                width: 100%;
+                overflow-x: hidden; /* Prevent body scroll from container overflow */
+            }
+
+            .header {
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                border-radius: 15px;
             }
 
             h1 {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 0.9rem;
             }
 
             .stats {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr; /* 2 columns on mobile */
+                gap: 0.8rem;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .stat-value {
+                font-size: 1.8rem;
+            }
+
+            .sort-container {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 1rem;
+            }
+
+            .sort-container label {
+                margin-bottom: 0.5rem;
+            }
+
+            .sort-container select {
+                width: 100%;
             }
 
             table {
@@ -245,11 +286,18 @@
             }
 
             th, td {
-                padding: 0.8rem;
+                padding: 0.8rem 0.5rem; /* Reduce cell padding */
+                white-space: nowrap; /* Keep content on one line for scrolling */
             }
 
             .day-values {
                 flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 480px) {
+             .stats {
+                grid-template-columns: 1fr; /* 1 column on very small screens */
             }
         }
     </style>
