@@ -3,10 +3,14 @@ const fs = require('fs');
 const path = require('path');
 
 (async () => {
-    // 計算今天和前一天的日期（格式：YYYYMMDD）
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    // 取得台北時間 (UTC+8)
+    // 在 GitHub Actions (UTC) 上，直接用 new Date() 會得到 UTC 時間，導致 14:00 (UTC+8) 變成 06:00 (UTC)，造成日期誤判
+    const now = new Date();
+    const taipeiDateString = now.toLocaleString('en-US', { timeZone: 'Asia/Taipei', hour12: false });
+    const taipeiTime = new Date(taipeiDateString);
+
+    const taipeiHour = taipeiTime.getHours();
+    const taipeiMinute = taipeiTime.getMinutes();
 
     const formatDate = (date) => {
         const year = date.getFullYear();
@@ -15,23 +19,19 @@ const path = require('path');
         return `${year}${month}${day}`;
     };
 
-    const todayStr = formatDate(today);
-    const yesterdayStr = formatDate(yesterday);
+    const todayStr = formatDate(taipeiTime);
 
-    // 根據執行時間決定「交易日期」：
-    // - 每天下午 14:00（含）之後，到隔天早上 08:59 之前，都算前一個交易日
-    //   例如：1/19 14:00 ~ 1/20 08:59 → 使用 1/19 當作檔名日期
-    // - 其他時間（09:00 ~ 13:59）可以視需要調整，目前邏輯也視為「昨天」
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    const yesterdayTaipei = new Date(taipeiTime);
+    yesterdayTaipei.setDate(yesterdayTaipei.getDate() - 1);
+    const yesterdayStr = formatDate(yesterdayTaipei);
 
-    // 簡化規則：如果現在時間 < 14:00，就用昨天；否則用今天
-    const targetDateStr = currentHour < 14 ? yesterdayStr : todayStr;
+    // 簡化規則：如果台北時間 < 14:00，就用昨天；否則用今天
+    const targetDateStr = taipeiHour < 14 ? yesterdayStr : todayStr;
 
     console.log(
-        `📅 系統日期: 今天=${todayStr}, 昨天=${yesterdayStr}；目前時間=${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}，` +
-        `本次擷取的「交易日期」將使用: ${targetDateStr}\n`
+        `📅 系統原始時間 (UTC/Local): ${now.toISOString()}\n` +
+        `🌏 台北時間 (UTC+8): ${taipeiDateString} (Hour: ${taipeiHour})\n` +
+        `📅 交易日期判斷: 今天=${todayStr}, 昨天=${yesterdayStr} -> 使用: ${targetDateStr}\n`
     );
 
     // 簡單的 CSV 解析函數
