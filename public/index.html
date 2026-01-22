@@ -324,7 +324,7 @@
 
 <body>
   <header class="header">
-    <h1>📊 股票數據瀏覽器</h1>
+    <h1>股票數據瀏覽器</h1>
     <p>瀏覽每日主力買超、值增/值縮、量增/量縮排行</p>
   </header>
 
@@ -384,11 +384,48 @@
     let filesData = [];
     let availableDates = [];
 
+    // Get URL parameters
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        date: params.get('date'),
+        category: params.get('category')
+      };
+    }
+
+    // Update URL parameters
+    function updateUrlParams(date, category) {
+      const params = new URLSearchParams();
+      if (date) params.set('date', date);
+      if (category) params.set('category', category);
+      const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+
     // Initialize
     async function init() {
       await loadFilesJson();
       populateDropdowns();
       setupEventListeners();
+
+      // Check for URL parameters and auto-select
+      const urlParams = getUrlParams();
+      if (urlParams.date || urlParams.category) {
+        const dateSelect = document.getElementById('dateSelect');
+        const categorySelect = document.getElementById('categorySelect');
+
+        if (urlParams.date && availableDates.includes(urlParams.date)) {
+          dateSelect.value = urlParams.date;
+        }
+        if (urlParams.category && CATEGORIES.includes(urlParams.category)) {
+          categorySelect.value = urlParams.category;
+        }
+
+        // Load data if both are selected
+        if (dateSelect.value && categorySelect.value) {
+          loadData();
+        }
+      }
     }
 
     // Load files.json
@@ -447,6 +484,9 @@
     async function loadData() {
       const date = document.getElementById('dateSelect').value;
       const category = document.getElementById('categorySelect').value;
+
+      // Update URL parameters
+      updateUrlParams(date, category);
 
       if (!date || !category) {
         return;
