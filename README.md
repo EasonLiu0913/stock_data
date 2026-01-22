@@ -1,77 +1,53 @@
-# WantGoo Stock Scraper
+# Stock Data Dashboard (股票數據儀表板)
 
-Automated scraper to extract the top 10 stocks from WantGoo's "Major Investors Net Buy/Sell Rank" for the last 15 days.
+這是一個專注於台股籌碼面分析的資料視覺化專案，主要追蹤主力籌碼與外資動向。
 
-## Quick Start
+## 📊 主要功能
 
-### 1. Extract Cookies (One-time setup)
+### 1. 股票數據瀏覽器 (Stock Data Browser)
+入口：[Stock Data Browser](https://easonliu0913.github.io/stock_data/public/index.html)
 
-Open your browser console on WantGoo and run the cookie extraction script:
+提供每日更新的籌碼排行數據，支援多種篩選條件：
+- **主力買賣超排行**：支援 1、2、3、4、5、10、20、30 日區間統計。
+- **市值/量能排行**：上市值增/值縮、量增/量縮排行。
+- **URL 參數連動**：選擇日期或分類時會自動更新 URL，方便分享特定數據頁面。
 
-```bash
-# See detailed instructions in COOKIE_SETUP.md
-```
+### 2. 外資連續買超追蹤 (Foreign Investors Tracker)
+入口：[Foreign Investors Tracker](https://easonliu0913.github.io/stock_data/public/foreign.html)
 
-**TL;DR:**
-1. Open https://www.wantgoo.com/stock/major-investors/net-buy-sell-rank?market=Listed&orderByDays=15
-2. Press F12 → Console tab
-3. Paste content of `extract_cookies.js` and press Enter
-4. Save clipboard to `cookies.json`
+專門針對外資動向的進階分析工具：
+- **連續買超排行**：找出外資連續多日買進的潛力股（支援顯示完整 10 日數據）。
+- **多種排序模式**：
+    - 4 日累計買超
+    - 短期成長率 (第1天 vs 第2天)
+    - 區間佈局 (4天內3天買超)
+    - **連續天數排行** (由長到短排序，並顯示 10 日累計與平均)
+- **視覺化圖表**：以顏色區分買賣超強度（紅買綠賣）。
 
-### 2. Run the Scraper
+### 3. 其他分析工具
+- **[分析工具](https://easonliu0913.github.io/stock_data/public/analyze.html)**：個股深入分析工具。
+- **[比較工具](https://easonliu0913.github.io/stock_data/public/compare.html)**：多檔股票比較工具。
 
-```bash
-export PATH=$HOME/.nvm/versions/node/v22.11.0/bin:$PATH
-node scraper.js
-```
+---
 
-### 3. Output
+## 🚀 如何使用
 
-The scraper creates `stock_data_YYYYMMDD.csv` with 7 columns:
-- Rank
-- Stock (name)
-- NetBuy_Today
-- NetBuy_15Days
-- Price
-- Change (%)
-- Volume
+### 線上瀏覽 (GitHub Pages)
+直接訪問上述連結即可使用。
 
-## Files
+### 本地開發
+1. Clone 此專案：
+   ```bash
+   git clone https://github.com/EasonLiu0913/stock_data.git
+   ```
+2. 直接用瀏覽器打開 `public/` 資料夾下的 HTML 檔案即可使用。
 
-- `scraper.js` - Main scraper script
-- `extract_cookies.js` - Browser console script to extract cookies
-- `COOKIE_SETUP.md` - Detailed setup instructions
-- `cookies.json` - Your browser cookies (create this file)
-- `package.json` - Node.js dependencies
+---
 
-## How It Works
+## 🛠 資料更新 (Data Update)
 
-1. Loads cookies from `cookies.json` to bypass bot detection
-2. Navigates to WantGoo with `orderByDays=15` parameter
-3. Waits for `table#netBuyRank` to load
-4. Extracts top 10 rows from the table
-5. Saves to CSV with timestamp
+本專案使用自動化流程每日更新數據：
 
-## Troubleshooting
-
-**"No cookies.json found"**
-- Run the cookie extraction process (see COOKIE_SETUP.md)
-
-**"No data extracted"**
-- Cookies may have expired - re-extract them
-- Website might be temporarily unavailable
-
-**Bot detection / verification page**
-- Make sure cookies.json contains valid, recent cookies
-- Ensure you're logged into WantGoo in your browser
-
-## Daily Automation
-
-To run daily, add to crontab:
-
-```bash
-# Run every day at 9 AM
-0 9 * * * cd /Users/eason/Documents/stock && /Users/eason/.nvm/versions/node/v22.11.0/bin/node scraper.js
-```
-
-Note: You may need to refresh cookies periodically (every few weeks).
+- **排程執行**：系統會每日自動執行爬蟲腳本更新數據。
+- **資料位置**：所有處理後的 JSON/CSV 檔案存放在 `data_fubon/` 目錄中。
+- **自動化**：透過 Crontab 每日固定時間自動執行更新。

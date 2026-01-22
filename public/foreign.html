@@ -318,7 +318,6 @@
     <div class="container">
         <div class="header">
             <h1>🎯 外資連續買超股票</h1>
-            <p class="subtitle">篩選條件：外資近 4 天連續買超（前四個數字都是正數）</p>
             <p class="subtitle" id="dataDate" style="color: #667eea; font-weight: 600; margin-top: 0.5rem;"></p>
         </div>
 
@@ -340,10 +339,10 @@
         <div class="sort-container">
             <label for="sortSelect">排序方式：</label>
             <select id="sortSelect" onchange="sortStocks()">
+                <option value="consecutive" selected>連續最多天買超排行</option>
                 <option value="total">4日累計（從多到少）</option>
                 <option value="growth">第1天→第2天成長率（從大到小）</option>
                 <option value="three-days">四天中有三天在買（4日累計從大到小）</option>
-                <option value="consecutive">連續最多天買超排行</option>
             </select>
         </div>
 
@@ -355,12 +354,19 @@
                     <tr>
                         <th>股票代號</th>
                         <th>股票名稱</th>
+                        <th>連續天數</th>
                         <th>第1天</th>
                         <th>第2天</th>
                         <th>第3天</th>
                         <th>第4天</th>
-                        <th>4日累計</th>
-                        <th>平均每日</th>
+                        <th>第5天</th>
+                        <th>第6天</th>
+                        <th>第7天</th>
+                        <th>第8天</th>
+                        <th>第9天</th>
+                        <th>第10天</th>
+                        <th>10日累計</th>
+                        <th>10日平均</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -458,8 +464,15 @@
                 // 檢查 URL 參數並設定下拉選單
                 const urlParams = getUrlParams();
                 const validSortOptions = ['total', 'growth', 'three-days', 'consecutive'];
+
+                // 如果 URL 有參數，使用參數；否則保持預設值 (consecutive)
                 if (urlParams.sort && validSortOptions.includes(urlParams.sort)) {
                     document.getElementById('sortSelect').value = urlParams.sort;
+                } else {
+                    // 若無 URL 參數，確保選單和變數都設為預設值
+                    document.getElementById('sortSelect').value = 'consecutive';
+                    // 並且更新 URL 為預設值，這樣分享連結時才會一致 (選擇性)
+                    // updateUrlParams('consecutive'); 
                 }
 
                 // 初始排序（依照下拉選單值）
