@@ -444,6 +444,7 @@
         let allFilteredStocks = []; // 儲存所有符合條件的股票資料
         let currentDataDateStr = ''; // 儲存當前資料日期字串 (YYYYMMDD)
 
+        // TODO: 台股可能會遇到颱風天或其他因素停市，所以建議從 /data_fubon/files.json 往前找日期
         // 計算過去 N 個交易日（跳過週末）
         function getTradingDates(baseDateStr, count) {
             const dates = [];
@@ -542,7 +543,17 @@
                 allFilteredStocks = [];
 
                 for (const [stockCode, stockData] of Object.entries(data)) {
-                    const foreignInvestors = stockData.ForeignInvestors;
+                    let foreignInvestors = stockData.ForeignInvestors;
+                    let dates = [];
+
+                    // Handle new Object format (Date -> Value)
+                    if (foreignInvestors && !Array.isArray(foreignInvestors) && typeof foreignInvestors === 'object') {
+                        // Sort dates descending (Newest first)
+                        // Format "115/01/22" sorts correctly as string
+                        const sortedDates = Object.keys(foreignInvestors).sort().reverse();
+                        dates = sortedDates;
+                        foreignInvestors = sortedDates.map(d => foreignInvestors[d]);
+                    }
 
                     // 檢查是否有 ForeignInvestors 資料且至少有 4 天
                     if (foreignInvestors && foreignInvestors.length >= 4) {
@@ -576,7 +587,8 @@
                             average: average,
                             growthRate: growthRate,
                             consecutiveDays: consecutiveDays,
-                            foreignInvestors: foreignInvestors
+                            foreignInvestors: foreignInvestors,
+                            dates: dates // Store the dates
                         });
                     }
                 }
@@ -688,8 +700,13 @@
             // 根據排序模式設定表頭
             if (sortBy === 'consecutive') {
                 // 10 天模式：顯示所有 10 天資料
-                // 計算 10 個交易日日期
-                const tradingDates = getTradingDates(currentDataDateStr || '20250101', 10);
+                // 優先使用從資料中提取的日期
+                let tradingDates = [];
+                if (stocks.length > 0 && stocks[0].dates && stocks[0].dates.length > 0) {
+                    tradingDates = stocks[0].dates.slice(0, 10);
+                } else {
+                    tradingDates = getTradingDates(currentDataDateStr || '20250101', 10);
+                }
 
                 let dateHeaders = '';
                 tradingDates.forEach(date => {
@@ -737,18 +754,23 @@
                 });
             } else {
                 // 4 天模式：原本的顯示邏輯
-                // 計算 4 個交易日日期
-                const tradingDates = getTradingDates(currentDataDateStr || '20250101', 4);
+                // 優先使用從資料中提取的日期
+                let tradingDates = [];
+                if (stocks.length > 0 && stocks[0].dates && stocks[0].dates.length > 0) {
+                    tradingDates = stocks[0].dates.slice(0, 4);
+                } else {
+                    tradingDates = getTradingDates(currentDataDateStr || '20250101', 4);
+                }
 
                 tableHead.innerHTML = `
                     <tr>
                         <th class="serial-col">#</th>
                         <th>股票代號</th>
                         <th>股票名稱</th>
-                        <th>${tradingDates[0]}</th>
-                        <th>${tradingDates[1]}</th>
-                        <th>${tradingDates[2]}</th>
-                        <th>${tradingDates[3]}</th>
+                        <th>${tradingDates[0] || 'Day 1'}</th>
+                        <th>${tradingDates[1] || 'Day 2'}</th>
+                        <th>${tradingDates[2] || 'Day 3'}</th>
+                        <th>${tradingDates[3] || 'Day 4'}</th>
                         <th>4日累計</th>
                         <th>平均每日</th>
                     </tr>

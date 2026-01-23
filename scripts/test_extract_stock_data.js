@@ -162,6 +162,8 @@ const path = require('path');
     const failedStocks = []; // 失敗清單
 
     try {
+        // 測試用：只處理前 3 檔股票
+        // stockNumbersToProcess = stockNumbersToProcess.slice(0, 3);
         const total = stockNumbersToProcess.length;
         let processed = 0;
 
@@ -282,6 +284,24 @@ const path = require('path');
                         return str.replace(/,/g, '');
                     };
 
+                    // 提取日期
+                    const dateElement = document.querySelector('.opsBtmTitleK');
+                    let dateKey = 'Unknown';
+                    if (dateElement) {
+                        const dateText = dateElement.innerText.trim();
+                        // 嘗試解析 YYYY/MM/DD
+                        const parts = dateText.split('/');
+                        if (parts.length === 3) {
+                            const year = parseInt(parts[0]);
+                            const rocYear = year - 1911;
+                            const month = parts[1];
+                            const day = parts[2];
+                            dateKey = `${rocYear}/${month}/${day}`;
+                        } else {
+                            dateKey = dateText;
+                        }
+                    }
+
                     // 組織成鍵值對格式
                     const dataObj = {};
 
@@ -320,7 +340,10 @@ const path = require('path');
                         success: true,
                         spanCount: spans.length,
                         spanTexts: spanTexts,
-                        data: dataObj
+                        date: dateKey,
+                        data: {
+                            [dateKey]: dataObj
+                        }
                     };
                 });
 
@@ -345,18 +368,37 @@ const path = require('path');
 
                     // 第二步：爬取機構投資人資料
                     console.log(`  🔄 [${processed}/${total}] ${stockNumber}: 開始提取機構投資人資料...`);
-                    const institutionalUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stockNumber}&b=2`;
 
                     try {
+                        // 1. 設定日期範圍（1個月）
+                        // 交易日期: targetDateStr (YYYYMMDD) -> Date Object
+                        const year = parseInt(targetDateStr.substring(0, 4));
+                        const month = parseInt(targetDateStr.substring(4, 6)) - 1;
+                        const day = parseInt(targetDateStr.substring(6, 8));
+
+                        const endDateObj = new Date(year, month, day);
+                        const startDateObj = new Date(year, month - 1, day); // 往前推一個月
+
+                        // 格式化日期為 YYYY-M-D (不補零)
+                        const formatDateParam = (date) => {
+                            return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+                        };
+
+                        const startDateParam = formatDateParam(startDateObj);
+                        const endDateParam = formatDateParam(endDateObj);
+
+                        // 建構帶有日期參數的 URL
+                        // c = 起始日, d = 迄止日
+                        const institutionalUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stockNumber}&c=${startDateParam}&d=${endDateParam}`;
+
+                        // 2. 直接前往目標 URL
                         await page.goto(institutionalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-                        await page.waitForTimeout(3000);
+                        await page.waitForTimeout(1000); // 稍作等待確保 DOM 穩定
 
                         const institutionalData = await page.evaluate(() => {
                             try {
                                 // 找所有 table.t01
                                 const allT01Tables = document.querySelectorAll('table.t01');
-
-                                // 嘗試找到包含資料的表格
                                 let targetTable = null;
 
                                 // 先嘗試找 td.t0 下的 table.t01
@@ -365,70 +407,61 @@ const path = require('path');
                                     const t01 = t0Cell.querySelector('table.t01');
                                     if (t01) {
                                         const rows = t01.querySelectorAll('tbody tr');
-                                        if (rows.length > 10) {
+                                        if (rows.length > 5) {
                                             targetTable = t01;
                                             break;
                                         }
                                     }
                                 }
 
-                                // 如果還沒找到，直接找第一個 table.t01
                                 if (!targetTable && allT01Tables.length > 0) {
                                     targetTable = allT01Tables[0];
                                 }
 
-                                if (!targetTable) {
-                                    return { error: '找不到目標表格' };
-                                }
+                                if (!targetTable) return { error: '找不到目標表格' };
 
                                 const tbody = targetTable.querySelector('tbody');
-                                if (!tbody) {
-                                    return { error: '找不到 tbody' };
-                                }
+                                if (!tbody) return { error: '找不到 tbody' };
 
                                 const rows = Array.from(tbody.querySelectorAll('tr'));
 
-                                // 找到標題行（包含「日期」和「外資」「投信」「自營商」的那一行）
-                                // 注意：不能只找「外資」「投信」「自營商」，因為可能有其他行也包含這些詞（如：外資持股、投信持股等）
                                 let headerIndex = -1;
                                 for (let i = 0; i < rows.length; i++) {
                                     const rowText = rows[i].innerText;
-                                    // 必須同時包含「日期」和「外資」，這樣才能確保是資料表的標題行
                                     if (rowText.includes('日期') && rowText.includes('外資') && rowText.includes('投信') && rowText.includes('自營商')) {
                                         headerIndex = i;
                                         break;
                                     }
                                 }
 
-                                if (headerIndex === -1) {
-                                    return { error: '找不到標題行' };
-                                }
+                                if (headerIndex === -1) return { error: '找不到標題行' };
 
-                                // 初始化資料陣列
-                                const foreignInvestors = [];  // 外資
-                                const investmentTrust = [];   // 投信
-                                const dealers = [];           // 自營商
-                                const dailyTotal = [];        // 單日合計
+                                const foreignInvestors = {};
+                                const investmentTrust = {};
+                                const dealers = {};
+                                const dailyTotal = {};
 
-                                // 從標題行的下一行開始，取10行資料
-                                for (let i = headerIndex + 1; i < Math.min(headerIndex + 11, rows.length); i++) {
-                                    const row = rows[i];
+                                const maxRows = 30;
+                                const dataRows = rows.slice(headerIndex + 1, headerIndex + 1 + maxRows);
+
+                                for (const row of dataRows) {
                                     const rowText = row.innerText.trim();
                                     const values = rowText.split(/\s+/);
 
                                     if (values.length >= 5) {
-                                        // 提取數字，移除千位符號
                                         const parseNumber = (text) => {
                                             const cleaned = text.trim().replace(/,/g, '');
                                             const num = parseInt(cleaned, 10);
                                             return isNaN(num) ? 0 : num;
                                         };
 
-                                        // values[0] 是日期
-                                        foreignInvestors.push(parseNumber(values[1]));
-                                        investmentTrust.push(parseNumber(values[2]));
-                                        dealers.push(parseNumber(values[3]));
-                                        dailyTotal.push(parseNumber(values[4]));
+                                        const dateKey = values[0];
+                                        if (dateKey.match(/^\d+\/\d+\/\d+$/)) {
+                                            foreignInvestors[dateKey] = parseNumber(values[1]);
+                                            investmentTrust[dateKey] = parseNumber(values[2]);
+                                            dealers[dateKey] = parseNumber(values[3]);
+                                            dailyTotal[dateKey] = parseNumber(values[4]);
+                                        }
                                     }
                                 }
 
@@ -447,8 +480,8 @@ const path = require('path');
                         if (institutionalData.error) {
                             console.log(`  ⚠️  [${processed}/${total}] ${stockNumber}: 機構投資人資料提取失敗 - ${institutionalData.error}`);
                         } else {
-                            console.log(`  ✅ [${processed}/${total}] ${stockNumber}: 成功提取機構投資人資料 (${institutionalData.ForeignInvestors.length} 天)`);
-                            // 合併到現有資料
+                            const fiCount = Object.keys(institutionalData.ForeignInvestors).length;
+                            console.log(`  ✅ [${processed}/${total}] ${stockNumber}: 成功提取機構投資人資料 (${fiCount} 天)`);
                             result[stockNumber] = {
                                 ...result[stockNumber],
                                 ForeignInvestors: institutionalData.ForeignInvestors,
@@ -495,7 +528,6 @@ const path = require('path');
     console.log(`⏭️  跳過: ${skippedCount} 個（已有資料）`);
     console.log(`📊 總計: ${stockNumbers.length} 個股票\n`);
 
-    // 如果有失敗的股票，輸出失敗清單
     if (failedStocks && failedStocks.length > 0) {
         console.log('=== 失敗清單 ===');
         failedStocks.forEach((item, index) => {
@@ -504,13 +536,11 @@ const path = require('path');
         });
         console.log('');
 
-        // 儲存失敗清單到檔案（同樣使用交易日期作為檔名日期）
         const failedListFile = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_stock_data_failedList.json`);
         fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8');
         console.log(`📋 失敗清單已儲存到: ${failedListFile}\n`);
     }
 
-    // 儲存結果到檔案（使用日期作為檔名）
     fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
     console.log(`💾 結果已儲存到: ${outputFilePath}`);
 
