@@ -87,11 +87,13 @@
             backdrop-filter: blur(10px);
             border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+            max-height: 75vh;
+            overflow-y: auto;
             overflow-x: auto;
             /* Allow horizontal scrolling */
             -webkit-overflow-scrolling: touch;
             /* Smooth scrolling on iOS */
+            position: relative;
         }
 
         table {
@@ -102,7 +104,8 @@
         }
 
         thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+            /* Background moved to th for sticky support */
             color: white;
         }
 
@@ -112,6 +115,11 @@
             font-weight: 600;
             font-size: 0.95rem;
             letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #667eea;
+            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
         }
 
         tbody tr {
@@ -178,6 +186,13 @@
             font-weight: 500;
             background: #e6fffa;
             color: #234e52;
+        }
+
+        .serial-col {
+            text-align: center;
+            width: 60px;
+            font-weight: bold;
+            color: #cbd5e0;
         }
 
         .loading {
@@ -311,6 +326,51 @@
                 /* 1 column on very small screens */
             }
         }
+
+        .search-container {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .search-container input {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            width: 200px;
+        }
+
+        .search-container input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-container button {
+            padding: 0.75rem 1.2rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-container button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .highlight-row {
+            background-color: #fffaf0 !important;
+            outline: 2px solid #ed8936;
+            transition: all 0.5s ease;
+            z-index: 5;
+            position: relative;
+        }
     </style>
 </head>
 
@@ -344,6 +404,11 @@
                 <option value="growth">第1天→第2天成長率（從大到小）</option>
                 <option value="three-days">四天中有三天在買（4日累計從大到小）</option>
             </select>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="搜尋代號或名稱..."
+                    onkeyup="if(event.key === 'Enter') searchStock()">
+                <button onclick="searchStock()">🔍</button>
+            </div>
         </div>
 
         <div class="table-container">
@@ -377,6 +442,36 @@
 
     <script>
         let allFilteredStocks = []; // 儲存所有符合條件的股票資料
+        let currentDataDateStr = ''; // 儲存當前資料日期字串 (YYYYMMDD)
+
+        // 計算過去 N 個交易日（跳過週末）
+        function getTradingDates(baseDateStr, count) {
+            const dates = [];
+            // 解析基本日期 (YYYYMMDD)
+            const year = parseInt(baseDateStr.substring(0, 4));
+            const month = parseInt(baseDateStr.substring(4, 6)) - 1; // Month is 0-indexed
+            const day = parseInt(baseDateStr.substring(6, 8));
+
+            let currentDate = new Date(year, month, day);
+
+            for (let i = 0; i < count; i++) {
+                // 如果是週六 (6) 或週日 (0)，往前推一天直到平日
+                // 注意：這裡假設資料也是跳過週末的。如果碰到連假，
+                // 因為沒有行事曆 API，可能會有些微誤差，但對一般週末有效。
+                while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+                    currentDate.setDate(currentDate.getDate() - 1);
+                }
+
+                // 格式化日期 MM/DD
+                const mm = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+                const dd = currentDate.getDate().toString().padStart(2, '0');
+                dates.push(`${mm}/${dd}`);
+
+                // 準備下一個迴圈，日期往前推一天
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+            return dates;
+        }
 
         // 取得 URL 參數
         function getUrlParams() {
@@ -412,6 +507,7 @@
                 const dateMatch = dataPath.match(/fubon_(\d{8})_stock_data\.json/);
                 if (dateMatch && dateMatch[1]) {
                     const dateStr = dateMatch[1];
+                    currentDataDateStr = dateStr; // 儲存日期供後續使用
                     const formattedDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
                     document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
                 }
@@ -568,27 +664,27 @@
             // 根據排序模式設定表頭
             if (sortBy === 'consecutive') {
                 // 10 天模式：顯示所有 10 天資料
+                // 計算 10 個交易日日期
+                const tradingDates = getTradingDates(currentDataDateStr || '20250101', 10);
+
+                let dateHeaders = '';
+                tradingDates.forEach(date => {
+                    dateHeaders += `<th>${date}</th>`;
+                });
+
                 tableHead.innerHTML = `
                     <tr>
+                        <th class="serial-col">#</th>
                         <th>股票代號</th>
                         <th>股票名稱</th>
                         <th>連續天數</th>
-                        <th>第1天</th>
-                        <th>第2天</th>
-                        <th>第3天</th>
-                        <th>第4天</th>
-                        <th>第5天</th>
-                        <th>第6天</th>
-                        <th>第7天</th>
-                        <th>第8天</th>
-                        <th>第9天</th>
-                        <th>第10天</th>
+                        ${dateHeaders}
                         <th>10日累計</th>
                         <th>10日平均</th>
                     </tr>
                 `;
 
-                stocks.forEach(stock => {
+                stocks.forEach((stock, index) => {
                     const row = document.createElement('tr');
                     const fi = stock.foreignInvestors;
 
@@ -605,8 +701,9 @@
                     }
 
                     row.innerHTML = `
+                        <td class="serial-col">${index + 1}</td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
-                        <td>${stock.name}</td>
+                        <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.name}</a></td>
                         <td style="font-weight: bold; color: #667eea;">${stock.consecutiveDays}</td>
                         ${daysCells}
                         <td class="${getColorClass(total10)}" style="font-weight: bold;">${total10.toLocaleString()}</td>
@@ -616,20 +713,24 @@
                 });
             } else {
                 // 4 天模式：原本的顯示邏輯
+                // 計算 4 個交易日日期
+                const tradingDates = getTradingDates(currentDataDateStr || '20250101', 4);
+
                 tableHead.innerHTML = `
                     <tr>
+                        <th class="serial-col">#</th>
                         <th>股票代號</th>
                         <th>股票名稱</th>
-                        <th>第1天</th>
-                        <th>第2天</th>
-                        <th>第3天</th>
-                        <th>第4天</th>
+                        <th>${tradingDates[0]}</th>
+                        <th>${tradingDates[1]}</th>
+                        <th>${tradingDates[2]}</th>
+                        <th>${tradingDates[3]}</th>
                         <th>4日累計</th>
                         <th>平均每日</th>
                     </tr>
                 `;
 
-                stocks.forEach(stock => {
+                stocks.forEach((stock, index) => {
                     const row = document.createElement('tr');
 
                     // 根據數值正負設定顏色類別
@@ -641,8 +742,9 @@
                     const avgClass = getColorClass(stock.average);
 
                     row.innerHTML = `
+                        <td class="serial-col">${index + 1}</td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
-                        <td>${stock.name}</td>
+                        <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.name}</a></td>
                         <td class="${day1Class}">${stock.day1.toLocaleString()}</td>
                         <td class="${day2Class}">${stock.day2.toLocaleString()}</td>
                         <td class="${day3Class}">${stock.day3.toLocaleString()}</td>
@@ -683,6 +785,50 @@
                 // 恢復標籤
                 document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = '4日累計買超（張）';
                 document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = '平均每日買超（張）';
+            }
+        }
+
+        function searchStock() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.trim().toUpperCase();
+            if (!filter) return;
+
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+            let found = false;
+
+            // 清除之前的 highlight
+            const oldHighlights = document.getElementsByClassName('highlight-row');
+            while (oldHighlights.length > 0) {
+                oldHighlights[0].classList.remove('highlight-row');
+            }
+
+            for (let i = 0; i < rows.length; i++) {
+                const codeCell = rows[i].getElementsByTagName('td')[1]; // 股票代號 is 2nd column (index 1) because of serial col
+                const nameCell = rows[i].getElementsByTagName('td')[2]; // 股票名稱 is 3rd column (index 2)
+
+                if (codeCell && nameCell) {
+                    const code = codeCell.textContent || codeCell.innerText;
+                    const name = nameCell.textContent || nameCell.innerText;
+
+                    if (code.toUpperCase().indexOf(filter) > -1 || name.indexOf(filter) > -1) {
+                        rows[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        rows[i].classList.add('highlight-row');
+
+                        // 2秒後移除 highlight
+                        setTimeout(() => {
+                            rows[i].classList.remove('highlight-row');
+                        }, 3000);
+
+                        found = true;
+                        input.value = ''; // Optional: clear input
+                        break; // 找到第一個就停
+                    }
+                }
+            }
+
+            if (!found) {
+                alert('未找到符合的股票');
             }
         }
 

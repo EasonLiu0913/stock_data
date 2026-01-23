@@ -46,7 +46,28 @@ jobs:
           # Only commit if there are changes
           if ! git diff --staged --quiet; then
             git commit -m "chore: update historical SMA data (Index ${{ inputs.start_index }}-${{ inputs.limit }})"
-            git push
+            
+            # Retry loop for push to handle race conditions
+            MAX_RETRIES=5
+            count=0
+            success=false
+            
+            while [ $count -lt $MAX_RETRIES ]; do
+              git pull --rebase origin main
+              if git push origin main; then
+                success=true
+                break
+              else
+                echo "Push failed, retrying ($((count + 1))/$MAX_RETRIES)..."
+                sleep 5
+                count=$((count + 1))
+              fi
+            done
+            
+            if [ "$success" = "false" ]; then
+              echo "Failed to push after $MAX_RETRIES attempts."
+              exit 1
+            fi
           else
             echo "No changes to commit."
           fi
