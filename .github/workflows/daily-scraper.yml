@@ -65,7 +65,29 @@ jobs:
                   git config --local user.name "github-actions[bot]"
                   git add data_fubon/ data_twse/
                   git diff --staged --quiet || git commit -m "chore: update stock data $(date +'%Y-%m-%d %H:%M:%S')"
-                  git push
+                  
+                  # Retry loop for push to handle race conditions
+                  MAX_RETRIES=5
+                  count=0
+                  success=false
+                  
+                  while [ $count -lt $MAX_RETRIES ]; do
+                    # 使用 -Xtheirs 在 rebase 時若有衝突，保留目前 Action 剛產生的 commit (Local)
+                    git pull --rebase -Xtheirs origin main
+                    if git push origin main; then
+                      success=true
+                      break
+                    else
+                      echo "Push failed, retrying ($((count + 1))/$MAX_RETRIES)..."
+                      sleep 5
+                      count=$((count + 1))
+                    fi
+                  done
+                  
+                  if [ "$success" = "false" ]; then
+                    echo "Failed to push after $MAX_RETRIES attempts."
+                    exit 1
+                  fi
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               continue-on-error: true
