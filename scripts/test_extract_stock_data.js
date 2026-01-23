@@ -289,17 +289,7 @@ const path = require('path');
                     let dateKey = 'Unknown';
                     if (dateElement) {
                         const dateText = dateElement.innerText.trim();
-                        // 嘗試解析 YYYY/MM/DD
-                        const parts = dateText.split('/');
-                        if (parts.length === 3) {
-                            const year = parseInt(parts[0]);
-                            const rocYear = year - 1911;
-                            const month = parts[1];
-                            const day = parts[2];
-                            dateKey = `${rocYear}/${month}/${day}`;
-                        } else {
-                            dateKey = dateText;
-                        }
+                        dateKey = dateText;
                     }
 
                     // 組織成鍵值對格式
