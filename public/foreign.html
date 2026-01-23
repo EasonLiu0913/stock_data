@@ -491,16 +491,40 @@
 
         async function loadData() {
             try {
-                // 自動偵測環境：GitHub Pages 或本地開發
                 // GitHub Pages: /stock_data/data_fubon/...
                 // 本地: ../data_fubon/...
                 const isGitHubPages = window.location.hostname.includes('github.io');
                 const basePath = isGitHubPages ? '/stock_data' : '..';
-                const dataPath = `${basePath}/data_fubon/fubon_20260121_stock_data.json`;
+
+                // 1. 先取得檔案列表
+                let dataPath = '';
+                try {
+                    const filesResponse = await fetch(`${basePath}/data_fubon/files.json`);
+                    if (filesResponse.ok) {
+                        const files = await filesResponse.json();
+                        // 找到符合格式的最新檔案 (fubon_YYYYMMDD_stock_data.json)
+                        const latestFile = files
+                            .filter(f => f.match(/fubon_\d{8}_stock_data\.json/))
+                            .sort()
+                            .pop();
+
+                        if (latestFile) {
+                            dataPath = `${basePath}/data_fubon/${latestFile}`;
+                            console.log('Loading latest file:', latestFile);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to fetch file list, falling back to default.');
+                }
+
+                // 如果找不到最新檔案，使用預設值 (fallback)
+                if (!dataPath) {
+                    dataPath = `${basePath}/data_fubon/fubon_20260121_stock_data.json`;
+                }
 
                 const response = await fetch(dataPath);
                 if (!response.ok) {
-                    throw new Error('無法載入資料');
+                    throw new Error(`無法載入資料: ${dataPath}`);
                 }
 
                 // 從檔名提取日期 (假設格式: ...fubon_YYYYMMDD_stock_data.json)
