@@ -198,8 +198,14 @@ const path = require('path');
 
     // 過濾掉已經有資料的股票
     const stockNumbersToProcess = stockNumbers.filter(stock => {
-        const hasData = existingData[stock] && Object.keys(existingData[stock]).length > 0;
-        return !hasData;
+        // 如果只有 StockName，或是空的，視為沒有資料，需要重新處理
+        if (!existingData[stock]) return true;
+
+        const keys = Object.keys(existingData[stock]);
+        // 過濾掉 StockName 後，如果還有其他 key，才算是有資料
+        const otherKeys = keys.filter(k => k !== 'StockName');
+
+        return otherKeys.length === 0;
     });
 
     const skippedCount = stockNumbers.length - stockNumbersToProcess.length;
