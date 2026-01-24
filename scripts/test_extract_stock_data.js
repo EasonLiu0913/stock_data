@@ -26,7 +26,9 @@ const path = require('path');
     const yesterdayStr = formatDate(yesterdayTaipei);
 
     // 簡化規則：如果台北時間 < 14:00，就用昨天；否則用今天
-    const targetDateStr = taipeiHour < 14 ? yesterdayStr : todayStr;
+    // const targetDateStr = taipeiHour < 14 ? yesterdayStr : todayStr;
+    // 修正：不再依賴時間判斷，改為直接偵測網頁上的日期
+    let targetDateStr = null;
 
     // 解析命令列參數 (--start YYYY-MM-DD --end YYYY-MM-DD)
     const args = process.argv.slice(2);
@@ -104,6 +106,62 @@ const path = require('path');
     let stockNumbers = Array.from(stockInfoMap.keys()).sort();
     console.log(`📊 從 CSV 中提取到 ${stockNumbers.length} 個股票代碼\n`);
 
+    // --- 新增：偵測市場日期 ---
+    if (stockNumbers.length === 0) {
+        console.error('❌ 沒有股票代碼，無法執行。');
+        process.exit(1);
+    }
+
+    const browser = await chromium.launch({ headless: true });
+    // 注意：這裡先不建立 page，等後面再建立，或者共用
+
+    console.log('🕵️‍♂️ 正在偵測最新的市場日期 (從前幾檔股票中提取)...');
+
+    // 建立一個臨時頁面來偵測日期
+    const probePage = await browser.newPage();
+    try {
+        // 嘗試前 3 檔股票，避免第一檔剛好有問題
+        const probeLimit = Math.min(stockNumbers.length, 3);
+        for (let i = 0; i < probeLimit; i++) {
+            const stockCode = stockNumbers[i];
+            const probeUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stockCode}.djhtm`;
+            try {
+                // console.log(`   正在檢查 ${stockCode}...`);
+                await probePage.goto(probeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+                // 等待一下下讓內容載入
+                try {
+                    await probePage.waitForSelector('.opsBtmTitleK', { timeout: 5000 });
+                } catch (e) {
+                    // 忽略等待錯誤，繼續嘗試提取
+                }
+
+                const dateText = await probePage.evaluate(() => {
+                    const el = document.querySelector('.opsBtmTitleK');
+                    return el ? el.innerText.trim() : null;
+                });
+
+                if (dateText && /^\d{4}\/\d{2}\/\d{2}$/.test(dateText)) {
+                    targetDateStr = dateText.replace(/\//g, ''); // 2024/01/24 -> 20240124
+                    console.log(`✅ 偵測到日期: ${dateText} (將以此作為檔名日期)`);
+                    break;
+                }
+            } catch (e) {
+                console.log(`   ⚠️ 無法從 ${stockCode} 獲取日期: ${e.message}`);
+            }
+        }
+    } finally {
+        await probePage.close();
+    }
+
+    if (!targetDateStr) {
+        // 如果真的抓不到，最後的備案：回退到時間判斷
+        targetDateStr = taipeiHour < 14 ? yesterdayStr : todayStr;
+        console.warn(`⚠️ 無法自動偵測日期，回退到時間判斷: ${targetDateStr}`);
+    }
+    console.log(`📁 目標檔案: fubon_${targetDateStr}_stock_data.json\n`);
+    // --- 偵測結束 ---
+
 
     // 讀取現有的 JSON 檔案（如果存在），檢查哪些股票已經有資料
     // 檔名依「交易日期」決定（targetDateStr）
@@ -163,7 +221,9 @@ const path = require('path');
         return;
     }
 
-    const browser = await chromium.launch({ headless: true });
+    // const browser = await chromium.launch({ headless: true }); // Browser launched earlier
+    // 重用 browser，開啟新頁面處理主迴圈
+
     const page = await browser.newPage();
 
     // 從現有資料開始
