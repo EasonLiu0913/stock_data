@@ -53,7 +53,13 @@ jobs:
             success=false
             
             while [ $count -lt $MAX_RETRIES ]; do
+              # Stash any unstaged changes before rebase
+              git stash --include-untracked || true
               git pull --rebase origin main
+              # Pop stash if it exists
+              git stash pop || true
+              # Re-add files in case stash affected them
+              git add data_history_sma/
               if git push origin main; then
                 success=true
                 break
