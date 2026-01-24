@@ -3,7 +3,16 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const TARGET_DATE_STR = '2025/12/02';
+// Configuration
+const args = process.argv.slice(2);
+function getArg(flag) {
+    const idx = args.indexOf(flag);
+    return (idx !== -1 && args[idx + 1]) ? args[idx + 1] : null;
+}
+
+const DEFAULT_TARGET_DATE_STR = '2025/11/02';
+const argStart = getArg('--start');
+const TARGET_DATE_STR = argStart || DEFAULT_TARGET_DATE_STR;
 const OUTPUT_DIR = path.join(__dirname, '../data_history_sma');
 const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 const FOCUS_SELECTOR = '#SysJustIFRAMEDIV > table > tbody > tr:nth-child(2) > td:nth-child(2) > table > tbody > tr > td > form > table > tbody > tr > td > table > tbody > tr:nth-child(1) > td';

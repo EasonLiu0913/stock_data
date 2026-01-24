@@ -66,9 +66,11 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
         return new Date(y, m, d);
     };
 
+
     const defaultEndDateObj = parseYYYYMMDD(targetDateStr);
-    const defaultStartDateObj = new Date(defaultEndDateObj);
-    defaultStartDateObj.setMonth(defaultStartDateObj.getMonth() - 1);
+    // Default start date requested by user: 2025-11-02
+    // If we want a fixed default:
+    const defaultStartDateObj = new Date(2025, 10, 2); // Month is 0-indexed (10 = November)
 
     // Helper: Format Date to URL Param (YYYY-M-D)
     const toParamDate = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
