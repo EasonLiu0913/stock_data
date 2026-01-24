@@ -244,7 +244,15 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
                     mergedData[date] = dailyData;
                 }
 
-                fs.writeFileSync(outputFile, JSON.stringify(mergedData, null, 2), 'utf8');
+                // Sort keys descending (latest date first)
+                const sortedData = {};
+                Object.keys(mergedData).sort((a, b) => {
+                    return b.localeCompare(a);
+                }).forEach(key => {
+                    sortedData[key] = mergedData[key];
+                });
+
+                fs.writeFileSync(outputFile, JSON.stringify(sortedData, null, 2), 'utf8');
                 // console.log(`  💾 Saved to ${outputFile}`);
             }
 
