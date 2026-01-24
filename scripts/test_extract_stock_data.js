@@ -28,6 +28,19 @@ const path = require('path');
     // 簡化規則：如果台北時間 < 14:00，就用昨天；否則用今天
     const targetDateStr = taipeiHour < 14 ? yesterdayStr : todayStr;
 
+    // 解析命令列參數 (--start YYYY-MM-DD --end YYYY-MM-DD)
+    const args = process.argv.slice(2);
+    const getArg = (flag) => {
+        const idx = args.indexOf(flag);
+        return (idx !== -1 && args[idx + 1]) ? args[idx + 1] : null;
+    };
+    const argStart = getArg('--start');
+    const argEnd = getArg('--end');
+
+    if (argStart || argEnd) {
+        console.log(`🔧 自訂爬取區間: ${argStart || 'Default'} ~ ${argEnd || 'Default'}`);
+    }
+
     console.log(
         `📅 系統原始時間 (UTC/Local): ${now.toISOString()}\n` +
         `🌏 台北時間 (UTC+8): ${taipeiDateString} (Hour: ${taipeiHour})\n` +
@@ -360,22 +373,24 @@ const path = require('path');
                     console.log(`  🔄 [${processed}/${total}] ${stockNumber}: 開始提取機構投資人資料...`);
 
                     try {
-                        // 1. 設定日期範圍（1個月）
-                        // 交易日期: targetDateStr (YYYYMMDD) -> Date Object
+                        // 1. 設定日期範圍
+                        // 預設: 結束日=targetDateStr, 起始日=前一個月
                         const year = parseInt(targetDateStr.substring(0, 4));
                         const month = parseInt(targetDateStr.substring(4, 6)) - 1;
                         const day = parseInt(targetDateStr.substring(6, 8));
 
-                        const endDateObj = new Date(year, month, day);
-                        const startDateObj = new Date(year, month - 1, day); // 往前推一個月
+                        const defaultEndDateObj = new Date(year, month, day);
+                        const defaultStartDateObj = new Date(year, month - 1, day);
 
-                        // 格式化日期為 YYYY-M-D (不補零)
-                        const formatDateParam = (date) => {
-                            return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+                        const toParamDate = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+                        const formatInputParam = (str) => {
+                            if (!str) return null;
+                            const p = str.split('-');
+                            return (p.length === 3) ? `${parseInt(p[0])}-${parseInt(p[1])}-${parseInt(p[2])}` : str;
                         };
 
-                        const startDateParam = formatDateParam(startDateObj);
-                        const endDateParam = formatDateParam(endDateObj);
+                        const startDateParam = formatInputParam(argStart) || toParamDate(defaultStartDateObj);
+                        const endDateParam = formatInputParam(argEnd) || toParamDate(defaultEndDateObj);
 
                         // 建構帶有日期參數的 URL
                         // c = 起始日, d = 迄止日
