@@ -397,13 +397,19 @@
         </div>
 
         <div class="sort-container">
-            <label for="sortSelect">排序方式：</label>
-            <select id="sortSelect" onchange="sortStocks()">
-                <option value="consecutive" selected>連續最多天買超排行</option>
-                <option value="total">4日累計（從多到少）</option>
-                <option value="growth">第1天→第2天成長率（從大到小）</option>
-                <option value="three-days">四天中有三天在買（4日累計從大到小）</option>
-            </select>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="dateSelect">日期：</label>
+                <select id="dateSelect" onchange="onDateChanged()"></select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="sortSelect">排序：</label>
+                <select id="sortSelect" onchange="sortStocks()">
+                    <option value="consecutive" selected>連續最多天買超排行</option>
+                    <option value="total">4日累計（從多到少）</option>
+                    <option value="growth">第1天→第2天成長率（從大到小）</option>
+                    <option value="three-days">四天中有三天在買（4日累計從大到小）</option>
+                </select>
+            </div>
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="搜尋代號或名稱..."
                     onkeyup="if(event.key === 'Enter') searchStock()">
@@ -443,6 +449,7 @@
     <script>
         let allFilteredStocks = []; // 儲存所有符合條件的股票資料
         let currentDataDateStr = ''; // 儲存當前資料日期字串 (YYYYMMDD)
+        let fileList = []; // 儲存所有可用的檔案列表
 
         // TODO: 台股可能會遇到颱風天或其他因素停市，所以建議從 /data_fubon/files.json 往前找日期
         // 計算過去 N 個交易日（跳過週末）
@@ -478,64 +485,120 @@
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
             return {
-                sort: params.get('sort')
+                sort: params.get('sort'),
+                date: params.get('date')
             };
         }
 
         // 更新 URL 參數
-        function updateUrlParams(sort) {
-            const params = new URLSearchParams();
+        function updateUrlParams(sort, date) {
+            const params = new URLSearchParams(window.location.search);
             if (sort) params.set('sort', sort);
+            if (date) params.set('date', date);
             const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
             window.history.replaceState({}, '', newUrl);
         }
 
-        async function loadData() {
+        async function init() {
+            // 1. 載入檔案列表並初始化日期選單
+            await loadFileList();
+            
+            // 2. 確定要載入的日期 (從 URL 或預設最新)
+            const urlParams = getUrlParams();
+            let targetDate = urlParams.date;
+
+            // 如果 URL 沒有指定日期，或指定的日期不在列表中，選第一個（最新）
+            const dateSelect = document.getElementById('dateSelect');
+            if (!targetDate || !Array.from(dateSelect.options).some(opt => opt.value === targetDate)) {
+                if (dateSelect.options.length > 0) {
+                    targetDate = dateSelect.options[0].value;
+                }
+            }
+
+            // 更新選單選取狀態
+            if (targetDate) {
+                dateSelect.value = targetDate;
+                // 3. 載入該日期的資料
+                await loadData(targetDate);
+            }
+        }
+
+        async function loadFileList() {
             try {
-                // GitHub Pages: /stock_data/data_fubon/...
-                // 本地: ../data_fubon/...
                 const isGitHubPages = window.location.hostname.includes('github.io');
                 const basePath = isGitHubPages ? '/stock_data' : '..';
+                
+                const response = await fetch(`${basePath}/data_fubon/files.json`);
+                if (!response.ok) throw new Error('無法載入檔案列表');
+                
+                const files = await response.json();
+                
+                // 過濾出符合格式的檔案: fubon_YYYYMMDD_stock_data.json
+                const stockFiles = files
+                    .filter(f => f.match(/^fubon_\d{8}_stock_data\.json$/))
+                    .sort().reverse(); // 最新日期在最前
 
-                // 1. 先取得檔案列表
-                let dataPath = '';
-                try {
-                    const filesResponse = await fetch(`${basePath}/data_fubon/files.json`);
-                    if (filesResponse.ok) {
-                        const files = await filesResponse.json();
-                        // 找到符合格式的最新檔案 (fubon_YYYYMMDD_stock_data.json)
-                        const latestFile = files
-                            .filter(f => f.match(/fubon_\d{8}_stock_data\.json/))
-                            .sort()
-                            .pop();
+                const dateSelect = document.getElementById('dateSelect');
+                dateSelect.innerHTML = '';
 
-                        if (latestFile) {
-                            dataPath = `${basePath}/data_fubon/${latestFile}`;
-                            console.log('Loading latest file:', latestFile);
-                        }
+                stockFiles.forEach(file => {
+                    // 提取日期 YYYYMMDD
+                    const match = file.match(/fubon_(\d{8})_stock_data\.json/);
+                    if (match) {
+                        const dateStr = match[1];
+                        const displayDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
+                        const option = document.createElement('option');
+                        option.value = dateStr;
+                        option.textContent = displayDate;
+                        dateSelect.appendChild(option);
                     }
-                } catch (e) {
-                    console.warn('Failed to fetch file list, falling back to default.');
-                }
+                });
 
-                // 如果找不到最新檔案，使用預設值 (fallback)
-                if (!dataPath) {
-                    dataPath = `${basePath}/data_fubon/fubon_20260121_stock_data.json`;
-                }
+            } catch (e) {
+                console.error('初始化失敗:', e);
+                // 失敗時的 Fallback
+                const dateSelect = document.getElementById('dateSelect');
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = '載入失敗 (預設)';
+                dateSelect.appendChild(option);
+            }
+        }
+
+        async function onDateChanged() {
+            const dateSelect = document.getElementById('dateSelect');
+            const selectedDate = dateSelect.value;
+            await loadData(selectedDate);
+        }
+
+        async function loadData(dateStr) {
+            if (!dateStr) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('stockTable').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+
+            try {
+                const isGitHubPages = window.location.hostname.includes('github.io');
+                const basePath = isGitHubPages ? '/stock_data' : '..';
+                const fileName = `fubon_${dateStr}_stock_data.json`;
+                const dataPath = `${basePath}/data_fubon/${fileName}`;
+
+                console.log(`Loading data for ${dateStr}: ${dataPath}`);
 
                 const response = await fetch(dataPath);
                 if (!response.ok) {
                     throw new Error(`無法載入資料: ${dataPath}`);
                 }
 
-                // 從檔名提取日期 (假設格式: ...fubon_YYYYMMDD_stock_data.json)
-                const dateMatch = dataPath.match(/fubon_(\d{8})_stock_data\.json/);
-                if (dateMatch && dateMatch[1]) {
-                    const dateStr = dateMatch[1];
-                    currentDataDateStr = dateStr; // 儲存日期供後續使用
-                    const formattedDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
-                    document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
-                }
+                currentDataDateStr = dateStr;
+                // 更新 URL
+                updateUrlParams(null, dateStr);
+
+                const formattedDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
+                document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
 
                 const data = await response.json();
 
@@ -593,21 +656,17 @@
                     }
                 }
 
-                // 檢查 URL 參數並設定下拉選單
+                // 檢查 URL 參數並設定下拉選單 (排序)
                 const urlParams = getUrlParams();
                 const validSortOptions = ['total', 'growth', 'three-days', 'consecutive'];
 
-                // 如果 URL 有參數，使用參數；否則保持預設值 (consecutive)
                 if (urlParams.sort && validSortOptions.includes(urlParams.sort)) {
                     document.getElementById('sortSelect').value = urlParams.sort;
                 } else {
-                    // 若無 URL 參數，確保選單和變數都設為預設值
                     document.getElementById('sortSelect').value = 'consecutive';
-                    // 並且更新 URL 為預設值，這樣分享連結時才會一致 (選擇性)
-                    // updateUrlParams('consecutive'); 
                 }
 
-                // 初始排序（依照下拉選單值）
+                // 初始排序
                 sortStocks();
 
                 // 更新統計資訊
@@ -879,7 +938,7 @@
         }
 
         // 頁面載入時執行
-        loadData();
+        init();
     </script>
 </body>
 
