@@ -72,8 +72,14 @@ jobs:
                   success=false
                   
                   while [ $count -lt $MAX_RETRIES ]; do
+                    # Stash any unstaged changes before rebase
+                    git stash --include-untracked || true
                     # 使用 -Xtheirs 在 rebase 時若有衝突，保留目前 Action 剛產生的 commit (Local)
                     git pull --rebase -Xtheirs origin main
+                    # Pop stash if it exists
+                    git stash pop || true
+                    # Re-add files in case stash affected them
+                    git add data_fubon/ data_twse/
                     if git push origin main; then
                       success=true
                       break
