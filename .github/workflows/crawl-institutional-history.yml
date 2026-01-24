@@ -1,0 +1,80 @@
+name: Crawl Institutional History (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start Date (YYYY-MM-DD)'
+        required: true
+        default: '2025-11-01'
+      end_date:
+        description: 'End Date (YYYY-MM-DD)'
+        required: true
+        default: '2025-12-01'
+      start_index:
+        description: 'Start Index (for batch processing)'
+        required: false
+        default: '0'
+      limit:
+        description: 'Limit (number of stocks to process, e.g. 300)'
+        required: false
+        default: '1200'
+
+jobs:
+  crawl-institutional:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Institutional Crawler
+        run: |
+          echo "🚀 Starting crawl for ${{ github.event.inputs.start_date }} to ${{ github.event.inputs.end_date }}"
+          echo "Batch: ${{ github.event.inputs.start_index }} to ${{ github.event.inputs.limit }}"
+          
+          node scripts/crawl_institutional_investors.js ${{ github.event.inputs.start_index }} ${{ github.event.inputs.limit }} --start ${{ github.event.inputs.start_date }} --end ${{ github.event.inputs.end_date }}
+        continue-on-error: true
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_institutional/
+          git diff --staged --quiet || git commit -m "chore: update institutional history ${{ github.event.inputs.start_date }}~${{ github.event.inputs.end_date }}"
+          
+          # Retry loop for push
+          MAX_RETRIES=5
+          count=0
+          success=false
+          
+          while [ $count -lt $MAX_RETRIES ]; do
+            git pull --rebase origin main
+            if git push origin main; then
+              success=true
+              break
+            else
+              echo "Push failed, retrying ($((count + 1))/$MAX_RETRIES)..."
+              sleep 5
+              count=$((count + 1))
+            fi
+          done
+          
+          if [ "$success" = "false" ]; then
+            echo "Failed to push after $MAX_RETRIES attempts."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
