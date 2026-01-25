@@ -214,7 +214,7 @@ async function crawlStock(page, stockCode, stopDate) {
         // If fresh: `stopDate` = `TARGET_DATE_STR` (12/02). We process 12/02. Next 12/01 < 12/02 Break.
         // This logic works for both!
 
-        if (currentDate < stopDate) {
+        if (currentDate <= stopDate) {
             // console.log(`Reached stop date ${stopDate}. Stopping.`);
             break;
         }
