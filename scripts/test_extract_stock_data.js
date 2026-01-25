@@ -224,6 +224,7 @@ const path = require('path');
             fs.writeFileSync(outputFilePath, JSON.stringify(existingData, null, 2), 'utf8');
             console.log(`💾 已更新資料到: ${outputFilePath}`);
         }
+        await browser.close();
         return;
     }
 
