@@ -1,13 +1,13 @@
-name: Daily Stock Data Scraper
+name: Warrant Data Scraper
 
 on:
     schedule:
-        # 17:00 TPE (09:00 UTC), 23:00 TPE (15:00 UTC), 03:00 TPE (19:00 UTC)
-        - cron: '0 9,15,19 * * *'
+        # Default schedule (07:00 TPE = 23:00 UTC) - User can change this
+        - cron: '0 23 * * *'
     workflow_dispatch: # Allow manual trigger
 
 jobs:
-    scrape-data:
+    scrape-warrant:
         runs-on: ubuntu-latest
 
         steps:
@@ -26,25 +26,11 @@ jobs:
                   npm ci
                   npx playwright install --with-deps chromium
 
-            - name: Run Fubon scraper (主力買超排行)
+            - name: Run TWSE warrant extractor
               run: |
-                  echo "🚀 開始執行 scraper_fubon.js..."
-                  node scripts/scraper_fubon.js
+                  echo "🚀 開始執行 extract_warrant_data.js..."
+                  node scripts/extract_warrant_data.js
               continue-on-error: true
-
-            - name: Run Fubon scraper other (值增/值縮/量增/量縮排行)
-              run: |
-                  echo "🚀 開始執行 scraper_fubon_other.js..."
-                  node scripts/scraper_fubon_other.js
-              continue-on-error: true
-
-            - name: Run stock data extractor (從 CSV 提取股票資料)
-              run: |
-                  echo "🚀 開始執行 test_extract_stock_data.js..."
-                  node scripts/test_extract_stock_data.js
-              continue-on-error: true
-
-
 
             - name: Generate static file lists (for GitHub Pages)
               run: |
@@ -56,8 +42,8 @@ jobs:
               run: |
                   git config --local user.email "github-actions[bot]@users.noreply.github.com"
                   git config --local user.name "github-actions[bot]"
-                  git add data_fubon/ data_twse/
-                  git diff --staged --quiet || git commit -m "chore: update stock data $(date +'%Y-%m-%d %H:%M:%S')"
+                  git add data_twse/
+                  git diff --staged --quiet || git commit -m "chore: update warrant data $(date +'%Y-%m-%d %H:%M:%S')"
                   
                   # Retry loop for push to handle race conditions
                   MAX_RETRIES=5
@@ -65,14 +51,10 @@ jobs:
                   success=false
                   
                   while [ $count -lt $MAX_RETRIES ]; do
-                    # Stash any unstaged changes before rebase
                     git stash --include-untracked || true
-                    # 使用 -Xtheirs 在 rebase 時若有衝突，保留目前 Action 剛產生的 commit (Local)
-                    git pull --rebase -Xtheirs origin main
-                    # Pop stash if it exists
+                    git pull --rebase origin main
                     git stash pop || true
-                    # Re-add files in case stash affected them
-                    git add data_fubon/ data_twse/
+                    git add data_twse/
                     if git push origin main; then
                       success=true
                       break
