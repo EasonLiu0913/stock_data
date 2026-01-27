@@ -422,7 +422,7 @@ const path = require('path');
                     if (data.debug) {
                         console.log(`     除錯資訊:`, JSON.stringify(data.debug, null, 2));
                     }
-                    result[stockNumber] = {};
+                    // result[stockNumber] = {}; // 保留原有資料，不覆蓋為空物件
                     failCount++;
                     failedStocks.push({
                         stock: stockNumber,
@@ -571,7 +571,7 @@ const path = require('path');
 
             } catch (error) {
                 console.log(`  ❌ [${processed}/${total}] ${stockNumber}: 錯誤 - ${error.message}`);
-                result[stockNumber] = {};
+                // result[stockNumber] = {}; // 保留原有資料，不覆蓋為空物件
                 failCount++;
                 failedStocks.push({
                     stock: stockNumber,
