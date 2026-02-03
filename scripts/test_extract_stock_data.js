@@ -256,7 +256,7 @@ const path = require('path');
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
                 // 等待頁面完全載入，特別是圖表部分
-                await page.waitForTimeout(3000);
+                await page.waitForTimeout(1000);
 
                 // 檢查是否有 iframe，並嘗試切換到 iframe
                 let targetFrame = page;
@@ -580,10 +580,11 @@ const path = require('path');
                 });
             }
 
-            // 等待 3 秒後再處理下一個股票（避免請求過快）
+            // 隨機等待 300~600 毫秒後再處理下一個股票（避免請求過快）
             if (processed < total) {
-                console.log(`  ⏳ 等待 3 秒後繼續處理下一個股票...`);
-                await page.waitForTimeout(3000);
+                const delay = Math.floor(Math.random() * 301) + 300; // 300~600ms
+                console.log(`  ⏳ 等待 ${delay} 毫秒後繼續處理下一個股票...`);
+                await page.waitForTimeout(delay);
             }
         }
 
