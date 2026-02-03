@@ -124,10 +124,16 @@ const REGEX_PATTERNS = {
             // Merge data
             const mergedData = { ...existingData, ...newData };
 
+            // Sort data by date (ascending)
+            const sortedData = {};
+            Object.keys(mergedData).sort().forEach(date => {
+                sortedData[date] = mergedData[date];
+            });
+
             // Save if we got new data or if it's a fresh file
             if (Object.keys(newData).length > 0) {
-                fs.writeFileSync(outputFile, JSON.stringify(mergedData, null, 2), 'utf8');
-                console.log(`   ✅ [${stock.code}] Saved. New: ${Object.keys(newData).length}, Total: ${Object.keys(mergedData).length}.`);
+                fs.writeFileSync(outputFile, JSON.stringify(sortedData, null, 2), 'utf8');
+                console.log(`   ✅ [${stock.code}] Saved. New: ${Object.keys(newData).length}, Total: ${Object.keys(sortedData).length}.`);
             } else {
                 console.log(`   🔸 [${stock.code}] No new data found.`);
             }
