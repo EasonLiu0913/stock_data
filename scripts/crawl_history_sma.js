@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-// Configuration
+const MAX_CONCURRENCY = 5; // Set concurrency to 5
 const args = process.argv.slice(2);
 function getArg(flag) {
     const idx = args.indexOf(flag);
@@ -40,9 +40,7 @@ const REGEX_PATTERNS = {
     }
 
     const fileContent = fs.readFileSync(CSV_FILE, 'utf8');
-    // Simple CSV parsing assuming no commas in fields
     const lines = fileContent.trim().split('\n');
-    const headers = lines[0].split(',');
     const stocks = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -72,11 +70,21 @@ const REGEX_PATTERNS = {
 
     const browser = await chromium.launch({ headless: true });
 
-    // Process each stock
-    for (let i = 0; i < stocksToProcess.length; i++) {
-        const stock = stocksToProcess[i];
-        const currentProgress = startIndex + i + 1;
-        const totalStocks = stocks.length;
+    console.log(`🚀 Starting concurrent processing with ${MAX_CONCURRENCY} workers...`);
+
+    // Worker Pool Implementation
+    const queue = stocksToProcess.map((stock, idx) => ({
+        stock,
+        originalIndex: startIndex + idx
+    }));
+    const totalStocks = stocks.length;
+
+    // Shared results stats (optional, mainly for logging)
+    let processedCount = 0;
+
+    async function processStock(page, task) {
+        const { stock, originalIndex } = task;
+        const currentProgress = originalIndex + 1;
 
         const outputFile = path.join(OUTPUT_DIR, `${stock.code}.json`);
         let existingData = {};
@@ -88,10 +96,8 @@ const REGEX_PATTERNS = {
                 existingData = JSON.parse(content);
                 const dates = Object.keys(existingData).sort();
                 if (dates.length > 0) {
-                    // Start from the latest date found (reverse sorted usually, or just end of sort)
-                    // standard sort "2026/01/01", "2026/01/02" -> "2026/01/02" is last
                     stopDate = dates[dates.length - 1];
-                    console.log(`[${stock.code}] Found existing data. Latest date: ${stopDate}. Updating from there.`);
+                    // console.log(`[${stock.code}] Existing data found. Latest: ${stopDate}.`);
                 }
             } catch (e) {
                 console.error(`[${stock.code}] Error reading existing file, starting fresh.`);
@@ -107,51 +113,77 @@ const REGEX_PATTERNS = {
 
         if (stopDate === todayStr) {
             console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Data up-to-date (${todayStr}). Skipping.`);
-            continue;
+            return;
         }
 
-        console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code}] Starting crawl (Until ${stopDate})...`);
-        const context = await browser.newContext();
-        const page = await context.newPage();
+        console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Starting crawl (Until ${stopDate})...`);
 
         try {
             const newData = await crawlStock(page, stock.code, stopDate);
 
             // Merge data
-            // newData keys overwrite existingData keys (if overlap)
-            // But usually newData are newer dates.
             const mergedData = { ...existingData, ...newData };
 
             // Save if we got new data or if it's a fresh file
             if (Object.keys(newData).length > 0) {
                 fs.writeFileSync(outputFile, JSON.stringify(mergedData, null, 2), 'utf8');
-                console.log(`[${stock.code}] Saved. New records: ${Object.keys(newData).length}, Total: ${Object.keys(mergedData).length}.`);
+                console.log(`   ✅ [${stock.code}] Saved. New: ${Object.keys(newData).length}, Total: ${Object.keys(mergedData).length}.`);
             } else {
-                console.log(`[${stock.code}] No new data found.`);
+                console.log(`   🔸 [${stock.code}] No new data found.`);
             }
 
         } catch (error) {
-            console.error(`[${stock.code}] Error crawling:`, error.message);
-        } finally {
-            await context.close();
+            console.error(`   ❌ [${stock.code}] Error crawling:`, error.message);
         }
-
-        // Small delay between stocks to be nice
-        await new Promise(r => setTimeout(r, 1000));
     }
 
+    // Worker Function
+    const workers = [];
+    for (let i = 0; i < MAX_CONCURRENCY; i++) {
+        workers.push((async () => {
+            // Create a new context/page per worker
+            // Reuse page for efficiency, but maybe recreate context every N stocks if memory leaks (not implementing complex recycle now)
+            const context = await browser.newContext();
+            const page = await context.newPage();
+
+            // Stagger start slightly
+            await page.waitForTimeout(i * 300);
+
+            while (queue.length > 0) {
+                const task = queue.shift();
+                if (task) {
+                    await processStock(page, task);
+
+                    // Random delay between stocks per worker
+                    const delay = Math.floor(Math.random() * 500) + 500;
+                    await page.waitForTimeout(delay);
+                }
+            }
+            await context.close();
+        })());
+    }
+
+    await Promise.all(workers);
     await browser.close();
+    console.log('\n✅ All stocks processed.');
+
 })();
 
 async function crawlStock(page, stockCode, stopDate) {
     const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stockCode}.djhtm`;
     // console.log(`Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle' });
+    try {
+        await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    } catch (e) {
+        // Retry once or just fail
+        // Using domcontentloaded is faster but might miss chart load trigger?
+        // Let's try domcontentloaded + wait for selector
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    }
 
     // Wait for chart date element
-    // Some stocks might not have data or load differently, add timeout
     try {
-        await page.waitForSelector('.opsBtmTitleK', { timeout: 10000 });
+        await page.waitForSelector('.opsBtmTitleK', { timeout: 15000 });
     } catch (e) {
         throw new Error('Chart did not load or selector not found');
     }
@@ -160,35 +192,50 @@ async function crawlStock(page, stockCode, stopDate) {
     let previousDate = '';
     let consecutiveSameDateCount = 0;
 
-    // console.log(`Getting initial focus on chart...`);
-
-    // Initial Click to focus + Tab x4 + ArrowLeft (First backward step)
+    // Initial Click to focus + Tab x4 + ArrowLeft
     try {
-        await page.click(FOCUS_SELECTOR);
+        // Wait for iframe or element inside it? The selector is deep.
+        // Assuming page structure is consistent.
+        // Try simple focus first.
+        // If the selector is very specific, might need to wait for it.
+        const focusEl = await page.$(FOCUS_SELECTOR);
+        if (focusEl) {
+            await focusEl.click();
+        } else {
+            // Fallback click on body or just rely on keyboard?
+            // Maybe click on canvas/graph area?
+            await page.click('body');
+        }
         await page.waitForTimeout(500);
 
         // Perform initial Tab navigation
         for (let i = 0; i < 4; i++) {
             await page.keyboard.press('Tab');
-            await page.waitForTimeout(200);
+            await page.waitForTimeout(100); // Faster tab
         }
     } catch (e) {
-        console.error(`Error initial focus interaction: ${e.message}`);
-        // Continue anyway, maybe it works?
+        // console.error(`Error initial focus interaction: ${e.message}`);
     }
 
-    while (true) {
+    // Limit infinite loops
+    let safetyCounter = 0;
+    const MAX_DAYS_BACK = 2000; // Limit roughly 5 years
+
+    while (safetyCounter++ < MAX_DAYS_BACK) {
         // 1. Extract Date
-        const dateText = await page.innerText('.opsBtmTitleK');
+        let dateText = '';
+        try {
+            dateText = await page.innerText('.opsBtmTitleK');
+        } catch (e) {
+            break; // Element gone?
+        }
+
         const currentDate = dateText.trim();
 
-        // console.log(`Processing Date: ${currentDate}`);
-
-        // Safety check: duplicate date (end of data or navigation fail)
+        // Safety check: duplicate date
         if (currentDate === previousDate) {
             consecutiveSameDateCount++;
             if (consecutiveSameDateCount >= 3) {
-                // console.log('Date has not changed for 3 iterations. Stopping.');
                 break;
             }
         } else {
@@ -196,42 +243,13 @@ async function crawlStock(page, stockCode, stopDate) {
         }
         previousDate = currentDate;
 
-        // Stop condition: Date < stopDate
-        // We want to stop when we reach data older than (or equal to? No, strictly older so we cover everything up to limit)
-        // If stopDate is 2025/12/02, and we see 2025/12/03, we keep going.
-        // If we see 2025/12/02, we process it? The user said "crawling date range to the latest date" (inclusive?).
-        // If existing latest is 12/05, and we see 12/05, do we re-crawl?
-        // User: "crawling date range just to the latest date"
-        // Safest is to duplicate the overlap day or just stop when < stopDate.
-        // If stopDate is the last captured date, we should probably stop if <= stopDate?
-        // If file has 12/05. We crawl 12/06. Next is 12/05. we stop.
-        // So `if (currentDate <= stopDate) break;`
-        // But user asked to *include* default target date 12/02.
-        // If stopDate is a previous crawl max date (e.g. 12/05), we can stop at 12/05 (since we have it).
-        // So `currentDate <= stopDate` is appropriate for incremental update.
-        // For default target (12/02), user wanted *until* 12/02 (inclusive), so condition was `<`.
-        // To support both, I will use `<=` generally, but for default target I'll pass `2025/12/01` as limit?
-        // Or just use `<` logic and set stopDate appropriately.
-        // Let's stick to `<` check so we *include* the stopDate in the new data if standard logic applies.
-        // Wait, if I have 12/05, I don't need to re-crawl 12/05. So checking `<= 12/05` breaks immediately. Correct.
-        // If stopDate = TARGET_DATE_STR (12/02) and I want to Include 12/02.
-        // Then logic `currentDate < stopDate` works (stops at 12/01).
-        // So if incremental, I pass `latestDate` and use `<=`.
-        // If fresh, I pass `TARGET_DATE_STR` and use `<`.
-        // This is complex. Let's simplify.
-        // I will use `<` logic.
-        // If incremental: `stopDate` = `latestDate`. If `currentDate == latestDate` (12/05), `12/05 < 12/05` is False. We process 12/05. We store 12/05 again (overlap). This is fine (overwrite).
-        // Then next is 12/04. `12/04 < 12/05` is True. We break.
-        // Result: We re-crawled 12/05 and everything new. This is safe.
-        // If fresh: `stopDate` = `TARGET_DATE_STR` (12/02). We process 12/02. Next 12/01 < 12/02 Break.
-        // This logic works for both!
-
+        // Stop condition
         if (currentDate <= stopDate) {
-            // console.log(`Reached stop date ${stopDate}. Stopping.`);
             break;
         }
 
         // 2. Extract SMA Values from Legend
+        // Optimization: Get innerText of the legend container directly
         const legendContainer = await page.$('#SysJustIFRAMEDIV');
         let legendText = '';
         if (legendContainer) {
@@ -249,9 +267,11 @@ async function crawlStock(page, stockCode, stopDate) {
         collectedData[currentDate] = dataPoint;
 
         // 3. Navigate to Previous Day
-        // Interaction: ArrowLeft (after initial setup)
         await page.keyboard.press('ArrowLeft');
-        await page.waitForTimeout(200); // Reduced timeout for speed, adjust if flaky
+        // Wait a bit for update. 
+        // 100ms is usually enough for JS update if network not involved for data points (canvas redraw)
+        // If it sends network request content, need more. Fubon usually has data loaded.
+        await page.waitForTimeout(150);
     }
 
     return collectedData;
