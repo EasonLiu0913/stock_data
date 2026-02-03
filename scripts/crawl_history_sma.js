@@ -57,13 +57,25 @@ const REGEX_PATTERNS = {
 
     console.log(`Found ${stocks.length} stocks in CSV.`);
 
+    // 解析位置參數: node crawl_history_sma.js [start_index] [limit]
+    const startIndex = parseInt(args[0], 10) || 0;
+    const limit = args[1] ? parseInt(args[1], 10) : null; // null 表示處理全部
+
+    // 計算實際處理範圍
+    const endIndex = limit ? Math.min(startIndex + limit, stocks.length) : stocks.length;
+    const stocksToProcess = stocks.slice(startIndex, endIndex);
+
+    console.log(`Processing stocks from index ${startIndex} to ${endIndex - 1} (${stocksToProcess.length} stocks)`);
+    if (!limit) {
+        console.log(`ℹ️  No limit specified, processing all remaining stocks.`);
+    }
+
     const browser = await chromium.launch({ headless: true });
 
     // Process each stock
-    // You can implement batching here using process.argv if needed
-    for (let i = 0; i < stocks.length; i++) {
-        const stock = stocks[i];
-        const currentProgress = i + 1;
+    for (let i = 0; i < stocksToProcess.length; i++) {
+        const stock = stocksToProcess[i];
+        const currentProgress = startIndex + i + 1;
         const totalStocks = stocks.length;
 
         const outputFile = path.join(OUTPUT_DIR, `${stock.code}.json`);
