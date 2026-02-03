@@ -124,9 +124,9 @@ const REGEX_PATTERNS = {
             // Merge data
             const mergedData = { ...existingData, ...newData };
 
-            // Sort data by date (ascending)
+            // Sort data by date (descending: newest first)
             const sortedData = {};
-            Object.keys(mergedData).sort().forEach(date => {
+            Object.keys(mergedData).sort().reverse().forEach(date => {
                 sortedData[date] = mergedData[date];
             });
 
