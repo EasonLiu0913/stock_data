@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
+const MAX_CONCURRENCY = 5;
 const OUTPUT_DIR = path.join(__dirname, '../data_institutional');
 const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 
@@ -116,10 +117,19 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
     // 今天日期 (用於判斷是否需要更新)
     const todayFormatted = `${taipeiTime.getFullYear()}/${String(taipeiTime.getMonth() + 1).padStart(2, '0')}/${String(taipeiTime.getDate()).padStart(2, '0')}`;
 
-    for (let i = 0; i < stocksToProcess.length; i++) {
-        const stock = stocksToProcess[i];
-        const currentProgress = startIndex + i + 1;
-        const totalStocks = stocks.length;
+    console.log(`🚀 Starting concurrent processing with ${MAX_CONCURRENCY} workers...`);
+
+    // Worker Pool Implementation
+    const queue = stocksToProcess.map((stock, idx) => ({
+        stock,
+        originalIndex: startIndex + idx
+    }));
+    const totalStocks = stocks.length;
+    let processedCount = 0;
+
+    async function processStock(page, task) {
+        const { stock, originalIndex } = task;
+        const currentProgress = originalIndex + 1;
 
         const outputFile = path.join(OUTPUT_DIR, `${stock.code}.json`);
         let existingData = {};
@@ -141,7 +151,7 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
         // 規則3: 如果檔案已有今天的資料，跳過
         if (latestDateInFile === todayFormatted) {
             console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Data up-to-date (${todayFormatted}). Skipping.`);
-            continue;
+            return;
         }
 
         // 決定日期範圍
@@ -151,31 +161,26 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
             // 如果有手動指定日期，使用手動指定的
             effectiveStartDate = startDateParam;
             effectiveEndDate = endDateParam;
-            console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Crawling (Manual: ${effectiveStartDate} ~ ${effectiveEndDate})...`);
+            console.log(`[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Crawling (Manual: ${effectiveStartDate} ~ ${effectiveEndDate})...`);
         } else if (latestDateInFile) {
             // 規則2: 有檔案，從最新資料日期爬到今天
             // 將 YYYY/MM/DD 轉成 URL 參數格式 YYYY-M-D
             const [y, m, d] = latestDateInFile.split('/').map(Number);
             effectiveStartDate = `${y}-${m}-${d}`;
             effectiveEndDate = toParamDate(parseYYYYMMDD(targetDateStr));
-            console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Updating (${effectiveStartDate} ~ ${effectiveEndDate})...`);
+            console.log(`[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Updating (${effectiveStartDate} ~ ${effectiveEndDate})...`);
         } else {
             // 規則1: 沒有檔案，從預設起始日到今天
             effectiveStartDate = toParamDate(defaultStartDateObj);
             effectiveEndDate = toParamDate(parseYYYYMMDD(targetDateStr));
-            console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] New file (${effectiveStartDate} ~ ${effectiveEndDate})...`);
+            console.log(`[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] New file (${effectiveStartDate} ~ ${effectiveEndDate})...`);
         }
-
-        const page = await browser.newPage();
 
         try {
             const institutionalUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stock.code}&c=${effectiveStartDate}&d=${effectiveEndDate}`;
             // console.log(`  URL: ${institutionalUrl}`);
 
             await page.goto(institutionalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-            // Basic wait
-            // await page.waitForTimeout(1000); 
 
             const newData = await page.evaluate(() => {
                 try {
@@ -237,15 +242,12 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
                                 return isNaN(num) ? 0 : num;
                             };
 
-                            const dateKey = values[0]; // e.g., 114/01/22 or 2025/01/22 (Fubon usually uses YYY/MM/DD or YYYY/MM/DD)
-                            // Fubon site often uses ROC year (e.g. 114/01/22) in some places, but let's check.
-                            // Actually test_extract_stock_data.js regex was /^\d+\/\d+\/\d+$/
+                            const dateKey = values[0]; // e.g., 114/01/22 or 2025/01/22
 
                             // Check if it looks like a date
                             if (dateKey.match(/^\d+\/\d+\/\d+$/)) {
                                 // Convert ROC year to AD if needed? 
-                                // Usually user wants uniform YYYY/MM/DD.
-                                // If 114/01/22 -> 2025/01/22.
+                                // usually YYYY/MM/DD works fine.
                                 let [y, m, d] = dateKey.split('/').map(Number);
                                 if (y < 1911) y += 1911;
                                 const formattedDate = `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
@@ -267,14 +269,11 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
             });
 
             if (newData.error) {
-                console.error(`  ❌ Error extracting: ${newData.error}`);
+                console.error(`  ❌ [${stock.code}] Error extracting: ${newData.error}`);
             } else {
                 const count = Object.keys(newData.data).length;
-                console.log(`  ✅ Extracted ${count} days of data.`);
 
                 // Merge Data
-                // Format: { "YYYY/MM/DD": { ... } }
-                // We want to merge deeply? No, per day is fine.
                 const mergedData = { ...existingData };
 
                 for (const [date, dailyData] of Object.entries(newData.data)) {
@@ -284,25 +283,49 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
                 // Sort keys descending (latest date first)
                 const sortedData = {};
                 Object.keys(mergedData).sort((a, b) => {
-                    return b.localeCompare(a);
+                    return b.localeCompare(a); // Descending string comparison
                 }).forEach(key => {
                     sortedData[key] = mergedData[key];
                 });
 
-                fs.writeFileSync(outputFile, JSON.stringify(sortedData, null, 2), 'utf8');
-                // console.log(`  💾 Saved to ${outputFile}`);
+                if (count > 0) {
+                    fs.writeFileSync(outputFile, JSON.stringify(sortedData, null, 2), 'utf8');
+                    console.log(`  ✅ [${stock.code}] Saved. Extracted: ${count}, Total: ${Object.keys(sortedData).length}.`);
+                } else {
+                    console.log(`  🔸 [${stock.code}] No new data extracted.`);
+                }
             }
 
         } catch (error) {
-            console.error(`  ❌ Error crawling: ${error.message}`);
-        } finally {
-            await page.close();
+            console.error(`  ❌ [${stock.code}] Error crawling: ${error.message}`);
         }
-
-        // Delay to be polite
-        await new Promise(r => setTimeout(r, 1000));
     }
 
+    // Worker Function
+    const workers = [];
+    for (let i = 0; i < MAX_CONCURRENCY; i++) {
+        workers.push((async () => {
+            const context = await browser.newContext();
+            const page = await context.newPage();
+
+            // Stagger start
+            await page.waitForTimeout(i * 300);
+
+            while (queue.length > 0) {
+                const task = queue.shift();
+                if (task) {
+                    await processStock(page, task);
+
+                    // Random delay
+                    const delay = Math.floor(Math.random() * 500) + 500;
+                    await page.waitForTimeout(delay);
+                }
+            }
+            await context.close();
+        })());
+    }
+
+    await Promise.all(workers);
     await browser.close();
-    console.log('\nDone.');
+    console.log('\n✅ All stocks processed.');
 })();
