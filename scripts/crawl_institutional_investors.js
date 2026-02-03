@@ -113,28 +113,63 @@ const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 
     const browser = await chromium.launch({ headless: true });
 
+    // 今天日期 (用於判斷是否需要更新)
+    const todayFormatted = `${taipeiTime.getFullYear()}/${String(taipeiTime.getMonth() + 1).padStart(2, '0')}/${String(taipeiTime.getDate()).padStart(2, '0')}`;
+
     for (let i = 0; i < stocksToProcess.length; i++) {
         const stock = stocksToProcess[i];
         const currentProgress = startIndex + i + 1;
         const totalStocks = stocks.length;
 
-        console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Crawling...`);
-
         const outputFile = path.join(OUTPUT_DIR, `${stock.code}.json`);
         let existingData = {};
+        let latestDateInFile = null;
 
         if (fs.existsSync(outputFile)) {
             try {
                 existingData = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+                // 找到檔案中最新的日期 (格式: YYYY/MM/DD)
+                const dates = Object.keys(existingData).sort((a, b) => b.localeCompare(a));
+                if (dates.length > 0) {
+                    latestDateInFile = dates[0];
+                }
             } catch (e) {
                 console.error(`  Warning: Could not read existing file for ${stock.code}`);
             }
         }
 
+        // 規則3: 如果檔案已有今天的資料，跳過
+        if (latestDateInFile === todayFormatted) {
+            console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Data up-to-date (${todayFormatted}). Skipping.`);
+            continue;
+        }
+
+        // 決定日期範圍
+        let effectiveStartDate, effectiveEndDate;
+
+        if (argStart && argEnd) {
+            // 如果有手動指定日期，使用手動指定的
+            effectiveStartDate = startDateParam;
+            effectiveEndDate = endDateParam;
+            console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Crawling (Manual: ${effectiveStartDate} ~ ${effectiveEndDate})...`);
+        } else if (latestDateInFile) {
+            // 規則2: 有檔案，從最新資料日期爬到今天
+            // 將 YYYY/MM/DD 轉成 URL 參數格式 YYYY-M-D
+            const [y, m, d] = latestDateInFile.split('/').map(Number);
+            effectiveStartDate = `${y}-${m}-${d}`;
+            effectiveEndDate = toParamDate(parseYYYYMMDD(targetDateStr));
+            console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] Updating (${effectiveStartDate} ~ ${effectiveEndDate})...`);
+        } else {
+            // 規則1: 沒有檔案，從預設起始日到今天
+            effectiveStartDate = toParamDate(defaultStartDateObj);
+            effectiveEndDate = toParamDate(parseYYYYMMDD(targetDateStr));
+            console.log(`\n[${currentProgress}/${totalStocks}] [${stock.code} ${stock.name}] New file (${effectiveStartDate} ~ ${effectiveEndDate})...`);
+        }
+
         const page = await browser.newPage();
 
         try {
-            const institutionalUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stock.code}&c=${startDateParam}&d=${endDateParam}`;
+            const institutionalUrl = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcl/zcl.djhtm?a=${stock.code}&c=${effectiveStartDate}&d=${effectiveEndDate}`;
             // console.log(`  URL: ${institutionalUrl}`);
 
             await page.goto(institutionalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
