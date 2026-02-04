@@ -502,7 +502,7 @@
         async function init() {
             // 1. 載入檔案列表並初始化日期選單
             await loadFileList();
-            
+
             // 2. 確定要載入的日期 (從 URL 或預設最新)
             const urlParams = getUrlParams();
             let targetDate = urlParams.date;
@@ -527,15 +527,15 @@
             try {
                 const isGitHubPages = window.location.hostname.includes('github.io');
                 const basePath = isGitHubPages ? '/stock_data' : '..';
-                
+
                 const response = await fetch(`${basePath}/data_fubon/files.json`);
                 if (!response.ok) throw new Error('無法載入檔案列表');
-                
+
                 const files = await response.json();
-                
-                // 過濾出符合格式的檔案: fubon_YYYYMMDD_stock_data.json
+
+                // 過濾出符合格式的檔案: fubon_YYYYMMDD_institutional.json
                 const stockFiles = files
-                    .filter(f => f.match(/^fubon_\d{8}_stock_data\.json$/))
+                    .filter(f => f.match(/^fubon_\d{8}_institutional\.json$/))
                     .sort().reverse(); // 最新日期在最前
 
                 const dateSelect = document.getElementById('dateSelect');
@@ -543,7 +543,7 @@
 
                 stockFiles.forEach(file => {
                     // 提取日期 YYYYMMDD
-                    const match = file.match(/fubon_(\d{8})_stock_data\.json/);
+                    const match = file.match(/fubon_(\d{8})_institutional\.json/);
                     if (match) {
                         const dateStr = match[1];
                         const displayDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
@@ -583,7 +583,7 @@
             try {
                 const isGitHubPages = window.location.hostname.includes('github.io');
                 const basePath = isGitHubPages ? '/stock_data' : '..';
-                const fileName = `fubon_${dateStr}_stock_data.json`;
+                const fileName = `fubon_${dateStr}_institutional.json`;
                 const dataPath = `${basePath}/data_fubon/${fileName}`;
 
                 console.log(`Loading data for ${dateStr}: ${dataPath}`);
