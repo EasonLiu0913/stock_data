@@ -57,7 +57,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  // 檔案路徑
  const twseIndustryCsvPath = path.join(__dirname, '../data_twse/twse_industry.csv');
  const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional.json`);
- const stockDataPath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_stock_data.json`);
+
 
  // 讀取股票清單
  const stockInfoMap = new Map();
