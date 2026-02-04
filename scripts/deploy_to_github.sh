@@ -6,13 +6,21 @@
 echo "🚀 開始 GitHub Pages 更新流程..."
 
 # 1. 執行股票資料提取
-echo "📊 正在提取股票資料..."
+echo "📊 正在提取股票資料 (SMA & Institutional)..."
 export PATH="/Users/eason/.nvm/versions/node/v22.11.0/bin:$PATH"
-node scripts/test_extract_stock_data.js
 
-# 檢查是否成功
-if [ $? -ne 0 ]; then
-    echo "❌ 股票資料提取失敗！"
+# Run both crawlers
+echo "  - Running SMA Crawler..."
+node scripts/crawl_sma_data.js
+SMA_EXIT=$?
+
+echo "  - Running Institutional Crawler..."
+node scripts/crawl_institutional_data.js
+INST_EXIT=$?
+
+# 檢查是否成功 (只要有一個失敗就算失敗)
+if [ $SMA_EXIT -ne 0 ] || [ $INST_EXIT -ne 0 ]; then
+    echo "❌ 股票資料提取失敗！ (SMA: $SMA_EXIT, Inst: $INST_EXIT)"
     exit 1
 fi
 
@@ -27,14 +35,15 @@ TODAY=$(date +%Y%m%d)
 echo "📅 日期: $TODAY"
 
 # 4. 檢查是否有變更
-if git diff --quiet data_fubon/fubon_${TODAY}_stock_data.json && git diff --quiet data_fubon/files.json && git diff --quiet public/; then
+if git diff --quiet data_fubon/fubon_${TODAY}_sma.json && git diff --quiet data_fubon/fubon_${TODAY}_institutional.json && git diff --quiet data_fubon/files.json && git diff --quiet public/; then
     echo "ℹ️  資料無變更，跳過提交"
     exit 0
 fi
 
 # 5. 提交變更到 Git
 echo "📝 正在提交變更到 Git..."
-git add data_fubon/fubon_${TODAY}_stock_data.json
+git add data_fubon/fubon_${TODAY}_sma.json
+git add data_fubon/fubon_${TODAY}_institutional.json
 git add data_fubon/files.json
 git add data_twse/files.json
 git add public/*.html
