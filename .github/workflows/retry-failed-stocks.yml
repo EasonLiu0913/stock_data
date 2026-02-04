@@ -1,0 +1,116 @@
+name: Retry Failed Stocks
+
+on:
+  schedule:
+    # 每天 17:00 台北時間 (09:00 UTC) 自動重爬失敗的股票
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260203)'
+        required: false
+        default: ''
+
+jobs:
+  retry-failed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Determine target date
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "TARGET_DATE=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+            echo "📅 使用手動輸入的日期: ${{ github.event.inputs.date }}"
+          else
+            # 預設使用台北時間的今天
+            TARGET_DATE=$(TZ='Asia/Taipei' date +'%Y%m%d')
+            echo "TARGET_DATE=$TARGET_DATE" >> $GITHUB_OUTPUT
+            echo "📅 使用今天的日期: $TARGET_DATE"
+          fi
+
+      - name: Check if failed list exists
+        id: check
+        run: |
+          FAILED_LIST="data_fubon/fubon_${{ steps.date.outputs.TARGET_DATE }}_stock_data_failedList.json"
+          if [ -f "$FAILED_LIST" ]; then
+            COUNT=$(jq length "$FAILED_LIST")
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+            echo "COUNT=$COUNT" >> $GITHUB_OUTPUT
+            echo "📋 發現失敗清單: $FAILED_LIST (共 $COUNT 個)"
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "COUNT=0" >> $GITHUB_OUTPUT
+            echo "✅ 沒有失敗清單，無需重爬"
+          fi
+
+      - name: Run retry script
+        if: steps.check.outputs.EXISTS == 'true' && steps.check.outputs.COUNT != '0'
+        run: |
+          echo "🔄 開始重爬失敗的股票..."
+          node scripts/retry_failed_stocks.js --date ${{ steps.date.outputs.TARGET_DATE }}
+
+      - name: Commit and push data
+        if: steps.check.outputs.EXISTS == 'true' && steps.check.outputs.COUNT != '0'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_fubon/
+          git diff --staged --quiet || git commit -m "chore: retry failed stocks for ${{ steps.date.outputs.TARGET_DATE }}"
+          
+          # Retry loop for push to handle race conditions
+          MAX_RETRIES=5
+          count=0
+          success=false
+          
+          while [ $count -lt $MAX_RETRIES ]; do
+            git stash --include-untracked || true
+            git pull --rebase -Xtheirs origin main
+            git stash pop || true
+            git add data_fubon/
+            if git push origin main; then
+              success=true
+              break
+            else
+              echo "Push failed, retrying ($((count + 1))/$MAX_RETRIES)..."
+              sleep 5
+              count=$((count + 1))
+            fi
+          done
+          
+          if [ "$success" = "false" ]; then
+            echo "Failed to push after $MAX_RETRIES attempts."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.check.outputs.EXISTS }}" = "true" ] && [ "${{ steps.check.outputs.COUNT }}" != "0" ]; then
+            echo "🎉 重爬完成！"
+            FAILED_LIST="data_fubon/fubon_${{ steps.date.outputs.TARGET_DATE }}_stock_data_failedList.json"
+            if [ -f "$FAILED_LIST" ]; then
+              REMAINING=$(jq length "$FAILED_LIST")
+              echo "📋 仍有 $REMAINING 個股票失敗"
+            else
+              echo "✅ 所有股票都已成功！"
+            fi
+          else
+            echo "✅ 沒有需要重爬的股票"
+          fi
