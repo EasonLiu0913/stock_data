@@ -115,83 +115,96 @@ function getDatesInRange(startStr, endStr) {
     for (const date of targetDates) {
         const dateFilename = formatFilenameDate(date); // YYYYMMDD
         const dateKeyAD = formatADDate(date); // YYYY/MM/DD
-        const outputFile = path.join(OUTPUT_DIR, `fubon_${dateFilename}_stock_data.json`);
 
-        const dailyResult = {};
-        let stockCount = 0;
+        const smaOutputFile = path.join(OUTPUT_DIR, `fubon_${dateFilename}_sma.json`);
+        const instOutputFile = path.join(OUTPUT_DIR, `fubon_${dateFilename}_institutional.json`);
+
+        const dailySmaResult = {};
+        const dailyInstResult = {};
+
+        let smaCount = 0;
+        let instCount = 0;
 
         for (const [code, name] of stockMap) {
             const smaAll = smaDataCache.get(code);
             const instAll = instDataCache.get(code);
 
-            // If no SMA data for this specific date, likely no trading or data missing
-            // Skip this stock for this day? Or include partial?
-            // Existing logic usually needs SMA data as base.
-            if (!smaAll || !smaAll[dateKeyAD]) {
-                continue;
+            // --- 處理 SMA 資料 ---
+            if (smaAll && smaAll[dateKeyAD]) {
+                const smaDay = smaAll[dateKeyAD];
+                const formatSMA = (val) => (typeof val === 'number' ? val.toFixed(2) : val);
+
+                dailySmaResult[code] = {
+                    StockName: name,
+                    [dateKeyAD]: {
+                        SMA5: formatSMA(smaDay.sma5),
+                        SMA20: formatSMA(smaDay.sma20),
+                        SMA60: formatSMA(smaDay.sma60),
+                        SMA120: formatSMA(smaDay.sma120),
+                        SMA240: formatSMA(smaDay.sma240)
+                    }
+                };
+                smaCount++;
             }
 
-            const smaDay = smaAll[dateKeyAD];
+            // --- 處理 Institutional 資料 ---
+            // Institutional data usually has history, but we want the snapshot "as of" this date
+            // The scraper extracts ~30 days relative to the query date.
+            // For backfill, we can reconstruct the object with key "ForeignInvestors", "InvestmentTrust", etc.
+            // containing dates UP TO dateKeyAD.
 
-            // Prepare Institutional Data (History up to this date)
-            // We want last ~30 entries up to dateKeyAD
-            const foreignInv = {};
-            const investTrust = {};
-            const dealers = {};
-            const dailyTotal = {};
+            // Only generate if we have data for this stock at all?
+            // Or if we specifically have data for this date?
+            // The frontend displays historical table, so we need the history object.
 
             if (instAll) {
-                // Filter keys <= dateKeyAD
-                // Sort keys descending to get latest
+                const foreignInv = {};
+                const investTrust = {};
+                const dealers = {};
+                const dailyTotal = {};
+
                 const sortedKeys = Object.keys(instAll).sort((a, b) => b.localeCompare(a));
-
-                // Find index of current date or closest previous date?
-                // Actually we just want history up to target date.
-                // Since keys are YYYY/MM/DD, we can compare strings.
-
                 const validKeys = sortedKeys.filter(k => k <= dateKeyAD);
-                // Take top 30? Or match logic of scraper?
-                // Scraper usually extracts what is on page (approx 30 days).
-                // Let's take up to 30.
-                const historyKeys = validKeys.slice(0, 30);
 
-                historyKeys.forEach(k => {
-                    const rocDate = formatROCDate(parseDate(k)); // Convert Key to ROC
-                    const data = instAll[k];
-                    if (data) {
-                        foreignInv[rocDate] = data.ForeignInvestors;
-                        investTrust[rocDate] = data.InvestmentTrust;
-                        dealers[rocDate] = data.Dealers;
-                        dailyTotal[rocDate] = data.DailyTotal;
-                    }
-                });
+                // If no data up to this date, skip this stock for institutional file
+                if (validKeys.length > 0) {
+                    // Take top 30
+                    const historyKeys = validKeys.slice(0, 30);
+
+                    historyKeys.forEach(k => {
+                        const rocDate = formatROCDate(parseDate(k));
+                        const data = instAll[k];
+                        if (data) {
+                            foreignInv[rocDate] = data.ForeignInvestors;
+                            investTrust[rocDate] = data.InvestmentTrust;
+                            dealers[rocDate] = data.Dealers;
+                            dailyTotal[rocDate] = data.DailyTotal;
+                        }
+                    });
+
+                    dailyInstResult[code] = {
+                        StockName: name,
+                        ForeignInvestors: foreignInv,
+                        InvestmentTrust: investTrust,
+                        Dealers: dealers,
+                        DailyTotal: dailyTotal
+                    };
+                    instCount++;
+                }
             }
-
-            // Format numbers in SMA to string with 2 decimals if needed?
-            // Existing file used string "25.92".
-            const formatSMA = (val) => (typeof val === 'number' ? val.toFixed(2) : val);
-
-            dailyResult[code] = {
-                StockName: name,
-                [dateKeyAD]: { // SMA Data
-                    SMA5: formatSMA(smaDay.sma5),
-                    SMA20: formatSMA(smaDay.sma20),
-                    SMA60: formatSMA(smaDay.sma60),
-                    SMA120: formatSMA(smaDay.sma120),
-                    SMA240: formatSMA(smaDay.sma240)
-                },
-                ForeignInvestors: foreignInv,
-                InvestmentTrust: investTrust,
-                Dealers: dealers,
-                DailyTotal: dailyTotal
-            };
-            stockCount++;
         }
 
-        if (stockCount > 0) {
-            fs.writeFileSync(outputFile, JSON.stringify(dailyResult, null, 2), 'utf8');
-            console.log(`Saved ${outputFile} (${stockCount} stocks)`);
-        } else {
+        if (smaCount > 0) {
+            fs.writeFileSync(smaOutputFile, JSON.stringify(dailySmaResult, null, 2), 'utf8');
+            console.log(`Saved ${smaOutputFile} (${smaCount} stocks)`);
+        }
+
+        if (instCount > 0) {
+            fs.writeFileSync(instOutputFile, JSON.stringify(dailyInstResult, null, 2), 'utf8');
+            console.log(`Saved ${instOutputFile} (${instCount} stocks)`);
+        }
+
+        if (smaCount === 0 && instCount === 0) {
             console.log(`Skipped ${dateFilename} (No Data)`);
         }
     }
