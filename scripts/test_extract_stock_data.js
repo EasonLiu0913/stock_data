@@ -311,8 +311,13 @@ const MAX_CONCURRENCY = 5; // 最大並發數 (GitHub Actions 一般 2-core, 設
                     await page.goto(institutionalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
                     // await page.waitForTimeout(500); // 減少等待
 
-                    const institutionalData = await page.evaluate(() => {
+                    const institutionalData = await page.evaluate((endDate) => {
                         try {
+                            // 將 endDateParam (YYYY-M-D) 轉換為民國年格式 (YYY/MM/DD)
+                            const [year, month, day] = endDate.split('-').map(Number);
+                            const rocYear = year - 1911;
+                            const endDateRoc = `${rocYear}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+
                             const allT01Tables = document.querySelectorAll('table.t01');
                             let targetTable = null;
                             const allT0Cells = document.querySelectorAll('td.t0');
@@ -336,23 +341,43 @@ const MAX_CONCURRENCY = 5; // 最大並發數 (GitHub Actions 一般 2-core, 設
                             const dailyTotal = {};
 
                             const dataRows = rows.slice(headerIndex + 1, headerIndex + 1 + 30);
-                            for (const row of dataRows) {
+                            for (let i = 0; i < dataRows.length; i++) {
+                                const row = dataRows[i];
                                 const values = row.innerText.trim().split(/\s+/);
                                 if (values.length >= 5 && values[0].match(/^\d+\/\d+\/\d+$/)) {
                                     const parseNum = (t) => { const n = parseInt(t.replace(/,/g, ''), 10); return isNaN(n) ? 0 : n; };
                                     const dk = values[0];
-                                    foreignInvestors[dk] = parseNum(values[1]);
-                                    investmentTrust[dk] = parseNum(values[2]);
-                                    dealers[dk] = parseNum(values[3]);
-                                    dailyTotal[dk] = parseNum(values[4]);
+                                    const foreignVal = parseNum(values[1]);
+                                    const investmentTrustVal = parseNum(values[2]);
+                                    const dealersVal = parseNum(values[3]);
+                                    const dailyTotalVal = parseNum(values[4]);
+
+                                    // 計算三大法人有幾個為 0
+                                    let zeroCount = 0;
+                                    for (const value of [foreignVal, investmentTrustVal, dealersVal]) {
+                                        if (value === 0) zeroCount++;
+                                    }
+
+                                    // 檢查：如果 i === 0 且 dk !== endDateRoc，代表資料尚未更新，跳過此股票
+                                    if (i === 0 && dk !== endDateRoc) {
+                                        return { error: '目標日期外資資料有誤 (非預期日期)', skipReason: 'NOT_EXPECTED_DATE' };
+                                    }
+
+                                    // 檢查：如果是目標日期且三大法人其中兩個為 0，代表資料尚未更新，跳過此股票
+                                    if (dk === endDateRoc && zeroCount >= 2) return { error: '目標日期外資資料尚未更新 (值為0)', skipReason: 'FOREIGN_ZERO' };
+
+                                    foreignInvestors[dk] = foreignVal;
+                                    investmentTrust[dk] = investmentTrustVal;
+                                    dealers[dk] = dealersVal;
+                                    dailyTotal[dk] = dailyTotalVal;
                                 }
                             }
                             return { success: true, ForeignInvestors: foreignInvestors, InvestmentTrust: investmentTrust, Dealers: dealers, DailyTotal: dailyTotal };
                         } catch (e) { return { error: e.message }; }
-                    });
+                    }, endDateParam);
 
                     if (institutionalData.error) {
-                        // console.log(`  ⚠️  ${stockNumber}: 機構資料失敗 - ${institutionalData.error}`);
+                        console.log(`  ⚠️  ${stockNumber}: 機構資料失敗 - ${institutionalData.error}`);
                     } else {
                         // console.log(`  ✅ ${stockNumber}: 機構資料 OK`);
                         result[stockNumber] = {
