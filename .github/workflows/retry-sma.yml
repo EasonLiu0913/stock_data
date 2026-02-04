@@ -1,0 +1,85 @@
+name: Retry SMA Failed
+
+on:
+  schedule:
+    # 每天 17:00 台北時間 (09:00 UTC)
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260204)'
+        required: false
+        default: ''
+
+jobs:
+  retry-sma:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Determine target date
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "target=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+          else
+            TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            echo "target=${TARGET_DATE}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if failed list exists
+        id: check
+        run: |
+          FAILED_FILE="data_fubon/fubon_${{ steps.date.outputs.target }}_sma_failedList.json"
+          if [ -f "$FAILED_FILE" ]; then
+            COUNT=$(jq length "$FAILED_FILE")
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
+            echo "📋 Found $COUNT failed stocks to retry"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ No failed list found, nothing to retry"
+          fi
+
+      - name: Run SMA retry
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          node scripts/retry_sma_failed.js --date ${{ steps.date.outputs.target }}
+
+      - name: Generate files.json
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          node scripts/generate_files_json.js || echo "generate_files_json.js not found, skipping"
+
+      - name: Commit and push changes
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🔄 Retry SMA failed stocks - ${CURRENT_DATE}"
+
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
