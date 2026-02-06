@@ -190,17 +190,14 @@ const MAX_CONCURRENCY = 3;
        const dealersVal = parseNum(values[3]);
        const dailyTotalVal = parseNum(values[4]);
 
-       let zeroCount = 0;
-       for (const value of [foreignVal, investmentTrustVal, dealersVal]) {
-        if (value === 0) zeroCount++;
-       }
-
+       // 檢查：如果 i === 0 且 dk !== endDateRoc，代表資料尚未更新，跳過此股票
        if (i === 0 && dk !== endDateRoc) {
         return { error: '目標日期資料有誤 (非預期日期)', skipReason: 'NOT_EXPECTED_DATE' };
        }
 
-       if (dk === endDateRoc && zeroCount >= 2) {
-        return { error: '目標日期資料尚未更新 (值為0)', skipReason: 'DATA_ZERO' };
+       // 檢查：如果是目標日期且 values[1]~values[4] 有任意欄位為 '--'，代表資料尚未更新
+       if (dk === endDateRoc && (values[1] === '--' || values[2] === '--' || values[3] === '--' || values[4] === '--')) {
+        return { error: '目標日期資料尚未更新 (值為 "--")', skipReason: 'DATA_MISSING' };
        }
 
        foreignInvestors[dk] = foreignVal;
