@@ -32,6 +32,10 @@ jobs:
       - name: Run Market Cap and Volume Ranking Crawler
         run: node scripts/scraper_fubon_other.js
 
+      - name: Generate files.json
+        run: |
+          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
+
       - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
