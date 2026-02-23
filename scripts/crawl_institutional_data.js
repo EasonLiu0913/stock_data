@@ -54,6 +54,16 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  console.log(`\n🏦 三大法人買賣超資料爬取`);
  console.log(`📅 目標日期: ${targetDateStr}\n`);
 
+ // 週末判斷：若目標日期為週六或週日，直接結束
+ const targetYear = parseInt(targetDateStr.substring(0, 4));
+ const targetMonth = parseInt(targetDateStr.substring(4, 6)) - 1;
+ const targetDay = parseInt(targetDateStr.substring(6, 8));
+ const targetDayOfWeek = new Date(targetYear, targetMonth, targetDay).getDay();
+ if (targetDayOfWeek === 0 || targetDayOfWeek === 6) {
+  console.log('📅 目標日期為週末（非交易日），跳過爬取。');
+  return;
+ }
+
  // 檔案路徑
  const twseIndustryCsvPath = path.join(__dirname, '../data_twse/twse_industry.csv');
  const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional.json`);
@@ -282,15 +292,19 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  console.log(`⏭️  跳過: ${skippedCount} 個（已有資料）`);
  console.log(`📊 總計: ${stockNumbers.length} 個股票\n`);
 
- // 儲存結果
- fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
- console.log(`💾 結果已儲存到: ${outputFilePath}`);
+ // 儲存結果（僅在有成功資料時才寫檔，避免非交易日產生空檔案）
+ if (successCount > 0) {
+  fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
+  console.log(`💾 結果已儲存到: ${outputFilePath}`);
 
- // 儲存失敗清單
- if (failedStocks.length > 0) {
-  const failedListFile = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional_failedList.json`);
-  fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8');
-  console.log(`📋 失敗清單已儲存到: ${failedListFile}`);
+  // 儲存失敗清單
+  if (failedStocks.length > 0) {
+   const failedListFile = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional_failedList.json`);
+   fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8');
+   console.log(`📋 失敗清單已儲存到: ${failedListFile}`);
+  }
+ } else {
+  console.log('\n⚠️ 沒有任何股票成功取得資料，跳過寫檔（可能為非交易日）');
  }
 
 })();
