@@ -146,6 +146,17 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  console.log(`\n📈 SMA 技術指標資料爬取`);
  console.log(`📁 目標檔案: fubon_${targetDateStr}_sma.json\n`);
 
+ // 週末判斷：若目標日期為週六或週日，直接結束
+ const tgtYear = parseInt(targetDateStr.substring(0, 4));
+ const tgtMonth = parseInt(targetDateStr.substring(4, 6)) - 1;
+ const tgtDay = parseInt(targetDateStr.substring(6, 8));
+ const tgtDayOfWeek = new Date(tgtYear, tgtMonth, tgtDay).getDay();
+ if (tgtDayOfWeek === 0 || tgtDayOfWeek === 6) {
+  console.log('📅 目標日期為週末（非交易日），跳過爬取。');
+  await browser.close();
+  return;
+ }
+
  // --- 準備資料 ---
  const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_sma.json`);
  let existingData = {};
@@ -340,7 +351,11 @@ const MAX_CONCURRENCY = 5; // 最大並發數
   console.log(`📋 失敗清單已儲存到: ${failedListFile}\n`);
  }
 
- fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
- console.log(`💾 結果已儲存到: ${outputFilePath}`);
+ if (successCount > 0) {
+  fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8');
+  console.log(`💾 結果已儲存到: ${outputFilePath}`);
+ } else {
+  console.log('\n⚠️ 沒有任何股票成功取得資料，跳過寫檔（可能為非交易日）');
+ }
 
 })();
