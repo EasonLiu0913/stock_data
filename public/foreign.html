@@ -450,6 +450,8 @@
         let allFilteredStocks = []; // 儲存所有符合條件的股票資料
         let currentDataDateStr = ''; // 儲存當前資料日期字串 (YYYYMMDD)
         let fileList = []; // 儲存所有可用的檔案列表
+        let displayedStocks = []; // 當前顯示中的股票（供 header 排序使用）
+        let headerSort = { key: null, direction: 'desc' }; // 點擊表頭排序狀態
 
         // TODO: 台股可能會遇到颱風天或其他因素停市，所以建議從 /data_fubon/files.json 往前找日期
         // 計算過去 N 個交易日（跳過週末）
@@ -731,11 +733,75 @@
                 });
             }
 
+            // 下拉選單變更時，重置 header 排序狀態
+            headerSort = { key: null, direction: 'desc' };
+            displayedStocks = stocksToDisplay;
+
             // 重新渲染表格
             renderTable(stocksToDisplay, sortBy);
 
             // 更新統計資訊
             updateStats(stocksToDisplay, sortBy);
+        }
+
+        // 取得指定股票在某個 sort key 下的可比較值
+        function getSortValue(stock, key) {
+            if (key === 'code') {
+                const n = parseInt(stock.code);
+                return isNaN(n) ? stock.code : n;
+            }
+            if (key === 'name') return stock.name || '';
+            if (key === 'consecutiveDays') return stock.consecutiveDays;
+            if (key === 'total') return stock.total;
+            if (key === 'average') return stock.average;
+            if (key === 'total10') {
+                return stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
+            }
+            if (key === 'avg10') {
+                const t = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
+                return Math.round(t / 10);
+            }
+            if (key.startsWith('day')) {
+                const idx = parseInt(key.substring(3));
+                return stock.foreignInvestors[idx] || 0;
+            }
+            return 0;
+        }
+
+        // 點擊表頭排序：第一次降冪，再點切換為升冪
+        function sortByHeader(key) {
+            if (headerSort.key === key) {
+                headerSort.direction = headerSort.direction === 'desc' ? 'asc' : 'desc';
+            } else {
+                headerSort.key = key;
+                headerSort.direction = 'desc';
+            }
+
+            const dir = headerSort.direction;
+            const sorted = [...displayedStocks].sort((a, b) => {
+                const va = getSortValue(a, key);
+                const vb = getSortValue(b, key);
+                if (typeof va === 'string' || typeof vb === 'string') {
+                    const cmp = String(va).localeCompare(String(vb));
+                    return dir === 'desc' ? -cmp : cmp;
+                }
+                return dir === 'desc' ? vb - va : va - vb;
+            });
+            displayedStocks = sorted;
+
+            const sortBy = document.getElementById('sortSelect').value;
+            renderTable(sorted, sortBy);
+            updateStats(sorted, sortBy);
+        }
+
+        // 產生可排序的 th HTML
+        function makeTh(label, key, extraClass = '') {
+            let arrow = '';
+            if (headerSort.key === key) {
+                arrow = headerSort.direction === 'desc' ? ' ▼' : ' ▲';
+            }
+            const cls = extraClass ? ` class="${extraClass}"` : '';
+            return `<th${cls} style="cursor:pointer;user-select:none;" onclick="sortByHeader('${key}')" data-sort-key="${key}">${label}${arrow}</th>`;
         }
 
         function renderTable(stocks = allFilteredStocks, sortBy = 'total') {
@@ -768,19 +834,19 @@
                 }
 
                 let dateHeaders = '';
-                tradingDates.forEach(date => {
-                    dateHeaders += `<th>${date}</th>`;
+                tradingDates.forEach((date, i) => {
+                    dateHeaders += makeTh(date, `day${i}`);
                 });
 
                 tableHead.innerHTML = `
                     <tr>
                         <th class="serial-col">#</th>
-                        <th>股票代號</th>
-                        <th>股票名稱</th>
-                        <th>連續天數</th>
+                        ${makeTh('股票代號', 'code')}
+                        ${makeTh('股票名稱', 'name')}
+                        ${makeTh('連續天數', 'consecutiveDays')}
                         ${dateHeaders}
-                        <th>10日累計</th>
-                        <th>10日平均</th>
+                        ${makeTh('10日累計', 'total10')}
+                        ${makeTh('10日平均', 'avg10')}
                     </tr>
                 `;
 
@@ -824,14 +890,14 @@
                 tableHead.innerHTML = `
                     <tr>
                         <th class="serial-col">#</th>
-                        <th>股票代號</th>
-                        <th>股票名稱</th>
-                        <th>${tradingDates[0] || 'Day 1'}</th>
-                        <th>${tradingDates[1] || 'Day 2'}</th>
-                        <th>${tradingDates[2] || 'Day 3'}</th>
-                        <th>${tradingDates[3] || 'Day 4'}</th>
-                        <th>4日累計</th>
-                        <th>平均每日</th>
+                        ${makeTh('股票代號', 'code')}
+                        ${makeTh('股票名稱', 'name')}
+                        ${makeTh(tradingDates[0] || 'Day 1', 'day0')}
+                        ${makeTh(tradingDates[1] || 'Day 2', 'day1')}
+                        ${makeTh(tradingDates[2] || 'Day 3', 'day2')}
+                        ${makeTh(tradingDates[3] || 'Day 4', 'day3')}
+                        ${makeTh('4日累計', 'total')}
+                        ${makeTh('平均每日', 'average')}
                     </tr>
                 `;
 
