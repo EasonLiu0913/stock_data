@@ -398,6 +398,13 @@
 
         <div class="sort-container">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="typeSelect">類型：</label>
+                <select id="typeSelect" onchange="onTypeChanged()">
+                    <option value="buy" selected>外資買超</option>
+                    <option value="sell">外資賣超</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label for="dateSelect">日期：</label>
                 <select id="dateSelect" onchange="onDateChanged()"></select>
             </div>
@@ -452,6 +459,7 @@
         let fileList = []; // 儲存所有可用的檔案列表
         let displayedStocks = []; // 當前顯示中的股票（供 header 排序使用）
         let headerSort = { key: null, direction: 'desc' }; // 點擊表頭排序狀態
+        let currentType = 'buy'; // buy: 外資買超, sell: 外資賣超
 
         // TODO: 台股可能會遇到颱風天或其他因素停市，所以建議從 /data_fubon/files.json 往前找日期
         // 計算過去 N 個交易日（跳過週末）
@@ -488,15 +496,17 @@
             const params = new URLSearchParams(window.location.search);
             return {
                 sort: params.get('sort'),
-                date: params.get('date')
+                date: params.get('date'),
+                type: params.get('type')
             };
         }
 
         // 更新 URL 參數
-        function updateUrlParams(sort, date) {
+        function updateUrlParams(sort, date, type) {
             const params = new URLSearchParams(window.location.search);
             if (sort) params.set('sort', sort);
             if (date) params.set('date', date);
+            if (type) params.set('type', type);
             const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
             window.history.replaceState({}, '', newUrl);
         }
@@ -508,6 +518,11 @@
             // 2. 確定要載入的日期 (從 URL 或預設最新)
             const urlParams = getUrlParams();
             let targetDate = urlParams.date;
+            if (urlParams.type === 'sell' || urlParams.type === 'buy') {
+                currentType = urlParams.type;
+            }
+            document.getElementById('typeSelect').value = currentType;
+            updateTypeLabels();
 
             // 如果 URL 沒有指定日期，或指定的日期不在列表中，選第一個（最新）
             const dateSelect = document.getElementById('dateSelect');
@@ -575,6 +590,33 @@
             await loadData(selectedDate);
         }
 
+        async function onTypeChanged() {
+            currentType = document.getElementById('typeSelect').value;
+            updateTypeLabels();
+            const dateSelect = document.getElementById('dateSelect');
+            await loadData(dateSelect.value);
+        }
+
+        function isTargetValue(value) {
+            return currentType === 'sell' ? value < 0 : value > 0;
+        }
+
+        function getComparableValue(value) {
+            return currentType === 'sell' ? Math.abs(value) : value;
+        }
+
+        function getTypeLabel() {
+            return currentType === 'sell' ? '賣超' : '買超';
+        }
+
+        function updateTypeLabels() {
+            const label = getTypeLabel();
+            document.querySelector('h1').textContent = `🎯 外資連續${label}股票`;
+            document.querySelector('#sortSelect option[value="consecutive"]').textContent = `連續最多天${label}排行`;
+            document.querySelector('#sortSelect option[value="total"]').textContent = `4日累計${label}（從多到少）`;
+            document.querySelector('#sortSelect option[value="three-days"]').textContent = `四天中有三天在${label}（4日累計從大到小）`;
+        }
+
         async function loadData(dateStr) {
             if (!dateStr) return;
 
@@ -597,7 +639,7 @@
 
                 currentDataDateStr = dateStr;
                 // 更新 URL
-                updateUrlParams(null, dateStr);
+                updateUrlParams(null, dateStr, currentType);
 
                 const formattedDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
                 document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
@@ -625,16 +667,17 @@
                         const firstFour = foreignInvestors.slice(0, 4);
                         const total = firstFour.reduce((sum, val) => sum + val, 0);
                         const average = Math.round(total / 4);
+                        const firstFourComparable = firstFour.map(getComparableValue);
 
                         // 計算第1天到第2天的成長率
-                        const growthRate = firstFour[1] !== 0
-                            ? ((firstFour[0] - firstFour[1]) / Math.abs(firstFour[1]) * 100)
+                        const growthRate = firstFourComparable[1] !== 0
+                            ? ((firstFourComparable[0] - firstFourComparable[1]) / Math.abs(firstFourComparable[1]) * 100)
                             : 0;
 
-                        // 計算從第 1 天開始連續買超的天數
+                        // 計算從第 1 天開始連續買超/賣超的天數
                         let consecutiveDays = 0;
                         for (let i = 0; i < foreignInvestors.length; i++) {
-                            if (foreignInvestors[i] > 0) {
+                            if (isTargetValue(foreignInvestors[i])) {
                                 consecutiveDays++;
                             } else {
                                 break;
@@ -671,9 +714,6 @@
                 // 初始排序
                 sortStocks();
 
-                // 更新統計資訊
-                updateStats();
-
                 // 顯示表格，隱藏載入中
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('stockTable').style.display = 'table';
@@ -692,44 +732,44 @@
             const sortBy = document.getElementById('sortSelect').value;
 
             // 更新 URL 參數
-            updateUrlParams(sortBy);
+            updateUrlParams(sortBy, currentDataDateStr, currentType);
 
             let stocksToDisplay = [];
 
             if (sortBy === 'total') {
-                // 篩選出前四天都是正數的股票
+                // 篩選出前四天都是買超/賣超的股票
                 stocksToDisplay = allFilteredStocks.filter(stock => {
-                    return stock.day1 > 0 && stock.day2 > 0 && stock.day3 > 0 && stock.day4 > 0;
+                    return [stock.day1, stock.day2, stock.day3, stock.day4].every(isTargetValue);
                 });
-                // 按照 4 日累計排序（由大到小）
-                stocksToDisplay.sort((a, b) => b.total - a.total);
+                // 按照 4 日累計買超/賣超張數排序（由大到小）
+                stocksToDisplay.sort((a, b) => getComparableValue(b.total) - getComparableValue(a.total));
             } else if (sortBy === 'growth') {
-                // 篩選出前四天都是正數的股票
+                // 篩選出前四天都是買超/賣超的股票
                 stocksToDisplay = allFilteredStocks.filter(stock => {
-                    return stock.day1 > 0 && stock.day2 > 0 && stock.day3 > 0 && stock.day4 > 0;
+                    return [stock.day1, stock.day2, stock.day3, stock.day4].every(isTargetValue);
                 });
                 // 按照成長率排序（由大到小）
                 stocksToDisplay.sort((a, b) => b.growthRate - a.growthRate);
             } else if (sortBy === 'three-days') {
-                // 篩選出四天中至少有三天是正數的股票
+                // 篩選出四天中至少有三天是買超/賣超的股票
                 stocksToDisplay = allFilteredStocks.filter(stock => {
-                    const positiveDays = [stock.day1, stock.day2, stock.day3, stock.day4].filter(val => val > 0).length;
-                    return positiveDays >= 3;
+                    const targetDays = [stock.day1, stock.day2, stock.day3, stock.day4].filter(isTargetValue).length;
+                    return targetDays >= 3;
                 });
-                // 按照 4 日累計排序（由大到小）
-                stocksToDisplay.sort((a, b) => b.total - a.total);
+                // 按照 4 日累計買超/賣超張數排序（由大到小）
+                stocksToDisplay.sort((a, b) => getComparableValue(b.total) - getComparableValue(a.total));
             } else if (sortBy === 'consecutive') {
-                // 篩選出至少連續 1 天買超的股票
+                // 篩選出至少連續 1 天買超/賣超的股票
                 stocksToDisplay = allFilteredStocks.filter(stock => stock.consecutiveDays >= 1);
-                // 按照連續買超天數排序（由大到小），天數相同時按連續期間累計排序
+                // 按照連續買超/賣超天數排序（由大到小），天數相同時按連續期間累計排序
                 stocksToDisplay.sort((a, b) => {
                     if (b.consecutiveDays !== a.consecutiveDays) {
                         return b.consecutiveDays - a.consecutiveDays;
                     }
-                    // 計算連續期間的累計買超
+                    // 計算連續期間的累計買超/賣超
                     const aConsecutiveTotal = a.foreignInvestors.slice(0, a.consecutiveDays).reduce((sum, val) => sum + val, 0);
                     const bConsecutiveTotal = b.foreignInvestors.slice(0, b.consecutiveDays).reduce((sum, val) => sum + val, 0);
-                    return bConsecutiveTotal - aConsecutiveTotal;
+                    return getComparableValue(bConsecutiveTotal) - getComparableValue(aConsecutiveTotal);
                 });
             }
 
@@ -752,18 +792,19 @@
             }
             if (key === 'name') return stock.name || '';
             if (key === 'consecutiveDays') return stock.consecutiveDays;
-            if (key === 'total') return stock.total;
-            if (key === 'average') return stock.average;
+            if (key === 'total') return getComparableValue(stock.total);
+            if (key === 'average') return getComparableValue(stock.average);
             if (key === 'total10') {
-                return stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
+                const total10 = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
+                return getComparableValue(total10);
             }
             if (key === 'avg10') {
                 const t = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
-                return Math.round(t / 10);
+                return getComparableValue(Math.round(t / 10));
             }
             if (key.startsWith('day')) {
                 const idx = parseInt(key.substring(3));
-                return stock.foreignInvestors[idx] || 0;
+                return getComparableValue(stock.foreignInvestors[idx] || 0);
             }
             return 0;
         }
@@ -931,31 +972,31 @@
         function updateStats(stocks = allFilteredStocks, sortBy = 'total') {
             if (sortBy === 'consecutive') {
                 // 10 日模式統計
-                const total10Buy = stocks.reduce((sum, stock) => {
+                const total10 = stocks.reduce((sum, stock) => {
                     const t10 = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
                     return sum + t10;
                 }, 0);
-                const avg10Buy = stocks.length > 0 ? Math.round(total10Buy / stocks.length) : 0;
+                const avg10 = stocks.length > 0 ? Math.round(total10 / stocks.length) : 0;
 
                 document.getElementById('totalStocks').textContent = stocks.length;
-                document.getElementById('totalBuy').textContent = total10Buy.toLocaleString();
-                document.getElementById('avgBuy').textContent = avg10Buy.toLocaleString();
+                document.getElementById('totalBuy').textContent = total10.toLocaleString();
+                document.getElementById('avgBuy').textContent = avg10.toLocaleString();
 
                 // 更新標籤
-                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = '10日累計買超（張）';
-                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = '平均10日買超（張）';
+                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = `10日累計${getTypeLabel()}（張）`;
+                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = `平均10日${getTypeLabel()}（張）`;
             } else {
                 // 4 日模式統計
-                const totalBuy = stocks.reduce((sum, stock) => sum + stock.total, 0);
-                const avgBuy = stocks.length > 0 ? Math.round(totalBuy / stocks.length) : 0;
+                const total = stocks.reduce((sum, stock) => sum + stock.total, 0);
+                const avg = stocks.length > 0 ? Math.round(total / stocks.length) : 0;
 
                 document.getElementById('totalStocks').textContent = stocks.length;
-                document.getElementById('totalBuy').textContent = totalBuy.toLocaleString();
-                document.getElementById('avgBuy').textContent = avgBuy.toLocaleString();
+                document.getElementById('totalBuy').textContent = total.toLocaleString();
+                document.getElementById('avgBuy').textContent = avg.toLocaleString();
 
                 // 恢復標籤
-                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = '4日累計買超（張）';
-                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = '平均每日買超（張）';
+                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = `4日累計${getTypeLabel()}（張）`;
+                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = `平均每日${getTypeLabel()}（張）`;
             }
         }
 

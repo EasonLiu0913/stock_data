@@ -1,0 +1,61 @@
+name: Update TWSE Industry Lists
+
+on:
+  schedule:
+    # 08:30 Taipei Time (00:30 UTC)
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-twse-industry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Update TWSE industry lists
+        run: node scripts/extract_twse_industry.js
+
+      - name: Generate files.json
+        run: node scripts/generate_file_lists.js
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE industry list changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE industry lists ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TWSE industry list changes"
+            exit 1
+          fi
