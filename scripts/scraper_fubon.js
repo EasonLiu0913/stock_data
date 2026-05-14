@@ -11,7 +11,15 @@ const path = require('path');
         { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_F_0_5.djhtm', name: '上市主力買超5日排行' },
         { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_F_0_10.djhtm', name: '上市主力買超10日排行' },
         { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_F_0_20.djhtm', name: '上市主力買超20日排行' },
-        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_F_0_30.djhtm', name: '上市主力買超30日排行' }
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_F_0_30.djhtm', name: '上市主力買超30日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_1.djhtm', name: '上市主力賣超1日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_2.djhtm', name: '上市主力賣超2日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_3.djhtm', name: '上市主力賣超3日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_4.djhtm', name: '上市主力賣超4日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_5.djhtm', name: '上市主力賣超5日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_10.djhtm', name: '上市主力賣超10日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_20.djhtm', name: '上市主力賣超20日排行' },
+        { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_FA_0_30.djhtm', name: '上市主力賣超30日排行' }
     ];
 
     const browser = await chromium.launch({ headless: true });
@@ -70,7 +78,8 @@ const path = require('path');
                 // Define headers based on the page: Rank, Name, Price, Change, ChangePercent, Buy, Sell, NetBuy
                 // Note: The actual columns might need adjustment based on the exact table content.
                 // Based on inspection: 名次, 股票名稱, 收盤價, 漲跌, 漲跌幅, 買進, 賣出, 買超
-                const headers = ['Rank', 'Stock', 'Price', 'Change', 'ChangePercent', 'Buy', 'Sell', 'NetBuy'];
+                const netColumn = target.name.includes('賣超') ? 'NetSell' : 'NetBuy';
+                const headers = ['Rank', 'Stock', 'Price', 'Change', 'ChangePercent', 'Buy', 'Sell', netColumn];
 
                 const csvContent = [
                     headers.join(','),
