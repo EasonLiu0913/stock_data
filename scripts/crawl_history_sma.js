@@ -97,6 +97,9 @@ const REGEX_PATTERNS = {
                 const dates = Object.keys(existingData).sort();
                 if (dates.length > 0) {
                     stopDate = dates[dates.length - 1];
+                    if (isMissingMarketData(existingData[stopDate])) {
+                        stopDate = previousDateString(stopDate);
+                    }
                     // console.log(`[${stock.code}] Existing data found. Latest: ${stopDate}.`);
                 }
             } catch (e) {
@@ -263,6 +266,7 @@ async function crawlStock(page, stockCode, stopDate) {
         }
 
         const dataPoint = {
+            ...(await extractMarketData(page)),
             sma5: extractValue(legendText, REGEX_PATTERNS.SMA5),
             sma20: extractValue(legendText, REGEX_PATTERNS.SMA20),
             sma60: extractValue(legendText, REGEX_PATTERNS.SMA60),
@@ -281,6 +285,55 @@ async function crawlStock(page, stockCode, stopDate) {
     }
 
     return collectedData;
+}
+
+function isMissingMarketData(dataPoint) {
+    return !dataPoint || ['price', 'open', 'high', 'low', 'volume'].some(key => dataPoint[key] == null);
+}
+
+function previousDateString(dateStr) {
+    const [year, month, day] = dateStr.split('/').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() - 1);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}/${mm}/${dd}`;
+}
+
+async function extractMarketData(page) {
+    return page.evaluate(() => {
+        const removeCommas = (str) => (typeof str === 'string' ? str.replace(/,/g, '') : str);
+        const extractNumber = (text) => {
+            const match = removeCommas(text || '').match(/\d+(\.\d+)?/);
+            return match ? Number(match[0]) : null;
+        };
+
+        const data = {};
+        const priceLegend = Array.from(document.querySelectorAll('.notehead .opsLegendK'))
+            .find(el => {
+                const notehead = el.closest('.notehead');
+                return el.innerText.trim() === '股價' || (notehead && notehead.innerText.includes('股價'));
+            });
+
+        if (priceLegend) {
+            const priceContainer = priceLegend.closest('.notehead');
+            const priceSpan = priceContainer ? priceContainer.querySelector('.opsTopTitleK span') : null;
+            data.price = extractNumber(priceSpan ? priceSpan.innerText.trim() : '');
+        }
+
+        const setField = (fieldName, selector, extractor) => {
+            const el = document.querySelector(selector);
+            data[fieldName] = el ? extractNumber(extractor ? extractor(el) : el.innerText.trim()) : null;
+        };
+
+        setField('open', '.opsLegendK-o span', el => el.innerText.trim());
+        setField('high', '.opsLegendK-h span', el => el.innerText.trim());
+        setField('low', '.opsLegendK-l span', el => el.innerText.trim());
+        setField('volume', '.opsLegendK-v', el => el.innerText.trim());
+
+        return data;
+    });
 }
 
 function extractValue(text, regex) {

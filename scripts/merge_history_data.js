@@ -7,7 +7,7 @@ const SMA_DIR = path.join(__dirname, '../data_history_sma');
 const OUTPUT_DIR = path.join(__dirname, '../data_fubon');
 const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 const START_DATE_STR = '2025/12/02';
-const END_DATE_STR = '2026/01/22';
+const END_DATE_STR = '2026/06/08';
 
 // Helper: Convert YYYY/MM/DD to Date object
 function parseDate(dateStr) {
@@ -133,10 +133,16 @@ function getDatesInRange(startStr, endStr) {
             if (smaAll && smaAll[dateKeyAD]) {
                 const smaDay = smaAll[dateKeyAD];
                 const formatSMA = (val) => (typeof val === 'number' ? val.toFixed(2) : val);
+                const formatVolume = (val) => (typeof val === 'number' ? String(Math.trunc(val)) : val);
 
                 dailySmaResult[code] = {
                     StockName: name,
                     [dateKeyAD]: {
+                        Price: formatSMA(smaDay.price),
+                        Open: formatSMA(smaDay.open),
+                        High: formatSMA(smaDay.high),
+                        Low: formatSMA(smaDay.low),
+                        Volume: formatVolume(smaDay.volume),
                         SMA5: formatSMA(smaDay.sma5),
                         SMA20: formatSMA(smaDay.sma20),
                         SMA60: formatSMA(smaDay.sma60),

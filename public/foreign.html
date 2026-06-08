@@ -433,6 +433,8 @@
                         <th>股票代號</th>
                         <th>股票名稱</th>
                         <th>連續天數</th>
+                        <th>股價</th>
+                        <th>均線區間</th>
                         <th>第1天</th>
                         <th>第2天</th>
                         <th>第3天</th>
@@ -617,6 +619,54 @@
             document.querySelector('#sortSelect option[value="three-days"]').textContent = `四天中有三天在${label}（4日累計從大到小）`;
         }
 
+        function formatPrice(price) {
+            return price || '-';
+        }
+
+        function getSmaRangeLabel(smaInfo) {
+            const price = parseFloat(smaInfo?.Price);
+            if (Number.isNaN(price)) return '-';
+
+            const availableSmas = ['SMA5', 'SMA20', 'SMA60', 'SMA240']
+                .map(key => ({ key, value: parseFloat(smaInfo?.[key]) }))
+                .filter(item => !Number.isNaN(item.value));
+
+            if (availableSmas.length === 0) return '-';
+            if (price >= availableSmas[0].value) return `> ${availableSmas[0].key}`;
+
+            for (let i = 1; i < availableSmas.length; i++) {
+                if (price >= availableSmas[i].value) {
+                    return `${availableSmas[i - 1].key} ~ ${availableSmas[i].key}`;
+                }
+            }
+
+            return `< ${availableSmas[availableSmas.length - 1].key}`;
+        }
+
+        function getAdDateKey(dateStr) {
+            return `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
+        }
+
+        async function loadSmaMap(basePath, dateStr) {
+            try {
+                const response = await fetch(`${basePath}/data_fubon/fubon_${dateStr}_sma.json`);
+                if (!response.ok) return {};
+
+                const smaData = await response.json();
+                const dateKey = getAdDateKey(dateStr);
+                const smaMap = {};
+
+                Object.entries(smaData).forEach(([stockCode, stockData]) => {
+                    smaMap[stockCode] = stockData?.[dateKey] || {};
+                });
+
+                return smaMap;
+            } catch (e) {
+                console.warn(`無法載入 SMA 資料: fubon_${dateStr}_sma.json`, e);
+                return {};
+            }
+        }
+
         async function loadData(dateStr) {
             if (!dateStr) return;
 
@@ -645,6 +695,7 @@
                 document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
 
                 const data = await response.json();
+                const smaMap = await loadSmaMap(basePath, dateStr);
 
                 // 載入所有有 ForeignInvestors 資料的股票（至少 4 天）
                 allFilteredStocks = [];
@@ -684,6 +735,8 @@
                             }
                         }
 
+                        const smaInfo = smaMap[stockCode] || {};
+
                         allFilteredStocks.push({
                             code: stockCode,
                             name: stockData.StockName || '',
@@ -695,6 +748,9 @@
                             average: average,
                             growthRate: growthRate,
                             consecutiveDays: consecutiveDays,
+                            price: smaInfo.Price || '',
+                            smaRange: getSmaRangeLabel(smaInfo),
+                            sma: smaInfo,
                             foreignInvestors: foreignInvestors,
                             dates: dates // Store the dates
                         });
@@ -792,6 +848,23 @@
             }
             if (key === 'name') return stock.name || '';
             if (key === 'consecutiveDays') return stock.consecutiveDays;
+            if (key === 'price') return parseFloat(stock.price) || 0;
+            if (key === 'smaRange') {
+                const order = {
+                    '> SMA5': 5,
+                    'SMA5 ~ SMA20': 4,
+                    'SMA5 ~ SMA60': 3.5,
+                    'SMA5 ~ SMA240': 2.5,
+                    'SMA20 ~ SMA60': 3,
+                    'SMA20 ~ SMA240': 2.5,
+                    'SMA60 ~ SMA240': 2,
+                    '< SMA5': 4,
+                    '< SMA20': 3,
+                    '< SMA60': 2,
+                    '< SMA240': 1
+                };
+                return order[stock.smaRange] || 0;
+            }
             if (key === 'total') return getComparableValue(stock.total);
             if (key === 'average') return getComparableValue(stock.average);
             if (key === 'total10') {
@@ -885,6 +958,8 @@
                         ${makeTh('股票代號', 'code')}
                         ${makeTh('股票名稱', 'name')}
                         ${makeTh('連續天數', 'consecutiveDays')}
+                        ${makeTh('股價', 'price')}
+                        ${makeTh('均線區間', 'smaRange')}
                         ${dateHeaders}
                         ${makeTh('10日累計', 'total10')}
                         ${makeTh('10日平均', 'avg10')}
@@ -912,6 +987,8 @@
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.name}</a></td>
                         <td style="font-weight: bold; color: #667eea;">${stock.consecutiveDays}</td>
+                        <td style="font-weight: 600;">${formatPrice(stock.price)}</td>
+                        <td>${stock.smaRange || '-'}</td>
                         ${daysCells}
                         <td class="${getColorClass(total10)}" style="font-weight: bold;">${total10.toLocaleString()}</td>
                         <td class="${getColorClass(avg10)}">${avg10.toLocaleString()}</td>

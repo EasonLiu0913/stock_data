@@ -179,7 +179,10 @@ const MAX_CONCURRENCY = 5; // 最大並發數
   const keys = Object.keys(existingData[stock]);
   // 檢查是否有日期格式的 key (SMA 資料)
   const smaKeys = keys.filter(k => k !== 'StockName' && /^\d{4}\/\d{2}\/\d{2}$/.test(k));
-  return smaKeys.length === 0;
+  if (smaKeys.length === 0) return true;
+
+  const targetDateKey = `${targetDateStr.substring(0, 4)}/${targetDateStr.substring(4, 6)}/${targetDateStr.substring(6, 8)}`;
+  return !existingData[stock][targetDateKey] || !existingData[stock][targetDateKey].Price;
  });
 
  const skippedCount = stockNumbers.length - stockNumbersToProcess.length;
@@ -271,6 +274,35 @@ const MAX_CONCURRENCY = 5; // 最大並發數
     const dateElement = document.querySelector('.opsBtmTitleK');
     const dateKey = dateElement ? dateElement.innerText.trim() : 'Unknown';
     const dataObj = {};
+    const priceLegend = Array.from(document.querySelectorAll('.notehead .opsLegendK'))
+     .find(el => {
+      const notehead = el.closest('.notehead');
+      return el.innerText.trim() === '股價' || (notehead && notehead.innerText.includes('股價'));
+     });
+
+    if (priceLegend) {
+     const priceContainer = priceLegend.closest('.notehead');
+     const priceSpan = priceContainer ? priceContainer.querySelector('.opsTopTitleK span') : null;
+     const priceText = priceSpan ? removeCommas(priceSpan.innerText.trim()) : '';
+     if (/^\d+(\.\d+)?$/.test(priceText)) {
+      dataObj.Price = priceText;
+     }
+    }
+
+    const setNumericField = (fieldName, selector, extractor) => {
+     const el = document.querySelector(selector);
+     if (!el) return;
+     const rawText = extractor ? extractor(el) : el.innerText.trim();
+     const value = removeCommas(rawText).match(/\d+(\.\d+)?/);
+     if (value) {
+      dataObj[fieldName] = value[0];
+     }
+    };
+
+    setNumericField('Open', '.opsLegendK-o span', el => el.innerText.trim());
+    setNumericField('High', '.opsLegendK-h span', el => el.innerText.trim());
+    setNumericField('Low', '.opsLegendK-l span', el => el.innerText.trim());
+    setNumericField('Volume', '.opsLegendK-v', el => el.innerText.trim());
 
     if (spanTexts.length % 2 === 0 && spanTexts.length > 0) {
      for (let i = 0; i < spanTexts.length; i += 2) {
@@ -295,6 +327,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
    } else {
     console.log(`  ✅ [${currentIdx}/${total}] ${stockNumber}: SMA OK`);
     result[stockNumber] = {
+     ...(result[stockNumber] || {}),
      StockName: stockInfoMap.get(stockNumber) || '',
      ...data.data
     };
