@@ -234,30 +234,11 @@ async function crawlStock(page, stockCode, stopDate) {
     let previousDate = '';
     let consecutiveSameDateCount = 0;
 
-    // Initial Click to focus + Tab x4 + ArrowLeft
-    try {
-        // Wait for iframe or element inside it? The selector is deep.
-        // Assuming page structure is consistent.
-        // Try simple focus first.
-        // If the selector is very specific, might need to wait for it.
-        const focusEl = await page.$(FOCUS_SELECTOR);
-        if (focusEl) {
-            await focusEl.click();
-        } else {
-            // Fallback click on body or just rely on keyboard?
-            // Maybe click on canvas/graph area?
-            await page.click('body');
-        }
-        await page.waitForTimeout(500);
+    const chartContext = await resolveChartContext(page);
 
-        // Perform initial Tab navigation
-        for (let i = 0; i < 4; i++) {
-            await page.keyboard.press('Tab');
-            await page.waitForTimeout(100); // Faster tab
-        }
-    } catch (e) {
-        // console.error(`Error initial focus interaction: ${e.message}`);
-    }
+    // Prime focus once. The old Tab sequence was brittle in headless CI.
+    await focusChart(chartContext);
+    await page.waitForTimeout(500);
 
     // Limit infinite loops
     let safetyCounter = 0;
@@ -313,7 +294,7 @@ async function crawlStock(page, stockCode, stopDate) {
         collectedData[currentDate] = dataPoint;
 
         // 3. Navigate to Previous Day
-        const nextDate = await moveChartToPreviousDay(page, currentDate, stockCode);
+        const nextDate = await moveChartToPreviousDay(chartContext, currentDate, stockCode);
 
         if (nextDate === currentDate) {
             console.log(`   ⚠️ [${stockCode}] Date did not change after ArrowLeft: ${currentDate}`);
@@ -327,52 +308,90 @@ async function crawlStock(page, stockCode, stopDate) {
     return { data: collectedData, visitedDates };
 }
 
-async function getChartDate(page) {
+async function resolveChartContext(page) {
     try {
-        const dateText = await page.locator('.opsBtmTitleK').first().textContent({ timeout: 2000 });
+        const iframeElement = await page.$('#SysJustIFRAMEDIV iframe');
+        if (iframeElement) {
+            const frameContent = await iframeElement.contentFrame();
+            if (frameContent) {
+                return frameContent;
+            }
+        }
+    } catch (e) {
+        // Fall back to the page context.
+    }
+
+    return page;
+}
+
+async function getChartDate(context) {
+    try {
+        const dateText = await context.locator('.opsBtmTitleK').first().textContent({ timeout: 2000 });
         return dateText ? dateText.trim() : '';
     } catch (e) {
         return '';
     }
 }
 
-async function focusChart(page) {
+async function focusChart(context) {
     try {
-        const focusEl = await page.$(FOCUS_SELECTOR);
-        if (focusEl) {
-            await focusEl.click({ force: true });
+        const graphEl = context.locator('#SysJustWebGraphDIV').first();
+        if (await graphEl.count()) {
+            await graphEl.click({ force: true, position: { x: 12, y: 12 } });
         } else {
-            await page.click('body', { force: true });
+            const focusEl = context.locator(FOCUS_SELECTOR).first();
+            if (await focusEl.count()) {
+                await focusEl.click({ force: true });
+            } else {
+                await context.locator('body').click({ force: true, position: { x: 12, y: 12 } });
+            }
         }
-        await page.waitForTimeout(250);
+        if (typeof context.waitForTimeout === 'function') {
+            await context.waitForTimeout(250);
+        }
         return true;
     } catch (e) {
         return false;
     }
 }
 
-async function moveChartToPreviousDay(page, currentDate, stockCode) {
+async function moveChartToPreviousDay(context, currentDate, stockCode) {
     const attempts = 3;
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
         try {
-            await page.keyboard.press('ArrowLeft');
-            await page.waitForTimeout(250);
+            await focusChart(context);
+            const graphEl = context.locator('#SysJustWebGraphDIV').first();
+            if (await graphEl.count()) {
+                await graphEl.press('ArrowLeft');
+            } else {
+                await context.locator('body').press('ArrowLeft');
+            }
 
-            const nextDate = await getChartDate(page);
-            if (nextDate && nextDate !== currentDate) {
+            const changed = await context.waitForFunction(
+                (selector, expectedDate) => {
+                    const el = document.querySelector(selector);
+                    return !!(el && el.textContent && el.textContent.trim() !== expectedDate);
+                },
+                '.opsBtmTitleK',
+                currentDate,
+                { timeout: 3500 }
+            ).then(() => true).catch(() => false);
+
+            const nextDate = await getChartDate(context);
+            if (changed && nextDate && nextDate !== currentDate) {
                 return nextDate;
             }
 
             console.log(`   ⚠️ [${stockCode}] ArrowLeft attempt ${attempt}/${attempts} did not move date from ${currentDate}. Refocusing...`);
-            await focusChart(page);
+            await focusChart(context);
         } catch (e) {
             console.log(`   ⚠️ [${stockCode}] ArrowLeft attempt ${attempt}/${attempts} failed: ${e.message}`);
-            await focusChart(page);
+            await focusChart(context);
         }
     }
 
-    return await getChartDate(page);
+    return await getChartDate(context);
 }
 
 function isMissingMarketData(dataPoint) {
