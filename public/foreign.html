@@ -185,6 +185,16 @@
             margin-top: 0.25rem;
         }
 
+        .daily-price.up {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        .daily-price.down {
+            color: #38a169;
+            font-weight: 600;
+        }
+
         .day-values {
             display: flex;
             gap: 0.5rem;
@@ -718,12 +728,33 @@
             });
         }
 
-        function renderDailyCell(value, price) {
+        function getPriceChangeInfo(price, previousPrice) {
+            const current = parseFloat(price);
+            const previous = parseFloat(previousPrice);
+
+            if (Number.isNaN(current) || Number.isNaN(previous) || previous === 0) {
+                return { label: '', className: '' };
+            }
+
+            const changePercent = ((current - previous) / previous) * 100;
+            if (changePercent > 0) {
+                return { label: `(+${changePercent.toFixed(2)}%)`, className: 'up' };
+            }
+            if (changePercent < 0) {
+                return { label: `(${changePercent.toFixed(2)}%)`, className: 'down' };
+            }
+
+            return { label: '(0.00%)', className: '' };
+        }
+
+        function renderDailyCell(value, price, previousPrice) {
             const numericValue = Number(value) || 0;
+            const changeInfo = getPriceChangeInfo(price, previousPrice);
+            const priceClass = changeInfo.className ? ` daily-price ${changeInfo.className}` : ' daily-price';
             return `
                 <div class="daily-cell">
                     <div>${numericValue.toLocaleString()}</div>
-                    <div class="daily-price">${formatPrice(price)}</div>
+                    <div class="${priceClass.trim()}">${formatPrice(price)}${changeInfo.label}</div>
                 </div>
             `;
         }
@@ -764,7 +795,7 @@
                             ? Object.keys(foreignInvestors)
                             : [];
                     });
-                const latestForeignDates = [...new Set(allForeignDates)].sort().reverse().slice(0, 10);
+                const latestForeignDates = [...new Set(allForeignDates)].sort().reverse().slice(0, 11);
                 const dailyPriceMap = await loadDailyPriceMap(basePath, latestForeignDates);
 
                 // 載入所有有 ForeignInvestors 資料的股票（至少 4 天）
@@ -1050,7 +1081,7 @@
                     for (let i = 0; i < 10; i++) {
                         const value = fi[i] || 0;
                         const colorClass = getColorClass(value);
-                        daysCells += `<td class="${colorClass}">${renderDailyCell(value, stock.dailyPrices?.[i])}</td>`;
+                        daysCells += `<td class="${colorClass}">${renderDailyCell(value, stock.dailyPrices?.[i], stock.dailyPrices?.[i + 1])}</td>`;
                     }
 
                     row.innerHTML = `
@@ -1105,10 +1136,10 @@
                         <td class="serial-col">${index + 1}</td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.name}</a></td>
-                        <td class="${day1Class}">${renderDailyCell(stock.day1, stock.dailyPrices?.[0])}</td>
-                        <td class="${day2Class}">${renderDailyCell(stock.day2, stock.dailyPrices?.[1])}</td>
-                        <td class="${day3Class}">${renderDailyCell(stock.day3, stock.dailyPrices?.[2])}</td>
-                        <td class="${day4Class}">${renderDailyCell(stock.day4, stock.dailyPrices?.[3])}</td>
+                        <td class="${day1Class}">${renderDailyCell(stock.day1, stock.dailyPrices?.[0], stock.dailyPrices?.[1])}</td>
+                        <td class="${day2Class}">${renderDailyCell(stock.day2, stock.dailyPrices?.[1], stock.dailyPrices?.[2])}</td>
+                        <td class="${day3Class}">${renderDailyCell(stock.day3, stock.dailyPrices?.[2], stock.dailyPrices?.[3])}</td>
+                        <td class="${day4Class}">${renderDailyCell(stock.day4, stock.dailyPrices?.[3], stock.dailyPrices?.[4])}</td>
                         <td class="${totalClass}" style="font-weight: bold;">${stock.total.toLocaleString()}</td>
                         <td class="${avgClass}">${stock.average.toLocaleString()}</td>
                     `;

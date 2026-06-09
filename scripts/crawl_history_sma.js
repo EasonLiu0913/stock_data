@@ -16,6 +16,7 @@ const argStart = getArg('--start');
 const TARGET_DATE_STR = argStart || DEFAULT_TARGET_DATE_STR;
 const OUTPUT_DIR = path.join(__dirname, '../data_history_sma');
 const DAILY_SMA_DIR = path.join(__dirname, '../data_fubon');
+const TRADING_DAYS_FILE = path.join(__dirname, '../data_history_sma/trading_days.json');
 const NON_TRADING_DAYS_FILE = path.join(__dirname, '../data_history_sma/non_trading_days.json');
 const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 const FOCUS_SELECTOR = '#SysJustIFRAMEDIV > table > tbody > tr:nth-child(2) > td:nth-child(2) > table > tbody > tr > td > form > table > tbody > tr > td > table > tbody > tr:nth-child(1) > td';
@@ -71,8 +72,9 @@ const REGEX_PATTERNS = {
         console.log(`ℹ️  No limit specified, processing all remaining stocks.`);
     }
 
-    const knownMarketDates = new Set(loadKnownMarketDates());
+    const tradingCalendar = loadTradingCalendar();
     const nonTradingCalendar = loadNonTradingCalendar();
+    addKnownDailySmaDates(tradingCalendar);
     let browser = null;
     let browserPromise = null;
     const getBrowser = async () => {
@@ -111,14 +113,14 @@ const REGEX_PATTERNS = {
             try {
                 const content = fs.readFileSync(outputFile, 'utf8');
                 existingData = JSON.parse(content);
-                learnNonTradingDaysFromTradingDates(nonTradingCalendar, Object.keys(existingData), knownMarketDates);
-                crawlPlan = getCrawlPlan(existingData, TARGET_DATE_STR, knownMarketDates, nonTradingCalendar);
+                crawlPlan = getCrawlPlan(existingData, TARGET_DATE_STR, tradingCalendar, nonTradingCalendar);
             } catch (e) {
                 console.error(`[${stock.code}] Error reading existing file, starting fresh.`);
             }
         }
 
         if (!crawlPlan.shouldCrawl) {
+            saveTradingCalendar(tradingCalendar);
             saveNonTradingCalendar(nonTradingCalendar);
             console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Data complete. Skipping.`);
             return;
@@ -130,10 +132,10 @@ const REGEX_PATTERNS = {
             const page = await getPage();
             const crawlResult = await crawlStock(page, stock.code, crawlPlan.stopDate);
             const crawledData = crawlResult.data;
+            learnTradingDaysFromTradingDates(tradingCalendar, crawlResult.visitedDates);
             learnNonTradingDaysFromTradingDates(nonTradingCalendar, [
-                ...Object.keys(existingData),
                 ...crawlResult.visitedDates
-            ], knownMarketDates);
+            ], tradingCalendar);
 
             // Merge data
             const mergedData = { ...existingData, ...crawledData };
@@ -150,9 +152,11 @@ const REGEX_PATTERNS = {
             // Save if we got crawled data or learned non-trading days.
             if (crawledCount > 0) {
                 fs.writeFileSync(outputFile, JSON.stringify(sortedData, null, 2), 'utf8');
+                saveTradingCalendar(tradingCalendar);
                 saveNonTradingCalendar(nonTradingCalendar);
                 console.log(`   ✅ [${stock.code}] Saved. Crawled: ${crawledCount}, Added: ${addedCount}, Total: ${Object.keys(sortedData).length}.`);
             } else {
+                saveTradingCalendar(tradingCalendar);
                 saveNonTradingCalendar(nonTradingCalendar);
                 console.log(`   🔸 [${stock.code}] No new data found.`);
             }
@@ -357,7 +361,38 @@ function filenameDateToKey(dateStr) {
     return `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
 }
 
-function loadKnownMarketDates() {
+function addCalendarDate(calendar, dateStr) {
+    if (!isDateKey(dateStr) || !isTrackedNonTradingYear(dateStr) || isWeekend(dateStr)) return false;
+
+    const year = dateStr.substring(0, 4);
+    if (!calendar[year]) calendar[year] = [];
+    if (calendar[year].includes(dateStr)) return false;
+
+    calendar[year].push(dateStr);
+    calendar[year].sort();
+    return true;
+}
+
+function calendarToSet(calendar) {
+    return new Set(Object.values(calendar).flat());
+}
+
+function loadTradingCalendar() {
+    if (!fs.existsSync(TRADING_DAYS_FILE)) return {};
+
+    try {
+        return JSON.parse(fs.readFileSync(TRADING_DAYS_FILE, 'utf8'));
+    } catch (e) {
+        console.warn(`⚠️  Failed to read trading calendar: ${TRADING_DAYS_FILE}`);
+        return {};
+    }
+}
+
+function saveTradingCalendar(calendar) {
+    saveCalendar(TRADING_DAYS_FILE, calendar);
+}
+
+function loadKnownDailySmaDates() {
     if (!fs.existsSync(DAILY_SMA_DIR)) return [];
 
     return fs.readdirSync(DAILY_SMA_DIR)
@@ -367,6 +402,10 @@ function loadKnownMarketDates() {
         })
         .filter(Boolean)
         .sort();
+}
+
+function addKnownDailySmaDates(calendar) {
+    loadKnownDailySmaDates().forEach(date => addCalendarDate(calendar, date));
 }
 
 function loadNonTradingCalendar() {
@@ -380,12 +419,16 @@ function loadNonTradingCalendar() {
     }
 }
 
-function saveNonTradingCalendar(calendar) {
+function saveCalendar(filePath, calendar) {
     const normalized = {};
     Object.keys(calendar).sort().forEach(year => {
         normalized[year] = [...new Set(calendar[year])].sort();
     });
-    fs.writeFileSync(NON_TRADING_DAYS_FILE, JSON.stringify(normalized, null, 2) + '\n', 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(normalized, null, 2) + '\n', 'utf8');
+}
+
+function saveNonTradingCalendar(calendar) {
+    saveCalendar(NON_TRADING_DAYS_FILE, calendar);
 }
 
 function isKnownNonTradingDate(calendar, dateStr) {
@@ -394,15 +437,7 @@ function isKnownNonTradingDate(calendar, dateStr) {
 }
 
 function addNonTradingDate(calendar, dateStr) {
-    if (!isDateKey(dateStr) || !isTrackedNonTradingYear(dateStr) || isWeekend(dateStr)) return false;
-
-    const year = dateStr.substring(0, 4);
-    if (!calendar[year]) calendar[year] = [];
-    if (calendar[year].includes(dateStr)) return false;
-
-    calendar[year].push(dateStr);
-    calendar[year].sort();
-    return true;
+    return addCalendarDate(calendar, dateStr);
 }
 
 function getDatesBetweenExclusive(olderDate, newerDate) {
@@ -415,27 +450,40 @@ function getDatesBetweenExclusive(olderDate, newerDate) {
     return dates;
 }
 
-function learnNonTradingDaysFromTradingDates(calendar, tradingDates, knownMarketDates) {
+function learnTradingDaysFromTradingDates(calendar, tradingDates) {
+    tradingDates
+        .filter(isDateKey)
+        .filter(isTrackedNonTradingYear)
+        .forEach(date => addCalendarDate(calendar, date));
+}
+
+function learnNonTradingDaysFromTradingDates(calendar, tradingDates, tradingCalendar) {
     const dates = [...new Set(tradingDates.filter(isDateKey))]
         .sort();
+    const tradingDatesSet = calendarToSet(tradingCalendar);
 
     for (let i = 1; i < dates.length; i++) {
         getDatesBetweenExclusive(dates[i - 1], dates[i]).forEach(date => {
-            if (knownMarketDates.has(date)) return;
+            if (tradingDatesSet.has(date)) return;
             addNonTradingDate(calendar, date);
         });
     }
 }
 
-function getMissingDatesBetween(existingData, olderDate, newerDate, knownMarketDates, nonTradingCalendar) {
+function getMissingDatesBetween(existingData, olderDate, newerDate, tradingCalendar, nonTradingCalendar) {
+    const tradingDates = calendarToSet(tradingCalendar);
     return getDatesBetweenExclusive(olderDate, newerDate)
         .filter(isTrackedNonTradingYear)
         .filter(date => !isWeekend(date))
         .filter(date => !isKnownNonTradingDate(nonTradingCalendar, date))
-        .filter(date => knownMarketDates.has(date) || !existingData[date]);
+        .filter(date => tradingDates.has(date) || !existingData[date]);
 }
 
-function getCrawlPlan(existingData, fallbackStopDate, knownMarketDates, nonTradingCalendar) {
+function getLatestKnownTradingDate(tradingCalendar) {
+    return [...calendarToSet(tradingCalendar)].sort().reverse()[0] || formatDateKey(new Date());
+}
+
+function getCrawlPlan(existingData, fallbackStopDate, tradingCalendar, nonTradingCalendar) {
     const dates = Object.keys(existingData).sort();
     if (dates.length === 0) {
         return {
@@ -445,23 +493,30 @@ function getCrawlPlan(existingData, fallbackStopDate, knownMarketDates, nonTradi
         };
     }
 
+    const gaps = [];
     for (let i = dates.length - 1; i > 0; i--) {
         const newerDate = dates[i];
         const olderDate = dates[i - 1];
-        const missingDates = getMissingDatesBetween(existingData, olderDate, newerDate, knownMarketDates, nonTradingCalendar);
+        const missingDates = getMissingDatesBetween(existingData, olderDate, newerDate, tradingCalendar, nonTradingCalendar);
 
         if (missingDates.length > 0) {
-            return {
-                shouldCrawl: true,
-                stopDate: isMissingMarketData(existingData[olderDate]) ? previousDateString(olderDate) : olderDate,
-                reason: `missing ${missingDates.length} possible trading dates between ${olderDate} and ${newerDate}`
-            };
+            gaps.push({ olderDate, newerDate, missingDates });
         }
     }
 
+    if (gaps.length > 0) {
+        const oldestGap = gaps[gaps.length - 1];
+        const missingCount = gaps.reduce((sum, gap) => sum + gap.missingDates.length, 0);
+        return {
+            shouldCrawl: true,
+            stopDate: isMissingMarketData(existingData[oldestGap.olderDate]) ? previousDateString(oldestGap.olderDate) : oldestGap.olderDate,
+            reason: `missing ${missingCount} possible trading dates across ${gaps.length} gaps`
+        };
+    }
+
     const latestDate = dates[dates.length - 1];
-    const latestKnownMarketDate = [...knownMarketDates].sort().reverse()[0] || formatDateKey(new Date());
-    const missingRecentDates = getMissingDatesBetween(existingData, latestDate, latestKnownMarketDate, knownMarketDates, nonTradingCalendar);
+    const latestKnownMarketDate = getLatestKnownTradingDate(tradingCalendar);
+    const missingRecentDates = getMissingDatesBetween(existingData, latestDate, latestKnownMarketDate, tradingCalendar, nonTradingCalendar);
 
     if (latestDate < latestKnownMarketDate && missingRecentDates.length > 0) {
         return {
