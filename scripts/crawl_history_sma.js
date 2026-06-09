@@ -114,6 +114,7 @@ const REGEX_PATTERNS = {
                 const content = fs.readFileSync(outputFile, 'utf8');
                 existingData = JSON.parse(content);
                 crawlPlan = getCrawlPlan(existingData, TARGET_DATE_STR, tradingCalendar, nonTradingCalendar);
+                logCrawlPlan(stock.code, existingData, crawlPlan, tradingCalendar, nonTradingCalendar);
             } catch (e) {
                 console.error(`[${stock.code}] Error reading existing file, starting fresh.`);
             }
@@ -531,6 +532,35 @@ function getCrawlPlan(existingData, fallbackStopDate, tradingCalendar, nonTradin
         stopDate: latestDate,
         reason: 'complete'
     };
+}
+
+function logCrawlPlan(stockCode, existingData, crawlPlan, tradingCalendar, nonTradingCalendar) {
+    const dates = Object.keys(existingData).sort();
+    const latestDate = dates[dates.length - 1] || '-';
+    const oldestDate = dates[0] || '-';
+    const tradingDates = calendarToSet(tradingCalendar);
+    const nonTradingDates = calendarToSet(nonTradingCalendar);
+    const gaps = [];
+
+    for (let i = dates.length - 1; i > 0; i--) {
+        const newerDate = dates[i];
+        const olderDate = dates[i - 1];
+        const missingDates = getMissingDatesBetween(existingData, olderDate, newerDate, tradingCalendar, nonTradingCalendar);
+        if (missingDates.length > 0) {
+            gaps.push({
+                olderDate,
+                newerDate,
+                missingDates: missingDates.slice(0, 5),
+                missingCount: missingDates.length
+            });
+        }
+    }
+
+    console.log(`   📋 [${stockCode}] Plan: latest=${latestDate}, oldest=${oldestDate}, stop=${crawlPlan.stopDate}, reason=${crawlPlan.reason}`);
+    console.log(`   📋 [${stockCode}] Calendar: trading=${tradingDates.size}, nonTrading=${nonTradingDates.size}, gaps=${gaps.length}`);
+    gaps.slice(0, 3).forEach((gap, idx) => {
+        console.log(`   📋 [${stockCode}] Gap${idx + 1}: ${gap.olderDate} -> ${gap.newerDate}, missing=${gap.missingCount}, sample=${gap.missingDates.join(', ')}`);
+    });
 }
 
 function previousDateString(dateStr) {
