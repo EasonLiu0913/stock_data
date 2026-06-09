@@ -4,7 +4,7 @@ const path = require('path');
 
 // Configuration
 const MAX_CONCURRENCY = 5; // Set concurrency to 5
-const MAX_EXISTING_DATE_GAP_DAYS = 10;
+const NON_TRADING_START_YEAR = 2026;
 const args = process.argv.slice(2);
 function getArg(flag) {
     const idx = args.indexOf(flag);
@@ -15,6 +15,8 @@ const DEFAULT_TARGET_DATE_STR = '2025/11/02';
 const argStart = getArg('--start');
 const TARGET_DATE_STR = argStart || DEFAULT_TARGET_DATE_STR;
 const OUTPUT_DIR = path.join(__dirname, '../data_history_sma');
+const DAILY_SMA_DIR = path.join(__dirname, '../data_fubon');
+const NON_TRADING_DAYS_FILE = path.join(__dirname, '../data_history_sma/non_trading_days.json');
 const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 const FOCUS_SELECTOR = '#SysJustIFRAMEDIV > table > tbody > tr:nth-child(2) > td:nth-child(2) > table > tbody > tr > td > form > table > tbody > tr > td > table > tbody > tr:nth-child(1) > td';
 
@@ -69,7 +71,17 @@ const REGEX_PATTERNS = {
         console.log(`ℹ️  No limit specified, processing all remaining stocks.`);
     }
 
-    const browser = await chromium.launch({ headless: true });
+    const knownMarketDates = new Set(loadKnownMarketDates());
+    const nonTradingCalendar = loadNonTradingCalendar();
+    let browser = null;
+    let browserPromise = null;
+    const getBrowser = async () => {
+        if (!browserPromise) {
+            browserPromise = chromium.launch({ headless: true });
+        }
+        browser = await browserPromise;
+        return browser;
+    };
 
     console.log(`🚀 Starting concurrent processing with ${MAX_CONCURRENCY} workers...`);
 
@@ -83,47 +95,48 @@ const REGEX_PATTERNS = {
     // Shared results stats (optional, mainly for logging)
     let processedCount = 0;
 
-    async function processStock(page, task) {
+    async function processStock(getPage, task) {
         const { stock, originalIndex } = task;
         const currentProgress = originalIndex + 1;
 
         const outputFile = path.join(OUTPUT_DIR, `${stock.code}.json`);
         let existingData = {};
-        let stopDate = TARGET_DATE_STR;
+        let crawlPlan = {
+            shouldCrawl: true,
+            stopDate: TARGET_DATE_STR,
+            reason: 'no existing data'
+        };
 
         if (fs.existsSync(outputFile)) {
             try {
                 const content = fs.readFileSync(outputFile, 'utf8');
                 existingData = JSON.parse(content);
-                stopDate = getIncrementalStopDate(existingData, stopDate);
-                if (isMissingMarketData(existingData[stopDate])) {
-                    stopDate = previousDateString(stopDate);
-                    // console.log(`[${stock.code}] Existing data found. Latest: ${stopDate}.`);
-                }
+                learnNonTradingDaysFromTradingDates(nonTradingCalendar, Object.keys(existingData), knownMarketDates);
+                crawlPlan = getCrawlPlan(existingData, TARGET_DATE_STR, knownMarketDates, nonTradingCalendar);
             } catch (e) {
                 console.error(`[${stock.code}] Error reading existing file, starting fresh.`);
             }
         }
 
-        // Check if we already have today's data
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${year}/${month}/${day}`;
-
-        if (stopDate === todayStr) {
-            console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Data up-to-date (${todayStr}). Skipping.`);
+        if (!crawlPlan.shouldCrawl) {
+            saveNonTradingCalendar(nonTradingCalendar);
+            console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Data complete. Skipping.`);
             return;
         }
 
-        console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Starting crawl (Until ${stopDate})...`);
+        console.log(`[${currentProgress}/${totalStocks}] [${stock.code}] Starting crawl (${crawlPlan.reason}, until ${crawlPlan.stopDate})...`);
 
         try {
-            const newData = await crawlStock(page, stock.code, stopDate);
+            const page = await getPage();
+            const crawlResult = await crawlStock(page, stock.code, crawlPlan.stopDate);
+            const crawledData = crawlResult.data;
+            learnNonTradingDaysFromTradingDates(nonTradingCalendar, [
+                ...Object.keys(existingData),
+                ...crawlResult.visitedDates
+            ], knownMarketDates);
 
             // Merge data
-            const mergedData = { ...existingData, ...newData };
+            const mergedData = { ...existingData, ...crawledData };
 
             // Sort data by date (descending: newest first)
             const sortedData = {};
@@ -131,11 +144,16 @@ const REGEX_PATTERNS = {
                 sortedData[date] = mergedData[date];
             });
 
-            // Save if we got new data or if it's a fresh file
-            if (Object.keys(newData).length > 0) {
+            const crawledCount = Object.keys(crawledData).length;
+            const addedCount = Object.keys(crawledData).filter(date => !existingData[date]).length;
+
+            // Save if we got crawled data or learned non-trading days.
+            if (crawledCount > 0) {
                 fs.writeFileSync(outputFile, JSON.stringify(sortedData, null, 2), 'utf8');
-                console.log(`   ✅ [${stock.code}] Saved. New: ${Object.keys(newData).length}, Total: ${Object.keys(sortedData).length}.`);
+                saveNonTradingCalendar(nonTradingCalendar);
+                console.log(`   ✅ [${stock.code}] Saved. Crawled: ${crawledCount}, Added: ${addedCount}, Total: ${Object.keys(sortedData).length}.`);
             } else {
+                saveNonTradingCalendar(nonTradingCalendar);
                 console.log(`   🔸 [${stock.code}] No new data found.`);
             }
 
@@ -148,30 +166,41 @@ const REGEX_PATTERNS = {
     const workers = [];
     for (let i = 0; i < MAX_CONCURRENCY; i++) {
         workers.push((async () => {
-            // Create a new context/page per worker
-            // Reuse page for efficiency, but maybe recreate context every N stocks if memory leaks (not implementing complex recycle now)
-            const context = await browser.newContext();
-            const page = await context.newPage();
+            let context = null;
+            let page = null;
 
-            // Stagger start slightly
-            await page.waitForTimeout(i * 300);
+            const getPage = async () => {
+                if (!page) {
+                    const activeBrowser = await getBrowser();
+                    context = await activeBrowser.newContext();
+                    page = await context.newPage();
+                    await page.waitForTimeout(i * 300);
+                }
+                return page;
+            };
 
             while (queue.length > 0) {
                 const task = queue.shift();
                 if (task) {
-                    await processStock(page, task);
+                    await processStock(getPage, task);
 
                     // Random delay between stocks per worker
-                    const delay = Math.floor(Math.random() * 500) + 500;
-                    await page.waitForTimeout(delay);
+                    if (page) {
+                        const delay = Math.floor(Math.random() * 500) + 500;
+                        await page.waitForTimeout(delay);
+                    }
                 }
             }
-            await context.close();
+            if (context) {
+                await context.close();
+            }
         })());
     }
 
     await Promise.all(workers);
-    await browser.close();
+    if (browser) {
+        await browser.close();
+    }
     console.log('\n✅ All stocks processed.');
 
 })();
@@ -196,6 +225,7 @@ async function crawlStock(page, stockCode, stopDate) {
     }
 
     const collectedData = {};
+    const visitedDates = [];
     let previousDate = '';
     let consecutiveSameDateCount = 0;
 
@@ -238,6 +268,9 @@ async function crawlStock(page, stockCode, stopDate) {
         }
 
         const currentDate = dateText.trim();
+        if (isDateKey(currentDate)) {
+            visitedDates.push(currentDate);
+        }
 
         // Safety check: duplicate date
         if (currentDate === previousDate) {
@@ -282,11 +315,15 @@ async function crawlStock(page, stockCode, stopDate) {
         await page.waitForTimeout(150);
     }
 
-    return collectedData;
+    return { data: collectedData, visitedDates };
 }
 
 function isMissingMarketData(dataPoint) {
     return !dataPoint || ['price', 'open', 'high', 'low', 'volume'].some(key => dataPoint[key] == null);
+}
+
+function isDateKey(dateStr) {
+    return /^\d{4}\/\d{2}\/\d{2}$/.test(dateStr);
 }
 
 function parseDateString(dateStr) {
@@ -294,35 +331,157 @@ function parseDateString(dateStr) {
     return new Date(year, month - 1, day);
 }
 
-function getDaysBetween(startDateStr, endDateStr) {
-    return (parseDateString(endDateStr) - parseDateString(startDateStr)) / (24 * 60 * 60 * 1000);
+function formatDateKey(date) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}/${mm}/${dd}`;
 }
 
-function getIncrementalStopDate(existingData, fallbackStopDate) {
+function nextDateString(dateStr) {
+    const date = parseDateString(dateStr);
+    date.setDate(date.getDate() + 1);
+    return formatDateKey(date);
+}
+
+function isWeekend(dateStr) {
+    const day = parseDateString(dateStr).getDay();
+    return day === 0 || day === 6;
+}
+
+function isTrackedNonTradingYear(dateStr) {
+    return parseInt(dateStr.substring(0, 4), 10) >= NON_TRADING_START_YEAR;
+}
+
+function filenameDateToKey(dateStr) {
+    return `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
+}
+
+function loadKnownMarketDates() {
+    if (!fs.existsSync(DAILY_SMA_DIR)) return [];
+
+    return fs.readdirSync(DAILY_SMA_DIR)
+        .map(file => {
+            const match = file.match(/^fubon_(\d{8})_sma\.json$/);
+            return match ? filenameDateToKey(match[1]) : null;
+        })
+        .filter(Boolean)
+        .sort();
+}
+
+function loadNonTradingCalendar() {
+    if (!fs.existsSync(NON_TRADING_DAYS_FILE)) return {};
+
+    try {
+        return JSON.parse(fs.readFileSync(NON_TRADING_DAYS_FILE, 'utf8'));
+    } catch (e) {
+        console.warn(`⚠️  Failed to read non-trading calendar: ${NON_TRADING_DAYS_FILE}`);
+        return {};
+    }
+}
+
+function saveNonTradingCalendar(calendar) {
+    const normalized = {};
+    Object.keys(calendar).sort().forEach(year => {
+        normalized[year] = [...new Set(calendar[year])].sort();
+    });
+    fs.writeFileSync(NON_TRADING_DAYS_FILE, JSON.stringify(normalized, null, 2) + '\n', 'utf8');
+}
+
+function isKnownNonTradingDate(calendar, dateStr) {
+    const year = dateStr.substring(0, 4);
+    return Array.isArray(calendar[year]) && calendar[year].includes(dateStr);
+}
+
+function addNonTradingDate(calendar, dateStr) {
+    if (!isDateKey(dateStr) || !isTrackedNonTradingYear(dateStr) || isWeekend(dateStr)) return false;
+
+    const year = dateStr.substring(0, 4);
+    if (!calendar[year]) calendar[year] = [];
+    if (calendar[year].includes(dateStr)) return false;
+
+    calendar[year].push(dateStr);
+    calendar[year].sort();
+    return true;
+}
+
+function getDatesBetweenExclusive(olderDate, newerDate) {
+    const dates = [];
+    let current = nextDateString(olderDate);
+    while (current < newerDate) {
+        dates.push(current);
+        current = nextDateString(current);
+    }
+    return dates;
+}
+
+function learnNonTradingDaysFromTradingDates(calendar, tradingDates, knownMarketDates) {
+    const dates = [...new Set(tradingDates.filter(isDateKey))]
+        .sort();
+
+    for (let i = 1; i < dates.length; i++) {
+        getDatesBetweenExclusive(dates[i - 1], dates[i]).forEach(date => {
+            if (knownMarketDates.has(date)) return;
+            addNonTradingDate(calendar, date);
+        });
+    }
+}
+
+function getMissingDatesBetween(existingData, olderDate, newerDate, knownMarketDates, nonTradingCalendar) {
+    return getDatesBetweenExclusive(olderDate, newerDate)
+        .filter(isTrackedNonTradingYear)
+        .filter(date => !isWeekend(date))
+        .filter(date => !isKnownNonTradingDate(nonTradingCalendar, date))
+        .filter(date => knownMarketDates.has(date) || !existingData[date]);
+}
+
+function getCrawlPlan(existingData, fallbackStopDate, knownMarketDates, nonTradingCalendar) {
     const dates = Object.keys(existingData).sort();
-    if (dates.length === 0) return fallbackStopDate;
+    if (dates.length === 0) {
+        return {
+            shouldCrawl: true,
+            stopDate: fallbackStopDate,
+            reason: 'no existing data'
+        };
+    }
 
     for (let i = dates.length - 1; i > 0; i--) {
         const newerDate = dates[i];
         const olderDate = dates[i - 1];
-        const gapDays = getDaysBetween(olderDate, newerDate);
+        const missingDates = getMissingDatesBetween(existingData, olderDate, newerDate, knownMarketDates, nonTradingCalendar);
 
-        if (gapDays > MAX_EXISTING_DATE_GAP_DAYS) {
-            console.log(`   ⚠️  Existing data gap detected: ${olderDate} -> ${newerDate}. Backfilling from ${olderDate}.`);
-            return olderDate;
+        if (missingDates.length > 0) {
+            return {
+                shouldCrawl: true,
+                stopDate: isMissingMarketData(existingData[olderDate]) ? previousDateString(olderDate) : olderDate,
+                reason: `missing ${missingDates.length} possible trading dates between ${olderDate} and ${newerDate}`
+            };
         }
     }
 
-    return dates[dates.length - 1];
+    const latestDate = dates[dates.length - 1];
+    const latestKnownMarketDate = [...knownMarketDates].sort().reverse()[0] || formatDateKey(new Date());
+    const missingRecentDates = getMissingDatesBetween(existingData, latestDate, latestKnownMarketDate, knownMarketDates, nonTradingCalendar);
+
+    if (latestDate < latestKnownMarketDate && missingRecentDates.length > 0) {
+        return {
+            shouldCrawl: true,
+            stopDate: isMissingMarketData(existingData[latestDate]) ? previousDateString(latestDate) : latestDate,
+            reason: `missing ${missingRecentDates.length} possible recent trading dates after ${latestDate}`
+        };
+    }
+
+    return {
+        shouldCrawl: false,
+        stopDate: latestDate,
+        reason: 'complete'
+    };
 }
 
 function previousDateString(dateStr) {
     const date = parseDateString(dateStr);
     date.setDate(date.getDate() - 1);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}/${mm}/${dd}`;
+    return formatDateKey(date);
 }
 
 async function extractMarketData(page) {
