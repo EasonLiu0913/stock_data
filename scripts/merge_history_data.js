@@ -8,6 +8,8 @@ const OUTPUT_DIR = path.join(__dirname, '../data_fubon');
 const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
 const START_DATE_STR = '2025/12/02';
 const END_DATE_STR = '2026/06/08';
+const args = process.argv.slice(2);
+const SMA_ONLY = args.includes('--sma-only');
 
 // Helper: Convert YYYY/MM/DD to Date object
 function parseDate(dateStr) {
@@ -127,7 +129,7 @@ function getDatesInRange(startStr, endStr) {
 
         for (const [code, name] of stockMap) {
             const smaAll = smaDataCache.get(code);
-            const instAll = instDataCache.get(code);
+            const instAll = SMA_ONLY ? null : instDataCache.get(code);
 
             // --- 處理 SMA 資料 ---
             if (smaAll && smaAll[dateKeyAD]) {
@@ -205,7 +207,7 @@ function getDatesInRange(startStr, endStr) {
             console.log(`Saved ${smaOutputFile} (${smaCount} stocks)`);
         }
 
-        if (instCount > 0) {
+        if (!SMA_ONLY && instCount > 0) {
             fs.writeFileSync(instOutputFile, JSON.stringify(dailyInstResult, null, 2), 'utf8');
             console.log(`Saved ${instOutputFile} (${instCount} stocks)`);
         }

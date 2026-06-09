@@ -41,13 +41,13 @@ jobs:
       - name: Merge history data
         run: |
           echo "🔄 Merging historical SMA data into daily files..."
-          node scripts/merge_history_data.js
+          node scripts/merge_history_data.js --sma-only
           
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add data_history_sma/ data_fubon/
+          git add data_history_sma/ data_fubon/*_sma.json
           # Only commit if there are changes
           if ! git diff --staged --quiet; then
             git commit -m "chore: update historical SMA data (Index ${{ inputs.start_index }}-${{ inputs.limit }})"
@@ -64,7 +64,7 @@ jobs:
               # Pop stash if it exists
               git stash pop || true
               # Re-add files in case stash affected them
-              git add data_history_sma/ data_fubon/
+              git add data_history_sma/ data_fubon/*_sma.json
               if git push origin main; then
                 success=true
                 break
