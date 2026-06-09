@@ -313,14 +313,66 @@ async function crawlStock(page, stockCode, stopDate) {
         collectedData[currentDate] = dataPoint;
 
         // 3. Navigate to Previous Day
-        await page.keyboard.press('ArrowLeft');
-        // Wait a bit for update. 
-        // 100ms is usually enough for JS update if network not involved for data points (canvas redraw)
-        // If it sends network request content, need more. Fubon usually has data loaded.
-        await page.waitForTimeout(150);
+        const nextDate = await moveChartToPreviousDay(page, currentDate, stockCode);
+
+        if (nextDate === currentDate) {
+            console.log(`   ⚠️ [${stockCode}] Date did not change after ArrowLeft: ${currentDate}`);
+        } else {
+            consecutiveSameDateCount = 0;
+        }
+
+        previousDate = nextDate || currentDate;
     }
 
     return { data: collectedData, visitedDates };
+}
+
+async function getChartDate(page) {
+    try {
+        const dateText = await page.locator('.opsBtmTitleK').first().textContent({ timeout: 2000 });
+        return dateText ? dateText.trim() : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+async function focusChart(page) {
+    try {
+        const focusEl = await page.$(FOCUS_SELECTOR);
+        if (focusEl) {
+            await focusEl.click({ force: true });
+        } else {
+            await page.click('body', { force: true });
+        }
+        await page.waitForTimeout(250);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function moveChartToPreviousDay(page, currentDate, stockCode) {
+    const attempts = 3;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+            await page.keyboard.press('ArrowLeft');
+            await page.waitForTimeout(250);
+
+            const nextDate = await getChartDate(page);
+            if (nextDate && nextDate !== currentDate) {
+                return nextDate;
+            }
+
+            console.log(`   ⚠️ [${stockCode}] ArrowLeft attempt ${attempt}/${attempts} did not move date from ${currentDate}. Refocusing...`);
+            await focusChart(page);
+        } catch (e) {
+            console.log(`   ⚠️ [${stockCode}] ArrowLeft attempt ${attempt}/${attempts} failed: ${e.message}`);
+            await focusChart(page);
+        }
+    }
+
+    return await getChartDate(page);
 }
 
 function isMissingMarketData(dataPoint) {
