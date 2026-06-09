@@ -4,6 +4,7 @@ const path = require('path');
 
 // Configuration
 const MAX_CONCURRENCY = 5; // Set concurrency to 5
+const MAX_EXISTING_DATE_GAP_DAYS = 10;
 const args = process.argv.slice(2);
 function getArg(flag) {
     const idx = args.indexOf(flag);
@@ -94,12 +95,9 @@ const REGEX_PATTERNS = {
             try {
                 const content = fs.readFileSync(outputFile, 'utf8');
                 existingData = JSON.parse(content);
-                const dates = Object.keys(existingData).sort();
-                if (dates.length > 0) {
-                    stopDate = dates[dates.length - 1];
-                    if (isMissingMarketData(existingData[stopDate])) {
-                        stopDate = previousDateString(stopDate);
-                    }
+                stopDate = getIncrementalStopDate(existingData, stopDate);
+                if (isMissingMarketData(existingData[stopDate])) {
+                    stopDate = previousDateString(stopDate);
                     // console.log(`[${stock.code}] Existing data found. Latest: ${stopDate}.`);
                 }
             } catch (e) {
@@ -291,9 +289,35 @@ function isMissingMarketData(dataPoint) {
     return !dataPoint || ['price', 'open', 'high', 'low', 'volume'].some(key => dataPoint[key] == null);
 }
 
-function previousDateString(dateStr) {
+function parseDateString(dateStr) {
     const [year, month, day] = dateStr.split('/').map(Number);
-    const date = new Date(year, month - 1, day);
+    return new Date(year, month - 1, day);
+}
+
+function getDaysBetween(startDateStr, endDateStr) {
+    return (parseDateString(endDateStr) - parseDateString(startDateStr)) / (24 * 60 * 60 * 1000);
+}
+
+function getIncrementalStopDate(existingData, fallbackStopDate) {
+    const dates = Object.keys(existingData).sort();
+    if (dates.length === 0) return fallbackStopDate;
+
+    for (let i = dates.length - 1; i > 0; i--) {
+        const newerDate = dates[i];
+        const olderDate = dates[i - 1];
+        const gapDays = getDaysBetween(olderDate, newerDate);
+
+        if (gapDays > MAX_EXISTING_DATE_GAP_DAYS) {
+            console.log(`   ⚠️  Existing data gap detected: ${olderDate} -> ${newerDate}. Backfilling from ${olderDate}.`);
+            return olderDate;
+        }
+    }
+
+    return dates[dates.length - 1];
+}
+
+function previousDateString(dateStr) {
+    const date = parseDateString(dateStr);
     date.setDate(date.getDate() - 1);
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');

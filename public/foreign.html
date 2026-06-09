@@ -173,6 +173,18 @@
             font-weight: 600;
         }
 
+        .daily-cell {
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .daily-price {
+            color: #718096;
+            font-size: 0.78rem;
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
         .day-values {
             display: flex;
             gap: 0.5rem;
@@ -647,24 +659,73 @@
             return `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
         }
 
-        async function loadSmaMap(basePath, dateStr) {
+        function rocDateToAdDateStr(rocDate) {
+            const parts = String(rocDate || '').split('/');
+            if (parts.length !== 3) return '';
+
+            const year = parseInt(parts[0], 10) + 1911;
+            const month = parts[1].padStart(2, '0');
+            const day = parts[2].padStart(2, '0');
+
+            return `${year}${month}${day}`;
+        }
+
+        async function loadSmaData(basePath, dateStr) {
             try {
                 const response = await fetch(`${basePath}/data_fubon/fubon_${dateStr}_sma.json`);
                 if (!response.ok) return {};
 
-                const smaData = await response.json();
-                const dateKey = getAdDateKey(dateStr);
-                const smaMap = {};
-
-                Object.entries(smaData).forEach(([stockCode, stockData]) => {
-                    smaMap[stockCode] = stockData?.[dateKey] || {};
-                });
-
-                return smaMap;
+                return await response.json();
             } catch (e) {
                 console.warn(`無法載入 SMA 資料: fubon_${dateStr}_sma.json`, e);
                 return {};
             }
+        }
+
+        async function loadSmaMap(basePath, dateStr) {
+            const smaData = await loadSmaData(basePath, dateStr);
+            const dateKey = getAdDateKey(dateStr);
+            const smaMap = {};
+
+            Object.entries(smaData).forEach(([stockCode, stockData]) => {
+                smaMap[stockCode] = stockData?.[dateKey] || {};
+            });
+
+            return smaMap;
+        }
+
+        async function loadDailyPriceMap(basePath, rocDates) {
+            const uniqueDateStrs = [...new Set(rocDates.map(rocDateToAdDateStr).filter(Boolean))];
+            const datePriceEntries = await Promise.all(uniqueDateStrs.map(async (dateStr) => {
+                const smaData = await loadSmaData(basePath, dateStr);
+                const dateKey = getAdDateKey(dateStr);
+                const prices = {};
+
+                Object.entries(smaData).forEach(([stockCode, stockData]) => {
+                    prices[stockCode] = stockData?.[dateKey]?.Price || '';
+                });
+
+                return [dateStr, prices];
+            }));
+
+            return Object.fromEntries(datePriceEntries);
+        }
+
+        function getDailyPrices(stockCode, dates, dailyPriceMap) {
+            return dates.map(date => {
+                const dateStr = rocDateToAdDateStr(date);
+                return dailyPriceMap[dateStr]?.[stockCode] || '';
+            });
+        }
+
+        function renderDailyCell(value, price) {
+            const numericValue = Number(value) || 0;
+            return `
+                <div class="daily-cell">
+                    <div>${numericValue.toLocaleString()}</div>
+                    <div class="daily-price">${formatPrice(price)}</div>
+                </div>
+            `;
         }
 
         async function loadData(dateStr) {
@@ -696,6 +757,15 @@
 
                 const data = await response.json();
                 const smaMap = await loadSmaMap(basePath, dateStr);
+                const allForeignDates = Object.values(data)
+                    .flatMap(stockData => {
+                        const foreignInvestors = stockData.ForeignInvestors;
+                        return foreignInvestors && !Array.isArray(foreignInvestors) && typeof foreignInvestors === 'object'
+                            ? Object.keys(foreignInvestors)
+                            : [];
+                    });
+                const latestForeignDates = [...new Set(allForeignDates)].sort().reverse().slice(0, 10);
+                const dailyPriceMap = await loadDailyPriceMap(basePath, latestForeignDates);
 
                 // 載入所有有 ForeignInvestors 資料的股票（至少 4 天）
                 allFilteredStocks = [];
@@ -752,6 +822,7 @@
                             smaRange: getSmaRangeLabel(smaInfo),
                             sma: smaInfo,
                             foreignInvestors: foreignInvestors,
+                            dailyPrices: getDailyPrices(stockCode, dates, dailyPriceMap),
                             dates: dates // Store the dates
                         });
                     }
@@ -979,7 +1050,7 @@
                     for (let i = 0; i < 10; i++) {
                         const value = fi[i] || 0;
                         const colorClass = getColorClass(value);
-                        daysCells += `<td class="${colorClass}">${value.toLocaleString()}</td>`;
+                        daysCells += `<td class="${colorClass}">${renderDailyCell(value, stock.dailyPrices?.[i])}</td>`;
                     }
 
                     row.innerHTML = `
@@ -1034,10 +1105,10 @@
                         <td class="serial-col">${index + 1}</td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
                         <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.name}</a></td>
-                        <td class="${day1Class}">${stock.day1.toLocaleString()}</td>
-                        <td class="${day2Class}">${stock.day2.toLocaleString()}</td>
-                        <td class="${day3Class}">${stock.day3.toLocaleString()}</td>
-                        <td class="${day4Class}">${stock.day4.toLocaleString()}</td>
+                        <td class="${day1Class}">${renderDailyCell(stock.day1, stock.dailyPrices?.[0])}</td>
+                        <td class="${day2Class}">${renderDailyCell(stock.day2, stock.dailyPrices?.[1])}</td>
+                        <td class="${day3Class}">${renderDailyCell(stock.day3, stock.dailyPrices?.[2])}</td>
+                        <td class="${day4Class}">${renderDailyCell(stock.day4, stock.dailyPrices?.[3])}</td>
                         <td class="${totalClass}" style="font-weight: bold;">${stock.total.toLocaleString()}</td>
                         <td class="${avgClass}">${stock.average.toLocaleString()}</td>
                     `;
