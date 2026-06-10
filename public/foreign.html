@@ -101,6 +101,8 @@
             border-collapse: collapse;
             min-width: 600px;
             /* Ensure table doesn't get too squeezed */
+            --summary-total-width: 118px;
+            --summary-average-width: 108px;
         }
 
         thead {
@@ -193,6 +195,42 @@
         .daily-price.down {
             color: #38a169;
             font-weight: 600;
+        }
+
+        .summary-separator {
+            border-left: 2px solid #cbd5e0;
+            box-shadow: inset 8px 0 0 rgba(102, 126, 234, 0.06);
+        }
+
+        th.summary-separator {
+            border-left-color: rgba(255, 255, 255, 0.55);
+        }
+
+        .sticky-summary {
+            position: sticky;
+            background: #ffffff;
+            z-index: 6;
+            min-width: var(--summary-average-width);
+            width: var(--summary-average-width);
+        }
+
+        th.sticky-summary {
+            background: #667eea;
+            z-index: 16;
+        }
+
+        .summary-total {
+            right: var(--summary-average-width);
+            min-width: var(--summary-total-width);
+            width: var(--summary-total-width);
+        }
+
+        .summary-average {
+            right: 0;
+        }
+
+        tbody tr:hover .sticky-summary {
+            background: #f7fafc;
         }
 
         .day-values {
@@ -1063,8 +1101,8 @@
                         ${makeTh('股價', 'price')}
                         ${makeTh('均線區間', 'smaRange')}
                         ${dateHeaders}
-                        ${makeTh('10日累計', 'total10')}
-                        ${makeTh('10日平均', 'avg10')}
+                        ${makeTh('10日累計', 'total10', 'summary-separator sticky-summary summary-total')}
+                        ${makeTh('10日平均', 'avg10', 'sticky-summary summary-average')}
                     </tr>
                 `;
 
@@ -1092,8 +1130,8 @@
                         <td style="font-weight: 600;">${formatPrice(stock.price)}</td>
                         <td>${stock.smaRange || '-'}</td>
                         ${daysCells}
-                        <td class="${getColorClass(total10)}" style="font-weight: bold;">${total10.toLocaleString()}</td>
-                        <td class="${getColorClass(avg10)}">${avg10.toLocaleString()}</td>
+                        <td class="${getColorClass(total10)} summary-separator sticky-summary summary-total" style="font-weight: bold;">${total10.toLocaleString()}</td>
+                        <td class="${getColorClass(avg10)} sticky-summary summary-average">${avg10.toLocaleString()}</td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -1116,8 +1154,8 @@
                         ${makeTh(tradingDates[1] || 'Day 2', 'day1')}
                         ${makeTh(tradingDates[2] || 'Day 3', 'day2')}
                         ${makeTh(tradingDates[3] || 'Day 4', 'day3')}
-                        ${makeTh('4日累計', 'total')}
-                        ${makeTh('平均每日', 'average')}
+                        ${makeTh('4日累計', 'total', 'summary-separator sticky-summary summary-total')}
+                        ${makeTh('平均每日', 'average', 'sticky-summary summary-average')}
                     </tr>
                 `;
 
@@ -1140,8 +1178,8 @@
                         <td class="${day2Class}">${renderDailyCell(stock.day2, stock.dailyPrices?.[1], stock.dailyPrices?.[2])}</td>
                         <td class="${day3Class}">${renderDailyCell(stock.day3, stock.dailyPrices?.[2], stock.dailyPrices?.[3])}</td>
                         <td class="${day4Class}">${renderDailyCell(stock.day4, stock.dailyPrices?.[3], stock.dailyPrices?.[4])}</td>
-                        <td class="${totalClass}" style="font-weight: bold;">${stock.total.toLocaleString()}</td>
-                        <td class="${avgClass}">${stock.average.toLocaleString()}</td>
+                        <td class="${totalClass} summary-separator sticky-summary summary-total" style="font-weight: bold;">${stock.total.toLocaleString()}</td>
+                        <td class="${avgClass} sticky-summary summary-average">${stock.average.toLocaleString()}</td>
                     `;
                     tableBody.appendChild(row);
                 });
