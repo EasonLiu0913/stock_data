@@ -242,6 +242,12 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
+    .trade-value-cell {
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+
     /* Loading & Empty States */
     .loading,
     .empty-state {
@@ -610,21 +616,29 @@
 
       const headers = data[0];
       const rows = data.slice(1);
+      const priceIndex = headers.findIndex(header => header === 'Price' || header.includes('價格'));
+      const netTradeIndex = headers.findIndex(header => ['NetBuy', 'NetSell', '買超', '賣超'].includes(header));
+      const hasTradeValue = priceIndex >= 0 && netTradeIndex >= 0;
+      const displayHeaders = hasTradeValue ? [...headers, 'TradeValue'] : headers;
 
       let html = '<table><thead><tr>';
-      headers.forEach(header => {
+      displayHeaders.forEach(header => {
         html += `<th>${header}</th>`;
       });
       html += '</tr></thead><tbody>';
 
       rows.forEach((row, index) => {
         html += '<tr>';
-        row.forEach((cell, cellIndex) => {
+        const tradeValue = hasTradeValue ? calculateTradeValue(row[priceIndex], row[netTradeIndex]) : null;
+        const displayRow = hasTradeValue ? [...row, formatNumber(tradeValue)] : row;
+
+        displayRow.forEach((cell, cellIndex) => {
           let cellClass = '';
           let cellContent = cell;
+          const header = displayHeaders[cellIndex];
 
           // Rank column styling
-          if (headers[cellIndex] === 'Rank') {
+          if (header === 'Rank') {
             cellClass = 'rank-cell';
             if (parseInt(cell) <= 3) {
               cellClass += ' rank-top';
@@ -632,17 +646,17 @@
           }
 
           // Stock column
-          else if (headers[cellIndex] === 'Stock') {
+          else if (header === 'Stock') {
             cellClass = 'stock-cell';
           }
 
           // Price column
-          else if (headers[cellIndex] === 'Price') {
+          else if (header === 'Price') {
             cellClass = 'price-cell';
           }
 
           // Change/ChangePercent columns
-          else if (headers[cellIndex] === 'Change' || headers[cellIndex] === 'ChangePercent') {
+          else if (header === 'Change' || header === 'ChangePercent') {
             if (cell.includes('+')) {
               cellClass = 'positive';
             } else if (cell.includes('-')) {
@@ -651,8 +665,17 @@
           }
 
           // Number columns
-          else if (['Buy', 'Sell', 'NetBuy'].includes(headers[cellIndex])) {
+          else if (['Buy', 'Sell', 'NetBuy', 'NetSell'].includes(header)) {
             cellClass = 'number-cell';
+          }
+
+          else if (header === 'TradeValue') {
+            cellClass = 'trade-value-cell';
+            if (tradeValue > 0) {
+              cellClass += ' positive';
+            } else if (tradeValue < 0) {
+              cellClass += ' negative';
+            }
           }
 
           html += `<td class="${cellClass}">${cellContent}</td>`;
@@ -662,6 +685,20 @@
 
       html += '</tbody></table>';
       tableContent.innerHTML = html;
+    }
+
+    function parseNumber(value) {
+      const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
+      const number = parseFloat(normalized);
+      return Number.isNaN(number) ? 0 : number;
+    }
+
+    function calculateTradeValue(price, shares) {
+      return Math.round(parseNumber(price) * parseNumber(shares));
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString();
     }
 
     // Run initialization

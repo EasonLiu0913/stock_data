@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>權證標的十日追蹤</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #155e75 0%, #4338ca 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 2400px;
+            margin: 0 auto;
+        }
+
+        .header,
+        .stats,
+        .controls,
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        .header {
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: #1f2937;
+            font-size: 2.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            color: #4338ca;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        label {
+            color: #1f2937;
+            font-weight: 700;
+        }
+
+        select,
+        input {
+            padding: 0.7rem 1rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            background: white;
+            color: #1f2937;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #4338ca;
+            box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.12);
+        }
+
+        .search-container {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.7rem 1rem;
+            background: #4338ca;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .table-container {
+            border-radius: 20px;
+            max-height: 75vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+            --summary-total-width: 132px;
+            --summary-average-width: 122px;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: white;
+            background: #4338ca;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12);
+        }
+
+        td {
+            padding: 0.9rem 1rem;
+            color: #1f2937;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .serial-col {
+            width: 60px;
+            text-align: center;
+            color: #94a3b8;
+            font-weight: 800;
+        }
+
+        .stock-code {
+            color: #4338ca;
+            font-weight: 800;
+        }
+
+        .stock-code a {
+            color: #4338ca;
+            text-decoration: none;
+        }
+
+        .stock-code a:hover {
+            color: #155e75;
+            border-bottom: 2px solid #155e75;
+        }
+
+        .daily-cell {
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
+        .daily-price {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .daily-price.up {
+            color: #dc2626;
+        }
+
+        .daily-price.down {
+            color: #16a34a;
+        }
+
+        .positive {
+            color: #dc2626;
+            font-weight: 800;
+        }
+
+        .neutral {
+            color: #1f2937;
+            font-weight: 800;
+        }
+
+        .summary-separator {
+            border-left: 2px solid #cbd5e1;
+            box-shadow: inset 8px 0 0 rgba(67, 56, 202, 0.06);
+        }
+
+        th.summary-separator {
+            border-left-color: rgba(255, 255, 255, 0.55);
+        }
+
+        .sticky-summary {
+            position: sticky;
+            background: white;
+            z-index: 6;
+            min-width: var(--summary-average-width);
+            width: var(--summary-average-width);
+        }
+
+        th.sticky-summary {
+            background: #4338ca;
+            z-index: 16;
+        }
+
+        .summary-total {
+            right: var(--summary-average-width);
+            min-width: var(--summary-total-width);
+            width: var(--summary-total-width);
+        }
+
+        .summary-average {
+            right: 0;
+        }
+
+        tbody tr:hover .sticky-summary {
+            background: #f8fafc;
+        }
+
+        .loading,
+        .error {
+            padding: 3rem;
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            color: #7f1d1d;
+            background: #fee2e2;
+            border-radius: 12px;
+            margin: 1rem;
+        }
+
+        .highlight-row {
+            background: #fff7ed !important;
+            outline: 2px solid #f97316;
+            position: relative;
+            z-index: 5;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .controls,
+            .control-group,
+            .search-container {
+                align-items: stretch;
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .search-container {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>權證標的十日追蹤</h1>
+            <p class="subtitle" id="dataDate"></p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalStocks">-</div>
+                <div class="stat-label">追蹤股票數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalAppearances">-</div>
+                <div class="stat-label">10日上榜總次數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="summaryTotal">-</div>
+                <div class="stat-label" id="summaryTotalLabel">10日累計值</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="summaryAverage">-</div>
+                <div class="stat-label" id="summaryAverageLabel">平均每檔累計值</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="dateSelect">追蹤清單：</label>
+                <select id="dateSelect" onchange="onDateChanged()"></select>
+            </div>
+            <div class="control-group">
+                <label for="sortSelect">排序：</label>
+                <select id="sortSelect" onchange="onSortChanged()">
+                    <option value="ten-day" selected>10日上榜排行</option>
+                    <option value="total">4日累計權證數（從多到少）</option>
+                    <option value="growth">第1天→第2天成長率（從大到小）</option>
+                    <option value="three-days">四天中有三天上榜（4日累計從大到小）</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="summaryMetricSelect">統計欄位：</label>
+                <select id="summaryMetricSelect" onchange="onSummaryMetricChanged()">
+                    <option value="value" selected>累積值</option>
+                    <option value="shares">累積權證數</option>
+                </select>
+            </div>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="搜尋代號或名稱..."
+                    onkeyup="if(event.key === 'Enter') searchStock()">
+                <button onclick="searchStock()">搜尋</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div id="loading" class="loading">載入中...</div>
+            <div id="error" style="display: none;"></div>
+            <table id="stockTable" style="display: none;">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_DATE = '20260612';
+        const TRACKING_DAYS = 10;
+
+        let currentDate = DEFAULT_DATE;
+        let currentSummaryMetric = 'value';
+        let currentSort = 'ten-day';
+        let allTrackedStocks = [];
+        let displayedStocks = [];
+        let headerSort = { key: null, direction: 'desc' };
+
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                date: params.get('date'),
+                summary: params.get('summary'),
+                sort: params.get('sort')
+            };
+        }
+
+        function updateUrlParams(date, summary, sort) {
+            const params = new URLSearchParams(window.location.search);
+            if (date) params.set('date', date);
+            if (summary) params.set('summary', summary);
+            if (sort) params.set('sort', sort);
+            window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        }
+
+        function getBasePath() {
+            return window.location.hostname.includes('github.io') ? '/stock_data' : '..';
+        }
+
+        function formatDisplayDate(dateStr) {
+            return `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
+        }
+
+        function getAdDateKey(dateStr) {
+            return formatDisplayDate(dateStr);
+        }
+
+        function parseNumber(value) {
+            const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
+            const number = parseFloat(normalized);
+            return Number.isNaN(number) ? 0 : number;
+        }
+
+        function formatPrice(price) {
+            return price || '-';
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n').filter(Boolean);
+            return lines.map(line => {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+
+                result.push(current.trim());
+                return result;
+            });
+        }
+
+        async function fetchJson(url, fallback = null) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return fallback;
+                return await response.json();
+            } catch (error) {
+                console.warn(`Fetch JSON failed: ${url}`, error);
+                return fallback;
+            }
+        }
+
+        async function fetchText(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`無法載入資料: ${url}`);
+            return response.text();
+        }
+
+        async function init() {
+            const urlParams = getUrlParams();
+            if (urlParams.summary === 'shares' || urlParams.summary === 'value') {
+                currentSummaryMetric = urlParams.summary;
+            }
+            if (urlParams.date) {
+                currentDate = urlParams.date;
+            }
+            if (['ten-day', 'total', 'growth', 'three-days'].includes(urlParams.sort)) {
+                currentSort = urlParams.sort;
+            }
+
+            document.getElementById('summaryMetricSelect').value = currentSummaryMetric;
+            document.getElementById('sortSelect').value = currentSort;
+            await loadDateOptions();
+
+            const dateSelect = document.getElementById('dateSelect');
+            if (Array.from(dateSelect.options).some(option => option.value === currentDate)) {
+                dateSelect.value = currentDate;
+            } else if (Array.from(dateSelect.options).some(option => option.value === DEFAULT_DATE)) {
+                currentDate = DEFAULT_DATE;
+                dateSelect.value = DEFAULT_DATE;
+            } else if (dateSelect.options.length > 0) {
+                currentDate = dateSelect.options[0].value;
+                dateSelect.value = currentDate;
+            }
+
+            await loadData(currentDate);
+        }
+
+        async function loadDateOptions() {
+            const basePath = getBasePath();
+            const files = await fetchJson(`${basePath}/data_twse/files.json`, []);
+            const dates = files
+                .map(file => {
+                    const match = file.match(/^(\d{8})發行之標的證券排行\.csv$/);
+                    return match ? match[1] : null;
+                })
+                .filter(Boolean)
+                .sort()
+                .reverse();
+
+            const dateSelect = document.getElementById('dateSelect');
+            dateSelect.innerHTML = '';
+            dates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = formatDisplayDate(date);
+                dateSelect.appendChild(option);
+            });
+        }
+
+        async function onDateChanged() {
+            currentDate = document.getElementById('dateSelect').value;
+            await loadData(currentDate);
+        }
+
+        function onSummaryMetricChanged() {
+            currentSummaryMetric = document.getElementById('summaryMetricSelect').value;
+            updateUrlParams(currentDate, currentSummaryMetric, currentSort);
+            renderTable(displayedStocks);
+            updateStats(displayedStocks);
+        }
+
+        function onSortChanged() {
+            currentSort = document.getElementById('sortSelect').value;
+            headerSort = { key: null, direction: 'desc' };
+            applySortAndRender();
+        }
+
+        async function loadTwseRanking(basePath, dateStr) {
+            const csvText = await fetchText(`${basePath}/data_twse/${dateStr}發行之標的證券排行.csv`);
+            const rows = parseCSV(csvText);
+            const header = rows[0] || [];
+            const codeIndex = header.findIndex(cell => cell.includes('標的代號'));
+            const nameIndex = header.findIndex(cell => cell.includes('標的名稱'));
+            const countIndex = header.findIndex(cell => cell.includes('發行檔數'));
+            const rankIndex = header.findIndex(cell => cell.includes('排行'));
+            const map = new Map();
+
+            rows.slice(1).forEach(row => {
+                const code = row[codeIndex] || '';
+                if (!code) return;
+                map.set(code, {
+                    code,
+                    name: row[nameIndex] || '',
+                    rank: parseNumber(row[rankIndex]),
+                    count: parseNumber(row[countIndex])
+                });
+            });
+
+            return map;
+        }
+
+        async function loadSmaPrices(basePath, dateStr) {
+            const smaData = await fetchJson(`${basePath}/data_fubon/fubon_${dateStr}_sma.json`, {});
+            const dateKey = getAdDateKey(dateStr);
+            const prices = {};
+
+            Object.entries(smaData || {}).forEach(([code, stockData]) => {
+                prices[code] = stockData?.[dateKey]?.Price || '';
+            });
+
+            return prices;
+        }
+
+        async function loadData(dateStr) {
+            if (!dateStr) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('stockTable').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+
+            try {
+                const basePath = getBasePath();
+                const files = await fetchJson(`${basePath}/data_twse/files.json`, []);
+                const availableDates = files
+                    .map(file => {
+                        const match = file.match(/^(\d{8})發行之標的證券排行\.csv$/);
+                        return match ? match[1] : null;
+                    })
+                    .filter(Boolean)
+                    .sort();
+                const trackingDates = availableDates.filter(date => date <= dateStr).slice(-TRACKING_DAYS).reverse();
+                if (trackingDates.length === 0) throw new Error('找不到可用的 TWSE 權證資料');
+
+                currentDate = dateStr;
+                updateUrlParams(currentDate, currentSummaryMetric, currentSort);
+                document.getElementById('dataDate').textContent =
+                    `追蹤清單：data_twse/${dateStr}發行之標的證券排行.csv；統計區間：${trackingDates.map(formatDisplayDate).join('、')}`;
+
+                const [baseRanking, rankingEntries, priceEntries] = await Promise.all([
+                    loadTwseRanking(basePath, dateStr),
+                    Promise.all(trackingDates.map(async date => [date, await loadTwseRanking(basePath, date)])),
+                    Promise.all(trackingDates.map(async date => [date, await loadSmaPrices(basePath, date)]))
+                ]);
+
+                const rankingByDate = Object.fromEntries(rankingEntries);
+                const pricesByDate = Object.fromEntries(priceEntries);
+
+                allTrackedStocks = Array.from(baseRanking.values()).map(baseStock => {
+                    const counts = trackingDates.map(date => rankingByDate[date]?.get(baseStock.code)?.count || 0);
+                    const ranks = trackingDates.map(date => rankingByDate[date]?.get(baseStock.code)?.rank || null);
+                    const prices = trackingDates.map(date => pricesByDate[date]?.[baseStock.code] || '');
+                    const appearances = counts.filter(count => count > 0).length;
+                    const totalCount = counts.reduce((sum, count) => sum + count, 0);
+                    const totalCount4 = counts.slice(0, 4).reduce((sum, count) => sum + count, 0);
+                    const tradeValueTotal = counts.reduce((sum, count, index) => {
+                        const price = parseFloat(prices[index]);
+                        return sum + (Number.isNaN(price) ? 0 : price * count);
+                    }, 0);
+                    const tradeValueTotal4 = counts.slice(0, 4).reduce((sum, count, index) => {
+                        const price = parseFloat(prices[index]);
+                        return sum + (Number.isNaN(price) ? 0 : price * count);
+                    }, 0);
+                    const firstFour = counts.slice(0, 4);
+                    const growthRate = firstFour[1] !== 0
+                        ? ((firstFour[0] - firstFour[1]) / Math.abs(firstFour[1])) * 100
+                        : 0;
+                    return {
+                        code: baseStock.code,
+                        name: baseStock.name,
+                        baseRank: baseStock.rank,
+                        baseCount: baseStock.count,
+                        appearances,
+                        growthRate,
+                        totalCount,
+                        totalCount4,
+                        averageCount: Math.round(totalCount / TRACKING_DAYS),
+                        averageCount4: Math.round(totalCount4 / 4),
+                        tradeValueTotal: Math.round(tradeValueTotal),
+                        tradeValueTotal4: Math.round(tradeValueTotal4),
+                        tradeValueAverage: Math.round(tradeValueTotal / TRACKING_DAYS),
+                        tradeValueAverage4: Math.round(tradeValueTotal4 / 4),
+                        latestPrice: prices[0] || '',
+                        counts,
+                        ranks,
+                        prices,
+                        dates: trackingDates
+                    };
+                });
+
+                headerSort = { key: null, direction: 'desc' };
+                applySortAndRender();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('stockTable').style.display = 'table';
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.style.display = 'block';
+                errorDiv.className = 'error';
+                errorDiv.textContent = `載入資料時發生錯誤: ${error.message}`;
+            }
+        }
+
+        function getPriceChangeInfo(price, previousPrice) {
+            const current = parseFloat(price);
+            const previous = parseFloat(previousPrice);
+            if (Number.isNaN(current) || Number.isNaN(previous) || previous === 0) {
+                return { label: '', className: '' };
+            }
+
+            const changePercent = ((current - previous) / previous) * 100;
+            if (changePercent > 0) return { label: `(+${changePercent.toFixed(2)}%)`, className: 'up' };
+            if (changePercent < 0) return { label: `(${changePercent.toFixed(2)}%)`, className: 'down' };
+            return { label: '(0.00%)', className: '' };
+        }
+
+        function renderDailyCell(count, price, previousPrice) {
+            const changeInfo = getPriceChangeInfo(price, previousPrice);
+            const priceClass = changeInfo.className ? `daily-price ${changeInfo.className}` : 'daily-price';
+
+            return `
+                <div class="daily-cell">
+                    <div>${Number(count || 0).toLocaleString()}</div>
+                    <div class="${priceClass}">${formatPrice(price)}${changeInfo.label}</div>
+                </div>
+            `;
+        }
+
+        function getDisplayDayCount() {
+            return currentSort === 'total' || currentSort === 'growth' || currentSort === 'three-days'
+                ? 4
+                : TRACKING_DAYS;
+        }
+
+        function getSummaryTotal(stock) {
+            const days = getDisplayDayCount();
+            if (days === 4) {
+                return currentSummaryMetric === 'value' ? stock.tradeValueTotal4 : stock.totalCount4;
+            }
+
+            return currentSummaryMetric === 'value' ? stock.tradeValueTotal : stock.totalCount;
+        }
+
+        function getSummaryAverage(stock) {
+            const days = getDisplayDayCount();
+            if (days === 4) {
+                return currentSummaryMetric === 'value' ? stock.tradeValueAverage4 : stock.averageCount4;
+            }
+
+            return currentSummaryMetric === 'value' ? stock.tradeValueAverage : stock.averageCount;
+        }
+
+        function applySortAndRender() {
+            let stocks = [];
+
+            if (currentSort === 'ten-day') {
+                stocks = [...allTrackedStocks].sort((a, b) => {
+                    if (b.appearances !== a.appearances) return b.appearances - a.appearances;
+                    if (b.totalCount !== a.totalCount) return b.totalCount - a.totalCount;
+                    return a.baseRank - b.baseRank;
+                });
+            } else if (currentSort === 'total') {
+                stocks = allTrackedStocks
+                    .filter(stock => stock.counts.slice(0, 4).every(count => count > 0))
+                    .sort((a, b) => b.totalCount4 - a.totalCount4);
+            } else if (currentSort === 'growth') {
+                stocks = allTrackedStocks
+                    .filter(stock => stock.counts.slice(0, 4).every(count => count > 0))
+                    .sort((a, b) => b.growthRate - a.growthRate);
+            } else if (currentSort === 'three-days') {
+                stocks = allTrackedStocks
+                    .filter(stock => stock.counts.slice(0, 4).filter(count => count > 0).length >= 3)
+                    .sort((a, b) => b.totalCount4 - a.totalCount4);
+            }
+
+            displayedStocks = stocks;
+            updateUrlParams(currentDate, currentSummaryMetric, currentSort);
+            renderTable(displayedStocks);
+            updateStats(displayedStocks);
+        }
+
+        function getSortValue(stock, key) {
+            if (key === 'code') {
+                const number = parseInt(stock.code, 10);
+                return Number.isNaN(number) ? stock.code : number;
+            }
+            if (key === 'name') return stock.name || '';
+            if (key === 'baseRank') return stock.baseRank || 0;
+            if (key === 'appearances') return stock.appearances;
+            if (key === 'growthRate') return stock.growthRate;
+            if (key === 'latestPrice') return parseFloat(stock.latestPrice) || 0;
+            if (key === 'summaryTotal') return getSummaryTotal(stock);
+            if (key === 'summaryAverage') return getSummaryAverage(stock);
+            if (key.startsWith('day')) {
+                const index = parseInt(key.substring(3), 10);
+                return stock.counts[index] || 0;
+            }
+            return 0;
+        }
+
+        function sortByHeader(key) {
+            if (headerSort.key === key) {
+                headerSort.direction = headerSort.direction === 'desc' ? 'asc' : 'desc';
+            } else {
+                headerSort.key = key;
+                headerSort.direction = 'desc';
+            }
+
+            const direction = headerSort.direction;
+            displayedStocks = [...displayedStocks].sort((a, b) => {
+                const va = getSortValue(a, key);
+                const vb = getSortValue(b, key);
+                if (typeof va === 'string' || typeof vb === 'string') {
+                    const compare = String(va).localeCompare(String(vb));
+                    return direction === 'desc' ? -compare : compare;
+                }
+                return direction === 'desc' ? vb - va : va - vb;
+            });
+
+            renderTable(displayedStocks);
+            updateStats(displayedStocks);
+        }
+
+        function makeTh(label, key, extraClass = '') {
+            let arrow = '';
+            if (headerSort.key === key) {
+                arrow = headerSort.direction === 'desc' ? ' ▼' : ' ▲';
+            }
+            const classAttr = extraClass ? ` class="${extraClass}"` : '';
+            return `<th${classAttr} style="cursor:pointer;user-select:none;" onclick="sortByHeader('${key}')" data-sort-key="${key}">${label}${arrow}</th>`;
+        }
+
+        function renderTable(stocks) {
+            const tableHead = document.getElementById('tableHead');
+            const tableBody = document.getElementById('tableBody');
+            const useTradeValue = currentSummaryMetric === 'value';
+            const displayDays = getDisplayDayCount();
+            const summaryPeriodLabel = displayDays === 4 ? '4日' : '10日';
+            const metricHeader = currentSort === 'growth'
+                    ? makeTh('成長率', 'growthRate')
+                    : makeTh('上榜天數', 'appearances');
+            tableBody.innerHTML = '';
+
+            const dates = (stocks[0]?.dates || []).slice(0, displayDays);
+            const dayHeaders = dates.map((date, index) => makeTh(formatDisplayDate(date).substring(5), `day${index}`)).join('');
+            tableHead.innerHTML = `
+                <tr>
+                    <th class="serial-col">#</th>
+                    ${makeTh('股票代號', 'code')}
+                    ${makeTh('股票名稱', 'name')}
+                    ${makeTh('基準排名', 'baseRank')}
+                    ${metricHeader}
+                    ${makeTh('股價', 'latestPrice')}
+                    ${dayHeaders}
+                    ${makeTh(useTradeValue ? `${summaryPeriodLabel}累計值` : `${summaryPeriodLabel}累計權證數`, 'summaryTotal', 'summary-separator sticky-summary summary-total')}
+                    ${makeTh(useTradeValue ? `${summaryPeriodLabel}平均值` : `${summaryPeriodLabel}平均權證數`, 'summaryAverage', 'sticky-summary summary-average')}
+                </tr>
+            `;
+
+            stocks.forEach((stock, index) => {
+                const row = document.createElement('tr');
+                const dayCells = stock.counts.slice(0, displayDays).map((count, dayIndex) => {
+                    const cellClass = count > 0 ? 'positive' : 'neutral';
+                    return `<td class="${cellClass}">${renderDailyCell(count, stock.prices[dayIndex], stock.prices[dayIndex + 1])}</td>`;
+                }).join('');
+                const summaryTotal = getSummaryTotal(stock);
+                const summaryAverage = getSummaryAverage(stock);
+                const metricValue = currentSort === 'growth'
+                        ? `${stock.growthRate.toFixed(2)}%`
+                        : stock.appearances;
+
+                row.innerHTML = `
+                    <td class="serial-col">${index + 1}</td>
+                    <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.code}</a></td>
+                    <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${stock.code}.djhtm" target="_blank">${stock.name}</a></td>
+                    <td>${stock.baseRank || '-'}</td>
+                    <td style="font-weight: 800; color: #4338ca;">${metricValue}</td>
+                    <td style="font-weight: 700;">${formatPrice(stock.latestPrice)}</td>
+                    ${dayCells}
+                    <td class="positive summary-separator sticky-summary summary-total" style="font-weight: 800;">${summaryTotal.toLocaleString()}</td>
+                    <td class="positive sticky-summary summary-average">${summaryAverage.toLocaleString()}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateStats(stocks) {
+            const displayDays = getDisplayDayCount();
+            const summaryPeriodLabel = displayDays === 4 ? '4日' : '10日';
+            const totalAppearances = stocks.reduce((sum, stock) => sum + stock.appearances, 0);
+            const total = stocks.reduce((sum, stock) => sum + getSummaryTotal(stock), 0);
+            const average = stocks.length > 0 ? Math.round(total / stocks.length) : 0;
+
+            document.getElementById('totalStocks').textContent = stocks.length.toLocaleString();
+            document.getElementById('totalAppearances').textContent = totalAppearances.toLocaleString();
+            document.getElementById('summaryTotal').textContent = total.toLocaleString();
+            document.getElementById('summaryAverage').textContent = average.toLocaleString();
+            document.getElementById('summaryTotalLabel').textContent =
+                currentSummaryMetric === 'value' ? `${summaryPeriodLabel}累計值` : `${summaryPeriodLabel}累計權證數`;
+            document.getElementById('summaryAverageLabel').textContent =
+                currentSummaryMetric === 'value' ? '平均每檔累計值' : '平均每檔權證數';
+        }
+
+        function searchStock() {
+            const filter = document.getElementById('searchInput').value.trim().toUpperCase();
+            if (!filter) return;
+
+            const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+            Array.from(document.getElementsByClassName('highlight-row')).forEach(row => row.classList.remove('highlight-row'));
+
+            for (let i = 0; i < rows.length; i++) {
+                const code = rows[i].getElementsByTagName('td')[1]?.textContent.toUpperCase() || '';
+                const name = rows[i].getElementsByTagName('td')[2]?.textContent.toUpperCase() || '';
+                if (code.includes(filter) || name.includes(filter)) {
+                    rows[i].classList.add('highlight-row');
+                    rows[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+            }
+
+            alert('找不到符合的股票');
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

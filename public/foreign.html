@@ -477,6 +477,13 @@
                     <option value="three-days">四天中有三天在買（4日累計從大到小）</option>
                 </select>
             </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label for="summaryMetricSelect">統計欄位：</label>
+                <select id="summaryMetricSelect" onchange="onSummaryMetricChanged()">
+                    <option value="value" selected>累積值</option>
+                    <option value="shares">累積張數</option>
+                </select>
+            </div>
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="搜尋代號或名稱..."
                     onkeyup="if(event.key === 'Enter') searchStock()">
@@ -522,6 +529,7 @@
         let displayedStocks = []; // 當前顯示中的股票（供 header 排序使用）
         let headerSort = { key: null, direction: 'desc' }; // 點擊表頭排序狀態
         let currentType = 'buy'; // buy: 外資買超, sell: 外資賣超
+        let currentSummaryMetric = 'value'; // value: 累積值, shares: 累積張數
 
         // TODO: 台股可能會遇到颱風天或其他因素停市，所以建議從 /data_fubon/files.json 往前找日期
         // 計算過去 N 個交易日（跳過週末）
@@ -559,16 +567,18 @@
             return {
                 sort: params.get('sort'),
                 date: params.get('date'),
-                type: params.get('type')
+                type: params.get('type'),
+                summary: params.get('summary')
             };
         }
 
         // 更新 URL 參數
-        function updateUrlParams(sort, date, type) {
+        function updateUrlParams(sort, date, type, summary) {
             const params = new URLSearchParams(window.location.search);
             if (sort) params.set('sort', sort);
             if (date) params.set('date', date);
             if (type) params.set('type', type);
+            if (summary) params.set('summary', summary);
             const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
             window.history.replaceState({}, '', newUrl);
         }
@@ -583,7 +593,11 @@
             if (urlParams.type === 'sell' || urlParams.type === 'buy') {
                 currentType = urlParams.type;
             }
+            if (urlParams.summary === 'shares' || urlParams.summary === 'value') {
+                currentSummaryMetric = urlParams.summary;
+            }
             document.getElementById('typeSelect').value = currentType;
+            document.getElementById('summaryMetricSelect').value = currentSummaryMetric;
             updateTypeLabels();
 
             // 如果 URL 沒有指定日期，或指定的日期不在列表中，選第一個（最新）
@@ -657,6 +671,14 @@
             updateTypeLabels();
             const dateSelect = document.getElementById('dateSelect');
             await loadData(dateSelect.value);
+        }
+
+        function onSummaryMetricChanged() {
+            currentSummaryMetric = document.getElementById('summaryMetricSelect').value;
+            const sortBy = document.getElementById('sortSelect').value;
+            updateUrlParams(sortBy, currentDataDateStr, currentType, currentSummaryMetric);
+            renderTable(displayedStocks, sortBy);
+            updateStats(displayedStocks, sortBy);
         }
 
         function isTargetValue(value) {
@@ -797,6 +819,23 @@
             `;
         }
 
+        function getDailyTradeValues(stock, days = 10) {
+            return stock.foreignInvestors.slice(0, days).map((shares, index) => {
+                const price = parseFloat(stock.dailyPrices?.[index]);
+                if (Number.isNaN(price)) return 0;
+                return price * (Number(shares) || 0);
+            });
+        }
+
+        function getTradeValueStats(stock, days = 10) {
+            const values = getDailyTradeValues(stock, days);
+            const total = values.reduce((sum, value) => sum + value, 0);
+            return {
+                total: Math.round(total),
+                average: Math.round(total / days)
+            };
+        }
+
         async function loadData(dateStr) {
             if (!dateStr) return;
 
@@ -819,7 +858,7 @@
 
                 currentDataDateStr = dateStr;
                 // 更新 URL
-                updateUrlParams(null, dateStr, currentType);
+                updateUrlParams(null, dateStr, currentType, currentSummaryMetric);
 
                 const formattedDate = `${dateStr.substring(0, 4)}/${dateStr.substring(4, 6)}/${dateStr.substring(6, 8)}`;
                 document.getElementById('dataDate').textContent = `資料日期：${formattedDate}`;
@@ -928,7 +967,7 @@
             const sortBy = document.getElementById('sortSelect').value;
 
             // 更新 URL 參數
-            updateUrlParams(sortBy, currentDataDateStr, currentType);
+            updateUrlParams(sortBy, currentDataDateStr, currentType, currentSummaryMetric);
 
             let stocksToDisplay = [];
 
@@ -1007,6 +1046,8 @@
             }
             if (key === 'total') return getComparableValue(stock.total);
             if (key === 'average') return getComparableValue(stock.average);
+            if (key === 'valueTotal') return getComparableValue(getTradeValueStats(stock, 4).total);
+            if (key === 'valueAverage') return getComparableValue(getTradeValueStats(stock, 4).average);
             if (key === 'total10') {
                 const total10 = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
                 return getComparableValue(total10);
@@ -1015,6 +1056,8 @@
                 const t = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
                 return getComparableValue(Math.round(t / 10));
             }
+            if (key === 'valueTotal10') return getComparableValue(getTradeValueStats(stock, 10).total);
+            if (key === 'valueAvg10') return getComparableValue(getTradeValueStats(stock, 10).average);
             if (key.startsWith('day')) {
                 const idx = parseInt(key.substring(3));
                 return getComparableValue(stock.foreignInvestors[idx] || 0);
@@ -1061,7 +1104,10 @@
         function renderTable(stocks = allFilteredStocks, sortBy = 'total') {
             const tableBody = document.getElementById('tableBody');
             const tableHead = document.getElementById('tableHead');
+            const stockTable = document.getElementById('stockTable');
             tableBody.innerHTML = '';
+            stockTable.className = '';
+            const useTradeValueSummary = currentSummaryMetric === 'value';
 
             // 根據數值決定顏色類別的函數
             const getColorClass = (value) => {
@@ -1101,8 +1147,8 @@
                         ${makeTh('股價', 'price')}
                         ${makeTh('均線區間', 'smaRange')}
                         ${dateHeaders}
-                        ${makeTh('10日累計', 'total10', 'summary-separator sticky-summary summary-total')}
-                        ${makeTh('10日平均', 'avg10', 'sticky-summary summary-average')}
+                        ${makeTh(useTradeValueSummary ? '10日累計值' : '10日累計', useTradeValueSummary ? 'valueTotal10' : 'total10', 'summary-separator sticky-summary summary-total')}
+                        ${makeTh(useTradeValueSummary ? '10日平均值' : '10日平均', useTradeValueSummary ? 'valueAvg10' : 'avg10', 'sticky-summary summary-average')}
                     </tr>
                 `;
 
@@ -1113,6 +1159,9 @@
                     // 計算 10 日累計和平均
                     const total10 = fi.slice(0, 10).reduce((sum, val) => sum + val, 0);
                     const avg10 = Math.round(total10 / 10);
+                    const valueStats10 = getTradeValueStats(stock, 10);
+                    const summaryTotal10 = useTradeValueSummary ? valueStats10.total : total10;
+                    const summaryAvg10 = useTradeValueSummary ? valueStats10.average : avg10;
 
                     // 生成每天的 td
                     let daysCells = '';
@@ -1130,8 +1179,8 @@
                         <td style="font-weight: 600;">${formatPrice(stock.price)}</td>
                         <td>${stock.smaRange || '-'}</td>
                         ${daysCells}
-                        <td class="${getColorClass(total10)} summary-separator sticky-summary summary-total" style="font-weight: bold;">${total10.toLocaleString()}</td>
-                        <td class="${getColorClass(avg10)} sticky-summary summary-average">${avg10.toLocaleString()}</td>
+                        <td class="${getColorClass(summaryTotal10)} summary-separator sticky-summary summary-total" style="font-weight: bold;">${summaryTotal10.toLocaleString()}</td>
+                        <td class="${getColorClass(summaryAvg10)} sticky-summary summary-average">${summaryAvg10.toLocaleString()}</td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -1154,8 +1203,8 @@
                         ${makeTh(tradingDates[1] || 'Day 2', 'day1')}
                         ${makeTh(tradingDates[2] || 'Day 3', 'day2')}
                         ${makeTh(tradingDates[3] || 'Day 4', 'day3')}
-                        ${makeTh('4日累計', 'total', 'summary-separator sticky-summary summary-total')}
-                        ${makeTh('平均每日', 'average', 'sticky-summary summary-average')}
+                        ${makeTh(useTradeValueSummary ? '4日累計值' : '4日累計', useTradeValueSummary ? 'valueTotal' : 'total', 'summary-separator sticky-summary summary-total')}
+                        ${makeTh(useTradeValueSummary ? '4日平均值' : '平均每日', useTradeValueSummary ? 'valueAverage' : 'average', 'sticky-summary summary-average')}
                     </tr>
                 `;
 
@@ -1167,8 +1216,9 @@
                     const day2Class = getColorClass(stock.day2);
                     const day3Class = getColorClass(stock.day3);
                     const day4Class = getColorClass(stock.day4);
-                    const totalClass = getColorClass(stock.total);
-                    const avgClass = getColorClass(stock.average);
+                    const valueStats4 = getTradeValueStats(stock, 4);
+                    const summaryTotal4 = useTradeValueSummary ? valueStats4.total : stock.total;
+                    const summaryAvg4 = useTradeValueSummary ? valueStats4.average : stock.average;
 
                     row.innerHTML = `
                         <td class="serial-col">${index + 1}</td>
@@ -1178,8 +1228,8 @@
                         <td class="${day2Class}">${renderDailyCell(stock.day2, stock.dailyPrices?.[1], stock.dailyPrices?.[2])}</td>
                         <td class="${day3Class}">${renderDailyCell(stock.day3, stock.dailyPrices?.[2], stock.dailyPrices?.[3])}</td>
                         <td class="${day4Class}">${renderDailyCell(stock.day4, stock.dailyPrices?.[3], stock.dailyPrices?.[4])}</td>
-                        <td class="${totalClass} summary-separator sticky-summary summary-total" style="font-weight: bold;">${stock.total.toLocaleString()}</td>
-                        <td class="${avgClass} sticky-summary summary-average">${stock.average.toLocaleString()}</td>
+                        <td class="${getColorClass(summaryTotal4)} summary-separator sticky-summary summary-total" style="font-weight: bold;">${summaryTotal4.toLocaleString()}</td>
+                        <td class="${getColorClass(summaryAvg4)} sticky-summary summary-average">${summaryAvg4.toLocaleString()}</td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -1187,9 +1237,15 @@
         }
 
         function updateStats(stocks = allFilteredStocks, sortBy = 'total') {
+            const useTradeValueSummary = currentSummaryMetric === 'value';
+
             if (sortBy === 'consecutive') {
                 // 10 日模式統計
                 const total10 = stocks.reduce((sum, stock) => {
+                    if (useTradeValueSummary) {
+                        return sum + getTradeValueStats(stock, 10).total;
+                    }
+
                     const t10 = stock.foreignInvestors.slice(0, 10).reduce((s, v) => s + v, 0);
                     return sum + t10;
                 }, 0);
@@ -1200,11 +1256,21 @@
                 document.getElementById('avgBuy').textContent = avg10.toLocaleString();
 
                 // 更新標籤
-                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = `10日累計${getTypeLabel()}（張）`;
-                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = `平均10日${getTypeLabel()}（張）`;
+                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = useTradeValueSummary
+                    ? `10日累計${getTypeLabel()}值`
+                    : `10日累計${getTypeLabel()}（張）`;
+                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = useTradeValueSummary
+                    ? `平均10日${getTypeLabel()}值`
+                    : `平均10日${getTypeLabel()}（張）`;
             } else {
                 // 4 日模式統計
-                const total = stocks.reduce((sum, stock) => sum + stock.total, 0);
+                const total = stocks.reduce((sum, stock) => {
+                    if (useTradeValueSummary) {
+                        return sum + getTradeValueStats(stock, 4).total;
+                    }
+
+                    return sum + stock.total;
+                }, 0);
                 const avg = stocks.length > 0 ? Math.round(total / stocks.length) : 0;
 
                 document.getElementById('totalStocks').textContent = stocks.length;
@@ -1212,8 +1278,12 @@
                 document.getElementById('avgBuy').textContent = avg.toLocaleString();
 
                 // 恢復標籤
-                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = `4日累計${getTypeLabel()}（張）`;
-                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = `平均每日${getTypeLabel()}（張）`;
+                document.querySelector('#stats .stat-card:nth-child(2) .stat-label').textContent = useTradeValueSummary
+                    ? `4日累計${getTypeLabel()}值`
+                    : `4日累計${getTypeLabel()}（張）`;
+                document.querySelector('#stats .stat-card:nth-child(3) .stat-label').textContent = useTradeValueSummary
+                    ? `平均每日${getTypeLabel()}值`
+                    : `平均每日${getTypeLabel()}（張）`;
             }
         }
 

@@ -88,6 +88,12 @@
             color: #666;
             margin-top: 10px;
         }
+
+        .trade-value {
+            color: #7c2d12;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -226,6 +232,7 @@
 
                 // 3. Fetch and process each file
                 const stockSets = [];
+                const stockTradeValues = new Map();
 
                 for (const file of targetFiles) {
                     const res = await fetch(`${basePath}/data_fubon/${file}`);
@@ -236,6 +243,8 @@
                     const headers = parseCSVRow(rows[0]);
                     const stockIndex = headers.findIndex(h => h.includes('Stock') || h.includes('股票名稱'));
                     const rankIndex = headers.findIndex(h => h.includes('Rank') || h.includes('排行') || h.includes('排名'));
+                    const priceIndex = headers.findIndex(h => h.includes('Price') || h.includes('價格'));
+                    const netTradeIndex = headers.findIndex(h => ['NetBuy', 'NetSell', '買超', '賣超'].includes(h));
 
                     if (stockIndex === -1) {
                         console.warn(`Could not find Stock column in ${file}`);
@@ -257,7 +266,13 @@
                         }
 
                         if (cols[stockIndex]) {
-                            stocks.add(cols[stockIndex].trim());
+                            const stock = cols[stockIndex].trim();
+                            stocks.add(stock);
+
+                            if (priceIndex >= 0 && netTradeIndex >= 0) {
+                                const tradeValue = calculateTradeValue(cols[priceIndex], cols[netTradeIndex]);
+                                stockTradeValues.set(stock, (stockTradeValues.get(stock) || 0) + tradeValue);
+                            }
                         }
                     }
                     stockSets.push({ file, stocks });
@@ -305,9 +320,9 @@
 
                         if (code && /^\d+/.test(code)) {
                             const url = `https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${code}.djhtm`;
-                            html += `<a href="${url}" target="_blank" class="stock-item">${stock}</a>`;
+                            html += `<a href="${url}" target="_blank" class="stock-item">${stock}${renderTradeValue(stockTradeValues.get(stock))}</a>`;
                         } else {
-                            html += `<span class="stock-item">${stock}</span>`;
+                            html += `<span class="stock-item">${stock}${renderTradeValue(stockTradeValues.get(stock))}</span>`;
                         }
                     });
                     html += '</div>';
@@ -327,6 +342,25 @@
                 console.error(err);
                 statusDiv.innerHTML = `<span class="error">Error: ${err.message}</span>`;
             }
+        }
+
+        function parseNumber(value) {
+            const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
+            const number = parseFloat(normalized);
+            return Number.isNaN(number) ? 0 : number;
+        }
+
+        function calculateTradeValue(price, shares) {
+            return Math.round(parseNumber(price) * parseNumber(shares));
+        }
+
+        function formatNumber(value) {
+            return Number(value || 0).toLocaleString();
+        }
+
+        function renderTradeValue(value) {
+            if (value == null) return '';
+            return ` <span class="trade-value">(TradeValue: ${formatNumber(value)})</span>`;
         }
 
         // Simple CSV parser to handle quotes

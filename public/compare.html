@@ -80,6 +80,12 @@
             background: #e8f5e9;
             border-radius: 4px;
         }
+
+        .trade-value {
+            color: #7c2d12;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -481,6 +487,9 @@
                         if (price) {
                             extraInfo += ` <span style="color: #d32f2f; font-size: 0.9em; font-weight: bold;">(${price})</span>`;
                         }
+                        if (fubonInfo?.tradeValue != null) {
+                            extraInfo += ` <span class="trade-value">(TradeValue: ${formatNumber(fubonInfo.tradeValue)})</span>`;
+                        }
                         if (sma20) {
                             extraInfo += ` <span style="color: #666; font-size: 0.9em;">(SMA20: ${sma20})</span>`;
                         }
@@ -503,7 +512,7 @@
 
         function extractStocks(csvContent, type, limit) {
             const rows = csvContent.split('\n').map(r => r.trim()).filter(r => r);
-            const stocks = new Map(); // Code -> {name, price}
+            const stocks = new Map(); // Code -> {name, price, netTrade, tradeValue}
             let count = 0;
 
             if (type === 'fubon') {
@@ -512,6 +521,7 @@
                 const headers = parseCSVRow(rows[0]);
                 const stockIdx = headers.findIndex(h => h.includes('Stock') || h.includes('股票名稱'));
                 const priceIdx = headers.findIndex(h => h.includes('Price') || h.includes('價格'));
+                const netTradeIdx = headers.findIndex(h => ['NetBuy', 'NetSell', '買超', '賣超'].includes(h));
 
                 for (let i = 1; i < rows.length; i++) {
                     if (count >= limit) break;
@@ -549,7 +559,9 @@
                         if (code && /^\d+/.test(code)) {
                             // Extract price from Price column
                             const price = priceIdx >= 0 && cols[priceIdx] ? cols[priceIdx].trim() : '';
-                            stocks.set(code, { name, price });
+                            const netTrade = netTradeIdx >= 0 && cols[netTradeIdx] ? parseNumber(cols[netTradeIdx]) : null;
+                            const tradeValue = price && netTrade != null ? calculateTradeValue(price, netTrade) : null;
+                            stocks.set(code, { name, price, netTrade, tradeValue });
                             count++;
                         }
                     }
@@ -570,6 +582,20 @@
                 }
             }
             return stocks;
+        }
+
+        function parseNumber(value) {
+            const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
+            const number = parseFloat(normalized);
+            return Number.isNaN(number) ? 0 : number;
+        }
+
+        function calculateTradeValue(price, shares) {
+            return Math.round(parseNumber(price) * parseNumber(shares));
+        }
+
+        function formatNumber(value) {
+            return Number(value || 0).toLocaleString();
         }
 
         function parseCSVRow(row) {
