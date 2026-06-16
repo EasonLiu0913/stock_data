@@ -196,6 +196,25 @@
             line-height: 1.25;
         }
 
+        .daily-count.neutral {
+            color: #64748b;
+        }
+
+        .daily-count-change {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-left: 0.25rem;
+        }
+
+        .daily-count-change.up {
+            color: #dc2626;
+        }
+
+        .daily-count-change.down {
+            color: #16a34a;
+        }
+
         .daily-price {
             color: #64748b;
             font-size: 0.78rem;
@@ -668,13 +687,29 @@
             return { label: '(0.00%)', className: '' };
         }
 
-        function renderDailyCell(count, price, previousPrice) {
+        function getCountChangeInfo(count, previousCount) {
+            const current = Number(count || 0);
+            const previous = Number(previousCount || 0);
+            if (previous === 0) {
+                return { label: '(-)', className: '' };
+            }
+
+            const changePercent = ((current - previous) / Math.abs(previous)) * 100;
+            if (changePercent > 0) return { label: `(+${changePercent.toFixed(2)}%)`, className: 'up' };
+            if (changePercent < 0) return { label: `(${changePercent.toFixed(2)}%)`, className: 'down' };
+            return { label: '(0.00%)', className: '' };
+        }
+
+        function renderDailyCell(count, price, previousPrice, previousCount) {
             const changeInfo = getPriceChangeInfo(price, previousPrice);
+            const countChangeInfo = getCountChangeInfo(count, previousCount);
             const priceClass = changeInfo.className ? `daily-price ${changeInfo.className}` : 'daily-price';
+            const countChangeClass = countChangeInfo.className ? `daily-count-change ${countChangeInfo.className}` : 'daily-count-change';
+            const countClass = countChangeInfo.label === '(0.00%)' ? 'daily-count neutral' : 'daily-count';
 
             return `
                 <div class="daily-cell">
-                    <div>${Number(count || 0).toLocaleString()}</div>
+                    <div><span class="${countClass}">${Number(count || 0).toLocaleString()}</span><span class="${countChangeClass}">${countChangeInfo.label}</span></div>
                     <div class="${priceClass}">${formatPrice(price)}${changeInfo.label}</div>
                 </div>
             `;
@@ -815,7 +850,7 @@
                 const row = document.createElement('tr');
                 const dayCells = stock.counts.slice(0, displayDays).map((count, dayIndex) => {
                     const cellClass = count > 0 ? 'positive' : 'neutral';
-                    return `<td class="${cellClass}">${renderDailyCell(count, stock.prices[dayIndex], stock.prices[dayIndex + 1])}</td>`;
+                    return `<td class="${cellClass}">${renderDailyCell(count, stock.prices[dayIndex], stock.prices[dayIndex + 1], stock.counts[dayIndex + 1])}</td>`;
                 }).join('');
                 const summaryTotal = getSummaryTotal(stock);
                 const summaryAverage = getSummaryAverage(stock);
