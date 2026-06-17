@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自營商買賣超彙總表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header,
+        .controls,
+        .table-wrap {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .header {
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            line-height: 1.3;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 700;
+            color: #334155;
+        }
+
+        select,
+        input {
+            min-height: 40px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        input {
+            min-width: 240px;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .table-wrap {
+            border-radius: 8px;
+            overflow: auto;
+            max-height: 78vh;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1280px;
+            font-size: 0.92rem;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem 0.85rem;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            z-index: 4;
+            background: #1d4ed8;
+            color: #ffffff;
+            font-weight: 800;
+            user-select: none;
+        }
+
+        thead tr:first-child th {
+            top: 0;
+            background: #1e3a8a;
+            text-align: center;
+        }
+
+        thead tr:nth-child(2) th {
+            top: 43px;
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: #eff6ff;
+        }
+
+        .text-cell,
+        th.text-cell {
+            text-align: left;
+        }
+
+        .code-cell {
+            color: #1d4ed8;
+            font-weight: 800;
+        }
+
+        .positive {
+            color: #dc2626;
+            font-weight: 800;
+        }
+
+        .negative {
+            color: #16a34a;
+            font-weight: 800;
+        }
+
+        .loading,
+        .error,
+        .empty {
+            padding: 2rem;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .error {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.35rem;
+            }
+
+            .controls,
+            .control-group {
+                align-items: stretch;
+                flex-direction: column;
+                width: 100%;
+            }
+
+            input,
+            select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="pageTitle">自營商買賣超彙總表</h1>
+            <div class="meta" id="pageMeta"></div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="dateSelect">資料日期</label>
+                <select id="dateSelect" onchange="onDateChanged()"></select>
+            </div>
+            <div class="control-group">
+                <label for="searchInput">搜尋</label>
+                <input id="searchInput" type="text" placeholder="輸入證券代號或名稱" oninput="applyFiltersAndRender()">
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <div id="loading" class="loading">載入中...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            <table id="dataTable" style="display: none;">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const DATA_DIR = 'data_twse_dealers';
+
+        let files = [];
+        let currentFile = '';
+        let currentPayload = null;
+        let displayedRows = [];
+        let sortState = { index: 10, direction: 'desc' };
+
+        function getBasePath() {
+            return window.location.hostname.includes('github.io') ? '/stock_data' : '..';
+        }
+
+        function formatDate(dateStr) {
+            if (!/^\d{8}$/.test(String(dateStr || ''))) return dateStr || '';
+            return `${dateStr.slice(0, 4)}/${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}`;
+        }
+
+        function parseNumber(value) {
+            const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
+            const number = Number(normalized);
+            return Number.isNaN(number) ? null : number;
+        }
+
+        function normalizeCell(value) {
+            return String(value ?? '').trim();
+        }
+
+        function getCellValue(row, index) {
+            return normalizeCell(row[index]);
+        }
+
+        async function fetchJson(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`無法載入資料: ${url}`);
+            return response.json();
+        }
+
+        async function init() {
+            try {
+                const basePath = getBasePath();
+                files = await fetchJson(`${basePath}/${DATA_DIR}/files.json`);
+                files = files
+                    .filter(file => /^\d{8}_twse_dealers\.json$/.test(file))
+                    .sort()
+                    .reverse();
+
+                if (files.length === 0) throw new Error('找不到 TWSE 自營商買賣超資料檔');
+
+                const params = new URLSearchParams(window.location.search);
+                currentFile = params.get('file') && files.includes(params.get('file')) ? params.get('file') : files[0];
+
+                renderDateOptions();
+                await loadFile(currentFile);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderDateOptions() {
+            const dateSelect = document.getElementById('dateSelect');
+            dateSelect.innerHTML = files.map(file => {
+                const date = file.slice(0, 8);
+                return `<option value="${file}">${formatDate(date)}</option>`;
+            }).join('');
+            dateSelect.value = currentFile;
+        }
+
+        async function onDateChanged() {
+            currentFile = document.getElementById('dateSelect').value;
+            await loadFile(currentFile);
+        }
+
+        async function loadFile(file) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dataTable').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+
+            const basePath = getBasePath();
+            currentPayload = await fetchJson(`${basePath}/${DATA_DIR}/${file}`);
+
+            document.title = currentPayload.title || '自營商買賣超彙總表';
+            document.getElementById('pageTitle').textContent = currentPayload.title || '自營商買賣超彙總表';
+            document.getElementById('pageMeta').textContent =
+                `資料日期：${formatDate(currentPayload.date)}；資料筆數：${(currentPayload.data || []).length.toLocaleString()}`;
+
+            const params = new URLSearchParams(window.location.search);
+            params.set('file', file);
+            window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+
+            applyFiltersAndRender();
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dataTable').style.display = 'table';
+        }
+
+        function applyFiltersAndRender() {
+            if (!currentPayload) return;
+
+            const keyword = document.getElementById('searchInput').value.trim().toUpperCase();
+            displayedRows = (currentPayload.data || []).filter(row => {
+                if (!keyword) return true;
+                const code = getCellValue(row, 0).toUpperCase();
+                const name = getCellValue(row, 1).toUpperCase();
+                return code.includes(keyword) || name.includes(keyword);
+            });
+
+            sortRows();
+            renderTable();
+        }
+
+        function sortRows() {
+            const { index, direction } = sortState;
+            displayedRows = [...displayedRows].sort((a, b) => {
+                const aRaw = getCellValue(a, index);
+                const bRaw = getCellValue(b, index);
+                const aNumber = parseNumber(aRaw);
+                const bNumber = parseNumber(bRaw);
+
+                let result;
+                if (aNumber !== null && bNumber !== null) {
+                    result = aNumber - bNumber;
+                } else {
+                    result = aRaw.localeCompare(bRaw, 'zh-Hant');
+                }
+
+                return direction === 'asc' ? result : -result;
+            });
+        }
+
+        function sortByField(index) {
+            if (sortState.index === index) {
+                sortState.direction = sortState.direction === 'desc' ? 'asc' : 'desc';
+            } else {
+                sortState = { index, direction: 'desc' };
+            }
+            applyFiltersAndRender();
+        }
+
+        function getFieldLabel(label, index) {
+            const text = normalizeCell(label) || '#';
+            if (sortState.index !== index) return text;
+            return `${text}${sortState.direction === 'desc' ? ' ▼' : ' ▲'}`;
+        }
+
+        function getCellClass(value, index) {
+            if (index <= 1) return index === 0 ? 'text-cell code-cell' : 'text-cell';
+            const number = parseNumber(value);
+            if (number === null) return '';
+            if (number > 0 && [4, 7, 10].includes(index)) return 'positive';
+            if (number < 0 && [4, 7, 10].includes(index)) return 'negative';
+            return '';
+        }
+
+        function renderTable() {
+            const fields = currentPayload.fields || [];
+            const groups = currentPayload.groups || [];
+            const tableHead = document.getElementById('tableHead');
+            const tableBody = document.getElementById('tableBody');
+
+            const groupHeaders = groups.map(group => {
+                const title = normalizeCell(group.title) || '&nbsp;';
+                return `<th colspan="${group.span}">${title}</th>`;
+            }).join('');
+
+            const fieldHeaders = fields.map((field, index) => {
+                const textClass = index <= 1 ? ' class="text-cell"' : '';
+                return `<th${textClass} onclick="sortByField(${index})">${getFieldLabel(field, index)}</th>`;
+            }).join('');
+
+            tableHead.innerHTML = `
+                <tr>${groupHeaders}</tr>
+                <tr>${fieldHeaders}</tr>
+            `;
+
+            if (displayedRows.length === 0) {
+                tableBody.innerHTML = `<tr><td class="empty" colspan="${fields.length}">沒有符合條件的資料</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = displayedRows.map(row => {
+                const cells = fields.map((_, index) => {
+                    const value = getCellValue(row, index);
+                    const className = getCellClass(value, index);
+                    const classAttr = className ? ` class="${className}"` : '';
+                    return `<td${classAttr}>${value || '-'}</td>`;
+                }).join('');
+                return `<tr>${cells}</tr>`;
+            }).join('');
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dataTable').style.display = 'none';
+            const error = document.getElementById('error');
+            error.style.display = 'block';
+            error.textContent = message;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

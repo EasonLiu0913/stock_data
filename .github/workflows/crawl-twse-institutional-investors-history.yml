@@ -1,0 +1,122 @@
+name: Crawl TWSE Institutional Investors History
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Single target date (YYYYMMDD). If set, start/end are ignored.'
+        required: false
+        default: ''
+      start_date:
+        description: 'Start date (YYYYMMDD). Leave empty to use script default.'
+        required: false
+        default: ''
+      end_date:
+        description: 'End date (YYYYMMDD). Leave empty to use Taipei today.'
+        required: false
+        default: ''
+      force:
+        description: 'Overwrite existing files'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      min_delay:
+        description: 'Minimum random delay between dates in ms'
+        required: false
+        default: '3000'
+      max_delay:
+        description: 'Maximum random delay between dates in ms'
+        required: false
+        default: '5000'
+      max_retries:
+        description: 'Max retries for rate-limit or mismatch responses'
+        required: false
+        default: '3'
+      rate_limit_cooldown:
+        description: 'Cooldown for 307/429/503 responses in ms'
+        required: false
+        default: '90000'
+      mismatch_cooldown:
+        description: 'Cooldown for response date mismatch in ms'
+        required: false
+        default: '90000'
+
+jobs:
+  crawl-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Crawl TWSE institutional investors history
+        run: |
+          ARGS=(
+            --min-delay "${{ github.event.inputs.min_delay }}"
+            --max-delay "${{ github.event.inputs.max_delay }}"
+            --max-retries "${{ github.event.inputs.max_retries }}"
+            --rate-limit-cooldown "${{ github.event.inputs.rate_limit_cooldown }}"
+            --mismatch-cooldown "${{ github.event.inputs.mismatch_cooldown }}"
+          )
+
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS+=(--date "${{ github.event.inputs.date }}")
+          else
+            if [ -n "${{ github.event.inputs.start_date }}" ]; then
+              ARGS+=(--start "${{ github.event.inputs.start_date }}")
+            fi
+            if [ -n "${{ github.event.inputs.end_date }}" ]; then
+              ARGS+=(--end "${{ github.event.inputs.end_date }}")
+            fi
+          fi
+
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS+=(--force)
+          fi
+
+          node scripts/crawl_history_twse_institutional_investors.js "${ARGS[@]}"
+
+      - name: Generate files.json
+        run: node scripts/generate_file_lists.js
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse_institutional_investors/ data_fubon/files.json data_twse/files.json
+
+          if git diff --staged --quiet; then
+            echo "No TWSE institutional investors changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE institutional investors history ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TWSE institutional investors history changes"
+            exit 1
+          fi

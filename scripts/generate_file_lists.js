@@ -8,6 +8,16 @@ const directories = [
         path: 'data_twse_foreign_investors',
         output: 'data_twse_foreign_investors/files.json',
         filter: file => /^\d{8}_twse_foreign_investors\.json$/.test(file)
+    },
+    {
+        path: 'data_twse_dealers',
+        output: 'data_twse_dealers/files.json',
+        filter: file => /^\d{8}_twse_dealers\.json$/.test(file)
+    },
+    {
+        path: 'data_twse_institutional_investors',
+        output: 'data_twse_institutional_investors/files.json',
+        filter: file => /^\d{8}_twse_institutional_investors\.json$/.test(file)
     }
 ];
 
