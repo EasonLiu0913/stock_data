@@ -3,7 +3,12 @@ const path = require('path');
 
 const directories = [
     { path: 'data_fubon', output: 'data_fubon/files.json' },
-    { path: 'data_twse', output: 'data_twse/files.json' }
+    { path: 'data_twse', output: 'data_twse/files.json' },
+    {
+        path: 'data_twse_foreign_investors',
+        output: 'data_twse_foreign_investors/files.json',
+        filter: file => /^\d{8}_twse_foreign_investors\.json$/.test(file)
+    }
 ];
 
 directories.forEach(dir => {
@@ -11,7 +16,9 @@ directories.forEach(dir => {
     const outputPath = path.join(__dirname, '..', dir.output);
 
     if (fs.existsSync(dirPath)) {
-        const files = fs.readdirSync(dirPath).filter(file => file.endsWith('.csv') || file.endsWith('.json'));
+        const files = fs.readdirSync(dirPath)
+            .filter(file => file.endsWith('.csv') || file.endsWith('.json'))
+            .filter(file => !dir.filter || dir.filter(file));
         fs.writeFileSync(outputPath, JSON.stringify(files, null, 2));
         console.log(`✅ Generated ${dir.output} with ${files.length} files`);
     } else {
