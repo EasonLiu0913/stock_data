@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股價低於均線清單</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-muted: #eef2f7;
+      --text: #1f2937;
+      --muted: #64748b;
+      --border: #d8e0ea;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --positive: #dc2626;
+      --negative: #16a34a;
+      --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(1400px, 100%);
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    header {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #111827;
+      font-size: 2rem;
+      font-weight: 750;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .controls {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr)) minmax(220px, 0.8fr);
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 18px;
+    }
+
+    .control-group label {
+      color: var(--muted);
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 7px;
+    }
+
+    select {
+      appearance: none;
+      background-color: #ffffff;
+      background-image: linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%);
+      background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+      background-repeat: no-repeat;
+      background-size: 6px 6px, 6px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1rem;
+      min-height: 42px;
+      padding: 9px 36px 9px 12px;
+      width: 100%;
+    }
+
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+      outline: none;
+    }
+
+    .stat {
+      align-self: end;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 8px 12px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      display: block;
+      font-size: 0.78rem;
+      line-height: 1.2;
+    }
+
+    .stat-value {
+      color: var(--primary-dark);
+      display: block;
+      font-size: 1.15rem;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      align-items: center;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      padding: 14px 16px;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 750;
+    }
+
+    .panel-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 920px;
+      width: 100%;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 11px 12px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 0.8rem;
+      font-weight: 750;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover {
+      background: #e2e8f0;
+      color: #1e40af;
+    }
+
+    .sort-arrow {
+      color: var(--primary);
+      display: inline-block;
+      font-size: 0.75rem;
+      margin-left: 5px;
+      min-width: 10px;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .number {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .price-change {
+      display: inline-block;
+      font-size: 0.82rem;
+      font-weight: 750;
+      margin-left: 4px;
+    }
+
+    .stock-code a {
+      color: var(--primary);
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    .stock-code a:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+
+    .negative {
+      color: var(--negative);
+      font-weight: 750;
+    }
+
+    .positive {
+      color: var(--positive);
+      font-weight: 750;
+    }
+
+    .empty,
+    .error {
+      color: var(--muted);
+      padding: 42px 16px;
+      text-align: center;
+    }
+
+    .error {
+      color: #b91c1c;
+    }
+
+    @media (max-width: 800px) {
+      .page {
+        padding: 20px 10px 32px;
+      }
+
+      h1 {
+        font-size: 1.45rem;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <header>
+      <h1>股價低於均線清單</h1>
+      <p class="subtitle">資料來源：data_fubon/fubon_20260622_sma.json</p>
+    </header>
+
+    <section class="controls" aria-label="篩選條件">
+      <div class="control-group">
+        <label for="dateSelect">日期</label>
+        <select id="dateSelect"></select>
+      </div>
+      <div class="control-group">
+        <label for="smaSelect">均線</label>
+        <select id="smaSelect">
+          <option value="SMA5">SMA5</option>
+          <option value="SMA20">SMA20</option>
+          <option value="SMA60" selected>SMA60</option>
+          <option value="SMA120">SMA120</option>
+          <option value="SMA240">SMA240</option>
+        </select>
+      </div>
+      <div class="stat">
+        <span class="stat-label">符合條件</span>
+        <span class="stat-value" id="matchCount">-</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title" id="tableTitle">Price <= SMA60</div>
+        <div class="panel-note" id="tableNote">載入中</div>
+      </div>
+      <div class="table-wrap" id="resultArea">
+        <div class="empty">資料載入中</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const DATA_FILE = 'fubon_20260622_sma.json';
+    const DATA_FOLDER = window.location.hostname.includes('github.io') ? '/stock_data/data_fubon' : '../data_fubon';
+    const TWSE_DATA_FOLDER = window.location.hostname.includes('github.io') ? '/stock_data/data_twse' : '../data_twse';
+    const SMA_OPTIONS = ['SMA5', 'SMA20', 'SMA60', 'SMA120', 'SMA240'];
+
+    let smaData = {};
+    let industryMap = {};
+    let smaFileDates = [];
+    let previousSmaData = null;
+    let previousDateKey = '';
+    let currentPreviousFileDate = '';
+    let sortState = {
+      key: 'volume',
+      direction: 'desc'
+    };
+
+    function formatDateLabel(dateKey) {
+      return dateKey.replace(/\//g, '-');
+    }
+
+    function dateKeyToFileDate(dateKey) {
+      return dateKey.replace(/\//g, '');
+    }
+
+    function fileDateToDateKey(fileDate) {
+      return `${fileDate.slice(0, 4)}/${fileDate.slice(4, 6)}/${fileDate.slice(6, 8)}`;
+    }
+
+    function parseNumber(value) {
+      if (value === null || value === undefined || value === '') return NaN;
+      return Number(String(value).replace(/,/g, ''));
+    }
+
+    function getDateKeys(data) {
+      const dateKeys = new Set();
+      Object.values(data).forEach((stock) => {
+        Object.keys(stock).forEach((key) => {
+          if (/^\d{4}\/\d{2}\/\d{2}$/.test(key)) {
+            dateKeys.add(key);
+          }
+        });
+      });
+      return Array.from(dateKeys).sort((a, b) => b.localeCompare(a));
+    }
+
+    async function loadSmaFileDates() {
+      try {
+        const response = await fetch(`${DATA_FOLDER}/files.json`);
+        if (!response.ok) return;
+
+        const files = await response.json();
+        smaFileDates = files
+          .map((fileName) => {
+            const match = fileName.match(/^fubon_(\d{8})_sma\.json$/);
+            return match ? match[1] : null;
+          })
+          .filter(Boolean)
+          .sort();
+      } catch (error) {
+        smaFileDates = [];
+      }
+    }
+
+    function getPreviousFileDate(dateKey) {
+      const selectedFileDate = dateKeyToFileDate(dateKey);
+      for (let i = smaFileDates.length - 1; i >= 0; i--) {
+        if (smaFileDates[i] < selectedFileDate) {
+          return smaFileDates[i];
+        }
+      }
+      return '';
+    }
+
+    async function loadPreviousData(dateKey) {
+      const previousFileDate = getPreviousFileDate(dateKey);
+      if (!previousFileDate) {
+        previousSmaData = null;
+        previousDateKey = '';
+        currentPreviousFileDate = '';
+        return;
+      }
+
+      if (currentPreviousFileDate === previousFileDate) return;
+
+      const response = await fetch(`${DATA_FOLDER}/fubon_${previousFileDate}_sma.json`);
+      if (!response.ok) throw new Error(`無法載入前一日資料 HTTP ${response.status}`);
+
+      previousSmaData = await response.json();
+      previousDateKey = fileDateToDateKey(previousFileDate);
+      currentPreviousFileDate = previousFileDate;
+    }
+
+    function getPriceChange(code, price) {
+      if (!previousSmaData || !previousDateKey) return null;
+
+      const previousPrice = parseNumber(previousSmaData[code]?.[previousDateKey]?.Price);
+      if (!Number.isFinite(previousPrice) || previousPrice === 0) return null;
+
+      return ((price - previousPrice) / previousPrice) * 100;
+    }
+
+    function renderPriceCell(row) {
+      if (!Number.isFinite(row.priceChangePercent)) {
+        return row.price.toFixed(2);
+      }
+
+      const className = row.priceChangePercent >= 0 ? 'positive' : 'negative';
+      const sign = row.priceChangePercent > 0 ? '+' : '';
+      return `${row.price.toFixed(2)} <span class="price-change ${className}">(${sign}${row.priceChangePercent.toFixed(2)}%)</span>`;
+    }
+
+    function getRows(dateKey, smaKey) {
+      return Object.entries(smaData)
+        .map(([code, stock]) => {
+          const dayData = stock[dateKey];
+          if (!dayData) return null;
+
+          const price = parseNumber(dayData.Price);
+          const sma = parseNumber(dayData[smaKey]);
+          if (!Number.isFinite(price) || !Number.isFinite(sma) || price > sma) return null;
+
+          const diff = price - sma;
+          const diffPercent = sma === 0 ? 0 : (diff / sma) * 100;
+
+          return {
+            code,
+            name: stock.StockName || '',
+            industry: industryMap[code]?.Industry || '-',
+            price,
+            priceChangePercent: getPriceChange(code, price),
+            sma,
+            diff,
+            diffPercent,
+            volume: parseNumber(dayData.Volume)
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function compareRows(a, b, key) {
+      if (key === 'code' || key === 'name' || key === 'industry') {
+        return String(a[key]).localeCompare(String(b[key]), 'zh-Hant');
+      }
+
+      const aValue = Number.isFinite(a[key]) ? a[key] : Number.NEGATIVE_INFINITY;
+      const bValue = Number.isFinite(b[key]) ? b[key] : Number.NEGATIVE_INFINITY;
+      return aValue - bValue;
+    }
+
+    function getDefaultSortDirection(key) {
+      if (key === 'code' || key === 'name' || key === 'industry' || key === 'diffPercent') {
+        return 'asc';
+      }
+      return 'desc';
+    }
+
+    function getSortRules() {
+      const rules = [{ key: sortState.key, direction: sortState.direction }];
+
+      if (sortState.key !== 'volume') {
+        rules.push({ key: 'volume', direction: 'desc' });
+      }
+
+      if (sortState.key !== 'diffPercent') {
+        rules.push({ key: 'diffPercent', direction: 'asc' });
+      }
+
+      return rules;
+    }
+
+    function sortRows(rows) {
+      return [...rows].sort((a, b) => {
+        for (const rule of getSortRules()) {
+          const direction = rule.direction === 'asc' ? 1 : -1;
+          const result = compareRows(a, b, rule.key);
+          if (result !== 0) return result * direction;
+        }
+        return a.code.localeCompare(b.code);
+      });
+    }
+
+    function sortArrow(key) {
+      if (sortState.key !== key) return '';
+      return sortState.direction === 'asc' ? '▲' : '▼';
+    }
+
+    function headerCell(label, key, className = '') {
+      const classes = ['sortable', className].filter(Boolean).join(' ');
+      return `<th class="${classes}" data-sort-key="${key}">${label}<span class="sort-arrow">${sortArrow(key)}</span></th>`;
+    }
+
+    async function renderTable() {
+      const dateKey = document.getElementById('dateSelect').value;
+      const smaKey = document.getElementById('smaSelect').value;
+      const resultArea = document.getElementById('resultArea');
+      const matchCount = document.getElementById('matchCount');
+      const tableTitle = document.getElementById('tableTitle');
+      const tableNote = document.getElementById('tableNote');
+
+      tableTitle.textContent = `Price <= ${smaKey}`;
+
+      if (!dateKey) {
+        matchCount.textContent = '-';
+        tableNote.textContent = '沒有可用日期';
+        resultArea.innerHTML = '<div class="empty">沒有可用日期</div>';
+        return;
+      }
+
+      try {
+        await loadPreviousData(dateKey);
+      } catch (error) {
+        tableNote.textContent = error.message;
+      }
+
+      const rows = sortRows(getRows(dateKey, smaKey));
+      const totalWithDate = Object.values(smaData).filter((stock) => Boolean(stock[dateKey])).length;
+      matchCount.textContent = rows.length.toLocaleString();
+      const previousText = previousDateKey ? `，漲跌幅比較 ${formatDateLabel(previousDateKey)}` : '，無前一日價格';
+      tableNote.textContent = `${formatDateLabel(dateKey)}，共 ${totalWithDate.toLocaleString()} 檔有該日資料${previousText}`;
+
+      if (rows.length === 0) {
+        resultArea.innerHTML = '<div class="empty">沒有符合條件的股票</div>';
+        return;
+      }
+
+      const bodyHtml = rows.map((row, index) => {
+        const diffClass = row.diff <= 0 ? 'negative' : 'positive';
+        const volume = Number.isFinite(row.volume) ? row.volume.toLocaleString() : '-';
+        return `
+          <tr>
+            <td class="number">${index + 1}</td>
+            <td class="stock-code"><a href="https://fubon-ebrokerdj.fbs.com.tw/z/zc/zcw/zcw1_${row.code}.djhtm" target="_blank" rel="noopener">${row.code}</a></td>
+            <td>${row.name}</td>
+            <td>${row.industry}</td>
+            <td class="number">${renderPriceCell(row)}</td>
+            <td class="number">${row.sma.toFixed(2)}</td>
+            <td class="number ${diffClass}">${row.diff.toFixed(2)}</td>
+            <td class="number ${diffClass}">${row.diffPercent.toFixed(2)}%</td>
+            <td class="number">${volume}</td>
+          </tr>
+        `;
+      }).join('');
+
+      resultArea.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th class="number">#</th>
+              ${headerCell('股票代號', 'code')}
+              ${headerCell('股票名稱', 'name')}
+              ${headerCell('Industry', 'industry')}
+              ${headerCell('Price', 'price', 'number')}
+              ${headerCell(smaKey, 'sma', 'number')}
+              ${headerCell('差距', 'diff', 'number')}
+              ${headerCell('差距%', 'diffPercent', 'number')}
+              ${headerCell('Volume', 'volume', 'number')}
+            </tr>
+          </thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
+      `;
+    }
+
+    async function loadData() {
+      const dateSelect = document.getElementById('dateSelect');
+      const resultArea = document.getElementById('resultArea');
+      const tableNote = document.getElementById('tableNote');
+
+      try {
+        await loadSmaFileDates();
+        const industryResponse = await fetch(`${TWSE_DATA_FOLDER}/twse_industry_Stock.json`);
+        if (!industryResponse.ok) throw new Error(`無法載入產業資料 HTTP ${industryResponse.status}`);
+        industryMap = await industryResponse.json();
+
+        const response = await fetch(`${DATA_FOLDER}/${DATA_FILE}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        smaData = await response.json();
+        const dateKeys = getDateKeys(smaData);
+        dateSelect.innerHTML = dateKeys.map((dateKey) => (
+          `<option value="${dateKey}">${formatDateLabel(dateKey)}</option>`
+        )).join('');
+
+        document.getElementById('smaSelect').value = 'SMA60';
+        renderTable();
+      } catch (error) {
+        tableNote.textContent = '載入失敗';
+        resultArea.innerHTML = `<div class="error">無法載入 ${DATA_FILE}: ${error.message}</div>`;
+      }
+    }
+
+    document.getElementById('dateSelect').addEventListener('change', renderTable);
+    document.getElementById('smaSelect').addEventListener('change', renderTable);
+    document.getElementById('resultArea').addEventListener('click', (event) => {
+      const header = event.target.closest('th[data-sort-key]');
+      if (!header) return;
+
+      const key = header.dataset.sortKey;
+      if (sortState.key === key) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState.key = key;
+        sortState.direction = getDefaultSortDirection(key);
+      }
+
+      renderTable();
+    });
+    loadData();
+  </script>
+</body>
+
+</html>
