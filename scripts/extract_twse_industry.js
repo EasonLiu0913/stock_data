@@ -2,6 +2,40 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
+const NAVIGATION_TIMEOUT_MS = 90000;
+const SELECTOR_TIMEOUT_MS = 30000;
+const MAX_NAVIGATION_ATTEMPTS = 3;
+
+async function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function gotoWithRetry(page, url) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= MAX_NAVIGATION_ATTEMPTS; attempt++) {
+        try {
+            console.log(`Navigating to ${url} (attempt ${attempt}/${MAX_NAVIGATION_ATTEMPTS})...`);
+            await page.goto(url, {
+                waitUntil: 'domcontentloaded',
+                timeout: NAVIGATION_TIMEOUT_MS
+            });
+
+            await page.waitForSelector('table.h4', { timeout: SELECTOR_TIMEOUT_MS });
+            return;
+        } catch (error) {
+            lastError = error;
+            console.warn(`⚠️ Navigation attempt ${attempt} failed: ${error.message}`);
+
+            if (attempt < MAX_NAVIGATION_ATTEMPTS) {
+                await wait(attempt * 5000);
+            }
+        }
+    }
+
+    throw lastError;
+}
+
 (async () => {
     // URL for "Stock" mode (strMode=2)
     const url = 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2';
@@ -14,14 +48,18 @@ const path = require('path');
 
     console.log(`Launching browser...`);
     const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+        locale: 'zh-TW',
+        timezoneId: 'Asia/Taipei',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        extraHTTPHeaders: {
+            'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7'
+        }
+    });
+    const page = await context.newPage();
 
     try {
-        console.log(`Navigating to ${url}...`);
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
-
-        // Wait for the table to appear
-        await page.waitForSelector('table.h4');
+        await gotoWithRetry(page, url);
 
         console.log('Extracting data...');
         const data = await page.evaluate(() => {
@@ -93,6 +131,10 @@ const path = require('path');
             return result;
         });
 
+        if (!data || Object.keys(data).length === 0) {
+            throw new Error('No TWSE industry data extracted');
+        }
+
         // Save CSVs
         const categoryMap = {
             '股票': 'Stock',
@@ -146,7 +188,9 @@ const path = require('path');
 
     } catch (error) {
         console.error('❌ Error during extraction:', error);
+        process.exitCode = 1;
     } finally {
+        await context.close();
         await browser.close();
     }
 })();
