@@ -1,0 +1,70 @@
+name: Crawl TWSE Foreign Investors
+
+on:
+  schedule:
+    # 每天 14:56 台北時間 (06:56 UTC)
+    - cron: '56 6 * * *'
+    # 每天 15:53 台北時間 (07:53 UTC) retry
+    - cron: '53 7 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260623)'
+        required: false
+        default: ''
+
+jobs:
+  crawl-twse-foreign-investors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TWSE foreign investors crawler
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/crawl_twse_foreign_investors.js --date "${{ github.event.inputs.date }}"
+          else
+            node scripts/crawl_twse_foreign_investors.js
+          fi
+
+      - name: Generate files.json
+        run: |
+          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_twse_foreign_investors/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE foreign investors changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE foreign investors data ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TWSE foreign investors changes"
+            exit 1
+          fi

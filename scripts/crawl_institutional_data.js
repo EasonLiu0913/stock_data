@@ -133,11 +133,20 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  if (fs.existsSync(outputFilePath)) {
   try {
    existingData = JSON.parse(fs.readFileSync(outputFilePath, 'utf8'));
+   existingData = Object.fromEntries(
+    Object.entries(existingData).filter(([, data]) => hasInstitutionalRows(data))
+   );
    const existingCount = Object.keys(existingData).length;
-   console.log(`📋 發現現有資料，已有 ${existingCount} 個股票\n`);
+   console.log(`📋 發現現有有效資料，已有 ${existingCount} 個股票\n`);
   } catch (e) {
    console.log(`⚠️ 讀取現有資料失敗，將重新建立\n`);
   }
+ }
+
+ function hasInstitutionalRows(data) {
+  if (!data || typeof data !== 'object') return false;
+  return ['ForeignInvestors', 'InvestmentTrust', 'Dealers', 'DailyTotal']
+   .some(key => data[key] && typeof data[key] === 'object' && Object.keys(data[key]).length > 0);
  }
 
  // 篩選待處理股票 (跳過已有完整資料的)
@@ -235,6 +244,9 @@ const MAX_CONCURRENCY = 5; // 最大並發數
        dailyTotal[dk] = dailyTotalVal;
       }
      }
+     if (Object.keys(foreignInvestors).length === 0) {
+      return { error: '目標日期無法人資料', skipReason: 'EMPTY_DATA' };
+     }
      return { success: true, ForeignInvestors: foreignInvestors, InvestmentTrust: investmentTrust, Dealers: dealers, DailyTotal: dailyTotal };
     } catch (e) { return { error: e.message }; }
    }, endDateParam);
@@ -305,6 +317,10 @@ const MAX_CONCURRENCY = 5; // 最大並發數
   }
  } else {
   console.log('\n⚠️ 沒有任何股票成功取得資料，跳過寫檔（可能為非交易日）');
+  if (fs.existsSync(outputFilePath) && Object.keys(result).length === 0) {
+   fs.unlinkSync(outputFilePath);
+   console.log(`🗑️ 已刪除既有空資料檔: ${outputFilePath}`);
+  }
  }
 
 })();

@@ -112,9 +112,18 @@ const MAX_CONCURRENCY = 3;
  if (fs.existsSync(institutionalDataPath)) {
   try {
    institutionalData = JSON.parse(fs.readFileSync(institutionalDataPath, 'utf8'));
+   institutionalData = Object.fromEntries(
+    Object.entries(institutionalData).filter(([, data]) => hasInstitutionalRows(data))
+   );
   } catch (e) {
    console.log(`⚠️ 無法讀取現有三大法人資料`);
   }
+ }
+
+ function hasInstitutionalRows(data) {
+  if (!data || typeof data !== 'object') return false;
+  return ['ForeignInvestors', 'InvestmentTrust', 'Dealers', 'DailyTotal']
+   .some(key => data[key] && typeof data[key] === 'object' && Object.keys(data[key]).length > 0);
  }
 
  // 計算日期參數
@@ -206,6 +215,9 @@ const MAX_CONCURRENCY = 3;
        dailyTotal[dk] = dailyTotalVal;
       }
      }
+     if (Object.keys(foreignInvestors).length === 0) {
+      return { error: '目標日期無法人資料', skipReason: 'EMPTY_DATA' };
+     }
      return { success: true, ForeignInvestors: foreignInvestors, InvestmentTrust: investmentTrust, Dealers: dealers, DailyTotal: dailyTotal };
     } catch (e) { return { error: e.message }; }
    }, endDateParam);
@@ -261,9 +273,16 @@ const MAX_CONCURRENCY = 3;
  console.log(`✅ 成功: ${successCount} 個`);
  console.log(`❌ 仍失敗: ${failCount} 個\n`);
 
- // 儲存更新後的資料
- fs.writeFileSync(institutionalDataPath, JSON.stringify(institutionalData, null, 2), 'utf8');
- console.log(`💾 已更新: ${institutionalDataPath}`);
+ // 儲存更新後的資料；沒有有效資料時避免產生空主檔
+ if (Object.keys(institutionalData).length > 0) {
+  fs.writeFileSync(institutionalDataPath, JSON.stringify(institutionalData, null, 2), 'utf8');
+  console.log(`💾 已更新: ${institutionalDataPath}`);
+ } else if (fs.existsSync(institutionalDataPath)) {
+  fs.unlinkSync(institutionalDataPath);
+  console.log(`🗑️ 已刪除既有空資料檔: ${institutionalDataPath}`);
+ } else {
+  console.log(`⚠️ 沒有有效三大法人資料，跳過寫入主檔`);
+ }
 
  // 更新失敗清單
  if (stillFailedList.length > 0) {
