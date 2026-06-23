@@ -291,17 +291,18 @@ const MAX_CONCURRENCY = 5; // 最大並發數
     sysJustWebGraphDIV.querySelector('div[class*="FgTxt"]');
    if (!fgTxt) return { error: '找不到 div.FgTxt' };
 
+   const hasSmaText = (text) => /SMA\d+/.test(text || '');
    let fg0 = fgTxt.querySelector('#fg0') || fgTxt.querySelector('div[id*="fg0"]');
    if (!fg0) {
     const allDivs = Array.from(fgTxt.querySelectorAll('div'));
-    fg0 = allDivs.find(div => div.innerText && div.innerText.includes('SMA5'));
+    fg0 = allDivs.find(div => hasSmaText(div.innerText));
    }
    if (!fg0) return { error: '找不到 div#fg0 或包含 SMA5 的元素' };
 
    let targetDiv = fg0.querySelector('div.box > div');
    if (!targetDiv) {
     const allDivs = Array.from(fg0.querySelectorAll('div'));
-    targetDiv = allDivs.find(div => div.innerText && div.innerText.includes('SMA5')) || fg0;
+    targetDiv = allDivs.find(div => hasSmaText(div.innerText)) || fg0;
    }
 
    const spans = Array.from(targetDiv.querySelectorAll('span'));
@@ -370,8 +371,12 @@ const MAX_CONCURRENCY = 5; // 最大並發數
     }
    }
 
-   const requiredFields = ['Price', 'Open', 'High', 'Low', 'Volume', 'SMA5', 'SMA20', 'SMA60'];
+   const requiredFields = ['Price', 'Open', 'High', 'Low', 'Volume'];
    const missingFields = requiredFields.filter(field => !dataObj[field]);
+   const hasSmaField = Object.keys(dataObj).some(field => field.startsWith('SMA') && dataObj[field]);
+   if (!hasSmaField) {
+    missingFields.push('SMA*');
+   }
    if (missingFields.length > 0) {
     return { error: `缺少必要欄位: ${missingFields.join(', ')}` };
    }
