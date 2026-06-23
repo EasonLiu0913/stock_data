@@ -1,0 +1,80 @@
+name: Crawl TWSE MI Index
+
+on:
+  schedule:
+    # 每天 14:37 台北時間 (06:37 UTC)
+    - cron: '37 6 * * *'
+    # 每天 15:23 台北時間 (07:23 UTC) retry
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260623)'
+        required: false
+        default: ''
+      type:
+        description: 'TWSE MI_INDEX type'
+        required: false
+        default: 'ALL'
+
+jobs:
+  crawl-twse-mi-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TWSE MI_INDEX crawler
+        run: |
+          ARGS=()
+
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS+=(--date "${{ github.event.inputs.date }}")
+          fi
+
+          if [ -n "${{ github.event.inputs.type }}" ]; then
+            ARGS+=(--type "${{ github.event.inputs.type }}")
+          fi
+
+          node scripts/crawl_twse_mi_index.js "${ARGS[@]}"
+
+      - name: Generate files.json
+        run: |
+          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_twse_mi_index/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE MI_INDEX changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE MI_INDEX data ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TWSE MI_INDEX changes"
+            exit 1
+          fi
