@@ -218,6 +218,189 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  const total = stockNumbersToProcess.length;
  let processedCount = 0;
 
+ async function focusChart(context) {
+  try {
+   const graphEl = context.locator('#SysJustWebGraphDIV').first();
+   if (await graphEl.count()) {
+    await graphEl.click({ force: true, position: { x: 12, y: 12 } });
+   } else {
+    await context.locator('body').click({ force: true, position: { x: 12, y: 12 } });
+   }
+   if (typeof context.waitForTimeout === 'function') {
+    await context.waitForTimeout(250);
+   }
+   return true;
+  } catch (e) {
+   return false;
+  }
+ }
+
+ async function getChartDate(context) {
+  try {
+   const dateText = await context.locator('.opsBtmTitleK').first().textContent({ timeout: 2000 });
+   return dateText ? dateText.trim() : '';
+  } catch (e) {
+   return '';
+  }
+ }
+
+ async function moveChartToPreviousDay(context, currentDate, stockNumber) {
+  const attempts = 3;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+   try {
+    await focusChart(context);
+    const graphEl = context.locator('#SysJustWebGraphDIV').first();
+    if (await graphEl.count()) {
+     await graphEl.press('ArrowLeft');
+    } else {
+     await context.locator('body').press('ArrowLeft');
+    }
+
+    const changed = await context.waitForFunction(
+     (selector, expectedDate) => {
+      const el = document.querySelector(selector);
+      return !!(el && el.textContent && el.textContent.trim() !== expectedDate);
+     },
+     '.opsBtmTitleK',
+     currentDate,
+     { timeout: 3500 }
+    ).then(() => true).catch(() => false);
+
+    const nextDate = await getChartDate(context);
+    if (changed && nextDate && nextDate !== currentDate) {
+     return nextDate;
+    }
+
+    console.log(`   ⚠️ [${stockNumber}] ArrowLeft attempt ${attempt}/${attempts} did not move date from ${currentDate}. Refocusing...`);
+   } catch (e) {
+    console.log(`   ⚠️ [${stockNumber}] ArrowLeft attempt ${attempt}/${attempts} failed: ${e.message}`);
+   }
+  }
+
+  return await getChartDate(context);
+ }
+
+ async function extractSmaData(context) {
+  return context.evaluate(() => {
+   const sysJustWebGraphDIV = document.querySelector('#SysJustWebGraphDIV');
+   if (!sysJustWebGraphDIV) return { error: '找不到 #SysJustWebGraphDIV' };
+
+   let fgTxt = sysJustWebGraphDIV.querySelector('div.op.FgTxt') ||
+    sysJustWebGraphDIV.querySelector('div.opsFgTxt') ||
+    sysJustWebGraphDIV.querySelector('div[class*="FgTxt"]');
+   if (!fgTxt) return { error: '找不到 div.FgTxt' };
+
+   let fg0 = fgTxt.querySelector('#fg0') || fgTxt.querySelector('div[id*="fg0"]');
+   if (!fg0) {
+    const allDivs = Array.from(fgTxt.querySelectorAll('div'));
+    fg0 = allDivs.find(div => div.innerText && div.innerText.includes('SMA5'));
+   }
+   if (!fg0) return { error: '找不到 div#fg0 或包含 SMA5 的元素' };
+
+   let targetDiv = fg0.querySelector('div.box > div');
+   if (!targetDiv) {
+    const allDivs = Array.from(fg0.querySelectorAll('div'));
+    targetDiv = allDivs.find(div => div.innerText && div.innerText.includes('SMA5')) || fg0;
+   }
+
+   const spans = Array.from(targetDiv.querySelectorAll('span'));
+   let spanTexts = spans.map(span => span.innerText.trim()).filter(text => text);
+
+   if (spanTexts.length === 0) {
+    const divText = targetDiv.innerText.trim();
+    const pattern = /(SMA\d+)\s*([\d,]+\.?\d*)/g;
+    let match;
+    while ((match = pattern.exec(divText)) !== null) {
+     spanTexts.push(match[1], match[2]);
+    }
+   }
+
+   const removeCommas = (str) => (typeof str === 'string' ? str.replace(/,/g, '') : str);
+
+   const dateElement = document.querySelector('.opsBtmTitleK');
+   if (!dateElement) return { error: '找不到日期元素 .opsBtmTitleK' };
+
+   const dateKey = dateElement.innerText.trim();
+   if (!/^\d{4}\/\d{2}\/\d{2}$/.test(dateKey)) {
+    return { error: `日期格式錯誤: ${dateKey || '(空白)'}` };
+   }
+
+   const dataObj = {};
+   const priceLegend = Array.from(document.querySelectorAll('.notehead .opsLegendK'))
+    .find(el => {
+     const notehead = el.closest('.notehead');
+     return el.innerText.trim() === '股價' || (notehead && notehead.innerText.includes('股價'));
+    });
+
+   if (priceLegend) {
+    const priceContainer = priceLegend.closest('.notehead');
+    const priceSpan = priceContainer ? priceContainer.querySelector('.opsTopTitleK span') : null;
+    const priceText = priceSpan ? removeCommas(priceSpan.innerText.trim()) : '';
+    if (/^\d+(\.\d+)?$/.test(priceText)) {
+     dataObj.Price = priceText;
+    }
+   }
+
+   const setNumericField = (fieldName, selector, extractor) => {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    const rawText = extractor ? extractor(el) : el.innerText.trim();
+    const value = removeCommas(rawText).match(/\d+(\.\d+)?/);
+    if (value) {
+     dataObj[fieldName] = value[0];
+    }
+   };
+
+   setNumericField('Open', '.opsLegendK-o span', el => el.innerText.trim());
+   setNumericField('High', '.opsLegendK-h span', el => el.innerText.trim());
+   setNumericField('Low', '.opsLegendK-l span', el => el.innerText.trim());
+   setNumericField('Volume', '.opsLegendK-v', el => el.innerText.trim());
+
+   if (spanTexts.length % 2 === 0 && spanTexts.length > 0) {
+    for (let i = 0; i < spanTexts.length; i += 2) {
+     dataObj[spanTexts[i]] = removeCommas(spanTexts[i + 1]);
+    }
+   } else if (spanTexts.length > 0) {
+    const divText = targetDiv.innerText.trim();
+    const pattern = /(SMA\d+)\s*([\d,]+\.?\d*)/g;
+    let match;
+    while ((match = pattern.exec(divText)) !== null) {
+     dataObj[match[1]] = removeCommas(match[2]);
+    }
+   }
+
+   const requiredFields = ['Price', 'Open', 'High', 'Low', 'Volume', 'SMA5', 'SMA20', 'SMA60'];
+   const missingFields = requiredFields.filter(field => !dataObj[field]);
+   if (missingFields.length > 0) {
+    return { error: `缺少必要欄位: ${missingFields.join(', ')}` };
+   }
+
+   return { success: true, date: dateKey, data: { [dateKey]: dataObj } };
+  });
+ }
+
+ async function moveToTargetDate(context, currentDate, stockNumber) {
+  let date = currentDate;
+  let moves = 0;
+  const maxMoves = 60;
+
+  while (date > targetDateKey && moves < maxMoves) {
+   const nextDate = await moveChartToPreviousDay(context, date, stockNumber);
+   if (!nextDate || nextDate === date) {
+    return { error: `無法切換到目標日期: 目前 ${date}，預期 ${targetDateKey}` };
+   }
+   date = nextDate;
+   moves++;
+  }
+
+  if (date < targetDateKey) {
+   return { error: `日期早於目標日期: 取得 ${date}，預期 ${targetDateKey}` };
+  }
+
+  return extractSmaData(context);
+ }
+
  // 處理單一股票的函數
  async function processStock(page, stockNumber) {
   processedCount++;
@@ -246,101 +429,20 @@ const MAX_CONCURRENCY = 5; // 最大並發數
    }
 
    // 提取 SMA 資料
-   const data = await targetFrame.evaluate(() => {
-    const sysJustWebGraphDIV = document.querySelector('#SysJustWebGraphDIV');
-    if (!sysJustWebGraphDIV) return { error: '找不到 #SysJustWebGraphDIV' };
+   let data = await extractSmaData(targetFrame);
 
-    let fgTxt = sysJustWebGraphDIV.querySelector('div.op.FgTxt') || sysJustWebGraphDIV.querySelector('div[class*="FgTxt"]');
-    if (!fgTxt) return { error: '找不到 div.FgTxt' };
-
-    let fg0 = fgTxt.querySelector('#fg0') || fgTxt.querySelector('div[id*="fg0"]');
-    if (!fg0) {
-     const allDivs = Array.from(fgTxt.querySelectorAll('div'));
-     fg0 = allDivs.find(div => div.innerText && div.innerText.includes('SMA5'));
-    }
-    if (!fg0) return { error: '找不到 div#fg0 或包含 SMA5 的元素' };
-
-    let targetDiv = fg0.querySelector('div.box > div');
-    if (!targetDiv) {
-     const allDivs = Array.from(fg0.querySelectorAll('div'));
-     targetDiv = allDivs.find(div => div.innerText && div.innerText.includes('SMA5')) || fg0;
-    }
-
-    const spans = Array.from(targetDiv.querySelectorAll('span'));
-    let spanTexts = spans.map(span => span.innerText.trim()).filter(text => text);
-
-    if (spanTexts.length === 0) {
-     const divText = targetDiv.innerText.trim();
-     const pattern = /(SMA\d+)\s*([\d,]+\.?\d*)/g;
-     let match;
-     while ((match = pattern.exec(divText)) !== null) {
-      spanTexts.push(match[1], match[2]);
-     }
-    }
-
-    const removeCommas = (str) => (typeof str === 'string' ? str.replace(/,/g, '') : str);
-
-    const dateElement = document.querySelector('.opsBtmTitleK');
-    if (!dateElement) return { error: '找不到日期元素 .opsBtmTitleK' };
-
-    const dateKey = dateElement.innerText.trim();
-    if (!/^\d{4}\/\d{2}\/\d{2}$/.test(dateKey)) {
-     return { error: `日期格式錯誤: ${dateKey || '(空白)'}` };
-    }
-
-    const dataObj = {};
-    const priceLegend = Array.from(document.querySelectorAll('.notehead .opsLegendK'))
-     .find(el => {
-      const notehead = el.closest('.notehead');
-      return el.innerText.trim() === '股價' || (notehead && notehead.innerText.includes('股價'));
-     });
-
-    if (priceLegend) {
-     const priceContainer = priceLegend.closest('.notehead');
-     const priceSpan = priceContainer ? priceContainer.querySelector('.opsTopTitleK span') : null;
-     const priceText = priceSpan ? removeCommas(priceSpan.innerText.trim()) : '';
-     if (/^\d+(\.\d+)?$/.test(priceText)) {
-      dataObj.Price = priceText;
-     }
-    }
-
-    const setNumericField = (fieldName, selector, extractor) => {
-     const el = document.querySelector(selector);
-     if (!el) return;
-     const rawText = extractor ? extractor(el) : el.innerText.trim();
-     const value = removeCommas(rawText).match(/\d+(\.\d+)?/);
-     if (value) {
-      dataObj[fieldName] = value[0];
-     }
-    };
-
-    setNumericField('Open', '.opsLegendK-o span', el => el.innerText.trim());
-    setNumericField('High', '.opsLegendK-h span', el => el.innerText.trim());
-    setNumericField('Low', '.opsLegendK-l span', el => el.innerText.trim());
-    setNumericField('Volume', '.opsLegendK-v', el => el.innerText.trim());
-
-    if (spanTexts.length % 2 === 0 && spanTexts.length > 0) {
-     for (let i = 0; i < spanTexts.length; i += 2) {
-      dataObj[spanTexts[i]] = removeCommas(spanTexts[i + 1]);
-     }
-    } else if (spanTexts.length > 0) {
-     const divText = targetDiv.innerText.trim();
-     const pattern = /(SMA\d+)\s*([\d,]+\.?\d*)/g;
-     let match;
-     while ((match = pattern.exec(divText)) !== null) {
-      dataObj[match[1]] = removeCommas(match[2]);
-     }
-    }
-
-    return { success: true, date: dateKey, data: { [dateKey]: dataObj } };
-   });
+   if (!data.error && data.date > targetDateKey) {
+    console.log(`  ↩️  [${currentIdx}/${total}] ${stockNumber}: 取得 ${data.date}，嘗試回切到 ${targetDateKey}`);
+    data = await moveToTargetDate(targetFrame, data.date, stockNumber);
+   }
 
    if (data.error) {
     console.log(`  ❌ [${currentIdx}/${total}] ${stockNumber}: ${data.error}`);
     failCount++;
     failedStocks.push({ stock: stockNumber, url: url, error: data.error });
    } else if (data.date !== targetDateKey) {
-    const errorMessage = `日期不符: 取得 ${data.date}，預期 ${targetDateKey}`;
+    const errorPrefix = data.date < targetDateKey ? '日期早於目標日期' : '日期不符';
+    const errorMessage = `${errorPrefix}: 取得 ${data.date}，預期 ${targetDateKey}`;
     console.log(`  ❌ [${currentIdx}/${total}] ${stockNumber}: ${errorMessage}`);
     failCount++;
     failedStocks.push({ stock: stockNumber, url: url, error: errorMessage });
