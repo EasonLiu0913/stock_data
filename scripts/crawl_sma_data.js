@@ -145,6 +145,15 @@ const MAX_CONCURRENCY = 5; // 最大並發數
 
  console.log(`\n📈 SMA 技術指標資料爬取`);
  console.log(`📁 目標檔案: fubon_${targetDateStr}_sma.json\n`);
+ const targetDateKey = `${targetDateStr.substring(0, 4)}/${targetDateStr.substring(4, 6)}/${targetDateStr.substring(6, 8)}`;
+
+ const removeStaleUnknownEntries = (data) => {
+  for (const stockData of Object.values(data)) {
+   if (stockData && stockData[targetDateKey]) {
+    delete stockData.Unknown;
+   }
+  }
+ };
 
  // 週末判斷：若目標日期為週六或週日，直接結束
  const tgtYear = parseInt(targetDateStr.substring(0, 4));
@@ -164,6 +173,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  if (fs.existsSync(outputFilePath)) {
   try {
    existingData = JSON.parse(fs.readFileSync(outputFilePath, 'utf8'));
+   removeStaleUnknownEntries(existingData);
    const existingCount = Object.keys(existingData).filter(key =>
     existingData[key] && Object.keys(existingData[key]).length > 1
    ).length;
@@ -181,7 +191,6 @@ const MAX_CONCURRENCY = 5; // 最大並發數
   const smaKeys = keys.filter(k => k !== 'StockName' && /^\d{4}\/\d{2}\/\d{2}$/.test(k));
   if (smaKeys.length === 0) return true;
 
-  const targetDateKey = `${targetDateStr.substring(0, 4)}/${targetDateStr.substring(4, 6)}/${targetDateStr.substring(6, 8)}`;
   return !existingData[stock][targetDateKey] || !existingData[stock][targetDateKey].Price;
  });
 
@@ -272,7 +281,13 @@ const MAX_CONCURRENCY = 5; // 最大並發數
     const removeCommas = (str) => (typeof str === 'string' ? str.replace(/,/g, '') : str);
 
     const dateElement = document.querySelector('.opsBtmTitleK');
-    const dateKey = dateElement ? dateElement.innerText.trim() : 'Unknown';
+    if (!dateElement) return { error: '找不到日期元素 .opsBtmTitleK' };
+
+    const dateKey = dateElement.innerText.trim();
+    if (!/^\d{4}\/\d{2}\/\d{2}$/.test(dateKey)) {
+     return { error: `日期格式錯誤: ${dateKey || '(空白)'}` };
+    }
+
     const dataObj = {};
     const priceLegend = Array.from(document.querySelectorAll('.notehead .opsLegendK'))
      .find(el => {
@@ -324,10 +339,17 @@ const MAX_CONCURRENCY = 5; // 最大並發數
     console.log(`  ❌ [${currentIdx}/${total}] ${stockNumber}: ${data.error}`);
     failCount++;
     failedStocks.push({ stock: stockNumber, url: url, error: data.error });
+   } else if (data.date !== targetDateKey) {
+    const errorMessage = `日期不符: 取得 ${data.date}，預期 ${targetDateKey}`;
+    console.log(`  ❌ [${currentIdx}/${total}] ${stockNumber}: ${errorMessage}`);
+    failCount++;
+    failedStocks.push({ stock: stockNumber, url: url, error: errorMessage });
    } else {
     console.log(`  ✅ [${currentIdx}/${total}] ${stockNumber}: SMA OK`);
+    const stockData = { ...(result[stockNumber] || {}) };
+    delete stockData.Unknown;
     result[stockNumber] = {
-     ...(result[stockNumber] || {}),
+     ...stockData,
      StockName: stockInfoMap.get(stockNumber) || '',
      ...data.data
     };

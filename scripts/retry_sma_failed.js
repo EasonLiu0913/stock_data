@@ -48,6 +48,15 @@ const MAX_CONCURRENCY = 3;
 
  console.log(`\n🔄 SMA 失敗股票重爬`);
  console.log(`📅 目標日期: ${targetDateStr}\n`);
+ const targetDateKey = `${targetDateStr.substring(0, 4)}/${targetDateStr.substring(4, 6)}/${targetDateStr.substring(6, 8)}`;
+
+ const removeStaleUnknownEntries = (data) => {
+  for (const stockData of Object.values(data)) {
+   if (stockData && stockData[targetDateKey]) {
+    delete stockData.Unknown;
+   }
+  }
+ };
 
  // 檔案路徑
  const failedListPath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_sma_failedList.json`);
@@ -112,6 +121,7 @@ const MAX_CONCURRENCY = 3;
  if (fs.existsSync(smaDataPath)) {
   try {
    smaData = JSON.parse(fs.readFileSync(smaDataPath, 'utf8'));
+   removeStaleUnknownEntries(smaData);
   } catch (e) {
    console.log(`⚠️ 無法讀取現有 SMA 資料`);
   }
@@ -190,7 +200,13 @@ const MAX_CONCURRENCY = 3;
 
     const removeCommas = (str) => (typeof str === 'string' ? str.replace(/,/g, '') : str);
     const dateElement = document.querySelector('.opsBtmTitleK');
-    const dateKey = dateElement ? dateElement.innerText.trim() : 'Unknown';
+    if (!dateElement) return { error: '找不到日期元素 .opsBtmTitleK' };
+
+    const dateKey = dateElement.innerText.trim();
+    if (!/^\d{4}\/\d{2}\/\d{2}$/.test(dateKey)) {
+     return { error: `日期格式錯誤: ${dateKey || '(空白)'}` };
+    }
+
     const dataObj = {};
 
     if (spanTexts.length % 2 === 0 && spanTexts.length > 0) {
@@ -206,9 +222,17 @@ const MAX_CONCURRENCY = 3;
     console.log(`  ❌ [${currentIdx}/${total}] ${stockNumber}: ${data.error}`);
     failCount++;
     stillFailedList.push({ stock: stockNumber, url: url, error: data.error });
+   } else if (data.date !== targetDateKey) {
+    const errorMessage = `日期不符: 取得 ${data.date}，預期 ${targetDateKey}`;
+    console.log(`  ❌ [${currentIdx}/${total}] ${stockNumber}: ${errorMessage}`);
+    failCount++;
+    stillFailedList.push({ stock: stockNumber, url: url, error: errorMessage });
    } else {
     console.log(`  ✅ [${currentIdx}/${total}] ${stockNumber}: SMA OK`);
+    const stockData = { ...(smaData[stockNumber] || {}) };
+    delete stockData.Unknown;
     smaData[stockNumber] = {
+     ...stockData,
      StockName: stockInfoMap.get(stockNumber) || '',
      ...data.data
     };
