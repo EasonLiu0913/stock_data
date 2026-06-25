@@ -1,0 +1,70 @@
+name: Crawl TWSE Institutional Investors
+
+on:
+  schedule:
+    # 每天 16:11 台北時間 (08:11 UTC)
+    - cron: '11 8 * * *'
+    # 每天 17:33 台北時間 (09:33 UTC) retry
+    - cron: '33 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260625)'
+        required: false
+        default: ''
+
+jobs:
+  crawl-twse-institutional-investors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TWSE institutional investors crawler
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/crawl_twse_institutional_investors.js --date "${{ github.event.inputs.date }}"
+          else
+            node scripts/crawl_twse_institutional_investors.js
+          fi
+
+      - name: Generate files.json
+        run: |
+          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_twse_institutional_investors/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE institutional investors changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE institutional investors data ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TWSE institutional investors changes"
+            exit 1
+          fi
