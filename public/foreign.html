@@ -491,7 +491,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <label for="sortSelect">排序：</label>
-                <select id="sortSelect" onchange="sortStocks()">
+                <select id="sortSelect" onchange="onSortChanged()">
                     <option value="consecutive" selected>連續最多天買超排行</option>
                     <option value="total">4日累計（從多到少）</option>
                     <option value="growth">第1天→第2天成長率（從大到小）</option>
@@ -549,6 +549,7 @@
         let fileList = []; // 儲存所有可用的檔案列表
         let displayedStocks = []; // 當前顯示中的股票（供 header 排序使用）
         let headerSort = { key: null, direction: 'desc' }; // 點擊表頭排序狀態
+        let pendingDefaultHeaderSortKey = null; // 類型頁預設用表格欄位排序，但不改變排序頁面
         let currentType = 'foreign-buy'; // {institution}-{buy/sell}
         let currentSummaryMetric = 'value'; // value: 累積值, shares: 累積張數
 
@@ -637,9 +638,13 @@
             // 2. 確定要載入的日期 (從 URL 或預設最新)
             const urlParams = getUrlParams();
             let targetDate = urlParams.date;
+            const hasAnyUrlParam = Boolean(urlParams.sort || urlParams.date || urlParams.type || urlParams.summary);
             const normalizedType = normalizeTypeParam(urlParams.type);
             if (Array.from(document.getElementById('typeSelect').options).some(opt => opt.value === normalizedType)) {
                 currentType = normalizedType;
+            }
+            if (hasAnyUrlParam) {
+                pendingDefaultHeaderSortKey = 'day0';
             }
             if (urlParams.summary === 'shares' || urlParams.summary === 'value') {
                 currentSummaryMetric = urlParams.summary;
@@ -711,13 +716,16 @@
         async function onDateChanged() {
             const dateSelect = document.getElementById('dateSelect');
             const selectedDate = dateSelect.value;
+            pendingDefaultHeaderSortKey = 'day0';
             await loadData(selectedDate);
         }
 
         async function onTypeChanged() {
             currentType = document.getElementById('typeSelect').value;
             updateTypeLabels();
+            pendingDefaultHeaderSortKey = 'day0';
             const dateSelect = document.getElementById('dateSelect');
+            updateUrlParams(document.getElementById('sortSelect').value, dateSelect.value, currentType, currentSummaryMetric);
             await loadData(dateSelect.value);
         }
 
@@ -727,6 +735,11 @@
             updateUrlParams(sortBy, currentDataDateStr, currentType, currentSummaryMetric);
             renderTable(displayedStocks, sortBy);
             updateStats(displayedStocks, sortBy);
+        }
+
+        function onSortChanged() {
+            pendingDefaultHeaderSortKey = 'day0';
+            sortStocks();
         }
 
         function isTargetValue(value) {
@@ -997,6 +1010,9 @@
 
                 if (urlParams.sort && validSortOptions.includes(urlParams.sort)) {
                     document.getElementById('sortSelect').value = urlParams.sort;
+                } else if (urlParams.sort === 'today') {
+                    pendingDefaultHeaderSortKey = 'day0';
+                    document.getElementById('sortSelect').value = 'consecutive';
                 } else {
                     document.getElementById('sortSelect').value = 'consecutive';
                 }
@@ -1063,8 +1079,16 @@
                 });
             }
 
-            // 下拉選單變更時，重置 header 排序狀態
-            headerSort = { key: null, direction: 'desc' };
+            const defaultHeaderSortKey = pendingDefaultHeaderSortKey;
+            pendingDefaultHeaderSortKey = null;
+
+            // 下拉選單變更時，重置 header 排序狀態；類型頁可預設套用當天欄位排序
+            headerSort = defaultHeaderSortKey
+                ? { key: defaultHeaderSortKey, direction: 'desc' }
+                : { key: null, direction: 'desc' };
+            if (defaultHeaderSortKey) {
+                stocksToDisplay.sort((a, b) => getSortValue(b, defaultHeaderSortKey) - getSortValue(a, defaultHeaderSortKey));
+            }
             displayedStocks = stocksToDisplay;
 
             // 重新渲染表格
