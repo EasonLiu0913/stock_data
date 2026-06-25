@@ -16,16 +16,19 @@ async function gotoWithRetry(page, url) {
     for (let attempt = 1; attempt <= MAX_NAVIGATION_ATTEMPTS; attempt++) {
         try {
             console.log(`Navigating to ${url} (attempt ${attempt}/${MAX_NAVIGATION_ATTEMPTS})...`);
-            await page.goto(url, {
+            const response = await page.goto(url, {
                 waitUntil: 'domcontentloaded',
                 timeout: NAVIGATION_TIMEOUT_MS
             });
+            logNavigationResponse(response);
 
             await page.waitForSelector('table.h4', { timeout: SELECTOR_TIMEOUT_MS });
+            console.log(`Navigation ready. currentUrl=${page.url()}`);
             return;
         } catch (error) {
             lastError = error;
             console.warn(`⚠️ Navigation attempt ${attempt} failed: ${error.message}`);
+            console.warn(`   currentUrl=${page.url()}`);
 
             if (attempt < MAX_NAVIGATION_ATTEMPTS) {
                 await wait(attempt * 5000);
@@ -34,6 +37,37 @@ async function gotoWithRetry(page, url) {
     }
 
     throw lastError;
+}
+
+function getHeaderValue(headers, name) {
+    const key = Object.keys(headers).find(header => header.toLowerCase() === name.toLowerCase());
+    return key ? headers[key] : '';
+}
+
+function formatDebugHeaders(headers) {
+    const selected = {
+        location: getHeaderValue(headers, 'location'),
+        contentType: getHeaderValue(headers, 'content-type'),
+        xCache: getHeaderValue(headers, 'x-cache'),
+        xRequestId: getHeaderValue(headers, 'x-request-id'),
+        server: getHeaderValue(headers, 'server')
+    };
+    return Object.entries(selected)
+        .filter(([, value]) => value)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ');
+}
+
+function logNavigationResponse(response) {
+    if (!response) {
+        console.warn('⚠️ Navigation did not return a response object');
+        return;
+    }
+
+    const status = response.status();
+    const headers = response.headers();
+    const detail = formatDebugHeaders(headers);
+    console.log(`Navigation response: status=${status}, url=${response.url()}${detail ? `, ${detail}` : ''}`);
 }
 
 (async () => {
@@ -57,6 +91,14 @@ async function gotoWithRetry(page, url) {
         }
     });
     const page = await context.newPage();
+    page.on('response', response => {
+        const status = response.status();
+        if (status >= 300 && status < 400) {
+            console.warn(`↪️ Redirect response: status=${status}, url=${response.url()}, ${formatDebugHeaders(response.headers()) || 'headers=(none)'}`);
+        } else if (status >= 400) {
+            console.warn(`⚠️ HTTP response: status=${status}, url=${response.url()}, ${formatDebugHeaders(response.headers()) || 'headers=(none)'}`);
+        }
+    });
 
     try {
         await gotoWithRetry(page, url);

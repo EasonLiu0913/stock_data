@@ -46,6 +46,19 @@ function getNumberArg(flag, fallback) {
     return number;
 }
 
+function getTaipeiTodayCompact() {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    const parts = Object.fromEntries(
+        formatter.formatToParts(new Date()).map(part => [part.type, part.value])
+    );
+    return `${parts.year}${parts.month}${parts.day}`;
+}
+
 function refreshFilesJson() {
     const files = fs.readdirSync(OUTPUT_DIR)
         .filter(file => /^\d{8}_twse_foreign_investors\.json$/.test(file))
@@ -66,6 +79,33 @@ function validatePayload(payload) {
     }
 }
 
+function getDebugHeaders(response) {
+    return {
+        location: response.headers.get('location') || '',
+        contentType: response.headers.get('content-type') || '',
+        xCache: response.headers.get('x-cache') || '',
+        xRequestId: response.headers.get('x-request-id') || '',
+        server: response.headers.get('server') || ''
+    };
+}
+
+function formatDebugHeaders(headers) {
+    return Object.entries(headers)
+        .filter(([, value]) => value)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ');
+}
+
+function buildTwseError(response, url) {
+    const headers = getDebugHeaders(response);
+    const detail = formatDebugHeaders(headers);
+    const error = new Error(`TWSE request failed: ${response.status} ${response.statusText}${detail ? ` (${detail})` : ''}`);
+    error.status = response.status;
+    error.url = url;
+    error.headers = headers;
+    return error;
+}
+
 async function fetchTwseForeignInvestorsOnce(dateStr = '') {
     const params = new URLSearchParams({ response: 'json', _: String(Date.now()) });
     if (dateStr) params.set('date', dateStr);
@@ -78,10 +118,7 @@ async function fetchTwseForeignInvestorsOnce(dateStr = '') {
     });
 
     if (!response.ok) {
-        const location = response.headers.get('location');
-        const error = new Error(`TWSE request failed: ${response.status} ${response.statusText}${location ? ` (${location})` : ''}`);
-        error.status = response.status;
-        throw error;
+        throw buildTwseError(response, url);
     }
 
     const payload = await response.json();
@@ -113,6 +150,10 @@ async function fetchTwseForeignInvestors(dateStr = '') {
 
             const cooldown = rateLimitCooldownMs * attempt;
             console.log(`🕒 Got ${error.status}; cooling down ${Math.round(cooldown / 1000)}s before retry ${attempt}/${maxRetries}`);
+            console.log(`   URL: ${error.url || '(unknown)'}`);
+            if (error.headers) {
+                console.log(`   Headers: ${formatDebugHeaders(error.headers) || '(none)'}`);
+            }
             await sleep(cooldown);
         }
     }
@@ -120,7 +161,7 @@ async function fetchTwseForeignInvestors(dateStr = '') {
 
 (async () => {
     try {
-        const targetDate = normalizeDateInput(getArg('--date') || getPositionalDate());
+        const targetDate = normalizeDateInput(getArg('--date') || getPositionalDate()) || getTaipeiTodayCompact();
         const maxRetries = getNumberArg('--max-retries', 3);
         const minDelayMs = getNumberArg('--min-delay', DEFAULT_MIN_DELAY_MS);
         const maxDelayMs = getNumberArg('--max-delay', DEFAULT_MAX_DELAY_MS);

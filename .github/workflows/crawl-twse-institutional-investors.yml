@@ -30,11 +30,17 @@ jobs:
 
       - name: Run TWSE institutional investors crawler
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            node scripts/crawl_twse_institutional_investors.js --date "${{ github.event.inputs.date }}"
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            TARGET_DATE="$DATE_INPUT"
           else
-            node scripts/crawl_twse_institutional_investors.js
+            TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
           fi
+
+          node scripts/crawl_twse_institutional_investors.js \
+            --date "$TARGET_DATE" \
+            --max-retries 3 \
+            --rate-limit-cooldown 180000
 
       - name: Generate files.json
         run: |
