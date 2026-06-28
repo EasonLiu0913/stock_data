@@ -23,6 +23,16 @@ const directories = [
         path: 'data_twse_mi_index',
         output: 'data_twse_mi_index/files.json',
         filter: file => /^\d{8}_twse_mi_index\.json$/.test(file)
+    },
+    {
+        path: 'data_taifex_major_institutional_traders_futures_options',
+        output: 'data_taifex_major_institutional_traders_futures_options/files.json',
+        filter: file => /^\d{8}_taifex_major_institutional_traders_futures_options\.csv$/.test(file)
+    },
+    {
+        path: 'data_twse_margin_balance',
+        output: 'data_twse_margin_balance/files.json',
+        filter: file => /^\d{8}_twse_margin_balance\.csv$/.test(file)
     }
 ];
 

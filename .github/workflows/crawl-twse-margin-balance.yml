@@ -1,0 +1,71 @@
+name: Crawl TWSE Margin Balance
+
+on:
+  schedule:
+    # 每天 16:02 台北時間 (08:02 UTC)
+    - cron: '2 8 * * *'
+    # 每天 18:05 台北時間 (10:05 UTC)
+    - cron: '5 10 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Expected data date (YYYYMMDD). Leave empty for latest.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  crawl-twse-margin-balance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Crawl TWSE margin balance data
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/crawl_twse_margin_balance.js --date "${{ github.event.inputs.date }}"
+          else
+            node scripts/crawl_twse_margin_balance.js
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse_margin_balance/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE margin balance changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE margin balance data ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TWSE margin balance changes"
+            exit 1
+          fi

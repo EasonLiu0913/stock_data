@@ -1,0 +1,59 @@
+name: Update Non-Trading Days
+
+on:
+  schedule:
+    # 每年 12/27、12/30、12/31 的 10:21 台北時間 (02:21 UTC)
+    - cron: '21 2 27,30,31 12 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-non-trading-days:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update TWSE non-trading days
+        run: node scripts/update_non_trading_days_from_twse_holidays.js
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_history_sma/non_trading_days.json
+
+          if git diff --staged --quiet; then
+            echo "No non-trading day changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update non-trading days ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push non-trading day changes"
+            exit 1
+          fi

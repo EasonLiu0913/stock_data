@@ -1,0 +1,71 @@
+name: Crawl TAIFEX Futures and Options Institutional Traders
+
+on:
+  schedule:
+    # 每天 17:21 台北時間 (09:21 UTC)
+    - cron: '21 9 * * *'
+    # 每天 19:06 台北時間 (11:06 UTC)
+    - cron: '6 11 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Expected data date (YYYYMMDD). Leave empty for latest.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  crawl-taifex-futures-options:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Crawl TAIFEX futures/options institutional trader data
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/crawl_taifex_major_institutional_traders_futures_options.js --date "${{ github.event.inputs.date }}"
+          else
+            node scripts/crawl_taifex_major_institutional_traders_futures_options.js
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_taifex_major_institutional_traders_futures_options/
+
+          if git diff --staged --quiet; then
+            echo "No TAIFEX futures/options changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TAIFEX futures/options institutional data ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push TAIFEX futures/options changes"
+            exit 1
+          fi
