@@ -31,10 +31,6 @@ on:
         description: 'Maximum random delay between dates in ms'
         required: false
         default: '5000'
-      max_retries:
-        description: 'Max retries for rate-limit or mismatch responses'
-        required: false
-        default: '3'
       rate_limit_cooldown:
         description: 'Cooldown for 307/429/503 responses in ms'
         required: false
@@ -67,7 +63,7 @@ jobs:
           ARGS=(
             --min-delay "${{ github.event.inputs.min_delay }}"
             --max-delay "${{ github.event.inputs.max_delay }}"
-            --max-retries "${{ github.event.inputs.max_retries }}"
+            --max-retries 0
             --rate-limit-cooldown "${{ github.event.inputs.rate_limit_cooldown }}"
             --mismatch-cooldown "${{ github.event.inputs.mismatch_cooldown }}"
           )
@@ -106,17 +102,5 @@ jobs:
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "chore: update TWSE institutional investors history ${CURRENT_DATE}"
 
-          success=false
-          for i in 1 2 3; do
-            if git pull --rebase origin main && git push origin main; then
-              success=true
-              break
-            fi
-            echo "Push failed, retry $i..."
-            sleep 5
-          done
-
-          if [ "$success" != "true" ]; then
-            echo "Failed to push TWSE institutional investors history changes"
-            exit 1
-          fi
+          git pull --rebase origin main
+          git push origin main

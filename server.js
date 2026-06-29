@@ -5,7 +5,10 @@ const path = require('path');
 const PORT = 3000;
 const DIRS = {
     'fubon': path.join(__dirname, 'data_fubon'),
-    'twse': path.join(__dirname, 'data_twse')
+    'twse': path.join(__dirname, 'data_twse'),
+    'twse_margin_balance': path.join(__dirname, 'data_twse_margin_balance'),
+    'twse_institutional_investors': path.join(__dirname, 'data_twse_institutional_investors'),
+    'twse_mi_index': path.join(__dirname, 'data_twse_mi_index')
 };
 
 const server = http.createServer((req, res) => {
@@ -46,6 +49,16 @@ const server = http.createServer((req, res) => {
             if (err) {
                 res.writeHead(500);
                 res.end('Error loading foreign.html');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(content);
+            }
+        });
+    } else if (urlPath === '/twse-margin-balance') {
+        fs.readFile(path.join(__dirname, 'public/twse-margin-balance.html'), (err, content) => {
+            if (err) {
+                res.writeHead(500);
+                res.end('Error loading twse-margin-balance.html');
             } else {
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(content);
@@ -123,6 +136,16 @@ const server = http.createServer((req, res) => {
                 res.end(content);
             }
         });
+    } else if (urlPath === '/twse-margin-balance.html') {
+        fs.readFile(path.join(__dirname, 'public/twse-margin-balance.html'), (err, content) => {
+            if (err) {
+                res.writeHead(500);
+                res.end('Error loading twse-margin-balance.html');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(content);
+            }
+        });
     } else if (urlPath.startsWith('/api/files')) {
         // /api/files?source=fubon or /api/files?source=twse
         const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
@@ -145,6 +168,92 @@ const server = http.createServer((req, res) => {
                 const csvFiles = files.filter(f => f.endsWith('.csv'));
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(csvFiles));
+            }
+        });
+    } else if (urlPath.startsWith('/data_twse_margin_balance/')) {
+        const fileName = decodeURIComponent(urlPath.replace('/data_twse_margin_balance/', ''));
+        const targetDir = DIRS.twse_margin_balance;
+        const filePath = path.join(targetDir, fileName);
+
+        if (!filePath.startsWith(targetDir)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
+
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                let contentType = 'text/plain; charset=utf-8';
+                if (fileName.endsWith('.csv')) {
+                    contentType = 'text/csv; charset=utf-8';
+                } else if (fileName.endsWith('.json')) {
+                    contentType = 'application/json; charset=utf-8';
+                }
+                res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content);
+            }
+        });
+    } else if (urlPath.startsWith('/data_twse_institutional_investors/')) {
+        const fileName = decodeURIComponent(urlPath.replace('/data_twse_institutional_investors/', ''));
+        const targetDir = DIRS.twse_institutional_investors;
+        const filePath = path.join(targetDir, fileName);
+
+        if (!filePath.startsWith(targetDir)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
+
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(content);
+            }
+        });
+    } else if (urlPath.startsWith('/data_twse_mi_index/')) {
+        const fileName = decodeURIComponent(urlPath.replace('/data_twse_mi_index/', ''));
+        const targetDir = DIRS.twse_mi_index;
+        const filePath = path.join(targetDir, fileName);
+
+        if (!filePath.startsWith(targetDir)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
+
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(content);
+            }
+        });
+    } else if (urlPath.startsWith('/data_fubon/')) {
+        const fileName = decodeURIComponent(urlPath.replace('/data_fubon/', ''));
+        const targetDir = DIRS.fubon;
+        const filePath = path.join(targetDir, fileName);
+
+        if (!filePath.startsWith(targetDir)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
+
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('File not found');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(content);
             }
         });
     } else if (urlPath.startsWith('/data/')) {

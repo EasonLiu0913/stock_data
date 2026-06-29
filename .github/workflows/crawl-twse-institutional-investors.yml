@@ -4,8 +4,18 @@ on:
   schedule:
     # 每天 16:11 台北時間 (08:11 UTC)
     - cron: '11 8 * * *'
-    # 每天 17:33 台北時間 (09:33 UTC) retry
+    # 每天 17:33 台北時間 (09:33 UTC)
     - cron: '33 9 * * *'
+    # 每天 18:17 台北時間 (10:17 UTC)
+    - cron: '17 10 * * *'
+    # 每天 19:19 台北時間 (11:19 UTC)
+    - cron: '19 11 * * *'
+    # 每天 20:23 台北時間 (12:23 UTC)
+    - cron: '23 12 * * *'
+    # 每天 21:29 台北時間 (13:29 UTC)
+    - cron: '29 13 * * *'
+    # 每天 22:31 台北時間 (14:31 UTC)
+    - cron: '31 14 * * *'
   workflow_dispatch:
     inputs:
       date:
@@ -20,15 +30,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run TWSE institutional investors crawler
+      - name: Check existing TWSE institutional investors file
+        id: existing
         run: |
           DATE_INPUT="${{ github.event.inputs.date }}"
           if [ -n "$DATE_INPUT" ]; then
@@ -37,16 +40,42 @@ jobs:
             TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
           fi
 
+          OUTPUT_FILE="data_twse_institutional_investors/${TARGET_DATE}_twse_institutional_investors.json"
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "TWSE institutional investors file already exists: $OUTPUT_FILE"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.existing.outputs.exists != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: steps.existing.outputs.exists != 'true'
+        run: npm ci
+
+      - name: Run TWSE institutional investors crawler
+        if: steps.existing.outputs.exists != 'true'
+        run: |
           node scripts/crawl_twse_institutional_investors.js \
-            --date "$TARGET_DATE" \
-            --max-retries 3 \
+            --date "${{ steps.existing.outputs.target_date }}" \
+            --max-retries 0 \
             --rate-limit-cooldown 180000
 
       - name: Generate files.json
+        if: steps.existing.outputs.exists != 'true'
         run: |
           node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
 
       - name: Commit and push changes
+        if: steps.existing.outputs.exists != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -60,17 +89,5 @@ jobs:
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "chore: update TWSE institutional investors data ${CURRENT_DATE}"
 
-          success=false
-          for i in 1 2 3; do
-            if git pull --rebase origin main && git push origin main; then
-              success=true
-              break
-            fi
-            echo "Push failed, retry $i..."
-            sleep 5
-          done
-
-          if [ "$success" != "true" ]; then
-            echo "Failed to push TWSE institutional investors changes"
-            exit 1
-          fi
+          git pull --rebase origin main
+          git push origin main
