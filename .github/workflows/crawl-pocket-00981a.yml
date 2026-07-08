@@ -1,0 +1,92 @@
+name: Crawl Pocket 00981A Data
+
+on:
+  schedule:
+    # Weekdays 15:02 Taipei Time (07:02 UTC)
+    - cron: '2 7 * * 1-5'
+    # Weekdays 16:21 Taipei Time (08:21 UTC)
+    - cron: '21 8 * * 1-5'
+    # Weekdays 17:32 Taipei Time (09:32 UTC)
+    - cron: '32 9 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-pocket-00981a
+  cancel-in-progress: false
+
+jobs:
+  crawl-pocket-00981a:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check latest holdings data date
+        id: check_holdings
+        run: |
+          TODAY=$(TZ='Asia/Taipei' date '+%Y%m%d')
+          LATEST_FILE="data_pocket/00981A_holdings_latest.json"
+
+          echo "today=${TODAY}" >> "$GITHUB_OUTPUT"
+          echo "latest_file=${LATEST_FILE}" >> "$GITHUB_OUTPUT"
+
+          if [ ! -f "$LATEST_FILE" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Latest holdings file not found. Crawler will run."
+            exit 0
+          fi
+
+          HOLDINGS_DATE=$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(p.summary?.date || '')" "$LATEST_FILE")
+          echo "holdings_date=${HOLDINGS_DATE}" >> "$GITHUB_OUTPUT"
+
+          if [ "$HOLDINGS_DATE" = "$TODAY" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Latest holdings data date is today (${TODAY}). Crawler will not run."
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Latest holdings data date is ${HOLDINGS_DATE:-empty}, not today (${TODAY}). Crawler will run."
+          fi
+
+      - name: Run Pocket 00981A crawler
+        if: steps.check_holdings.outputs.should_run == 'true'
+        run: node scripts/crawl_pocket_00981A_holdings.js
+
+      - name: Commit and push changes
+        if: steps.check_holdings.outputs.should_run == 'true'
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_pocket/
+
+          if git diff --staged --quiet; then
+            echo "No Pocket 00981A changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update Pocket 00981A data ${CURRENT_DATE}"
+
+          success=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin main; then
+              success=true
+              break
+            fi
+            echo "Push failed, retry $i..."
+            sleep 5
+          done
+
+          if [ "$success" != "true" ]; then
+            echo "Failed to push Pocket 00981A changes"
+            exit 1
+          fi

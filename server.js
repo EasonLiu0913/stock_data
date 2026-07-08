@@ -8,7 +8,8 @@ const DIRS = {
     'twse': path.join(__dirname, 'data_twse'),
     'twse_margin_balance': path.join(__dirname, 'data_twse_margin_balance'),
     'twse_institutional_investors': path.join(__dirname, 'data_twse_institutional_investors'),
-    'twse_mi_index': path.join(__dirname, 'data_twse_mi_index')
+    'twse_mi_index': path.join(__dirname, 'data_twse_mi_index'),
+    'pocket': path.join(__dirname, 'data_pocket')
 };
 
 const server = http.createServer((req, res) => {
