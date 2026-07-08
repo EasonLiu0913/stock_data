@@ -5,7 +5,7 @@
 ## 📊 主要功能
 
 ### 1. 股票數據瀏覽器 (Stock Data Browser)
-入口：[Stock Data Browser](https://easonliu0913.github.io/stock_data/public/index.html)
+入口：[Stock Data Browser](https://easonliu0913.github.io/stock_data/public/stock-data-browser.html)
 
 提供每日更新的籌碼排行數據，支援多種篩選條件：
 - **主力買賣超排行**：支援 1、2、3、4、5、10、20、30 日區間統計。
@@ -25,6 +25,7 @@
 - **視覺化圖表**：以顏色區分買賣超強度（紅買綠賣）。
 
 ### 3. 其他分析工具
+- **[工具清單](https://easonliu0913.github.io/stock_data/public/index.html)**：瀏覽所有 HTML 工具頁，並以新分頁開啟。
 - **[分析工具](https://easonliu0913.github.io/stock_data/public/analyze.html)**：個股深入分析工具。
 - **[比較工具](https://easonliu0913.github.io/stock_data/public/compare.html)**：多檔股票比較工具。
 

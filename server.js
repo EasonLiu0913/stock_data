@@ -23,11 +23,11 @@ const server = http.createServer((req, res) => {
     const urlPath = req.url.split('?')[0];
 
     if (urlPath === '/' || urlPath === '') {
-        // Serve the analyze.html file
-        fs.readFile(path.join(__dirname, 'web/analyze.html'), (err, content) => {
+        // Serve the HTML tools index.
+        fs.readFile(path.join(__dirname, 'public/index.html'), (err, content) => {
             if (err) {
                 res.writeHead(500);
-                res.end('Error loading analyze.html');
+                res.end('Error loading index.html');
             } else {
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(content);

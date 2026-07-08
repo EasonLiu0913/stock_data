@@ -2,708 +2,275 @@
 <html lang="zh-TW">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>股票數據瀏覽器</title>
-  <style>
-    :root {
-      --primary: #6366f1;
-      --primary-dark: #4f46e5;
-      --secondary: #10b981;
-      --bg-dark: #0f172a;
-      --bg-card: #1e293b;
-      --bg-gradient: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --border: #334155;
-      --positive: #22c55e;
-      --negative: #ef4444;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票數據工具清單</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-dark);
-      color: var(--text-primary);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
+        .container {
+            max-width: 1120px;
+            margin: 0 auto;
+        }
 
-    /* Header */
-    .header {
-      background: var(--bg-gradient);
-      border-bottom: 1px solid var(--border);
-      padding: 2rem;
-      text-align: center;
-    }
+        .header,
+        .toolbar,
+        .link-list {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
 
-    .header h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
-    }
+        .header {
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
 
-    .header p {
-      color: var(--text-secondary);
-      font-size: 1.1rem;
-    }
+        h1 {
+            font-size: 1.8rem;
+            line-height: 1.3;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
 
-    /* Controls */
-    .controls {
-      max-width: 2400px;
-      margin: 2rem auto;
-      padding: 0 2rem;
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
+        .meta {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
 
-    .control-group {
-      flex: 1;
-      min-width: 250px;
-    }
+        .toolbar {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
 
-    .control-group label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 0.5rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
+        label {
+            font-weight: 700;
+            color: #334155;
+            white-space: nowrap;
+        }
 
-    .control-group select {
-      width: 100%;
-      padding: 1rem 1.25rem;
-      font-size: 1rem;
-      background: var(--bg-card);
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      color: var(--text-primary);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 1rem center;
-      background-size: 1.25rem;
-    }
+        input {
+            width: 100%;
+            min-height: 40px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 0.95rem;
+            outline: none;
+        }
 
-    .control-group select:hover {
-      border-color: var(--primary);
-    }
+        input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
 
-    .control-group select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
-    }
+        .link-list {
+            overflow: hidden;
+        }
 
-    /* Table Container */
-    .table-container {
-      max-width: 2400px;
-      margin: 0 auto 3rem;
-      padding: 0 2rem;
-    }
+        .tool-link {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            color: inherit;
+            text-decoration: none;
+            border-bottom: 1px solid #e2e8f0;
+        }
 
-    .table-card {
-      background: var(--bg-card);
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    }
+        .tool-link:last-child {
+            border-bottom: 0;
+        }
 
-    .table-header {
-      background: var(--bg-gradient);
-      padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
+        .tool-link:hover {
+            background: #eff6ff;
+        }
 
-    .table-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
+        .tool-title {
+            color: #1e293b;
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
 
-    .table-info {
-      display: flex;
-      gap: 1.5rem;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-    }
+        .tool-desc {
+            color: #64748b;
+            line-height: 1.5;
+            font-size: 0.93rem;
+        }
 
-    .table-info span {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
+        .tool-file {
+            color: #2563eb;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.88rem;
+            font-weight: 800;
+            align-self: center;
+            white-space: nowrap;
+        }
 
-    .badge {
-      background: var(--primary);
-      color: white;
-      padding: 0.25rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
+        .empty {
+            display: none;
+            padding: 2rem;
+            text-align: center;
+            color: #64748b;
+            font-weight: 700;
+        }
 
-    /* Data Table */
-    .table-scroll {
-      overflow-x: auto;
-    }
+        @media (max-width: 768px) {
+            body {
+                padding: 0.75rem;
+            }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
+            h1 {
+                font-size: 1.35rem;
+            }
 
-    thead {
-      background: rgba(99, 102, 241, 0.15);
-    }
+            .toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
 
-    thead th {
-      padding: 1rem 1.25rem;
-      text-align: left;
-      font-weight: 600;
-      color: var(--primary);
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
-      border-bottom: 2px solid var(--border);
-    }
+            .tool-link {
+                grid-template-columns: 1fr;
+            }
 
-    tbody tr {
-      transition: all 0.2s ease;
-      border-bottom: 1px solid var(--border);
-    }
-
-    tbody tr:hover {
-      background: rgba(99, 102, 241, 0.08);
-    }
-
-    tbody td {
-      padding: 1rem 1.25rem;
-      white-space: nowrap;
-    }
-
-    .rank-cell {
-      font-weight: 700;
-      color: var(--primary);
-      text-align: center;
-      width: 60px;
-    }
-
-    .rank-top {
-      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      font-size: 1.1rem;
-    }
-
-    .stock-cell {
-      font-weight: 600;
-    }
-
-    .price-cell {
-      font-weight: 600;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .positive {
-      color: var(--positive);
-    }
-
-    .negative {
-      color: var(--negative);
-    }
-
-    .number-cell {
-      text-align: right;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .trade-value-cell {
-      text-align: right;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-    }
-
-    /* Loading & Empty States */
-    .loading,
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 4rem 2rem;
-      color: var(--text-secondary);
-    }
-
-    .loading-spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 1rem;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .empty-icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-      opacity: 0.5;
-    }
-
-    .empty-state h3 {
-      font-size: 1.25rem;
-      color: var(--text-primary);
-      margin-bottom: 0.5rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .header h1 {
-        font-size: 1.75rem;
-      }
-
-      .controls {
-        flex-direction: column;
-      }
-
-      .control-group {
-        width: 100%;
-      }
-
-      .table-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: var(--bg-dark);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--primary);
-    }
-  </style>
+            .tool-file {
+                white-space: normal;
+            }
+        }
+    </style>
 </head>
 
 <body>
-  <header class="header">
-    <h1>股票數據瀏覽器</h1>
-    <p>瀏覽每日主力買超、值增/值縮、量增/量縮排行</p>
-  </header>
-
-  <div class="controls">
-    <div class="control-group">
-      <label>📅 選擇日期</label>
-      <select id="dateSelect">
-        <option value="">請選擇日期...</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label>📈 選擇排行類型</label>
-      <select id="categorySelect">
-        <option value="">請選擇類型...</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="table-container">
-    <div class="table-card">
-      <div class="table-header">
-        <div class="table-title" id="tableTitle">請選擇日期與類型</div>
-        <div class="table-info" id="tableInfo"></div>
-      </div>
-      <div class="table-scroll">
-        <div id="tableContent">
-          <div class="empty-state">
-            <div class="empty-icon">📋</div>
-            <h3>尚未選擇資料</h3>
-            <p>請從上方下拉選單選擇日期與排行類型</p>
-          </div>
+    <div class="container">
+        <div class="header">
+            <h1>股票數據工具清單</h1>
+            <div class="meta" id="pageMeta"></div>
         </div>
-      </div>
+
+        <div class="toolbar">
+            <label for="searchInput">搜尋</label>
+            <input id="searchInput" type="text" placeholder="輸入頁面名稱或檔名" oninput="renderLinks()">
+        </div>
+
+        <div class="link-list" id="linkList"></div>
+        <div class="empty" id="emptyState">沒有符合條件的頁面</div>
     </div>
-  </div>
 
-  <script>
-    // Data folder path
-    const DATA_FOLDER = '../data_fubon';
-
-    // Available categories
-    const CATEGORIES = [
-      '上市外資賣超1日排行',
-      '上市外資賣超2日排行',
-      '上市外資賣超3日排行',
-      '上市外資賣超4日排行',
-      '上市外資賣超5日排行',
-      '上市外資賣超10日排行',
-      '上市外資賣超20日排行',
-      '上市外資賣超30日排行',
-      '上市主力賣超1日排行',
-      '上市主力賣超2日排行',
-      '上市主力賣超3日排行',
-      '上市主力賣超4日排行',
-      '上市主力賣超5日排行',
-      '上市主力賣超10日排行',
-      '上市主力賣超20日排行',
-      '上市主力賣超30日排行',
-      '上市外資買超1日排行',
-      '上市外資買超2日排行',
-      '上市外資買超3日排行',
-      '上市外資買超4日排行',
-      '上市外資買超5日排行',
-      '上市外資買超10日排行',
-      '上市外資買超20日排行',
-      '上市外資買超30日排行',
-      '上市主力買超1日排行',
-      '上市主力買超2日排行',
-      '上市主力買超3日排行',
-      '上市主力買超4日排行',
-      '上市主力買超5日排行',
-      '上市主力買超10日排行',
-      '上市主力買超20日排行',
-      '上市主力買超30日排行',
-      '上市值增排行',
-      '上市值縮排行',
-      '上市量增排行',
-      '上市量縮排行'
-    ];
-
-    let filesData = [];
-    let availableDates = [];
-
-    // Get URL parameters
-    function getUrlParams() {
-      const params = new URLSearchParams(window.location.search);
-      return {
-        date: params.get('date'),
-        category: params.get('category')
-      };
-    }
-
-    // Update URL parameters
-    function updateUrlParams(date, category) {
-      const params = new URLSearchParams();
-      if (date) params.set('date', date);
-      if (category) params.set('category', category);
-      const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-      window.history.replaceState({}, '', newUrl);
-    }
-
-    // Initialize
-    async function init() {
-      await loadFilesJson();
-      populateDropdowns();
-      setupEventListeners();
-
-      // Check for URL parameters and auto-select
-      const urlParams = getUrlParams();
-      if (urlParams.date || urlParams.category) {
-        const dateSelect = document.getElementById('dateSelect');
-        const categorySelect = document.getElementById('categorySelect');
-
-        if (urlParams.date && availableDates.includes(urlParams.date)) {
-          dateSelect.value = urlParams.date;
-        }
-        if (urlParams.category && CATEGORIES.includes(urlParams.category)) {
-          categorySelect.value = urlParams.category;
-        }
-
-        // Load data if both are selected
-        if (dateSelect.value && categorySelect.value) {
-          loadData();
-        }
-      }
-    }
-
-    // Load files.json
-    async function loadFilesJson() {
-      try {
-        const response = await fetch(`${DATA_FOLDER}/files.json`);
-        filesData = await response.json();
-
-        // Extract unique dates from filenames
-        const dateSet = new Set();
-        filesData.forEach(filename => {
-          const match = filename.match(/fubon_(\d{8})_/);
-          if (match) {
-            dateSet.add(match[1]);
-          }
-        });
-
-        // Sort dates in descending order (newest first)
-        availableDates = Array.from(dateSet).sort((a, b) => b.localeCompare(a));
-      } catch (error) {
-        console.error('Error loading files.json:', error);
-      }
-    }
-
-    // Populate dropdowns
-    function populateDropdowns() {
-      const dateSelect = document.getElementById('dateSelect');
-      const categorySelect = document.getElementById('categorySelect');
-
-      // Populate dates
-      availableDates.forEach(date => {
-        const option = document.createElement('option');
-        option.value = date;
-        // Format date for display: 20260121 -> 2026/01/21
-        const formattedDate = `${date.slice(0, 4)}/${date.slice(4, 6)}/${date.slice(6, 8)}`;
-        option.textContent = formattedDate;
-        dateSelect.appendChild(option);
-      });
-
-      // Populate categories
-      CATEGORIES.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
-      });
-    }
-
-    // Setup event listeners
-    function setupEventListeners() {
-      document.getElementById('dateSelect').addEventListener('change', loadData);
-      document.getElementById('categorySelect').addEventListener('change', loadData);
-    }
-
-    // Load and display CSV data
-    async function loadData() {
-      const date = document.getElementById('dateSelect').value;
-      const category = document.getElementById('categorySelect').value;
-
-      // Update URL parameters
-      updateUrlParams(date, category);
-
-      if (!date || !category) {
-        return;
-      }
-
-      const filename = `fubon_${date}_${category}.csv`;
-      const tableContent = document.getElementById('tableContent');
-      const tableTitle = document.getElementById('tableTitle');
-      const tableInfo = document.getElementById('tableInfo');
-
-      // Check if file exists
-      if (!filesData.includes(filename)) {
-        tableTitle.textContent = '找不到資料';
-        tableInfo.innerHTML = '';
-        tableContent.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">❌</div>
-                        <h3>此日期無此類型資料</h3>
-                        <p>檔案 ${filename} 不存在</p>
-                    </div>
-                `;
-        return;
-      }
-
-      // Show loading
-      tableContent.innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>載入資料中...</p>
-                </div>
-            `;
-
-      try {
-        const response = await fetch(`${DATA_FOLDER}/${filename}`);
-        const csvText = await response.text();
-        const data = parseCSV(csvText);
-
-        // Update header
-        const formattedDate = `${date.slice(0, 4)}/${date.slice(4, 6)}/${date.slice(6, 8)}`;
-        tableTitle.textContent = `${formattedDate} ${category}`;
-        tableInfo.innerHTML = `
-                    <span><span class="badge">${data.length - 1} 筆資料</span></span>
-                `;
-
-        // Render table
-        renderTable(data);
-      } catch (error) {
-        console.error('Error loading CSV:', error);
-        tableContent.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">⚠️</div>
-                        <h3>載入失敗</h3>
-                        <p>無法讀取檔案: ${error.message}</p>
-                    </div>
-                `;
-      }
-    }
-
-    // Parse CSV
-    function parseCSV(text) {
-      const lines = text.trim().split('\n');
-      return lines.map(line => {
-        const result = [];
-        let current = '';
-        let inQuotes = false;
-
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            result.push(current.trim());
-            current = '';
-          } else {
-            current += char;
-          }
-        }
-        result.push(current.trim());
-        return result;
-      });
-    }
-
-    // Render table
-    function renderTable(data) {
-      const tableContent = document.getElementById('tableContent');
-
-      if (data.length < 2) {
-        tableContent.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <h3>無資料</h3>
-                        <p>此檔案沒有資料</p>
-                    </div>
-                `;
-        return;
-      }
-
-      const headers = data[0];
-      const rows = data.slice(1);
-      const priceIndex = headers.findIndex(header => header === 'Price' || header.includes('價格'));
-      const netTradeIndex = headers.findIndex(header => ['NetBuy', 'NetSell', '買超', '賣超'].includes(header));
-      const hasTradeValue = priceIndex >= 0 && netTradeIndex >= 0;
-      const displayHeaders = hasTradeValue ? [...headers, 'TradeValue'] : headers;
-
-      let html = '<table><thead><tr>';
-      displayHeaders.forEach(header => {
-        html += `<th>${header}</th>`;
-      });
-      html += '</tr></thead><tbody>';
-
-      rows.forEach((row, index) => {
-        html += '<tr>';
-        const tradeValue = hasTradeValue ? calculateTradeValue(row[priceIndex], row[netTradeIndex]) : null;
-        const displayRow = hasTradeValue ? [...row, formatNumber(tradeValue)] : row;
-
-        displayRow.forEach((cell, cellIndex) => {
-          let cellClass = '';
-          let cellContent = cell;
-          const header = displayHeaders[cellIndex];
-
-          // Rank column styling
-          if (header === 'Rank') {
-            cellClass = 'rank-cell';
-            if (parseInt(cell) <= 3) {
-              cellClass += ' rank-top';
+    <script>
+        const tools = [
+            {
+                file: 'stock-data-browser.html',
+                title: '股票數據瀏覽器',
+                description: '瀏覽富邦與證交所股票排行資料，依日期與排行類型切換表格。'
+            },
+            {
+                file: 'pocket-00981A.html',
+                title: '00981A ETF 持股與產業分布',
+                description: '查看 Pocket 口袋證券 00981A 持股內容與產業分布長條圖。'
+            },
+            {
+                file: 'foreign.html',
+                title: '法人連續買賣超股票',
+                description: '追蹤法人連續買賣超與多日排行條件。'
+            },
+            {
+                file: 'twse-foreign-investors.html',
+                title: '外資及陸資買賣超彙總表',
+                description: '瀏覽證交所外資及陸資每日買賣超資料。'
+            },
+            {
+                file: 'twse-institutional-investors.html',
+                title: '三大法人買賣超日報',
+                description: '瀏覽三大法人買賣超日報資料。'
+            },
+            {
+                file: 'twse-dealers.html',
+                title: '自營商買賣超彙總表',
+                description: '瀏覽自營商買賣超彙總資料。'
+            },
+            {
+                file: 'twse-margin-balance.html',
+                title: '信用交易融資融券餘額',
+                description: '查看上市股票信用交易融資融券餘額。'
+            },
+            {
+                file: 'sma-below.html',
+                title: '股價低於均線清單',
+                description: '篩選股價低於均線的股票清單。'
+            },
+            {
+                file: 'warrants.html',
+                title: '權證標的十日追蹤',
+                description: '追蹤權證標的近十日資料變化。'
+            },
+            {
+                file: 'analyze.html',
+                title: 'Stock Analysis Tool',
+                description: '個股資料分析工具。'
+            },
+            {
+                file: 'compare.html',
+                title: 'Stock Comparison Tool',
+                description: '比較 Fubon 與 TWSE 股票資料。'
             }
-          }
+        ];
 
-          // Stock column
-          else if (header === 'Stock') {
-            cellClass = 'stock-cell';
-          }
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
-          // Price column
-          else if (header === 'Price') {
-            cellClass = 'price-cell';
-          }
+        function renderLinks() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const filteredTools = tools.filter(tool => {
+                if (!keyword) return true;
+                return [tool.file, tool.title, tool.description].some(value =>
+                    String(value).toLowerCase().includes(keyword)
+                );
+            });
 
-          // Change/ChangePercent columns
-          else if (header === 'Change' || header === 'ChangePercent') {
-            if (cell.includes('+')) {
-              cellClass = 'positive';
-            } else if (cell.includes('-')) {
-              cellClass = 'negative';
-            }
-          }
+            document.getElementById('pageMeta').textContent =
+                `共 ${tools.length.toLocaleString()} 個 HTML 頁面；目前顯示 ${filteredTools.length.toLocaleString()} 個`;
 
-          // Number columns
-          else if (['Buy', 'Sell', 'NetBuy', 'NetSell'].includes(header)) {
-            cellClass = 'number-cell';
-          }
+            document.getElementById('linkList').innerHTML = filteredTools.map(tool => `
+                <a class="tool-link" href="${escapeHtml(tool.file)}" target="_blank" rel="noopener noreferrer">
+                    <span>
+                        <span class="tool-title">${escapeHtml(tool.title)}</span>
+                        <span class="tool-desc">${escapeHtml(tool.description)}</span>
+                    </span>
+                    <span class="tool-file">${escapeHtml(tool.file)}</span>
+                </a>
+            `).join('');
 
-          else if (header === 'TradeValue') {
-            cellClass = 'trade-value-cell';
-            if (tradeValue > 0) {
-              cellClass += ' positive';
-            } else if (tradeValue < 0) {
-              cellClass += ' negative';
-            }
-          }
+            document.getElementById('emptyState').style.display = filteredTools.length === 0 ? 'block' : 'none';
+        }
 
-          html += `<td class="${cellClass}">${cellContent}</td>`;
-        });
-        html += '</tr>';
-      });
-
-      html += '</tbody></table>';
-      tableContent.innerHTML = html;
-    }
-
-    function parseNumber(value) {
-      const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
-      const number = parseFloat(normalized);
-      return Number.isNaN(number) ? 0 : number;
-    }
-
-    function calculateTradeValue(price, shares) {
-      return Math.round(parseNumber(price) * parseNumber(shares));
-    }
-
-    function formatNumber(value) {
-      return Number(value || 0).toLocaleString();
-    }
-
-    // Run initialization
-    init();
-  </script>
+        renderLinks();
+    </script>
 </body>
 
 </html>
