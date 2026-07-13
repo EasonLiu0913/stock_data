@@ -307,10 +307,14 @@
         let volumeMap = {};
         let quoteMap = {};
         let smaRangeMap = {};
+        let tenDayMarginDecreaseMap = {};
+        let tenDayInstitutionalMap = {};
+        let tenDayVolumeMap = {};
         let columnView = 'compact';
         let marginThreshold = 'over10000';
-        let sortState = { key: 'marginDecreasePercent', direction: 'desc' };
+        let sortState = { key: 'tenDayMarginDecrease', direction: 'desc' };
         const SORT_OPTIONS = [
+            { key: 'tenDayMarginDecrease', label: '近10日融資餘額減少' },
             { key: 'marginDecreasePercent', label: '融資減少百分比' },
             { key: 'field:6', label: '融資今日餘額' }
         ];
@@ -367,6 +371,17 @@
             return ((previousBalance - currentBalance) / previousBalance) * 100;
         }
 
+        function getTenDayMarginDecrease(row) {
+            return tenDayMarginDecreaseMap[normalizeCell(row[0])] ?? null;
+        }
+
+        function getDailyMarginBalanceChange(row) {
+            const previousBalance = parseNumber(row[5]);
+            const currentBalance = parseNumber(row[6]);
+            if (previousBalance === null || currentBalance === null) return null;
+            return currentBalance - previousBalance;
+        }
+
         function getShortIncreasePercent(row) {
             const previousBalance = parseNumber(row[11]);
             const currentBalance = parseNumber(row[12]);
@@ -376,13 +391,21 @@
 
         function formatDecreasePercent(value) {
             if (value === null) return '-';
-            return `-${Math.abs(value).toFixed(2)}%`;
+            const balanceChangePercent = -value;
+            const sign = balanceChangePercent > 0 ? '+' : '';
+            return `${sign}${balanceChangePercent.toFixed(2)}%`;
         }
 
         function formatSignedPercent(value) {
             if (value === null) return '-';
             const sign = value > 0 ? '+' : '';
             return `${sign}${value.toFixed(2)}%`;
+        }
+
+        function formatSignedNumber(value) {
+            if (value === null) return '-';
+            const sign = value > 0 ? '+' : '';
+            return `${sign}${formatNumber(value)}`;
         }
 
         function getSignValue(signHtml) {
@@ -491,9 +514,13 @@
 
                 const params = new URLSearchParams(window.location.search);
                 const queryFile = params.get('file');
+                const querySort = params.get('sort');
                 currentFile = queryFile && files.includes(queryFile)
                     ? queryFile
                     : files.includes(DEFAULT_FILE) ? DEFAULT_FILE : files[0];
+                if (SORT_OPTIONS.some(option => option.key === querySort)) {
+                    sortState = { key: querySort, direction: 'desc' };
+                }
 
                 renderDateOptions();
                 renderSortOptions();
@@ -545,6 +572,7 @@
 
         function onSortChanged() {
             sortState = { key: document.getElementById('sortSelect').value, direction: 'desc' };
+            updateUrlParams();
             applyFiltersAndRender();
         }
 
@@ -621,6 +649,97 @@
             }
         }
 
+        async function loadTenDayMarginData(file) {
+            const historyFiles = getTenDayHistoryFiles(file);
+            const basePath = getBasePath();
+            const csvTexts = await Promise.all(historyFiles.map(historyFile => {
+                return fetchText(`${basePath}/${DATA_DIR}/${historyFile}`);
+            }));
+
+            tenDayMarginDecreaseMap = {};
+            csvTexts.forEach(csvText => {
+                parseCsv(csvText).slice(1).forEach(row => {
+                    const code = normalizeCell(row[0]);
+                    const previousBalance = parseNumber(row[5]);
+                    const currentBalance = parseNumber(row[6]);
+                    if (!code || previousBalance === null || currentBalance === null) return;
+                    tenDayMarginDecreaseMap[code] =
+                        (tenDayMarginDecreaseMap[code] || 0) + previousBalance - currentBalance;
+                });
+            });
+        }
+
+        function getTenDayHistoryFiles(file) {
+            const fileIndex = files.indexOf(file);
+            return fileIndex === -1 ? [] : files.slice(fileIndex, fileIndex + 10);
+        }
+
+        async function loadTenDayTradingData(file) {
+            const basePath = getBasePath();
+            const historyDates = getTenDayHistoryFiles(file).map(historyFile => historyFile.slice(0, 8));
+            const dailyPayloads = await Promise.all(historyDates.map(async date => {
+                const [institutionalPayload, miIndexPayload] = await Promise.all([
+                    fetchJson(`${basePath}/${INSTITUTIONAL_DATA_DIR}/${date}_twse_institutional_investors.json`)
+                        .catch(() => null),
+                    fetchJson(`${basePath}/${MI_INDEX_DATA_DIR}/${date}_twse_mi_index.json`)
+                        .catch(() => null)
+                ]);
+                return { institutionalPayload, miIndexPayload };
+            }));
+
+            tenDayInstitutionalMap = {};
+            tenDayVolumeMap = {};
+            dailyPayloads.forEach(({ institutionalPayload, miIndexPayload }) => {
+                (institutionalPayload?.data || []).forEach(row => {
+                    const code = normalizeCell(row[0]);
+                    if (!code) return;
+                    const totals = tenDayInstitutionalMap[code] || {
+                        foreign: 0,
+                        investmentTrust: 0,
+                        dealers: 0
+                    };
+                    totals.foreign += parseNumber(row[4]) || 0;
+                    totals.investmentTrust += parseNumber(row[10]) || 0;
+                    totals.dealers += parseNumber(row[11]) || 0;
+                    tenDayInstitutionalMap[code] = totals;
+                });
+
+                const quoteTable = (miIndexPayload?.tables || []).find(table => {
+                    const fieldsText = (table.fields || []).join('|');
+                    return fieldsText.includes('證券代號') && fieldsText.includes('成交股數');
+                });
+                (quoteTable?.data || []).forEach(row => {
+                    const code = normalizeCell(row[0]);
+                    const volume = parseNumber(row[2]);
+                    if (!code || volume === null) return;
+                    tenDayVolumeMap[code] = (tenDayVolumeMap[code] || 0) + volume;
+                });
+            });
+        }
+
+        function getInstitutionalValue(row, key) {
+            const code = normalizeCell(row[0]);
+            const sourceMap = sortState.key === 'tenDayMarginDecrease'
+                ? tenDayInstitutionalMap
+                : institutionalMap;
+            return sourceMap[code]?.[key] ?? null;
+        }
+
+        function getVolumeValue(row) {
+            const code = normalizeCell(row[0]);
+            const sourceMap = sortState.key === 'tenDayMarginDecrease'
+                ? tenDayVolumeMap
+                : volumeMap;
+            return sourceMap[code] ?? null;
+        }
+
+        function updateUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('file', currentFile);
+            params.set('sort', sortState.key);
+            window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        }
+
         async function loadFile(file) {
             document.getElementById('loading').style.display = 'block';
             document.getElementById('dataTable').style.display = 'none';
@@ -629,9 +748,13 @@
             const basePath = getBasePath();
             const date = file.slice(0, 8);
             const csvText = await fetchText(`${basePath}/${DATA_DIR}/${file}`);
-            await loadInstitutionalData(date);
-            await loadMiIndexData(date);
-            await loadSmaData(date);
+            await Promise.all([
+                loadInstitutionalData(date),
+                loadMiIndexData(date),
+                loadSmaData(date),
+                loadTenDayMarginData(file),
+                loadTenDayTradingData(file)
+            ]);
             const parsed = parseCsv(csvText);
             fields = parsed[0] || [];
             rows = parsed.slice(1);
@@ -640,9 +763,7 @@
             document.getElementById('pageMeta').textContent =
                 `資料日期：${formatDate(date)}；資料筆數：${rows.length.toLocaleString('zh-TW')}`;
 
-            const params = new URLSearchParams(window.location.search);
-            params.set('file', file);
-            window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+            updateUrlParams();
 
             applyFiltersAndRender();
             document.getElementById('loading').style.display = 'none';
@@ -654,6 +775,7 @@
             displayedRows = rows.filter(row => {
                 const currentMarginBalance = parseNumber(row[6]) || 0;
                 if (marginThreshold === 'over10000' && currentMarginBalance < 10000) return false;
+                if (sortState.key === 'tenDayMarginDecrease' && (getTenDayMarginDecrease(row) || 0) <= 0) return false;
 
                 if (!keyword) return true;
                 const code = normalizeCell(row[0]).toUpperCase();
@@ -686,13 +808,15 @@
         }
 
         function getSortValue(row, key) {
+            if (key === 'tenDayMarginDecrease') return getTenDayMarginDecrease(row);
+            if (key === 'dailyMarginBalanceChange') return getDailyMarginBalanceChange(row);
             if (key === 'marginDecreasePercent') return getMarginDecreasePercent(row);
             if (key === 'shortIncreasePercent') return getShortIncreasePercent(row);
             if (key === 'price') return quoteMap[normalizeCell(row[0])]?.price ?? null;
             if (key === 'smaRange') return smaRangeMap[normalizeCell(row[0])] ?? '';
-            if (key === 'volume') return volumeMap[normalizeCell(row[0])] ?? null;
+            if (key === 'volume') return getVolumeValue(row);
             if (key.startsWith('institutional:')) {
-                return institutionalMap[normalizeCell(row[0])]?.[key.replace('institutional:', '')] ?? null;
+                return getInstitutionalValue(row, key.replace('institutional:', ''));
             }
             if (key.startsWith('field:')) return normalizeCell(row[Number(key.replace('field:', ''))]);
             return '';
@@ -706,6 +830,7 @@
             }
             if (SORT_OPTIONS.some(option => option.key === key)) {
                 document.getElementById('sortSelect').value = key;
+                updateUrlParams();
             }
             applyFiltersAndRender();
         }
@@ -748,18 +873,30 @@
 
         function getDisplayFields() {
             if (columnView === 'compact') {
-                return [
+                const periodLabel = sortState.key === 'tenDayMarginDecrease' ? '近10日' : '單日';
+                const compactFields = [
                     { label: '股票代號', key: 'field:0', rawIndex: 0 },
                     { label: '股票名稱', key: 'field:1', rawIndex: 1 },
                     { label: '股票價格', key: 'price', rawIndex: null, type: 'price' },
                     { label: '均線區間', key: 'smaRange', rawIndex: null, type: 'smaRange' },
-                    { label: '融資減少百分比', key: 'marginDecreasePercent', rawIndex: null, type: 'marginDecreasePercent' },
+                    { label: '融資今日餘額', key: 'field:6', rawIndex: 6 },
+                    { label: '較前日融資餘額增減', key: 'dailyMarginBalanceChange', rawIndex: null, type: 'dailyMarginBalanceChange' },
+                    { label: '較前日融資餘額增減百分比', key: 'marginDecreasePercent', rawIndex: null, type: 'marginDecreasePercent' },
                     { label: '融券增加百分比', key: 'shortIncreasePercent', rawIndex: null, type: 'shortIncreasePercent' },
-                    { label: '外資買賣數量(千)', key: 'institutional:foreign', rawIndex: null, type: 'institutional', institutionalKey: 'foreign' },
-                    { label: '投信買賣數量(千)', key: 'institutional:investmentTrust', rawIndex: null, type: 'institutional', institutionalKey: 'investmentTrust' },
-                    { label: '自營商買賣數量(千)', key: 'institutional:dealers', rawIndex: null, type: 'institutional', institutionalKey: 'dealers' },
-                    { label: '成交量(千)', key: 'volume', rawIndex: null, type: 'volume' }
+                    { label: `${periodLabel}外資買賣數量(千)`, key: 'institutional:foreign', rawIndex: null, type: 'institutional', institutionalKey: 'foreign' },
+                    { label: `${periodLabel}投信買賣數量(千)`, key: 'institutional:investmentTrust', rawIndex: null, type: 'institutional', institutionalKey: 'investmentTrust' },
+                    { label: `${periodLabel}自營商買賣數量(千)`, key: 'institutional:dealers', rawIndex: null, type: 'institutional', institutionalKey: 'dealers' },
+                    { label: `${periodLabel}成交量(千)`, key: 'volume', rawIndex: null, type: 'volume' }
                 ];
+                if (sortState.key === 'tenDayMarginDecrease') {
+                    compactFields.splice(4, 0, {
+                        label: '近10日融資餘額減少',
+                        key: 'tenDayMarginDecrease',
+                        rawIndex: null,
+                        type: 'tenDayMarginDecrease'
+                    });
+                }
+                return compactFields;
             }
 
             const displayFields = [];
@@ -778,14 +915,49 @@
                         rawIndex: null,
                         type: 'smaRange'
                     });
+                    if (sortState.key === 'tenDayMarginDecrease') {
+                        displayFields.push({
+                            label: '近10日融資餘額減少',
+                            key: 'tenDayMarginDecrease',
+                            rawIndex: null,
+                            type: 'tenDayMarginDecrease'
+                        });
+                        displayFields.push({
+                            label: '近10日外資買賣數量(千)',
+                            key: 'institutional:foreign',
+                            rawIndex: null,
+                            type: 'institutional',
+                            institutionalKey: 'foreign'
+                        });
+                        displayFields.push({
+                            label: '近10日投信買賣數量(千)',
+                            key: 'institutional:investmentTrust',
+                            rawIndex: null,
+                            type: 'institutional',
+                            institutionalKey: 'investmentTrust'
+                        });
+                        displayFields.push({
+                            label: '近10日自營商買賣數量(千)',
+                            key: 'institutional:dealers',
+                            rawIndex: null,
+                            type: 'institutional',
+                            institutionalKey: 'dealers'
+                        });
+                    }
                     displayFields.push({
-                        label: '融資減少百分比',
+                        label: '較前日融資餘額增減',
+                        key: 'dailyMarginBalanceChange',
+                        rawIndex: null,
+                        type: 'dailyMarginBalanceChange'
+                    });
+                    displayFields.push({
+                        label: '較前日融資餘額增減百分比',
                         key: 'marginDecreasePercent',
                         rawIndex: null,
                         type: 'marginDecreasePercent'
                     });
                     displayFields.push({
-                        label: '成交量',
+                        label: sortState.key === 'tenDayMarginDecrease' ? '近10日成交量(千)' : '單日成交量(千)',
                         key: 'volume',
                         rawIndex: null,
                         type: 'volume'
@@ -817,9 +989,23 @@
 
             tableBody.innerHTML = displayedRows.map(row => {
                 const cells = displayFields.map(field => {
+                    if (field.type === 'tenDayMarginDecrease') {
+                        const value = getTenDayMarginDecrease(row);
+                        const className = value === null ? 'muted' : value > 0 ? 'negative' : value < 0 ? 'positive' : '';
+                        const classAttr = className ? ` class="${className}"` : '';
+                        return `<td${classAttr}>${value === null ? '-' : formatNumber(value)}</td>`;
+                    }
+
+                    if (field.type === 'dailyMarginBalanceChange') {
+                        const value = getDailyMarginBalanceChange(row);
+                        const className = value === null ? 'muted' : value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+                        const classAttr = className ? ` class="${className}"` : '';
+                        return `<td${classAttr}>${formatSignedNumber(value)}</td>`;
+                    }
+
                     if (field.type === 'marginDecreasePercent') {
                         const value = getMarginDecreasePercent(row);
-                        const className = value === null ? 'muted' : 'negative';
+                        const className = value === null ? 'muted' : value > 0 ? 'negative' : value < 0 ? 'positive' : '';
                         const classAttr = className ? ` class="${className}"` : '';
                         return `<td${classAttr}>${formatDecreasePercent(value)}</td>`;
                     }
@@ -832,14 +1018,14 @@
                     }
 
                     if (field.type === 'institutional') {
-                        const value = institutionalMap[normalizeCell(row[0])]?.[field.institutionalKey] ?? null;
+                        const value = getInstitutionalValue(row, field.institutionalKey);
                         const className = value === null ? 'muted' : value > 0 ? 'positive' : value < 0 ? 'negative' : '';
                         const classAttr = className ? ` class="${className}"` : '';
                         return `<td${classAttr}>${formatThousandsUnit(value)}</td>`;
                     }
 
                     if (field.type === 'volume') {
-                        const value = volumeMap[normalizeCell(row[0])] ?? null;
+                        const value = getVolumeValue(row);
                         const className = value === null ? 'muted' : '';
                         const classAttr = className ? ` class="${className}"` : '';
                         return `<td${classAttr}>${formatThousandsUnit(value)}</td>`;
