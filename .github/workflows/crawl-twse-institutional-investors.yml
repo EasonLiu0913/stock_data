@@ -37,7 +37,8 @@ jobs:
           if [ -n "$DATE_INPUT" ]; then
             TARGET_DATE="$DATE_INPUT"
           else
-            TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            # Before 03:00 Taipei time, the market data still belongs to the previous day.
+            TARGET_DATE=$(TZ='Asia/Taipei' date --date='3 hours ago' '+%Y%m%d')
           fi
 
           OUTPUT_FILE="data_twse_institutional_investors/${TARGET_DATE}_twse_institutional_investors.json"
