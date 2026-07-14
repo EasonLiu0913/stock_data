@@ -296,7 +296,6 @@
         const INSTITUTIONAL_DATA_DIR = 'data_twse_institutional_investors';
         const MI_INDEX_DATA_DIR = 'data_twse_mi_index';
         const FUBON_DATA_DIR = 'data_fubon';
-        const DEFAULT_FILE = '20260629_twse_margin_balance.csv';
 
         let files = [];
         let currentFile = '';
@@ -517,7 +516,7 @@
                 const querySort = params.get('sort');
                 currentFile = queryFile && files.includes(queryFile)
                     ? queryFile
-                    : files.includes(DEFAULT_FILE) ? DEFAULT_FILE : files[0];
+                    : files[0];
                 if (SORT_OPTIONS.some(option => option.key === querySort)) {
                     sortState = { key: querySort, direction: 'desc' };
                 }
@@ -652,12 +651,18 @@
         async function loadTenDayMarginData(file) {
             const historyFiles = getTenDayHistoryFiles(file);
             const basePath = getBasePath();
-            const csvTexts = await Promise.all(historyFiles.map(historyFile => {
-                return fetchText(`${basePath}/${DATA_DIR}/${historyFile}`);
+            const csvTexts = await Promise.all(historyFiles.map(async historyFile => {
+                try {
+                    return await fetchText(`${basePath}/${DATA_DIR}/${historyFile}`);
+                } catch (error) {
+                    console.warn(`無法載入近10日融資資料: ${historyFile}`, error);
+                    return '';
+                }
             }));
 
             tenDayMarginDecreaseMap = {};
             csvTexts.forEach(csvText => {
+                if (!csvText) return;
                 parseCsv(csvText).slice(1).forEach(row => {
                     const code = normalizeCell(row[0]);
                     const previousBalance = parseNumber(row[5]);
@@ -745,29 +750,34 @@
             document.getElementById('dataTable').style.display = 'none';
             document.getElementById('error').style.display = 'none';
 
-            const basePath = getBasePath();
-            const date = file.slice(0, 8);
-            const csvText = await fetchText(`${basePath}/${DATA_DIR}/${file}`);
-            await Promise.all([
-                loadInstitutionalData(date),
-                loadMiIndexData(date),
-                loadSmaData(date),
-                loadTenDayMarginData(file),
-                loadTenDayTradingData(file)
-            ]);
-            const parsed = parseCsv(csvText);
-            fields = parsed[0] || [];
-            rows = parsed.slice(1);
+            try {
+                const basePath = getBasePath();
+                const date = file.slice(0, 8);
+                const csvText = await fetchText(`${basePath}/${DATA_DIR}/${file}`);
+                await Promise.all([
+                    loadInstitutionalData(date),
+                    loadMiIndexData(date),
+                    loadSmaData(date),
+                    loadTenDayMarginData(file),
+                    loadTenDayTradingData(file)
+                ]);
+                const parsed = parseCsv(csvText);
+                fields = parsed[0] || [];
+                rows = parsed.slice(1);
 
-            document.title = `信用交易融資融券餘額 ${formatDate(date)}`;
-            document.getElementById('pageMeta').textContent =
-                `資料日期：${formatDate(date)}；資料筆數：${rows.length.toLocaleString('zh-TW')}`;
+                document.title = `信用交易融資融券餘額 ${formatDate(date)}`;
+                document.getElementById('pageMeta').textContent =
+                    `資料日期：${formatDate(date)}；資料筆數：${rows.length.toLocaleString('zh-TW')}`;
 
-            updateUrlParams();
+                updateUrlParams();
 
-            applyFiltersAndRender();
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('dataTable').style.display = 'table';
+                applyFiltersAndRender();
+                document.getElementById('dataTable').style.display = 'table';
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
         }
 
         function applyFiltersAndRender() {
