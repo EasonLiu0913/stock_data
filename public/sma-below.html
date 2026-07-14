@@ -277,7 +277,7 @@
   <main class="page">
     <header>
       <h1>股價低於均線清單</h1>
-      <p class="subtitle">資料來源：data_fubon/fubon_20260622_sma.json</p>
+      <p class="subtitle" id="dataSource">資料來源：data_fubon</p>
     </header>
 
     <section class="controls" aria-label="篩選條件">
@@ -313,7 +313,6 @@
   </main>
 
   <script>
-    const DATA_FILE = 'fubon_20260622_sma.json';
     const DATA_FOLDER = window.location.hostname.includes('github.io') ? '/stock_data/data_fubon' : '../data_fubon';
     const TWSE_DATA_FOLDER = window.location.hostname.includes('github.io') ? '/stock_data/data_twse' : '../data_twse';
     const SMA_OPTIONS = ['SMA5', 'SMA20', 'SMA60', 'SMA120', 'SMA240'];
@@ -321,6 +320,8 @@
     let smaData = {};
     let industryMap = {};
     let smaFileDates = [];
+    let currentFileDate = '';
+    let currentDateKey = '';
     let previousSmaData = null;
     let previousDateKey = '';
     let currentPreviousFileDate = '';
@@ -359,21 +360,27 @@
     }
 
     async function loadSmaFileDates() {
-      try {
-        const response = await fetch(`${DATA_FOLDER}/files.json`);
-        if (!response.ok) return;
+      const response = await fetch(`${DATA_FOLDER}/files.json`);
+      if (!response.ok) throw new Error(`無法載入檔案清單 HTTP ${response.status}`);
 
-        const files = await response.json();
-        smaFileDates = files
-          .map((fileName) => {
-            const match = fileName.match(/^fubon_(\d{8})_sma\.json$/);
-            return match ? match[1] : null;
-          })
-          .filter(Boolean)
-          .sort();
-      } catch (error) {
-        smaFileDates = [];
-      }
+      const files = await response.json();
+      smaFileDates = files
+        .map((fileName) => {
+          const match = fileName.match(/^fubon_(\d{8})_sma\.json$/);
+          return match ? match[1] : null;
+        })
+        .filter(Boolean)
+        .sort();
+
+      if (smaFileDates.length === 0) throw new Error('找不到 SMA 資料檔');
+    }
+
+    function renderDateOptions() {
+      const dateSelect = document.getElementById('dateSelect');
+      dateSelect.innerHTML = [...smaFileDates].reverse().map((fileDate) => {
+        const label = formatDateLabel(fileDateToDateKey(fileDate));
+        return `<option value="${fileDate}">${label}</option>`;
+      }).join('');
     }
 
     function getPreviousFileDate(dateKey) {
@@ -505,7 +512,8 @@
     }
 
     async function renderTable() {
-      const dateKey = document.getElementById('dateSelect').value;
+      const selectedFileDate = document.getElementById('dateSelect').value;
+      const dateKey = currentDateKey || (selectedFileDate ? fileDateToDateKey(selectedFileDate) : '');
       const smaKey = document.getElementById('smaSelect').value;
       const resultArea = document.getElementById('resultArea');
       const matchCount = document.getElementById('matchCount');
@@ -576,6 +584,41 @@
       `;
     }
 
+    async function loadSmaData(fileDate) {
+      const response = await fetch(`${DATA_FOLDER}/fubon_${fileDate}_sma.json`);
+      if (!response.ok) throw new Error(`無法載入 SMA 資料 HTTP ${response.status}`);
+
+      smaData = await response.json();
+      currentFileDate = fileDate;
+
+      const dateKeys = getDateKeys(smaData);
+      const expectedDateKey = fileDateToDateKey(fileDate);
+      currentDateKey = dateKeys.includes(expectedDateKey) ? expectedDateKey : (dateKeys[0] || '');
+
+      document.getElementById('dataSource').textContent = `資料來源：data_fubon/fubon_${fileDate}_sma.json`;
+    }
+
+    async function onDateChanged() {
+      const fileDate = document.getElementById('dateSelect').value;
+      const resultArea = document.getElementById('resultArea');
+      const tableNote = document.getElementById('tableNote');
+
+      if (!fileDate || fileDate === currentFileDate) {
+        renderTable();
+        return;
+      }
+
+      try {
+        tableNote.textContent = '載入中';
+        resultArea.innerHTML = '<div class="empty">資料載入中</div>';
+        await loadSmaData(fileDate);
+        renderTable();
+      } catch (error) {
+        tableNote.textContent = '載入失敗';
+        resultArea.innerHTML = `<div class="error">無法載入 fubon_${fileDate}_sma.json: ${error.message}</div>`;
+      }
+    }
+
     async function loadData() {
       const dateSelect = document.getElementById('dateSelect');
       const resultArea = document.getElementById('resultArea');
@@ -587,24 +630,19 @@
         if (!industryResponse.ok) throw new Error(`無法載入產業資料 HTTP ${industryResponse.status}`);
         industryMap = await industryResponse.json();
 
-        const response = await fetch(`${DATA_FOLDER}/${DATA_FILE}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        smaData = await response.json();
-        const dateKeys = getDateKeys(smaData);
-        dateSelect.innerHTML = dateKeys.map((dateKey) => (
-          `<option value="${dateKey}">${formatDateLabel(dateKey)}</option>`
-        )).join('');
+        renderDateOptions();
+        dateSelect.value = smaFileDates[smaFileDates.length - 1];
+        await loadSmaData(dateSelect.value);
 
         document.getElementById('smaSelect').value = 'SMA60';
         renderTable();
       } catch (error) {
         tableNote.textContent = '載入失敗';
-        resultArea.innerHTML = `<div class="error">無法載入 ${DATA_FILE}: ${error.message}</div>`;
+        resultArea.innerHTML = `<div class="error">無法載入 SMA 資料: ${error.message}</div>`;
       }
     }
 
-    document.getElementById('dateSelect').addEventListener('change', renderTable);
+    document.getElementById('dateSelect').addEventListener('change', onDateChanged);
     document.getElementById('smaSelect').addEventListener('change', renderTable);
     document.getElementById('resultArea').addEventListener('click', (event) => {
       const header = event.target.closest('th[data-sort-key]');
