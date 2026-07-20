@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="輸入股價，快速計算漲跌 10% 內各級距的股價、漲跌金額與百分比。">
+    <title>股價漲跌試算表</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            background: #f8fafc;
+            color: #0f172a;
+            font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+        }
+
+        .container {
+            width: min(100%, 760px);
+            margin: 0 auto;
+        }
+
+        .header,
+        .calculator,
+        .table-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+        }
+
+        .header {
+            margin-bottom: 16px;
+            padding: 24px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            color: #1e293b;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+        }
+
+        .description {
+            margin: 0;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .calculator {
+            margin-bottom: 16px;
+            padding: 20px 24px;
+        }
+
+        h2 {
+            margin: 0 0 16px;
+            color: #1e293b;
+            font-size: 1.15rem;
+        }
+
+        .mode-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 0 0 20px;
+            padding: 4px;
+            border: 0;
+            border-radius: 10px;
+            background: #f1f5f9;
+        }
+
+        .mode-switch label {
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: 7px;
+            color: #64748b;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .mode-switch input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+        }
+
+        .mode-switch label:has(input:checked) {
+            color: #1d4ed8;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
+        }
+
+        .mode-switch label:has(input:focus-visible) {
+            outline: 3px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .field {
+            min-width: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-weight: 700;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .currency {
+            position: absolute;
+            top: 50%;
+            left: 14px;
+            color: #64748b;
+            font-weight: 700;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .suffix {
+            right: 14px;
+            left: auto;
+        }
+
+        .with-suffix input {
+            padding-right: 42px;
+            padding-left: 14px;
+        }
+
+        input {
+            width: 100%;
+            min-height: 48px;
+            padding: 10px 14px 10px 48px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            color: #0f172a;
+            background: #ffffff;
+            font: inherit;
+            font-size: 1.05rem;
+        }
+
+        input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
+        }
+
+        input[aria-invalid="true"] {
+            border-color: #dc2626;
+        }
+
+        .hint,
+        .error {
+            margin: 8px 0 0;
+            font-size: 0.9rem;
+        }
+
+        .calculated-value,
+        .target-result {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #1e40af;
+            line-height: 1.55;
+            font-weight: 700;
+        }
+
+        .target-result:empty,
+        .calculated-value:empty {
+            display: none;
+        }
+
+        .target-result.up {
+            background: #fef2f2;
+        }
+
+        .target-result.down {
+            background: #f0fdf4;
+        }
+
+        .target-result.flat {
+            background: #f1f5f9;
+        }
+
+        .target-result.out-of-range {
+            color: #92400e;
+            background: #fffbeb;
+        }
+
+        .table-meta {
+            padding: 14px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #475569;
+            background: #ffffff;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .hint {
+            color: #64748b;
+        }
+
+        .error {
+            display: none;
+            color: #b91c1c;
+            font-weight: 600;
+        }
+
+        .table-card {
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-variant-numeric: tabular-nums;
+        }
+
+        th,
+        td {
+            padding: 13px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: right;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            color: #475569;
+            background: #f1f5f9;
+            font-size: 0.9rem;
+            letter-spacing: 0.04em;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .up {
+            color: #dc2626;
+        }
+
+        .down {
+            color: #16a34a;
+        }
+
+        .flat {
+            color: #475569;
+            font-weight: 700;
+        }
+
+        .empty-state {
+            padding: 48px 24px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        @media (max-width: 560px) {
+            body {
+                padding: 12px;
+            }
+
+            .header,
+            .calculator {
+                padding: 18px;
+            }
+
+            .mode-switch,
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+
+            th,
+            td {
+                padding: 11px 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <header class="header">
+            <h1>股價漲跌試算表</h1>
+            <p class="description">用昨收價格，或用目前股價與漲跌幅反推，自動列出上漲 10% 到下跌 10% 的股價變化。</p>
+        </header>
+
+        <section class="calculator" aria-labelledby="methodTitle">
+            <h2 id="methodTitle">選擇計算方式</h2>
+            <fieldset class="mode-switch" aria-label="計算方式">
+                <label>
+                    <input type="radio" name="calculationMode" value="previousClose" checked>
+                    輸入昨收價格
+                </label>
+                <label>
+                    <input type="radio" name="calculationMode" value="reverse">
+                    用股價與百分比反推
+                </label>
+            </fieldset>
+
+            <div id="previousClosePanel">
+                <label for="previousClose">昨收價格</label>
+                <div class="input-wrap">
+                    <span class="currency">NT$</span>
+                    <input id="previousClose" type="number" min="0" step="any" inputmode="decimal"
+                        placeholder="例如：100" autocomplete="off" aria-describedby="methodHint methodError">
+                </div>
+            </div>
+
+            <div id="reversePanel" hidden>
+                <div class="input-grid">
+                    <div class="field">
+                        <label for="currentPrice">目前股價</label>
+                        <div class="input-wrap">
+                            <span class="currency">NT$</span>
+                            <input id="currentPrice" type="number" min="0" step="any" inputmode="decimal"
+                                placeholder="例如：105" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="currentPercentage">目前漲跌幅</label>
+                        <div class="input-wrap with-suffix">
+                            <input id="currentPercentage" type="number" min="-10" max="10" step="any"
+                                inputmode="decimal" placeholder="例如：5" autocomplete="off">
+                            <span class="currency suffix">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="inferredClose" class="calculated-value" aria-live="polite"></div>
+            </div>
+
+            <p id="methodHint" class="hint">請輸入大於 0 的數字，結果會立即更新。</p>
+            <p id="methodError" class="error" role="alert"></p>
+        </section>
+
+        <section class="calculator" aria-labelledby="targetTitle">
+            <h2 id="targetTitle">目標價漲跌幅估算</h2>
+            <label for="targetPrice">目標價</label>
+            <div class="input-wrap">
+                <span class="currency">NT$</span>
+                <input id="targetPrice" type="number" min="0" step="any" inputmode="decimal"
+                    placeholder="先輸入上方資料，再輸入目標價" autocomplete="off" aria-describedby="targetHint">
+            </div>
+            <p id="targetHint" class="hint">依目前推算的昨收價格，計算目標價的漲跌金額與百分比。</p>
+            <div id="targetResult" class="target-result" aria-live="polite"></div>
+        </section>
+
+        <section class="table-card" aria-label="股價漲跌計算結果">
+            <div id="emptyState" class="empty-state">輸入股價後，計算結果會顯示在這裡。</div>
+            <table id="resultTable" hidden>
+                <caption id="tableMeta" class="table-meta"></caption>
+                <thead>
+                    <tr>
+                        <th scope="col">股價</th>
+                        <th scope="col">漲跌</th>
+                        <th scope="col">百分比</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody" aria-live="polite"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        const modeInputs = document.querySelectorAll('input[name="calculationMode"]');
+        const previousClosePanel = document.getElementById('previousClosePanel');
+        const reversePanel = document.getElementById('reversePanel');
+        const previousCloseInput = document.getElementById('previousClose');
+        const currentPriceInput = document.getElementById('currentPrice');
+        const currentPercentageInput = document.getElementById('currentPercentage');
+        const inferredClose = document.getElementById('inferredClose');
+        const targetPriceInput = document.getElementById('targetPrice');
+        const targetResult = document.getElementById('targetResult');
+        const resultTable = document.getElementById('resultTable');
+        const resultBody = document.getElementById('resultBody');
+        const emptyState = document.getElementById('emptyState');
+        const methodError = document.getElementById('methodError');
+        const tableMeta = document.getElementById('tableMeta');
+        let effectivePreviousClose = null;
+
+        const numberFormatter = new Intl.NumberFormat('zh-TW', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        function formatSignedNumber(value) {
+            if (Math.abs(value) < Number.EPSILON) return '0.00';
+            return `${value > 0 ? '+' : '-'}${numberFormatter.format(Math.abs(value))}`;
+        }
+
+        function getActiveMode() {
+            return document.querySelector('input[name="calculationMode"]:checked').value;
+        }
+
+        function setMethodError(message = '') {
+            methodError.textContent = message;
+            methodError.style.display = message ? 'block' : 'none';
+        }
+
+        function showEmptyState(message) {
+            effectivePreviousClose = null;
+            resultTable.hidden = true;
+            emptyState.hidden = false;
+            emptyState.textContent = message;
+            resultBody.replaceChildren();
+            inferredClose.textContent = '';
+            updateTargetResult();
+        }
+
+        function renderPriceChanges(basePrice) {
+            const fragment = document.createDocumentFragment();
+
+            for (let percentage = 10; percentage >= -10; percentage -= 1) {
+                const change = basePrice * percentage / 100;
+                const calculatedPrice = basePrice + change;
+                const trendClass = percentage > 0 ? 'up' : percentage < 0 ? 'down' : 'flat';
+                const row = document.createElement('tr');
+
+                row.className = trendClass;
+                row.innerHTML = `
+                    <td>${numberFormatter.format(calculatedPrice)}</td>
+                    <td>${formatSignedNumber(change)}</td>
+                    <td>${percentage > 0 ? '+' : ''}${percentage}%</td>
+                `;
+                fragment.appendChild(row);
+            }
+
+            resultBody.replaceChildren(fragment);
+            effectivePreviousClose = basePrice;
+            emptyState.hidden = true;
+            resultTable.hidden = false;
+            tableMeta.textContent = `推算昨收價格：NT$ ${numberFormatter.format(basePrice)}`;
+            updateTargetResult();
+        }
+
+        function updateCalculation() {
+            setMethodError();
+
+            if (getActiveMode() === 'previousClose') {
+                const rawValue = previousCloseInput.value.trim();
+                previousCloseInput.setAttribute('aria-invalid', 'false');
+
+                if (rawValue === '') {
+                    showEmptyState('輸入昨收價格後，計算結果會顯示在這裡。');
+                    return;
+                }
+
+                const previousClose = Number(rawValue);
+                if (!Number.isFinite(previousClose) || previousClose <= 0) {
+                    previousCloseInput.setAttribute('aria-invalid', 'true');
+                    setMethodError('請輸入大於 0 的有效昨收價格。');
+                    showEmptyState('目前沒有可顯示的計算結果。');
+                    return;
+                }
+
+                renderPriceChanges(previousClose);
+                return;
+            }
+
+            const priceRawValue = currentPriceInput.value.trim();
+            const percentageRawValue = currentPercentageInput.value.trim();
+            currentPriceInput.setAttribute('aria-invalid', 'false');
+            currentPercentageInput.setAttribute('aria-invalid', 'false');
+
+            if (priceRawValue === '' || percentageRawValue === '') {
+                showEmptyState('輸入目前股價與漲跌幅後，計算結果會顯示在這裡。');
+                return;
+            }
+
+            const currentPrice = Number(priceRawValue);
+            const currentPercentage = Number(percentageRawValue);
+            if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+                currentPriceInput.setAttribute('aria-invalid', 'true');
+                setMethodError('請輸入大於 0 的有效目前股價。');
+                showEmptyState('目前沒有可顯示的計算結果。');
+                return;
+            }
+
+            if (!Number.isFinite(currentPercentage) || currentPercentage < -10 || currentPercentage > 10) {
+                currentPercentageInput.setAttribute('aria-invalid', 'true');
+                setMethodError('漲跌幅必須介於 -10% 到 +10% 之間。');
+                showEmptyState('目前沒有可顯示的計算結果。');
+                return;
+            }
+
+            const previousClose = currentPrice / (1 + currentPercentage / 100);
+            inferredClose.textContent = `反推昨收價格：NT$ ${numberFormatter.format(previousClose)}`;
+            renderPriceChanges(previousClose);
+        }
+
+        function updateTargetResult() {
+            const rawValue = targetPriceInput.value.trim();
+            targetPriceInput.setAttribute('aria-invalid', 'false');
+            targetResult.className = 'target-result';
+
+            if (rawValue === '') {
+                targetResult.textContent = '';
+                return;
+            }
+
+            const targetPrice = Number(rawValue);
+            if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
+                targetPriceInput.setAttribute('aria-invalid', 'true');
+                targetResult.textContent = '請輸入大於 0 的有效目標價。';
+                targetResult.classList.add('out-of-range');
+                return;
+            }
+
+            if (effectivePreviousClose === null) {
+                targetResult.textContent = '請先在上方輸入資料，取得昨收價格。';
+                return;
+            }
+
+            const change = targetPrice - effectivePreviousClose;
+            const percentage = change / effectivePreviousClose * 100;
+            const trendClass = percentage > 0 ? 'up' : percentage < 0 ? 'down' : 'flat';
+            const signedPercentage = `${percentage > 0 ? '+' : ''}${numberFormatter.format(percentage)}%`;
+            const isOutOfRange = percentage > 10 || percentage < -10;
+
+            targetResult.textContent = `目標價 NT$ ${numberFormatter.format(targetPrice)}：漲跌 ${formatSignedNumber(change)}（${signedPercentage}）${isOutOfRange ? '，已超出 ±10% 範圍' : ''}`;
+            targetResult.classList.add(isOutOfRange ? 'out-of-range' : trendClass);
+        }
+
+        modeInputs.forEach(input => {
+            input.addEventListener('change', () => {
+                const isPreviousCloseMode = getActiveMode() === 'previousClose';
+                previousClosePanel.hidden = !isPreviousCloseMode;
+                reversePanel.hidden = isPreviousCloseMode;
+                updateCalculation();
+                (isPreviousCloseMode ? previousCloseInput : currentPriceInput).focus();
+            });
+        });
+
+        previousCloseInput.addEventListener('input', updateCalculation);
+        currentPriceInput.addEventListener('input', updateCalculation);
+        currentPercentageInput.addEventListener('input', updateCalculation);
+        targetPriceInput.addEventListener('input', updateTargetResult);
+        previousCloseInput.focus();
+    </script>
+</body>
+
+</html>
