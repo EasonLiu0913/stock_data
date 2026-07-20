@@ -245,12 +245,20 @@ async function fetchChartPayloadWithBrowser(cookieHeader) {
         if (cookieHeader) await context.addCookies(parseCookieHeader(cookieHeader));
 
         const page = await context.newPage();
+        const timeoutMs = Number(getArg('--timeout') || process.env.MACROMICRO_TIMEOUT_MS || 60000);
         const payloadPromise = page.waitForResponse(
             response => response.url() === DATA_URL && response.status() === 200,
-            { timeout: 60000 }
+            { timeout: timeoutMs }
         );
-        await page.goto(CHART_PAGE, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        const response = await payloadPromise;
+        await page.goto(CHART_PAGE, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+        let response;
+        try {
+            response = await payloadPromise;
+        } catch (error) {
+            const title = await page.title().catch(() => '');
+            const url = page.url();
+            throw new Error(`MacroMicro chart data response timed out after ${timeoutMs}ms. Current page: ${title || '(no title)'} (${url}). This usually means MacroMicro or Cloudflare did not serve chart data to this browser/session.`);
+        }
         const text = await response.text();
 
         try {
@@ -310,6 +318,10 @@ function refreshFilesJson() {
             console.warn('Warning: MacroMicro returned only a limited series. The site may be enforcing chart view limits for this session.');
         }
     } catch (error) {
+        if (getArg('--optional') || process.env.MACROMICRO_OPTIONAL) {
+            console.warn(`Optional MacroMicro crawl skipped: ${error.message}`);
+            process.exit(0);
+        }
         console.error(`Failed to crawl MacroMicro Taiwan margin maintenance data: ${error.message}`);
         process.exit(1);
     }
