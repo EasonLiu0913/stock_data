@@ -39,45 +39,66 @@ jobs:
           fi
 
           OUTPUT_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+          MACROMICRO_OUTPUT_FILE="data_macromicro_twse_margin_maintenance/${TARGET_DATE}_macromicro_twse_margin_maintenance.json"
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
+          echo "macromicro_output_file=$MACROMICRO_OUTPUT_FILE" >> "$GITHUB_OUTPUT"
 
           if [ -f "$OUTPUT_FILE" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "twse_exists=true" >> "$GITHUB_OUTPUT"
             echo "TWSE margin balance file already exists: $OUTPUT_FILE"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "twse_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -f "$MACROMICRO_OUTPUT_FILE" ]; then
+            echo "macromicro_exists=true" >> "$GITHUB_OUTPUT"
+            echo "MacroMicro margin maintenance file already exists: $MACROMICRO_OUTPUT_FILE"
+          else
+            echo "macromicro_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Node.js
-        if: steps.existing.outputs.exists != 'true'
+        if: steps.existing.outputs.twse_exists != 'true' || steps.existing.outputs.macromicro_exists != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install dependencies
-        if: steps.existing.outputs.exists != 'true'
+        if: steps.existing.outputs.twse_exists != 'true' || steps.existing.outputs.macromicro_exists != 'true'
         run: npm ci
 
+      - name: Install Playwright browser
+        if: steps.existing.outputs.macromicro_exists != 'true'
+        run: npx playwright install chromium
+
       - name: Crawl TWSE margin balance data
-        if: steps.existing.outputs.exists != 'true'
+        if: steps.existing.outputs.twse_exists != 'true'
         run: |
           node scripts/crawl_twse_margin_balance.js --date "${{ steps.existing.outputs.target_date }}"
 
+      - name: Crawl MacroMicro margin maintenance data
+        if: steps.existing.outputs.macromicro_exists != 'true'
+        env:
+          MACROMICRO_HEADLESS: '1'
+        run: |
+          node scripts/crawl_macromicro_twse_margin_maintenance.js
+
       - name: Commit and push changes
-        if: steps.existing.outputs.exists != 'true'
+        if: steps.existing.outputs.twse_exists != 'true' || steps.existing.outputs.macromicro_exists != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data_twse_margin_balance/
+          git add data_macromicro_twse_margin_maintenance/
 
           if git diff --staged --quiet; then
-            echo "No TWSE margin balance changes"
+            echo "No margin balance changes"
             exit 0
           fi
 
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update TWSE margin balance data ${CURRENT_DATE}"
+          git commit -m "chore: update margin balance data ${CURRENT_DATE}"
 
           git pull --rebase origin main
           git push origin main

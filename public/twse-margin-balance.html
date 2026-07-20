@@ -280,6 +280,7 @@
         </div>
 
         <div class="summary-grid" id="summaryGrid"></div>
+        <div class="summary-grid" id="maintenanceSummaryGrid"></div>
 
         <div class="table-wrap">
             <div id="loading" class="loading">載入中...</div>
@@ -296,6 +297,8 @@
         const INSTITUTIONAL_DATA_DIR = 'data_twse_institutional_investors';
         const MI_INDEX_DATA_DIR = 'data_twse_mi_index';
         const FUBON_DATA_DIR = 'data_fubon';
+        const MACROMICRO_MARGIN_MAINTENANCE_DIR = 'data_macromicro_twse_margin_maintenance';
+        const MACROMICRO_MARGIN_MAINTENANCE_CHART_ID = '53117';
 
         let files = [];
         let currentFile = '';
@@ -525,9 +528,117 @@
                 renderSortOptions();
                 renderColumnOptions();
                 renderMarginThresholdOptions();
+                await loadMarginMaintenanceData();
                 await loadFile(currentFile);
             } catch (error) {
                 showError(error.message);
+            }
+        }
+
+        function getMacromicroChartNode(payload) {
+            return payload?.data?.[`c:${MACROMICRO_MARGIN_MAINTENANCE_CHART_ID}`]
+                || payload?.data?.[MACROMICRO_MARGIN_MAINTENANCE_CHART_ID]
+                || payload?.[`c:${MACROMICRO_MARGIN_MAINTENANCE_CHART_ID}`]
+                || payload;
+        }
+
+        function normalizeMacromicroPoint(point) {
+            if (Array.isArray(point)) {
+                return {
+                    date: String(point[0] || '').replace(/[^\d]/g, ''),
+                    value: parseNumber(point[1])
+                };
+            }
+            return {
+                date: String(point?.date ?? point?.x ?? point?.time ?? '').replace(/[^\d]/g, ''),
+                value: parseNumber(point?.value ?? point?.y)
+            };
+        }
+
+        function getMaintenanceRows(payload) {
+            const node = getMacromicroChartNode(payload);
+            const series = node?.series?.[0];
+            if (!Array.isArray(series)) {
+                throw new Error('MacroMicro JSON 找不到 series[0]');
+            }
+
+            const points = series
+                .map(normalizeMacromicroPoint)
+                .filter(point => /^\d{8}$/.test(point.date) && point.value !== null)
+                .sort((a, b) => a.date.localeCompare(b.date));
+
+            return points.slice(-2).reverse().map(point => {
+                const pointIndex = points.findIndex(item => item.date === point.date);
+                const previous = pointIndex > 0 ? points[pointIndex - 1] : null;
+                const changePercent = previous && previous.value
+                    ? ((point.value - previous.value) / previous.value) * 100
+                    : null;
+                return { ...point, changePercent };
+            });
+        }
+
+        function formatMaintenanceValue(value) {
+            if (value === null) return '-';
+            return `${value.toLocaleString('zh-TW', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}%`;
+        }
+
+        function renderMarginMaintenanceSummary(rows) {
+            const latest = rows[0];
+            const previous = rows[1] || null;
+            const changeClass = latest.changePercent > 0 ? 'positive' : latest.changePercent < 0 ? 'negative' : 'muted';
+            const changeText = latest.changePercent === null
+                ? '-'
+                : `${latest.changePercent > 0 ? '+' : ''}${latest.changePercent.toFixed(2)}%`;
+            const cards = [
+                ['大盤融資維持率日期', formatDate(latest.date), ''],
+                ['大盤融資維持率', formatMaintenanceValue(latest.value), ''],
+                ['前次交易日維持率', previous ? `${formatMaintenanceValue(previous.value)} (${formatDate(previous.date)})` : '-', ''],
+                ['較前次增減%', changeText, changeClass]
+            ];
+
+            document.getElementById('maintenanceSummaryGrid').innerHTML = cards.map(([label, value, className]) => `
+                <div class="summary-card">
+                    <div class="summary-label">${label}</div>
+                    <div class="summary-value ${className}">${value}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadMarginMaintenanceData() {
+            const summaryGrid = document.getElementById('maintenanceSummaryGrid');
+
+            try {
+                const basePath = getBasePath();
+                const files = await fetchJson(`${basePath}/${MACROMICRO_MARGIN_MAINTENANCE_DIR}/files.json`);
+                const latestFile = files
+                    .filter(file => /^\d{8}_macromicro_twse_margin_maintenance\.json$/.test(file))
+                    .sort()
+                    .pop();
+
+                if (!latestFile) {
+                    throw new Error('尚未建立 MacroMicro 大盤融資維持率 JSON');
+                }
+
+                const payload = await fetchJson(`${basePath}/${MACROMICRO_MARGIN_MAINTENANCE_DIR}/${latestFile}`);
+                const rows = getMaintenanceRows(payload);
+                if (rows.length === 0) {
+                    throw new Error('MacroMicro 大盤融資維持率沒有可顯示資料');
+                }
+                renderMarginMaintenanceSummary(rows);
+            } catch (error) {
+                summaryGrid.innerHTML = `
+                    <div class="summary-card">
+                        <div class="summary-label">大盤融資維持率</div>
+                        <div class="summary-value muted">無資料</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">說明</div>
+                        <div class="summary-value muted">${error.message}</div>
+                    </div>
+                `;
             }
         }
 

@@ -33,6 +33,11 @@ const directories = [
         path: 'data_twse_margin_balance',
         output: 'data_twse_margin_balance/files.json',
         filter: file => /^\d{8}_twse_margin_balance\.csv$/.test(file)
+    },
+    {
+        path: 'data_macromicro_twse_margin_maintenance',
+        output: 'data_macromicro_twse_margin_maintenance/files.json',
+        filter: file => /^\d{8}_macromicro_twse_margin_maintenance\.json$/.test(file)
     }
 ];
 
