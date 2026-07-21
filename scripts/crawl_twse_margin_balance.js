@@ -53,8 +53,9 @@ function refreshFilesJson() {
     fs.writeFileSync(path.join(OUTPUT_DIR, 'files.json'), JSON.stringify(files, null, 2), 'utf8');
 }
 
-async function fetchCsv() {
-    const response = await fetch(API_URL, {
+async function fetchCsv(expectedDate = '') {
+    const url = expectedDate ? `${API_URL}&date=${expectedDate}` : API_URL;
+    const response = await fetch(url, {
         headers: {
             accept: 'text/csv,*/*',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
@@ -79,7 +80,7 @@ async function fetchCsv() {
 (async () => {
     try {
         const expectedDate = normalizeDate(getArg('--date'));
-        const payload = await fetchCsv();
+        const payload = await fetchCsv(expectedDate);
         const rowCount = validateCsv(payload.text);
 
         if (expectedDate && payload.date !== expectedDate) {

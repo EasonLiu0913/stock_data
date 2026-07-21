@@ -4,7 +4,7 @@ const path = require('path');
 const ROOT_DIR = path.join(__dirname, '..');
 const OUTPUT_DIR = path.join(ROOT_DIR, 'data_twse_margin_maintenance');
 const OUTPUT_SUFFIX = 'twse_margin_maintenance';
-const FORMULA_VERSION = 'exclude-etf-punish-notice-clause-11-v1';
+const FORMULA_VERSION = 'twse-stock-exclude-punish-short-sale-restricted-ky-v1';
 const args = process.argv.slice(2);
 
 function getArg(flag) {
@@ -67,28 +67,13 @@ function parseCsv(text) {
     return rows;
 }
 
-function readCsvCodes(filePath) {
-    const rows = parseCsv(fs.readFileSync(filePath, 'utf8'));
-    const fields = rows.shift() || [];
-    const codeIndex = fields.indexOf('Code');
-    if (codeIndex === -1) throw new Error(`${filePath} is missing Code field.`);
-    return new Set(rows.map(row => String(row[codeIndex] || '').trim()).filter(Boolean));
-}
-
 function getFieldIndex(fields, name, sourceLabel) {
     const index = fields.indexOf(name);
     if (index === -1) throw new Error(`${sourceLabel} is missing field: ${name}`);
     return index;
 }
 
-function loadMarginRecords(date, etfCodes) {
-    const filePath = path.join(ROOT_DIR, 'data_twse_margin_balance', `${date}_twse_margin_balance.csv`);
-    const rows = parseCsv(fs.readFileSync(filePath, 'utf8'));
-    const fields = rows.shift() || [];
-    const codeIndex = getFieldIndex(fields, '股票代號', filePath);
-    const nameIndex = getFieldIndex(fields, '股票名稱', filePath);
-    const balanceIndex = getFieldIndex(fields, '融資今日餘額', filePath);
-
+function loadClosingPrices(date) {
     const quotePath = path.join(ROOT_DIR, 'data_twse_mi_index', `${date}_twse_mi_index.json`);
     const quotePayload = JSON.parse(fs.readFileSync(quotePath, 'utf8'));
     const quoteTable = (quotePayload.tables || []).find(table => {
@@ -99,12 +84,27 @@ function loadMarginRecords(date, etfCodes) {
 
     const quoteCodeIndex = getFieldIndex(quoteTable.fields, '證券代號', quotePath);
     const closeIndex = getFieldIndex(quoteTable.fields, '收盤價', quotePath);
-    const prices = new Map(quoteTable.data.map(row => [
+    return new Map(quoteTable.data.map(row => [
         String(row[quoteCodeIndex] || '').trim(),
         parseNumber(row[closeIndex])
     ]));
+}
 
-    return rows.map(row => {
+function getStockMarginRecords(payload, prices) {
+    const table = (payload.tables || []).find(item => {
+        const fields = item?.fields || [];
+        return fields.includes('代號') && fields.includes('名稱') && fields.includes('今日餘額');
+    });
+    if (!table) throw new Error('TWSE STOCK margin payload is missing detail table.');
+
+    const codeIndex = getFieldIndex(table.fields, '代號', 'TWSE STOCK margin payload');
+    const nameIndex = getFieldIndex(table.fields, '名稱', 'TWSE STOCK margin payload');
+    const balanceIndex = 6;
+    const noteIndex = table.fields.length - 1;
+
+    return (table.data || [])
+        .filter(row => String(row[codeIndex] || '').trim() && String(row[nameIndex] || '').trim() !== '合計')
+        .map(row => {
         const code = String(row[codeIndex] || '').trim();
         const marginBalanceLots = parseNumber(row[balanceIndex]);
         const close = prices.get(code) || 0;
@@ -114,9 +114,9 @@ function loadMarginRecords(date, etfCodes) {
             marginBalanceLots,
             close,
             marketValue: marginBalanceLots * 1000 * close,
-            isEtf: etfCodes.has(code)
+            note: String(row[noteIndex] || '').trim()
         };
-    });
+        });
 }
 
 async function fetchJson(url) {
@@ -185,67 +185,63 @@ async function main() {
     const date = normalizeDate(getArg('--date'));
     const outputDir = path.resolve(getArg('--output-dir') || OUTPUT_DIR);
     const marginSummaryUrl = `https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=${date}&selectType=ALL&response=json`;
+    const stockMarginUrl = `https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=${date}&selectType=STOCK&response=json`;
     const punishUrl = `https://www.twse.com.tw/rwd/zh/announcement/punish?startDate=${date}&endDate=${date}&querytype=3&stockNo=&selectType=&proceType=&remarkType=&sortKind=STKNO&response=json`;
-    const noticeUrl = `https://www.twse.com.tw/rwd/zh/announcement/notice?startDate=${date}&endDate=${date}&stockNo=&response=json`;
 
-    const etfCodes = readCsvCodes(path.join(ROOT_DIR, 'data_twse', 'twse_industry_ETF.csv'));
-    const records = loadMarginRecords(date, etfCodes);
-    const [marginSummary, punishPayload, noticePayload] = await Promise.all([
+    const prices = loadClosingPrices(date);
+    const [marginSummary, stockMarginPayload, punishPayload] = await Promise.all([
         loadJsonOverride('--margin-summary-file') || fetchJson(marginSummaryUrl),
-        loadJsonOverride('--punish-file') || fetchJson(punishUrl),
-        loadJsonOverride('--notice-file') || fetchJson(noticeUrl)
+        loadJsonOverride('--stock-margin-file') || fetchJson(stockMarginUrl),
+        loadJsonOverride('--punish-file') || fetchJson(punishUrl)
     ]);
 
     const financingAmount = getFinancingAmount(marginSummary);
+    const records = getStockMarginRecords(stockMarginPayload, prices);
     const punishCodes = getCodes(punishPayload, '證券代號');
-    const noticeTextIndex = getFieldIndex(noticePayload.fields || [], '注意交易資訊', 'TWSE notice payload');
-    const noticeClause11Codes = getCodes(
-        noticePayload,
-        '證券代號',
-        row => String(row[noticeTextIndex] || '').includes('第十一款')
-    );
+    const shortSaleRestrictedCodes = new Set(records
+        .filter(record => record.note.includes('X'))
+        .map(record => record.code));
+    const kyCodes = new Set(records
+        .filter(record => record.name.includes('-KY'))
+        .map(record => record.code));
 
-    const includedRecords = records.filter(record => !record.isEtf);
-    const baselineMarketValue = includedRecords.reduce((sum, record) => sum + record.marketValue, 0);
+    const baselineMarketValue = records.reduce((sum, record) => sum + record.marketValue, 0);
     const excludedCodes = new Set();
-    const punish = summarizeExcluded(includedRecords, punishCodes, excludedCodes);
+    const punish = summarizeExcluded(records, punishCodes, excludedCodes);
     punish.codes.forEach(code => excludedCodes.add(code));
-    const noticeClause11 = summarizeExcluded(includedRecords, noticeClause11Codes, excludedCodes);
-    noticeClause11.codes.forEach(code => excludedCodes.add(code));
+    const shortSaleRestrictedX = summarizeExcluded(records, shortSaleRestrictedCodes, excludedCodes);
+    shortSaleRestrictedX.codes.forEach(code => excludedCodes.add(code));
+    const ky = summarizeExcluded(records, kyCodes, excludedCodes);
+    ky.codes.forEach(code => excludedCodes.add(code));
 
-    const numerator = baselineMarketValue - punish.marketValue - noticeClause11.marketValue;
+    const numerator = baselineMarketValue - punish.marketValue - shortSaleRestrictedX.marketValue - ky.marketValue;
     const maintenanceRatio = financingAmount ? numerator / financingAmount * 100 : null;
-    const missingPrices = includedRecords
+    const missingPrices = records
         .filter(record => record.marginBalanceLots > 0 && !record.close)
         .map(record => ({ code: record.code, name: record.name, marginBalanceLots: record.marginBalanceLots }));
 
     const output = {
         date,
         formulaVersion: FORMULA_VERSION,
-        formula: '(非 ETF 融資股票市值－當日處置股融資市值－當日注意交易第十一款股票融資市值)／證交所融資金額今日餘額',
+        formula: '(TWSE STOCK 融資股票市值－當日處置股融資市值－註記 X 股票融資市值－KY 股票融資市值)／證交所融資金額今日餘額',
         maintenanceRatio,
         numerator,
         denominator: financingAmount,
         baseline: {
-            nonEtfMarketValue: baselineMarketValue,
-            securityCount: includedRecords.length
+            stockMarketValue: baselineMarketValue,
+            securityCount: records.length
         },
         excluded: {
-            etf: {
-                count: records.filter(record => record.isEtf).length,
-                marketValue: records.filter(record => record.isEtf).reduce((sum, record) => sum + record.marketValue, 0)
-            },
             punish,
-            noticeClause11
+            shortSaleRestrictedX,
+            ky
         },
         dataQuality: { missingPrices },
         sources: {
             marginSummary: marginSummaryUrl,
+            stockMargin: stockMarginUrl,
             punish: punishUrl,
-            notice: noticeUrl,
-            marginBalance: `data_twse_margin_balance/${date}_twse_margin_balance.csv`,
-            closingPrices: `data_twse_mi_index/${date}_twse_mi_index.json`,
-            etfList: 'data_twse/twse_industry_ETF.csv'
+            closingPrices: `data_twse_mi_index/${date}_twse_mi_index.json`
         }
     };
 
