@@ -1,0 +1,104 @@
+name: Calculate TWSE Margin Maintenance
+
+on:
+  schedule:
+    # 平日 21:05、22:05、23:05 台北時間，等待融資餘額與收盤價資料完成。
+    - cron: '5 13 * * 1-5'
+    - cron: '5 14 * * 1-5'
+    - cron: '5 15 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target date (YYYYMMDD). Leave empty for today in Taipei.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: calculate-twse-margin-maintenance
+  cancel-in-progress: false
+
+jobs:
+  calculate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check required files and existing result
+        id: check
+        shell: bash
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            TARGET_DATE="$DATE_INPUT"
+          else
+            TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+          fi
+
+          if [[ ! "$TARGET_DATE" =~ ^[0-9]{8}$ ]]; then
+            echo "Invalid date: $TARGET_DATE (expected YYYYMMDD)"
+            exit 1
+          fi
+
+          MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+          PRICE_FILE="data_twse_mi_index/${TARGET_DATE}_twse_mi_index.json"
+          ETF_FILE="data_twse/twse_industry_ETF.csv"
+          OUTPUT_FILE="data_twse_margin_maintenance/${TARGET_DATE}_twse_margin_maintenance.json"
+
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Result already exists: $OUTPUT_FILE"
+            exit 0
+          fi
+
+          MISSING_FILES=()
+          for REQUIRED_FILE in "$MARGIN_FILE" "$PRICE_FILE" "$ETF_FILE"; do
+            if [ ! -f "$REQUIRED_FILE" ]; then
+              MISSING_FILES+=("$REQUIRED_FILE")
+            fi
+          done
+
+          if [ "${#MISSING_FILES[@]}" -gt 0 ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Required files are not ready; calculation skipped:"
+            printf '  - %s\n' "${MISSING_FILES[@]}"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "All required files exist; calculating $TARGET_DATE."
+
+      - name: Setup Node.js
+        if: steps.check.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Calculate TWSE margin maintenance ratio
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          node scripts/calculate_twse_margin_maintenance.js --date "${{ steps.check.outputs.target_date }}"
+
+      - name: Commit and push result
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -- data_twse_margin_maintenance/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE margin maintenance changes"
+            exit 0
+          fi
+
+          git commit -m "chore: calculate TWSE margin maintenance ${{ steps.check.outputs.target_date }}"
+          git pull --rebase origin main
+          git push origin main

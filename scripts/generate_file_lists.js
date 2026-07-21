@@ -35,6 +35,26 @@ const directories = [
         filter: file => /^\d{8}_twse_margin_balance\.csv$/.test(file)
     },
     {
+        path: 'data_twse_margin_maintenance',
+        output: 'data_twse_margin_maintenance/files.json',
+        filter: file => /^\d{8}_twse_margin_maintenance\.json$/.test(file)
+    },
+    {
+        path: 'data_tpex_margin_balance',
+        output: 'data_tpex_margin_balance/files.json',
+        filter: file => /^\d{8}_tpex_margin_balance\.json$/.test(file)
+    },
+    {
+        path: 'data_tpex_etf_list',
+        output: 'data_tpex_etf_list/files.json',
+        filter: file => /^\d{6}_tpex_etf_list\.json$/.test(file)
+    },
+    {
+        path: 'data_tpex_daily_quotes',
+        output: 'data_tpex_daily_quotes/files.json',
+        filter: file => /^\d{8}_tpex_daily_quotes\.json$/.test(file)
+    },
+    {
         path: 'data_macromicro_twse_margin_maintenance',
         output: 'data_macromicro_twse_margin_maintenance/files.json',
         filter: file => /^\d{8}_macromicro_twse_margin_maintenance\.json$/.test(file)
