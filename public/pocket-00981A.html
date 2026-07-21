@@ -219,6 +219,23 @@
             color: #64748b;
         }
 
+        .change-cell {
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .change-cell.positive {
+            color: #b91c1c;
+        }
+
+        .change-cell.negative {
+            color: #047857;
+        }
+
+        .change-cell.neutral {
+            color: #64748b;
+        }
+
         .loading,
         .error,
         .empty {
@@ -311,6 +328,7 @@
                         <th class="text-cell" data-key="symbol">標的代號</th>
                         <th class="text-cell" data-key="name">標的名稱</th>
                         <th data-key="weightPercent">權重(%)</th>
+                        <th data-key="weightPercentChange">較前期增減</th>
                         <th data-key="quantity">持有數</th>
                         <th data-key="unit">單位</th>
                         <th data-key="date">日期</th>
@@ -332,6 +350,8 @@
         let currentIndustryFile = INDUSTRY_LATEST_FILE;
         let payload = null;
         let industryPayload = null;
+        let previousHoldingsPayload = null;
+        let previousHoldingsBySymbol = new Map();
         let displayedRows = [];
         let sortState = { key: 'rank', direction: 'asc' };
 
@@ -414,6 +434,13 @@
             return match ? match[1] : '';
         }
 
+        function getPreviousHoldingsFile(file) {
+            const files = filesIndex?.holdings || [];
+            const normalizedFile = file === HOLDINGS_LATEST_FILE ? files[0] : file;
+            const currentIndex = files.indexOf(normalizedFile);
+            return currentIndex >= 0 ? files[currentIndex + 1] : null;
+        }
+
         function renderDateOptions() {
             renderSelectOptions('holdingsDateSelect', filesIndex.holdings, currentHoldingsFile, HOLDINGS_LATEST_FILE);
             renderSelectOptions('industryDateSelect', filesIndex.industryDistribution, currentIndustryFile, INDUSTRY_LATEST_FILE);
@@ -444,15 +471,20 @@
             document.getElementById('error').style.display = 'none';
 
             const basePath = getBasePath();
+            const previousHoldingsFile = getPreviousHoldingsFile(currentHoldingsFile);
             [payload, industryPayload] = await Promise.all([
                 fetchJson(`${basePath}/${DATA_DIR}/${currentHoldingsFile}`),
                 fetchJson(`${basePath}/${DATA_DIR}/${currentIndustryFile}`)
             ]);
+            previousHoldingsPayload = previousHoldingsFile
+                ? await fetchJson(`${basePath}/${DATA_DIR}/${previousHoldingsFile}`)
+                : null;
+            previousHoldingsBySymbol = buildHoldingsBySymbol(previousHoldingsPayload?.holdings || []);
 
             document.title = payload.title || '00981A ETF 持股內容';
             document.getElementById('pageTitle').textContent = payload.title || '00981A ETF 持股內容';
             document.getElementById('pageMeta').textContent =
-                `資料來源：${payload.source || 'Pocket 口袋證券'}；持股日期：${formatDate(payload.summary?.date)}；產業日期：${formatDate(industryPayload.summary?.date)}；抓取時間：${new Date(payload.fetchedAt).toLocaleString('zh-TW')}`;
+                `資料來源：${payload.source || 'Pocket 口袋證券'}；持股日期：${formatDate(payload.summary?.date)}；比較前期：${formatDate(previousHoldingsPayload?.summary?.date) || '無'}；產業日期：${formatDate(industryPayload.summary?.date)}；抓取時間：${new Date(payload.fetchedAt).toLocaleString('zh-TW')}`;
 
             const params = new URLSearchParams(window.location.search);
             params.set('holdings', currentHoldingsFile);
@@ -463,6 +495,23 @@
             applyFiltersAndRender();
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dataTable').style.display = 'table';
+        }
+
+        function buildHoldingsBySymbol(holdings) {
+            return new Map(holdings.map(row => [String(row.symbol), row]));
+        }
+
+        function enrichHoldingRow(row) {
+            const previousRow = previousHoldingsBySymbol.get(String(row.symbol));
+            const currentWeight = Number(row.weightPercent);
+            const previousWeight = Number(previousRow?.weightPercent);
+            const hasComparableWeight = Number.isFinite(currentWeight) && Number.isFinite(previousWeight);
+
+            return {
+                ...row,
+                previousWeightPercent: hasComparableWeight ? previousWeight : null,
+                weightPercentChange: hasComparableWeight ? currentWeight - previousWeight : null
+            };
         }
 
         function setSort(key) {
@@ -476,7 +525,7 @@
 
         function applyFiltersAndRender() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const holdings = payload?.holdings || [];
+            const holdings = (payload?.holdings || []).map(enrichHoldingRow);
 
             displayedRows = holdings.filter(row => {
                 if (!keyword) return true;
@@ -501,6 +550,14 @@
             return String(aValue ?? '').localeCompare(String(bValue ?? ''), 'zh-Hant') * multiplier;
         }
 
+        function formatChange(value) {
+            if (value == null) return '<span class="muted">-</span>';
+            if (Math.abs(value) < 0.005) return '<span class="change-cell neutral">0.00%</span>';
+            const sign = value > 0 ? '+' : '';
+            const className = value > 0 ? 'positive' : 'negative';
+            return `<span class="change-cell ${className}">${sign}${formatNumber(value, 2)}%</span>`;
+        }
+
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             const rows = [...displayedRows].sort(compareRows);
@@ -509,7 +566,7 @@
                 `顯示 ${rows.length.toLocaleString()} / ${(payload?.summary?.totalRows || 0).toLocaleString()} 筆；股票權重合計 ${formatNumber(payload?.summary?.totalWeightPercent, 2)}%`;
 
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td class="empty" colspan="7">沒有符合條件的資料</td></tr>`;
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">沒有符合條件的資料</td></tr>`;
                 return;
             }
 
@@ -519,6 +576,7 @@
                     <td class="text-cell code-cell">${escapeHtml(row.symbol)}</td>
                     <td class="text-cell">${escapeHtml(row.name)}</td>
                     <td>${row.weightPercent == null ? '<span class="muted">-</span>' : formatNumber(row.weightPercent, 2)}</td>
+                    <td>${formatChange(row.weightPercentChange)}</td>
                     <td>${formatNumber(row.quantity)}</td>
                     <td>${escapeHtml(row.unit)}</td>
                     <td>${formatDate(row.date)}</td>
