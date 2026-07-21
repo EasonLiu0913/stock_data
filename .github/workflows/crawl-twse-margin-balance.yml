@@ -91,8 +91,17 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add data_twse_margin_balance/
-          git add data_macromicro_twse_margin_maintenance/
+
+          # MacroMicro is optional and may not create its output directory.
+          # Only stage data directories that actually exist.
+          for data_dir in \
+            data_twse_margin_balance \
+            data_macromicro_twse_margin_maintenance
+          do
+            if [ -d "$data_dir" ]; then
+              git add -- "$data_dir"
+            fi
+          done
 
           if git diff --staged --quiet; then
             echo "No margin balance changes"
