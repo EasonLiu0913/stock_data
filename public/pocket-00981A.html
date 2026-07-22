@@ -210,6 +210,16 @@
             text-align: left;
         }
 
+        .name-cell,
+        th.name-cell {
+            width: calc(10em + 1.7rem);
+            min-width: calc(10em + 1.7rem);
+            max-width: calc(10em + 1.7rem);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .code-cell {
             color: #0f766e;
             font-weight: 800;
@@ -326,7 +336,7 @@
                     <tr>
                         <th data-key="rank">排名</th>
                         <th class="text-cell" data-key="symbol">標的代號</th>
-                        <th class="text-cell" data-key="name">標的名稱</th>
+                        <th class="text-cell name-cell" data-key="name">標的名稱</th>
                         <th data-key="weightPercent">權重(%)</th>
                         <th data-key="weightPercentChange">較前期增減</th>
                         <th data-key="quantity">持有數</th>
@@ -574,7 +584,7 @@
                 <tr>
                     <td>${formatNumber(row.rank)}</td>
                     <td class="text-cell code-cell">${escapeHtml(row.symbol)}</td>
-                    <td class="text-cell">${escapeHtml(row.name)}</td>
+                    <td class="text-cell name-cell" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
                     <td>${row.weightPercent == null ? '<span class="muted">-</span>' : formatNumber(row.weightPercent, 2)}</td>
                     <td>${formatChange(row.weightPercentChange)}</td>
                     <td>${formatNumber(row.quantity)}</td>

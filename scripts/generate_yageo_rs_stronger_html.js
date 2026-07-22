@@ -98,6 +98,7 @@ const template = String.raw`<!doctype html>
     .topbar { min-height:48px; display:flex; align-items:center; gap:18px; padding:6px 12px; font-size:clamp(15px,2vw,27px); font-weight:800; white-space:nowrap; border-bottom:1px solid #17191c; }
     .stock { font-size:1.12em; }
     .date { color:#e8e8e8; }
+    .mobile-break { display:none; }
     .green { color:#18db22; } .red { color:#ff302b; } .muted { color:#d8d8d5; }
     .toolbar { height:42px; display:flex; align-items:center; gap:2px; padding:2px 12px; background:#080a0b; }
     .tool { height:34px; min-width:43px; border:1px solid #272b2f; color:#00cccc; background:linear-gradient(#2c3033,#191c1f); font-size:19px; font-weight:700; cursor:pointer; }
@@ -115,18 +116,18 @@ const template = String.raw`<!doctype html>
     .volume-controls { top:calc(40.1% + 5px); left:17%; }
     .charge-controls label { display:flex; align-items:center; white-space:nowrap; color:#eee; background:#07090a; }
     .charge-controls select { margin-left:6px; min-width:76px; }
-    @media (max-width:720px) { .topbar { gap:8px; overflow:auto; } .toolbar { overflow:auto; } .note { display:block; } .rs-controls { top:calc(79% + 25px); left:16px; } .charge-controls { top:calc(60.2% + 25px); left:16px; } .volume-controls { top:calc(40.1% + 25px); left:16px; } }
+    @media (max-width:720px) { .topbar { flex-wrap:wrap; gap:4px 8px; overflow:visible; font-size:clamp(13px,3.8vw,16px); } .mobile-break { display:block; flex-basis:100%; width:0; height:0; } .toolbar { display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:1px; width:100%; padding:2px 4px; overflow:hidden; } .tool { width:100%; min-width:0; padding:0; font-size:clamp(13px,3.8vw,17px); } .chart-wrap { aspect-ratio:3/5; } .note { display:block; } .rs-controls { top:calc(76.9% + 25px); left:16px; } .charge-controls { top:calc(57.9% + 25px); left:16px; } .volume-controls { top:calc(38.9% + 25px); left:16px; } }
   </style>
 </head>
 <body>
 <main class="app">
   <header class="topbar">
-    <span class="stock">國巨* (2327)</span><span>日線圖</span><span class="date">2026/07/21</span>
-    <span>開 <b class="green">621.00</b></span><span>收 <b class="red">653.00 ↑</b> 元</span>
+    <span class="stock">國巨* (2327)</span><span>日線圖</span><span class="date">2026/07/21</span><span class="mobile-break" aria-hidden="true"></span>
+    <span>開 <b class="green">621.00</b></span><span>收 <b class="red">653.00 ↑</b> 元</span><span class="mobile-break" aria-hidden="true"></span>
     <span>量 <b>64686</b> 張</span><span>+23.00 (+3.65%)</span>
   </header>
   <nav class="toolbar" aria-label="圖表週期">
-    <button class="tool">1</button><button class="tool">5</button><button class="tool">10</button><button class="tool">15</button><button class="tool">30</button><button class="tool">60</button><button class="tool">日</button><button class="tool active">週</button><button class="tool">月</button>
+    <button class="tool">1</button><button class="tool">5</button><button class="tool">10</button><button class="tool">15</button><button class="tool">30</button><button class="tool">60</button><button class="tool active">日</button><button class="tool">週</button><button class="tool">月</button>
   </nav>
   <section class="chart-wrap" aria-label="國巨技術分析圖表">
     <div class="volume-controls" aria-label="成交量均線設定">
@@ -194,7 +195,11 @@ function draw() {
   const w=canvas.clientWidth,h=canvas.clientHeight, d=enrich(+horizon.value,+chargePeriod.value,+volumePeriod.value);
   ctx.fillStyle=C.bg; ctx.fillRect(0,0,w,h);
   const left=16,right=Math.max(55,w*.06),plotW=w-left-right;
-  const price={top:6,bottom:h*.397}, volume={top:h*.401,bottom:h*.598}, charge={top:h*.602,bottom:h*.786}, rs={top:h*.790,bottom:h-35};
+  const mobile=w<=720;
+  const price=mobile?{top:6,bottom:h*.385}:{top:6,bottom:h*.397};
+  const volume=mobile?{top:h*.389,bottom:h*.575}:{top:h*.401,bottom:h*.598};
+  const charge=mobile?{top:h*.579,bottom:h*.765}:{top:h*.602,bottom:h*.786};
+  const rs=mobile?{top:h*.769,bottom:h-30}:{top:h*.790,bottom:h-35};
   const panels=[price,volume,charge,rs];
   const x=i=>left+(i+.5)*plotW/rows.length;
   const step=plotW/rows.length, candleW=Math.max(2,step*.60);
