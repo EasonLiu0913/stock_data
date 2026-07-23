@@ -1,0 +1,131 @@
+name: Crawl Fubon Brokers Trade
+
+on:
+  schedule:
+    # 台北時間 23:17；避開 21:17/22:17 的逐股票分點 Action。
+    - cron: '17 15 * * 1-5'
+    # 台北時間 23:47 再續抓／檢查一次。
+    - cron: '47 15 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '目標日期（YYYYMMDD）；空白時使用台北今日'
+        required: false
+        default: ''
+      force:
+        description: '重新下載已有分點檔案'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fubon-brokers-trade
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve target date
+        id: target
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            target_date="${{ inputs.date }}"
+          else
+            target_date=$(TZ='Asia/Taipei' date '+%Y%m%d')
+          fi
+
+          if [[ ! "$target_date" =~ ^[0-9]{8}$ ]]; then
+            echo "Invalid date: $target_date"
+            exit 1
+          fi
+
+          echo "date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "Target date: $target_date"
+
+      - name: Check trading calendar
+        id: calendar
+        shell: bash
+        run: |
+          target="${{ steps.target.outputs.date }}"
+          dashed="${target:0:4}-${target:4:2}-${target:6:2}"
+          slashed="${target:0:4}/${target:4:2}/${target:6:2}"
+          weekday=$(node -e \
+            "process.stdout.write(String(new Date(process.argv[1] + 'T00:00:00Z').getUTCDay()))" \
+            "$dashed")
+
+          is_holiday=$(jq -r --arg target "$slashed" \
+            '[.[][]] | index($target) != null' \
+            data_history_sma/non_trading_days.json)
+
+          if [ "$weekday" -eq 0 ] || [ "$weekday" -eq 6 ] || [ "$is_holiday" = "true" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "$dashed is not a trading day; skipping."
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "$dashed is a trading day."
+          fi
+
+      - name: Crawl all broker branches
+        if: steps.calendar.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          args="${{ steps.target.outputs.date }}"
+          if [ "${{ inputs.force }}" = "true" ]; then
+            args="$args --force"
+          fi
+          node scripts/scraper_json_driven.js $args
+
+      - name: Verify broker branch files
+        if: steps.calendar.outputs.should_run == 'true'
+        run: node scripts/check_fubon_brokers_trade.js ${{ steps.target.outputs.date }}
+
+      - name: Commit and push changes
+        if: steps.calendar.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          target="${{ steps.target.outputs.date }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "data_fubon_brokers_trade/${target}/"
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          current_time=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🏦 Update Fubon brokers trade ${target} - ${current_time}"
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin main; then
+              exit 0
+            fi
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push after 5 attempts."
+          exit 1
