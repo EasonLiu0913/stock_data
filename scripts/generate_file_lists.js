@@ -3,6 +3,11 @@ const path = require('path');
 
 const directories = [
     { path: 'data_fubon', output: 'data_fubon/files.json' },
+    {
+        path: 'data_fubon_broker_details',
+        output: 'data_fubon_broker_details/files.json',
+        filter: file => /^fubon_\d{8}_券商分點進出明細(?:_summary)?\.(?:csv|json)$/.test(file)
+    },
     { path: 'data_twse', output: 'data_twse/files.json' },
     {
         path: 'data_twse_foreign_investors',
@@ -64,6 +69,7 @@ const directories = [
 directories.forEach(dir => {
     const dirPath = path.join(__dirname, '..', dir.path);
     const outputPath = path.join(__dirname, '..', dir.output);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
     if (fs.existsSync(dirPath)) {
         const files = fs.readdirSync(dirPath)

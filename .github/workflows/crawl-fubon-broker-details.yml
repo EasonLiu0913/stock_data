@@ -1,0 +1,150 @@
+name: Crawl Fubon Broker Details
+
+on:
+  schedule:
+    # 主力排行最後一次排程為台北 20:47；21:17 再抓券商分點明細。
+    - cron: '17 13 * * 1-5'
+    # 台北 22:17 再檢查／重試一次；已有完整檔案時會立即跳過。
+    - cron: '17 14 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '單日日期（YYYYMMDD）；和 start_date/end_date 擇一'
+        required: false
+        default: ''
+      start_date:
+        description: '區間起日（YYYY-MM-DD）'
+        required: false
+        default: ''
+      end_date:
+        description: '區間迄日（YYYY-MM-DD 或 yesterday）'
+        required: false
+        default: ''
+      max_dates:
+        description: '本次最多補抓幾個未完成交易日；0 表示不限'
+        required: false
+        default: '5'
+      concurrency:
+        description: '同時爬取股票數（1-10；區間建議 1-2）'
+        required: false
+        default: '2'
+      min_delay_ms:
+        description: '每次請求後最短隨機等待（毫秒）'
+        required: false
+        default: '800'
+      max_delay_ms:
+        description: '每次請求後最長隨機等待（毫秒）'
+        required: false
+        default: '2500'
+      date_min_delay_ms:
+        description: '交易日之間最短隨機等待（毫秒）'
+        required: false
+        default: '5000'
+      date_max_delay_ms:
+        description: '交易日之間最長隨機等待（毫秒）'
+        required: false
+        default: '15000'
+      backoff_base_ms:
+        description: '請求失敗指數退避基準（毫秒）'
+        required: false
+        default: '5000'
+      force:
+        description: '重新下載已有完整檔案'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fubon-broker-details
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve crawler arguments
+        id: args
+        shell: bash
+        run: |
+          args="--concurrency ${{ inputs.concurrency || '4' }}"
+          args="$args --min-delay-ms ${{ inputs.min_delay_ms || '800' }}"
+          args="$args --max-delay-ms ${{ inputs.max_delay_ms || '2500' }}"
+          args="$args --date-min-delay-ms ${{ inputs.date_min_delay_ms || '5000' }}"
+          args="$args --date-max-delay-ms ${{ inputs.date_max_delay_ms || '15000' }}"
+          args="$args --backoff-base-ms ${{ inputs.backoff_base_ms || '5000' }}"
+
+          if [ -n "${{ inputs.date }}" ]; then
+            args="$args --date ${{ inputs.date }}"
+          elif [ -n "${{ inputs.start_date }}" ] || [ -n "${{ inputs.end_date }}" ]; then
+            args="$args --start ${{ inputs.start_date || '2026-01-01' }}"
+            args="$args --end ${{ inputs.end_date || 'yesterday' }}"
+            args="$args --max-dates ${{ inputs.max_dates || '5' }}"
+            args="$args --allow-missing-ranking"
+          fi
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            args="$args --force"
+          fi
+
+          echo "value=$args" >> "$GITHUB_OUTPUT"
+          echo "Crawler arguments: $args"
+
+      - name: Crawl broker details
+        run: node scripts/crawl_fubon_broker_details.js ${{ steps.args.outputs.value }}
+
+      - name: Verify generated data
+        if: ${{ inputs.start_date == '' && inputs.end_date == '' }}
+        run: |
+          args="${{ steps.args.outputs.value }}"
+          args="${args/ --force/}"
+          node scripts/crawl_fubon_broker_details.js $args --check-only
+
+      - name: Generate file indexes
+        run: node scripts/generate_file_lists.js
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_fubon_broker_details/
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🏦 Update Fubon broker details - ${current_date}"
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin main; then
+              exit 0
+            fi
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push after 5 attempts."
+          exit 1
