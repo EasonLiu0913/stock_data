@@ -6,7 +6,7 @@ const directories = [
     {
         path: 'data_fubon_broker_details',
         output: 'data_fubon_broker_details/files.json',
-        filter: file => /^fubon_\d{8}_券商分點進出明細(?:_summary)?\.(?:csv|json)$/.test(file)
+        filter: file => /^fubon_\d{8}_券商分點進出明細\.json$/.test(file)
     },
     { path: 'data_twse', output: 'data_twse/files.json' },
     {

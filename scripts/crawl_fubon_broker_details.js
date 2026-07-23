@@ -1,29 +1,27 @@
 #!/usr/bin/env node
 
 /**
- * 下載富邦 MoneyDJ「券商分點-進出明細」。
+ * 逐日下載所有 TWSE 上市標的的富邦 MoneyDJ「券商分點-進出明細」。
  *
- * 股票範圍：
- *   取 data_fubon/fubon_YYYYMMDD_上市主力買超1日排行.csv 內的股票。
+ * 股票母體來自 data_twse/twse_industry_*.csv，不依賴任何主力排行 CSV。
+ * 每個交易日輸出一份 JSON，內含每檔股票的前 15 大買超與賣超券商。
  *
  * 常用指令：
  *   node scripts/crawl_fubon_broker_details.js
  *   node scripts/crawl_fubon_broker_details.js --date 20260722
- *   node scripts/crawl_fubon_broker_details.js --start 2026-01-01 --end yesterday
  *   node scripts/crawl_fubon_broker_details.js --start 2026-01-01 --end yesterday --max-dates 5
  *   node scripts/crawl_fubon_broker_details.js --date 20260722 --check-only
  *
- * 測試／除錯：
+ * 測試：
  *   node scripts/crawl_fubon_broker_details.js --date 20260722 --stocks 2634,3481
- *   node scripts/crawl_fubon_broker_details.js --start 2026-01-01 --end yesterday --dry-run
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
 const ROOT_DIR = path.join(__dirname, '..');
-const RANKING_DIR = path.join(ROOT_DIR, 'data_fubon');
 const DEFAULT_OUTPUT_DIR = path.join(ROOT_DIR, 'data_fubon_broker_details');
 const NON_TRADING_DAYS_FILE = path.join(
     ROOT_DIR,
@@ -31,21 +29,16 @@ const NON_TRADING_DAYS_FILE = path.join(
     'non_trading_days.json'
 );
 const SOURCE_BASE_URL = 'https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm';
-const CSV_HEADERS = [
-    'Date',
-    'Ranking',
-    'StockCode',
-    'StockName',
-    'Side',
-    'Position',
-    'BrokerName',
-    'BrokerID',
-    'BranchID',
-    'Buy',
-    'Sell',
-    'Net',
-    'SharePercent'
+const STOCK_LIST_CATEGORIES = [
+    'Stock',
+    'ETF',
+    'ETN',
+    'REITs',
+    'TDR',
+    'PreferredStock',
+    'InnovationBoard'
 ];
+const SCHEMA_VERSION = 2;
 
 function parseArgs(argv) {
     const options = {
@@ -60,43 +53,71 @@ function parseArgs(argv) {
         dateMinDelayMs: 5000,
         dateMaxDelayMs: 15000,
         backoffBaseMs: 5000,
+        checkpointSize: 100,
         force: false,
-        allowMissingRanking: false,
         checkOnly: false,
         dryRun: false,
         stocks: [],
         outputDir: DEFAULT_OUTPUT_DIR
     };
 
+    const valueOptions = new Map([
+        ['--date', 'date'],
+        ['--start', 'start'],
+        ['--end', 'end'],
+        ['--concurrency', 'concurrency'],
+        ['--retries', 'retries'],
+        ['--max-dates', 'maxDates'],
+        ['--min-delay-ms', 'minDelayMs'],
+        ['--max-delay-ms', 'maxDelayMs'],
+        ['--date-min-delay-ms', 'dateMinDelayMs'],
+        ['--date-max-delay-ms', 'dateMaxDelayMs'],
+        ['--backoff-base-ms', 'backoffBaseMs'],
+        ['--checkpoint-size', 'checkpointSize'],
+        ['--output-dir', 'outputDir']
+    ]);
+    const numericKeys = new Set([
+        'concurrency',
+        'retries',
+        'maxDates',
+        'minDelayMs',
+        'maxDelayMs',
+        'dateMinDelayMs',
+        'dateMaxDelayMs',
+        'backoffBaseMs',
+        'checkpointSize'
+    ]);
+
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
-        const next = argv[index + 1];
-
-        if (arg === '--date') options.date = next, index += 1;
-        else if (arg === '--start') options.start = next, index += 1;
-        else if (arg === '--end') options.end = next, index += 1;
-        else if (arg === '--concurrency') options.concurrency = Number(next), index += 1;
-        else if (arg === '--retries') options.retries = Number(next), index += 1;
-        else if (arg === '--max-dates') options.maxDates = Number(next), index += 1;
-        else if (arg === '--min-delay-ms') options.minDelayMs = Number(next), index += 1;
-        else if (arg === '--max-delay-ms') options.maxDelayMs = Number(next), index += 1;
-        else if (arg === '--date-min-delay-ms') options.dateMinDelayMs = Number(next), index += 1;
-        else if (arg === '--date-max-delay-ms') options.dateMaxDelayMs = Number(next), index += 1;
-        else if (arg === '--backoff-base-ms') options.backoffBaseMs = Number(next), index += 1;
-        else if (arg === '--stocks') {
-            options.stocks = next.split(',').map(value => value.trim()).filter(Boolean);
+        if (valueOptions.has(arg)) {
+            const key = valueOptions.get(arg);
+            const value = argv[index + 1];
+            if (value === undefined) throw new Error(`${arg} 缺少值`);
+            options[key] = numericKeys.has(key) ? Number(value) : value;
             index += 1;
-        } else if (arg === '--output-dir') {
-            options.outputDir = path.resolve(next);
+        } else if (arg === '--stocks') {
+            const value = argv[index + 1];
+            if (value === undefined) throw new Error('--stocks 缺少值');
+            options.stocks = value
+                .split(',')
+                .map(item => item.trim().toUpperCase())
+                .filter(Boolean);
             index += 1;
         } else if (arg === '--force') options.force = true;
-        else if (arg === '--allow-missing-ranking') options.allowMissingRanking = true;
         else if (arg === '--check-only') options.checkOnly = true;
         else if (arg === '--dry-run') options.dryRun = true;
         else if (arg === '--help' || arg === '-h') options.help = true;
-        else throw new Error(`未知參數：${arg}`);
+        else if (arg === '--allow-missing-ranking') {
+            // 舊版相容：新版不使用排行，保留參數避免既有指令失敗。
+        } else {
+            throw new Error(`未知參數：${arg}`);
+        }
     }
 
+    if (options.outputDir !== DEFAULT_OUTPUT_DIR) {
+        options.outputDir = path.resolve(options.outputDir);
+    }
     if (!Number.isInteger(options.concurrency) || options.concurrency < 1 || options.concurrency > 10) {
         throw new Error('--concurrency 必須是 1 到 10 的整數');
     }
@@ -105,6 +126,9 @@ function parseArgs(argv) {
     }
     if (!Number.isInteger(options.maxDates) || options.maxDates < 0) {
         throw new Error('--max-dates 必須是大於或等於 0 的整數');
+    }
+    if (!Number.isInteger(options.checkpointSize) || options.checkpointSize < 1) {
+        throw new Error('--checkpoint-size 必須是大於 0 的整數');
     }
     for (const [name, value] of [
         ['--min-delay-ms', options.minDelayMs],
@@ -131,7 +155,7 @@ function parseArgs(argv) {
 
 function printHelp() {
     console.log(`
-富邦券商分點進出明細爬蟲
+富邦全市場券商分點進出明細爬蟲
 
 用法：
   node scripts/crawl_fubon_broker_details.js [options]
@@ -140,7 +164,7 @@ function printHelp() {
   --date YYYYMMDD          下載單日；未指定日期時使用台北今日
   --start YYYY-MM-DD       區間起日
   --end YYYY-MM-DD         區間迄日，可使用 yesterday
-  --max-dates N            本次最多處理 N 個未完成交易日；0 表示不限
+  --max-dates N            最多處理 N 個未完成交易日；0 表示不限
   --concurrency N          同時開啟頁數，預設 4，最大 10
   --retries N              每檔股票重試次數，預設 3
   --min-delay-ms N         每次請求後最短等待，預設 800ms
@@ -148,13 +172,17 @@ function printHelp() {
   --date-min-delay-ms N    每個交易日之間最短等待，預設 5000ms
   --date-max-delay-ms N    每個交易日之間最長等待，預設 15000ms
   --backoff-base-ms N      失敗退避基準，預設 5000ms
-  --force                  即使已有完整檔案仍重新下載
-  --allow-missing-ranking  區間下載時略過缺少排行的日期
-  --check-only             只檢查既有輸出，不連線
+  --checkpoint-size N      每 N 檔寫入一次進度，預設 100
+  --force                  重新下載已有完整檔案
+  --check-only             只檢查既有 JSON，不連線
   --dry-run                只列出日期與股票數，不連線
   --stocks CODE1,CODE2     僅抓指定股票，供測試使用
   --output-dir PATH        自訂輸出資料夾
   --help                   顯示說明
+
+股票母體：
+  Stock、ETF、ETN、REITs、TDR、PreferredStock、InnovationBoard。
+  排除 Warrants，不讀取主力買超／賣超排行 CSV。
 `);
 }
 
@@ -168,9 +196,9 @@ function taipeiDate(offsetDays = 0) {
     const parts = Object.fromEntries(
         formatter.formatToParts(new Date()).map(part => [part.type, part.value])
     );
-    const utcDate = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00Z`);
-    utcDate.setUTCDate(utcDate.getUTCDate() + offsetDays);
-    return utcDate.toISOString().slice(0, 10);
+    const date = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offsetDays);
+    return date.toISOString().slice(0, 10);
 }
 
 function normalizeDate(value) {
@@ -178,11 +206,8 @@ function normalizeDate(value) {
     if (value === 'today') return taipeiDate(0);
     if (value === 'yesterday') return taipeiDate(-1);
 
-    const compact = value.match(/^(\d{4})(\d{2})(\d{2})$/);
-    const dashed = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    const match = compact || dashed;
+    const match = value.match(/^(\d{4})[-/]?(\d{2})[-/]?(\d{2})$/);
     if (!match) throw new Error(`日期格式錯誤：${value}`);
-
     const isoDate = `${match[1]}-${match[2]}-${match[3]}`;
     const parsed = new Date(`${isoDate}T00:00:00Z`);
     if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== isoDate) {
@@ -195,23 +220,8 @@ function compactDate(isoDate) {
     return isoDate.replaceAll('-', '');
 }
 
-function displayDate(isoDate) {
-    const [year, month, day] = isoDate.split('-').map(Number);
-    return `${year}/${month}/${day}`;
-}
-
-function randomInteger(min, max) {
-    if (max <= min) return min;
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function wait(milliseconds) {
-    if (milliseconds <= 0) return Promise.resolve();
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
-
-function formatDelay(milliseconds) {
-    return `${(milliseconds / 1000).toFixed(milliseconds % 1000 === 0 ? 0 : 1)} 秒`;
+function requestDate(isoDate) {
+    return isoDate.split('-').map(Number).join('-');
 }
 
 function dateRange(start, end) {
@@ -219,11 +229,22 @@ function dateRange(start, end) {
     const endDate = new Date(`${end}T00:00:00Z`);
     if (startDate > endDate) throw new Error(`起日 ${start} 晚於迄日 ${end}`);
 
-    const result = [];
-    for (const cursor = new Date(startDate); cursor <= endDate; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-        result.push(cursor.toISOString().slice(0, 10));
+    const dates = [];
+    for (const date = new Date(startDate); date <= endDate; date.setUTCDate(date.getUTCDate() + 1)) {
+        dates.push(date.toISOString().slice(0, 10));
     }
-    return result;
+    return dates;
+}
+
+function resolveDates(options) {
+    if (options.date) return [normalizeDate(options.date)];
+    if (options.start || options.end) {
+        return dateRange(
+            normalizeDate(options.start || '2026-01-01'),
+            normalizeDate(options.end || 'yesterday')
+        );
+    }
+    return [taipeiDate(0)];
 }
 
 function loadNonTradingDays() {
@@ -240,21 +261,6 @@ function isWeekend(isoDate) {
     return day === 0 || day === 6;
 }
 
-function outputPaths(outputDir, isoDate) {
-    const date = compactDate(isoDate);
-    return {
-        csv: path.join(outputDir, `fubon_${date}_券商分點進出明細.csv`),
-        summary: path.join(outputDir, `fubon_${date}_券商分點進出明細_summary.json`)
-    };
-}
-
-function rankingPath(isoDate) {
-    return path.join(
-        RANKING_DIR,
-        `fubon_${compactDate(isoDate)}_上市主力買超1日排行.csv`
-    );
-}
-
 function parseCsv(text) {
     const rows = [];
     let row = [];
@@ -264,7 +270,6 @@ function parseCsv(text) {
     for (let index = 0; index < text.length; index += 1) {
         const char = text[index];
         const next = text[index + 1];
-
         if (quoted && char === '"' && next === '"') {
             field += '"';
             index += 1;
@@ -283,7 +288,6 @@ function parseCsv(text) {
             field += char;
         }
     }
-
     if (field !== '' || row.length > 0) {
         row.push(field);
         rows.push(row);
@@ -291,64 +295,79 @@ function parseCsv(text) {
     return rows;
 }
 
-function loadRankingStocks(isoDate) {
-    const filePath = rankingPath(isoDate);
-    if (!fs.existsSync(filePath)) {
-        throw new Error(`找不到主力買超排行：${path.relative(ROOT_DIR, filePath)}`);
+function loadStockUniverse(onlyCodes = []) {
+    const stocks = new Map();
+    const sourceFiles = [];
+
+    for (const category of STOCK_LIST_CATEGORIES) {
+        const filePath = path.join(ROOT_DIR, 'data_twse', `twse_industry_${category}.csv`);
+        if (!fs.existsSync(filePath)) {
+            throw new Error(`找不到股票清單：${path.relative(ROOT_DIR, filePath)}`);
+        }
+        sourceFiles.push(path.relative(ROOT_DIR, filePath));
+        const rows = parseCsv(fs.readFileSync(filePath, 'utf8'));
+        const headers = rows[0] || [];
+        const codeIndex = headers.indexOf('Code');
+        const nameIndex = headers.indexOf('Name');
+        if (codeIndex < 0 || nameIndex < 0) {
+            throw new Error(`股票清單欄位不完整：${filePath}`);
+        }
+
+        for (const row of rows.slice(1)) {
+            const code = (row[codeIndex] || '').trim().toUpperCase();
+            const name = (row[nameIndex] || '').trim();
+            if (!code || stocks.has(code)) continue;
+            stocks.set(code, { code, name, category });
+        }
     }
 
-    const rows = parseCsv(fs.readFileSync(filePath, 'utf8'));
-    const headers = rows[0] || [];
-    const rankIndex = headers.indexOf('Rank');
-    const stockIndex = headers.indexOf('Stock');
-    if (rankIndex < 0 || stockIndex < 0) {
-        throw new Error(`排行欄位不完整：${path.relative(ROOT_DIR, filePath)}`);
+    let result = [...stocks.values()].sort((a, b) =>
+        a.code.localeCompare(b.code, 'en', { numeric: true })
+    );
+    if (onlyCodes.length > 0) {
+        const requested = new Set(onlyCodes);
+        result = result.filter(stock => requested.has(stock.code));
+        for (const code of onlyCodes) {
+            if (!stocks.has(code)) {
+                result.push({ code, name: '', category: 'Manual' });
+            }
+        }
     }
 
-    const stocks = rows.slice(1).map(row => {
-        const stockText = (row[stockIndex] || '').trim();
-        const match = stockText.match(/^([0-9A-Z]+)\s*(.*)$/i);
-        if (!match) throw new Error(`無法解析股票欄位：${stockText}`);
-        return {
-            ranking: Number(row[rankIndex]),
-            code: match[1].toUpperCase(),
-            name: match[2].trim()
-        };
-    });
-
-    const uniqueStocks = [];
-    const seen = new Set();
-    for (const stock of stocks) {
-        if (!stock.code || !Number.isFinite(stock.ranking) || seen.has(stock.code)) continue;
-        seen.add(stock.code);
-        uniqueStocks.push(stock);
-    }
-    if (uniqueStocks.length === 0) throw new Error(`排行內沒有股票：${filePath}`);
-    return uniqueStocks;
+    const universeHash = crypto
+        .createHash('sha256')
+        .update(result.map(stock => `${stock.code}|${stock.name}|${stock.category}`).join('\n'))
+        .digest('hex');
+    return { stocks: result, sourceFiles, universeHash };
 }
 
-function readSummary(filePath) {
-    if (!fs.existsSync(filePath)) return null;
-    try {
-        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch {
-        return null;
-    }
+function outputPath(outputDir, isoDate) {
+    return path.join(
+        outputDir,
+        `fubon_${compactDate(isoDate)}_券商分點進出明細.json`
+    );
 }
 
-function existingDateIsComplete(paths, expectedCount = null) {
-    if (!fs.existsSync(paths.csv)) return false;
-    const summary = readSummary(paths.summary);
-    if (!summary || summary.complete !== true || summary.failedStocks?.length !== 0) return false;
-    if (expectedCount !== null && summary.expectedStockCount !== expectedCount) return false;
-    return summary.successfulStockCount === summary.expectedStockCount;
+function randomInteger(min, max) {
+    if (max <= min) return min;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function toNumber(text) {
-    const normalized = String(text || '').replaceAll(',', '').replace('%', '').trim();
+function wait(milliseconds) {
+    if (milliseconds <= 0) return Promise.resolve();
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+function formatDelay(milliseconds) {
+    const digits = milliseconds % 1000 === 0 ? 0 : 1;
+    return `${(milliseconds / 1000).toFixed(digits)} 秒`;
+}
+
+function toNumber(value) {
+    const normalized = String(value || '').replaceAll(',', '').replace('%', '').trim();
     if (normalized === '' || normalized === '--') return null;
-    const value = Number(normalized);
-    return Number.isFinite(value) ? value : null;
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : null;
 }
 
 function extractId(href, key) {
@@ -360,22 +379,33 @@ function extractId(href, key) {
     }
 }
 
+function normalizePageDate(value, fallbackYear) {
+    if (!value) return '';
+    const parts = value.split('/');
+    if (parts.length === 2) parts.unshift(fallbackYear);
+    return parts
+        .map((part, index) => index === 0 ? part : part.padStart(2, '0'))
+        .join('-');
+}
+
 async function extractBrokerDetails(page, stock, isoDate) {
-    const sourceUrl = `${SOURCE_BASE_URL}?a=${encodeURIComponent(stock.code)}&e=${displayDate(isoDate).replaceAll('/', '-')}&f=${displayDate(isoDate).replaceAll('/', '-')}`;
+    const date = requestDate(isoDate);
+    const sourceUrl = `${SOURCE_BASE_URL}?a=${encodeURIComponent(stock.code)}&e=${date}&f=${date}`;
     const response = await page.goto(sourceUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
     });
-    const status = response?.status();
-    if (status === 403 || status === 429 || (status && status >= 500)) {
-        throw new Error(`HTTP ${status}`);
-    }
-    if (status && status >= 400) {
-        throw new Error(`HTTP ${status}`);
-    }
+    const httpStatus = response?.status();
+    if (httpStatus && httpStatus >= 400) throw new Error(`HTTP ${httpStatus}`);
 
     const pageData = await page.evaluate(() => {
-        const table = document.querySelector('#oMainTable');
+        const fallbackTables = Array.from(document.querySelectorAll('table.t01'))
+            .filter(candidate => candidate.innerText.includes('券商分點-進出明細'))
+            .sort(
+                (left, right) =>
+                    left.querySelectorAll('tr').length - right.querySelectorAll('tr').length
+            );
+        const table = document.querySelector('#oMainTable') || fallbackTables[0];
         if (!table) return { error: '找不到分點明細表格' };
 
         const text = table.innerText;
@@ -383,20 +413,21 @@ async function extractBrokerDetails(page, stock, isoDate) {
             return { error: '頁面不是券商分點進出明細' };
         }
 
-        const dateMatch = text.match(/(?:最後更新日|資料日期)：\s*(\d{4}\/\d{1,2}\/\d{1,2})/);
+        const dateMatch = text.match(
+            /(?:最後更新日|資料日期)：\s*((?:\d{4}\/)?\d{1,2}\/\d{1,2})/
+        );
         const titleMatch = text.match(/^(.+?)\(([^)]+)\)主力進出比較圖/m);
         const rows = Array.from(table.querySelectorAll('tr'));
-        const details = [];
+        const pairs = [];
 
         for (const row of rows) {
             const cells = Array.from(row.querySelectorAll(':scope > td'));
             if (cells.length !== 10) continue;
-
             const buyLink = cells[0].querySelector('a');
             const sellLink = cells[5].querySelector('a');
             if (!buyLink || !sellLink) continue;
 
-            details.push({
+            pairs.push({
                 buy: {
                     brokerName: buyLink.innerText.trim(),
                     href: buyLink.getAttribute('href') || '',
@@ -416,75 +447,101 @@ async function extractBrokerDetails(page, stock, isoDate) {
             });
         }
 
-        const footerRows = rows.filter(row => row.innerText.includes('合計買超張數'));
-        let totalNetBuy = '';
-        let totalNetSell = '';
-        if (footerRows[0]) {
-            const cells = Array.from(footerRows[0].querySelectorAll(':scope > td'));
-            totalNetBuy = cells[1]?.innerText.trim() || '';
-            totalNetSell = cells[3]?.innerText.trim() || '';
-        }
-
+        const footer = rows.find(row => row.innerText.includes('合計買超張數'));
+        const footerCells = footer ? Array.from(footer.querySelectorAll(':scope > td')) : [];
         return {
             pageDate: dateMatch?.[1] || '',
             stockName: titleMatch?.[1]?.trim() || '',
             stockCode: titleMatch?.[2]?.trim() || '',
-            details,
-            totalNetBuy,
-            totalNetSell
+            totalNetBuy: footerCells[1]?.innerText.trim() || '',
+            totalNetSell: footerCells[3]?.innerText.trim() || '',
+            pairs
         };
     });
 
     if (pageData.error) throw new Error(pageData.error);
-    const normalizedPageDate = pageData.pageDate
-        ? pageData.pageDate.split('/').map((part, index) => index === 0 ? part : part.padStart(2, '0')).join('-')
-        : '';
-    if (normalizedPageDate !== isoDate) {
-        throw new Error(`頁面日期不符：預期 ${isoDate}，實際 ${normalizedPageDate || '未知'}`);
-    }
-    if (
-        pageData.stockCode &&
-        pageData.stockCode.toUpperCase() !== stock.code.toUpperCase()
-    ) {
-        throw new Error(`股票代碼不符：預期 ${stock.code}，實際 ${pageData.stockCode || '未知'}`);
-    }
-    if (pageData.details.length === 0 || pageData.details.length > 15) {
-        throw new Error(`分點列數異常：${pageData.details.length}`);
+    const pageDate = normalizePageDate(pageData.pageDate, isoDate.slice(0, 4));
+    if (pageData.stockCode && pageData.stockCode.toUpperCase() !== stock.code) {
+        throw new Error(`股票代碼不符：預期 ${stock.code}，實際 ${pageData.stockCode}`);
     }
 
-    const rows = [];
-    pageData.details.forEach((pair, index) => {
-        for (const [side, detail] of [['Buy', pair.buy], ['Sell', pair.sell]]) {
-            rows.push({
-                Date: compactDate(isoDate),
-                Ranking: stock.ranking,
-                StockCode: stock.code,
-                StockName: stock.name || pageData.stockName,
-                Side: side,
-                Position: index + 1,
-                BrokerName: detail.brokerName,
-                BrokerID: extractId(detail.href, 'BHID'),
-                BranchID: extractId(detail.href, 'b'),
-                Buy: toNumber(detail.buy),
-                Sell: toNumber(detail.sell),
-                Net: toNumber(detail.net),
-                SharePercent: toNumber(detail.sharePercent)
-            });
-        }
+    if (pageDate !== isoDate) {
+        return {
+            status: 'unavailable',
+            code: stock.code,
+            name: stock.name || pageData.stockName,
+            category: stock.category,
+            requestedDate: isoDate,
+            pageDate: pageDate || null,
+            reason: '該日期無分點資料',
+            sourceUrl
+        };
+    }
+    if (pageData.pairs.length === 0) {
+        return {
+            status: 'unavailable',
+            code: stock.code,
+            name: stock.name || pageData.stockName,
+            category: stock.category,
+            requestedDate: isoDate,
+            pageDate,
+            reason: '該日沒有可列出的買賣超分點',
+            sourceUrl
+        };
+    }
+    if (pageData.pairs.length > 15) {
+        throw new Error(`分點列數異常：${pageData.pairs.length}`);
+    }
+
+    const buyBrokers = [];
+    const sellBrokers = [];
+    pageData.pairs.forEach((pair, index) => {
+        buyBrokers.push({
+            rank: index + 1,
+            brokerName: pair.buy.brokerName,
+            brokerId: extractId(pair.buy.href, 'BHID'),
+            branchId: extractId(pair.buy.href, 'b'),
+            buy: toNumber(pair.buy.buy),
+            sell: toNumber(pair.buy.sell),
+            netBuy: toNumber(pair.buy.net),
+            sharePercent: toNumber(pair.buy.sharePercent)
+        });
+        sellBrokers.push({
+            rank: index + 1,
+            brokerName: pair.sell.brokerName,
+            brokerId: extractId(pair.sell.href, 'BHID'),
+            branchId: extractId(pair.sell.href, 'b'),
+            buy: toNumber(pair.sell.buy),
+            sell: toNumber(pair.sell.sell),
+            netSell: toNumber(pair.sell.net),
+            sharePercent: toNumber(pair.sell.sharePercent)
+        });
     });
 
+    const totalNetBuy = toNumber(pageData.totalNetBuy);
+    const totalNetSell = toNumber(pageData.totalNetSell);
+    if (!Number.isFinite(totalNetBuy) || !Number.isFinite(totalNetSell)) {
+        throw new Error('缺少合計買超／賣超張數');
+    }
+
     return {
-        stock: {
-            ranking: stock.ranking,
-            code: stock.code,
-            name: stock.name || pageData.stockName
-        },
-        sourceUrl,
-        pageDate: normalizedPageDate,
-        detailPairs: pageData.details.length,
-        totalNetBuy: toNumber(pageData.totalNetBuy),
-        totalNetSell: toNumber(pageData.totalNetSell),
-        rows
+        status: 'success',
+        code: stock.code,
+        data: {
+            stockCode: stock.code,
+            stockName: stock.name || pageData.stockName,
+            category: stock.category,
+            date: isoDate,
+            unit: '張',
+            buyBrokers,
+            sellBrokers,
+            totals: {
+                netBuy: totalNetBuy,
+                netSell: totalNetSell,
+                net: totalNetBuy - totalNetSell
+            },
+            sourceUrl
+        }
     };
 }
 
@@ -496,22 +553,18 @@ async function crawlWithRetry(page, stock, isoDate, options) {
         } catch (error) {
             lastError = error;
             if (attempt < options.retries) {
-                const exponentialDelay = Math.min(
-                    options.backoffBaseMs * (3 ** (attempt - 1)),
-                    300000
-                );
-                const jitter = randomInteger(
-                    Math.floor(exponentialDelay * 0.8),
-                    Math.ceil(exponentialDelay * 1.2)
+                const base = Math.min(options.backoffBaseMs * (3 ** (attempt - 1)), 300000);
+                const delay = randomInteger(
+                    Math.floor(base * 0.8),
+                    Math.ceil(base * 1.2)
                 );
                 console.warn(
-                    `[${isoDate}] ${stock.code} 第 ${attempt}/${options.retries} 次失敗（${error.message}），退避 ${formatDelay(jitter)}`
+                    `[${isoDate}] ${stock.code} 第 ${attempt}/${options.retries} 次失敗（${error.message}），退避 ${formatDelay(delay)}`
                 );
-                await wait(jitter);
+                await wait(delay);
             }
         } finally {
-            const requestDelay = randomInteger(options.minDelayMs, options.maxDelayMs);
-            await wait(requestDelay);
+            await wait(randomInteger(options.minDelayMs, options.maxDelayMs));
         }
     }
     throw lastError;
@@ -519,7 +572,6 @@ async function crawlWithRetry(page, stock, isoDate, options) {
 
 async function crawlStocks(context, stocks, isoDate, options) {
     const results = new Array(stocks.length);
-    const failures = [];
     let nextIndex = 0;
 
     async function worker(workerIndex) {
@@ -531,27 +583,22 @@ async function crawlStocks(context, stocks, isoDate, options) {
                 if (index >= stocks.length) return;
 
                 const stock = stocks[index];
-                console.log(
-                    `[${isoDate}] [${index + 1}/${stocks.length}] Worker ${workerIndex}: ${stock.code} ${stock.name}`
-                );
-                try {
-                    results[index] = await crawlWithRetry(
-                        page,
-                        stock,
-                        isoDate,
-                        options
-                    );
+                if (index % 25 === 0 || stocks.length <= 20) {
                     console.log(
-                        `[${isoDate}] ${stock.code} OK (${results[index].detailPairs}x2)`
+                        `[${isoDate}] [${index + 1}/${stocks.length}] Worker ${workerIndex}: ${stock.code} ${stock.name}`
                     );
+                }
+                try {
+                    results[index] = await crawlWithRetry(page, stock, isoDate, options);
                 } catch (error) {
-                    failures.push({
-                        ranking: stock.ranking,
+                    results[index] = {
+                        status: 'failed',
                         code: stock.code,
                         name: stock.name,
+                        category: stock.category,
                         error: error.message
-                    });
-                    console.log(`[${isoDate}] ${stock.code} FAILED: ${error.message}`);
+                    };
+                    console.error(`[${isoDate}] ${stock.code} FAILED: ${error.message}`);
                 }
             }
         } finally {
@@ -563,172 +610,239 @@ async function crawlStocks(context, stocks, isoDate, options) {
     await Promise.all(
         Array.from({ length: workerCount }, (_, index) => worker(index + 1))
     );
+    return results.filter(Boolean);
+}
+
+function createEmptyPayload(isoDate, universe) {
     return {
-        results: results.filter(Boolean),
-        failures: failures.sort((a, b) => a.ranking - b.ranking)
+        schemaVersion: SCHEMA_VERSION,
+        date: isoDate,
+        market: 'TWSE',
+        unit: '張',
+        source: 'Fubon MoneyDJ 券商分點-進出明細',
+        stockUniverse: {
+            sourceFiles: universe.sourceFiles,
+            categories: STOCK_LIST_CATEGORIES,
+            excludes: ['Warrants'],
+            hash: universe.universeHash,
+            expectedStockCount: universe.stocks.length
+        },
+        complete: false,
+        generatedAt: null,
+        successfulStockCount: 0,
+        unavailableStockCount: 0,
+        failedStockCount: 0,
+        stocks: {},
+        unavailableStocks: [],
+        failedStocks: []
     };
 }
 
-function csvEscape(value) {
-    if (value === null || value === undefined) return '';
-    const text = String(value);
-    if (/[",\r\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
-    return text;
+function readPayload(filePath) {
+    if (!fs.existsSync(filePath)) return null;
+    try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch {
+        return null;
+    }
 }
 
-function writeAtomically(filePath, content) {
+function existingPayloadCanResume(payload, isoDate, universe) {
+    return Boolean(
+        payload &&
+        payload.schemaVersion === SCHEMA_VERSION &&
+        payload.date === isoDate &&
+        payload.stockUniverse?.hash === universe.universeHash
+    );
+}
+
+function completedCodes(payload) {
+    return new Set([
+        ...Object.keys(payload.stocks || {}),
+        ...(payload.unavailableStocks || []).map(stock => stock.code)
+    ]);
+}
+
+function mergeResults(payload, results, universe) {
+    const unavailableByCode = new Map(
+        (payload.unavailableStocks || []).map(stock => [stock.code, stock])
+    );
+    const failedByCode = new Map(
+        (payload.failedStocks || []).map(stock => [stock.code, stock])
+    );
+
+    for (const result of results) {
+        failedByCode.delete(result.code);
+        if (result.status === 'success') {
+            payload.stocks[result.code] = result.data;
+            unavailableByCode.delete(result.code);
+        } else if (result.status === 'unavailable') {
+            unavailableByCode.set(result.code, result);
+            delete payload.stocks[result.code];
+        } else {
+            failedByCode.set(result.code, {
+                code: result.code,
+                name: result.name,
+                category: result.category,
+                error: result.error
+            });
+        }
+    }
+
+    payload.unavailableStocks = [...unavailableByCode.values()].sort((a, b) =>
+        a.code.localeCompare(b.code, 'en', { numeric: true })
+    );
+    payload.failedStocks = [...failedByCode.values()].sort((a, b) =>
+        a.code.localeCompare(b.code, 'en', { numeric: true })
+    );
+    payload.successfulStockCount = Object.keys(payload.stocks).length;
+    payload.unavailableStockCount = payload.unavailableStocks.length;
+    payload.failedStockCount = payload.failedStocks.length;
+    const accountedFor =
+        payload.successfulStockCount +
+        payload.unavailableStockCount;
+    payload.complete =
+        accountedFor === universe.stocks.length &&
+        payload.failedStockCount === 0;
+    payload.generatedAt = new Date().toISOString();
+    return payload;
+}
+
+function writeAtomically(filePath, payload) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     const temporaryPath = `${filePath}.tmp-${process.pid}`;
-    fs.writeFileSync(temporaryPath, content, 'utf8');
+    fs.writeFileSync(temporaryPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
     fs.renameSync(temporaryPath, filePath);
 }
 
-function saveDateResult(paths, isoDate, stocks, results, failures) {
-    const rows = results
-        .flatMap(result => result.rows)
-        .sort((a, b) =>
-            a.Ranking - b.Ranking ||
-            (a.Side === b.Side ? 0 : a.Side === 'Buy' ? -1 : 1) ||
-            a.Position - b.Position
-        );
-    const csv = [
-        CSV_HEADERS.join(','),
-        ...rows.map(row => CSV_HEADERS.map(header => csvEscape(row[header])).join(','))
-    ].join('\n') + '\n';
-
-    const summaries = results
-        .map(result => ({
-            ranking: result.stock.ranking,
-            code: result.stock.code,
-            name: result.stock.name,
-            pageDate: result.pageDate,
-            detailPairs: result.detailPairs,
-            totalNetBuy: result.totalNetBuy,
-            totalNetSell: result.totalNetSell,
-            sourceUrl: result.sourceUrl
-        }))
-        .sort((a, b) => a.ranking - b.ranking);
-    const complete = results.length === stocks.length && failures.length === 0;
-    const summary = {
-        date: isoDate,
-        rankingFile: path.relative(ROOT_DIR, rankingPath(isoDate)),
-        expectedStockCount: stocks.length,
-        successfulStockCount: results.length,
-        failedStockCount: failures.length,
-        rowCount: rows.length,
-        complete,
-        generatedAt: new Date().toISOString(),
-        stocks: summaries,
-        failedStocks: failures
-    };
-
-    writeAtomically(paths.csv, csv);
-    writeAtomically(paths.summary, `${JSON.stringify(summary, null, 2)}\n`);
-    return summary;
-}
-
-function checkDateOutput(paths, isoDate, expectedStocks) {
+function validatePayload(payload, isoDate, universe) {
     const errors = [];
-    if (!fs.existsSync(paths.csv)) errors.push(`缺少 CSV：${paths.csv}`);
-    if (!fs.existsSync(paths.summary)) errors.push(`缺少摘要：${paths.summary}`);
-    if (errors.length > 0) return errors;
-
-    const summary = readSummary(paths.summary);
-    if (!summary) return [`摘要 JSON 無法解析：${paths.summary}`];
-    if (summary.date !== isoDate) errors.push(`摘要日期錯誤：${summary.date}`);
-    if (summary.complete !== true) errors.push('摘要標記為未完成');
-    if (summary.failedStockCount !== 0 || summary.failedStocks?.length !== 0) {
-        errors.push(`仍有 ${summary.failedStockCount ?? summary.failedStocks?.length} 檔失敗`);
+    if (!payload) return ['JSON 不存在或無法解析'];
+    if (payload.schemaVersion !== SCHEMA_VERSION) {
+        errors.push(`schemaVersion 錯誤：${payload.schemaVersion}`);
     }
-    if (summary.expectedStockCount !== expectedStocks.length) {
+    if (payload.date !== isoDate) errors.push(`日期錯誤：${payload.date}`);
+    if (payload.stockUniverse?.hash !== universe.universeHash) {
+        errors.push('股票母體 hash 不符，股票清單可能已更新');
+    }
+    if (payload.stockUniverse?.expectedStockCount !== universe.stocks.length) {
         errors.push(
-            `預期股票數錯誤：摘要 ${summary.expectedStockCount}，排行 ${expectedStocks.length}`
+            `股票母體數量錯誤：JSON=${payload.stockUniverse?.expectedStockCount}，目前=${universe.stocks.length}`
         );
     }
-    if (summary.successfulStockCount !== expectedStocks.length) {
-        errors.push(
-            `成功股票數錯誤：${summary.successfulStockCount}/${expectedStocks.length}`
-        );
+    if (payload.complete !== true) errors.push('JSON 標記為未完成');
+    if (payload.failedStockCount !== 0 || payload.failedStocks?.length !== 0) {
+        errors.push(`仍有 ${payload.failedStockCount ?? payload.failedStocks?.length} 檔失敗`);
     }
-    if (!Array.isArray(summary.stocks) || summary.stocks.length !== expectedStocks.length) {
-        errors.push(`摘要股票明細數錯誤：${summary.stocks?.length ?? 0}/${expectedStocks.length}`);
-    } else {
-        const summaryCodes = new Set();
-        for (const stock of summary.stocks) {
-            if (summaryCodes.has(stock.code)) errors.push(`摘要股票重複：${stock.code}`);
-            summaryCodes.add(stock.code);
-            if (stock.pageDate !== isoDate) {
-                errors.push(`摘要頁面日期錯誤：${stock.code} ${stock.pageDate}`);
+
+    const expectedCodes = new Set(universe.stocks.map(stock => stock.code));
+    const accountedCodes = new Set();
+    for (const [code, stock] of Object.entries(payload.stocks || {})) {
+        if (!expectedCodes.has(code)) errors.push(`包含股票清單外代碼：${code}`);
+        if (accountedCodes.has(code)) errors.push(`重複代碼：${code}`);
+        accountedCodes.add(code);
+        if (stock.stockCode !== code) errors.push(`股票代碼欄位錯誤：${code}`);
+        if (stock.date !== isoDate) errors.push(`股票日期錯誤：${code}`);
+        if (!Array.isArray(stock.buyBrokers) || !Array.isArray(stock.sellBrokers)) {
+            errors.push(`缺少買賣超券商陣列：${code}`);
+            continue;
+        }
+        if (
+            stock.buyBrokers.length < 1 ||
+            stock.buyBrokers.length > 15 ||
+            stock.buyBrokers.length !== stock.sellBrokers.length
+        ) {
+            errors.push(
+                `買賣超券商列數錯誤：${code} Buy=${stock.buyBrokers.length} Sell=${stock.sellBrokers.length}`
+            );
+        }
+        if (
+            !Number.isFinite(stock.totals?.netBuy) ||
+            !Number.isFinite(stock.totals?.netSell) ||
+            stock.totals.net !== stock.totals.netBuy - stock.totals.netSell
+        ) {
+            errors.push(`合計欄位錯誤：${code}`);
+        }
+        for (const item of stock.buyBrokers) {
+            if (!item.brokerName || !Number.isFinite(item.buy) || !Number.isFinite(item.sell) ||
+                !Number.isFinite(item.netBuy) || !Number.isFinite(item.sharePercent)) {
+                errors.push(`買超券商欄位錯誤：${code} rank=${item.rank}`);
             }
-            if (!Number.isInteger(stock.detailPairs) || stock.detailPairs < 1 || stock.detailPairs > 15) {
-                errors.push(`摘要分點列數錯誤：${stock.code} ${stock.detailPairs}`);
-            }
-            if (!Number.isFinite(stock.totalNetBuy) || !Number.isFinite(stock.totalNetSell)) {
-                errors.push(`摘要頁尾合計缺失：${stock.code}`);
+        }
+        for (const item of stock.sellBrokers) {
+            if (!item.brokerName || !Number.isFinite(item.buy) || !Number.isFinite(item.sell) ||
+                !Number.isFinite(item.netSell) || !Number.isFinite(item.sharePercent)) {
+                errors.push(`賣超券商欄位錯誤：${code} rank=${item.rank}`);
             }
         }
     }
 
-    const csvRows = parseCsv(fs.readFileSync(paths.csv, 'utf8'));
-    const headers = csvRows[0] || [];
-    const indexes = Object.fromEntries(CSV_HEADERS.map(header => [header, headers.indexOf(header)]));
-    for (const [header, index] of Object.entries(indexes)) {
-        if (index < 0) errors.push(`CSV 缺少欄位：${header}`);
+    for (const stock of payload.unavailableStocks || []) {
+        if (!expectedCodes.has(stock.code)) errors.push(`無資料清單含未知代碼：${stock.code}`);
+        if (accountedCodes.has(stock.code)) errors.push(`重複代碼：${stock.code}`);
+        accountedCodes.add(stock.code);
     }
-    if (errors.length > 0) return errors;
-
-    const records = csvRows.slice(1);
-    if (summary.rowCount !== records.length) {
-        errors.push(`CSV 列數錯誤：摘要 ${summary.rowCount}，實際 ${records.length}`);
+    if (accountedCodes.size !== universe.stocks.length) {
+        errors.push(`已交代股票數錯誤：${accountedCodes.size}/${universe.stocks.length}`);
     }
-
-    const expectedCodes = new Set(expectedStocks.map(stock => stock.code));
-    const foundCodes = new Set();
-    const keys = new Set();
-    const sideCounts = new Map();
-    for (const row of records) {
-        const code = row[indexes.StockCode];
-        const side = row[indexes.Side];
-        const position = Number(row[indexes.Position]);
-        const date = row[indexes.Date];
-        if (date !== compactDate(isoDate)) errors.push(`CSV 內日期錯誤：${date}`);
-        if (!expectedCodes.has(code)) errors.push(`CSV 含排行外股票：${code}`);
-        if (!['Buy', 'Sell'].includes(side)) errors.push(`Side 錯誤：${side}`);
-        if (!Number.isInteger(position) || position < 1 || position > 15) {
-            errors.push(`Position 錯誤：${code} ${side} ${position}`);
-        }
-        const key = `${code}:${side}:${position}`;
-        if (keys.has(key)) errors.push(`重複資料：${key}`);
-        keys.add(key);
-        foundCodes.add(code);
-        sideCounts.set(`${code}:${side}`, (sideCounts.get(`${code}:${side}`) || 0) + 1);
-        if (!row[indexes.BrokerName]) errors.push(`BrokerName 空白：${key}`);
-        for (const header of ['Buy', 'Sell', 'Net', 'SharePercent']) {
-            if (!Number.isFinite(Number(row[indexes[header]]))) {
-                errors.push(`${header} 不是數字：${key}`);
-            }
-        }
+    if (payload.successfulStockCount !== Object.keys(payload.stocks || {}).length) {
+        errors.push('successfulStockCount 錯誤');
     }
-    for (const code of expectedCodes) {
-        if (!foundCodes.has(code)) errors.push(`CSV 缺少股票：${code}`);
-        const buyCount = sideCounts.get(`${code}:Buy`) || 0;
-        const sellCount = sideCounts.get(`${code}:Sell`) || 0;
-        if (buyCount !== sellCount || buyCount < 1 || buyCount > 15) {
-            errors.push(`買賣分點列數不一致：${code} Buy=${buyCount} Sell=${sellCount}`);
-        }
+    if (payload.unavailableStockCount !== (payload.unavailableStocks || []).length) {
+        errors.push('unavailableStockCount 錯誤');
     }
-
     return [...new Set(errors)];
 }
 
-function resolveDates(options) {
-    if (options.date) return [normalizeDate(options.date)];
-    if (options.start || options.end) {
-        const start = normalizeDate(options.start || '2026-01-01');
-        const end = normalizeDate(options.end || 'yesterday');
-        return dateRange(start, end);
+async function crawlDate(context, isoDate, universe, options) {
+    const filePath = outputPath(options.outputDir, isoDate);
+    const existing = options.force ? null : readPayload(filePath);
+    let payload = existingPayloadCanResume(existing, isoDate, universe)
+        ? existing
+        : createEmptyPayload(isoDate, universe);
+
+    if (!options.force && payload.complete) {
+        const errors = validatePayload(payload, isoDate, universe);
+        if (errors.length === 0) {
+            console.log(`⏭️  ${isoDate} 已完整，跳過`);
+            return { skipped: true, failed: false };
+        }
     }
-    return [taipeiDate(0)];
+
+    const done = completedCodes(payload);
+    const pending = universe.stocks.filter(stock => !done.has(stock.code));
+    console.log(
+        `\n🚀 ${isoDate}：股票母體 ${universe.stocks.length}，已完成 ${done.size}，待抓 ${pending.length}`
+    );
+
+    for (let offset = 0; offset < pending.length; offset += options.checkpointSize) {
+        const batch = pending.slice(offset, offset + options.checkpointSize);
+        console.log(
+            `📦 ${isoDate} 批次 ${offset + 1}-${offset + batch.length}/${pending.length}`
+        );
+        const results = await crawlStocks(context, batch, isoDate, options);
+        payload = mergeResults(payload, results, universe);
+        writeAtomically(filePath, payload);
+        console.log(
+            `💾 進度：成功 ${payload.successfulStockCount}、該日無資料 ${payload.unavailableStockCount}、失敗 ${payload.failedStockCount}`
+        );
+    }
+
+    // 重跑先前失敗項目時，failedStocks 會在 mergeResults 中更新。
+    payload = mergeResults(payload, [], universe);
+    writeAtomically(filePath, payload);
+    const errors = validatePayload(payload, isoDate, universe);
+    if (errors.length > 0) {
+        console.error(`❌ ${isoDate} 未完成：`);
+        errors.slice(0, 30).forEach(error => console.error(`   - ${error}`));
+        if (errors.length > 30) console.error(`   ...另有 ${errors.length - 30} 項`);
+        return { skipped: false, failed: true };
+    }
+
+    console.log(
+        `✅ ${isoDate} 完成：${payload.successfulStockCount} 檔有資料、${payload.unavailableStockCount} 檔該日無資料`
+    );
+    return { skipped: false, failed: false };
 }
 
 async function main() {
@@ -738,86 +852,67 @@ async function main() {
         return;
     }
 
+    const universe = loadStockUniverse(options.stocks);
     const nonTradingDays = loadNonTradingDays();
     const requestedDates = resolveDates(options);
     const tradingDates = requestedDates.filter(
         date => !isWeekend(date) && !nonTradingDays.has(date)
     );
-    const skippedNonTrading = requestedDates.filter(
-        date => isWeekend(date) || nonTradingDays.has(date)
-    );
+    const skippedDates = requestedDates.length - tradingDates.length;
 
     console.log(`📅 要求日期：${requestedDates[0]} ～ ${requestedDates.at(-1)}`);
-    console.log(`🏦 交易日：${tradingDates.length}；略過非交易日：${skippedNonTrading.length}`);
+    console.log(`🏦 交易日：${tradingDates.length}；略過非交易日：${skippedDates}`);
+    console.log(`📋 股票母體：${universe.stocks.length} 檔（不含權證、不依賴排行 CSV）`);
     console.log(`📁 輸出：${options.outputDir}`);
     console.log(
         `🛡️ 節流：請求後 ${options.minDelayMs}-${options.maxDelayMs}ms；日期間 ${options.dateMinDelayMs}-${options.dateMaxDelayMs}ms；併行 ${options.concurrency}`
     );
 
-    const dateJobs = [];
-    const missingRankings = [];
-    for (const isoDate of tradingDates) {
-        let stocks;
-        try {
-            stocks = options.stocks.length > 0
-                ? options.stocks.map((code, index) => ({
-                    ranking: index + 1,
-                    code: code.toUpperCase(),
-                    name: ''
-                }))
-                : loadRankingStocks(isoDate);
-        } catch (error) {
-            missingRankings.push({ date: isoDate, error: error.message });
-            continue;
-        }
-
-        const paths = outputPaths(options.outputDir, isoDate);
-        if (!options.force && !options.checkOnly && existingDateIsComplete(paths, stocks.length)) {
-            console.log(`⏭️  ${isoDate} 已完整，跳過`);
-            continue;
-        }
-        dateJobs.push({ isoDate, stocks, paths });
+    let jobs = tradingDates.map(isoDate => ({
+        isoDate,
+        filePath: outputPath(options.outputDir, isoDate)
+    }));
+    if (!options.force && !options.checkOnly) {
+        jobs = jobs.filter(job => {
+            const payload = readPayload(job.filePath);
+            return !(
+                existingPayloadCanResume(payload, job.isoDate, universe) &&
+                payload.complete &&
+                validatePayload(payload, job.isoDate, universe).length === 0
+            );
+        });
     }
-
-    if (missingRankings.length > 0) {
-        console.error('\n⚠️ 缺少排行的交易日：');
-        missingRankings.forEach(item => console.error(`  ${item.date}: ${item.error}`));
-    }
-
-    const selectedJobs = options.maxDates > 0
-        ? dateJobs.slice(0, options.maxDates)
-        : dateJobs;
-    if (options.maxDates > 0 && dateJobs.length > selectedJobs.length) {
-        console.log(`📦 本次依 --max-dates 僅處理前 ${selectedJobs.length}/${dateJobs.length} 天`);
-    }
+    if (options.maxDates > 0) jobs = jobs.slice(0, options.maxDates);
 
     if (options.dryRun) {
-        selectedJobs.forEach(job =>
-            console.log(`DRY RUN ${job.isoDate}: ${job.stocks.length} 檔股票`)
+        jobs.forEach(job =>
+            console.log(`DRY RUN ${job.isoDate}: ${universe.stocks.length} 檔股票`)
         );
-        if (missingRankings.length > 0 && !options.allowMissingRanking) process.exitCode = 2;
         return;
     }
 
     if (options.checkOnly) {
-        let failed = missingRankings.length > 0 && !options.allowMissingRanking;
-        for (const job of selectedJobs) {
-            const errors = checkDateOutput(job.paths, job.isoDate, job.stocks);
+        let failed = false;
+        for (const job of jobs) {
+            const errors = validatePayload(
+                readPayload(job.filePath),
+                job.isoDate,
+                universe
+            );
             if (errors.length === 0) {
-                console.log(`✅ ${job.isoDate} 檢查通過（${job.stocks.length} 檔）`);
+                console.log(`✅ ${job.isoDate} JSON 檢查通過`);
             } else {
                 failed = true;
-                console.error(`❌ ${job.isoDate} 檢查失敗：`);
-                errors.forEach(error => console.error(`   - ${error}`));
+                console.error(`❌ ${job.isoDate} JSON 檢查失敗：`);
+                errors.slice(0, 30).forEach(error => console.error(`   - ${error}`));
             }
         }
         if (failed) process.exitCode = 2;
         return;
     }
 
-    if (selectedJobs.length === 0) {
+    if (jobs.length === 0) {
         console.log('沒有需要下載的日期。');
-        if (missingRankings.length > 0 && !options.allowMissingRanking) process.exitCode = 2;
         return;
     }
 
@@ -829,49 +924,29 @@ async function main() {
         userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/122 Safari/537.36'
     });
 
-    let failed = missingRankings.length > 0 && !options.allowMissingRanking;
+    let failed = false;
     try {
-        for (let jobIndex = 0; jobIndex < selectedJobs.length; jobIndex += 1) {
-            const job = selectedJobs[jobIndex];
-            console.log(`\n🚀 ${job.isoDate}：開始下載 ${job.stocks.length} 檔股票`);
-            const { results, failures } = await crawlStocks(
+        for (let index = 0; index < jobs.length; index += 1) {
+            const result = await crawlDate(
                 context,
-                job.stocks,
-                job.isoDate,
+                jobs[index].isoDate,
+                universe,
                 options
             );
-            const summary = saveDateResult(
-                job.paths,
-                job.isoDate,
-                job.stocks,
-                results,
-                failures
-            );
-            const checkErrors = checkDateOutput(job.paths, job.isoDate, job.stocks);
-            if (checkErrors.length > 0) {
-                failed = true;
-                console.error(`❌ ${job.isoDate} 未完成：`);
-                checkErrors.forEach(error => console.error(`   - ${error}`));
-            } else {
-                console.log(
-                    `✅ ${job.isoDate} 完成：${summary.successfulStockCount} 檔、${summary.rowCount} 列`
-                );
-            }
-
-            if (jobIndex < selectedJobs.length - 1) {
-                const dateDelay = randomInteger(
+            failed ||= result.failed;
+            if (index < jobs.length - 1) {
+                const delay = randomInteger(
                     options.dateMinDelayMs,
                     options.dateMaxDelayMs
                 );
-                console.log(`⏳ 下一個交易日前隨機等待 ${formatDelay(dateDelay)}`);
-                await wait(dateDelay);
+                console.log(`⏳ 下一個交易日前隨機等待 ${formatDelay(delay)}`);
+                await wait(delay);
             }
         }
     } finally {
         await context.close();
         await browser.close();
     }
-
     if (failed) process.exitCode = 2;
 }
 

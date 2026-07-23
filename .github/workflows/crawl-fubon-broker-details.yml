@@ -2,7 +2,7 @@ name: Crawl Fubon Broker Details
 
 on:
   schedule:
-    # 主力排行最後一次排程為台北 20:47；21:17 再抓券商分點明細。
+    # 台北 21:17 抓取全市場券商分點明細。
     - cron: '17 13 * * 1-5'
     # 台北 22:17 再檢查／重試一次；已有完整檔案時會立即跳過。
     - cron: '17 14 * * 1-5'
@@ -21,7 +21,7 @@ on:
         required: false
         default: ''
       max_dates:
-        description: '本次最多補抓幾個未完成交易日；0 表示不限'
+        description: '本次最多補抓幾個未完成交易日；建議 1，最多 5'
         required: false
         default: '5'
       concurrency:
@@ -48,6 +48,10 @@ on:
         description: '請求失敗指數退避基準（毫秒）'
         required: false
         default: '5000'
+      checkpoint_size:
+        description: '每處理幾檔股票寫入一次 JSON 進度'
+        required: false
+        default: '100'
       force:
         description: '重新下載已有完整檔案'
         type: boolean
@@ -93,6 +97,7 @@ jobs:
           args="$args --date-min-delay-ms ${{ inputs.date_min_delay_ms || '5000' }}"
           args="$args --date-max-delay-ms ${{ inputs.date_max_delay_ms || '15000' }}"
           args="$args --backoff-base-ms ${{ inputs.backoff_base_ms || '5000' }}"
+          args="$args --checkpoint-size ${{ inputs.checkpoint_size || '100' }}"
 
           if [ -n "${{ inputs.date }}" ]; then
             args="$args --date ${{ inputs.date }}"
@@ -100,7 +105,6 @@ jobs:
             args="$args --start ${{ inputs.start_date || '2026-01-01' }}"
             args="$args --end ${{ inputs.end_date || 'yesterday' }}"
             args="$args --max-dates ${{ inputs.max_dates || '5' }}"
-            args="$args --allow-missing-ranking"
           fi
 
           if [ "${{ inputs.force }}" = "true" ]; then
