@@ -765,13 +765,15 @@ function validatePayload(payload, isoDate, universe) {
         }
         for (const item of stock.buyBrokers) {
             if (!item.brokerName || !Number.isFinite(item.buy) || !Number.isFinite(item.sell) ||
-                !Number.isFinite(item.netBuy) || !Number.isFinite(item.sharePercent)) {
+                !Number.isFinite(item.netBuy) ||
+                (item.sharePercent !== null && !Number.isFinite(item.sharePercent))) {
                 errors.push(`買超券商欄位錯誤：${code} rank=${item.rank}`);
             }
         }
         for (const item of stock.sellBrokers) {
             if (!item.brokerName || !Number.isFinite(item.buy) || !Number.isFinite(item.sell) ||
-                !Number.isFinite(item.netSell) || !Number.isFinite(item.sharePercent)) {
+                !Number.isFinite(item.netSell) ||
+                (item.sharePercent !== null && !Number.isFinite(item.sharePercent))) {
                 errors.push(`賣超券商欄位錯誤：${code} rank=${item.rank}`);
             }
         }
