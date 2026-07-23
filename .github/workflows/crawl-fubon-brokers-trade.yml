@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: '目標日期（YYYYMMDD）；空白時使用台北今日'
+        description: '目標日期（YYYYMMDD）；空白時以台北 08:00 為換日界線'
         required: false
         default: ''
       force:
@@ -54,7 +54,8 @@ jobs:
           if [ -n "${{ inputs.date }}" ]; then
             target_date="${{ inputs.date }}"
           else
-            target_date=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            # 將台北時間往前移 8 小時，讓 00:00～07:59 仍歸屬前一交易日。
+            target_date=$(TZ='Asia/Taipei' date -d '8 hours ago' '+%Y%m%d')
           fi
 
           if [[ ! "$target_date" =~ ^[0-9]{8}$ ]]; then

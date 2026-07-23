@@ -105,6 +105,10 @@ jobs:
             args="$args --start ${{ inputs.start_date || '2026-01-01' }}"
             args="$args --end ${{ inputs.end_date || 'yesterday' }}"
             args="$args --max-dates ${{ inputs.max_dates || '5' }}"
+          else
+            # 將台北時間往前移 8 小時，讓 00:00～07:59 仍歸屬前一交易日。
+            target_date=$(TZ='Asia/Taipei' date -d '8 hours ago' '+%Y%m%d')
+            args="$args --date $target_date"
           fi
 
           if [ "${{ inputs.force }}" = "true" ]; then
