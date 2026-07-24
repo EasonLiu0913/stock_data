@@ -567,7 +567,8 @@
             const visible = getVisibleRows();
             const layout = getPanelLayout(width, height);
             const candleStep = layout.plotWidth / Math.max(visible.length, 1);
-            const candleWidth = Math.max(1.5, Math.min(11, candleStep * 0.62));
+            const candleGap = Math.max(1, Math.min(3, candleStep * 0.16));
+            const candleWidth = Math.max(1.5, candleStep - candleGap);
             const lows = visible.map(row => row.low);
             const highs = visible.map(row => row.high);
             const visibleSmaValues = visible.flatMap(row =>
@@ -625,7 +626,7 @@
 
                 ctx.strokeStyle = color;
                 ctx.fillStyle = color;
-                ctx.lineWidth = Math.max(1, Math.min(1.6, candleWidth / 4));
+                ctx.lineWidth = Math.max(1, Math.min(2.2, candleWidth / 5));
                 ctx.beginPath();
                 ctx.moveTo(x, highY);
                 ctx.lineTo(x, lowY);
