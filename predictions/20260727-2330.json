@@ -13,7 +13,19 @@
   "risk_score": null,
   "final_direction_label": "中性",
   "data_completeness": 40,
-  "missing_data": ["institutional", "margin", "broker", "ATR14", "RSI14"],
+  "missing_data": ["institutional", "margin", "broker"],
+  "missing_files": [
+    "data_twse_institutional_investors/20260724_twse_institutional_investors.json (empty)",
+    "data_fubon/fubon_20260724_institutional.json (empty)",
+    "data_twse_margin_balance/20260724_twse_margin_balance.csv (missing)",
+    "data_fubon_broker_details/fubon_20260724_券商分點進出明細.json (missing)"
+  ],
+  "missing_indicators": ["ATR14", "RSI14"],
+  "data_quality_notes": [
+    "檔名存在不代表資料可用；法人檔案經內容檢查為空檔。",
+    "大盤資料使用 data_twse_market_chart/market_chart.json 的 TWSE 結構化資料，因此計入 10% 完整度。",
+    "ATR14 與 RSI14 為衍生指標，不另占資料完整度權重。"
+  ],
   "backtest_rule_id": null,
   "backtest_status": "unavailable",
   "view": {
@@ -26,7 +38,7 @@
       "市場：TWSE"
     ],
     "verdict_title": "中性，短線略偏弱",
-    "verdict_summary": "固定方向分數為 -1。收盤跌破 SMA20 是唯一觸發的負向計分；單日跌幅、三日跌幅、量能及相對大盤強弱均未達額外門檻。由於法人、融資與券商分點資料未完整納入，本報告不輸出精確方向機率。",
+    "verdict_summary": "固定方向分數為 -1。收盤跌破 SMA20 是唯一觸發的負向計分；單日跌幅、三日跌幅、量能及相對大盤強弱均未達額外門檻。7/24 法人檔案雖存在但內容為空，融資與券商分點檔案亦未取得，因此本報告不輸出精確方向機率。",
     "risk_label": "短線略偏弱",
     "forecast_cards": [
       {"label": "基準情境", "value": "2,340～2,405", "description": "守 SMA60、受制 SMA20 的震盪區。"},
@@ -39,7 +51,7 @@
       {"label": "成交量倍率", "value": "0.97 倍", "description": "7/24 成交量 24,586 張，略低於 7/23 的 25,343 張。"},
       {"label": "均線位置", "value": "SMA20 下方", "description": "收盤 2,350 元低於 SMA20 2,413 元，但仍略高於 SMA60。"},
       {"label": "開盤至收盤", "value": "-0.21%", "description": "開盤 2,355 元、收盤 2,350 元，未達 -3% 門檻。"},
-      {"label": "資料完整度", "value": "40%", "description": "價量 30 分、大盤 10 分；低於 50% 不輸出方向機率。"}
+      {"label": "資料完整度", "value": "40%", "description": "價量 30 分、大盤 10 分；法人空檔不計分，低於 50% 不輸出方向機率。"}
     ],
     "scores": [
       {"item": "單日報酬", "value": "-2.29%", "rule": "未達 r1 ≤ -3%", "score": 0},
@@ -48,7 +60,7 @@
       {"item": "下跌放量", "value": "0.97 倍", "rule": "未達 volume_ratio_1d ≥ 1.2", "score": 0},
       {"item": "相對大盤強弱", "value": "約 +0.38 個百分點", "rule": "未達 ±3", "score": 0},
       {"item": "三日報酬", "value": "-2.49%", "rule": "未達 r3 ≤ -8%", "score": 0},
-      {"item": "法人／融資／分點", "value": "未完整取得", "rule": "缺少對應日期資料，依規則計 0", "score": 0}
+      {"item": "法人／融資／分點", "value": "法人空檔；融資與分點缺檔", "rule": "無有效對應日期資料，依規則計 0", "score": 0}
     ],
     "scenarios": [
       {"label": "基準情境", "title": "支撐與壓力間震盪", "description": "守住 2,340～2,345 元，但無法站回 2,405～2,415 元，維持中性整理。", "target": "參考區間：2,340～2,405"},
@@ -62,7 +74,7 @@
       {"type": "第一壓力", "price": "2,365", "description": "2026-07-24 盤中高點。"},
       {"type": "核心壓力", "price": "2,405～2,415", "description": "前一日收盤與 SMA20 重疊區。"}
     ],
-    "data_note": "低完整度提醒：本報告尚未完整納入 2026-07-24 三大法人、融資融券、券商分點，以及計算 ATR14、RSI14 所需的完整序列。依方法規範，低於 50% 不得輸出上漲或下跌機率。",
+    "data_note": "低完整度提醒：2026-07-24 的 TWSE 與富邦法人檔案雖已建立，但內容皆為空；同日融資融券與券商分點明細尚未取得。ATR14、RSI14 則需由歷史價格序列計算。依方法規範，完整度 40% 不得輸出上漲或下跌機率。",
     "footer": "本頁為規則化市場情境分析，不構成買賣建議。預測日開盤、盤中及收盤資料不得回填至本次核心判斷。"
   }
 }
