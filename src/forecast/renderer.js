@@ -16,6 +16,9 @@ const METADATA_FIELDS = [
   'final_direction_label',
   'data_completeness',
   'missing_data',
+  'missing_files',
+  'missing_indicators',
+  'data_quality_notes',
   'backtest_rule_id',
   'backtest_status',
 ];
@@ -114,7 +117,7 @@ function renderForecastHtml(data, template) {
     scores: [],
     scenarios: [],
     levels: [],
-    data_note: '請檢查 missing_data 與 data_completeness 後再解讀結果。',
+    data_note: '請檢查 missing_data、missing_files 與 data_completeness 後再解讀結果。',
     footer: '本頁為規則化市場情境分析，不構成買賣建議。',
     ...(data.view ?? {}),
   };
