@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣加權指數日 K 線</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #07111f;
+            --panel: #0d1a2b;
+            --panel-2: #101f33;
+            --border: #22334b;
+            --text: #e8eef7;
+            --muted: #8ea1bb;
+            --red: #ff5b68;
+            --green: #21c58b;
+            --blue: #5da9ff;
+            --amber: #f7bc55;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 20px;
+            background:
+                radial-gradient(circle at 15% -10%, rgba(47, 113, 183, 0.24), transparent 32%),
+                linear-gradient(180deg, #07111f 0%, #091522 100%);
+            color: var(--text);
+            font-family: Inter, "Noto Sans TC", "Segoe UI", sans-serif;
+        }
+
+        .page {
+            width: min(1500px, 100%);
+            margin: 0 auto;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+
+        .eyebrow {
+            margin-bottom: 7px;
+            color: var(--blue);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.55rem, 3vw, 2.4rem);
+            letter-spacing: -0.035em;
+        }
+
+        .subtitle {
+            margin: 8px 0 0;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .home-link {
+            color: var(--text);
+            text-decoration: none;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(13, 26, 43, 0.82);
+            font-size: 0.9rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .metric {
+            min-height: 90px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: linear-gradient(145deg, rgba(16, 31, 51, 0.96), rgba(10, 23, 38, 0.96));
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+        }
+
+        .metric-label {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .metric-value {
+            margin-top: 7px;
+            font-size: clamp(1.1rem, 2vw, 1.55rem);
+            font-weight: 850;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-detail {
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .positive {
+            color: var(--red);
+        }
+
+        .negative {
+            color: var(--green);
+        }
+
+        .chart-card {
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: rgba(10, 23, 38, 0.96);
+            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(16, 31, 51, 0.72);
+        }
+
+        .toolbar-group,
+        .legend {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        select,
+        button {
+            min-height: 36px;
+            border: 1px solid #30445f;
+            border-radius: 9px;
+            background: #112239;
+            color: var(--text);
+            padding: 0 11px;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 750;
+            cursor: pointer;
+        }
+
+        button:hover,
+        select:hover {
+            border-color: #53749b;
+            background: #162b46;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .swatch {
+            width: 9px;
+            height: 9px;
+            border-radius: 3px;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            height: min(730px, calc(100vh - 265px));
+            min-height: 540px;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+            cursor: crosshair;
+        }
+
+        .tooltip {
+            position: absolute;
+            z-index: 4;
+            display: none;
+            min-width: 220px;
+            pointer-events: none;
+            padding: 11px 12px;
+            border: 1px solid #3b526f;
+            border-radius: 10px;
+            background: rgba(4, 12, 23, 0.94);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+            color: var(--text);
+            font-size: 0.8rem;
+            line-height: 1.55;
+            font-variant-numeric: tabular-nums;
+            backdrop-filter: blur(8px);
+        }
+
+        .tooltip-date {
+            margin-bottom: 5px;
+            color: #ffffff;
+            font-weight: 850;
+        }
+
+        .tooltip-grid {
+            display: grid;
+            grid-template-columns: auto auto;
+            column-gap: 16px;
+        }
+
+        .tooltip-grid span:nth-child(even) {
+            text-align: right;
+            font-weight: 750;
+        }
+
+        .status {
+            display: grid;
+            place-items: center;
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            padding: 30px;
+            background: rgba(7, 17, 31, 0.88);
+            color: var(--muted);
+            font-weight: 750;
+            text-align: center;
+        }
+
+        .footnote {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 11px 14px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 800px) {
+            body {
+                padding: 10px;
+            }
+
+            .topbar {
+                align-items: flex-start;
+            }
+
+            .subtitle {
+                font-size: 0.85rem;
+            }
+
+            .summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .metric {
+                min-height: 80px;
+                padding: 12px;
+            }
+
+            .toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .canvas-wrap {
+                height: 620px;
+                min-height: 620px;
+            }
+
+            .legend {
+                gap: 7px 12px;
+            }
+
+            .footnote {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div>
+                <div class="eyebrow">TWSE Market Dashboard</div>
+                <h1>台灣加權指數日 K 線</h1>
+                <p class="subtitle">大盤開高低收、成交量與外資買賣超，共用日期軸同步檢視。</p>
+            </div>
+            <a class="home-link" href="index.html">返回工具清單</a>
+        </header>
+
+        <section class="summary" aria-label="最新市場摘要">
+            <article class="metric">
+                <div class="metric-label">最新交易日</div>
+                <div class="metric-value" id="latestDate">—</div>
+                <div class="metric-detail" id="dataRange">資料載入中</div>
+            </article>
+            <article class="metric">
+                <div class="metric-label">加權指數</div>
+                <div class="metric-value" id="latestClose">—</div>
+                <div class="metric-detail" id="latestChange">—</div>
+            </article>
+            <article class="metric">
+                <div class="metric-label">市場成交量</div>
+                <div class="metric-value" id="latestVolume">—</div>
+                <div class="metric-detail" id="latestTurnover">—</div>
+            </article>
+            <article class="metric">
+                <div class="metric-label">外資買賣超</div>
+                <div class="metric-value" id="latestForeign">—</div>
+                <div class="metric-detail">外資及陸資，不含外資自營商</div>
+            </article>
+        </section>
+
+        <section class="chart-card">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label for="rangeSelect">顯示區間</label>
+                    <select id="rangeSelect">
+                        <option value="60">近 60 日</option>
+                        <option value="120" selected>近 120 日</option>
+                        <option value="250">近 250 日</option>
+                        <option value="all">全部</option>
+                    </select>
+                    <button id="zoomIn" type="button" aria-label="放大圖表">＋ 放大</button>
+                    <button id="zoomOut" type="button" aria-label="縮小圖表">－ 縮小</button>
+                    <button id="resetView" type="button">回到最新</button>
+                </div>
+                <div class="legend" aria-label="圖例">
+                    <span class="legend-item"><i class="swatch" style="background: var(--red)"></i>上漲</span>
+                    <span class="legend-item"><i class="swatch" style="background: var(--green)"></i>下跌</span>
+                    <span class="legend-item"><i class="swatch" style="background: var(--blue)"></i>成交量</span>
+                    <span class="legend-item"><i class="swatch" style="background: var(--amber)"></i>外資淨額</span>
+                    <span class="legend-item"><i class="swatch" style="background: #ffd166"></i>SMA5</span>
+                    <span class="legend-item"><i class="swatch" style="background: #8b5cf6"></i>SMA10</span>
+                    <span class="legend-item"><i class="swatch" style="background: #22d3ee"></i>SMA20</span>
+                    <span class="legend-item"><i class="swatch" style="background: #fb923c"></i>SMA60</span>
+                    <span class="legend-item"><i class="swatch" style="background: #f472b6"></i>SMA120</span>
+                </div>
+            </div>
+
+            <div class="canvas-wrap" id="canvasWrap">
+                <canvas id="marketChart" tabindex="0"
+                    aria-label="台灣加權指數日 K 線、成交量與外資買賣超互動圖"></canvas>
+                <div class="tooltip" id="tooltip"></div>
+                <div class="status" id="status">正在載入市場資料…</div>
+            </div>
+
+            <div class="footnote">
+                <span>滑鼠滾輪可縮放，左右拖曳可移動日期；觸控裝置可直接拖曳。</span>
+                <span id="sourceNote">資料來源：臺灣證券交易所</span>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('marketChart');
+        const ctx = canvas.getContext('2d');
+        const wrap = document.getElementById('canvasWrap');
+        const tooltip = document.getElementById('tooltip');
+        const status = document.getElementById('status');
+        const rangeSelect = document.getElementById('rangeSelect');
+        const COLORS = {
+            grid: '#21334a',
+            gridStrong: '#314763',
+            text: '#8ea1bb',
+            bright: '#e8eef7',
+            red: '#ff5b68',
+            green: '#21c58b',
+            blue: '#5da9ff',
+            amber: '#f7bc55',
+            crosshair: '#7088a8'
+        };
+        const SMA_SERIES = [
+            { period: 5, key: 'sma5', color: '#ffd166' },
+            { period: 10, key: 'sma10', color: '#8b5cf6' },
+            { period: 20, key: 'sma20', color: '#22d3ee' },
+            { period: 60, key: 'sma60', color: '#fb923c' },
+            { period: 120, key: 'sma120', color: '#f472b6' }
+        ];
+
+        let rows = [];
+        let visibleCount = 120;
+        let endIndex = 0;
+        let hoverIndex = -1;
+        let dragState = null;
+        let chartMetrics = null;
+
+        function getBasePath() {
+            return window.location.hostname.includes('github.io') ? '/stock_data' : '..';
+        }
+
+        function formatDate(value) {
+            const text = String(value || '');
+            return /^\d{8}$/.test(text)
+                ? `${text.slice(0, 4)}/${text.slice(4, 6)}/${text.slice(6, 8)}`
+                : text;
+        }
+
+        function formatAxisDate(value) {
+            const text = String(value || '');
+            return /^\d{8}$/.test(text) ? `${text.slice(4, 6)}/${text.slice(6, 8)}` : text;
+        }
+
+        function formatNumber(value, digits = 2) {
+            return Number(value).toLocaleString('zh-TW', {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        }
+
+        function formatCompact(value) {
+            const absolute = Math.abs(Number(value));
+            if (absolute >= 1e12) return `${formatNumber(value / 1e12, 2)} 兆`;
+            if (absolute >= 1e8) return `${formatNumber(value / 1e8, 2)} 億`;
+            if (absolute >= 1e4) return `${formatNumber(value / 1e4, 1)} 萬`;
+            return formatNumber(value, 0);
+        }
+
+        function formatSigned(value, suffix = '') {
+            const number = Number(value);
+            const sign = number > 0 ? '+' : '';
+            return `${sign}${formatNumber(number, 2)}${suffix}`;
+        }
+
+        function toneClass(value) {
+            return Number(value) > 0 ? 'positive' : Number(value) < 0 ? 'negative' : '';
+        }
+
+        function calculateMovingAverages(data) {
+            for (const series of SMA_SERIES) {
+                let rollingSum = 0;
+                data.forEach((row, index) => {
+                    rollingSum += row.close;
+                    if (index >= series.period) rollingSum -= data[index - series.period].close;
+                    row[series.key] = index >= series.period - 1
+                        ? rollingSum / series.period
+                        : null;
+                });
+            }
+        }
+
+        function updateSummary() {
+            const latest = rows.at(-1);
+            const previous = rows.at(-2);
+            if (!latest) return;
+            const change = previous ? latest.close - previous.close : 0;
+            const changePercent = previous ? change / previous.close * 100 : 0;
+
+            document.getElementById('latestDate').textContent = formatDate(latest.date);
+            document.getElementById('dataRange').textContent =
+                `${formatDate(rows[0].date)} 至 ${formatDate(latest.date)}，共 ${rows.length} 日`;
+            document.getElementById('latestClose').textContent = formatNumber(latest.close, 2);
+            const changeElement = document.getElementById('latestChange');
+            changeElement.textContent = `${formatSigned(change)}（${formatSigned(changePercent, '%')}）`;
+            changeElement.className = `metric-detail ${toneClass(change)}`;
+            document.getElementById('latestVolume').textContent =
+                `${formatNumber(latest.volumeShares / 1e8, 2)} 億股`;
+            document.getElementById('latestTurnover').textContent =
+                `成交值 ${formatCompact(latest.turnover)}元`;
+            const foreignElement = document.getElementById('latestForeign');
+            foreignElement.textContent = `${formatSigned(latest.foreignNetAmount / 1e8)} 億元`;
+            foreignElement.className = `metric-value ${toneClass(latest.foreignNetAmount)}`;
+        }
+
+        function clampView() {
+            const minimum = Math.min(20, rows.length);
+            visibleCount = Math.max(minimum, Math.min(rows.length, visibleCount));
+            endIndex = Math.max(visibleCount, Math.min(rows.length, endIndex || rows.length));
+        }
+
+        function setRange(value) {
+            visibleCount = value === 'all' ? rows.length : Number(value);
+            endIndex = rows.length;
+            hoverIndex = -1;
+            tooltip.style.display = 'none';
+            clampView();
+            draw();
+        }
+
+        function resizeCanvas() {
+            const rect = wrap.getBoundingClientRect();
+            const ratio = Math.max(1, window.devicePixelRatio || 1);
+            canvas.width = Math.round(rect.width * ratio);
+            canvas.height = Math.round(rect.height * ratio);
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            draw();
+        }
+
+        function getVisibleRows() {
+            clampView();
+            return rows.slice(endIndex - visibleCount, endIndex);
+        }
+
+        function getPanelLayout(width, height) {
+            const left = width < 700 ? 58 : 74;
+            const right = width < 700 ? 12 : 22;
+            return {
+                left,
+                right,
+                plotWidth: width - left - right,
+                price: { top: 38, bottom: height * 0.56 },
+                volume: { top: height * 0.615, bottom: height * 0.75 },
+                foreign: { top: height * 0.805, bottom: height - 48 }
+            };
+        }
+
+        function drawLabel(text, x, y, options = {}) {
+            ctx.fillStyle = options.color || COLORS.text;
+            ctx.font = `${options.weight || 600} ${options.size || 11}px Inter, "Noto Sans TC", sans-serif`;
+            ctx.textAlign = options.align || 'left';
+            ctx.textBaseline = options.baseline || 'middle';
+            ctx.fillText(text, x, y);
+        }
+
+        function drawHorizontalGrid(panel, minimum, maximum, ticks, formatter, layout) {
+            const span = maximum - minimum || 1;
+            for (let index = 0; index <= ticks; index += 1) {
+                const ratio = index / ticks;
+                const y = panel.bottom - ratio * (panel.bottom - panel.top);
+                const value = minimum + ratio * span;
+                ctx.strokeStyle = COLORS.grid;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(layout.left, y);
+                ctx.lineTo(layout.left + layout.plotWidth, y);
+                ctx.stroke();
+                drawLabel(formatter(value), layout.left - 8, y, { align: 'right', size: 10 });
+            }
+        }
+
+        function draw() {
+            if (!rows.length || !canvas.clientWidth || !canvas.clientHeight) return;
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+            const visible = getVisibleRows();
+            const layout = getPanelLayout(width, height);
+            const candleStep = layout.plotWidth / Math.max(visible.length, 1);
+            const candleWidth = Math.max(1.5, Math.min(11, candleStep * 0.62));
+            const lows = visible.map(row => row.low);
+            const highs = visible.map(row => row.high);
+            const visibleSmaValues = visible.flatMap(row =>
+                SMA_SERIES.map(series => row[series.key]).filter(Number.isFinite)
+            );
+            let priceMin = Math.min(...lows, ...visibleSmaValues);
+            let priceMax = Math.max(...highs, ...visibleSmaValues);
+            const pricePadding = Math.max((priceMax - priceMin) * 0.08, priceMax * 0.002);
+            priceMin -= pricePadding;
+            priceMax += pricePadding;
+            const priceY = value => layout.price.bottom -
+                (value - priceMin) / (priceMax - priceMin || 1) *
+                (layout.price.bottom - layout.price.top);
+
+            const volumeMax = Math.max(...visible.map(row => row.volumeShares), 1) * 1.12;
+            const volumeY = value => layout.volume.bottom -
+                value / volumeMax * (layout.volume.bottom - layout.volume.top);
+
+            const foreignMax = Math.max(...visible.map(row => Math.abs(row.foreignNetAmount)), 1) * 1.12;
+            const foreignZero = (layout.foreign.top + layout.foreign.bottom) / 2;
+            const foreignHalfHeight = (layout.foreign.bottom - layout.foreign.top) / 2;
+            const foreignY = value => foreignZero - value / foreignMax * foreignHalfHeight;
+
+            drawLabel('加權指數（日 K）', layout.left, 17, { color: COLORS.bright, weight: 800, size: 12 });
+            drawLabel('成交量（億股）', layout.left, layout.volume.top - 15, {
+                color: COLORS.blue, weight: 800, size: 11
+            });
+            drawLabel('外資買賣超（億元）', layout.left, layout.foreign.top - 15, {
+                color: COLORS.amber, weight: 800, size: 11
+            });
+
+            drawHorizontalGrid(layout.price, priceMin, priceMax, 5, value => formatNumber(value, 0), layout);
+            drawHorizontalGrid(layout.volume, 0, volumeMax, 2, value => formatNumber(value / 1e8, 0), layout);
+            ctx.strokeStyle = COLORS.gridStrong;
+            ctx.beginPath();
+            ctx.moveTo(layout.left, foreignZero);
+            ctx.lineTo(layout.left + layout.plotWidth, foreignZero);
+            ctx.stroke();
+            drawLabel(formatNumber(foreignMax / 1e8, 0), layout.left - 8, layout.foreign.top, {
+                align: 'right', size: 10
+            });
+            drawLabel('0', layout.left - 8, foreignZero, { align: 'right', size: 10 });
+            drawLabel(formatNumber(-foreignMax / 1e8, 0), layout.left - 8, layout.foreign.bottom, {
+                align: 'right', size: 10
+            });
+
+            visible.forEach((row, index) => {
+                const x = layout.left + candleStep * (index + 0.5);
+                const up = row.close >= row.open;
+                const color = up ? COLORS.red : COLORS.green;
+                const openY = priceY(row.open);
+                const closeY = priceY(row.close);
+                const highY = priceY(row.high);
+                const lowY = priceY(row.low);
+
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineWidth = Math.max(1, Math.min(1.6, candleWidth / 4));
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+                const bodyTop = Math.min(openY, closeY);
+                const bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
+                ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+                const volumeTop = volumeY(row.volumeShares);
+                ctx.globalAlpha = 0.68;
+                ctx.fillRect(
+                    x - candleWidth / 2,
+                    volumeTop,
+                    candleWidth,
+                    Math.max(1, layout.volume.bottom - volumeTop)
+                );
+                ctx.globalAlpha = 1;
+
+                const foreignTop = foreignY(row.foreignNetAmount);
+                ctx.fillStyle = row.foreignNetAmount >= 0 ? COLORS.red : COLORS.green;
+                ctx.globalAlpha = 0.78;
+                ctx.fillRect(
+                    x - candleWidth / 2,
+                    Math.min(foreignTop, foreignZero),
+                    candleWidth,
+                    Math.max(1, Math.abs(foreignZero - foreignTop))
+                );
+                ctx.globalAlpha = 1;
+            });
+
+            for (const series of SMA_SERIES) {
+                ctx.strokeStyle = series.color;
+                ctx.lineWidth = series.period >= 60 ? 1.8 : 1.55;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                let started = false;
+                visible.forEach((row, index) => {
+                    const value = row[series.key];
+                    if (!Number.isFinite(value)) {
+                        started = false;
+                        return;
+                    }
+                    const x = layout.left + candleStep * (index + 0.5);
+                    const y = priceY(value);
+                    if (!started) {
+                        ctx.moveTo(x, y);
+                        started = true;
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+            }
+
+            const labelCount = Math.min(7, visible.length);
+            const usedLabelIndexes = new Set();
+            for (let index = 0; index < labelCount; index += 1) {
+                const rowIndex = Math.round(index * (visible.length - 1) / Math.max(labelCount - 1, 1));
+                if (usedLabelIndexes.has(rowIndex)) continue;
+                usedLabelIndexes.add(rowIndex);
+                const x = layout.left + candleStep * (rowIndex + 0.5);
+                ctx.strokeStyle = COLORS.grid;
+                ctx.beginPath();
+                ctx.moveTo(x, layout.price.top);
+                ctx.lineTo(x, layout.foreign.bottom);
+                ctx.stroke();
+                drawLabel(formatAxisDate(visible[rowIndex].date), x, height - 23, {
+                    align: 'center', size: 10
+                });
+            }
+
+            if (hoverIndex >= 0 && hoverIndex < visible.length) {
+                const x = layout.left + candleStep * (hoverIndex + 0.5);
+                ctx.strokeStyle = COLORS.crosshair;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x, layout.price.top);
+                ctx.lineTo(x, layout.foreign.bottom);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            chartMetrics = { visible, layout, candleStep };
+        }
+
+        function updateTooltip(event) {
+            if (!chartMetrics || dragState) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const { visible, layout, candleStep } = chartMetrics;
+            if (x < layout.left || x > layout.left + layout.plotWidth) {
+                hoverIndex = -1;
+                tooltip.style.display = 'none';
+                draw();
+                return;
+            }
+            hoverIndex = Math.max(0, Math.min(
+                visible.length - 1,
+                Math.floor((x - layout.left) / candleStep)
+            ));
+            const row = visible[hoverIndex];
+            const previousGlobalIndex = endIndex - visibleCount + hoverIndex - 1;
+            const previous = previousGlobalIndex >= 0 ? rows[previousGlobalIndex] : null;
+            const change = previous ? row.close - previous.close : 0;
+
+            tooltip.innerHTML = `
+                <div class="tooltip-date">${formatDate(row.date)}</div>
+                <div class="tooltip-grid">
+                    <span>開盤</span><span>${formatNumber(row.open)}</span>
+                    <span>最高</span><span>${formatNumber(row.high)}</span>
+                    <span>最低</span><span>${formatNumber(row.low)}</span>
+                    <span>收盤</span><span class="${toneClass(change)}">${formatNumber(row.close)}</span>
+                    <span>漲跌</span><span class="${toneClass(change)}">${formatSigned(change)}</span>
+                    ${SMA_SERIES.map(series => `
+                        <span style="color: ${series.color}">SMA${series.period}</span>
+                        <span style="color: ${series.color}">${Number.isFinite(row[series.key]) ? formatNumber(row[series.key]) : '—'}</span>
+                    `).join('')}
+                    <span>成交量</span><span>${formatNumber(row.volumeShares / 1e8)} 億股</span>
+                    <span>成交值</span><span>${formatCompact(row.turnover)}元</span>
+                    <span>外資</span><span class="${toneClass(row.foreignNetAmount)}">${formatSigned(row.foreignNetAmount / 1e8)} 億元</span>
+                </div>
+            `;
+            tooltip.style.display = 'block';
+            const tooltipWidth = tooltip.offsetWidth;
+            const tooltipHeight = tooltip.offsetHeight;
+            let left = event.clientX - rect.left + 14;
+            let top = event.clientY - rect.top + 14;
+            if (left + tooltipWidth > rect.width - 8) left -= tooltipWidth + 28;
+            if (top + tooltipHeight > rect.height - 8) top -= tooltipHeight + 28;
+            tooltip.style.left = `${Math.max(8, left)}px`;
+            tooltip.style.top = `${Math.max(8, top)}px`;
+            draw();
+        }
+
+        function zoom(factor, anchorRatio = 0.5) {
+            if (!rows.length) return;
+            const oldCount = visibleCount;
+            const newCount = Math.round(oldCount * factor);
+            const oldStart = endIndex - oldCount;
+            const anchorIndex = oldStart + oldCount * anchorRatio;
+            visibleCount = newCount;
+            clampView();
+            const newStart = Math.round(anchorIndex - visibleCount * anchorRatio);
+            endIndex = newStart + visibleCount;
+            clampView();
+            hoverIndex = -1;
+            tooltip.style.display = 'none';
+            draw();
+        }
+
+        canvas.addEventListener('mousemove', updateTooltip);
+        canvas.addEventListener('mouseleave', () => {
+            if (!dragState) {
+                hoverIndex = -1;
+                tooltip.style.display = 'none';
+                draw();
+            }
+        });
+        canvas.addEventListener('wheel', event => {
+            event.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            zoom(event.deltaY > 0 ? 1.15 : 0.86, ratio);
+        }, { passive: false });
+        canvas.addEventListener('pointerdown', event => {
+            canvas.setPointerCapture(event.pointerId);
+            dragState = { pointerId: event.pointerId, startX: event.clientX, startEnd: endIndex };
+            tooltip.style.display = 'none';
+            canvas.style.cursor = 'grabbing';
+        });
+        canvas.addEventListener('pointermove', event => {
+            if (!dragState || dragState.pointerId !== event.pointerId || !chartMetrics) return;
+            const delta = Math.round((dragState.startX - event.clientX) / chartMetrics.candleStep);
+            endIndex = dragState.startEnd + delta;
+            clampView();
+            hoverIndex = -1;
+            draw();
+        });
+        canvas.addEventListener('pointerup', event => {
+            if (dragState?.pointerId === event.pointerId) {
+                dragState = null;
+                canvas.style.cursor = 'crosshair';
+            }
+        });
+        canvas.addEventListener('keydown', event => {
+            if (event.key === 'ArrowLeft') endIndex -= 5;
+            else if (event.key === 'ArrowRight') endIndex += 5;
+            else if (event.key === '+' || event.key === '=') zoom(0.86);
+            else if (event.key === '-') zoom(1.15);
+            else return;
+            event.preventDefault();
+            clampView();
+            draw();
+        });
+
+        rangeSelect.addEventListener('change', () => setRange(rangeSelect.value));
+        document.getElementById('zoomIn').addEventListener('click', () => zoom(0.78));
+        document.getElementById('zoomOut').addEventListener('click', () => zoom(1.28));
+        document.getElementById('resetView').addEventListener('click', () => setRange(rangeSelect.value));
+
+        async function loadData() {
+            try {
+                const response = await fetch(`${getBasePath()}/data_twse_market_chart/market_chart.json`, {
+                    cache: 'no-store'
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const payload = await response.json();
+                rows = Array.isArray(payload.data) ? payload.data : [];
+                if (!rows.length) throw new Error('資料檔沒有可顯示的交易日');
+                calculateMovingAverages(rows);
+                updateSummary();
+                document.getElementById('sourceNote').textContent =
+                    `資料來源：${payload.sources?.ohlc || 'TWSE'}、${payload.sources?.volume || 'TWSE'}、${payload.sources?.foreign || 'TWSE'}`;
+                status.style.display = 'none';
+                setRange(rangeSelect.value);
+                resizeCanvas();
+            } catch (error) {
+                status.textContent = `無法載入大盤圖表資料：${error.message}`;
+                status.style.color = '#ff8b95';
+            }
+        }
+
+        new ResizeObserver(resizeCanvas).observe(wrap);
+        loadData();
+    </script>
+</body>
+
+</html>
