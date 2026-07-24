@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="台積電（2330）2026-07-27 下一交易日股價風險與情境預測">
+  <title>2026-07-27 台積電（2330）下一交易日預測報告</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07100e;
+      --surface: rgba(15, 29, 27, 0.92);
+      --surface-strong: #112520;
+      --line: rgba(178, 214, 201, 0.16);
+      --text: #f2f8f5;
+      --muted: #9ab0a8;
+      --green: #46dfa8;
+      --cyan: #61c8db;
+      --amber: #ffc85c;
+      --red: #ff7285;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.32);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 12% -8%, rgba(70, 223, 168, 0.17), transparent 34rem),
+        radial-gradient(circle at 92% 5%, rgba(97, 200, 219, 0.14), transparent 31rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+      line-height: 1.65;
+    }
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 72px; }
+    .hero, .panel, .card, .scenario, .level, .meta-table { border: 1px solid var(--line); background: var(--surface); }
+    .hero {
+      padding: clamp(28px, 5vw, 54px);
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(23, 48, 42, 0.96), rgba(9, 18, 17, 0.93));
+      box-shadow: var(--shadow);
+    }
+    .eyebrow, .section-kicker { margin: 0; color: var(--cyan); font-size: .76rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    h1 { margin: 14px 0 12px; font-size: clamp(2rem, 5.6vw, 4.45rem); line-height: 1.04; letter-spacing: -.045em; }
+    h1 span { color: var(--muted); font-weight: 550; }
+    .lead { max-width: 860px; margin: 0; color: #c5d5cf; font-size: clamp(1rem, 2vw, 1.16rem); }
+    .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .pill { padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(4,11,10,.34); color: #c8d8d2; font-size: .84rem; }
+    .verdict { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 28px; align-items: center; margin-top: 18px; padding: clamp(24px,4vw,36px); border: 1px solid rgba(255,200,92,.26); border-radius: 24px; background: linear-gradient(115deg, rgba(255,200,92,.10), var(--surface)); }
+    .verdict h2 { margin: 4px 0 8px; font-size: clamp(1.35rem,3vw,2rem); }
+    .verdict p { margin: 0; color: #c4d2cd; }
+    .badge { display: grid; width: 140px; height: 140px; place-content: center; border: 12px solid rgba(255,200,92,.15); border-top-color: var(--amber); border-right-color: var(--amber); border-radius: 50%; text-align: center; transform: rotate(8deg); }
+    .badge strong, .badge span { transform: rotate(-8deg); }
+    .badge strong { color: var(--amber); font-size: 1.5rem; line-height: 1.05; }
+    .badge span { margin-top: 6px; color: var(--muted); font-size: .73rem; }
+    section { margin-top: 52px; }
+    section h2 { margin: 7px 0 18px; font-size: clamp(1.45rem,3vw,2.2rem); letter-spacing: -.025em; }
+    .grid-4, .grid-3, .grid-2 { display: grid; gap: 14px; }
+    .grid-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .card, .scenario { padding: 22px; border-radius: 18px; }
+    .label { display: block; color: var(--muted); font-size: .8rem; }
+    .card strong { display: block; margin: 9px 0 5px; color: var(--green); font-size: 1.45rem; }
+    .card.warning strong { color: var(--amber); }
+    .card.risk strong { color: var(--red); }
+    .card p, .scenario p { margin: 0; color: #bdccc7; font-size: .9rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+    table { width: 100%; min-width: 720px; border-collapse: collapse; }
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: .78rem; letter-spacing: .05em; }
+    tr:last-child td { border-bottom: 0; }
+    .negative { color: var(--red); font-weight: 750; }
+    .positive { color: var(--green); font-weight: 750; }
+    .neutral { color: var(--amber); font-weight: 750; }
+    .probability { display: inline-block; margin-bottom: 14px; padding: 5px 10px; border-radius: 999px; background: rgba(97,200,219,.11); color: var(--cyan); font-size: .8rem; font-weight: 800; }
+    .scenario h3 { margin: 0 0 8px; }
+    .scenario strong { display: block; margin-top: 14px; font-size: 1.2rem; }
+    .levels { display: grid; gap: 10px; }
+    .level { display: grid; grid-template-columns: 110px 120px minmax(0,1fr); gap: 18px; align-items: center; padding: 15px 18px; border-radius: 14px; }
+    .level .type { color: var(--muted); font-size: .82rem; }
+    .level strong { color: var(--cyan); }
+    .level p { margin: 0; color: #bac9c4; font-size: .9rem; }
+    .note { padding: 18px 20px; border-left: 3px solid var(--amber); border-radius: 0 14px 14px 0; background: rgba(255,200,92,.10); color: #d3d9d6; }
+    .meta-table { padding: 20px; border-radius: 18px; overflow-wrap: anywhere; }
+    .meta-table dl { display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px; margin: 0; }
+    .meta-table dt { color: var(--muted); }
+    .meta-table dd { margin: 0; }
+    code { color: #a8e6d2; font-family: "SFMono-Regular", Consolas, monospace; font-size: .86em; }
+    footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+    @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2,minmax(0,1fr)); } .grid-3 { grid-template-columns: 1fr; } .verdict { grid-template-columns: 1fr; } }
+    @media (max-width: 650px) { .page { width: min(100% - 20px,1120px); padding-top: 10px; } .hero { border-radius: 20px; } .grid-2 { grid-template-columns: 1fr; } .level { grid-template-columns: 85px 1fr; gap: 5px 12px; } .level p { grid-column: 1/-1; } .meta-table dl { grid-template-columns: 1fr; } }
+    @media (max-width: 430px) { .grid-4 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Next-session forecast · 2026-07-27</p>
+      <h1>台積電 <span>2330</span></h1>
+      <p class="lead">依《個股下一交易日預測方法》1.1.0，以 2026-07-24 台股收盤資料評估 7/27（一）走勢。核心模型不倒灌週五美股完整收盤、週末消息或預測日資料。</p>
+      <div class="pills">
+        <span class="pill">預測日：2026-07-27</span>
+        <span class="pill">基準交易日：2026-07-24</span>
+        <span class="pill">資訊截止：2026-07-24 15:30 Asia/Taipei</span>
+        <span class="pill">前收：2,350 元</span>
+        <span class="pill">市場：TWSE</span>
+      </div>
+    </header>
+
+    <div class="verdict">
+      <div>
+        <p class="section-kicker">Verdict</p>
+        <h2>中性，短線略偏弱</h2>
+        <p>固定方向分數為 -1。收盤跌破 SMA20 是唯一觸發的負向計分；單日跌幅、三日跌幅、量能及相對大盤強弱均未達額外門檻。由於法人、融資與券商分點資料未完整納入，本報告不輸出精確方向機率。</p>
+      </div>
+      <div class="badge" aria-label="方向中性">
+        <strong>中性</strong>
+        <span>短線略偏弱</span>
+      </div>
+    </div>
+
+    <section>
+      <p class="section-kicker">Forecast range</p>
+      <h2>週一基準預測</h2>
+      <div class="grid-4">
+        <article class="card"><span class="label">基準情境</span><strong>2,340～2,405</strong><p>守 SMA60、受制 SMA20 的震盪區。</p></article>
+        <article class="card"><span class="label">可能盤中區間</span><strong>2,320～2,415</strong><p>以近期支撐、壓力與短線波動估計。</p></article>
+        <article class="card warning"><span class="label">多空分界</span><strong>2,340 元</strong><p>接近 SMA60 2,341.92 元與 7/24 低點。</p></article>
+        <article class="card warning"><span class="label">轉強確認</span><strong>2,415 元</strong><p>需重新站回 SMA20 並有量能配合。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <p class="section-kicker">Known facts</p>
+      <h2>已知事實</h2>
+      <div class="grid-3">
+        <article class="card risk"><span class="label">單日報酬 r1</span><strong>-2.29%</strong><p>2,405 元跌至 2,350 元，未達 -3% 計分門檻。</p></article>
+        <article class="card risk"><span class="label">三日累計 r3</span><strong>-2.49%</strong><p>由 7/21 收盤 2,410 元計算，未達 -8% 門檻。</p></article>
+        <article class="card"><span class="label">成交量倍率</span><strong>0.97 倍</strong><p>7/24 成交量 24,586 張，略低於 7/23 的 25,343 張。</p></article>
+        <article class="card warning"><span class="label">均線位置</span><strong>SMA20 下方</strong><p>收盤 2,350 元低於 SMA20 2,413 元，但仍略高於 SMA60。</p></article>
+        <article class="card"><span class="label">開盤至收盤</span><strong>-0.21%</strong><p>開盤 2,355 元、收盤 2,350 元，未達 -3% 門檻。</p></article>
+        <article class="card"><span class="label">資料完整度</span><strong>40%</strong><p>價量 30 分、大盤 10 分；低於 50% 不輸出方向機率。</p></article>
+      </div>
+    </section>
+
+    <section>
+      <p class="section-kicker">Direction score</p>
+      <h2>固定規則計分</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>項目</th><th>數值</th><th>規則判定</th><th>分數</th></tr></thead>
+          <tbody>
+            <tr><td>單日報酬</td><td>-2.29%</td><td>未達 r1 ≤ -3%</td><td class="neutral">0</td></tr>
+            <tr><td>收盤與 SMA20</td><td>2,350 &lt; 2,413</td><td>close &lt; SMA20</td><td class="negative">-1</td></tr>
+            <tr><td>開盤至收盤</td><td>-0.21%</td><td>未達 intraday_return ≤ -3%</td><td class="neutral">0</td></tr>
+            <tr><td>下跌放量</td><td>0.97 倍</td><td>未達 volume_ratio_1d ≥ 1.2</td><td class="neutral">0</td></tr>
+            <tr><td>相對大盤強弱</td><td>約 +0.38 個百分點</td><td>未達 ±3</td><td class="neutral">0</td></tr>
+            <tr><td>三日報酬</td><td>-2.49%</td><td>未達 r3 ≤ -8%</td><td class="neutral">0</td></tr>
+            <tr><td>法人／融資／分點</td><td>未完整取得</td><td>缺少對應日期資料，依規則計 0</td><td class="neutral">0</td></tr>
+            <tr><td><strong>合計</strong></td><td></td><td><strong>raw_direction_label：中性</strong></td><td class="negative"><strong>-1</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <p class="section-kicker">Scenarios</p>
+      <h2>三種情境</h2>
+      <div class="grid-3">
+        <article class="scenario"><span class="probability">基準情境</span><h3>支撐與壓力間震盪</h3><p>守住 2,340～2,345 元，但無法站回 2,405～2,415 元，維持中性整理。</p><strong>參考區間：2,340～2,405</strong></article>
+        <article class="scenario"><span class="probability">偏多觸發</span><h3>重新站回 SMA20</h3><p>突破 2,405～2,415 元且量能放大，代表短線修正有機會結束。</p><strong>下一壓力：2,440～2,450</strong></article>
+        <article class="scenario"><span class="probability">偏空觸發</span><h3>SMA60 支撐失守</h3><p>跌破 2,340 元且成交量明顯放大，短線可能往下一個整理區尋找承接。</p><strong>下一支撐：2,300～2,320</strong></article>
+      </div>
+    </section>
+
+    <section>
+      <p class="section-kicker">Key levels</p>
+      <h2>關鍵價位</h2>
+      <div class="levels">
+        <div class="level"><span class="type">第一支撐</span><strong>2,345</strong><p>2026-07-24 盤中低點。</p></div>
+        <div class="level"><span class="type">核心支撐</span><strong>2,340</strong><p>SMA60 約 2,341.92 元，多空分界。</p></div>
+        <div class="level"><span class="type">第二支撐</span><strong>2,300～2,320</strong><p>跌破 SMA60 後的下一個心理與整理區。</p></div>
+        <div class="level"><span class="type">第一壓力</span><strong>2,365</strong><p>2026-07-24 盤中高點。</p></div>
+        <div class="level"><span class="type">核心壓力</span><strong>2,405～2,415</strong><p>前一日收盤與 SMA20 重疊區。</p></div>
+      </div>
+    </section>
+
+    <section>
+      <p class="section-kicker">Data quality</p>
+      <h2>資料限制與方法欄位</h2>
+      <div class="note"><strong>低完整度提醒：</strong>本報告尚未完整納入 2026-07-24 三大法人、融資融券、券商分點，以及計算 ATR14、RSI14 所需的完整序列。依方法規範，低於 50% 不得輸出上漲或下跌機率，也不應把方向標籤解讀為投資建議。</div>
+      <div class="meta-table" style="margin-top:14px">
+        <dl>
+          <dt>methodology_version</dt><dd><code>1.1.0</code></dd>
+          <dt>generated_at</dt><dd><code>2026-07-24T19:21:43+08:00</code></dd>
+          <dt>prediction_mode</dt><dd><code>prospective</code></dd>
+          <dt>stock_code / stock_name</dt><dd><code>2330 / 台積電</code></dd>
+          <dt>forecast_date</dt><dd><code>2026-07-27</code></dd>
+          <dt>base_trade_date</dt><dd><code>2026-07-24</code></dd>
+          <dt>information_cutoff</dt><dd><code>2026-07-24T15:30:00+08:00</code></dd>
+          <dt>market</dt><dd><code>TWSE</code></dd>
+          <dt>direction_score</dt><dd><code>-1</code></dd>
+          <dt>raw_direction_label</dt><dd><code>中性</code></dd>
+          <dt>risk_score</dt><dd><code>資料不足，未完整計算</code></dd>
+          <dt>final_direction_label</dt><dd><code>中性</code></dd>
+          <dt>data_completeness</dt><dd><code>40</code></dd>
+          <dt>missing_data</dt><dd><code>institutional, margin, broker, ATR14, RSI14</code></dd>
+          <dt>backtest_rule_id</dt><dd><code>null</code></dd>
+          <dt>backtest_status</dt><dd><code>unavailable</code></dd>
+        </dl>
+      </div>
+    </section>
+
+    <footer>本頁為規則化市場情境分析，不構成買賣建議。預測日開盤、盤中及收盤資料不得回填至本次核心判斷。</footer>
+  </main>
+</body>
+</html>
