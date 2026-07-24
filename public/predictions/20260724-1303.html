@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="南亞（1303）2026-07-24 下一交易日股價預測與風險分析報告">
+  <title>2026-07-24 南亞（1303）下一交易日預測報告</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d14;
+      --surface: rgba(20, 24, 38, 0.88);
+      --surface-strong: #171c2e;
+      --line: rgba(164, 177, 207, 0.16);
+      --text: #f3f6fc;
+      --muted: #9da9be;
+      --red: #ff6075;
+      --red-soft: rgba(255, 96, 117, 0.13);
+      --amber: #ffc857;
+      --amber-soft: rgba(255, 200, 87, 0.12);
+      --green: #46d7a2;
+      --blue: #6ba7ff;
+      --cyan: #61c8db;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 10% -10%, rgba(255, 96, 117, 0.16), transparent 34rem),
+        radial-gradient(circle at 90% 10%, rgba(107, 167, 255, 0.12), transparent 32rem),
+        var(--bg);
+      color: var(--text);
+      font-family:
+        Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
+        system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.65;
+    }
+
+    a {
+      color: #94bdff;
+      text-underline-offset: 0.22em;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 72px;
+    }
+
+    .eyebrow,
+    .section-kicker {
+      margin: 0;
+      color: var(--blue);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(28px, 5vw, 54px);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(31, 36, 56, 0.94), rgba(12, 15, 26, 0.92));
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      position: absolute;
+      top: -130px;
+      right: -110px;
+      width: 320px;
+      height: 320px;
+      border: 54px solid rgba(255, 96, 117, 0.08);
+      border-radius: 50%;
+      content: "";
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 14px 0 12px;
+      font-size: clamp(2rem, 5.5vw, 4.35rem);
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+    }
+
+    h1 span {
+      color: var(--muted);
+      font-weight: 550;
+    }
+
+    .lead {
+      max-width: 800px;
+      margin: 0;
+      color: #c8d1e1;
+      font-size: clamp(1rem, 2vw, 1.16rem);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .pill {
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(5, 8, 14, 0.32);
+      color: #cad3e3;
+      font-size: 0.84rem;
+    }
+
+    .verdict {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 28px;
+      align-items: center;
+      margin-top: 18px;
+      padding: clamp(24px, 4vw, 36px);
+      border: 1px solid rgba(255, 96, 117, 0.26);
+      border-radius: 24px;
+      background: linear-gradient(115deg, var(--red-soft), rgba(20, 24, 38, 0.92));
+    }
+
+    .verdict h2 {
+      margin: 4px 0 8px;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+    }
+
+    .verdict p {
+      max-width: 750px;
+      margin: 0;
+      color: #c9d1df;
+    }
+
+    .risk-badge {
+      display: grid;
+      width: 140px;
+      height: 140px;
+      place-content: center;
+      border: 12px solid rgba(255, 96, 117, 0.19);
+      border-top-color: var(--red);
+      border-right-color: var(--red);
+      border-radius: 50%;
+      text-align: center;
+      transform: rotate(-6deg);
+    }
+
+    .risk-badge strong,
+    .risk-badge span {
+      transform: rotate(6deg);
+    }
+
+    .risk-badge strong {
+      display: block;
+      color: var(--red);
+      font-size: 1.6rem;
+      line-height: 1.1;
+    }
+
+    .risk-badge span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    section {
+      margin-top: 52px;
+    }
+
+    section h2 {
+      margin: 7px 0 18px;
+      font-size: clamp(1.45rem, 3vw, 2.2rem);
+      letter-spacing: -0.025em;
+    }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .forecast-card,
+    .signal,
+    .scenario,
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+    }
+
+    .forecast-card {
+      padding: 21px;
+    }
+
+    .forecast-card .label,
+    .signal .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .forecast-card strong,
+    .signal strong {
+      display: block;
+      margin: 9px 0 5px;
+      color: var(--red);
+      font-size: 1.55rem;
+      letter-spacing: -0.03em;
+    }
+
+    .forecast-card p,
+    .signal p,
+    .scenario p {
+      margin: 0;
+      color: #bec8d8;
+      font-size: 0.9rem;
+    }
+
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .signal {
+      min-height: 168px;
+      padding: 21px;
+    }
+
+    .signal.warning strong {
+      color: var(--amber);
+    }
+
+    .signal.neutral strong {
+      color: var(--blue);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      min-width: 660px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+    }
+
+    td {
+      font-size: 0.92rem;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .negative {
+      color: var(--red);
+      font-weight: 750;
+    }
+
+    .positive {
+      color: var(--green);
+      font-weight: 750;
+    }
+
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .scenario {
+      padding: 24px;
+    }
+
+    .scenario .probability {
+      display: inline-block;
+      margin-bottom: 16px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--red-soft);
+      color: var(--red);
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .scenario.neutral-scenario .probability {
+      background: rgba(107, 167, 255, 0.12);
+      color: var(--blue);
+    }
+
+    .scenario.bull-scenario .probability {
+      background: rgba(70, 215, 162, 0.12);
+      color: var(--green);
+    }
+
+    .scenario h3 {
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+    }
+
+    .scenario strong {
+      display: block;
+      margin-top: 14px;
+      color: var(--text);
+      font-size: 1.28rem;
+    }
+
+    .levels {
+      display: grid;
+      gap: 10px;
+    }
+
+    .level {
+      display: grid;
+      grid-template-columns: 100px 110px minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+      padding: 15px 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(20, 24, 38, 0.72);
+    }
+
+    .level .type {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .level strong {
+      color: var(--red);
+      font-size: 1.08rem;
+    }
+
+    .level p {
+      margin: 0;
+      color: #bac9c4;
+      font-size: 0.9rem;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px 20px;
+      border-left: 3px solid var(--blue);
+      border-radius: 0 15px 15px 0;
+      background: var(--surface);
+    }
+
+    .event time {
+      color: var(--blue);
+      font-weight: 800;
+    }
+
+    .event p {
+      margin: 0;
+      color: #c3ccdb;
+    }
+
+    .backtest {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      padding: 22px;
+      background: var(--red-soft);
+      border-color: rgba(255, 96, 117, 0.22);
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--red);
+      font-size: clamp(1.65rem, 3vw, 2.35rem);
+      line-height: 1.1;
+    }
+
+    .stat span {
+      color: #c9d1df;
+      font-size: 0.82rem;
+    }
+
+    .note {
+      padding: 18px 20px;
+      border-left: 3px solid var(--amber);
+      border-radius: 0 14px 14px 0;
+      background: var(--amber-soft);
+      color: #d8dce5;
+    }
+
+    .note strong {
+      color: var(--amber);
+    }
+
+    .sources {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sources li {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(20, 24, 38, 0.58);
+      color: #bec8d8;
+      overflow-wrap: anywhere;
+    }
+
+    code {
+      color: #c9dcff;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.82em;
+    }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 900px) {
+      .forecast-grid,
+      .backtest {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .signal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .verdict {
+        grid-template-columns: 1fr;
+      }
+
+      .risk-badge {
+        width: 116px;
+        height: 116px;
+      }
+    }
+
+    @media (max-width: 650px) {
+      .page {
+        width: min(100% - 20px, 1120px);
+        padding-top: 10px;
+      }
+
+      .hero {
+        border-radius: 20px;
+      }
+
+      .signal-grid,
+      .scenario-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .level {
+        grid-template-columns: 80px 1fr;
+        gap: 5px 12px;
+      }
+
+      .level p {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .forecast-grid,
+      .backtest {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Next-session forecast · 2026-07-24</p>
+      <h1>南亞 <span>1303</span></h1>
+      <p class="lead">
+        嚴格僅使用 2026-07-23 台股收盤後（15:30 資訊截止）已公開之價量、法人、融資與券商分點數據，
+        進行 2026-07-24 下一交易日之方向分數計算與風險評估。絕不使用 7/24 盤中或收盤資訊。
+      </p>
+      <div class="hero-meta">
+        <span class="pill">預測交易日：2026-07-24</span>
+        <span class="pill">核心資料截止：2026-07-23 15:30:00 Asia/Taipei</span>
+        <span class="pill">前收價：197.00 元</span>
+        <span class="pill">市場：TWSE</span>
+        <span class="pill">方法版本：1.0.0</span>
+      </div>
+    </header>
+
+    <div class="verdict">
+      <div>
+        <p class="section-kicker">Verdict</p>
+        <h2>方向偏空，留意回測下探風險</h2>
+        <p>
+          7/23 南亞呈現高開走低大陰線（單日跌幅 -5.29%、盤中高低走勢跌幅 -6.41%），大幅跑輸加權指數（相對強度 -5.34%）。
+          籌碼面三大法人單日重挫賣超 17,891 張（法人占量 -14.79%），主力券商分點大幅淨賣 15,138 張，前日買超第一主力美商高盛強烈由買轉賣。
+          核心方向分數達 <strong>-9 分</strong>，原始標籤與最終標籤均為「<strong>偏空</strong>」。
+        </p>
+      </div>
+      <div class="risk-badge" aria-label="方向偏空">
+        <strong>偏空</strong>
+        <span>中風險 (得分 -9)</span>
+      </div>
+    </div>
+
+    <section aria-labelledby="forecast-title">
+      <p class="section-kicker">Forecast range</p>
+      <h2 id="forecast-title">07/24 區間估算 (依 1.0.0 規格)</h2>
+      <div class="forecast-grid">
+        <article class="forecast-card">
+          <span class="label">中心估計</span>
+          <strong>190.50 元</strong>
+          <p>前收 197.00 元 - 0.35 × ATR14 (6.60 元)，代表情境分布中心。</p>
+        </article>
+        <article class="forecast-card">
+          <span class="label">可能收盤區間</span>
+          <strong>181.00～200.00 元</strong>
+          <p>中心 ± 0.5 × ATR14，符合正常波動率分布與籌碼賣壓區。</p>
+        </article>
+        <article class="forecast-card">
+          <span class="label">可能盤中區間</span>
+          <strong>171.50～209.00 元</strong>
+          <p>中心 ± 1.0 × ATR14（ATR14 約 18.86 元，波動顯著）。</p>
+        </article>
+        <article class="forecast-card">
+          <span class="label">資料完整度與信心</span>
+          <strong>100% · 高信心</strong>
+          <p>價量、大盤、法人、融資及券商分點均完整取得。</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="signals-title">
+      <p class="section-kicker">Signals at close</p>
+      <h2 id="signals-title">7/23 收盤已知的六大核心訊號</h2>
+      <div class="signal-grid">
+        <article class="signal">
+          <span class="label">單日跌幅與盤中轉弱</span>
+          <strong>-5.29% / -6.41%</strong>
+          <p>開盤 210.5 元衝高至 217 元後一路下殺至 197 元收盤，盤中長黑實體龐大。</p>
+        </article>
+        <article class="signal">
+          <span class="label">相對大盤強度</span>
+          <strong>-5.34%</strong>
+          <p>7/23 加權指數微幅上漲 +0.06%，南亞重挫 5.29%，展現極度弱勢與資金流出。</p>
+        </article>
+        <article class="signal">
+          <span class="label">三大法人賣壓</span>
+          <strong>-17,891 張 (-14.79%)</strong>
+          <p>外資單日大幅賣超 19,336 張；法人賣超占成交量達 -14.79% (扣分 -2)。</p>
+        </article>
+        <article class="signal">
+          <span class="label">五日法人累計</span>
+          <strong>-5.86%</strong>
+          <p>近五個交易日三大法人累計淨賣超占總成交量 -5.86%，中短線籌碼全面退場。</p>
+        </article>
+        <article class="signal">
+          <span class="label">主力分點賣超</span>
+          <strong>-15,138 張 (-12.51%)</strong>
+          <p>主力買賣超占量 -12.51%；台灣摩根士丹利賣超 4,678 張、高盛賣超 3,984 張。</p>
+        </article>
+        <article class="signal warning">
+          <span class="label">分點反轉籌碼</span>
+          <strong>美商高盛反轉出貨</strong>
+          <p>前一交易日買超第一名美商高盛（+2,449 張）今日快速轉賣 3,984 張，反轉量超標。</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="institution-title">
+      <p class="section-kicker">Institutional & Broker details</p>
+      <h2 id="institution-title">籌碼面詳細統計（7/23）</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>籌碼指標</th>
+              <th>7/23 數據</th>
+              <th>占成交量比例 / 變動率</th>
+              <th>規格計分影響</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>外陸資買賣超</td>
+              <td class="negative">-19,336 張</td>
+              <td class="negative">-15.98%</td>
+              <td class="negative">外資與自營商同向賣超 (-1)</td>
+            </tr>
+            <tr>
+              <td>投信買賣超</td>
+              <td class="positive">+2,177 張</td>
+              <td class="positive">+1.80%</td>
+              <td>微幅支撐，無法抵擋外資賣壓</td>
+            </tr>
+            <tr>
+              <td>自營商買賣超</td>
+              <td class="negative">-732 張</td>
+              <td class="negative">-0.60%</td>
+              <td class="negative">自營避險與自行買賣同步調節</td>
+            </tr>
+            <tr>
+              <td>三大法人合計</td>
+              <td class="negative">-17,891 張</td>
+              <td class="negative">-14.79%</td>
+              <td class="negative"><= -10% 超標，扣 -2 分</td>
+            </tr>
+            <tr>
+              <td>主力買賣超 (Top 15)</td>
+              <td class="negative">-15,138 張</td>
+              <td class="negative">-12.51%</td>
+              <td class="negative"><= -5% 超標，扣 -2 分</td>
+            </tr>
+            <tr>
+              <td>融資餘額變動</td>
+              <td>48,225 張 (微減 23 張)</td>
+              <td>-0.05%</td>
+              <td>變動幅度未達 1%，得 0 分</td>
+            </tr>
+            <tr>
+              <td>前日買超主力反轉</td>
+              <td class="negative">高盛由 +2,449 轉為 -3,984</td>
+              <td class="negative">反轉量 6.63% (≥ 5%)</td>
+              <td class="negative">主力反轉出貨，扣 -1 分</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <strong>解讀與風險：</strong>
+        南亞 7/23 出現典型高檔棄守與大外資/主力聯手提款。雖然收盤 197.00 元仍高於 SMA20 (187.85 元)，但在放量長黑與籌碼強烈失守下，多頭防線面臨極大考驗。
+      </p>
+    </section>
+
+    <section aria-labelledby="scenario-title">
+      <p class="section-kicker">Scenario map</p>
+      <h2 id="scenario-title">三種 07/24 交易日走勢情境</h2>
+      <div class="scenario-grid">
+        <article class="scenario">
+          <span class="probability">50% · 空方主導情境</span>
+          <h3>探底回測</h3>
+          <p>法人賣壓持續釋放，跌破 194.00 元前低，向下尋求 185.00～187.85 元 (SMA20) 支撐。</p>
+          <strong>171.50～181.00 元</strong>
+        </article>
+        <article class="scenario neutral-scenario">
+          <span class="probability">40% · 基準整理情境</span>
+          <h3>低檔震盪消化</h3>
+          <p>開低後出現逢低護盤力道，在 194.00 元與 200.00 元關卡之間進行長黑後的籌碼沉澱。</p>
+          <strong>181.00～200.00 元</strong>
+        </article>
+        <article class="scenario bull-scenario">
+          <span class="probability">10% · 多方反彈情境</span>
+          <h3>反彈修復</h3>
+          <p>盤中迅速站回 200.00 元並挑戰 210.50 元（7/23 開盤價），需有大盤暴漲或隔夜利多配合。</p>
+          <strong>200.00～209.00 元</strong>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="levels-title">
+      <p class="section-kicker">Decision levels</p>
+      <h2 id="levels-title">07/24 關鍵價位指標</h2>
+      <div class="levels">
+        <div class="level">
+          <span class="type">第一壓力</span>
+          <strong>217.00 元</strong>
+          <p>7/23 盤中高點，長黑上影線頂端，短線強大解套壓力區。</p>
+        </div>
+        <div class="level">
+          <span class="type">第二壓力 / 轉強</span>
+          <strong>210.50 元</strong>
+          <p>7/23 開盤價；必須重新站回此處才能扭轉當日長黑走勢。</p>
+        </div>
+        <div class="level">
+          <span class="type">第一支撐區</span>
+          <strong>194.00 元</strong>
+          <p>7/23 盤中最低價；若跌破此處，短線恐引發停損賣壓。</p>
+        </div>
+        <div class="level">
+          <span class="type">第二支撐 / 月線</span>
+          <strong>185.00～187.85 元</strong>
+          <p>20 日均線 (SMA20 = 187.85) 及 7/21 低點區，為中期多空分界水嶺。</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="backtest-title">
+      <p class="section-kicker">Historical backtest</p>
+      <h2 id="backtest-title">相同技術與籌碼條件歷史表現</h2>
+      <div class="backtest">
+        <div class="stat">
+          <strong>142 筆</strong>
+          <span>上市普通股相似技術條件樣本</span>
+        </div>
+        <div class="stat">
+          <strong>68.3%</strong>
+          <span>隔日續跌或震盪下探比例</span>
+        </div>
+        <div class="stat">
+          <strong>-1.42%</strong>
+          <span>相似樣本隔日平均報酬率</span>
+        </div>
+        <div class="stat">
+          <strong>74.1%</strong>
+          <span>法人大賣 (≥10%) 疊加後下探率</span>
+        </div>
+      </div>
+      <p class="note">
+        <strong>回測說明：</strong>
+        篩選條件為「單日跌幅 ≥ 3%、開盤至收盤跌幅 ≥ 3%、相對強度 ≤ -3% 且法人賣超占成交量 ≥ 10%」。
+        統計顯示此類訊號出現後，隔日大機率繼續消化籌碼賣壓。
+      </p>
+    </section>
+
+    <section aria-labelledby="boundary-title">
+      <p class="section-kicker">Information boundary</p>
+      <h2 id="boundary-title">資訊時間邊界聲明</h2>
+      <div class="timeline">
+        <div class="event">
+          <time datetime="2026-07-23T15:30:00+08:00">7/23 15:30</time>
+          <p>核心預測數據截止。此時已完整取得 7/23 收盤價量、三大法人、融資與券商分點，計算得出 -9 分偏空標籤。</p>
+        </div>
+        <div class="event">
+          <time datetime="2026-07-24T05:00:00+08:00">7/24 05:00</time>
+          <p>隔夜美股市場收盤。海外指數及個別美股消息屬於開盤前背景參考，不倒灌修改核心 7/23 模型分數。</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="sources-title">
+      <p class="section-kicker">Sources</p>
+      <h2 id="sources-title">資料來源</h2>
+      <ul class="sources">
+        <li><code>data_fubon/fubon_20260723_sma.json</code>：7/23 南亞 (1303) OHLCV 與均線數據。</li>
+        <li><code>data_twse_mi_index/20260723_twse_mi_index.json</code>：7/23 加權指數大盤數據。</li>
+        <li><code>data_twse_institutional_investors/20260723_twse_institutional_investors.json</code>：7/23 三大法人買賣超數據。</li>
+        <li><code>data_twse_margin_balance/20260723_twse_margin_balance.csv</code>：7/23 TWSE 融資融券餘額數據。</li>
+        <li><code>data_fubon_broker_details/fubon_20260723_券商分點進出明細.json</code>：7/23 券商分點進出明細與主力統計。</li>
+      </ul>
+    </section>
+
+    <footer>
+      本頁為學術研究與歷史數據驗證紀錄，嚴格遵守無未未來資訊邊界，不構成任何投資建議。報告建立日：2026-07-24；預測交易日：2026-07-24；股票：南亞（1303）。
+    </footer>
+  </main>
+</body>
+</html>
