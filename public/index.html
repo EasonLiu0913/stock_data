@@ -105,6 +105,81 @@
             background: #eff6ff;
         }
 
+        .prediction-group {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .prediction-group:last-child {
+            border-bottom: 0;
+        }
+
+        .prediction-toggle {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .prediction-toggle::-webkit-details-marker {
+            display: none;
+        }
+
+        .prediction-toggle:hover,
+        .prediction-group[open] .prediction-toggle {
+            background: #eff6ff;
+        }
+
+        .prediction-toggle .tool-title::before {
+            display: inline-block;
+            width: 1rem;
+            margin-right: 0.35rem;
+            color: #2563eb;
+            content: '›';
+            transform-origin: center;
+            transition: transform 160ms ease;
+        }
+
+        .prediction-group[open] .prediction-toggle .tool-title::before {
+            transform: rotate(90deg);
+        }
+
+        .prediction-links {
+            padding: 0 1rem 1rem 2.5rem;
+            background: #f8fafc;
+        }
+
+        .prediction-link {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            padding: 0.9rem 1rem;
+            color: inherit;
+            text-decoration: none;
+            border: 1px solid #dbe5f0;
+            border-bottom: 0;
+            background: #ffffff;
+        }
+
+        .prediction-link:first-child {
+            border-radius: 7px 7px 0 0;
+        }
+
+        .prediction-link:last-child {
+            border-bottom: 1px solid #dbe5f0;
+            border-radius: 0 0 7px 7px;
+        }
+
+        .prediction-link:only-child {
+            border-bottom: 1px solid #dbe5f0;
+            border-radius: 7px;
+        }
+
+        .prediction-link:hover {
+            background: #f0fdf4;
+        }
+
         .tool-title {
             color: #1e293b;
             font-size: 1.05rem;
@@ -151,6 +226,15 @@
 
             .tool-link {
                 grid-template-columns: 1fr;
+            }
+
+            .prediction-toggle,
+            .prediction-link {
+                grid-template-columns: 1fr;
+            }
+
+            .prediction-links {
+                padding: 0 0.75rem 0.75rem;
             }
 
             .tool-file {
@@ -245,6 +329,19 @@
             }
         ];
 
+        const predictions = [
+            {
+                file: 'predictions/20260727-3231.html',
+                title: '2026-07-27 緯創（3231）',
+                description: '下一交易日股價區間、法人籌碼、關鍵價位與情境機率預測。'
+            },
+            {
+                file: 'predictions/20260724-2408.html',
+                title: '2026-07-24 南亞科（2408）',
+                description: '使用 7/23 收盤以前資訊建立的隔日下跌風險判斷紀錄。'
+            }
+        ];
+
         function escapeHtml(value) {
             return String(value ?? '')
                 .replace(/&/g, '&amp;')
@@ -262,11 +359,21 @@
                     String(value).toLowerCase().includes(keyword)
                 );
             });
+            const predictionGroupMatches = !keyword ||
+                ['預測', 'prediction', 'predictions'].some(value => value.includes(keyword));
+            const matchedPredictions = predictions.filter(prediction => {
+                if (predictionGroupMatches) return true;
+                return [prediction.file, prediction.title, prediction.description].some(value =>
+                    String(value).toLowerCase().includes(keyword)
+                );
+            });
+            const totalPages = tools.length + predictions.length;
+            const matchedPages = filteredTools.length + matchedPredictions.length;
 
             document.getElementById('pageMeta').textContent =
-                `共 ${tools.length.toLocaleString()} 個 HTML 頁面；目前顯示 ${filteredTools.length.toLocaleString()} 個`;
+                `共 ${totalPages.toLocaleString()} 個 HTML 頁面；目前符合 ${matchedPages.toLocaleString()} 個`;
 
-            document.getElementById('linkList').innerHTML = filteredTools.map(tool => `
+            const toolLinks = filteredTools.map(tool => `
                 <a class="tool-link" href="${escapeHtml(tool.file)}" target="_blank" rel="noopener noreferrer">
                     <span>
                         <span class="tool-title">${escapeHtml(tool.title)}</span>
@@ -275,8 +382,31 @@
                     <span class="tool-file">${escapeHtml(tool.file)}</span>
                 </a>
             `).join('');
+            const predictionLinks = matchedPredictions.length === 0 ? '' : `
+                <details class="prediction-group">
+                    <summary class="prediction-toggle">
+                        <span>
+                            <span class="tool-title">預測</span>
+                            <span class="tool-desc">點擊展開目前已有的股票預測報告，共 ${matchedPredictions.length.toLocaleString()} 份。</span>
+                        </span>
+                        <span class="tool-file">predictions/</span>
+                    </summary>
+                    <div class="prediction-links">
+                        ${matchedPredictions.map(prediction => `
+                            <a class="prediction-link" href="${escapeHtml(prediction.file)}" target="_blank" rel="noopener noreferrer">
+                                <span>
+                                    <span class="tool-title">${escapeHtml(prediction.title)}</span>
+                                    <span class="tool-desc">${escapeHtml(prediction.description)}</span>
+                                </span>
+                                <span class="tool-file">${escapeHtml(prediction.file)}</span>
+                            </a>
+                        `).join('')}
+                    </div>
+                </details>
+            `;
 
-            document.getElementById('emptyState').style.display = filteredTools.length === 0 ? 'block' : 'none';
+            document.getElementById('linkList').innerHTML = predictionLinks + toolLinks;
+            document.getElementById('emptyState').style.display = matchedPages === 0 ? 'block' : 'none';
         }
 
         renderLinks();
