@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="$meta_description">
+  <title>$page_title</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07100e;--surface:rgba(15,29,27,.92);--line:rgba(178,214,201,.16);--text:#f2f8f5;--muted:#9ab0a8;--green:#46dfa8;--cyan:#61c8db;--amber:#ffc85c;--red:#ff7285;--shadow:0 28px 90px rgba(0,0,0,.32)}
+    *{box-sizing:border-box}body{margin:0;min-width:320px;background:radial-gradient(circle at 12% -8%,rgba(70,223,168,.17),transparent 34rem),radial-gradient(circle at 92% 5%,rgba(97,200,219,.14),transparent 31rem),var(--bg);color:var(--text);font-family:Inter,"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.65}.page{width:min(1120px,calc(100% - 32px));margin:auto;padding:48px 0 72px}.hero,.card,.scenario,.level,.meta{border:1px solid var(--line);background:var(--surface)}.hero{padding:clamp(28px,5vw,54px);border-radius:28px;background:linear-gradient(135deg,rgba(23,48,42,.96),rgba(9,18,17,.93));box-shadow:var(--shadow)}.eyebrow,.kicker{margin:0;color:var(--cyan);font-size:.76rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase}h1{margin:14px 0 12px;font-size:clamp(2rem,5.6vw,4.45rem);line-height:1.04;letter-spacing:-.045em}h1 span{color:var(--muted);font-weight:550}.lead{max-width:860px;margin:0;color:#c5d5cf}.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}.pill{padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(4,11,10,.34);color:#c8d8d2;font-size:.84rem}.verdict{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;align-items:center;margin-top:18px;padding:clamp(24px,4vw,36px);border:1px solid rgba(255,200,92,.26);border-radius:24px;background:linear-gradient(115deg,rgba(255,200,92,.1),var(--surface))}.verdict h2{margin:4px 0 8px}.verdict p{margin:0;color:#c4d2cd}.badge{display:grid;width:140px;height:140px;place-content:center;border:12px solid rgba(255,200,92,.15);border-top-color:var(--amber);border-right-color:var(--amber);border-radius:50%;text-align:center}.badge strong{color:var(--amber);font-size:1.5rem}.badge span{color:var(--muted);font-size:.73rem}section{margin-top:52px}section h2{margin:7px 0 18px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card,.scenario{padding:22px;border-radius:18px}.label{display:block;color:var(--muted);font-size:.8rem}.card strong{display:block;margin:9px 0 5px;color:var(--green);font-size:1.45rem}.card p,.scenario p{margin:0;color:#bdccc7;font-size:.9rem}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface)}table{width:100%;min-width:720px;border-collapse:collapse}th,td{padding:14px 16px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-size:.78rem}.positive{color:var(--green);font-weight:750}.negative{color:var(--red);font-weight:750}.neutral{color:var(--amber);font-weight:750}.levels{display:grid;gap:10px}.level{display:grid;grid-template-columns:110px 120px minmax(0,1fr);gap:18px;align-items:center;padding:15px 18px;border-radius:14px}.level span{color:var(--muted)}.level strong{color:var(--cyan)}.level p{margin:0;color:#bac9c4}.note{padding:18px 20px;border-left:3px solid var(--amber);background:rgba(255,200,92,.1);color:#d3d9d6}.meta{margin-top:14px;padding:20px;border-radius:18px}.meta dl{display:grid;grid-template-columns:220px 1fr;gap:8px 18px;margin:0}.meta dt{color:var(--muted)}.meta dd{margin:0}code{color:#a8e6d2}footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}@media(max-width:900px){.grid{grid-template-columns:1fr}.verdict{grid-template-columns:1fr}}@media(max-width:650px){.page{width:min(100% - 20px,1120px);padding-top:10px}.level{grid-template-columns:85px 1fr}.level p{grid-column:1/-1}.meta dl{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main class="page">
+  <header class="hero">
+    <p class="eyebrow">Next-session forecast · $forecast_date</p>
+    <h1>$stock_name <span>$stock_code</span></h1>
+    <p class="lead">$lead</p>
+    <div class="pills">$hero_pills</div>
+  </header>
+  <div class="verdict">
+    <div><p class="kicker">Verdict</p><h2>$verdict_title</h2><p>$verdict_summary</p></div>
+    <div class="badge"><strong>$final_direction_label</strong><span>$risk_label</span></div>
+  </div>
+  <section><p class="kicker">Forecast range</p><h2>下一交易日情境</h2><div class="grid">$forecast_cards</div></section>
+  <section><p class="kicker">Known facts</p><h2>已知事實</h2><div class="grid">$fact_cards</div></section>
+  <section><p class="kicker">Direction score</p><h2>固定規則計分</h2><div class="table-wrap"><table><thead><tr><th>項目</th><th>數值</th><th>規則判定</th><th>分數</th></tr></thead><tbody>$score_rows</tbody></table></div></section>
+  <section><p class="kicker">Scenarios</p><h2>情境分析</h2><div class="grid">$scenario_cards</div></section>
+  <section><p class="kicker">Key levels</p><h2>關鍵價位</h2><div class="levels">$level_rows</div></section>
+  <section><p class="kicker">Data quality</p><h2>資料限制與方法欄位</h2><div class="note">$data_note</div><div class="meta"><dl>$metadata_rows</dl></div></section>
+  <footer>$footer</footer>
+</main>
+</body>
+</html>
