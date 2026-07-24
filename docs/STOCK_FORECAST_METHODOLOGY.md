@@ -1,6 +1,6 @@
 # 個股下一交易日預測方法
 
-版本：`1.0.0`  
+版本：`1.1.0`
 適用範圍：臺灣證券交易所上市普通股  
 預測目標：下一交易日的方向、風險、可能區間與關鍵價位  
 核心原則：同一份資料、同一個資訊截止時間及同一版本規則，必須得到相同的核心判斷。
@@ -28,7 +28,9 @@
 
 | 欄位 | 說明 |
 |---|---|
-| `methodology_version` | 本文件版本，例如 `1.0.0` |
+| `methodology_version` | 本文件版本，例如 `1.1.0` |
+| `generated_at` | 報告實際建立時間，須含時區 |
+| `prediction_mode` | `prospective` 或 `historical_cutoff_simulation` |
 | `stock_code` | 股票代號 |
 | `stock_name` | 股票名稱 |
 | `forecast_date` | 預測的交易日 |
@@ -41,6 +43,8 @@
 | `final_direction_label` | 套用風險降級後方向 |
 | `data_completeness` | 依第 12 節計算 |
 | `missing_data` | 缺少的資料種類 |
+| `backtest_rule_id` | 依第 13 節選用的固定回測規則；無適用規則時為 `null` |
+| `backtest_status` | `unavailable`、`insufficient`、`exploratory`、`weak`、`supportive` 或 `conflicting` |
 
 報告檔名：
 
@@ -69,6 +73,15 @@ base_trade_date 15:30:00 Asia/Taipei
 
 這個時間足以涵蓋台股收盤價量，但部分盤後籌碼資料可能尚未發布。只能使用截止時間前實際取得的資料。
 
+`information_cutoff` 是允許使用資訊的最晚時間，不代表所有資料在該時間已經發布或已被抓取。每種來源應另外保存：
+
+- `source_trade_date`
+- `fetched_at`，若原始檔有可靠抓取時間
+- 原始檔相對路徑
+- 原始檔 SHA-256
+
+若原始檔沒有 `fetched_at`，報告只能宣稱「使用標記為該交易日或更早的資料」，不得宣稱在某個精確時間已完整取得。
+
 如果報告要加入隔夜美股，必須建立另一個明確版本，例如：
 
 ```text
@@ -87,6 +100,22 @@ forecast_date 08:30:00 Asia/Taipei
 - 用 `forecast_date` 的結果反過來選擇最有利的指標。
 
 驗證結果必須與預測特徵分開呈現。
+
+### 3.4 事前預測與歷史模擬
+
+只有在 `forecast_date` 開盤前完成並留下可驗證時間戳的報告，才能設定：
+
+```text
+prediction_mode = prospective
+```
+
+在預測交易日開盤後才建立，或缺少可驗證事前時間戳時，必須設定：
+
+```text
+prediction_mode = historical_cutoff_simulation
+```
+
+歷史模擬仍須依 `information_cutoff` 過濾輸入，但不能宣稱它已由時間戳證明完全未查看結果。
 
 ## 4. 資料來源優先級
 
@@ -147,6 +176,23 @@ forecast_date 08:30:00 Asia/Taipei
 2. 不得直接用未調整的前收與當日收盤計算報酬。
 3. 回測時若無法可靠還原參考價，排除該樣本。
 
+回測必須同時檢查前一交易日、訊號日及結果日。任一天發生公司行動而無法可靠還原報酬時，整筆樣本排除並記錄原因。
+
+### 5.3 歷史股票母體
+
+若只有目前的 `data_twse/twse_industry_Stock.json`，可以用於回測，但必須輸出：
+
+```text
+universe_mode = current_list
+survivorship_bias_warning = true
+```
+
+若未來取得逐日上市普通股清單，應改用每個樣本日當時的股票母體：
+
+```text
+universe_mode = point_in_time
+```
+
 ## 6. 資料驗證順序
 
 每次預測必須依序完成：
@@ -194,9 +240,20 @@ intraday_return = (close[T] / open[T] - 1) × 100
 
 ### 7.4 成交量倍率
 
+為避免「與前一日相比」和「與近期均量相比」混用，固定拆成兩個欄位：
+
 ```text
-volume_ratio = volume[T] / volume[T-1]
+volume_ratio_1d =
+  volume[T] / volume[T-1]
+
+volume_ratio_5d =
+  volume[T]
+  / average(volume[T-5 ... T-1])
 ```
+
+第 10 節方向分數只使用 `volume_ratio_1d`。`volume_ratio_5d` 只用於補充說明近期量能，不額外計分。
+
+報告與程式不得再使用未標明期間的 `volume_ratio`。
 
 ### 7.5 均線乖離
 
@@ -296,7 +353,8 @@ margin_change_rate =
 - `r1`
 - `r3`
 - `intraday_return`
-- `volume_ratio`
+- `volume_ratio_1d`
+- `volume_ratio_5d`
 - `gap_sma5`
 - `gap_sma20`
 - `gap_sma60`
@@ -347,7 +405,16 @@ margin_change_rate =
 
 ### 步驟 10：執行歷史回測
 
-回測只能修正信心與情境描述，不得推翻核心方向分數。
+只能依第 13 節固定規則表，從已存在的 `rule_id` 選擇回測群組。沒有適用規則時，設定：
+
+```text
+backtest_rule_id = null
+backtest_status = unavailable
+```
+
+不得為單一股票臨時拼接條件，也不得測試多組條件後只公布結果最好的一組。
+
+回測只能決定 `backtest_status` 與歷史情境描述，不得修改方向分數、方向標籤或第 14 節固定機率。
 
 ### 步驟 11：加入基本面背景
 
@@ -374,6 +441,8 @@ margin_change_rate =
 - 推論。
 - 缺失資料。
 - 回測樣本數。
+- 回測規則 ID、資料期間、有效訊號日期數與排除統計。
+- 回測證據狀態。
 - 可能推翻判斷的價位或事件。
 
 ## 9. 已知事實與推論必須分開
@@ -414,8 +483,8 @@ margin_change_rate =
 | `close < SMA20` | -1 |
 | `intraday_return ≥ 3%` | +1 |
 | `intraday_return ≤ -3%` | -1 |
-| 上漲且 `volume_ratio ≥ 1.2` | +1 |
-| 下跌且 `volume_ratio ≥ 1.2` | -1 |
+| 上漲且 `volume_ratio_1d ≥ 1.2` | +1 |
+| 下跌且 `volume_ratio_1d ≥ 1.2` | -1 |
 | `relative_strength ≥ 3` | +2 |
 | `relative_strength ≤ -3` | -2 |
 | `r3 ≥ 8%` | +1 |
@@ -485,7 +554,7 @@ margin_change_rate =
 | `abs(r3) ≥ 15%` | +2 |
 | `abs(gap_sma20) ≥ 15%` | +1 |
 | `RSI14 ≥ 70` 或 `RSI14 ≤ 30` | +1 |
-| 上漲但 `volume_ratio < 1` | +1 |
+| 上漲但 `volume_ratio_1d < 1` | +1 |
 | `ATR14 / close ≥ 4%` | +1 |
 | 距最近明確壓力或支撐小於等於 `0.5 × ATR14` | +1 |
 
@@ -510,7 +579,7 @@ margin_change_rate =
 
 這個規則用來避免在急漲末端給出「強烈追價」，或在急跌末端給出「強烈追空」。
 
-## 12. 資料完整度與信心
+## 12. 資料完整度與回測證據
 
 ### 12.1 權重
 
@@ -526,52 +595,86 @@ margin_change_rate =
 data_completeness = 已取得且日期正確的權重加總
 ```
 
-### 12.2 信心
+### 12.2 完整度標籤
 
-| 完整度 | 信心 |
+| 完整度 | 標籤 |
 |---:|---|
-| 90 ～ 100 | 高 |
-| 70 ～ 89 | 中 |
-| 50 ～ 69 | 中低 |
-| < 50 | 低，不輸出方向機率 |
+| 90 ～ 100 | 高完整度 |
+| 70 ～ 89 | 中完整度 |
+| 50 ～ 69 | 中低完整度 |
+| < 50 | 低完整度，不輸出方向機率 |
 
 基本面與新聞不計入完整度。
 
+資料完整度只表示核心輸入是否齊全，不等於預測命中率或回測勝率。報告不得把 `100%` 寫成「100% 預測信心」。
+
+回測證據強度由第 13.10 節另外決定。報告必須分開顯示：
+
+```text
+資料完整度：100%（高完整度）
+回測證據：exploratory / weak / supportive ...
+```
+
+不得將兩者合併成未定義的單一百分比。
+
 ## 13. 歷史回測規格
 
-### 13.1 防止資料洩漏
+### 13.1 回測定位
+
+回測回答的是「固定歷史條件出現後，下一交易日結果如何分布」，不是證明未來一定重演。
+
+回測不得修改：
+
+- `direction_score`
+- `raw_direction_label`
+- `final_direction_label`
+- 第 14 節固定情境機率
+
+回測只能影響：
+
+- `backtest_status`
+- 歷史類比說明
+- 證據是否支持核心方向的文字
+
+### 13.2 防止資料洩漏
 
 - 樣本特徵只能使用樣本日收盤以前資料。
 - 結果是下一個交易日收盤報酬。
-- 回測截止日必須早於 `base_trade_date`，不得包含正在預測的樣本。
+- `signal_date < base_trade_date`。
+- `next_trade_date <= base_trade_date`。
+- 不得包含正在預測的結果或 `forecast_date` 資料。
 - 只使用上市普通股。
 - 排除缺價與公司行動無法還原的樣本。
 - 暫時排除 `abs(next_return) > 15%` 的異常資料。
 
-### 13.2 固定回測群組
+### 13.3 固定回測規則
 
-#### A. 下跌延續
+回測規則使用與股票無關的固定 `rule_id`。不得以股票代號命名回測腳本或規則。
+
+#### A. `bearish_breakdown_below_sma20_v1`
+
+預期方向：`bearish`
 
 ```text
 r1 ≤ -3%
 close < SMA20
-volume_ratio ≥ 1.2
+volume_ratio_1d ≥ 1.2
 ```
 
-用於南亞科 2026-07-24 類型。
+#### B. `momentum_cooling_above_sma20_v1`
 
-#### B. 急漲後降溫
+預期方向：`bearish`
 
 ```text
 r3 ≥ 15%
 0% < r1 ≤ 5%
-volume_ratio < 1
+volume_ratio_1d < 1
 gap_sma20 ≥ 10%
 ```
 
-用於緯創 2026-07-27 類型。
+#### C. `momentum_cooling_with_institutional_buy_v1`
 
-#### C. 急漲後降溫且法人強買
+預期方向：`bullish`
 
 符合 B，另外：
 
@@ -579,25 +682,240 @@ gap_sma20 ≥ 10%
 institutional_ratio ≥ 20%
 ```
 
-### 13.3 回測輸出
+#### D. `bearish_candle_above_sma20_v1`
+
+預期方向：`bearish`
+
+```text
+r1 ≤ -3%
+intraday_return ≤ -3%
+close > SMA20
+```
+
+1303 的既有報告是在本規則凍結前、且在預測交易日收盤後建立，因此只能標示為：
+
+```text
+prediction_mode = historical_cutoff_simulation
+backtest_status 最佳不得高於 exploratory
+```
+
+自方法版本 `1.1.0` 起，未來案例可以依固定條件使用 D，不得再為個別股票增刪條件。
+
+### 13.4 交易日連續性
+
+先依市場交易日曆得到：
+
+```text
+previous_trade_date
+signal_date
+next_trade_date
+```
+
+三者必須是相鄰交易日。每筆樣本必須在精確日期取得該股票資料。
+
+禁止使用：
+
+```text
+同一股票陣列中的上一筆或下一筆可用資料
+```
+
+因為資料缺漏時，這會把多日報酬誤當成單一下一交易日報酬。
+
+任一精確日期缺少股票資料時，排除樣本並增加對應計數：
+
+```text
+missing_previous_date
+missing_signal_date
+missing_next_date
+```
+
+### 13.5 每日資料完整性
+
+每個交易日計算：
+
+```text
+daily_coverage =
+  當日有有效價格的普通股數
+  / 股票母體普通股數
+```
+
+`daily_coverage < 90%` 時，該日標記為 `partial_market_file`。即使整日未直接排除，個股的前日、訊號日或結果日任一天缺資料，該樣本都必須排除。
+
+### 13.6 公司行動與異常資料
+
+每筆樣本同時檢查：
+
+- `previous_trade_date`
+- `signal_date`
+- `next_trade_date`
+
+若任一天發生除權、除息、減資、分割、合併或面額變更：
+
+1. 優先使用 TWSE 官方參考價或官方漲跌百分比。
+2. 無法可靠還原時排除。
+3. 增加 `corporate_action` 排除計數。
+
+每筆資料還必須符合：
+
+```text
+OHLC > 0
+low ≤ open ≤ high
+low ≤ close ≤ high
+volume > 0
+SMA20 是有限數值
+abs(next_close_return) ≤ 15%
+```
+
+不符合時排除並記錄原因，不得靜默略過。
+
+### 13.7 結果定義
+
+隔日收盤報酬：
+
+```text
+next_close_return =
+  (close[next_trade_date] / close[signal_date] - 1) × 100
+```
+
+只有 `next_close_return < 0` 才能稱為「隔日收盤下跌」。
+
+若要使用「隔日下探」，必須另外計算：
+
+```text
+next_intraday_low_return =
+  (low[next_trade_date] / close[signal_date] - 1) × 100
+```
+
+並在規則中明確定義下探門檻。不得只用隔日收盤報酬宣稱盤中下探。
+
+### 13.8 回測輸出
 
 至少輸出：
 
-- 樣本數。
-- 隔日上漲與下跌比例。
-- 平均隔日報酬。
-- 中位數隔日報酬。
-- 第 10 與第 90 百分位。
+- `total_samples`
+- `distinct_signal_dates`
+- `history_sessions`
+- `up_count`
+- `down_count`
+- `flat_count`
+- `directional_hit_rate`
+- `average_return`
+- `median_return`
+- `p10_return`
+- `p90_return`
+- `minimum_return`
+- `maximum_return`
+- `max_samples_per_date`
+- `date_equal_weighted_directional_hit_rate`
+- 依訊號日期群聚的方向命中率 95% 信賴區間
+- 依訊號日期群聚的平均報酬 95% 信賴區間
+- 每種排除原因與數量
 
-若樣本數：
+`directional_hit_rate` 依規則的 `expected_direction` 決定：
 
-- `< 20`：只能寫「探索性小樣本」。
-- `20 ～ 99`：可以作輔助，不得稱穩定勝率。
-- `≥ 100`：可以作為情境基準，但仍不代表保證。
+```text
+bearish：next_close_return < 0
+bullish：next_close_return > 0
+```
+
+樣本明細至少包含：
+
+```text
+stock_code
+previous_trade_date
+signal_date
+next_trade_date
+close
+sma20
+規則使用的全部特徵
+next_close_return
+corporate_action_status
+```
+
+### 13.9 交易日群聚與信賴區間
+
+同一交易日出現的多檔訊號高度相關，不得將所有股票樣本視為完全獨立。
+
+主要統計可以維持逐股樣本加權，但不確定性必須以 `signal_date` 為群聚單位。
+
+建議實作固定種子的交易日群聚 bootstrap：
+
+```text
+iterations = 10000
+seed = SHA-256(
+  methodology_version + ":" + rule_id + ":" + as_of_date
+) 的前 32 位元
+```
+
+每次從唯一訊號日期中有放回抽樣，抽到某日即納入該日全部樣本。輸出第 2.5 與第 97.5 百分位作為 95% 信賴區間。
+
+### 13.10 回測證據狀態
+
+依序判斷：
+
+| 狀態 | 固定條件 |
+|---|---|
+| `unavailable` | 沒有適用固定規則或無法執行 |
+| `insufficient` | `total_samples < 20` 或 `distinct_signal_dates < 10` |
+| `exploratory` | `history_sessions < 250`、`total_samples < 100` 或 `distinct_signal_dates < 30` |
+| `supportive` | 方向命中率群聚 95% 區間未跨過 50%，平均報酬群聚 95% 區間未跨過 0%，且兩者都支持預期方向 |
+| `conflicting` | 上述兩個信賴區間都未跨過中性基準，但方向與規則預期相反 |
+| `weak` | 資料量達標，但不符合 `supportive` 或 `conflicting` |
+
+判斷採第一個符合的狀態；`exploratory` 不得因表面樣本數很多而升級。
+
+### 13.11 最低揭露要求
+
+報告至少揭露：
+
+- 規則 ID 與完整條件。
+- 預期方向。
+- 輸入與樣本日期範圍。
+- 股票母體模式與存活者偏差警告。
+- 有效樣本數與唯一訊號日期數。
+- 所有排除統計。
+- 樣本加權結果。
+- 交易日等權結果。
+- 群聚信賴區間。
+- `backtest_status`。
+
+不得只顯示一個勝率或平均報酬。
+
+### 13.12 可重現輸出
+
+回測輸出至少保存：
+
+```text
+schema_version
+methodology_version
+rule_id
+expected_direction
+as_of_date
+outcome_definition
+source_date_range
+signal_date_range
+universe_mode
+survivorship_bias_warning
+script_git_commit
+input_files_sha256
+exclusions
+statistics
+samples
+```
+
+可重現性聲明固定為：
+
+> 在相同程式 commit、相同方法版本及相同輸入檔案雜湊下，除執行時間欄位外，樣本與統計輸出必須一致。
+
+為使主要 JSON 可以逐位元比較，`generated_at` 建議放在獨立 run manifest。若保留在同一檔案，驗證時必須明確排除該欄位。
+
+不得宣稱「每次執行產出完全相同檔案」，除非動態時間欄位也已固定。
 
 ## 14. 情境機率
 
 情境機率是風險配置，不是精確命中率。固定使用下表，不得由模型自行編造。
+
+第 13 節回測結果不改變本節機率。若 `backtest_status` 為 `weak`、`exploratory`、`insufficient` 或 `conflicting`，只能在文字中揭露證據有限或相反，不得擅自重新分配百分比。
 
 | 最終方向 | 基準整理 | 多方情境 | 空方情境 |
 |---|---:|---:|---:|
@@ -704,7 +1022,7 @@ intraday_range =
 - `r1 = -4.38%`。
 - 7/23 開盤 452、最高 452、最低 415、收盤 426。
 - `intraday_return = -5.75%`。
-- 成交量由 63,907 增至 89,387 張，`volume_ratio ≈ 1.40`。
+- 成交量由 63,907 增至 89,387 張，`volume_ratio_1d ≈ 1.40`。
 - 收盤低於 SMA20 428.4 元。
 - 主力淨賣 8,493 張，約占成交量 `-9.5%`。
 - 融資由 87,812 增至 90,111 張，增加約 `2.62%`。
@@ -735,7 +1053,7 @@ intraday_range =
 - 7/24 收盤 179 元，`r1 = +3.17%`。
 - 7/21 收盤 149.5 元，`r3 = +19.73%`。
 - SMA20 153.7 元，`gap_sma20 ≈ +16.5%`。
-- 7/24 成交量為前一日約 82.5%，上漲量縮。
+- 7/24 `volume_ratio_1d ≈ 0.825`，上漲量縮。
 - 加權指數下跌 2.67%，相對強弱約 `+5.84`。
 - 三大法人合計買超 44,453 張，占成交量約 `24.7%`。
 - 外資與投信同為買超。
@@ -790,7 +1108,7 @@ HTML 報告固定使用以下順序：
 5. 法人、融資及分點資料。
 6. 三種情境與固定機率。
 7. 支撐、壓力與判斷失效條件。
-8. 回測條件、樣本數與統計結果。
+8. 回測規則 ID、資料期間、排除統計、樣本與訊號日期數、群聚信賴區間及證據狀態。
 9. 資訊邊界與缺失資料。
 10. 資料來源。
 11. 非投資建議聲明。
@@ -801,18 +1119,40 @@ HTML 報告固定使用以下順序：
 
 - [ ] `forecast_date` 是否真的是下一交易日？
 - [ ] 是否記錄 `information_cutoff`？
+- [ ] 是否區分 `prospective` 與 `historical_cutoff_simulation`？
+- [ ] 是否保存各來源交易日、可用時的抓取時間與輸入雜湊？
 - [ ] 是否使用正確日期的價格、法人、融資與分點？
 - [ ] 是否列出缺失資料？
 - [ ] 是否處理除權息或減資？
-- [ ] `r1`、`r3`、量比、均線乖離、RSI、ATR 是否依固定公式？
+- [ ] `r1`、`r3`、`volume_ratio_1d`、`volume_ratio_5d`、均線乖離、RSI、ATR 是否依固定公式？
 - [ ] 方向分數是否能逐項重算？
 - [ ] 高風險時是否依規則降級？
 - [ ] 情境機率是否直接使用固定表？
 - [ ] 回測是否排除預測日與未來資料？
-- [ ] 是否揭露回測樣本數？
+- [ ] 回測的前日、訊號日與結果日是否為相鄰交易日？
+- [ ] 回測是否排除或調整公司行動、缺價與異常報酬？
+- [ ] 是否揭露回測規則 ID、期間、樣本數、唯一訊號日期數與排除統計？
+- [ ] 是否輸出中位數、P10、P90、交易日等權結果與群聚信賴區間？
+- [ ] 是否分開顯示資料完整度與 `backtest_status`？
 - [ ] 新聞是否只作背景，沒有任意改變分數？
 - [ ] 已知事實、推論與驗證結果是否分開？
 - [ ] 是否寫出推翻判斷的價位或條件？
 - [ ] HTML 檔名是否使用預測日期與股票代號？
 
 只要任一核心項目無法回答，報告就必須標記為 `provisional`，不得呈現為完整預測。
+
+## 21. 版本紀錄
+
+### 1.1.0
+
+- 將沒有事前時間戳的報告明確標為 `historical_cutoff_simulation`。
+- 將成交量倍率拆成 `volume_ratio_1d` 與 `volume_ratio_5d`。
+- 將資料完整度與回測證據狀態分開。
+- 將案例導向回測群組改為固定 `rule_id`。
+- 新增 `bearish_candle_above_sma20_v1`。
+- 規定回測日期必須依市場交易日曆精確相鄰。
+- 新增每日覆蓋率、公司行動、異常值與排除統計要求。
+- 新增交易日群聚信賴區間與固定證據狀態。
+- 新增輸入雜湊、程式 commit 與可重現輸出契約。
+
+既有報告與回測輸出在依本版本重新執行以前，保留原本的方法版本，不得只修改版本字串就宣稱符合 `1.1.0`。
