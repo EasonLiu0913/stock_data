@@ -1,416 +1,127 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票數據工具清單</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
-            min-height: 100vh;
-            padding: 1.5rem;
-        }
-
-        .container {
-            max-width: 1120px;
-            margin: 0 auto;
-        }
-
-        .header,
-        .toolbar,
-        .link-list {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-        }
-
-        .header {
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            line-height: 1.3;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .meta {
-            color: #64748b;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .toolbar {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        label {
-            font-weight: 700;
-            color: #334155;
-            white-space: nowrap;
-        }
-
-        input {
-            width: 100%;
-            min-height: 40px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 0.55rem 0.75rem;
-            background: #ffffff;
-            color: #0f172a;
-            font-size: 0.95rem;
-            outline: none;
-        }
-
-        input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-        }
-
-        .link-list {
-            overflow: hidden;
-        }
-
-        .tool-link {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 1rem;
-            padding: 1rem 1.25rem;
-            color: inherit;
-            text-decoration: none;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .tool-link:last-child {
-            border-bottom: 0;
-        }
-
-        .tool-link:hover {
-            background: #eff6ff;
-        }
-
-        .prediction-group {
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .prediction-group:last-child {
-            border-bottom: 0;
-        }
-
-        .prediction-toggle {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 1rem;
-            padding: 1rem 1.25rem;
-            cursor: pointer;
-            list-style: none;
-        }
-
-        .prediction-toggle::-webkit-details-marker {
-            display: none;
-        }
-
-        .prediction-toggle:hover,
-        .prediction-group[open] .prediction-toggle {
-            background: #eff6ff;
-        }
-
-        .prediction-toggle .tool-title::before {
-            display: inline-block;
-            width: 1rem;
-            margin-right: 0.35rem;
-            color: #2563eb;
-            content: '›';
-            transform-origin: center;
-            transition: transform 160ms ease;
-        }
-
-        .prediction-group[open] .prediction-toggle .tool-title::before {
-            transform: rotate(90deg);
-        }
-
-        .prediction-links {
-            padding: 0 1rem 1rem 2.5rem;
-            background: #f8fafc;
-        }
-
-        .prediction-link {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 1rem;
-            padding: 0.9rem 1rem;
-            color: inherit;
-            text-decoration: none;
-            border: 1px solid #dbe5f0;
-            border-bottom: 0;
-            background: #ffffff;
-        }
-
-        .prediction-link:first-child {
-            border-radius: 7px 7px 0 0;
-        }
-
-        .prediction-link:last-child {
-            border-bottom: 1px solid #dbe5f0;
-            border-radius: 0 0 7px 7px;
-        }
-
-        .prediction-link:only-child {
-            border-bottom: 1px solid #dbe5f0;
-            border-radius: 7px;
-        }
-
-        .prediction-link:hover {
-            background: #f0fdf4;
-        }
-
-        .tool-title {
-            color: #1e293b;
-            font-size: 1.05rem;
-            font-weight: 800;
-            margin-bottom: 0.25rem;
-        }
-
-        .tool-desc {
-            color: #64748b;
-            line-height: 1.5;
-            font-size: 0.93rem;
-        }
-
-        .tool-file {
-            color: #2563eb;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.88rem;
-            font-weight: 800;
-            align-self: center;
-            white-space: nowrap;
-        }
-
-        .empty {
-            display: none;
-            padding: 2rem;
-            text-align: center;
-            color: #64748b;
-            font-weight: 700;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; color: #0f172a; min-height: 100vh; padding: 1.5rem; }
+        .container { max-width: 1120px; margin: 0 auto; }
+        .header, .toolbar, .link-list { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+        .header { padding: 1.5rem; margin-bottom: 1rem; }
+        h1 { font-size: 1.8rem; line-height: 1.3; color: #1e293b; margin-bottom: .5rem; }
+        .meta { color: #64748b; font-size: .95rem; font-weight: 600; }
+        .toolbar { padding: 1rem; margin-bottom: 1rem; display: flex; gap: .75rem; align-items: center; }
+        label { font-weight: 700; color: #334155; white-space: nowrap; }
+        input { width: 100%; min-height: 40px; border: 1px solid #cbd5e1; border-radius: 6px; padding: .55rem .75rem; background: #fff; color: #0f172a; font-size: .95rem; outline: none; }
+        input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+        .link-list { overflow: hidden; }
+        .tool-link, .prediction-toggle, .prediction-link { display: grid; grid-template-columns: 1fr auto; gap: 1rem; color: inherit; text-decoration: none; }
+        .tool-link { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; }
+        .tool-link:last-child { border-bottom: 0; }
+        .tool-link:hover, .prediction-toggle:hover, .prediction-group[open] .prediction-toggle { background: #eff6ff; }
+        .prediction-group { border-bottom: 1px solid #e2e8f0; }
+        .prediction-toggle { padding: 1rem 1.25rem; cursor: pointer; list-style: none; }
+        .prediction-toggle::-webkit-details-marker { display: none; }
+        .prediction-toggle .tool-title::before { display: inline-block; width: 1rem; margin-right: .35rem; color: #2563eb; content: '›'; transform-origin: center; transition: transform 160ms ease; }
+        .prediction-group[open] .prediction-toggle .tool-title::before { transform: rotate(90deg); }
+        .prediction-links { padding: 0 1rem 1rem 2.5rem; background: #f8fafc; }
+        .prediction-link { padding: .9rem 1rem; border: 1px solid #dbe5f0; border-bottom: 0; background: #fff; }
+        .prediction-link:first-child { border-radius: 7px 7px 0 0; }
+        .prediction-link:last-child { border-bottom: 1px solid #dbe5f0; border-radius: 0 0 7px 7px; }
+        .prediction-link:only-child { border-bottom: 1px solid #dbe5f0; border-radius: 7px; }
+        .prediction-link:hover { background: #f0fdf4; }
+        .tool-title { display: block; color: #1e293b; font-size: 1.05rem; font-weight: 800; margin-bottom: .25rem; }
+        .tool-desc { display: block; color: #64748b; line-height: 1.5; font-size: .93rem; }
+        .tool-file { color: #2563eb; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .88rem; font-weight: 800; align-self: center; white-space: nowrap; }
+        .empty { display: none; padding: 2rem; text-align: center; color: #64748b; font-weight: 700; }
         @media (max-width: 768px) {
-            body {
-                padding: 0.75rem;
-            }
-
-            h1 {
-                font-size: 1.35rem;
-            }
-
-            .toolbar {
-                align-items: stretch;
-                flex-direction: column;
-            }
-
-            .tool-link {
-                grid-template-columns: 1fr;
-            }
-
-            .prediction-toggle,
-            .prediction-link {
-                grid-template-columns: 1fr;
-            }
-
-            .prediction-links {
-                padding: 0 0.75rem 0.75rem;
-            }
-
-            .tool-file {
-                white-space: normal;
-            }
+            body { padding: .75rem; }
+            h1 { font-size: 1.35rem; }
+            .toolbar { align-items: stretch; flex-direction: column; }
+            .tool-link, .prediction-toggle, .prediction-link { grid-template-columns: 1fr; }
+            .prediction-links { padding: 0 .75rem .75rem; }
+            .tool-file { white-space: normal; }
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header">
             <h1>股票數據工具清單</h1>
             <div class="meta" id="pageMeta"></div>
         </div>
-
         <div class="toolbar">
             <label for="searchInput">搜尋</label>
             <input id="searchInput" type="text" placeholder="輸入頁面名稱或檔名" oninput="renderLinks()">
         </div>
-
         <div class="link-list" id="linkList"></div>
         <div class="empty" id="emptyState">沒有符合條件的頁面</div>
     </div>
-
     <script>
         const tools = [
-            {
-                file: 'stock-price-change.html',
-                title: '股價漲跌試算表',
-                description: '輸入昨收價格，或用目前股價與漲跌幅反推，查看正負 10% 股價表並估算目標價漲跌幅。'
-            },
-            {
-                file: 'stock-data-browser.html',
-                title: '股票數據瀏覽器',
-                description: '瀏覽富邦與證交所股票排行資料，依日期與排行類型切換表格。'
-            },
-            {
-                file: 'pocket-00981A.html',
-                title: '00981A ETF 持股與產業分布',
-                description: '查看 Pocket 口袋證券 00981A 持股內容與產業分布長條圖。'
-            },
-            {
-                file: 'foreign.html',
-                title: '法人連續買賣超股票',
-                description: '追蹤法人連續買賣超與多日排行條件。'
-            },
-            {
-                file: 'twse-foreign-investors.html',
-                title: '外資及陸資買賣超彙總表',
-                description: '瀏覽證交所外資及陸資每日買賣超資料。'
-            },
-            {
-                file: 'twse-institutional-investors.html',
-                title: '三大法人買賣超日報',
-                description: '瀏覽三大法人買賣超日報資料。'
-            },
-            {
-                file: 'twse-dealers.html',
-                title: '自營商買賣超彙總表',
-                description: '瀏覽自營商買賣超彙總資料。'
-            },
-            {
-                file: 'twse-margin-balance.html',
-                title: '信用交易融資融券餘額',
-                description: '查看上市股票信用交易融資融券餘額。'
-            },
-            {
-                file: 'twse-market-chart.html',
-                title: '台灣加權指數日 K 線',
-                description: '同步查看加權指數日 K、成交量與外資買賣超金額。'
-            },
-            {
-                file: 'sma-below.html',
-                title: '股價低於均線清單',
-                description: '篩選股價低於均線的股票清單。'
-            },
-            {
-                file: 'warrants.html',
-                title: '權證標的十日追蹤',
-                description: '追蹤權證標的近十日資料變化。'
-            },
-            {
-                file: 'analyze.html',
-                title: 'Stock Analysis Tool',
-                description: '個股資料分析工具。'
-            },
-            {
-                file: 'compare.html',
-                title: 'Stock Comparison Tool',
-                description: '比較 Fubon 與 TWSE 股票資料。'
-            }
+            { file: 'stock-price-change.html', title: '股價漲跌試算表', description: '輸入昨收價格，或用目前股價與漲跌幅反推，查看正負 10% 股價表並估算目標價漲跌幅。' },
+            { file: 'stock-data-browser.html', title: '股票數據瀏覽器', description: '瀏覽富邦與證交所股票排行資料，依日期與排行類型切換表格。' },
+            { file: 'pocket-00981A.html', title: '00981A ETF 持股與產業分布', description: '查看 Pocket 口袋證券 00981A 持股內容與產業分布長條圖。' },
+            { file: 'foreign.html', title: '法人連續買賣超股票', description: '追蹤法人連續買賣超與多日排行條件。' },
+            { file: 'twse-foreign-investors.html', title: '外資及陸資買賣超彙總表', description: '瀏覽證交所外資及陸資每日買賣超資料。' },
+            { file: 'twse-institutional-investors.html', title: '三大法人買賣超日報', description: '瀏覽三大法人買賣超日報資料。' },
+            { file: 'twse-dealers.html', title: '自營商買賣超彙總表', description: '瀏覽自營商買賣超彙總資料。' },
+            { file: 'twse-margin-balance.html', title: '信用交易融資融券餘額', description: '查看上市股票信用交易融資融券餘額。' },
+            { file: 'twse-market-chart.html', title: '台灣加權指數日 K 線', description: '同步查看加權指數日 K、成交量與外資買賣超金額。' },
+            { file: 'sma-below.html', title: '股價低於均線清單', description: '篩選股價低於均線的股票清單。' },
+            { file: 'warrants.html', title: '權證標的十日追蹤', description: '追蹤權證標的近十日資料變化。' },
+            { file: 'analyze.html', title: 'Stock Analysis Tool', description: '個股資料分析工具。' },
+            { file: 'compare.html', title: 'Stock Comparison Tool', description: '比較 Fubon 與 TWSE 股票資料。' }
         ];
 
         const predictions = [
-            {
-                file: 'predictions/20260727-3231.html',
-                title: '2026-07-27 緯創（3231）',
-                description: '下一交易日股價區間、法人籌碼、關鍵價位與情境機率預測。'
-            },
-            {
-                file: 'predictions/20260724-2408.html',
-                title: '2026-07-24 南亞科（2408）',
-                description: '使用 7/23 收盤以前資訊建立的隔日下跌風險判斷紀錄。'
-            }
+            { file: 'predictions/20260727-00981A.html', title: '2026-07-27 00981A', description: '依 ETF 最新持股結構與主要成分股走勢整理的下一交易日情境預測。' },
+            { file: 'predictions/20260727-2330.html', title: '2026-07-27 台積電（2330）', description: '下一交易日股價區間、法人籌碼、關鍵價位與情境機率預測。' },
+            { file: 'predictions/20260727-2303.html', title: '2026-07-27 聯電（2303）', description: '下一交易日股價區間、法人籌碼、關鍵價位與情境機率預測。' },
+            { file: 'predictions/20260727-3231.html', title: '2026-07-27 緯創（3231）', description: '下一交易日股價區間、法人籌碼、關鍵價位與情境機率預測。' },
+            { file: 'predictions/20260724-2408.html', title: '2026-07-24 南亞科（2408）', description: '使用 7/23 收盤以前資訊建立的隔日下跌風險判斷紀錄。' }
         ];
 
         function escapeHtml(value) {
-            return String(value ?? '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+            return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
         function renderLinks() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filteredTools = tools.filter(tool => {
-                if (!keyword) return true;
-                return [tool.file, tool.title, tool.description].some(value =>
-                    String(value).toLowerCase().includes(keyword)
-                );
-            });
-            const predictionGroupMatches = !keyword ||
-                ['預測', 'prediction', 'predictions'].some(value => value.includes(keyword));
-            const matchedPredictions = predictions.filter(prediction => {
-                if (predictionGroupMatches) return true;
-                return [prediction.file, prediction.title, prediction.description].some(value =>
-                    String(value).toLowerCase().includes(keyword)
-                );
-            });
+            const filteredTools = tools.filter(tool => !keyword || [tool.file, tool.title, tool.description].some(value => String(value).toLowerCase().includes(keyword)));
+            const predictionGroupMatches = !keyword || ['預測', 'prediction', 'predictions'].some(value => value.includes(keyword));
+            const matchedPredictions = predictions.filter(prediction => predictionGroupMatches || [prediction.file, prediction.title, prediction.description].some(value => String(value).toLowerCase().includes(keyword)));
             const totalPages = tools.length + predictions.length;
             const matchedPages = filteredTools.length + matchedPredictions.length;
-
-            document.getElementById('pageMeta').textContent =
-                `共 ${totalPages.toLocaleString()} 個 HTML 頁面；目前符合 ${matchedPages.toLocaleString()} 個`;
+            document.getElementById('pageMeta').textContent = `共 ${totalPages.toLocaleString()} 個 HTML 頁面；目前符合 ${matchedPages.toLocaleString()} 個`;
 
             const toolLinks = filteredTools.map(tool => `
                 <a class="tool-link" href="${escapeHtml(tool.file)}" target="_blank" rel="noopener noreferrer">
-                    <span>
-                        <span class="tool-title">${escapeHtml(tool.title)}</span>
-                        <span class="tool-desc">${escapeHtml(tool.description)}</span>
-                    </span>
+                    <span><span class="tool-title">${escapeHtml(tool.title)}</span><span class="tool-desc">${escapeHtml(tool.description)}</span></span>
                     <span class="tool-file">${escapeHtml(tool.file)}</span>
-                </a>
-            `).join('');
+                </a>`).join('');
+
             const predictionLinks = matchedPredictions.length === 0 ? '' : `
-                <details class="prediction-group">
+                <details class="prediction-group" open>
                     <summary class="prediction-toggle">
-                        <span>
-                            <span class="tool-title">預測</span>
-                            <span class="tool-desc">點擊展開目前已有的股票預測報告，共 ${matchedPredictions.length.toLocaleString()} 份。</span>
-                        </span>
+                        <span><span class="tool-title">預測</span><span class="tool-desc">點擊展開目前已有的股票預測報告，共 ${matchedPredictions.length.toLocaleString()} 份。</span></span>
                         <span class="tool-file">predictions/</span>
                     </summary>
                     <div class="prediction-links">
                         ${matchedPredictions.map(prediction => `
                             <a class="prediction-link" href="${escapeHtml(prediction.file)}" target="_blank" rel="noopener noreferrer">
-                                <span>
-                                    <span class="tool-title">${escapeHtml(prediction.title)}</span>
-                                    <span class="tool-desc">${escapeHtml(prediction.description)}</span>
-                                </span>
+                                <span><span class="tool-title">${escapeHtml(prediction.title)}</span><span class="tool-desc">${escapeHtml(prediction.description)}</span></span>
                                 <span class="tool-file">${escapeHtml(prediction.file)}</span>
-                            </a>
-                        `).join('')}
+                            </a>`).join('')}
                     </div>
-                </details>
-            `;
+                </details>`;
 
             document.getElementById('linkList').innerHTML = predictionLinks + toolLinks;
             document.getElementById('emptyState').style.display = matchedPages === 0 ? 'block' : 'none';
         }
-
         renderLinks();
     </script>
 </body>
-
 </html>
