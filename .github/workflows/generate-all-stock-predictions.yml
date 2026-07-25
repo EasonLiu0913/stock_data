@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/generate_all_stock_predictions.js'
       - 'scripts/normalize_non_trading_days.js'
+      - 'scripts/normalize_market_chart_for_forecast.js'
       - '.github/workflows/generate-all-stock-predictions.yml'
       - 'src/forecast/**'
       - 'templates/prediction_template.html'
@@ -35,6 +36,8 @@ jobs:
         run: npm ci
       - name: Normalize non-trading days
         run: node scripts/normalize_non_trading_days.js
+      - name: Normalize market chart
+        run: node scripts/normalize_market_chart_for_forecast.js
       - name: Generate JSON, HTML, missing-data list and index
         id: generate
         shell: bash
