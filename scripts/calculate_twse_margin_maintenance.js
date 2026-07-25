@@ -4,7 +4,7 @@ const path = require('path');
 const ROOT_DIR = path.join(__dirname, '..');
 const OUTPUT_DIR = path.join(ROOT_DIR, 'data_twse_margin_maintenance');
 const OUTPUT_SUFFIX = 'twse_margin_maintenance';
-const FORMULA_VERSION = 'twse-stock-exclude-punish-short-sale-restricted-ky-v1';
+const FORMULA_VERSION = 'twse-stock-exclude-punish-ky-v1';
 const args = process.argv.slice(2);
 
 function getArg(flag) {
@@ -198,9 +198,6 @@ async function main() {
     const financingAmount = getFinancingAmount(marginSummary);
     const records = getStockMarginRecords(stockMarginPayload, prices);
     const punishCodes = getCodes(punishPayload, '證券代號');
-    const shortSaleRestrictedCodes = new Set(records
-        .filter(record => record.note.includes('X'))
-        .map(record => record.code));
     const kyCodes = new Set(records
         .filter(record => record.name.includes('-KY'))
         .map(record => record.code));
@@ -209,12 +206,10 @@ async function main() {
     const excludedCodes = new Set();
     const punish = summarizeExcluded(records, punishCodes, excludedCodes);
     punish.codes.forEach(code => excludedCodes.add(code));
-    const shortSaleRestrictedX = summarizeExcluded(records, shortSaleRestrictedCodes, excludedCodes);
-    shortSaleRestrictedX.codes.forEach(code => excludedCodes.add(code));
     const ky = summarizeExcluded(records, kyCodes, excludedCodes);
     ky.codes.forEach(code => excludedCodes.add(code));
 
-    const numerator = baselineMarketValue - punish.marketValue - shortSaleRestrictedX.marketValue - ky.marketValue;
+    const numerator = baselineMarketValue - punish.marketValue - ky.marketValue;
     const maintenanceRatio = financingAmount ? numerator / financingAmount * 100 : null;
     const missingPrices = records
         .filter(record => record.marginBalanceLots > 0 && !record.close)
@@ -223,7 +218,7 @@ async function main() {
     const output = {
         date,
         formulaVersion: FORMULA_VERSION,
-        formula: '(TWSE STOCK 融資股票市值－當日處置股融資市值－註記 X 股票融資市值－KY 股票融資市值)／證交所融資金額今日餘額',
+        formula: '(TWSE STOCK 融資股票市值－當日處置股融資市值－KY 股票融資市值)／證交所融資金額今日餘額',
         maintenanceRatio,
         numerator,
         denominator: financingAmount,
@@ -233,7 +228,6 @@ async function main() {
         },
         excluded: {
             punish,
-            shortSaleRestrictedX,
             ky
         },
         dataQuality: { missingPrices },
