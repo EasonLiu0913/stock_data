@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股票預測策略分類</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f6f8fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{max-width:1440px;margin:0 auto;padding:24px}.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:18px}.eyebrow{font-size:13px;font-weight:800;color:#526173}.title{margin:4px 0 0;font-size:30px}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{border:1px solid #cdd6e3;background:#fff;border-radius:6px;padding:9px 12px;color:#1f3b57;text-decoration:none;font-weight:800}.grid{display:grid;gap:14px}.group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.card{background:#fff;border:1px solid #dce3ec;border-radius:8px;padding:16px;box-shadow:0 1px 2px rgba(22,31,44,.04);cursor:pointer}.card:hover,.card.active{border-color:#8db7df;background:#f8fbff}.group-name{font-size:18px;font-weight:900;margin-bottom:8px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{border:1px solid #e2e8f0;border-radius:8px;padding:9px;background:#fff}.metric b{display:block;font-size:18px}.metric span{font-size:12px;color:#697789}.section-title{font-size:18px;margin:0 0 12px}.table-card{background:#fff;border:1px solid #dce3ec;border-radius:8px;padding:16px}.table-wrap{overflow:auto;border:1px solid #dce3ec;border-radius:8px;background:#fff}table{width:100%;border-collapse:collapse;min-width:1040px}th,td{padding:10px 12px;border-bottom:1px solid #edf1f6;text-align:left;font-size:13px;white-space:nowrap}th{background:#f2f5f9;color:#475569;font-size:12px}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#eef2f7;color:#334155}.bull{background:#e8f7ef;color:#12623a}.bear{background:#fdeaea;color:#9e2f2f}.warn{background:#fff4db;color:#8a5a00}.link{color:#1d5f99;font-weight:800;text-decoration:none}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}input,select{height:38px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;padding:0 10px;color:#172033}@media(max-width:1060px){.group-grid{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start;flex-direction:column}}@media(max-width:680px){.shell{padding:14px}.group-grid,.metrics{grid-template-columns:1fr}.title{font-size:24px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div><div class="eyebrow" id="meta">載入中</div><h1 class="title">股票預測策略分類</h1></div>
+      <nav class="nav"><a href="prediction-dashboard.html">總覽</a><a href="prediction-industry-dashboard.html">產業解讀</a><a href="index.html">工具清單</a></nav>
+    </div>
+    <section class="grid group-grid" id="groupCards"></section>
+    <section class="table-card" style="margin-top:14px">
+      <h2 class="section-title" id="groupTitle">分類股票清單</h2>
+      <div class="controls"><input id="q" placeholder="搜尋代號、名稱、產業" oninput="renderStocks()"><select id="industry" onchange="renderStocks()"><option value="">全部產業</option></select></div>
+      <div class="table-wrap"><table><thead><tr><th>股票</th><th>產業</th><th>方向</th><th>分數</th><th>風險</th><th>完整度</th><th>r1</th><th>r3</th><th>RSI</th><th>量比</th><th>籌碼</th><th>翻轉訊號</th><th>分類標籤</th><th>報告</th></tr></thead><tbody id="stockRows"></tbody></table></div>
+    </section>
+  </main>
+  <script>
+    let dashboard, selected, currentManifest;
+    const fmt=n=>Number.isFinite(n)?n.toFixed(2):'NA';
+    const pct=n=>Number.isFinite(n)?`${n.toFixed(1)}%`:'NA';
+    const cls=v=>String(v).includes('偏多')?'bull':String(v).includes('偏空')?'bear':String(v).includes('高')?'warn':'';
+    const params=new URLSearchParams(location.search);
+    let currentDate;
+    async function loadDashboard(){const m=await fetch('../data_predictions/manifest.json').then(r=>r.json());currentManifest=m;currentDate=params.get('date')||m.latest_date||m.forecast_date_compact;const summaryPath=currentDate===m.latest_date&&m.latest_summary?m.latest_summary:`data_predictions/${currentDate}/summary.json`;dashboard=await fetch(`../${summaryPath}`).then(r=>{if(!r.ok)throw new Error(`找不到 ${summaryPath}`);return r.json();});const hash=decodeURIComponent(location.hash.slice(1));selected=dashboard.group_summary.find(g=>g.group===hash)||dashboard.group_summary[0];render(currentManifest);}
+    function withDate(file){return `${file}?date=${encodeURIComponent(currentDate)}`;}
+    function render(manifest){document.querySelector('.nav').innerHTML=`<select id="dateSelect" onchange="location.href='prediction-groups.html?date='+this.value">${(manifest.available_dates||[currentDate]).map(date=>`<option value="${date}" ${date===currentDate?'selected':''}>${date}</option>`).join('')}</select><a href="${withDate('prediction-dashboard.html')}">總覽</a><a href="${withDate('prediction-industry-dashboard.html')}">產業解讀</a><a href="index.html">工具清單</a>`;document.getElementById('meta').textContent=`預測日 ${dashboard.forecast_date}；基準日 ${dashboard.base_trade_date}；${dashboard.group_summary.length} 個策略分類`;document.getElementById('groupCards').innerHTML=dashboard.group_summary.map(g=>`<article class="card ${g.group===selected.group?'active':''}" onclick="selectGroup('${encodeURIComponent(g.group)}')"><div class="group-name">${g.group}</div><div class="metrics"><div class="metric"><b>${g.count}</b><span>檔數</span></div><div class="metric"><b>${fmt(g.average_direction_score)}</b><span>平均分數</span></div><div class="metric"><b>${pct(g.bullish_ratio)}</b><span>偏多</span></div><div class="metric"><b>${pct(g.reversal_ratio)}</b><span>翻轉訊號</span></div></div></article>`).join('');const industries=[...new Set(dashboard.stocks.map(s=>s.industry))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));document.getElementById('industry').innerHTML='<option value="">全部產業</option>'+industries.map(v=>`<option value="${v}">${v}</option>`).join('');renderStocks();}
+    function selectGroup(name){selected=dashboard.group_summary.find(g=>g.group===decodeURIComponent(name));location.hash=encodeURIComponent(selected.group);render(currentManifest);}
+    function renderStocks(){if(!selected)return;document.getElementById('groupTitle').textContent=`${selected.group}：${selected.count.toLocaleString()} 檔`;const q=document.getElementById('q').value.trim().toLowerCase();const ind=document.getElementById('industry').value;const memberSet=new Set(selected.members);const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code)&&(!q||[s.stock_code,s.stock_name,s.industry].some(v=>String(v).toLowerCase().includes(q)))&&(!ind||s.industry===ind)).sort((a,b)=>b.direction_score-a.direction_score);document.getElementById('stockRows').innerHTML=rows.map(s=>`<tr><td>${s.stock_name} <b>${s.stock_code}</b></td><td>${s.industry}</td><td><span class="pill ${cls(s.final_direction_label)}">${s.final_direction_label}</span></td><td>${s.direction_score}</td><td><span class="pill ${cls(s.risk_label)}">${s.risk_label}</span></td><td>${s.data_completeness}%</td><td>${fmt(s.features.r1)}</td><td>${fmt(s.features.r3)}</td><td>${fmt(s.features.rsi14)}</td><td>${fmt(s.features.volume_ratio_1d)}</td><td>${s.chip_bias}</td><td>${s.reversal_signals.tags.join('、')||'—'}</td><td>${s.strategy_tags.join('、')}</td><td><a class="link" href="${s.report_file}">個股</a></td></tr>`).join('');}
+    loadDashboard().catch(err=>{document.getElementById('meta').textContent=`載入失敗：${err.message}`});
+  </script>
+</body>
+</html>

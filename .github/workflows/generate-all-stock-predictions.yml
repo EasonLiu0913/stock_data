@@ -6,7 +6,9 @@ on:
     branches: [main]
     paths:
       - 'scripts/generate_all_stock_predictions.js'
+      - 'scripts/generate_prediction_dashboard_data.js'
       - 'scripts/prepare_and_verify_forecast_inputs.js'
+      - 'scripts/resolve_forecast_dates.js'
       - 'scripts/normalize_non_trading_days.js'
       - 'scripts/normalize_market_chart_for_forecast.js'
       - '.github/workflows/generate-all-stock-predictions.yml'
@@ -25,8 +27,6 @@ jobs:
   generate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    env:
-      FORECAST_RUN_GENERATION: '20260727-v2'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,9 +42,11 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm ci
+      - name: Resolve forecast dates
+        run: |
+          node scripts/resolve_forecast_dates.js --github-env >> "$GITHUB_ENV"
+          node scripts/resolve_forecast_dates.js
       - name: Verify and normalize fresh source files
-        env:
-          FORECAST_BASE_DATE: '20260724'
         run: node scripts/prepare_and_verify_forecast_inputs.js
       - name: Normalize non-trading days
         run: node scripts/normalize_non_trading_days.js
@@ -56,27 +58,37 @@ jobs:
         run: |
           mkdir -p data_predictions
           set +e
-          node scripts/generate_all_stock_predictions.js > data_predictions/generation.log 2>&1
+          node scripts/generate_all_stock_predictions.js > /tmp/generation.log 2>&1
           status=$?
-          cp .forecast-input-validation.json data_predictions/input-validation.json
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" -eq 0 ]; then
-            echo "success" > data_predictions/generation-status.txt
+            generation_status="success"
           else
-            echo "failed" > data_predictions/generation-status.txt
+            generation_status="failed"
+          fi
+          forecast_dir=$(node -e "const fs=require('fs'); const p='data_predictions/manifest.json'; if (!fs.existsSync(p)) process.exit(1); const m=JSON.parse(fs.readFileSync(p,'utf8')); process.stdout.write(m.output_directory || '');" 2>/dev/null)
+          if [ -n "$forecast_dir" ]; then
+            mkdir -p "$forecast_dir"
+            cp /tmp/generation.log "$forecast_dir/generation.log"
+            cp .forecast-input-validation.json "$forecast_dir/input-validation.json"
+            echo "$generation_status" > "$forecast_dir/generation-status.txt"
+          else
+            cp /tmp/generation.log data_predictions/generation.log
+            cp .forecast-input-validation.json data_predictions/input-validation.json
+            echo "$generation_status" > data_predictions/generation-status.txt
           fi
           exit 0
       - name: Commit generation result
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_predictions public/predictions public/index.html
+          git add data_predictions public/index.html
           if git diff --cached --quiet; then
             echo "No generated changes"
             exit 0
           fi
           if [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
-            message="feat: regenerate verified 20260727 stock forecasts"
+            message="feat: regenerate verified ${FORECAST_TARGET_DATE} stock forecasts"
           else
             message="fix: record verified forecast generation failure"
           fi

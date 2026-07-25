@@ -52,6 +52,35 @@
 public/predictions/YYYYMMDD-股票代號.html
 ```
 
+原始 JSON 與產生紀錄按預測日期分資料夾：
+
+```text
+data_predictions/YYYYMMDD/股票代號.json
+data_predictions/YYYYMMDD/manifest.json
+data_predictions/YYYYMMDD/missing-data-stocks.json
+data_predictions/YYYYMMDD/generation.log
+data_predictions/YYYYMMDD/input-validation.json
+data_predictions/YYYYMMDD/generation-status.txt
+data_predictions/YYYYMMDD/summary.json
+data_predictions/YYYYMMDD/industry-summary.json
+data_predictions/YYYYMMDD/group-summary.json
+```
+
+`summary.json` 是 dashboard 使用的聚合資料，包含每檔股票的簡化欄位、產業、策略標籤與個股報告連結。`industry-summary.json` 及 `group-summary.json` 分別提供產業解讀頁與策略分類頁的整合數據。
+
+dashboard 聚合層另外會從最近的 `data_fubon/fubon_YYYYMMDD_sma.json` 歷史資料計算弱勢翻轉訊號。這些訊號目前用於 dashboard 解讀與分類，不直接改變個股預測分數：
+
+- `重新站上20MA`：前一交易日收盤仍在 SMA20 以下或等於 SMA20，最新基準日收盤站上 SMA20。
+- `重新站上60MA`：前一交易日收盤仍在 SMA60 以下或等於 SMA60，最新基準日收盤站上 SMA60。
+- `MACD翻多`：MACD 線由下往上穿越 signal 線。
+- `MACD柱狀翻正`：MACD histogram 由 0 以下或等於 0 翻到 0 以上。
+- `KD黃金交叉`：K9 由下往上穿越 D9。
+- `KD低檔轉折`：前一日 K9 低於 25，且最新 K9 開始回升。
+
+任一翻轉訊號成立時，該股票會被標記為 `弱勢翻轉觀察`。
+
+`data_predictions/manifest.json` 只保留最新批次摘要與最新日期資料夾路徑，避免第一層目錄列出所有股票檔案，並提供 `latest_summary`、`latest_industry_summary`、`latest_group_summary` 供前端載入。
+
 其中 `YYYYMMDD` 是 `forecast_date`，不是報告建立日。
 
 ## 3. 時間與交易日規則

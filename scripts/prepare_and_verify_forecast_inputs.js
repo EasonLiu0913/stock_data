@@ -3,9 +3,10 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { resolveForecastDates } = require('./resolve_forecast_dates');
 
 const ROOT = path.resolve(__dirname, '..');
-const DATE = process.env.FORECAST_BASE_DATE || '20260724';
+const DATE = process.env.FORECAST_BASE_DATE || resolveForecastDates().base_trade_date_compact;
 const institutionalPath = path.join(ROOT, 'data_twse_institutional_investors', `${DATE}_twse_institutional_investors.json`);
 const brokerPath = path.join(ROOT, 'data_fubon_broker_details', `fubon_${DATE}_券商分點進出明細.json`);
 const reportPath = path.join(ROOT, '.forecast-input-validation.json');

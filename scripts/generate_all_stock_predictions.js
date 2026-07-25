@@ -3,7 +3,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { generateForecastFile } = require('../src/forecast/generator');
+const { spawnSync } = require('node:child_process');
+const { normalizeIsoDate } = require('./resolve_forecast_dates');
 
 const ROOT = path.resolve(__dirname, '..');
 const STOCK_LIST = path.join(ROOT, 'data_twse', 'twse_industry_Stock.json');
@@ -14,7 +15,6 @@ const BROKER_DIR = path.join(ROOT, 'data_fubon_broker_details');
 const MARKET_FILE = path.join(ROOT, 'data_twse_market_chart', 'market_chart.json');
 const HOLIDAY_FILE = path.join(ROOT, 'data_history_sma', 'non_trading_days.json');
 const JSON_DIR = path.join(ROOT, 'data_predictions');
-const HTML_DIR = path.join(ROOT, 'public', 'predictions');
 const INDEX_FILE = path.join(ROOT, 'public', 'index.html');
 const METHOD_VERSION = '1.1.0';
 
@@ -39,6 +39,19 @@ function dateFromName(name) {
 }
 function isoDate(compact) { return `${compact.slice(0,4)}-${compact.slice(4,6)}-${compact.slice(6,8)}`; }
 function compactDate(iso) { return iso.replaceAll('-', ''); }
+function envIsoDate(name) {
+  const value = process.env[name];
+  if (!value) return null;
+  const iso = normalizeIsoDate(value);
+  if (!iso) throw new Error(`Invalid ${name}: ${value}`);
+  return iso;
+}
+function loadHolidaySet(file) {
+  const data = readJson(file, []);
+  if (Array.isArray(data)) return new Set(data);
+  if (data && typeof data === 'object') return new Set(Object.values(data).flatMap((value) => Array.isArray(value) ? value : []));
+  return new Set();
+}
 function nextTradeDate(baseIso, holidays) {
   const d = new Date(`${baseIso}T12:00:00+08:00`);
   do {
@@ -158,7 +171,12 @@ function updateIndex(predictions) {
 
 function main() {
   const stocks = readJson(STOCK_LIST, {});
-  const priceFiles = listFiles(PRICE_DIR, /^fubon_20\d{6}_sma\.json$/).slice(-40);
+  const requestedBaseIso = envIsoDate('FORECAST_BASE_DATE');
+  const requestedTargetIso = envIsoDate('FORECAST_TARGET_DATE');
+  const requestedBaseCompact = requestedBaseIso ? compactDate(requestedBaseIso) : null;
+  const priceFiles = listFiles(PRICE_DIR, /^fubon_20\d{6}_sma\.json$/)
+    .filter((file) => !requestedBaseCompact || dateFromName(file) <= requestedBaseCompact)
+    .slice(-40);
   if (!priceFiles.length) throw new Error('No SMA files found');
   const history = new Map();
   for (const file of priceFiles) {
@@ -167,6 +185,7 @@ function main() {
       const dates = Object.keys(item || {}).filter((k)=>/^20\d{2}[\/-]\d{2}[\/-]\d{2}$/.test(k)).sort();
       for (const dateKey of dates) {
         const r=item[dateKey]||{}; const iso=dateKey.replaceAll('/','-');
+        if (requestedBaseIso && iso > requestedBaseIso) continue;
         const row={date:iso,close:num(r.Price??r.Close),open:num(r.Open),high:num(r.High),low:num(r.Low),volume:num(r.Volume),sma5:num(r.SMA5),sma20:num(r.SMA20),sma60:num(r.SMA60)};
         if ([row.close,row.open,row.high,row.low,row.volume].every(Number.isFinite)) {
           if (!history.has(code)) history.set(code,new Map()); history.get(code).set(iso,row);
@@ -175,12 +194,19 @@ function main() {
     }
   }
   const allDates=[...new Set([...history.values()].flatMap((m)=>[...m.keys()]))].sort();
-  const baseIso=allDates.at(-1); const baseCompact=compactDate(baseIso); const holidays=new Set(readJson(HOLIDAY_FILE,[])||[]); const forecastDate=nextTradeDate(baseIso,holidays);
+  if (!allDates.length) throw new Error(`No SMA rows found${requestedBaseIso ? ` on or before ${requestedBaseIso}` : ''}`);
+  const baseIso=requestedBaseIso || allDates.at(-1);
+  if (!allDates.includes(baseIso)) throw new Error(`No SMA rows found for FORECAST_BASE_DATE ${baseIso}`);
+  const baseCompact=compactDate(baseIso); const holidays=loadHolidaySet(HOLIDAY_FILE); const forecastDate=requestedTargetIso || nextTradeDate(baseIso,holidays);
   const instFiles=listFiles(INST_DIR,/^20\d{6}_twse_institutional_investors\.json$/).filter((f)=>dateFromName(f)<=baseCompact).slice(-5);
   const marginFiles=listFiles(MARGIN_DIR,/^20\d{6}_twse_margin_balance\.csv$/).filter((f)=>dateFromName(f)<=baseCompact);
   const margin=marginFiles.length?loadMargin(path.join(MARGIN_DIR,marginFiles.at(-1))):new Map();
   const marketReturn=extractMarketReturn(baseIso);
-  fs.rmSync(HTML_DIR,{recursive:true,force:true}); fs.rmSync(JSON_DIR,{recursive:true,force:true}); fs.mkdirSync(HTML_DIR,{recursive:true}); fs.mkdirSync(JSON_DIR,{recursive:true});
+  const forecastCompact=compactDate(forecastDate);
+  const forecastJsonDir=path.join(JSON_DIR,forecastCompact);
+  fs.mkdirSync(JSON_DIR,{recursive:true});
+  fs.rmSync(forecastJsonDir,{recursive:true,force:true});
+  fs.mkdirSync(forecastJsonDir,{recursive:true});
   const missingStocks=[]; const predictions=[]; const generatedAt=new Date().toISOString();
   for (const [code, meta] of Object.entries(stocks)) {
     const rows=[...(history.get(code)?.values()||[])].sort((a,b)=>a.date.localeCompare(b.date)); const t=rows.at(-1); const missing=[]; const missingFiles=[];
@@ -208,14 +234,23 @@ function main() {
     let final=raw;if(risk>=4&&raw==='偏多')final='中性偏多';if(risk>=4&&raw==='偏空')final='中性偏空';
     const completeness=(t?30:0)+(Number.isFinite(marketReturn)?10:0)+(inst&&Number.isFinite(inst.total)?25:0)+(Number.isFinite(marginRate)?15:0)+(Number.isFinite(mainRatio)?20:0);
     const payload={methodology_version:METHOD_VERSION,generated_at:generatedAt,prediction_mode:'prospective',stock_code:code,stock_name:meta.Name,forecast_date:forecastDate,base_trade_date:baseIso,information_cutoff:`${baseIso}T15:30:00+08:00`,market:'TWSE',direction_score:score,raw_direction_label:raw,risk_score:risk,risk_label:riskLabel(risk),final_direction_label:final,data_completeness:completeness,missing_data:[...new Set(missing)],missing_files:[...new Set(missingFiles)],missing_indicators:[],data_quality_notes:[],backtest_rule_id:null,backtest_status:'unavailable',features:{r1:round(r1),r3:round(r3),intraday_return:round(intraday),volume_ratio_1d:round(vr1),volume_ratio_5d:round(vr5),gap_sma20:round(gap20),atr14:round(atr),rsi14:round(rsi),relative_strength:round(rel),institutional_ratio:round(instRatio),main_net_ratio:round(mainRatio),margin_change_rate:round(marginRate)},view:{lead:`依方法 ${METHOD_VERSION}，使用 ${baseIso} 收盤以前的專案資料評估。`,risk_label:riskLabel(risk),forecast_cards:[{label:'收盤價',value:t?String(t.close):'缺少',description:`SMA20：${t?.sma20??'缺少'}`},{label:'方向分數',value:String(score),description:raw},{label:'資料完整度',value:`${completeness}%`,description:missing.length?`缺少：${[...new Set(missing)].join('、')}`:'核心資料齊全'}],facts:[{label:'單日報酬',value:Number.isFinite(r1)?`${round(r1)}%`:'無法計算',description:`基準日 ${baseIso}`},{label:'三日報酬',value:Number.isFinite(r3)?`${round(r3)}%`:'無法計算',description:'依固定公式計算'},{label:'RSI14 / ATR14',value:`${round(rsi)??'NA'} / ${round(atr)??'NA'}`,description:'簡單平均規格'}],scores,scenarios:[{label:'基準情境',title:final,description:'依固定分數與風險降級規則產生。',target:t&&atr?`${round(t.close-atr)} ～ ${round(t.close+atr)}`:'區間資料不足'}],levels:t?[{type:'參考支撐',price:String(round(t.low)),description:'基準日低點'},{type:'參考壓力',price:String(round(t.high)),description:'基準日高點'}]:[],data_note:missing.length?`缺少資料：${[...new Set(missing)].join('、')}。未取得對應日期資料的項目依規格計 0 分。`:'核心資料已依日期完成交叉驗證。'}};
-    const jsonFile=path.join(JSON_DIR,`${compactDate(forecastDate)}-${code}.json`);fs.writeFileSync(jsonFile,JSON.stringify(payload,null,2));generateForecastFile({inputPath:jsonFile});
-    predictions.push({file:`predictions/${compactDate(forecastDate)}-${code}.html`,title:`${forecastDate} ${meta.Name}（${code}）`,description:`方法 ${METHOD_VERSION}；資料完整度 ${completeness}%。`});
+    const jsonFile=path.join(forecastJsonDir,`${code}.json`);fs.writeFileSync(jsonFile,JSON.stringify(payload,null,2));
+    predictions.push({file:`prediction-stock.html?date=${forecastCompact}&code=${code}`,title:`${forecastDate} ${meta.Name}（${code}）`,description:`方法 ${METHOD_VERSION}；資料完整度 ${completeness}%。`});
     if(missing.length)missingStocks.push({stock_code:code,stock_name:meta.Name,missing_data:[...new Set(missing)],missing_files:[...new Set(missingFiles)]});
   }
   predictions.sort((a,b)=>a.title.localeCompare(b.title,'zh-Hant'));
   updateIndex(predictions);
-  fs.writeFileSync(path.join(JSON_DIR,'missing-data-stocks.json'),JSON.stringify({base_trade_date:baseIso,forecast_date:forecastDate,count:missingStocks.length,stocks:missingStocks},null,2));
-  fs.writeFileSync(path.join(JSON_DIR,'manifest.json'),JSON.stringify({methodology_version:METHOD_VERSION,generated_at:generatedAt,base_trade_date:baseIso,forecast_date:forecastDate,total_stocks:Object.keys(stocks).length,generated_reports:predictions.length,missing_data_stocks:missingStocks.length},null,2));
+  fs.writeFileSync(path.join(forecastJsonDir,'missing-data-stocks.json'),JSON.stringify({base_trade_date:baseIso,forecast_date:forecastDate,count:missingStocks.length,stocks:missingStocks},null,2));
+  const previousManifest=readJson(path.join(JSON_DIR,'manifest.json'),{});
+  const existingDateDirs=fs.readdirSync(JSON_DIR,{withFileTypes:true})
+    .filter((entry)=>entry.isDirectory()&&/^20\d{6}$/.test(entry.name))
+    .map((entry)=>entry.name);
+  const availableDates=[...new Set([...(previousManifest.available_dates||[]),...existingDateDirs,forecastCompact])].filter((date)=>/^20\d{6}$/.test(date)).sort();
+  const manifest={methodology_version:METHOD_VERSION,generated_at:generatedAt,base_trade_date:baseIso,forecast_date:forecastDate,forecast_date_compact:forecastCompact,output_directory:`data_predictions/${forecastCompact}`,latest_date:forecastCompact,available_dates:availableDates,total_stocks:Object.keys(stocks).length,generated_reports:predictions.length,report_mode:'dynamic-json',missing_data_stocks:missingStocks.length};
+  fs.writeFileSync(path.join(forecastJsonDir,'manifest.json'),JSON.stringify(manifest,null,2));
+  fs.writeFileSync(path.join(JSON_DIR,'manifest.json'),JSON.stringify({...manifest,latest_manifest:`data_predictions/${forecastCompact}/manifest.json`,latest_missing_data:`data_predictions/${forecastCompact}/missing-data-stocks.json`},null,2));
+  const dashboardResult = spawnSync(process.execPath, [path.join(__dirname, 'generate_prediction_dashboard_data.js')], { stdio: 'inherit' });
+  if (dashboardResult.status !== 0) process.exit(dashboardResult.status || 1);
   console.log(JSON.stringify({baseIso,forecastDate,total:predictions.length,missing:missingStocks.length}));
 }
 main();
