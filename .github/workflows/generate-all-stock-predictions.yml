@@ -33,8 +33,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Generate JSON, HTML, missing-data list and index
-        run: node scripts/generate_all_stock_predictions.js
-      - name: Commit generated reports
+        id: generate
+        shell: bash
+        run: |
+          mkdir -p data_predictions
+          set +e
+          node scripts/generate_all_stock_predictions.js > data_predictions/generation.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 0 ]; then
+            echo "success" > data_predictions/generation-status.txt
+          else
+            echo "failed" > data_predictions/generation-status.txt
+          fi
+          exit 0
+      - name: Commit generation result
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -43,5 +56,10 @@ jobs:
             echo "No generated changes"
             exit 0
           fi
-          git commit -m "feat: regenerate all stock forecast reports"
+          if [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
+            message="feat: regenerate all stock forecast reports"
+          else
+            message="fix: record stock forecast generation failure"
+          fi
+          git commit -m "$message"
           git push origin HEAD:main
