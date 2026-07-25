@@ -32,6 +32,8 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm ci
+      - name: Normalize non-trading days
+        run: node scripts/normalize_non_trading_days.js
       - name: Generate JSON, HTML, missing-data list and index
         id: generate
         shell: bash
