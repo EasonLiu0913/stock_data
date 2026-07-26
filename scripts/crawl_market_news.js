@@ -64,6 +64,38 @@ function decodeHtml(value) {
   return decodeXml(value);
 }
 
+function normalizeSummaryText(value) {
+  return decodeHtml(value)
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function withoutSourceSuffix(value, sourceName) {
+  let text = normalizeSummaryText(value);
+  const source = normalizeSummaryText(sourceName);
+  if (source) {
+    text = text.replace(new RegExp(`\\s*-\\s*${escapeRegExp(source)}$`, 'i'), '');
+    text = text.replace(new RegExp(`\\s+${escapeRegExp(source)}$`, 'i'), '');
+  }
+  return text.trim();
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function cleanSummary(item) {
+  const summary = normalizeSummaryText(item.summary);
+  if (!summary) return '';
+  const title = withoutSourceSuffix(item.title, item.source_name);
+  const summaryWithoutSource = withoutSourceSuffix(summary, item.source_name);
+  if (title && summaryWithoutSource && (title === summaryWithoutSource || title.includes(summaryWithoutSource) || summaryWithoutSource.includes(title))) {
+    return '';
+  }
+  return summary;
+}
+
 function absoluteUrl(url) {
   try {
     return new URL(url, 'https://tw.stock.yahoo.com').toString();
@@ -135,6 +167,43 @@ function addDays(compactDate, days) {
   return date.toISOString().slice(0, 10).replaceAll('-', '');
 }
 
+function addTime(baseDate, amount, unit) {
+  const date = new Date(baseDate.getTime());
+  if (unit === 'minute') date.setMinutes(date.getMinutes() + amount);
+  if (unit === 'hour') date.setHours(date.getHours() + amount);
+  if (unit === 'day') date.setDate(date.getDate() + amount);
+  return date;
+}
+
+function parseYahooRelativeTime(value, baseDate) {
+  const text = normalizeSummaryText(value);
+  if (!text) return '';
+  if (/剛剛|剛才/.test(text)) return baseDate.toUTCString();
+  let match = text.match(/(\d+)\s*分鐘前/);
+  if (match) return addTime(baseDate, -Number(match[1]), 'minute').toUTCString();
+  match = text.match(/(\d+)\s*小時前/);
+  if (match) return addTime(baseDate, -Number(match[1]), 'hour').toUTCString();
+  match = text.match(/(\d+)\s*天前/);
+  if (match) return addTime(baseDate, -Number(match[1]), 'day').toUTCString();
+  if (/昨天/.test(text)) return addTime(baseDate, -1, 'day').toUTCString();
+  return '';
+}
+
+function parsePublishedTimeFromHtml(html) {
+  const patterns = [
+    /property="article:published_time"\s+content="([^"]+)"/i,
+    /name="pubdate"\s+content="([^"]+)"/i,
+    /<time[^>]+datetime="([^"]+)"/i,
+    /"datePublished"\s*:\s*"([^"]+)"/i
+  ];
+  for (const pattern of patterns) {
+    const value = html.match(pattern)?.[1];
+    const timestamp = Date.parse(value || '');
+    if (Number.isFinite(timestamp)) return new Date(timestamp).toUTCString();
+  }
+  return '';
+}
+
 function queryWithDateWindow(query, targetDate, windowDays) {
   const days = Number(windowDays);
   if (!Number.isFinite(days) || days <= 0) return query;
@@ -160,7 +229,7 @@ function mergeArticle(byKey, item, category, sourceId) {
     trusted_domain: item.trusted_domain,
     categories: [...categories].sort(),
     matched_queries: [...new Set([...(existing?.matched_queries || []), sourceId])].sort(),
-    summary: item.summary
+    summary: cleanSummary(item)
   });
 }
 
@@ -182,6 +251,19 @@ async function fetchText(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
   }
 }
 
+async function hydratePublishedAt(items) {
+  for (const item of items) {
+    if (item.published_at || !/^https:\/\/tw\.(?:news|stock)\.yahoo\.com\/news\//.test(item.link || '')) continue;
+    try {
+      const html = await fetchText(item.link);
+      item.published_at = parsePublishedTimeFromHtml(html);
+    } catch {
+      item.published_at = '';
+    }
+  }
+  return items;
+}
+
 function itemKey(item) {
   return crypto
     .createHash('sha1')
@@ -189,25 +271,28 @@ function itemKey(item) {
     .digest('hex');
 }
 
-function parseYahooStockPage(html, sourceConfig, trustedDomains) {
+function parseYahooStockPage(html, sourceConfig, trustedDomains, baseDate = new Date()) {
   const items = [];
   const streamStart = html.indexOf('<div id="YDC-Stream"');
   const streamEnd = streamStart >= 0 ? html.indexOf('</ul>', streamStart) : -1;
   const streamHtml = streamStart >= 0 && streamEnd > streamStart ? html.slice(streamStart, streamEnd) : html;
   const rows = streamHtml.match(/<li class="js-stream-content[\s\S]*?<\/li>/g) || [];
   for (const row of rows) {
+    if (/gemini-ad|native-ad-item|data-test-locator="ad"|>\s*Ad\s*</i.test(row)) continue;
     const articleMatch = row.match(/<h3[\s\S]*?<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/h3>/i);
     if (!articleMatch) continue;
     const link = absoluteUrl(decodeHtml(articleMatch[1]));
-    if (!/\/news\//.test(link) || /[?&]bcmt=/.test(link)) continue;
+    if (!/^https:\/\/tw\.(?:news|stock)\.yahoo\.com\/news\//.test(link) || /[?&]bcmt=/.test(link)) continue;
+    const metaMatch = row.match(/<span[^>]*>([\s\S]*?)<\/span>\s*<i[^>]*>\s*•\s*<\/i>\s*<span[^>]*>([\s\S]*?)<\/span>/i);
     const sourceMatch = row.match(/<div class="[^"]*C\(#959595\)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
     const summaryMatch = row.match(/<p class="[^"]*"[^>]*>([\s\S]*?)<\/p>/i);
-    const sourceName = decodeHtml(sourceMatch?.[1] || sourceConfig.source_name || '');
+    const sourceName = decodeHtml(metaMatch?.[1] || sourceMatch?.[1] || sourceConfig.source_name || '');
+    const relativeTime = decodeHtml(metaMatch?.[2] || '');
     const item = {
       title: decodeHtml(articleMatch[2]),
       link,
       guid: link,
-      published_at: '',
+      published_at: parseYahooRelativeTime(relativeTime, baseDate),
       source_name: sourceName,
       source_url: sourceConfig.url,
       summary: decodeHtml(summaryMatch?.[1] || ''),
@@ -221,6 +306,7 @@ function parseYahooStockPage(html, sourceConfig, trustedDomains) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const targetDate = normalizeCompactDate(args.get('date') || taipeiCompactDate());
+  const crawledAt = new Date();
   const searchDateWindowDays = args.get('search-date-window-days') || args.get('historical-window-days') || 0;
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   const outputDir = path.join(OUTPUT_DIR, targetDate);
@@ -267,7 +353,7 @@ async function main() {
     };
     try {
       const html = await fetchText(sourceConfig.url);
-      const items = parseYahooStockPage(html, sourceConfig, config.trustedDomains || []);
+      const items = await hydratePublishedAt(parseYahooStockPage(html, sourceConfig, config.trustedDomains || [], crawledAt));
       result.item_count = items.length;
       for (const item of items) mergeArticle(byKey, item, sourceConfig.category, sourceConfig.id);
     } catch (error) {
@@ -285,7 +371,7 @@ async function main() {
 
   const payload = {
     schemaVersion: 1,
-    generated_at: new Date().toISOString(),
+    generated_at: crawledAt.toISOString(),
     collection_date: targetDate,
     source_config: path.relative(ROOT, CONFIG_PATH),
     crawler: path.relative(ROOT, __filename),
