@@ -60,6 +60,18 @@ function decodeXml(value) {
     .trim();
 }
 
+function decodeHtml(value) {
+  return decodeXml(value);
+}
+
+function absoluteUrl(url) {
+  try {
+    return new URL(url, 'https://tw.stock.yahoo.com').toString();
+  } catch {
+    return url;
+  }
+}
+
 function xmlField(xml, tag) {
   const match = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i'));
   return match ? decodeXml(match[1]) : '';
@@ -131,6 +143,27 @@ function queryWithDateWindow(query, targetDate, windowDays) {
   return `${query} after:${after} before:${before}`;
 }
 
+function mergeArticle(byKey, item, category, sourceId) {
+  if (!item.title || !item.link) return;
+  const key = itemKey(item);
+  const existing = byKey.get(key);
+  const categories = new Set(existing?.categories || []);
+  categories.add(category);
+  byKey.set(key, {
+    id: key,
+    title: item.title,
+    link: item.link,
+    guid: item.guid,
+    published_at: item.published_at,
+    source_name: item.source_name,
+    source_url: item.source_url,
+    trusted_domain: item.trusted_domain,
+    categories: [...categories].sort(),
+    matched_queries: [...new Set([...(existing?.matched_queries || []), sourceId])].sort(),
+    summary: item.summary
+  });
+}
+
 async function fetchText(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -156,6 +189,35 @@ function itemKey(item) {
     .digest('hex');
 }
 
+function parseYahooStockPage(html, sourceConfig, trustedDomains) {
+  const items = [];
+  const streamStart = html.indexOf('<div id="YDC-Stream"');
+  const streamEnd = streamStart >= 0 ? html.indexOf('</ul>', streamStart) : -1;
+  const streamHtml = streamStart >= 0 && streamEnd > streamStart ? html.slice(streamStart, streamEnd) : html;
+  const rows = streamHtml.match(/<li class="js-stream-content[\s\S]*?<\/li>/g) || [];
+  for (const row of rows) {
+    const articleMatch = row.match(/<h3[\s\S]*?<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/h3>/i);
+    if (!articleMatch) continue;
+    const link = absoluteUrl(decodeHtml(articleMatch[1]));
+    if (!/\/news\//.test(link) || /[?&]bcmt=/.test(link)) continue;
+    const sourceMatch = row.match(/<div class="[^"]*C\(#959595\)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+    const summaryMatch = row.match(/<p class="[^"]*"[^>]*>([\s\S]*?)<\/p>/i);
+    const sourceName = decodeHtml(sourceMatch?.[1] || sourceConfig.source_name || '');
+    const item = {
+      title: decodeHtml(articleMatch[2]),
+      link,
+      guid: link,
+      published_at: '',
+      source_name: sourceName,
+      source_url: sourceConfig.url,
+      summary: decodeHtml(summaryMatch?.[1] || ''),
+    };
+    item.trusted_domain = isTrustedDomain(item, trustedDomains);
+    items.push(item);
+  }
+  return items;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const targetDate = normalizeCompactDate(args.get('date') || taipeiCompactDate());
@@ -164,6 +226,7 @@ async function main() {
   const outputDir = path.join(OUTPUT_DIR, targetDate);
   const byKey = new Map();
   const queryResults = [];
+  const direct_source_results = [];
 
   for (const queryConfig of config.queries || []) {
     const query = queryWithDateWindow(queryConfig.query, targetDate, searchDateWindowDays);
@@ -183,30 +246,35 @@ async function main() {
       const items = parseRss(xml);
       result.item_count = items.length;
       for (const item of items) {
-        if (!item.title || !item.link) continue;
-        const key = itemKey(item);
-        const existing = byKey.get(key);
-        const categories = new Set(existing?.categories || []);
-        categories.add(queryConfig.category);
-        byKey.set(key, {
-          id: key,
-          title: item.title,
-          link: item.link,
-          guid: item.guid,
-          published_at: item.published_at,
-          source_name: item.source_name,
-          source_url: item.source_url,
-          trusted_domain: isTrustedDomain(item, config.trustedDomains || []),
-          categories: [...categories].sort(),
-          matched_queries: [...new Set([...(existing?.matched_queries || []), queryConfig.id])].sort(),
-          summary: item.summary
-        });
+        item.trusted_domain = isTrustedDomain(item, config.trustedDomains || []);
+        mergeArticle(byKey, item, queryConfig.category, queryConfig.id);
       }
     } catch (error) {
       result.status = 'failed';
       result.error = error.message;
     }
     queryResults.push(result);
+  }
+
+  for (const sourceConfig of config.directSources || []) {
+    const result = {
+      id: sourceConfig.id,
+      category: sourceConfig.category,
+      url: sourceConfig.url,
+      status: 'ok',
+      item_count: 0,
+      error: null
+    };
+    try {
+      const html = await fetchText(sourceConfig.url);
+      const items = parseYahooStockPage(html, sourceConfig, config.trustedDomains || []);
+      result.item_count = items.length;
+      for (const item of items) mergeArticle(byKey, item, sourceConfig.category, sourceConfig.id);
+    } catch (error) {
+      result.status = 'failed';
+      result.error = error.message;
+    }
+    direct_source_results.push(result);
   }
 
   const articles = [...byKey.values()].sort((left, right) => {
@@ -222,6 +290,7 @@ async function main() {
     source_config: path.relative(ROOT, CONFIG_PATH),
     crawler: path.relative(ROOT, __filename),
     query_results: queryResults,
+    direct_source_results,
     article_count: articles.length,
     trusted_article_count: articles.filter((article) => article.trusted_domain).length,
     articles
@@ -246,6 +315,7 @@ async function main() {
   console.log(JSON.stringify({
     collection_date: targetDate,
     queries: queryResults.length,
+    direct_sources: direct_source_results.length,
     articles: payload.article_count,
     trusted_articles: payload.trusted_article_count,
     output: `data_market_news/${targetDate}/market_news.json`
