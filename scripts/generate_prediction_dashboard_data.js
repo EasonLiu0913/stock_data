@@ -277,10 +277,12 @@ function strategyTags(stock) {
 function summarizeStocks(stocks) {
   const directions = {};
   const risks = {};
+  const marketContextRisks = {};
   const completenessBands = { '高完整度': 0, '中完整度': 0, '低完整度': 0 };
   for (const stock of stocks) {
     directions[stock.final_direction_label] = (directions[stock.final_direction_label] || 0) + 1;
     risks[stock.risk_label] = (risks[stock.risk_label] || 0) + 1;
+    marketContextRisks[stock.market_context_risk_label] = (marketContextRisks[stock.market_context_risk_label] || 0) + 1;
     if (stock.data_completeness >= 80) completenessBands['高完整度'] += 1;
     else if (stock.data_completeness >= 50) completenessBands['中完整度'] += 1;
     else completenessBands['低完整度'] += 1;
@@ -296,6 +298,7 @@ function summarizeStocks(stocks) {
     bullish_ratio: round(ratio(stocks, (stock) => isBullish(stock.final_direction_label))),
     bearish_ratio: round(ratio(stocks, (stock) => isBearish(stock.final_direction_label))),
     high_risk_ratio: round(ratio(stocks, (stock) => stock.risk_label === '高風險')),
+    market_high_risk_ratio: round(ratio(stocks, (stock) => stock.market_context_risk_label === '高風險')),
     low_completeness_ratio: round(ratio(stocks, (stock) => stock.data_completeness < 50)),
     volume_expansion_ratio: round(ratio(stocks, (stock) => stock.features.volume_ratio_1d >= 1.2)),
     overheated_ratio: round(ratio(stocks, (stock) => stock.features.rsi14 >= 70)),
@@ -311,6 +314,7 @@ function summarizeStocks(stocks) {
     relative_strength_7d_market_return: round(stocks.find((stock) => Number.isFinite(stock.relative_strength_7d?.market_return_7d))?.relative_strength_7d?.market_return_7d),
     directions,
     risks,
+    market_context_risks: marketContextRisks,
     completeness_bands: completenessBands,
   };
 }
@@ -354,8 +358,12 @@ function main() {
       final_direction_label: payload.final_direction_label,
       raw_direction_label: payload.raw_direction_label,
       direction_score: payload.direction_score,
-      risk_score: payload.risk_score,
-      risk_label: payload.risk_label,
+      risk_score: payload.stock_risk_score ?? payload.risk_score,
+      risk_label: payload.stock_risk_label ?? payload.risk_label,
+      market_context_risk_score: payload.market_context_risk_score ?? null,
+      market_context_risk_label: payload.market_context_risk_label ?? payload.market_risk?.risk_label ?? 'NA',
+      combined_risk_score: payload.combined_risk_score ?? payload.risk_score,
+      combined_risk_label: payload.combined_risk_label ?? payload.risk_label,
       data_completeness: payload.data_completeness,
       missing_data: payload.missing_data || [],
       features: {
