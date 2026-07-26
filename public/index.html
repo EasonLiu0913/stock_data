@@ -1141,10 +1141,8 @@
         function renderLinks() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const filteredTools = tools.filter(tool => !keyword || [tool.file, tool.title, tool.description].some(value => String(value).toLowerCase().includes(keyword)));
-            const predictionGroupMatches = !keyword || ['預測', 'prediction', 'predictions'].some(value => value.includes(keyword));
-            const matchedPredictions = predictions.filter(prediction => predictionGroupMatches || [prediction.file, prediction.title, prediction.description].some(value => String(value).toLowerCase().includes(keyword)));
-            const totalPages = tools.length + predictions.length;
-            const matchedPages = filteredTools.length + matchedPredictions.length;
+            const totalPages = tools.length;
+            const matchedPages = filteredTools.length;
             document.getElementById('pageMeta').textContent = `共 ${totalPages.toLocaleString()} 個 HTML 頁面；目前符合 ${matchedPages.toLocaleString()} 個`;
 
             const toolLinks = filteredTools.map(tool => `
@@ -1153,13 +1151,7 @@
                     <span class="tool-file">${escapeHtml(tool.file)}</span>
                 </a>`).join('');
 
-            const predictionLinks = matchedPredictions.length === 0 ? '' : `
-                <a class="tool-link" href="prediction-dashboard.html" target="_blank" rel="noopener noreferrer">
-                    <span><span class="tool-title">預測</span><span class="tool-desc">查看最新預測 Dashboard、產業解讀與策略分類；目前符合 ${matchedPredictions.length.toLocaleString()} 份個股預測報告。</span></span>
-                    <span class="tool-file">prediction-dashboard.html</span>
-                </a>`;
-
-            document.getElementById('linkList').innerHTML = predictionLinks + toolLinks;
+            document.getElementById('linkList').innerHTML = toolLinks;
             document.getElementById('emptyState').style.display = matchedPages === 0 ? 'block' : 'none';
         }
         renderLinks();

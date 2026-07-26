@@ -1,6 +1,6 @@
 {
   "methodology_version": "1.1.0",
-  "generated_at": "2026-07-26T13:05:52.853Z",
+  "generated_at": "2026-07-26T13:27:29.410Z",
   "prediction_mode": "prospective",
   "stock_code": "1414",
   "stock_name": "東和",
@@ -8,8 +8,8 @@
   "base_trade_date": "2026-07-24",
   "information_cutoff": "2026-07-24T15:30:00+08:00",
   "market": "TWSE",
-  "direction_score": -1,
-  "raw_direction_label": "中性",
+  "direction_score": -2,
+  "raw_direction_label": "中性偏空",
   "risk_score": 1,
   "risk_label": "低風險",
   "stock_risk_score": 1,
@@ -18,7 +18,7 @@
   "market_context_risk_label": "高風險",
   "combined_risk_score": 5,
   "combined_risk_label": "高風險",
-  "final_direction_label": "中性",
+  "final_direction_label": "中性偏空",
   "data_completeness": 100,
   "missing_data": [],
   "missing_files": [],
@@ -36,7 +36,7 @@
     "atr14": 0.62,
     "rsi14": 26.02,
     "relative_strength": 2.67,
-    "institutional_ratio": 4280.16,
+    "institutional_ratio": 4.28,
     "main_net_ratio": 0,
     "margin_change_rate": -3.39,
     "market_news_risk_score": 62.2,
@@ -210,8 +210,8 @@
       },
       {
         "label": "方向分數",
-        "value": "-1",
-        "description": "中性"
+        "value": "-2",
+        "description": "中性偏空"
       },
       {
         "label": "資料完整度",
@@ -255,9 +255,9 @@
       },
       {
         "item": "法人占量",
-        "value": "4280.16%",
-        "rule": "固定區間",
-        "score": 2
+        "value": "4.28%",
+        "rule": "三大法人買賣超張數 / 成交張數",
+        "score": 1
       },
       {
         "item": "融資變動",
@@ -287,21 +287,61 @@
     "scenarios": [
       {
         "label": "基準情境",
-        "title": "中性",
+        "title": "中性偏空",
         "description": "依固定分數與總風險降級規則產生。",
         "target": "17.13 ～ 18.37"
       }
     ],
     "levels": [
       {
-        "type": "參考支撐",
-        "price": "17.3",
-        "description": "基準日低點"
+        "type": "今日收盤價",
+        "price": "17.75",
+        "description": "基準日 2026-07-24 收盤價"
       },
       {
-        "type": "參考壓力",
-        "price": "17.8",
-        "description": "基準日高點"
+        "type": "近期支撐 1",
+        "price": "17.3",
+        "description": "近 5 日低點"
+      },
+      {
+        "type": "近期支撐 2",
+        "price": "16.8",
+        "description": "近 20 日低點"
+      },
+      {
+        "type": "SMA20 均線壓力",
+        "price": "18.73",
+        "description": "收盤價在 SMA20 之下，反彈至均線可視為壓力"
+      },
+      {
+        "type": "SMA60 均線支撐",
+        "price": "17.06",
+        "description": "收盤價在 SMA60 之上，回測均線可視為支撐"
+      },
+      {
+        "type": "近期壓力 1",
+        "price": "19",
+        "description": "近 5 日高點"
+      },
+      {
+        "type": "近期壓力 2",
+        "price": "19.85",
+        "description": "近 20 日高點"
+      },
+      {
+        "type": "前波大量收盤價",
+        "price": "17.6",
+        "description": "近 20 日最大量 K 收盤價；2026-06-26，成交量 840 張"
+      },
+      {
+        "type": "波動下緣",
+        "price": "17.13",
+        "description": "收盤價 - ATR14；ATR14=0.62"
+      },
+      {
+        "type": "波動上緣",
+        "price": "18.37",
+        "description": "收盤價 + ATR14；ATR14=0.62"
       }
     ],
     "data_note": "核心資料已依日期完成交叉驗證。"

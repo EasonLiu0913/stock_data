@@ -293,6 +293,47 @@ function calcAtr(rows) {
   }
   return mean(tr);
 }
+function rangeLevel(rows, days, field, type, description) {
+  const sample = rows.slice(-days);
+  const values = sample.map((row) => row[field]).filter(Number.isFinite);
+  if (!values.length) return null;
+  return { type, price: String(round(field === 'low' ? Math.min(...values) : Math.max(...values))), description };
+}
+function movingAverageLevels(t) {
+  if (!t) return [];
+  return [
+    ['SMA20', t.sma20],
+    ['SMA60', t.sma60]
+  ]
+    .filter(([, price]) => Number.isFinite(price))
+    .map(([name, price]) => ({
+      type: t.close >= price ? `${name} 均線支撐` : `${name} 均線壓力`,
+      price: String(round(price)),
+      description: t.close >= price ? `收盤價在 ${name} 之上，回測均線可視為支撐` : `收盤價在 ${name} 之下，反彈至均線可視為壓力`
+    }));
+}
+function highVolumeLevels(rows) {
+  const sample = rows.slice(-20).filter((row) => Number.isFinite(row.volume));
+  if (!sample.length) return [];
+  const hv = sample.reduce((best, row) => row.volume > best.volume ? row : best, sample[0]);
+  return [
+    { type: '前波大量收盤價', price: String(round(hv.close)), description: `近 20 日最大量 K 收盤價；${hv.date}，成交量 ${round(hv.volume,0)} 張` }
+  ];
+}
+function technicalLevels(rows, t, atr) {
+  if (!t) return [];
+  return [
+    { type: '今日收盤價', price: String(round(t.close)), description: `基準日 ${t.date} 收盤價` },
+    rangeLevel(rows, 5, 'low', '近期支撐 1', '近 5 日低點'),
+    rangeLevel(rows, 20, 'low', '近期支撐 2', '近 20 日低點'),
+    ...movingAverageLevels(t),
+    rangeLevel(rows, 5, 'high', '近期壓力 1', '近 5 日高點'),
+    rangeLevel(rows, 20, 'high', '近期壓力 2', '近 20 日高點'),
+    ...highVolumeLevels(rows),
+    Number.isFinite(atr) ? { type: '波動下緣', price: String(round(t.close - atr)), description: `收盤價 - ATR14；ATR14=${round(atr)}` } : null,
+    Number.isFinite(atr) ? { type: '波動上緣', price: String(round(t.close + atr)), description: `收盤價 + ATR14；ATR14=${round(atr)}` } : null
+  ].filter(Boolean);
+}
 function updateIndex(predictions) {
   let html = fs.readFileSync(INDEX_FILE, 'utf8');
   const block = `const predictions = [\n${predictions.map((p)=>`            { file: '${p.file}', title: '${p.title.replaceAll("'","\\'")}', description: '${p.description}' }`).join(',\n')}\n        ];`;
@@ -370,7 +411,8 @@ function main() {
     if(Number.isFinite(r1)&&Number.isFinite(vr1)&&vr1>=1.2&&r1!==0)add('量價',`${round(vr1)}x`,r1>0?'上漲放量':'下跌放量',r1>0?1:-1);
     if(Number.isFinite(rel)){if(rel>=3)add('相對強弱',`${round(rel)}%`,'≥ 3',2);else if(rel<=-3)add('相對強弱',`${round(rel)}%`,'≤ -3',-2);}
     if(Number.isFinite(r3)){if(r3>=8)add('三日報酬',`${round(r3)}%`,'≥ 8%',1);else if(r3<=-8)add('三日報酬',`${round(r3)}%`,'≤ -8%',-1);}
-    const instRatio=inst&&t&&Number.isFinite(inst.total)?inst.total/t.volume*100:null; if(Number.isFinite(instRatio)){let s=instRatio>=10?2:instRatio>=3?1:instRatio<=-10?-2:instRatio<=-3?-1:0;if(s)add('法人占量',`${round(instRatio)}%`,'固定區間',s);}
+    const instTotalLots=inst&&Number.isFinite(inst.total)?inst.total/1000:null;
+    const instRatio=Number.isFinite(instTotalLots)&&t?instTotalLots/t.volume*100:null; if(Number.isFinite(instRatio)){let s=instRatio>=10?2:instRatio>=3?1:instRatio<=-10?-2:instRatio<=-3?-1:0;if(s)add('法人占量',`${round(instRatio)}%`,'三大法人買賣超張數 / 成交張數',s);}
     if(inst&&Number.isFinite(inst.foreign)&&Number.isFinite(inst.trust)&&inst.foreign*inst.trust>0)add('外資投信同向',inst.foreign>0?'同買':'同賣','同方向',inst.foreign>0?1:-1);
     if(Number.isFinite(mainRatio)){let s=mainRatio>=5?2:mainRatio>=2?1:mainRatio<=-5?-2:mainRatio<=-2?-1:0;if(s)add('主力占量',`${round(mainRatio)}%`,'固定區間',s);}
     if(Number.isFinite(r1)&&Number.isFinite(marginRate)){let s=0;if(marginRate<=-1)s=1;else if(marginRate>=1)s=r1<0?-2:-1;if(s)add('融資變動',`${round(marginRate)}%`,'股價與融資規則',s);}
@@ -388,7 +430,7 @@ function main() {
     const combinedRisk=stockRisk+marketRiskOverlay;
     let final=raw;if(combinedRisk>=4&&raw==='偏多')final='中性偏多';if(combinedRisk>=4&&raw==='偏空')final='中性偏空';
     const completeness=(t?30:0)+(Number.isFinite(marketReturn)?10:0)+(inst&&Number.isFinite(inst.total)?25:0)+(Number.isFinite(marginRate)?15:0)+(Number.isFinite(mainRatio)?20:0);
-    const payload={methodology_version:METHOD_VERSION,generated_at:generatedAt,prediction_mode:'prospective',stock_code:code,stock_name:meta.Name,forecast_date:forecastDate,base_trade_date:baseIso,information_cutoff:`${baseIso}T15:30:00+08:00`,market:'TWSE',direction_score:score,raw_direction_label:raw,risk_score:stockRisk,risk_label:riskLabel(stockRisk),stock_risk_score:stockRisk,stock_risk_label:riskLabel(stockRisk),market_context_risk_score:marketRiskOverlay,market_context_risk_label:riskLabel(marketRiskOverlay),combined_risk_score:combinedRisk,combined_risk_label:riskLabel(combinedRisk),final_direction_label:final,data_completeness:completeness,missing_data:[...new Set(missing)],missing_files:[...new Set(missingFiles)],missing_indicators:[],data_quality_notes:marketRisk?[]:['缺少市場新聞/外部指數風險快照'],backtest_rule_id:null,backtest_status:'unavailable',features:{r1:round(r1),r3:round(r3),intraday_return:round(intraday),volume_ratio_1d:round(vr1),volume_ratio_5d:round(vr5),gap_sma20:round(gap20),atr14:round(atr),rsi14:round(rsi),relative_strength:round(rel),institutional_ratio:round(instRatio),main_net_ratio:round(mainRatio),margin_change_rate:round(marginRate),market_news_risk_score:round(newsRiskScore,1),external_market_risk_score:round(marketRisk?.external_market?.external_market_risk_score,1),market_risk_score:round(marketRiskScore,1),adr_sox_nasdaq_risk:round(adrRiskScore,1),oil_futures_risk:round(oilRiskScore,1)},market_risk:marketRisk?{source_file:marketRisk.source_file,risk_label:marketRisk.risk_label,top_keywords:marketRisk.news?.top_keywords?.slice(0,8)||[],top_industries:marketRisk.news?.top_industries?.slice(0,8)||[],tracked_indicators:marketRisk.external_market?.tracked_indicators||[]}:null,view:{lead:`依方法 ${METHOD_VERSION}，使用 ${baseIso} 收盤以前的專案資料評估。`,risk_label:`個股${riskLabel(stockRisk)} / 市場${riskLabel(marketRiskOverlay)}`,forecast_cards:[{label:'收盤價',value:t?String(t.close):'缺少',description:`SMA20：${t?.sma20??'缺少'}`},{label:'方向分數',value:String(score),description:raw},{label:'資料完整度',value:`${completeness}%`,description:missing.length?`缺少：${[...new Set(missing)].join('、')}`:'核心資料齊全'}],facts:[{label:'單日報酬',value:Number.isFinite(r1)?`${round(r1)}%`:'無法計算',description:`基準日 ${baseIso}`},{label:'三日報酬',value:Number.isFinite(r3)?`${round(r3)}%`:'無法計算',description:'依固定公式計算'},{label:'個股風險',value:riskLabel(stockRisk),description:`個股技術/波動風險分數：${stockRisk}`},{label:'市場風險',value:Number.isFinite(marketRiskScore)?`${round(marketRiskScore,1)}`:'缺少',description:marketRisk?.risk_label?`新聞與外部指數：${marketRisk.risk_label}；疊加分數 ${marketRiskOverlay}`:'未產生 market_risk_snapshot'},{label:'ADR/油價風險',value:`${round(adrRiskScore,1)??'NA'} / ${round(oilRiskScore,1)??'NA'}`,description:'ADR/費半/Nasdaq 與油價期貨'}],scores,scenarios:[{label:'基準情境',title:final,description:'依固定分數與總風險降級規則產生。',target:t&&atr?`${round(t.close-atr)} ～ ${round(t.close+atr)}`:'區間資料不足'}],levels:t?[{type:'參考支撐',price:String(round(t.low)),description:'基準日低點'},{type:'參考壓力',price:String(round(t.high)),description:'基準日高點'}]:[],data_note:missing.length?`缺少資料：${[...new Set(missing)].join('、')}。未取得對應日期資料的項目依規格計 0 分。`:'核心資料已依日期完成交叉驗證。'}};
+    const payload={methodology_version:METHOD_VERSION,generated_at:generatedAt,prediction_mode:'prospective',stock_code:code,stock_name:meta.Name,forecast_date:forecastDate,base_trade_date:baseIso,information_cutoff:`${baseIso}T15:30:00+08:00`,market:'TWSE',direction_score:score,raw_direction_label:raw,risk_score:stockRisk,risk_label:riskLabel(stockRisk),stock_risk_score:stockRisk,stock_risk_label:riskLabel(stockRisk),market_context_risk_score:marketRiskOverlay,market_context_risk_label:riskLabel(marketRiskOverlay),combined_risk_score:combinedRisk,combined_risk_label:riskLabel(combinedRisk),final_direction_label:final,data_completeness:completeness,missing_data:[...new Set(missing)],missing_files:[...new Set(missingFiles)],missing_indicators:[],data_quality_notes:marketRisk?[]:['缺少市場新聞/外部指數風險快照'],backtest_rule_id:null,backtest_status:'unavailable',features:{r1:round(r1),r3:round(r3),intraday_return:round(intraday),volume_ratio_1d:round(vr1),volume_ratio_5d:round(vr5),gap_sma20:round(gap20),atr14:round(atr),rsi14:round(rsi),relative_strength:round(rel),institutional_ratio:round(instRatio),main_net_ratio:round(mainRatio),margin_change_rate:round(marginRate),market_news_risk_score:round(newsRiskScore,1),external_market_risk_score:round(marketRisk?.external_market?.external_market_risk_score,1),market_risk_score:round(marketRiskScore,1),adr_sox_nasdaq_risk:round(adrRiskScore,1),oil_futures_risk:round(oilRiskScore,1)},market_risk:marketRisk?{source_file:marketRisk.source_file,risk_label:marketRisk.risk_label,top_keywords:marketRisk.news?.top_keywords?.slice(0,8)||[],top_industries:marketRisk.news?.top_industries?.slice(0,8)||[],tracked_indicators:marketRisk.external_market?.tracked_indicators||[]}:null,view:{lead:`依方法 ${METHOD_VERSION}，使用 ${baseIso} 收盤以前的專案資料評估。`,risk_label:`個股${riskLabel(stockRisk)} / 市場${riskLabel(marketRiskOverlay)}`,forecast_cards:[{label:'收盤價',value:t?String(t.close):'缺少',description:`SMA20：${t?.sma20??'缺少'}`},{label:'方向分數',value:String(score),description:raw},{label:'資料完整度',value:`${completeness}%`,description:missing.length?`缺少：${[...new Set(missing)].join('、')}`:'核心資料齊全'}],facts:[{label:'單日報酬',value:Number.isFinite(r1)?`${round(r1)}%`:'無法計算',description:`基準日 ${baseIso}`},{label:'三日報酬',value:Number.isFinite(r3)?`${round(r3)}%`:'無法計算',description:'依固定公式計算'},{label:'個股風險',value:riskLabel(stockRisk),description:`個股技術/波動風險分數：${stockRisk}`},{label:'市場風險',value:Number.isFinite(marketRiskScore)?`${round(marketRiskScore,1)}`:'缺少',description:marketRisk?.risk_label?`新聞與外部指數：${marketRisk.risk_label}；疊加分數 ${marketRiskOverlay}`:'未產生 market_risk_snapshot'},{label:'ADR/油價風險',value:`${round(adrRiskScore,1)??'NA'} / ${round(oilRiskScore,1)??'NA'}`,description:'ADR/費半/Nasdaq 與油價期貨'}],scores,scenarios:[{label:'基準情境',title:final,description:'依固定分數與總風險降級規則產生。',target:t&&atr?`${round(t.close-atr)} ～ ${round(t.close+atr)}`:'區間資料不足'}],levels:technicalLevels(rows,t,atr),data_note:missing.length?`缺少資料：${[...new Set(missing)].join('、')}。未取得對應日期資料的項目依規格計 0 分。`:'核心資料已依日期完成交叉驗證。'}};
     const jsonFile=path.join(forecastJsonDir,`${code}.json`);fs.writeFileSync(jsonFile,JSON.stringify(payload,null,2));
     predictions.push({file:`prediction-stock.html?date=${forecastCompact}&code=${code}`,title:`${forecastDate} ${meta.Name}（${code}）`,description:`方法 ${METHOD_VERSION}；資料完整度 ${completeness}%。`});
     if(missing.length)missingStocks.push({stock_code:code,stock_name:meta.Name,missing_data:[...new Set(missing)],missing_files:[...new Set(missingFiles)]});
