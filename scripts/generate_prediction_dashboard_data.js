@@ -124,8 +124,11 @@ function loadPriceHistory() {
         const parsed = {
           date: dateKey.replaceAll('/', '-'),
           close: num(row.Price ?? row.Close),
+          open: num(row.Open),
           high: num(row.High),
           low: num(row.Low),
+          volume: num(row.Volume),
+          sma5: num(row.SMA5),
           sma20: num(row.SMA20),
           sma60: num(row.SMA60),
         };
@@ -165,6 +168,7 @@ function calculateMacd(rows) {
     signal: signal[last],
     histogram: histogram[last],
     bullish_cross: macd[prev] <= signal[prev] && macd[last] > signal[last],
+    histogram_improving: histogram[last] > histogram[prev],
     histogram_positive_turn: histogram[prev] <= 0 && histogram[last] > 0,
   };
 }
@@ -191,6 +195,178 @@ function calculateKd(rows) {
     bullish_cross: previousK <= previousD && k > d,
     oversold_turn: previousK < 25 && k > previousK,
   };
+}
+
+function calculateRsiValues(rows, period = 14) {
+  if (!rows || rows.length <= period) return [];
+  const output = Array(rows.length).fill(null);
+  let gain = 0;
+  let loss = 0;
+  for (let index = 1; index <= period; index += 1) {
+    const change = rows[index].close - rows[index - 1].close;
+    if (change >= 0) gain += change;
+    else loss -= change;
+  }
+  let averageGain = gain / period;
+  let averageLoss = loss / period;
+  output[period] = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
+  for (let index = period + 1; index < rows.length; index += 1) {
+    const change = rows[index].close - rows[index - 1].close;
+    averageGain = (averageGain * (period - 1) + Math.max(change, 0)) / period;
+    averageLoss = (averageLoss * (period - 1) + Math.max(-change, 0)) / period;
+    output[index] = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
+  }
+  return output;
+}
+
+function averageNumber(values) {
+  const valid = values.filter(Number.isFinite);
+  return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
+}
+
+function rangePercent(rows) {
+  if (!rows?.length) return null;
+  const highs = rows.map((row) => row.high).filter(Number.isFinite);
+  const lows = rows.map((row) => row.low).filter(Number.isFinite);
+  if (!highs.length || !lows.length) return null;
+  const high = Math.max(...highs);
+  const low = Math.min(...lows);
+  return low > 0 ? (high / low - 1) * 100 : null;
+}
+
+function averageDailyRange(rows) {
+  return averageNumber(rows.map((row) => Number.isFinite(row.high) && Number.isFinite(row.low) && Number.isFinite(row.close) && row.close > 0
+    ? (row.high - row.low) / row.close * 100
+    : null));
+}
+
+function maCompressionPercent(row) {
+  const values = [row?.sma5, row?.sma20, row?.sma60].filter(Number.isFinite);
+  if (values.length < 3) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return min > 0 ? (max / min - 1) * 100 : null;
+}
+
+function nearHighPercent(close, rows) {
+  const highs = rows.map((row) => row.high).filter(Number.isFinite);
+  if (!Number.isFinite(close) || !highs.length) return null;
+  const high = Math.max(...highs);
+  return high > 0 ? (high / close - 1) * 100 : null;
+}
+
+function consolidationStrength(rows, stock) {
+  const empty = {
+    tag: '多日盤整+趨勢轉強',
+    matched: false,
+    consolidation_score: 0,
+    strengthening_score: 0,
+    consolidation_reasons: [],
+    strengthening_reasons: [],
+  };
+  if (!rows || rows.length < 25) return empty;
+
+  const current = rows.at(-1);
+  const previous = rows.at(-2);
+  const fiveAgo = rows.at(-6);
+  const recent5 = rows.slice(-5);
+  const recent10 = rows.slice(-10);
+  const recent20 = rows.slice(-20);
+  const prior20 = rows.slice(-21, -1);
+  const volumes5 = recent5.map((row) => row.volume);
+  const volumes20 = recent20.map((row) => row.volume);
+  const avgVolume5 = averageNumber(volumes5);
+  const avgVolume20 = averageNumber(volumes20);
+  const range5 = averageDailyRange(recent5);
+  const range20Daily = averageDailyRange(recent20);
+  const range10 = rangePercent(recent10);
+  const range20 = rangePercent(recent20);
+  const maCompression = maCompressionPercent(current);
+  const sma20Slope5 = Number.isFinite(current.sma20) && Number.isFinite(fiveAgo?.sma20) && fiveAgo.sma20 > 0
+    ? (current.sma20 / fiveAgo.sma20 - 1) * 100
+    : null;
+  const near20High = nearHighPercent(current.close, recent20);
+  const rsiValues = calculateRsiValues(rows);
+  const rsi = stock.features.rsi14 ?? rsiValues.at(-1);
+  const rsi3Ago = rsiValues.at(-4);
+  const macd = calculateMacd(rows);
+  const kd = calculateKd(rows);
+  const chip = chipBias(stock);
+  const reasons = [];
+  const strengthReasons = [];
+
+  addReason(reasons, Number.isFinite(range20) && range20 <= 12, '20日區間收斂');
+  addReason(reasons, Number.isFinite(range10) && range10 <= 8, '10日區間收斂');
+  addReason(reasons, Number.isFinite(maCompression) && maCompression <= 6, 'SMA5/20/60均線糾結');
+  addReason(reasons, Number.isFinite(sma20Slope5) && Math.abs(sma20Slope5) <= 1, 'SMA20斜率平坦');
+  addReason(reasons, Number.isFinite(range5) && Number.isFinite(range20Daily) && range5 < range20Daily, '近5日波動收斂');
+  addReason(reasons, Number.isFinite(avgVolume5) && Number.isFinite(avgVolume20) && avgVolume5 <= avgVolume20 * 0.9, '近5日量能收斂');
+  addReason(reasons, Number.isFinite(rsi) && rsi >= 40 && rsi <= 60, 'RSI中性整理');
+  addReason(reasons, !isRecentBreakoutOrBreakdown(current, prior20), '未明顯連續創高破底');
+
+  addReason(strengthReasons, Number.isFinite(current.close) && Number.isFinite(current.sma20) && current.close > current.sma20, '收盤站上SMA20');
+  addReason(strengthReasons, Number.isFinite(near20High) && near20High <= 3, '接近20日高點');
+  addReason(strengthReasons, Number.isFinite(current.sma5) && Number.isFinite(fiveAgo?.sma5) && current.sma5 > fiveAgo.sma5, 'SMA5斜率轉正');
+  addReason(strengthReasons, Number.isFinite(current.sma5) && Number.isFinite(current.sma20) && (current.sma5 > current.sma20 || (current.sma5 / current.sma20 - 1) * 100 >= -1), 'SMA5貼近或站上SMA20');
+  addReason(strengthReasons, Number.isFinite(current.volume) && Number.isFinite(avgVolume5) && current.volume > avgVolume5, '成交量高於5日均量');
+  addReason(strengthReasons, Number.isFinite(current.volume) && Number.isFinite(avgVolume20) && current.volume >= avgVolume20 * 1.2, '成交量高於20日均量1.2倍');
+  addReason(strengthReasons, Boolean(macd?.bullish_cross), 'MACD黃金交叉');
+  addReason(strengthReasons, Boolean(macd) && (macd.histogram_positive_turn || macd.histogram_improving || macd.histogram > 0), 'MACD柱狀改善');
+  addReason(strengthReasons, Boolean(kd?.bullish_cross), 'KD黃金交叉');
+  addReason(strengthReasons, Number.isFinite(rsi) && rsi >= 50, 'RSI站上50');
+  addReason(strengthReasons, Number.isFinite(rsi) && Number.isFinite(rsi3Ago) && rsi > rsi3Ago, 'RSI近3日走升');
+  addReason(strengthReasons, Boolean(stock.relative_strength_7d?.relative_strength_strong), '近7日相對大盤轉強');
+  addReason(strengthReasons, chip !== '偏空', '籌碼未明顯偏空');
+
+  const hasPriceStrength = strengthReasons.includes('收盤站上SMA20') || strengthReasons.includes('接近20日高點');
+  const hasMomentumStrength = strengthReasons.includes('MACD黃金交叉')
+    || strengthReasons.includes('MACD柱狀改善')
+    || strengthReasons.includes('KD黃金交叉')
+    || strengthReasons.includes('RSI站上50')
+    || strengthReasons.includes('RSI近3日走升');
+  const hasRangeCompression = reasons.includes('20日區間收斂') || reasons.includes('10日區間收斂');
+  const matched = reasons.length >= 4
+    && strengthReasons.length >= 5
+    && stock.direction_score >= 0
+    && !isBearish(stock.final_direction_label)
+    && hasRangeCompression
+    && hasPriceStrength
+    && hasMomentumStrength
+    && stock.data_completeness >= 80
+    && stock.risk_label !== '高風險'
+    && (!Number.isFinite(rsi) || rsi < 70)
+    && (!Number.isFinite(stock.features.gap_sma20) || stock.features.gap_sma20 <= 8);
+
+  return {
+    tag: empty.tag,
+    matched,
+    consolidation_score: reasons.length,
+    strengthening_score: strengthReasons.length,
+    consolidation_reasons: reasons,
+    strengthening_reasons: strengthReasons,
+    metrics: {
+      range_10d: round(range10),
+      range_20d: round(range20),
+      ma_compression: round(maCompression),
+      sma20_slope_5d: round(sma20Slope5),
+      average_range_5d: round(range5),
+      average_range_20d: round(range20Daily),
+      volume_ratio_5d_to_20d: round(Number.isFinite(avgVolume5) && Number.isFinite(avgVolume20) && avgVolume20 !== 0 ? avgVolume5 / avgVolume20 : null),
+      near_20d_high: round(near20High),
+      rsi14: round(rsi),
+    },
+  };
+}
+
+function addReason(reasons, condition, reason) {
+  if (condition) reasons.push(reason);
+}
+
+function isRecentBreakoutOrBreakdown(current, priorRows) {
+  const highs = priorRows.map((row) => row.high).filter(Number.isFinite);
+  const lows = priorRows.map((row) => row.low).filter(Number.isFinite);
+  if (!Number.isFinite(current?.close) || !highs.length || !lows.length) return false;
+  return current.close >= Math.max(...highs) || current.close <= Math.min(...lows);
 }
 
 function reversalSignals(rows) {
@@ -271,6 +447,7 @@ function strategyTags(stock) {
   if (stock.relative_strength_7d?.relative_strength_strong) {
     tags.push(stock.relative_strength_7d.relative_strength_mode === '大盤跌勢抗跌' ? '七日抗跌強勢' : '七日領漲強勢');
   }
+  if (stock.consolidation_strength?.matched) tags.push(stock.consolidation_strength.tag);
   return tags.length ? tags : ['一般觀察'];
 }
 
@@ -381,6 +558,8 @@ function main() {
       relative_strength_7d: rs7d,
     };
     stock.chip_bias = chipBias(stock);
+    const consolidation = consolidationStrength(priceHistory.get(payload.stock_code), stock);
+    if (consolidation.matched) stock.consolidation_strength = consolidation;
     stock.strategy_tags = strategyTags(stock);
     return stock;
   });
