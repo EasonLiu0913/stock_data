@@ -1,0 +1,78 @@
+name: Crawl External Market Indicators
+
+on:
+  schedule:
+    # 台北時間 07:20：美股收盤後，收集 Nasdaq、SOX、TSM ADR、匯率與油價期貨。
+    - cron: '20 23 * * 0-4'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Collection date (YYYYMMDD). Leave empty for today in Taipei.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-external-market-indicators
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Crawl external market indicators
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            node scripts/crawl_external_market_indicators.js --date "${{ inputs.date }}"
+          else
+            node scripts/crawl_external_market_indicators.js
+          fi
+
+      - name: Generate market risk snapshot
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            node scripts/generate_market_risk_snapshot.js --date "${{ inputs.date }}"
+          else
+            node scripts/generate_market_risk_snapshot.js
+          fi
+
+      - name: Generate files.json
+        run: node scripts/generate_file_lists.js
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/external_market_indicators.json config/stock_news_aliases.json data_external_market/ data_market_risk/
+
+          if git diff --staged --quiet; then
+            echo "No external market changes"
+            exit 0
+          fi
+
+          current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update external market indicators ${current_date}"
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin main; then
+              exit 0
+            fi
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push after 5 attempts."
+          exit 1

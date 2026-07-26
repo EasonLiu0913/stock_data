@@ -3,12 +3,22 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { resolveForecastDates } = require('./resolve_forecast_dates');
+const { normalizeIsoDate, resolveForecastDates } = require('./resolve_forecast_dates');
 
 const ROOT = path.resolve(__dirname, '..');
-const DATE = process.env.FORECAST_BASE_DATE || resolveForecastDates().base_trade_date_compact;
+function compactDate(value) {
+  const iso = normalizeIsoDate(value);
+  if (iso) return iso.replaceAll('-', '');
+  const compact = String(value || '').replace(/[^\d]/g, '');
+  if (/^\d{8}$/.test(compact)) return compact;
+  return '';
+}
+
+const DATE = compactDate(process.env.FORECAST_BASE_DATE) || resolveForecastDates().base_trade_date_compact;
 const institutionalPath = path.join(ROOT, 'data_twse_institutional_investors', `${DATE}_twse_institutional_investors.json`);
 const brokerPath = path.join(ROOT, 'data_fubon_broker_details', `fubon_${DATE}_券商分點進出明細.json`);
+const normalizedInstitutionalPath = path.join(ROOT, 'data_normalized', 'institutional_investors', `${DATE}.json`);
+const normalizedBrokerPath = path.join(ROOT, 'data_normalized', 'broker_details', `${DATE}.json`);
 const reportPath = path.join(ROOT, '.forecast-input-validation.json');
 
 function readAndVerify(file) {
@@ -78,37 +88,58 @@ function normalizeBroker(source) {
 
 const institutional = readAndVerify(institutionalPath);
 const broker = readAndVerify(brokerPath);
-const normalizedInstitutional = normalizeInstitutional(institutional.data);
-const normalizedBroker = normalizeBroker(broker.data);
+const parsedInstitutional = normalizeInstitutional(institutional.data);
+const parsedBroker = normalizeBroker(broker.data);
 
 for (const code of ['1101', '1102', '3231']) {
-  if (!normalizedInstitutional[code]) throw new Error(`institutional assertion failed: ${code}`);
-  if (!normalizedBroker[code]) throw new Error(`broker assertion failed: ${code}`);
+  if (!parsedInstitutional[code]) throw new Error(`institutional assertion failed: ${code}`);
+  if (!parsedBroker[code]) throw new Error(`broker assertion failed: ${code}`);
 }
 
-fs.writeFileSync(institutionalPath, JSON.stringify(normalizedInstitutional));
-fs.writeFileSync(brokerPath, JSON.stringify(normalizedBroker));
+fs.mkdirSync(path.dirname(normalizedInstitutionalPath), { recursive: true });
+fs.mkdirSync(path.dirname(normalizedBrokerPath), { recursive: true });
+fs.writeFileSync(normalizedInstitutionalPath, `${JSON.stringify({
+  schemaVersion: 1,
+  generated_at: new Date().toISOString(),
+  source_file: path.relative(ROOT, institutionalPath),
+  source_sha256: institutional.sha256,
+  date: DATE,
+  unit: '股',
+  stocks: parsedInstitutional
+}, null, 2)}\n`, 'utf8');
+fs.writeFileSync(normalizedBrokerPath, `${JSON.stringify({
+  schemaVersion: 1,
+  generated_at: new Date().toISOString(),
+  source_file: path.relative(ROOT, brokerPath),
+  source_sha256: broker.sha256,
+  date: DATE,
+  source_unit: broker.data.unit ?? '張',
+  normalized_unit: '股',
+  stocks: parsedBroker
+}, null, 2)}\n`, 'utf8');
 
 const report = {
   checked_at: new Date().toISOString(),
   base_date: DATE,
-  cache_used: false,
+  source_files_mutated: false,
   source_commit: process.env.GITHUB_SHA ?? null,
   files: {
     institutional: {
       path: path.relative(ROOT, institutionalPath),
+      normalized_path: path.relative(ROOT, normalizedInstitutionalPath),
       bytes: institutional.bytes,
       sha256: institutional.sha256,
       source_records: institutional.data.data.length,
-      parsed_records: Object.keys(normalizedInstitutional).length
+      parsed_records: Object.keys(parsedInstitutional).length
     },
     broker: {
       path: path.relative(ROOT, brokerPath),
+      normalized_path: path.relative(ROOT, normalizedBrokerPath),
       bytes: broker.bytes,
       sha256: broker.sha256,
       expected_records: broker.data.stockUniverse?.expectedStockCount ?? null,
       source_records: Object.keys(broker.data.stocks).length,
-      parsed_records: Object.keys(normalizedBroker).length
+      parsed_records: Object.keys(parsedBroker).length
     }
   },
   assertions: ['1101', '1102', '3231']

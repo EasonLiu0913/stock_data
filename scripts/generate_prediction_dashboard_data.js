@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const PREDICTION_DIR = path.join(ROOT, 'data_predictions');
 const INDUSTRY_FILE = path.join(ROOT, 'data_twse', 'twse_industry_Stock.json');
 const PRICE_DIR = path.join(ROOT, 'data_fubon');
+const MI_INDEX_DIR = path.join(ROOT, 'data_twse_mi_index');
 
 function readJson(file, fallback = null) {
   try {
@@ -19,6 +20,12 @@ function readJson(file, fallback = null) {
 
 function round(value, digits = 2) {
   return Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
+}
+
+function pct(current, previous) {
+  return Number.isFinite(current) && Number.isFinite(previous) && previous !== 0
+    ? (current / previous - 1) * 100
+    : null;
 }
 
 function compactDate(iso) {
@@ -48,6 +55,61 @@ function listFiles(dir, pattern) {
   } catch {
     return [];
   }
+}
+
+function compactDateFromIso(iso) {
+  return String(iso || '').replaceAll('-', '');
+}
+
+function parseMarketClose(file) {
+  const payload = readJson(file, null);
+  if (!payload) return null;
+  for (const table of payload.tables || []) {
+    const fields = table.fields || [];
+    const nameIndex = fields.findIndex((field) => field === '指數' || field === '報酬指數');
+    const closeIndex = fields.findIndex((field) => String(field).includes('收盤指數'));
+    if (nameIndex < 0 || closeIndex < 0) continue;
+    const row = (table.data || []).find((item) => String(item[nameIndex] || '').trim() === '發行量加權股價指數');
+    if (!row) continue;
+    const close = num(row[closeIndex]);
+    if (Number.isFinite(close)) return close;
+  }
+  return null;
+}
+
+function loadMarketHistory(baseTradeDate) {
+  const baseCompact = compactDateFromIso(baseTradeDate);
+  return listFiles(MI_INDEX_DIR, /^\d{8}_twse_mi_index\.json$/)
+    .map((file) => ({ file, date: file.slice(0, 8) }))
+    .filter((item) => !baseCompact || item.date <= baseCompact)
+    .map((item) => ({
+      date: `${item.date.slice(0, 4)}-${item.date.slice(4, 6)}-${item.date.slice(6, 8)}`,
+      close: parseMarketClose(path.join(MI_INDEX_DIR, item.file))
+    }))
+    .filter((item) => Number.isFinite(item.close))
+    .sort((left, right) => left.date.localeCompare(right.date));
+}
+
+function windowReturn(rows, periods = 7) {
+  if (!Array.isArray(rows) || rows.length <= periods) return null;
+  const current = rows.at(-1);
+  const previous = rows.at(-(periods + 1));
+  return pct(current?.close, previous?.close);
+}
+
+function relativeStrength7d(stockRows, marketRows) {
+  const stockReturn = windowReturn(stockRows, 7);
+  const marketReturn = windowReturn(marketRows, 7);
+  const spread = Number.isFinite(stockReturn) && Number.isFinite(marketReturn) ? stockReturn - marketReturn : null;
+  const mode = Number.isFinite(marketReturn) && marketReturn < 0 ? '大盤跌勢抗跌' : '大盤漲勢領漲';
+  const isStrong = Number.isFinite(spread) && spread >= 3 && (marketReturn < 0 ? stockReturn >= -3 : stockReturn > marketReturn);
+  return {
+    stock_return_7d: round(stockReturn),
+    market_return_7d: round(marketReturn),
+    relative_strength_7d: round(spread),
+    relative_strength_mode: Number.isFinite(marketReturn) ? mode : '資料不足',
+    relative_strength_strong: Boolean(isStrong),
+  };
 }
 
 function loadPriceHistory() {
@@ -206,6 +268,9 @@ function strategyTags(stock) {
   if ((f.r1 ?? 0) >= 3 || (f.r3 ?? 0) >= 8) tags.push('技術強勢');
   if ((f.r1 ?? 0) <= -3 || (f.r3 ?? 0) <= -8) tags.push('技術弱勢');
   if (stock.reversal_signals.tags.length) tags.push('弱勢翻轉觀察');
+  if (stock.relative_strength_7d?.relative_strength_strong) {
+    tags.push(stock.relative_strength_7d.relative_strength_mode === '大盤跌勢抗跌' ? '七日抗跌強勢' : '七日領漲強勢');
+  }
   return tags.length ? tags : ['一般觀察'];
 }
 
@@ -242,6 +307,8 @@ function summarizeStocks(stocks) {
     reclaim_sma60_ratio: round(ratio(stocks, (stock) => stock.reversal_signals.crossed_sma60)),
     macd_bullish_ratio: round(ratio(stocks, (stock) => stock.reversal_signals.macd_bullish_cross || stock.reversal_signals.macd_histogram_positive_turn)),
     kd_bullish_ratio: round(ratio(stocks, (stock) => stock.reversal_signals.kd_bullish_cross || stock.reversal_signals.kd_oversold_turn)),
+    relative_strength_7d_ratio: round(ratio(stocks, (stock) => stock.relative_strength_7d?.relative_strength_strong)),
+    relative_strength_7d_market_return: round(stocks.find((stock) => Number.isFinite(stock.relative_strength_7d?.market_return_7d))?.relative_strength_7d?.market_return_7d),
     directions,
     risks,
     completeness_bands: completenessBands,
@@ -268,11 +335,14 @@ function main() {
   const stockMeta = readJson(INDUSTRY_FILE, {});
   const priceHistory = loadPriceHistory();
   const files = fs.readdirSync(predictionDir).filter((file) => /^\d+\.json$/.test(file)).sort();
+  const firstPayload = files.length ? readJson(path.join(predictionDir, files[0]), {}) : {};
+  const marketHistory = loadMarketHistory(firstPayload.base_trade_date);
   const stocks = files.map((file) => {
     const payload = readJson(path.join(predictionDir, file), {});
     const meta = stockMeta[payload.stock_code] || {};
     const forecastCompact = compactDate(payload.forecast_date);
     const reversal = reversalSignals(priceHistory.get(payload.stock_code));
+    const rs7d = relativeStrength7d(priceHistory.get(payload.stock_code), marketHistory);
     const stock = {
       stock_code: payload.stock_code,
       stock_name: payload.stock_name || meta.Name || payload.stock_code,
@@ -300,6 +370,7 @@ function main() {
         margin_change_rate: payload.features?.margin_change_rate ?? null,
       },
       reversal_signals: reversal,
+      relative_strength_7d: rs7d,
     };
     stock.chip_bias = chipBias(stock);
     stock.strategy_tags = strategyTags(stock);

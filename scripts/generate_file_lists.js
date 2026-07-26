@@ -63,8 +63,48 @@ const directories = [
         path: 'data_macromicro_twse_margin_maintenance',
         output: 'data_macromicro_twse_margin_maintenance/files.json',
         filter: file => /^\d{8}_macromicro_twse_margin_maintenance\.json$/.test(file)
+    },
+    {
+        path: 'data_market_news',
+        output: 'data_market_news/files.json',
+        recursive: true,
+        filter: file => /^\d{8}\/market_news\.json$/.test(file)
+    },
+    {
+        path: 'data_normalized',
+        output: 'data_normalized/files.json',
+        recursive: true,
+        filter: file => /^(institutional_investors|broker_details)\/\d{8}\.json$/.test(file)
+    },
+    {
+        path: 'data_external_market',
+        output: 'data_external_market/files.json',
+        recursive: true,
+        filter: file => /^\d{8}\/external_market_indicators\.json$/.test(file)
+    },
+    {
+        path: 'data_market_risk',
+        output: 'data_market_risk/files.json',
+        recursive: true,
+        filter: file => /^\d{8}\/market_risk_snapshot\.json$/.test(file)
     }
 ];
+
+function listDataFiles(dirPath, recursive, basePath = dirPath) {
+    if (!fs.existsSync(dirPath)) return [];
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+        const entryPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+            if (recursive) files.push(...listDataFiles(entryPath, recursive, basePath));
+            continue;
+        }
+        if (!entry.isFile() || (!entry.name.endsWith('.csv') && !entry.name.endsWith('.json'))) continue;
+        files.push(path.relative(basePath, entryPath).replaceAll(path.sep, '/'));
+    }
+    return files;
+}
 
 directories.forEach(dir => {
     const dirPath = path.join(__dirname, '..', dir.path);
@@ -72,8 +112,7 @@ directories.forEach(dir => {
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
     if (fs.existsSync(dirPath)) {
-        const files = fs.readdirSync(dirPath)
-            .filter(file => file.endsWith('.csv') || file.endsWith('.json'))
+        const files = listDataFiles(dirPath, Boolean(dir.recursive))
             .filter(file => !dir.filter || dir.filter(file));
         fs.writeFileSync(outputPath, JSON.stringify(files, null, 2));
         console.log(`✅ Generated ${dir.output} with ${files.length} files`);

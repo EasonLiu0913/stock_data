@@ -8,9 +8,10 @@ on:
       - 'scripts/generate_all_stock_predictions.js'
       - 'scripts/generate_prediction_dashboard_data.js'
       - 'scripts/prepare_and_verify_forecast_inputs.js'
+      - 'scripts/generate_market_risk_snapshot.js'
       - 'scripts/resolve_forecast_dates.js'
       - 'scripts/normalize_non_trading_days.js'
-      - 'scripts/normalize_market_chart_for_forecast.js'
+      - 'config/stock_news_aliases.json'
       - '.github/workflows/generate-all-stock-predictions.yml'
       - 'src/forecast/**'
       - 'templates/prediction_template.html'
@@ -46,12 +47,12 @@ jobs:
         run: |
           node scripts/resolve_forecast_dates.js --github-env >> "$GITHUB_ENV"
           node scripts/resolve_forecast_dates.js
-      - name: Verify and normalize fresh source files
+      - name: Verify fresh source files
         run: node scripts/prepare_and_verify_forecast_inputs.js
+      - name: Generate market risk snapshot
+        run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE"
       - name: Normalize non-trading days
         run: node scripts/normalize_non_trading_days.js
-      - name: Normalize market chart
-        run: node scripts/normalize_market_chart_for_forecast.js
       - name: Generate JSON, HTML, missing-data list and index
         id: generate
         shell: bash
@@ -82,7 +83,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_predictions public/index.html
+          git add data_normalized data_market_risk data_predictions public/index.html
           if git diff --cached --quiet; then
             echo "No generated changes"
             exit 0
