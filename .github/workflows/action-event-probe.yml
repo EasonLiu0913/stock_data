@@ -1,0 +1,30 @@
+name: Action event probe
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    if: github.event.issue.title == '[automation] Probe GitHub Actions'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Write probe marker
+        run: |
+          mkdir -p data_prediction_runs
+          node -e "require('fs').writeFileSync('data_prediction_runs/action-probe.json', JSON.stringify({status:'success', triggered_at:new Date().toISOString(), issue_number:${{ github.event.issue.number }}}, null, 2)+'\n')"
+      - name: Commit probe marker
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_runs/action-probe.json
+          git commit -m "ci: confirm GitHub Actions issue trigger"
+          git pull --rebase origin main
+          git push origin HEAD:main
