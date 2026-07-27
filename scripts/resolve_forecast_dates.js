@@ -92,16 +92,9 @@ function taipeiParts(now) {
   };
 }
 
-function resolveForecastDates(now = new Date(), holidays = loadHolidaySet()) {
+function buildResolvedDates(targetIso, now, holidays) {
   const parts = taipeiParts(now);
-  const minutes = parts.hour * 60 + parts.minute;
-  const marketCloseMinutes = 15 * 60 + 30;
-  const todayIsTradingDate = isTradingDate(parts.isoDate, holidays);
-  const targetIso = todayIsTradingDate && minutes < marketCloseMinutes
-    ? parts.isoDate
-    : nextTradingDate(parts.isoDate, holidays, false);
   const baseIso = previousTradingDate(targetIso, holidays, false);
-
   return {
     now_taipei_date: parts.isoDate,
     now_taipei_time: `${pad(parts.hour)}:${pad(parts.minute)}`,
@@ -110,6 +103,28 @@ function resolveForecastDates(now = new Date(), holidays = loadHolidaySet()) {
     forecast_target_date: targetIso,
     forecast_target_date_compact: compactDate(targetIso)
   };
+}
+
+function resolveForecastDates(now = new Date(), holidays = loadHolidaySet()) {
+  const parts = taipeiParts(now);
+  const minutes = parts.hour * 60 + parts.minute;
+  const marketCloseMinutes = 15 * 60 + 30;
+  const todayIsTradingDate = isTradingDate(parts.isoDate, holidays);
+  const targetIso = todayIsTradingDate && minutes < marketCloseMinutes
+    ? parts.isoDate
+    : nextTradingDate(parts.isoDate, holidays, false);
+  return buildResolvedDates(targetIso, now, holidays);
+}
+
+function resolveExplicitForecastDate(value, now = new Date(), holidays = loadHolidaySet()) {
+  const targetIso = normalizeIsoDate(value);
+  if (!targetIso) {
+    throw new Error(`Invalid --target-date value: ${value}. Expected YYYYMMDD or YYYY-MM-DD.`);
+  }
+  if (!isTradingDate(targetIso, holidays)) {
+    throw new Error(`Forecast target date is not a trading day: ${targetIso}`);
+  }
+  return buildResolvedDates(targetIso, now, holidays);
 }
 
 function parseArgs(argv) {
@@ -136,7 +151,11 @@ if (require.main === module) {
   if (Number.isNaN(now.getTime())) {
     throw new Error(`Invalid --now value: ${nowArg}`);
   }
-  const resolved = resolveForecastDates(now);
+
+  const targetDateArg = args.get('target-date');
+  const resolved = targetDateArg
+    ? resolveExplicitForecastDate(targetDateArg, now)
+    : resolveForecastDates(now);
 
   if (args.has('github-env')) {
     process.stdout.write([
@@ -159,5 +178,6 @@ module.exports = {
   nextTradingDate,
   normalizeIsoDate,
   previousTradingDate,
+  resolveExplicitForecastDate,
   resolveForecastDates
 };
