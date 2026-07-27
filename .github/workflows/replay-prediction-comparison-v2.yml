@@ -1,0 +1,81 @@
+name: Replay and compare V1 / V2 predictions
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: Forecast date in YYYYMMDD; defaults to latest V2 date
+        required: false
+  push:
+    branches: [main]
+    paths:
+      - 'data_fubon/fubon_20??????_sma.json'
+  schedule:
+    - cron: '30 13 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: replay-prediction-comparison-v2
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Resolve comparison date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          if [ -n "$INPUT_DATE" ]; then
+            date="$INPUT_DATE"
+          else
+            date=$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('data_predictions_v2/manifest.json','utf8')); process.stdout.write(m.latest_date);")
+          fi
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+      - name: Check result-day prices
+        id: prices
+        shell: bash
+        run: |
+          file="data_fubon/fubon_${{ steps.date.outputs.date }}_sma.json"
+          if [ -s "$file" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Actual price file is not ready: $file"
+          fi
+      - name: Replay unchanged V1
+        if: steps.prices.outputs.ready == 'true'
+        run: node scripts/generate_prediction_replay.js --date "${{ steps.date.outputs.date }}"
+      - name: Replay V2 with five evaluation angles
+        if: steps.prices.outputs.ready == 'true'
+        run: node scripts/generate_prediction_replay_v2.js --date "${{ steps.date.outputs.date }}" --cost-bps 30
+      - name: Generate V1 / V2 accuracy comparison
+        if: steps.prices.outputs.ready == 'true'
+        run: node scripts/compare_prediction_versions.js --date "${{ steps.date.outputs.date }}"
+      - name: Commit replay comparison
+        if: steps.prices.outputs.ready == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_predictions data_predictions_v2 data_prediction_comparisons
+          if git diff --cached --quiet; then
+            echo "No replay changes"
+            exit 0
+          fi
+          git commit -m "feat: compare V1 and V2 forecast accuracy for ${{ steps.date.outputs.date }}"
+          git pull --rebase origin main
+          git push origin HEAD:main
