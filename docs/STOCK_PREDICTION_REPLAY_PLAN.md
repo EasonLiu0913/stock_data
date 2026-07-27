@@ -48,17 +48,21 @@ payload
 
 ## 需要的實際行情資料
 
-覆盤需要下一交易日的真實 OHLCV：
+覆盤需要下一交易日的真實 OHLCV、官方開盤參考價及交易狀態：
 
 | 欄位 | 用途 |
 |---|---|
-| 前一交易日收盤價 | 計算開盤與收盤相對基準。 |
+| 前一交易日收盤價 | 保存未調整價差及稽核公司行動。 |
+| TWSE 官方開盤參考價 | 作為除權息、減資後的開盤及收盤報酬基準。 |
 | 實際開盤價 | 判斷開高或開低。 |
 | 實際最高價 | 判斷盤中上攻與震幅。 |
 | 實際最低價 | 判斷盤中下殺與震幅。 |
 | 實際收盤價 | 判斷最終方向。 |
 | 實際成交量 | 判斷放量、縮量與氛圍強度。 |
 | 5 日 / 20 日均量 | 作為成交量放大或萎縮基準。 |
+| 漲跌停價 | 判斷一字漲停、一字跌停及價格受限狀態。 |
+| 停止交易／恢復交易狀態 | 決定該樣本是否可進入命中率統計。 |
+| 公司行動類型與生效日 | 說明參考價調整原因及價格區間如何換算。 |
 
 以 `20260727` 預測批次為例，覆盤會比對：
 
@@ -66,6 +70,66 @@ payload
 data_predictions/20260727/summary.json
 data_fubon/fubon_20260727_sma.json
 ```
+
+### 公司行動與價格基準
+
+覆盤日若發生除權息、減資、分割或其他會改變開盤參考價的公司行動，不得直接使用前一交易日收盤價計算方向。至少同時保存：
+
+```text
+previous_close
+official_opening_reference_price
+reference_price_source
+corporate_action_status
+corporate_action_type
+```
+
+市場方向與氛圍使用：
+
+```text
+adjusted_open_return
+  = open / official_opening_reference_price - 1
+
+adjusted_close_return
+  = close / official_opening_reference_price - 1
+```
+
+原本的 `close / previous_close - 1` 仍可保存為 `unadjusted_close_return`，但不得用它判定除權息日的方向命中。
+
+事前預測的絕對價格區間與支撐壓力也會受到公司行動影響。覆盤必須保留原始預測價位，另外產生 `corporate_action_adjusted_targets` 後再比較，不能覆寫 `prediction_snapshot`。調整公式、官方參考價及取整規則都要保存；無法可靠調整時將價格區間驗證標為 `not_comparable_corporate_action`。
+
+官方來源優先使用證交所的[除權息計算結果表](https://www.twse.com.tw/exchangeReport/TWT49U?response=html)或等價官方資料檔。來源必須能提供除權息前收盤價、除權息參考價、漲停價、跌停價與開盤競價基準，並保存資料日期與抓取時間。
+
+### 漲跌停、停止交易與流動性
+
+漲跌停價格必須依 TWSE 官方開盤競價基準及合法跳動單位取得或重算，不能簡單以收盤價乘上 `±10%`。一般上市股票原則上以當市開盤競價基準上下 10% 為限，但初次上市等情況可能沒有一般升降幅度限制，因此仍應優先讀取官方漲跌停欄位，並支援 `price_limit_status = not_applicable`。計算與例外規則以證交所[集中市場交易制度](https://www.twse.com.tw/zh/products/system/trading.html)為準。
+
+新增特殊型態：
+
+- `一字漲停`：開、高、低、收相同，且等於當日漲停價。
+- `一字跌停`：開、高、低、收相同，且等於當日跌停價。
+- `觸及漲停`／`觸及跌停`：盤中碰到限制價，但不是一字鎖死。
+- `停止交易`：沒有合法可比較行情。
+- `零成交`：沒有成交量或成交價不足以形成正常 OHLC。
+- `低流動性`：成交量顯著低於該股自身歷史基準。
+
+一字漲跌停樣本仍保留方向結果，但 `actual_mood_score`、影線、震幅與量能解讀標為 `price_limit_constrained`，不得和一般交易日直接平均。
+
+覆盤資格使用獨立欄位：
+
+```text
+outcome_eligibility.status
+outcome_eligibility.reasons
+```
+
+建議狀態：
+
+| 狀態 | 處理 |
+|---|---|
+| `eligible` | 納入方向、氛圍與區間統計。 |
+| `special_case` | 保留方向判定，但從一般氛圍統計分離。 |
+| `excluded` | 不進入命中率分母，只保存排除原因。 |
+
+缺少 OHLC、停止交易及無法調整的公司行動屬於 `excluded`。低流動性不應僅憑單一固定張數全部刪除；先依該股 20 日均量或成交值設定版本化門檻，標記為 `special_case`，再比較納入與排除後的敏感度。
 
 ## 實際走勢標籤
 
@@ -82,6 +146,9 @@ data_fubon/fubon_20260727_sma.json
 | 縮量整理 | 成交量低於均量門檻，且漲跌幅與震幅都不大。 |
 | 長上影賣壓 | 盤中高點明顯高於收盤。 |
 | 長下影承接 | 盤中低點明顯低於收盤。 |
+| 一字漲停 | OHLC 相同且等於官方漲停價。 |
+| 一字跌停 | OHLC 相同且等於官方跌停價。 |
+| 觸及漲停／跌停 | 盤中碰到官方限制價但未一字鎖死。 |
 
 實作時應保留原始數值，標籤只是方便 dashboard 與覆盤摘要閱讀。
 
@@ -111,6 +178,7 @@ data_fubon/fubon_20260727_sma.json
 |---|---|
 | `direction_accuracy` | 預測方向和實際收盤方向是否一致。 |
 | `mood_accuracy` | 預測氛圍和實際盤中氛圍是否一致。 |
+| `alpha_accuracy` | 預測方向和剝離市場 Beta 後的個股相對報酬是否一致。 |
 
 最後再合成 `prediction_match_label`：
 
@@ -129,6 +197,64 @@ data_fubon/fubon_20260727_sma.json
 | 偏空 | 開低走低、收跌、放量 | 明顯準確 |
 | 偏空 | 開低走高、收紅、放量 | 明顯不準 |
 | 中性 | 小幅震盪、縮量 | 大致準確 |
+
+### 絕對命中與相對 Alpha 命中
+
+每批覆盤必須同時保存絕對報酬與相對市場表現，避免大盤單日暴漲暴跌主導全部結論：
+
+```text
+stock_adjusted_return
+market_return
+simple_excess_return = stock_adjusted_return - market_return
+beta_adjusted_alpha = stock_adjusted_return - beta_estimate × market_return
+```
+
+`beta_estimate` 建議使用預測截止日前的 60 個有效交易日估計，至少需要 30 筆；不可使用覆盤日之後資料。樣本不足時以 `beta = 1` 產生暫代值，並標記：
+
+```text
+alpha_method = beta_1_fallback
+```
+
+`alpha_accuracy` 第一版規則：
+
+- 預測偏多：`beta_adjusted_alpha > 0` 為命中。
+- 預測偏空：`beta_adjusted_alpha < 0` 為命中。
+- 預測中性：落在事先固定的中性帶內為命中。
+
+Dashboard 必須同時顯示 `absolute_directional_hit_rate` 與 `alpha_hit_rate`，不得只挑較好看的數字。Beta 估計方法、觀察窗、中性帶與缺值處理都必須版本化。
+
+### 全市場報酬分布與相對位置
+
+除了加權指數，覆盤會以所有具方向覆盤資格的股票建立 `market_breadth`：
+
+- 上漲、下跌、平盤家數與比例。
+- 等權平均、中位數、P10、P25、P75、P90、最小值與最大值。
+- 小於 `-10%`、每 1% 一組至 `+10%`、以及大於等於 `+10%` 的完整分布。
+- 加權指數報酬，與等權股票市場報酬並列。
+
+每檔股票回填：
+
+```text
+market_percentile
+return_vs_market_median
+return_vs_equal_weight_market
+return_vs_weighted_index
+industry_percentile
+return_vs_industry_median
+market_influence_score
+industry_influence_score
+```
+
+`market_effect_assessment` 使用版本化規則分類：
+
+- `broad_market_driven`
+- `sector_driven`
+- `idiosyncratic_weakness`
+- `relative_resilience`
+- `relative_leadership`
+- `mixed_or_unclear`
+
+第一版把全市場至少 70% 同方向視為廣泛市場行情，並用個股在分布中的百分位判斷它是跟隨主要分布、相對抗跌／領漲，或顯著落後。`market_influence_score` 是同日橫斷面證據強度，不是因果機率，也不改變原始 `direction_accuracy`。
 
 ## 預測數字逐項驗證
 
@@ -176,6 +302,8 @@ data_predictions/YYYYMMDD/replay-mistakes.json
 - 準確度判斷。
 - 原因標籤。
 - 因果候選、證據狀態、反事實測試與限制。
+- 公司行動、價格限制、流動性及覆盤資格。
+- 個股調整後報酬、大盤報酬、Beta 與相對 Alpha。
 
 ### `replay-summary.json`
 
@@ -187,6 +315,9 @@ Dashboard 使用的摘要：
 - 明顯不準數量。
 - 偏多命中率。
 - 偏空命中率。
+- 絕對方向命中率與相對 Alpha 命中率。
+- 公司行動、漲跌停、低流動性及其他排除統計。
+- 當日市場環境分類。
 - 放量情境命中率。
 - 開高走低誤判數。
 - 開低走高漏判數。
@@ -206,6 +337,27 @@ Dashboard 使用的摘要：
 - 周圍影響因素。
 - 相關產業、策略標籤、概念股分類。
 - 每個失敗候選原因的機制、證據狀態與下一個反事實測試。
+- 群聚性錯誤的產業、策略、概念與市場環境摘要。
+
+### `replay-history.json`
+
+在單日輸出之上維護輕量級跨日索引：
+
+```text
+data_predictions/replay-history.json
+```
+
+每個預測交易日只保存摘要與來源檔雜湊，不重複嵌入逐檔明細。至少包含：
+
+- 預測日、實際交易日與方法版本。
+- 合格、特殊及排除樣本數。
+- 絕對方向命中率、Alpha 命中率及區間覆蓋率。
+- 偏多、偏空與中性分組結果。
+- 市場環境分類。
+- 5 日與 20 日滾動命中率。
+- 最近 30／90 個交易日的有效樣本與趨勢。
+
+同一預測日重跑時必須以日期鍵更新並檢查來源 SHA-256，避免重複累加。
 
 ## Dashboard 覆盤區塊
 
@@ -215,6 +367,9 @@ Dashboard 可以新增「事後覆盤」區塊：
 - 如果存在，顯示覆盤 KPI。
 - 列出「明顯準確」與「明顯不準」清單。
 - 支援依產業、策略分類、概念股清單觀察命中率。
+- 顯示絕對命中率與 Alpha 命中率的差異。
+- 顯示 5 日／20 日滾動命中率，以及最近 30／90 個交易日趨勢。
+- 顯示市場環境 × 預測方向的勝率矩陣。
 
 建議第一版先做：
 
@@ -224,6 +379,30 @@ Dashboard 可以新增「事後覆盤」區塊：
 - 誤判最集中的概念股。
 - 命中率最高的策略標籤。
 - 命中率最低的策略標籤。
+
+### 市場環境矩陣
+
+每個覆盤日保存 `market_regime`。第一版可以使用事先固定並版本化的規則：
+
+| 環境 | 範例規則 |
+|---|---|
+| 多頭日 | 加權指數收盤報酬 `≥ +1%`。 |
+| 空頭日 | 加權指數收盤報酬 `≤ -1%`。 |
+| 高波動轉折日 | 收盤報酬介於 `-1%～+1%`，但日內震幅 `≥ 2%`。 |
+| 震盪日 | 其他情況。 |
+
+門檻只是 `market_regime_v1` 的初始值，變更時必須提高版本，不得事後為了改善命中率重切分類。Dashboard 以市場環境為列、偏多／偏空／中性為欄，同時顯示樣本數、絕對命中率及 Alpha 命中率。
+
+### 優先看群聚錯誤
+
+Top 30 個股清單保留作為案例入口，但調整模型前應先看群聚：
+
+- 同產業在同一天集體失敗。
+- 同策略標籤跨多檔失效。
+- 同概念股或供應鏈共同反向。
+- 特定市場環境下同方向預測集體失敗。
+
+群聚摘要至少揭露樣本數、相對全體錯誤率差及涵蓋交易日數。樣本太少或只集中在單一市場日時，只能標示 `exploratory_cluster`。單一個股 Top 30 若找不到公開且有時間戳的事件證據，維持「未解釋個案」，不得硬套根本原因。
 
 ## 原因標籤
 
@@ -363,15 +542,58 @@ concept_strength
 data_predictions/YYYYMMDD/factor-experiments.json
 ```
 
-## 建議實作順序
+## 漸進式實作路線
 
-1. 讀取 `summary.json`、每檔原始預測 JSON 與實際行情檔。
-2. 凍結完整預測快照並保存 SHA-256。
-3. 產生逐檔方向、實際型態、價格區間與關鍵價位驗證。
-4. 產生原因標籤、逐項分數反事實與第一階段因果候選。
-5. 產生 `replay.json`、`replay-summary.json` 與 `replay-mistakes.json`。
-6. 在 dashboard 加入「事後覆盤」區塊。
-7. 等 `2026-07-27` 真實行情抓到後，執行：
+完整機制分成三期。每一期都必須能獨立執行、驗收及回滾，不等待全部因果功能完成才產生覆盤。
+
+### Phase 1：基礎覆盤 MVP
+
+- 讀取 `summary.json`、每檔原始預測 JSON 與實際行情。
+- 凍結完整預測快照並驗證 SHA-256。
+- 建立公司行動、漲跌停、停止交易與流動性的覆盤資格閘門。
+- 產生 `direction_accuracy`、`actual_mood_score` 與基礎 `replay.json`。
+- 產生基礎 KPI、Top 30 準確／不準清單與排除統計。
+- Dashboard 在資料未到位時顯示「等待實際行情資料」。
+
+驗收條件：除權息樣本不會因前收基準而誤判；停止交易不進入分母；一字漲跌停不和一般氛圍樣本混算。
+
+### Phase 2：分類、區間與長期追蹤
+
+- 驗證目標價格區間、支撐、壓力及公司行動調整後價位。
+- 依產業、策略、概念股及群聚錯誤統計。
+- 增加大盤報酬、Beta 調整 Alpha 與 `alpha_accuracy`。
+- 建立 `replay-history.json`、5 日／20 日滾動命中率及 30／90 日趨勢。
+- 建立市場環境矩陣。
+
+驗收條件：Dashboard 同時顯示絕對與 Alpha 命中率；每個分組都顯示樣本數；跨日重跑不會重複累加。
+
+### Phase 3：因果分析與因子實驗
+
+- 產生個案候選機制、支持證據、反證及缺少證據。
+- 實作單一因子移除與完整 ablation test。
+- 產生 `factor-experiments.json`。
+- 跨市場日做配對比較、群聚 bootstrap 與信賴區間。
+- 只有通過跨日反事實測試的因素才提高因果可信度。
+
+驗收條件：可以重現原模型及移除因子模型；結果日資料不會倒灌進事前特徵；單一個案不會被標成已證明根本原因。
+
+### 目前實作狀態
+
+| 能力 | 狀態 |
+|---|---|
+| 完整快照、SHA-256、方向／氛圍及 replay 後端 | 已有第一版；雜湊不一致會排除，正式結果等待實際行情。 |
+| 正式日期與相鄰交易日保護 | 已實作；非 dry-run 必須使用 forecast date，且基準日須為前一個可用交易日。 |
+| 公司行動、漲跌停、流動性資格閘門 | 已有第一版；TWT48U 負責事件偵測，有 TWT49U 官方參考價即可調整，缺正式參考價時安全排除。 |
+| 價格區間、支撐壓力、分組統計 | 後端已有第一版，支援公司行動調整係數；仍需 Dashboard。 |
+| 因果候選與同批次因子關聯 | 已有探索版，不等於完成 ablation 或因果識別。 |
+| 全市場寬度、1% 報酬分布、個股／產業百分位與市場影響分類 | 已實作第一版，結果會寫入摘要及每檔覆盤。 |
+| Beta Alpha、跨日歷史、滾動趨勢、市場環境矩陣 | 待實作。 |
+| 真正因子移除、配對比較與 bootstrap | 待實作。 |
+| 覆盤邊界自動化測試 | 已建立第一版，涵蓋缺 OHLCV、快照不一致、公司行動、漲跌停、中性誤判與錯誤群聚。 |
+
+## 執行方式
+
+等 `2026-07-27` 真實行情抓到後，執行：
 
 ```bash
 node scripts/generate_prediction_replay.js --date 20260727
@@ -389,8 +611,7 @@ npm run replay:prediction -- --date 20260727
 node scripts/generate_prediction_replay.js --date 20260727 --actual-date 20260724 --dry-run
 ```
 
-8. 第一版先人工核對明顯準確、明顯不準、區間命中與因果候選，不急著調整預測模型。
-9. 累積多個交易日後，再做因子歸零、配對比較與重新組合。
+第一版先人工核對覆盤資格、明顯準確、明顯不準、區間命中與因果候選，不急著調整預測模型。累積多個交易日後，再做因子歸零、配對比較與重新組合。
 
 ## 20260727 第一版覆盤流程
 
@@ -399,7 +620,8 @@ node scripts/generate_prediction_replay.js --date 20260727 --actual-date 2026072
 1. 確認 `data_predictions/20260727/summary.json` 存在。
 2. 執行覆盤腳本。
 3. 產生 `replay.json`、`replay-summary.json`、`replay-mistakes.json`。
-4. 驗證快照 SHA-256、預測價格數字及實際 OHLCV 沒有互相覆寫。
-5. Dashboard 顯示覆盤區塊。
-6. 人工檢查明顯準確、明顯不準、區間判定與候選因果是否合理。
-7. 累積多日樣本後再進入因果與因子實驗。
+4. 驗證官方開盤參考價、公司行動、交易狀態及覆盤資格。
+5. 驗證快照 SHA-256、預測價格數字及實際 OHLCV 沒有互相覆寫。
+6. Dashboard 顯示覆盤區塊。
+7. 人工檢查明顯準確、明顯不準、區間判定、群聚錯誤與候選因果是否合理。
+8. 累積多日樣本後再進入因果與因子實驗。

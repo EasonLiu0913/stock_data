@@ -2,20 +2,6 @@ name: Generate all stock predictions
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/generate_all_stock_predictions.js'
-      - 'scripts/generate_prediction_dashboard_data.js'
-      - 'scripts/prepare_and_verify_forecast_inputs.js'
-      - 'scripts/generate_market_risk_snapshot.js'
-      - 'scripts/resolve_forecast_dates.js'
-      - 'scripts/normalize_non_trading_days.js'
-      - 'config/stock_news_aliases.json'
-      - '.github/workflows/generate-all-stock-predictions.yml'
-      - 'src/forecast/**'
-      - 'templates/prediction_template.html'
-      - 'docs/STOCK_FORECAST_METHODOLOGY.md'
 
 permissions:
   contents: write
@@ -47,6 +33,8 @@ jobs:
         run: |
           node scripts/resolve_forecast_dates.js --github-env >> "$GITHUB_ENV"
           node scripts/resolve_forecast_dates.js
+      - name: Check required forecast files
+        run: node scripts/check_forecast_required_files.js
       - name: Verify fresh source files
         run: node scripts/prepare_and_verify_forecast_inputs.js
       - name: Generate market risk snapshot
