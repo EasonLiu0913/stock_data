@@ -30,6 +30,11 @@ const directories = [
         filter: file => /^\d{8}_twse_mi_index\.json$/.test(file)
     },
     {
+        path: 'data_twse_twt49u',
+        output: 'data_twse_twt49u/files.json',
+        filter: file => /^\d{8}_twt49u\.json$/.test(file)
+    },
+    {
         path: 'data_taifex_major_institutional_traders_futures_options',
         output: 'data_taifex_major_institutional_traders_futures_options/files.json',
         filter: file => /^\d{8}_taifex_major_institutional_traders_futures_options\.csv$/.test(file)
