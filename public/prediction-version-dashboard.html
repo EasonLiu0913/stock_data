@@ -56,8 +56,9 @@
     let selectedCode = params.get('code') || '';
 
     const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-    const fmt = value => Number.isFinite(Number(value)) ? Number(value).toFixed(2) : 'NA';
-    const pct = value => Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : 'NA';
+    const hasNumber = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+    const fmt = value => hasNumber(value) ? Number(value).toFixed(2) : 'NA';
+    const pct = value => hasNumber(value) ? `${Number(value).toFixed(1)}%` : 'NA';
     const directionClass = value => String(value || '').includes('偏多') ? 'bull' : String(value || '').includes('偏空') ? 'bear' : 'neutral';
     const currentData = row => currentVersion === 'v2' ? row.v2 : row.v1;
 
@@ -122,6 +123,7 @@
     function setVersion(version) {
       if (version === 'v2' && !payload?.versions.v2.available) return;
       currentVersion = version;
+      if (version === 'v1') document.getElementById('quadrantFilter').value = '';
       setQuery({ version, date: payload.forecast_date_compact, code: selectedCode });
       updateHeader();
       renderKpis();
@@ -168,7 +170,7 @@
         return (!query || text.includes(query)) &&
           (!direction || current.direction === direction) &&
           (!changed || (changed === 'changed' ? isChanged : !isChanged)) &&
-          (!quadrant || row.v2?.chip_technical_quadrant === quadrant);
+          (currentVersion !== 'v2' || !quadrant || row.v2?.chip_technical_quadrant === quadrant);
       }).sort((a,b) => {
         const scoreDiff = Number(currentData(b)?.score ?? -999) - Number(currentData(a)?.score ?? -999);
         return scoreDiff || String(a.stock_code).localeCompare(String(b.stock_code));
@@ -197,7 +199,7 @@
           <td>${esc(row.v2?.relative_strength_bucket || 'NA')}</td>
           <td>${esc(row.v2?.chip_technical_quadrant || 'NA')}</td>
           <td>${esc(fmt(row.features.rsi14))}</td>
-          <td>${esc(fmt(row.features.relative_strength))}%</td>
+          <td>${hasNumber(row.features.relative_strength) ? `${esc(fmt(row.features.relative_strength))}%` : 'NA'}</td>
           <td>${esc(current.risk_label || 'NA')}</td>
           <td>${esc(pct(current.data_completeness))}</td>
         </tr>`;
@@ -220,7 +222,7 @@
           <div class="mini">V2 分數差<strong>${esc(fmt(row.v2?.score_delta))}</strong></div>
           <div class="mini">籌碼×技術<strong>${esc(row.v2?.chip_technical_quadrant || 'NA')}</strong></div>
           <div class="mini">相對強弱分組<strong>${esc(row.v2?.relative_strength_bucket || 'NA')}</strong></div>
-          <div class="mini">RSI / 7日RS<strong>${esc(fmt(row.features.rsi14))} / ${esc(fmt(row.features.relative_strength))}%</strong></div>
+          <div class="mini">RSI / 7日RS<strong>${esc(fmt(row.features.rsi14))} / ${hasNumber(row.features.relative_strength) ? `${esc(fmt(row.features.relative_strength))}%` : 'NA'}</strong></div>
         </div>
         <h3>V2 規則調整</h3>
         <div class="adjustments">${adjustments.length ? adjustments.map(item => `<div class="adjustment"><strong>${esc(item.id)}</strong>　分數 ${esc(fmt(item.score))}<div class="note">${esc(item.explanation || '')}</div></div>`).join('') : '<div class="note">此股票沒有 V2 調整資料，或尚未產生 V2。</div>'}</div>
