@@ -9,6 +9,8 @@ on:
       - 'scripts/compare_prediction_versions.js'
       - 'tests/generate_all_stock_predictions_v2.test.js'
       - '.github/workflows/generate-prediction-comparison-v2.yml'
+  schedule:
+    - cron: '5 14 27 7 *'
 
 permissions:
   contents: write
@@ -23,6 +25,7 @@ env:
 
 jobs:
   generate:
+    if: github.event_name != 'schedule' || github.run_started_at < '2026-07-28T00:00:00Z'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
