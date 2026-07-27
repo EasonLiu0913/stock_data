@@ -10,7 +10,7 @@ on:
       - 'tests/generate_all_stock_predictions_v2.test.js'
       - '.github/workflows/generate-prediction-comparison-v2.yml'
   schedule:
-    - cron: '5 14 27 7 *'
+    - cron: '10 14 27 7 *'
 
 permissions:
   contents: write
@@ -36,41 +36,96 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: npm ci
+        id: install
+        continue-on-error: true
+        run: npm ci 2>&1 | tee /tmp/install.log
       - name: Refresh empty 20260727 institutional data
+        id: refresh
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
           file="data_twse_institutional_investors/20260727_twse_institutional_investors.json"
           if [ ! -s "$file" ]; then
             node scripts/crawl_twse_institutional_investors.js --date 20260727 --max-retries 5 --rate-limit-cooldown 30000 --mismatch-cooldown 30000
           fi
           test -s "$file"
+        2>&1 | tee /tmp/refresh.log
       - name: Verify required source data
-        run: |
-          node scripts/check_forecast_required_files.js
-          node scripts/prepare_and_verify_forecast_inputs.js
-      - name: Generate market risk snapshot
-        run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE"
-      - name: Normalize non-trading days
-        run: node scripts/normalize_non_trading_days.js
-      - name: Run tests
-        run: npm test
-      - name: Generate unchanged V1 predictions
-        run: node scripts/generate_all_stock_predictions.js
-      - name: Generate independent V2 shadow predictions
-        run: node scripts/generate_all_stock_predictions_v2.js --date 20260728
-      - name: Compare forecast outputs
-        run: node scripts/compare_prediction_versions.js --date 20260728
-      - name: Commit both prediction versions
+        id: verify
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          node scripts/check_forecast_required_files.js
+          node scripts/prepare_and_verify_forecast_inputs.js
+        2>&1 | tee /tmp/verify.log
+      - name: Generate market risk snapshot
+        id: risk
+        continue-on-error: true
+        run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE" 2>&1 | tee /tmp/risk.log
+      - name: Normalize non-trading days
+        id: calendar
+        continue-on-error: true
+        run: node scripts/normalize_non_trading_days.js 2>&1 | tee /tmp/calendar.log
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        run: npm test 2>&1 | tee /tmp/tests.log
+      - name: Generate unchanged V1 predictions
+        id: v1
+        continue-on-error: true
+        run: node scripts/generate_all_stock_predictions.js 2>&1 | tee /tmp/v1.log
+      - name: Generate independent V2 shadow predictions
+        id: v2
+        continue-on-error: true
+        run: node scripts/generate_all_stock_predictions_v2.js --date 20260728 2>&1 | tee /tmp/v2.log
+      - name: Compare forecast outputs
+        id: compare
+        continue-on-error: true
+        run: node scripts/compare_prediction_versions.js --date 20260728 2>&1 | tee /tmp/compare.log
+      - name: Record and commit pipeline result
+        if: always()
+        shell: bash
+        env:
+          INSTALL: ${{ steps.install.outcome }}
+          REFRESH: ${{ steps.refresh.outcome }}
+          VERIFY: ${{ steps.verify.outcome }}
+          RISK: ${{ steps.risk.outcome }}
+          CALENDAR: ${{ steps.calendar.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          V1: ${{ steps.v1.outcome }}
+          V2: ${{ steps.v2.outcome }}
+          COMPARE: ${{ steps.compare.outcome }}
+        run: |
+          mkdir -p data_prediction_runs/20260728
+          node - <<'NODE'
+          const fs = require('fs');
+          const stages = Object.fromEntries(['INSTALL','REFRESH','VERIFY','RISK','CALENDAR','TESTS','V1','V2','COMPARE'].map(key => [key.toLowerCase(), process.env[key] || 'unknown']));
+          const success = stages.v1 === 'success' && stages.v2 === 'success' && stages.compare === 'success';
+          fs.writeFileSync('data_prediction_runs/20260728/status.json', JSON.stringify({
+            generated_at: new Date().toISOString(),
+            base_trade_date: '2026-07-27',
+            forecast_date: '2026-07-28',
+            status: success ? 'success' : 'failed',
+            stages,
+          }, null, 2) + '\n');
+          NODE
+          for name in install refresh verify risk calendar tests v1 v2 compare; do
+            test -f "/tmp/$name.log" && cp "/tmp/$name.log" "data_prediction_runs/20260728/$name.log"
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_twse_institutional_investors data_normalized data_market_risk data_predictions data_predictions_v2 data_prediction_comparisons public/index.html
+          git add data_twse_institutional_investors data_normalized data_market_risk data_predictions data_predictions_v2 data_prediction_comparisons data_prediction_runs public/index.html
           if git diff --cached --quiet; then
             echo "No generated changes"
             exit 0
           fi
-          git commit -m "feat: generate 20260728 V1 and V2 stock forecasts"
+          if [ "$V1" = "success" ] && [ "$V2" = "success" ] && [ "$COMPARE" = "success" ]; then
+            message="feat: generate 20260728 V1 and V2 stock forecasts"
+          else
+            message="fix: record 20260728 dual forecast pipeline failure"
+          fi
+          git commit -m "$message"
           git pull --rebase origin main
           git push origin HEAD:main
