@@ -16,8 +16,6 @@ on:
 permissions:
   contents: write
 
-# V1 and V2 are separate workflows, but share one lock so they cannot write
-# prediction outputs to main at the same time.
 concurrency:
   group: manual-stock-prediction-generation
   cancel-in-progress: false
@@ -59,32 +57,20 @@ jobs:
           source_manifest="data_predictions/$date/manifest.json"
           if [ ! -s "$source_manifest" ]; then
             echo "V1 source manifest does not exist: $source_manifest"
-            echo "Run the manual V1 workflow first."
             exit 1
           fi
 
-          node - "$source_manifest" "$date" <<'NODE'
-          const fs = require('fs');
-          const [file, expectedDate] = process.argv.slice(2);
-          const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-          const actualDate = manifest.forecast_date_compact || String(manifest.forecast_date || '').replaceAll('-', '');
-          if (actualDate !== expectedDate) {
-            throw new Error(`V1 manifest date mismatch: expected ${expectedDate}, actual ${actualDate}`);
-          }
-          if (!Number.isFinite(Number(manifest.generated_reports)) || Number(manifest.generated_reports) < 1) {
-            throw new Error('V1 manifest has no generated reports');
-          }
-          NODE
+          node -e "const fs=require('fs'); const file=process.argv[1]; const expected=process.argv[2]; const m=JSON.parse(fs.readFileSync(file,'utf8')); const actual=m.forecast_date_compact || String(m.forecast_date || '').replaceAll('-',''); if(actual!==expected) throw new Error('V1 manifest date mismatch'); if(Number(m.generated_reports)<1) throw new Error('V1 manifest has no reports');" "$source_manifest" "$date"
 
           status_file="data_predictions/$date/generation-status.txt"
           if [ -f "$status_file" ] && [ "$(tr -d '\r\n' < "$status_file")" != "success" ]; then
-            echo "V1 source generation did not succeed: $status_file"
+            echo "V1 source generation did not succeed"
             exit 1
           fi
 
           if [ "$FORCE_RUN" != "true" ] && [ -s "data_predictions_v2/$date/manifest.json" ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "V2 already exists for $date. Use force=true for an intentional rerun."
+            echo "V2 exists; refreshing viewer without recalculating predictions."
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
@@ -98,23 +84,24 @@ jobs:
         if: steps.source.outputs.run == 'true'
         run: node scripts/generate_all_stock_predictions_v2.js --date "${{ steps.source.outputs.date }}"
 
-      - name: Commit V2 outputs
-        if: steps.source.outputs.run == 'true'
+      - name: Generate V1 V2 HTML viewer data
+        run: node scripts/generate_prediction_version_ui.js --date "${{ steps.source.outputs.date }}"
+
+      - name: Commit V2 outputs and viewer
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_predictions_v2 data_prediction_ui public/index.html public/prediction-version-dashboard.html
 
-          git add data_predictions_v2
           if git diff --cached --quiet; then
-            echo "No V2 changes"
+            echo "No V2 or viewer changes"
             exit 0
           fi
 
-          git commit -m "feat: generate ${{ steps.source.outputs.date }} V2 shadow forecasts"
+          git commit -m "feat: publish ${{ steps.source.outputs.date }} V1 V2 prediction viewer"
 
           if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before rebase:"
             git status --short
             exit 1
           fi
@@ -124,9 +111,7 @@ jobs:
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
-            echo "V2 push failed; retry ${attempt}/5"
             sleep 5
           done
 
-          echo "V2 push failed after 5 attempts"
           exit 1
