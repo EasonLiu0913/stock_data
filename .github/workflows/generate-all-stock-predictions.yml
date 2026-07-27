@@ -1,4 +1,4 @@
-name: Generate all stock predictions
+name: Generate V1 stock predictions (manual)
 
 on:
   workflow_dispatch:
@@ -6,42 +6,52 @@ on:
 permissions:
   contents: write
 
+# V1 and V2 are separate workflows, but share one lock so they cannot write
+# prediction outputs to main at the same time.
 concurrency:
-  group: generate-all-stock-predictions
+  group: manual-stock-prediction-generation
   cancel-in-progress: false
 
 jobs:
   generate:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+
       - name: Confirm checked-out main commit
         run: |
           git fetch origin main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Resolve forecast dates
         run: |
           node scripts/resolve_forecast_dates.js --github-env >> "$GITHUB_ENV"
           node scripts/resolve_forecast_dates.js
+
       - name: Check required forecast files
         run: node scripts/check_forecast_required_files.js
+
       - name: Verify fresh source files
         run: node scripts/prepare_and_verify_forecast_inputs.js
+
       - name: Generate market risk snapshot
         run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE"
-      - name: Normalize non-trading days
+
+      - name: Normalize non-trading days for this run
         run: node scripts/normalize_non_trading_days.js
-      - name: Generate JSON, HTML, missing-data list and index
+
+      - name: Generate V1 prediction outputs
         id: generate
         shell: bash
         run: |
@@ -50,11 +60,13 @@ jobs:
           node scripts/generate_all_stock_predictions.js > /tmp/generation.log 2>&1
           status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+
           if [ "$status" -eq 0 ]; then
             generation_status="success"
           else
             generation_status="failed"
           fi
+
           forecast_dir=$(node -e "const fs=require('fs'); const p='data_predictions/manifest.json'; if (!fs.existsSync(p)) process.exit(1); const m=JSON.parse(fs.readFileSync(p,'utf8')); process.stdout.write(m.output_directory || '');" 2>/dev/null)
           if [ -n "$forecast_dir" ]; then
             mkdir -p "$forecast_dir"
@@ -66,20 +78,50 @@ jobs:
             cp .forecast-input-validation.json data_predictions/input-validation.json
             echo "$generation_status" > data_predictions/generation-status.txt
           fi
+
           exit 0
-      - name: Commit generation result
+
+      - name: Restore temporary source normalization
+        if: always()
+        run: git restore --worktree -- data_history_sma/non_trading_days.json
+
+      - name: Commit V1 generation result
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add data_normalized data_market_risk data_predictions public/index.html
           if git diff --cached --quiet; then
             echo "No generated changes"
             exit 0
           fi
+
           if [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
-            message="feat: regenerate verified ${FORECAST_TARGET_DATE} stock forecasts"
+            message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 stock forecasts"
           else
-            message="fix: record verified forecast generation failure"
+            message="fix: record verified V1 forecast generation failure"
           fi
           git commit -m "$message"
-          git push origin HEAD:main
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "V1 push failed; retry ${attempt}/5"
+            sleep 5
+          done
+
+          echo "V1 push failed after 5 attempts"
+          exit 1
+
+      - name: Mark V1 generation failure
+        if: steps.generate.outputs.exit_code != '0'
+        run: exit 1
