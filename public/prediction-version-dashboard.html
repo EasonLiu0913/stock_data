@@ -5,7 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>V1 / V2 股票預測切換</title>
   <style>
-    *{box-sizing:border-box}body{margin:0;background:#f6f8fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(100%,1440px);margin:0 auto;padding:24px}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.eyebrow{font-size:13px;color:#607086;font-weight:800}.title{margin:4px 0 6px;font-size:30px}.note{color:#607086;line-height:1.55}.toolbar,.card,.table-wrap,.detail{background:#fff;border:1px solid #dce3ec;border-radius:10px;box-shadow:0 1px 2px rgba(22,31,44,.04)}.toolbar{padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}.switch{display:inline-flex;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#fff}.switch button{appearance:none;border:0;border-right:1px solid #cbd5e1;background:#fff;padding:10px 16px;font-weight:900;color:#475569;cursor:pointer}.switch button:last-child{border-right:0}.switch button.active{background:#1d5f99;color:#fff}.switch button:disabled{cursor:not-allowed;opacity:.45}.toolbar input,.toolbar select{height:40px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:0 11px;color:#172033}.toolbar input{flex:1 1 260px}.toolbar label{font-size:13px;font-weight:800;color:#526173}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}.card{padding:15px}.label{font-size:12px;color:#697789;font-weight:800}.value{font-size:27px;font-weight:900;margin-top:5px}.sub{font-size:12px;color:#697789;margin-top:4px;line-height:1.4}.version-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#e9f2fc;color:#24547f}.version-badge.v2{background:#f2eafd;color:#63358d}.table-wrap{overflow:auto}.table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 15px;border-bottom:1px solid #e7edf4}.table-head h2{margin:0;font-size:18px}.count{font-size:13px;color:#607086;font-weight:800}table{width:100%;border-collapse:collapse;min-width:1180px}th,td{padding:10px 12px;border-bottom:1px solid #edf1f6;text-align:left;font-size:13px;white-space:nowrap}th{position:sticky;top:0;background:#f2f5f9;color:#475569;font-size:12px;z-index:1}tbody tr{cursor:pointer}tbody tr:hover td,tbody tr.selected td{background:#eef6ff}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900;background:#eef2f7;color:#334155}.bull{background:#e8f7ef;color:#12623a}.bear{background:#fdeaea;color:#9e2f2f}.neutral{background:#eef2f7;color:#334155}.changed{background:#fff0ce;color:#805300}.delta-up{color:#08783f;font-weight:900}.delta-down{color:#aa2d2d;font-weight:900}.detail{margin-top:14px;padding:18px;display:none}.detail.open{display:block}.detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.detail h2{margin:0 0 5px}.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:14px 0}.mini{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:11px}.mini strong{display:block;margin-top:4px}.adjustments{display:grid;gap:8px}.adjustment{border:1px solid #e2e8f0;border-radius:8px;padding:11px}.raw-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.raw-links a,.home-link{display:inline-flex;align-items:center;min-height:38px;border:1px solid #cbd5e1;border-radius:7px;padding:0 12px;text-decoration:none;color:#1d5f99;font-weight:900;background:#fff}.empty{padding:40px;text-align:center;color:#607086;font-weight:800}.error{background:#fff1f1;border:1px solid #f0b9b9;color:#8e2626;border-radius:8px;padding:14px;margin-bottom:14px;display:none}@media(max-width:720px){.shell{padding:14px}.topbar{flex-direction:column}.title{font-size:24px}.toolbar{align-items:stretch}.switch{width:100%}.switch button{flex:1}.toolbar input,.toolbar select{width:100%}.detail-head{flex-direction:column}}
+    *{box-sizing:border-box}
+    body{margin:0;background:#f6f8fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .shell{width:min(100%,1440px);margin:0 auto;padding:24px}
+    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+    .eyebrow{font-size:13px;color:#607086;font-weight:800}
+    .title{margin:4px 0 6px;font-size:30px}
+    .note{color:#607086;line-height:1.55}
+    .toolbar,.card,.table-wrap,.detail{background:#fff;border:1px solid #dce3ec;border-radius:10px;box-shadow:0 1px 2px rgba(22,31,44,.04)}
+    .toolbar{padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+    .switch{display:inline-flex;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#fff}
+    .switch button{appearance:none;border:0;border-right:1px solid #cbd5e1;background:#fff;padding:10px 16px;font-weight:900;color:#475569;cursor:pointer}
+    .switch button:last-child{border-right:0}
+    .switch button.active{background:#1d5f99;color:#fff}
+    .switch button:disabled{cursor:not-allowed;opacity:.45}
+    .toolbar input,.toolbar select{height:40px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:0 11px;color:#172033}
+    .toolbar input{flex:1 1 260px}
+    .toolbar label{font-size:13px;font-weight:800;color:#526173}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+    .card{padding:15px}
+    .label{font-size:12px;color:#697789;font-weight:800}
+    .value{font-size:27px;font-weight:900;margin-top:5px}
+    .sub{font-size:12px;color:#697789;margin-top:4px;line-height:1.4}
+    .version-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#e9f2fc;color:#24547f}
+    .version-badge.v2{background:#f2eafd;color:#63358d}
+    .table-wrap{overflow:auto}
+    .table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 15px;border-bottom:1px solid #e7edf4}
+    .table-head h2{margin:0;font-size:18px}
+    .count{font-size:13px;color:#607086;font-weight:800}
+    table{width:100%;border-collapse:collapse;min-width:1180px}
+    th,td{padding:10px 12px;border-bottom:1px solid #edf1f6;text-align:left;font-size:13px;white-space:nowrap}
+    th{position:sticky;top:0;background:#f2f5f9;color:#475569;font-size:12px;z-index:1}
+    tbody tr{cursor:pointer}
+    tbody tr:hover td,tbody tr.selected td{background:#eef6ff}
+    .stock-link{color:#1d5f99;font-weight:900;text-decoration:none}
+    .stock-link:hover{text-decoration:underline}
+    .stock-link:focus-visible{outline:2px solid #1d5f99;outline-offset:3px;border-radius:2px}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900;background:#eef2f7;color:#334155}
+    .bull{background:#e8f7ef;color:#12623a}
+    .bear{background:#fdeaea;color:#9e2f2f}
+    .neutral{background:#eef2f7;color:#334155}
+    .changed{background:#fff0ce;color:#805300}
+    .delta-up{color:#08783f;font-weight:900}
+    .delta-down{color:#aa2d2d;font-weight:900}
+    .detail{margin-top:14px;padding:18px;display:none}
+    .detail.open{display:block}
+    .detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+    .detail h2{margin:0 0 5px}
+    .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:14px 0}
+    .mini{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:11px}
+    .mini strong{display:block;margin-top:4px}
+    .adjustments{display:grid;gap:8px}
+    .adjustment{border:1px solid #e2e8f0;border-radius:8px;padding:11px}
+    .raw-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+    .raw-links a,.home-link{display:inline-flex;align-items:center;min-height:38px;border:1px solid #cbd5e1;border-radius:7px;padding:0 12px;text-decoration:none;color:#1d5f99;font-weight:900;background:#fff}
+    .empty{padding:40px;text-align:center;color:#607086;font-weight:800}
+    .error{background:#fff1f1;border:1px solid #f0b9b9;color:#8e2626;border-radius:8px;padding:14px;margin-bottom:14px;display:none}
+    @media(max-width:720px){.shell{padding:14px}.topbar{flex-direction:column}.title{font-size:24px}.toolbar{align-items:stretch}.switch{width:100%}.switch button{flex:1}.toolbar input,.toolbar select{width:100%}.detail-head{flex-direction:column}}
   </style>
 </head>
 <body>
@@ -61,6 +117,7 @@
     const pct = value => hasNumber(value) ? `${Number(value).toFixed(1)}%` : 'NA';
     const directionClass = value => String(value || '').includes('偏多') ? 'bull' : String(value || '').includes('偏空') ? 'bear' : 'neutral';
     const currentData = row => currentVersion === 'v2' ? row.v2 : row.v1;
+    const yahooStockUrl = code => `https://tw.stock.yahoo.com/quote/${encodeURIComponent(String(code))}.TW/technical-analysis`;
 
     function setQuery(values) {
       const next = new URL(location.href);
@@ -187,8 +244,9 @@
         const changed = Boolean(row.v1 && row.v2 && row.v1.direction !== row.v2.direction);
         const delta = row.v2?.score_delta;
         const deltaClass = Number(delta) > 0 ? 'delta-up' : Number(delta) < 0 ? 'delta-down' : '';
+        const yahooUrl = yahooStockUrl(row.stock_code);
         return `<tr class="${row.stock_code === selectedCode ? 'selected' : ''}" onclick="openDetail('${esc(row.stock_code)}')">
-          <td><strong>${esc(row.stock_code)}</strong> ${esc(row.stock_name)}</td>
+          <td><a class="stock-link" href="${esc(yahooUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="在 Yahoo 股市查看 ${esc(row.stock_name)}（${esc(row.stock_code)}）">${esc(row.stock_name)} <strong>${esc(row.stock_code)}</strong></a></td>
           <td>${esc(row.industry || 'NA')}</td>
           <td><span class="pill ${directionClass(current.direction)}">${esc(current.direction || 'NA')}</span></td>
           <td><strong>${esc(fmt(current.score))}</strong></td>
@@ -226,7 +284,7 @@
         </div>
         <h3>V2 規則調整</h3>
         <div class="adjustments">${adjustments.length ? adjustments.map(item => `<div class="adjustment"><strong>${esc(item.id)}</strong>　分數 ${esc(fmt(item.score))}<div class="note">${esc(item.explanation || '')}</div></div>`).join('') : '<div class="note">此股票沒有 V2 調整資料，或尚未產生 V2。</div>'}</div>
-        <div class="raw-links">${row.paths.v1 ? `<a href="../${esc(row.paths.v1)}" target="_blank" rel="noopener">開啟 V1 JSON</a>` : ''}${row.paths.v2 ? `<a href="../${esc(row.paths.v2)}" target="_blank" rel="noopener">開啟 V2 JSON</a>` : ''}</div>`;
+        <div class="raw-links"><a href="${esc(yahooStockUrl(row.stock_code))}" target="_blank" rel="noopener noreferrer">Yahoo 股市技術分析</a>${row.paths.v1 ? `<a href="../${esc(row.paths.v1)}" target="_blank" rel="noopener">開啟 V1 JSON</a>` : ''}${row.paths.v2 ? `<a href="../${esc(row.paths.v2)}" target="_blank" rel="noopener">開啟 V2 JSON</a>` : ''}</div>`;
       panel.classList.add('open');
       if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
