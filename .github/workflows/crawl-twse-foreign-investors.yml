@@ -70,11 +70,6 @@ jobs:
             --max-retries 0 \
             --rate-limit-cooldown 180000
 
-      - name: Generate files.json
-        if: steps.existing.outputs.exists != 'true'
-        run: |
-          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
-
       - name: Commit and push changes
         if: steps.existing.outputs.exists != 'true'
         run: |
