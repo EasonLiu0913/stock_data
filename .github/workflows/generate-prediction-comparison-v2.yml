@@ -25,67 +25,88 @@ env:
 
 jobs:
   generate:
-    if: github.event_name != 'schedule' || github.run_started_at < '2026-07-28T00:00:00Z'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+      - name: Check whether the one-time experiment already succeeded
+        id: gate
+        shell: bash
+        run: |
+          if node -e "const fs=require('fs'); const p='data_prediction_runs/20260728/status.json'; if (!fs.existsSync(p)) process.exit(1); const s=JSON.parse(fs.readFileSync(p,'utf8')); process.exit(s.status === 'success' ? 0 : 1)"; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "The 20260728 experiment already succeeded; nothing to rerun."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
         with:
           node-version: '20'
       - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
         id: install
         continue-on-error: true
         run: npm ci 2>&1 | tee /tmp/install.log
       - name: Refresh empty 20260727 institutional data
+        if: steps.gate.outputs.run == 'true'
         id: refresh
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          file="data_twse_institutional_investors/20260727_twse_institutional_investors.json"
-          if [ ! -s "$file" ]; then
-            node scripts/crawl_twse_institutional_investors.js --date 20260727 --max-retries 5 --rate-limit-cooldown 30000 --mismatch-cooldown 30000
-          fi
-          test -s "$file"
-        2>&1 | tee /tmp/refresh.log
+          {
+            file="data_twse_institutional_investors/20260727_twse_institutional_investors.json"
+            if [ ! -s "$file" ]; then
+              node scripts/crawl_twse_institutional_investors.js --date 20260727 --max-retries 5 --rate-limit-cooldown 30000 --mismatch-cooldown 30000
+            fi
+            test -s "$file"
+          } 2>&1 | tee /tmp/refresh.log
       - name: Verify required source data
+        if: steps.gate.outputs.run == 'true'
         id: verify
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          node scripts/check_forecast_required_files.js
-          node scripts/prepare_and_verify_forecast_inputs.js
-        2>&1 | tee /tmp/verify.log
+          {
+            node scripts/check_forecast_required_files.js
+            node scripts/prepare_and_verify_forecast_inputs.js
+          } 2>&1 | tee /tmp/verify.log
       - name: Generate market risk snapshot
+        if: steps.gate.outputs.run == 'true'
         id: risk
         continue-on-error: true
         run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE" 2>&1 | tee /tmp/risk.log
       - name: Normalize non-trading days
+        if: steps.gate.outputs.run == 'true'
         id: calendar
         continue-on-error: true
         run: node scripts/normalize_non_trading_days.js 2>&1 | tee /tmp/calendar.log
       - name: Run tests
+        if: steps.gate.outputs.run == 'true'
         id: tests
         continue-on-error: true
         run: npm test 2>&1 | tee /tmp/tests.log
       - name: Generate unchanged V1 predictions
+        if: steps.gate.outputs.run == 'true'
         id: v1
         continue-on-error: true
         run: node scripts/generate_all_stock_predictions.js 2>&1 | tee /tmp/v1.log
       - name: Generate independent V2 shadow predictions
+        if: steps.gate.outputs.run == 'true'
         id: v2
         continue-on-error: true
         run: node scripts/generate_all_stock_predictions_v2.js --date 20260728 2>&1 | tee /tmp/v2.log
       - name: Compare forecast outputs
+        if: steps.gate.outputs.run == 'true'
         id: compare
         continue-on-error: true
         run: node scripts/compare_prediction_versions.js --date 20260728 2>&1 | tee /tmp/compare.log
       - name: Record and commit pipeline result
-        if: always()
+        if: always() && steps.gate.outputs.run == 'true'
         shell: bash
         env:
           INSTALL: ${{ steps.install.outcome }}
