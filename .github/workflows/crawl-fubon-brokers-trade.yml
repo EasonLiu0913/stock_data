@@ -89,22 +89,54 @@ jobs:
             echo "$dashed is a trading day."
           fi
 
-      - name: Crawl all broker branches
+      - name: Crawl all broker branches with resume checkpoints
         if: steps.calendar.outputs.should_run == 'true'
+        id: crawl
         shell: bash
         run: |
+          set -o pipefail
+          set +e
+
           args="${{ steps.target.outputs.date }}"
           if [ "${{ inputs.force }}" = "true" ]; then
             args="$args --force"
           fi
-          node scripts/scraper_json_driven.js $args
+
+          node scripts/scraper_json_driven.js $args 2>&1 | tee /tmp/fubon-brokers-crawl.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "Crawler exit code: $status"
+          exit 0
 
       - name: Verify broker branch files
         if: steps.calendar.outputs.should_run == 'true'
-        run: node scripts/check_fubon_brokers_trade.js ${{ steps.target.outputs.date }}
+        id: verify
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
 
-      - name: Commit and push changes
-        if: steps.calendar.outputs.should_run == 'true'
+          node scripts/check_fubon_brokers_trade.js "${{ steps.target.outputs.date }}" \
+            2>&1 | tee /tmp/fubon-brokers-verify.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "Verification exit code: $status"
+          exit 0
+
+      - name: Upload partial crawl artifact
+        if: always() && steps.calendar.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fubon-brokers-trade-${{ steps.target.outputs.date }}-${{ github.run_id }}
+          path: |
+            data_fubon_brokers_trade/${{ steps.target.outputs.date }}/
+            /tmp/fubon-brokers-crawl.log
+            /tmp/fubon-brokers-verify.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Commit and push completed and partial results
+        if: always() && steps.calendar.outputs.should_run == 'true'
         shell: bash
         run: |
           target="${{ steps.target.outputs.date }}"
@@ -118,15 +150,43 @@ jobs:
           fi
 
           current_time=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "🏦 Update Fubon brokers trade ${target} - ${current_time}"
+          if [ "${{ steps.verify.outputs.exit_code }}" = "0" ]; then
+            message="🏦 Complete Fubon brokers trade ${target} - ${current_time}"
+          else
+            message="🏦 Checkpoint partial Fubon brokers trade ${target} - ${current_time}"
+          fi
+          git commit -m "$message"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
 
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin main; then
+            if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
             fi
+            git rebase --abort 2>/dev/null || true
             echo "Push failed, retry ${attempt}/5..."
             sleep 5
           done
 
-          echo "Failed to push after 5 attempts."
+          echo "Failed to push after 5 attempts. Partial results remain available as a workflow artifact."
           exit 1
+
+      - name: Mark incomplete crawl as failed after saving progress
+        if: always() && steps.calendar.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          crawl_status="${{ steps.crawl.outputs.exit_code }}"
+          verify_status="${{ steps.verify.outputs.exit_code }}"
+
+          if [ "$crawl_status" != "0" ] || [ "$verify_status" != "0" ]; then
+            echo "Broker crawl is incomplete, but completed CSV files and _crawl-status.json were preserved."
+            echo "Crawler exit code: ${crawl_status:-unknown}"
+            echo "Verification exit code: ${verify_status:-unknown}"
+            exit 1
+          fi
+
+          echo "Broker crawl and verification completed successfully."
