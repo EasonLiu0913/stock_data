@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>股票預測 V1 / V2 比較</title>
+  <style>
+    body{margin:0;background:#f4f6f8;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}.shell{width:min(1120px,calc(100% - 32px));margin:32px auto}.card{background:#fff;border:1px solid #d9e0e8;border-radius:10px;padding:18px;margin:14px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.value{font-size:28px;font-weight:900;margin-top:6px}.muted{color:#667085}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e9edf2;text-align:left;font-size:13px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body><main class="shell"><h1>股票預測 V1 / V2 比較</h1><p class="muted" id="meta">載入中…</p><section class="grid" id="cards"></section><section class="card"><h2>方向改變案例</h2><div style="overflow:auto"><table><thead><tr><th>股票</th><th>V1</th><th>V2</th><th>分數差</th><th>相對強勢</th><th>籌碼×技術</th></tr></thead><tbody id="rows"></tbody></table></div></section></main><script>
+(async()=>{const manifest=await fetch('../data_prediction_comparisons/manifest.json').then(r=>r.json());const data=await fetch(`../${manifest.latest_comparison}`).then(r=>r.json());document.getElementById('meta').textContent=`預測日 ${data.forecast_date} · ${data.status}`;const accuracy=data.accuracy_comparison;const cards=[['共同樣本',data.shared_prediction_count],['方向改變',`${data.forecast_difference.changed_direction_count}（${data.forecast_difference.changed_direction_rate}%）`],['命中率差',accuracy?`${accuracy.deltas.hit_rate>=0?'+':''}${accuracy.deltas.hit_rate}%`:'等待結果日']];document.getElementById('cards').innerHTML=cards.map(([a,b])=>`<article class="card"><div class="muted">${a}</div><div class="value">${b}</div></article>`).join('');document.getElementById('rows').innerHTML=data.forecast_difference.changed_examples.slice(0,100).map(r=>`<tr><td>${r.stock_name||''}（${r.stock_code}）</td><td>${r.v1_direction} / ${r.v1_score}</td><td>${r.v2_direction} / ${r.v2_score}</td><td>${r.score_delta>=0?'+':''}${r.score_delta}</td><td>${r.relative_strength_bucket||''}</td><td>${r.chip_technical_quadrant||''}</td></tr>`).join('')||'<tr><td colspan="6">目前沒有方向改變案例。</td></tr>'})().catch(error=>{document.getElementById('meta').textContent=`載入失敗：${error.message}`});
+</script></body></html>
