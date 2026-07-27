@@ -4,15 +4,6 @@ on:
   workflow_dispatch:
   issues:
     types: [opened]
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/generate_all_stock_predictions_v2.js'
-      - 'scripts/compare_prediction_versions.js'
-      - 'tests/generate_all_stock_predictions_v2.test.js'
-      - '.github/workflows/generate-prediction-comparison-v2.yml'
-  schedule:
-    - cron: '*/5 14 27 7 *'
 
 permissions:
   contents: write
@@ -29,11 +20,13 @@ jobs:
   generate:
     if: github.event_name != 'issues' || github.event.issue.title == '[automation] Run 20260728 V1 V2 forecasts'
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+
       - name: Check whether the one-time experiment already succeeded
         id: gate
         shell: bash
@@ -44,31 +37,64 @@ jobs:
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
+
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'
         with:
           node-version: '20'
+
       - name: Install dependencies
         if: steps.gate.outputs.run == 'true'
         id: install
         continue-on-error: true
         run: npm ci 2>&1 | tee /tmp/install.log
-      - name: Refresh empty 20260727 institutional data
-        if: steps.gate.outputs.run == 'true'
-        id: refresh
+
+      - name: Prepare all 20260727 source data
+        if: steps.gate.outputs.run == 'true' && steps.install.outcome == 'success'
+        id: prepare
         continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           {
-            file="data_twse_institutional_investors/20260727_twse_institutional_investors.json"
-            if [ ! -s "$file" ]; then
-              node scripts/crawl_twse_institutional_investors.js --date 20260727 --max-retries 5 --rate-limit-cooldown 30000 --mismatch-cooldown 30000
+            institutional="data_twse_institutional_investors/20260727_twse_institutional_investors.json"
+            margin="data_twse_margin_balance/20260727_twse_margin_balance.csv"
+            broker="data_fubon_broker_details/fubon_20260727_券商分點進出明細.json"
+
+            if [ ! -s "$institutional" ]; then
+              echo "Refreshing institutional investors data: $institutional"
+              node scripts/crawl_twse_institutional_investors.js \
+                --date 20260727 \
+                --max-retries 5 \
+                --rate-limit-cooldown 30000 \
+                --mismatch-cooldown 30000
             fi
-            test -s "$file"
-          } 2>&1 | tee /tmp/refresh.log
+
+            if [ ! -s "$margin" ]; then
+              echo "Refreshing margin balance data: $margin"
+              node scripts/crawl_twse_margin_balance.js --date 20260727
+            fi
+
+            if [ ! -s "$broker" ]; then
+              echo "Refreshing all-market broker details: $broker"
+              npx playwright install --with-deps chromium
+              node scripts/crawl_fubon_broker_details.js \
+                --date 20260727 \
+                --concurrency 4 \
+                --retries 3 \
+                --min-delay-ms 800 \
+                --max-delay-ms 2500 \
+                --backoff-base-ms 5000 \
+                --checkpoint-size 100
+            fi
+
+            test -s "$institutional"
+            test -s "$margin"
+            test -s "$broker"
+          } 2>&1 | tee /tmp/prepare.log
+
       - name: Verify required source data
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.prepare.outcome == 'success'
         id: verify
         continue-on-error: true
         shell: bash
@@ -78,42 +104,54 @@ jobs:
             node scripts/check_forecast_required_files.js
             node scripts/prepare_and_verify_forecast_inputs.js
           } 2>&1 | tee /tmp/verify.log
+
       - name: Generate market risk snapshot
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.verify.outcome == 'success'
         id: risk
         continue-on-error: true
         run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE" 2>&1 | tee /tmp/risk.log
+
       - name: Normalize non-trading days
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.verify.outcome == 'success'
         id: calendar
         continue-on-error: true
         run: node scripts/normalize_non_trading_days.js 2>&1 | tee /tmp/calendar.log
+
       - name: Run tests
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.verify.outcome == 'success'
         id: tests
         continue-on-error: true
         run: npm test 2>&1 | tee /tmp/tests.log
+
       - name: Generate unchanged V1 predictions
-        if: steps.gate.outputs.run == 'true'
+        if: >-
+          steps.gate.outputs.run == 'true' &&
+          steps.verify.outcome == 'success' &&
+          steps.risk.outcome == 'success' &&
+          steps.calendar.outcome == 'success' &&
+          steps.tests.outcome == 'success'
         id: v1
         continue-on-error: true
         run: node scripts/generate_all_stock_predictions.js 2>&1 | tee /tmp/v1.log
+
       - name: Generate independent V2 shadow predictions
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.v1.outcome == 'success'
         id: v2
         continue-on-error: true
         run: node scripts/generate_all_stock_predictions_v2.js --date 20260728 2>&1 | tee /tmp/v2.log
+
       - name: Compare forecast outputs
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.v2.outcome == 'success'
         id: compare
         continue-on-error: true
         run: node scripts/compare_prediction_versions.js --date 20260728 2>&1 | tee /tmp/compare.log
+
       - name: Record and commit pipeline result
         if: always() && steps.gate.outputs.run == 'true'
         shell: bash
         env:
           INSTALL: ${{ steps.install.outcome }}
-          REFRESH: ${{ steps.refresh.outcome }}
+          PREPARE: ${{ steps.prepare.outcome }}
           VERIFY: ${{ steps.verify.outcome }}
           RISK: ${{ steps.risk.outcome }}
           CALENDAR: ${{ steps.calendar.outcome }}
@@ -125,8 +163,10 @@ jobs:
           mkdir -p data_prediction_runs/20260728
           node - <<'NODE'
           const fs = require('fs');
-          const stages = Object.fromEntries(['INSTALL','REFRESH','VERIFY','RISK','CALENDAR','TESTS','V1','V2','COMPARE'].map(key => [key.toLowerCase(), process.env[key] || 'unknown']));
-          const success = stages.v1 === 'success' && stages.v2 === 'success' && stages.compare === 'success';
+          const stageNames = ['INSTALL','PREPARE','VERIFY','RISK','CALENDAR','TESTS','V1','V2','COMPARE'];
+          const stages = Object.fromEntries(stageNames.map(key => [key.toLowerCase(), process.env[key] || 'skipped']));
+          const required = ['install','prepare','verify','risk','calendar','tests','v1','v2','compare'];
+          const success = required.every(key => stages[key] === 'success');
           fs.writeFileSync('data_prediction_runs/20260728/status.json', JSON.stringify({
             generated_at: new Date().toISOString(),
             base_trade_date: '2026-07-27',
@@ -135,21 +175,44 @@ jobs:
             stages,
           }, null, 2) + '\n');
           NODE
-          for name in install refresh verify risk calendar tests v1 v2 compare; do
+
+          for name in install prepare verify risk calendar tests v1 v2 compare; do
             test -f "/tmp/$name.log" && cp "/tmp/$name.log" "data_prediction_runs/20260728/$name.log"
           done
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_twse_institutional_investors data_normalized data_market_risk data_predictions data_predictions_v2 data_prediction_comparisons data_prediction_runs public/index.html
+          git add \
+            data_twse_institutional_investors \
+            data_twse_margin_balance \
+            data_fubon_broker_details \
+            data_normalized \
+            data_market_risk \
+            data_predictions \
+            data_predictions_v2 \
+            data_prediction_comparisons \
+            data_prediction_runs \
+            public/index.html
+
           if git diff --cached --quiet; then
             echo "No generated changes"
             exit 0
           fi
-          if [ "$V1" = "success" ] && [ "$V2" = "success" ] && [ "$COMPARE" = "success" ]; then
+
+          if [ "$INSTALL" = "success" ] && \
+             [ "$PREPARE" = "success" ] && \
+             [ "$VERIFY" = "success" ] && \
+             [ "$RISK" = "success" ] && \
+             [ "$CALENDAR" = "success" ] && \
+             [ "$TESTS" = "success" ] && \
+             [ "$V1" = "success" ] && \
+             [ "$V2" = "success" ] && \
+             [ "$COMPARE" = "success" ]; then
             message="feat: generate 20260728 V1 and V2 stock forecasts"
           else
             message="fix: record 20260728 dual forecast pipeline failure"
           fi
+
           git commit -m "$message"
           git pull --rebase origin main
           git push origin HEAD:main
