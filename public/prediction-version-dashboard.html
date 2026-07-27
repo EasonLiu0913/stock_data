@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V1 / V2 股票預測切換</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f6f8fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(100%,1440px);margin:0 auto;padding:24px}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.eyebrow{font-size:13px;color:#607086;font-weight:800}.title{margin:4px 0 6px;font-size:30px}.note{color:#607086;line-height:1.55}.toolbar,.card,.table-wrap,.detail{background:#fff;border:1px solid #dce3ec;border-radius:10px;box-shadow:0 1px 2px rgba(22,31,44,.04)}.toolbar{padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}.switch{display:inline-flex;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#fff}.switch button{appearance:none;border:0;border-right:1px solid #cbd5e1;background:#fff;padding:10px 16px;font-weight:900;color:#475569;cursor:pointer}.switch button:last-child{border-right:0}.switch button.active{background:#1d5f99;color:#fff}.switch button:disabled{cursor:not-allowed;opacity:.45}.toolbar input,.toolbar select{height:40px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:0 11px;color:#172033}.toolbar input{flex:1 1 260px}.toolbar label{font-size:13px;font-weight:800;color:#526173}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}.card{padding:15px}.label{font-size:12px;color:#697789;font-weight:800}.value{font-size:27px;font-weight:900;margin-top:5px}.sub{font-size:12px;color:#697789;margin-top:4px;line-height:1.4}.version-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#e9f2fc;color:#24547f}.version-badge.v2{background:#f2eafd;color:#63358d}.table-wrap{overflow:auto}.table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 15px;border-bottom:1px solid #e7edf4}.table-head h2{margin:0;font-size:18px}.count{font-size:13px;color:#607086;font-weight:800}table{width:100%;border-collapse:collapse;min-width:1180px}th,td{padding:10px 12px;border-bottom:1px solid #edf1f6;text-align:left;font-size:13px;white-space:nowrap}th{position:sticky;top:0;background:#f2f5f9;color:#475569;font-size:12px;z-index:1}tbody tr{cursor:pointer}tbody tr:hover td,tbody tr.selected td{background:#eef6ff}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:900;background:#eef2f7;color:#334155}.bull{background:#e8f7ef;color:#12623a}.bear{background:#fdeaea;color:#9e2f2f}.neutral{background:#eef2f7;color:#334155}.changed{background:#fff0ce;color:#805300}.delta-up{color:#08783f;font-weight:900}.delta-down{color:#aa2d2d;font-weight:900}.detail{margin-top:14px;padding:18px;display:none}.detail.open{display:block}.detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.detail h2{margin:0 0 5px}.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:14px 0}.mini{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:11px}.mini strong{display:block;margin-top:4px}.adjustments{display:grid;gap:8px}.adjustment{border:1px solid #e2e8f0;border-radius:8px;padding:11px}.raw-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.raw-links a,.home-link{display:inline-flex;align-items:center;min-height:38px;border:1px solid #cbd5e1;border-radius:7px;padding:0 12px;text-decoration:none;color:#1d5f99;font-weight:900;background:#fff}.empty{padding:40px;text-align:center;color:#607086;font-weight:800}.error{background:#fff1f1;border:1px solid #f0b9b9;color:#8e2626;border-radius:8px;padding:14px;margin-bottom:14px;display:none}@media(max-width:720px){.shell{padding:14px}.topbar{flex-direction:column}.title{font-size:24px}.toolbar{align-items:stretch}.switch{width:100%}.switch button{flex:1}.toolbar input,.toolbar select{width:100%}.detail-head{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div>
+        <div class="eyebrow" id="meta">載入中</div>
+        <h1 class="title">V1 / V2 股票預測切換</h1>
+        <div class="note">V1 是正式預測；V2 是實驗影子版本。此頁顯示預測差異，不等同事後命中率比較。</div>
+      </div>
+      <a class="home-link" href="index.html">回工具首頁</a>
+    </div>
+
+    <div class="error" id="errorBox"></div>
+
+    <section class="toolbar">
+      <div class="switch" aria-label="預測版本">
+        <button type="button" id="v1Button" onclick="setVersion('v1')">V1 正式</button>
+        <button type="button" id="v2Button" onclick="setVersion('v2')">V2 實驗</button>
+      </div>
+      <label for="dateSelect">預測日</label>
+      <select id="dateSelect" onchange="changeDate()"></select>
+      <input id="searchInput" type="search" placeholder="搜尋股票代號、名稱或產業" oninput="renderRows()">
+      <select id="directionFilter" onchange="renderRows()"><option value="">全部方向</option></select>
+      <select id="changedFilter" onchange="renderRows()"><option value="">全部股票</option><option value="changed">只看 V1/V2 方向不同</option><option value="same">只看方向相同</option></select>
+      <select id="quadrantFilter" onchange="renderRows()"><option value="">全部籌碼×技術狀態</option></select>
+    </section>
+
+    <section class="kpis" id="kpis"></section>
+
+    <section class="table-wrap">
+      <div class="table-head"><h2 id="tableTitle">股票清單</h2><div class="count" id="resultCount"></div></div>
+      <table>
+        <thead><tr><th>股票</th><th>產業</th><th>目前版本方向</th><th>目前分數</th><th>V1 方向</th><th>V2 方向</th><th>分數差</th><th>方向改變</th><th>RS 分組</th><th>籌碼×技術</th><th>RSI</th><th>7日相對強弱</th><th>風險</th><th>完整度</th></tr></thead>
+        <tbody id="stockRows"></tbody>
+      </table>
+      <div class="empty" id="emptyState" hidden>沒有符合條件的股票</div>
+    </section>
+
+    <section class="detail" id="detailPanel"></section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    let manifest = null;
+    let payload = null;
+    let currentVersion = params.get('version') === 'v2' ? 'v2' : 'v1';
+    let selectedCode = params.get('code') || '';
+
+    const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    const fmt = value => Number.isFinite(Number(value)) ? Number(value).toFixed(2) : 'NA';
+    const pct = value => Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : 'NA';
+    const directionClass = value => String(value || '').includes('偏多') ? 'bull' : String(value || '').includes('偏空') ? 'bear' : 'neutral';
+    const currentData = row => currentVersion === 'v2' ? row.v2 : row.v1;
+
+    function setQuery(values) {
+      const next = new URL(location.href);
+      Object.entries(values).forEach(([key, value]) => value ? next.searchParams.set(key, value) : next.searchParams.delete(key));
+      history.replaceState(null, '', next);
+    }
+
+    async function fetchJson(file) {
+      const response = await fetch(`../${file}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`讀取失敗：${file}（HTTP ${response.status}）`);
+      return response.json();
+    }
+
+    async function init() {
+      try {
+        manifest = await fetchJson('data_prediction_ui/manifest.json');
+        const requested = params.get('date');
+        const date = requested && manifest.available_dates.includes(requested) ? requested : manifest.latest_date;
+        document.getElementById('dateSelect').innerHTML = manifest.available_dates.slice().reverse().map(item => `<option value="${esc(item)}" ${item === date ? 'selected' : ''}>${item.slice(0,4)}-${item.slice(4,6)}-${item.slice(6,8)}</option>`).join('');
+        await loadDate(date);
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    async function loadDate(date) {
+      payload = await fetchJson(`data_prediction_ui/${date}.json`);
+      if (currentVersion === 'v2' && !payload.versions.v2.available) currentVersion = 'v1';
+      setQuery({ date, version: currentVersion, code: selectedCode });
+      initializeFilters();
+      updateHeader();
+      renderKpis();
+      renderRows();
+      if (selectedCode) openDetail(selectedCode, false);
+    }
+
+    function showError(message) {
+      const box = document.getElementById('errorBox');
+      box.textContent = message;
+      box.style.display = 'block';
+    }
+
+    function initializeFilters() {
+      const directions = [...new Set(payload.rows.flatMap(row => [row.v1?.direction, row.v2?.direction]).filter(Boolean))].sort();
+      const quadrants = [...new Set(payload.rows.map(row => row.v2?.chip_technical_quadrant).filter(Boolean))].sort();
+      document.getElementById('directionFilter').innerHTML = '<option value="">全部方向</option>' + directions.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join('');
+      document.getElementById('quadrantFilter').innerHTML = '<option value="">全部籌碼×技術狀態</option>' + quadrants.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join('');
+    }
+
+    function updateHeader() {
+      const version = payload.versions[currentVersion];
+      document.getElementById('v1Button').classList.toggle('active', currentVersion === 'v1');
+      document.getElementById('v2Button').classList.toggle('active', currentVersion === 'v2');
+      document.getElementById('v2Button').disabled = !payload.versions.v2.available;
+      document.getElementById('quadrantFilter').disabled = currentVersion !== 'v2';
+      document.getElementById('meta').innerHTML = `資料基準日 ${esc(payload.base_trade_date || 'NA')} · 預測日 ${esc(payload.forecast_date || payload.forecast_date_compact)} · <span class="version-badge ${currentVersion}">${currentVersion.toUpperCase()} ${esc(version.methodology_version || '')}</span>`;
+      document.getElementById('tableTitle').textContent = `${currentVersion.toUpperCase()} 股票預測清單`;
+    }
+
+    function setVersion(version) {
+      if (version === 'v2' && !payload?.versions.v2.available) return;
+      currentVersion = version;
+      setQuery({ version, date: payload.forecast_date_compact, code: selectedCode });
+      updateHeader();
+      renderKpis();
+      renderRows();
+      if (selectedCode) openDetail(selectedCode, false);
+    }
+
+    async function changeDate() {
+      selectedCode = '';
+      document.getElementById('detailPanel').classList.remove('open');
+      try {
+        await loadDate(document.getElementById('dateSelect').value);
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    function renderKpis() {
+      const version = payload.versions[currentVersion];
+      const distribution = version.direction_distribution || {};
+      const bullish = Object.entries(distribution).filter(([key]) => key.includes('偏多')).reduce((sum, [,value]) => sum + value, 0);
+      const bearish = Object.entries(distribution).filter(([key]) => key.includes('偏空')).reduce((sum, [,value]) => sum + value, 0);
+      const neutral = version.total_predictions - bullish - bearish;
+      const cards = [
+        ['預測股票', version.total_predictions, `${currentVersion.toUpperCase()} ${version.methodology_version || ''}`],
+        ['偏多', bullish, pct(version.total_predictions ? bullish / version.total_predictions * 100 : null)],
+        ['中性', neutral, pct(version.total_predictions ? neutral / version.total_predictions * 100 : null)],
+        ['偏空', bearish, pct(version.total_predictions ? bearish / version.total_predictions * 100 : null)]
+      ];
+      if (currentVersion === 'v2') cards.push(['與 V1 方向不同', version.changed_direction_count || 0, pct(version.changed_direction_rate)]);
+      document.getElementById('kpis').innerHTML = cards.map(([label,value,sub]) => `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`).join('');
+    }
+
+    function filteredRows() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const direction = document.getElementById('directionFilter').value;
+      const changed = document.getElementById('changedFilter').value;
+      const quadrant = document.getElementById('quadrantFilter').value;
+      return payload.rows.filter(row => {
+        const current = currentData(row);
+        if (!current) return false;
+        const text = `${row.stock_code} ${row.stock_name} ${row.industry || ''}`.toLowerCase();
+        const isChanged = Boolean(row.v1 && row.v2 && row.v1.direction !== row.v2.direction);
+        return (!query || text.includes(query)) &&
+          (!direction || current.direction === direction) &&
+          (!changed || (changed === 'changed' ? isChanged : !isChanged)) &&
+          (!quadrant || row.v2?.chip_technical_quadrant === quadrant);
+      }).sort((a,b) => {
+        const scoreDiff = Number(currentData(b)?.score ?? -999) - Number(currentData(a)?.score ?? -999);
+        return scoreDiff || String(a.stock_code).localeCompare(String(b.stock_code));
+      });
+    }
+
+    function renderRows() {
+      if (!payload) return;
+      const rows = filteredRows();
+      document.getElementById('resultCount').textContent = `顯示 ${rows.length} / ${payload.rows.filter(row => currentData(row)).length} 支`;
+      document.getElementById('emptyState').hidden = rows.length > 0;
+      document.getElementById('stockRows').innerHTML = rows.map(row => {
+        const current = currentData(row);
+        const changed = Boolean(row.v1 && row.v2 && row.v1.direction !== row.v2.direction);
+        const delta = row.v2?.score_delta;
+        const deltaClass = Number(delta) > 0 ? 'delta-up' : Number(delta) < 0 ? 'delta-down' : '';
+        return `<tr class="${row.stock_code === selectedCode ? 'selected' : ''}" onclick="openDetail('${esc(row.stock_code)}')">
+          <td><strong>${esc(row.stock_code)}</strong> ${esc(row.stock_name)}</td>
+          <td>${esc(row.industry || 'NA')}</td>
+          <td><span class="pill ${directionClass(current.direction)}">${esc(current.direction || 'NA')}</span></td>
+          <td><strong>${esc(fmt(current.score))}</strong></td>
+          <td>${row.v1 ? `<span class="pill ${directionClass(row.v1.direction)}">${esc(row.v1.direction || 'NA')}</span>` : 'NA'}</td>
+          <td>${row.v2 ? `<span class="pill ${directionClass(row.v2.direction)}">${esc(row.v2.direction || 'NA')}</span>` : '尚未產生'}</td>
+          <td class="${deltaClass}">${row.v2 ? esc(fmt(delta)) : 'NA'}</td>
+          <td>${changed ? '<span class="pill changed">有改變</span>' : '相同'}</td>
+          <td>${esc(row.v2?.relative_strength_bucket || 'NA')}</td>
+          <td>${esc(row.v2?.chip_technical_quadrant || 'NA')}</td>
+          <td>${esc(fmt(row.features.rsi14))}</td>
+          <td>${esc(fmt(row.features.relative_strength))}%</td>
+          <td>${esc(current.risk_label || 'NA')}</td>
+          <td>${esc(pct(current.data_completeness))}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openDetail(code, scroll = true) {
+      const row = payload.rows.find(item => String(item.stock_code) === String(code));
+      if (!row) return;
+      selectedCode = String(code);
+      setQuery({ code: selectedCode, date: payload.forecast_date_compact, version: currentVersion });
+      renderRows();
+      const current = currentData(row);
+      const adjustments = row.v2?.adjustments || [];
+      const panel = document.getElementById('detailPanel');
+      panel.innerHTML = `<div class="detail-head"><div><div class="eyebrow">${esc(row.industry || '未分類')}</div><h2>${esc(row.stock_name)}（${esc(row.stock_code)}）</h2><div class="note">目前顯示 ${currentVersion.toUpperCase()}；可直接切換版本觀察相同股票。</div></div><span class="pill ${directionClass(current?.direction)}">${esc(current?.direction || 'NA')} · ${esc(fmt(current?.score))}</span></div>
+        <div class="detail-grid">
+          <div class="mini">V1 分數／方向<strong>${esc(fmt(row.v1?.score))} · ${esc(row.v1?.direction || 'NA')}</strong></div>
+          <div class="mini">V2 分數／方向<strong>${esc(fmt(row.v2?.score))} · ${esc(row.v2?.direction || '尚未產生')}</strong></div>
+          <div class="mini">V2 分數差<strong>${esc(fmt(row.v2?.score_delta))}</strong></div>
+          <div class="mini">籌碼×技術<strong>${esc(row.v2?.chip_technical_quadrant || 'NA')}</strong></div>
+          <div class="mini">相對強弱分組<strong>${esc(row.v2?.relative_strength_bucket || 'NA')}</strong></div>
+          <div class="mini">RSI / 7日RS<strong>${esc(fmt(row.features.rsi14))} / ${esc(fmt(row.features.relative_strength))}%</strong></div>
+        </div>
+        <h3>V2 規則調整</h3>
+        <div class="adjustments">${adjustments.length ? adjustments.map(item => `<div class="adjustment"><strong>${esc(item.id)}</strong>　分數 ${esc(fmt(item.score))}<div class="note">${esc(item.explanation || '')}</div></div>`).join('') : '<div class="note">此股票沒有 V2 調整資料，或尚未產生 V2。</div>'}</div>
+        <div class="raw-links">${row.paths.v1 ? `<a href="../${esc(row.paths.v1)}" target="_blank" rel="noopener">開啟 V1 JSON</a>` : ''}${row.paths.v2 ? `<a href="../${esc(row.paths.v2)}" target="_blank" rel="noopener">開啟 V2 JSON</a>` : ''}</div>`;
+      panel.classList.add('open');
+      if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    init();
+  </script>
+</body>
+</html>
