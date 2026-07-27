@@ -182,6 +182,103 @@
             border-bottom-color: #1e40af;
         }
 
+        .stock-name-button {
+            appearance: none;
+            border: 0;
+            border-bottom: 1px dashed #2563eb;
+            background: transparent;
+            color: #1d4ed8;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 900;
+            padding: 0.1rem 0;
+        }
+
+        .stock-name-button:hover,
+        .stock-name-button:focus-visible {
+            color: #1e40af;
+            border-bottom-style: solid;
+            outline: none;
+        }
+
+        .stock-name-button::after {
+            content: '＋';
+            display: inline-block;
+            margin-left: 0.35rem;
+            font-size: 0.8rem;
+        }
+
+        .stock-name-button[aria-expanded="true"]::after {
+            content: '－';
+        }
+
+        .expanded-stock-row {
+            background: #eff6ff;
+        }
+
+        .history-row:hover {
+            background: transparent;
+        }
+
+        .history-row > td {
+            padding: 0;
+            background: #f8fafc;
+            border-bottom: 2px solid #bfdbfe;
+            text-align: left;
+            white-space: normal;
+        }
+
+        .history-panel {
+            padding: 1rem 1.25rem 1.25rem;
+        }
+
+        .history-title {
+            color: #1e3a8a;
+            font-size: 1rem;
+            font-weight: 900;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #dbeafe;
+            border-radius: 7px;
+            background: #ffffff;
+        }
+
+        table.history-table {
+            width: auto;
+            min-width: 640px;
+            font-size: 0.86rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.6rem 0.75rem;
+        }
+
+        .history-table .history-date-cell {
+            width: 138px;
+            min-width: 138px;
+        }
+
+        .history-table th {
+            position: static;
+            background: #dbeafe;
+            color: #1e3a8a;
+            cursor: default;
+        }
+
+        .history-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .history-empty {
+            color: #64748b;
+            font-weight: 700;
+            padding: 0.5rem 0;
+        }
+
         .positive {
             color: #dc2626;
             font-weight: 900;
@@ -309,8 +406,11 @@
         let quoteMap = {};
         let smaRangeMap = {};
         let tenDayMarginDecreaseMap = {};
+        let tenDayMarginHistoryMap = {};
+        let tenDayPriceChangeMap = {};
         let tenDayInstitutionalMap = {};
         let tenDayVolumeMap = {};
+        let expandedStockCode = '';
         let columnView = 'compact';
         let marginThreshold = 'over10000';
         let sortState = { key: 'tenDayMarginDecrease', direction: 'desc' };
@@ -335,6 +435,17 @@
         function formatDate(dateStr) {
             if (!/^\d{8}$/.test(String(dateStr || ''))) return dateStr || '';
             return `${dateStr.slice(0, 4)}/${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}`;
+        }
+
+        function formatDateWithWeekday(dateStr) {
+            if (!/^\d{8}$/.test(String(dateStr || ''))) return dateStr || '';
+            const year = Number(dateStr.slice(0, 4));
+            const month = Number(dateStr.slice(4, 6));
+            const day = Number(dateStr.slice(6, 8));
+            const weekday = ['日', '一', '二', '三', '四', '五', '六'][
+                new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+            ];
+            return `${formatDate(dateStr)}（${weekday}）`;
         }
 
         function parseNumber(value) {
@@ -732,8 +843,10 @@
             }));
 
             tenDayMarginDecreaseMap = {};
-            csvTexts.forEach(csvText => {
+            tenDayMarginHistoryMap = {};
+            csvTexts.forEach((csvText, index) => {
                 if (!csvText) return;
+                const date = historyFiles[index].slice(0, 8);
                 parseCsv(csvText).slice(1).forEach(row => {
                     const code = normalizeCell(row[0]);
                     const previousBalance = parseNumber(row[5]);
@@ -741,6 +854,16 @@
                     if (!code || previousBalance === null || currentBalance === null) return;
                     tenDayMarginDecreaseMap[code] =
                         (tenDayMarginDecreaseMap[code] || 0) + previousBalance - currentBalance;
+                    if (!tenDayMarginHistoryMap[code]) tenDayMarginHistoryMap[code] = [];
+                    tenDayMarginHistoryMap[code].push({
+                        date,
+                        previousBalance,
+                        currentBalance,
+                        balanceChange: currentBalance - previousBalance,
+                        balanceChangePercent: previousBalance
+                            ? ((currentBalance - previousBalance) / previousBalance) * 100
+                            : null
+                    });
                 });
             });
         }
@@ -760,12 +883,13 @@
                     fetchJson(`${basePath}/${MI_INDEX_DATA_DIR}/${date}_twse_mi_index.json`)
                         .catch(() => null)
                 ]);
-                return { institutionalPayload, miIndexPayload };
+                return { date, institutionalPayload, miIndexPayload };
             }));
 
             tenDayInstitutionalMap = {};
             tenDayVolumeMap = {};
-            dailyPayloads.forEach(({ institutionalPayload, miIndexPayload }) => {
+            tenDayPriceChangeMap = {};
+            dailyPayloads.forEach(({ date, institutionalPayload, miIndexPayload }) => {
                 (institutionalPayload?.data || []).forEach(row => {
                     const code = normalizeCell(row[0]);
                     if (!code) return;
@@ -787,8 +911,12 @@
                 (quoteTable?.data || []).forEach(row => {
                     const code = normalizeCell(row[0]);
                     const volume = parseNumber(row[2]);
-                    if (!code || volume === null) return;
-                    tenDayVolumeMap[code] = (tenDayVolumeMap[code] || 0) + volume;
+                    if (!code) return;
+                    if (volume !== null) {
+                        tenDayVolumeMap[code] = (tenDayVolumeMap[code] || 0) + volume;
+                    }
+                    if (!tenDayPriceChangeMap[code]) tenDayPriceChangeMap[code] = {};
+                    tenDayPriceChangeMap[code][date] = getPriceChangePercent(row);
                 });
             });
         }
@@ -820,6 +948,7 @@
             document.getElementById('loading').style.display = 'block';
             document.getElementById('dataTable').style.display = 'none';
             document.getElementById('error').style.display = 'none';
+            expandedStockCode = '';
 
             try {
                 const basePath = getBasePath();
@@ -1049,6 +1178,70 @@
             return displayFields;
         }
 
+        function toggleStockHistory(code) {
+            expandedStockCode = expandedStockCode === code ? '' : code;
+            renderTable();
+        }
+
+        function renderStockHistory(row, colspan) {
+            const code = normalizeCell(row[0]);
+            const name = normalizeCell(row[1]);
+            const history = tenDayMarginHistoryMap[code] || [];
+            if (history.length === 0) {
+                return `
+                    <tr class="history-row">
+                        <td colspan="${colspan}">
+                            <div class="history-panel">
+                                <div class="history-title">${code} ${name}｜近 10 日融資餘額</div>
+                                <div class="history-empty">目前沒有可顯示的近 10 日資料。</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            const historyRows = history.map(item => {
+                const balanceClass = item.balanceChange > 0 ? 'positive' : item.balanceChange < 0 ? 'negative' : 'muted';
+                const priceChange = tenDayPriceChangeMap[code]?.[item.date] ?? null;
+                const priceClass = priceChange > 0 ? 'positive' : priceChange < 0 ? 'negative' : 'muted';
+                return `
+                    <tr>
+                        <td class="text-cell history-date-cell">${formatDateWithWeekday(item.date)}</td>
+                        <td>${formatNumber(item.previousBalance)}</td>
+                        <td><strong>${formatNumber(item.currentBalance)}</strong></td>
+                        <td class="${balanceClass}">${formatSignedNumber(item.balanceChange)}</td>
+                        <td class="${balanceClass}">${formatSignedPercent(item.balanceChangePercent)}</td>
+                        <td class="${priceClass}">${formatSignedPercent(priceChange)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <tr class="history-row">
+                    <td colspan="${colspan}">
+                        <div class="history-panel">
+                            <div class="history-title">${code} ${name}｜近 ${history.length} 個交易日融資餘額與股價漲跌幅</div>
+                            <div class="history-table-wrap">
+                                <table class="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-cell history-date-cell">日期</th>
+                                            <th>融資前日餘額</th>
+                                            <th>融資今日餘額</th>
+                                            <th>融資增減</th>
+                                            <th>融資增減%</th>
+                                            <th>股價漲跌幅%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${historyRows}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
         function renderTable() {
             const tableHead = document.getElementById('tableHead');
             const tableBody = document.getElementById('tableBody');
@@ -1070,6 +1263,8 @@
             }
 
             tableBody.innerHTML = displayedRows.map(row => {
+                const stockCode = normalizeCell(row[0]);
+                const isExpanded = expandedStockCode === stockCode;
                 const cells = displayFields.map(field => {
                     if (field.type === 'tenDayMarginDecrease') {
                         const value = getTenDayMarginDecrease(row);
@@ -1136,9 +1331,23 @@
                     if (index === 0 && value) {
                         return `<td${classAttr}><a href="${getStockLink(value)}" target="_blank">${value}</a></td>`;
                     }
+                    if (index === 1 && value) {
+                        return `
+                            <td${classAttr}>
+                                <button
+                                    type="button"
+                                    class="stock-name-button"
+                                    aria-expanded="${isExpanded}"
+                                    onclick='toggleStockHistory(${JSON.stringify(stockCode)})'
+                                >${text}</button>
+                            </td>
+                        `;
+                    }
                     return `<td${classAttr}>${text}</td>`;
                 }).join('');
-                return `<tr>${cells}</tr>`;
+                const rowClass = isExpanded ? ' class="expanded-stock-row"' : '';
+                const historyRow = isExpanded ? renderStockHistory(row, displayFields.length) : '';
+                return `<tr${rowClass}>${cells}</tr>${historyRow}`;
             }).join('');
         }
 
