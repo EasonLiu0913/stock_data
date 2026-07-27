@@ -1,0 +1,73 @@
+name: Generate 20260728 V1 and V2 predictions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/generate_all_stock_predictions_v2.js'
+      - 'scripts/compare_prediction_versions.js'
+      - 'tests/generate_all_stock_predictions_v2.test.js'
+      - '.github/workflows/generate-prediction-comparison-v2.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-prediction-comparison-v2-20260728
+  cancel-in-progress: false
+
+env:
+  FORECAST_BASE_DATE: '2026-07-27'
+  FORECAST_TARGET_DATE: '2026-07-28'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Refresh empty 20260727 institutional data
+        shell: bash
+        run: |
+          file="data_twse_institutional_investors/20260727_twse_institutional_investors.json"
+          if [ ! -s "$file" ]; then
+            node scripts/crawl_twse_institutional_investors.js --date 20260727 --max-retries 5 --rate-limit-cooldown 30000 --mismatch-cooldown 30000
+          fi
+          test -s "$file"
+      - name: Verify required source data
+        run: |
+          node scripts/check_forecast_required_files.js
+          node scripts/prepare_and_verify_forecast_inputs.js
+      - name: Generate market risk snapshot
+        run: node scripts/generate_market_risk_snapshot.js --date "$FORECAST_BASE_DATE"
+      - name: Normalize non-trading days
+        run: node scripts/normalize_non_trading_days.js
+      - name: Run tests
+        run: npm test
+      - name: Generate unchanged V1 predictions
+        run: node scripts/generate_all_stock_predictions.js
+      - name: Generate independent V2 shadow predictions
+        run: node scripts/generate_all_stock_predictions_v2.js --date 20260728
+      - name: Compare forecast outputs
+        run: node scripts/compare_prediction_versions.js --date 20260728
+      - name: Commit both prediction versions
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_twse_institutional_investors data_normalized data_market_risk data_predictions data_predictions_v2 data_prediction_comparisons public/index.html
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "feat: generate 20260728 V1 and V2 stock forecasts"
+          git pull --rebase origin main
+          git push origin HEAD:main
