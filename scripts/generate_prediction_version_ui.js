@@ -56,6 +56,7 @@ function countBy(rows, selector) {
 }
 
 function numberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -197,12 +198,13 @@ function main() {
   writeJson(path.join(UI_ROOT, `${date}.json`), payload);
   const previousManifest = readJson(path.join(UI_ROOT, 'manifest.json'), {});
   const availableDates = [...new Set([...(previousManifest.available_dates || []), date])].sort();
+  const latestDate = availableDates.at(-1);
   writeJson(path.join(UI_ROOT, 'manifest.json'), {
     schema_version: 1,
     generated_at: payload.generated_at,
-    latest_date: date,
+    latest_date: latestDate,
     available_dates: availableDates,
-    latest_data: `data_prediction_ui/${date}.json`
+    latest_data: `data_prediction_ui/${latestDate}.json`
   });
 
   const indexUpdated = updateIndex();
@@ -224,4 +226,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { main, normalizeCompleteness, normalizeVersion };
+module.exports = { main, normalizeCompleteness, normalizeVersion, numberOrNull };
