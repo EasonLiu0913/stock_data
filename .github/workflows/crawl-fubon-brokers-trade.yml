@@ -102,7 +102,11 @@ jobs:
             args="$args --force"
           fi
 
-          node scripts/scraper_json_driven.js $args 2>&1 | tee /tmp/fubon-brokers-crawl.log
+          # The job limit is 330 minutes. Stop crawling at 300 minutes so the
+          # remaining time can be used to verify, upload, commit and push partial results.
+          timeout --signal=TERM --kill-after=30s 300m \
+            node scripts/scraper_json_driven.js $args \
+            2>&1 | tee /tmp/fubon-brokers-crawl.log
           status=${PIPESTATUS[0]}
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           echo "Crawler exit code: $status"
