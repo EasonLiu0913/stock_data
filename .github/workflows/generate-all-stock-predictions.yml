@@ -16,8 +16,6 @@ on:
 permissions:
   contents: write
 
-# V1 and V2 are separate workflows, but share one lock so they cannot write
-# prediction outputs to main at the same time.
 concurrency:
   group: manual-stock-prediction-generation
   cancel-in-progress: false
@@ -51,10 +49,7 @@ jobs:
           INPUT_FORECAST_DATE: ${{ inputs.forecast_date }}
           FORCE_RUN: ${{ inputs.force }}
         run: |
-          node scripts/resolve_forecast_dates.js \
-            --target-date "$INPUT_FORECAST_DATE" \
-            --github-env > /tmp/forecast-dates.env
-
+          node scripts/resolve_forecast_dates.js --target-date "$INPUT_FORECAST_DATE" --github-env > /tmp/forecast-dates.env
           cat /tmp/forecast-dates.env >> "$GITHUB_ENV"
           set -a
           source /tmp/forecast-dates.env
@@ -65,19 +60,15 @@ jobs:
 
           echo "## V1 預測執行日期" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 資料基準交易日：\`$FORECAST_BASE_DATE_ISO\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 預測目標交易日：\`$FORECAST_TARGET_DATE_ISO\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 強制重新產生：\`$FORCE_RUN\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 資料基準交易日：$FORECAST_BASE_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 預測目標交易日：$FORECAST_TARGET_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 強制重新產生：$FORCE_RUN" >> "$GITHUB_STEP_SUMMARY"
 
           existing_manifest="data_predictions/$FORECAST_TARGET_DATE/manifest.json"
           existing_status="data_predictions/$FORECAST_TARGET_DATE/generation-status.txt"
-          if [ "$FORCE_RUN" != "true" ] && \
-             [ -s "$existing_manifest" ] && \
-             { [ ! -f "$existing_status" ] || [ "$(tr -d '\r\n' < "$existing_status")" = "success" ]; }; then
+          if [ "$FORCE_RUN" != "true" ] && [ -s "$existing_manifest" ] && { [ ! -f "$existing_status" ] || [ "$(tr -d '\r\n' < "$existing_status")" = "success" ]; }; then
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "同日期 V1 成功結果已存在，本次未重複執行。需要覆寫時請勾選 force。" >> "$GITHUB_STEP_SUMMARY"
-            echo "V1 output already exists for $FORECAST_TARGET_DATE; skipping."
+            echo "V1 output exists; refreshing viewer without recalculating predictions."
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
@@ -135,28 +126,33 @@ jobs:
         if: always() && steps.dates.outputs.run == 'true'
         run: git restore --worktree -- data_history_sma/non_trading_days.json
 
-      - name: Commit V1 generation result
-        if: steps.dates.outputs.run == 'true'
+      - name: Generate V1 V2 HTML viewer data
+        if: always() && steps.dates.outputs.target_date != ''
+        run: node scripts/generate_prediction_version_ui.js --date "${{ steps.dates.outputs.target_date }}"
+
+      - name: Commit V1 result and viewer
+        if: always() && steps.dates.outputs.target_date != ''
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data_normalized data_market_risk data_predictions public/index.html
+          git add data_normalized data_market_risk data_predictions data_prediction_ui public/index.html public/prediction-version-dashboard.html
           if git diff --cached --quiet; then
-            echo "No generated changes"
+            echo "No V1 or viewer changes"
             exit 0
           fi
 
-          if [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
-            message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 stock forecasts"
+          if [ "${{ steps.dates.outputs.run }}" != "true" ]; then
+            message="feat: publish ${FORECAST_TARGET_DATE} V1 V2 prediction viewer"
+          elif [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
+            message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 forecasts and viewer"
           else
-            message="fix: record verified V1 forecast generation failure"
+            message="fix: record ${FORECAST_TARGET_DATE} V1 generation failure"
           fi
           git commit -m "$message"
 
           if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before rebase:"
             git status --short
             exit 1
           fi
@@ -166,11 +162,9 @@ jobs:
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
-            echo "V1 push failed; retry ${attempt}/5"
             sleep 5
           done
 
-          echo "V1 push failed after 5 attempts"
           exit 1
 
       - name: Mark V1 generation failure
