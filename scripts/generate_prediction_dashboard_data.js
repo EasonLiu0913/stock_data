@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const PREDICTION_DIR = path.join(ROOT, 'data_predictions');
@@ -16,6 +17,10 @@ function readJson(file, fallback = null) {
   } catch {
     return fallback;
   }
+}
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
 }
 
 function round(value, digits = 2) {
@@ -519,7 +524,8 @@ function main() {
   const firstPayload = files.length ? readJson(path.join(predictionDir, files[0]), {}) : {};
   const marketHistory = loadMarketHistory(firstPayload.base_trade_date);
   const stocks = files.map((file) => {
-    const payload = readJson(path.join(predictionDir, file), {});
+    const rawPayload = fs.readFileSync(path.join(predictionDir, file), 'utf8');
+    const payload = JSON.parse(rawPayload);
     const meta = stockMeta[payload.stock_code] || {};
     const forecastCompact = compactDate(payload.forecast_date);
     const reversal = reversalSignals(priceHistory.get(payload.stock_code));
@@ -532,6 +538,7 @@ function main() {
       base_trade_date: payload.base_trade_date,
       report_file: `prediction-stock.html?date=${forecastCompact}&code=${payload.stock_code}`,
       json_file: `${forecastCompact}/${payload.stock_code}.json`,
+      forecast_source_sha256: sha256(rawPayload),
       final_direction_label: payload.final_direction_label,
       raw_direction_label: payload.raw_direction_label,
       direction_score: payload.direction_score,
