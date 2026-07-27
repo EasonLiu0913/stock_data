@@ -1,81 +1,121 @@
-name: Replay and compare V1 / V2 predictions
+name: Compare V1 and V2 replay results (manual)
 
 on:
   workflow_dispatch:
     inputs:
       date:
-        description: Forecast date in YYYYMMDD; defaults to latest V2 date
+        description: Forecast/result date in YYYYMMDD; defaults to latest V2 date
         required: false
-  push:
-    branches: [main]
-    paths:
-      - 'data_fubon/fubon_20??????_sma.json'
-  schedule:
-    - cron: '30 13 * * 1-5'
+        default: ''
+      force:
+        description: Regenerate replay comparison when the date already has comparison output
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
 
 concurrency:
-  group: replay-prediction-comparison-v2
+  group: manual-prediction-replay-comparison
   cancel-in-progress: false
 
 jobs:
-  replay:
+  replay-and-compare:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Resolve comparison date
         id: date
         shell: bash
         env:
-          INPUT_DATE: ${{ github.event.inputs.date }}
+          INPUT_DATE: ${{ inputs.date }}
+          FORCE_RUN: ${{ inputs.force }}
         run: |
           if [ -n "$INPUT_DATE" ]; then
             date="$INPUT_DATE"
           else
-            date=$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('data_predictions_v2/manifest.json','utf8')); process.stdout.write(m.latest_date);")
+            date=$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('data_predictions_v2/manifest.json','utf8')); process.stdout.write(m.latest_date || m.forecast_date_compact || '');")
+          fi
+
+          if ! [[ "$date" =~ ^20[0-9]{6}$ ]]; then
+            echo "Unable to resolve a valid comparison date: $date"
+            exit 1
+          fi
+
+          test -s "data_predictions/$date/manifest.json" || {
+            echo "Missing V1 forecast manifest for $date";
+            exit 1;
+          }
+          test -s "data_predictions_v2/$date/manifest.json" || {
+            echo "Missing V2 forecast manifest for $date";
+            exit 1;
+          }
+          test -s "data_fubon/fubon_${date}_sma.json" || {
+            echo "Actual result-day price file is not ready: data_fubon/fubon_${date}_sma.json";
+            exit 1;
+          }
+
+          if [ "$FORCE_RUN" != "true" ] && [ -s "data_prediction_comparisons/$date/comparison.json" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Comparison already exists for $date. Use force=true for an intentional rerun."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
           fi
           echo "date=$date" >> "$GITHUB_OUTPUT"
-      - name: Check result-day prices
-        id: prices
-        shell: bash
-        run: |
-          file="data_fubon/fubon_${{ steps.date.outputs.date }}_sma.json"
-          if [ -s "$file" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Actual price file is not ready: $file"
-          fi
-      - name: Replay unchanged V1
-        if: steps.prices.outputs.ready == 'true'
+
+      - name: Replay V1
+        if: steps.date.outputs.run == 'true'
         run: node scripts/generate_prediction_replay.js --date "${{ steps.date.outputs.date }}"
+
       - name: Replay V2 with five evaluation angles
-        if: steps.prices.outputs.ready == 'true'
+        if: steps.date.outputs.run == 'true'
         run: node scripts/generate_prediction_replay_v2.js --date "${{ steps.date.outputs.date }}" --cost-bps 30
-      - name: Generate V1 / V2 accuracy comparison
-        if: steps.prices.outputs.ready == 'true'
+
+      - name: Generate V1 and V2 accuracy comparison
+        if: steps.date.outputs.run == 'true'
         run: node scripts/compare_prediction_versions.js --date "${{ steps.date.outputs.date }}"
+
       - name: Commit replay comparison
-        if: steps.prices.outputs.ready == 'true'
+        if: steps.date.outputs.run == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add data_predictions data_predictions_v2 data_prediction_comparisons
           if git diff --cached --quiet; then
             echo "No replay changes"
             exit 0
           fi
+
           git commit -m "feat: compare V1 and V2 forecast accuracy for ${{ steps.date.outputs.date }}"
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Replay comparison push failed; retry ${attempt}/5"
+            sleep 5
+          done
+
+          echo "Replay comparison push failed after 5 attempts"
+          exit 1
