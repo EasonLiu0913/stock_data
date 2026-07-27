@@ -2,6 +2,8 @@ name: Generate 20260728 V1 and V2 predictions
 
 on:
   workflow_dispatch:
+  issues:
+    types: [opened]
   push:
     branches: [main]
     paths:
@@ -25,6 +27,7 @@ env:
 
 jobs:
   generate:
+    if: github.event_name != 'issues' || github.event.issue.title == '[automation] Run 20260728 V1 V2 forecasts'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
