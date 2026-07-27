@@ -973,6 +973,55 @@ function conceptFailureSummaries(allRows, obviousMisses) {
   return failureGroups(allRows, obviousMisses, (row) => namesByCode.get(String(row.stock_code)) || []);
 }
 
+function buildReplayDashboardPayload(rows, summaryPayload, mistakesPayload) {
+  const namesByCode = conceptNamesByCode();
+  return {
+    replay_schema_version: REPLAY_SCHEMA_VERSION,
+    generated_at: summaryPayload.generated_at,
+    prediction_date: summaryPayload.prediction_date,
+    actual_trade_date: summaryPayload.actual_trade_date,
+    rows: rows.map((row) => ({
+      stock_code: row.stock_code,
+      stock_name: row.stock_name,
+      industry: row.industry,
+      report_file: row.report_file,
+      verified: Boolean(row.verified),
+      eligibility_status: row.outcome_eligibility?.status || 'unknown',
+      eligibility_reasons: row.outcome_eligibility?.reasons || [],
+      prediction: {
+        final_direction_label: row.prediction?.final_direction_label || null,
+        direction_score: row.prediction?.direction_score ?? null,
+        strategy_tags: row.prediction?.strategy_tags || [],
+      },
+      actual: row.actual ? {
+        close_return: row.actual.close_return,
+        mood_label: row.actual.mood_label,
+        pattern_tags: row.actual.pattern_tags || [],
+      } : null,
+      prediction_match_label: row.prediction_match_label || null,
+      reason_tags: row.reason_tags || [],
+      concepts: namesByCode.get(String(row.stock_code)) || [],
+      factor_states: row.causal_analysis?.prediction_time_factor_states || [],
+      market_relative: row.market_relative ? {
+        classification: row.market_relative.classification,
+        market_percentile: row.market_relative.market_percentile,
+        industry_percentile: row.market_relative.industry_percentile,
+      } : null,
+      forecast_targets: row.forecast_target_evaluation ? {
+        any_scenario_close_hit: row.forecast_target_evaluation.any_scenario_close_hit,
+        any_scenario_range_overlap: row.forecast_target_evaluation.any_scenario_range_overlap,
+      } : null,
+    })),
+    groups: {
+      by_reason: mistakesPayload.by_reason,
+      by_industry: mistakesPayload.by_industry,
+      by_strategy_tag: mistakesPayload.by_strategy_tag,
+      by_concept: mistakesPayload.by_concept,
+      causal_hypotheses: mistakesPayload.causal_hypotheses,
+    },
+  };
+}
+
 function summarizeReturnSet(rows) {
   const values = rows.map((row) => row.actual?.close_return).filter(Number.isFinite);
   const upCount = values.filter((value) => value > 0).length;
@@ -1324,7 +1373,9 @@ function main() {
     path.join(predictionDir, 'replay.json'),
     path.join(predictionDir, 'replay-summary.json'),
     path.join(predictionDir, 'replay-mistakes.json'),
+    path.join(predictionDir, 'replay-dashboard.json'),
   ];
+  const dashboardPayload = buildReplayDashboardPayload(rows, summaryPayload, mistakesPayload);
 
   if (!args.dryRun) {
     writeJsonAtomic(outputs[0], {
@@ -1338,6 +1389,7 @@ function main() {
     });
     writeJsonAtomic(outputs[1], summaryPayload);
     writeJsonAtomic(outputs[2], mistakesPayload);
+    writeJsonAtomic(outputs[3], dashboardPayload);
   }
 
   console.log(JSON.stringify({
@@ -1373,6 +1425,7 @@ module.exports = {
   actualPattern,
   attachMarketBreadth,
   buildMarketBreadth,
+  buildReplayDashboardPayload,
   buildReplayRow,
   causalAnalysis,
   countFailureReasons,

@@ -5,12 +5,44 @@ const assert = require('node:assert/strict');
 
 const {
   attachMarketBreadth,
+  buildReplayDashboardPayload,
   buildReplayRow,
   failureGroups,
   matchPrediction,
   reasonTags,
   validateReplayDates,
 } = require('../scripts/generate_prediction_replay');
+
+test('dashboard payload keeps every compact row needed for full-list drilldown', () => {
+  const rows = [{
+    stock_code: 'TEST',
+    stock_name: 'Test',
+    industry: '測試業',
+    report_file: 'prediction-stock.html?code=TEST',
+    verified: true,
+    outcome_eligibility: { status: 'eligible', reasons: [] },
+    prediction: { final_direction_label: '偏多', direction_score: 5, strategy_tags: ['籌碼同步偏多'] },
+    actual: { close_return: 2.5, mood_label: '偏多', pattern_tags: ['收高'] },
+    prediction_match_label: '明顯準確',
+    reason_tags: ['方向正確'],
+    causal_analysis: { prediction_time_factor_states: ['chip_aligned'] },
+    market_relative: { classification: 'relative_leadership', market_percentile: 90, industry_percentile: 80 },
+    forecast_target_evaluation: { any_scenario_close_hit: true, any_scenario_range_overlap: true },
+  }];
+  const summary = {
+    generated_at: '2026-07-27T00:00:00.000Z',
+    prediction_date: '2026-07-27',
+    actual_trade_date: '2026-07-27',
+  };
+  const groups = { by_reason: [], by_industry: [], by_strategy_tag: [], by_concept: [], causal_hypotheses: [] };
+  const payload = buildReplayDashboardPayload(rows, summary, groups);
+
+  assert.equal(payload.rows.length, 1);
+  assert.equal(payload.rows[0].prediction_match_label, '明顯準確');
+  assert.deepEqual(payload.rows[0].prediction.strategy_tags, ['籌碼同步偏多']);
+  assert.deepEqual(payload.rows[0].factor_states, ['chip_aligned']);
+  assert.deepEqual(payload.groups.by_strategy_tag, []);
+});
 
 function stock(overrides = {}) {
   return {
