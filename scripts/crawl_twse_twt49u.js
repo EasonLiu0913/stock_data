@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -9,6 +10,7 @@ const OUTPUT_DIR = path.join(__dirname, '../data_twse_twt49u');
 const RATE_LIMIT_STATUS_CODES = new Set([307, 429, 503]);
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 90000;
+const DEFAULT_MIN_ROW_RATIO = 0.5;
 
 function getArg(args, flag) {
   const index = args.indexOf(flag);
@@ -132,10 +134,113 @@ function refreshFilesJson(outputDir = OUTPUT_DIR) {
   return outputPath;
 }
 
+function serializePayload(payload) {
+  return `${JSON.stringify(payload, null, 2)}\n`;
+}
+
+function sha256(content) {
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
 function writeJsonAtomic(file, payload) {
   const temporaryFile = `${file}.tmp-${process.pid}`;
-  fs.writeFileSync(temporaryFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(temporaryFile, serializePayload(payload), 'utf8');
   fs.renameSync(temporaryFile, file);
+}
+
+function verifyStoredPayload(file, targetDate, expectedSha256) {
+  const content = fs.readFileSync(file, 'utf8');
+  const payload = JSON.parse(content);
+  validatePayload(payload, targetDate);
+  const actualSha256 = sha256(content);
+  if (actualSha256 !== expectedSha256) {
+    throw new Error(
+      `Stored file SHA-256 mismatch: expected ${expectedSha256}, got ${actualSha256}`,
+    );
+  }
+}
+
+function savePayloadSafely(file, payload, targetDate, options = {}) {
+  const {
+    force = false,
+    minRowRatio = DEFAULT_MIN_ROW_RATIO,
+  } = options;
+
+  validatePayload(payload, targetDate);
+  const newContent = serializePayload(payload);
+  const newSha256 = sha256(newContent);
+  const newRows = payload.data.length;
+
+  if (!fs.existsSync(file)) {
+    writeJsonAtomic(file, payload);
+    verifyStoredPayload(file, targetDate, newSha256);
+    return {
+      status: 'created',
+      oldRows: null,
+      newRows,
+      oldSha256: null,
+      newSha256,
+    };
+  }
+
+  const oldContent = fs.readFileSync(file, 'utf8');
+  const oldSha256 = sha256(oldContent);
+  let oldPayload;
+  try {
+    oldPayload = JSON.parse(oldContent);
+    validatePayload(oldPayload, targetDate);
+  } catch (error) {
+    if (!force) {
+      throw new Error(
+        `Existing file is invalid and was preserved: ${error.message}. Use --force only after review.`,
+      );
+    }
+    oldPayload = null;
+  }
+  const oldRows = Array.isArray(oldPayload?.data) ? oldPayload.data.length : null;
+
+  if (oldSha256 === newSha256) {
+    return {
+      status: 'unchanged',
+      oldRows,
+      newRows,
+      oldSha256,
+      newSha256,
+    };
+  }
+
+  if (Number.isInteger(oldRows) && oldRows > 0 && newRows === 0) {
+    throw new Error(
+      `Refusing to replace non-empty existing data (${oldRows} rows) with an empty response; --force cannot bypass this safeguard.`,
+    );
+  }
+
+  if (
+    Number.isInteger(oldRows)
+    && oldRows > 0
+    && newRows / oldRows < minRowRatio
+    && !force
+  ) {
+    throw new Error(
+      `New row count dropped from ${oldRows} to ${newRows} (below ${Math.round(minRowRatio * 100)}%). Existing file was preserved; review and rerun with --force if intentional.`,
+    );
+  }
+
+  if (!force) {
+    throw new Error(
+      `Existing file differs from the new response (rows ${oldRows ?? 'unknown'} -> ${newRows}, SHA-256 ${oldSha256} -> ${newSha256}). Existing file was preserved; rerun manually with --force after review.`,
+    );
+  }
+
+  writeJsonAtomic(file, payload);
+  verifyStoredPayload(file, targetDate, newSha256);
+  return {
+    status: 'updated',
+    oldRows,
+    newRows,
+    oldSha256,
+    newSha256,
+  };
 }
 
 async function fetchTwseTwt49uOnce(date, fetchImpl = fetch) {
@@ -187,12 +292,12 @@ async function fetchTwseTwt49u(date, options = {}) {
 function usage() {
   return [
     'Usage:',
-    '  node scripts/crawl_twse_twt49u.js [--date YYYYMMDD] [--max-retries N]',
-    '  node scripts/crawl_twse_twt49u.js YYYYMMDD',
+    '  node scripts/crawl_twse_twt49u.js [--date YYYYMMDD] [--force] [--max-retries N]',
+    '  node scripts/crawl_twse_twt49u.js YYYYMMDD [--force]',
     '',
     'Examples:',
     '  node scripts/crawl_twse_twt49u.js --date 20260727',
-    '  npm run crawl:twse-twt49u -- --date 20260727',
+    '  npm run crawl:twse-twt49u -- --date 20260727 --force',
   ].join('\n');
 }
 
@@ -205,6 +310,7 @@ async function main(argv = process.argv.slice(2)) {
   const targetDate = normalizeDateInput(
     getArg(argv, '--date') || getPositionalDate(argv),
   ) || getTaipeiTodayCompact();
+  const force = argv.includes('--force');
   const maxRetries = getNumberArg(argv, '--max-retries', DEFAULT_MAX_RETRIES);
   const rateLimitCooldownMs = getNumberArg(
     argv,
@@ -218,13 +324,14 @@ async function main(argv = process.argv.slice(2)) {
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   const outputPath = path.join(OUTPUT_DIR, `${targetDate}_twt49u.json`);
-  writeJsonAtomic(outputPath, payload);
+  const result = savePayloadSafely(outputPath, payload, targetDate, { force });
   const filesPath = refreshFilesJson();
 
-  console.log(`✅ Saved ${payload.title || `TWSE TWT49U ${targetDate}`}`);
+  console.log(`✅ TWT49U ${result.status}: ${payload.title || targetDate}`);
   console.log(`📁 ${outputPath}`);
   console.log(`📁 ${filesPath}`);
-  console.log(`📊 Rows: ${payload.data.length}, Fields: ${payload.fields.length}`);
+  console.log(`📊 Rows: ${result.oldRows ?? 'new'} -> ${result.newRows}`);
+  console.log(`🔐 SHA-256: ${result.oldSha256 || 'new'} -> ${result.newSha256}`);
 }
 
 if (require.main === module) {
@@ -241,5 +348,8 @@ module.exports = {
   normalizeDateInput,
   refreshFilesJson,
   rocDateToCompact,
+  savePayloadSafely,
+  sha256,
   validatePayload,
+  verifyStoredPayload,
 };
