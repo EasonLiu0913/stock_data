@@ -21,15 +21,25 @@ on:
         required: false
         default: 'ALL'
 
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-mi-index
+  cancel-in-progress: false
+
 jobs:
   crawl-twse-mi-index:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check existing TWSE MI_INDEX file
         id: existing
+        shell: bash
         run: |
           DATE_INPUT="${{ github.event.inputs.date }}"
           if [ -n "$DATE_INPUT" ]; then
@@ -62,6 +72,7 @@ jobs:
 
       - name: Run TWSE MI_INDEX crawler
         if: steps.existing.outputs.exists != 'true'
+        shell: bash
         run: |
           ARGS=(--date "${{ steps.existing.outputs.target_date }}" --max-retries 0)
 
@@ -71,19 +82,24 @@ jobs:
 
           node scripts/crawl_twse_mi_index.js "${ARGS[@]}"
 
-      - name: Generate files.json
+      - name: Generate TWSE MI_INDEX files.json only
         if: steps.existing.outputs.exists != 'true'
-        run: |
-          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
+        run: node scripts/generate_file_lists.js --only data_twse_mi_index
 
       - name: Commit and push changes
         if: steps.existing.outputs.exists != 'true'
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data_twse_mi_index/
 
           if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE MI_INDEX changes:"
+              git status --short
+              exit 1
+            fi
             echo "No TWSE MI_INDEX changes to commit"
             exit 0
           fi
@@ -91,5 +107,20 @@ jobs:
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "chore: update TWSE MI_INDEX data ${CURRENT_DATE}"
 
-          git pull --rebase origin main
-          git push origin main
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE MI_INDEX data after 5 attempts."
+          exit 1
