@@ -1,0 +1,94 @@
+name: Analyze Volume Confirmation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/analyze_volume_confirmation.js
+      - .github/workflows/analyze-volume-confirmation.yml
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Analysis date (YYYYMMDD). Leave empty for latest available SMA date.'
+        required: false
+        default: ''
+      sample_size:
+        description: 'Representative stock count'
+        required: false
+        default: '200'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analyze-volume-confirmation
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Analyze volume confirmation
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_SAMPLE_SIZE: ${{ inputs.sample_size }}
+        run: |
+          args=(--sample-size "${INPUT_SAMPLE_SIZE:-200}")
+          if [ -n "$INPUT_DATE" ]; then
+            args+=(--date "$INPUT_DATE")
+          fi
+          node scripts/analyze_volume_confirmation.js "${args[@]}"
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: volume-confirmation-${{ github.run_id }}
+          path: data_volume_analysis/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Commit and push analysis
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_volume_analysis/
+
+          if git diff --staged --quiet; then
+            echo "No volume-analysis changes"
+            exit 0
+          fi
+
+          analysis_date=$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('data_volume_analysis/manifest.json'));process.stdout.write(m.latest_date)")
+          git commit -m "analysis: update volume confirmation ${analysis_date}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push volume analysis after 5 attempts. Artifact is still available."
+          exit 1
