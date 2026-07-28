@@ -38,6 +38,150 @@ function v1ReplayMetrics(date) {
   };
 }
 
+function actualSide(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return numeric > 0.3 ? 1 : numeric < -0.3 ? -1 : 0;
+}
+
+function sideLabel(value) {
+  return value > 0 ? '上漲' : value < 0 ? '下跌' : '中性';
+}
+
+function percentage(count, total) {
+  return round(total ? count / total * 100 : null);
+}
+
+function buildPairedEvaluation(date, v1Predictions, v2Predictions) {
+  const v1Dashboard = readJson(path.join(ROOT, 'data_predictions', date, 'replay-dashboard.json'), null);
+  const v2Dashboard = readJson(path.join(ROOT, 'data_predictions_v2', date, 'replay-v2.json'), null);
+  if (!Array.isArray(v1Dashboard?.rows) || !Array.isArray(v2Dashboard?.rows)) return null;
+
+  const v1Rows = new Map(v1Dashboard.rows
+    .filter((row) => row?.verified && row?.actual)
+    .map((row) => [String(row.stock_code || row.prediction?.stock_code || ''), row]));
+  const v2Rows = new Map(v2Dashboard.rows
+    .filter((row) => Number.isFinite(Number(row?.actual_return)))
+    .map((row) => [String(row.stock_code || ''), row]));
+
+  const rows = [...v1Rows.keys()]
+    .filter((code) => code && v2Rows.has(code) && v1Predictions.has(code) && v2Predictions.has(code))
+    .map((code) => {
+      const v1Row = v1Rows.get(code);
+      const v2Row = v2Rows.get(code);
+      const v1Prediction = v1Predictions.get(code);
+      const v2Prediction = v2Predictions.get(code);
+      const actualReturn = Number(v2Row.actual_return ?? v1Row.actual?.close_return);
+      const actual = actualSide(actualReturn);
+      const v1Direction = v1Prediction.final_direction_label;
+      const v2Direction = v2Prediction.final_direction_label;
+      const v1Predicted = side(v1Direction);
+      const v2Predicted = side(v2Direction);
+      const v1Distance = Math.abs(v1Predicted - actual);
+      const v2Distance = Math.abs(v2Predicted - actual);
+      const adjustments = v2Prediction.experimental_v2?.adjustments || [];
+      const activeAdjustments = adjustments.filter((item) => Number(item.score) !== 0);
+      const primaryFactor = activeAdjustments.length
+        ? activeAdjustments.map((item) => item.id).join(' + ')
+        : v1Direction !== v2Direction ? 'direction_mapping_or_threshold' : 'no_direction_change';
+      return {
+        stock_code: code,
+        stock_name: v2Prediction.stock_name || v1Prediction.stock_name || v2Row.stock_name,
+        industry: v2Prediction.industry || v1Prediction.industry || v2Row.industry,
+        actual_return: round(actualReturn),
+        actual_class: sideLabel(actual),
+        v1_score: Number(v1Prediction.direction_score),
+        v2_score: Number(v2Prediction.direction_score),
+        score_delta: round(Number(v2Prediction.direction_score) - Number(v1Prediction.direction_score)),
+        v1_direction: v1Direction,
+        v2_direction: v2Direction,
+        direction_changed: v1Direction !== v2Direction,
+        v1_hit: v1Predicted === actual,
+        v2_hit: v2Predicted === actual,
+        closer_version: v1Distance < v2Distance ? 'v1' : v2Distance < v1Distance ? 'v2' : 'tie',
+        transition: v1Direction + ' → ' + v2Direction,
+        primary_factor: primaryFactor,
+        relative_strength_bucket: v2Prediction.experimental_v2?.relative_strength_bucket,
+        chip_technical_quadrant: v2Prediction.experimental_v2?.chip_technical_quadrant,
+        adjustments,
+      };
+    });
+
+  const changedRows = rows.filter((row) => row.direction_changed);
+  const exact = {
+    both_hit: rows.filter((row) => row.v1_hit && row.v2_hit).length,
+    v1_only_hit: rows.filter((row) => row.v1_hit && !row.v2_hit).length,
+    v2_only_hit: rows.filter((row) => !row.v1_hit && row.v2_hit).length,
+    neither_hit: rows.filter((row) => !row.v1_hit && !row.v2_hit).length,
+  };
+  exact.v1_hit_count = exact.both_hit + exact.v1_only_hit;
+  exact.v2_hit_count = exact.both_hit + exact.v2_only_hit;
+  exact.v1_hit_rate = percentage(exact.v1_hit_count, rows.length);
+  exact.v2_hit_rate = percentage(exact.v2_hit_count, rows.length);
+  exact.v2_minus_v1_hit_rate = round(exact.v2_hit_rate - exact.v1_hit_rate);
+
+  const closer = {
+    v1_closer: changedRows.filter((row) => row.closer_version === 'v1').length,
+    v2_closer: changedRows.filter((row) => row.closer_version === 'v2').length,
+    tie: changedRows.filter((row) => row.closer_version === 'tie').length,
+  };
+  closer.v1_closer_rate = percentage(closer.v1_closer, changedRows.length);
+  closer.v2_closer_rate = percentage(closer.v2_closer, changedRows.length);
+  closer.v2_minus_v1_count = closer.v2_closer - closer.v1_closer;
+
+  function groupedSummary(key) {
+    const groups = new Map();
+    for (const row of changedRows) {
+      const name = row[key] || 'unknown';
+      const item = groups.get(name) || {
+        name,
+        count: 0,
+        v1_closer: 0,
+        v2_closer: 0,
+        tie: 0,
+        both_hit: 0,
+        v1_only_hit: 0,
+        v2_only_hit: 0,
+        neither_hit: 0,
+      };
+      item.count += 1;
+      item[row.closer_version === 'v1' ? 'v1_closer' : row.closer_version === 'v2' ? 'v2_closer' : 'tie'] += 1;
+      if (row.v1_hit && row.v2_hit) item.both_hit += 1;
+      else if (row.v1_hit) item.v1_only_hit += 1;
+      else if (row.v2_hit) item.v2_only_hit += 1;
+      else item.neither_hit += 1;
+      groups.set(name, item);
+    }
+    return [...groups.values()].map((item) => ({
+      ...item,
+      v2_minus_v1_closer: item.v2_closer - item.v1_closer,
+      v2_minus_v1_only_hit: item.v2_only_hit - item.v1_only_hit,
+    })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }
+
+  return {
+    definition: {
+      scope: 'Only stocks evaluable by both V1 and V2 are compared.',
+      actual_class: '上漲: return > 0.3%; 下跌: return < -0.3%; 中性: |return| <= 0.3%.',
+      hit: 'Predicted direction class exactly equals the actual class.',
+      closer: 'On direction-changed rows, smaller ordinal distance between predicted class (-1/0/+1) and actual class wins.',
+      caveat: 'Unified-rule rates are for apples-to-apples diagnosis and can differ from each version replay headline because replay eligibility filters may differ.',
+    },
+    common_evaluable_count: rows.length,
+    changed_evaluable_count: changedRows.length,
+    actual_distribution: {
+      up: rows.filter((row) => row.actual_class === '上漲').length,
+      neutral: rows.filter((row) => row.actual_class === '中性').length,
+      down: rows.filter((row) => row.actual_class === '下跌').length,
+    },
+    exact_outcome: exact,
+    closer_on_changed: closer,
+    transition_matrix: groupedSummary('transition'),
+    adjustment_effectiveness: groupedSummary('primary_factor'),
+    changed_rows: changedRows,
+  };
+}
+
 function compactVolumeImpact(model) {
   if (!model) return null;
   return {
@@ -82,8 +226,9 @@ function main() {
   const v1Replay = v1ReplayMetrics(date);
   const v2Replay = readJson(path.join(ROOT, 'data_predictions_v2', date, 'replay-summary-v2.json'), null);
   const volumeImpact = readJson(path.join(ROOT, 'data_prediction_analysis', date, 'volume-filter-impact.json'), null);
+  const pairedEvaluation = buildPairedEvaluation(date, v1, v2);
   const payload = {
-    comparison_version: '1.1.0',
+    comparison_version: '1.2.0',
     generated_at: new Date().toISOString(),
     forecast_date: date,
     shared_prediction_count: shared.length,
@@ -118,6 +263,7 @@ function main() {
           : null,
       },
     } : null,
+    paired_evaluation: pairedEvaluation,
     volume_filter_comparison: volumeImpact ? {
       definition: volumeImpact.definition,
       v1: compactVolumeImpact(volumeImpact.models?.v1),
@@ -137,6 +283,10 @@ function main() {
     `- 狀態：${payload.status}`,
     '',
     '## 準確度比較',
+    '',
+    pairedEvaluation
+      ? '共同判分樣本 ' + pairedEvaluation.common_evaluable_count + ' 筆；方向改變 ' + pairedEvaluation.changed_evaluable_count + ' 筆，其中 V1 較接近 ' + pairedEvaluation.closer_on_changed.v1_closer + ' 筆、V2 較接近 ' + pairedEvaluation.closer_on_changed.v2_closer + ' 筆。'
+      : '尚未產生共同判分分析。',
     '',
     payload.accuracy_comparison
       ? `V1 命中率 ${payload.accuracy_comparison.v1.hit_rate}%；V2 命中率 ${payload.accuracy_comparison.v2.hit_rate}%；差異 ${payload.accuracy_comparison.deltas.hit_rate >= 0 ? '+' : ''}${payload.accuracy_comparison.deltas.hit_rate}%。`
