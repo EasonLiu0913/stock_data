@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: '資料日期（YYYYMMDD）；留空時使用台灣當天日期'
+        description: '指定資料日期（YYYYMMDD）；留空時自動抓取下一個交易日'
         required: false
         default: ''
         type: string
   schedule:
-    # 16:30 Asia/Taipei, Monday through Friday
-    - cron: '30 8 * * 1-5'
+    # 16:30 Asia/Taipei every day; non-trading days are skipped below.
+    - cron: '30 8 * * *'
 
 permissions:
   contents: write
@@ -47,18 +47,38 @@ jobs:
               echo "Invalid date: $INPUT_DATE (expected YYYYMMDD)"
               exit 1
             fi
-            echo "args=--date $INPUT_DATE" >> "$GITHUB_OUTPUT"
+            echo "run=true" >> "$GITHUB_OUTPUT"
             echo "date=$INPUT_DATE" >> "$GITHUB_OUTPUT"
-          else
-            taipei_date=$(TZ=Asia/Taipei date +%Y%m%d)
-            echo "args=" >> "$GITHUB_OUTPUT"
-            echo "date=$taipei_date" >> "$GITHUB_OUTPUT"
+            echo "Manual run will crawl the explicitly requested date: $INPUT_DATE"
+            exit 0
           fi
 
+          taipei_today=$(TZ=Asia/Taipei date +%F)
+          if ! node -e '
+            const { isTradingDate, loadHolidaySet } = require("./scripts/resolve_forecast_dates");
+            process.exit(isTradingDate(process.argv[1], loadHolidaySet()) ? 0 : 1);
+          ' "$taipei_today"; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "date=" >> "$GITHUB_OUTPUT"
+            echo "Skip: $taipei_today is a weekend or configured non-trading day."
+            exit 0
+          fi
+
+          target_date=$(node -e '
+            const { loadHolidaySet, nextTradingDate } = require("./scripts/resolve_forecast_dates");
+            process.stdout.write(nextTradingDate(process.argv[1], loadHolidaySet(), false).replaceAll("-", ""));
+          ' "$taipei_today")
+
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "Trading day $taipei_today: crawl next trading date $target_date."
+
       - name: Crawl TWSE TWT49U
-        run: npm run crawl:twse-twt49u -- ${{ steps.date.outputs.args }}
+        if: steps.date.outputs.run == 'true'
+        run: npm run crawl:twse-twt49u -- --date "${{ steps.date.outputs.date }}"
 
       - name: Commit TWT49U data
+        if: steps.date.outputs.run == 'true'
         shell: bash
         env:
           TARGET_DATE: ${{ steps.date.outputs.date }}
