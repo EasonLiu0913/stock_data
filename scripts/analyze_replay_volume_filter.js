@@ -141,6 +141,22 @@ function v2Outcome(value) {
   return value === 'hit' || value === 'miss' ? value : 'neutral';
 }
 
+function directionSide(label) {
+  if (String(label || '').includes('偏多')) return 1;
+  if (String(label || '').includes('偏空')) return -1;
+  return 0;
+}
+
+function commonOutcome(direction, actualReturn) {
+  const side = directionSide(direction);
+  const actual = number(actualReturn);
+  if (!Number.isFinite(actual)) return 'neutral';
+  if (side > 0) return actual > 0 ? 'hit' : actual < 0 ? 'miss' : 'neutral';
+  if (side < 0) return actual < 0 ? 'hit' : actual > 0 ? 'miss' : 'neutral';
+  return Math.abs(actual) <= 0.3 ? 'hit' : 'miss';
+}
+
+
 function buildVolumeMap(v1Rows) {
   const map = new Map();
   for (const row of v1Rows || []) {
@@ -161,16 +177,19 @@ function normalizeV1Rows(rows) {
     const ratio20 = number(row.actual?.volume_ratio_20d_actual);
     if (!row.verified || !Number.isFinite(ratio20)) return null;
     const volume = number(row.actual?.volume);
+    const direction = row.prediction?.final_direction_label || '';
+    const actualReturn = number(row.actual?.close_return);
+    const outcome = commonOutcome(direction, actualReturn);
     return {
       model: 'v1',
       stock_code: String(row.stock_code),
       stock_name: row.stock_name || '',
       industry: row.industry || 'unknown',
-      direction: row.prediction?.final_direction_label || '',
+      direction,
       score: number(row.prediction?.direction_score),
-      actual_return: number(row.actual?.close_return),
-      prediction_result: row.prediction_match_label || '中性難判',
-      outcome: v1Outcome(row.prediction_match_label),
+      actual_return: actualReturn,
+      prediction_result: outcome === 'hit' ? '準確' : outcome === 'miss' ? '不準' : '中性難判',
+      outcome,
       volume_ratio_20d: ratio20,
       actual_volume: volume,
       average_volume_20d: Number.isFinite(volume) && ratio20 > 0 ? volume / ratio20 : null,
@@ -184,15 +203,17 @@ function normalizeV2Rows(rows, volumeMap) {
   return (rows || []).map((row) => {
     const volume = volumeMap.get(String(row.stock_code));
     if (!volume || !Number.isFinite(volume.ratio20)) return null;
-    const outcome = v2Outcome(row.outcome);
+    const direction = row.final_direction_label || '';
+    const actualReturn = number(row.actual_return);
+    const outcome = commonOutcome(direction, actualReturn);
     return {
       model: 'v2',
       stock_code: String(row.stock_code),
       stock_name: row.stock_name || '',
       industry: row.industry || 'unknown',
-      direction: row.final_direction_label || '',
+      direction,
       score: number(row.score),
-      actual_return: number(row.actual_return),
+      actual_return: actualReturn,
       prediction_result: outcome === 'hit' ? '準確' : outcome === 'miss' ? '不準' : '中性難判',
       outcome,
       volume_ratio_20d: volume.ratio20,
@@ -464,6 +485,7 @@ if (require.main === module) {
 
 module.exports = {
   accuracySummary,
+  commonOutcome,
   normalizeV1Rows,
   normalizeV2Rows,
   summarizeModel,
