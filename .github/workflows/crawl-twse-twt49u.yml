@@ -1,0 +1,93 @@
+name: Crawl TWSE TWT49U
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '資料日期（YYYYMMDD）；留空時使用台灣當天日期'
+        required: false
+        default: ''
+        type: string
+  schedule:
+    # 16:30 Asia/Taipei, Monday through Friday
+    - cron: '30 8 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-twt49u
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve requested date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          if [ -n "$INPUT_DATE" ]; then
+            if ! [[ "$INPUT_DATE" =~ ^20[0-9]{6}$ ]]; then
+              echo "Invalid date: $INPUT_DATE (expected YYYYMMDD)"
+              exit 1
+            fi
+            echo "args=--date $INPUT_DATE" >> "$GITHUB_OUTPUT"
+            echo "date=$INPUT_DATE" >> "$GITHUB_OUTPUT"
+          else
+            taipei_date=$(TZ=Asia/Taipei date +%Y%m%d)
+            echo "args=" >> "$GITHUB_OUTPUT"
+            echo "date=$taipei_date" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Crawl TWSE TWT49U
+        run: npm run crawl:twse-twt49u -- ${{ steps.date.outputs.args }}
+
+      - name: Commit TWT49U data
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data_twse_twt49u
+          if git diff --cached --quiet; then
+            echo "No TWT49U changes for $TARGET_DATE"
+            exit 0
+          fi
+
+          git commit -m "chore: update TWSE TWT49U data $TARGET_DATE"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "TWT49U push failed; retry $attempt/5"
+            sleep 5
+          done
+
+          echo "TWT49U push failed after 5 attempts"
+          exit 1
