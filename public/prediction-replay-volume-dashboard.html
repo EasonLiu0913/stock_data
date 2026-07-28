@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>覆盤成交量排除測試</title>
+  <style>
+    :root{--bg:#f4f6f8;--surface:#fff;--ink:#172033;--muted:#667085;--line:#d9e0e8;--blue:#2f6fae;--navy:#183b56;--green:#16746a;--green-soft:#e6f5f1;--red:#a33a3a;--red-soft:#fbeaea;--amber:#a86400;--amber-soft:#fff3d6}*{box-sizing:border-box}html,body{max-width:100%;overflow-x:hidden}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}button,input,select{font:inherit}.shell{width:min(100%,1500px);margin:0 auto;padding:24px}.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}.eyebrow{margin:0 0 5px;color:var(--muted);font-size:13px;font-weight:800}h1{margin:0;font-size:clamp(25px,4vw,34px)}h2{margin:0;font-size:19px}h3{margin:0;font-size:16px}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a,.nav select{min-height:39px;border:1px solid #c7d1dd;border-radius:7px;background:var(--surface);color:#24425f;padding:8px 11px;font-weight:800;text-decoration:none}.nav a.active{background:var(--navy);border-color:var(--navy);color:#fff}.notice{padding:13px 15px;border:1px solid #ead7a5;border-left:4px solid var(--amber);border-radius:8px;background:#fffbef;color:#6d5a36;line-height:1.55;margin-bottom:14px}.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:14px}.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:16px;box-shadow:0 1px 2px rgba(23,32,51,.05);min-width:0}.kpi-label{color:var(--muted);font-size:12px;font-weight:800}.kpi-value{margin-top:6px;font-size:25px;font-weight:900}.kpi-sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}.positive{color:var(--green)}.negative{color:var(--red)}.tabs{display:flex;gap:6px;flex-wrap:wrap}.tab{min-height:36px;border:1px solid #c8d1dc;border-radius:7px;background:#fff;color:#3b5167;padding:7px 11px;cursor:pointer;font-weight:800}.tab.active{background:var(--navy);border-color:var(--navy);color:#fff}.section{margin-top:14px}.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:11px}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.45}.model-grid{grid-template-columns:1fr 1fr}.model-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:13px}.fact{padding:10px;border:1px solid #e6ebf0;border-radius:7px;background:#fafbfc}.fact span{display:block;color:var(--muted);font-size:11px}.fact b{display:block;margin-top:4px;font-size:18px}.controls{display:grid;grid-template-columns:minmax(240px,2fr) minmax(160px,1fr);gap:9px;margin:12px 0}.control{width:100%;min-height:39px;border:1px solid #c7d1dd;border-radius:7px;background:#fff;color:var(--ink);padding:8px 10px}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#fff}.data-table{width:100%;min-width:1100px;border-collapse:collapse}th,td{padding:10px 11px;border-bottom:1px solid #e9edf2;text-align:left;font-size:12px;vertical-align:top}th{background:#f0f3f6;color:#506174;white-space:nowrap}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;background:#edf1f5;color:#405164;font-size:11px;font-weight:900;white-space:nowrap}.pill.hit{background:var(--green-soft);color:#12655c}.pill.miss{background:var(--red-soft);color:#8d3535}.pill.low{background:var(--amber-soft);color:#805600}.loading,.error,.empty{padding:42px 18px;text-align:center;color:var(--muted);font-weight:800}.error{color:var(--red)}.hidden{display:none!important}.interpretation{margin-top:12px;padding:12px 14px;border-radius:7px;background:#f5f7fa;color:#405164;line-height:1.55}.interpretation.good{background:var(--green-soft);color:#12655c}.interpretation.bad{background:var(--red-soft);color:#8d3535}.industry-table{min-width:850px}@media(max-width:1150px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:850px){.topbar{align-items:flex-start;flex-direction:column}.model-grid{grid-template-columns:1fr}.model-summary{grid-template-columns:1fr 1fr}}@media(max-width:640px){.shell{padding:14px}.kpis,.model-summary,.controls{grid-template-columns:1fr}.nav{width:100%}.nav a,.nav select{flex:1 1 auto;text-align:center}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><p class="eyebrow" id="meta">載入成交量分析中</p><h1>覆盤成交量排除測試</h1></div>
+      <nav class="nav">
+        <select id="dateSelect" aria-label="分析日期"></select>
+        <a id="replayLink" href="prediction-replay-dashboard.html">覆盤總覽</a>
+        <a id="factorLink" href="prediction-replay-factor-dashboard.html">產業因子</a>
+        <a class="active" href="#">成交量排除測試</a>
+        <a id="forecastLink" href="prediction-dashboard.html">事前預測</a>
+      </nav>
+    </header>
+    <div class="notice">低量定義預設為「結果日成交量 ÷ 前20個交易日平均成交量 ≤ 0.75」。這是覆盤敏感度分析，不代表當時可以預先知道結果日成交量；正式模型要改用預測日前可取得的量能資料再做跨日驗證。</div>
+    <div id="loading" class="card loading">正在計算排除低量前後的 V1／V2 準確率與股票清單…</div>
+    <div id="error" class="card error hidden"></div>
+    <div id="dashboard" class="hidden">
+      <section class="card">
+        <div class="section-head"><div><h2>模型切換</h2><p>同一份20日量比套用到 V1 與 V2，方便比較排除效果。</p></div><div class="tabs" id="modelTabs"></div></div>
+        <div class="grid kpis" id="kpis"></div>
+        <div id="interpretation" class="interpretation"></div>
+      </section>
+
+      <section class="section grid model-grid" id="modelComparison"></section>
+
+      <section class="section card">
+        <div class="section-head"><div><h2>不同低量門檻敏感度</h2><p>不要只挑一個有利門檻；同時查看準確率、排除數量與保留覆蓋率。</p></div></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>低量門檻</th><th>排除檔數</th><th>保留覆蓋率</th><th>排除準確</th><th>排除不準</th><th>原始命中率</th><th>排除後命中率</th><th>差異</th></tr></thead><tbody id="sensitivityRows"></tbody></table></div>
+      </section>
+
+      <section class="section card">
+        <div class="section-head"><div><h2>低成交量股票清單</h2><p>可切換「預測不準＋低量」與「預測準確＋低量」，完整清單依量比由低到高排列。</p></div><div class="tabs" id="listTabs"></div></div>
+        <div class="controls"><input class="control" id="search" type="search" placeholder="搜尋股票代號、名稱、產業"><select class="control" id="industry"><option value="">全部產業</option></select></div>
+        <div class="kpi-sub" id="listNote"></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>股票</th><th>產業</th><th>預測方向</th><th>分數</th><th>實際漲跌</th><th>20日量比</th><th>當日成交量</th><th>20日平均量</th><th>判定</th><th>原因</th></tr></thead><tbody id="listRows"></tbody></table></div>
+      </section>
+
+      <section class="section card">
+        <div class="section-head"><div><h2>各產業排除效果</h2><p>小樣本只作線索；先看低量檔數，再看命中率差異。</p></div></div>
+        <div class="table-wrap"><table class="data-table industry-table"><thead><tr><th>產業</th><th>樣本</th><th>低量檔數</th><th>低量占比</th><th>原始命中率</th><th>排除後命中率</th><th>差異</th><th>排除準確／不準</th></tr></thead><tbody id="industryRows"></tbody></table></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const state={date:'',report:null,model:'v1',listType:'inaccurate'};
+    const num=value=>Number.isFinite(Number(value))?Number(value):null;
+    const pct=value=>Number.isFinite(num(value))?`${num(value).toFixed(2)}%`:'NA';
+    const signed=value=>Number.isFinite(num(value))?`${num(value)>=0?'+':''}${num(value).toFixed(2)}%`:'NA';
+    const fmt=value=>Number.isFinite(num(value))?num(value).toFixed(2):'NA';
+    const volume=value=>Number.isFinite(num(value))?`${Math.round(num(value)).toLocaleString('zh-TW')} 張`:'NA';
+    const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const compact=value=>String(value||'').replaceAll('-','').replaceAll('/','');
+    async function fetchJson(path){const response=await fetch(`../${path}`,{cache:'no-store'});if(!response.ok)throw new Error(`找不到 ${path}`);return response.json();}
+    async function analysisExists(date){try{return (await fetch(`../data_prediction_analysis/${date}/volume-filter-impact.json`,{method:'HEAD',cache:'no-store'})).ok;}catch{return false;}}
+    async function load(){
+      const params=new URLSearchParams(location.search);const requested=compact(params.get('date'));
+      const [analysisManifest,predictionManifest]=await Promise.all([fetchJson('data_prediction_analysis/manifest.json'),fetchJson('data_predictions/manifest.json')]);
+      const candidates=[...new Set([requested,...(analysisManifest.available_volume_filter_dates||[]),analysisManifest.latest_volume_filter_date,...(predictionManifest.available_dates||[]),predictionManifest.latest_date].map(compact).filter(date=>/^20\d{6}$/.test(date)))].sort().reverse();
+      const available=[];for(const date of candidates){if(await analysisExists(date))available.push(date);}
+      if(!available.length)throw new Error('目前沒有成交量排除分析，請先執行 Compare V1 and V2 replay results 或 Analyze Replay Volume Filter。');
+      state.date=requested&&available.includes(requested)?requested:available[0];
+      const url=new URL(location.href);url.searchParams.set('date',state.date);history.replaceState(null,'',url);
+      state.report=await fetchJson(`data_prediction_analysis/${state.date}/volume-filter-impact.json`);
+      renderNav(available);render();
+    }
+    function renderNav(dates){
+      document.getElementById('dateSelect').innerHTML=dates.map(date=>`<option value="${date}" ${date===state.date?'selected':''}>${date}</option>`).join('');
+      document.getElementById('dateSelect').addEventListener('change',event=>location.href=`prediction-replay-volume-dashboard.html?date=${encodeURIComponent(event.target.value)}`);
+      document.getElementById('replayLink').href=`prediction-replay-dashboard.html?date=${encodeURIComponent(state.date)}`;
+      document.getElementById('factorLink').href=`prediction-replay-factor-dashboard.html?date=${encodeURIComponent(state.date)}`;
+      document.getElementById('forecastLink').href=`prediction-dashboard.html?date=${encodeURIComponent(state.date)}`;
+    }
+    function current(){return state.report.models?.[state.model]||{};}
+    function render(){
+      const threshold=state.report.definition?.selected_low_volume_threshold;
+      document.getElementById('meta').textContent=`覆盤日 ${state.date} · 低量門檻 ≤ ${threshold} 倍 · ${state.report.definition?.factor_name||'20日成交量比'}`;
+      document.getElementById('modelTabs').innerHTML=['v1','v2'].map(model=>`<button type="button" class="tab ${model===state.model?'active':''}" data-model="${model}">${model.toUpperCase()}</button>`).join('');
+      document.getElementById('listTabs').innerHTML=[['inaccurate','低量不準'],['accurate','低量準確'],['neutral','低量中性']].map(([key,label])=>`<button type="button" class="tab ${key===state.listType?'active':''}" data-list="${key}">${label}</button>`).join('');
+      fillIndustries();renderModel();renderComparison();
+      document.getElementById('dashboard').classList.remove('hidden');document.getElementById('loading').classList.add('hidden');
+    }
+    function renderModel(){
+      const model=current(),impact=model.impact||{},before=model.baseline||{},after=model.after_excluding_low_volume||{};
+      const cards=[
+        ['原始命中率',pct(before.all_sample_hit_rate),`${before.sample_count||0} 檔有量比資料`],
+        ['排除低量後',pct(after.all_sample_hit_rate),`${after.sample_count||0} 檔保留`],
+        ['準確率差異',signed(impact.all_sample_hit_rate_delta),impact.all_sample_hit_rate_delta>0?'排除後提高':impact.all_sample_hit_rate_delta<0?'排除後降低':'沒有改變'],
+        ['低量排除數',impact.removed_count??0,`保留覆蓋 ${pct(impact.retained_coverage_rate)}`],
+        ['低量不準',impact.removed_miss_count??0,'可能被排除的錯誤'],
+        ['低量準確',impact.removed_hit_count??0,'會犧牲的正確預測'],
+      ];
+      document.getElementById('kpis').innerHTML=cards.map(([label,value,sub],index)=>`<article class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${index===2?(num(impact.all_sample_hit_rate_delta)>=0?'positive':'negative'):''}">${value}</div><div class="kpi-sub">${sub}</div></article>`).join('');
+      const target=document.getElementById('interpretation');target.textContent=impact.interpretation||'尚無判讀';target.className=`interpretation ${num(impact.all_sample_hit_rate_delta)>0?'good':num(impact.all_sample_hit_rate_delta)<0?'bad':''}`;
+      document.getElementById('sensitivityRows').innerHTML=(model.sensitivity||[]).map(item=>`<tr><td><b>≤ ${fmt(item.threshold)}</b></td><td>${item.removed_count}</td><td>${pct(item.retained_coverage_rate)}</td><td>${item.removed_hit_count}</td><td>${item.removed_miss_count}</td><td>${pct(item.before?.all_sample_hit_rate)}</td><td>${pct(item.after?.all_sample_hit_rate)}</td><td class="${num(item.all_sample_hit_rate_delta)>=0?'positive':'negative'}"><b>${signed(item.all_sample_hit_rate_delta)}</b></td></tr>`).join('');
+      renderList();renderIndustries();
+    }
+    function renderComparison(){
+      document.getElementById('modelComparison').innerHTML=['v1','v2'].map(key=>{const model=state.report.models?.[key]||{},impact=model.impact||{};return `<article class="card"><h3>${key.toUpperCase()}</h3><div class="model-summary"><div class="fact"><span>原始命中率</span><b>${pct(model.baseline?.all_sample_hit_rate)}</b></div><div class="fact"><span>排除後命中率</span><b>${pct(model.after_excluding_low_volume?.all_sample_hit_rate)}</b></div><div class="fact"><span>差異</span><b class="${num(impact.all_sample_hit_rate_delta)>=0?'positive':'negative'}">${signed(impact.all_sample_hit_rate_delta)}</b></div><div class="fact"><span>排除數</span><b>${impact.removed_count??0}</b></div><div class="fact"><span>排除不準</span><b>${impact.removed_miss_count??0}</b></div><div class="fact"><span>排除準確</span><b>${impact.removed_hit_count??0}</b></div></div></article>`;}).join('');
+    }
+    function fillIndustries(){
+      const rows=Object.values(state.report.models||{}).flatMap(model=>Object.values(model.low_volume_lists||{}).flat());
+      const industries=[...new Set(rows.map(item=>item.industry).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+      document.getElementById('industry').innerHTML='<option value="">全部產業</option>'+industries.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('');
+    }
+    function renderList(){
+      const source=current().low_volume_lists?.[state.listType]||[];
+      const q=document.getElementById('search').value.trim().toLowerCase(),industry=document.getElementById('industry').value;
+      const rows=source.filter(item=>{const haystack=[item.stock_code,item.stock_name,item.industry,item.direction,item.prediction_result,...(item.reason_tags||[])].join(' ').toLowerCase();return(!q||haystack.includes(q))&&(!industry||item.industry===industry);});
+      const label={inaccurate:'低量不準',accurate:'低量準確',neutral:'低量中性'}[state.listType];
+      document.getElementById('listNote').textContent=`${state.model.toUpperCase()} ${label}共 ${source.length} 檔，目前顯示 ${rows.length} 檔。`;
+      document.getElementById('listRows').innerHTML=rows.map(item=>`<tr><td>${item.report_file?`<a href="${esc(item.report_file)}">${esc(item.stock_name)} <b>${esc(item.stock_code)}</b></a>`:`${esc(item.stock_name)} <b>${esc(item.stock_code)}</b>`}</td><td>${esc(item.industry)}</td><td>${esc(item.direction||'—')}</td><td>${fmt(item.score)}</td><td class="${num(item.actual_return)>=0?'positive':'negative'}"><b>${signed(item.actual_return)}</b></td><td><span class="pill low">${fmt(item.volume_ratio_20d)} 倍</span></td><td>${volume(item.actual_volume)}</td><td>${volume(item.average_volume_20d)}</td><td><span class="pill ${item.outcome==='hit'?'hit':item.outcome==='miss'?'miss':''}">${esc(item.prediction_result)}</span></td><td>${esc((item.reason_tags||[]).join('、')||'—')}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">沒有符合條件的股票。</td></tr>';
+    }
+    function renderIndustries(){
+      const rows=current().by_industry||[];
+      document.getElementById('industryRows').innerHTML=rows.map(item=>`<tr><td><b>${esc(item.industry)}</b></td><td>${item.sample_count}</td><td>${item.low_volume_count}</td><td>${pct(item.low_volume_rate)}</td><td>${pct(item.before_hit_rate)}</td><td>${pct(item.after_hit_rate)}</td><td class="${num(item.hit_rate_delta)>=0?'positive':'negative'}"><b>${signed(item.hit_rate_delta)}</b></td><td>${item.removed_hit_count}／${item.removed_miss_count}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">沒有產業資料。</td></tr>';
+    }
+    document.getElementById('modelTabs').addEventListener('click',event=>{const button=event.target.closest('[data-model]');if(!button)return;state.model=button.dataset.model;document.querySelectorAll('[data-model]').forEach(item=>item.classList.toggle('active',item.dataset.model===state.model));renderModel();});
+    document.getElementById('listTabs').addEventListener('click',event=>{const button=event.target.closest('[data-list]');if(!button)return;state.listType=button.dataset.list;document.querySelectorAll('[data-list]').forEach(item=>item.classList.toggle('active',item.dataset.list===state.listType));renderList();});
+    document.getElementById('search').addEventListener('input',renderList);document.getElementById('industry').addEventListener('change',renderList);
+    load().catch(error=>{document.getElementById('loading').classList.add('hidden');const target=document.getElementById('error');target.textContent=`成交量排除報告載入失敗：${error.message}`;target.classList.remove('hidden');});
+  </script>
+</body>
+</html>
