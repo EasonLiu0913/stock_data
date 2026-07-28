@@ -52,6 +52,119 @@ function percentage(count, total) {
   return round(total ? count / total * 100 : null);
 }
 
+function predictionHit(direction, actualReturn) {
+  const predicted = side(direction);
+  const actual = Number(actualReturn);
+  if (!Number.isFinite(actual)) return false;
+  if (predicted > 0) return actual > 0;
+  if (predicted < 0) return actual < 0;
+  return Math.abs(actual) <= 0.3;
+}
+
+function ranks(values) {
+  const indexed = values.map((value, index) => ({ value, index }))
+    .sort((a, b) => a.value - b.value || a.index - b.index);
+  const result = new Array(values.length);
+  for (let start = 0; start < indexed.length;) {
+    let end = start + 1;
+    while (end < indexed.length && indexed[end].value === indexed[start].value) end += 1;
+    const rank = (start + end - 1) / 2 + 1;
+    for (let index = start; index < end; index += 1) result[indexed[index].index] = rank;
+    start = end;
+  }
+  return result;
+}
+
+function pearson(left, right) {
+  if (left.length !== right.length || left.length < 2) return null;
+  const leftAverage = average(left);
+  const rightAverage = average(right);
+  let numerator = 0;
+  let leftSquares = 0;
+  let rightSquares = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    const leftDelta = left[index] - leftAverage;
+    const rightDelta = right[index] - rightAverage;
+    numerator += leftDelta * rightDelta;
+    leftSquares += leftDelta ** 2;
+    rightSquares += rightDelta ** 2;
+  }
+  const denominator = Math.sqrt(leftSquares * rightSquares);
+  return denominator ? numerator / denominator : null;
+}
+
+function spearman(left, right) {
+  return pearson(ranks(left), ranks(right));
+}
+
+function buildCommonMetrics(rows) {
+  if (!rows.length) return null;
+  const directionalCommonRows = rows.filter((row) => side(row.v1_direction) !== 0 && side(row.v2_direction) !== 0);
+  const marketAverage = average(rows.map((row) => Number(row.actual_return)));
+
+  function metrics(version) {
+    const directionKey = version + '_direction';
+    const scoreKey = version + '_score';
+    const hitKey = version + '_hit';
+    const bullish = rows.filter((row) => side(row[directionKey]) > 0);
+    const bearish = rows.filter((row) => side(row[directionKey]) < 0);
+    const bullishHitRate = percentage(bullish.filter((row) => row[hitKey]).length, bullish.length);
+    const bearishHitRate = percentage(bearish.filter((row) => row[hitKey]).length, bearish.length);
+    const balancedValues = [bullishHitRate, bearishHitRate].filter(Number.isFinite);
+    const signedReturns = directionalCommonRows
+      .map((row) => side(row[directionKey]) * Number(row.actual_return))
+      .filter(Number.isFinite);
+    const scorePairs = rows
+      .map((row) => ({
+        score: Number(row[scoreKey]),
+        excessReturn: Number(row.actual_return) - marketAverage,
+      }))
+      .filter((row) => Number.isFinite(row.score) && Number.isFinite(row.excessReturn));
+    const ic = scorePairs.length > 1
+      ? round(spearman(scorePairs.map((row) => row.score), scorePairs.map((row) => row.excessReturn)), 4)
+      : null;
+    const balanced = round(average(balancedValues));
+    return {
+      sample_count: rows.length,
+      verified_count: rows.length,
+      directional_common_sample_count: directionalCommonRows.length,
+      bullish_sample_count: bullish.length,
+      bearish_sample_count: bearish.length,
+      hit_rate: percentage(rows.filter((row) => row[hitKey]).length, rows.length),
+      bullish_hit_rate: bullishHitRate,
+      bearish_hit_rate: bearishHitRate,
+      balanced_weight_accuracy: balanced,
+      balanced_directional_accuracy: balanced,
+      average_gross_signed_return: round(average(signedReturns)),
+      score_vs_market_excess_spearman_ic: ic,
+      ic_sample_count: scorePairs.length,
+    };
+  }
+
+  const v1 = metrics('v1');
+  const v2 = metrics('v2');
+  return {
+    sample_policy: {
+      rule: 'All V1/V2 performance metrics use the intersection of stocks evaluable by both versions.',
+      common_sample_count: rows.length,
+      investment_return_rule: 'Average investment return uses the subset where both V1 and V2 have a non-neutral direction.',
+      directional_common_sample_count: directionalCommonRows.length,
+      market_benchmark: 'Equal-weight average return of the same common sample.',
+    },
+    common_sample_count: rows.length,
+    directional_common_sample_count: directionalCommonRows.length,
+    v1,
+    v2,
+    deltas: {
+      hit_rate: round(v2.hit_rate - v1.hit_rate),
+      balanced_weight_accuracy: round(v2.balanced_weight_accuracy - v1.balanced_weight_accuracy),
+      balanced_directional_accuracy: round(v2.balanced_directional_accuracy - v1.balanced_directional_accuracy),
+      average_gross_signed_return: round(v2.average_gross_signed_return - v1.average_gross_signed_return),
+      score_vs_market_excess_spearman_ic: round(v2.score_vs_market_excess_spearman_ic - v1.score_vs_market_excess_spearman_ic, 4),
+    },
+  };
+}
+
 function buildPairedEvaluation(date, v1Predictions, v2Predictions) {
   const v1Dashboard = readJson(path.join(ROOT, 'data_predictions', date, 'replay-dashboard.json'), null);
   const v2Dashboard = readJson(path.join(ROOT, 'data_predictions_v2', date, 'replay-v2.json'), null);
@@ -96,8 +209,8 @@ function buildPairedEvaluation(date, v1Predictions, v2Predictions) {
         v1_direction: v1Direction,
         v2_direction: v2Direction,
         direction_changed: v1Direction !== v2Direction,
-        v1_hit: v1Predicted === actual,
-        v2_hit: v2Predicted === actual,
+        v1_hit: predictionHit(v1Direction, actualReturn),
+        v2_hit: predictionHit(v2Direction, actualReturn),
         closer_version: v1Distance < v2Distance ? 'v1' : v2Distance < v1Distance ? 'v2' : 'tie',
         transition: v1Direction + ' → ' + v2Direction,
         primary_factor: primaryFactor,
@@ -165,7 +278,7 @@ function buildPairedEvaluation(date, v1Predictions, v2Predictions) {
       actual_class: '上漲: return > 0.3%; 下跌: return < -0.3%; 中性: |return| <= 0.3%.',
       hit: 'Predicted direction class exactly equals the actual class.',
       closer: 'On direction-changed rows, smaller ordinal distance between predicted class (-1/0/+1) and actual class wins.',
-      caveat: 'Unified-rule rates are for apples-to-apples diagnosis and can differ from each version replay headline because replay eligibility filters may differ.',
+      caveat: 'All performance comparisons use only the intersection of stocks evaluable by both versions. Version-only stocks are retained only for stock-list views.',
     },
     common_evaluable_count: rows.length,
     changed_evaluable_count: changedRows.length,
@@ -174,6 +287,7 @@ function buildPairedEvaluation(date, v1Predictions, v2Predictions) {
       neutral: rows.filter((row) => row.actual_class === '中性').length,
       down: rows.filter((row) => row.actual_class === '下跌').length,
     },
+    comparison_metrics: buildCommonMetrics(rows),
     exact_outcome: exact,
     closer_on_changed: closer,
     transition_matrix: groupedSummary('transition'),
@@ -228,35 +342,39 @@ function main() {
   const volumeImpact = readJson(path.join(ROOT, 'data_prediction_analysis', date, 'volume-filter-impact.json'), null);
   const pairedEvaluation = buildPairedEvaluation(date, v1, v2);
   const payload = {
-    comparison_version: '1.2.0',
+    comparison_version: '2.0.0',
     generated_at: new Date().toISOString(),
     forecast_date: date,
     shared_prediction_count: shared.length,
+    prediction_universe: {
+      comparison_policy: 'performance_uses_shared_evaluable_intersection',
+      v1_prediction_count: v1.size,
+      v2_prediction_count: v2.size,
+      shared_prediction_count: shared.length,
+      v1_only_count: [...v1.keys()].filter((code) => !v2.has(code)).length,
+      v2_only_count: [...v2.keys()].filter((code) => !v1.has(code)).length,
+      v1_only_stock_codes: [...v1.keys()].filter((code) => !v2.has(code)).sort(),
+      v2_only_stock_codes: [...v2.keys()].filter((code) => !v1.has(code)).sort(),
+    },
     forecast_difference: {
       changed_direction_count: changed.length,
       changed_direction_rate: round(shared.length ? changed.length / shared.length * 100 : null),
       average_score_delta: round(average(differences.map((row) => row.score_delta))),
       changed_examples: changed.slice(0, 200),
     },
-    accuracy_comparison: v1Replay && v2Replay ? {
+    accuracy_comparison: pairedEvaluation?.comparison_metrics ? {
+      ...pairedEvaluation.comparison_metrics,
       v1: {
-        ...v1Replay,
+        ...pairedEvaluation.comparison_metrics.v1,
         low_volume_filter_impact: compactVolumeImpact(volumeImpact?.models?.v1),
       },
       v2: {
-        verified_count: v2Replay.verified_count,
-        hit_rate: v2Replay.raw_accuracy?.hit_rate,
-        balanced_directional_accuracy: v2Replay.raw_accuracy?.balanced_directional_accuracy,
-        average_gross_signed_return: v2Replay.economic_value?.average_gross_signed_return,
-        average_net_signed_return_30bps: v2Replay.economic_value?.average_net_signed_return,
-        score_vs_market_excess_spearman_ic: v2Replay.relative_ability?.score_vs_market_excess_spearman_ic,
-        numeric_error: v2Replay.numeric_error,
+        ...pairedEvaluation.comparison_metrics.v2,
+        numeric_error: v2Replay?.numeric_error,
         low_volume_filter_impact: compactVolumeImpact(volumeImpact?.models?.v2),
       },
       deltas: {
-        hit_rate: round(v2Replay.raw_accuracy?.hit_rate - v1Replay.hit_rate),
-        average_gross_signed_return: round(v2Replay.economic_value?.average_gross_signed_return - v1Replay.average_gross_signed_return),
-        average_net_signed_return_30bps: round(v2Replay.economic_value?.average_net_signed_return - v1Replay.average_net_signed_return_30bps),
+        ...pairedEvaluation.comparison_metrics.deltas,
         low_volume_filtered_hit_rate: volumeImpact
           ? round(volumeImpact.models?.v2?.after_excluding_low_volume?.all_sample_hit_rate
             - volumeImpact.models?.v1?.after_excluding_low_volume?.all_sample_hit_rate)
@@ -270,7 +388,7 @@ function main() {
       v2: compactVolumeImpact(volumeImpact.models?.v2),
       source_file: `data_prediction_analysis/${date}/volume-filter-impact.json`,
     } : null,
-    status: v1Replay && v2Replay ? 'accuracy_available' : 'forecast_only_waiting_for_actual_market_data',
+    status: pairedEvaluation?.comparison_metrics ? 'accuracy_available_common_sample' : 'forecast_only_waiting_for_actual_market_data',
   };
   const outDir = path.join(ROOT, 'data_prediction_comparisons', date);
   writeJson(path.join(outDir, 'comparison.json'), payload);
