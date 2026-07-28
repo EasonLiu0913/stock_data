@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const V1_DIR = path.join(ROOT, 'data_predictions');
 const V2_DIR = path.join(ROOT, 'data_predictions_v2');
 const OUTPUT_ROOT = path.join(ROOT, 'data_prediction_analysis');
-const ANALYSIS_VERSION = '1.0.0';
+const ANALYSIS_VERSION = '1.1.0';
 const DEFAULT_LOW_VOLUME_THRESHOLD = 0.75;
 const DEFAULT_SENSITIVITY_THRESHOLDS = [0.5, 0.75, 1, 1.2];
 
@@ -362,10 +362,17 @@ function main() {
   if (!Array.isArray(v2Replay?.rows) || !v2Replay.rows.length) throw new Error(`V2 replay is empty: ${path.relative(ROOT, v2File)}`);
 
   const volumeMap = buildVolumeMap(v1Replay.rows);
-  const v1Rows = normalizeV1Rows(v1Replay.rows);
-  const v2Rows = normalizeV2Rows(v2Replay.rows, volumeMap);
-  if (!v1Rows.length) throw new Error(`V1 replay has no rows with a valid 20-day volume ratio for ${date}`);
-  if (!v2Rows.length) throw new Error(`V2 replay has no rows joinable to V1 20-day volume ratios for ${date}`);
+  const normalizedV1Rows = normalizeV1Rows(v1Replay.rows);
+  const normalizedV2Rows = normalizeV2Rows(v2Replay.rows, volumeMap);
+  if (!normalizedV1Rows.length) throw new Error(`V1 replay has no rows with a valid 20-day volume ratio for ${date}`);
+  if (!normalizedV2Rows.length) throw new Error(`V2 replay has no rows joinable to V1 20-day volume ratios for ${date}`);
+
+  const v1Codes = new Set(normalizedV1Rows.map((row) => row.stock_code));
+  const v2Codes = new Set(normalizedV2Rows.map((row) => row.stock_code));
+  const commonCodes = new Set([...v1Codes].filter((code) => v2Codes.has(code)));
+  const v1Rows = normalizedV1Rows.filter((row) => commonCodes.has(row.stock_code));
+  const v2Rows = normalizedV2Rows.filter((row) => commonCodes.has(row.stock_code));
+  if (!commonCodes.size) throw new Error(`V1 and V2 have no common volume-covered rows for ${date}`);
 
   const generatedAt = new Date().toISOString();
   const payload = {
@@ -378,11 +385,20 @@ function main() {
       formula: '結果日成交量 / 結果日前20個交易日平均成交量',
       selected_low_volume_threshold: args.lowVolumeThreshold,
       low_volume_condition: `volume_ratio_20d <= ${args.lowVolumeThreshold}`,
-      use_note: '低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。',
+      use_note: '低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。V1/V2 僅使用兩版皆有20日量比且可覆盤的共同股票。',
+      sample_policy: 'V1/V2 使用相同的共同成交量樣本。',
+      common_sample_count: commonCodes.size,
     },
     source_files: {
       v1_replay: path.relative(ROOT, v1File),
       v2_replay: path.relative(ROOT, v2File),
+    },
+    sample_universe: {
+      normalized_v1_count: normalizedV1Rows.length,
+      normalized_v2_count: normalizedV2Rows.length,
+      common_sample_count: commonCodes.size,
+      v1_only_count: [...v1Codes].filter((code) => !v2Codes.has(code)).length,
+      v2_only_count: [...v2Codes].filter((code) => !v1Codes.has(code)).length,
     },
     models: {
       v1: summarizeModel(v1Rows, args.lowVolumeThreshold, args.sensitivityThresholds),
@@ -390,7 +406,7 @@ function main() {
     },
     limitations: [
       '成交量是結果日資料，本分析只用來檢查是否應把預測日前的量能條件加入未來模型；不可倒灌成原預測已知資訊。',
-      '單一交易日的準確率差異可能受大盤、產業與樣本組成影響，不能直接視為因果。',
+      'V1/V2 已固定使用共同樣本，但單一交易日的準確率差異仍可能受大盤與產業影響，不能直接視為因果。',
       '若要正式排除低量股票，應累積多個覆盤日並做樣本外驗證，同時觀察覆蓋率與犧牲的正確預測數。',
     ],
   };
