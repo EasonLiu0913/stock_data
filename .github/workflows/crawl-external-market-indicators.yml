@@ -2,6 +2,12 @@ name: Crawl External Market Indicators
 
 on:
   schedule:
+    # 台北時間 02:02（UTC 前一日 18:02）。若實際開始時間早於 04:30，僅檢查後跳過。
+    - cron: '2 18 * * 0-4'
+    # 台北時間 03:03（UTC 前一日 19:03）。若實際開始時間早於 04:30，僅檢查後跳過。
+    - cron: '3 19 * * 0-4'
+    # 台北時間 03:31（UTC 前一日 19:31）。若實際開始時間早於 04:30，僅檢查後跳過。
+    - cron: '31 19 * * 0-4'
     # 台北時間 07:20：美股收盤後，收集 Nasdaq、SOX、TSM ADR、匯率與油價期貨。
     - cron: '20 23 * * 0-4'
   workflow_dispatch:
@@ -28,33 +34,86 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Check crawl eligibility
+        id: crawl-gate
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_DATE: ${{ github.event.inputs.date || '' }}
+        run: |
+          set -euo pipefail
+
+          TAIPEI_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+          TAIPEI_HOUR=$(TZ='Asia/Taipei' date '+%H')
+          TAIPEI_MINUTE=$(TZ='Asia/Taipei' date '+%M')
+          TAIPEI_TIME=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          TARGET_DATE="${INPUT_DATE:-$TAIPEI_DATE}"
+
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "Taipei actual start time: $TAIPEI_TIME"
+          echo "Target collection date: $TARGET_DATE"
+
+          # 手動執行保留原有能力，可重抓指定日期，不受 04:30 與既有檔案限制。
+          if [ "$EVENT_NAME" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=manual dispatch" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch: crawl is allowed."
+            exit 0
+          fi
+
+          CURRENT_MINUTES=$((10#$TAIPEI_HOUR * 60 + 10#$TAIPEI_MINUTE))
+          EARLIEST_MINUTES=$((4 * 60 + 30))
+
+          if [ "$CURRENT_MINUTES" -lt "$EARLIEST_MINUTES" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=actual Taipei start time is earlier than 04:30" >> "$GITHUB_OUTPUT"
+            echo "Skip: actual Taipei start time is earlier than 04:30."
+            exit 0
+          fi
+
+          TARGET_FILE="data_external_market/$TARGET_DATE/external_market_indicators.json"
+          if [ -s "$TARGET_FILE" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=target file already exists" >> "$GITHUB_OUTPUT"
+            echo "Skip: $TARGET_FILE already exists and is not empty."
+            exit 0
+          fi
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "reason=eligible scheduled run" >> "$GITHUB_OUTPUT"
+          echo "Run: time threshold passed and target file does not exist."
+
+      - name: Report skipped scheduled run
+        if: steps.crawl-gate.outputs.should_run != 'true'
+        run: |
+          echo "External-market crawl skipped."
+          echo "Reason: ${{ steps.crawl-gate.outputs.reason }}"
+          echo "Target date: ${{ steps.crawl-gate.outputs.target_date }}"
+
       - name: Setup Node.js
+        if: steps.crawl-gate.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Crawl external market indicators
-        run: |
-          if [ -n "${{ inputs.date }}" ]; then
-            node scripts/crawl_external_market_indicators.js --date "${{ inputs.date }}"
-          else
-            node scripts/crawl_external_market_indicators.js
-          fi
+        if: steps.crawl-gate.outputs.should_run == 'true'
+        run: node scripts/crawl_external_market_indicators.js --date "${{ steps.crawl-gate.outputs.target_date }}"
 
       - name: Generate market risk snapshot
-        run: |
-          if [ -n "${{ inputs.date }}" ]; then
-            node scripts/generate_market_risk_snapshot.js --date "${{ inputs.date }}"
-          else
-            node scripts/generate_market_risk_snapshot.js
-          fi
+        if: steps.crawl-gate.outputs.should_run == 'true'
+        run: node scripts/generate_market_risk_snapshot.js --date "${{ steps.crawl-gate.outputs.target_date }}"
 
       - name: Generate relevant files.json only
+        if: steps.crawl-gate.outputs.should_run == 'true'
         run: node scripts/generate_file_lists.js --only data_external_market,data_market_risk
 
       - name: Commit and push changes
+        if: steps.crawl-gate.outputs.should_run == 'true'
         shell: bash
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add config/external_market_indicators.json config/stock_news_aliases.json data_external_market/ data_market_risk/
