@@ -11,9 +11,21 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Expected page date (YYYYMMDD). Leave empty to accept the latest displayed date.'
+        description: '單日查詢日期 YYYYMMDD；不可與日期區間同時輸入'
         required: false
         default: ''
+      start_date:
+        description: '區間開始日期 YYYYMMDD（含當日）'
+        required: false
+        default: ''
+      end_date:
+        description: '區間結束日期 YYYYMMDD（含當日）'
+        required: false
+        default: ''
+      delay_ms:
+        description: '區間每個交易日之間的延遲毫秒，允許 1000–60000'
+        required: false
+        default: '3000'
 
 permissions:
   contents: write
@@ -25,7 +37,7 @@ concurrency:
 jobs:
   crawl-taifex-futures-contracts:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 360
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,14 +57,17 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Resolve target date
-        id: target-date
+      - name: Resolve crawl inputs
+        id: crawl-inputs
         shell: bash
         run: |
           set -euo pipefail
 
           if [ "${{ github.event_name }}" != "schedule" ]; then
             echo "date=${{ github.event.inputs.date }}" >> "$GITHUB_OUTPUT"
+            echo "start_date=${{ github.event.inputs.start_date }}" >> "$GITHUB_OUTPUT"
+            echo "end_date=${{ github.event.inputs.end_date }}" >> "$GITHUB_OUTPUT"
+            echo "delay_ms=${{ github.event.inputs.delay_ms }}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -99,15 +114,37 @@ jobs:
 
           echo "Scheduled target date: $TARGET_DATE"
           echo "date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "start_date=" >> "$GITHUB_OUTPUT"
+          echo "end_date=" >> "$GITHUB_OUTPUT"
+          echo "delay_ms=3000" >> "$GITHUB_OUTPUT"
 
       - name: Crawl TAIFEX futures contracts institutional trader data
         shell: bash
         run: |
           set -euo pipefail
-          TARGET_DATE="${{ steps.target-date.outputs.date }}"
 
-          if [ -n "$TARGET_DATE" ]; then
-            node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js --date "$TARGET_DATE"
+          DATE="${{ steps.crawl-inputs.outputs.date }}"
+          START_DATE="${{ steps.crawl-inputs.outputs.start_date }}"
+          END_DATE="${{ steps.crawl-inputs.outputs.end_date }}"
+          DELAY_MS="${{ steps.crawl-inputs.outputs.delay_ms }}"
+
+          if [ -n "$DATE" ] && { [ -n "$START_DATE" ] || [ -n "$END_DATE" ]; }; then
+            echo "Use either date or start_date/end_date, not both."
+            exit 1
+          fi
+
+          if { [ -n "$START_DATE" ] && [ -z "$END_DATE" ]; } || { [ -z "$START_DATE" ] && [ -n "$END_DATE" ]; }; then
+            echo "Range mode requires both start_date and end_date."
+            exit 1
+          fi
+
+          if [ -n "$START_DATE" ] && [ -n "$END_DATE" ]; then
+            node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js \
+              --start-date "$START_DATE" \
+              --end-date "$END_DATE" \
+              --delay-ms "${DELAY_MS:-3000}"
+          elif [ -n "$DATE" ]; then
+            node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js --date "$DATE"
           else
             node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js
           fi
