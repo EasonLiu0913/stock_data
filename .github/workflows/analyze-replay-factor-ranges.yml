@@ -1,0 +1,86 @@
+name: Analyze Replay Factor Ranges
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/analyze_replay_factor_ranges.js
+      - .github/workflows/analyze-replay-factor-ranges.yml
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Replay date (YYYYMMDD). Leave empty for latest completed replay.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analyze-replay-factor-ranges
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Analyze industry factor ranges
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            node scripts/analyze_replay_factor_ranges.js --date "${{ inputs.date }}"
+          else
+            node scripts/analyze_replay_factor_ranges.js
+          fi
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-factor-ranges-${{ github.run_id }}
+          path: data_prediction_analysis/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Commit and push analysis
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/
+
+          if git diff --staged --quiet; then
+            echo "No analysis changes"
+            exit 0
+          fi
+
+          analysis_date=$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('data_prediction_analysis/manifest.json'));process.stdout.write(m.latest_date)")
+          git commit -m "analysis: update replay factor ranges ${analysis_date}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push analysis after 5 attempts. Artifact is still available."
+          exit 1
