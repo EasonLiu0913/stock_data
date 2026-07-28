@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>產業因子關聯報告</title>
+  <style>
+    :root{--bg:#f4f6f8;--surface:#fff;--ink:#172033;--muted:#667085;--line:#d9e0e8;--blue:#2f6fae;--blue-soft:#eaf2fa;--green:#16746a;--green-soft:#e6f5f1;--red:#a33a3a;--red-soft:#fbeaea;--amber:#a86400;--amber-soft:#fff3d6}
+    *{box-sizing:border-box}html,body{max-width:100%;overflow-x:hidden}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}button,input,select{font:inherit}.shell{width:min(100%,1480px);margin:0 auto;padding:24px}.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}.eyebrow{margin:0 0 5px;color:var(--muted);font-size:13px;font-weight:800}h1{margin:0;font-size:clamp(25px,4vw,34px)}h2{margin:0;font-size:19px}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a,.nav select{min-height:39px;border:1px solid #c7d1dd;border-radius:7px;background:var(--surface);color:#24425f;padding:8px 11px;font-weight:800;text-decoration:none}.nav a.active{background:var(--blue);border-color:var(--blue);color:#fff}.notice{padding:13px 15px;border:1px solid #ead7a5;border-left:4px solid var(--amber);border-radius:8px;background:#fffbef;color:#6d5a36;line-height:1.55;margin-bottom:14px}.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:16px;box-shadow:0 1px 2px rgba(23,32,51,.05);min-width:0}.kpi-label{color:var(--muted);font-size:12px;font-weight:800}.kpi-value{margin-top:6px;font-size:27px;font-weight:900}.kpi-sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}.tabs{display:flex;gap:6px;flex-wrap:wrap}.tab{min-height:36px;border:1px solid #c8d1dc;border-radius:7px;background:#fff;color:#3b5167;padding:7px 11px;cursor:pointer;font-weight:800}.tab.active{background:#183b56;border-color:#183b56;color:#fff}.controls{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(150px,1fr));gap:9px;margin:13px 0}.control{width:100%;min-height:39px;border:1px solid #c7d1dd;border-radius:7px;background:#fff;color:var(--ink);padding:8px 10px}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#fff}.summary-table{width:100%;min-width:1450px;border-collapse:collapse}th,td{padding:10px 11px;border-bottom:1px solid #e9edf2;text-align:left;font-size:12px;vertical-align:top}th{position:sticky;top:0;background:#f0f3f6;color:#506174;z-index:1}.sort{border:0;background:transparent;color:inherit;padding:0;cursor:pointer;font-weight:900;white-space:nowrap}.sort:hover{text-decoration:underline}tbody tr{cursor:pointer}tbody tr:hover{background:#f7fafc}tbody tr.selected{background:#eef6ff}.positive{color:var(--green)}.negative{color:var(--red)}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;background:#edf1f5;color:#405164;font-size:11px;font-weight:900;white-space:nowrap}.pill.positive{background:var(--green-soft);color:#12655c}.pill.negative{background:var(--red-soft);color:#8d3535}.pill.warn{background:var(--amber-soft);color:#805600}.section{margin-top:14px}.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:11px}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}.detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.factor-card h3{margin:0;font-size:16px}.factor-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.fact{padding:9px 0;border-bottom:1px solid #e9edf2}.fact span{display:block;color:var(--muted);font-size:11px}.fact b{display:block;margin-top:3px;font-size:15px}.bin-table{width:100%;border-collapse:collapse;margin-top:12px}.bin-table th{position:static}.empty,.loading,.error{padding:42px 18px;text-align:center;color:var(--muted);font-weight:800}.error{color:var(--red)}.hidden{display:none!important}@media(max-width:1050px){.topbar{align-items:flex-start;flex-direction:column}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}@media(max-width:640px){.shell{padding:14px}.kpis,.controls{grid-template-columns:1fr}.nav{width:100%}.nav a,.nav select{flex:1 1 auto;text-align:center}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><p class="eyebrow" id="meta">載入產業因子分析中</p><h1>產業 r1／r3／7日RS 關聯報告</h1></div>
+      <nav class="nav">
+        <select id="dateSelect" aria-label="分析日期"></select>
+        <a id="replayLink" href="prediction-replay-dashboard.html">覆盤總覽</a>
+        <a class="active" href="#">產業因子關聯</a>
+        <a id="forecastLink" href="prediction-dashboard.html">事前預測</a>
+      </nav>
+    </header>
+    <div class="notice">目前報告是單一交易日的橫斷面探索。區間可用來觀察產業差異，但不能直接當成固定買賣門檻；應累積多個覆盤日，確認同一產業的方向與區間是否重複出現。</div>
+    <div id="loading" class="card loading">正在整理各產業的分位區間、相關係數與實際報酬…</div>
+    <div id="error" class="card error hidden"></div>
+    <div id="dashboard" class="hidden">
+      <section class="grid kpis" id="kpis"></section>
+      <section class="card">
+        <div class="section-head"><div><h2>產業因子摘要</h2><p>點擊表格列可查看該產業 r1、r3、7日RS 的四分位區間明細。</p></div><div class="tabs" id="factorTabs"></div></div>
+        <div class="controls">
+          <input class="control" id="search" type="search" placeholder="搜尋產業">
+          <select class="control" id="association"><option value="">全部關聯型態</option></select>
+          <select class="control" id="evidence"><option value="">全部證據等級</option></select>
+          <select class="control" id="sample"><option value="0">全部樣本</option><option value="12" selected>至少 12 檔</option><option value="20">至少 20 檔</option><option value="30">至少 30 檔</option></select>
+        </div>
+        <div class="kpi-sub" id="summaryNote"></div>
+        <div class="table-wrap"><table class="summary-table"><thead id="industryHead"></thead><tbody id="industryRows"></tbody></table></div>
+      </section>
+      <section class="section card" id="detailSection">
+        <div class="section-head"><div><h2 id="detailTitle">產業區間明細</h2><p id="detailNote">選擇上方產業查看各因子分組。</p></div></div>
+        <div class="grid detail-grid" id="factorDetails"></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const state={date:'',report:null,factor:'r1',sort:{key:'strength',dir:'desc'},selectedIndustry:''};
+    const factorLabels={r1:'r1',r3:'r3',relative7d:'7日RS'};
+    const compact=value=>String(value||'').replaceAll('-','').replaceAll('/','');
+    const num=value=>Number.isFinite(Number(value))?Number(value):null;
+    const fmt=(value,digits=2)=>Number.isFinite(num(value))?num(value).toFixed(digits):'NA';
+    const pct=value=>Number.isFinite(num(value))?`${num(value)>=0?'+':''}${num(value).toFixed(3)}%`:'NA';
+    const rate=value=>Number.isFinite(num(value))?`${num(value).toFixed(2)}%`:'NA';
+    const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    async function fetchJson(path){const response=await fetch(`../${path}`,{cache:'no-store'});if(!response.ok)throw new Error(`找不到 ${path}`);return response.json();}
+    async function analysisExists(date){try{return (await fetch(`../data_prediction_analysis/${date}/industry-factor-ranges.json`,{method:'HEAD',cache:'no-store'})).ok;}catch{return false;}}
+    function tone(value){return num(value)>0?'positive':num(value)<0?'negative':'';}
+    function strength(factor){return Math.abs(num(factor?.spearman)||0)*4+Math.abs(num(factor?.best_to_worst_average_return_spread)||0);}
+    async function load(){
+      const params=new URLSearchParams(location.search);const requested=compact(params.get('date'));
+      const [predictionManifest,analysisManifest]=await Promise.all([fetchJson('data_predictions/manifest.json'),fetchJson('data_prediction_analysis/manifest.json')]);
+      const candidates=[...new Set([requested,analysisManifest.latest_date,...(predictionManifest.available_dates||[]),predictionManifest.latest_date].map(compact).filter(date=>/^20\d{6}$/.test(date)))].sort().reverse();
+      const available=[];for(const date of candidates){if(await analysisExists(date))available.push(date);}
+      if(!available.length)throw new Error('目前沒有產業因子分析檔，請先執行 Analyze Replay Factor Ranges Action。');
+      state.date=requested&&available.includes(requested)?requested:available[0];
+      const url=new URL(location.href);url.searchParams.set('date',state.date);history.replaceState(null,'',url);
+      state.report=await fetchJson(`data_prediction_analysis/${state.date}/industry-factor-ranges.json`);
+      renderNav(available);render();
+    }
+    function renderNav(dates){
+      document.getElementById('dateSelect').innerHTML=dates.map(date=>`<option value="${date}" ${date===state.date?'selected':''}>${date}</option>`).join('');
+      document.getElementById('dateSelect').addEventListener('change',event=>location.href=`prediction-replay-factor-dashboard.html?date=${encodeURIComponent(event.target.value)}`);
+      document.getElementById('replayLink').href=`prediction-replay-dashboard.html?date=${encodeURIComponent(state.date)}`;
+      document.getElementById('forecastLink').href=`prediction-dashboard.html?date=${encodeURIComponent(state.date)}`;
+    }
+    function render(){
+      const report=state.report;document.getElementById('meta').textContent=`預測／實際日 ${report.actual_trade_date} · 有效 ${report.verified_count.toLocaleString()} 檔 · ${report.industry_count} 個產業`;
+      const overall=report.overall;const cards=[['有效股票',report.verified_count.toLocaleString(),'完成覆盤且有三項因子'],['產業數',report.industry_count,'全部產業'],['可分層產業',report.eligible_industry_count,'至少 12 檔'],['全市場平均',pct(overall.average_actual_return),'實際收盤漲跌'],['全市場上漲率',rate(overall.positive_rate),'實際報酬大於 0']];
+      document.getElementById('kpis').innerHTML=cards.map(([label,value,sub])=>`<article class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${value.startsWith('+')?'positive':value.startsWith('-')?'negative':''}">${value}</div><div class="kpi-sub">${sub}</div></article>`).join('');
+      document.getElementById('factorTabs').innerHTML=Object.entries(factorLabels).map(([key,label])=>`<button type="button" class="tab ${key===state.factor?'active':''}" data-factor="${key}">${label}</button>`).join('');
+      fillFilters();renderIndustries();selectInitialIndustry();
+      document.getElementById('dashboard').classList.remove('hidden');document.getElementById('loading').classList.add('hidden');
+    }
+    function fillFilters(){
+      const factors=state.report.industries.flatMap(item=>Object.values(item.factors||{}));
+      const associations=[...new Set(factors.map(item=>item.association).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+      const evidence=[...new Set(factors.map(item=>item.evidence_level).filter(Boolean))];
+      document.getElementById('association').innerHTML='<option value="">全部關聯型態</option>'+associations.map(value=>`<option>${esc(value)}</option>`).join('');
+      document.getElementById('evidence').innerHTML='<option value="">全部證據等級</option>'+evidence.map(value=>`<option>${esc(value)}</option>`).join('');
+    }
+    function rowValue(industry,key){const factor=industry.factors?.[state.factor]||{};const map={industry:industry.industry,sample:industry.sample_count,industryReturn:industry.average_actual_return,positiveRate:industry.positive_rate,association:factor.association,spearman:factor.spearman,pearson:factor.pearson,bestRange:factor.best_range?.minimum,bestReturn:factor.best_range?.average_actual_return,bestPositive:factor.best_range?.positive_rate,worstRange:factor.worst_range?.minimum,spread:factor.best_to_worst_average_return_spread,evidence:factor.evidence_level,strength:strength(factor)};return map[key];}
+    function compare(left,right){const key=state.sort.key;const a=rowValue(left,key),b=rowValue(right,key);const missing=value=>value===null||value===undefined||value==='';if(missing(a)&&missing(b))return left.industry.localeCompare(right.industry,'zh-Hant');if(missing(a))return 1;if(missing(b))return -1;let result=Number.isFinite(Number(a))&&Number.isFinite(Number(b))?Number(a)-Number(b):String(a).localeCompare(String(b),'zh-Hant',{numeric:true});return state.sort.dir==='desc'?-result:result;}
+    function sortButton(key,label){return `<button type="button" class="sort" data-sort="${key}">${label}${state.sort.key===key?(state.sort.dir==='desc'?' ↓':' ↑'):''}</button>`;}
+    function renderIndustries(){
+      const q=document.getElementById('search').value.trim().toLowerCase(),association=document.getElementById('association').value,evidence=document.getElementById('evidence').value,minSample=Number(document.getElementById('sample').value||0);
+      const rows=state.report.industries.filter(industry=>{const factor=industry.factors?.[state.factor]||{};return (!q||industry.industry.toLowerCase().includes(q))&&(!association||factor.association===association)&&(!evidence||factor.evidence_level===evidence)&&industry.sample_count>=minSample;}).sort(compare);
+      document.getElementById('industryHead').innerHTML=`<tr>${[['industry','產業'],['sample','樣本'],['industryReturn','產業平均漲跌'],['positiveRate','產業上漲率'],['association','關聯型態'],['spearman','Spearman'],['pearson','Pearson'],['bestRange','最佳區間'],['bestReturn','區間平均漲跌'],['bestPositive','區間上漲率'],['worstRange','最差區間'],['spread','最佳－最差差距'],['evidence','證據']].map(([key,label])=>`<th>${sortButton(key,label)}</th>`).join('')}</tr>`;
+      document.getElementById('industryRows').innerHTML=rows.map(industry=>{const factor=industry.factors?.[state.factor]||{},selected=industry.industry===state.selectedIndustry?'selected':'';return `<tr class="${selected}" data-industry="${esc(industry.industry)}"><td><b>${esc(industry.industry)}</b></td><td>${industry.sample_count}</td><td class="${tone(industry.average_actual_return)}"><b>${pct(industry.average_actual_return)}</b></td><td>${rate(industry.positive_rate)}</td><td><span class="pill ${factor.association==='正向連動'?'positive':factor.association==='反向連動'?'negative':'warn'}">${esc(factor.association||'資料不足')}</span></td><td>${fmt(factor.spearman,4)}</td><td>${fmt(factor.pearson,4)}</td><td>${esc(factor.best_range?.range||'NA')}</td><td class="${tone(factor.best_range?.average_actual_return)}"><b>${pct(factor.best_range?.average_actual_return)}</b></td><td>${rate(factor.best_range?.positive_rate)}</td><td>${esc(factor.worst_range?.range||'NA')}</td><td>${fmt(factor.best_to_worst_average_return_spread,3)}pp</td><td>${esc(factor.evidence_level||'資料不足')}</td></tr>`;}).join('')||'<tr><td colspan="13" class="empty">沒有符合條件的產業。</td></tr>';
+      document.getElementById('summaryNote').textContent=`${factorLabels[state.factor]} · 顯示 ${rows.length} 個產業；點擊標題可排序。`;
+    }
+    function selectInitialIndustry(){if(state.selectedIndustry&&state.report.industries.some(item=>item.industry===state.selectedIndustry)){renderDetail();return;}const eligible=state.report.industries.filter(item=>item.sample_count>=12).sort((a,b)=>strength(b.factors?.[state.factor])-strength(a.factors?.[state.factor]));state.selectedIndustry=(eligible[0]||state.report.industries[0])?.industry||'';renderIndustries();renderDetail();}
+    function renderDetail(){const industry=state.report.industries.find(item=>item.industry===state.selectedIndustry);if(!industry){document.getElementById('factorDetails').innerHTML='<div class="empty">請選擇產業。</div>';return;}document.getElementById('detailTitle').textContent=`${industry.industry}：因子區間明細`;document.getElementById('detailNote').textContent=`樣本 ${industry.sample_count} 檔；產業平均 ${pct(industry.average_actual_return)}；上漲率 ${rate(industry.positive_rate)}。`;document.getElementById('factorDetails').innerHTML=Object.entries(factorLabels).map(([key,label])=>{const factor=industry.factors?.[key]||{};return `<article class="factor-card"><h3>${label} <span class="pill ${factor.association==='正向連動'?'positive':factor.association==='反向連動'?'negative':'warn'}">${esc(factor.association||'資料不足')}</span></h3><div class="factor-meta"><div class="fact"><span>Spearman</span><b>${fmt(factor.spearman,4)}</b></div><div class="fact"><span>最佳－最差</span><b>${fmt(factor.best_to_worst_average_return_spread,3)}pp</b></div><div class="fact"><span>最佳區間</span><b>${esc(factor.best_range?.range||'NA')}</b></div><div class="fact"><span>證據</span><b>${esc(factor.evidence_level||'資料不足')}</b></div></div><table class="bin-table"><thead><tr><th>區間</th><th>樣本</th><th>平均漲跌</th><th>中位數</th><th>上漲率</th></tr></thead><tbody>${(factor.bins||[]).map(bin=>`<tr><td>${esc(bin.range)}</td><td>${bin.count}</td><td class="${tone(bin.average_actual_return)}"><b>${pct(bin.average_actual_return)}</b></td><td class="${tone(bin.median_actual_return)}">${pct(bin.median_actual_return)}</td><td>${rate(bin.positive_rate)}</td></tr>`).join('')}</tbody></table></article>`;}).join('');}
+    document.getElementById('factorTabs').addEventListener('click',event=>{const button=event.target.closest('[data-factor]');if(!button)return;state.factor=button.dataset.factor;state.sort={key:'strength',dir:'desc'};document.querySelectorAll('[data-factor]').forEach(item=>item.classList.toggle('active',item.dataset.factor===state.factor));renderIndustries();selectInitialIndustry();});
+    document.getElementById('industryHead').addEventListener('click',event=>{const button=event.target.closest('[data-sort]');if(!button)return;if(state.sort.key===button.dataset.sort)state.sort.dir=state.sort.dir==='desc'?'asc':'desc';else state.sort={key:button.dataset.sort,dir:'desc'};renderIndustries();});
+    document.getElementById('industryRows').addEventListener('click',event=>{const row=event.target.closest('[data-industry]');if(!row)return;state.selectedIndustry=row.dataset.industry;renderIndustries();renderDetail();document.getElementById('detailSection').scrollIntoView({behavior:'smooth',block:'start'});});
+    ['search','association','evidence','sample'].forEach(id=>document.getElementById(id).addEventListener(id==='search'?'input':'change',renderIndustries));
+    load().catch(error=>{document.getElementById('loading').classList.add('hidden');const target=document.getElementById('error');target.textContent=`產業因子報告載入失敗：${error.message}`;target.classList.remove('hidden');});
+  </script>
+</body>
+</html>
