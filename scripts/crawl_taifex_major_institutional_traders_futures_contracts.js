@@ -26,6 +26,18 @@ function formatDate(dateCompact) {
     return `${dateCompact.slice(0, 4)}/${dateCompact.slice(4, 6)}/${dateCompact.slice(6, 8)}`;
 }
 
+function buildDateQueryPayload(dateCompact) {
+    return {
+        queryType: '1',
+        goDay: '',
+        doQuery: '1',
+        dateaddcnt: '',
+        queryDate: formatDate(dateCompact),
+        commodityId: '',
+        button: '送出查詢'
+    };
+}
+
 function parseNumber(value) {
     const normalized = String(value ?? '')
         .replace(/,/g, '')
@@ -176,7 +188,38 @@ function comparablePayload(payload) {
     return clone;
 }
 
-async function loadPage(page) {
+async function submitDateQuery(page, expectedDate) {
+    const fields = buildDateQueryPayload(expectedDate);
+
+    await Promise.all([
+        page.waitForNavigation({
+            waitUntil: 'domcontentloaded',
+            timeout: 60000
+        }),
+        page.evaluate(({ action, fields }) => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = action;
+            form.acceptCharset = 'UTF-8';
+
+            for (const [name, value] of Object.entries(fields)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }, {
+            action: PAGE_URL,
+            fields
+        })
+    ]);
+}
+
+async function loadPage(page, expectedDate) {
     let lastError = null;
 
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -187,7 +230,12 @@ async function loadPage(page) {
             });
 
             if (!response || !response.ok()) {
-                throw new Error(`TAIFEX returned HTTP ${response ? response.status() : 'no response'}`);
+                throw new Error(`TAIFEX returned HTTP ${response ? response.status() : 'no response'} for initial GET`);
+            }
+
+            if (expectedDate) {
+                await submitDateQuery(page, expectedDate);
+                console.log(`Submitted TAIFEX POST query for ${formatDate(expectedDate)}`);
             }
 
             await page.waitForSelector(TABLE_SELECTOR, { timeout: 30000 });
@@ -302,7 +350,7 @@ async function extractTable(page) {
         });
         const page = await context.newPage();
 
-        await loadPage(page);
+        await loadPage(page, expectedDate);
         const extracted = await extractTable(page);
         const dateMatch = extracted.metadataText.match(/日期\s*(\d{4})\/(\d{2})\/(\d{2})/);
 
@@ -312,7 +360,7 @@ async function extractTable(page) {
 
         const payloadDate = `${dateMatch[1]}${dateMatch[2]}${dateMatch[3]}`;
         if (expectedDate && payloadDate !== expectedDate) {
-            throw new Error(`TAIFEX page date is ${payloadDate}, but target date is ${expectedDate}. Data is not ready; no file was written.`);
+            throw new Error(`TAIFEX page date is ${payloadDate}, but target date is ${expectedDate}. The POST query may have been ignored; no file was written.`);
         }
 
         const rows = buildStructuredRows(extracted.bodyRows);
@@ -324,7 +372,9 @@ async function extractTable(page) {
             source: {
                 name: '臺灣期貨交易所－三大法人－區分各期貨契約－依日期',
                 url: PAGE_URL,
-                pageTitle: extracted.pageTitle
+                pageTitle: extracted.pageTitle,
+                requestMethod: expectedDate ? 'POST' : 'GET',
+                queryDate: expectedDate ? formatDate(expectedDate) : null
             },
             date: formatDate(payloadDate),
             dateCompact: payloadDate,
