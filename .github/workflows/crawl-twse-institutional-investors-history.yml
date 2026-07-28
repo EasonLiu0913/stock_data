@@ -40,6 +40,13 @@ on:
         required: false
         default: '90000'
 
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-institutional-investors-history
+  cancel-in-progress: false
+
 jobs:
   crawl-history:
     runs-on: ubuntu-latest
@@ -49,6 +56,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -85,16 +93,22 @@ jobs:
 
           node scripts/crawl_history_twse_institutional_investors.js "${ARGS[@]}"
 
-      - name: Generate files.json
-        run: node scripts/generate_file_lists.js
+      - name: Generate TWSE institutional files.json only
+        run: node scripts/generate_file_lists.js --only data_twse_institutional_investors
 
       - name: Commit and push changes
+        shell: bash
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add data_twse_institutional_investors/ data_fubon/files.json data_twse/files.json
+          git add data_twse_institutional_investors/
 
           if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE institutional-history changes:"
+              git status --short
+              exit 1
+            fi
             echo "No TWSE institutional investors changes"
             exit 0
           fi
@@ -102,5 +116,20 @@ jobs:
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "chore: update TWSE institutional investors history ${CURRENT_DATE}"
 
-          git pull --rebase origin main
-          git push origin main
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE institutional investors history after 5 attempts."
+          exit 1
