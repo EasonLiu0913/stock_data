@@ -73,9 +73,8 @@
     .comparison-table .positive{color:#08783f;font-weight:900}
     .comparison-table .negative{color:#aa2d2d;font-weight:900}
     .comparison-table .winner{background:#e8f7ef;color:#12623a}
-    .performance-table th:first-child,.performance-table td:first-child{min-width:370px;white-space:normal}
+    .performance-table th:first-child,.performance-table td:first-child{min-width:210px}
     .indicator-name{display:block;font-weight:900;color:#334155}
-    .indicator-help{display:block;margin-top:4px;color:#697789;font-size:11px;line-height:1.5;font-weight:500}
     .compare-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
     .compare-filters input,.compare-filters select{height:38px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:0 10px}
     .compare-filters input{flex:1 1 240px}
@@ -136,6 +135,7 @@
     const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
     const hasNumber = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
     const fmt = value => hasNumber(value) ? Number(value).toFixed(2) : 'NA';
+    const fmt4 = value => hasNumber(value) ? Number(value).toFixed(4) : 'NA';
     const pct = value => hasNumber(value) ? `${Number(value).toFixed(1)}%` : 'NA';
     const directionClass = value => String(value || '').includes('偏多') ? 'bull' : String(value || '').includes('偏空') ? 'bear' : 'neutral';
     const currentData = row => currentVersion === 'v2' ? row.v2 : row.v1;
@@ -204,7 +204,7 @@
       document.getElementById('detailPanel').classList.toggle('open', !compareMode && Boolean(selectedCode));
       if (compareMode) {
         document.getElementById('pageTitle').textContent = 'V1 / V2 覆盤比較分析';
-        document.getElementById('pageNote').textContent = '官方命中率、統一判分、方向轉換、V2 調整因素與成交量排除效果分開呈現，避免混用不同樣本母體。';
+        document.getElementById('pageNote').textContent = '所有 V1 / V2 績效指標固定使用共同可判分樣本；版本專屬股票只在股票清單中分開顯示。';
         document.getElementById('meta').innerHTML = '資料基準日 ' + esc(payload.base_trade_date || 'NA') + ' · 預測日 ' + esc(payload.forecast_date || payload.forecast_date_compact) + ' · <span class="version-badge">COMPARE</span>';
       } else {
         document.getElementById('pageTitle').textContent = 'V1 / V2 股票預測切換';
@@ -239,13 +239,14 @@
       if (currentVersion === 'compare') {
         const accuracy = comparison?.accuracy_comparison;
         const changed = comparison?.paired_evaluation?.changed_evaluable_count ?? comparison?.forecast_difference?.changed_direction_count;
+        const commonCount = accuracy?.common_sample_count ?? comparison?.paired_evaluation?.common_evaluable_count;
         const cards = [
-          ['官方 V1 命中率', accuracy ? pct(accuracy.v1.hit_rate) : 'NA', accuracy ? accuracy.v1.verified_count + ' 筆 eligibility 樣本' : '尚未覆盤'],
-          ['官方 V2 命中率', accuracy ? pct(accuracy.v2.hit_rate) : 'NA', accuracy ? accuracy.v2.verified_count + ' 筆 eligibility 樣本' : '尚未覆盤'],
-          ['V2 − V1 命中率', accuracy ? (Number(accuracy.deltas.hit_rate) >= 0 ? '+' : '') + fmt(accuracy.deltas.hit_rate) + ' pp' : 'NA', '官方各版樣本；僅供 headline 參考'],
+          ['V1 命中率', accuracy ? pct(accuracy.v1.hit_rate) : 'NA', accuracy ? commonCount + ' 筆共同樣本' : '尚未覆盤'],
+          ['V2 命中率', accuracy ? pct(accuracy.v2.hit_rate) : 'NA', accuracy ? commonCount + ' 筆共同樣本' : '尚未覆盤'],
+          ['V2 − V1 命中率', accuracy ? (Number(accuracy.deltas.hit_rate) >= 0 ? '+' : '') + fmt(accuracy.deltas.hit_rate) + ' pp' : 'NA', '相同股票、相同判分規則'],
           ['共同預測', comparison?.shared_prediction_count ?? 'NA', '兩版都有預測輸出'],
           ['方向改變', comparison?.forecast_difference?.changed_direction_count ?? 'NA', pct(comparison?.forecast_difference?.changed_direction_rate)],
-          ['方向改變可判分', changed ?? 'NA', '下方使用同一套規則逐筆比較']
+          ['方向改變可判分', changed ?? 'NA', '共同樣本中的方向差異']
         ];
         document.getElementById('kpis').innerHTML = cards.map(([label,value,sub]) => '<div class="card"><div class="label">' + esc(label) + '</div><div class="value">' + esc(value) + '</div><div class="sub">' + esc(sub) + '</div></div>').join('');
         renderComparison();
@@ -314,36 +315,34 @@
       const factorRows = factors.map(row => '<tr><td><strong>' + esc(factorLabel(row.name)) + '</strong></td><td>' + esc(row.count) + '</td><td>' + esc(row.v1_closer) + '</td><td>' + esc(row.v2_closer) + '</td><td>' + esc(row.v1_only_hit) + '</td><td>' + esc(row.v2_only_hit) + '</td><td class="' + (row.v2_minus_v1_closer > 0 ? 'positive' : row.v2_minus_v1_closer < 0 ? 'negative' : '') + '">' + esc(signed(row.v2_minus_v1_closer)) + '</td></tr>').join('');
       const returnRows = accuracy ? [
         {
-          label: '官方命中率',
-          help: '各版本依自己的覆盤資格樣本，計算預測方向與實際上漲／中性／下跌類別完全一致的比例。用來比較整體方向判斷成功率；因 V1、V2 eligibility 筆數可能不同，不能視為完全相同母體。',
+          label: '共同樣本命中率',
           v1: pct(accuracy.v1.hit_rate),
           v2: pct(accuracy.v2.hit_rate),
           delta: signed(accuracy.deltas.hit_rate, ' pp')
         },
         {
           label: '平均投報率',
-          help: '依預測方向換算每筆報酬：偏多採用實際報酬，偏空則反向計算，再取平均；中性不列入。這是未扣交易成本的方向策略平均投報率，數值越高越好。',
           v1: pct(accuracy.v1.average_gross_signed_return),
           v2: pct(accuracy.v2.average_gross_signed_return),
           delta: signed(accuracy.deltas.average_gross_signed_return, ' pp')
         },
         {
           label: '平衡權重準確率',
-          help: '偏多命中率與偏空命中率各占 50% 後取平均，中性預測不列入。避免樣本較多的一側主導結果，用來判斷模型辨識多空兩側是否均衡；目前只有 V2 輸出。',
-          v1: 'NA',
-          v2: pct(accuracy.v2.balanced_directional_accuracy),
-          delta: 'V2 only'
+          v1: pct(accuracy.v1.balanced_weight_accuracy ?? accuracy.v1.balanced_directional_accuracy),
+          v2: pct(accuracy.v2.balanced_weight_accuracy ?? accuracy.v2.balanced_directional_accuracy),
+          delta: signed(accuracy.deltas.balanced_weight_accuracy ?? accuracy.deltas.balanced_directional_accuracy, ' pp')
         },
         {
           label: '市場超額報酬 IC 率',
-          help: '以 Spearman 相關係數衡量預測分數排序與股票相對大盤超額報酬排序是否一致。比較的是選股排序能力，不是方向命中率；正值越高代表高分股票越傾向跑贏大盤，目前只有 V2 輸出。',
-          v1: 'NA',
-          v2: fmt(accuracy.v2.score_vs_market_excess_spearman_ic),
-          delta: 'V2 only'
+          v1: fmt4(accuracy.v1.score_vs_market_excess_spearman_ic),
+          v2: fmt4(accuracy.v2.score_vs_market_excess_spearman_ic),
+          delta: hasNumber(accuracy.deltas.score_vs_market_excess_spearman_ic)
+            ? (Number(accuracy.deltas.score_vs_market_excess_spearman_ic) > 0 ? '+' : '') + fmt4(accuracy.deltas.score_vs_market_excess_spearman_ic)
+            : 'NA'
         }
       ].map(row => {
         const deltaClass = String(row.delta).startsWith('+') ? 'positive' : String(row.delta).startsWith('-') ? 'negative' : '';
-        return '<tr><td><span class="indicator-name">' + esc(row.label) + '</span><small class="indicator-help">' + esc(row.help) + '</small></td><td>' + esc(row.v1) + '</td><td>' + esc(row.v2) + '</td><td class="' + deltaClass + '">' + esc(row.delta) + '</td></tr>';
+        return '<tr><td><span class="indicator-name">' + esc(row.label) + '</span></td><td>' + esc(row.v1) + '</td><td>' + esc(row.v2) + '</td><td class="' + deltaClass + '">' + esc(row.delta) + '</td></tr>';
       }).join('') : '';
       const volumeRows = volume ? [
         ['低量門檻（實際量 / 前20日均量）', volume.v1.threshold, volume.v2.threshold, '越低代表量縮'],
@@ -357,7 +356,7 @@
         '<section class="section-card"><h2>同一套命中定義：結果拆解</h2><p class="section-note">' + esc(scope) + '。' + esc(paired.definition?.actual_class || '') + ' ' + esc(paired.definition?.caveat || '') + '</p><div class="metric-grid">' +
         metrics.map(([label,value,sub]) => '<div class="metric"><div class="label">' + esc(label) + '</div><strong>' + esc(value ?? 'NA') + '</strong><div class="sub">' + esc(sub) + '</div></div>').join('') +
         '</div></section>' +
-        '<section class="section-card"><h2>整體績效指標</h2><p class="section-note">官方命中率保留各版本原本 eligibility；平均投報率用來補充方向判斷是否具有經濟價值。pp 代表百分點，例如 65% − 60% = 5 pp。</p><table class="comparison-table performance-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>V2 − V1 / 說明</th></tr></thead><tbody>' + returnRows + '</tbody></table></section>' +
+        '<section class="section-card"><h2>整體績效指標</h2><p class="section-note">所有指標均使用 V1、V2 共同可判分股票；平均投報率另限定兩版都有明確多空方向的共同子樣本。pp 代表百分點。</p><table class="comparison-table performance-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>V2 − V1 / 說明</th></tr></thead><tbody>' + returnRows + '</tbody></table></section>' +
         '<section class="section-card"><h2>方向轉換矩陣</h2><p class="section-note">直接看 V2 把哪一類 V1 判斷改成什麼，以及改動後誰更接近真實方向。</p><table class="comparison-table"><thead><tr><th>方向轉換</th><th>筆數</th><th>V1 較近</th><th>V2 較近</th><th>僅 V1 命中</th><th>僅 V2 命中</th><th>都未中</th><th>V2−V1 較近</th></tr></thead><tbody>' + transitionRows + '</tbody></table></section>' +
         '<section class="section-card"><h2>V2 調整因素成效</h2><p class="section-note">因素是診斷分組，不代表單一因果；同一規則需跨多個交易日才適合下結論。</p><table class="comparison-table"><thead><tr><th>主要因素</th><th>筆數</th><th>V1 較近</th><th>V2 較近</th><th>僅 V1 命中</th><th>僅 V2 命中</th><th>V2−V1 較近</th></tr></thead><tbody>' + factorRows + '</tbody></table></section>' +
         (volume ? '<section class="section-card"><h2>成交量排除測試</h2><p class="section-note">' + esc(volume.definition?.description || volume.definition?.rule || '測試排除低量樣本後，兩版命中率是否改善。') + '</p><table class="comparison-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>差異／說明</th></tr></thead><tbody>' + volumeRows + '</tbody></table></section>' : '') +
