@@ -11,12 +11,21 @@ on:
         required: false
         default: ''
 
+permissions:
+  contents: write
+
+concurrency:
+  group: retry-sma
+  cancel-in-progress: false
+
 jobs:
   retry-sma:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -55,22 +64,26 @@ jobs:
 
       - name: Run SMA retry
         if: steps.check.outputs.exists == 'true'
-        run: |
-          node scripts/retry_sma_failed.js --date ${{ steps.date.outputs.target }}
+        run: node scripts/retry_sma_failed.js --date ${{ steps.date.outputs.target }}
 
-      - name: Generate files.json
+      - name: Generate SMA files.json only
         if: steps.check.outputs.exists == 'true'
-        run: |
-          node scripts/generate_file_lists.js || echo "generate_file_lists.js not found, skipping"
+        run: node scripts/generate_file_lists.js --only data_fubon
 
       - name: Commit and push changes
         if: steps.check.outputs.exists == 'true'
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add data_fubon/
 
           if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no retry-SMA changes:"
+              git status --short
+              exit 1
+            fi
             echo "No changes to commit"
             exit 0
           fi
@@ -78,8 +91,20 @@ jobs:
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "🔄 Retry SMA failed stocks - ${CURRENT_DATE}"
 
-          for i in 1 2 3; do
-            git pull --rebase origin main && git push && break
-            echo "Push failed, retry $i..."
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
             sleep 5
           done
+
+          echo "Failed to push retry-SMA data after 5 attempts."
+          exit 1
