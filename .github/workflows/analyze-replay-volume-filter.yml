@@ -1,0 +1,107 @@
+name: Analyze Replay Volume Filter
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: Replay date in YYYYMMDD; leave blank for newest date with non-empty V1 and V2 replay files
+        required: false
+        default: ''
+      low_volume_threshold:
+        description: Low-volume threshold for actual volume / previous 20-day average volume
+        required: false
+        default: '0.75'
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/analyze_replay_volume_filter.js
+      - .github/workflows/analyze-replay-volume-filter.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analyze-replay-volume-filter
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Analyze low-volume exclusion impact
+        shell: bash
+        run: |
+          args=(--low-volume-threshold "${{ inputs.low_volume_threshold || '0.75' }}")
+          if [ -n "${{ inputs.date }}" ]; then
+            args+=(--date "${{ inputs.date }}")
+          fi
+          node scripts/analyze_replay_volume_filter.js "${args[@]}"
+
+      - name: Resolve analyzed date
+        id: result
+        shell: bash
+        run: |
+          date=$(node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("data_prediction_analysis/manifest.json","utf8"));process.stdout.write(m.latest_volume_filter_date||"");')
+          if ! [[ "$date" =~ ^20[0-9]{6}$ ]]; then
+            echo "Unable to resolve analyzed volume-filter date: $date"
+            exit 1
+          fi
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-volume-filter-${{ steps.result.outputs.date }}
+          path: |
+            data_prediction_analysis/${{ steps.result.outputs.date }}/volume-filter-impact.json
+            data_prediction_analysis/${{ steps.result.outputs.date }}/volume-filter-impact.md
+          retention-days: 14
+
+      - name: Commit and push analysis
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/
+
+          if git diff --cached --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no volume-analysis changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No replay volume-filter changes"
+            exit 0
+          fi
+
+          git commit -m "analysis: update replay volume filter ${{ steps.result.outputs.date }}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Volume analysis push failed; retry ${attempt}/5"
+            sleep 5
+          done
+
+          echo "Volume analysis push failed after 5 attempts"
+          exit 1
