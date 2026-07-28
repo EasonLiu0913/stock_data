@@ -38,6 +38,22 @@ function v1ReplayMetrics(date) {
   };
 }
 
+function compactVolumeImpact(model) {
+  if (!model) return null;
+  return {
+    threshold: model.selected_threshold,
+    volume_covered_count: model.volume_covered_count,
+    baseline_hit_rate: model.baseline?.all_sample_hit_rate,
+    after_excluding_low_volume_hit_rate: model.after_excluding_low_volume?.all_sample_hit_rate,
+    hit_rate_delta: model.impact?.all_sample_hit_rate_delta,
+    removed_count: model.impact?.removed_count,
+    removed_hit_count: model.impact?.removed_hit_count,
+    removed_miss_count: model.impact?.removed_miss_count,
+    retained_coverage_rate: model.impact?.retained_coverage_rate,
+    interpretation: model.impact?.interpretation,
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const v2Manifest = readJson(path.join(ROOT, 'data_predictions_v2', 'manifest.json'), null);
@@ -65,8 +81,9 @@ function main() {
   const changed = differences.filter((row) => row.direction_changed);
   const v1Replay = v1ReplayMetrics(date);
   const v2Replay = readJson(path.join(ROOT, 'data_predictions_v2', date, 'replay-summary-v2.json'), null);
+  const volumeImpact = readJson(path.join(ROOT, 'data_prediction_analysis', date, 'volume-filter-impact.json'), null);
   const payload = {
-    comparison_version: '1.0.0',
+    comparison_version: '1.1.0',
     generated_at: new Date().toISOString(),
     forecast_date: date,
     shared_prediction_count: shared.length,
@@ -77,7 +94,10 @@ function main() {
       changed_examples: changed.slice(0, 200),
     },
     accuracy_comparison: v1Replay && v2Replay ? {
-      v1: v1Replay,
+      v1: {
+        ...v1Replay,
+        low_volume_filter_impact: compactVolumeImpact(volumeImpact?.models?.v1),
+      },
       v2: {
         verified_count: v2Replay.verified_count,
         hit_rate: v2Replay.raw_accuracy?.hit_rate,
@@ -86,12 +106,23 @@ function main() {
         average_net_signed_return_30bps: v2Replay.economic_value?.average_net_signed_return,
         score_vs_market_excess_spearman_ic: v2Replay.relative_ability?.score_vs_market_excess_spearman_ic,
         numeric_error: v2Replay.numeric_error,
+        low_volume_filter_impact: compactVolumeImpact(volumeImpact?.models?.v2),
       },
       deltas: {
         hit_rate: round(v2Replay.raw_accuracy?.hit_rate - v1Replay.hit_rate),
         average_gross_signed_return: round(v2Replay.economic_value?.average_gross_signed_return - v1Replay.average_gross_signed_return),
         average_net_signed_return_30bps: round(v2Replay.economic_value?.average_net_signed_return - v1Replay.average_net_signed_return_30bps),
+        low_volume_filtered_hit_rate: volumeImpact
+          ? round(volumeImpact.models?.v2?.after_excluding_low_volume?.all_sample_hit_rate
+            - volumeImpact.models?.v1?.after_excluding_low_volume?.all_sample_hit_rate)
+          : null,
       },
+    } : null,
+    volume_filter_comparison: volumeImpact ? {
+      definition: volumeImpact.definition,
+      v1: compactVolumeImpact(volumeImpact.models?.v1),
+      v2: compactVolumeImpact(volumeImpact.models?.v2),
+      source_file: `data_prediction_analysis/${date}/volume-filter-impact.json`,
     } : null,
     status: v1Replay && v2Replay ? 'accuracy_available' : 'forecast_only_waiting_for_actual_market_data',
   };
@@ -110,6 +141,10 @@ function main() {
     payload.accuracy_comparison
       ? `V1 命中率 ${payload.accuracy_comparison.v1.hit_rate}%；V2 命中率 ${payload.accuracy_comparison.v2.hit_rate}%；差異 ${payload.accuracy_comparison.deltas.hit_rate >= 0 ? '+' : ''}${payload.accuracy_comparison.deltas.hit_rate}%。`
       : '尚未取得結果日行情；目前只比較兩版預測輸出差異。',
+    '',
+    payload.volume_filter_comparison
+      ? `排除20日量比 ≤ ${payload.volume_filter_comparison.definition.selected_low_volume_threshold} 後：V1 ${payload.volume_filter_comparison.v1.after_excluding_low_volume_hit_rate}%（差 ${payload.volume_filter_comparison.v1.hit_rate_delta >= 0 ? '+' : ''}${payload.volume_filter_comparison.v1.hit_rate_delta}），V2 ${payload.volume_filter_comparison.v2.after_excluding_low_volume_hit_rate}%（差 ${payload.volume_filter_comparison.v2.hit_rate_delta >= 0 ? '+' : ''}${payload.volume_filter_comparison.v2.hit_rate_delta}）。`
+      : '尚未產生成交量排除測試。',
     '',
     '完整資料請見 `comparison.json`。',
     '',
