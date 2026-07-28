@@ -6,6 +6,8 @@ const PAGE_URL = 'https://www.taifex.com.tw/cht/3/futContractsDate';
 const TABLE_SELECTOR = 'table.table_f.table-sticky-3.w-1000';
 const OUTPUT_DIR = path.join(__dirname, '../data_taifex_major_institutional_traders_futures_contracts');
 const OUTPUT_SUFFIX = 'taifex_major_institutional_traders_futures_contracts';
+const NON_TRADING_DAYS_FILE = path.join(__dirname, '../data_history_sma/non_trading_days.json');
+const DEFAULT_DELAY_MS = 3000;
 const args = process.argv.slice(2);
 
 function getArg(flag) {
@@ -24,6 +26,36 @@ function normalizeDate(value) {
 
 function formatDate(dateCompact) {
     return `${dateCompact.slice(0, 4)}/${dateCompact.slice(4, 6)}/${dateCompact.slice(6, 8)}`;
+}
+
+function compactDateToUtc(dateCompact) {
+    const year = Number(dateCompact.slice(0, 4));
+    const month = Number(dateCompact.slice(4, 6));
+    const day = Number(dateCompact.slice(6, 8));
+    const value = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+        value.getUTCFullYear() !== year
+        || value.getUTCMonth() !== month - 1
+        || value.getUTCDate() !== day
+    ) {
+        throw new Error(`Invalid calendar date: ${dateCompact}`);
+    }
+
+    return value;
+}
+
+function utcDateToCompact(value) {
+    return value.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+function parseDelayMs(value) {
+    if (value == null || value === '') return DEFAULT_DELAY_MS;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1000 || parsed > 60000) {
+        throw new Error(`Invalid --delay-ms value: ${value}. Expected an integer from 1000 to 60000.`);
+    }
+    return parsed;
 }
 
 function buildDateQueryPayload(dateCompact) {
@@ -57,6 +89,106 @@ function parseSequence(value) {
 
 function sleep(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+function loadNonTradingDays() {
+    let payload;
+    try {
+        payload = JSON.parse(fs.readFileSync(NON_TRADING_DAYS_FILE, 'utf8'));
+    } catch (error) {
+        throw new Error(`Unable to read non-trading-day list ${NON_TRADING_DAYS_FILE}: ${error.message}`);
+    }
+
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error(`Invalid non-trading-day list: expected an object keyed by year in ${NON_TRADING_DAYS_FILE}.`);
+    }
+
+    const dates = new Set();
+    for (const [year, entries] of Object.entries(payload)) {
+        if (!Array.isArray(entries)) continue;
+        for (const entry of entries) {
+            const normalized = normalizeDate(entry);
+            compactDateToUtc(normalized);
+            if (!normalized.startsWith(String(year))) {
+                throw new Error(`Non-trading date ${entry} is stored under the wrong year key ${year}.`);
+            }
+            dates.add(normalized);
+        }
+    }
+
+    return dates;
+}
+
+function isWeekend(dateCompact) {
+    const day = compactDateToUtc(dateCompact).getUTCDay();
+    return day === 0 || day === 6;
+}
+
+function buildTradingDateRange(startDate, endDate, nonTradingDays) {
+    const start = compactDateToUtc(startDate);
+    const end = compactDateToUtc(endDate);
+
+    if (start > end) {
+        throw new Error(`Start date ${startDate} must not be later than end date ${endDate}.`);
+    }
+
+    const tradingDates = [];
+    const skippedDates = [];
+
+    for (let cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+        const dateCompact = utcDateToCompact(cursor);
+        if (isWeekend(dateCompact)) {
+            skippedDates.push({ date: dateCompact, reason: 'weekend' });
+            continue;
+        }
+        if (nonTradingDays.has(dateCompact)) {
+            skippedDates.push({ date: dateCompact, reason: 'configured-non-trading-day' });
+            continue;
+        }
+        tradingDates.push(dateCompact);
+    }
+
+    return { tradingDates, skippedDates };
+}
+
+function resolveRunPlan() {
+    const date = normalizeDate(getArg('--date'));
+    const startDate = normalizeDate(getArg('--start-date'));
+    const endDate = normalizeDate(getArg('--end-date'));
+    const delayMs = parseDelayMs(getArg('--delay-ms'));
+    const hasRangeInput = Boolean(startDate || endDate);
+
+    if (date && hasRangeInput) {
+        throw new Error('Use either --date or --start-date/--end-date, not both.');
+    }
+    if (hasRangeInput && (!startDate || !endDate)) {
+        throw new Error('Range mode requires both --start-date and --end-date.');
+    }
+
+    if (startDate && endDate) {
+        const nonTradingDays = loadNonTradingDays();
+        const { tradingDates, skippedDates } = buildTradingDateRange(startDate, endDate, nonTradingDays);
+        if (tradingDates.length === 0) {
+            throw new Error(`No trading dates remain between ${startDate} and ${endDate} after weekend and non-trading-day filtering.`);
+        }
+        return {
+            mode: 'range',
+            dates: tradingDates,
+            skippedDates,
+            delayMs,
+            startDate,
+            endDate
+        };
+    }
+
+    return {
+        mode: date ? 'single-date' : 'latest',
+        dates: [date],
+        skippedDates: [],
+        delayMs,
+        startDate: null,
+        endDate: null
+    };
 }
 
 function refreshFilesJson() {
@@ -334,11 +466,115 @@ async function extractTable(page) {
     });
 }
 
+function writePayload(payload) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    const outputFile = `${payload.dateCompact}_${OUTPUT_SUFFIX}.json`;
+    const outputPath = path.join(OUTPUT_DIR, outputFile);
+    let changed = true;
+
+    if (fs.existsSync(outputPath)) {
+        const existing = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+        if (JSON.stringify(comparablePayload(existing)) === JSON.stringify(comparablePayload(payload))) {
+            changed = false;
+        }
+    }
+
+    if (changed) {
+        fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+        console.log(`Saved ${outputFile}`);
+    } else {
+        console.log(`No data changes for ${outputFile}`);
+    }
+
+    return { outputFile, changed };
+}
+
+async function crawlOneDate(page, expectedDate) {
+    await loadPage(page, expectedDate);
+    const extracted = await extractTable(page);
+    const dateMatch = extracted.metadataText.match(/日期\s*(\d{4})\/(\d{2})\/(\d{2})/);
+
+    if (!dateMatch) {
+        throw new Error(`Unable to read the data date from metadata: ${extracted.metadataText || '(empty)'}`);
+    }
+
+    const payloadDate = `${dateMatch[1]}${dateMatch[2]}${dateMatch[3]}`;
+    if (expectedDate && payloadDate !== expectedDate) {
+        throw new Error(`TAIFEX page date is ${payloadDate}, but target date is ${expectedDate}. The POST query may have been ignored; no file was written.`);
+    }
+
+    const rows = buildStructuredRows(extracted.bodyRows);
+    const validation = validateRows(rows);
+    const productNames = [...new Set(rows.filter(row => row.rowType === 'contract').map(row => row.productName))];
+
+    const payload = {
+        schemaVersion: 1,
+        source: {
+            name: '臺灣期貨交易所－三大法人－區分各期貨契約－依日期',
+            url: PAGE_URL,
+            pageTitle: extracted.pageTitle,
+            requestMethod: expectedDate ? 'POST' : 'GET',
+            queryDate: expectedDate ? formatDate(expectedDate) : null
+        },
+        date: formatDate(payloadDate),
+        dateCompact: payloadDate,
+        fetchedAt: new Date().toISOString(),
+        unit: {
+            contracts: '口數',
+            contractAmount: '千元'
+        },
+        table: {
+            selector: TABLE_SELECTOR,
+            className: extracted.className,
+            metadataText: extracted.metadataText,
+            columns: [
+                '序號',
+                '商品名稱',
+                '身份別',
+                '交易多方口數',
+                '交易多方契約金額千元',
+                '交易空方口數',
+                '交易空方契約金額千元',
+                '交易多空淨額口數',
+                '交易多空淨額契約金額千元',
+                '未平倉多方口數',
+                '未平倉多方契約金額千元',
+                '未平倉空方口數',
+                '未平倉空方契約金額千元',
+                '未平倉多空淨額口數',
+                '未平倉多空淨額契約金額千元'
+            ],
+            headerRows: extracted.headerRows
+        },
+        summary: {
+            rowCount: rows.length,
+            contractProductCount: productNames.length,
+            contractProducts: productNames,
+            formulaErrorCount: validation.formulaErrorCount,
+            taiwanStockIndexFuturesForeignOpenInterest: validation.taiwanStockIndexFuturesForeignOpenInterest
+        },
+        rows
+    };
+
+    const writeResult = writePayload(payload);
+    const taiwanFutures = validation.taiwanStockIndexFuturesForeignOpenInterest;
+    console.log(`Date: ${payloadDate}`);
+    console.log(`Rows: ${rows.length}`);
+    console.log(`Products: ${productNames.length}`);
+    console.log(`臺股期貨外資未平倉淨額: ${taiwanFutures.longContracts} - ${taiwanFutures.shortContracts} = ${taiwanFutures.netContracts}`);
+
+    return {
+        date: payloadDate,
+        changed: writeResult.changed,
+        outputFile: writeResult.outputFile
+    };
+}
+
 (async () => {
     let browser;
 
     try {
-        const expectedDate = normalizeDate(getArg('--date'));
+        const plan = resolveRunPlan();
         browser = await chromium.launch({ headless: true });
         const context = await browser.newContext({
             locale: 'zh-TW',
@@ -350,97 +586,46 @@ async function extractTable(page) {
         });
         const page = await context.newPage();
 
-        await loadPage(page, expectedDate);
-        const extracted = await extractTable(page);
-        const dateMatch = extracted.metadataText.match(/日期\s*(\d{4})\/(\d{2})\/(\d{2})/);
-
-        if (!dateMatch) {
-            throw new Error(`Unable to read the data date from metadata: ${extracted.metadataText || '(empty)'}`);
-        }
-
-        const payloadDate = `${dateMatch[1]}${dateMatch[2]}${dateMatch[3]}`;
-        if (expectedDate && payloadDate !== expectedDate) {
-            throw new Error(`TAIFEX page date is ${payloadDate}, but target date is ${expectedDate}. The POST query may have been ignored; no file was written.`);
-        }
-
-        const rows = buildStructuredRows(extracted.bodyRows);
-        const validation = validateRows(rows);
-        const productNames = [...new Set(rows.filter(row => row.rowType === 'contract').map(row => row.productName))];
-
-        const payload = {
-            schemaVersion: 1,
-            source: {
-                name: '臺灣期貨交易所－三大法人－區分各期貨契約－依日期',
-                url: PAGE_URL,
-                pageTitle: extracted.pageTitle,
-                requestMethod: expectedDate ? 'POST' : 'GET',
-                queryDate: expectedDate ? formatDate(expectedDate) : null
-            },
-            date: formatDate(payloadDate),
-            dateCompact: payloadDate,
-            fetchedAt: new Date().toISOString(),
-            unit: {
-                contracts: '口數',
-                contractAmount: '千元'
-            },
-            table: {
-                selector: TABLE_SELECTOR,
-                className: extracted.className,
-                metadataText: extracted.metadataText,
-                columns: [
-                    '序號',
-                    '商品名稱',
-                    '身份別',
-                    '交易多方口數',
-                    '交易多方契約金額千元',
-                    '交易空方口數',
-                    '交易空方契約金額千元',
-                    '交易多空淨額口數',
-                    '交易多空淨額契約金額千元',
-                    '未平倉多方口數',
-                    '未平倉多方契約金額千元',
-                    '未平倉空方口數',
-                    '未平倉空方契約金額千元',
-                    '未平倉多空淨額口數',
-                    '未平倉多空淨額契約金額千元'
-                ],
-                headerRows: extracted.headerRows
-            },
-            summary: {
-                rowCount: rows.length,
-                contractProductCount: productNames.length,
-                contractProducts: productNames,
-                formulaErrorCount: validation.formulaErrorCount,
-                taiwanStockIndexFuturesForeignOpenInterest: validation.taiwanStockIndexFuturesForeignOpenInterest
-            },
-            rows
-        };
-
-        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-        const outputFile = `${payloadDate}_${OUTPUT_SUFFIX}.json`;
-        const outputPath = path.join(OUTPUT_DIR, outputFile);
-        let changed = true;
-
-        if (fs.existsSync(outputPath)) {
-            const existing = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-            if (JSON.stringify(comparablePayload(existing)) === JSON.stringify(comparablePayload(payload))) {
-                changed = false;
+        if (plan.mode === 'range') {
+            console.log(`Range: ${plan.startDate} - ${plan.endDate}`);
+            console.log(`Trading dates to crawl: ${plan.dates.length}`);
+            console.log(`Skipped dates: ${plan.skippedDates.length}`);
+            for (const skipped of plan.skippedDates) {
+                console.log(`Skip ${skipped.date}: ${skipped.reason}`);
             }
         }
 
-        if (changed) {
-            fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-            console.log(`Saved ${outputFile}`);
-        } else {
-            console.log(`No data changes for ${outputFile}`);
+        const successes = [];
+        const failures = [];
+
+        for (let index = 0; index < plan.dates.length; index++) {
+            const targetDate = plan.dates[index];
+            const label = targetDate || 'latest';
+            console.log(`\n[${index + 1}/${plan.dates.length}] Crawl ${label}`);
+
+            try {
+                successes.push(await crawlOneDate(page, targetDate));
+            } catch (error) {
+                failures.push({ date: label, message: error.message });
+                console.error(`Failed ${label}: ${error.message}`);
+            }
+
+            if (index < plan.dates.length - 1) {
+                console.log(`Delay ${plan.delayMs} ms before next request`);
+                await sleep(plan.delayMs);
+            }
         }
 
         refreshFilesJson();
-        const taiwanFutures = validation.taiwanStockIndexFuturesForeignOpenInterest;
-        console.log(`Date: ${payloadDate}`);
-        console.log(`Rows: ${rows.length}`);
-        console.log(`Products: ${productNames.length}`);
-        console.log(`臺股期貨外資未平倉淨額: ${taiwanFutures.longContracts} - ${taiwanFutures.shortContracts} = ${taiwanFutures.netContracts}`);
+        const changedCount = successes.filter(item => item.changed).length;
+        console.log(`\nCompleted: ${successes.length}/${plan.dates.length}`);
+        console.log(`Files changed: ${changedCount}`);
+        console.log(`Failures: ${failures.length}`);
+
+        if (failures.length > 0) {
+            const details = failures.map(item => `${item.date}: ${item.message}`).join('\n');
+            throw new Error(`Failed to complete all requested dates:\n${details}`);
+        }
     } catch (error) {
         console.error(`Failed to crawl TAIFEX futures contracts institutional trader data: ${error.message}`);
         process.exitCode = 1;
