@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: Forecast/result date in YYYYMMDD; defaults to latest V2 date
+        description: Forecast/result date in YYYYMMDD; leave blank to use the newest complete V2 available date
         required: false
         default: ''
       force:
@@ -45,8 +45,62 @@ jobs:
         run: |
           if [ -n "$INPUT_DATE" ]; then
             date="$INPUT_DATE"
+            echo "Using manually requested comparison date: $date"
           else
-            date=$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('data_predictions_v2/manifest.json','utf8')); process.stdout.write(m.latest_date || m.forecast_date_compact || '');")
+            mapfile -t candidate_dates < <(
+              node <<'NODE'
+              const fs = require('fs');
+              const manifest = JSON.parse(
+                fs.readFileSync('data_predictions_v2/manifest.json', 'utf8')
+              );
+
+              const candidates = [
+                ...(Array.isArray(manifest.available_dates) ? manifest.available_dates : []),
+                manifest.latest_date,
+                manifest.forecast_date_compact,
+              ]
+                .map(value => String(value || '').replaceAll('-', '').replaceAll('/', ''))
+                .filter(value => /^20\d{6}$/.test(value));
+
+              const uniqueNewestFirst = [...new Set(candidates)].sort().reverse();
+              process.stdout.write(uniqueNewestFirst.join('\n'));
+              NODE
+            )
+
+            if [ "${#candidate_dates[@]}" -eq 0 ]; then
+              echo "V2 manifest does not contain any valid available dates"
+              exit 1
+            fi
+
+            echo "V2 candidate dates, newest first: ${candidate_dates[*]}"
+            date=""
+
+            for candidate in "${candidate_dates[@]}"; do
+              missing=()
+
+              if [ ! -s "data_predictions/$candidate/manifest.json" ]; then
+                missing+=("V1 forecast manifest")
+              fi
+              if [ ! -s "data_predictions_v2/$candidate/manifest.json" ]; then
+                missing+=("V2 forecast manifest")
+              fi
+              if [ ! -s "data_fubon/fubon_${candidate}_sma.json" ]; then
+                missing+=("actual SMA result")
+              fi
+
+              if [ "${#missing[@]}" -eq 0 ]; then
+                date="$candidate"
+                echo "Selected newest complete comparison date: $date"
+                break
+              fi
+
+              echo "Skipping incomplete date $candidate; missing: ${missing[*]}"
+            done
+
+            if [ -z "$date" ]; then
+              echo "None of the V2 available dates has complete V1, V2, and actual SMA data"
+              exit 1
+            fi
           fi
 
           if ! [[ "$date" =~ ^20[0-9]{6}$ ]]; then
