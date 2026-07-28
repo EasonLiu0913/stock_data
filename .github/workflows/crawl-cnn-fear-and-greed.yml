@@ -1,0 +1,87 @@
+name: Crawl CNN Fear and Greed Index
+
+on:
+  schedule:
+    # 台北時間 03:31（UTC 前一日 19:31）
+    - cron: '31 19 * * *'
+    # 台北時間 07:08（UTC 前一日 23:08）
+    - cron: '8 23 * * *'
+    # 台北時間 14:02（UTC 06:02）
+    - cron: '2 6 * * *'
+    # 台北時間 18:11（UTC 10:11）
+    - cron: '11 10 * * *'
+    # 台北時間 19:07（UTC 11:07）
+    - cron: '7 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-cnn-fear-and-greed
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Crawl CNN Fear and Greed Index
+        id: crawl
+        run: node scripts/crawl_cnn_fear_and_greed.js
+
+      - name: Generate CNN Fear and Greed files.json
+        run: node scripts/generate_file_lists.js --only data_cnn_fear_and_greed
+
+      - name: Commit and push changes
+        shell: bash
+        env:
+          DATA_DATE: ${{ steps.crawl.outputs.data_date }}
+          SOURCE_TIMESTAMP: ${{ steps.crawl.outputs.timestamp }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_cnn_fear_and_greed/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no CNN Fear and Greed changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No CNN Fear and Greed changes"
+            exit 0
+          fi
+
+          git commit -m "chore: update CNN Fear and Greed Index ${DATA_DATE} (${SOURCE_TIMESTAMP})"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push after 5 attempts."
+          exit 1
