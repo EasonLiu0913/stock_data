@@ -48,23 +48,23 @@ jobs:
             echo "Using manually requested comparison date: $date"
           else
             mapfile -t candidate_dates < <(
-              node <<'NODE'
-              const fs = require('fs');
-              const manifest = JSON.parse(
-                fs.readFileSync('data_predictions_v2/manifest.json', 'utf8')
-              );
+              node -e '
+                const fs = require("fs");
+                const manifest = JSON.parse(
+                  fs.readFileSync("data_predictions_v2/manifest.json", "utf8")
+                );
 
-              const candidates = [
-                ...(Array.isArray(manifest.available_dates) ? manifest.available_dates : []),
-                manifest.latest_date,
-                manifest.forecast_date_compact,
-              ]
-                .map(value => String(value || '').replaceAll('-', '').replaceAll('/', ''))
-                .filter(value => /^20\d{6}$/.test(value));
+                const candidates = [
+                  ...(Array.isArray(manifest.available_dates) ? manifest.available_dates : []),
+                  manifest.latest_date,
+                  manifest.forecast_date_compact,
+                ]
+                  .map(value => String(value || "").replaceAll("-", "").replaceAll("/", ""))
+                  .filter(value => /^20\d{6}$/.test(value));
 
-              const uniqueNewestFirst = [...new Set(candidates)].sort().reverse();
-              process.stdout.write(uniqueNewestFirst.join('\n'));
-              NODE
+                const uniqueNewestFirst = [...new Set(candidates)].sort().reverse();
+                process.stdout.write(uniqueNewestFirst.join("\n"));
+              '
             )
 
             if [ "${#candidate_dates[@]}" -eq 0 ]; then
