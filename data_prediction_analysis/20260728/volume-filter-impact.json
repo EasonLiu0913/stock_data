@@ -1,6 +1,6 @@
 {
-  "analysis_version": "1.0.0",
-  "generated_at": "2026-07-28T09:53:20.334Z",
+  "analysis_version": "1.1.0",
+  "generated_at": "2026-07-28T10:40:06.814Z",
   "prediction_date": "2026-07-28",
   "actual_trade_date": "2026-07-28",
   "definition": {
@@ -8,11 +8,20 @@
     "formula": "結果日成交量 / 結果日前20個交易日平均成交量",
     "selected_low_volume_threshold": 0.75,
     "low_volume_condition": "volume_ratio_20d <= 0.75",
-    "use_note": "低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。"
+    "use_note": "低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。V1/V2 僅使用兩版皆有20日量比且可覆盤的共同股票。",
+    "sample_policy": "V1/V2 使用相同的共同成交量樣本。",
+    "common_sample_count": 1047
   },
   "source_files": {
     "v1_replay": "data_predictions/20260728/replay.json",
     "v2_replay": "data_predictions_v2/20260728/replay-v2.json"
+  },
+  "sample_universe": {
+    "normalized_v1_count": 1047,
+    "normalized_v2_count": 1047,
+    "common_sample_count": 1047,
+    "v1_only_count": 0,
+    "v2_only_count": 0
   },
   "models": {
     "v1": {
@@ -17716,7 +17725,7 @@
   },
   "limitations": [
     "成交量是結果日資料，本分析只用來檢查是否應把預測日前的量能條件加入未來模型；不可倒灌成原預測已知資訊。",
-    "單一交易日的準確率差異可能受大盤、產業與樣本組成影響，不能直接視為因果。",
+    "V1/V2 已固定使用共同樣本，但單一交易日的準確率差異仍可能受大盤與產業影響，不能直接視為因果。",
     "若要正式排除低量股票，應累積多個覆盤日並做樣本外驗證，同時觀察覆蓋率與犧牲的正確預測數。"
   ]
 }
