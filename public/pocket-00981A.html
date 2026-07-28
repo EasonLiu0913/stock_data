@@ -1,217 +1,107 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>00981A ETF 持股內容</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8fafc;
-            color: #0f172a;
             min-height: 100vh;
             padding: 1.5rem;
+            background: #f8fafc;
+            color: #0f172a;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         }
-
-        .container {
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-
-        .header,
-        .controls,
-        .chart-section,
-        .table-wrap {
-            background: #ffffff;
+        .container { max-width: 1280px; margin: 0 auto; }
+        .header, .controls, .chart-section, .table-wrap {
+            background: #fff;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
         }
-
-        .header {
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            line-height: 1.3;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .meta {
-            color: #64748b;
-            font-size: 0.95rem;
-            font-weight: 600;
-            line-height: 1.7;
-        }
-
+        .header { padding: 1.5rem; margin-bottom: 1rem; }
+        h1 { margin-bottom: .5rem; color: #1e293b; font-size: 1.8rem; line-height: 1.3; }
+        .meta { color: #64748b; font-size: .95rem; font-weight: 600; line-height: 1.7; }
         .controls {
-            padding: 1rem;
-            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 1rem;
             flex-wrap: wrap;
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        label {
-            font-weight: 700;
-            color: #334155;
-        }
-
-        input,
-        select {
-            min-height: 40px;
-            min-width: 260px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 0.55rem 0.75rem;
-            background: #ffffff;
-            color: #0f172a;
-            font-size: 0.95rem;
-            outline: none;
-        }
-
-        select {
-            min-width: 170px;
-        }
-
-        input:focus,
-        select:focus {
-            border-color: #0f766e;
-            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
-        }
-
-        .summary {
-            margin-left: auto;
-            color: #475569;
-            font-weight: 700;
-        }
-
-        .chart-section {
-            padding: 1.25rem;
+            padding: 1rem;
             margin-bottom: 1rem;
         }
-
+        .control-group { display: flex; align-items: center; gap: .5rem; }
+        label { color: #334155; font-weight: 700; }
+        input, select {
+            min-height: 40px;
+            min-width: 260px;
+            padding: .55rem .75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            background: #fff;
+            color: #0f172a;
+            font-size: .95rem;
+        }
+        select { min-width: 170px; }
+        input:focus, select:focus {
+            border-color: #0f766e;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, .12);
+        }
+        .summary { margin-left: auto; color: #475569; font-weight: 700; }
+        .chart-section { padding: 1.25rem; margin-bottom: 1rem; }
         .chart-header {
             display: flex;
             justify-content: space-between;
-            gap: 1rem;
             align-items: baseline;
-            margin-bottom: 1rem;
+            gap: 1rem;
             flex-wrap: wrap;
+            margin-bottom: 1rem;
         }
-
-        .chart-header h2 {
-            font-size: 1.2rem;
-            color: #1e293b;
-        }
-
-        .chart-meta {
-            color: #64748b;
-            font-weight: 700;
-            font-size: 0.92rem;
-        }
-
-        .bar-chart {
-            display: grid;
-            gap: 0.65rem;
-        }
-
+        .chart-header h2 { color: #1e293b; font-size: 1.2rem; }
+        .chart-meta { color: #64748b; font-size: .92rem; font-weight: 700; }
+        .bar-chart { display: grid; gap: .65rem; }
         .bar-row {
             display: grid;
             grid-template-columns: minmax(120px, 180px) 1fr 72px;
-            gap: 0.75rem;
             align-items: center;
+            gap: .75rem;
             min-height: 28px;
         }
-
         .bar-label {
+            overflow: hidden;
             color: #334155;
             font-weight: 700;
-            overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        .bar-track {
-            height: 22px;
-            border-radius: 6px;
-            background: #e2e8f0;
-            overflow: hidden;
-        }
-
-        .bar-fill {
-            height: 100%;
-            min-width: 2px;
-            border-radius: 6px;
-            background: #0f766e;
-        }
-
-        .bar-value {
-            color: #0f172a;
-            font-weight: 800;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .table-wrap {
-            overflow: auto;
-            max-height: 76vh;
-        }
-
-        table {
-            width: 100%;
-            min-width: 920px;
-            border-collapse: collapse;
-            font-size: 0.94rem;
-        }
-
-        th,
-        td {
+        .bar-track { height: 22px; overflow: hidden; border-radius: 6px; background: #e2e8f0; }
+        .bar-fill { height: 100%; min-width: 2px; border-radius: 6px; background: #0f766e; }
+        .bar-value { color: #0f172a; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+        .table-wrap { max-height: 76vh; overflow: auto; }
+        table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: .94rem; }
+        th, td {
+            padding: .75rem .85rem;
             border-bottom: 1px solid #e2e8f0;
-            padding: 0.75rem 0.85rem;
-            white-space: nowrap;
             text-align: right;
+            white-space: nowrap;
         }
-
         th {
             position: sticky;
             top: 0;
             z-index: 2;
             background: #0f766e;
-            color: #ffffff;
+            color: #fff;
             font-weight: 800;
             cursor: pointer;
             user-select: none;
         }
-
-        tbody tr:hover {
-            background: #ecfdf5;
-        }
-
-        .text-cell,
-        th.text-cell {
-            text-align: left;
-        }
-
-        .name-cell,
-        th.name-cell {
+        tbody tr:hover { background: #ecfdf5; }
+        tbody tr.new-holding-row { background: #fffbeb; }
+        tbody tr.new-holding-row:hover { background: #fef3c7; }
+        .text-cell, th.text-cell { text-align: left; }
+        .name-cell, th.name-cell {
             width: calc(10em + 1.7rem);
             min-width: calc(10em + 1.7rem);
             max-width: calc(10em + 1.7rem);
@@ -219,82 +109,35 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
-        .code-cell {
-            color: #0f766e;
+        .code-cell { color: #0f766e; font-weight: 800; }
+        .muted { color: #64748b; }
+        .change-cell { font-weight: 800; font-variant-numeric: tabular-nums; }
+        .change-cell.positive { color: #b91c1c; }
+        .change-cell.negative { color: #047857; }
+        .change-cell.neutral { color: #64748b; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: .78rem;
             font-weight: 800;
         }
-
-        .muted {
-            color: #64748b;
-        }
-
-        .change-cell {
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .change-cell.positive {
-            color: #b91c1c;
-        }
-
-        .change-cell.negative {
-            color: #047857;
-        }
-
-        .change-cell.neutral {
-            color: #64748b;
-        }
-
-        .loading,
-        .error,
-        .empty {
-            padding: 2rem;
-            text-align: center;
-            font-weight: 700;
-        }
-
-        .error {
-            color: #991b1b;
-            background: #fee2e2;
-        }
-
+        .status-badge.new { background: #fef3c7; color: #92400e; }
+        .status-badge.unavailable { background: #e2e8f0; color: #64748b; }
+        .loading, .error, .empty { padding: 2rem; text-align: center; font-weight: 700; }
+        .error { background: #fee2e2; color: #991b1b; }
         @media (max-width: 768px) {
-            body {
-                padding: 0.75rem;
-            }
-
-            h1 {
-                font-size: 1.35rem;
-            }
-
-            .controls,
-            .control-group {
-                align-items: stretch;
-                flex-direction: column;
-                width: 100%;
-            }
-
-            input,
-            select,
-            .summary {
-                width: 100%;
-                min-width: 0;
-                margin-left: 0;
-            }
-
-            .bar-row {
-                grid-template-columns: 1fr;
-                gap: 0.35rem;
-            }
-
-            .bar-value {
-                text-align: left;
-            }
+            body { padding: .75rem; }
+            h1 { font-size: 1.35rem; }
+            .controls, .control-group { align-items: stretch; flex-direction: column; width: 100%; }
+            input, select, .summary { width: 100%; min-width: 0; margin-left: 0; }
+            .bar-row { grid-template-columns: 1fr; gap: .35rem; }
+            .bar-value { text-align: left; }
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <div class="header">
@@ -330,8 +173,8 @@
 
         <div class="table-wrap">
             <div id="loading" class="loading">載入中...</div>
-            <div id="error" class="error" style="display: none;"></div>
-            <table id="dataTable" style="display: none;">
+            <div id="error" class="error" style="display:none"></div>
+            <table id="dataTable" style="display:none">
                 <thead>
                     <tr>
                         <th data-key="rank">排名</th>
@@ -392,7 +235,7 @@
         }
 
         async function fetchJson(url) {
-            const response = await fetch(url);
+            const response = await fetch(url, { cache: 'no-store' });
             if (!response.ok) throw new Error(`無法載入資料: ${url}`);
             return response.json();
         }
@@ -429,7 +272,6 @@
                     }
                 };
             }
-
             filesIndex.holdings = (filesIndex.holdings || []).slice().sort().reverse();
             filesIndex.industryDistribution = (filesIndex.industryDistribution || []).slice().sort().reverse();
         }
@@ -512,13 +354,21 @@
         }
 
         function enrichHoldingRow(row) {
+            const hasPreviousPeriod = Boolean(previousHoldingsPayload);
             const previousRow = previousHoldingsBySymbol.get(String(row.symbol));
             const currentWeight = Number(row.weightPercent);
             const previousWeight = Number(previousRow?.weightPercent);
-            const hasComparableWeight = Number.isFinite(currentWeight) && Number.isFinite(previousWeight);
+            const hasComparableWeight = Boolean(previousRow)
+                && Number.isFinite(currentWeight)
+                && Number.isFinite(previousWeight);
+
+            let comparisonStatus = 'unavailable';
+            if (hasComparableWeight) comparisonStatus = 'comparable';
+            else if (hasPreviousPeriod && !previousRow) comparisonStatus = 'new';
 
             return {
                 ...row,
+                comparisonStatus,
                 previousWeightPercent: hasComparableWeight ? previousWeight : null,
                 weightPercentChange: hasComparableWeight ? currentWeight - previousWeight : null
             };
@@ -536,14 +386,12 @@
         function applyFiltersAndRender() {
             const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
             const holdings = (payload?.holdings || []).map(enrichHoldingRow);
-
             displayedRows = holdings.filter(row => {
                 if (!keyword) return true;
-                return [row.symbol, row.name, row.unit, row.date].some(value =>
+                return [row.symbol, row.name, row.unit, row.date, row.comparisonStatus].some(value =>
                     String(value ?? '').toLowerCase().includes(keyword)
                 );
             });
-
             renderTable();
         }
 
@@ -552,17 +400,21 @@
             const multiplier = direction === 'asc' ? 1 : -1;
             const aValue = a[key];
             const bValue = b[key];
-
             if (typeof aValue === 'number' || typeof bValue === 'number') {
                 return ((aValue ?? -Infinity) - (bValue ?? -Infinity)) * multiplier;
             }
-
             return String(aValue ?? '').localeCompare(String(bValue ?? ''), 'zh-Hant') * multiplier;
         }
 
-        function formatChange(value) {
-            if (value == null) return '<span class="muted">-</span>';
-            if (Math.abs(value) < 0.005) return '<span class="change-cell neutral">0.00%</span>';
+        function formatChange(row) {
+            if (row.comparisonStatus === 'new') {
+                return '<span class="status-badge new">新增</span>';
+            }
+            if (row.comparisonStatus === 'unavailable') {
+                return '<span class="status-badge unavailable">無前期</span>';
+            }
+            const value = row.weightPercentChange;
+            if (Math.abs(value) < .005) return '<span class="change-cell neutral">0.00%</span>';
             const sign = value > 0 ? '+' : '';
             const className = value > 0 ? 'positive' : 'negative';
             return `<span class="change-cell ${className}">${sign}${formatNumber(value, 2)}%</span>`;
@@ -571,22 +423,23 @@
         function renderTable() {
             const tbody = document.getElementById('tableBody');
             const rows = [...displayedRows].sort(compareRows);
-
+            const newCount = rows.filter(row => row.comparisonStatus === 'new').length;
+            const newSummary = previousHoldingsPayload ? `；新增 ${newCount.toLocaleString()} 檔` : '；無前期可比較';
             document.getElementById('summaryText').textContent =
-                `顯示 ${rows.length.toLocaleString()} / ${(payload?.summary?.totalRows || 0).toLocaleString()} 筆；股票權重合計 ${formatNumber(payload?.summary?.totalWeightPercent, 2)}%`;
+                `顯示 ${rows.length.toLocaleString()} / ${(payload?.summary?.totalRows || 0).toLocaleString()} 筆；股票權重合計 ${formatNumber(payload?.summary?.totalWeightPercent, 2)}%${newSummary}`;
 
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td class="empty" colspan="8">沒有符合條件的資料</td></tr>`;
+                tbody.innerHTML = '<tr><td class="empty" colspan="8">沒有符合條件的資料</td></tr>';
                 return;
             }
 
             tbody.innerHTML = rows.map(row => `
-                <tr>
+                <tr class="${row.comparisonStatus === 'new' ? 'new-holding-row' : ''}">
                     <td>${formatNumber(row.rank)}</td>
                     <td class="text-cell code-cell">${escapeHtml(row.symbol)}</td>
                     <td class="text-cell name-cell" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
                     <td>${row.weightPercent == null ? '<span class="muted">-</span>' : formatNumber(row.weightPercent, 2)}</td>
-                    <td>${formatChange(row.weightPercentChange)}</td>
+                    <td>${formatChange(row)}</td>
                     <td>${formatNumber(row.quantity)}</td>
                     <td>${escapeHtml(row.unit)}</td>
                     <td>${formatDate(row.date)}</td>
@@ -599,7 +452,6 @@
             const rows = (industryPayload?.distribution || [])
                 .filter(row => row.weightPercent > 0)
                 .sort((a, b) => b.weightPercent - a.weightPercent);
-
             document.getElementById('chartMeta').textContent =
                 `資料日期：${formatDate(industryPayload?.summary?.date)}；顯示 ${rows.length.toLocaleString()} 個產業`;
 
@@ -610,13 +462,11 @@
 
             const maxWeight = Math.max(...rows.map(row => row.weightPercent));
             chartEl.innerHTML = rows.map(row => {
-                const width = maxWeight > 0 ? (row.weightPercent / maxWeight) * 100 : 0;
+                const width = maxWeight > 0 ? row.weightPercent / maxWeight * 100 : 0;
                 return `
                     <div class="bar-row">
                         <div class="bar-label" title="${escapeHtml(row.industry)}">${escapeHtml(row.industry)}</div>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width: ${width.toFixed(2)}%;"></div>
-                        </div>
+                        <div class="bar-track"><div class="bar-fill" style="width:${width.toFixed(2)}%"></div></div>
                         <div class="bar-value">${formatNumber(row.weightPercent, 2)}%</div>
                     </div>
                 `;
@@ -635,5 +485,4 @@
         init();
     </script>
 </body>
-
 </html>
