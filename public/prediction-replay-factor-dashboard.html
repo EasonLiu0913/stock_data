@@ -75,7 +75,7 @@
     function render(){
       const report=state.report;document.getElementById('meta').textContent=`預測／實際日 ${report.actual_trade_date} · 有效 ${report.verified_count.toLocaleString()} 檔 · ${report.industry_count} 個產業`;
       const overall=report.overall;const cards=[['有效股票',report.verified_count.toLocaleString(),'完成覆盤且有三項因子'],['產業數',report.industry_count,'全部產業'],['可分層產業',report.eligible_industry_count,'至少 12 檔'],['全市場平均',pct(overall.average_actual_return),'實際收盤漲跌'],['全市場上漲率',rate(overall.positive_rate),'實際報酬大於 0']];
-      document.getElementById('kpis').innerHTML=cards.map(([label,value,sub])=>`<article class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${value.startsWith('+')?'positive':value.startsWith('-')?'negative':''}">${value}</div><div class="kpi-sub">${sub}</div></article>`).join('');
+      document.getElementById('kpis').innerHTML=cards.map(([label,value,sub])=>{const valueText=String(value);return `<article class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${valueText.startsWith('+')?'positive':valueText.startsWith('-')?'negative':''}">${valueText}</div><div class="kpi-sub">${sub}</div></article>`;}).join('');
       document.getElementById('factorTabs').innerHTML=Object.entries(factorLabels).map(([key,label])=>`<button type="button" class="tab ${key===state.factor?'active':''}" data-factor="${key}">${label}</button>`).join('');
       fillFilters();renderIndustries();selectInitialIndustry();
       document.getElementById('dashboard').classList.remove('hidden');document.getElementById('loading').classList.add('hidden');
