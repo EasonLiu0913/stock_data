@@ -25,6 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -48,8 +49,8 @@ jobs:
             node scripts/generate_market_risk_snapshot.js
           fi
 
-      - name: Generate files.json
-        run: node scripts/generate_file_lists.js
+      - name: Generate relevant files.json only
+        run: node scripts/generate_file_lists.js --only data_external_market,data_market_risk
 
       - name: Commit and push changes
         shell: bash
@@ -59,6 +60,11 @@ jobs:
           git add config/external_market_indicators.json config/stock_news_aliases.json data_external_market/ data_market_risk/
 
           if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no external-market changes:"
+              git status --short
+              exit 1
+            fi
             echo "No external market changes"
             exit 0
           fi
@@ -66,10 +72,17 @@ jobs:
           current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "chore: update external market indicators ${current_date}"
 
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin main; then
+            if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
             fi
+            git rebase --abort 2>/dev/null || true
             echo "Push failed, retry ${attempt}/5..."
             sleep 5
           done
