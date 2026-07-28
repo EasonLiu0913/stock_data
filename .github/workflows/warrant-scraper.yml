@@ -1,76 +1,88 @@
 name: Warrant Data Scraper
 
 on:
-    schedule:
-        # 05:11 TPE (21:11 UTC)
-        - cron: '11 21 * * *'
-        # 07:23 TPE (23:23 UTC)
-        - cron: '23 23 * * *'
-    workflow_dispatch: # Allow manual trigger
+  schedule:
+    # 05:11 TPE (21:11 UTC)
+    - cron: '11 21 * * *'
+    # 07:23 TPE (23:23 UTC)
+    - cron: '23 23 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: warrant-scraper
+  cancel-in-progress: false
 
 jobs:
-    scrape-warrant:
-        runs-on: ubuntu-latest
+  scrape-warrant:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '22'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-            - name: Install dependencies
-              run: |
-                  npm ci
-                  npx playwright install --with-deps chromium
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
 
-            - name: Run TWSE warrant extractor
-              run: |
-                  echo "🚀 開始執行 extract_warrant_data.js..."
-                  node scripts/extract_warrant_data.js
-              continue-on-error: true
+      - name: Run TWSE warrant extractor
+        run: |
+          echo "🚀 開始執行 extract_warrant_data.js..."
+          node scripts/extract_warrant_data.js
+        continue-on-error: true
 
-            - name: Generate static file lists (for GitHub Pages)
-              run: |
-                  echo "📑 正在產生檔案列表..."
-                  node scripts/generate_file_lists.js
-              continue-on-error: true
+      - name: Generate TWSE files.json only
+        run: |
+          echo "📑 正在產生檔案列表..."
+          node scripts/generate_file_lists.js --only data_twse
 
-            - name: Commit and push data
-              run: |
-                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
-                  git config --local user.name "github-actions[bot]"
-                  git add data_twse/
-                  git diff --staged --quiet || git commit -m "chore: update warrant data $(date +'%Y-%m-%d %H:%M:%S')"
-                  
-                  # Retry loop for push to handle race conditions
-                  MAX_RETRIES=5
-                  count=0
-                  success=false
-                  
-                  while [ $count -lt $MAX_RETRIES ]; do
-                    git stash --include-untracked || true
-                    git pull --rebase origin main
-                    git stash pop || true
-                    git add data_twse/
-                    if git push origin main; then
-                      success=true
-                      break
-                    else
-                      echo "Push failed, retrying ($((count + 1))/$MAX_RETRIES)..."
-                      sleep 5
-                      count=$((count + 1))
-                    fi
-                  done
-                  
-                  if [ "$success" = "false" ]; then
-                    echo "Failed to push after $MAX_RETRIES attempts."
-                    exit 1
-                  fi
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              continue-on-error: true
+      - name: Commit and push data
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no warrant changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No warrant changes"
+            exit 0
+          fi
+
+          current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update warrant data ${current_date}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push warrant data after 5 attempts."
+          exit 1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
