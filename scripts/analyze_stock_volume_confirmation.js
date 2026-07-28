@@ -33,7 +33,7 @@ const RULES=[
 ['baseline','所有 |r1|≥0.5%',x=>true],['rvol12','20日均量比≥1.2',x=>x.rvol20>=1.2],['rvol15','20日均量比≥1.5',x=>x.rvol20>=1.5],['rvol20','20日均量比≥2.0',x=>x.rvol20>=2],['p80','60日量能百分位≥80',x=>x.volume_percentile60>=80],['amount15','成交金額20日比≥1.5',x=>x.amount_ratio20>=1.5],['dual','均量比≥1.5且百分位≥80',x=>x.rvol20>=1.5&&x.volume_percentile60>=80],['low','20日均量比≤0.75',x=>x.rvol20<=.75],['up_close_high','上漲＋均量比≥1.5＋收近高',x=>x.direction==='up'&&x.rvol20>=1.5&&x.clv>=.7],['up_close_low','上漲＋均量比≥1.5＋收中低',x=>x.direction==='up'&&x.rvol20>=1.5&&x.clv<=.4],['down_close_low','下跌＋均量比≥1.5＋收近低',x=>x.direction==='down'&&x.rvol20>=1.5&&x.clv<=.3],['down_close_high','下跌＋均量比≥1.5＋收中高',x=>x.direction==='down'&&x.rvol20>=1.5&&x.clv>=.6]
 ];
 function analyze(label,rows){return{label,liquidity:liquidity(rows),rvol20_buckets:buckets(rows,'rvol20'),best_thresholds:{rvol20:best(rows,'rvol20'),amount_ratio20:best(rows,'amount_ratio20')},rules:RULES.map(([key,name,test])=>{const a=rows.filter(test);return{key,label:name,matched:a.length,up:stats(a,'up'),down:stats(a,'down')}})}}
-const money=v=>!Number.isFinite(v)?'NA':v>=1e9?`${r(v/1e9,2)} 億元`:v>=1e6?`${r(v/1e6,1)} 百萬元`:`${r(v/1e3,1)} 千元`;
+const money=v=>!Number.isFinite(v)?'NA':v>=1e8?`${r(v/1e8,2)} 億元`:v>=1e6?`${r(v/1e6,1)} 百萬元`:`${r(v/1e3,1)} 千元`;
 function md(P){
   const L=[
     `# 股票成交量確認分析：${P.date}`,
