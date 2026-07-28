@@ -111,19 +111,41 @@ function listDataFiles(dirPath, recursive, basePath = dirPath) {
     return files;
 }
 
-directories.forEach(dir => {
+function parseOnly(argv) {
+    const index = argv.indexOf('--only');
+    if (index < 0) return null;
+    const value = argv[index + 1] || '';
+    const requested = value.split(',').map(item => item.trim()).filter(Boolean);
+    if (!requested.length) throw new Error('--only requires a comma-separated directory or output list');
+    return new Set(requested);
+}
+
+function selectDirectories(only) {
+    if (!only) return directories;
+    const known = new Set(directories.flatMap(item => [item.path, item.output]));
+    const unknown = [...only].filter(item => !known.has(item));
+    if (unknown.length) throw new Error(`Unknown file-list target(s): ${unknown.join(', ')}`);
+    return directories.filter(item => only.has(item.path) || only.has(item.output));
+}
+
+function writeIfChanged(outputPath, files) {
+    const content = JSON.stringify(files, null, 2);
+    const previous = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : null;
+    if (previous === content) return false;
+    fs.writeFileSync(outputPath, content, 'utf8');
+    return true;
+}
+
+const selectedDirectories = selectDirectories(parseOnly(process.argv.slice(2)));
+
+selectedDirectories.forEach(dir => {
     const dirPath = path.join(__dirname, '..', dir.path);
     const outputPath = path.join(__dirname, '..', dir.output);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
-    if (fs.existsSync(dirPath)) {
-        const files = listDataFiles(dirPath, Boolean(dir.recursive))
-            .filter(file => !dir.filter || dir.filter(file));
-        fs.writeFileSync(outputPath, JSON.stringify(files, null, 2));
-        console.log(`✅ Generated ${dir.output} with ${files.length} files`);
-    } else {
-        console.log(`⚠️ Directory ${dir.path} does not exist`);
-        // Write empty array if dir doesn't exist
-        fs.writeFileSync(outputPath, JSON.stringify([], null, 2));
-    }
+    const files = fs.existsSync(dirPath)
+        ? listDataFiles(dirPath, Boolean(dir.recursive)).filter(file => !dir.filter || dir.filter(file)).sort()
+        : [];
+    const changed = writeIfChanged(outputPath, files);
+    console.log(`${changed ? '✅ Updated' : '➖ Unchanged'} ${dir.output} with ${files.length} files`);
 });
