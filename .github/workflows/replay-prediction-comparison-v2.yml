@@ -12,6 +12,10 @@ on:
         type: boolean
         required: false
         default: false
+      low_volume_threshold:
+        description: Low-volume threshold for actual volume / previous 20-day average volume
+        required: false
+        default: '0.75'
 
 permissions:
   contents: write
@@ -127,13 +131,19 @@ jobs:
             echo "Comparison already exists for $date. Use force=true for an intentional rerun."
           fi
 
-          analysis_run=false
+          factor_analysis_run=false
           if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/industry-factor-ranges.json" ]; then
-            analysis_run=true
+            factor_analysis_run=true
+          fi
+
+          volume_analysis_run=false
+          if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/volume-filter-impact.json" ]; then
+            volume_analysis_run=true
           fi
 
           echo "run=$comparison_run" >> "$GITHUB_OUTPUT"
-          echo "analysis_run=$analysis_run" >> "$GITHUB_OUTPUT"
+          echo "factor_analysis_run=$factor_analysis_run" >> "$GITHUB_OUTPUT"
+          echo "volume_analysis_run=$volume_analysis_run" >> "$GITHUB_OUTPUT"
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
       - name: Replay V1
@@ -144,16 +154,23 @@ jobs:
         if: steps.date.outputs.run == 'true'
         run: node scripts/generate_prediction_replay_v2.js --date "${{ steps.date.outputs.date }}" --cost-bps 30
 
+      - name: Analyze low-volume exclusion impact
+        if: steps.date.outputs.volume_analysis_run == 'true'
+        run: |
+          node scripts/analyze_replay_volume_filter.js \
+            --date "${{ steps.date.outputs.date }}" \
+            --low-volume-threshold "${{ inputs.low_volume_threshold || '0.75' }}"
+
       - name: Generate V1 and V2 accuracy comparison
         if: steps.date.outputs.run == 'true'
         run: node scripts/compare_prediction_versions.js --date "${{ steps.date.outputs.date }}"
 
       - name: Generate industry r1 r3 and 7-day RS analysis
-        if: steps.date.outputs.analysis_run == 'true'
+        if: steps.date.outputs.factor_analysis_run == 'true'
         run: node scripts/analyze_replay_factor_ranges.js --date "${{ steps.date.outputs.date }}"
 
-      - name: Commit replay comparison and factor analysis
-        if: steps.date.outputs.run == 'true' || steps.date.outputs.analysis_run == 'true'
+      - name: Commit replay comparison and analyses
+        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_analysis_run == 'true' || steps.date.outputs.volume_analysis_run == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -161,11 +178,11 @@ jobs:
 
           git add data_predictions data_predictions_v2 data_prediction_comparisons data_prediction_analysis
           if git diff --cached --quiet; then
-            echo "No replay or factor-analysis changes"
+            echo "No replay or analysis changes"
             exit 0
           fi
 
-          git commit -m "feat: update replay comparison and factor analysis for ${{ steps.date.outputs.date }}"
+          git commit -m "feat: update replay comparison and analyses for ${{ steps.date.outputs.date }}"
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "Unexpected uncommitted changes remain before rebase:"
