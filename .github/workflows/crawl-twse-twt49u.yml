@@ -8,6 +8,11 @@ on:
         required: false
         default: ''
         type: string
+      force:
+        description: '既有檔案不同時，確認以證交所新資料覆寫（非空改空仍會拒絕）'
+        required: false
+        default: false
+        type: boolean
   schedule:
     # 16:30 Asia/Taipei every day; non-trading days are skipped below.
     - cron: '30 8 * * *'
@@ -36,12 +41,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run TWT49U safety tests
+        run: node --test tests/crawl_twse_twt49u.test.js
+
       - name: Resolve requested date
         id: date
         shell: bash
         env:
           INPUT_DATE: ${{ inputs.date || '' }}
+          FORCE_RUN: ${{ inputs.force || false }}
         run: |
+          echo "force=$FORCE_RUN" >> "$GITHUB_OUTPUT"
+
           if [ -n "$INPUT_DATE" ]; then
             if ! [[ "$INPUT_DATE" =~ ^20[0-9]{6}$ ]]; then
               echo "Invalid date: $INPUT_DATE (expected YYYYMMDD)"
@@ -49,7 +60,7 @@ jobs:
             fi
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "date=$INPUT_DATE" >> "$GITHUB_OUTPUT"
-            echo "Manual run will crawl the explicitly requested date: $INPUT_DATE"
+            echo "Manual run will crawl the explicitly requested date: $INPUT_DATE (force=$FORCE_RUN)"
             exit 0
           fi
 
@@ -71,11 +82,20 @@ jobs:
 
           echo "run=true" >> "$GITHUB_OUTPUT"
           echo "date=$target_date" >> "$GITHUB_OUTPUT"
-          echo "Trading day $taipei_today: crawl next trading date $target_date."
+          echo "Trading day $taipei_today: crawl next trading date $target_date (force=$FORCE_RUN)."
 
       - name: Crawl TWSE TWT49U
         if: steps.date.outputs.run == 'true'
-        run: npm run crawl:twse-twt49u -- --date "${{ steps.date.outputs.date }}"
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+          FORCE_RUN: ${{ steps.date.outputs.force }}
+        run: |
+          args=(--date "$TARGET_DATE")
+          if [ "$FORCE_RUN" = "true" ]; then
+            args+=(--force)
+          fi
+          npm run crawl:twse-twt49u -- "${args[@]}"
 
       - name: Commit TWT49U data
         if: steps.date.outputs.run == 'true'
