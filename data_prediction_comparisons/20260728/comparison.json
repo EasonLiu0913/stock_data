@@ -1,5 +1,5 @@
 {
-  "comparison_version": "1.0.0",
+  "comparison_version": "1.2.0",
   "generated_at": "2026-07-28T09:38:08.014Z",
   "forecast_date": "20260728",
   "shared_prediction_count": 1052,
@@ -4281,7 +4281,19 @@
       "verified_count": 1047,
       "hit_rate": 65.9,
       "average_gross_signed_return": 2.96,
-      "average_net_signed_return_30bps": 2.66
+      "average_net_signed_return_30bps": 2.66,
+      "low_volume_filter_impact": {
+        "threshold": 0.75,
+        "volume_covered_count": 1047,
+        "baseline_hit_rate": 65.9,
+        "after_excluding_low_volume_hit_rate": 63.15,
+        "hit_rate_delta": -2.75,
+        "removed_count": 469,
+        "removed_hit_count": 325,
+        "removed_miss_count": 135,
+        "retained_coverage_rate": 55.21,
+        "interpretation": "排除低量後命中率下降，低量不能直接當成排除條件。"
+      }
     },
     "v2": {
       "verified_count": 1049,
@@ -4298,13 +4310,5812 @@
         "mean_absolute_percentage_error": 3.59,
         "average_interval_width_percent": 8.92,
         "average_close_distance_to_interval_percent": 0.36
+      },
+      "low_volume_filter_impact": {
+        "threshold": 0.75,
+        "volume_covered_count": 1047,
+        "baseline_hit_rate": 56.92,
+        "after_excluding_low_volume_hit_rate": 54.15,
+        "hit_rate_delta": -2.77,
+        "removed_count": 469,
+        "removed_hit_count": 283,
+        "removed_miss_count": 181,
+        "retained_coverage_rate": 55.21,
+        "interpretation": "排除低量後命中率下降，低量不能直接當成排除條件。"
       }
     },
     "deltas": {
       "hit_rate": -9.08,
       "average_gross_signed_return": 0.32,
-      "average_net_signed_return_30bps": 0.32
+      "average_net_signed_return_30bps": 0.32,
+      "low_volume_filtered_hit_rate": -9
     }
   },
-  "status": "accuracy_available"
+  "status": "accuracy_available",
+  "paired_evaluation": {
+    "definition": {
+      "scope": "20260728 既有資料先列出 V1/V2 方向不同、且有實際報酬的股票；後續重新執行 action 會輸出完整共同可判分樣本。",
+      "actual_class": "上漲: return > 0.3%; 下跌: return < -0.3%; 中性: |return| <= 0.3%.",
+      "hit": "預測方向類別與實際類別完全一致。",
+      "closer": "只在方向不同樣本，以 -1/0/+1 與實際類別的距離判定較接近版本。",
+      "caveat": "本區是統一規則診斷；官方 V1/V2 覆盤命中率仍使用各自 eligibility 樣本。"
+    },
+    "common_evaluable_count": null,
+    "changed_evaluable_count": 172,
+    "actual_distribution": {
+      "up": 22,
+      "neutral": 21,
+      "down": 129
+    },
+    "exact_outcome": {
+      "both_hit": 0,
+      "v1_only_hit": 111,
+      "v2_only_hit": 23,
+      "neither_hit": 38,
+      "v1_hit_count": 111,
+      "v2_hit_count": 23,
+      "v1_hit_rate": 64.53,
+      "v2_hit_rate": 13.37,
+      "v2_minus_v1_hit_rate": -51.16
+    },
+    "closer_on_changed": {
+      "v1_closer": 112,
+      "v2_closer": 60,
+      "tie": 0,
+      "v1_closer_rate": 65.12,
+      "v2_closer_rate": 34.88,
+      "v2_minus_v1_count": -52
+    },
+    "transition_matrix": [
+      {
+        "name": "中性偏空 → 中性",
+        "count": 133,
+        "v1_closer": 102,
+        "v2_closer": 31,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 102,
+        "v2_only_hit": 19,
+        "neither_hit": 12,
+        "v2_minus_v1_closer": -71,
+        "v2_minus_v1_only_hit": -83
+      },
+      {
+        "name": "中性偏多 → 中性",
+        "count": 36,
+        "v1_closer": 9,
+        "v2_closer": 27,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 9,
+        "v2_only_hit": 2,
+        "neither_hit": 25,
+        "v2_minus_v1_closer": 18,
+        "v2_minus_v1_only_hit": -7
+      },
+      {
+        "name": "中性 → 中性偏空",
+        "count": 3,
+        "v1_closer": 1,
+        "v2_closer": 2,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 0,
+        "v2_only_hit": 2,
+        "neither_hit": 1,
+        "v2_minus_v1_closer": 1,
+        "v2_minus_v1_only_hit": 2
+      }
+    ],
+    "adjustment_effectiveness": [
+      {
+        "name": "chip_technical_interaction",
+        "count": 102,
+        "v1_closer": 76,
+        "v2_closer": 26,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 76,
+        "v2_only_hit": 16,
+        "neither_hit": 10,
+        "v2_minus_v1_closer": -50,
+        "v2_minus_v1_only_hit": -60
+      },
+      {
+        "name": "direction_mapping_or_threshold",
+        "count": 52,
+        "v1_closer": 28,
+        "v2_closer": 24,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 28,
+        "v2_only_hit": 4,
+        "neither_hit": 20,
+        "v2_minus_v1_closer": -4,
+        "v2_minus_v1_only_hit": -24
+      },
+      {
+        "name": "remove_legacy_relative_strength + nonlinear_relative_strength",
+        "count": 8,
+        "v1_closer": 2,
+        "v2_closer": 6,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 2,
+        "v2_only_hit": 1,
+        "neither_hit": 5,
+        "v2_minus_v1_closer": 4,
+        "v2_minus_v1_only_hit": -1
+      },
+      {
+        "name": "remove_legacy_relative_strength + chip_technical_interaction",
+        "count": 5,
+        "v1_closer": 4,
+        "v2_closer": 1,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 3,
+        "v2_only_hit": 0,
+        "neither_hit": 2,
+        "v2_minus_v1_closer": -3,
+        "v2_minus_v1_only_hit": -3
+      },
+      {
+        "name": "remove_legacy_relative_strength + nonlinear_relative_strength + chip_technical_interaction",
+        "count": 4,
+        "v1_closer": 2,
+        "v2_closer": 2,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 2,
+        "v2_only_hit": 2,
+        "neither_hit": 0,
+        "v2_minus_v1_closer": 0,
+        "v2_minus_v1_only_hit": 0
+      },
+      {
+        "name": "remove_legacy_relative_strength",
+        "count": 1,
+        "v1_closer": 0,
+        "v2_closer": 1,
+        "tie": 0,
+        "both_hit": 0,
+        "v1_only_hit": 0,
+        "v2_only_hit": 0,
+        "neither_hit": 1,
+        "v2_minus_v1_closer": 1,
+        "v2_minus_v1_only_hit": 0
+      }
+    ],
+    "changed_rows": [
+      {
+        "stock_code": "1210",
+        "stock_name": "大成",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "食品工業",
+        "actual_return": -1.03,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1216",
+        "stock_name": "統一",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "食品工業",
+        "actual_return": 0.39,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1217",
+        "stock_name": "愛之味",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "食品工業",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1219",
+        "stock_name": "福壽",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "食品工業",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1234",
+        "stock_name": "黑松",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "食品工業",
+        "actual_return": -0.15,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1323",
+        "stock_name": "永裕",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "塑膠工業",
+        "actual_return": -0.5,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1324",
+        "stock_name": "地球",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "塑膠工業",
+        "actual_return": -1.45,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1413",
+        "stock_name": "宏洲",
+        "v1_score": 5,
+        "v2_score": 2,
+        "score_delta": -3,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": -1,
+            "explanation": "extreme_relative_strength_mean_reversion_penalty"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": -9.82,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "1414",
+        "stock_name": "東和",
+        "v1_score": 3,
+        "v2_score": 2,
+        "score_delta": -1,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_strong",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": 1.64,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "1432",
+        "stock_name": "大魯閣",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "運動休閒",
+        "actual_return": -0.33,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1437",
+        "stock_name": "勤益控",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1438",
+        "stock_name": "三地開發",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -0.68,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1439",
+        "stock_name": "雋揚",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": 0.37,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1441",
+        "stock_name": "大東",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": 0.11,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1443",
+        "stock_name": "立益物流",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -2.09,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1445",
+        "stock_name": "大宇",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": 0.47,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1454",
+        "stock_name": "台富",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": -2.37,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1456",
+        "stock_name": "怡華",
+        "v1_score": 2,
+        "v2_score": 1,
+        "score_delta": -1,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_strong",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "1460",
+        "stock_name": "宏遠",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": -0.87,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1512",
+        "stock_name": "瑞利",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -2.19,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1514",
+        "stock_name": "亞力",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電機機械",
+        "actual_return": -4.27,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1515",
+        "stock_name": "力山",
+        "v1_score": -2,
+        "v2_score": 1,
+        "score_delta": 3,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_weak",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": 2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "confirmation_blocked_by_overextension"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電機機械",
+        "actual_return": -7.7,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "1516",
+        "stock_name": "川飛",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -3.44,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1521",
+        "stock_name": "大億",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -1.39,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1558",
+        "stock_name": "伸興",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電機機械",
+        "actual_return": -0.34,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1597",
+        "stock_name": "直得",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電機機械",
+        "actual_return": -8.56,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1598",
+        "stock_name": "岱宇",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "運動休閒",
+        "actual_return": 0.77,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1603",
+        "stock_name": "華電",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電器電纜",
+        "actual_return": -2.56,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1614",
+        "stock_name": "三洋電",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電器電纜",
+        "actual_return": 0.32,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1617",
+        "stock_name": "榮星",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電器電纜",
+        "actual_return": -3.9,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1708",
+        "stock_name": "東鹼",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -5.62,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1709",
+        "stock_name": "和益",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -5.39,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "1714",
+        "stock_name": "和桐",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -5.54,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1718",
+        "stock_name": "中纖",
+        "v1_score": -3,
+        "v2_score": 1,
+        "score_delta": 4,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_weak",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": 2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "extreme_relative_strength_mean_reversion_penalty"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -5.07,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "1721",
+        "stock_name": "三晃",
+        "v1_score": 2,
+        "v2_score": 1,
+        "score_delta": -1,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_strong",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -7.13,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "1725",
+        "stock_name": "元禎",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -2.68,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1731",
+        "stock_name": "美吾華",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -0.24,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1805",
+        "stock_name": "寶徠",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -3.08,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "1907",
+        "stock_name": "永豐餘",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "造紙工業",
+        "actual_return": 0.36,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2007",
+        "stock_name": "燁興",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "鋼鐵工業",
+        "actual_return": -2.1,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2009",
+        "stock_name": "第一銅",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "鋼鐵工業",
+        "actual_return": -1.47,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2024",
+        "stock_name": "志聯",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "鋼鐵工業",
+        "actual_return": -0.72,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2028",
+        "stock_name": "威致",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "chip_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "鋼鐵工業",
+        "actual_return": -0.96,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2029",
+        "stock_name": "盛餘",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "鋼鐵工業",
+        "actual_return": -0.96,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2033",
+        "stock_name": "佳大",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "鋼鐵工業",
+        "actual_return": -3.92,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2072",
+        "stock_name": "世紀風電",
+        "v1_score": -1,
+        "v2_score": -4,
+        "score_delta": -3,
+        "v1_direction": "中性",
+        "v2_direction": "中性偏空",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "extreme_relative_strength_no_direct_bonus"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": -1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "綠能環保",
+        "actual_return": 0.33,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性 → 中性偏空",
+        "primary_factor": "remove_legacy_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "2107",
+        "stock_name": "厚生",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "橡膠工業",
+        "actual_return": -0.77,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2114",
+        "stock_name": "鑫永銓",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "橡膠工業",
+        "actual_return": -0.68,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2233",
+        "stock_name": "宇隆",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -6.34,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2239",
+        "stock_name": "英利-KY",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -0.75,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2248",
+        "stock_name": "華勝-KY",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -3.09,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2302",
+        "stock_name": "麗正",
+        "v1_score": -4,
+        "v2_score": -2,
+        "score_delta": 2,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_weak",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": 2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": -1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -8.67,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "2303",
+        "stock_name": "聯電",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -9.92,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2316",
+        "stock_name": "楠梓電",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -8.06,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2321",
+        "stock_name": "東訊",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -1.33,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2355",
+        "stock_name": "敬鵬",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -6.86,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2367",
+        "stock_name": "燿華",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -8.46,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2373",
+        "stock_name": "震旦行",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": 0.19,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2375",
+        "stock_name": "凱美",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -9.54,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2379",
+        "stock_name": "瑞昱",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "chip_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -4.07,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2385",
+        "stock_name": "群光",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -2.83,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2404",
+        "stock_name": "漢唐",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": -9.42,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2408",
+        "stock_name": "南亞科",
+        "v1_score": 3,
+        "v2_score": 1,
+        "score_delta": -2,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "extreme_relative_strength_no_direct_bonus"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -9.98,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength"
+      },
+      {
+        "stock_code": "2419",
+        "stock_name": "仲琦",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -5.43,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2427",
+        "stock_name": "三商電",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "資訊服務業",
+        "actual_return": -1.94,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2433",
+        "stock_name": "互盛電",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": 0.24,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2461",
+        "stock_name": "光群雷",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": -3.43,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2462",
+        "stock_name": "良得電",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "neither",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -3.86,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2464",
+        "stock_name": "盟立",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": -8.07,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2467",
+        "stock_name": "志聖",
+        "v1_score": 2,
+        "v2_score": 1,
+        "score_delta": -1,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_strong",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -4.51,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "2478",
+        "stock_name": "大毅",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -9.73,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2486",
+        "stock_name": "一詮",
+        "v1_score": 3,
+        "v2_score": 2,
+        "score_delta": -1,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_strong",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "光電業",
+        "actual_return": -9.89,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "2489",
+        "stock_name": "瑞軒",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "光電業",
+        "actual_return": -8.65,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2514",
+        "stock_name": "龍邦",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2530",
+        "stock_name": "華建",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -1.24,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2534",
+        "stock_name": "宏盛",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -1.15,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2646",
+        "stock_name": "星宇航空",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "航運業",
+        "actual_return": 0.93,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2723",
+        "stock_name": "美食-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "觀光餐旅",
+        "actual_return": -0.96,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2727",
+        "stock_name": "王品",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "chip_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "觀光餐旅",
+        "actual_return": 1.55,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2739",
+        "stock_name": "寒舍",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "觀光餐旅",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "2748",
+        "stock_name": "雲品",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "觀光餐旅",
+        "actual_return": -1.13,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2852",
+        "stock_name": "第一保",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "金融保險業",
+        "actual_return": -0.75,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2855",
+        "stock_name": "統一證",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "neither",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "金融保險業",
+        "actual_return": -6.22,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2889",
+        "stock_name": "國票金",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "金融保險業",
+        "actual_return": -0.64,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2897",
+        "stock_name": "王道銀行",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "chip_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "金融保險業",
+        "actual_return": -0.97,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "2904",
+        "stock_name": "匯僑",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 0.37,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3005",
+        "stock_name": "神基",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": -2.22,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "3015",
+        "stock_name": "全漢",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -5.63,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3018",
+        "stock_name": "隆銘綠能",
+        "v1_score": 4,
+        "v2_score": 1,
+        "score_delta": -3,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": -1,
+            "explanation": "extreme_relative_strength_mean_reversion_penalty"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": 9.79,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "3029",
+        "stock_name": "零壹",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "資訊服務業",
+        "actual_return": -2.4,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "3049",
+        "stock_name": "精金",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "光電業",
+        "actual_return": -6.07,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3052",
+        "stock_name": "夆典",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -0.47,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3058",
+        "stock_name": "立德",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -2,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3092",
+        "stock_name": "鴻碩",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -4.23,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3266",
+        "stock_name": "昇陽",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": 0.37,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3312",
+        "stock_name": "弘憶股",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子通路業",
+        "actual_return": -8.38,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3413",
+        "stock_name": "京鼎",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -6.38,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3481",
+        "stock_name": "群創",
+        "v1_score": -5,
+        "v2_score": -2,
+        "score_delta": 3,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_weak",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": 2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "confirmation_blocked_by_overextension"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "光電業",
+        "actual_return": -4.96,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "3532",
+        "stock_name": "台勝科",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -9.88,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3557",
+        "stock_name": "嘉威",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "居家生活",
+        "actual_return": -0.77,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3593",
+        "stock_name": "力銘",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -2.21,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3596",
+        "stock_name": "智易",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -4.32,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3617",
+        "stock_name": "碩天",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": -2.12,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3645",
+        "stock_name": "達邁",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "neither",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -6.42,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "3653",
+        "stock_name": "健策",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -4.4,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "3679",
+        "stock_name": "新至陞",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "3703",
+        "stock_name": "欣陸",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -0.96,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4178",
+        "stock_name": "永笙-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -3.78,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "4426",
+        "stock_name": "利勤",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "紡織纖維",
+        "actual_return": -1.93,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4545",
+        "stock_name": "銘鈺",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -2.53,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "4555",
+        "stock_name": "氣立",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電機機械",
+        "actual_return": -6.53,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "4557",
+        "stock_name": "永新-KY",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "neither",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -3.47,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4562",
+        "stock_name": "穎漢",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電機機械",
+        "actual_return": -4.49,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "4581",
+        "stock_name": "光隆精密-KY",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "汽車工業",
+        "actual_return": -0.98,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4737",
+        "stock_name": "華廣",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": 0.35,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4770",
+        "stock_name": "上品",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "化學工業",
+        "actual_return": -2.69,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4807",
+        "stock_name": "日成-KY",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "貿易百貨業",
+        "actual_return": -2.43,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4919",
+        "stock_name": "新唐",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -9.06,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "4938",
+        "stock_name": "和碩",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": -4.81,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "4999",
+        "stock_name": "鑫禾",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -1.29,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "5215",
+        "stock_name": "科嘉-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": -1.56,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "5244",
+        "stock_name": "弘凱",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "光電業",
+        "actual_return": -4.05,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "5515",
+        "stock_name": "建國",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "建材營造業",
+        "actual_return": -2.64,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "5876",
+        "stock_name": "上海商銀",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "金融保險業",
+        "actual_return": -6.6,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "5907",
+        "stock_name": "大洋-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "貿易百貨業",
+        "actual_return": -3.69,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6128",
+        "stock_name": "上福",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": -0.25,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6136",
+        "stock_name": "富爾特",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -1.02,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6142",
+        "stock_name": "友勁",
+        "v1_score": 2,
+        "v2_score": -1,
+        "score_delta": -3,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "extreme_relative_strength_no_direct_bonus"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": -1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -5.93,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "6155",
+        "stock_name": "鈞寶",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -6,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6230",
+        "stock_name": "尼得科超眾",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": 0.44,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6277",
+        "stock_name": "宏正",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": -1.27,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6282",
+        "stock_name": "康舒",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -8.44,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6415",
+        "stock_name": "矽力*-KY",
+        "v1_score": -5,
+        "v2_score": -2,
+        "score_delta": 3,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_weak",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": 2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "confirmation_blocked_by_overextension"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -9.91,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "6426",
+        "stock_name": "統新",
+        "v1_score": -1,
+        "v2_score": -3,
+        "score_delta": -2,
+        "v1_direction": "中性",
+        "v2_direction": "中性偏空",
+        "direction_changed": true,
+        "relative_strength_bucket": "moderate_strong",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 1,
+            "explanation": "relative_strength_confirmation_only"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": -1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -5.25,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性 → 中性偏空",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "6491",
+        "stock_name": "晶碩",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "neither",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -4.29,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6585",
+        "stock_name": "鼎基",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -6.61,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6591",
+        "stock_name": "動力-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電腦及週邊設備業",
+        "actual_return": -2.66,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6598",
+        "stock_name": "ABC-KY",
+        "v1_score": 0,
+        "v2_score": -4,
+        "score_delta": -4,
+        "v1_direction": "中性",
+        "v2_direction": "中性偏空",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": -1,
+            "explanation": "extreme_relative_strength_mean_reversion_penalty"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": -1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -3,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性 → 中性偏空",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength + chip_technical_interaction"
+      },
+      {
+        "stock_code": "6625",
+        "stock_name": "必應",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -1.33,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6655",
+        "stock_name": "科定",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -0.42,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6671",
+        "stock_name": "三能-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "居家生活",
+        "actual_return": 1.56,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6706",
+        "stock_name": "惠特",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "光電業",
+        "actual_return": -5.12,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6754",
+        "stock_name": "匯僑設計",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "居家生活",
+        "actual_return": 0.83,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6794",
+        "stock_name": "向榮生技",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -1.55,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6796",
+        "stock_name": "晉弘",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -2.23,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6838",
+        "stock_name": "台新藥",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": 2.67,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6863",
+        "stock_name": "永道-KY",
+        "v1_score": 2,
+        "v2_score": -1,
+        "score_delta": -3,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "extreme_strong",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "remove_legacy_relative_strength",
+            "score": -2,
+            "explanation": "移除 V1 對相對強弱直接給予的線性分數。"
+          },
+          {
+            "id": "nonlinear_relative_strength",
+            "score": -1,
+            "explanation": "extreme_relative_strength_mean_reversion_penalty"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "通信網路業",
+        "actual_return": -3.19,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "remove_legacy_relative_strength + nonlinear_relative_strength"
+      },
+      {
+        "stock_code": "6890",
+        "stock_name": "來億-KY",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "chip_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "運動休閒",
+        "actual_return": -1.42,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6902",
+        "stock_name": "GOGOLOOK",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "數位雲端",
+        "actual_return": -4.56,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6931",
+        "stock_name": "青松健康",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -2.3,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6936",
+        "stock_name": "永鴻生技",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "生技醫療業",
+        "actual_return": -0.16,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6952",
+        "stock_name": "大武山",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 0.14,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "6958",
+        "stock_name": "日盛台駿",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 1.11,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "6965",
+        "stock_name": "中傑-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "運動休閒",
+        "actual_return": 0,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "7765",
+        "stock_name": "中華資安",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "數位雲端",
+        "actual_return": -1.75,
+        "actual_class": "下跌",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "7769",
+        "stock_name": "鴻勁",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "半導體業",
+        "actual_return": -5.89,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "7788",
+        "stock_name": "松川精密",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子零組件業",
+        "actual_return": -5.54,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "7791",
+        "stock_name": "皇家可口",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "食品工業",
+        "actual_return": -1.46,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8072",
+        "stock_name": "陞泰",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "電子通路業",
+        "actual_return": -2.04,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8201",
+        "stock_name": "無敵",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他電子業",
+        "actual_return": -1.24,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8367",
+        "stock_name": "建新國際",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "航運業",
+        "actual_return": 0.74,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8454",
+        "stock_name": "富邦媒",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "數位雲端",
+        "actual_return": -2.45,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8467",
+        "stock_name": "波力-KY",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "運動休閒",
+        "actual_return": -1.94,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8481",
+        "stock_name": "政伸",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -0.12,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8482",
+        "stock_name": "商億-KY",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "居家生活",
+        "actual_return": -0.1,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "8940",
+        "stock_name": "新天地",
+        "v1_score": -3,
+        "v2_score": -2,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "觀光餐旅",
+        "actual_return": -0.62,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "9902",
+        "stock_name": "台火",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 0.36,
+        "actual_class": "上漲",
+        "v1_hit": false,
+        "v2_hit": false,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "9918",
+        "stock_name": "欣天然",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "油電燃氣業",
+        "actual_return": 0.12,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "9926",
+        "stock_name": "新海",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "油電燃氣業",
+        "actual_return": -0.3,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      },
+      {
+        "stock_code": "9938",
+        "stock_name": "百和",
+        "v1_score": -2,
+        "v2_score": -2,
+        "score_delta": 0,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "technical_only",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -1.17,
+        "actual_class": "下跌",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "9940",
+        "stock_name": "信義",
+        "v1_score": 2,
+        "v2_score": 2,
+        "score_delta": 0,
+        "v1_direction": "中性偏多",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "both_aligned",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 0,
+            "explanation": "no_interaction_bonus"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": 0.74,
+        "actual_class": "上漲",
+        "v1_hit": true,
+        "v2_hit": false,
+        "closer_version": "v1",
+        "transition": "中性偏多 → 中性",
+        "primary_factor": "direction_mapping_or_threshold"
+      },
+      {
+        "stock_code": "9944",
+        "stock_name": "新麗",
+        "v1_score": -2,
+        "v2_score": -1,
+        "score_delta": 1,
+        "v1_direction": "中性偏空",
+        "v2_direction": "中性",
+        "direction_changed": true,
+        "relative_strength_bucket": "neutral",
+        "chip_technical_quadrant": "conflict",
+        "adjustments": [
+          {
+            "id": "nonlinear_relative_strength",
+            "score": 0,
+            "explanation": "no_relative_strength_adjustment"
+          },
+          {
+            "id": "chip_technical_interaction",
+            "score": 1,
+            "explanation": "chip_counterweight_for_technical_conflict"
+          }
+        ],
+        "industry": "其他業",
+        "actual_return": -0.28,
+        "actual_class": "中性",
+        "v1_hit": false,
+        "v2_hit": true,
+        "closer_version": "v2",
+        "transition": "中性偏空 → 中性",
+        "primary_factor": "chip_technical_interaction"
+      }
+    ]
+  },
+  "volume_filter_comparison": {
+    "definition": {
+      "factor_name": "20日成交量比",
+      "formula": "結果日成交量 / 結果日前20個交易日平均成交量",
+      "selected_low_volume_threshold": 0.75,
+      "low_volume_condition": "volume_ratio_20d <= 0.75",
+      "use_note": "低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。"
+    },
+    "v1": {
+      "threshold": 0.75,
+      "volume_covered_count": 1047,
+      "baseline_hit_rate": 65.9,
+      "after_excluding_low_volume_hit_rate": 63.15,
+      "hit_rate_delta": -2.75,
+      "removed_count": 469,
+      "removed_hit_count": 325,
+      "removed_miss_count": 135,
+      "retained_coverage_rate": 55.21,
+      "interpretation": "排除低量後命中率下降，低量不能直接當成排除條件。"
+    },
+    "v2": {
+      "threshold": 0.75,
+      "volume_covered_count": 1047,
+      "baseline_hit_rate": 56.92,
+      "after_excluding_low_volume_hit_rate": 54.15,
+      "hit_rate_delta": -2.77,
+      "removed_count": 469,
+      "removed_hit_count": 283,
+      "removed_miss_count": 181,
+      "retained_coverage_rate": 55.21,
+      "interpretation": "排除低量後命中率下降，低量不能直接當成排除條件。"
+    },
+    "source_file": "data_prediction_analysis/20260728/volume-filter-impact.json"
+  }
 }
