@@ -61,6 +61,21 @@
     .raw-links a,.home-link{display:inline-flex;align-items:center;min-height:38px;border:1px solid #cbd5e1;border-radius:7px;padding:0 12px;text-decoration:none;color:#1d5f99;font-weight:900;background:#fff}
     .empty{padding:40px;text-align:center;color:#607086;font-weight:800}
     .error{background:#fff1f1;border:1px solid #f0b9b9;color:#8e2626;border-radius:8px;padding:14px;margin-bottom:14px;display:none}
+    .comparison-panel{display:grid;gap:14px}
+    .section-card{background:#fff;border:1px solid #dce3ec;border-radius:10px;box-shadow:0 1px 2px rgba(22,31,44,.04);padding:16px;overflow:auto}
+    .section-card h2{margin:0 0 5px;font-size:18px}
+    .section-card .section-note{margin:0 0 14px;color:#607086;font-size:13px;line-height:1.55}
+    .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+    .metric{border:1px solid #e2e8f0;background:#f8fafc;border-radius:8px;padding:12px}
+    .metric strong{display:block;font-size:24px;margin-top:4px}
+    .comparison-table{min-width:760px}
+    .comparison-table tbody tr{cursor:default}
+    .comparison-table .positive{color:#08783f;font-weight:900}
+    .comparison-table .negative{color:#aa2d2d;font-weight:900}
+    .comparison-table .winner{background:#e8f7ef;color:#12623a}
+    .compare-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .compare-filters input,.compare-filters select{height:38px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:0 10px}
+    .compare-filters input{flex:1 1 240px}
     @media(max-width:720px){.shell{padding:14px}.topbar{flex-direction:column}.title{font-size:24px}.toolbar{align-items:stretch}.switch{width:100%}.switch button{flex:1}.toolbar input,.toolbar select{width:100%}.detail-head{flex-direction:column}}
   </style>
 </head>
@@ -69,8 +84,8 @@
     <div class="topbar">
       <div>
         <div class="eyebrow" id="meta">載入中</div>
-        <h1 class="title">V1 / V2 股票預測切換</h1>
-        <div class="note">V1 是正式預測；V2 是實驗影子版本。此頁顯示預測差異，不等同事後命中率比較。</div>
+        <h1 class="title" id="pageTitle">V1 / V2 股票預測切換</h1>
+        <div class="note" id="pageNote">V1 是正式預測；V2 是實驗影子版本。此頁顯示預測差異，不等同事後命中率比較。</div>
       </div>
       <a class="home-link" href="index.html">回工具首頁</a>
     </div>
@@ -81,18 +96,21 @@
       <div class="switch" aria-label="預測版本">
         <button type="button" id="v1Button" onclick="setVersion('v1')">V1 正式</button>
         <button type="button" id="v2Button" onclick="setVersion('v2')">V2 實驗</button>
+        <button type="button" id="compareButton" onclick="setVersion('compare')">V1 / V2 比較分析</button>
       </div>
       <label for="dateSelect">預測日</label>
       <select id="dateSelect" onchange="changeDate()"></select>
-      <input id="searchInput" type="search" placeholder="搜尋股票代號、名稱或產業" oninput="renderRows()">
-      <select id="directionFilter" onchange="renderRows()"><option value="">全部方向</option></select>
-      <select id="changedFilter" onchange="renderRows()"><option value="">全部股票</option><option value="changed">只看 V1/V2 方向不同</option><option value="same">只看方向相同</option></select>
-      <select id="quadrantFilter" onchange="renderRows()"><option value="">全部籌碼×技術狀態</option></select>
+      <input class="prediction-only" id="searchInput" type="search" placeholder="搜尋股票代號、名稱或產業" oninput="renderRows()">
+      <select class="prediction-only" id="directionFilter" onchange="renderRows()"><option value="">全部方向</option></select>
+      <select class="prediction-only" id="changedFilter" onchange="renderRows()"><option value="">全部股票</option><option value="changed">只看 V1/V2 方向不同</option><option value="same">只看方向相同</option></select>
+      <select class="prediction-only" id="quadrantFilter" onchange="renderRows()"><option value="">全部籌碼×技術狀態</option></select>
     </section>
 
     <section class="kpis" id="kpis"></section>
 
-    <section class="table-wrap">
+    <section class="comparison-panel" id="comparisonPanel" hidden></section>
+
+    <section class="table-wrap" id="predictionTableSection">
       <div class="table-head"><h2 id="tableTitle">股票清單</h2><div class="count" id="resultCount"></div></div>
       <table>
         <thead><tr><th>股票</th><th>產業</th><th>目前版本方向</th><th>目前分數</th><th>V1 方向</th><th>V2 方向</th><th>分數差</th><th>方向改變</th><th>RS 分組</th><th>籌碼×技術</th><th>RSI</th><th>7日相對強弱</th><th>風險</th><th>完整度</th></tr></thead>
@@ -108,7 +126,8 @@
     const params = new URLSearchParams(location.search);
     let manifest = null;
     let payload = null;
-    let currentVersion = params.get('version') === 'v2' ? 'v2' : 'v1';
+    let comparison = null;
+    let currentVersion = ['v2', 'compare'].includes(params.get('version')) ? params.get('version') : 'v1';
     let selectedCode = params.get('code') || '';
 
     const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
@@ -145,6 +164,7 @@
 
     async function loadDate(date) {
       payload = await fetchJson(`data_prediction_ui/${date}.json`);
+      comparison = await fetchJson(`data_prediction_comparisons/${date}/comparison.json`).catch(() => null);
       if (currentVersion === 'v2' && !payload.versions.v2.available) currentVersion = 'v1';
       setQuery({ date, version: currentVersion, code: selectedCode });
       initializeFilters();
@@ -168,24 +188,38 @@
     }
 
     function updateHeader() {
-      const version = payload.versions[currentVersion];
+      const compareMode = currentVersion === 'compare';
+      const version = compareMode ? null : payload.versions[currentVersion];
       document.getElementById('v1Button').classList.toggle('active', currentVersion === 'v1');
       document.getElementById('v2Button').classList.toggle('active', currentVersion === 'v2');
+      document.getElementById('compareButton').classList.toggle('active', compareMode);
       document.getElementById('v2Button').disabled = !payload.versions.v2.available;
       document.getElementById('quadrantFilter').disabled = currentVersion !== 'v2';
-      document.getElementById('meta').innerHTML = `資料基準日 ${esc(payload.base_trade_date || 'NA')} · 預測日 ${esc(payload.forecast_date || payload.forecast_date_compact)} · <span class="version-badge ${currentVersion}">${currentVersion.toUpperCase()} ${esc(version.methodology_version || '')}</span>`;
-      document.getElementById('tableTitle').textContent = `${currentVersion.toUpperCase()} 股票預測清單`;
+      document.querySelectorAll('.prediction-only').forEach(element => { element.hidden = compareMode; });
+      document.getElementById('predictionTableSection').hidden = compareMode;
+      document.getElementById('comparisonPanel').hidden = !compareMode;
+      document.getElementById('detailPanel').classList.toggle('open', !compareMode && Boolean(selectedCode));
+      if (compareMode) {
+        document.getElementById('pageTitle').textContent = 'V1 / V2 覆盤比較分析';
+        document.getElementById('pageNote').textContent = '官方命中率、統一判分、方向轉換、V2 調整因素與成交量排除效果分開呈現，避免混用不同樣本母體。';
+        document.getElementById('meta').innerHTML = '資料基準日 ' + esc(payload.base_trade_date || 'NA') + ' · 預測日 ' + esc(payload.forecast_date || payload.forecast_date_compact) + ' · <span class="version-badge">COMPARE</span>';
+      } else {
+        document.getElementById('pageTitle').textContent = 'V1 / V2 股票預測切換';
+        document.getElementById('pageNote').textContent = 'V1 是正式預測；V2 是實驗影子版本。可切換同一股票，或進入比較分析查看事後覆盤。';
+        document.getElementById('meta').innerHTML = '資料基準日 ' + esc(payload.base_trade_date || 'NA') + ' · 預測日 ' + esc(payload.forecast_date || payload.forecast_date_compact) + ' · <span class="version-badge ' + currentVersion + '">' + currentVersion.toUpperCase() + ' ' + esc(version.methodology_version || '') + '</span>';
+        document.getElementById('tableTitle').textContent = currentVersion.toUpperCase() + ' 股票預測清單';
+      }
     }
 
     function setVersion(version) {
       if (version === 'v2' && !payload?.versions.v2.available) return;
       currentVersion = version;
-      if (version === 'v1') document.getElementById('quadrantFilter').value = '';
-      setQuery({ version, date: payload.forecast_date_compact, code: selectedCode });
+      if (version !== 'v2') document.getElementById('quadrantFilter').value = '';
+      setQuery({ version, date: payload.forecast_date_compact, code: version === 'compare' ? '' : selectedCode });
       updateHeader();
       renderKpis();
       renderRows();
-      if (selectedCode) openDetail(selectedCode, false);
+      if (selectedCode && version !== 'compare') openDetail(selectedCode, false);
     }
 
     async function changeDate() {
@@ -199,19 +233,127 @@
     }
 
     function renderKpis() {
+      if (currentVersion === 'compare') {
+        const accuracy = comparison?.accuracy_comparison;
+        const changed = comparison?.paired_evaluation?.changed_evaluable_count ?? comparison?.forecast_difference?.changed_direction_count;
+        const cards = [
+          ['官方 V1 命中率', accuracy ? pct(accuracy.v1.hit_rate) : 'NA', accuracy ? accuracy.v1.verified_count + ' 筆 eligibility 樣本' : '尚未覆盤'],
+          ['官方 V2 命中率', accuracy ? pct(accuracy.v2.hit_rate) : 'NA', accuracy ? accuracy.v2.verified_count + ' 筆 eligibility 樣本' : '尚未覆盤'],
+          ['V2 − V1 命中率', accuracy ? (Number(accuracy.deltas.hit_rate) >= 0 ? '+' : '') + fmt(accuracy.deltas.hit_rate) + ' pp' : 'NA', '官方各版樣本；僅供 headline 參考'],
+          ['共同預測', comparison?.shared_prediction_count ?? 'NA', '兩版都有預測輸出'],
+          ['方向改變', comparison?.forecast_difference?.changed_direction_count ?? 'NA', pct(comparison?.forecast_difference?.changed_direction_rate)],
+          ['方向改變可判分', changed ?? 'NA', '下方使用同一套規則逐筆比較']
+        ];
+        document.getElementById('kpis').innerHTML = cards.map(([label,value,sub]) => '<div class="card"><div class="label">' + esc(label) + '</div><div class="value">' + esc(value) + '</div><div class="sub">' + esc(sub) + '</div></div>').join('');
+        renderComparison();
+        return;
+      }
       const version = payload.versions[currentVersion];
       const distribution = version.direction_distribution || {};
       const bullish = Object.entries(distribution).filter(([key]) => key.includes('偏多')).reduce((sum, [,value]) => sum + value, 0);
       const bearish = Object.entries(distribution).filter(([key]) => key.includes('偏空')).reduce((sum, [,value]) => sum + value, 0);
       const neutral = version.total_predictions - bullish - bearish;
       const cards = [
-        ['預測股票', version.total_predictions, `${currentVersion.toUpperCase()} ${version.methodology_version || ''}`],
+        ['預測股票', version.total_predictions, currentVersion.toUpperCase() + ' ' + (version.methodology_version || '')],
         ['偏多', bullish, pct(version.total_predictions ? bullish / version.total_predictions * 100 : null)],
         ['中性', neutral, pct(version.total_predictions ? neutral / version.total_predictions * 100 : null)],
         ['偏空', bearish, pct(version.total_predictions ? bearish / version.total_predictions * 100 : null)]
       ];
       if (currentVersion === 'v2') cards.push(['與 V1 方向不同', version.changed_direction_count || 0, pct(version.changed_direction_rate)]);
-      document.getElementById('kpis').innerHTML = cards.map(([label,value,sub]) => `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`).join('');
+      document.getElementById('kpis').innerHTML = cards.map(([label,value,sub]) => '<div class="card"><div class="label">' + esc(label) + '</div><div class="value">' + esc(value) + '</div><div class="sub">' + esc(sub) + '</div></div>').join('');
+    }
+
+    function signed(value, suffix = '') {
+      if (!hasNumber(value)) return 'NA';
+      return (Number(value) > 0 ? '+' : '') + fmt(value) + suffix;
+    }
+
+    function factorLabel(value) {
+      const labels = {
+        nonlinear_relative_strength: '非線性相對強弱',
+        chip_technical_interaction: '籌碼 × 技術交互作用',
+        direction_mapping_or_threshold: '方向映射／門檻',
+        no_direction_change: '方向未改變'
+      };
+      return labels[value] || value || '未分類';
+    }
+
+    function renderComparison() {
+      const panel = document.getElementById('comparisonPanel');
+      if (!comparison) {
+        panel.innerHTML = '<section class="section-card empty">這個日期尚未產生 V1 / V2 覆盤比較。請先執行 Compare V1 and V2 replay results (manual) action。</section>';
+        return;
+      }
+      const paired = comparison.paired_evaluation;
+      const accuracy = comparison.accuracy_comparison;
+      if (!paired) {
+        panel.innerHTML = '<section class="section-card empty">已有整體比較，但尚未包含統一判分因素資料；請重新執行比較 action。</section>';
+        return;
+      }
+      const exact = paired.exact_outcome || {};
+      const closer = paired.closer_on_changed || {};
+      const transitions = paired.transition_matrix || [];
+      const factors = paired.adjustment_effectiveness || [];
+      const volume = comparison.volume_filter_comparison;
+      const scope = paired.common_evaluable_count
+        ? '共同可判分 ' + paired.common_evaluable_count + ' 筆'
+        : '目前先分析方向改變且可判分的 ' + paired.changed_evaluable_count + ' 筆';
+      const metrics = [
+        ['兩版都命中', exact.both_hit, '統一判分'],
+        ['只有 V1 命中', exact.v1_only_hit, pct(exact.v1_hit_rate)],
+        ['只有 V2 命中', exact.v2_only_hit, pct(exact.v2_hit_rate)],
+        ['兩版都未命中', exact.neither_hit, '需再檢查'],
+        ['V1 較接近真實', closer.v1_closer, pct(closer.v1_closer_rate)],
+        ['V2 較接近真實', closer.v2_closer, pct(closer.v2_closer_rate)],
+        ['距離相同', closer.tie, '方向類別距離']
+      ];
+      const transitionRows = transitions.map(row => '<tr><td><strong>' + esc(row.name) + '</strong></td><td>' + esc(row.count) + '</td><td>' + esc(row.v1_closer) + '</td><td>' + esc(row.v2_closer) + '</td><td>' + esc(row.v1_only_hit) + '</td><td>' + esc(row.v2_only_hit) + '</td><td>' + esc(row.neither_hit) + '</td><td class="' + (row.v2_minus_v1_closer > 0 ? 'positive' : row.v2_minus_v1_closer < 0 ? 'negative' : '') + '">' + esc(signed(row.v2_minus_v1_closer)) + '</td></tr>').join('');
+      const factorRows = factors.map(row => '<tr><td><strong>' + esc(factorLabel(row.name)) + '</strong></td><td>' + esc(row.count) + '</td><td>' + esc(row.v1_closer) + '</td><td>' + esc(row.v2_closer) + '</td><td>' + esc(row.v1_only_hit) + '</td><td>' + esc(row.v2_only_hit) + '</td><td class="' + (row.v2_minus_v1_closer > 0 ? 'positive' : row.v2_minus_v1_closer < 0 ? 'negative' : '') + '">' + esc(signed(row.v2_minus_v1_closer)) + '</td></tr>').join('');
+      const returnRows = accuracy ? [
+        ['官方命中率', pct(accuracy.v1.hit_rate), pct(accuracy.v2.hit_rate), signed(accuracy.deltas.hit_rate, ' pp')],
+        ['平均方向毛報酬', pct(accuracy.v1.average_gross_signed_return), pct(accuracy.v2.average_gross_signed_return), signed(accuracy.deltas.average_gross_signed_return, ' pp')],
+        ['扣 30bps 後平均報酬', pct(accuracy.v1.average_net_signed_return_30bps), pct(accuracy.v2.average_net_signed_return_30bps), signed(accuracy.deltas.average_net_signed_return_30bps, ' pp')],
+        ['平衡方向準確率', 'NA', pct(accuracy.v2.balanced_directional_accuracy), 'V2 only'],
+        ['分數 vs 市場超額報酬 IC', 'NA', fmt(accuracy.v2.score_vs_market_excess_spearman_ic), 'V2 only']
+      ].map(row => '<tr>' + row.map((cell,index) => '<td' + (index === 3 && String(cell).startsWith('+') ? ' class="positive"' : index === 3 && String(cell).startsWith('-') ? ' class="negative"' : '') + '>' + esc(cell) + '</td>').join('') + '</tr>').join('') : '';
+      const volumeRows = volume ? [
+        ['低量門檻（實際量 / 前20日均量）', volume.v1.threshold, volume.v2.threshold, '越低代表量縮'],
+        ['排除前命中率', pct(volume.v1.baseline_hit_rate), pct(volume.v2.baseline_hit_rate), '原樣本'],
+        ['排除低量後命中率', pct(volume.v1.after_excluding_low_volume_hit_rate), pct(volume.v2.after_excluding_low_volume_hit_rate), signed((volume.v2.after_excluding_low_volume_hit_rate ?? 0) - (volume.v1.after_excluding_low_volume_hit_rate ?? 0), ' pp')],
+        ['各版命中率改善', signed(volume.v1.hit_rate_delta, ' pp'), signed(volume.v2.hit_rate_delta, ' pp'), '排除後 − 排除前'],
+        ['排除筆數', volume.v1.removed_count, volume.v2.removed_count, '低量樣本']
+      ].map(row => '<tr>' + row.map(cell => '<td>' + esc(cell) + '</td>').join('') + '</tr>').join('') : '';
+
+      panel.innerHTML =
+        '<section class="section-card"><h2>同一套命中定義：結果拆解</h2><p class="section-note">' + esc(scope) + '。' + esc(paired.definition?.actual_class || '') + ' ' + esc(paired.definition?.caveat || '') + '</p><div class="metric-grid">' +
+        metrics.map(([label,value,sub]) => '<div class="metric"><div class="label">' + esc(label) + '</div><strong>' + esc(value ?? 'NA') + '</strong><div class="sub">' + esc(sub) + '</div></div>').join('') +
+        '</div></section>' +
+        '<section class="section-card"><h2>整體績效指標</h2><p class="section-note">官方 headline 保留各版本原本 eligibility；報酬指標可補充「方向判斷是否有經濟價值」。</p><table class="comparison-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>V2 − V1 / 說明</th></tr></thead><tbody>' + returnRows + '</tbody></table></section>' +
+        '<section class="section-card"><h2>方向轉換矩陣</h2><p class="section-note">直接看 V2 把哪一類 V1 判斷改成什麼，以及改動後誰更接近真實方向。</p><table class="comparison-table"><thead><tr><th>方向轉換</th><th>筆數</th><th>V1 較近</th><th>V2 較近</th><th>僅 V1 命中</th><th>僅 V2 命中</th><th>都未中</th><th>V2−V1 較近</th></tr></thead><tbody>' + transitionRows + '</tbody></table></section>' +
+        '<section class="section-card"><h2>V2 調整因素成效</h2><p class="section-note">因素是診斷分組，不代表單一因果；同一規則需跨多個交易日才適合下結論。</p><table class="comparison-table"><thead><tr><th>主要因素</th><th>筆數</th><th>V1 較近</th><th>V2 較近</th><th>僅 V1 命中</th><th>僅 V2 命中</th><th>V2−V1 較近</th></tr></thead><tbody>' + factorRows + '</tbody></table></section>' +
+        (volume ? '<section class="section-card"><h2>成交量排除測試</h2><p class="section-note">' + esc(volume.definition?.description || volume.definition?.rule || '測試排除低量樣本後，兩版命中率是否改善。') + '</p><table class="comparison-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>差異／說明</th></tr></thead><tbody>' + volumeRows + '</tbody></table></section>' : '') +
+        '<section class="section-card"><h2>逐筆方向差異</h2><p class="section-note">可搜尋股票，或只看 V1 命中、V2 命中、哪一版較接近的股票。</p><div class="compare-filters"><input id="compareSearch" type="search" placeholder="搜尋股票代號、名稱、產業" oninput="renderComparisonRows()"><select id="compareOutcome" onchange="renderComparisonRows()"><option value="">全部命中結果</option><option value="v1_only">只有 V1 命中</option><option value="v2_only">只有 V2 命中</option><option value="neither">兩版都未命中</option><option value="both">兩版都命中</option></select><select id="compareCloser" onchange="renderComparisonRows()"><option value="">全部接近結果</option><option value="v1">V1 較接近</option><option value="v2">V2 較接近</option><option value="tie">距離相同</option></select></div><div class="count" id="compareCount"></div><table class="comparison-table"><thead><tr><th>股票</th><th>產業</th><th>實際報酬</th><th>實際類別</th><th>V1 方向</th><th>V2 方向</th><th>命中結果</th><th>較接近</th><th>主要因素</th></tr></thead><tbody id="comparisonRows"></tbody></table></section>';
+      renderComparisonRows();
+    }
+
+    function renderComparisonRows() {
+      const body = document.getElementById('comparisonRows');
+      if (!body || !comparison?.paired_evaluation) return;
+      const query = (document.getElementById('compareSearch')?.value || '').trim().toLowerCase();
+      const outcome = document.getElementById('compareOutcome')?.value || '';
+      const closer = document.getElementById('compareCloser')?.value || '';
+      const allRows = comparison.paired_evaluation.changed_rows || [];
+      const rows = allRows.filter(row => {
+        const text = (row.stock_code + ' ' + (row.stock_name || '') + ' ' + (row.industry || '')).toLowerCase();
+        const rowOutcome = row.v1_hit && row.v2_hit ? 'both' : row.v1_hit ? 'v1_only' : row.v2_hit ? 'v2_only' : 'neither';
+        return (!query || text.includes(query)) && (!outcome || outcome === rowOutcome) && (!closer || closer === row.closer_version);
+      });
+      document.getElementById('compareCount').textContent = '顯示 ' + rows.length + ' / ' + allRows.length + ' 支';
+      body.innerHTML = rows.map(row => {
+        const outcome = row.v1_hit && row.v2_hit ? '兩版都命中' : row.v1_hit ? '只有 V1 命中' : row.v2_hit ? '只有 V2 命中' : '兩版都未命中';
+        const closerText = row.closer_version === 'v1' ? 'V1' : row.closer_version === 'v2' ? 'V2' : '相同';
+        return '<tr><td><a class="stock-link" href="' + esc(yahooStockUrl(row.stock_code)) + '" target="_blank" rel="noopener noreferrer">' + esc(row.stock_name || '') + ' <strong>' + esc(row.stock_code) + '</strong></a></td><td>' + esc(row.industry || 'NA') + '</td><td class="' + (Number(row.actual_return) > 0 ? 'positive' : Number(row.actual_return) < 0 ? 'negative' : '') + '">' + esc(signed(row.actual_return, '%')) + '</td><td>' + esc(row.actual_class) + '</td><td><span class="pill ' + directionClass(row.v1_direction) + '">' + esc(row.v1_direction) + '</span></td><td><span class="pill ' + directionClass(row.v2_direction) + '">' + esc(row.v2_direction) + '</span></td><td>' + esc(outcome) + '</td><td><span class="pill ' + (closerText === 'V2' ? 'bull' : closerText === 'V1' ? 'bear' : 'neutral') + '">' + esc(closerText) + '</span></td><td>' + esc(factorLabel(row.primary_factor)) + '</td></tr>';
+      }).join('');
     }
 
     function filteredRows() {
@@ -235,7 +377,7 @@
     }
 
     function renderRows() {
-      if (!payload) return;
+      if (!payload || currentVersion === 'compare') return;
       const rows = filteredRows();
       document.getElementById('resultCount').textContent = `顯示 ${rows.length} / ${payload.rows.filter(row => currentData(row)).length} 支`;
       document.getElementById('emptyState').hidden = rows.length > 0;
@@ -265,6 +407,7 @@
     }
 
     function openDetail(code, scroll = true) {
+      if (currentVersion === 'compare') return;
       const row = payload.rows.find(item => String(item.stock_code) === String(code));
       if (!row) return;
       selectedCode = String(code);
