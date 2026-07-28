@@ -1,0 +1,58 @@
+name: Fix prediction dashboard KPI overflow
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-prediction-dashboard-kpi-overflow.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply KPI overflow fix
+        run: node scripts/fix_prediction_dashboard_kpi_overflow.js
+
+      - name: Check dashboard JavaScript syntax
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('public/prediction-dashboard.html', 'utf8');
+          const match = html.match(/<script>([\s\S]*?)<\/script>/);
+          if (!match) throw new Error('Dashboard script block not found');
+          fs.writeFileSync('/tmp/prediction-dashboard.js', match[1]);
+          NODE
+          node --check /tmp/prediction-dashboard.js
+
+      - name: Commit and push dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add public/prediction-dashboard.html
+
+          if git diff --staged --quiet; then
+            echo "Dashboard already contains the responsive KPI fix"
+            exit 0
+          fi
+
+          git commit -m "fix: prevent dashboard KPI text overflow"
+          git pull --rebase origin main
+          git push origin HEAD:main
