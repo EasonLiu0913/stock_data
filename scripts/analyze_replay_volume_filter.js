@@ -391,9 +391,21 @@ function main() {
   const v1Codes = new Set(normalizedV1Rows.map((row) => row.stock_code));
   const v2Codes = new Set(normalizedV2Rows.map((row) => row.stock_code));
   const commonCodes = new Set([...v1Codes].filter((code) => v2Codes.has(code)));
-  const v1Rows = normalizedV1Rows.filter((row) => commonCodes.has(row.stock_code));
-  const v2Rows = normalizedV2Rows.filter((row) => commonCodes.has(row.stock_code));
   if (!commonCodes.size) throw new Error(`V1 and V2 have no common volume-covered rows for ${date}`);
+
+  const v2ByCode = new Map(normalizedV2Rows.map((row) => [row.stock_code, row]));
+  const alignOutcome = (row) => {
+    const commonActualReturn = v2ByCode.get(row.stock_code)?.actual_return;
+    const outcome = commonOutcome(row.direction, commonActualReturn);
+    return {
+      ...row,
+      actual_return: commonActualReturn,
+      outcome,
+      prediction_result: outcome === 'hit' ? '準確' : outcome === 'miss' ? '不準' : '中性難判',
+    };
+  };
+  const v1Rows = normalizedV1Rows.filter((row) => commonCodes.has(row.stock_code)).map(alignOutcome);
+  const v2Rows = normalizedV2Rows.filter((row) => commonCodes.has(row.stock_code)).map(alignOutcome);
 
   const generatedAt = new Date().toISOString();
   const payload = {
@@ -407,7 +419,7 @@ function main() {
       selected_low_volume_threshold: args.lowVolumeThreshold,
       low_volume_condition: `volume_ratio_20d <= ${args.lowVolumeThreshold}`,
       use_note: '低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。V1/V2 僅使用兩版皆有20日量比且可覆盤的共同股票。',
-      sample_policy: 'V1/V2 使用相同的共同成交量樣本。',
+      sample_policy: 'V1/V2 使用相同的共同成交量樣本、相同結果日報酬與相同方向判分規則。',
       common_sample_count: commonCodes.size,
     },
     source_files: {
