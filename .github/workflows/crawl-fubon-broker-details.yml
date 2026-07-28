@@ -128,8 +128,8 @@ jobs:
           args="${args/ --force/}"
           node scripts/crawl_fubon_broker_details.js $args --check-only
 
-      - name: Generate file indexes
-        run: node scripts/generate_file_lists.js
+      - name: Generate broker-details files.json only
+        run: node scripts/generate_file_lists.js --only data_fubon_broker_details
 
       - name: Commit and push changes
         shell: bash
@@ -139,6 +139,11 @@ jobs:
           git add data_fubon_broker_details/
 
           if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no broker-detail changes:"
+              git status --short
+              exit 1
+            fi
             echo "No changes to commit"
             exit 0
           fi
@@ -146,13 +151,20 @@ jobs:
           current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "🏦 Update Fubon broker details - ${current_date}"
 
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin main; then
+            if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
             fi
+            git rebase --abort 2>/dev/null || true
             echo "Push failed, retry ${attempt}/5..."
             sleep 5
           done
 
-          echo "Failed to push after 5 attempts."
+          echo "Failed to push broker details after 5 attempts."
           exit 1
