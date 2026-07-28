@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - scripts/analyze_volume_confirmation.js
+      - scripts/analyze_stock_volume_confirmation.js
       - .github/workflows/analyze-volume-confirmation.yml
   workflow_dispatch:
     inputs:
@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Analyze volume confirmation
+      - name: Analyze stock volume confirmation
         shell: bash
         env:
           INPUT_DATE: ${{ inputs.date }}
@@ -51,7 +51,7 @@ jobs:
           if [ -n "$INPUT_DATE" ]; then
             args+=(--date "$INPUT_DATE")
           fi
-          node scripts/analyze_volume_confirmation.js "${args[@]}"
+          node scripts/analyze_stock_volume_confirmation.js "${args[@]}"
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@v4
@@ -74,7 +74,7 @@ jobs:
           fi
 
           analysis_date=$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('data_volume_analysis/manifest.json'));process.stdout.write(m.latest_date)")
-          git commit -m "analysis: update volume confirmation ${analysis_date}"
+          git commit -m "analysis: update stock volume confirmation ${analysis_date}"
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "Unexpected uncommitted changes remain before rebase:"
