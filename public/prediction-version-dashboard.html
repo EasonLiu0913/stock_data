@@ -321,28 +321,21 @@
           delta: signed(accuracy.deltas.hit_rate, ' pp')
         },
         {
-          label: '平均方向毛報酬',
-          help: '偏多訊號乘上實際報酬，偏空訊號則反向計算，再取平均，尚未扣除交易成本。比較預測方向若轉成部位後的原始報酬能力，數值越高越好。',
+          label: '平均投報率',
+          help: '依預測方向換算每筆報酬：偏多採用實際報酬，偏空則反向計算，再取平均；中性不列入。這是未扣交易成本的方向策略平均投報率，數值越高越好。',
           v1: pct(accuracy.v1.average_gross_signed_return),
           v2: pct(accuracy.v2.average_gross_signed_return),
           delta: signed(accuracy.deltas.average_gross_signed_return, ' pp')
         },
         {
-          label: '扣 30bps 後平均報酬',
-          help: '在每筆方向毛報酬扣除 0.30%（30 個基點）的假設交易成本後再平均。比較兩版訊號在考慮成本後是否仍有經濟價值，數值越高越好。',
-          v1: pct(accuracy.v1.average_net_signed_return_30bps),
-          v2: pct(accuracy.v2.average_net_signed_return_30bps),
-          delta: signed(accuracy.deltas.average_net_signed_return_30bps, ' pp')
-        },
-        {
-          label: '平衡方向準確率',
-          help: '分別計算上漲、中性、下跌三類的辨識率後再平均，避免樣本最多的方向主導總命中率。用來判斷模型是否能均衡辨識各種行情；目前只有 V2 輸出。',
+          label: '平衡權重準確率',
+          help: '偏多命中率與偏空命中率各占 50% 後取平均，中性預測不列入。避免樣本較多的一側主導結果，用來判斷模型辨識多空兩側是否均衡；目前只有 V2 輸出。',
           v1: 'NA',
           v2: pct(accuracy.v2.balanced_directional_accuracy),
           delta: 'V2 only'
         },
         {
-          label: '分數 vs 市場超額報酬 IC',
+          label: '市場超額報酬 IC 率',
           help: '以 Spearman 相關係數衡量預測分數排序與股票相對大盤超額報酬排序是否一致。比較的是選股排序能力，不是方向命中率；正值越高代表高分股票越傾向跑贏大盤，目前只有 V2 輸出。',
           v1: 'NA',
           v2: fmt(accuracy.v2.score_vs_market_excess_spearman_ic),
@@ -364,7 +357,7 @@
         '<section class="section-card"><h2>同一套命中定義：結果拆解</h2><p class="section-note">' + esc(scope) + '。' + esc(paired.definition?.actual_class || '') + ' ' + esc(paired.definition?.caveat || '') + '</p><div class="metric-grid">' +
         metrics.map(([label,value,sub]) => '<div class="metric"><div class="label">' + esc(label) + '</div><strong>' + esc(value ?? 'NA') + '</strong><div class="sub">' + esc(sub) + '</div></div>').join('') +
         '</div></section>' +
-        '<section class="section-card"><h2>整體績效指標</h2><p class="section-note">官方 headline 保留各版本原本 eligibility；報酬指標可補充「方向判斷是否有經濟價值」。pp 代表百分點，例如 65% − 60% = 5 pp。</p><table class="comparison-table performance-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>V2 − V1 / 說明</th></tr></thead><tbody>' + returnRows + '</tbody></table></section>' +
+        '<section class="section-card"><h2>整體績效指標</h2><p class="section-note">官方命中率保留各版本原本 eligibility；平均投報率用來補充方向判斷是否具有經濟價值。pp 代表百分點，例如 65% − 60% = 5 pp。</p><table class="comparison-table performance-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>V2 − V1 / 說明</th></tr></thead><tbody>' + returnRows + '</tbody></table></section>' +
         '<section class="section-card"><h2>方向轉換矩陣</h2><p class="section-note">直接看 V2 把哪一類 V1 判斷改成什麼，以及改動後誰更接近真實方向。</p><table class="comparison-table"><thead><tr><th>方向轉換</th><th>筆數</th><th>V1 較近</th><th>V2 較近</th><th>僅 V1 命中</th><th>僅 V2 命中</th><th>都未中</th><th>V2−V1 較近</th></tr></thead><tbody>' + transitionRows + '</tbody></table></section>' +
         '<section class="section-card"><h2>V2 調整因素成效</h2><p class="section-note">因素是診斷分組，不代表單一因果；同一規則需跨多個交易日才適合下結論。</p><table class="comparison-table"><thead><tr><th>主要因素</th><th>筆數</th><th>V1 較近</th><th>V2 較近</th><th>僅 V1 命中</th><th>僅 V2 命中</th><th>V2−V1 較近</th></tr></thead><tbody>' + factorRows + '</tbody></table></section>' +
         (volume ? '<section class="section-card"><h2>成交量排除測試</h2><p class="section-note">' + esc(volume.definition?.description || volume.definition?.rule || '測試排除低量樣本後，兩版命中率是否改善。') + '</p><table class="comparison-table"><thead><tr><th>指標</th><th>V1</th><th>V2</th><th>差異／說明</th></tr></thead><tbody>' + volumeRows + '</tbody></table></section>' : '') +
