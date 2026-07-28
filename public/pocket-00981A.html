@@ -13,7 +13,7 @@
             color: #0f172a;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         }
-        .container { max-width: 1280px; margin: 0 auto; }
+        .container { max-width: 1380px; margin: 0 auto; }
         .header, .controls, .chart-section, .table-wrap {
             background: #fff;
             border: 1px solid #e2e8f0;
@@ -80,7 +80,7 @@
         .bar-fill { height: 100%; min-width: 2px; border-radius: 6px; background: #0f766e; }
         .bar-value { color: #0f172a; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
         .table-wrap { max-height: 76vh; overflow: auto; }
-        table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: .94rem; }
+        table { width: 100%; min-width: 1120px; border-collapse: collapse; font-size: .94rem; }
         th, td {
             padding: .75rem .85rem;
             border-bottom: 1px solid #e2e8f0;
@@ -126,6 +126,7 @@
         }
         .status-badge.new { background: #fef3c7; color: #92400e; }
         .status-badge.unavailable { background: #e2e8f0; color: #64748b; }
+        .status-badge.missing { background: #fee2e2; color: #991b1b; }
         .loading, .error, .empty { padding: 2rem; text-align: center; font-weight: 700; }
         .error { background: #fee2e2; color: #991b1b; }
         @media (max-width: 768px) {
@@ -182,8 +183,9 @@
                         <th class="text-cell name-cell" data-key="name">標的名稱</th>
                         <th data-key="weightPercent">權重(%)</th>
                         <th data-key="weightPercentChange">較前期增減</th>
-                        <th data-key="quantity">持有數</th>
-                        <th data-key="unit">單位</th>
+                        <th data-key="quantityLots">持有數</th>
+                        <th data-key="displayUnit">單位</th>
+                        <th data-key="quantityChangeLots">較前期增減張數</th>
                         <th data-key="date">日期</th>
                     </tr>
                 </thead>
@@ -217,11 +219,34 @@
             return `${dateStr.slice(0, 4)}/${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}`;
         }
 
+        function toNumber(value) {
+            if (value == null || value === '') return null;
+            const normalized = String(value).replace(/,/g, '').trim();
+            if (!normalized) return null;
+            const parsed = Number(normalized);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function toLots(value) {
+            const shares = toNumber(value);
+            return shares == null ? null : shares / 1000;
+        }
+
         function formatNumber(value, digits = 0) {
-            if (value == null || value === '') return '';
-            return Number(value).toLocaleString('zh-TW', {
+            const parsed = toNumber(value);
+            if (parsed == null) return '';
+            return parsed.toLocaleString('zh-TW', {
                 minimumFractionDigits: digits,
                 maximumFractionDigits: digits
+            });
+        }
+
+        function formatFlexibleNumber(value, maximumFractionDigits = 3) {
+            const parsed = toNumber(value);
+            if (parsed == null) return '';
+            return parsed.toLocaleString('zh-TW', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits
             });
         }
 
@@ -353,24 +378,46 @@
             return new Map(holdings.map(row => [String(row.symbol), row]));
         }
 
+        function comparisonStatus(hasPreviousPeriod, previousRow, comparable) {
+            if (!hasPreviousPeriod) return 'unavailable';
+            if (!previousRow) return 'new';
+            return comparable ? 'comparable' : 'missing';
+        }
+
         function enrichHoldingRow(row) {
             const hasPreviousPeriod = Boolean(previousHoldingsPayload);
             const previousRow = previousHoldingsBySymbol.get(String(row.symbol));
-            const currentWeight = Number(row.weightPercent);
-            const previousWeight = Number(previousRow?.weightPercent);
-            const hasComparableWeight = Boolean(previousRow)
-                && Number.isFinite(currentWeight)
-                && Number.isFinite(previousWeight);
 
-            let comparisonStatus = 'unavailable';
-            if (hasComparableWeight) comparisonStatus = 'comparable';
-            else if (hasPreviousPeriod && !previousRow) comparisonStatus = 'new';
+            const currentWeight = toNumber(row.weightPercent);
+            const previousWeight = toNumber(previousRow?.weightPercent);
+            const hasComparableWeight = Boolean(previousRow)
+                && currentWeight != null
+                && previousWeight != null;
+
+            const quantityLots = toLots(row.quantity);
+            const previousQuantityLots = toLots(previousRow?.quantity);
+            const hasComparableQuantity = Boolean(previousRow)
+                && quantityLots != null
+                && previousQuantityLots != null;
+
+            const weightComparisonStatus = comparisonStatus(hasPreviousPeriod, previousRow, hasComparableWeight);
+            const quantityComparisonStatus = comparisonStatus(hasPreviousPeriod, previousRow, hasComparableQuantity);
 
             return {
                 ...row,
-                comparisonStatus,
+                comparisonStatus: previousRow ? 'existing' : hasPreviousPeriod ? 'new' : 'unavailable',
+                weightComparisonStatus,
+                quantityComparisonStatus,
                 previousWeightPercent: hasComparableWeight ? previousWeight : null,
-                weightPercentChange: hasComparableWeight ? currentWeight - previousWeight : null
+                weightPercentChange: hasComparableWeight ? currentWeight - previousWeight : null,
+                quantityLots,
+                previousQuantityLots: hasComparableQuantity ? previousQuantityLots : null,
+                quantityChangeLots: hasComparableQuantity
+                    ? quantityLots - previousQuantityLots
+                    : quantityComparisonStatus === 'new'
+                        ? quantityLots
+                        : null,
+                displayUnit: '張'
             };
         }
 
@@ -388,7 +435,7 @@
             const holdings = (payload?.holdings || []).map(enrichHoldingRow);
             displayedRows = holdings.filter(row => {
                 if (!keyword) return true;
-                return [row.symbol, row.name, row.unit, row.date, row.comparisonStatus].some(value =>
+                return [row.symbol, row.name, row.displayUnit, row.date, row.comparisonStatus].some(value =>
                     String(value ?? '').toLowerCase().includes(keyword)
                 );
             });
@@ -406,18 +453,37 @@
             return String(aValue ?? '').localeCompare(String(bValue ?? ''), 'zh-Hant') * multiplier;
         }
 
-        function formatChange(row) {
-            if (row.comparisonStatus === 'new') {
-                return '<span class="status-badge new">新增</span>';
-            }
-            if (row.comparisonStatus === 'unavailable') {
-                return '<span class="status-badge unavailable">無前期</span>';
-            }
+        function statusBadge(status) {
+            if (status === 'new') return '<span class="status-badge new">新增</span>';
+            if (status === 'unavailable') return '<span class="status-badge unavailable">無前期</span>';
+            if (status === 'missing') return '<span class="status-badge missing">無資料</span>';
+            return '';
+        }
+
+        function formatWeightChange(row) {
+            if (row.weightComparisonStatus !== 'comparable') return statusBadge(row.weightComparisonStatus);
             const value = row.weightPercentChange;
             if (Math.abs(value) < .005) return '<span class="change-cell neutral">0.00%</span>';
             const sign = value > 0 ? '+' : '';
             const className = value > 0 ? 'positive' : 'negative';
             return `<span class="change-cell ${className}">${sign}${formatNumber(value, 2)}%</span>`;
+        }
+
+        function formatQuantityChange(row) {
+            if (row.quantityComparisonStatus === 'new') {
+                const addedLots = row.quantityChangeLots == null
+                    ? ''
+                    : ` <span class="change-cell positive">+${formatFlexibleNumber(row.quantityChangeLots)} 張</span>`;
+                return `${statusBadge('new')}${addedLots}`;
+            }
+            if (row.quantityComparisonStatus !== 'comparable') {
+                return statusBadge(row.quantityComparisonStatus);
+            }
+            const value = row.quantityChangeLots;
+            if (Math.abs(value) < .0005) return '<span class="change-cell neutral">0 張</span>';
+            const sign = value > 0 ? '+' : '';
+            const className = value > 0 ? 'positive' : 'negative';
+            return `<span class="change-cell ${className}">${sign}${formatFlexibleNumber(value)} 張</span>`;
         }
 
         function renderTable() {
@@ -429,7 +495,7 @@
                 `顯示 ${rows.length.toLocaleString()} / ${(payload?.summary?.totalRows || 0).toLocaleString()} 筆；股票權重合計 ${formatNumber(payload?.summary?.totalWeightPercent, 2)}%${newSummary}`;
 
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td class="empty" colspan="8">沒有符合條件的資料</td></tr>';
+                tbody.innerHTML = '<tr><td class="empty" colspan="9">沒有符合條件的資料</td></tr>';
                 return;
             }
 
@@ -439,9 +505,10 @@
                     <td class="text-cell code-cell">${escapeHtml(row.symbol)}</td>
                     <td class="text-cell name-cell" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
                     <td>${row.weightPercent == null ? '<span class="muted">-</span>' : formatNumber(row.weightPercent, 2)}</td>
-                    <td>${formatChange(row)}</td>
-                    <td>${formatNumber(row.quantity)}</td>
-                    <td>${escapeHtml(row.unit)}</td>
+                    <td>${formatWeightChange(row)}</td>
+                    <td>${row.quantityLots == null ? '<span class="muted">-</span>' : formatFlexibleNumber(row.quantityLots)}</td>
+                    <td>${escapeHtml(row.displayUnit)}</td>
+                    <td>${formatQuantityChange(row)}</td>
                     <td>${formatDate(row.date)}</td>
                 </tr>
             `).join('');
