@@ -10,6 +10,7 @@ const investmentTrust = require('../scripts/crawl_twse_investment_trust');
 const {
   crawlRange,
   enumerateDates,
+  loadNonTradingDaysForRange,
   randomDelay,
   validateRange,
 } = require('../scripts/crawl_twse_institutional_summaries_range');
@@ -117,6 +118,22 @@ test('randomDelay validates bounds and includes configured endpoints', () => {
   assert.equal(randomDelay(3000, 5000, () => 0.999999), 5000);
   assert.throws(() => randomDelay(5000, 3000), /Invalid delay range/);
   assert.throws(() => randomDelay(0, 300001), /exceeds safety limit/);
+});
+
+test('range calendar remains optional when requested years are uncovered', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    const file = path.join(directory, 'non_trading_days.json');
+    fs.writeFileSync(
+      file,
+      JSON.stringify({ 2026: ['2026/07/10'] }),
+      'utf8',
+    );
+
+    assert.deepEqual(
+      [...loadNonTradingDaysForRange('20250101', '20261231', file)],
+      ['2026/07/10'],
+    );
+  });
 });
 
 test('crawlRange skips weekends and holidays and delays only between requests', async () => {
