@@ -136,6 +136,17 @@ test('rejects inconsistent latest and chart metrics', () => {
   );
 });
 
+test('rejects null metrics instead of silently treating them as zero', () => {
+  const capture = captureFixture();
+  capture.chartHistory[0].financingBalance100M = null;
+  assert.throws(
+    () => normalizeDomCapture(capture, {
+      expectedDate: '20260728',
+    }),
+    /chartHistory.financingBalance100M must be a finite number/,
+  );
+});
+
 test('writes normalized output and refreshes the manual index', () => {
   withTemporaryDirectory((directory) => {
     const rawDir = path.join(directory, 'manual', 'raw');
