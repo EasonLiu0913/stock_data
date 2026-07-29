@@ -8,7 +8,9 @@ const path = require('node:path');
 
 const {
   inferTargetDate,
+  repairInvalidFiles,
   scanDirectory,
+  validateFile,
 } = require('../scripts/check_twse_foreign_investors_json');
 
 function makePayload(date, row) {
@@ -126,5 +128,105 @@ test('scanDirectory recursively reports invalid and malformed JSON files', async
 
     const savedReport = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
     assert.equal(savedReport.counts.invalid_files, 2);
+  });
+});
+
+test('repairInvalidFiles backs up and replaces an invalid file with a validated refetch', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    const inputDir = path.join(directory, 'data');
+    const outputFile = path.join(directory, 'report.json');
+    const backupDir = path.join(directory, 'backups');
+    const dataFile = path.join(
+      inputDir,
+      'nested',
+      '20260525_twse_foreign_investors.json',
+    );
+    const invalidRow = [
+      ' ', '9914', '美利達',
+      '685,000', '467,000', '218,000',
+    ];
+    const validRow = [
+      ' ', '9914', '美利達',
+      '685,000', '467,000', '218,000',
+      '0', '0', '0',
+      '685,000', '467,000', '218,000',
+    ];
+
+    writeJson(dataFile, makePayload('20260525', invalidRow));
+    const initialReport = scanDirectory({
+      inputDir,
+      outputFile,
+      minRows: 1,
+    });
+    assert.equal(initialReport.counts.invalid_files, 1);
+
+    let requestedDate = null;
+    const repair = await repairInvalidFiles(initialReport.invalid_files, {
+      inputDir,
+      backupDir,
+      minRows: 1,
+      maxRetries: 0,
+      retryCooldownMs: 0,
+      fetchDataset: async (targetDate) => {
+        requestedDate = targetDate;
+        return makePayload(targetDate, validRow);
+      },
+    });
+
+    assert.equal(requestedDate, '20260525');
+    assert.equal(repair.attempted, 1);
+    assert.equal(repair.repaired, 1);
+    assert.equal(repair.failed, 0);
+
+    const repairedPayload = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+    assert.equal(repairedPayload.data[0].length, 12);
+    assert.equal(validateFile(dataFile, { minRows: 1 }).valid, true);
+
+    const backupFile = path.join(
+      backupDir,
+      'nested',
+      '20260525_twse_foreign_investors.json',
+    );
+    assert.equal(fs.existsSync(backupFile), true);
+    const backupPayload = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
+    assert.equal(backupPayload.data[0].length, 6);
+  });
+});
+
+test('repairInvalidFiles preserves the original file when refetch fails', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    const inputDir = path.join(directory, 'data');
+    const outputFile = path.join(directory, 'report.json');
+    const backupDir = path.join(directory, 'backups');
+    const dataFile = path.join(
+      inputDir,
+      '20260525_twse_foreign_investors.json',
+    );
+    const invalidRow = [
+      ' ', '9914', '美利達',
+      '685,000', '467,000', '218,000',
+    ];
+
+    writeJson(dataFile, makePayload('20260525', invalidRow));
+    const originalContent = fs.readFileSync(dataFile, 'utf8');
+    const initialReport = scanDirectory({
+      inputDir,
+      outputFile,
+      minRows: 1,
+    });
+
+    const repair = await repairInvalidFiles(initialReport.invalid_files, {
+      inputDir,
+      backupDir,
+      minRows: 1,
+      fetchDataset: async () => {
+        throw new Error('simulated TWSE outage');
+      },
+    });
+
+    assert.equal(repair.repaired, 0);
+    assert.equal(repair.failed, 1);
+    assert.equal(fs.readFileSync(dataFile, 'utf8'), originalContent);
+    assert.equal(fs.existsSync(backupDir), false);
   });
 });
