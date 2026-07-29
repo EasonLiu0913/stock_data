@@ -84,7 +84,9 @@ jobs:
           MAX_RETRIES: ${{ inputs.max_retries }}
           RETRY_COOLDOWN_MS: ${{ inputs.retry_cooldown_ms }}
           MAX_DAYS: ${{ inputs.max_days }}
+          CRAWL_LOG_FILE: ${{ runner.temp }}/twse-institutional-range-crawl.log
         run: |
+          set -o pipefail
           npm run crawl:twse-institutional-summaries-range -- \
             --start "$START_DATE" \
             --end "$END_DATE" \
@@ -92,7 +94,173 @@ jobs:
             --max-delay "$MAX_DELAY_MS" \
             --max-retries "$MAX_RETRIES" \
             --retry-cooldown "$RETRY_COOLDOWN_MS" \
-            --max-days "$MAX_DAYS"
+            --max-days "$MAX_DAYS" \
+            2>&1 | tee "$CRAWL_LOG_FILE"
+
+      - name: Build range crawl report
+        id: report
+        if: >-
+          always() &&
+          steps.tests.outcome == 'success' &&
+          (steps.crawl.outcome == 'success' || steps.crawl.outcome == 'failure')
+        shell: bash
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          CRAWL_OUTCOME: ${{ steps.crawl.outcome }}
+          CRAWL_LOG_FILE: ${{ runner.temp }}/twse-institutional-range-crawl.log
+          REPORT_FILE: ${{ runner.temp }}/twse-institutional-range-report.json
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const logFile = process.env.CRAWL_LOG_FILE;
+          const reportFile = process.env.REPORT_FILE;
+          const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+          const lines = log.split(/\r?\n/);
+          const failures = [];
+          const skippedNonTradingDates = [];
+
+          for (const line of lines) {
+            const failure = line.match(/^❌\s+(\d{8})\s+(\S+)\s+([^:]+):\s*(.+)$/);
+            if (failure) {
+              failures.push({
+                targetDate: failure[1],
+                endpointId: failure[2],
+                label: failure[3].trim(),
+                message: failure[4].trim(),
+              });
+              continue;
+            }
+            const skipped = line.match(/^⏭️\s+Skip\s+(\d{8}):/);
+            if (skipped) skippedNonTradingDates.push(skipped[1]);
+          }
+
+          const summaryMatch = log.match(
+            /Created=(\d+), Existing=(\d+), SkippedDates=(\d+), Requests=(\d+), Failed=(\d+)/,
+          );
+          const fatalLine = [...lines]
+            .reverse()
+            .find((line) => /^❌ Failed to crawl TWSE institutional range:/.test(line));
+
+          const failuresByDate = new Map();
+          for (const failure of failures) {
+            const items = failuresByDate.get(failure.targetDate) || [];
+            items.push({
+              endpointId: failure.endpointId,
+              label: failure.label,
+              message: failure.message,
+            });
+            failuresByDate.set(failure.targetDate, items);
+          }
+          const failedDates = [...failuresByDate.keys()].sort();
+
+          const counts = summaryMatch ? {
+            created: Number(summaryMatch[1]),
+            existing: Number(summaryMatch[2]),
+            skipped_non_trading_dates: Number(summaryMatch[3]),
+            network_requests: Number(summaryMatch[4]),
+            failed: Number(summaryMatch[5]),
+          } : {
+            created: null,
+            existing: null,
+            skipped_non_trading_dates: skippedNonTradingDates.length,
+            network_requests: null,
+            failed: failures.length,
+          };
+
+          const report = {
+            schemaVersion: 1,
+            generated_at: new Date().toISOString(),
+            range: {
+              start: process.env.START_DATE,
+              end: process.env.END_DATE,
+            },
+            crawl_outcome: process.env.CRAWL_OUTCOME,
+            counts,
+            skipped_non_trading_dates: [...new Set(skippedNonTradingDates)].sort(),
+            failed_dates: failedDates,
+            failures,
+            fatal_error: fatalLine
+              ? fatalLine.replace(/^❌ Failed to crawl TWSE institutional range:\s*/, '')
+              : null,
+            rerun_suggestions: failedDates.map((date) => ({
+              start_date: date,
+              end_date: date,
+              failed_endpoints: failuresByDate.get(date),
+            })),
+          };
+
+          fs.writeFileSync(reportFile, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+          console.log(`Range report written: ${reportFile}`);
+          console.log(`Failed dates: ${failedDates.join(', ') || '(none)'}`);
+          NODE
+
+      - name: Publish range crawl summary
+        if: steps.report.outcome == 'success'
+        shell: bash
+        env:
+          REPORT_FILE: ${{ runner.temp }}/twse-institutional-range-report.json
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync(process.env.REPORT_FILE, 'utf8'));
+          const escapeCell = (value) => String(value ?? '')
+            .replaceAll('|', '\\|')
+            .replace(/\r?\n/g, ' ');
+          const countText = (value) => Number.isFinite(value) ? value : '無法統計';
+          const lines = [
+            '### TWSE 三大法人區間爬取報告',
+            '',
+            `- 區間：${report.range.start} ～ ${report.range.end}`,
+            `- 新增：${countText(report.counts.created)} 份；既有：${countText(report.counts.existing)} 份；失敗：${countText(report.counts.failed)} 份`,
+            `- 跳過非交易日：${countText(report.counts.skipped_non_trading_dates)} 天；實際請求：${countText(report.counts.network_requests)} 次`,
+            '',
+          ];
+
+          if (report.failures.length) {
+            lines.push('| 失敗日期 | 端點 | 法人 | 原因 |');
+            lines.push('|---|---|---|---|');
+            for (const failure of report.failures) {
+              lines.push(
+                `| ${escapeCell(failure.targetDate)} | ${escapeCell(failure.endpointId)} | ${escapeCell(failure.label)} | ${escapeCell(failure.message)} |`,
+              );
+            }
+            lines.push('', '#### 建議重跑');
+            for (const suggestion of report.rerun_suggestions) {
+              const endpoints = suggestion.failed_endpoints
+                .map((item) => `${item.endpointId} ${item.label}`)
+                .join('、');
+              lines.push(
+                `- \`start_date=${suggestion.start_date}\`、\`end_date=${suggestion.end_date}\`（${endpoints}）`,
+              );
+            }
+          } else if (report.fatal_error) {
+            lines.push(`❌ 無法辨識特定失敗日期：${escapeCell(report.fatal_error)}`);
+          } else {
+            lines.push('✅ 沒有失敗日期，不需要重跑。');
+          }
+
+          lines.push(
+            '',
+            '完整 Console Log 與 JSON 報告可在本次 Action 的 Artifacts 下載。',
+          );
+          fs.appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            `${lines.join('\n')}\n`,
+          );
+          NODE
+
+      - name: Upload range crawl records
+        if: steps.report.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: twse-institutional-range-report-${{ inputs.start_date }}-${{ inputs.end_date }}
+          path: |
+            ${{ runner.temp }}/twse-institutional-range-crawl.log
+            ${{ runner.temp }}/twse-institutional-range-report.json
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Generate institutional-summary files.json only
         id: file_lists
@@ -151,6 +319,36 @@ jobs:
 
       - name: Report range crawl failure
         if: always() && steps.crawl.outcome == 'failure'
+        shell: bash
+        env:
+          REPORT_FILE: ${{ runner.temp }}/twse-institutional-range-report.json
         run: |
           echo "One or more downloads failed. Valid completed files were committed."
+          if [ -s "$REPORT_FILE" ]; then
+            node <<'NODE'
+            const fs = require('node:fs');
+            const report = JSON.parse(fs.readFileSync(process.env.REPORT_FILE, 'utf8'));
+            if (report.failures.length) {
+              console.error('Failed downloads:');
+              for (const failure of report.failures) {
+                console.error(
+                  `- ${failure.targetDate} ${failure.endpointId} ${failure.label}: ${failure.message}`,
+                );
+              }
+              console.error('Suggested reruns:');
+              for (const suggestion of report.rerun_suggestions) {
+                const endpoints = suggestion.failed_endpoints
+                  .map((item) => `${item.endpointId} ${item.label}`)
+                  .join(', ');
+                console.error(
+                  `- start_date=${suggestion.start_date}, end_date=${suggestion.end_date} (${endpoints})`,
+                );
+              }
+            } else if (report.fatal_error) {
+              console.error(`Fatal crawl error: ${report.fatal_error}`);
+            }
+            NODE
+          else
+            echo "Range report was not generated; inspect the crawl step for the fatal error."
+          fi
           exit 1
