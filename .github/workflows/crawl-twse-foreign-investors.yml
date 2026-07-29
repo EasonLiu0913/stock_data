@@ -1,4 +1,4 @@
-name: Crawl TWSE Foreign Investors (TWT38U)
+name: Crawl TWSE Institutional Summaries (TWT38U/TWT44U/TWT43U)
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: crawl-twse-foreign-investors
+  group: crawl-twse-institutional-summaries
   cancel-in-progress: false
 
 jobs:
@@ -42,8 +42,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run TWT38U safety tests
-        run: node --test tests/crawl_twse_foreign_investors.test.js
+      - name: Run institutional-summary safety tests
+        run: |
+          node --test \
+            tests/crawl_twse_foreign_investors.test.js \
+            tests/crawl_twse_institutional_summaries.test.js
 
       - name: Resolve target date
         id: date
@@ -63,17 +66,24 @@ jobs:
           ' "$TARGET_DATE"
 
           echo "date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
-          echo "TWT38U target date: $TARGET_DATE"
+          echo "Institutional-summary target date: $TARGET_DATE"
 
       - name: Crawl TWSE TWT38U
         env:
           TARGET_DATE: ${{ steps.date.outputs.date }}
         run: npm run crawl:twse-foreign-investors -- --date "$TARGET_DATE"
 
-      - name: Generate foreign-investor files.json only
-        run: node scripts/generate_file_lists.js --only data_twse_foreign_investors
+      - name: Crawl TWSE TWT44U
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: npm run crawl:twse-investment-trust -- --date "$TARGET_DATE"
 
-      - name: Commit TWT38U data
+      - name: Crawl TWSE TWT43U
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: npm run crawl:twse-dealers -- --date "$TARGET_DATE"
+
+      - name: Commit institutional-summary data
         shell: bash
         env:
           TARGET_DATE: ${{ steps.date.outputs.date }}
@@ -81,18 +91,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data_twse_foreign_investors
+          git add \
+            data_twse_foreign_investors \
+            data_twse_investment_trust \
+            data_twse_dealers
           if git diff --cached --quiet; then
             if [ -n "$(git status --porcelain)" ]; then
               echo "Unexpected uncommitted changes remain:"
               git status --short
               exit 1
             fi
-            echo "No TWT38U changes for $TARGET_DATE"
+            echo "No institutional-summary changes for $TARGET_DATE"
             exit 0
           fi
 
-          git commit -m "chore: update TWSE TWT38U data $TARGET_DATE"
+          git commit -m "chore: update TWSE institutional summaries $TARGET_DATE"
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "Unexpected uncommitted changes remain before rebase:"
@@ -105,9 +118,9 @@ jobs:
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
-            echo "TWT38U push failed; retry $attempt/5"
+            echo "Institutional-summary push failed; retry $attempt/5"
             sleep 5
           done
 
-          echo "TWT38U push failed after 5 attempts"
+          echo "Institutional-summary push failed after 5 attempts"
           exit 1
