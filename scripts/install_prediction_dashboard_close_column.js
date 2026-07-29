@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+// This installer patches the existing dashboard without regenerating prediction data.
 const root = path.resolve(__dirname, '..');
 const file = path.join(root, 'public', 'prediction-dashboard.html');
 let html = fs.readFileSync(file, 'utf8');
