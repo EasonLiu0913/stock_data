@@ -1,0 +1,126 @@
+name: Crawl TWSE 三大法人買賣超
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '指定資料日期（YYYYMMDD）；留空時使用台灣當日'
+        required: false
+        default: ''
+        type: string
+  schedule:
+    # Weekdays 17:12 Asia/Taipei (09:12 UTC)
+    - cron: '12 9 * * 1-5'
+    # Weekdays 18:06 Asia/Taipei (10:06 UTC)
+    - cron: '6 10 * * 1-5'
+    # Weekdays 19:21 Asia/Taipei (11:21 UTC)
+    - cron: '21 11 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-institutional-summaries
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run institutional-summary safety tests
+        run: |
+          node --test \
+            tests/crawl_twse_foreign_investors.test.js \
+            tests/crawl_twse_institutional_summaries.test.js
+
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          if [ -n "$INPUT_DATE" ]; then
+            TARGET_DATE="$INPUT_DATE"
+          else
+            TARGET_DATE=$(TZ=Asia/Taipei date '+%Y%m%d')
+          fi
+
+          node -e '
+            const { normalizeDateInput } = require("./scripts/crawl_twse_foreign_investors");
+            process.stdout.write(normalizeDateInput(process.argv[1]));
+          ' "$TARGET_DATE"
+
+          echo "date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "Institutional-summary target date: $TARGET_DATE"
+
+      - name: Crawl TWSE TWT38U
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: npm run crawl:twse-foreign-investors -- --date "$TARGET_DATE"
+
+      - name: Crawl TWSE TWT44U
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: npm run crawl:twse-investment-trust -- --date "$TARGET_DATE"
+
+      - name: Crawl TWSE TWT43U
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: npm run crawl:twse-dealers -- --date "$TARGET_DATE"
+
+      - name: Commit institutional-summary data
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            data_twse_foreign_investors \
+            data_twse_investment_trust \
+            data_twse_dealers
+          if git diff --cached --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain:"
+              git status --short
+              exit 1
+            fi
+            echo "No institutional-summary changes for $TARGET_DATE"
+            exit 0
+          fi
+
+          git commit -m "chore: update TWSE institutional summaries $TARGET_DATE"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Institutional-summary push failed; retry $attempt/5"
+            sleep 5
+          done
+
+          echo "Institutional-summary push failed after 5 attempts"
+          exit 1
