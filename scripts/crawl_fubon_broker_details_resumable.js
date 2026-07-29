@@ -61,78 +61,105 @@ function outputPath(outputDir, isoDate) {
     return path.join(outputDir, `fubon_${isoDate.replaceAll('-', '')}_券商分點進出明細.json`);
 }
 
-function normalizePendingItem(item, kind, previous, now) {
+function normalizePendingItem(item, kind, now) {
     return {
-        ...previous,
         ...item,
         status: 'pending',
         kind: item.kind || kind,
-        attempts: Number(previous?.attempts || item.attempts || 0) + 1,
-        firstSeenAt: previous?.firstSeenAt || item.firstSeenAt || now,
+        attempts: Number(item.attempts || 0) + 1,
+        firstSeenAt: item.firstSeenAt || now,
         lastAttemptAt: now
     };
 }
 
-function migratePayloadToRetryQueue(payload, now = new Date().toISOString()) {
+function collectRetrySource(sourceByCode, item, defaultKind) {
+    if (!item?.code) return;
+    const previous = sourceByCode.get(item.code);
+    sourceByCode.set(item.code, {
+        ...previous,
+        ...item,
+        kind: item.kind || previous?.kind || defaultKind,
+        attempts: Math.max(Number(previous?.attempts || 0), Number(item.attempts || 0)),
+        firstSeenAt: previous?.firstSeenAt || item.firstSeenAt
+    });
+}
+
+function migratePayloadToRetryQueue(
+    payload,
+    now = new Date().toISOString(),
+    { finalizeUnavailable = false } = {}
+) {
     if (!payload || typeof payload !== 'object') return { changed: false, pendingCount: 0 };
-    const pendingByCode = new Map();
+
+    const sourceByCode = new Map();
     for (const item of payload.pendingStocks || []) {
-        if (item?.code) pendingByCode.set(item.code, { ...item });
+        collectRetrySource(sourceByCode, item, item.kind || 'failed');
     }
     for (const item of payload.unavailableStocks || []) {
-        if (!item?.code) continue;
-        pendingByCode.set(
-            item.code,
-            normalizePendingItem(item, 'unavailable', pendingByCode.get(item.code), now)
-        );
+        collectRetrySource(sourceByCode, item, 'unavailable');
     }
     for (const item of payload.failedStocks || []) {
-        if (!item?.code) continue;
-        pendingByCode.set(
-            item.code,
-            normalizePendingItem(item, item.kind || 'failed', pendingByCode.get(item.code), now)
-        );
+        collectRetrySource(sourceByCode, item, item.kind || 'failed');
     }
 
-    // Successful stocks must never remain in the retry queue.
-    for (const code of Object.keys(payload.stocks || {})) pendingByCode.delete(code);
+    const pendingByCode = new Map();
+    const unavailableByCode = new Map();
+    for (const [code, item] of sourceByCode) {
+        const normalized = normalizePendingItem(item, item.kind || 'failed', now);
+        if (finalizeUnavailable && normalized.kind === 'unavailable') {
+            unavailableByCode.set(code, { ...normalized, status: 'unavailable' });
+        } else {
+            pendingByCode.set(code, normalized);
+        }
+    }
+
+    // Successful stocks must never remain in a retry or unavailable queue.
+    for (const code of Object.keys(payload.stocks || {})) {
+        pendingByCode.delete(code);
+        unavailableByCode.delete(code);
+    }
 
     const pendingStocks = [...pendingByCode.values()].sort((a, b) =>
+        a.code.localeCompare(b.code, 'en', { numeric: true })
+    );
+    const unavailableStocks = [...unavailableByCode.values()].sort((a, b) =>
         a.code.localeCompare(b.code, 'en', { numeric: true })
     );
     const before = JSON.stringify({
         complete: payload.complete,
         unavailableStocks: payload.unavailableStocks,
         failedStocks: payload.failedStocks,
-        pendingStocks: payload.pendingStocks
+        pendingStocks: payload.pendingStocks,
+        pendingStockCount: payload.pendingStockCount
     });
 
     payload.pendingStocks = pendingStocks;
     payload.pendingStockCount = pendingStocks.length;
-    // The legacy crawler retries failedStocks but treats unavailableStocks as completed.
-    // Mirror every pending item into failedStocks and clear unavailableStocks.
+    // The legacy crawler retries failedStocks but treats unavailableStocks as accounted for.
     payload.failedStocks = pendingStocks.map(item => ({ ...item }));
     payload.failedStockCount = pendingStocks.length;
-    payload.unavailableStocks = [];
-    payload.unavailableStockCount = 0;
+    payload.unavailableStocks = unavailableStocks;
+    payload.unavailableStockCount = unavailableStocks.length;
     payload.successfulStockCount = Object.keys(payload.stocks || {}).length;
     payload.complete = pendingStocks.length === 0
-        && payload.successfulStockCount === payload.stockUniverse?.expectedStockCount;
+        && payload.successfulStockCount + unavailableStocks.length
+            === payload.stockUniverse?.expectedStockCount;
     payload.generatedAt = now;
 
     const after = JSON.stringify({
         complete: payload.complete,
         unavailableStocks: payload.unavailableStocks,
         failedStocks: payload.failedStocks,
-        pendingStocks: payload.pendingStocks
+        pendingStocks: payload.pendingStocks,
+        pendingStockCount: payload.pendingStockCount
     });
     return { changed: before !== after, pendingCount: pendingStocks.length };
 }
 
-function migrateFile(filePath) {
+function migrateFile(filePath, options = {}) {
     if (!fs.existsSync(filePath)) return { filePath, exists: false, pendingCount: 0 };
     const payload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const result = migratePayloadToRetryQueue(payload);
+    const result = migratePayloadToRetryQueue(payload, new Date().toISOString(), options);
     if (result.changed) {
         const temporary = `${filePath}.tmp-${process.pid}`;
         fs.writeFileSync(temporary, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -169,13 +196,16 @@ function main() {
     for (let round = 1; round <= DEFAULT_ROUNDS; round += 1) {
         console.log(`\n🔁 Fubon Broker Details retry round ${round}/${DEFAULT_ROUNDS}`);
 
-        // Before every round, convert legacy unavailable entries to retryable failures.
+        // Before every round, convert unavailable entries to retryable failures.
         for (const date of targetDates) migrateFile(outputPath(outputDir, date));
 
         lastStatus = runCrawler(roundArgs);
         finalPending = 0;
         for (const date of targetDates) {
-            const result = migrateFile(outputPath(outputDir, date));
+            const result = migrateFile(outputPath(outputDir, date), {
+                // After all retry rounds, a stable no-data response is terminal and accounted for.
+                finalizeUnavailable: round === DEFAULT_ROUNDS
+            });
             finalPending += result.pendingCount;
         }
 
