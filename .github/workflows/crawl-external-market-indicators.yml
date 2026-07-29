@@ -16,6 +16,11 @@ on:
         description: '美國市場日期 YYYYMMDD；留空時依紐約時間與 09:30 開盤時間自動判斷'
         required: false
         default: ''
+      force_overwrite:
+        description: '強制重新抓取並覆蓋同日期既有資料'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -40,6 +45,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_DATE: ${{ github.event.inputs.date || '' }}
+          FORCE_OVERWRITE: ${{ github.event.inputs.force_overwrite || 'false' }}
         run: |
           set -euo pipefail
 
@@ -57,29 +63,26 @@ jobs:
 
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "has_explicit_date=$HAS_EXPLICIT_DATE" >> "$GITHUB_OUTPUT"
+          echo "force_overwrite=$FORCE_OVERWRITE" >> "$GITHUB_OUTPUT"
           echo "Taipei actual start time: $TAIPEI_TIME"
           echo "Resolved U.S. market target date: $TARGET_DATE"
+          echo "Force overwrite: $FORCE_OVERWRITE"
 
-          # 手動執行可重抓指定或自動判斷的美國市場日期，不受 04:30 與既有檔案限制。
-          if [ "$EVENT_NAME" != "schedule" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "reason=manual dispatch" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch: crawl is allowed."
-            exit 0
-          fi
+          # 排程執行仍需通過 04:30；手動執行不受時間限制。
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            CURRENT_MINUTES=$((10#$TAIPEI_HOUR * 60 + 10#$TAIPEI_MINUTE))
+            EARLIEST_MINUTES=$((4 * 60 + 30))
 
-          CURRENT_MINUTES=$((10#$TAIPEI_HOUR * 60 + 10#$TAIPEI_MINUTE))
-          EARLIEST_MINUTES=$((4 * 60 + 30))
-
-          if [ "$CURRENT_MINUTES" -lt "$EARLIEST_MINUTES" ]; then
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "reason=actual Taipei start time is earlier than 04:30" >> "$GITHUB_OUTPUT"
-            echo "Skip: actual Taipei start time is earlier than 04:30."
-            exit 0
+            if [ "$CURRENT_MINUTES" -lt "$EARLIEST_MINUTES" ]; then
+              echo "should_run=false" >> "$GITHUB_OUTPUT"
+              echo "reason=actual Taipei start time is earlier than 04:30" >> "$GITHUB_OUTPUT"
+              echo "Skip: actual Taipei start time is earlier than 04:30."
+              exit 0
+            fi
           fi
 
           TARGET_FILE="data_external_market/$TARGET_DATE/external_market_indicators.json"
-          if [ -s "$TARGET_FILE" ]; then
+          if [ "$FORCE_OVERWRITE" != "true" ] && [ -s "$TARGET_FILE" ]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "reason=resolved U.S. market-date file already exists" >> "$GITHUB_OUTPUT"
             echo "Skip: $TARGET_FILE already exists and is not empty."
@@ -87,10 +90,18 @@ jobs:
           fi
 
           echo "should_run=true" >> "$GITHUB_OUTPUT"
-          echo "reason=eligible scheduled run" >> "$GITHUB_OUTPUT"
-          echo "Run: time threshold passed and resolved U.S. market-date file does not exist."
+          if [ "$FORCE_OVERWRITE" = "true" ]; then
+            echo "reason=forced overwrite" >> "$GITHUB_OUTPUT"
+            echo "Run: force overwrite is enabled."
+          elif [ "$EVENT_NAME" != "schedule" ]; then
+            echo "reason=manual dispatch" >> "$GITHUB_OUTPUT"
+            echo "Run: manual dispatch and target file does not exist."
+          else
+            echo "reason=eligible scheduled run" >> "$GITHUB_OUTPUT"
+            echo "Run: time threshold passed and resolved U.S. market-date file does not exist."
+          fi
 
-      - name: Report skipped scheduled run
+      - name: Report skipped run
         if: steps.crawl-gate.outputs.should_run != 'true'
         run: |
           echo "External-market crawl skipped."
@@ -108,9 +119,9 @@ jobs:
         if: steps.crawl-gate.outputs.should_run == 'true'
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
           TARGET_DATE: ${{ steps.crawl-gate.outputs.target_date }}
           HAS_EXPLICIT_DATE: ${{ steps.crawl-gate.outputs.has_explicit_date }}
+          FORCE_OVERWRITE: ${{ steps.crawl-gate.outputs.force_overwrite }}
         run: |
           set -euo pipefail
 
@@ -118,7 +129,7 @@ jobs:
           if [ "$HAS_EXPLICIT_DATE" = "true" ]; then
             ARGS+=(--date "$TARGET_DATE")
           fi
-          if [ "$EVENT_NAME" = "schedule" ]; then
+          if [ "$FORCE_OVERWRITE" != "true" ]; then
             ARGS+=(--skip-existing)
           fi
 
