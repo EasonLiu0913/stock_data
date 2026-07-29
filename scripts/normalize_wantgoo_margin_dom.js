@@ -46,8 +46,14 @@ function compactDate(value) {
 }
 
 function requireFiniteNumber(record, field, sourceName) {
-  const value = Number(record?.[field]);
-  if (!Number.isFinite(value)) {
+  const rawValue = record?.[field];
+  const value = Number(rawValue);
+  if (
+    rawValue === null
+    || rawValue === undefined
+    || rawValue === ''
+    || !Number.isFinite(value)
+  ) {
     throw new Error(`${sourceName}.${field} must be a finite number`);
   }
   return value;
