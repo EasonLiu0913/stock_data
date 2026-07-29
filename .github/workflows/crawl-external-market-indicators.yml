@@ -21,6 +21,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_time_limit:
+        description: '跳過台北時間 04:30 前不得執行的限制'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -46,6 +51,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_DATE: ${{ github.event.inputs.date || '' }}
           FORCE_OVERWRITE: ${{ github.event.inputs.force_overwrite || 'false' }}
+          SKIP_TIME_LIMIT: ${{ github.event.inputs.skip_time_limit || 'false' }}
         run: |
           set -euo pipefail
 
@@ -64,21 +70,21 @@ jobs:
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "has_explicit_date=$HAS_EXPLICIT_DATE" >> "$GITHUB_OUTPUT"
           echo "force_overwrite=$FORCE_OVERWRITE" >> "$GITHUB_OUTPUT"
+          echo "skip_time_limit=$SKIP_TIME_LIMIT" >> "$GITHUB_OUTPUT"
           echo "Taipei actual start time: $TAIPEI_TIME"
           echo "Resolved U.S. market target date: $TARGET_DATE"
           echo "Force overwrite: $FORCE_OVERWRITE"
+          echo "Skip time limit: $SKIP_TIME_LIMIT"
 
-          # 排程執行仍需通過 04:30；手動執行不受時間限制。
-          if [ "$EVENT_NAME" = "schedule" ]; then
-            CURRENT_MINUTES=$((10#$TAIPEI_HOUR * 60 + 10#$TAIPEI_MINUTE))
-            EARLIEST_MINUTES=$((4 * 60 + 30))
+          CURRENT_MINUTES=$((10#$TAIPEI_HOUR * 60 + 10#$TAIPEI_MINUTE))
+          EARLIEST_MINUTES=$((4 * 60 + 30))
 
-            if [ "$CURRENT_MINUTES" -lt "$EARLIEST_MINUTES" ]; then
-              echo "should_run=false" >> "$GITHUB_OUTPUT"
-              echo "reason=actual Taipei start time is earlier than 04:30" >> "$GITHUB_OUTPUT"
-              echo "Skip: actual Taipei start time is earlier than 04:30."
-              exit 0
-            fi
+          if [ "$SKIP_TIME_LIMIT" != "true" ] \
+            && [ "$CURRENT_MINUTES" -lt "$EARLIEST_MINUTES" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=actual Taipei start time is earlier than 04:30" >> "$GITHUB_OUTPUT"
+            echo "Skip: actual Taipei start time is earlier than 04:30. Enable skip_time_limit for a manual early run."
+            exit 0
           fi
 
           TARGET_FILE="data_external_market/$TARGET_DATE/external_market_indicators.json"
@@ -90,9 +96,15 @@ jobs:
           fi
 
           echo "should_run=true" >> "$GITHUB_OUTPUT"
-          if [ "$FORCE_OVERWRITE" = "true" ]; then
+          if [ "$FORCE_OVERWRITE" = "true" ] && [ "$SKIP_TIME_LIMIT" = "true" ]; then
+            echo "reason=forced overwrite with time limit bypass" >> "$GITHUB_OUTPUT"
+            echo "Run: force overwrite and time-limit bypass are enabled."
+          elif [ "$FORCE_OVERWRITE" = "true" ]; then
             echo "reason=forced overwrite" >> "$GITHUB_OUTPUT"
             echo "Run: force overwrite is enabled."
+          elif [ "$SKIP_TIME_LIMIT" = "true" ]; then
+            echo "reason=time limit bypass" >> "$GITHUB_OUTPUT"
+            echo "Run: time-limit bypass is enabled."
           elif [ "$EVENT_NAME" != "schedule" ]; then
             echo "reason=manual dispatch" >> "$GITHUB_OUTPUT"
             echo "Run: manual dispatch and target file does not exist."
