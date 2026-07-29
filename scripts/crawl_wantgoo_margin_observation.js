@@ -169,19 +169,20 @@ async function fetchJsonWithRetry(url, options = {}) {
 
 async function fetchObservationOnce(options = {}) {
   const {
+    headed = false,
     navigationTimeoutMs = 120000,
     responseTimeoutMs = 120000,
   } = options;
   const { chromium } = require('playwright');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: !headed });
   const page = await browser.newPage({
     locale: 'zh-TW',
     timezoneId: 'Asia/Taipei',
-    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   });
   const payloads = {};
   const responseErrors = [];
   const responseStatuses = {};
+  const browserErrors = [];
 
   function sourceNameFromUrl(value) {
     const pathname = new URL(value).pathname.toLowerCase();
@@ -199,7 +200,15 @@ async function fetchObservationOnce(options = {}) {
 
   page.on('response', async (response) => {
     const sourceName = sourceNameFromUrl(response.url());
-    if (!sourceName) return;
+    if (!sourceName) {
+      if (
+        response.request().resourceType() === 'script'
+        && response.status() >= 400
+      ) {
+        browserErrors.push(`script ${response.status()}: ${response.url()}`);
+      }
+      return;
+    }
     responseStatuses[sourceName] = response.status();
     try {
       if (!response.ok()) {
@@ -210,6 +219,22 @@ async function fetchObservationOnce(options = {}) {
       responseErrors.push(`${sourceName}: ${error.message}`);
     }
   });
+  page.on('pageerror', (error) => {
+    browserErrors.push(`pageerror: ${error.message}`);
+    console.error(`🧩 Wantgoo page JavaScript error: ${error.message}`);
+  });
+  page.on('console', (message) => {
+    if (message.type() !== 'error') return;
+    const entry = `console.error: ${message.text()}`;
+    browserErrors.push(entry);
+    console.error(`🧩 ${entry}`);
+  });
+  page.on('requestfailed', (request) => {
+    if (!['document', 'script', 'xhr', 'fetch'].includes(request.resourceType())) return;
+    const entry = `${request.resourceType()} failed: ${request.url()} (${request.failure()?.errorText || 'unknown'})`;
+    browserErrors.push(entry);
+    console.error(`🌐 ${entry}`);
+  });
 
   try {
     const pageResponse = await page.goto(
@@ -219,9 +244,18 @@ async function fetchObservationOnce(options = {}) {
     console.log(
       `🌐 Wantgoo page: ${pageResponse?.status() || 'unknown'} ${page.url()} (${await page.title()})`,
     );
+    if (headed) {
+      console.log('🖥️ Headed mode is active. Complete any browser verification in the opened window.');
+    }
 
     const deadline = Date.now() + responseTimeoutMs;
+    let challengeLogged = false;
     while (Object.keys(payloads).length < 3 && Date.now() < deadline) {
+      const currentUrl = page.url();
+      if (!challengeLogged && currentUrl.includes('__cf_chl_')) {
+        challengeLogged = true;
+        console.log(`🛡️ Cloudflare challenge detected: ${currentUrl.split('?')[0]}`);
+      }
       await page.waitForTimeout(500);
     }
 
@@ -241,6 +275,7 @@ async function fetchObservationOnce(options = {}) {
       `captured=${Object.keys(payloads).join(',') || 'none'}`,
       `statuses=${JSON.stringify(responseStatuses)}`,
       responseErrors.length > 0 ? `errors=${responseErrors.join('; ')}` : '',
+      browserErrors.length > 0 ? `browser=${browserErrors.slice(-10).join('; ')}` : '',
     ].filter(Boolean).join(' ');
     throw new Error(
       `Browser did not capture Wantgoo sources within ${responseTimeoutMs}ms: ${missing.join(', ')} (${details})`,
@@ -340,7 +375,8 @@ function saveObservation(raw, normalized, options = {}) {
 async function main(args = process.argv.slice(2)) {
   const expectedDate = normalizeDateInput(getArg(args, '--date')) || taipeiDateCompact();
   const force = args.includes('--force');
-  const raw = await fetchObservation();
+  const headed = args.includes('--headed');
+  const raw = await fetchObservation({ headed });
   const normalized = normalizeObservation(raw);
 
   if (normalized.date !== expectedDate) {
