@@ -12,6 +12,7 @@ const {
   enumerateDates,
   loadNonTradingDaysForRange,
   randomDelay,
+  selectDatasets,
   validateRange,
 } = require('../scripts/crawl_twse_institutional_summaries_range');
 
@@ -118,6 +119,25 @@ test('randomDelay validates bounds and includes configured endpoints', () => {
   assert.equal(randomDelay(3000, 5000, () => 0.999999), 5000);
   assert.throws(() => randomDelay(5000, 3000), /Invalid delay range/);
   assert.throws(() => randomDelay(0, 300001), /exceeds safety limit/);
+});
+
+test('selectDatasets defaults to all and supports checkbox combinations', () => {
+  assert.deepEqual(
+    selectDatasets('').map((item) => item.endpointId),
+    ['TWT38U', 'TWT44U', 'TWT43U'],
+  );
+  assert.deepEqual(
+    selectDatasets('TWT44U').map((item) => item.endpointId),
+    ['TWT44U'],
+  );
+  assert.deepEqual(
+    selectDatasets('twt43u,TWT38U,TWT43U').map((item) => item.endpointId),
+    ['TWT43U', 'TWT38U'],
+  );
+  assert.throws(
+    () => selectDatasets('UNKNOWN'),
+    /Unknown dataset UNKNOWN/,
+  );
 });
 
 test('range calendar remains optional when requested years are uncovered', async () => {
