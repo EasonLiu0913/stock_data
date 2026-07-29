@@ -119,19 +119,51 @@ jobs:
           echo "Crawler arguments: $args"
 
       - name: Crawl broker details with pending retry rounds
-        run: node scripts/crawl_fubon_broker_details_resumable.js ${{ steps.args.outputs.value }}
+        id: crawl
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          node scripts/crawl_fubon_broker_details_resumable.js ${{ steps.args.outputs.value }} \
+            2>&1 | tee /tmp/fubon-broker-details-crawl.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "Crawler exit code: $status"
+          exit 0
 
       - name: Verify generated data
-        if: ${{ inputs.start_date == '' && inputs.end_date == '' }}
+        id: verify
+        if: always() && inputs.start_date == '' && inputs.end_date == ''
+        shell: bash
         run: |
+          set -o pipefail
+          set +e
           args="${{ steps.args.outputs.value }}"
           args="${args/ --force/}"
-          node scripts/crawl_fubon_broker_details_resumable.js $args --check-only
+          node scripts/crawl_fubon_broker_details_resumable.js $args --check-only \
+            2>&1 | tee /tmp/fubon-broker-details-verify.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "Verification exit code: $status"
+          exit 0
 
       - name: Generate broker-details files.json only
+        if: always()
         run: node scripts/generate_file_lists.js --only data_fubon_broker_details
 
+      - name: Upload crawl logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fubon-broker-details-${{ github.run_id }}
+          path: |
+            /tmp/fubon-broker-details-crawl.log
+            /tmp/fubon-broker-details-verify.log
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Commit and push changes
+        if: always()
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -149,7 +181,13 @@ jobs:
           fi
 
           current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "🏦 Update Fubon broker details - ${current_date}"
+          if [ "${{ steps.crawl.outputs.exit_code }}" = "0" ] && \
+             { [ "${{ steps.verify.outputs.exit_code }}" = "0" ] || [ -z "${{ steps.verify.outputs.exit_code }}" ]; }; then
+            message="🏦 Complete Fubon broker details - ${current_date}"
+          else
+            message="🏦 Checkpoint Fubon broker details pending retry - ${current_date}"
+          fi
+          git commit -m "$message"
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "Unexpected uncommitted changes remain before rebase:"
@@ -168,3 +206,19 @@ jobs:
 
           echo "Failed to push broker details after 5 attempts."
           exit 1
+
+      - name: Mark incomplete broker details crawl as failed after saving progress
+        if: always()
+        shell: bash
+        run: |
+          crawl_status="${{ steps.crawl.outputs.exit_code }}"
+          verify_status="${{ steps.verify.outputs.exit_code }}"
+
+          if [ "$crawl_status" != "0" ] || { [ -n "$verify_status" ] && [ "$verify_status" != "0" ]; }; then
+            echo "Fubon broker details still has pending retry stocks, but progress was committed."
+            echo "Crawler exit code: ${crawl_status:-unknown}"
+            echo "Verification exit code: ${verify_status:-not-run}"
+            exit 1
+          fi
+
+          echo "Fubon broker details crawl and verification completed successfully."
