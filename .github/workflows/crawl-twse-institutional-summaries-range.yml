@@ -1,0 +1,156 @@
+name: Crawl TWSE 三大法人買賣超（區間）
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '開始日期（YYYYMMDD）'
+        required: true
+        type: string
+      end_date:
+        description: '結束日期（YYYYMMDD，不可晚於台灣當日）'
+        required: true
+        type: string
+      min_delay_ms:
+        description: '每次實際請求之間的最短隨機延遲（毫秒）'
+        required: true
+        default: '3000'
+        type: string
+      max_delay_ms:
+        description: '每次實際請求之間的最長隨機延遲（毫秒）'
+        required: true
+        default: '5000'
+        type: string
+      max_retries:
+        description: '限流、伺服器錯誤或回傳日期不符時的重試次數'
+        required: true
+        default: '3'
+        type: string
+      retry_cooldown_ms:
+        description: '重試等待基準時間（毫秒）'
+        required: true
+        default: '90000'
+        type: string
+      max_days:
+        description: '允許的最大區間天數（含起訖日）'
+        required: true
+        default: '366'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-institutional-summaries
+  cancel-in-progress: false
+
+jobs:
+  crawl-range:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run institutional-summary range safety tests
+        id: tests
+        run: |
+          node --test \
+            tests/crawl_twse_foreign_investors.test.js \
+            tests/crawl_twse_institutional_summaries.test.js \
+            tests/crawl_twse_institutional_summaries_range.test.js
+
+      - name: Crawl TWSE institutional summaries range
+        id: crawl
+        continue-on-error: true
+        shell: bash
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          MIN_DELAY_MS: ${{ inputs.min_delay_ms }}
+          MAX_DELAY_MS: ${{ inputs.max_delay_ms }}
+          MAX_RETRIES: ${{ inputs.max_retries }}
+          RETRY_COOLDOWN_MS: ${{ inputs.retry_cooldown_ms }}
+          MAX_DAYS: ${{ inputs.max_days }}
+        run: |
+          npm run crawl:twse-institutional-summaries-range -- \
+            --start "$START_DATE" \
+            --end "$END_DATE" \
+            --min-delay "$MIN_DELAY_MS" \
+            --max-delay "$MAX_DELAY_MS" \
+            --max-retries "$MAX_RETRIES" \
+            --retry-cooldown "$RETRY_COOLDOWN_MS" \
+            --max-days "$MAX_DAYS"
+
+      - name: Generate institutional-summary files.json only
+        id: file_lists
+        if: >-
+          always() &&
+          steps.tests.outcome == 'success' &&
+          (steps.crawl.outcome == 'success' || steps.crawl.outcome == 'failure')
+        run: |
+          node scripts/generate_file_lists.js --only \
+            data_twse_foreign_investors,data_twse_investment_trust,data_twse_dealers
+
+      - name: Commit and push validated range data
+        if: steps.file_lists.outcome == 'success'
+        shell: bash
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            data_twse_foreign_investors \
+            data_twse_investment_trust \
+            data_twse_dealers
+          if git diff --cached --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain:"
+              git status --short
+              exit 1
+            fi
+            echo "No institutional-summary range changes"
+            exit 0
+          fi
+
+          git commit -m \
+            "chore: update TWSE institutional summaries ${START_DATE}-${END_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Range push failed; retry ${attempt}/5"
+            sleep 5
+          done
+
+          echo "Range push failed after 5 attempts"
+          exit 1
+
+      - name: Report range crawl failure
+        if: always() && steps.crawl.outcome == 'failure'
+        run: |
+          echo "One or more downloads failed. Valid completed files were committed."
+          exit 1
