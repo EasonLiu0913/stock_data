@@ -352,6 +352,7 @@ async function crawlDate(config, options) {
     maxRetries = DEFAULT_MAX_RETRIES,
     retryCooldownMs = DEFAULT_RETRY_COOLDOWN_MS,
     minRows = config.minRows,
+    beforeFetch = null,
   } = options;
   const targetDate = normalizeDateInput(inputDate);
 
@@ -383,6 +384,13 @@ async function crawlDate(config, options) {
     };
   }
 
+  if (beforeFetch) {
+    await beforeFetch({
+      endpointId: config.endpointId,
+      targetDate,
+      outputPath,
+    });
+  }
   const payload = await fetchDataset(config, targetDate, {
     fetchImpl,
     maxRetries,
