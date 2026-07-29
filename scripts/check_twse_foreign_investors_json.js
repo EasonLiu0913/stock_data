@@ -13,6 +13,13 @@ const DEFAULT_OUTPUT_FILE = path.join(
   'reports',
   'twse_foreign_investors_validation_report.json',
 );
+const DEFAULT_BACKUP_ROOT = path.join(
+  ROOT,
+  'reports',
+  'twse_foreign_investors_invalid_backups',
+);
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_RETRY_COOLDOWN_MS = 90000;
 const METADATA_FILENAMES = new Set([
   'files.json',
   'manifest.json',
@@ -38,6 +45,14 @@ function toProjectPath(file) {
   return relative && !relative.startsWith('..')
     ? relative.replaceAll(path.sep, '/')
     : path.resolve(file).replaceAll(path.sep, '/');
+}
+
+function toAbsolutePath(file) {
+  return path.isAbsolute(file) ? path.resolve(file) : path.resolve(ROOT, file);
+}
+
+function timestampForPath(now = new Date()) {
+  return now.toISOString().replace(/\.\d{3}Z$/, 'Z').replaceAll(/[-:]/g, '');
 }
 
 function listJsonFilesRecursive(directory) {
@@ -127,15 +142,19 @@ function validateFile(file, options = {}) {
   }
 }
 
-function writeJsonAtomic(file, payload) {
+function writeTextAtomic(file, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporaryFile = `${file}.tmp-${process.pid}`;
   try {
-    fs.writeFileSync(temporaryFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(temporaryFile, content, 'utf8');
     fs.renameSync(temporaryFile, file);
   } finally {
     if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
   }
+}
+
+function writeJsonAtomic(file, payload) {
+  writeTextAtomic(file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
 function scanDirectory(options = {}) {
@@ -169,6 +188,7 @@ function scanDirectory(options = {}) {
   const report = {
     schemaVersion: 1,
     generated_at: new Date().toISOString(),
+    mode: 'scan_only',
     input_directory: toProjectPath(inputDir),
     output_file: toProjectPath(outputFile),
     validator: {
@@ -193,6 +213,104 @@ function scanDirectory(options = {}) {
   return report;
 }
 
+function assertFileInsideInputDirectory(file, inputDir) {
+  const relative = path.relative(inputDir, file);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Refusing to repair file outside input directory: ${file}`);
+  }
+  return relative;
+}
+
+async function repairInvalidFiles(invalidFiles, options = {}) {
+  const inputDir = path.resolve(options.inputDir || DEFAULT_INPUT_DIR);
+  const backupDir = path.resolve(
+    options.backupDir || path.join(DEFAULT_BACKUP_ROOT, timestampForPath()),
+  );
+  const minRows = options.minRows ?? foreignInvestors.CONFIG.minRows;
+  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const retryCooldownMs = options.retryCooldownMs ?? DEFAULT_RETRY_COOLDOWN_MS;
+  const fetchDataset = options.fetchDataset || foreignInvestors.fetchDataset;
+  const results = [];
+
+  for (const invalid of invalidFiles) {
+    const targetDate = invalid.target_date;
+    const sourceFile = toAbsolutePath(invalid.file);
+
+    if (!targetDate) {
+      results.push({
+        status: 'failed',
+        file: invalid.file,
+        target_date: null,
+        original_error: invalid.error,
+        error: 'Cannot repair because the target date could not be inferred',
+      });
+      continue;
+    }
+
+    try {
+      if (!fs.existsSync(sourceFile)) {
+        throw new Error(`Invalid source file no longer exists: ${sourceFile}`);
+      }
+      const relativeFile = assertFileInsideInputDirectory(sourceFile, inputDir);
+      const replacementPayload = await fetchDataset(targetDate, {
+        maxRetries,
+        retryCooldownMs,
+        minRows,
+      });
+
+      // fetchDataset already validates, but validate again before touching disk.
+      foreignInvestors.validatePayload(replacementPayload, targetDate, { minRows });
+
+      const originalContent = fs.readFileSync(sourceFile, 'utf8');
+      const backupFile = path.join(backupDir, relativeFile);
+      fs.mkdirSync(path.dirname(backupFile), { recursive: true });
+      fs.writeFileSync(backupFile, originalContent, 'utf8');
+
+      try {
+        writeJsonAtomic(sourceFile, replacementPayload);
+        const validation = validateFile(sourceFile, { minRows });
+        if (!validation.valid) {
+          throw new Error(`Replacement validation failed: ${validation.error}`);
+        }
+
+        results.push({
+          status: 'repaired',
+          file: toProjectPath(sourceFile),
+          target_date: targetDate,
+          original_error: invalid.error,
+          original_row_context: invalid.row_context || null,
+          backup_file: toProjectPath(backupFile),
+          replacement_payload_date: replacementPayload.date,
+          replacement_row_count: replacementPayload.data.length,
+        });
+      } catch (error) {
+        writeTextAtomic(sourceFile, originalContent);
+        throw error;
+      }
+    } catch (error) {
+      results.push({
+        status: 'failed',
+        file: invalid.file,
+        target_date: targetDate,
+        original_error: invalid.error,
+        error: error.message,
+      });
+    }
+  }
+
+  const repaired = results.filter((item) => item.status === 'repaired').length;
+  const failed = results.length - repaired;
+  if (repaired > 0) foreignInvestors.refreshFilesJson(inputDir);
+
+  return {
+    attempted: results.length,
+    repaired,
+    failed,
+    backup_directory: repaired > 0 ? toProjectPath(backupDir) : null,
+    results,
+  };
+}
+
 function usage() {
   return [
     'Usage:',
@@ -202,31 +320,100 @@ function usage() {
     '  --input-dir DIR       Directory to scan recursively',
     '  --output-file FILE    JSON report output path',
     `  --min-rows N          Minimum data rows (default: ${foreignInvestors.CONFIG.minRows})`,
-    '  --fail-on-invalid     Exit with code 1 when invalid files are found',
+    '  --repair              Re-fetch invalid dates and replace files only after validation',
+    '  --backup-dir DIR      Backup root for invalid files before replacement',
+    `  --max-retries N       TWSE request retry count (default: ${DEFAULT_MAX_RETRIES})`,
+    `  --retry-cooldown MS   Retry cooldown base (default: ${DEFAULT_RETRY_COOLDOWN_MS})`,
+    '  --fail-on-invalid     Exit with code 1 when invalid files remain after processing',
   ].join('\n');
 }
 
-function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   if (argv.includes('--help') || argv.includes('-h')) {
     console.log(usage());
     return;
   }
 
-  const report = scanDirectory({
-    inputDir: getArg(argv, '--input-dir') || DEFAULT_INPUT_DIR,
-    outputFile: getArg(argv, '--output-file') || DEFAULT_OUTPUT_FILE,
-    minRows: getIntegerArg(
-      argv,
-      '--min-rows',
-      foreignInvestors.CONFIG.minRows,
-    ),
+  const inputDir = path.resolve(getArg(argv, '--input-dir') || DEFAULT_INPUT_DIR);
+  const outputFile = path.resolve(getArg(argv, '--output-file') || DEFAULT_OUTPUT_FILE);
+  const minRows = getIntegerArg(
+    argv,
+    '--min-rows',
+    foreignInvestors.CONFIG.minRows,
+  );
+  const shouldRepair = argv.includes('--repair');
+
+  const initialReport = scanDirectory({
+    inputDir,
+    outputFile,
+    minRows,
   });
+
+  let report = initialReport;
+  if (shouldRepair && initialReport.counts.invalid_files > 0) {
+    console.log(`🔧 準備重新抓取 ${initialReport.counts.invalid_files} 份錯誤檔案`);
+    const repair = await repairInvalidFiles(initialReport.invalid_files, {
+      inputDir,
+      backupDir: getArg(argv, '--backup-dir') || undefined,
+      minRows,
+      maxRetries: getIntegerArg(argv, '--max-retries', DEFAULT_MAX_RETRIES),
+      retryCooldownMs: getIntegerArg(
+        argv,
+        '--retry-cooldown',
+        DEFAULT_RETRY_COOLDOWN_MS,
+      ),
+    });
+    const finalReport = scanDirectory({
+      inputDir,
+      outputFile,
+      minRows,
+    });
+
+    report = {
+      ...finalReport,
+      schemaVersion: 2,
+      generated_at: new Date().toISOString(),
+      mode: 'scan_and_repair',
+      counts_before_repair: initialReport.counts,
+      counts_after_repair: finalReport.counts,
+      initially_invalid_files: initialReport.invalid_files,
+      repair,
+      remaining_invalid_files: finalReport.invalid_files,
+    };
+    writeJsonAtomic(outputFile, report);
+  } else if (shouldRepair) {
+    report = {
+      ...initialReport,
+      schemaVersion: 2,
+      mode: 'scan_and_repair',
+      counts_before_repair: initialReport.counts,
+      counts_after_repair: initialReport.counts,
+      initially_invalid_files: [],
+      repair: {
+        attempted: 0,
+        repaired: 0,
+        failed: 0,
+        backup_directory: null,
+        results: [],
+      },
+      remaining_invalid_files: [],
+    };
+    writeJsonAtomic(outputFile, report);
+  }
 
   console.log('✅ TWSE 外資法人 JSON 掃描完成');
   console.log(`📁 掃描目錄：${report.input_directory}`);
   console.log(`📄 掃描資料檔：${report.counts.scanned_data_files}`);
   console.log(`✅ 格式正確：${report.counts.valid_files}`);
   console.log(`❌ 格式錯誤：${report.counts.invalid_files}`);
+  if (report.repair) {
+    console.log(`🔧 已嘗試修復：${report.repair.attempted}`);
+    console.log(`✅ 修復成功：${report.repair.repaired}`);
+    console.log(`❌ 修復失敗：${report.repair.failed}`);
+    if (report.repair.backup_directory) {
+      console.log(`🗄️ 原始壞檔備份：${report.repair.backup_directory}`);
+    }
+  }
   console.log(`🧾 報告位置：${report.output_file}`);
 
   for (const invalid of report.invalid_files) {
@@ -242,20 +429,22 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
-    console.error(`❌ Failed to validate TWSE foreign-investor JSON files: ${error.message}`);
+  main().catch((error) => {
+    console.error(`❌ Failed to validate/repair TWSE foreign-investor JSON files: ${error.message}`);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = {
+  DEFAULT_BACKUP_ROOT,
   DEFAULT_INPUT_DIR,
   DEFAULT_OUTPUT_FILE,
   inferTargetDate,
   listJsonFilesRecursive,
+  repairInvalidFiles,
   scanDirectory,
+  timestampForPath,
   validateFile,
   writeJsonAtomic,
+  writeTextAtomic,
 };
