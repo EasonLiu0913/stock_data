@@ -93,6 +93,12 @@ const directories = [
         filter: file => /^\d{8}\/external_market_indicators\.json$/.test(file)
     },
     {
+        path: 'data_cnn_fear_and_greed',
+        output: 'data_cnn_fear_and_greed/files.json',
+        recursive: true,
+        filter: file => /^\d{8}\/cnn_fear_and_greed\.json$/.test(file)
+    },
+    {
         path: 'data_market_risk',
         output: 'data_market_risk/files.json',
         recursive: true,
