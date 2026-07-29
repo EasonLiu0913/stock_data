@@ -79,6 +79,18 @@ test('validateRange checks real dates, ordering, future dates, and max days', ()
     }).dates,
     ['20260727', '20260728', '20260729'],
   );
+  assert.deepEqual(
+    validateRange({
+      start: ' 20260625 ',
+      end: '\uFEFF2026/06/25\u00A0',
+      today: '20260729',
+    }),
+    {
+      start: '20260625',
+      end: '20260625',
+      dates: ['20260625'],
+    },
+  );
   assert.throws(
     () => validateRange({
       start: '20260230',
