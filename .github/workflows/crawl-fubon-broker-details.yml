@@ -118,15 +118,15 @@ jobs:
           echo "value=$args" >> "$GITHUB_OUTPUT"
           echo "Crawler arguments: $args"
 
-      - name: Crawl broker details
-        run: node scripts/crawl_fubon_broker_details.js ${{ steps.args.outputs.value }}
+      - name: Crawl broker details with pending retry rounds
+        run: node scripts/crawl_fubon_broker_details_resumable.js ${{ steps.args.outputs.value }}
 
       - name: Verify generated data
         if: ${{ inputs.start_date == '' && inputs.end_date == '' }}
         run: |
           args="${{ steps.args.outputs.value }}"
           args="${args/ --force/}"
-          node scripts/crawl_fubon_broker_details.js $args --check-only
+          node scripts/crawl_fubon_broker_details_resumable.js $args --check-only
 
       - name: Generate broker-details files.json only
         run: node scripts/generate_file_lists.js --only data_fubon_broker_details
