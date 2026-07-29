@@ -89,7 +89,7 @@ test('buildRequestUrl uses the TWT38U endpoint and requested date', () => {
   assert.equal(url.searchParams.get('_'), '1785293947873');
 });
 
-test('loadNonTradingDays fails closed when the requested year is missing', async () => {
+test('loadNonTradingDays is best effort when coverage or file is missing', async () => {
   await withTemporaryDirectory(async (directory) => {
     const file = path.join(directory, 'non_trading_days.json');
     fs.writeFileSync(file, JSON.stringify({ 2026: ['2026/07/10'] }), 'utf8');
@@ -98,9 +98,13 @@ test('loadNonTradingDays fails closed when the requested year is missing', async
       [...loadNonTradingDays(file, '2026')],
       ['2026/07/10'],
     );
-    assert.throws(
-      () => loadNonTradingDays(file, '2027'),
-      /does not cover year 2027/,
+    assert.deepEqual(
+      [...loadNonTradingDays(file, '2027')],
+      ['2026/07/10'],
+    );
+    assert.deepEqual(
+      [...loadNonTradingDays(path.join(directory, 'missing.json'), '2027')],
+      [],
     );
   });
 });
