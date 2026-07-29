@@ -10,7 +10,7 @@ const {
   normalizeDomCapture,
   normalizeFile,
   validateInputFilename,
-} = require('./normalize_wantgoo_margin_dom');
+} = require('../scripts/normalize_wantgoo_margin_dom');
 
 function captureFixture() {
   return {
