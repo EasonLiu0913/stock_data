@@ -1,89 +1,113 @@
-name: Crawl TWSE Foreign Investors
+name: Crawl TWSE Foreign Investors (TWT38U)
 
 on:
-  schedule:
-    # 平日 15:53 台北時間 (07:53 UTC)
-    - cron: '53 7 * * 1-5'
-    # 平日 16:37 台北時間 (08:37 UTC)
-    - cron: '37 8 * * 1-5'
-    # 平日 17:41 台北時間 (09:41 UTC)
-    - cron: '41 9 * * 1-5'
-    # 平日 18:43 台北時間 (10:43 UTC)
-    - cron: '43 10 * * 1-5'
-    # 平日 19:47 台北時間 (11:47 UTC)
-    - cron: '47 11 * * 1-5'
-    # 平日 20:49 台北時間 (12:49 UTC)
-    - cron: '49 12 * * 1-5'
-    # 平日 21:51 台北時間 (13:51 UTC)
-    - cron: '51 13 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: 'Target Date (YYYYMMDD format, e.g., 20260623)'
+        description: '指定資料日期（YYYYMMDD）；留空時使用台灣當日'
         required: false
         default: ''
+        type: string
+  schedule:
+    # Weekdays 17:12 Asia/Taipei (09:12 UTC)
+    - cron: '12 9 * * 1-5'
+    # Weekdays 18:06 Asia/Taipei (10:06 UTC)
+    - cron: '6 10 * * 1-5'
+    # Weekdays 19:21 Asia/Taipei (11:21 UTC)
+    - cron: '21 11 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-foreign-investors
+  cancel-in-progress: false
 
 jobs:
-  crawl-twse-foreign-investors:
+  crawl:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Check existing TWSE foreign investors file
-        id: existing
-        run: |
-          DATE_INPUT="${{ github.event.inputs.date }}"
-          if [ -n "$DATE_INPUT" ]; then
-            TARGET_DATE="$DATE_INPUT"
-          else
-            # Before 03:00 Taipei time, the market data still belongs to the previous day.
-            TARGET_DATE=$(TZ='Asia/Taipei' date --date='3 hours ago' '+%Y%m%d')
-          fi
-
-          OUTPUT_FILE="data_twse_foreign_investors/${TARGET_DATE}_twse_foreign_investors.json"
-          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
-          echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
-
-          if [ -f "$OUTPUT_FILE" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "TWSE foreign investors file already exists: $OUTPUT_FILE"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Setup Node.js
-        if: steps.existing.outputs.exists != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
 
       - name: Install dependencies
-        if: steps.existing.outputs.exists != 'true'
         run: npm ci
 
-      - name: Run TWSE foreign investors crawler
-        if: steps.existing.outputs.exists != 'true'
-        run: |
-          node scripts/crawl_twse_foreign_investors.js \
-            --date "${{ steps.existing.outputs.target_date }}" \
-            --max-retries 0 \
-            --rate-limit-cooldown 180000
+      - name: Run TWT38U safety tests
+        run: node --test tests/crawl_twse_foreign_investors.test.js
 
-      - name: Commit and push changes
-        if: steps.existing.outputs.exists != 'true'
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          if [ -n "$INPUT_DATE" ]; then
+            TARGET_DATE="$INPUT_DATE"
+          else
+            TARGET_DATE=$(TZ=Asia/Taipei date '+%Y%m%d')
+          fi
+
+          node -e '
+            const { normalizeDateInput } = require("./scripts/crawl_twse_foreign_investors");
+            process.stdout.write(normalizeDateInput(process.argv[1]));
+          ' "$TARGET_DATE"
+
+          echo "date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "TWT38U target date: $TARGET_DATE"
+
+      - name: Crawl TWSE TWT38U
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: npm run crawl:twse-foreign-investors -- --date "$TARGET_DATE"
+
+      - name: Generate foreign-investor files.json only
+        run: node scripts/generate_file_lists.js --only data_twse_foreign_investors
+
+      - name: Commit TWT38U data
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data_twse_foreign_investors/
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git diff --staged --quiet; then
-            echo "No TWSE foreign investors changes to commit"
+          git add data_twse_foreign_investors
+          if git diff --cached --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain:"
+              git status --short
+              exit 1
+            fi
+            echo "No TWT38U changes for $TARGET_DATE"
             exit 0
           fi
 
-          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update TWSE foreign investors data ${CURRENT_DATE}"
+          git commit -m "chore: update TWSE TWT38U data $TARGET_DATE"
 
-          git pull --rebase origin main
-          git push origin main
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "TWT38U push failed; retry $attempt/5"
+            sleep 5
+          done
+
+          echo "TWT38U push failed after 5 attempts"
+          exit 1
