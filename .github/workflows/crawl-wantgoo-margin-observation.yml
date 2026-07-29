@@ -1,0 +1,125 @@
+name: Crawl Wantgoo 融資融券觀測資料
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '預期資料日期（YYYYMMDD）；留空使用台灣今天'
+        required: false
+        default: ''
+        type: string
+      force:
+        description: '經人工確認後覆寫同日期觀測資料'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # 17:35, 19:05, 21:05 Asia/Taipei on weekdays.
+    - cron: '35 9 * * 1-5'
+    - cron: '5 11 * * 1-5'
+    - cron: '5 13 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-wantgoo-margin-observation
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Wantgoo observation safety tests
+        run: node --test tests/crawl_wantgoo_margin_observation.test.js
+
+      - name: Resolve expected date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          if [ -n "$INPUT_DATE" ]; then
+            if ! [[ "$INPUT_DATE" =~ ^20[0-9]{6}$ ]]; then
+              echo "Invalid date: $INPUT_DATE (expected YYYYMMDD)"
+              exit 1
+            fi
+            target_date="$INPUT_DATE"
+          else
+            target_date=$(TZ=Asia/Taipei date +%Y%m%d)
+            taipei_today=$(TZ=Asia/Taipei date +%F)
+            if ! node -e '
+              const { isTradingDate, loadHolidaySet } = require("./scripts/resolve_forecast_dates");
+              process.exit(isTradingDate(process.argv[1], loadHolidaySet()) ? 0 : 1);
+            ' "$taipei_today"; then
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "Skip: $taipei_today is a weekend or configured non-trading day."
+              exit 0
+            fi
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "date=$target_date" >> "$GITHUB_OUTPUT"
+
+      - name: Random request delay
+        if: steps.date.outputs.run == 'true'
+        shell: bash
+        run: sleep $((RANDOM % 91 + 15))
+
+      - name: Crawl Wantgoo margin observation
+        if: steps.date.outputs.run == 'true'
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+          FORCE_RUN: ${{ inputs.force || false }}
+        run: |
+          args=(--date "$TARGET_DATE")
+          if [ "$FORCE_RUN" = "true" ]; then
+            args+=(--force)
+          fi
+          node scripts/crawl_wantgoo_margin_observation.js "${args[@]}"
+
+      - name: Commit observation data
+        if: steps.date.outputs.run == 'true'
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data_wantgoo_margin
+          if git diff --cached --quiet; then
+            echo "No Wantgoo observation changes for $TARGET_DATE"
+            exit 0
+          fi
+          git commit -m "chore: add Wantgoo margin observation $TARGET_DATE"
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Wantgoo observation push failed; retry $attempt/5"
+            sleep 5
+          done
+          echo "Wantgoo observation push failed after 5 attempts"
+          exit 1
