@@ -98,21 +98,27 @@ function validateRange(options) {
   return { start, end, dates };
 }
 
-function loadNonTradingDaysForRange(start, end) {
-  const years = new Set();
-  for (let year = Number(start.slice(0, 4)); year <= Number(end.slice(0, 4)); year += 1) {
-    years.add(String(year));
+function loadNonTradingDaysForRange(
+  start,
+  end,
+  file = NON_TRADING_DAYS_FILE,
+) {
+  const dates = foreignInvestors.loadNonTradingDays(file);
+  const coveredYears = new Set(
+    [...dates].map((date) => String(date).slice(0, 4)),
+  );
+  for (
+    let year = Number(start.slice(0, 4));
+    year <= Number(end.slice(0, 4));
+    year += 1
+  ) {
+    if (!coveredYears.has(String(year))) {
+      console.warn(
+        `⚠️ No non-trading-day calendar for ${year}; API date validation will protect writes`,
+      );
+    }
   }
-
-  const result = new Set();
-  for (const year of years) {
-    const dates = foreignInvestors.loadNonTradingDays(
-      NON_TRADING_DAYS_FILE,
-      year,
-    );
-    for (const date of dates) result.add(date);
-  }
-  return result;
+  return dates;
 }
 
 function randomDelay(minMs, maxMs, randomFn = Math.random) {
