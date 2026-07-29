@@ -178,6 +178,19 @@ test('repairInvalidFiles backs up and replaces an invalid file with a validated 
     assert.equal(repair.repaired, 1);
     assert.equal(repair.failed, 0);
 
+    const repairedResult = repair.results[0];
+    assert.equal(repairedResult.changes.matched, true);
+    assert.equal(repairedResult.changes.matched_by, 'stock_code');
+    assert.equal(repairedResult.changes.stock_code, '9914');
+    assert.equal(repairedResult.changes.stock_name, '美利達');
+    assert.equal(repairedResult.changes.old_field_count, 6);
+    assert.equal(repairedResult.changes.new_field_count, 12);
+    const changedColumns = repairedResult.changes.changed_fields
+      .map((field) => field.column_index);
+    assert.deepEqual(changedColumns, [6, 7, 8, 9, 10, 11]);
+    assert.equal(repairedResult.changes.changed_fields[0].old_value, null);
+    assert.equal(repairedResult.changes.changed_fields[0].new_value, '0');
+
     const repairedPayload = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
     assert.equal(repairedPayload.data[0].length, 12);
     assert.equal(validateFile(dataFile, { minRows: 1 }).valid, true);

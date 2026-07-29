@@ -213,6 +213,70 @@ function scanDirectory(options = {}) {
   return report;
 }
 
+function buildRepairDiff(invalidFile, replacementPayload) {
+  const oldRow = invalidFile.row_context?.row;
+  if (!Array.isArray(oldRow) || !Array.isArray(replacementPayload?.data)) return null;
+
+  const codeIndex = foreignInvestors.CONFIG.codeIndex;
+  const nameIndex = foreignInvestors.CONFIG.nameIndex;
+  const stockCode = String(invalidFile.row_context?.stock_code || '').trim();
+  let newRow = null;
+  let matchedBy = null;
+
+  if (stockCode) {
+    newRow = replacementPayload.data.find((row) => (
+      Array.isArray(row)
+      && String(row[codeIndex] || '').trim() === stockCode
+    ));
+    if (newRow) matchedBy = 'stock_code';
+  }
+
+  if (!newRow && Number.isInteger(invalidFile.row_context?.row_index)) {
+    const candidate = replacementPayload.data[invalidFile.row_context.row_index];
+    if (Array.isArray(candidate)) {
+      newRow = candidate;
+      matchedBy = 'row_index';
+    }
+  }
+
+  if (!Array.isArray(newRow)) {
+    return {
+      matched: false,
+      stock_code: stockCode || null,
+      stock_name: invalidFile.row_context?.stock_name || null,
+      old_field_count: oldRow.length,
+      new_field_count: null,
+      changed_fields: [],
+    };
+  }
+
+  const changedFields = [];
+  const fieldCount = Math.max(oldRow.length, newRow.length);
+  for (let index = 0; index < fieldCount; index += 1) {
+    const oldValue = index < oldRow.length ? oldRow[index] : null;
+    const newValue = index < newRow.length ? newRow[index] : null;
+    if (JSON.stringify(oldValue) === JSON.stringify(newValue)) continue;
+    changedFields.push({
+      column_index: index,
+      field_name: replacementPayload.fields?.[index] ?? null,
+      old_value: oldValue,
+      new_value: newValue,
+    });
+  }
+
+  return {
+    matched: true,
+    matched_by: matchedBy,
+    stock_code: String(newRow[codeIndex] || '').trim() || stockCode || null,
+    stock_name: String(newRow[nameIndex] || '').trim()
+      || invalidFile.row_context?.stock_name
+      || null,
+    old_field_count: oldRow.length,
+    new_field_count: newRow.length,
+    changed_fields: changedFields,
+  };
+}
+
 function assertFileInsideInputDirectory(file, inputDir) {
   const relative = path.relative(inputDir, file);
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
@@ -282,6 +346,7 @@ async function repairInvalidFiles(invalidFiles, options = {}) {
           backup_file: toProjectPath(backupFile),
           replacement_payload_date: replacementPayload.date,
           replacement_row_count: replacementPayload.data.length,
+          changes: buildRepairDiff(invalid, replacementPayload),
         });
       } catch (error) {
         writeTextAtomic(sourceFile, originalContent);
@@ -436,6 +501,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildRepairDiff,
   DEFAULT_BACKUP_ROOT,
   DEFAULT_INPUT_DIR,
   DEFAULT_OUTPUT_FILE,
