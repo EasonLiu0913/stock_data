@@ -88,22 +88,27 @@ function compactToIso(date) {
 
 function loadNonTradingDays(file = NON_TRADING_DAYS_FILE, targetYear = '') {
   if (!fs.existsSync(file)) {
-    throw new Error(`Non-trading-day calendar is missing: ${file}`);
+    console.warn(
+      `⚠️ Non-trading-day calendar is missing; API validation remains active: ${file}`,
+    );
+    return new Set();
   }
   const content = fs.readFileSync(file, 'utf8').trim();
   if (!content) {
-    throw new Error(`Non-trading-day calendar is empty: ${file}`);
+    console.warn(
+      `⚠️ Non-trading-day calendar is empty; API validation remains active: ${file}`,
+    );
+    return new Set();
   }
 
-  const calendar = JSON.parse(content);
-  if (
-    targetYear
-    && !Array.isArray(calendar)
-    && !Array.isArray(calendar?.[targetYear])
-  ) {
-    throw new Error(
-      `Non-trading-day calendar does not cover year ${targetYear}: ${file}`,
+  let calendar;
+  try {
+    calendar = JSON.parse(content);
+  } catch (error) {
+    console.warn(
+      `⚠️ Non-trading-day calendar is invalid; API validation remains active: ${file}`,
     );
+    return new Set();
   }
   const dates = Array.isArray(calendar)
     ? calendar
@@ -112,11 +117,10 @@ function loadNonTradingDays(file = NON_TRADING_DAYS_FILE, targetYear = '') {
     ));
   if (
     targetYear
-    && Array.isArray(calendar)
     && !dates.some((date) => String(date).startsWith(targetYear))
   ) {
-    throw new Error(
-      `Non-trading-day calendar does not cover year ${targetYear}: ${file}`,
+    console.warn(
+      `⚠️ Non-trading-day calendar does not cover ${targetYear}; requests will rely on API date validation`,
     );
   }
   return new Set(dates.map((date) => String(date).replaceAll('-', '/')));
