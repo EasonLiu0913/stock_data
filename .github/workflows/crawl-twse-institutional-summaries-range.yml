@@ -11,6 +11,21 @@ on:
         description: '結束日期（YYYYMMDD，不可晚於台灣當日）'
         required: true
         type: string
+      foreign_investors:
+        description: '抓取外資及陸資（TWT38U）；三項都不勾時預設全部抓取'
+        required: false
+        default: false
+        type: boolean
+      investment_trust:
+        description: '抓取投信（TWT44U）；三項都不勾時預設全部抓取'
+        required: false
+        default: false
+        type: boolean
+      dealers:
+        description: '抓取自營商（TWT43U）；三項都不勾時預設全部抓取'
+        required: false
+        default: false
+        type: boolean
       min_delay_ms:
         description: '每次實際請求之間的最短隨機延遲（毫秒）'
         required: true
@@ -64,6 +79,46 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve selected institutional datasets
+        id: datasets
+        shell: bash
+        env:
+          FOREIGN_INVESTORS: ${{ inputs.foreign_investors }}
+          INVESTMENT_TRUST: ${{ inputs.investment_trust }}
+          DEALERS: ${{ inputs.dealers }}
+        run: |
+          set -euo pipefail
+          SELECTED_IDS=()
+          SELECTED_LABELS=()
+
+          if [ "$FOREIGN_INVESTORS" = "true" ]; then
+            SELECTED_IDS+=("TWT38U")
+            SELECTED_LABELS+=("外資及陸資")
+          fi
+          if [ "$INVESTMENT_TRUST" = "true" ]; then
+            SELECTED_IDS+=("TWT44U")
+            SELECTED_LABELS+=("投信")
+          fi
+          if [ "$DEALERS" = "true" ]; then
+            SELECTED_IDS+=("TWT43U")
+            SELECTED_LABELS+=("自營商")
+          fi
+
+          if [ "${#SELECTED_IDS[@]}" -eq 0 ]; then
+            SELECTED_IDS=("TWT38U" "TWT44U" "TWT43U")
+            SELECTED_LABELS=("外資及陸資" "投信" "自營商")
+            echo "selection_mode=default-all" >> "$GITHUB_OUTPUT"
+            echo "No institution checkbox selected; defaulting to all three datasets."
+          else
+            echo "selection_mode=explicit" >> "$GITHUB_OUTPUT"
+          fi
+
+          IDS=$(IFS=,; echo "${SELECTED_IDS[*]}")
+          LABELS=$(IFS='、'; echo "${SELECTED_LABELS[*]}")
+          echo "ids=$IDS" >> "$GITHUB_OUTPUT"
+          echo "labels=$LABELS" >> "$GITHUB_OUTPUT"
+          echo "Selected datasets: $IDS ($LABELS)"
+
       - name: Run institutional-summary range safety tests
         id: tests
         run: |
@@ -84,6 +139,7 @@ jobs:
           MAX_RETRIES: ${{ inputs.max_retries }}
           RETRY_COOLDOWN_MS: ${{ inputs.retry_cooldown_ms }}
           MAX_DAYS: ${{ inputs.max_days }}
+          SELECTED_DATASETS: ${{ steps.datasets.outputs.ids }}
           CRAWL_LOG_FILE: ${{ runner.temp }}/twse-institutional-range-crawl.log
         run: |
           set -o pipefail
@@ -95,6 +151,7 @@ jobs:
             --max-retries "$MAX_RETRIES" \
             --retry-cooldown "$RETRY_COOLDOWN_MS" \
             --max-days "$MAX_DAYS" \
+            --datasets "$SELECTED_DATASETS" \
             2>&1 | tee "$CRAWL_LOG_FILE"
 
       - name: Build range crawl report
@@ -108,6 +165,9 @@ jobs:
           START_DATE: ${{ inputs.start_date }}
           END_DATE: ${{ inputs.end_date }}
           CRAWL_OUTCOME: ${{ steps.crawl.outcome }}
+          SELECTED_DATASETS: ${{ steps.datasets.outputs.ids }}
+          SELECTED_LABELS: ${{ steps.datasets.outputs.labels }}
+          SELECTION_MODE: ${{ steps.datasets.outputs.selection_mode }}
           CRAWL_LOG_FILE: ${{ runner.temp }}/twse-institutional-range-crawl.log
           REPORT_FILE: ${{ runner.temp }}/twse-institutional-range-report.json
         run: |
@@ -170,13 +230,20 @@ jobs:
           };
 
           const report = {
-            schemaVersion: 1,
+            schemaVersion: 2,
             generated_at: new Date().toISOString(),
             range: {
               start: process.env.START_DATE,
               end: process.env.END_DATE,
             },
             crawl_outcome: process.env.CRAWL_OUTCOME,
+            selection_mode: process.env.SELECTION_MODE,
+            selected_datasets: String(process.env.SELECTED_DATASETS || '')
+              .split(',')
+              .filter(Boolean),
+            selected_labels: String(process.env.SELECTED_LABELS || '')
+              .split('、')
+              .filter(Boolean),
             counts,
             skipped_non_trading_dates: [...new Set(skippedNonTradingDates)].sort(),
             failed_dates: failedDates,
@@ -209,10 +276,14 @@ jobs:
             .replaceAll('|', '\\|')
             .replace(/\r?\n/g, ' ');
           const countText = (value) => Number.isFinite(value) ? value : '無法統計';
+          const selectionNote = report.selection_mode === 'default-all'
+            ? '全部未勾，預設三個都抓'
+            : '依勾選項目';
           const lines = [
             '### TWSE 三大法人區間爬取報告',
             '',
             `- 區間：${report.range.start} ～ ${report.range.end}`,
+            `- 抓取法人：${report.selected_labels.join('、') || '未指定'}（${selectionNote}）`,
             `- 新增：${countText(report.counts.created)} 份；既有：${countText(report.counts.existing)} 份；失敗：${countText(report.counts.failed)} 份`,
             `- 跳過非交易日：${countText(report.counts.skipped_non_trading_dates)} 天；實際請求：${countText(report.counts.network_requests)} 次`,
             '',
@@ -232,7 +303,7 @@ jobs:
                 .map((item) => `${item.endpointId} ${item.label}`)
                 .join('、');
               lines.push(
-                `- \`start_date=${suggestion.start_date}\`、\`end_date=${suggestion.end_date}\`（${endpoints}）`,
+                `- \`start_date=${suggestion.start_date}\`、\`end_date=${suggestion.end_date}\`，並只勾選失敗法人（${endpoints}）`,
               );
             }
           } else if (report.fatal_error) {
@@ -278,6 +349,7 @@ jobs:
         env:
           START_DATE: ${{ inputs.start_date }}
           END_DATE: ${{ inputs.end_date }}
+          SELECTED_LABELS: ${{ steps.datasets.outputs.labels }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -297,7 +369,7 @@ jobs:
           fi
 
           git commit -m \
-            "chore: update TWSE institutional summaries ${START_DATE}-${END_DATE}"
+            "chore: update TWSE institutional summaries ${START_DATE}-${END_DATE} (${SELECTED_LABELS})"
 
           if [ -n "$(git status --porcelain)" ]; then
             echo "Unexpected uncommitted changes remain before rebase:"
@@ -341,7 +413,7 @@ jobs:
                   .map((item) => `${item.endpointId} ${item.label}`)
                   .join(', ');
                 console.error(
-                  `- start_date=${suggestion.start_date}, end_date=${suggestion.end_date} (${endpoints})`,
+                  `- start_date=${suggestion.start_date}, end_date=${suggestion.end_date}; check only ${endpoints}`,
                 );
               }
             } else if (report.fatal_error) {
