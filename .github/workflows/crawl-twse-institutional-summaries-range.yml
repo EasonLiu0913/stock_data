@@ -202,6 +202,9 @@ jobs:
           const fatalLine = [...lines]
             .reverse()
             .find((line) => /^❌ Failed to crawl TWSE institutional range:/.test(line));
+          const normalizedRange = log.match(
+            /^📅 Range:\s*(\d{8})\s*~\s*(\d{8})\s*$/m,
+          );
 
           const failuresByDate = new Map();
           for (const failure of failures) {
@@ -233,8 +236,10 @@ jobs:
             schemaVersion: 2,
             generated_at: new Date().toISOString(),
             range: {
-              start: process.env.START_DATE,
-              end: process.env.END_DATE,
+              start: normalizedRange?.[1]
+                || String(process.env.START_DATE || '').trim(),
+              end: normalizedRange?.[2]
+                || String(process.env.END_DATE || '').trim(),
             },
             crawl_outcome: process.env.CRAWL_OUTCOME,
             selection_mode: process.env.SELECTION_MODE,
