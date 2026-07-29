@@ -167,7 +167,11 @@ async function fetchJsonWithRetry(url, options = {}) {
   }
 }
 
-async function fetchObservation(options = {}) {
+async function fetchObservationOnce(options = {}) {
+  const {
+    navigationTimeoutMs = 120000,
+    responseTimeoutMs = 120000,
+  } = options;
   const { chromium } = require('playwright');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({
@@ -177,6 +181,7 @@ async function fetchObservation(options = {}) {
   });
   const payloads = {};
   const responseErrors = [];
+  const responseStatuses = {};
 
   function sourceNameFromUrl(value) {
     const pathname = new URL(value).pathname.toLowerCase();
@@ -195,6 +200,7 @@ async function fetchObservation(options = {}) {
   page.on('response', async (response) => {
     const sourceName = sourceNameFromUrl(response.url());
     if (!sourceName) return;
+    responseStatuses[sourceName] = response.status();
     try {
       if (!response.ok()) {
         throw new Error(`${response.status()} ${response.statusText()}`);
@@ -206,18 +212,24 @@ async function fetchObservation(options = {}) {
   });
 
   try {
-    await page.goto(
+    const pageResponse = await page.goto(
       'https://www.wantgoo.com/stock/margin-trading/exclude-etf/taiex',
-      { waitUntil: 'domcontentloaded', timeout: 60000 },
+      { waitUntil: 'domcontentloaded', timeout: navigationTimeoutMs },
     );
-    await page.waitForFunction(
-      () => document.querySelector('#tradeDate')?.textContent?.trim().length > 0,
-      null,
-      { timeout: 60000 },
+    console.log(
+      `🌐 Wantgoo page: ${pageResponse?.status() || 'unknown'} ${page.url()} (${await page.title()})`,
     );
-    const deadline = Date.now() + 30000;
+
+    const deadline = Date.now() + responseTimeoutMs;
     while (Object.keys(payloads).length < 3 && Date.now() < deadline) {
       await page.waitForTimeout(500);
+    }
+
+    if (Object.keys(payloads).length < 3) {
+      const bodyText = await page.locator('body').innerText({ timeout: 5000 }).catch(() => '');
+      if (/cloudflare|checking your browser|verify you are human|請確認您是人類/i.test(bodyText)) {
+        responseErrors.push('Cloudflare challenge page detected');
+      }
     }
   } finally {
     await browser.close();
@@ -225,10 +237,43 @@ async function fetchObservation(options = {}) {
 
   const missing = Object.keys(ENDPOINTS).filter((name) => !payloads[name]);
   if (missing.length > 0) {
-    const details = responseErrors.length > 0 ? ` (${responseErrors.join('; ')})` : '';
-    throw new Error(`Browser did not capture Wantgoo sources: ${missing.join(', ')}${details}`);
+    const details = [
+      `captured=${Object.keys(payloads).join(',') || 'none'}`,
+      `statuses=${JSON.stringify(responseStatuses)}`,
+      responseErrors.length > 0 ? `errors=${responseErrors.join('; ')}` : '',
+    ].filter(Boolean).join(' ');
+    throw new Error(
+      `Browser did not capture Wantgoo sources within ${responseTimeoutMs}ms: ${missing.join(', ')} (${details})`,
+    );
   }
   return payloads;
+}
+
+async function fetchObservation(options = {}) {
+  const {
+    maxBrowserAttempts = 3,
+    minAttemptDelayMs = 20000,
+    maxAttemptDelayMs = 40000,
+  } = options;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxBrowserAttempts; attempt += 1) {
+    try {
+      console.log(`🔎 Wantgoo browser attempt ${attempt}/${maxBrowserAttempts}`);
+      return await fetchObservationOnce(options);
+    } catch (error) {
+      lastError = error;
+      console.error(`⚠️ Wantgoo browser attempt ${attempt} failed: ${error.message}`);
+      if (attempt === maxBrowserAttempts) break;
+      const delay = minAttemptDelayMs + Math.floor(
+        Math.random() * (Math.max(minAttemptDelayMs, maxAttemptDelayMs) - minAttemptDelayMs + 1),
+      );
+      console.log(`🕒 Recreating browser context in ${Math.round(delay / 1000)} seconds`);
+      await sleep(delay);
+    }
+  }
+
+  throw lastError;
 }
 
 function serialize(value) {
@@ -319,6 +364,7 @@ if (require.main === module) {
 module.exports = {
   ENDPOINTS,
   fetchObservation,
+  fetchObservationOnce,
   fetchJsonWithRetry,
   normalizeDateInput,
   normalizeObservation,
