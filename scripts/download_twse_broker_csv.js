@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const WELCOME_URL = 'https://bsr.twse.com.tw/bshtm/bsWelcome.aspx';
 const MENU_URL = 'https://bsr.twse.com.tw/bshtm/bsMenu.aspx';
@@ -15,6 +16,12 @@ const DEFAULT_OUTPUT_DIR = path.resolve(
   'data_twse_broker_trades',
   'raw',
 );
+const DEFAULT_UTF8_OUTPUT_DIR = path.resolve(
+  __dirname,
+  '..',
+  'data_twse_broker_trades',
+  'utf8',
+);
 
 function getArg(args, flag) {
   const index = args.indexOf(flag);
@@ -25,6 +32,7 @@ function getPositionalStockCode(args) {
   const flagsWithValues = new Set([
     '--stock',
     '--output-dir',
+    '--utf8-output-dir',
     '--timeout-ms',
   ]);
   for (let index = 0; index < args.length; index += 1) {
@@ -89,6 +97,14 @@ function buildOutputPath(outputDir, dataDate, stockCode) {
   );
 }
 
+function getDefaultUtf8OutputDir(outputDir) {
+  const resolvedOutputDir = path.resolve(outputDir);
+  if (resolvedOutputDir === DEFAULT_OUTPUT_DIR) {
+    return DEFAULT_UTF8_OUTPUT_DIR;
+  }
+  return path.join(path.dirname(resolvedOutputDir), 'utf8');
+}
+
 function validateDownloadLink(href, stockCode) {
   let url;
   try {
@@ -134,6 +150,37 @@ function validateDownloadedFile(file) {
   return stats.size;
 }
 
+function convertCsvToUtf8(inputFile, outputFile) {
+  const result = spawnSync(
+    'iconv',
+    ['-f', 'cp950', '-t', 'utf-8', inputFile],
+    {
+      encoding: 'buffer',
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  if (result.error) {
+    throw new Error(`Failed to run iconv for TWSE CSV UTF-8 conversion: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `Failed to convert TWSE CSV to UTF-8: ${result.stderr.toString('utf8').trim()}`,
+    );
+  }
+
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
+  const temporaryFile = `${outputFile}.part-${process.pid}`;
+  try {
+    fs.writeFileSync(temporaryFile, result.stdout);
+    const size = validateDownloadedFile(temporaryFile);
+    if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+    fs.renameSync(temporaryFile, outputFile);
+    return size;
+  } finally {
+    if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
+  }
+}
+
 function usage() {
   return [
     'Usage:',
@@ -143,6 +190,8 @@ function usage() {
     'Options:',
     '  --stock CODE        TWSE security code (4-6 letters or digits)',
     '  --output-dir DIR    Output directory',
+    '  --utf8-output-dir DIR',
+    '                      UTF-8 CSV output directory (default: sibling utf8 dir)',
     '  --timeout-ms MS     Time allowed for manual CAPTCHA entry (default: 300000)',
     '  --force             Replace an existing validated target file',
     '',
@@ -168,8 +217,12 @@ async function main(args = process.argv.slice(2)) {
   const outputDir = path.resolve(
     getArg(args, '--output-dir') || DEFAULT_OUTPUT_DIR,
   );
+  const utf8OutputDir = path.resolve(
+    getArg(args, '--utf8-output-dir') || getDefaultUtf8OutputDir(outputDir),
+  );
   const force = args.includes('--force');
   fs.mkdirSync(outputDir, { recursive: true });
+  fs.mkdirSync(utf8OutputDir, { recursive: true });
 
   const { chromium } = require('playwright');
   let browser;
@@ -204,9 +257,14 @@ async function main(args = process.argv.slice(2)) {
       await page.locator('body').innerText(),
     );
     const outputFile = buildOutputPath(outputDir, dataDate, stockCode);
+    const utf8OutputFile = buildOutputPath(utf8OutputDir, dataDate, stockCode);
     if (fs.existsSync(outputFile) && !force) {
       const size = validateDownloadedFile(outputFile);
       console.log(`⏭️ Valid file already exists (${size} bytes): ${outputFile}`);
+      if (!fs.existsSync(utf8OutputFile)) {
+        const utf8Size = convertCsvToUtf8(outputFile, utf8OutputFile);
+        console.log(`✅ Created UTF-8 CSV (${utf8Size} bytes): ${utf8OutputFile}`);
+      }
       return;
     }
 
@@ -250,8 +308,11 @@ async function main(args = process.argv.slice(2)) {
         fs.unlinkSync(outputFile);
       }
       fs.renameSync(temporaryFile, outputFile);
+      const utf8Size = convertCsvToUtf8(outputFile, utf8OutputFile);
       console.log(`✅ Saved ${link.recordCount} TWSE broker records (${size} bytes)`);
       console.log(`📁 ${outputFile}`);
+      console.log(`✅ Converted UTF-8 CSV (${utf8Size} bytes)`);
+      console.log(`📁 ${utf8OutputFile}`);
     } finally {
       if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
     }
@@ -269,9 +330,12 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_OUTPUT_DIR,
+  DEFAULT_UTF8_OUTPUT_DIR,
   MENU_URL,
   WELCOME_URL,
   buildOutputPath,
+  convertCsvToUtf8,
+  getDefaultUtf8OutputDir,
   main,
   normalizeStockCode,
   parseOfficialDataDate,

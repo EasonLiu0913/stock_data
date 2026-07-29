@@ -7,7 +7,11 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {
+  DEFAULT_OUTPUT_DIR,
+  DEFAULT_UTF8_OUTPUT_DIR,
   buildOutputPath,
+  convertCsvToUtf8,
+  getDefaultUtf8OutputDir,
   normalizeStockCode,
   parseOfficialDataDate,
   validateDownloadLink,
@@ -86,6 +90,14 @@ test('buildOutputPath uses official date and normalized stock code', () => {
   );
 });
 
+test('getDefaultUtf8OutputDir uses utf8 sibling for raw output', () => {
+  assert.equal(getDefaultUtf8OutputDir(DEFAULT_OUTPUT_DIR), DEFAULT_UTF8_OUTPUT_DIR);
+  assert.equal(
+    getDefaultUtf8OutputDir('/tmp/downloads/raw'),
+    path.join('/tmp/downloads', 'utf8'),
+  );
+});
+
 test('validateDownloadedFile rejects empty and HTML responses', async () => {
   await withTemporaryDirectory(async (directory) => {
     const csvFile = path.join(directory, 'data.csv');
@@ -111,6 +123,27 @@ test('validateDownloadedFile rejects empty and HTML responses', async () => {
     assert.throws(
       () => validateDownloadedFile(emptyFile),
       /empty or too small/,
+    );
+  });
+});
+
+test('convertCsvToUtf8 converts TWSE CP950 CSV text', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    const rawFile = path.join(directory, 'raw.csv');
+    const utf8File = path.join(directory, 'utf8', 'data.csv');
+    fs.writeFileSync(
+      rawFile,
+      Buffer.from([
+        0xa8, 0xe9, 0xb0, 0xd3, 0x2c, 0xa6, 0x58, 0xae, 0x77, 0x0a,
+        0x31, 0x2c, 0x31, 0x30, 0x32, 0x30, 0xa6, 0x58, 0xa1, 0x40,
+        0xa1, 0x40, 0xae, 0x77, 0x0a,
+      ]),
+    );
+
+    assert.equal(convertCsvToUtf8(rawFile, utf8File), 33);
+    assert.equal(
+      fs.readFileSync(utf8File, 'utf8'),
+      '券商,合庫\n1,1020合　　庫\n',
     );
   });
 });
