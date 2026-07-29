@@ -1,0 +1,44 @@
+name: Apply Fubon Broker Details Retry Patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/apply_fubon_broker_details_retry_patch.js
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-fubon-broker-details-retry-patch
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Apply patch
+        run: node scripts/apply_fubon_broker_details_retry_patch.js
+      - name: Syntax and focused tests
+        run: |
+          node --check scripts/crawl_fubon_broker_details.js
+          node --test tests/crawl_fubon_broker_details_retry.test.js
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/crawl_fubon_broker_details.js tests/crawl_fubon_broker_details_retry.test.js
+          if git diff --staged --quiet; then
+            echo "No patch changes"
+            exit 0
+          fi
+          git commit -m "fix: retry unavailable Fubon broker details"
+          git pull --rebase origin main
+          git push origin HEAD:main
