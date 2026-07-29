@@ -38,10 +38,12 @@ function getPositionalDate(args) {
 
 function normalizeDateInput(value) {
   if (!value) return '';
-  const normalized = String(value).replace(/[/-]/g, '');
+  const trimmed = String(value).trim();
+  if (!trimmed) return '';
+  const normalized = trimmed.replace(/[/-]/g, '');
   if (!/^20\d{6}$/.test(normalized)) {
     throw new Error(
-      `Invalid date: ${value}. Expected YYYYMMDD, YYYY-MM-DD, or YYYY/MM/DD.`,
+      `Invalid date: ${trimmed}. Expected YYYYMMDD, YYYY-MM-DD, or YYYY/MM/DD.`,
     );
   }
 
@@ -54,7 +56,7 @@ function normalizeDateInput(value) {
     || date.getUTCMonth() !== month - 1
     || date.getUTCDate() !== day
   ) {
-    throw new Error(`Invalid calendar date: ${value}`);
+    throw new Error(`Invalid calendar date: ${trimmed}`);
   }
   return normalized;
 }
