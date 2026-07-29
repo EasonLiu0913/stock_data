@@ -114,7 +114,7 @@ jobs:
           fi
 
           IDS=$(IFS=,; echo "${SELECTED_IDS[*]}")
-          LABELS=$(IFS='、'; echo "${SELECTED_LABELS[*]}")
+          LABELS=$(IFS=,; echo "${SELECTED_LABELS[*]}")
           echo "ids=$IDS" >> "$GITHUB_OUTPUT"
           echo "labels=$LABELS" >> "$GITHUB_OUTPUT"
           echo "Selected datasets: $IDS ($LABELS)"
@@ -242,7 +242,7 @@ jobs:
               .split(',')
               .filter(Boolean),
             selected_labels: String(process.env.SELECTED_LABELS || '')
-              .split('、')
+              .split(',')
               .filter(Boolean),
             counts,
             skipped_non_trading_dates: [...new Set(skippedNonTradingDates)].sort(),
