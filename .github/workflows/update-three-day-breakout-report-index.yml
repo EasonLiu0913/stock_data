@@ -1,0 +1,50 @@
+name: Update Three-Day Breakout Report Index
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/three-day-breakout-institutional-report.html'
+      - 'scripts/add_three_day_breakout_report_to_index.js'
+      - '.github/workflows/update-three-day-breakout-report-index.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-three-day-breakout-report-index
+  cancel-in-progress: false
+
+jobs:
+  update-index:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Add report link to index
+        run: node scripts/add_three_day_breakout_report_to_index.js
+      - name: Commit and push index
+        shell: bash
+        run: |
+          if git diff --quiet -- public/index.html; then
+            echo 'Index already up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/index.html
+          git commit -m 'docs: add three-day breakout report to public index'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
