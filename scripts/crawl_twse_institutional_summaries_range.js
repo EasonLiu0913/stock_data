@@ -21,6 +21,25 @@ const DATASETS = Object.freeze([
   { endpointId: 'TWT43U', label: '自營商', crawler: dealers },
 ]);
 
+function selectDatasets(value) {
+  const requested = String(value || '')
+    .split(',')
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean);
+  if (!requested.length) return [...DATASETS];
+
+  const uniqueIds = [...new Set(requested)];
+  return uniqueIds.map((endpointId) => {
+    const dataset = DATASETS.find((item) => item.endpointId === endpointId);
+    if (!dataset) {
+      throw new Error(
+        `Unknown dataset ${endpointId}; expected TWT38U, TWT44U, or TWT43U`,
+      );
+    }
+    return dataset;
+  });
+}
+
 function getArg(args, flag) {
   const index = args.indexOf(flag);
   return index !== -1 && args[index + 1] ? args[index + 1] : null;
@@ -225,6 +244,7 @@ function usage() {
     '  --max-retries N       Retry count per request (default: 3)',
     '  --retry-cooldown MS   Retry cooldown base (default: 90000)',
     '  --max-days N          Maximum inclusive range (default: 366)',
+    '  --datasets IDS        Comma-separated endpoint IDs; omitted means all three',
   ].join('\n');
 }
 
@@ -255,6 +275,7 @@ async function main(argv = process.argv.slice(2)) {
     DEFAULT_RETRY_COOLDOWN_MS,
   );
   const maxDays = getIntegerArg(argv, '--max-days', DEFAULT_MAX_DAYS);
+  const datasets = selectDatasets(getArg(argv, '--datasets'));
   randomDelay(minDelayMs, maxDelayMs);
 
   const range = validateRange({
@@ -270,6 +291,9 @@ async function main(argv = process.argv.slice(2)) {
   console.log('🚀 TWSE 三大法人買賣超區間下載');
   console.log(`📅 Range: ${range.start} ~ ${range.end}`);
   console.log(`📌 Calendar days: ${range.dates.length}`);
+  console.log(
+    `🏛️ Selected datasets: ${datasets.map((item) => `${item.endpointId} ${item.label}`).join(', ')}`,
+  );
   console.log(`⏱️ Request delay: ${minDelayMs}-${maxDelayMs}ms`);
   console.log(
     `🔁 Retries: ${maxRetries}, retry cooldown: ${retryCooldownMs}ms`,
@@ -278,6 +302,7 @@ async function main(argv = process.argv.slice(2)) {
   const summary = await crawlRange({
     dates: range.dates,
     nonTradingDays,
+    datasets,
     minDelayMs,
     maxDelayMs,
     maxRetries,
@@ -314,5 +339,6 @@ module.exports = {
   loadNonTradingDaysForRange,
   main,
   randomDelay,
+  selectDatasets,
   validateRange,
 };
