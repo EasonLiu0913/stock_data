@@ -163,9 +163,12 @@ jobs:
           retention-days: 7
 
       - name: Commit and push changes
+        id: persist
         if: always()
         shell: bash
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data_fubon_broker_details/
@@ -176,6 +179,7 @@ jobs:
               git status --short
               exit 1
             fi
+            echo "result=no_changes" >> "$GITHUB_OUTPUT"
             echo "No changes to commit"
             exit 0
           fi
@@ -197,6 +201,7 @@ jobs:
 
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
+              echo "result=pushed" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
@@ -213,12 +218,26 @@ jobs:
         run: |
           crawl_status="${{ steps.crawl.outputs.exit_code }}"
           verify_status="${{ steps.verify.outputs.exit_code }}"
+          persist_outcome="${{ steps.persist.outcome }}"
+          persist_result="${{ steps.persist.outputs.result }}"
 
-          if [ "$crawl_status" != "0" ] || { [ -n "$verify_status" ] && [ "$verify_status" != "0" ]; }; then
-            echo "Fubon broker details still has pending retry stocks, but progress was committed."
+          if [ "$persist_outcome" != "success" ]; then
+            echo "Fubon broker details persistence failed; generated progress was not confirmed on main."
+            echo "Persistence outcome: ${persist_outcome:-unknown}"
             echo "Crawler exit code: ${crawl_status:-unknown}"
             echo "Verification exit code: ${verify_status:-not-run}"
             exit 1
           fi
 
-          echo "Fubon broker details crawl and verification completed successfully."
+          if [ "$crawl_status" != "0" ] || { [ -n "$verify_status" ] && [ "$verify_status" != "0" ]; }; then
+            if [ "$persist_result" = "pushed" ]; then
+              echo "Fubon broker details still has pending retry stocks; new checkpoint progress was committed and pushed."
+            else
+              echo "Fubon broker details still has pending retry stocks; persistence completed with no new file changes."
+            fi
+            echo "Crawler exit code: ${crawl_status:-unknown}"
+            echo "Verification exit code: ${verify_status:-not-run}"
+            exit 1
+          fi
+
+          echo "Fubon broker details crawl and verification completed successfully (${persist_result:-no_changes})."
