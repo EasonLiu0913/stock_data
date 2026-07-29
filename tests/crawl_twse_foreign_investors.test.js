@@ -71,6 +71,8 @@ test('normalizeDateInput validates supported formats and calendar dates', () => 
   assert.equal(normalizeDateInput('20260727'), '20260727');
   assert.equal(normalizeDateInput('2026-07-27'), '20260727');
   assert.equal(normalizeDateInput('2026/07/27'), '20260727');
+  assert.equal(normalizeDateInput(' 20260625 '), '20260625');
+  assert.equal(normalizeDateInput('\uFEFF2026-06-25\u00A0'), '20260625');
   assert.throws(() => normalizeDateInput('20260230'), /Invalid calendar date/);
 });
 
