@@ -183,6 +183,25 @@ async function fetchObservationOnce(options = {}) {
   const responseErrors = [];
   const responseStatuses = {};
   const browserErrors = [];
+  const wantgooRequests = new Set();
+
+  function safeUrl(value) {
+    try {
+      const url = new URL(value);
+      return `${url.origin}${url.pathname}`;
+    } catch {
+      return String(value).split('?')[0];
+    }
+  }
+
+  function isWantgooUrl(value) {
+    try {
+      const hostname = new URL(value).hostname.toLowerCase();
+      return hostname === 'wantgoo.com' || hostname.endsWith('.wantgoo.com');
+    } catch {
+      return false;
+    }
+  }
 
   function sourceNameFromUrl(value) {
     const pathname = new URL(value).pathname.toLowerCase();
@@ -199,13 +218,26 @@ async function fetchObservationOnce(options = {}) {
   }
 
   page.on('response', async (response) => {
+    const resourceType = response.request().resourceType();
+    const responseUrl = response.url();
+    const isWantgoo = isWantgooUrl(responseUrl);
+    if (isWantgoo && ['xhr', 'fetch'].includes(resourceType)) {
+      const entry = `${resourceType.toUpperCase()} ${response.status()} ${safeUrl(responseUrl)}`;
+      wantgooRequests.add(entry);
+      console.log(`📡 ${entry}`);
+      if (response.status() >= 400) browserErrors.push(entry);
+    }
+
     const sourceName = sourceNameFromUrl(response.url());
     if (!sourceName) {
       if (
-        response.request().resourceType() === 'script'
+        isWantgoo
+        && resourceType === 'script'
         && response.status() >= 400
       ) {
-        browserErrors.push(`script ${response.status()}: ${response.url()}`);
+        const entry = `SCRIPT ${response.status()} ${safeUrl(responseUrl)}`;
+        browserErrors.push(entry);
+        console.error(`📜 ${entry}`);
       }
       return;
     }
@@ -229,9 +261,15 @@ async function fetchObservationOnce(options = {}) {
     browserErrors.push(entry);
     console.error(`🧩 ${entry}`);
   });
+  page.on('request', (request) => {
+    if (!isWantgooUrl(request.url())) return;
+    if (!['xhr', 'fetch'].includes(request.resourceType())) return;
+    console.log(`➡️ ${request.resourceType().toUpperCase()} ${safeUrl(request.url())}`);
+  });
   page.on('requestfailed', (request) => {
+    if (!isWantgooUrl(request.url())) return;
     if (!['document', 'script', 'xhr', 'fetch'].includes(request.resourceType())) return;
-    const entry = `${request.resourceType()} failed: ${request.url()} (${request.failure()?.errorText || 'unknown'})`;
+    const entry = `${request.resourceType()} failed: ${safeUrl(request.url())} (${request.failure()?.errorText || 'unknown'})`;
     browserErrors.push(entry);
     console.error(`🌐 ${entry}`);
   });
@@ -274,6 +312,7 @@ async function fetchObservationOnce(options = {}) {
     const details = [
       `captured=${Object.keys(payloads).join(',') || 'none'}`,
       `statuses=${JSON.stringify(responseStatuses)}`,
+      `wantgooRequests=${wantgooRequests.size > 0 ? [...wantgooRequests].join('; ') : 'none'}`,
       responseErrors.length > 0 ? `errors=${responseErrors.join('; ')}` : '',
       browserErrors.length > 0 ? `browser=${browserErrors.slice(-10).join('; ')}` : '',
     ].filter(Boolean).join(' ');
