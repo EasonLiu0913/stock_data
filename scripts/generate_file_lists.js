@@ -15,6 +15,11 @@ const directories = [
         filter: file => /^\d{8}_twse_foreign_investors\.json$/.test(file)
     },
     {
+        path: 'data_twse_investment_trust',
+        output: 'data_twse_investment_trust/files.json',
+        filter: file => /^\d{8}_twse_investment_trust\.json$/.test(file)
+    },
+    {
         path: 'data_twse_dealers',
         output: 'data_twse_dealers/files.json',
         filter: file => /^\d{8}_twse_dealers\.json$/.test(file)
@@ -86,12 +91,6 @@ const directories = [
         output: 'data_external_market/files.json',
         recursive: true,
         filter: file => /^\d{8}\/external_market_indicators\.json$/.test(file)
-    },
-    {
-        path: 'data_cnn_fear_and_greed',
-        output: 'data_cnn_fear_and_greed/files.json',
-        recursive: true,
-        filter: file => /^\d{8}\/cnn_fear_and_greed\.json$/.test(file)
     },
     {
         path: 'data_market_risk',
