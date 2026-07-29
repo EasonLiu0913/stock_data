@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const REPOSITORY_ROOT = path.resolve(__dirname);
+const REPOSITORY_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_OUTPUT_ROOT = path.join(
   REPOSITORY_ROOT,
   'data_wantgoo_margin',
