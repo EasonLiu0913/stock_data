@@ -61,7 +61,9 @@ function main() {
   const dashboard = readJson(dashboardFile, { rows: [] });
   if (!summary?.market_breadth) throw new Error(`Missing replay market breadth: ${path.relative(ROOT, summaryFile)}`);
 
-  const previous = latestActualEnvironment(addDays(date, -1));
+  const expectedPreviousDate = compactDate(summary.base_trade_date || addDays(date, -1), 'base trade date');
+  const latestPrevious = latestActualEnvironment(expectedPreviousDate);
+  const previous = latestPrevious?.date === expectedPreviousDate ? latestPrevious : null;
   const previousCode = previous?.payload?.actual_environment?.code || null;
   const actualCode = classifyActual(summary.market_breadth, previousCode);
   const labels = {
