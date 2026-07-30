@@ -28,14 +28,125 @@ function predictionFeatures(row) {
   return row?.features || row?.prediction?.features || {};
 }
 
-function candidateRule(row) {
-  const features = predictionFeatures(row);
-  const volume5 = Number(features.volume_ratio_5d);
-  const rsi = Number(features.rsi14);
-  return Number.isFinite(volume5) && volume5 >= 1.5 && Number.isFinite(rsi) && rsi >= 70;
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
-function evaluateRelativeLeadershipShadow(predictionStocks, replayRows, disabled) {
+function candidateRule(row) {
+  const features = predictionFeatures(row);
+  const volume5 = finiteNumber(features.volume_ratio_5d);
+  const rsi = finiteNumber(features.rsi14);
+  return volume5 !== null && volume5 >= 1.5 && rsi !== null && rsi >= 70;
+}
+
+function confirmationProfile(row) {
+  const features = predictionFeatures(row);
+  const volume5 = finiteNumber(features.volume_ratio_5d);
+  const rsi = finiteNumber(features.rsi14);
+  const r1 = finiteNumber(features.r1);
+  const relativeStrength7d = finiteNumber(
+    row?.relative_strength_7d?.relative_strength_7d
+      ?? features.relative_strength_7d
+      ?? features.relative_strength,
+  );
+  const chipBullish = String(row?.chip_bias || '').includes('偏多');
+  const directionBullish = String(row?.final_direction_label || row?.raw_direction_label || '').includes('偏多');
+  const breakoutMatched = row?.breakout_precursor?.matched === true;
+
+  const signals = {
+    volume_ratio_5d_at_least_2: volume5 !== null && volume5 >= 2,
+    rsi14_at_least_75: rsi !== null && rsi >= 75,
+    relative_strength_7d_at_least_8: relativeStrength7d !== null && relativeStrength7d >= 8,
+    previous_day_non_negative: r1 !== null && r1 >= 0,
+    chip_bias_bullish: chipBullish,
+    predicted_direction_bullish: directionBullish,
+    breakout_precursor: breakoutMatched,
+  };
+
+  const score =
+    Number(signals.volume_ratio_5d_at_least_2) +
+    Number(signals.rsi14_at_least_75) +
+    Number(signals.relative_strength_7d_at_least_8) * 2 +
+    Number(signals.previous_day_non_negative) +
+    Number(signals.chip_bias_bullish) +
+    Number(signals.predicted_direction_bullish) +
+    Number(signals.breakout_precursor);
+
+  return {
+    score,
+    signals,
+    metrics: {
+      volume_ratio_5d: volume5,
+      rsi14: rsi,
+      r1,
+      relative_strength_7d: relativeStrength7d,
+    },
+  };
+}
+
+function normalizePolicyState(policyState) {
+  if (policyState === true) return 'disabled_shadow';
+  if (policyState === false || policyState == null) return 'normal';
+  return String(policyState);
+}
+
+function policyRuleDescription(policyState) {
+  policyState = normalizePolicyState(policyState);
+  if (policyState === 'disabled_shadow') {
+    return '首日衝擊：Shadow 停用全部量價動能候選。';
+  }
+  if (policyState === 'reduced_shadow') {
+    return '風險警告：確認分數至少 3 分列入核心，2 分列入觀察；相對強勢 7 日達 8 分計 2 分。';
+  }
+  if (policyState === 'restricted_shadow') {
+    return '衝擊後：確認分數至少 4 分且 7 日相對強勢至少 8 才列入核心；3 分以上列入觀察。';
+  }
+  if (policyState === 'unavailable') {
+    return '環境資料無效：不評估政策後清單。';
+  }
+  return '一般環境：保留全部原始候選。';
+}
+
+function policyBucket(row, policyState) {
+  policyState = normalizePolicyState(policyState);
+  const profile = confirmationProfile(row);
+  if (policyState === 'disabled_shadow') return { bucket: 'excluded', profile };
+  if (policyState === 'unavailable') return { bucket: 'unassessed', profile };
+  if (policyState === 'reduced_shadow') {
+    if (profile.score >= 3) return { bucket: 'core', profile };
+    if (profile.score >= 2) return { bucket: 'watchlist', profile };
+    return { bucket: 'excluded', profile };
+  }
+  if (policyState === 'restricted_shadow') {
+    if (profile.score >= 4 && profile.signals.relative_strength_7d_at_least_8) {
+      return { bucket: 'core', profile };
+    }
+    if (profile.score >= 3) return { bucket: 'watchlist', profile };
+    return { bucket: 'excluded', profile };
+  }
+  return { bucket: 'core', profile };
+}
+
+function stockOutput(item) {
+  const decision = item.policy_decision;
+  return {
+    stock_code: item.code,
+    stock_name: item.prediction?.stock_name || item.replay?.stock_name || null,
+    volume_ratio_5d: finiteNumber(predictionFeatures(item.prediction).volume_ratio_5d),
+    rsi14: finiteNumber(predictionFeatures(item.prediction).rsi14),
+    r1: finiteNumber(predictionFeatures(item.prediction).r1),
+    relative_strength_7d: decision.profile.metrics.relative_strength_7d,
+    confirmation_score: decision.profile.score,
+    confirmation_signals: decision.profile.signals,
+    policy_bucket: decision.bucket,
+    relative_leadership: isRelativeLeader(item.replay),
+    market_percentile: finiteNumber(item.replay?.market_relative?.market_percentile),
+  };
+}
+
+function evaluateRelativeLeadershipShadow(predictionStocks, replayRows, policyState = 'normal') {
+  policyState = normalizePolicyState(policyState);
   const predictions = Array.isArray(predictionStocks) ? predictionStocks : [];
   const rows = Array.isArray(replayRows) ? replayRows : [];
   const predictionByCode = new Map();
@@ -62,29 +173,55 @@ function evaluateRelativeLeadershipShadow(predictionStocks, replayRows, disabled
 
   const predictionWithoutVerifiedReplay = [...predictionByCode.keys()]
     .filter((code) => !verifiedReplayCodes.has(code)).length;
-  const candidates = matched.filter((item) => candidateRule(item.prediction));
-  const hits = candidates.filter((item) => isRelativeLeader(item.replay));
-  const avoidedFalsePositives = disabled ? candidates.length - hits.length : 0;
-  const suppressedTruePositives = disabled ? hits.length : 0;
+  const candidates = matched
+    .filter((item) => candidateRule(item.prediction))
+    .map((item) => ({
+      ...item,
+      policy_decision: policyBucket(item.prediction, policyState),
+    }));
+  const rawHits = candidates.filter((item) => isRelativeLeader(item.replay));
+  const policyAssessed = policyState !== 'unavailable';
+  const policyCandidates = policyAssessed
+    ? candidates.filter((item) => item.policy_decision.bucket === 'core')
+    : [];
+  const watchlist = policyAssessed
+    ? candidates.filter((item) => item.policy_decision.bucket === 'watchlist')
+    : [];
+  const excluded = policyAssessed
+    ? candidates.filter((item) => item.policy_decision.bucket === 'excluded')
+    : [];
+  const policyHits = policyCandidates.filter((item) => isRelativeLeader(item.replay));
+  const rawFalsePositives = candidates.length - rawHits.length;
+  const policyFalsePositives = policyCandidates.length - policyHits.length;
+  const avoidedFalsePositives = policyAssessed ? rawFalsePositives - policyFalsePositives : null;
+  const suppressedTruePositives = policyAssessed ? rawHits.length - policyHits.length : null;
+  const rawPrecision = candidates.length ? round(rawHits.length / candidates.length * 100) : null;
+  const policyPrecision = policyCandidates.length
+    ? round(policyHits.length / policyCandidates.length * 100)
+    : policyAssessed ? null : null;
 
   return {
+    policy_rule: policyRuleDescription(policyState),
     raw_candidates: candidates.length,
-    raw_hits: hits.length,
-    raw_precision: candidates.length ? round(hits.length / candidates.length * 100) : null,
-    policy_candidates: disabled ? 0 : candidates.length,
+    raw_hits: rawHits.length,
+    raw_precision: rawPrecision,
+    policy_assessed: policyAssessed,
+    policy_candidates: policyAssessed ? policyCandidates.length : null,
+    policy_hits: policyAssessed ? policyHits.length : null,
+    policy_precision: policyPrecision,
+    policy_precision_delta: rawPrecision !== null && policyPrecision !== null
+      ? round(policyPrecision - rawPrecision)
+      : null,
+    watchlist_candidates: policyAssessed ? watchlist.length : null,
+    excluded_candidates: policyAssessed ? excluded.length : null,
     avoided_false_positives: avoidedFalsePositives,
     suppressed_true_positives: suppressedTruePositives,
-    net_avoided_errors: avoidedFalsePositives - suppressedTruePositives,
-    candidate_stocks: candidates.map((item) => ({
-      stock_code: item.code,
-      stock_name: item.prediction?.stock_name || item.replay?.stock_name || null,
-      volume_ratio_5d: Number(item.prediction?.features?.volume_ratio_5d),
-      rsi14: Number(item.prediction?.features?.rsi14),
-      relative_leadership: isRelativeLeader(item.replay),
-      market_percentile: Number.isFinite(Number(item.replay?.market_relative?.market_percentile))
-        ? Number(item.replay.market_relative.market_percentile)
-        : null,
-    })),
+    net_avoided_errors: policyAssessed
+      ? avoidedFalsePositives - suppressedTruePositives
+      : null,
+    candidate_stocks: candidates.map(stockOutput),
+    policy_candidate_stocks: policyCandidates.map(stockOutput),
+    watchlist_stocks: watchlist.map(stockOutput),
     data_quality: {
       prediction_stock_count: predictions.length,
       verified_replay_rows: verifiedRows.length,
@@ -145,15 +282,19 @@ function main() {
   const predictedFile = path.join(ROOT, 'data_market_environment', date, 'market_environment.json');
   const predicted = readJson(predictedFile, null);
   const predictedCode = predicted?.environment?.code || null;
-  const disabled = predicted?.strategy_policy?.relative_leadership_momentum === 'disabled_shadow';
-  const shadowEvaluation = evaluateRelativeLeadershipShadow(predictionSummary.stocks, dashboard.rows, disabled);
+  const policyState = predicted?.strategy_policy?.relative_leadership_momentum || 'normal';
+  const shadowEvaluation = evaluateRelativeLeadershipShadow(
+    predictionSummary.stocks,
+    dashboard.rows,
+    policyState,
+  );
   if (shadowEvaluation.data_quality.verified_replay_rows > 0 && shadowEvaluation.data_quality.matched_rows === 0) {
     throw new Error(`Prediction/replay stock-code join produced zero rows for ${date}`);
   }
 
   const generatedAt = new Date().toISOString();
   const payload = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generated_at: generatedAt,
     replay_date: date,
     source_files: {
@@ -187,9 +328,9 @@ function main() {
     },
     relative_leadership_shadow_policy: {
       rule: 'volume_ratio_5d >= 1.5 && rsi14 >= 70',
-      policy_state: predicted?.strategy_policy?.relative_leadership_momentum || null,
+      policy_state: policyState,
       ...shadowEvaluation,
-      note: '事前特徵取自 summary.json，實際相對領漲結果取自 replay-dashboard.json；Shadow mode 未改動正式清單。',
+      note: '所有政策分層只使用 summary.json 的事前欄位；實際相對領漲結果取自 replay-dashboard.json。Shadow mode 未改動正式清單。',
     },
   };
 
@@ -214,6 +355,10 @@ function main() {
     match: payload.prediction_evaluation.match,
     raw_candidates: shadowEvaluation.raw_candidates,
     raw_hits: shadowEvaluation.raw_hits,
+    policy_state: policyState,
+    policy_candidates: shadowEvaluation.policy_candidates,
+    policy_hits: shadowEvaluation.policy_hits,
+    policy_precision: shadowEvaluation.policy_precision,
     matched_rows: shadowEvaluation.data_quality.matched_rows,
     output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
   }));
@@ -226,5 +371,8 @@ module.exports = {
   classifyActual,
   predictedMatchesActual,
   candidateRule,
+  confirmationProfile,
+  policyBucket,
+  normalizePolicyState,
   evaluateRelativeLeadershipShadow,
 };
