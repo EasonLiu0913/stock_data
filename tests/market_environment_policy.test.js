@@ -18,6 +18,7 @@ function prediction(code, overrides = {}) {
       volume_ratio_5d: 2.5,
       rsi14: 78,
       r1: 1,
+      gap_sma20: 5,
       ...overrides.features,
     },
     relative_strength_7d: {
@@ -47,6 +48,7 @@ test('confirmation score uses prediction-time momentum, relative strength, chips
   const profile = confirmationProfile(prediction('A'));
   assert.equal(profile.score, 7);
   assert.equal(profile.signals.relative_strength_7d_at_least_8, true);
+  assert.equal(profile.signals.gap_sma20_at_most_10, true);
   assert.equal(profile.signals.chip_bias_bullish, true);
 });
 
@@ -70,13 +72,23 @@ test('risk warning reduced policy keeps confirmed candidates and separates watch
   assert.equal(policyBucket(excluded, 'reduced_shadow').bucket, 'excluded');
 });
 
-test('post-shock restricted policy requires strong seven-day relative strength for core', () => {
+test('post-shock core requires high confirmation, strong relative strength, and controlled SMA20 gap', () => {
   const strong = prediction('A');
-  const noRelativeStrength = prediction('B', {
+  const overextended = prediction('B', {
+    features: { gap_sma20: 12 },
+  });
+  const lowerScore = prediction('C', {
+    chip_bias: '中性或不足',
+    final_direction_label: '中性',
+  });
+  const noRelativeStrength = prediction('D', {
     relative_strength_7d: { relative_strength_7d: 5 },
     breakout_precursor: { matched: true },
   });
+
   assert.equal(policyBucket(strong, 'restricted_shadow').bucket, 'core');
+  assert.equal(policyBucket(overextended, 'restricted_shadow').bucket, 'watchlist');
+  assert.equal(policyBucket(lowerScore, 'restricted_shadow').bucket, 'watchlist');
   assert.equal(policyBucket(noRelativeStrength, 'restricted_shadow').bucket, 'watchlist');
 });
 
@@ -109,6 +121,23 @@ test('shadow evaluation reports core precision and avoided errors without changi
   assert.equal(result.avoided_false_positives, 2);
   assert.equal(result.suppressed_true_positives, 0);
   assert.equal(result.net_avoided_errors, 2);
+});
+
+test('post-shock high-confidence core separates overextended candidates into watchlist', () => {
+  const predictions = [
+    prediction('A'),
+    prediction('B', { features: { gap_sma20: 27 } }),
+    prediction('C', { chip_bias: '中性或不足', final_direction_label: '中性偏多' }),
+  ];
+  const rows = [replay('A', true), replay('B', false), replay('C', false)];
+  const result = evaluateRelativeLeadershipShadow(predictions, rows, 'restricted_shadow');
+
+  assert.equal(result.raw_candidates, 3);
+  assert.equal(result.policy_candidates, 1);
+  assert.equal(result.policy_hits, 1);
+  assert.equal(result.policy_precision, 100);
+  assert.equal(result.watchlist_candidates, 2);
+  assert.equal(result.policy_candidate_stocks[0].gap_sma20, 5);
 });
 
 test('boolean disabled argument remains backward compatible', () => {
