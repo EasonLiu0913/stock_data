@@ -1,18 +1,21 @@
 {
-  "schemaVersion": 1,
-  "generated_at": "2026-07-30T12:41:41.064Z",
+  "schemaVersion": 2,
+  "generated_at": "2026-07-30T13:10:23.332Z",
   "forecast_date": "2026-07-28",
   "forecast_date_compact": "20260728",
   "base_trade_date": "2026-07-27",
   "base_trade_date_compact": "20260727",
-  "information_cutoff": "2026-07-30T12:41:41.064Z",
+  "information_cutoff": "2026-07-30T13:10:23.332Z",
   "historical_reconstruction": true,
   "mode": "shadow",
   "data_freshness": {
-    "status": "holiday_adjusted",
+    "status": "stale_warning",
+    "reason": "primary_market_date_mismatch",
     "expected_us_market_date": "20260727",
     "actual_us_market_date": "20260724",
     "business_day_gap": 1,
+    "source_directory_date": "20260727",
+    "source_collection_date": "20260727",
     "primary_indicator_agreement": "5/5",
     "primary_market_dates": {
       "nasdaq": "20260724",
@@ -43,8 +46,8 @@
     "adr_sox_nasdaq_market_risk": 92.5
   },
   "environment": {
-    "code": "shock_first_day_warning",
-    "label": "首日衝擊警告",
+    "code": "data_invalid",
+    "label": "資料無效",
     "score": 9,
     "confidence": "low",
     "triggers": [
@@ -96,16 +99,17 @@
     "enforcement_mode": "shadow",
     "raw_predictions_preserved": true,
     "formal_direction_score_adjustment": 0,
-    "bearish_prediction": "normal",
-    "relative_leadership_momentum": "disabled_shadow",
-    "bullish_upgrade": "blocked_shadow",
-    "post_shock_survivor": "not_applicable",
-    "explanation": "首日衝擊風險時僅在 Shadow mode 停用量價動能相對領漲清單，不改正式分數。"
+    "bearish_prediction": "unavailable",
+    "relative_leadership_momentum": "unavailable",
+    "bullish_upgrade": "unavailable",
+    "post_shock_survivor": "unavailable",
+    "explanation": "來源資料不完整或過期，不應產生正式環境判定。"
   },
   "notes": [
     "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
     "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
     "此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。"
   ],
-  "snapshot_hash": "e5d5e5db96f51c3ea8e09999b3a98be2dd8a757c0692f04f7b8f9823c0925530"
+  "snapshot_hash": "162366a95789316074842c69119226cfef8ced0511bce7ff763c3d34d6d75e7f"
 }
