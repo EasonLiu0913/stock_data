@@ -7,6 +7,7 @@ on:
       - scripts/analyze_relative_leadership_rules.js
       - scripts/analyze_relative_leadership_common.js
       - scripts/analyze_relative_leadership_by_environment.js
+      - scripts/install_market_environment_ui.js
       - data_market_environment/**/actual_market_environment.json
       - .github/workflows/analyze-relative-leadership.yml
   workflow_dispatch:
@@ -61,6 +62,9 @@ jobs:
           if [ -n "${{ inputs.date }}" ]; then args+=(--date "${{ inputs.date }}"); fi
           node scripts/analyze_relative_leadership_by_environment.js "${args[@]}"
 
+      - name: Install market environment banner
+        run: node scripts/install_market_environment_ui.js
+
       - name: Upload analysis artifact
         uses: actions/upload-artifact@v4
         with:
@@ -76,7 +80,7 @@ jobs:
           git checkout -- scripts/analyze_relative_leadership_common.js
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data_prediction_analysis/relative-leadership/
+          git add data_prediction_analysis/relative-leadership/ public/prediction-dashboard.html
           if git diff --staged --quiet; then echo "No analysis changes"; exit 0; fi
           analysis_date=$(node -e "const fs=require('fs');const f='data_prediction_analysis/relative-leadership/manifest.json';if(fs.existsSync(f)){const m=JSON.parse(fs.readFileSync(f));process.stdout.write(m.latest_date||'latest')}else process.stdout.write('latest')")
           git commit -m "analysis: relative leadership rules by environment ${analysis_date}"
