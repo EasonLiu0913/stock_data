@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "generated_at": "2026-07-30T13:10:23.332Z",
+  "schemaVersion": 3,
+  "generated_at": "2026-07-30T13:27:45.550Z",
   "forecast_date": "2026-07-28",
   "forecast_date_compact": "20260728",
   "base_trade_date": "2026-07-27",
@@ -9,59 +9,71 @@
   "historical_reconstruction": true,
   "mode": "shadow",
   "data_freshness": {
-    "status": "stale_warning",
-    "reason": "primary_market_date_mismatch",
+    "status": "historical_reconstructed",
+    "reason": "reconstructed_from_later_snapshot_rows",
     "expected_us_market_date": "20260727",
-    "actual_us_market_date": "20260724",
-    "business_day_gap": 1,
-    "source_directory_date": "20260727",
-    "source_collection_date": "20260727",
+    "actual_us_market_date": "20260727",
+    "business_day_gap": 0,
+    "source_directory_date": "20260728",
+    "source_collection_date": "20260728",
     "primary_indicator_agreement": "5/5",
     "primary_market_dates": {
-      "nasdaq": "20260724",
-      "sp500": "20260724",
-      "dow": "20260724",
-      "sox": "20260724",
-      "tsm_adr": "20260724"
+      "nasdaq": "20260727",
+      "sp500": "20260727",
+      "dow": "20260727",
+      "sox": "20260727",
+      "tsm_adr": "20260727"
     },
     "error_count": 0
   },
   "source_files": {
-    "external_market": "data_external_market/20260727/external_market_indicators.json",
+    "external_market": "data_external_market/20260728/external_market_indicators.json",
     "market_risk": "data_market_risk/20260727/market_risk_snapshot.json",
     "twse_index": "data_twse_mi_index/20260727_twse_mi_index.json",
     "foreign_futures": "data_taifex_major_institutional_traders_futures_contracts/20260727_taifex_major_institutional_traders_futures_contracts.json",
     "previous_actual_environment": "data_market_environment/20260727/actual_market_environment.json"
   },
   "metrics": {
-    "sox_change_1d_pct": -4.25,
-    "sox_return_3d_pct": -4.35,
-    "tsm_adr_change_1d_pct": -2.93,
+    "sox_change_1d_pct": -2.23,
+    "sox_return_3d_pct": -6.9,
+    "tsm_adr_change_1d_pct": -1.07,
     "twse_change_1d_pct": -0.05,
     "twse_return_3d_pct": -2.66,
-    "twse_minus_sox_3d_pct_points": 1.69,
+    "twse_minus_sox_3d_pct_points": 4.24,
     "foreign_futures_net_contracts": -78699,
     "foreign_futures_net_change_contracts": -2439,
-    "market_risk_score": 73.6,
-    "adr_sox_nasdaq_market_risk": 92.5
+    "market_risk_score": 66.5,
+    "adr_sox_nasdaq_market_risk": 69.1
   },
   "environment": {
-    "code": "data_invalid",
-    "label": "資料無效",
-    "score": 9,
-    "confidence": "low",
+    "code": "shock_first_day_warning",
+    "label": "首日衝擊警告",
+    "score": 11,
+    "confidence": "medium",
     "triggers": [
       {
         "id": "sox_1d_drop",
         "label": "費半單日跌幅低於 -2%",
-        "value": -4.25,
+        "value": -2.23,
+        "points": 2
+      },
+      {
+        "id": "sox_3d_drop",
+        "label": "費半近 3 個交易日跌幅低於 -5%",
+        "value": -6.9,
         "points": 2
       },
       {
         "id": "tsm_adr_drop",
         "label": "台積電 ADR 單日跌幅低於 -1%",
-        "value": -2.93,
+        "value": -1.07,
         "points": 1
+      },
+      {
+        "id": "twse_sox_divergence",
+        "label": "台股近 3 日相對費半高出至少 3 個百分點",
+        "value": 4.24,
+        "points": 2
       },
       {
         "id": "twse_not_repriced",
@@ -80,18 +92,6 @@
         "label": "外資期貨淨空單日增加至少 2,000 口",
         "value": -2439,
         "points": 1
-      },
-      {
-        "id": "market_risk_high",
-        "label": "市場風險分數至少 70",
-        "value": 73.6,
-        "points": 1
-      },
-      {
-        "id": "semiconductor_external_risk_high",
-        "label": "ADR／費半外部風險至少 85",
-        "value": 92.5,
-        "points": 1
       }
     ]
   },
@@ -99,17 +99,17 @@
     "enforcement_mode": "shadow",
     "raw_predictions_preserved": true,
     "formal_direction_score_adjustment": 0,
-    "bearish_prediction": "unavailable",
-    "relative_leadership_momentum": "unavailable",
-    "bullish_upgrade": "unavailable",
-    "post_shock_survivor": "unavailable",
-    "explanation": "來源資料不完整或過期，不應產生正式環境判定。"
+    "bearish_prediction": "normal",
+    "relative_leadership_momentum": "disabled_shadow",
+    "bullish_upgrade": "blocked_shadow",
+    "post_shock_survivor": "not_applicable",
+    "explanation": "首日衝擊風險時僅在 Shadow mode 停用量價動能相對領漲清單，不改正式分數。"
   },
   "notes": [
     "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
     "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
-    "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
-    "此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。"
+    "美股行情由 data_external_market/20260728/external_market_indicators.json 的歷史 rows 精確重建至 20260727；已截斷目標日之後資料。",
+    "此檔為歷史重建，不代表當時系統已在台股開盤前成功保存該快照。"
   ],
-  "snapshot_hash": "162366a95789316074842c69119226cfef8ced0511bce7ff763c3d34d6d75e7f"
+  "snapshot_hash": "2bb54b5b62420578fdb42bc996409dd5ffddf3eaf027b07129563d9a8d5a2a0b"
 }
