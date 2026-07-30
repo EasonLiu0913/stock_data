@@ -204,6 +204,44 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
+          official_is_complete() {
+            node -e 'const {isCompleteOutput}=require("./scripts/plan_fubon_broker_batches"); process.exit(isCompleteOutput(process.argv[1]) ? 0 : 1)' "$1"
+          }
+
+          remove_incomplete_day() {
+            local iso_date="$1"
+            local compact="${iso_date//-/}"
+            local filename="fubon_${compact}_券商分點進出明細.json"
+            local destination="$FINAL_OUTPUT_DIR/$filename"
+
+            if [ ! -f "$destination" ] || official_is_complete "$destination"; then
+              return 0
+            fi
+
+            echo "🧹 $iso_date 正式檔為未完成資料，先從 main 移除。"
+            for attempt in 1 2 3 4 5; do
+              git fetch origin main
+              git reset --hard origin/main
+              if [ ! -f "$destination" ] || official_is_complete "$destination"; then
+                return 0
+              fi
+              rm -f "$destination"
+              node scripts/generate_file_lists.js --only data_fubon_broker_details
+              git add -A -- "$destination" "$FINAL_OUTPUT_DIR/files.json"
+              if git diff --staged --quiet; then
+                return 0
+              fi
+              git commit -m "🧹 Remove incomplete Fubon broker details ${compact}"
+              if git push origin HEAD:main; then
+                echo "✅ $iso_date 未完成正式檔已移除。"
+                return 0
+              fi
+              echo "Delete push failed for $iso_date, retry $attempt/5..."
+              sleep 5
+            done
+            return 1
+          }
+
           persist_complete_day() {
             local iso_date="$1"
             local compact="${iso_date//-/}"
@@ -246,6 +284,13 @@ jobs:
             iso_date="${dates[$index]}"
             compact="${iso_date//-/}"
             log_file="/tmp/fubon-logs/${compact}.log"
+
+            if ! remove_incomplete_day "$iso_date"; then
+              echo "❌ $iso_date 無法先移除未完成正式檔，跳過本日。"
+              failed_dates+=("$iso_date:cleanup")
+              continue
+            fi
+
             args=(
               --date "$iso_date"
               --final-output-dir "$FINAL_OUTPUT_DIR"
@@ -331,6 +376,35 @@ jobs:
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Remove incomplete official single-day file
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw_date='${{ needs.validate-inputs.outputs.target_date }}'
+          compact=$(echo "$raw_date" | tr -d -- '-/')
+          destination="$FINAL_OUTPUT_DIR/fubon_${compact}_券商分點進出明細.json"
+
+          if [ ! -f "$destination" ] || node -e 'const {isCompleteOutput}=require("./scripts/plan_fubon_broker_batches"); process.exit(isCompleteOutput(process.argv[1]) ? 0 : 1)' "$destination"; then
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            if [ ! -f "$destination" ] || node -e 'const {isCompleteOutput}=require("./scripts/plan_fubon_broker_batches"); process.exit(isCompleteOutput(process.argv[1]) ? 0 : 1)' "$destination"; then
+              exit 0
+            fi
+            rm -f "$destination"
+            node scripts/generate_file_lists.js --only data_fubon_broker_details
+            git add -A -- "$destination" "$FINAL_OUTPUT_DIR/files.json"
+            git commit -m "🧹 Remove incomplete Fubon broker details ${compact}"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
 
       - name: Crawl single day in isolated work directory
         id: crawl
