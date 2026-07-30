@@ -39,6 +39,35 @@ function trigger(id, label, value, points) {
   return { id, label, value, points };
 }
 
+function classifyExternalFreshness(externalValidation, expectedUsDate) {
+  const actualUsDate = externalValidation?.actual_date || null;
+  const usDateGap = actualUsDate
+    ? businessDayDistance(expectedUsDate, actualUsDate, 7)
+    : Infinity;
+
+  if (externalValidation?.exact) {
+    return {
+      status: 'fresh',
+      reason: 'exact_primary_market_date_match',
+      business_day_gap: Number.isFinite(usDateGap) ? usDateGap : 0,
+    };
+  }
+
+  if (externalValidation?.complete) {
+    return {
+      status: 'stale_warning',
+      reason: 'primary_market_date_mismatch',
+      business_day_gap: Number.isFinite(usDateGap) ? usDateGap : null,
+    };
+  }
+
+  return {
+    status: 'invalid',
+    reason: 'primary_indicators_incomplete_or_inconsistent',
+    business_day_gap: Number.isFinite(usDateGap) ? usDateGap : null,
+  };
+}
+
 function strategyPolicy(code) {
   const common = {
     enforcement_mode: 'shadow',
@@ -129,11 +158,9 @@ function main() {
   const external = externalSource?.payload || null;
   const externalValidation = primaryExternalValidation(external, expectedUsDate);
   const actualUsDate = externalValidation.actual_date;
-  const usDateGap = actualUsDate ? businessDayDistance(expectedUsDate, actualUsDate, 7) : Infinity;
-  let freshnessStatus = 'invalid';
-  if (externalValidation.exact) freshnessStatus = 'fresh';
-  else if (externalValidation.complete && usDateGap <= 1) freshnessStatus = 'holiday_adjusted';
-  else if (externalValidation.complete && usDateGap <= 2) freshnessStatus = 'stale_warning';
+  const freshness = classifyExternalFreshness(externalValidation, expectedUsDate);
+  const freshnessStatus = freshness.status;
+  const usDateGap = freshness.business_day_gap;
 
   const marketRiskSource = latestDatedFileInDirectories(
     path.join(ROOT, 'data_market_risk'),
@@ -184,7 +211,7 @@ function main() {
 
   const recentActualCode = previousActual?.payload?.actual_environment?.code || null;
   let code;
-  if (!externalValidation.complete || ['invalid', 'stale_warning'].includes(freshnessStatus)) code = 'data_invalid';
+  if (freshnessStatus !== 'fresh') code = 'data_invalid';
   else if (recentActualCode === 'systemic_selloff_first_day') code = 'post_shock_day_1';
   else if (['post_shock_stress', 'market_stress'].includes(recentActualCode)) code = 'post_shock_day_2';
   else if (score >= 6) code = 'shock_first_day_warning';
@@ -203,7 +230,7 @@ function main() {
   const generatedAt = new Date().toISOString();
   const historical = forecastDate < taipeiToday();
   const payloadWithoutHash = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generated_at: generatedAt,
     forecast_date: compactToIso(forecastDate),
     forecast_date_compact: forecastDate,
@@ -214,9 +241,12 @@ function main() {
     mode: 'shadow',
     data_freshness: {
       status: freshnessStatus,
+      reason: freshness.reason,
       expected_us_market_date: expectedUsDate,
       actual_us_market_date: actualUsDate,
-      business_day_gap: Number.isFinite(usDateGap) ? usDateGap : null,
+      business_day_gap: usDateGap,
+      source_directory_date: externalSource?.date || null,
+      source_collection_date: externalValidation.collection_date,
       primary_indicator_agreement: externalValidation.primary_indicator_agreement,
       primary_market_dates: externalValidation.primary_market_dates,
       error_count: externalValidation.error_count,
@@ -251,6 +281,7 @@ function main() {
     notes: [
       'Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。',
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
+      '未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。',
       historical ? '此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。' : '此檔為目前流程產生的盤前環境快照。',
     ],
   };
@@ -270,6 +301,7 @@ function main() {
     environment: code,
     score,
     freshness: freshnessStatus,
+    freshness_reason: freshness.reason,
     snapshot_hash: payload.snapshot_hash,
     dry_run: dryRun,
     output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
@@ -278,4 +310,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, strategyPolicy };
+module.exports = { main, strategyPolicy, classifyExternalFreshness };
