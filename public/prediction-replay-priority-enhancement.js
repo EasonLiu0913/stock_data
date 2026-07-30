@@ -52,13 +52,15 @@
     if (!priorityList || !guardrails) return false;
 
     const originalRenderPriorities = typeof renderPriorities === 'function' ? renderPriorities : null;
-    if (originalRenderPriorities?.__dynamicPriorityVersion === '2') return true;
+    if (originalRenderPriorities?.__dynamicPriorityVersion === '3') return true;
 
     function enhancedRenderPriorities() {
       const s = state.summary;
       const verified = state.rows.filter(row => row.verified);
-      const bullish = summarize(verified.filter(row => predictionLabel(row).includes('多')));
-      const bearish = summarize(verified.filter(row => predictionLabel(row).includes('空')));
+      const bullishRows = verified.filter(row => predictionLabel(row).includes('多'));
+      const bearishRows = verified.filter(row => predictionLabel(row).includes('空'));
+      const bullish = summarize(bullishRows);
+      const bearish = summarize(bearishRows);
       const bullishGap = Number(s.bearish_hit_rate) - Number(s.bullish_hit_rate);
       const market = s.market_breadth || {};
       const oneSidedMarket = Number(market.down_ratio) >= 70 || Number(market.up_ratio) >= 70;
@@ -71,10 +73,10 @@
       const relativeFactor = (s.prediction_time_factor_associations || [])
         .find(item => item.factor === 'relative_strength_strong');
 
-      const chipOnly = summarize(verified.filter(row => hasStrategy(row, '籌碼同步偏多') && !hasStrategy(row, '技術強勢')));
-      const technicalOnly = summarize(verified.filter(row => !hasStrategy(row, '籌碼同步偏多') && hasStrategy(row, '技術強勢')));
-      const both = summarize(verified.filter(row => hasStrategy(row, '籌碼同步偏多') && hasStrategy(row, '技術強勢')));
-      const neither = summarize(verified.filter(row => !hasStrategy(row, '籌碼同步偏多') && !hasStrategy(row, '技術強勢')));
+      const chipOnly = summarize(bullishRows.filter(row => hasStrategy(row, '籌碼同步偏多') && !hasStrategy(row, '技術強勢')));
+      const technicalOnly = summarize(bullishRows.filter(row => !hasStrategy(row, '籌碼同步偏多') && hasStrategy(row, '技術強勢')));
+      const both = summarize(bullishRows.filter(row => hasStrategy(row, '籌碼同步偏多') && hasStrategy(row, '技術強勢')));
+      const neither = summarize(bullishRows.filter(row => !hasStrategy(row, '籌碼同步偏多') && !hasStrategy(row, '技術強勢')));
       const technicalTotal = technicalOnly.count + both.count;
 
       const priorities = [];
@@ -110,24 +112,24 @@
       }
 
       if (technicalTotal > 0 || chipOnly.count > 0 || both.count > 0) {
-        const techSummary = summarize(verified.filter(row => hasStrategy(row, '技術強勢')));
-        const overallMissRate = Number(s.obvious_miss_rate);
-        const techExcess = Number.isFinite(techSummary.obviousMissRate) && Number.isFinite(overallMissRate)
-          ? techSummary.obviousMissRate - overallMissRate
+        const techSummary = summarize(bullishRows.filter(row => hasStrategy(row, '技術強勢')));
+        const bullishMissRate = bullish.obviousMissRate;
+        const techExcess = Number.isFinite(techSummary.obviousMissRate) && Number.isFinite(bullishMissRate)
+          ? techSummary.obviousMissRate - bullishMissRate
           : 0;
         priorities.push({
           level: technicalTotal >= 30 && techExcess >= 10 ? 'P1' : 'P2',
           severity: Math.max(techExcess, both.count),
-          title: '拆開「籌碼同步偏多」與「技術強勢」的四象限效果',
+          title: '拆開偏多樣本中「籌碼同步偏多」與「技術強勢」的四象限效果',
           evidence: [
             quadrantText('只籌碼', chipOnly),
             quadrantText('只技術', technicalOnly),
             quadrantText('兩者同時', both),
             quadrantText('兩者皆無', neither),
           ].join('；') + '。',
-          next: '下一步：比較四象限在相同方向分數與市場環境下的命中差；只有「兩者同時」相對只籌碼或皆無穩定改善時，才保留疊加升級。',
+          next: '下一步：在偏多樣本內，再控制方向分數、產業與市場環境比較四象限；只有「兩者同時」相對只籌碼或皆無穩定改善時，才保留疊加升級。',
           impact: `${both.count} 同時`,
-          impactLabel: '真正交集樣本',
+          impactLabel: '偏多真正交集',
         });
       }
 
@@ -179,7 +181,7 @@
       guardrails.innerHTML = guardrailItems.map(item => `<li>${item}</li>`).join('');
     }
 
-    enhancedRenderPriorities.__dynamicPriorityVersion = '2';
+    enhancedRenderPriorities.__dynamicPriorityVersion = '3';
     renderPriorities = enhancedRenderPriorities;
     enhancedRenderPriorities();
     return true;
