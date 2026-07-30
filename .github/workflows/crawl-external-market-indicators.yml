@@ -2,18 +2,14 @@ name: Crawl External Market Indicators
 
 on:
   schedule:
-    # 台北時間週二至週六 03:51（UTC 前一日週一至週五 19:51）。
     - cron: '51 19 * * 1-5'
-    # 台北時間週二至週六 04:01（UTC 前一日週一至週五 20:01）。
     - cron: '1 20 * * 1-5'
-    # 台北時間週二至週六 05:02（UTC 前一日週一至週五 21:02）。
     - cron: '2 21 * * 1-5'
-    # 台北時間週二至週六 06:20（UTC 前一日週一至週五 22:20）。
     - cron: '20 22 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: '美國市場日期 YYYYMMDD；留空時依紐約時間與 09:30 開盤時間自動判斷'
+        description: '美國市場日期 YYYYMMDD；留空時依紐約時間自動判斷'
         required: false
         default: ''
       force_overwrite:
@@ -22,7 +18,7 @@ on:
         type: boolean
         default: false
       skip_time_limit:
-        description: '跳過台北時間 04:30 前不得執行的限制'
+        description: '手動略過「紐約 17:00 後」限制'
         required: false
         type: boolean
         default: false
@@ -44,161 +40,124 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Check crawl eligibility
-        id: crawl-gate
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve target and check New York close buffer
+        id: gate
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
           INPUT_DATE: ${{ github.event.inputs.date || '' }}
           FORCE_OVERWRITE: ${{ github.event.inputs.force_overwrite || 'false' }}
           SKIP_TIME_LIMIT: ${{ github.event.inputs.skip_time_limit || 'false' }}
         run: |
           set -euo pipefail
-
-          TAIPEI_HOUR=$(TZ='Asia/Taipei' date '+%H')
-          TAIPEI_MINUTE=$(TZ='Asia/Taipei' date '+%M')
-          TAIPEI_TIME=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-
           if [ -n "$INPUT_DATE" ]; then
-            TARGET_DATE=$(node scripts/crawl_external_market_indicators.js --resolve-date --date "$INPUT_DATE")
-            HAS_EXPLICIT_DATE=true
+            target=$(node scripts/crawl_external_market_indicators.js --resolve-date --date "$INPUT_DATE")
+            explicit=true
           else
-            TARGET_DATE=$(node scripts/crawl_external_market_indicators.js --resolve-date)
-            HAS_EXPLICIT_DATE=false
+            target=$(node scripts/crawl_external_market_indicators.js --resolve-date)
+            explicit=false
           fi
+          echo "target_date=$target" >> "$GITHUB_OUTPUT"
+          echo "explicit=$explicit" >> "$GITHUB_OUTPUT"
+          echo "force=$FORCE_OVERWRITE" >> "$GITHUB_OUTPUT"
 
-          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
-          echo "has_explicit_date=$HAS_EXPLICIT_DATE" >> "$GITHUB_OUTPUT"
-          echo "force_overwrite=$FORCE_OVERWRITE" >> "$GITHUB_OUTPUT"
-          echo "skip_time_limit=$SKIP_TIME_LIMIT" >> "$GITHUB_OUTPUT"
-          echo "Taipei actual start time: $TAIPEI_TIME"
-          echo "Resolved U.S. market target date: $TARGET_DATE"
-          echo "Force overwrite: $FORCE_OVERWRITE"
-          echo "Skip time limit: $SKIP_TIME_LIMIT"
+          ny_hour=$(TZ='America/New_York' date '+%H')
+          ny_minute=$(TZ='America/New_York' date '+%M')
+          ny_time=$(TZ='America/New_York' date '+%Y-%m-%d %H:%M:%S %Z')
+          echo "New York time: $ny_time"
+          echo "Resolved target: $target"
 
-          CURRENT_MINUTES=$((10#$TAIPEI_HOUR * 60 + 10#$TAIPEI_MINUTE))
-          EARLIEST_MINUTES=$((4 * 60 + 30))
-
-          if [ "$SKIP_TIME_LIMIT" != "true" ] \
-            && [ "$CURRENT_MINUTES" -lt "$EARLIEST_MINUTES" ]; then
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "reason=actual Taipei start time is earlier than 04:30" >> "$GITHUB_OUTPUT"
-            echo "Skip: actual Taipei start time is earlier than 04:30. Enable skip_time_limit for a manual early run."
-            exit 0
+          if [ "$explicit" != "true" ] && [ "$SKIP_TIME_LIMIT" != "true" ]; then
+            minutes=$((10#$ny_hour * 60 + 10#$ny_minute))
+            if [ "$minutes" -lt 1020 ]; then
+              echo "should_run=false" >> "$GITHUB_OUTPUT"
+              echo "reason=New York time is before 17:00 close buffer" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           fi
-
-          TARGET_FILE="data_external_market/$TARGET_DATE/external_market_indicators.json"
-          if [ "$FORCE_OVERWRITE" != "true" ] && [ -s "$TARGET_FILE" ]; then
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "reason=resolved U.S. market-date file already exists" >> "$GITHUB_OUTPUT"
-            echo "Skip: $TARGET_FILE already exists and is not empty."
-            exit 0
-          fi
-
           echo "should_run=true" >> "$GITHUB_OUTPUT"
-          if [ "$FORCE_OVERWRITE" = "true" ] && [ "$SKIP_TIME_LIMIT" = "true" ]; then
-            echo "reason=forced overwrite with time limit bypass" >> "$GITHUB_OUTPUT"
-            echo "Run: force overwrite and time-limit bypass are enabled."
-          elif [ "$FORCE_OVERWRITE" = "true" ]; then
-            echo "reason=forced overwrite" >> "$GITHUB_OUTPUT"
-            echo "Run: force overwrite is enabled."
-          elif [ "$SKIP_TIME_LIMIT" = "true" ]; then
-            echo "reason=time limit bypass" >> "$GITHUB_OUTPUT"
-            echo "Run: time-limit bypass is enabled."
-          elif [ "$EVENT_NAME" != "schedule" ]; then
-            echo "reason=manual dispatch" >> "$GITHUB_OUTPUT"
-            echo "Run: manual dispatch and target file does not exist."
-          else
-            echo "reason=eligible scheduled run" >> "$GITHUB_OUTPUT"
-            echo "Run: time threshold passed and resolved U.S. market-date file does not exist."
-          fi
+          echo "reason=eligible" >> "$GITHUB_OUTPUT"
 
       - name: Report skipped run
-        if: steps.crawl-gate.outputs.should_run != 'true'
+        if: steps.gate.outputs.should_run != 'true'
         run: |
           echo "External-market crawl skipped."
-          echo "Reason: ${{ steps.crawl-gate.outputs.reason }}"
-          echo "Resolved U.S. market target date: ${{ steps.crawl-gate.outputs.target_date }}"
-
-      - name: Setup Node.js
-        if: steps.crawl-gate.outputs.should_run == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+          echo "Reason: ${{ steps.gate.outputs.reason }}"
+          echo "Target: ${{ steps.gate.outputs.target_date }}"
 
       - name: Crawl external market indicators
-        id: crawl-market
-        if: steps.crawl-gate.outputs.should_run == 'true'
+        id: crawl
+        if: steps.gate.outputs.should_run == 'true'
         shell: bash
         env:
-          TARGET_DATE: ${{ steps.crawl-gate.outputs.target_date }}
-          HAS_EXPLICIT_DATE: ${{ steps.crawl-gate.outputs.has_explicit_date }}
-          FORCE_OVERWRITE: ${{ steps.crawl-gate.outputs.force_overwrite }}
+          TARGET_DATE: ${{ steps.gate.outputs.target_date }}
+          FORCE_OVERWRITE: ${{ steps.gate.outputs.force }}
         run: |
           set -euo pipefail
-
-          ARGS=()
-          if [ "$HAS_EXPLICIT_DATE" = "true" ]; then
-            ARGS+=(--date "$TARGET_DATE")
-          fi
+          args=(--date "$TARGET_DATE")
           if [ "$FORCE_OVERWRITE" != "true" ]; then
-            ARGS+=(--skip-existing)
+            args+=(--skip-existing)
           fi
+          node scripts/crawl_external_market_indicators.js "${args[@]}"
 
-          node scripts/crawl_external_market_indicators.js "${ARGS[@]}"
-
-      - name: Report actual-market-date duplicate skip
-        if: steps.crawl-gate.outputs.should_run == 'true' && steps.crawl-market.outputs.skipped == 'true'
+      - name: Validate five primary indicators and exact market date
+        id: validate
+        if: steps.gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          EXPECTED_DATE: ${{ steps.gate.outputs.target_date }}
+          OUTPUT_FILE: ${{ steps.crawl.outputs.output_file }}
         run: |
-          echo "External-market crawl skipped after Yahoo market-date resolution."
-          echo "Actual market date: ${{ steps.crawl-market.outputs.market_date }}"
-          echo "Existing file: ${{ steps.crawl-market.outputs.output_file }}"
+          set -euo pipefail
+          node scripts/validate_external_market_snapshot.js \
+            --expected-date "$EXPECTED_DATE" \
+            --file "$OUTPUT_FILE"
+
+      - name: Discard not-ready snapshot
+        if: steps.gate.outputs.should_run == 'true' && steps.validate.outputs.ready != 'true'
+        shell: bash
+        run: |
+          echo "Yahoo has not published a complete exact-date 5/5 snapshot yet."
+          echo "Expected: ${{ steps.gate.outputs.target_date }}"
+          echo "Actual: ${{ steps.validate.outputs.actual_date }}"
+          echo "Agreement: ${{ steps.validate.outputs.agreement }}"
+          git reset --hard HEAD
+          git clean -fd data_external_market data_market_risk
 
       - name: Generate market risk snapshot
-        if: steps.crawl-gate.outputs.should_run == 'true' && steps.crawl-market.outputs.skipped != 'true'
-        run: node scripts/generate_market_risk_snapshot.js --date "${{ steps.crawl-market.outputs.market_date }}"
+        if: steps.validate.outputs.ready == 'true'
+        run: node scripts/generate_market_risk_snapshot.js --date "${{ steps.validate.outputs.actual_date }}"
 
       - name: Generate relevant files.json only
-        if: steps.crawl-gate.outputs.should_run == 'true' && steps.crawl-market.outputs.skipped != 'true'
+        if: steps.validate.outputs.ready == 'true'
         run: node scripts/generate_file_lists.js --only data_external_market,data_market_risk
 
+      - name: Run market environment tests
+        if: steps.validate.outputs.ready == 'true'
+        run: node --test tests/market_environment.test.js
+
       - name: Commit and push changes
-        if: steps.crawl-gate.outputs.should_run == 'true' && steps.crawl-market.outputs.skipped != 'true'
+        if: steps.validate.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add config/external_market_indicators.json config/stock_news_aliases.json data_external_market/ data_market_risk/
-
           if git diff --staged --quiet; then
-            if [ -n "$(git status --porcelain)" ]; then
-              echo "Unexpected uncommitted changes remain even though there are no external-market changes:"
-              git status --short
-              exit 1
-            fi
             echo "No external market changes"
             exit 0
           fi
-
           current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update external market indicators ${current_date}"
-
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before rebase:"
-            git status --short
-            exit 1
-          fi
-
+          git commit -m "chore: update verified external market indicators ${current_date}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              exit 0
-            fi
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
-            echo "Push failed, retry ${attempt}/5..."
             sleep 5
           done
-
-          echo "Failed to push after 5 attempts."
           exit 1
