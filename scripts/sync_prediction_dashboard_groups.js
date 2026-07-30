@@ -18,6 +18,22 @@ function compactDate(value) {
   return /^20\d{6}$/.test(compact) ? compact : '';
 }
 
+function emptyFormalStrategySummary() {
+  const summary = summarizeStocks([]);
+  for (const field of [
+    'average_direction_score',
+    'average_completeness',
+    'average_r1',
+    'average_r3',
+    'average_gap_sma20',
+    'average_rsi14',
+    'relative_strength_7d_market_return',
+  ]) {
+    summary[field] = null;
+  }
+  return summary;
+}
+
 function ensureFormalStrategyGroup(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
@@ -28,7 +44,7 @@ function ensureFormalStrategyGroup(summary, groupSummary) {
   const classification = summary.formal_strategy_classifications?.[STRATEGY_ID] || {};
   const emptyGroup = {
     group: FORMAL_TAG,
-    ...summarizeStocks([]),
+    ...emptyFormalStrategySummary(),
     formal_strategy: true,
     strategy_id: STRATEGY_ID,
     environment_code: classification.environment_code || null,
@@ -116,6 +132,7 @@ if (require.main === module) {
 
 module.exports = {
   compactDate,
+  emptyFormalStrategySummary,
   ensureFormalStrategyGroup,
   syncSummaryPayload,
   syncPredictionDashboardGroups,
