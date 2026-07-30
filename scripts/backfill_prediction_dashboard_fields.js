@@ -8,6 +8,7 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
 const PREDICTION_ROOT = path.join(ROOT, 'data_predictions');
 const GENERATOR = path.join(__dirname, 'generate_prediction_dashboard_data.js');
+const FORMAL_TAGGER = path.join(__dirname, 'apply_formal_market_strategy_tags.js');
 
 function compactDate(value) {
   const compact = String(value || '').replaceAll('-', '').replaceAll('/', '');
@@ -74,6 +75,19 @@ function usage() {
   ].join('\n');
 }
 
+function runNodeScript(script, args, label, date) {
+  const result = spawnSync(process.execPath, [script, ...args], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.status !== 0) {
+    throw new Error(`${label} failed for ${date} with exit code ${result.status}`);
+  }
+}
+
 function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.help) {
@@ -85,18 +99,13 @@ function main(argv = process.argv.slice(2)) {
 
   console.log(`Selected prediction dates: ${dates.join(', ')}`);
   for (const date of dates) {
-    const args = [GENERATOR, '--date', date];
-    if (options.dryRun) args.push('--dry-run');
-    const result = spawnSync(process.execPath, args, {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-    if (result.stdout) process.stdout.write(result.stdout);
-    if (result.stderr) process.stderr.write(result.stderr);
-    if (result.status !== 0) {
-      throw new Error(`dashboard backfill failed for ${date} with exit code ${result.status}`);
-    }
+    const generatorArgs = ['--date', date];
+    if (options.dryRun) generatorArgs.push('--dry-run');
+    runNodeScript(GENERATOR, generatorArgs, 'dashboard backfill', date);
+
+    const taggerArgs = ['--date', date];
+    if (options.dryRun) taggerArgs.push('--dry-run');
+    runNodeScript(FORMAL_TAGGER, taggerArgs, 'formal strategy tag backfill', date);
   }
   console.log(`${options.dryRun ? 'Dry-run validated' : 'Backfilled'} ${dates.length} prediction date(s).`);
   return 0;
