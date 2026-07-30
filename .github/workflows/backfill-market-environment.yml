@@ -22,7 +22,7 @@ on:
         type: boolean
         default: false
       generate_actual:
-        description: '已有覆盤資料時建立實際環境'
+        description: '已有覆盤資料時建立實際環境與正式策略覆盤'
         required: false
         type: boolean
         default: true
@@ -64,8 +64,8 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
           echo "Selected $count Taiwan trading dates"
 
-      - name: Run market environment tests
-        run: node --test tests/market_environment.test.js
+      - name: Run market environment and formal strategy tests
+        run: node --test tests/market_environment.test.js tests/formal_strategy_replay.test.js
 
       - name: Build historical snapshots
         shell: bash
@@ -96,6 +96,7 @@ jobs:
               && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-summary.json" ] \
               && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-dashboard.json" ]; then
               node scripts/generate_actual_market_environment.js --date "$FORECAST_TARGET_DATE"
+              node scripts/evaluate_formal_strategy_replay.js --date "$FORECAST_TARGET_DATE"
             fi
           done < /tmp/environment-dates.txt
 
@@ -117,6 +118,7 @@ jobs:
           git add \
             data_market_environment \
             data_prediction_analysis/relative-leadership/environment \
+            data_prediction_analysis/formal-strategy \
             data_predictions/*/replay-summary.json \
             public/prediction-dashboard.html
           if git diff --cached --quiet; then echo "No backfill changes"; exit 0; fi
