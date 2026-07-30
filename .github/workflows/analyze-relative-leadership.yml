@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - scripts/analyze_relative_leadership_rules.js
+      - scripts/analyze_relative_leadership_common.js
       - .github/workflows/analyze-relative-leadership.yml
   workflow_dispatch:
     inputs:
@@ -47,7 +48,7 @@ jobs:
           if [ -n "${{ inputs.date }}" ]; then
             args+=(--date "${{ inputs.date }}")
           fi
-          node scripts/analyze_relative_leadership_rules.js "${args[@]}"
+          node scripts/analyze_relative_leadership_common.js "${args[@]}"
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@v4
@@ -89,5 +90,3 @@ jobs:
 
           echo "Failed to push analysis after 5 attempts. Artifact is still available."
           exit 1
-
-# Trigger commit after workflow is present on main.
