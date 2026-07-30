@@ -104,8 +104,10 @@ function main(argv = process.argv.slice(2)) {
         return 0;
       }
     } catch {
-      // Invalid existing files are replaced only after a new complete crawl succeeds.
+      // Invalid JSON is treated as an incomplete official file.
     }
+    fs.rmSync(destinationFile, { force: true });
+    console.warn(`🧹 ${isoDate} 移除本機正式資料夾中的未完成檔案`);
   }
 
   fs.rmSync(workDir, { recursive: true, force: true });
