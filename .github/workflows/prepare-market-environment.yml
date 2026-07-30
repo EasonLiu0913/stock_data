@@ -1,0 +1,106 @@
+name: Prepare Market Environment
+
+on:
+  schedule:
+    # 台北時間週二至週六 06:35
+    - cron: '35 22 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      forecast_date:
+        description: '預測交易日 YYYYMMDD；留空自動判斷下一個要預測的交易日'
+        required: false
+        default: ''
+      force:
+        description: '覆蓋既有市場環境快照'
+        required: false
+        type: boolean
+        default: false
+      strict:
+        description: '外部資料不完整或過期時直接失敗'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-market-environment
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve forecast and base dates
+        id: dates
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.forecast_date || '' }}
+        run: |
+          set -euo pipefail
+          args=(--github-env)
+          if [ -n "$INPUT_DATE" ]; then args+=(--target-date "$INPUT_DATE"); fi
+          node scripts/resolve_forecast_dates.js "${args[@]}" > /tmp/environment-dates.env
+          cat /tmp/environment-dates.env
+          cat /tmp/environment-dates.env >> "$GITHUB_ENV"
+          set -a
+          source /tmp/environment-dates.env
+          set +a
+          echo "forecast_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
+
+      - name: Generate immutable shadow environment snapshot
+        shell: bash
+        env:
+          FORCE: ${{ inputs.force || 'false' }}
+          STRICT: ${{ toJSON(inputs.strict) }}
+        run: |
+          set -euo pipefail
+          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          if [ "$STRICT" != "false" ]; then args+=(--strict); fi
+          node scripts/generate_market_environment.js "${args[@]}"
+
+      - name: Verify environment snapshot hash and dates
+        run: |
+          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
+          if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then
+            args+=(--allow-historical-reconstruction)
+          fi
+          node scripts/verify_market_environment.js "${args[@]}"
+
+      - name: Install market environment banner
+        run: node scripts/install_market_environment_ui.js
+
+      - name: Run market environment tests
+        run: node --test tests/market_environment.test.js
+
+      - name: Commit and push snapshot and UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_market_environment public/prediction-dashboard.html
+          if git diff --cached --quiet; then
+            echo "No market environment changes"
+            exit 0
+          fi
+          git commit -m "feat: prepare ${FORECAST_TARGET_DATE} market environment shadow snapshot"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
