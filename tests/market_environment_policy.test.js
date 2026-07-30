@@ -150,3 +150,5 @@ test('boolean disabled argument remains backward compatible', () => {
   assert.equal(result.avoided_false_positives, 1);
   assert.equal(result.suppressed_true_positives, 1);
 });
+
+require('./formal_market_strategy_tags.test');
