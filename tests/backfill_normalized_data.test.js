@@ -98,9 +98,32 @@ test('normalizes broker branch details and concentration metrics', () => {
     share_percent: 10
   });
   assert.equal(normalized.top_sell_branches[0].net_shares, -7000);
+  assert.equal(normalized.concentration.ranked_buy_net_shares, 24000);
   assert.equal(normalized.concentration.top3_buy_net_shares, 24000);
   assert.equal(normalized.concentration.top3_buy_concentration_pct, 100);
   assert.equal(normalized.concentration.top3_sell_concentration_pct, 100);
+});
+
+test('uses ranked branch sum when reported totals are smaller than displayed branches', () => {
+  const normalized = normalizeBrokerSource({
+    unit: '張',
+    stocks: {
+      '006204': {
+        stockCode: '006204',
+        stockName: '測試ETF',
+        totals: { netBuy: 10, netSell: 3, net: 7 },
+        buyBrokers: [
+          { rank: 1, brokerId: 'A', branchId: '01', netBuy: 8, sharePercent: 8 },
+          { rank: 2, brokerId: 'B', branchId: '02', netBuy: 7, sharePercent: 7 }
+        ],
+        sellBrokers: [{ rank: 1, brokerId: 'C', branchId: '03', netSell: 3, sharePercent: 3 }]
+      }
+    }
+  })['006204'];
+  assert.equal(normalized.concentration.ranked_buy_net_shares, 15000);
+  assert.equal(normalized.concentration.source_reported_buy_net_shares, 10000);
+  assert.equal(normalized.concentration.source_buy_difference_shares, -5000);
+  assert.equal(normalized.concentration.top3_buy_concentration_pct, 100);
 });
 
 test('deduplicates repeated broker branch identities', () => {
@@ -129,7 +152,7 @@ test('deduplicates repeated broker branch identities', () => {
 
 test('rejects old broker schema without branch details', () => {
   const payload = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     date: '20260729',
     stocks: {
       1101: {
@@ -142,12 +165,12 @@ test('rejects old broker schema without branch details', () => {
     }
   };
   const errors = validateNormalized('broker', payload, '20260729', { minimumRecords: 1 });
-  assert.ok(errors.some(error => error.includes('schemaVersion must be 3')));
+  assert.ok(errors.some(error => error.includes('schemaVersion must be 4')));
   assert.ok(errors.some(error => error.includes('top_buy_branches')));
   assert.ok(errors.some(error => error.includes('concentration')));
 });
 
-test('accepts valid broker schema v3', () => {
+test('accepts valid broker schema v4', () => {
   const stock = normalizeBrokerSource({
     unit: '張',
     stocks: {
@@ -161,7 +184,7 @@ test('accepts valid broker schema v3', () => {
     }
   })['1101'];
   const payload = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     date: '20260729',
     stocks: {
       1101: stock,
