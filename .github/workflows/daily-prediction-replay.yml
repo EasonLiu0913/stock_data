@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_environment:
+        description: '重新產生實際市場環境與 Shadow policy 比較'
+        required: false
+        type: boolean
+        default: false
       low_volume_threshold:
         description: '低量門檻：實際成交量 ÷ 前 20 日平均成交量'
         required: false
@@ -27,7 +32,7 @@ concurrency:
 
 jobs:
   replay_and_compare:
-    name: 產生 V1／V2 覆盤比較
+    name: 產生 V1／V2 覆盤、環境驗證與比較
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,128 +58,80 @@ jobs:
         env:
           DATE: ${{ inputs.replay_date }}
           FORCE_RUN: ${{ inputs.force_comparison }}
+          FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
         run: |
+          set -euo pipefail
           date="$DATE"
-          if ! [[ "$date" =~ ^20[0-9]{6}$ ]]; then
-            echo "Unable to resolve a valid comparison date: $date"
-            exit 1
-          fi
-
-          test -s "data_predictions/$date/manifest.json" || {
-            echo "Missing V1 forecast manifest for $date"
-            exit 1
-          }
-          test -s "data_predictions_v2/$date/manifest.json" || {
-            echo "Missing V2 forecast manifest for $date"
-            exit 1
-          }
-          test -s "data_fubon/fubon_${date}_sma.json" || {
-            echo "Actual result-day price file is not ready: data_fubon/fubon_${date}_sma.json"
-            exit 1
-          }
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $date"; exit 1; }
+          test -s "data_predictions/$date/manifest.json" || { echo "Missing V1 forecast manifest"; exit 1; }
+          test -s "data_predictions_v2/$date/manifest.json" || { echo "Missing V2 forecast manifest"; exit 1; }
+          test -s "data_fubon/fubon_${date}_sma.json" || { echo "Actual result-day price file is not ready"; exit 1; }
 
           comparison_run=true
-          if [ "$FORCE_RUN" != "true" ] \
-            && [ -s "data_prediction_comparisons/$date/comparison.json" ]; then
-            comparison_run=false
-            echo "Comparison already exists for $date. Use force_comparison=true for an intentional rerun."
-          fi
-
-          factor_analysis_run=false
-          if [ "$comparison_run" = "true" ] \
-            || [ ! -s "data_prediction_analysis/$date/industry-factor-ranges.json" ]; then
-            factor_analysis_run=true
-          fi
-
-          volume_analysis_run=false
-          if [ "$comparison_run" = "true" ] \
-            || [ ! -s "data_prediction_analysis/$date/volume-filter-impact.json" ]; then
-            volume_analysis_run=true
-          fi
+          if [ "$FORCE_RUN" != "true" ] && [ -s "data_prediction_comparisons/$date/comparison.json" ]; then comparison_run=false; fi
+          factor_run=false
+          if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/industry-factor-ranges.json" ]; then factor_run=true; fi
+          volume_run=false
+          if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/volume-filter-impact.json" ]; then volume_run=true; fi
+          environment_run=false
+          if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ ! -s "data_market_environment/$date/actual_market_environment.json" ]; then environment_run=true; fi
 
           echo "run=$comparison_run" >> "$GITHUB_OUTPUT"
-          echo "factor_analysis_run=$factor_analysis_run" \
-            >> "$GITHUB_OUTPUT"
-          echo "volume_analysis_run=$volume_analysis_run" \
-            >> "$GITHUB_OUTPUT"
+          echo "factor_run=$factor_run" >> "$GITHUB_OUTPUT"
+          echo "volume_run=$volume_run" >> "$GITHUB_OUTPUT"
+          echo "environment_run=$environment_run" >> "$GITHUB_OUTPUT"
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
           echo "## 每日預測覆盤" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- 覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
           echo "- 重新產生比較：$comparison_run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 重新產生產業分析：$factor_analysis_run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 重新產生成交量分析：$volume_analysis_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 重新產生實際市場環境：$environment_run" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run market environment tests
+        run: node --test tests/market_environment.test.js
 
       - name: Replay V1
         if: steps.date.outputs.run == 'true'
-        run: |
-          node scripts/generate_prediction_replay.js \
-            --date "${{ steps.date.outputs.date }}"
+        run: node scripts/generate_prediction_replay.js --date "${{ steps.date.outputs.date }}"
 
       - name: Replay V2 with five evaluation angles
         if: steps.date.outputs.run == 'true'
-        run: |
-          node scripts/generate_prediction_replay_v2.js \
-            --date "${{ steps.date.outputs.date }}" \
-            --cost-bps 30
+        run: node scripts/generate_prediction_replay_v2.js --date "${{ steps.date.outputs.date }}" --cost-bps 30
 
       - name: Analyze low-volume exclusion impact
-        if: steps.date.outputs.volume_analysis_run == 'true'
-        run: |
-          node scripts/analyze_replay_volume_filter.js \
-            --date "${{ steps.date.outputs.date }}" \
-            --low-volume-threshold "${{ inputs.low_volume_threshold }}"
+        if: steps.date.outputs.volume_run == 'true'
+        run: node scripts/analyze_replay_volume_filter.js --date "${{ steps.date.outputs.date }}" --low-volume-threshold "${{ inputs.low_volume_threshold }}"
 
       - name: Generate V1 and V2 accuracy comparison
         if: steps.date.outputs.run == 'true'
-        run: |
-          node scripts/compare_prediction_versions.js \
-            --date "${{ steps.date.outputs.date }}"
+        run: node scripts/compare_prediction_versions.js --date "${{ steps.date.outputs.date }}"
 
       - name: Generate industry r1 r3 and 7-day RS analysis
-        if: steps.date.outputs.factor_analysis_run == 'true'
-        run: |
-          node scripts/analyze_replay_factor_ranges.js \
-            --date "${{ steps.date.outputs.date }}"
+        if: steps.date.outputs.factor_run == 'true'
+        run: node scripts/analyze_replay_factor_ranges.js --date "${{ steps.date.outputs.date }}"
 
-      - name: Commit replay comparison and analyses
-        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_analysis_run == 'true' || steps.date.outputs.volume_analysis_run == 'true'
+      - name: Generate actual market environment and compare shadow policy
+        if: steps.date.outputs.environment_run == 'true'
+        run: node scripts/generate_actual_market_environment.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Analyze relative leadership by market environment
+        if: steps.date.outputs.environment_run == 'true' || steps.date.outputs.run == 'true'
+        run: node scripts/analyze_relative_leadership_by_environment.js --date "${{ steps.date.outputs.date }}" --max-dates 30
+
+      - name: Commit replay comparison, environment, and analyses
+        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_run == 'true' || steps.date.outputs.volume_run == 'true' || steps.date.outputs.environment_run == 'true'
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add \
-            data_predictions \
-            data_predictions_v2 \
-            data_prediction_comparisons \
-            data_prediction_analysis
-
-          if git diff --cached --quiet; then
-            echo "No replay or analysis changes"
-            exit 0
-          fi
-
-          git commit -m \
-            "feat: update replay comparison and analyses for ${{ steps.date.outputs.date }}"
-
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before comparison rebase:"
-            git status --short
-            exit 1
-          fi
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_predictions data_predictions_v2 data_prediction_comparisons data_prediction_analysis data_market_environment
+          if git diff --cached --quiet; then echo "No replay, environment, or analysis changes"; exit 0; fi
+          git commit -m "feat: update replay environment and analyses for ${{ steps.date.outputs.date }}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main \
-              && git push origin HEAD:main; then
-              exit 0
-            fi
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
-            echo "Replay comparison push failed; retry ${attempt}/5"
             sleep 5
           done
-
-          echo "Replay comparison push failed after 5 attempts"
           exit 1
