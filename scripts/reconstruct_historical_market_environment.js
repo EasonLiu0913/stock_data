@@ -19,6 +19,7 @@ const {
   refreshEnvironmentIndexes,
 } = require('./market_environment_lib');
 const { strategyPolicy } = require('./generate_market_environment');
+const { classifyPredictedEnvironment } = require('./classify_market_environment');
 
 const EXTERNAL_ROOT = path.join(ROOT, 'data_external_market');
 
@@ -165,12 +166,13 @@ function buildTriggers(metrics) {
   return { score, triggers };
 }
 
-function classifyEnvironment(score, previousActualCode) {
-  if (previousActualCode === 'systemic_selloff_first_day') return 'post_shock_day_1';
-  if (['post_shock_stress', 'market_stress'].includes(previousActualCode)) return 'post_shock_day_2';
-  if (score >= 6) return 'shock_first_day_warning';
-  if (score >= 4) return 'risk_warning';
-  return 'normal';
+function classifyEnvironment(score, previousActualCode, triggers = []) {
+  return classifyPredictedEnvironment({
+    score,
+    triggers,
+    previousActualCode,
+    dataValid: true,
+  }).code;
 }
 
 function main() {
@@ -222,7 +224,13 @@ function main() {
   const previous = latestActualEnvironment(baseDate);
   const previousExact = previous?.date === baseDate ? previous : null;
   const previousActualCode = previousExact?.payload?.actual_environment?.code || null;
-  const code = classifyEnvironment(score, previousActualCode);
+  const decision = classifyPredictedEnvironment({
+    score,
+    triggers,
+    previousActualCode,
+    dataValid: true,
+  });
+  const code = decision.code;
   const labels = {
     normal: '一般環境',
     risk_warning: '風險警告',
@@ -234,7 +242,7 @@ function main() {
   const generatedAt = new Date().toISOString();
   const payloadWithoutHash = {
     ...existing,
-    schemaVersion: Math.max(3, Number(existing.schemaVersion) || 1),
+    schemaVersion: Math.max(4, Number(existing.schemaVersion) || 1),
     generated_at: generatedAt,
     historical_reconstruction: true,
     data_freshness: {
@@ -262,11 +270,13 @@ function main() {
       label: labels[code],
       score,
       confidence: triggers.length >= 3 ? 'medium' : 'low',
+      decision_gate: decision.shock_gate,
       triggers,
     },
     strategy_policy: strategyPolicy(code),
     notes: [
       'Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。',
+      '首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。',
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
       `美股行情由 ${path.relative(ROOT, source.file).replaceAll(path.sep, '/')} 的歷史 rows 精確重建至 ${expectedUsDate}；已截斷目標日之後資料。`,
       '此檔為歷史重建，不代表當時系統已在台股開盤前成功保存該快照。',
@@ -287,6 +297,7 @@ function main() {
     source_date: source.source_date,
     environment: code,
     score,
+    shock_gate_passed: decision.shock_gate.passed,
     dry_run: dryRun,
   }));
 }
