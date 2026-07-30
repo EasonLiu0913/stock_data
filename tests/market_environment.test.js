@@ -3,7 +3,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { primaryExternalValidation, trailingReturn } = require('../scripts/market_environment_lib');
-const { strategyPolicy } = require('../scripts/generate_market_environment');
+const {
+  strategyPolicy,
+  classifyExternalFreshness,
+} = require('../scripts/generate_market_environment');
 const {
   classifyActual,
   predictedMatchesActual,
@@ -25,6 +28,33 @@ test('external snapshot requires exact 5/5 primary date agreement', () => {
   const mixed = external();
   mixed.indicators[4].market_date = '20260724';
   assert.equal(primaryExternalValidation(mixed, '20260727').complete, false);
+});
+
+test('external freshness requires the exact expected US market date', () => {
+  const exact = primaryExternalValidation(external('20260727'), '20260727');
+  assert.deepEqual(classifyExternalFreshness(exact, '20260727'), {
+    status: 'fresh',
+    reason: 'exact_primary_market_date_match',
+    business_day_gap: 0,
+  });
+
+  const stalePayload = external('20260724');
+  stalePayload.collection_date = '20260727';
+  const stale = primaryExternalValidation(stalePayload, '20260727');
+  const result = classifyExternalFreshness(stale, '20260727');
+  assert.equal(result.status, 'stale_warning');
+  assert.equal(result.reason, 'primary_market_date_mismatch');
+  assert.equal(result.business_day_gap, 1);
+  assert.notEqual(result.status, 'holiday_adjusted');
+});
+
+test('incomplete primary indicators are invalid rather than holiday adjusted', () => {
+  const incomplete = external('20260727');
+  incomplete.indicators.pop();
+  const validation = primaryExternalValidation(incomplete, '20260727');
+  const result = classifyExternalFreshness(validation, '20260727');
+  assert.equal(result.status, 'invalid');
+  assert.equal(result.reason, 'primary_indicators_incomplete_or_inconsistent');
 });
 
 test('trailing return uses trading rows rather than calendar days', () => {
