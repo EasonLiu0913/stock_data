@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "generated_at": "2026-07-30T12:41:38.509Z",
+  "forecast_date": "2026-07-27",
+  "forecast_date_compact": "20260727",
+  "base_trade_date": "2026-07-24",
+  "base_trade_date_compact": "20260724",
+  "information_cutoff": "2026-07-30T12:41:38.509Z",
+  "historical_reconstruction": true,
+  "mode": "shadow",
+  "data_freshness": {
+    "status": "fresh",
+    "expected_us_market_date": "20260724",
+    "actual_us_market_date": "20260724",
+    "business_day_gap": 0,
+    "primary_indicator_agreement": "5/5",
+    "primary_market_dates": {
+      "nasdaq": "20260724",
+      "sp500": "20260724",
+      "dow": "20260724",
+      "sox": "20260724",
+      "tsm_adr": "20260724"
+    },
+    "error_count": 0
+  },
+  "source_files": {
+    "external_market": "data_external_market/20260724/external_market_indicators.json",
+    "market_risk": "data_market_risk/20260724/market_risk_snapshot.json",
+    "twse_index": "data_twse_mi_index/20260724_twse_mi_index.json",
+    "foreign_futures": "data_taifex_major_institutional_traders_futures_contracts/20260724_taifex_major_institutional_traders_futures_contracts.json",
+    "previous_actual_environment": null
+  },
+  "metrics": {
+    "sox_change_1d_pct": -4.25,
+    "sox_return_3d_pct": -4.35,
+    "tsm_adr_change_1d_pct": -2.93,
+    "twse_change_1d_pct": -2.67,
+    "twse_return_3d_pct": -1.31,
+    "twse_minus_sox_3d_pct_points": 3.04,
+    "foreign_futures_net_contracts": -76260,
+    "foreign_futures_net_change_contracts": -1062,
+    "market_risk_score": 69.2,
+    "adr_sox_nasdaq_market_risk": 92.5
+  },
+  "environment": {
+    "code": "shock_first_day_warning",
+    "label": "首日衝擊警告",
+    "score": 8,
+    "confidence": "medium",
+    "triggers": [
+      {
+        "id": "sox_1d_drop",
+        "label": "費半單日跌幅低於 -2%",
+        "value": -4.25,
+        "points": 2
+      },
+      {
+        "id": "tsm_adr_drop",
+        "label": "台積電 ADR 單日跌幅低於 -1%",
+        "value": -2.93,
+        "points": 1
+      },
+      {
+        "id": "twse_sox_divergence",
+        "label": "台股近 3 日相對費半高出至少 3 個百分點",
+        "value": 3.04,
+        "points": 2
+      },
+      {
+        "id": "foreign_futures_net_short",
+        "label": "外資臺股期貨淨空低於 -70,000 口",
+        "value": -76260,
+        "points": 2
+      },
+      {
+        "id": "semiconductor_external_risk_high",
+        "label": "ADR／費半外部風險至少 85",
+        "value": 92.5,
+        "points": 1
+      }
+    ]
+  },
+  "strategy_policy": {
+    "enforcement_mode": "shadow",
+    "raw_predictions_preserved": true,
+    "formal_direction_score_adjustment": 0,
+    "bearish_prediction": "normal",
+    "relative_leadership_momentum": "disabled_shadow",
+    "bullish_upgrade": "blocked_shadow",
+    "post_shock_survivor": "not_applicable",
+    "explanation": "首日衝擊風險時僅在 Shadow mode 停用量價動能相對領漲清單，不改正式分數。"
+  },
+  "notes": [
+    "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
+    "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。"
+  ],
+  "snapshot_hash": "e7d2047e01de4bf017d27d739d65fcb9de6a2899ca9e6841e4e42ad807c8f03a"
+}
