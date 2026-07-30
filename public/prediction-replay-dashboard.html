@@ -35,8 +35,31 @@
       forecastLink.href=`prediction-dashboard.html${valid?`?date=${encodeURIComponent(valid)}`:''}`;
       if(valid){const url=new URL(location.href);url.searchParams.set('date',valid);history.replaceState(null,'',url);}
     }
+    function injectPriorityEnhancement(nestedViewer){
+      const inject=()=>{
+        try{
+          const documentRef=nestedViewer.contentDocument;
+          if(!documentRef?.body||documentRef.getElementById('replay-priority-enhancement'))return;
+          const script=documentRef.createElement('script');
+          script.id='replay-priority-enhancement';
+          script.src='prediction-replay-priority-enhancement.js?v=2';
+          documentRef.body.appendChild(script);
+        }catch(error){console.warn('Unable to inject replay priority enhancement:',error);}
+      };
+      nestedViewer.addEventListener('load',inject);
+      try{
+        if(nestedViewer.getAttribute('src')&&nestedViewer.contentDocument?.readyState==='complete')inject();
+      }catch(error){console.warn('Unable to inspect nested replay viewer:',error);}
+    }
+    function installNestedEnhancements(){
+      try{
+        const nestedViewer=viewer.contentDocument?.getElementById('viewer');
+        if(nestedViewer)injectPriorityEnhancement(nestedViewer);
+      }catch(error){console.warn('Unable to install nested replay enhancements:',error);}
+    }
     viewer.addEventListener('load',()=>{
       try{const date=compact(new URL(viewer.contentWindow.location.href).searchParams.get('date'));if(date)applyDate(date);}catch(error){console.warn('Unable to read embedded replay date:',error);}
+      installNestedEnhancements();
     });
     applyDate(requestedDate);
     viewer.src=`prediction-replay-dashboard-embedded.html${requestedDate?`?date=${encodeURIComponent(requestedDate)}`:''}`;
