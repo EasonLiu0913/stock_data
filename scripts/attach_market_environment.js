@@ -10,6 +10,9 @@ const {
   readJson,
   atomicWriteJson,
 } = require('./market_environment_lib');
+const {
+  applyFormalMarketStrategyTags,
+} = require('./apply_formal_market_strategy_tags');
 
 function attach(rootDir, date, environment) {
   const dir = path.join(ROOT, rootDir, date);
@@ -44,7 +47,16 @@ function main() {
   if (!environment) throw new Error(`Missing environment snapshot: ${path.relative(ROOT, environmentFile)}`);
   const roots = version === 'v1' ? ['data_predictions'] : version === 'v2' ? ['data_predictions_v2'] : ['data_predictions', 'data_predictions_v2'];
   const changed = roots.reduce((total, rootDir) => total + attach(rootDir, date, environment), 0);
-  console.log(JSON.stringify({ date, version, changed, snapshot_hash: environment.snapshot_hash }));
+  const formalStrategy = roots.includes('data_predictions')
+    ? applyFormalMarketStrategyTags({ rootDir: 'data_predictions', date, environment })
+    : null;
+  console.log(JSON.stringify({
+    date,
+    version,
+    changed,
+    snapshot_hash: environment.snapshot_hash,
+    formal_strategy: formalStrategy,
+  }));
 }
 
 main();
