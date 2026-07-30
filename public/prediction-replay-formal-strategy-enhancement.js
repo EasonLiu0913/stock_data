@@ -10,7 +10,9 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[char]));
-  const formatPct = value => Number.isFinite(Number(value)) ? `${Number(value).toFixed(2)}%` : 'NA';
+  const formatPct = value => value !== null && value !== undefined && Number.isFinite(Number(value))
+    ? `${Number(value).toFixed(2)}%`
+    : 'NA';
   const isCandidate = stock => stock?.formal_market_strategy?.strategy_id === STRATEGY_ID
     || (stock?.strategy_tags || []).includes(STRATEGY_LABEL);
   const isRelativeLeader = row => row?.market_relative?.classification === 'relative_leadership';
