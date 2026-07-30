@@ -33,6 +33,16 @@ function main() {
   if (payload.historical_reconstruction && !allowHistorical) {
     throw new Error('Historical reconstruction cannot be used as a live immutable snapshot without explicit allowance');
   }
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date()).replaceAll('-', '');
+  if (forecastDate === today && !allowHistorical) {
+    const cutoff = Date.parse(`${forecastDate.slice(0, 4)}-${forecastDate.slice(4, 6)}-${forecastDate.slice(6, 8)}T09:00:00+08:00`);
+    const generatedAt = Date.parse(payload.generated_at || '');
+    if (!Number.isFinite(generatedAt) || generatedAt > cutoff) {
+      throw new Error('Current-day market environment snapshot was not created before the 09:00 Taipei cutoff');
+    }
+  }
   const { snapshot_hash: storedHash, ...withoutHash } = payload;
   const actualHash = sha256(withoutHash);
   if (!storedHash || storedHash !== actualHash) throw new Error('Market environment snapshot hash mismatch');
