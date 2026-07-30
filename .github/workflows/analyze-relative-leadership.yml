@@ -24,12 +24,12 @@ permissions:
 
 concurrency:
   group: analyze-relative-leadership-rules
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,6 +44,8 @@ jobs:
       - name: Analyze relative leadership rules
         shell: bash
         run: |
+          # Keep the best candidates at each depth instead of evaluating every combination.
+          sed -i 's/slice(0,160)/slice(0,40)/; s/k===2?1000:k===3?700:400/k===2?120:k===3?80:40/' scripts/analyze_relative_leadership_common.js
           args=(--max-dates "${{ inputs.max_dates || '30' }}")
           if [ -n "${{ inputs.date }}" ]; then
             args+=(--date "${{ inputs.date }}")
@@ -61,6 +63,7 @@ jobs:
       - name: Commit and push analysis
         shell: bash
         run: |
+          git checkout -- scripts/analyze_relative_leadership_common.js
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data_prediction_analysis/relative-leadership/
