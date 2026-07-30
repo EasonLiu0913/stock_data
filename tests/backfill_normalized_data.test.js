@@ -34,6 +34,36 @@ test('normalizes TWSE institutional rows by field name', () => {
   });
 });
 
+test('derives institutional total only when all component values are numeric', () => {
+  const source = {
+    fields: [
+      '證券代號',
+      '證券名稱',
+      '外陸資買賣超股數(不含外資自營商)',
+      '外資自營商買賣超股數',
+      '投信買賣超股數',
+      '自營商買賣超股數',
+      '三大法人買賣超股數'
+    ],
+    data: [
+      ['041528', '測試一', '1,000', '-200', '300', '-50', '--'],
+      ['041529', '測試二', '1,000', '-200', '', '-50', '--']
+    ]
+  };
+  const stocks = normalizeInstitutionalSource(source);
+  assert.deepEqual(stocks['041528'], {
+    stock_code: '041528',
+    stock_name: '測試一',
+    foreign: 800,
+    trust: 300,
+    dealer: -50,
+    total: 1050,
+    total_derived: true
+  });
+  assert.equal(stocks['041529'].total, null);
+  assert.equal(stocks['041529'].total_derived, undefined);
+});
+
 test('normalizes broker lots to shares and counts unique positive branches', () => {
   const source = {
     unit: '張',
