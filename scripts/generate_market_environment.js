@@ -147,7 +147,8 @@ function main() {
   const futuresHistory = loadFuturesHistory(baseDate);
   const futuresCurrent = [...futuresHistory].reverse().find((item) => item.date === baseDate) || futuresHistory.at(-1) || null;
   const futuresPrevious = futuresHistory.length >= 2 ? futuresHistory.at(-2) : null;
-  const previousActual = latestActualEnvironment(baseDate);
+  const latestActual = latestActualEnvironment(baseDate);
+  const previousActual = latestActual?.date === baseDate ? latestActual : null;
 
   const sox = indicatorById(external, 'sox');
   const tsmAdr = indicatorById(external, 'tsm_adr');
