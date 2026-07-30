@@ -1,0 +1,91 @@
+name: Backfill Prediction Dashboard Fields
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: '起始預測日 YYYYMMDD'
+        required: true
+        type: string
+        default: '20260727'
+      to_date:
+        description: '結束預測日 YYYYMMDD'
+        required: true
+        type: string
+        default: '20260728'
+      dry_run:
+        description: '只驗證，不寫入或提交'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-prediction-dashboard-fields
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test historical dashboard safeguards
+        run: node --test tests/prediction_dashboard_backfill.test.js
+
+      - name: Backfill derived dashboard fields
+        env:
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          args=(--from "$FROM_DATE" --to "$TO_DATE")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          node scripts/backfill_prediction_dashboard_fields.js "${args[@]}"
+
+      - name: Verify changed-file scope
+        if: inputs.dry_run != true
+        shell: bash
+        run: |
+          unexpected=$(git status --short | awk '
+            $2 !~ /^data_predictions\/20[0-9]{6}\/(summary|industry-summary|group-summary)\.json$/ { print }
+          ')
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected files changed:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit backfilled dashboard fields
+        if: inputs.dry_run != true
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_predictions/*/summary.json \
+            data_predictions/*/industry-summary.json \
+            data_predictions/*/group-summary.json
+          if git diff --cached --quiet; then
+            echo "No dashboard field changes"
+            exit 0
+          fi
+          git commit -m "data: backfill historical dashboard fields"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed; retry ${attempt}/5"
+            sleep 5
+          done
+          exit 1
