@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const ASSERTION_CODES = ['1101', '1102', '3231'];
+const BROKER_BRANCH_DETAIL_LIMIT = 5;
 const TYPES = {
   institutional: {
     sourceDir: 'data_twse_institutional_investors',
@@ -17,7 +18,7 @@ const TYPES = {
     sourceDir: 'data_fubon_broker_details',
     outputDir: 'data_normalized/broker_details',
     sourcePattern: /^fubon_(\d{8})_券商分點進出明細\.json$/,
-    schemaVersion: 2
+    schemaVersion: 3
   }
 };
 
@@ -25,6 +26,10 @@ function numeric(value) {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(String(value).replaceAll(',', '').trim());
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function round(value, digits = 4) {
+  return Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
 }
 
 function sha256(buffer) {
@@ -95,19 +100,62 @@ function normalizeInstitutionalSource(source) {
   return stocks;
 }
 
+function branchIdentity(item, fallbackRank = 0) {
+  const brokerId = String(item?.brokerId ?? '').trim();
+  const branchId = String(item?.branchId ?? '').trim();
+  const brokerName = String(item?.brokerName ?? '').trim();
+  return [brokerId, branchId].filter(Boolean).join(':')
+    || brokerName
+    || `rank:${numeric(item?.rank) ?? fallbackRank}`;
+}
+
+function normalizeBrokerBranches(items, side) {
+  if (!Array.isArray(items)) return [];
+  const grouped = new Map();
+  for (const [index, item] of items.entries()) {
+    const rawNet = numeric(side === 'buy' ? item?.netBuy : item?.netSell);
+    if (rawNet === null || rawNet <= 0) continue;
+    const branchKey = branchIdentity(item, index + 1);
+    const current = grouped.get(branchKey) || {
+      rank: numeric(item?.rank) ?? index + 1,
+      branch_key: branchKey,
+      broker_name: String(item?.brokerName ?? '').trim(),
+      broker_id: String(item?.brokerId ?? '').trim() || null,
+      branch_id: String(item?.branchId ?? '').trim() || null,
+      net_shares: 0,
+      share_percent: 0
+    };
+    current.rank = Math.min(current.rank, numeric(item?.rank) ?? current.rank);
+    current.net_shares += (side === 'buy' ? rawNet : -rawNet) * 1000;
+    current.share_percent += numeric(item?.sharePercent) ?? 0;
+    grouped.set(branchKey, current);
+  }
+  return [...grouped.values()]
+    .map(item => ({ ...item, share_percent: round(item.share_percent) }))
+    .sort((left, right) => side === 'buy'
+      ? right.net_shares - left.net_shares || left.rank - right.rank
+      : left.net_shares - right.net_shares || left.rank - right.rank);
+}
+
 function branchCount(items, valueKey) {
   if (!Array.isArray(items)) return null;
   const branches = new Set();
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     const value = numeric(item?.[valueKey]);
     if (value === null || value <= 0) continue;
-    const identity = [item?.brokerId, item?.branchId, item?.brokerName]
-      .map(value => String(value ?? '').trim())
-      .filter(Boolean)
-      .join(':');
-    branches.add(identity || `rank:${item?.rank ?? branches.size}`);
+    branches.add(branchIdentity(item, index + 1));
   }
   return branches.size;
+}
+
+function sumBranchShares(branches, limit = branches.length) {
+  return branches.slice(0, limit).reduce((sum, branch) => sum + Math.abs(branch.net_shares), 0);
+}
+
+function concentrationPercent(part, total) {
+  return Number.isFinite(part) && Number.isFinite(total) && total > 0
+    ? round(part / total * 100)
+    : null;
 }
 
 function normalizeBrokerSource(source) {
@@ -119,17 +167,99 @@ function normalizeBrokerSource(source) {
     const code = String(item?.stockCode ?? key).trim();
     const netLots = numeric(item?.totals?.net);
     if (!code || netLots === null) continue;
+
+    const allBuyBranches = normalizeBrokerBranches(item?.buyBrokers, 'buy');
+    const allSellBranches = normalizeBrokerBranches(item?.sellBrokers, 'sell');
+    const rankedBuyNetShares = (numeric(item?.totals?.netBuy) ?? sumBranchShares(allBuyBranches) / 1000) * 1000;
+    const rankedSellNetShares = (numeric(item?.totals?.netSell) ?? sumBranchShares(allSellBranches) / 1000) * 1000;
+    const top3BuyNetShares = sumBranchShares(allBuyBranches, 3);
+    const top5BuyNetShares = sumBranchShares(allBuyBranches, 5);
+    const top3SellNetShares = sumBranchShares(allSellBranches, 3);
+    const top5SellNetShares = sumBranchShares(allSellBranches, 5);
+
     stocks[code] = {
       stock_code: code,
       stock_name: String(item?.stockName ?? '').trim(),
       net: netLots * 1000,
       buy_branch_count: branchCount(item?.buyBrokers, 'netBuy'),
       sell_branch_count: branchCount(item?.sellBrokers, 'netSell'),
+      branch_detail_limit: BROKER_BRANCH_DETAIL_LIMIT,
+      top_buy_branches: allBuyBranches.slice(0, BROKER_BRANCH_DETAIL_LIMIT),
+      top_sell_branches: allSellBranches.slice(0, BROKER_BRANCH_DETAIL_LIMIT),
+      concentration: {
+        scope: 'source_ranked_branches',
+        ranked_buy_net_shares: rankedBuyNetShares,
+        ranked_sell_net_shares: rankedSellNetShares,
+        top3_buy_net_shares: top3BuyNetShares,
+        top5_buy_net_shares: top5BuyNetShares,
+        top3_sell_net_shares: top3SellNetShares,
+        top5_sell_net_shares: top5SellNetShares,
+        top3_buy_concentration_pct: concentrationPercent(top3BuyNetShares, rankedBuyNetShares),
+        top5_buy_concentration_pct: concentrationPercent(top5BuyNetShares, rankedBuyNetShares),
+        top3_sell_concentration_pct: concentrationPercent(top3SellNetShares, rankedSellNetShares),
+        top5_sell_concentration_pct: concentrationPercent(top5SellNetShares, rankedSellNetShares)
+      },
       source_unit: source.unit ?? item?.unit ?? '張',
       normalized_unit: '股'
     };
   }
   return stocks;
+}
+
+function validateBranchList(code, field, items, side, errors) {
+  if (!Array.isArray(items)) {
+    errors.push(`${code}: ${field} must be an array`);
+    return;
+  }
+  if (items.length > BROKER_BRANCH_DETAIL_LIMIT) errors.push(`${code}: ${field} exceeds detail limit`);
+  const keys = new Set();
+  for (const item of items) {
+    const key = String(item?.branch_key ?? '').trim();
+    const netShares = numeric(item?.net_shares);
+    if (!key) errors.push(`${code}: ${field} branch_key is empty`);
+    else if (keys.has(key)) errors.push(`${code}: ${field} duplicate branch_key ${key}`);
+    keys.add(key);
+    if (netShares === null || (side === 'buy' ? netShares <= 0 : netShares >= 0)) {
+      errors.push(`${code}: ${field} net_shares has invalid sign`);
+    }
+    const sharePercent = numeric(item?.share_percent);
+    if (sharePercent === null || sharePercent < 0) errors.push(`${code}: ${field} share_percent is invalid`);
+  }
+}
+
+function validateConcentration(code, concentration, errors) {
+  if (!concentration || typeof concentration !== 'object' || Array.isArray(concentration)) {
+    errors.push(`${code}: concentration must be an object`);
+    return;
+  }
+  for (const field of [
+    'ranked_buy_net_shares',
+    'ranked_sell_net_shares',
+    'top3_buy_net_shares',
+    'top5_buy_net_shares',
+    'top3_sell_net_shares',
+    'top5_sell_net_shares'
+  ]) {
+    const value = numeric(concentration[field]);
+    if (value === null || value < 0) errors.push(`${code}: concentration.${field} is invalid`);
+  }
+  for (const field of [
+    'top3_buy_concentration_pct',
+    'top5_buy_concentration_pct',
+    'top3_sell_concentration_pct',
+    'top5_sell_concentration_pct'
+  ]) {
+    const value = concentration[field];
+    if (value === null) continue;
+    const parsed = numeric(value);
+    if (parsed === null || parsed < 0 || parsed > 100.0001) errors.push(`${code}: concentration.${field} is invalid`);
+  }
+  if (numeric(concentration.top3_buy_net_shares) > numeric(concentration.top5_buy_net_shares)) {
+    errors.push(`${code}: top3 buy net exceeds top5`);
+  }
+  if (numeric(concentration.top3_sell_net_shares) > numeric(concentration.top5_sell_net_shares)) {
+    errors.push(`${code}: top3 sell net exceeds top5`);
+  }
 }
 
 function validateNormalized(type, payload, date, options = {}) {
@@ -160,6 +290,12 @@ function validateNormalized(type, payload, date, options = {}) {
         const value = numeric(item?.[field]);
         if (value === null || value < 0) errors.push(`${code}: ${field} is invalid`);
       }
+      if (numeric(item?.branch_detail_limit) !== BROKER_BRANCH_DETAIL_LIMIT) {
+        errors.push(`${code}: branch_detail_limit must be ${BROKER_BRANCH_DETAIL_LIMIT}`);
+      }
+      validateBranchList(code, 'top_buy_branches', item?.top_buy_branches, 'buy', errors);
+      validateBranchList(code, 'top_sell_branches', item?.top_sell_branches, 'sell', errors);
+      validateConcentration(code, item?.concentration, errors);
       if (item?.normalized_unit !== '股') errors.push(`${code}: normalized_unit must be 股`);
     }
     if (errors.length >= 20) {
@@ -248,7 +384,9 @@ function buildPayload(type, date, sourcePath) {
       ? { unit: '股' }
       : {
           source_unit: source.data.unit ?? '張',
-          normalized_unit: '股'
+          normalized_unit: '股',
+          branch_detail_limit: BROKER_BRANCH_DETAIL_LIMIT,
+          concentration_scope: 'source_ranked_branches'
         }),
     stocks
   };
@@ -352,7 +490,9 @@ function main(argv = process.argv.slice(2)) {
 if (require.main === module) process.exitCode = main();
 
 module.exports = {
+  BROKER_BRANCH_DETAIL_LIMIT,
   branchCount,
+  normalizeBrokerBranches,
   normalizeInstitutionalSource,
   normalizeBrokerSource,
   validateNormalized,
