@@ -45,6 +45,7 @@ function confirmationProfile(row) {
   const volume5 = finiteNumber(features.volume_ratio_5d);
   const rsi = finiteNumber(features.rsi14);
   const r1 = finiteNumber(features.r1);
+  const gapSma20 = finiteNumber(features.gap_sma20);
   const relativeStrength7d = finiteNumber(
     row?.relative_strength_7d?.relative_strength_7d
       ?? features.relative_strength_7d
@@ -59,6 +60,7 @@ function confirmationProfile(row) {
     rsi14_at_least_75: rsi !== null && rsi >= 75,
     relative_strength_7d_at_least_8: relativeStrength7d !== null && relativeStrength7d >= 8,
     previous_day_non_negative: r1 !== null && r1 >= 0,
+    gap_sma20_at_most_10: gapSma20 !== null && gapSma20 <= 10,
     chip_bias_bullish: chipBullish,
     predicted_direction_bullish: directionBullish,
     breakout_precursor: breakoutMatched,
@@ -80,6 +82,7 @@ function confirmationProfile(row) {
       volume_ratio_5d: volume5,
       rsi14: rsi,
       r1,
+      gap_sma20: gapSma20,
       relative_strength_7d: relativeStrength7d,
     },
   };
@@ -100,7 +103,7 @@ function policyRuleDescription(policyState) {
     return '風險警告：確認分數至少 3 分列入核心，2 分列入觀察；相對強勢 7 日達 8 分計 2 分。';
   }
   if (policyState === 'restricted_shadow') {
-    return '衝擊後：確認分數至少 4 分且 7 日相對強勢至少 8 才列入核心；3 分以上列入觀察。';
+    return '衝擊後高信心核心：確認分數至少 7、7 日相對強勢至少 8、SMA20 乖離不超過 10%；其餘確認分數至少 3 者列入觀察。';
   }
   if (policyState === 'unavailable') {
     return '環境資料無效：不評估政策後清單。';
@@ -119,9 +122,11 @@ function policyBucket(row, policyState) {
     return { bucket: 'excluded', profile };
   }
   if (policyState === 'restricted_shadow') {
-    if (profile.score >= 4 && profile.signals.relative_strength_7d_at_least_8) {
-      return { bucket: 'core', profile };
-    }
+    const highConfidence =
+      profile.score >= 7 &&
+      profile.signals.relative_strength_7d_at_least_8 &&
+      profile.signals.gap_sma20_at_most_10;
+    if (highConfidence) return { bucket: 'core', profile };
     if (profile.score >= 3) return { bucket: 'watchlist', profile };
     return { bucket: 'excluded', profile };
   }
@@ -136,6 +141,7 @@ function stockOutput(item) {
     volume_ratio_5d: finiteNumber(predictionFeatures(item.prediction).volume_ratio_5d),
     rsi14: finiteNumber(predictionFeatures(item.prediction).rsi14),
     r1: finiteNumber(predictionFeatures(item.prediction).r1),
+    gap_sma20: decision.profile.metrics.gap_sma20,
     relative_strength_7d: decision.profile.metrics.relative_strength_7d,
     confirmation_score: decision.profile.score,
     confirmation_signals: decision.profile.signals,
@@ -198,7 +204,7 @@ function evaluateRelativeLeadershipShadow(predictionStocks, replayRows, policySt
   const rawPrecision = candidates.length ? round(rawHits.length / candidates.length * 100) : null;
   const policyPrecision = policyCandidates.length
     ? round(policyHits.length / policyCandidates.length * 100)
-    : policyAssessed ? null : null;
+    : null;
 
   return {
     policy_rule: policyRuleDescription(policyState),
@@ -294,7 +300,7 @@ function main() {
 
   const generatedAt = new Date().toISOString();
   const payload = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     generated_at: generatedAt,
     replay_date: date,
     source_files: {
@@ -330,7 +336,7 @@ function main() {
       rule: 'volume_ratio_5d >= 1.5 && rsi14 >= 70',
       policy_state: policyState,
       ...shadowEvaluation,
-      note: '所有政策分層只使用 summary.json 的事前欄位；實際相對領漲結果取自 replay-dashboard.json。Shadow mode 未改動正式清單。',
+      note: '所有政策分層只使用 summary.json 的事前欄位；衝擊後高信心核心為探索規則，原候選保留於觀察清單。Shadow mode 未改動正式清單。',
     },
   };
 
