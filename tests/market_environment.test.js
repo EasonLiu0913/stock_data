@@ -5,6 +5,10 @@ const assert = require('node:assert/strict');
 const { primaryExternalValidation, trailingReturn } = require('../scripts/market_environment_lib');
 const { strategyPolicy, classifyExternalFreshness } = require('../scripts/generate_market_environment');
 const {
+  evaluateFirstDayShockGate,
+  classifyPredictedEnvironment,
+} = require('../scripts/classify_market_environment');
+const {
   classifyActual,
   predictedMatchesActual,
   candidateRule,
@@ -113,9 +117,49 @@ test('historical reconstructed shock score remains shadow-only', () => {
     adr_sox_nasdaq_market_risk: 92,
   };
   const result = buildTriggers(metrics);
-  const code = classifyEnvironment(result.score, null);
+  const code = classifyEnvironment(result.score, null, result.triggers);
   assert.equal(code, 'shock_first_day_warning');
   assert.equal(strategyPolicy(code).formal_direction_score_adjustment, 0);
+});
+
+test('first-day shock gate rejects an already repriced Taiwan market', () => {
+  const triggers = [
+    { id: 'sox_1d_drop', value: -4.25 },
+    { id: 'twse_sox_divergence', value: 3.04 },
+    { id: 'foreign_futures_net_short', value: -76260 },
+    { id: 'semiconductor_external_risk_high', value: 92.5 },
+  ];
+  const gate = evaluateFirstDayShockGate(triggers);
+  const result = classifyPredictedEnvironment({ score: 8, triggers, dataValid: true });
+  assert.equal(gate.passed, false);
+  assert.equal(gate.required_conditions.taiwan_not_repriced, false);
+  assert.equal(result.code, 'risk_warning');
+});
+
+test('first-day shock gate accepts 07/28 accumulation and unrepriced conditions', () => {
+  const triggers = [
+    { id: 'sox_1d_drop', value: -2.23 },
+    { id: 'sox_3d_drop', value: -6.9 },
+    { id: 'tsm_adr_drop', value: -1.07 },
+    { id: 'twse_sox_divergence', value: 4.24 },
+    { id: 'twse_not_repriced', value: -0.05 },
+    { id: 'foreign_futures_net_short', value: -78699 },
+    { id: 'foreign_futures_short_increase', value: -2439 },
+  ];
+  const gate = evaluateFirstDayShockGate(triggers);
+  const result = classifyPredictedEnvironment({ score: 11, triggers, dataValid: true });
+  assert.equal(gate.passed, true);
+  assert.equal(gate.required_conditions.taiwan_not_repriced, true);
+  assert.equal(gate.required_conditions.external_acceleration, true);
+  assert.equal(result.code, 'shock_first_day_warning');
+});
+
+test('severe one-day SOX drop can confirm external acceleration only when Taiwan is unrepriced', () => {
+  const triggers = [
+    { id: 'sox_1d_drop', value: -3.5 },
+    { id: 'twse_not_repriced', value: 0.1 },
+  ];
+  assert.equal(evaluateFirstDayShockGate(triggers).passed, true);
 });
 
 test('shock policy remains shadow-only and preserves formal scores', () => {
