@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_environment:
+        description: '覆蓋既有市場環境 Shadow snapshot'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -31,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.dates.outputs.target_date }}
+      environment_hash: ${{ steps.environment.outputs.snapshot_hash }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,37 +63,52 @@ jobs:
           INPUT_FORECAST_DATE: ${{ inputs.forecast_date }}
           FORCE_RUN: ${{ inputs.force_v1 }}
         run: |
-          node scripts/resolve_forecast_dates.js \
-            --target-date "$INPUT_FORECAST_DATE" \
-            --github-env > /tmp/forecast-dates.env
+          set -euo pipefail
+          node scripts/resolve_forecast_dates.js --target-date "$INPUT_FORECAST_DATE" --github-env > /tmp/forecast-dates.env
           cat /tmp/forecast-dates.env >> "$GITHUB_ENV"
           set -a
           source /tmp/forecast-dates.env
           set +a
-
           echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
           echo "target_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
 
-          echo "## 每日產生股票預測：V1" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 資料基準交易日：$FORECAST_BASE_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 預測交易日：$FORECAST_TARGET_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 強制重新產生 V1：$FORCE_RUN" >> "$GITHUB_STEP_SUMMARY"
-
           existing_manifest="data_predictions/$FORECAST_TARGET_DATE/manifest.json"
           existing_status="data_predictions/$FORECAST_TARGET_DATE/generation-status.txt"
-          if [ "$FORCE_RUN" != "true" ] \
-            && [ -s "$existing_manifest" ] \
-            && { [ ! -f "$existing_status" ] \
-              || [ "$(tr -d '\r\n' < "$existing_status")" = "success" ]; }; then
+          if [ "$FORCE_RUN" != "true" ] && [ -s "$existing_manifest" ] \
+            && { [ ! -f "$existing_status" ] || [ "$(tr -d '\r\n' < "$existing_status")" = "success" ]; }; then
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "V1 output exists; refreshing viewer without recalculating predictions."
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
-          node scripts/resolve_forecast_dates.js \
-            --target-date "$INPUT_FORECAST_DATE"
+          echo "## 每日產生股票預測：V1" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 資料基準交易日：$FORECAST_BASE_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 預測交易日：$FORECAST_TARGET_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 市場環境模式：Shadow" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate or reuse market environment snapshot
+        shell: bash
+        env:
+          FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
+        run: |
+          set -euo pipefail
+          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE" --strict)
+          if [ "$FORCE_ENVIRONMENT" = "true" ]; then args+=(--force); fi
+          node scripts/generate_market_environment.js "${args[@]}"
+
+      - name: Verify immutable market environment snapshot
+        id: environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
+          if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then
+            args+=(--allow-historical-reconstruction)
+          fi
+          node scripts/verify_market_environment.js "${args[@]}"
+
+      - name: Run market environment tests
+        run: node --test tests/market_environment.test.js
 
       - name: Check required forecast files
         if: steps.dates.outputs.run == 'true'
@@ -112,41 +133,30 @@ jobs:
         run: |
           mkdir -p data_predictions
           set +e
-          node scripts/generate_all_stock_predictions.js \
-            > /tmp/generation.log 2>&1
+          node scripts/generate_all_stock_predictions.js > /tmp/generation.log 2>&1
           status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-
-          if [ "$status" -eq 0 ]; then
-            generation_status="success"
-          else
-            generation_status="failed"
-          fi
-
-          forecast_dir=$(node -e "
-            const fs = require('fs');
-            const file = 'data_predictions/manifest.json';
-            if (!fs.existsSync(file)) process.exit(1);
-            const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-            process.stdout.write(manifest.output_directory || '');
-          " 2>/dev/null)
-
+          generation_status=$([ "$status" -eq 0 ] && echo success || echo failed)
+          forecast_dir=$(node -e "const fs=require('fs');const f='data_predictions/manifest.json';if(!fs.existsSync(f))process.exit(1);const m=JSON.parse(fs.readFileSync(f));process.stdout.write(m.output_directory||'')" 2>/dev/null)
           if [ -n "$forecast_dir" ]; then
             mkdir -p "$forecast_dir"
             cp /tmp/generation.log "$forecast_dir/generation.log"
-            cp .forecast-input-validation.json \
-              "$forecast_dir/input-validation.json"
-            echo "$generation_status" \
-              > "$forecast_dir/generation-status.txt"
+            cp .forecast-input-validation.json "$forecast_dir/input-validation.json"
+            echo "$generation_status" > "$forecast_dir/generation-status.txt"
           else
             cp /tmp/generation.log data_predictions/generation.log
-            cp .forecast-input-validation.json \
-              data_predictions/input-validation.json
-            echo "$generation_status" \
-              > data_predictions/generation-status.txt
+            cp .forecast-input-validation.json data_predictions/input-validation.json
+            echo "$generation_status" > data_predictions/generation-status.txt
           fi
-
           exit 0
+
+      - name: Attach environment snapshot to V1 outputs
+        if: always() && steps.dates.outputs.target_date != ''
+        run: node scripts/attach_market_environment.js --date "${{ steps.dates.outputs.target_date }}" --version v1
+
+      - name: Install market environment banner
+        if: always()
+        run: node scripts/install_market_environment_ui.js
 
       - name: Restore temporary source normalization
         if: always() && steps.dates.outputs.run == 'true'
@@ -154,57 +164,31 @@ jobs:
 
       - name: Generate V1 V2 HTML viewer data
         if: always() && steps.dates.outputs.target_date != ''
-        run: |
-          node scripts/generate_prediction_version_ui.js \
-            --date "${{ steps.dates.outputs.target_date }}"
+        run: node scripts/generate_prediction_version_ui.js --date "${{ steps.dates.outputs.target_date }}"
 
-      - name: Commit V1 result and viewer
+      - name: Commit V1 result, environment, and viewer
         if: always() && steps.dates.outputs.target_date != ''
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add \
-            data_normalized \
-            data_market_risk \
-            data_predictions \
-            data_prediction_ui \
-            public/index.html \
-            public/prediction-version-dashboard.html
-
-          if git diff --cached --quiet; then
-            echo "No V1 or viewer changes"
-            exit 0
-          fi
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_normalized data_market_risk data_market_environment data_predictions data_prediction_ui public/index.html public/prediction-version-dashboard.html public/prediction-dashboard.html
+          if git diff --cached --quiet; then echo "No V1 or environment changes"; exit 0; fi
           if [ "${{ steps.dates.outputs.run }}" != "true" ]; then
-            message="feat: publish ${FORECAST_TARGET_DATE} V1 V2 prediction viewer"
+            message="feat: attach ${FORECAST_TARGET_DATE} market environment to V1"
           elif [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
-            message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 forecasts and viewer"
+            message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 forecasts with market environment"
           else
             message="fix: record ${FORECAST_TARGET_DATE} V1 generation failure"
           fi
           git commit -m "$message"
-
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before V1 rebase:"
-            git status --short
-            exit 1
-          fi
-
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main \
-              && git push origin HEAD:main; then
-              exit 0
-            fi
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
-            echo "V1 push failed; retry ${attempt}/5"
             sleep 5
           done
-
-          echo "V1 push failed after 5 attempts"
           exit 1
 
       - name: Mark V1 generation failure
@@ -215,8 +199,6 @@ jobs:
     name: 2. 產生 V2 預測
     needs: generate_v1
     runs-on: ubuntu-latest
-    outputs:
-      date: ${{ steps.source.outputs.date }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -235,55 +217,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve and verify V1 source date
+      - name: Resolve and verify V1 source date and environment hash
         id: source
         shell: bash
         env:
           DATE: ${{ needs.generate_v1.outputs.target_date }}
+          EXPECTED_ENV_HASH: ${{ needs.generate_v1.outputs.environment_hash }}
           FORCE_RUN: ${{ inputs.force_v2 }}
         run: |
+          set -euo pipefail
           date="$DATE"
-          if ! [[ "$date" =~ ^20[0-9]{6}$ ]]; then
-            echo "Unable to resolve a valid V1 forecast date: $date"
-            exit 1
-          fi
-
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || exit 1
           source_manifest="data_predictions/$date/manifest.json"
-          if [ ! -s "$source_manifest" ]; then
-            echo "V1 source manifest does not exist: $source_manifest"
-            exit 1
-          fi
-
-          node -e "
-            const fs = require('fs');
-            const file = process.argv[1];
-            const expected = process.argv[2];
-            const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-            const actual = manifest.forecast_date_compact
-              || String(manifest.forecast_date || '').replaceAll('-', '');
-            if (actual !== expected) {
-              throw new Error('V1 manifest date mismatch');
-            }
-            if (Number(manifest.generated_reports) < 1) {
-              throw new Error('V1 manifest has no reports');
-            }
-          " "$source_manifest" "$date"
-
+          test -s "$source_manifest"
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V1 date mismatch');if(Number(m.generated_reports)<1)throw Error('V1 has no reports');if(m.market_environment?.snapshot_hash!==process.argv[3])throw Error('V1 environment hash mismatch');" "$source_manifest" "$date" "$EXPECTED_ENV_HASH"
           status_file="data_predictions/$date/generation-status.txt"
-          if [ -f "$status_file" ] \
-            && [ "$(tr -d '\r\n' < "$status_file")" != "success" ]; then
-            echo "V1 source generation did not succeed"
-            exit 1
-          fi
-
-          if [ "$FORCE_RUN" != "true" ] \
-            && [ -s "data_predictions_v2/$date/manifest.json" ]; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "V2 exists; refreshing viewer without recalculating predictions."
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
+          if [ -f "$status_file" ] && [ "$(tr -d '\r\n' < "$status_file")" != "success" ]; then exit 1; fi
+          if [ "$FORCE_RUN" != "true" ] && [ -s "data_predictions_v2/$date/manifest.json" ]; then echo "run=false" >> "$GITHUB_OUTPUT"; else echo "run=true" >> "$GITHUB_OUTPUT"; fi
           echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Verify V2 uses the same market environment snapshot
+        run: |
+          env_file="data_market_environment/${{ steps.source.outputs.date }}/market_environment.json"
+          node -e "const fs=require('fs');const e=JSON.parse(fs.readFileSync(process.argv[1]));if(e.snapshot_hash!==process.argv[2])throw Error('Environment hash changed between V1 and V2');" "$env_file" "${{ needs.generate_v1.outputs.environment_hash }}"
 
       - name: Run V2 rule tests
         if: steps.source.outputs.run == 'true'
@@ -291,51 +247,27 @@ jobs:
 
       - name: Generate V2 only
         if: steps.source.outputs.run == 'true'
-        run: |
-          node scripts/generate_all_stock_predictions_v2.js \
-            --date "${{ steps.source.outputs.date }}"
+        run: node scripts/generate_all_stock_predictions_v2.js --date "${{ steps.source.outputs.date }}"
+
+      - name: Attach environment snapshot to V2 outputs
+        run: node scripts/attach_market_environment.js --date "${{ steps.source.outputs.date }}" --version v2
 
       - name: Generate V1 V2 HTML viewer data
-        run: |
-          node scripts/generate_prediction_version_ui.js \
-            --date "${{ steps.source.outputs.date }}"
+        run: node scripts/generate_prediction_version_ui.js --date "${{ steps.source.outputs.date }}"
 
       - name: Commit V2 outputs and viewer
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add \
-            data_predictions_v2 \
-            data_prediction_ui \
-            public/index.html \
-            public/prediction-version-dashboard.html
-
-          if git diff --cached --quiet; then
-            echo "No V2 or viewer changes"
-            exit 0
-          fi
-
-          git commit -m \
-            "feat: publish ${{ steps.source.outputs.date }} V1 V2 prediction viewer"
-
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before V2 rebase:"
-            git status --short
-            exit 1
-          fi
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_predictions_v2 data_prediction_ui data_market_environment public/index.html public/prediction-version-dashboard.html public/prediction-dashboard.html
+          if git diff --cached --quiet; then echo "No V2 or viewer changes"; exit 0; fi
+          git commit -m "feat: publish ${{ steps.source.outputs.date }} V2 with shared market environment"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main \
-              && git push origin HEAD:main; then
-              exit 0
-            fi
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
-            echo "V2 push failed; retry ${attempt}/5"
             sleep 5
           done
-
-          echo "V2 push failed after 5 attempts"
           exit 1
