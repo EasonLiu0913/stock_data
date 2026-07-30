@@ -13,6 +13,9 @@ const {
 const {
   applyFormalMarketStrategyTags,
 } = require('./apply_formal_market_strategy_tags');
+const {
+  syncPredictionDashboardGroups,
+} = require('./sync_prediction_dashboard_groups');
 
 function attach(rootDir, date, environment) {
   const dir = path.join(ROOT, rootDir, date);
@@ -50,12 +53,16 @@ function main() {
   const formalStrategy = roots.includes('data_predictions')
     ? applyFormalMarketStrategyTags({ rootDir: 'data_predictions', date, environment })
     : null;
+  const dashboardGroupSync = roots.includes('data_predictions')
+    ? syncPredictionDashboardGroups({ rootDir: 'data_predictions', date })
+    : null;
   console.log(JSON.stringify({
     date,
     version,
     changed,
     snapshot_hash: environment.snapshot_hash,
     formal_strategy: formalStrategy,
+    dashboard_group_sync: dashboardGroupSync,
   }));
 }
 
