@@ -107,7 +107,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_market_environment data_prediction_analysis/relative-leadership/environment public/prediction-dashboard.html
+          git add \
+            data_market_environment \
+            data_prediction_analysis/relative-leadership/environment \
+            data_predictions/*/replay-summary.json \
+            public/prediction-dashboard.html
           if git diff --cached --quiet; then echo "No backfill changes"; exit 0; fi
           git commit -m "analysis: backfill market environment ${{ inputs.start_date }}-${{ inputs.end_date }}"
           test -z "$(git status --porcelain)" || { git status --short; exit 1; }
