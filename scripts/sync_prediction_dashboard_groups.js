@@ -7,15 +7,45 @@ const {
   readJson,
   atomicWriteJson,
 } = require('./market_environment_lib');
+const {
+  FORMAL_TAG,
+  STRATEGY_ID,
+  summarizeStocks,
+} = require('./apply_formal_market_strategy_tags');
 
 function compactDate(value) {
   const compact = String(value || '').replaceAll('-', '').replaceAll('/', '');
   return /^20\d{6}$/.test(compact) ? compact : '';
 }
 
+function ensureFormalStrategyGroup(summary, groupSummary) {
+  if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
+  if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
+
+  const existing = groupSummary.groups.find((group) => group?.group === FORMAL_TAG);
+  if (existing) return existing;
+
+  const classification = summary.formal_strategy_classifications?.[STRATEGY_ID] || {};
+  const emptyGroup = {
+    group: FORMAL_TAG,
+    ...summarizeStocks([]),
+    formal_strategy: true,
+    strategy_id: STRATEGY_ID,
+    environment_code: classification.environment_code || null,
+    active: classification.active === true,
+    changes_direction_score: false,
+    members: [],
+  };
+  groupSummary.groups.push(emptyGroup);
+  groupSummary.groups.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
+    || String(left.group).localeCompare(String(right.group), 'zh-Hant'));
+  return emptyGroup;
+}
+
 function syncSummaryPayload(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
+  ensureFormalStrategyGroup(summary, groupSummary);
   summary.group_summary = groupSummary.groups;
   summary.group_summary_source = 'group-summary.json';
   return summary;
@@ -42,7 +72,10 @@ function syncPredictionDashboardGroups({ rootDir = 'data_predictions', date, dry
   }
 
   syncSummaryPayload(summary, groupSummary);
-  if (!dryRun) atomicWriteJson(summaryFile, summary);
+  if (!dryRun) {
+    atomicWriteJson(groupSummaryFile, groupSummary);
+    atomicWriteJson(summaryFile, summary);
+  }
 
   return {
     date: compact,
@@ -83,6 +116,7 @@ if (require.main === module) {
 
 module.exports = {
   compactDate,
+  ensureFormalStrategyGroup,
   syncSummaryPayload,
   syncPredictionDashboardGroups,
   main,
