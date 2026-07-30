@@ -25,6 +25,7 @@ const {
   refreshEnvironmentIndexes,
   latestActualEnvironment,
 } = require('./market_environment_lib');
+const { classifyPredictedEnvironment } = require('./classify_market_environment');
 
 function taipeiToday() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -210,13 +211,13 @@ function main() {
   add(Number.isFinite(adrRisk) && adrRisk >= 85, 'semiconductor_external_risk_high', 'ADR／費半外部風險至少 85', round(adrRisk, 1), 1);
 
   const recentActualCode = previousActual?.payload?.actual_environment?.code || null;
-  let code;
-  if (freshnessStatus !== 'fresh') code = 'data_invalid';
-  else if (recentActualCode === 'systemic_selloff_first_day') code = 'post_shock_day_1';
-  else if (['post_shock_stress', 'market_stress'].includes(recentActualCode)) code = 'post_shock_day_2';
-  else if (score >= 6) code = 'shock_first_day_warning';
-  else if (score >= 4) code = 'risk_warning';
-  else code = 'normal';
+  const decision = classifyPredictedEnvironment({
+    score,
+    triggers,
+    previousActualCode: recentActualCode,
+    dataValid: freshnessStatus === 'fresh',
+  });
+  const code = decision.code;
 
   const labels = {
     normal: '一般環境',
@@ -230,7 +231,7 @@ function main() {
   const generatedAt = new Date().toISOString();
   const historical = forecastDate < taipeiToday();
   const payloadWithoutHash = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generated_at: generatedAt,
     forecast_date: compactToIso(forecastDate),
     forecast_date_compact: forecastDate,
@@ -275,11 +276,13 @@ function main() {
       label: labels[code],
       score,
       confidence: freshnessStatus === 'fresh' && triggers.length >= 3 ? 'medium' : 'low',
+      decision_gate: decision.shock_gate,
       triggers,
     },
     strategy_policy: strategyPolicy(code),
     notes: [
       'Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。',
+      '首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。',
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
       '未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。',
       historical ? '此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。' : '此檔為目前流程產生的盤前環境快照。',
@@ -300,6 +303,7 @@ function main() {
     base_date: baseDate,
     environment: code,
     score,
+    shock_gate_passed: decision.shock_gate.passed,
     freshness: freshnessStatus,
     freshness_reason: freshness.reason,
     snapshot_hash: payload.snapshot_hash,
