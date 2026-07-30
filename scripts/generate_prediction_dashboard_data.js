@@ -37,7 +37,30 @@ function compactDate(iso) {
   return String(iso || '').replaceAll('-', '');
 }
 
-function latestPredictionDirectory() {
+function parseArgs(argv) {
+  const options = { date: '', dryRun: false, help: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--date') options.date = compactDate(argv[++index]);
+    else if (arg === '--dry-run') options.dryRun = true;
+    else if (arg === '--help' || arg === '-h') options.help = true;
+    else throw new Error(`Unknown argument: ${arg}`);
+  }
+  if (options.date && !/^20\d{6}$/.test(options.date)) {
+    throw new Error('--date must be YYYYMMDD or YYYY-MM-DD');
+  }
+  return options;
+}
+
+function latestPredictionDirectory(requestedDate = '') {
+  if (requestedDate) {
+    const requested = path.join(PREDICTION_DIR, requestedDate);
+    if (!fs.existsSync(path.join(requested, 'manifest.json'))) {
+      throw new Error(`Prediction directory is missing or incomplete: ${requestedDate}`);
+    }
+    return requested;
+  }
+
   const manifest = readJson(path.join(PREDICTION_DIR, 'manifest.json'), null);
   if (manifest?.output_directory) return path.join(ROOT, manifest.output_directory);
   const dirs = fs.readdirSync(PREDICTION_DIR, { withFileTypes: true })
@@ -46,6 +69,11 @@ function latestPredictionDirectory() {
     .sort();
   if (!dirs.length) throw new Error('No prediction date directory found');
   return path.join(PREDICTION_DIR, dirs.at(-1));
+}
+
+function shouldUpdateRootManifest(rootManifest, predictionDir) {
+  if (!rootManifest?.output_directory) return false;
+  return path.resolve(ROOT, rootManifest.output_directory) === path.resolve(predictionDir);
 }
 
 function num(value) {
@@ -117,8 +145,11 @@ function relativeStrength7d(stockRows, marketRows) {
   };
 }
 
-function loadPriceHistory() {
-  const files = listFiles(PRICE_DIR, /^fubon_20\d{6}_sma\.json$/).slice(-90);
+function loadPriceHistory(baseTradeDate) {
+  const cutoff = compactDate(baseTradeDate);
+  const files = listFiles(PRICE_DIR, /^fubon_20\d{6}_sma\.json$/)
+    .filter((file) => !cutoff || file.slice(6, 14) <= cutoff)
+    .slice(-90);
   const history = new Map();
   for (const file of files) {
     const data = readJson(path.join(PRICE_DIR, file), {});
@@ -137,7 +168,8 @@ function loadPriceHistory() {
           sma20: num(row.SMA20),
           sma60: num(row.SMA60),
         };
-        if ([parsed.close, parsed.high, parsed.low].every(Number.isFinite)) {
+        const rowDate = compactDate(parsed.date);
+        if ((!cutoff || rowDate <= cutoff) && [parsed.close, parsed.high, parsed.low].every(Number.isFinite)) {
           if (!history.has(code)) history.set(code, new Map());
           history.get(code).set(parsed.date, parsed);
         }
@@ -577,13 +609,23 @@ function industryInterpretation(summary) {
   return notes.length ? notes.join('、') : '結構中性，暫無明顯單向訊號';
 }
 
-function main() {
-  const predictionDir = latestPredictionDirectory();
+function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
+  if (args.help) {
+    console.log('Usage: node scripts/generate_prediction_dashboard_data.js [--date YYYYMMDD] [--dry-run]');
+    return;
+  }
+
+  const predictionDir = latestPredictionDirectory(args.date);
+  const datedManifest = readJson(path.join(predictionDir, 'manifest.json'), {});
   const stockMeta = readJson(INDUSTRY_FILE, {});
-  const priceHistory = loadPriceHistory();
   const files = fs.readdirSync(predictionDir).filter((file) => /^\d+\.json$/.test(file)).sort();
-  const firstPayload = files.length ? readJson(path.join(predictionDir, files[0]), {}) : {};
-  const marketHistory = loadMarketHistory(firstPayload.base_trade_date);
+  if (!files.length) throw new Error(`No stock prediction JSON found in ${path.relative(ROOT, predictionDir)}`);
+  const firstPayload = readJson(path.join(predictionDir, files[0]), {});
+  const baseTradeDate = datedManifest.base_trade_date || firstPayload.base_trade_date;
+  if (!baseTradeDate) throw new Error('base_trade_date is required for a leakage-safe dashboard build');
+  const priceHistory = loadPriceHistory(baseTradeDate);
+  const marketHistory = loadMarketHistory(baseTradeDate);
   const stocks = files.map((file) => {
     const rawPayload = fs.readFileSync(path.join(predictionDir, file), 'utf8');
     const payload = JSON.parse(rawPayload);
@@ -627,8 +669,7 @@ function main() {
     };
     stock.chip_bias = chipBias(stock);
     stock.breakout_precursor = breakoutPrecursorProfile(priceHistory.get(payload.stock_code), stock);
-    const consolidation = consolidationStrength(priceHistory.get(payload.stock_code), stock);
-    if (consolidation.matched) stock.consolidation_strength = consolidation;
+    stock.consolidation_strength = consolidationStrength(priceHistory.get(payload.stock_code), stock);
     stock.strategy_tags = strategyTags(stock);
     return stock;
   });
@@ -661,18 +702,38 @@ function main() {
     members: members.map((stock) => stock.stock_code),
   })).sort((a, b) => b.count - a.count);
 
-  const manifest = readJson(path.join(PREDICTION_DIR, 'manifest.json'), {});
+  const rootManifest = readJson(path.join(PREDICTION_DIR, 'manifest.json'), {});
   const dashboard = {
     generated_at: new Date().toISOString(),
-    methodology_version: manifest.methodology_version,
-    forecast_date: manifest.forecast_date || stocks[0]?.forecast_date,
-    base_trade_date: manifest.base_trade_date || stocks[0]?.base_trade_date,
+    methodology_version: datedManifest.methodology_version,
+    forecast_date: datedManifest.forecast_date || stocks[0]?.forecast_date,
+    base_trade_date: baseTradeDate,
     source_directory: path.relative(ROOT, predictionDir),
+    generation_context: {
+      historical_target: Boolean(args.date),
+      price_history_cutoff: baseTradeDate,
+      future_price_rows_excluded: true,
+    },
     market_summary: summarizeStocks(stocks),
     stocks,
     industry_summary,
     group_summary,
   };
+
+  const outputFiles = ['summary.json', 'industry-summary.json', 'group-summary.json'];
+  if (args.dryRun) {
+    console.log(JSON.stringify({
+      dry_run: true,
+      prediction_date: path.basename(predictionDir),
+      base_trade_date: baseTradeDate,
+      stocks: stocks.length,
+      industries: industry_summary.length,
+      groups: group_summary.length,
+      would_write: outputFiles.map((file) => path.relative(ROOT, path.join(predictionDir, file))),
+      would_update_root_manifest: shouldUpdateRootManifest(rootManifest, predictionDir),
+    }));
+    return;
+  }
 
   fs.writeFileSync(path.join(predictionDir, 'summary.json'), JSON.stringify(dashboard, null, 2), 'utf8');
   fs.writeFileSync(path.join(predictionDir, 'industry-summary.json'), JSON.stringify({
@@ -687,13 +748,39 @@ function main() {
     base_trade_date: dashboard.base_trade_date,
     groups: group_summary,
   }, null, 2), 'utf8');
-  fs.writeFileSync(path.join(PREDICTION_DIR, 'manifest.json'), JSON.stringify({
-    ...manifest,
-    latest_summary: path.relative(ROOT, path.join(predictionDir, 'summary.json')),
-    latest_industry_summary: path.relative(ROOT, path.join(predictionDir, 'industry-summary.json')),
-    latest_group_summary: path.relative(ROOT, path.join(predictionDir, 'group-summary.json')),
-  }, null, 2), 'utf8');
-  console.log(JSON.stringify({ stocks: stocks.length, industries: industry_summary.length, groups: group_summary.length }));
+  const rootManifestUpdated = shouldUpdateRootManifest(rootManifest, predictionDir);
+  if (rootManifestUpdated) {
+    fs.writeFileSync(path.join(PREDICTION_DIR, 'manifest.json'), JSON.stringify({
+      ...rootManifest,
+      latest_summary: path.relative(ROOT, path.join(predictionDir, 'summary.json')),
+      latest_industry_summary: path.relative(ROOT, path.join(predictionDir, 'industry-summary.json')),
+      latest_group_summary: path.relative(ROOT, path.join(predictionDir, 'group-summary.json')),
+    }, null, 2), 'utf8');
+  }
+  console.log(JSON.stringify({
+    prediction_date: path.basename(predictionDir),
+    base_trade_date: baseTradeDate,
+    stocks: stocks.length,
+    industries: industry_summary.length,
+    groups: group_summary.length,
+    root_manifest_updated: rootManifestUpdated,
+  }));
 }
 
-main();
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+module.exports = {
+  compactDate,
+  parseArgs,
+  latestPredictionDirectory,
+  shouldUpdateRootManifest,
+  loadPriceHistory,
+  main,
+};
