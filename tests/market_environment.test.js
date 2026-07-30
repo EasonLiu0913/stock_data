@@ -4,7 +4,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { primaryExternalValidation, trailingReturn } = require('../scripts/market_environment_lib');
 const { strategyPolicy } = require('../scripts/generate_market_environment');
-const { classifyActual, predictedMatchesActual, candidateRule } = require('../scripts/generate_actual_market_environment');
+const {
+  classifyActual,
+  predictedMatchesActual,
+  candidateRule,
+  evaluateRelativeLeadershipShadow,
+} = require('../scripts/generate_actual_market_environment');
 
 function external(date = '20260727') {
   return {
@@ -52,6 +57,35 @@ test('stress after a first selloff becomes post-shock stress', () => {
 });
 
 test('relative leadership shadow candidate uses only prediction-time fields', () => {
-  assert.equal(candidateRule({ prediction: { features: { volume_ratio_5d: 1.5, rsi14: 70 } } }), true);
-  assert.equal(candidateRule({ prediction: { features: { volume_ratio_5d: 1.49, rsi14: 90 } } }), false);
+  assert.equal(candidateRule({ features: { volume_ratio_5d: 1.5, rsi14: 70 } }), true);
+  assert.equal(candidateRule({ features: { volume_ratio_5d: 1.49, rsi14: 90 } }), false);
+  assert.equal(candidateRule({ prediction: { features: { volume_ratio_5d: 2, rsi14: 75 } } }), true);
+});
+
+test('shadow evaluation joins prediction features and replay outcomes by stock code', () => {
+  const predictions = [
+    { stock_code: '2330', stock_name: '台積電', features: { volume_ratio_5d: 2, rsi14: 75 } },
+    { stock_code: '2317', stock_name: '鴻海', features: { volume_ratio_5d: 1.8, rsi14: 72 } },
+    { stock_code: '2454', stock_name: '聯發科', features: { volume_ratio_5d: 1.2, rsi14: 80 } },
+    { stock_code: '9999', stock_name: '無覆盤', features: { volume_ratio_5d: 3, rsi14: 90 } },
+  ];
+  const replayRows = [
+    { stock_code: '2330', verified: true, market_relative: { classification: 'relative_leadership', market_percentile: 95 } },
+    { stock_code: '2317', verified: true, market_relative: { classification: 'broad_market_driven', market_percentile: 60 } },
+    { stock_code: '2454', verified: true, market_relative: { classification: 'relative_leadership', market_percentile: 92 } },
+    { stock_code: '8888', verified: true, market_relative: { classification: 'relative_leadership', market_percentile: 99 } },
+  ];
+
+  const result = evaluateRelativeLeadershipShadow(predictions, replayRows, true);
+  assert.equal(result.raw_candidates, 2);
+  assert.equal(result.raw_hits, 1);
+  assert.equal(result.raw_precision, 50);
+  assert.equal(result.policy_candidates, 0);
+  assert.equal(result.avoided_false_positives, 1);
+  assert.equal(result.suppressed_true_positives, 1);
+  assert.equal(result.net_avoided_errors, 0);
+  assert.equal(result.data_quality.matched_rows, 3);
+  assert.equal(result.data_quality.replay_without_prediction, 1);
+  assert.equal(result.data_quality.prediction_without_verified_replay, 1);
+  assert.deepEqual(result.candidate_stocks.map((row) => row.stock_code), ['2330', '2317']);
 });
