@@ -40,7 +40,10 @@ jobs:
           node-version: '20'
 
       - name: Test historical dashboard safeguards
-        run: node --test tests/prediction_dashboard_backfill.test.js
+        run: |
+          node --check scripts/generate_prediction_dashboard_data.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node --test tests/prediction_dashboard_backfill.test.js
 
       - name: Backfill derived dashboard fields
         env:
