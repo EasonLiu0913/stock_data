@@ -35,16 +35,23 @@
       forecastLink.href=`prediction-dashboard.html${valid?`?date=${encodeURIComponent(valid)}`:''}`;
       if(valid){const url=new URL(location.href);url.searchParams.set('date',valid);history.replaceState(null,'',url);}
     }
-    function injectPriorityEnhancement(nestedViewer){
+    function injectReplayEnhancements(nestedViewer){
       const inject=()=>{
         try{
           const documentRef=nestedViewer.contentDocument;
-          if(!documentRef?.body||documentRef.getElementById('replay-priority-enhancement'))return;
-          const script=documentRef.createElement('script');
-          script.id='replay-priority-enhancement';
-          script.src='prediction-replay-priority-enhancement.js?v=3';
-          documentRef.body.appendChild(script);
-        }catch(error){console.warn('Unable to inject replay priority enhancement:',error);}
+          if(!documentRef?.body)return;
+          const scripts=[
+            ['replay-priority-enhancement','prediction-replay-priority-enhancement.js?v=3'],
+            ['replay-formal-strategy-enhancement','prediction-replay-formal-strategy-enhancement.js?v=1'],
+          ];
+          scripts.forEach(([id,src])=>{
+            if(documentRef.getElementById(id))return;
+            const script=documentRef.createElement('script');
+            script.id=id;
+            script.src=src;
+            documentRef.body.appendChild(script);
+          });
+        }catch(error){console.warn('Unable to inject replay enhancements:',error);}
       };
       nestedViewer.addEventListener('load',inject);
       try{
@@ -54,7 +61,7 @@
     function installNestedEnhancements(){
       try{
         const nestedViewer=viewer.contentDocument?.getElementById('viewer');
-        if(nestedViewer)injectPriorityEnhancement(nestedViewer);
+        if(nestedViewer)injectReplayEnhancements(nestedViewer);
       }catch(error){console.warn('Unable to install nested replay enhancements:',error);}
     }
     viewer.addEventListener('load',()=>{
