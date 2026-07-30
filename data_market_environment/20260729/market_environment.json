@@ -1,18 +1,21 @@
 {
-  "schemaVersion": 1,
-  "generated_at": "2026-07-30T12:41:43.686Z",
+  "schemaVersion": 3,
+  "generated_at": "2026-07-30T14:04:20.567Z",
   "forecast_date": "2026-07-29",
   "forecast_date_compact": "20260729",
   "base_trade_date": "2026-07-28",
   "base_trade_date_compact": "20260728",
-  "information_cutoff": "2026-07-30T12:41:43.686Z",
+  "information_cutoff": "2026-07-30T14:04:20.567Z",
   "historical_reconstruction": true,
   "mode": "shadow",
   "data_freshness": {
     "status": "fresh",
+    "reason": "exact_primary_market_date_match",
     "expected_us_market_date": "20260728",
     "actual_us_market_date": "20260728",
     "business_day_gap": 0,
+    "source_directory_date": "20260728",
+    "source_collection_date": "20260728",
     "primary_indicator_agreement": "5/5",
     "primary_market_dates": {
       "nasdaq": "20260728",
@@ -47,6 +50,19 @@
     "label": "衝擊後第 1 日",
     "score": 9,
     "confidence": "medium",
+    "decision_gate": {
+      "passed": false,
+      "required_conditions": {
+        "taiwan_not_repriced": false,
+        "external_acceleration": true
+      },
+      "supporting_conditions": {
+        "accumulated_external_drop": true,
+        "foreign_short_acceleration": true,
+        "severe_external_one_day_drop": true
+      },
+      "explanation": "台股前一日已明顯下跌，不能再視為尚未反映外部衝擊的首日。"
+    },
     "triggers": [
       {
         "id": "sox_1d_drop",
@@ -98,8 +114,10 @@
   },
   "notes": [
     "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
+    "首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。",
     "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
     "此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。"
   ],
-  "snapshot_hash": "33d04ae18539fe6b1c1bb98bf2c5c27415ced1b4c020a1cec901ff87821f3e44"
+  "snapshot_hash": "6a0df2dfdd16e427d63d25b9792d3c1d7d1e68b5d66910ce89deafcfe5f272a6"
 }

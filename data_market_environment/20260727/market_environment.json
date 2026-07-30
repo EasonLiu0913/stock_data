@@ -1,18 +1,21 @@
 {
-  "schemaVersion": 1,
-  "generated_at": "2026-07-30T12:41:38.509Z",
+  "schemaVersion": 3,
+  "generated_at": "2026-07-30T14:04:15.425Z",
   "forecast_date": "2026-07-27",
   "forecast_date_compact": "20260727",
   "base_trade_date": "2026-07-24",
   "base_trade_date_compact": "20260724",
-  "information_cutoff": "2026-07-30T12:41:38.509Z",
+  "information_cutoff": "2026-07-30T14:04:15.425Z",
   "historical_reconstruction": true,
   "mode": "shadow",
   "data_freshness": {
     "status": "fresh",
+    "reason": "exact_primary_market_date_match",
     "expected_us_market_date": "20260724",
     "actual_us_market_date": "20260724",
     "business_day_gap": 0,
+    "source_directory_date": "20260724",
+    "source_collection_date": "20260724",
     "primary_indicator_agreement": "5/5",
     "primary_market_dates": {
       "nasdaq": "20260724",
@@ -43,10 +46,23 @@
     "adr_sox_nasdaq_market_risk": 92.5
   },
   "environment": {
-    "code": "shock_first_day_warning",
-    "label": "首日衝擊警告",
+    "code": "risk_warning",
+    "label": "風險警告",
     "score": 8,
     "confidence": "medium",
+    "decision_gate": {
+      "passed": false,
+      "required_conditions": {
+        "taiwan_not_repriced": false,
+        "external_acceleration": true
+      },
+      "supporting_conditions": {
+        "accumulated_external_drop": false,
+        "foreign_short_acceleration": false,
+        "severe_external_one_day_drop": true
+      },
+      "explanation": "台股前一日已明顯下跌，不能再視為尚未反映外部衝擊的首日。"
+    },
     "triggers": [
       {
         "id": "sox_1d_drop",
@@ -85,15 +101,17 @@
     "raw_predictions_preserved": true,
     "formal_direction_score_adjustment": 0,
     "bearish_prediction": "normal",
-    "relative_leadership_momentum": "disabled_shadow",
-    "bullish_upgrade": "blocked_shadow",
+    "relative_leadership_momentum": "reduced_shadow",
+    "bullish_upgrade": "extra_confirmation_shadow",
     "post_shock_survivor": "not_applicable",
-    "explanation": "首日衝擊風險時僅在 Shadow mode 停用量價動能相對領漲清單，不改正式分數。"
+    "explanation": "風險警告時縮小候選清單並要求額外確認，不改正式方向分數。"
   },
   "notes": [
     "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
+    "首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。",
     "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
     "此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。"
   ],
-  "snapshot_hash": "e7d2047e01de4bf017d27d739d65fcb9de6a2899ca9e6841e4e42ad807c8f03a"
+  "snapshot_hash": "09ea2e0b8aa42be6c4720f650936a75b437aaa051dcd0566424579b4dc45c4dd"
 }
