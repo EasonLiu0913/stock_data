@@ -3,16 +3,19 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { primaryExternalValidation, trailingReturn } = require('../scripts/market_environment_lib');
-const {
-  strategyPolicy,
-  classifyExternalFreshness,
-} = require('../scripts/generate_market_environment');
+const { strategyPolicy, classifyExternalFreshness } = require('../scripts/generate_market_environment');
 const {
   classifyActual,
   predictedMatchesActual,
   candidateRule,
   evaluateRelativeLeadershipShadow,
 } = require('../scripts/generate_actual_market_environment');
+const {
+  reconstructIndicatorAtDate,
+  reconstructExternalPayloadAtDate,
+  buildTriggers,
+  classifyEnvironment,
+} = require('../scripts/reconstruct_historical_market_environment');
 
 function external(date = '20260727') {
   return {
@@ -30,31 +33,21 @@ test('external snapshot requires exact 5/5 primary date agreement', () => {
   assert.equal(primaryExternalValidation(mixed, '20260727').complete, false);
 });
 
-test('external freshness requires the exact expected US market date', () => {
-  const exact = primaryExternalValidation(external('20260727'), '20260727');
-  assert.deepEqual(classifyExternalFreshness(exact, '20260727'), {
-    status: 'fresh',
-    reason: 'exact_primary_market_date_match',
-    business_day_gap: 0,
-  });
-
-  const stalePayload = external('20260724');
-  stalePayload.collection_date = '20260727';
-  const stale = primaryExternalValidation(stalePayload, '20260727');
-  const result = classifyExternalFreshness(stale, '20260727');
-  assert.equal(result.status, 'stale_warning');
-  assert.equal(result.reason, 'primary_market_date_mismatch');
-  assert.equal(result.business_day_gap, 1);
-  assert.notEqual(result.status, 'holiday_adjusted');
+test('one-business-day stale data is not labeled holiday adjusted', () => {
+  const validation = primaryExternalValidation(external('20260724'), '20260727');
+  const freshness = classifyExternalFreshness(validation, '20260727');
+  assert.equal(freshness.status, 'stale_warning');
+  assert.equal(freshness.reason, 'primary_market_date_mismatch');
+  assert.equal(freshness.business_day_gap, 1);
 });
 
-test('incomplete primary indicators are invalid rather than holiday adjusted', () => {
-  const incomplete = external('20260727');
-  incomplete.indicators.pop();
-  const validation = primaryExternalValidation(incomplete, '20260727');
-  const result = classifyExternalFreshness(validation, '20260727');
-  assert.equal(result.status, 'invalid');
-  assert.equal(result.reason, 'primary_indicators_incomplete_or_inconsistent');
+test('incomplete primary external indicators remain invalid', () => {
+  const payload = external('20260727');
+  payload.indicators.pop();
+  const validation = primaryExternalValidation(payload, '20260727');
+  const freshness = classifyExternalFreshness(validation, '20260727');
+  assert.equal(freshness.status, 'invalid');
+  assert.equal(freshness.reason, 'primary_indicators_incomplete_or_inconsistent');
 });
 
 test('trailing return uses trading rows rather than calendar days', () => {
@@ -65,6 +58,64 @@ test('trailing return uses trading rows rather than calendar days', () => {
     { date: '20260727', close: 93 },
   ] }, 3);
   assert.equal(Number(value.toFixed(2)), -7);
+});
+
+test('historical indicator reconstruction truncates future rows and recomputes return', () => {
+  const indicator = {
+    id: 'sox',
+    market_date: '20260728',
+    rows: [
+      { date: '20260723', close: 100 },
+      { date: '20260724', close: 96 },
+      { date: '20260727', close: 93 },
+      { date: '20260728', close: 95 },
+    ],
+  };
+  const reconstructed = reconstructIndicatorAtDate(indicator, '20260727');
+  assert.equal(reconstructed.market_date, '20260727');
+  assert.equal(reconstructed.previous_market_date, '20260724');
+  assert.equal(reconstructed.previous_close, 96);
+  assert.equal(reconstructed.change_percent, -3.125);
+  assert.deepEqual(reconstructed.rows.map((row) => row.date), ['20260723', '20260724', '20260727']);
+});
+
+test('historical external payload becomes exact only when all five primary rows exist', () => {
+  const payload = {
+    collection_date: '20260728',
+    errors: [],
+    indicators: ['nasdaq', 'sp500', 'dow', 'sox', 'tsm_adr'].map((id) => ({
+      id,
+      market_date: '20260728',
+      rows: [
+        { date: '20260724', close: 100 },
+        { date: '20260727', close: 98 },
+        { date: '20260728', close: 99 },
+      ],
+    })),
+  };
+  const reconstructed = reconstructExternalPayloadAtDate(payload, '20260727');
+  assert.ok(reconstructed);
+  assert.equal(reconstructed.validation.exact, true);
+  assert.equal(reconstructed.payload.collection_date, '20260727');
+  assert.ok(reconstructed.payload.indicators.every((item) => item.market_date === '20260727'));
+});
+
+test('historical reconstructed shock score remains shadow-only', () => {
+  const metrics = {
+    sox_change_1d_pct: -2.2,
+    sox_return_3d_pct: -6.9,
+    tsm_adr_change_1d_pct: -1.1,
+    twse_minus_sox_3d_pct_points: 4.2,
+    twse_change_1d_pct: -0.05,
+    foreign_futures_net_contracts: -78699,
+    foreign_futures_net_change_contracts: -2439,
+    market_risk_score: 74,
+    adr_sox_nasdaq_market_risk: 92,
+  };
+  const result = buildTriggers(metrics);
+  const code = classifyEnvironment(result.score, null);
+  assert.equal(code, 'shock_first_day_warning');
+  assert.equal(strategyPolicy(code).formal_direction_score_adjustment, 0);
 });
 
 test('shock policy remains shadow-only and preserves formal scores', () => {
