@@ -96,6 +96,18 @@ function main(argv = process.argv.slice(2)) {
     '--output-dir', workDir
   ];
 
+  if (!argv.includes('--force') && fs.existsSync(destinationFile)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(destinationFile, 'utf8'));
+      if (validateCompletePayload(existing, isoDate).length === 0) {
+        console.log(`⏭️  ${isoDate} 正式檔已完整，跳過重新下載`);
+        return 0;
+      }
+    } catch {
+      // Invalid existing files are replaced only after a new complete crawl succeeds.
+    }
+  }
+
   fs.rmSync(workDir, { recursive: true, force: true });
   fs.mkdirSync(workDir, { recursive: true });
 
