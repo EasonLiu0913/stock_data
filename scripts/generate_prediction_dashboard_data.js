@@ -41,8 +41,12 @@ function parseArgs(argv) {
   const options = { date: '', dryRun: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === '--date') options.date = compactDate(argv[++index]);
-    else if (arg === '--dry-run') options.dryRun = true;
+    if (arg === '--date') {
+      const value = argv[index + 1];
+      if (!value || value.startsWith('--')) throw new Error('--date requires YYYYMMDD or YYYY-MM-DD');
+      options.date = compactDate(value);
+      index += 1;
+    } else if (arg === '--dry-run') options.dryRun = true;
     else if (arg === '--help' || arg === '-h') options.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
