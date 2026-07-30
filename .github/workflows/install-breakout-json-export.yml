@@ -1,0 +1,35 @@
+name: Install Breakout JSON Export
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/install_breakout_json_export.js'
+      - '.github/workflows/install-breakout-json-export.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install JSON export
+        run: node scripts/install_breakout_json_export.js
+
+      - name: Commit changes
+        run: |
+          if git diff --quiet -- public/three-day-breakout-institutional-report.html; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/three-day-breakout-institutional-report.html
+          git commit -m "feat: export breakout analysis as JSON"
+          git push
