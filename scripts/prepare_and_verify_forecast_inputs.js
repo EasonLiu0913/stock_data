@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { normalizeIsoDate, resolveForecastDates } = require('./resolve_forecast_dates');
 const {
+  BROKER_BRANCH_DETAIL_LIMIT,
   normalizeInstitutionalSource,
   normalizeBrokerSource,
   validateNormalized
@@ -85,13 +86,15 @@ function main() {
     stocks: parsedInstitutional
   };
   const brokerPayload = {
-    schemaVersion: 2,
+    schemaVersion: 4,
     generated_at: generatedAt,
     source_file: path.relative(ROOT, brokerPath).replaceAll(path.sep, '/'),
     source_sha256: broker.sha256,
     date,
     source_unit: broker.data.unit ?? '張',
     normalized_unit: '股',
+    branch_detail_limit: BROKER_BRANCH_DETAIL_LIMIT,
+    concentration_scope: 'sum_of_source_ranked_branches',
     stocks: parsedBroker
   };
 
