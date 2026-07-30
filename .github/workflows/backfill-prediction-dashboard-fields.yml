@@ -43,7 +43,8 @@ jobs:
         run: |
           node --check scripts/generate_prediction_dashboard_data.js
           node --check scripts/backfill_prediction_dashboard_fields.js
-          node --test tests/prediction_dashboard_backfill.test.js
+          node --check scripts/apply_formal_market_strategy_tags.js
+          node --test tests/prediction_dashboard_backfill.test.js tests/formal_market_strategy_tags.test.js
 
       - name: Backfill derived dashboard fields
         env:
