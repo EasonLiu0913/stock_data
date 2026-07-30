@@ -10,7 +10,6 @@ const {
   readJson,
   atomicWriteJson,
   round,
-  pctChange,
   sha256,
   listDateDirectories,
   primaryExternalValidation,
@@ -141,6 +140,10 @@ function recomputeMarketRisk(marketRiskPayload, exactExternalRisk) {
   );
 }
 
+function finite(value) {
+  return Number.isFinite(Number(value));
+}
+
 function buildTriggers(metrics) {
   const triggers = [];
   let score = 0;
@@ -150,15 +153,15 @@ function buildTriggers(metrics) {
     triggers.push({ id, label, value, points });
   };
 
-  add(metrics.sox_change_1d_pct <= -2, 'sox_1d_drop', '費半單日跌幅低於 -2%', metrics.sox_change_1d_pct, 2);
-  add(metrics.sox_return_3d_pct <= -5, 'sox_3d_drop', '費半近 3 個交易日跌幅低於 -5%', metrics.sox_return_3d_pct, 2);
-  add(metrics.tsm_adr_change_1d_pct <= -1, 'tsm_adr_drop', '台積電 ADR 單日跌幅低於 -1%', metrics.tsm_adr_change_1d_pct, 1);
-  add(metrics.twse_minus_sox_3d_pct_points >= 3, 'twse_sox_divergence', '台股近 3 日相對費半高出至少 3 個百分點', metrics.twse_minus_sox_3d_pct_points, 2);
-  add(metrics.twse_change_1d_pct > -0.5, 'twse_not_repriced', '台股前一日跌幅小於 0.5%，可能尚未補跌', metrics.twse_change_1d_pct, 1);
-  add(metrics.foreign_futures_net_contracts <= -70000, 'foreign_futures_net_short', '外資臺股期貨淨空低於 -70,000 口', metrics.foreign_futures_net_contracts, 2);
-  add(metrics.foreign_futures_net_change_contracts <= -2000, 'foreign_futures_short_increase', '外資期貨淨空單日增加至少 2,000 口', metrics.foreign_futures_net_change_contracts, 1);
-  add(metrics.market_risk_score >= 70, 'market_risk_high', '市場風險分數至少 70', metrics.market_risk_score, 1);
-  add(metrics.adr_sox_nasdaq_market_risk >= 85, 'semiconductor_external_risk_high', 'ADR／費半外部風險至少 85', metrics.adr_sox_nasdaq_market_risk, 1);
+  add(finite(metrics.sox_change_1d_pct) && Number(metrics.sox_change_1d_pct) <= -2, 'sox_1d_drop', '費半單日跌幅低於 -2%', metrics.sox_change_1d_pct, 2);
+  add(finite(metrics.sox_return_3d_pct) && Number(metrics.sox_return_3d_pct) <= -5, 'sox_3d_drop', '費半近 3 個交易日跌幅低於 -5%', metrics.sox_return_3d_pct, 2);
+  add(finite(metrics.tsm_adr_change_1d_pct) && Number(metrics.tsm_adr_change_1d_pct) <= -1, 'tsm_adr_drop', '台積電 ADR 單日跌幅低於 -1%', metrics.tsm_adr_change_1d_pct, 1);
+  add(finite(metrics.twse_minus_sox_3d_pct_points) && Number(metrics.twse_minus_sox_3d_pct_points) >= 3, 'twse_sox_divergence', '台股近 3 日相對費半高出至少 3 個百分點', metrics.twse_minus_sox_3d_pct_points, 2);
+  add(finite(metrics.twse_change_1d_pct) && Number(metrics.twse_change_1d_pct) > -0.5, 'twse_not_repriced', '台股前一日跌幅小於 0.5%，可能尚未補跌', metrics.twse_change_1d_pct, 1);
+  add(finite(metrics.foreign_futures_net_contracts) && Number(metrics.foreign_futures_net_contracts) <= -70000, 'foreign_futures_net_short', '外資臺股期貨淨空低於 -70,000 口', metrics.foreign_futures_net_contracts, 2);
+  add(finite(metrics.foreign_futures_net_change_contracts) && Number(metrics.foreign_futures_net_change_contracts) <= -2000, 'foreign_futures_short_increase', '外資期貨淨空單日增加至少 2,000 口', metrics.foreign_futures_net_change_contracts, 1);
+  add(finite(metrics.market_risk_score) && Number(metrics.market_risk_score) >= 70, 'market_risk_high', '市場風險分數至少 70', metrics.market_risk_score, 1);
+  add(finite(metrics.adr_sox_nasdaq_market_risk) && Number(metrics.adr_sox_nasdaq_market_risk) >= 85, 'semiconductor_external_risk_high', 'ADR／費半外部風險至少 85', metrics.adr_sox_nasdaq_market_risk, 1);
   return { score, triggers };
 }
 
@@ -184,7 +187,8 @@ function main() {
     return;
   }
 
-  const source = findHistoricalExternalSource(baseDate, compactDate(args.get('max-source-date') || '20991231'));
+  const expectedUsDate = compactDate(existing.data_freshness?.expected_us_market_date || baseDate, 'expected US market date');
+  const source = findHistoricalExternalSource(expectedUsDate, compactDate(args.get('max-source-date') || '20991231'));
   if (!source) {
     console.log(JSON.stringify({ forecast_date: forecastDate, skipped: true, reason: 'no_exact_historical_rows' }));
     return;
@@ -236,8 +240,8 @@ function main() {
     data_freshness: {
       status: 'historical_reconstructed',
       reason: 'reconstructed_from_later_snapshot_rows',
-      expected_us_market_date: baseDate,
-      actual_us_market_date: baseDate,
+      expected_us_market_date: expectedUsDate,
+      actual_us_market_date: expectedUsDate,
       business_day_gap: 0,
       source_directory_date: source.source_date,
       source_collection_date: source.source_collection_date,
@@ -264,7 +268,7 @@ function main() {
     notes: [
       'Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。',
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
-      `美股行情由 ${path.relative(ROOT, source.file).replaceAll(path.sep, '/')} 的歷史 rows 精確重建至 ${baseDate}；已截斷目標日之後資料。`,
+      `美股行情由 ${path.relative(ROOT, source.file).replaceAll(path.sep, '/')} 的歷史 rows 精確重建至 ${expectedUsDate}；已截斷目標日之後資料。`,
       '此檔為歷史重建，不代表當時系統已在台股開盤前成功保存該快照。',
     ],
   };
@@ -278,6 +282,7 @@ function main() {
   console.log(JSON.stringify({
     forecast_date: forecastDate,
     base_date: baseDate,
+    expected_us_market_date: expectedUsDate,
     reconstructed: true,
     source_date: source.source_date,
     environment: code,
