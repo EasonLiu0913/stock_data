@@ -64,47 +64,112 @@ test('derives institutional total only when all component values are numeric', (
   assert.equal(stocks['041529'].total_derived, undefined);
 });
 
-test('normalizes broker lots to shares and counts unique positive branches', () => {
+test('normalizes broker branch details and concentration metrics', () => {
   const source = {
     unit: '張',
     stocks: {
       1101: {
         stockCode: '1101',
         stockName: '台泥',
-        totals: { net: '12.5' },
+        totals: { netBuy: 24, netSell: 11, net: 13 },
         buyBrokers: [
-          { brokerId: 'A', branchId: '01', netBuy: 10 },
-          { brokerId: 'A', branchId: '01', netBuy: 5 },
-          { brokerId: 'B', branchId: '02', netBuy: 0 }
+          { rank: 1, brokerName: '甲', brokerId: 'A', branchId: '01', netBuy: 10, sharePercent: 10 },
+          { rank: 2, brokerName: '乙', brokerId: 'B', branchId: '02', netBuy: 8, sharePercent: 8 },
+          { rank: 3, brokerName: '丙', brokerId: 'C', branchId: '03', netBuy: 6, sharePercent: 6 }
         ],
-        sellBrokers: [{ brokerId: 'C', branchId: '03', netSell: 4 }]
+        sellBrokers: [
+          { rank: 1, brokerName: '丁', brokerId: 'D', branchId: '04', netSell: 7, sharePercent: 7 },
+          { rank: 2, brokerName: '戊', brokerId: 'E', branchId: '05', netSell: 4, sharePercent: 4 }
+        ]
       }
     }
   };
-  assert.deepEqual(normalizeBrokerSource(source), {
-    1101: {
-      stock_code: '1101',
-      stock_name: '台泥',
-      net: 12500,
-      buy_branch_count: 1,
-      sell_branch_count: 1,
-      source_unit: '張',
-      normalized_unit: '股'
-    }
+  const normalized = normalizeBrokerSource(source)['1101'];
+  assert.equal(normalized.net, 13000);
+  assert.equal(normalized.buy_branch_count, 3);
+  assert.equal(normalized.sell_branch_count, 2);
+  assert.deepEqual(normalized.top_buy_branches[0], {
+    rank: 1,
+    branch_key: 'A:01',
+    broker_name: '甲',
+    broker_id: 'A',
+    branch_id: '01',
+    net_shares: 10000,
+    share_percent: 10
   });
+  assert.equal(normalized.top_sell_branches[0].net_shares, -7000);
+  assert.equal(normalized.concentration.top3_buy_net_shares, 24000);
+  assert.equal(normalized.concentration.top3_buy_concentration_pct, 100);
+  assert.equal(normalized.concentration.top3_sell_concentration_pct, 100);
 });
 
-test('rejects old broker schema without branch counts', () => {
+test('deduplicates repeated broker branch identities', () => {
+  const source = {
+    unit: '張',
+    stocks: {
+      1101: {
+        stockCode: '1101',
+        stockName: '台泥',
+        totals: { netBuy: 15, netSell: 4, net: 11 },
+        buyBrokers: [
+          { rank: 1, brokerId: 'A', branchId: '01', netBuy: 10, sharePercent: 5 },
+          { rank: 2, brokerId: 'A', branchId: '01', netBuy: 5, sharePercent: 2.5 },
+          { rank: 3, brokerId: 'B', branchId: '02', netBuy: 0, sharePercent: 0 }
+        ],
+        sellBrokers: [{ rank: 1, brokerId: 'C', branchId: '03', netSell: 4, sharePercent: 2 }]
+      }
+    }
+  };
+  const normalized = normalizeBrokerSource(source)['1101'];
+  assert.equal(normalized.buy_branch_count, 1);
+  assert.equal(normalized.top_buy_branches.length, 1);
+  assert.equal(normalized.top_buy_branches[0].net_shares, 15000);
+  assert.equal(normalized.top_buy_branches[0].share_percent, 7.5);
+});
+
+test('rejects old broker schema without branch details', () => {
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     date: '20260729',
     stocks: {
-      1101: { stock_code: '1101', net: 1000, normalized_unit: '股' }
+      1101: {
+        stock_code: '1101',
+        net: 1000,
+        buy_branch_count: 1,
+        sell_branch_count: 1,
+        normalized_unit: '股'
+      }
     }
   };
   const errors = validateNormalized('broker', payload, '20260729', { minimumRecords: 1 });
-  assert.ok(errors.some(error => error.includes('schemaVersion must be 2')));
-  assert.ok(errors.some(error => error.includes('buy_branch_count')));
+  assert.ok(errors.some(error => error.includes('schemaVersion must be 3')));
+  assert.ok(errors.some(error => error.includes('top_buy_branches')));
+  assert.ok(errors.some(error => error.includes('concentration')));
+});
+
+test('accepts valid broker schema v3', () => {
+  const stock = normalizeBrokerSource({
+    unit: '張',
+    stocks: {
+      1101: {
+        stockCode: '1101',
+        stockName: '台泥',
+        totals: { netBuy: 10, netSell: 3, net: 7 },
+        buyBrokers: [{ rank: 1, brokerName: '甲', brokerId: 'A', branchId: '01', netBuy: 10, sharePercent: 10 }],
+        sellBrokers: [{ rank: 1, brokerName: '乙', brokerId: 'B', branchId: '02', netSell: 3, sharePercent: 3 }]
+      }
+    }
+  })['1101'];
+  const payload = {
+    schemaVersion: 3,
+    date: '20260729',
+    stocks: {
+      1101: stock,
+      1102: { ...stock, stock_code: '1102' },
+      3231: { ...stock, stock_code: '3231' }
+    }
+  };
+  assert.deepEqual(validateNormalized('broker', payload, '20260729', { minimumRecords: 1 }), []);
 });
 
 test('parses date range and type options', () => {
