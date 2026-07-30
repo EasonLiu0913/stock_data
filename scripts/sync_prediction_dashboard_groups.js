@@ -1,0 +1,89 @@
+#!/usr/bin/env node
+'use strict';
+
+const path = require('node:path');
+const {
+  ROOT,
+  readJson,
+  atomicWriteJson,
+} = require('./market_environment_lib');
+
+function compactDate(value) {
+  const compact = String(value || '').replaceAll('-', '').replaceAll('/', '');
+  return /^20\d{6}$/.test(compact) ? compact : '';
+}
+
+function syncSummaryPayload(summary, groupSummary) {
+  if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
+  if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
+  summary.group_summary = groupSummary.groups;
+  summary.group_summary_source = 'group-summary.json';
+  return summary;
+}
+
+function syncPredictionDashboardGroups({ rootDir = 'data_predictions', date, dryRun = false } = {}) {
+  const compact = compactDate(date);
+  if (!compact) throw new Error('date must be YYYYMMDD');
+
+  const predictionDir = path.join(ROOT, rootDir, compact);
+  const summaryFile = path.join(predictionDir, 'summary.json');
+  const groupSummaryFile = path.join(predictionDir, 'group-summary.json');
+  const summary = readJson(summaryFile, null);
+  const groupSummary = readJson(groupSummaryFile, null);
+
+  if (!summary || !Array.isArray(groupSummary?.groups)) {
+    return {
+      date: compact,
+      root_dir: rootDir,
+      skipped: true,
+      reason: !summary ? 'missing_summary' : 'missing_group_summary',
+      groups: 0,
+    };
+  }
+
+  syncSummaryPayload(summary, groupSummary);
+  if (!dryRun) atomicWriteJson(summaryFile, summary);
+
+  return {
+    date: compact,
+    root_dir: rootDir,
+    skipped: false,
+    groups: groupSummary.groups.length,
+    formal_groups: groupSummary.groups.filter((group) => group?.formal_strategy === true).map((group) => group.group),
+    dry_run: dryRun,
+  };
+}
+
+function parseArgs(argv) {
+  const options = { date: '', rootDir: 'data_predictions', dryRun: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--dry-run') options.dryRun = true;
+    else if (arg === '--date') options.date = argv[++index] || '';
+    else if (arg === '--root') options.rootDir = argv[++index] || '';
+    else throw new Error(`Unknown argument: ${arg}`);
+  }
+  return options;
+}
+
+function main(argv = process.argv.slice(2)) {
+  const result = syncPredictionDashboardGroups(parseArgs(argv));
+  console.log(JSON.stringify(result));
+  return result;
+}
+
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+module.exports = {
+  compactDate,
+  syncSummaryPayload,
+  syncPredictionDashboardGroups,
+  main,
+};
