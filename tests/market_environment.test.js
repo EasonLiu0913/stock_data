@@ -214,3 +214,5 @@ test('shadow evaluation joins prediction features and replay outcomes by stock c
   assert.equal(result.data_quality.prediction_without_verified_replay, 1);
   assert.deepEqual(result.candidate_stocks.map((row) => row.stock_code), ['2330', '2317']);
 });
+
+require('./market_environment_policy.test');
