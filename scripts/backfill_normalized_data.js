@@ -18,7 +18,7 @@ const TYPES = {
     sourceDir: 'data_fubon_broker_details',
     outputDir: 'data_normalized/broker_details',
     sourcePattern: /^fubon_(\d{8})_券商分點進出明細\.json$/,
-    schemaVersion: 3
+    schemaVersion: 4
   }
 };
 
@@ -153,9 +153,8 @@ function sumBranchShares(branches, limit = branches.length) {
 }
 
 function concentrationPercent(part, total) {
-  return Number.isFinite(part) && Number.isFinite(total) && total > 0
-    ? round(part / total * 100)
-    : null;
+  if (!Number.isFinite(part) || !Number.isFinite(total) || total <= 0) return null;
+  return round(Math.min(100, Math.max(0, part / total * 100)));
 }
 
 function normalizeBrokerSource(source) {
@@ -170,8 +169,16 @@ function normalizeBrokerSource(source) {
 
     const allBuyBranches = normalizeBrokerBranches(item?.buyBrokers, 'buy');
     const allSellBranches = normalizeBrokerBranches(item?.sellBrokers, 'sell');
-    const rankedBuyNetShares = (numeric(item?.totals?.netBuy) ?? sumBranchShares(allBuyBranches) / 1000) * 1000;
-    const rankedSellNetShares = (numeric(item?.totals?.netSell) ?? sumBranchShares(allSellBranches) / 1000) * 1000;
+
+    // Numerator and denominator must come from the same ranked branch list.
+    // Source totals are preserved for auditing because some rows differ from
+    // the sum of displayed branches and would otherwise produce >100%.
+    const rankedBuyNetShares = sumBranchShares(allBuyBranches);
+    const rankedSellNetShares = sumBranchShares(allSellBranches);
+    const sourceReportedBuyNetShares = numeric(item?.totals?.netBuy);
+    const sourceReportedSellNetShares = numeric(item?.totals?.netSell);
+    const sourceBuyShares = sourceReportedBuyNetShares === null ? null : sourceReportedBuyNetShares * 1000;
+    const sourceSellShares = sourceReportedSellNetShares === null ? null : sourceReportedSellNetShares * 1000;
     const top3BuyNetShares = sumBranchShares(allBuyBranches, 3);
     const top5BuyNetShares = sumBranchShares(allBuyBranches, 5);
     const top3SellNetShares = sumBranchShares(allSellBranches, 3);
@@ -187,9 +194,14 @@ function normalizeBrokerSource(source) {
       top_buy_branches: allBuyBranches.slice(0, BROKER_BRANCH_DETAIL_LIMIT),
       top_sell_branches: allSellBranches.slice(0, BROKER_BRANCH_DETAIL_LIMIT),
       concentration: {
-        scope: 'source_ranked_branches',
+        scope: 'sum_of_source_ranked_branches',
+        denominator_definition: 'sum(abs(net_shares)) of the normalized source ranked branch list for the same side',
         ranked_buy_net_shares: rankedBuyNetShares,
         ranked_sell_net_shares: rankedSellNetShares,
+        source_reported_buy_net_shares: sourceBuyShares,
+        source_reported_sell_net_shares: sourceSellShares,
+        source_buy_difference_shares: sourceBuyShares === null ? null : sourceBuyShares - rankedBuyNetShares,
+        source_sell_difference_shares: sourceSellShares === null ? null : sourceSellShares - rankedSellNetShares,
         top3_buy_net_shares: top3BuyNetShares,
         top5_buy_net_shares: top5BuyNetShares,
         top3_sell_net_shares: top3SellNetShares,
@@ -232,6 +244,9 @@ function validateConcentration(code, concentration, errors) {
     errors.push(`${code}: concentration must be an object`);
     return;
   }
+  if (concentration.scope !== 'sum_of_source_ranked_branches') {
+    errors.push(`${code}: concentration.scope is invalid`);
+  }
   for (const field of [
     'ranked_buy_net_shares',
     'ranked_sell_net_shares',
@@ -244,6 +259,16 @@ function validateConcentration(code, concentration, errors) {
     if (value === null || value < 0) errors.push(`${code}: concentration.${field} is invalid`);
   }
   for (const field of [
+    'source_reported_buy_net_shares',
+    'source_reported_sell_net_shares',
+    'source_buy_difference_shares',
+    'source_sell_difference_shares'
+  ]) {
+    if (concentration[field] !== null && numeric(concentration[field]) === null) {
+      errors.push(`${code}: concentration.${field} is invalid`);
+    }
+  }
+  for (const field of [
     'top3_buy_concentration_pct',
     'top5_buy_concentration_pct',
     'top3_sell_concentration_pct',
@@ -254,12 +279,16 @@ function validateConcentration(code, concentration, errors) {
     const parsed = numeric(value);
     if (parsed === null || parsed < 0 || parsed > 100.0001) errors.push(`${code}: concentration.${field} is invalid`);
   }
-  if (numeric(concentration.top3_buy_net_shares) > numeric(concentration.top5_buy_net_shares)) {
-    errors.push(`${code}: top3 buy net exceeds top5`);
-  }
-  if (numeric(concentration.top3_sell_net_shares) > numeric(concentration.top5_sell_net_shares)) {
-    errors.push(`${code}: top3 sell net exceeds top5`);
-  }
+  const rankedBuy = numeric(concentration.ranked_buy_net_shares);
+  const rankedSell = numeric(concentration.ranked_sell_net_shares);
+  const top3Buy = numeric(concentration.top3_buy_net_shares);
+  const top5Buy = numeric(concentration.top5_buy_net_shares);
+  const top3Sell = numeric(concentration.top3_sell_net_shares);
+  const top5Sell = numeric(concentration.top5_sell_net_shares);
+  if (top3Buy > top5Buy) errors.push(`${code}: top3 buy net exceeds top5`);
+  if (top5Buy > rankedBuy) errors.push(`${code}: top5 buy net exceeds ranked buy total`);
+  if (top3Sell > top5Sell) errors.push(`${code}: top3 sell net exceeds top5`);
+  if (top5Sell > rankedSell) errors.push(`${code}: top5 sell net exceeds ranked sell total`);
 }
 
 function validateNormalized(type, payload, date, options = {}) {
@@ -386,7 +415,7 @@ function buildPayload(type, date, sourcePath) {
           source_unit: source.data.unit ?? '張',
           normalized_unit: '股',
           branch_detail_limit: BROKER_BRANCH_DETAIL_LIMIT,
-          concentration_scope: 'source_ranked_branches'
+          concentration_scope: 'sum_of_source_ranked_branches'
         }),
     stocks
   };
