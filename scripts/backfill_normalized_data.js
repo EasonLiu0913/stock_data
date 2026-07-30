@@ -73,15 +73,23 @@ function normalizeInstitutionalSource(source) {
     if (!code) continue;
     const foreignCash = numeric(row[indexes.foreignCash]);
     const foreignDealer = numeric(row[indexes.foreignDealer]);
+    const foreign = foreignCash === null && foreignDealer === null
+      ? null
+      : (foreignCash ?? 0) + (foreignDealer ?? 0);
+    const trust = numeric(row[indexes.trust]);
+    const dealer = numeric(row[indexes.dealer]);
+    const sourceTotal = numeric(row[indexes.total]);
+    const derivedTotal = [foreign, trust, dealer].every(value => value !== null)
+      ? foreign + trust + dealer
+      : null;
     stocks[code] = {
       stock_code: code,
       stock_name: String(row[indexes.name] ?? '').trim(),
-      foreign: foreignCash === null && foreignDealer === null
-        ? null
-        : (foreignCash ?? 0) + (foreignDealer ?? 0),
-      trust: numeric(row[indexes.trust]),
-      dealer: numeric(row[indexes.dealer]),
-      total: numeric(row[indexes.total])
+      foreign,
+      trust,
+      dealer,
+      total: sourceTotal ?? derivedTotal,
+      ...(sourceTotal === null && derivedTotal !== null ? { total_derived: true } : {})
     };
   }
   return stocks;
