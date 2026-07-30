@@ -1,0 +1,61 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  STRATEGY_ID,
+  STRATEGY_LABEL,
+  evaluateFormalStrategy,
+} = require('../scripts/evaluate_formal_strategy_replay');
+
+function prediction(code, formal = false) {
+  return {
+    stock_code: code,
+    stock_name: code,
+    strategy_tags: formal ? [STRATEGY_LABEL] : ['一般觀察'],
+    formal_market_strategy: formal ? {
+      strategy_id: STRATEGY_ID,
+      confirmation_score: 7,
+      environment_code: 'post_shock_day_2',
+    } : undefined,
+  };
+}
+
+function replay(code, classification, verified = true) {
+  return {
+    stock_code: code,
+    verified,
+    market_relative: {
+      classification,
+      market_percentile: classification === 'relative_leadership' ? 95 : 50,
+    },
+  };
+}
+
+test('formal strategy replay evaluates only formally tagged candidates', () => {
+  const result = evaluateFormalStrategy(
+    [prediction('2207', true), prediction('2540', true), prediction('2330', false)],
+    [replay('2207', 'relative_leadership'), replay('2540', 'broad_market_driven'), replay('2330', 'relative_leadership')],
+  );
+
+  assert.equal(result.candidates, 2);
+  assert.equal(result.verified_candidates, 2);
+  assert.equal(result.hits, 1);
+  assert.equal(result.precision, 50);
+  assert.deepEqual(result.members, ['2207', '2540']);
+  assert.deepEqual(result.hit_members, ['2207']);
+  assert.equal(result.changes_direction_score, false);
+});
+
+test('formal strategy replay reports missing replay candidates without treating them as misses', () => {
+  const result = evaluateFormalStrategy(
+    [prediction('2207', true), prediction('5880', true)],
+    [replay('2207', 'relative_leadership')],
+  );
+
+  assert.equal(result.candidates, 2);
+  assert.equal(result.verified_candidates, 1);
+  assert.equal(result.hits, 1);
+  assert.equal(result.precision, 100);
+  assert.equal(result.missing_replay_candidates, 1);
+});
