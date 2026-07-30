@@ -20,6 +20,7 @@
     <div class="field"><label>股票搜尋</label><input id="keyword" placeholder="代號或名稱"></div>
     <div class="field"><label>排序</label><select id="sort"><option id="gainSortOption" value="gain">3 日漲幅</option><option value="score">提前布局分數</option><option value="institutional">法人淨買</option><option value="volume">量能倍數</option></select></div>
     <button id="run">重新分析</button>
+    <button id="exportJson" type="button" disabled>匯出 JSON</button>
   </div>
   <div id="status" class="status">準備讀取資料…</div>
 </section>
@@ -43,9 +44,180 @@ async function pool(items,limit,fn){let index=0;const workers=Array.from({length
 function average(values){const available=values.filter(value=>value!=null);return available.length?available.reduce((sum,value)=>sum+value,0)/available.length:null}
 function readSettings(){const gainDays=Math.min(20,Math.max(2,Math.trunc(num($('gainDays').value)||3)));const threshold=num($('threshold').value)??10;const lookback=Math.min(20,Math.max(3,Math.trunc(num($('lookback').value)||5)));const minVolume=Math.max(0,num($('minVolume').value)||0);$('gainDays').value=String(gainDays);$('lookback').value=String(lookback);state.gainDays=gainDays;state.threshold=threshold;state.lookback=lookback;return{gainDays,threshold,lookback,minVolume}}
 function updateDynamicLabels(){const gainDays=state.gainDays,threshold=state.threshold,lookback=state.lookback;document.title=`${gainDays} 日漲幅 ${threshold}% 前法人與券商布局分析`;$('pageTitle').textContent=`${gainDays} 日漲幅 ${threshold}% 前法人與券商布局分析`;$('pageDescription').textContent=`從全部可讀取交易日中找出「連續 ${gainDays} 個交易日，第一日收盤至第 ${gainDays} 日收盤累積上漲至少 ${threshold}%」的事件，回看起漲日前 ${lookback} 個交易日，尋找法人、主力券商、量價與均線共同特徵。`;$('thresholdLabel').textContent=`最低 ${gainDays} 日漲幅（%）`;$('gainHeader').textContent=`${gainDays} 日漲幅`;$('gainSortOption').textContent=`${gainDays} 日漲幅`;$('eventDefinition').textContent=`事件定義：每檔股票任意連續 ${gainDays} 個可用交易日，第 ${gainDays} 日收盤 ÷ 第一日收盤 − 1 ≥ 門檻。`}
-async function run(){const button=$('run');button.disabled=true;state.events=[];state.daily.clear();$('rows').innerHTML='';const {gainDays,threshold,lookback,minVolume}=readSettings();updateDynamicLabels();$('status').textContent='讀取交易日清單…';const files=await getJson('data_fubon/files.json');if(!files){$('status').textContent='無法讀取 data_fubon/files.json';button.disabled=false;return}const dates=[...new Set(files.map(file=>(String(file).match(/^fubon_(\d{8})_sma\.json$/)||[])[1]).filter(Boolean))].sort();state.dates=dates;$('mDates').textContent=dates.length.toLocaleString();$('status').textContent=`讀取 ${dates.length} 個交易日價格資料…`;await pool(dates,6,async(date,index)=>{const raw=await getJson(`data_fubon/fubon_${date}_sma.json`);const map=new Map();if(raw)for(const [code,entry] of Object.entries(raw)){const day=stockDay(entry),price=num(day?.Price),volume=num(day?.Volume);if(price!=null)map.set(code,{code,name:entry.StockName||'',price,volume,sma5:num(day?.SMA5)})}state.daily.set(date,map);if(index%10===0)$('status').textContent=`價格資料：${index+1}/${dates.length}`});const candidates=[];const endOffset=gainDays-1;for(let index=lookback;index+endOffset<dates.length;index++){const start=dates[index],end=dates[index+endOffset];const startMap=state.daily.get(start),endMap=state.daily.get(end);for(const [code,first] of startMap){const last=endMap.get(code);if(!last||first.price<=0||last.volume<minVolume)continue;const gain=(last.price/first.price-1)*100;if(gain<threshold)continue;const preDates=dates.slice(index-lookback,index);const pre=preDates.map(date=>state.daily.get(date)?.get(code)).filter(Boolean);if(pre.length!==lookback)continue;const preGain=(pre.at(-1).price/pre[0].price-1)*100;const baseVolume=average(pre.slice(0,-1).map(item=>item.volume));const recentVolume=average(pre.slice(-2).map(item=>item.volume));candidates.push({code,name:first.name,start,end,gain,gainDays,startPrice:first.price,endPrice:last.price,preDates,preGain,volumeRatio:baseVolume&&recentVolume?recentVolume/baseVolume:null,aboveSma5:pre.at(-1).sma5==null?null:pre.at(-1).price>pre.at(-1).sma5})}}const needed=[...new Set(candidates.flatMap(event=>event.preDates))];$('status').textContent=`找到 ${candidates.length} 個 ${gainDays} 日事件，讀取 ${needed.length} 日正規化法人與券商資料…`;const aux=new Map();await pool(needed,4,async(date,index)=>{aux.set(date,await loadAux(date));if(index%5===0)$('status').textContent=`籌碼資料：${index+1}/${needed.length}`});for(const event of candidates){const expected=event.preDates.length;let total=0,foreign=0,trust=0,dealer=0,buyDays=0,instDays=0;let brokerNet=0,buyBranches=0,brokerDays=0,branchDays=0;for(const date of event.preDates){const day=aux.get(date);const institutional=day?.inst.get(event.code);const broker=day?.broker.get(event.code);if(institutional){instDays++;total+=institutional.total;foreign+=institutional.foreign;trust+=institutional.trust;dealer+=institutional.dealer;if(institutional.total>0)buyDays++}if(broker){brokerDays++;brokerNet+=broker.net;if(broker.buyBranches!=null){branchDays++;buyBranches+=broker.buyBranches}}}event.inst=instDays?{total,foreign,trust,dealer,buyDays,days:instDays,expected,complete:instDays===expected}:null;event.broker=brokerDays?{net:brokerNet,branches:branchDays?buyBranches:null,days:brokerDays,branchDays,expected,complete:brokerDays===expected&&branchDays===expected}:null;const institutionalScore=event.inst?.complete?Math.min(35,Math.max(0,event.inst.buyDays*7+(event.inst.total>0?8:0))):0;const brokerScore=event.broker?.complete?Math.min(15,Math.max(0,event.broker.branches*1.5+(event.broker.net>0?5:0))):0;event.score=institutionalScore+(event.volumeRatio?Math.min(25,Math.max(0,(event.volumeRatio-1)*20)):0)+(event.aboveSma5?15:0)+(event.preGain>0&&event.preGain<8?10:0)+brokerScore}state.events=candidates;render();button.disabled=false}
+
+function exportedEvents(){
+  const keyword=$('keyword').value.trim().toLowerCase(),sort=$('sort').value;
+  const data=state.events.filter(event=>!keyword||`${event.code}${event.name}`.toLowerCase().includes(keyword));
+  data.sort((a,b)=>sort==='score'
+    ?b.score-a.score
+    :sort==='institutional'
+      ?(b.inst?.total??-Infinity)-(a.inst?.total??-Infinity)
+      :sort==='volume'
+        ?(b.volumeRatio??-Infinity)-(a.volumeRatio??-Infinity)
+        :b.gain-a.gain);
+  return data;
+}
+
+function scoreBreakdown(event){
+  const institutional=event.inst?.complete
+    ?Math.min(35,Math.max(0,event.inst.buyDays*7+(event.inst.total>0?8:0)))
+    :0;
+  const broker=event.broker?.complete
+    ?Math.min(15,Math.max(0,event.broker.branches*1.5+(event.broker.net>0?5:0)))
+    :0;
+  const volume=event.volumeRatio
+    ?Math.min(25,Math.max(0,(event.volumeRatio-1)*20))
+    :0;
+  const aboveSma5=event.aboveSma5?15:0;
+  const preGain=event.preGain>0&&event.preGain<8?10:0;
+  return{
+    institutional:Number(institutional.toFixed(2)),
+    broker:Number(broker.toFixed(2)),
+    volume:Number(volume.toFixed(2)),
+    above_sma5:aboveSma5,
+    pre_event_gain:preGain,
+    total:Number(event.score.toFixed(2))
+  };
+}
+
+function exportColumnDefinitions(){
+  return[
+    {field:'stock_code',label:'代號',type:'string'},
+    {field:'stock_name',label:'名稱',type:'string'},
+    {field:'event_start_date',label:'起始日',type:'YYYYMMDD'},
+    {field:'target_date',label:'達標日',type:'YYYYMMDD'},
+    {field:'gain_days',label:'漲幅計算交易日',type:'integer',unit:'交易日'},
+    {field:'gain_pct',label:'X 日漲幅',type:'number',unit:'%'},
+    {field:'start_price',label:'起始價',type:'number',unit:'元'},
+    {field:'target_price',label:'達標價',type:'number',unit:'元'},
+    {field:'pre_event.lookback_dates',label:'起漲前回看日期',type:'string[]'},
+    {field:'pre_event.gain_pct',label:'起漲前漲幅',type:'number',unit:'%'},
+    {field:'pre_event.volume_ratio',label:'起漲前量能倍數',type:'number',unit:'倍'},
+    {field:'pre_event.above_sma5',label:'起漲前是否站上 SMA5',type:'boolean|null'},
+    {field:'institutional.total',label:'法人累積淨買',type:'number|null',unit:'張'},
+    {field:'institutional.foreign',label:'外資累積淨買',type:'number|null',unit:'張'},
+    {field:'institutional.trust',label:'投信累積淨買',type:'number|null',unit:'張'},
+    {field:'institutional.dealer',label:'自營商累積淨買',type:'number|null',unit:'張'},
+    {field:'institutional.buy_days',label:'法人買超天數',type:'integer|null',unit:'交易日'},
+    {field:'broker.net',label:'券商集中累積淨買',type:'number|null'},
+    {field:'broker.buy_branch_count',label:'主買分點數累積',type:'number|null'},
+    {field:'score.total',label:'布局分數',type:'number',unit:'分'},
+    {field:'score.breakdown',label:'布局分數拆解',type:'object'},
+    {field:'data_quality',label:'資料完整度',type:'object'}
+  ];
+}
+
+function exportAnalysisJson(){
+  const events=exportedEvents();
+  const allEvents=state.events;
+  const filters={
+    gain_days:state.gainDays,
+    minimum_gain_pct:state.threshold,
+    lookback_trade_days:state.lookback,
+    minimum_volume_lots:Math.max(0,num($('minVolume').value)||0),
+    keyword:$('keyword').value.trim(),
+    sort:$('sort').value
+  };
+  const payload={
+    schema_version:1,
+    report_type:'multi_day_breakout_institutional_broker_analysis',
+    generated_at:new Date().toISOString(),
+    source_page:location.pathname,
+    filters,
+    event_definition:{
+      description:`連續 ${state.gainDays} 個可用交易日，第 ${state.gainDays} 日收盤相對第一日收盤累積漲幅至少 ${state.threshold}%。`,
+      formula:'(target_close / start_close - 1) * 100 >= minimum_gain_pct',
+      target_offset:state.gainDays-1,
+      pre_event_window:'事件起始日前 lookback_trade_days 個完整交易日'
+    },
+    data_sources:{
+      price:'data_fubon/fubon_YYYYMMDD_sma.json',
+      institutional:'data_normalized/institutional_investors/YYYYMMDD.json',
+      broker:'data_normalized/broker_details/YYYYMMDD.json'
+    },
+    analysis_scope:{
+      available_trade_date_count:state.dates.length,
+      first_available_trade_date:state.dates[0]||null,
+      last_available_trade_date:state.dates.at(-1)||null,
+      all_matching_event_count:allEvents.length,
+      exported_event_count:events.length,
+      exported_unique_stock_count:new Set(events.map(event=>event.code)).size
+    },
+    scoring_model:{
+      maximum_score:100,
+      components:{
+        institutional:{maximum:35,formula:'完整覆蓋時 min(35, 法人買超天數 * 7 + 法人累積淨買為正 ? 8 : 0)'},
+        broker:{maximum:15,formula:'完整覆蓋時 min(15, 主買分點數累積 * 1.5 + 券商累積淨買為正 ? 5 : 0)'},
+        volume:{maximum:25,formula:'min(25, max(0, (量能倍數 - 1) * 20))'},
+        above_sma5:{maximum:15,formula:'起漲前最後一日收盤高於 SMA5 時加 15'},
+        pre_event_gain:{maximum:10,formula:'起漲前漲幅大於 0% 且小於 8% 時加 10'}
+      }
+    },
+    column_definitions:exportColumnDefinitions(),
+    summary:{
+      institutional_complete_event_count:events.filter(event=>event.inst?.complete).length,
+      broker_complete_event_count:events.filter(event=>event.broker?.complete).length,
+      high_score_event_count:events.filter(event=>event.score>=55).length
+    },
+    events:events.map(event=>({
+      stock_code:event.code,
+      stock_name:event.name,
+      event_start_date:event.start,
+      target_date:event.end,
+      gain_days:event.gainDays||state.gainDays,
+      gain_pct:Number(event.gain.toFixed(4)),
+      start_price:event.startPrice,
+      target_price:event.endPrice,
+      pre_event:{
+        lookback_days:event.preDates.length,
+        lookback_dates:event.preDates,
+        gain_pct:Number(event.preGain.toFixed(4)),
+        volume_ratio:event.volumeRatio==null?null:Number(event.volumeRatio.toFixed(4)),
+        above_sma5:event.aboveSma5
+      },
+      institutional:event.inst?{
+        total:event.inst.total,
+        foreign:event.inst.foreign,
+        trust:event.inst.trust,
+        dealer:event.inst.dealer,
+        buy_days:event.inst.buyDays,
+        available_days:event.inst.days,
+        expected_days:event.inst.expected,
+        complete:event.inst.complete
+      }:null,
+      broker:event.broker?{
+        net:event.broker.net,
+        buy_branch_count:event.broker.branches,
+        available_days:event.broker.days,
+        branch_available_days:event.broker.branchDays,
+        expected_days:event.broker.expected,
+        complete:event.broker.complete
+      }:null,
+      score:{total:Number(event.score.toFixed(2)),breakdown:scoreBreakdown(event)},
+      data_quality:{
+        institutional_status:!event.inst?'missing':event.inst.complete?'complete':'partial',
+        broker_status:!event.broker?'missing':event.broker.complete?'complete':'partial'
+      }
+    }))
+  };
+  const timestamp=new Date().toISOString().replace(/[-:]/g,'').replace(/.d{3}Z$/,'Z');
+  const thresholdPart=String(state.threshold).replace('.','p');
+  const filename=`breakout-analysis_${state.gainDays}d_${thresholdPart}pct_${timestamp}.json`;
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  $('status').textContent=`已匯出 ${events.length} 個事件：${filename}`;
+}
+
+async function run(){const button=$('run'),exportButton=$('exportJson');button.disabled=true;exportButton.disabled=true;state.events=[];state.daily.clear();$('rows').innerHTML='';const {gainDays,threshold,lookback,minVolume}=readSettings();updateDynamicLabels();$('status').textContent='讀取交易日清單…';const files=await getJson('data_fubon/files.json');if(!files){$('status').textContent='無法讀取 data_fubon/files.json';button.disabled=false;return}const dates=[...new Set(files.map(file=>(String(file).match(/^fubon_(\d{8})_sma\.json$/)||[])[1]).filter(Boolean))].sort();state.dates=dates;$('mDates').textContent=dates.length.toLocaleString();$('status').textContent=`讀取 ${dates.length} 個交易日價格資料…`;await pool(dates,6,async(date,index)=>{const raw=await getJson(`data_fubon/fubon_${date}_sma.json`);const map=new Map();if(raw)for(const [code,entry] of Object.entries(raw)){const day=stockDay(entry),price=num(day?.Price),volume=num(day?.Volume);if(price!=null)map.set(code,{code,name:entry.StockName||'',price,volume,sma5:num(day?.SMA5)})}state.daily.set(date,map);if(index%10===0)$('status').textContent=`價格資料：${index+1}/${dates.length}`});const candidates=[];const endOffset=gainDays-1;for(let index=lookback;index+endOffset<dates.length;index++){const start=dates[index],end=dates[index+endOffset];const startMap=state.daily.get(start),endMap=state.daily.get(end);for(const [code,first] of startMap){const last=endMap.get(code);if(!last||first.price<=0||last.volume<minVolume)continue;const gain=(last.price/first.price-1)*100;if(gain<threshold)continue;const preDates=dates.slice(index-lookback,index);const pre=preDates.map(date=>state.daily.get(date)?.get(code)).filter(Boolean);if(pre.length!==lookback)continue;const preGain=(pre.at(-1).price/pre[0].price-1)*100;const baseVolume=average(pre.slice(0,-1).map(item=>item.volume));const recentVolume=average(pre.slice(-2).map(item=>item.volume));candidates.push({code,name:first.name,start,end,gain,gainDays,startPrice:first.price,endPrice:last.price,preDates,preGain,volumeRatio:baseVolume&&recentVolume?recentVolume/baseVolume:null,aboveSma5:pre.at(-1).sma5==null?null:pre.at(-1).price>pre.at(-1).sma5})}}const needed=[...new Set(candidates.flatMap(event=>event.preDates))];$('status').textContent=`找到 ${candidates.length} 個 ${gainDays} 日事件，讀取 ${needed.length} 日正規化法人與券商資料…`;const aux=new Map();await pool(needed,4,async(date,index)=>{aux.set(date,await loadAux(date));if(index%5===0)$('status').textContent=`籌碼資料：${index+1}/${needed.length}`});for(const event of candidates){const expected=event.preDates.length;let total=0,foreign=0,trust=0,dealer=0,buyDays=0,instDays=0;let brokerNet=0,buyBranches=0,brokerDays=0,branchDays=0;for(const date of event.preDates){const day=aux.get(date);const institutional=day?.inst.get(event.code);const broker=day?.broker.get(event.code);if(institutional){instDays++;total+=institutional.total;foreign+=institutional.foreign;trust+=institutional.trust;dealer+=institutional.dealer;if(institutional.total>0)buyDays++}if(broker){brokerDays++;brokerNet+=broker.net;if(broker.buyBranches!=null){branchDays++;buyBranches+=broker.buyBranches}}}event.inst=instDays?{total,foreign,trust,dealer,buyDays,days:instDays,expected,complete:instDays===expected}:null;event.broker=brokerDays?{net:brokerNet,branches:branchDays?buyBranches:null,days:brokerDays,branchDays,expected,complete:brokerDays===expected&&branchDays===expected}:null;const institutionalScore=event.inst?.complete?Math.min(35,Math.max(0,event.inst.buyDays*7+(event.inst.total>0?8:0))):0;const brokerScore=event.broker?.complete?Math.min(15,Math.max(0,event.broker.branches*1.5+(event.broker.net>0?5:0))):0;event.score=institutionalScore+(event.volumeRatio?Math.min(25,Math.max(0,(event.volumeRatio-1)*20)):0)+(event.aboveSma5?15:0)+(event.preGain>0&&event.preGain<8?10:0)+brokerScore}state.events=candidates;render();button.disabled=false;exportButton.disabled=false}
 function dataStatus(event){const labels=[];if(!event.inst)labels.push('缺法人');else if(!event.inst.complete)labels.push(`法人 ${event.inst.days}/${event.inst.expected}`);if(!event.broker)labels.push('缺券商');else if(event.broker.days<event.broker.expected)labels.push(`券商 ${event.broker.days}/${event.broker.expected}`);else if(event.broker.branchDays<event.broker.expected)labels.push(`券商分點 ${event.broker.branchDays}/${event.broker.expected}`);return labels.length?`<span class="tag missing">${labels.join('、')}</span>`:'完整'}
 function render(){const keyword=$('keyword').value.trim().toLowerCase(),sort=$('sort').value;const events=state.events;const data=events.filter(event=>!keyword||`${event.code}${event.name}`.toLowerCase().includes(keyword));data.sort((a,b)=>sort==='score'?b.score-a.score:sort==='institutional'?(b.inst?.total??-Infinity)-(a.inst?.total??-Infinity):sort==='volume'?(b.volumeRatio??-Infinity)-(a.volumeRatio??-Infinity):b.gain-a.gain);$('mEvents').textContent=events.length.toLocaleString();$('mStocks').textContent=new Set(events.map(event=>event.code)).size.toLocaleString();$('mInst').textContent=events.length?pct(events.filter(event=>event.inst?.complete).length/events.length*100):'－';$('mBroker').textContent=events.length?pct(events.filter(event=>event.broker?.complete).length/events.length*100):'－';$('rows').innerHTML=data.map(event=>`<tr><td>${event.code}</td><td>${event.name}</td><td>${event.start}</td><td>${event.end}</td><td class="pos">${pct(event.gain)}</td><td>${event.startPrice}</td><td>${event.endPrice}</td><td class="${event.preGain>0?'pos':'neg'}">${pct(event.preGain)}</td><td>${event.volumeRatio==null?'－':event.volumeRatio.toFixed(2)+'x'}</td><td>${event.aboveSma5==null?'－':event.aboveSma5?'是':'否'}</td><td class="${(event.inst?.total||0)>0?'pos':'neg'}">${fmt(event.inst?.total)}</td><td>${fmt(event.inst?.foreign)}</td><td>${fmt(event.inst?.trust)}</td><td>${fmt(event.inst?.dealer)}</td><td>${event.inst?`${event.inst.buyDays}/${event.inst.days}`:'－'}</td><td class="${(event.broker?.net||0)>0?'pos':'neg'}">${fmt(event.broker?.net)}</td><td>${fmt(event.broker?.branches)}</td><td><span class="tag ${event.score>=55?'good':''}">${event.score.toFixed(1)}</span></td><td>${dataStatus(event)}</td></tr>`).join('');buildInsights();$('status').textContent=`分析完成：${state.gainDays} 日漲幅至少 ${state.threshold}%，顯示 ${data.length} / ${events.length} 個事件。`}
 function buildInsights(){const events=state.events;if(!events.length){$('insights').innerHTML='<div class="insight">目前門檻下沒有事件。</div>';return}const withInstitutional=events.filter(event=>event.inst?.complete);const withBroker=events.filter(event=>event.broker?.complete);const rate=condition=>pct(events.filter(condition).length/events.length*100);const averageOf=selector=>average(events.map(selector));const high=events.filter(event=>event.score>=55).length;$('insights').innerHTML=`<div class="insight"><strong>法人提前偏多：</strong>${withInstitutional.length?pct(withInstitutional.filter(event=>event.inst.total>0).length/withInstitutional.length*100):'完整資料不足'} 的完整事件，在起漲前區間三大法人合計為淨買超；外資淨買事件占 ${withInstitutional.length?pct(withInstitutional.filter(event=>event.inst.foreign>0).length/withInstitutional.length*100):'－'}。</div><div class="insight"><strong>量能先行：</strong>${rate(event=>(event.volumeRatio||0)>=1.5)} 的事件，起漲前最近兩日平均量至少為較早期平均量的 1.5 倍；平均量能倍數為 ${(averageOf(event=>event.volumeRatio)||0).toFixed(2)}x。</div><div class="insight"><strong>技術位置：</strong>${rate(event=>event.aboveSma5===true)} 的事件在起漲前最後一日已站上 SMA5；${rate(event=>event.preGain>0&&event.preGain<8)} 屬於「已轉強但尚未明顯噴出」。</div><div class="insight"><strong>高分候選樣本：</strong>${high} 個事件布局分數 ≥55。券商資料完整時，${withBroker.length?pct(withBroker.filter(event=>event.broker.net>0).length/withBroker.length*100):'完整資料不足'} 在起漲前呈現集中淨買。</div>`}
-$('run').addEventListener('click',run);$('keyword').addEventListener('input',render);$('sort').addEventListener('change',render);$('gainDays').addEventListener('input',()=>{const value=Math.min(20,Math.max(2,Math.trunc(num($('gainDays').value)||3)));state.gainDays=value;$('thresholdLabel').textContent=`最低 ${value} 日漲幅（%）`});run();
+$('run').addEventListener('click',run);$('exportJson').addEventListener('click',exportAnalysisJson);$('keyword').addEventListener('input',render);$('sort').addEventListener('change',render);$('gainDays').addEventListener('input',()=>{const value=Math.min(20,Math.max(2,Math.trunc(num($('gainDays').value)||3)));state.gainDays=value;$('thresholdLabel').textContent=`最低 ${value} 日漲幅（%）`});run();
 </script></body></html>
