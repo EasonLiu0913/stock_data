@@ -1,0 +1,119 @@
+name: Backfill Market Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '開始預測交易日 YYYYMMDD'
+        required: true
+        type: string
+      end_date:
+        description: '結束預測交易日 YYYYMMDD'
+        required: true
+        type: string
+      dry_run:
+        description: '只顯示判定，不寫檔'
+        required: false
+        type: boolean
+        default: true
+      force:
+        description: '覆蓋既有事前環境快照'
+        required: false
+        type: boolean
+        default: false
+      generate_actual:
+        description: '已有覆盤資料時建立實際環境'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-market-environment
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve trading dates
+        id: dates
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+        run: |
+          node - <<'NODE' > /tmp/environment-dates.txt
+          const {normalizeIsoDate,isTradingDate,loadHolidaySet,addDays}=require('./scripts/resolve_forecast_dates');
+          const start=normalizeIsoDate(process.env.START_DATE),end=normalizeIsoDate(process.env.END_DATE),holidays=loadHolidaySet();
+          if(!start||!end||start>end) throw new Error('Invalid date range');
+          for(let date=start;date<=end;date=addDays(date,1)) if(isTradingDate(date,holidays)) console.log(date.replaceAll('-',''));
+          NODE
+          count=$(wc -l < /tmp/environment-dates.txt | tr -d ' ')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Selected $count Taiwan trading dates"
+
+      - name: Run market environment tests
+        run: node --test tests/market_environment.test.js
+
+      - name: Build historical snapshots
+        shell: bash
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
+          GENERATE_ACTUAL: ${{ inputs.generate_actual }}
+        run: |
+          set -euo pipefail
+          while read -r forecast_date; do
+            [ -n "$forecast_date" ] || continue
+            node scripts/resolve_forecast_dates.js --target-date "$forecast_date" --github-env > /tmp/one-date.env
+            set -a
+            source /tmp/one-date.env
+            set +a
+            args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
+            if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+            if [ "$FORCE" = "true" ]; then args+=(--force); fi
+            node scripts/generate_market_environment.js "${args[@]}"
+            if [ "$DRY_RUN" != "true" ] && [ "$GENERATE_ACTUAL" = "true" ] \
+              && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-summary.json" ] \
+              && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-dashboard.json" ]; then
+              node scripts/generate_actual_market_environment.js --date "$FORECAST_TARGET_DATE"
+            fi
+          done < /tmp/environment-dates.txt
+
+      - name: Rebuild environment-segmented relative leadership analysis
+        if: inputs.dry_run != true
+        run: node scripts/analyze_relative_leadership_by_environment.js --max-dates 30
+
+      - name: Install market environment banner
+        if: inputs.dry_run != true
+        run: node scripts/install_market_environment_ui.js
+
+      - name: Commit and push backfill
+        if: inputs.dry_run != true
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_market_environment data_prediction_analysis/relative-leadership/environment public/prediction-dashboard.html
+          if git diff --cached --quiet; then echo "No backfill changes"; exit 0; fi
+          git commit -m "analysis: backfill market environment ${{ inputs.start_date }}-${{ inputs.end_date }}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
