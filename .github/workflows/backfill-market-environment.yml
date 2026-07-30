@@ -85,6 +85,13 @@ jobs:
             if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
             if [ "$FORCE" = "true" ]; then args+=(--force); fi
             node scripts/generate_market_environment.js "${args[@]}"
+
+            if [ "$DRY_RUN" != "true" ]; then
+              node scripts/reconstruct_historical_market_environment.js \
+                --forecast-date "$FORECAST_TARGET_DATE" \
+                --base-date "$FORECAST_BASE_DATE"
+            fi
+
             if [ "$DRY_RUN" != "true" ] && [ "$GENERATE_ACTUAL" = "true" ] \
               && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-summary.json" ] \
               && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-dashboard.json" ]; then
