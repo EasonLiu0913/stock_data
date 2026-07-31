@@ -34,6 +34,20 @@ function writeText(file, content) {
   fs.writeFileSync(file, content, 'utf8');
 }
 
+function buildAnalysisManifest(existingManifest, date, generatedAt) {
+  const existing = existingManifest && typeof existingManifest === 'object'
+    && !Array.isArray(existingManifest)
+    ? existingManifest
+    : {};
+  return {
+    ...existing,
+    latest_date: date,
+    latest_json: `data_prediction_analysis/${date}/industry-factor-ranges.json`,
+    latest_markdown: `data_prediction_analysis/${date}/industry-factor-ranges.md`,
+    generated_at: generatedAt,
+  };
+}
+
 function compact(value) {
   return String(value || '').replaceAll('-', '').replaceAll('/', '');
 }
@@ -344,12 +358,12 @@ function main() {
   const outputDir = path.join(OUTPUT_ROOT, date);
   writeJson(path.join(outputDir, 'industry-factor-ranges.json'), payload);
   writeText(path.join(outputDir, 'industry-factor-ranges.md'), `${markdownReport(payload)}\n`);
-  writeJson(path.join(OUTPUT_ROOT, 'manifest.json'), {
-    latest_date: date,
-    latest_json: `data_prediction_analysis/${date}/industry-factor-ranges.json`,
-    latest_markdown: `data_prediction_analysis/${date}/industry-factor-ranges.md`,
-    generated_at: payload.generated_at,
-  });
+  const manifestFile = path.join(OUTPUT_ROOT, 'manifest.json');
+  writeJson(manifestFile, buildAnalysisManifest(
+    readJson(manifestFile, {}),
+    date,
+    payload.generated_at,
+  ));
   console.log(JSON.stringify({
     date,
     verified_count: rows.length,
@@ -368,4 +382,10 @@ if (require.main === module) {
   }
 }
 
-module.exports = { analyzeFactor, pearson, quantileBins, spearman };
+module.exports = {
+  analyzeFactor,
+  buildAnalysisManifest,
+  pearson,
+  quantileBins,
+  spearman,
+};

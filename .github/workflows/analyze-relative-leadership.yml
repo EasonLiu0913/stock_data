@@ -9,7 +9,6 @@ on:
       - scripts/analyze_relative_leadership_by_environment.js
       - scripts/install_market_environment_ui.js
       - data_market_environment/**/actual_market_environment.json
-      - .github/workflows/analyze-relative-leadership.yml
   workflow_dispatch:
     inputs:
       date:
@@ -25,8 +24,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: analyze-relative-leadership-rules
-  cancel-in-progress: true
+  group: prediction-analysis-writer
+  cancel-in-progress: false
 
 jobs:
   analyze:
