@@ -1,0 +1,50 @@
+name: Bootstrap Oversold Rebound Refactor
+on:
+  push:
+    branches:
+      - codex/oversold-rebound-separation-v1
+    paths:
+      - scripts/.bootstrap_oversold_rebound.js
+      - .github/workflows/bootstrap-oversold-rebound.yml
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/oversold-rebound-separation-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install refactor files
+        run: node scripts/.bootstrap_oversold_rebound.js
+      - name: Validate syntax and tests
+        run: |
+          node --check scripts/oversold_beta_rebound.js
+          node --check scripts/apply_formal_market_strategy_tags.js
+          node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/evaluate_formal_strategy_replay.js
+          node --check scripts/install_market_environment_ui.js
+          node --check public/prediction-dashboard-rebound-enhancement.js
+          node --check public/prediction-replay-formal-strategy-enhancement.js
+          node --test tests/formal_market_strategy_tags.test.js tests/prediction_dashboard_group_sync.test.js tests/formal_strategy_replay.test.js tests/oversold_beta_rebound.test.js tests/oversold_electronics_strategy.test.js tests/oversold_strategy_replay.test.js
+      - name: Rebuild 20260731 dashboard and replay
+        run: |
+          node scripts/backfill_prediction_dashboard_fields.js --from 20260731 --to 20260731
+          node scripts/install_market_environment_ui.js
+          if [ -s data_predictions/20260731/replay-summary.json ] && [ -s data_predictions/20260731/replay-dashboard.json ]; then
+            node scripts/evaluate_formal_strategy_replay.js --date 20260731
+          fi
+      - name: Commit, rebase, and publish branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: separate rebound readiness and electronics strategy"
+          git fetch origin main
+          git rebase origin/main
+          git push --force-with-lease origin HEAD:codex/oversold-rebound-separation-v1
