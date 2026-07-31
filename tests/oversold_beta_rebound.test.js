@@ -44,6 +44,16 @@ test('2026-07-31 readiness scores 85 with night futures kept as N/A', () => {
   const night = result.conditions.find(item => item.id === 'night_futures_open_signal');
   assert.equal(night.status, 'na');
   assert.equal(night.points, 0);
+  assert.equal(result.inputs.night_futures_change_pct, null);
+});
+
+test('calibration excludes the forecast date and reads the replay score field', () => {
+  const beforeForecast = probabilityCalibration(85, 85, '20260731');
+  assert.equal(beforeForecast.sample_count, 0);
+
+  const afterForecast = probabilityCalibration(85, 85, '20260801');
+  assert.ok(afterForecast.sample_count >= 1);
+  assert.ok(afterForecast.hit_count >= 1);
 });
 
 test('effective data weight below 70 returns unavailable probability rather than a low estimate', () => {
