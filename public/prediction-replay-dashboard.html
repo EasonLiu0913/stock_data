@@ -39,10 +39,13 @@
       const inject=()=>{
         try{
           const documentRef=nestedViewer.contentDocument;
+          const windowRef=nestedViewer.contentWindow;
           if(!documentRef?.body)return;
+          windowRef.__replayFormalStrategyEnhancementInstalled=false;
+          windowRef.__formalStrategySelectionSupportInstalled=false;
           const scripts=[
             ['replay-priority-enhancement','prediction-replay-priority-enhancement.js?v=3'],
-            ['replay-formal-strategy-enhancement','prediction-replay-formal-strategy-enhancement.js?v=3'],
+            ['replay-formal-strategy-enhancement','prediction-replay-formal-strategy-enhancement.js?v=4'],
           ];
           scripts.forEach(([id,src])=>{
             if(documentRef.getElementById(id))return;
