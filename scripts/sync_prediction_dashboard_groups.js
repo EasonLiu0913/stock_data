@@ -12,6 +12,7 @@ const {
   LEGACY_FORMAL_TAGS,
   STRATEGY_ID,
   LEGACY_STRATEGY_IDS,
+  FORMAL_STRATEGY_REGISTRY,
   summarizeStocks,
 } = require('./apply_formal_market_strategy_tags');
 
@@ -36,46 +37,122 @@ function emptyFormalStrategySummary() {
   return summary;
 }
 
-function ensureFormalStrategyGroup(summary, groupSummary) {
+function definitionMatchesGroup(definition, group) {
+  if (!group) return false;
+  return group.strategy_id === definition.strategy_id
+    || (definition.legacy_strategy_ids || []).includes(group.strategy_id)
+    || group.group === definition.label
+    || (definition.legacy_labels || []).includes(group.group);
+}
+
+function classificationFor(summary, definition) {
+  const classifications = summary?.formal_strategy_classifications || {};
+  return classifications[definition.strategy_id]
+    || (definition.legacy_strategy_ids || []).map((strategyId) => classifications[strategyId]).find(Boolean)
+    || {};
+}
+
+function normalizeRegisteredGroup(group, definition, classification = {}) {
+  group.group = definition.label;
+  group.formal_strategy = true;
+  group.strategy_id = definition.strategy_id;
+  group.fixed_display = true;
+  group.changes_direction_score = false;
+  group.evaluation_target = definition.evaluation_target;
+  group.criteria = [...(definition.criteria || [])];
+  group.calculation_status = group.calculation_status || classification.calculation_status || 'completed';
+  if (!Array.isArray(group.members)) group.members = [];
+  if (group.calculation_status === 'unable_to_calculate') {
+    group.count = null;
+    group.status_label = classification.status_label || group.status_label || '無法計算';
+    group.missing_sources = classification.missing_sources || group.missing_sources || [];
+  } else {
+    if (!Number.isFinite(Number(group.count))) group.count = group.members.length;
+    group.status_label = group.status_label || classification.status_label
+      || (Number(group.count) === 0 ? '已完成計算，當日 0 筆' : '已完成計算');
+  }
+  return group;
+}
+
+function buildEmptyRegisteredGroup(summary, definition) {
+  const classification = classificationFor(summary, definition);
+  const calculationStatus = classification.calculation_status || 'completed';
+  const base = {
+    group: definition.label,
+    ...emptyFormalStrategySummary(),
+    formal_strategy: true,
+    strategy_id: definition.strategy_id,
+    fixed_display: true,
+    changes_direction_score: false,
+    evaluation_target: definition.evaluation_target,
+    criteria: [...(definition.criteria || [])],
+    calculation_status: calculationStatus,
+    active: classification.active === true,
+    environment_code: classification.environment_code || null,
+    members: [],
+    warnings: classification.warnings || [],
+    missing_sources: classification.missing_sources || [],
+  };
+  if (calculationStatus === 'unable_to_calculate') {
+    base.count = null;
+    base.status_label = classification.status_label || '無法計算';
+  } else {
+    base.status_label = classification.status_label || '已完成計算，當日 0 筆';
+  }
+  return base;
+}
+
+function ensureRegisteredStrategyGroups(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
 
-  const legacyTags = new Set(LEGACY_FORMAL_TAGS);
-  const strategyIds = new Set([STRATEGY_ID, ...LEGACY_STRATEGY_IDS]);
-  const existing = groupSummary.groups.find((group) => strategyIds.has(group?.strategy_id)
-    || group?.group === FORMAL_TAG
-    || legacyTags.has(group?.group));
-  if (existing) {
-    existing.group = FORMAL_TAG;
-    existing.formal_strategy = true;
-    existing.strategy_id = STRATEGY_ID;
-    return existing;
+  const output = groupSummary.groups;
+  for (const definition of FORMAL_STRATEGY_REGISTRY) {
+    const matchingIndexes = output
+      .map((group, index) => definitionMatchesGroup(definition, group) ? index : -1)
+      .filter((index) => index >= 0);
+    let group;
+    if (matchingIndexes.length) {
+      group = output[matchingIndexes[0]];
+      for (let index = matchingIndexes.length - 1; index >= 1; index -= 1) {
+        output.splice(matchingIndexes[index], 1);
+      }
+      normalizeRegisteredGroup(group, definition, classificationFor(summary, definition));
+    } else {
+      group = buildEmptyRegisteredGroup(summary, definition);
+      output.push(group);
+    }
   }
-
-  const classifications = summary.formal_strategy_classifications || {};
-  const classification = classifications[STRATEGY_ID]
-    || LEGACY_STRATEGY_IDS.map((strategyId) => classifications[strategyId]).find(Boolean)
-    || {};
-  const emptyGroup = {
-    group: FORMAL_TAG,
-    ...emptyFormalStrategySummary(),
-    formal_strategy: true,
-    strategy_id: STRATEGY_ID,
-    environment_code: classification.environment_code || null,
-    active: classification.active === true,
-    changes_direction_score: false,
-    members: [],
-  };
-  groupSummary.groups.push(emptyGroup);
-  groupSummary.groups.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
+  output.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
     || String(left.group).localeCompare(String(right.group), 'zh-Hant'));
-  return emptyGroup;
+  return output.filter((group) => group?.formal_strategy === true);
+}
+
+function ensureFormalStrategyGroup(summary, groupSummary) {
+  if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
+  if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
+  const definition = FORMAL_STRATEGY_REGISTRY.find((item) => item.strategy_id === STRATEGY_ID);
+  const matchingIndexes = groupSummary.groups
+    .map((group, index) => definitionMatchesGroup(definition, group) ? index : -1)
+    .filter((index) => index >= 0);
+  let group;
+  if (matchingIndexes.length) {
+    group = groupSummary.groups[matchingIndexes[0]];
+    for (let index = matchingIndexes.length - 1; index >= 1; index -= 1) {
+      groupSummary.groups.splice(matchingIndexes[index], 1);
+    }
+    normalizeRegisteredGroup(group, definition, classificationFor(summary, definition));
+  } else {
+    group = buildEmptyRegisteredGroup(summary, definition);
+    groupSummary.groups.push(group);
+  }
+  return group;
 }
 
 function syncSummaryPayload(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
-  ensureFormalStrategyGroup(summary, groupSummary);
+  ensureRegisteredStrategyGroups(summary, groupSummary);
   summary.group_summary = groupSummary.groups;
   summary.group_summary_source = 'group-summary.json';
   return summary;
@@ -101,6 +178,7 @@ function syncPredictionDashboardGroups({ rootDir = 'data_predictions', date, dry
     };
   }
 
+  const formalGroups = ensureRegisteredStrategyGroups(summary, groupSummary);
   syncSummaryPayload(summary, groupSummary);
   if (!dryRun) {
     atomicWriteJson(groupSummaryFile, groupSummary);
@@ -112,7 +190,7 @@ function syncPredictionDashboardGroups({ rootDir = 'data_predictions', date, dry
     root_dir: rootDir,
     skipped: false,
     groups: groupSummary.groups.length,
-    formal_groups: groupSummary.groups.filter((group) => group?.formal_strategy === true).map((group) => group.group),
+    formal_groups: formalGroups.map((group) => group.group),
     dry_run: dryRun,
   };
 }
@@ -147,6 +225,11 @@ if (require.main === module) {
 module.exports = {
   compactDate,
   emptyFormalStrategySummary,
+  definitionMatchesGroup,
+  classificationFor,
+  normalizeRegisteredGroup,
+  buildEmptyRegisteredGroup,
+  ensureRegisteredStrategyGroups,
   ensureFormalStrategyGroup,
   syncSummaryPayload,
   syncPredictionDashboardGroups,
