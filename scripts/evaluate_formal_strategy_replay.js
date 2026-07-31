@@ -12,16 +12,20 @@ const {
   round,
 } = require('./market_environment_lib');
 
-const STRATEGY_ID = 'post_shock_high_confidence_core_v1';
-const STRATEGY_LABEL = '衝擊後高信心核心';
+const STRATEGY_ID = 'bear_market_defensive_resilience_v1';
+const LEGACY_STRATEGY_IDS = Object.freeze(['post_shock_high_confidence_core_v1']);
+const STRATEGY_LABEL = '熊市時防禦抗跌股';
+const LEGACY_STRATEGY_LABELS = Object.freeze(['衝擊後高信心核心']);
 
 function normalizeStockCode(value) {
   return String(value ?? '').trim();
 }
 
 function isFormalStrategyCandidate(stock) {
-  if (stock?.formal_market_strategy?.strategy_id === STRATEGY_ID) return true;
-  return Array.isArray(stock?.strategy_tags) && stock.strategy_tags.includes(STRATEGY_LABEL);
+  if ([STRATEGY_ID, ...LEGACY_STRATEGY_IDS].includes(stock?.formal_market_strategy?.strategy_id)) return true;
+  if (!Array.isArray(stock?.strategy_tags)) return false;
+  return [STRATEGY_LABEL, ...LEGACY_STRATEGY_LABELS]
+    .some((label) => stock.strategy_tags.includes(label));
 }
 
 function isRelativeLeader(row) {
@@ -107,8 +111,10 @@ function formalStrategyReplayGroup(evaluation, replayRows) {
 }
 
 function upsertFormalStrategyReplayGroup(groups, evaluation, replayRows) {
+  const strategyLabels = new Set([STRATEGY_LABEL, ...LEGACY_STRATEGY_LABELS]);
+  const strategyIds = new Set([STRATEGY_ID, ...LEGACY_STRATEGY_IDS]);
   const output = (Array.isArray(groups) ? groups : [])
-    .filter((group) => group?.name !== STRATEGY_LABEL);
+    .filter((group) => !strategyIds.has(group?.strategy_id) && !strategyLabels.has(group?.name));
   output.push(formalStrategyReplayGroup(evaluation, replayRows));
   output.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
     || String(left.name).localeCompare(String(right.name), 'zh-Hant'));
@@ -117,10 +123,11 @@ function upsertFormalStrategyReplayGroup(groups, evaluation, replayRows) {
 
 function syncReplayDashboardFormalTags(replayDashboard, evaluation) {
   const memberCodes = new Set((evaluation?.members || []).map(normalizeStockCode));
+  const strategyLabels = new Set([STRATEGY_LABEL, ...LEGACY_STRATEGY_LABELS]);
   for (const row of replayDashboard?.rows || []) {
     if (!row?.prediction) continue;
     const tags = (Array.isArray(row.prediction.strategy_tags) ? row.prediction.strategy_tags : [])
-      .filter((tag) => tag !== STRATEGY_LABEL);
+      .filter((tag) => !strategyLabels.has(tag));
     if (memberCodes.has(normalizeStockCode(row.stock_code))) tags.unshift(STRATEGY_LABEL);
     row.prediction.strategy_tags = tags;
   }
@@ -215,7 +222,9 @@ if (require.main === module) {
 
 module.exports = {
   STRATEGY_ID,
+  LEGACY_STRATEGY_IDS,
   STRATEGY_LABEL,
+  LEGACY_STRATEGY_LABELS,
   normalizeStockCode,
   isFormalStrategyCandidate,
   evaluateFormalStrategy,
