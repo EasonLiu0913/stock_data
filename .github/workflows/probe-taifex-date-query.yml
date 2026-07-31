@@ -1,0 +1,49 @@
+name: Probe TAIFEX Date Query
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/taifex_date_query_probe.js
+      - .github/workflows/probe-taifex-date-query.yml
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '夜盤交易量歸屬日 YYYYMMDD'
+        required: true
+        default: '20260731'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/official-disposition-night-data-v1
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: scripts/taifex_date_query_probe.js
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Probe date-specific official pages
+        env:
+          TARGET_DATE: ${{ inputs.target_date || '20260731' }}
+        run: |
+          mkdir -p data_market_constraints/$TARGET_DATE
+          node --check scripts/taifex_date_query_probe.js
+          node scripts/taifex_date_query_probe.js --date "$TARGET_DATE" --output "data_market_constraints/$TARGET_DATE/taifex-date-query.json"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: taifex-date-query-${{ inputs.target_date || '20260731' }}
+          path: data_market_constraints/${{ inputs.target_date || '20260731' }}/taifex-date-query.json
+          if-no-files-found: error
