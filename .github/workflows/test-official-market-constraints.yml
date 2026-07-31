@@ -1,0 +1,88 @@
+name: Test Official Market Constraints
+
+on:
+  push:
+    branches:
+      - codex/official-disposition-night-data-v1
+    paths:
+      - scripts/official_market_constraints.js
+      - tests/official_market_constraints.test.js
+      - .github/workflows/test-official-market-constraints.yml
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: 'TAIFEX 歸屬日 / 預測日 YYYYMMDD'
+        required: true
+        default: '20260731'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/official-disposition-night-data-v1
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax and parser tests
+        run: |
+          node --check scripts/official_market_constraints.js
+          node --test tests/official_market_constraints.test.js
+
+      - name: Probe official TWSE, TPEX and TAIFEX sources
+        env:
+          TARGET_DATE: ${{ inputs.target_date || '20260731' }}
+        run: |
+          set -euo pipefail
+          mkdir -p data_market_constraints/$TARGET_DATE
+          node scripts/official_market_constraints.js \
+            --date "$TARGET_DATE" \
+            --output "data_market_constraints/$TARGET_DATE/source-probe.json"
+
+      - name: Verify real-source result shape
+        env:
+          TARGET_DATE: ${{ inputs.target_date || '20260731' }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const date = process.env.TARGET_DATE;
+          const file = `data_market_constraints/${date}/source-probe.json`;
+          const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (!data.disposition.complete_market_coverage) {
+            throw new Error(`Disposition coverage incomplete: ${JSON.stringify(data.disposition.source_status)}`);
+          }
+          if (!data.night_futures.available) {
+            throw new Error(`Night futures unavailable: ${JSON.stringify(data.night_futures)}`);
+          }
+          if (!Number.isFinite(Number(data.night_futures.change_percent))) {
+            throw new Error('Night futures change_percent is not numeric');
+          }
+          if (!data.source_shapes.twse_first_row_keys.length
+            || !data.source_shapes.tpex_first_row_keys.length
+            || !data.source_shapes.taifex_first_row_keys.length) {
+            throw new Error(`Missing source field shape: ${JSON.stringify(data.source_shapes)}`);
+          }
+          console.log(JSON.stringify({
+            target_date: date,
+            disposition_active_stock_count: data.disposition.active_stock_count,
+            disposition_codes: data.disposition.active_stock_codes,
+            night_futures_change_percent: data.night_futures.change_percent,
+            selected_contract_month: data.night_futures.selected_contract_month,
+            observed_sessions: data.night_futures.observed_session_values,
+            source_shapes: data.source_shapes,
+          }, null, 2));
+          NODE
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: official-market-constraints-${{ inputs.target_date || '20260731' }}
+          path: data_market_constraints/${{ inputs.target_date || '20260731' }}/source-probe.json
+          if-no-files-found: error
