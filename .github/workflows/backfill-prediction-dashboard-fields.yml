@@ -12,7 +12,7 @@ on:
         description: '結束預測日 YYYYMMDD'
         required: true
         type: string
-        default: '20260728'
+        default: '20260731'
       dry_run:
         description: '只驗證，不寫入或提交'
         required: false
@@ -43,9 +43,21 @@ jobs:
         run: |
           node --check scripts/generate_prediction_dashboard_data.js
           node --check scripts/backfill_prediction_dashboard_fields.js
+          node --check scripts/oversold_beta_rebound.js
           node --check scripts/apply_formal_market_strategy_tags.js
           node --check scripts/sync_prediction_dashboard_groups.js
-          node --test tests/prediction_dashboard_backfill.test.js tests/formal_market_strategy_tags.test.js tests/prediction_dashboard_group_sync.test.js
+          node --check scripts/evaluate_formal_strategy_replay.js
+          node --check scripts/install_market_environment_ui.js
+          node --check public/prediction-dashboard-rebound-enhancement.js
+          node --check public/prediction-replay-formal-strategy-enhancement.js
+          node --test \
+            tests/prediction_dashboard_backfill.test.js \
+            tests/formal_market_strategy_tags.test.js \
+            tests/prediction_dashboard_group_sync.test.js \
+            tests/formal_strategy_replay.test.js \
+            tests/oversold_beta_rebound.test.js \
+            tests/oversold_electronics_strategy.test.js \
+            tests/oversold_strategy_replay.test.js
 
       - name: Backfill derived dashboard fields
         env:
@@ -58,12 +70,18 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           node scripts/backfill_prediction_dashboard_fields.js "${args[@]}"
 
+      - name: Install dashboard readiness card
+        if: inputs.dry_run != true
+        run: node scripts/install_market_environment_ui.js
+
       - name: Verify changed-file scope
         if: inputs.dry_run != true
         shell: bash
         run: |
           unexpected=$(git status --short | awk '
-            $2 !~ /^data_predictions\/20[0-9]{6}\/(summary|industry-summary|group-summary)\.json$/ { print }
+            $2 !~ /^data_predictions\/20[0-9]{6}\/(summary|industry-summary|group-summary)\.json$/ &&
+            $2 !~ /^data_market_environment\/20[0-9]{6}\/oversold_beta_rebound\.json$/ &&
+            $2 != "public/prediction-dashboard.html" { print }
           ')
           if [ -n "$unexpected" ]; then
             echo "Unexpected files changed:"
@@ -79,12 +97,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_predictions/*/summary.json \
             data_predictions/*/industry-summary.json \
-            data_predictions/*/group-summary.json
+            data_predictions/*/group-summary.json \
+            data_market_environment/*/oversold_beta_rebound.json \
+            public/prediction-dashboard.html
           if git diff --cached --quiet; then
             echo "No dashboard field changes"
             exit 0
           fi
-          git commit -m "data: backfill historical dashboard fields"
+          git commit -m "data: backfill rebound readiness and fixed strategies"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
