@@ -53,7 +53,11 @@ async function fetchOfficialMarketConstraints({ date, force = false } = {}) {
   if (!target) throw new Error('date must be YYYYMMDD');
   const outputDir = path.join(ROOT, 'data_market_constraints', target);
   const snapshotFile = path.join(outputDir, 'snapshot.json');
+  const dispositionFile = path.join(outputDir, 'disposition.json');
+  const nightFile = path.join(outputDir, 'night-futures.json');
   const existing = readJson(snapshotFile);
+  const existingDisposition = readJson(dispositionFile);
+  const existingNight = readJson(nightFile);
   if (!force && isReusableSnapshot(existing, target)) {
     return { ...existing, reused: true };
   }
@@ -63,7 +67,7 @@ async function fetchOfficialMarketConstraints({ date, force = false } = {}) {
     fetchJson(TPEX_DISPOSITION_URL, { timeoutMs: 45000, retries: 3 }),
     fetchOfficialTaifexNightFuture(target),
   ]);
-  const disposition = normalizeDispositionSnapshot(buildDispositionSnapshot({
+  let disposition = normalizeDispositionSnapshot(buildDispositionSnapshot({
     date: target,
     twseRows: twse.data,
     tpexRows: tpex.data,
@@ -84,17 +88,25 @@ async function fetchOfficialMarketConstraints({ date, force = false } = {}) {
       },
     },
   }));
-  const dispositionFile = path.join(outputDir, 'disposition.json');
-  const nightFile = path.join(outputDir, 'night-futures.json');
+  if (disposition.complete_market_coverage !== true
+    && existingDisposition?.target_date === target
+    && existingDisposition?.complete_market_coverage === true) {
+    disposition = existingDisposition;
+  }
+  let normalizedNight = {
+    ...nightFutures,
+    generated_at: nightFutures.generated_at || new Date().toISOString(),
+  };
+  if (normalizedNight.available !== true
+    && existingNight?.target_date === target
+    && existingNight?.available === true) {
+    normalizedNight = existingNight;
+  }
   const generatedAt = new Date().toISOString();
-  disposition.generated_at = generatedAt;
-  disposition.source_files = {
+  disposition.generated_at = disposition.generated_at || generatedAt;
+  disposition.source_files = disposition.source_files || {
     twse: TWSE_DISPOSITION_URL,
     tpex: TPEX_DISPOSITION_URL,
-  };
-  const normalizedNight = {
-    ...nightFutures,
-    generated_at: nightFutures.generated_at || generatedAt,
   };
   const complete = disposition.complete_market_coverage === true && normalizedNight.available === true;
   const snapshot = {
