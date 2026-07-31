@@ -76,16 +76,45 @@ jobs:
 
       - name: Verify changed-file scope
         if: inputs.dry_run != true
+        env:
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
         shell: bash
         run: |
-          unexpected=$(git status --short | awk '
-            $2 !~ /^data_predictions\/20[0-9]{6}\/(summary|industry-summary|group-summary)\.json$/ &&
-            $2 !~ /^data_market_environment\/20[0-9]{6}\/oversold_beta_rebound\.json$/ &&
-            $2 != "public/prediction-dashboard.html" { print }
-          ')
+          set -euo pipefail
+          unexpected=""
+          while IFS= read -r status_line; do
+            [ -n "$status_line" ] || continue
+            file="${status_line:3}"
+            allowed=false
+            file_date=""
+
+            if [ "$file" = "public/prediction-dashboard.html" ]; then
+              allowed=true
+            elif [[ "$file" =~ ^data_predictions/(20[0-9]{6})/(summary|industry-summary|group-summary|replay-summary|replay-dashboard)\.json$ ]]; then
+              allowed=true
+              file_date="${BASH_REMATCH[1]}"
+            elif [[ "$file" =~ ^data_market_environment/(20[0-9]{6})/(oversold_beta_rebound|actual_market_environment)\.json$ ]]; then
+              allowed=true
+              file_date="${BASH_REMATCH[1]}"
+            elif [[ "$file" =~ ^data_prediction_analysis/(formal-strategy|oversold-beta-rebound)/(20[0-9]{6})\.json$ ]]; then
+              allowed=true
+              file_date="${BASH_REMATCH[2]}"
+            fi
+
+            if [ "$allowed" = "true" ] && [ -n "$file_date" ] \
+              && { [[ "$file_date" < "$FROM_DATE" ]] || [[ "$file_date" > "$TO_DATE" ]]; }; then
+              allowed=false
+            fi
+
+            if [ "$allowed" != "true" ]; then
+              unexpected+="$status_line"$'\n'
+            fi
+          done < <(git status --short)
+
           if [ -n "$unexpected" ]; then
             echo "Unexpected files changed:"
-            echo "$unexpected"
+            printf '%s' "$unexpected"
             exit 1
           fi
 
@@ -95,10 +124,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_predictions/*/summary.json \
+          git add \
+            data_predictions/*/summary.json \
             data_predictions/*/industry-summary.json \
             data_predictions/*/group-summary.json \
+            data_predictions/*/replay-summary.json \
+            data_predictions/*/replay-dashboard.json \
             data_market_environment/*/oversold_beta_rebound.json \
+            data_market_environment/*/actual_market_environment.json \
+            data_prediction_analysis/formal-strategy/*.json \
+            data_prediction_analysis/oversold-beta-rebound/*.json \
             public/prediction-dashboard.html
           if git diff --cached --quiet; then
             echo "No dashboard field changes"
