@@ -1,0 +1,121 @@
+name: Test Official Market Constraints Integration
+
+on:
+  push:
+    branches:
+      - codex/official-disposition-night-data-v1
+    paths:
+      - scripts/apply_official_market_constraints.js
+      - scripts/fetch_official_market_constraints.js
+      - scripts/taifex_official_night_futures.js
+      - scripts/verify_official_market_constraints_integration.js
+      - scripts/backfill_prediction_dashboard_fields.js
+      - tests/apply_official_market_constraints.test.js
+      - tests/fetch_official_market_constraints.test.js
+      - tests/taifex_official_night_futures.test.js
+      - data_market_constraints/20260731/**
+      - .github/workflows/test-official-market-constraints-integration.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/apply_official_market_constraints.js
+      - scripts/fetch_official_market_constraints.js
+      - scripts/taifex_official_night_futures.js
+      - scripts/verify_official_market_constraints_integration.js
+      - scripts/backfill_prediction_dashboard_fields.js
+      - tests/apply_official_market_constraints.test.js
+      - tests/fetch_official_market_constraints.test.js
+      - tests/taifex_official_night_futures.test.js
+      - data_market_constraints/20260731/**
+      - .github/workflows/test-official-market-constraints-integration.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/official-disposition-night-data-v1
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax and unit tests
+        run: |
+          node --check scripts/taifex_official_night_futures.js
+          node --check scripts/fetch_official_market_constraints.js
+          node --check scripts/apply_official_market_constraints.js
+          node --check scripts/verify_official_market_constraints_integration.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node --test \
+            tests/official_market_constraints.test.js \
+            tests/taifex_night_futures.test.js \
+            tests/taifex_official_night_futures.test.js \
+            tests/fetch_official_market_constraints.test.js \
+            tests/apply_official_market_constraints.test.js \
+            tests/oversold_beta_rebound.test.js \
+            tests/oversold_electronics_strategy.test.js \
+            tests/oversold_strategy_replay.test.js
+
+      - name: Backfill verified 20260731 official constraints
+        run: node scripts/backfill_prediction_dashboard_fields.js --date 20260731
+
+      - name: Verify prediction, group, readiness and replay consistency
+        run: |
+          node scripts/verify_official_market_constraints_integration.js --date 20260731
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const readiness = JSON.parse(fs.readFileSync('data_market_environment/20260731/oversold_beta_rebound.json'));
+          const summary = JSON.parse(fs.readFileSync('data_predictions/20260731/summary.json'));
+          const formal = JSON.parse(fs.readFileSync('data_prediction_analysis/formal-strategy/20260731.json'));
+          const id = 'oversold_electronics_rebound_v1';
+          const classification = summary.formal_strategy_classifications[id];
+          const evaluation = formal.formal_strategy_evaluations[id];
+          if (readiness.score !== 100) throw new Error(`Expected readiness 100, got ${readiness.score}`);
+          if (readiness.effective_data_weight !== 100) throw new Error(`Expected effective weight 100, got ${readiness.effective_data_weight}`);
+          if (classification.count !== 231) throw new Error(`Expected 231 candidates, got ${classification.count}`);
+          const expectedExcluded = ['2483','2492','3026','3055','3090','3532','8028'];
+          if (JSON.stringify(classification.disposition_filter.excluded_codes) !== JSON.stringify(expectedExcluded)) {
+            throw new Error(`Unexpected exclusions: ${JSON.stringify(classification.disposition_filter.excluded_codes)}`);
+          }
+          if (evaluation.candidates !== 231) throw new Error(`Expected replay candidates 231, got ${evaluation.candidates}`);
+          console.log(JSON.stringify({
+            readiness_score: readiness.score,
+            effective_data_weight: readiness.effective_data_weight,
+            candidates: classification.count,
+            excluded: classification.disposition_filter.excluded_codes,
+            replay_candidates: evaluation.candidates,
+            replay_verified_candidates: evaluation.verified_candidates,
+            replay_hits: evaluation.hits,
+            replay_hit_rate: evaluation.hit_rate,
+          }, null, 2));
+          NODE
+
+      - name: Check generated JSON and diff whitespace
+        run: |
+          git diff --check
+          node -e "for (const f of process.argv.slice(1)) JSON.parse(require('fs').readFileSync(f,'utf8'))" \
+            data_market_constraints/20260731/disposition.json \
+            data_market_constraints/20260731/night-futures.json \
+            data_market_environment/20260731/oversold_beta_rebound.json \
+            data_predictions/20260731/summary.json \
+            data_predictions/20260731/group-summary.json \
+            data_prediction_analysis/formal-strategy/20260731.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-constraints-integration-20260731
+          path: |
+            data_market_constraints/20260731/
+            data_market_environment/20260731/oversold_beta_rebound.json
+            data_predictions/20260731/group-summary.json
+            data_prediction_analysis/formal-strategy/20260731.json
+          if-no-files-found: error
