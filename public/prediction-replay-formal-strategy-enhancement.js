@@ -2,8 +2,10 @@
   if (window.__replayFormalStrategyEnhancementInstalled) return;
   window.__replayFormalStrategyEnhancementInstalled = true;
 
-  const STRATEGY_ID = 'post_shock_high_confidence_core_v1';
-  const STRATEGY_LABEL = '衝擊後高信心核心';
+  const STRATEGY_ID = 'bear_market_defensive_resilience_v1';
+  const LEGACY_STRATEGY_IDS = ['post_shock_high_confidence_core_v1'];
+  const STRATEGY_LABEL = '熊市時防禦抗跌股';
+  const LEGACY_STRATEGY_LABELS = ['衝擊後高信心核心'];
   const candidateCodes = new Set();
   const hitCodes = new Set();
 
@@ -13,8 +15,10 @@
   const formatPct = value => value !== null && value !== undefined && Number.isFinite(Number(value))
     ? `${Number(value).toFixed(2)}%`
     : 'NA';
-  const isCandidate = stock => stock?.formal_market_strategy?.strategy_id === STRATEGY_ID
-    || (stock?.strategy_tags || []).includes(STRATEGY_LABEL);
+  const isCandidate = stock => [STRATEGY_ID, ...LEGACY_STRATEGY_IDS]
+    .includes(stock?.formal_market_strategy?.strategy_id)
+    || [STRATEGY_LABEL, ...LEGACY_STRATEGY_LABELS]
+      .some(label => (stock?.strategy_tags || []).includes(label));
   const isRelativeLeader = row => row?.market_relative?.classification === 'relative_leadership';
 
   async function fetchJson(path) {
@@ -42,7 +46,10 @@
     });
     const verified = stocks.filter(stock => stock.verified);
     const hits = verified.filter(stock => stock.relative_leadership === true);
-    const classification = predictionSummary.formal_strategy_classifications?.[STRATEGY_ID] || {};
+    const classifications = predictionSummary.formal_strategy_classifications || {};
+    const classification = classifications[STRATEGY_ID]
+      || LEGACY_STRATEGY_IDS.map(strategyId => classifications[strategyId]).find(Boolean)
+      || {};
     return {
       strategy_id: STRATEGY_ID,
       label: STRATEGY_LABEL,
