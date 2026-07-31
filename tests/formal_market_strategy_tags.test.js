@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   FORMAL_TAG,
+  LEGACY_FORMAL_TAGS,
   buildFormalStrategyClassification,
   buildFormalStrategyGroup,
   formalPostShockDecision,
@@ -78,10 +79,17 @@ test('stock tag update preserves existing strategy labels and adds formal metada
 });
 
 test('stock tag update removes stale formal labels when environment no longer qualifies', () => {
-  const item = stock({ strategy_tags: [FORMAL_TAG, '優先觀察'] });
+  const item = stock({ strategy_tags: [FORMAL_TAG, LEGACY_FORMAL_TAGS[0], '優先觀察'] });
   assert.equal(updateStockTag(item, environment('normal')), false);
   assert.deepEqual(item.strategy_tags, ['優先觀察']);
   assert.equal(item.formal_market_strategy, undefined);
+});
+
+test('stock tag update migrates the legacy label to the current label', () => {
+  const item = stock({ strategy_tags: [LEGACY_FORMAL_TAGS[0], '優先觀察'] });
+  assert.equal(updateStockTag(item, environment()), true);
+  assert.deepEqual(item.strategy_tags.slice(0, 2), [FORMAL_TAG, '優先觀察']);
+  assert.ok(!item.strategy_tags.includes(LEGACY_FORMAL_TAGS[0]));
 });
 
 test('formal strategy group summary uses the same dashboard aggregation shape', () => {
