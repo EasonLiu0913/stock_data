@@ -237,6 +237,27 @@ function applyOfficialMarketConstraints({ date, dryRun = false, evaluateReplayIf
   const groupSummary = readJson(groupSummaryFile, { groups: [] });
   const readinessFile = path.join(ROOT, 'data_market_environment', target, 'oversold_beta_rebound.json');
   const readiness = readJson(readinessFile, summary?.market_rebound_readiness || null);
+  const nightSourceFile = night ? path.relative(ROOT, nightFile).replaceAll(path.sep, '/') : null;
+  if (readiness && night?.available === true && night?.target_date === target) {
+    readiness.source_files = {
+      ...(readiness.source_files || {}),
+      night_futures: nightSourceFile,
+    };
+    readiness.night_futures = {
+      source_file: nightSourceFile,
+      contract: night.contract || 'TX',
+      selected_contract_month: night.selected_contract_month || null,
+      trading_session: night.trading_session || null,
+      change_percent: finiteNumber(night.change_percent),
+    };
+    if (summary.market_rebound_readiness) {
+      summary.market_rebound_readiness.source_files = {
+        ...(summary.market_rebound_readiness.source_files || {}),
+        night_futures: nightSourceFile,
+      };
+      summary.market_rebound_readiness.night_futures = readiness.night_futures;
+    }
+  }
   const applied = applyConstraintsToPayloads({
     summary,
     groupSummary,
@@ -254,6 +275,7 @@ function applyOfficialMarketConstraints({ date, dryRun = false, evaluateReplayIf
   };
 
   if (!dryRun) {
+    if (readiness) atomicWriteJson(readinessFile, readiness);
     atomicWriteJson(summaryFile, applied.summary);
     atomicWriteJson(groupSummaryFile, applied.groupSummary);
   }
