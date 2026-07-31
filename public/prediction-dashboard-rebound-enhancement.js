@@ -70,12 +70,28 @@
       ${(readiness.warnings || []).length ? `<div class="readiness-warning">${esc(readiness.warnings.join('；'))}</div>` : ''}`;
   }
 
+  async function loadCanonicalReadiness() {
+    const date = String(
+      (typeof currentDate !== 'undefined' && currentDate)
+      || (typeof dashboard !== 'undefined' && dashboard?.forecast_date)
+      || '',
+    ).replaceAll('-', '').replaceAll('/', '');
+    if (!/^20\d{6}$/.test(date)) return null;
+    try {
+      const response = await fetch(`../data_market_environment/${date}/oversold_beta_rebound.json`, { cache: 'no-store' });
+      return response.ok ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function load() {
     let attempts = 0;
     while (attempts < 200) {
       attempts += 1;
-      if (typeof dashboard !== 'undefined' && dashboard?.market_rebound_readiness) {
-        render(dashboard.market_rebound_readiness);
+      if (typeof dashboard !== 'undefined' && dashboard) {
+        const canonical = await loadCanonicalReadiness();
+        render(canonical || dashboard.market_rebound_readiness || null);
         return;
       }
       await new Promise(resolve => setTimeout(resolve, 50));
