@@ -2,7 +2,10 @@ name: "[03 晨間補充] 正式處置股與台指期夜盤"
 
 on:
   schedule:
-    - cron: '5,20,35 23 * * 0-4'
+    # GitHub cron 使用 UTC；以下對應台灣時間週一至週五 04:30、05:05、06:06。
+    - cron: '30 20 * * 0-4'
+    - cron: '5 21 * * 0-4'
+    - cron: '6 22 * * 0-4'
   workflow_dispatch:
     inputs:
       target_date:
@@ -36,24 +39,35 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Resolve target date and skip completed integration
+      - name: Resolve target date and refresh mode
         id: target
         shell: bash
         env:
           INPUT_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.target_date || '' }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
         run: |
           set -euo pipefail
           date="${INPUT_DATE:-$(TZ='Asia/Taipei' date '+%Y%m%d')}"
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target date: $date"; exit 1; }
           echo "date=$date" >> "$GITHUB_OUTPUT"
           echo "TARGET_DATE=$date" >> "$GITHUB_ENV"
+          echo "scheduled_cron=${EVENT_SCHEDULE:-}" >> "$GITHUB_OUTPUT"
 
           if [ ! -s "data_predictions/$date/summary.json" ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "reason=prediction_summary_missing" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          # 每一個排程時段都重新查官方來源，避免早一輪已完整但仍非最終資料時被跳過。
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=scheduled_refresh" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [ "$FORCE" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "reason=forced" >> "$GITHUB_OUTPUT"
@@ -99,10 +113,13 @@ jobs:
         shell: bash
         env:
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           args=(--date "$TARGET_DATE" --allow-partial)
-          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$FORCE" = "true" ]; then
+            args+=(--force)
+          fi
           node scripts/fetch_official_market_constraints.js "${args[@]}"
 
       - name: Rebuild readiness and fixed strategies
@@ -146,13 +163,26 @@ jobs:
           echo "- 目標日期：${TARGET_DATE:-未解析}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 是否執行：${{ steps.target.outputs.run || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 原因：${{ steps.target.outputs.reason || 'unknown' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 排程 cron：${{ steps.target.outputs.scheduled_cron || 'manual' }}" >> "$GITHUB_STEP_SUMMARY"
           if [ -n "${TARGET_DATE:-}" ] && [ -f "data_market_constraints/$TARGET_DATE/snapshot.json" ]; then
             node - "$TARGET_DATE" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('node:fs');
           const date = process.argv[2];
-          const snapshot = JSON.parse(fs.readFileSync(`data_market_constraints/${date}/snapshot.json`, 'utf8'));
-          console.log(`- Snapshot：${snapshot.calculation_status}`);
-          console.log(`- 處置股唯一代號：${snapshot.disposition?.active_stock_count ?? 'N/A'}`);
-          console.log(`- 夜盤漲跌幅：${snapshot.night_futures?.change_percent ?? 'N/A'}%`);
+          const read = (file) => {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          };
+          const snapshot = read(`data_market_constraints/${date}/snapshot.json`);
+          const disposition = read(`data_market_constraints/${date}/disposition.json`);
+          const night = read(`data_market_constraints/${date}/night-futures.json`);
+          console.log(`- Snapshot：${snapshot?.calculation_status || 'N/A'}`);
+          console.log(`- Snapshot 產生時間：${snapshot?.generated_at || 'N/A'}`);
+          console.log(`- 處置股唯一代號：${snapshot?.disposition?.active_stock_count ?? 'N/A'}`);
+          console.log(`- TWSE 抓取時間：${disposition?.source_status?.twse?.fetched_at || 'N/A'}`);
+          console.log(`- TPEx 抓取時間：${disposition?.source_status?.tpex?.fetched_at || 'N/A'}`);
+          console.log(`- 夜盤漲跌幅：${snapshot?.night_futures?.change_percent ?? 'N/A'}%`);
+          console.log(`- 夜盤契約：${night?.contract || 'N/A'} ${night?.selected_contract_month || ''}`.trim());
+          console.log(`- 夜盤交易時段：${night?.trading_session || 'N/A'}`);
+          console.log(`- 夜盤抓取時間：${night?.source_status?.fetched_at || night?.generated_at || 'N/A'}`);
+          console.log(`- 夜盤來源：${night?.source?.source_type || night?.source?.endpoint || 'N/A'}`);
           NODE
           fi
