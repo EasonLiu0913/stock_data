@@ -15,3 +15,4 @@ for(const file of ['scripts/.bootstrap_oversold_rebound.js','.github/workflows/b
   try{fs.unlinkSync(file)}catch{}
 }
 console.log(`Installed ${Object.keys(payload).length} oversold rebound files`);
+// Trigger the bootstrap workflow after the workflow file exists on this branch.
