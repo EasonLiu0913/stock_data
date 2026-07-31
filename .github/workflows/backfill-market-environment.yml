@@ -65,9 +65,16 @@ jobs:
           echo "Selected $count Taiwan trading dates"
 
       - name: Run market environment and formal strategy tests
-        run: node --test tests/market_environment.test.js tests/formal_strategy_replay.test.js
+        run: |
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node --test \
+            tests/market_environment.test.js \
+            tests/formal_strategy_replay.test.js \
+            tests/prediction_dashboard_backfill.test.js \
+            tests/formal_market_strategy_tags.test.js \
+            tests/prediction_dashboard_group_sync.test.js
 
-      - name: Build historical snapshots
+      - name: Build historical snapshots and sync dashboards
         shell: bash
         env:
           DRY_RUN: ${{ inputs.dry_run }}
@@ -90,6 +97,12 @@ jobs:
               node scripts/reconstruct_historical_market_environment.js \
                 --forecast-date "$FORECAST_TARGET_DATE" \
                 --base-date "$FORECAST_BASE_DATE"
+
+              # Readiness must exist before strategy tagging. Rebuild the selected
+              # prediction date now so summary/group files embed the canonical
+              # market_rebound_readiness instead of retaining the unavailable fallback.
+              node scripts/backfill_prediction_dashboard_fields.js \
+                --date "$FORECAST_TARGET_DATE"
             fi
 
             if [ "$DRY_RUN" != "true" ] && [ "$GENERATE_ACTUAL" = "true" ] \
@@ -120,6 +133,9 @@ jobs:
             data_prediction_analysis/relative-leadership/environment \
             data_prediction_analysis/formal-strategy \
             data_prediction_analysis/oversold-beta-rebound \
+            data_predictions/*/summary.json \
+            data_predictions/*/industry-summary.json \
+            data_predictions/*/group-summary.json \
             data_predictions/*/replay-summary.json \
             data_predictions/*/replay-dashboard.json \
             public/prediction-dashboard.html
