@@ -10,7 +10,7 @@ on:
     branches:
       - main
 permissions:
-  contents: read
+  contents: write
 jobs:
   install:
     runs-on: ubuntu-latest
@@ -57,3 +57,13 @@ jobs:
             rebound-final-files.tar.gz
             rebound-final-manifest.txt
           if-no-files-found: error
+      - name: Publish verified non-workflow files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git restore --staged .github/workflows
+          git restore .github/workflows
+          git commit -m "feat: separate rebound readiness and electronics strategy"
+          git push origin HEAD:codex/oversold-rebound-separation-v1
