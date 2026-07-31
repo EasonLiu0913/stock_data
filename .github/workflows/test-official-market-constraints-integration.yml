@@ -1,37 +1,27 @@
 name: Test Official Market Constraints Integration
 
 on:
-  push:
-    branches:
-      - codex/official-disposition-night-data-v1
-    paths:
-      - scripts/apply_official_market_constraints.js
-      - scripts/fetch_official_market_constraints.js
-      - scripts/taifex_official_night_futures.js
-      - scripts/verify_official_market_constraints_integration.js
-      - scripts/backfill_prediction_dashboard_fields.js
-      - tests/apply_official_market_constraints.test.js
-      - tests/fetch_official_market_constraints.test.js
-      - tests/taifex_official_night_futures.test.js
-      - data_market_constraints/20260731/**
-      - .github/workflows/test-official-market-constraints-integration.yml
   pull_request:
     branches:
       - main
     paths:
       - scripts/apply_official_market_constraints.js
       - scripts/fetch_official_market_constraints.js
+      - scripts/official_market_constraints.js
+      - scripts/taifex_night_futures.js
       - scripts/taifex_official_night_futures.js
       - scripts/verify_official_market_constraints_integration.js
       - scripts/backfill_prediction_dashboard_fields.js
       - tests/apply_official_market_constraints.test.js
       - tests/fetch_official_market_constraints.test.js
+      - tests/official_market_constraints.test.js
+      - tests/taifex_night_futures.test.js
       - tests/taifex_official_night_futures.test.js
       - data_market_constraints/20260731/**
       - .github/workflows/test-official-market-constraints-integration.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -40,8 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: codex/official-disposition-night-data-v1
-          fetch-depth: 0
+          fetch-depth: 1
 
       - uses: actions/setup-node@v4
         with:
@@ -108,27 +97,6 @@ jobs:
             data_predictions/20260731/summary.json \
             data_predictions/20260731/group-summary.json \
             data_prediction_analysis/formal-strategy/20260731.json
-
-      - name: Commit verified 20260731 backfill to PR branch
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            data_market_constraints/20260731 \
-            data_market_environment/20260731 \
-            data_predictions/20260731 \
-            data_prediction_analysis/formal-strategy/20260731.json \
-            data_prediction_analysis/oversold-beta-rebound/20260731.json
-          if git diff --cached --quiet; then
-            echo "Verified backfill already committed"
-            exit 0
-          fi
-          git commit -m "data: backfill 20260731 official market constraints"
-          git pull --rebase origin codex/official-disposition-night-data-v1
-          git push origin HEAD:codex/official-disposition-night-data-v1
 
       - uses: actions/upload-artifact@v4
         if: always()
