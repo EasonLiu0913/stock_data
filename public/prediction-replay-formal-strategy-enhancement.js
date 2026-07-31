@@ -27,7 +27,6 @@
   }[char]));
   const finite = value => value !== null && value !== undefined && Number.isFinite(Number(value));
   const formatPct = value => finite(value) ? `${Number(value).toFixed(2)}%` : 'N/A';
-  const formatNumber = value => finite(value) ? Number(value).toFixed(2) : 'N/A';
 
   async function fetchJson(path) {
     const response = await fetch(`../${path}`, { cache: 'no-store' });
@@ -132,21 +131,12 @@
     const originalRowMatchesSelection = rowMatchesSelection;
     rowMatchesSelection = function enhancedRowMatchesSelection(row, selection) {
       if (selection?.kind === 'registered_strategy_scope') {
-        const key = `${selection.value}:${selection.direction}`;
-        return row?.verified && selectionMembers.get(key)?.has(String(row?.stock_code ?? ''));
+        const key = `${selection.value}:${selection.scope || 'candidates'}`;
+        return row?.verified && Boolean(selectionMembers.get(key)?.has(String(row?.stock_code ?? '')));
       }
       return originalRowMatchesSelection(row, selection);
     };
     window.__formalStrategySelectionSupportInstalled = true;
-  }
-
-  function memberText(evaluation, members) {
-    if (!members.length) return '無';
-    const byCode = new Map(evaluation.stocks.map(stock => [stock.stock_code, stock]));
-    return members.map(code => {
-      const stock = byCode.get(String(code));
-      return stock?.stock_name ? `${stock.stock_name} ${code}` : code;
-    }).join('、');
   }
 
   function readinessHtml(readiness) {
@@ -175,6 +165,9 @@
          <div class="formal-strategy-kpi"><span>報酬中位數</span><b>${formatPct(evaluation.medianReturn)}</b></div>
          <div class="formal-strategy-kpi"><span>平均市場超額</span><b>${formatPct(evaluation.averageMarketExcessReturn)}</b></div>`
       : '';
+    const missingNote = evaluation.missingReplayCandidates
+      ? `；另有 ${evaluation.missingReplayCandidates} 檔缺少收盤資料，未列入有效候選`
+      : '';
     return `
       <article class="registered-strategy-card" data-strategy-card="${esc(evaluation.strategyId)}">
         <div class="formal-strategy-head">
@@ -196,8 +189,39 @@
           <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="hits" ${evaluation.hits ? '' : 'disabled'}>查看命中（${evaluation.hits}）</button>
           ${isOversold ? `<button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="misses" ${evaluation.missMembers.length ? '' : 'disabled'}>查看未命中（${evaluation.missMembers.length}）</button>` : ''}
         </div>
-        <div class="formal-strategy-members"><b>候選：</b>${esc(memberText(evaluation, evaluation.members))}<br><b>命中：</b>${esc(memberText(evaluation, evaluation.hitMembers))}${isOversold ? `<br><b>未命中：</b>${esc(memberText(evaluation, evaluation.missMembers))}` : ''}${evaluation.missingReplayCandidates ? `<br><b>缺少收盤資料：</b>${evaluation.missingReplayCandidates} 檔` : ''}</div>
+        <div class="formal-strategy-note">點擊上方按鈕後，會在下方「案例清單」顯示完整個股資料${missingNote}。</div>
       </article>`;
+  }
+
+  function clearCaseControls() {
+    const search = document.getElementById('caseSearch');
+    const direction = document.getElementById('caseDirection');
+    const industry = document.getElementById('caseIndustry');
+    if (search) search.value = '';
+    if (direction) direction.value = '';
+    if (industry) industry.value = '';
+  }
+
+  function applyStrategySelection(section, evaluation, scope) {
+    if (typeof state === 'undefined' || typeof renderCases !== 'function') return;
+    const labels = { candidates: '全部有效候選', hits: '命中', misses: '未命中' };
+    state.selection = {
+      kind: 'registered_strategy_scope',
+      value: evaluation.strategyId,
+      label: `${evaluation.label}－${labels[scope]}`,
+      scope,
+    };
+    state.caseType = 'all';
+    clearCaseControls();
+    renderCases();
+    const caseNote = document.getElementById('caseNote');
+    if (caseNote) caseNote.textContent = `顯示「${evaluation.label}」${labels[scope]}，不再套用一般覆盤的明顯準確／明顯不準分類。`;
+    section.querySelectorAll('.formal-strategy-action').forEach(button => {
+      const active = button.dataset.strategy === evaluation.strategyId && button.dataset.scope === scope;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    document.getElementById('caseRows')?.closest('.section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function renderSection(readiness, evaluations) {
@@ -220,8 +244,8 @@
         .formal-strategy-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.strategy-kpis-wide{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
         .formal-strategy-kpi{border:1px solid #ddd6fe;border-radius:8px;background:#fff;padding:12px;min-width:0}.readiness-replay-card .formal-strategy-kpi{border-color:#bfdbfe}
         .formal-strategy-kpi span{display:block;color:#667085;font-size:12px;font-weight:800}.formal-strategy-kpi b{display:block;margin-top:5px;font-size:22px;overflow-wrap:anywhere}.formal-strategy-kpi .compact-value{font-size:17px}
-        .formal-strategy-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.formal-strategy-action{border:1px solid #8b5cf6;border-radius:7px;background:#fff;color:#6d28d9;padding:7px 10px;font-weight:900;cursor:pointer}.formal-strategy-action:disabled{border-color:#d6d3d1;color:#a8a29e;cursor:not-allowed}
-        .formal-strategy-members{margin-top:11px;color:#526173;font-size:13px;line-height:1.6;overflow-wrap:anywhere}.strategy-description{margin:5px 0 0;color:#667085;font-size:13px;line-height:1.5}.strategy-result{font-weight:900}.strategy-good{color:#12623a}.strategy-bad{color:#9e2f2f}
+        .formal-strategy-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.formal-strategy-action{border:1px solid #8b5cf6;border-radius:7px;background:#fff;color:#6d28d9;padding:7px 10px;font-weight:900;cursor:pointer}.formal-strategy-action.active{background:#6d28d9;color:#fff}.formal-strategy-action:disabled{border-color:#d6d3d1;color:#a8a29e;cursor:not-allowed}
+        .formal-strategy-note{margin-top:11px;color:#526173;font-size:13px;line-height:1.6}.strategy-description{margin:5px 0 0;color:#667085;font-size:13px;line-height:1.5}.strategy-result{font-weight:900}.strategy-good{color:#12623a}.strategy-bad{color:#9e2f2f}
         @media(max-width:760px){.formal-strategy-kpis{grid-template-columns:1fr 1fr}}
       `;
       document.head.appendChild(style);
@@ -233,12 +257,10 @@
     section.innerHTML = `<div class="formal-strategy-replay-grid">${readinessHtml(readiness)}${evaluations.map(strategyHtml).join('')}</div>`;
     section.onclick = event => {
       const button = event.target.closest('[data-strategy][data-scope]');
-      if (!button || button.disabled || typeof setSelection !== 'function') return;
+      if (!button || button.disabled) return;
       const evaluation = evaluations.find(item => item.strategyId === button.dataset.strategy);
       if (!evaluation) return;
-      const scope = button.dataset.scope;
-      const labels = { candidates: '全部有效候選', hits: '命中', misses: '未命中' };
-      setSelection('registered_strategy_scope', evaluation.strategyId, `${evaluation.label}－${labels[scope]}`, scope);
+      applyStrategySelection(section, evaluation, button.dataset.scope);
     };
   }
 
