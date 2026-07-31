@@ -4,7 +4,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   STRATEGY_ID,
+  LEGACY_STRATEGY_IDS,
   STRATEGY_LABEL,
+  LEGACY_STRATEGY_LABELS,
   evaluateFormalStrategy,
   upsertFormalStrategyReplayGroup,
   syncReplayDashboardFormalTags,
@@ -62,6 +64,33 @@ test('formal strategy replay reports missing replay candidates without treating 
   assert.equal(result.missing_replay_candidates, 1);
 });
 
+test('formal strategy replay still recognizes legacy tag-only candidates', () => {
+  const legacy = prediction('2207', false);
+  legacy.strategy_tags = [LEGACY_STRATEGY_LABELS[0]];
+  const result = evaluateFormalStrategy(
+    [legacy],
+    [replay('2207', 'relative_leadership')],
+  );
+
+  assert.equal(result.label, STRATEGY_LABEL);
+  assert.equal(result.candidates, 1);
+  assert.equal(result.hits, 1);
+});
+
+test('formal strategy replay migrates candidates carrying the legacy strategy id', () => {
+  const legacy = prediction('2207', true);
+  legacy.strategy_tags = [];
+  legacy.formal_market_strategy.strategy_id = LEGACY_STRATEGY_IDS[0];
+  const result = evaluateFormalStrategy(
+    [legacy],
+    [replay('2207', 'relative_leadership')],
+  );
+
+  assert.equal(result.strategy_id, STRATEGY_ID);
+  assert.equal(result.candidates, 1);
+  assert.equal(result.hits, 1);
+});
+
 test('formal strategy remains in replay strategy groups even with zero candidates', () => {
   const evaluation = evaluateFormalStrategy(
     [prediction('2330', false)],
@@ -83,7 +112,7 @@ test('formal strategy replay synchronization updates compact dashboard tags', ()
   const dashboard = {
     rows: [
       { stock_code: '2207', prediction: { strategy_tags: ['優先觀察'] } },
-      { stock_code: '2330', prediction: { strategy_tags: [STRATEGY_LABEL, '一般觀察'] } },
+      { stock_code: '2330', prediction: { strategy_tags: [STRATEGY_LABEL, LEGACY_STRATEGY_LABELS[0], '一般觀察'] } },
     ],
   };
   syncReplayDashboardFormalTags(dashboard, {
