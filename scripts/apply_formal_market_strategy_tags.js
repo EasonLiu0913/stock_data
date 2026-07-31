@@ -14,8 +14,10 @@ const {
   policyBucket,
 } = require('./generate_actual_market_environment');
 
-const FORMAL_TAG = '衝擊後高信心核心';
-const STRATEGY_ID = 'post_shock_high_confidence_core_v1';
+const FORMAL_TAG = '熊市時防禦抗跌股';
+const LEGACY_FORMAL_TAGS = Object.freeze(['衝擊後高信心核心']);
+const STRATEGY_ID = 'bear_market_defensive_resilience_v1';
+const LEGACY_STRATEGY_IDS = Object.freeze(['post_shock_high_confidence_core_v1']);
 const POST_SHOCK_CODES = new Set(['post_shock_day_1', 'post_shock_day_2']);
 const FORMAL_CRITERIA = Object.freeze([
   '5 日量比 >= 1.5',
@@ -148,7 +150,8 @@ function formalPostShockDecision(stock, environment) {
 
 function updateStockTag(stock, environment) {
   const existingTags = Array.isArray(stock.strategy_tags) ? stock.strategy_tags : [];
-  stock.strategy_tags = [...new Set(existingTags.filter((tag) => tag !== FORMAL_TAG))];
+  const strategyTags = new Set([FORMAL_TAG, ...LEGACY_FORMAL_TAGS]);
+  stock.strategy_tags = [...new Set(existingTags.filter((tag) => !strategyTags.has(tag)))];
   delete stock.formal_market_strategy;
 
   const result = formalPostShockDecision(stock, environment);
@@ -189,10 +192,10 @@ function applyFormalMarketStrategyTags({ rootDir = 'data_predictions', date, env
   }
 
   const generatedAt = new Date().toISOString();
-  summary.formal_strategy_classifications = {
-    ...(summary.formal_strategy_classifications || {}),
-    [STRATEGY_ID]: buildFormalStrategyClassification(env, selected, generatedAt),
-  };
+  const formalStrategyClassifications = { ...(summary.formal_strategy_classifications || {}) };
+  for (const legacyId of LEGACY_STRATEGY_IDS) delete formalStrategyClassifications[legacyId];
+  formalStrategyClassifications[STRATEGY_ID] = buildFormalStrategyClassification(env, selected, generatedAt);
+  summary.formal_strategy_classifications = formalStrategyClassifications;
 
   const groupSummary = readJson(groupSummaryFile, {
     generated_at: summary.generated_at || generatedAt,
@@ -200,8 +203,10 @@ function applyFormalMarketStrategyTags({ rootDir = 'data_predictions', date, env
     base_trade_date: summary.base_trade_date,
     groups: [],
   });
+  const strategyTags = new Set([FORMAL_TAG, ...LEGACY_FORMAL_TAGS]);
+  const strategyIds = new Set([STRATEGY_ID, ...LEGACY_STRATEGY_IDS]);
   const groups = (Array.isArray(groupSummary.groups) ? groupSummary.groups : [])
-    .filter((group) => group?.group !== FORMAL_TAG);
+    .filter((group) => !strategyIds.has(group?.strategy_id) && !strategyTags.has(group?.group));
   groups.push(buildFormalStrategyGroup(env, selected));
   groups.sort((left, right) => Number(right.count || 0) - Number(left.count || 0) || String(left.group).localeCompare(String(right.group), 'zh-Hant'));
   groupSummary.generated_at = generatedAt;
@@ -255,7 +260,9 @@ if (require.main === module) {
 
 module.exports = {
   FORMAL_TAG,
+  LEGACY_FORMAL_TAGS,
   STRATEGY_ID,
+  LEGACY_STRATEGY_IDS,
   POST_SHOCK_CODES,
   FORMAL_CRITERIA,
   summarizeStocks,
