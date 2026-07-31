@@ -1,4 +1,24 @@
 (() => {
+  const FILTER_KEY = 'oversoldElectronicsRebound';
+  const STRATEGY_ID = 'oversold_electronics_rebound_v1';
+  const STRATEGY_LABEL = '跌深反彈電子股';
+
+  function isReboundCandidate(stock) {
+    if (!stock || typeof stock !== 'object') return false;
+    if (stock.formal_market_strategies?.[STRATEGY_ID]) return true;
+    if (stock.formal_market_strategy?.strategy_id === STRATEGY_ID) return true;
+    return Array.isArray(stock.strategy_tags) && stock.strategy_tags.includes(STRATEGY_LABEL);
+  }
+
+  function reboundCandidates(payload) {
+    return Array.isArray(payload?.stocks) ? payload.stocks.filter(isReboundCandidate) : [];
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { FILTER_KEY, STRATEGY_ID, STRATEGY_LABEL, isReboundCandidate, reboundCandidates };
+  }
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__predictionDashboardReboundEnhancementInstalled) return;
   window.__predictionDashboardReboundEnhancementInstalled = true;
 
@@ -7,6 +27,7 @@
   }[char]));
   const finite = value => value !== null && value !== undefined && Number.isFinite(Number(value));
   const formatPct = value => finite(value) ? `${Number(value).toFixed(2)}%` : 'N/A';
+  let lastReadiness = null;
 
   function conditionStateClass(condition) {
     if (condition?.status === 'full') return 'readiness-full';
@@ -28,7 +49,62 @@
     return readiness?.probability?.label || 'N/A';
   }
 
+  function registerReboundFilter() {
+    if (typeof quickFilters === 'undefined' || !quickFilters) return false;
+    quickFilters[FILTER_KEY] = {
+      label: STRATEGY_LABEL,
+      tag: '反彈',
+      test: isReboundCandidate,
+    };
+    return true;
+  }
+
+  function isReboundFilterActive() {
+    return typeof activeQuickFilter !== 'undefined'
+      && typeof activeListView !== 'undefined'
+      && activeQuickFilter === FILTER_KEY
+      && activeListView === 'stocks';
+  }
+
+  function stockListActionHtml() {
+    const count = typeof dashboard !== 'undefined' ? reboundCandidates(dashboard).length : 0;
+    const active = isReboundFilterActive();
+    const buttonLabel = active
+      ? '清除反彈清單篩選'
+      : count > 0
+        ? `查看符合清單（${count.toLocaleString('zh-TW')} 檔）`
+        : '目前沒有符合個股';
+    return `
+      <div class="readiness-actions">
+        <div class="readiness-action-summary">
+          <b>${STRATEGY_LABEL}</b>
+          <span>個股條件與上方市場準備度分開計算；目前 ${count.toLocaleString('zh-TW')} 檔符合。</span>
+        </div>
+        <button type="button" class="readiness-list-button${active ? ' active' : ''}" data-rebound-stock-list aria-pressed="${active}" ${count === 0 && !active ? 'disabled' : ''}>${buttonLabel}</button>
+      </div>`;
+  }
+
+  function clearStockControls() {
+    for (const id of ['q', 'direction', 'risk', 'industry', 'signal']) {
+      const control = document.getElementById(id);
+      if (control) control.value = '';
+    }
+  }
+
+  function bindStockListAction(element) {
+    const button = element.querySelector('[data-rebound-stock-list]');
+    if (!button || button.disabled) return;
+    button.addEventListener('click', () => {
+      if (!registerReboundFilter() || typeof setQuickFilter !== 'function') return;
+      clearStockControls();
+      setQuickFilter(FILTER_KEY);
+      window.requestAnimationFrame(() => render(lastReadiness));
+    });
+  }
+
   function render(readiness) {
+    lastReadiness = readiness;
+    registerReboundFilter();
     const element = document.getElementById('oversoldBetaReboundBanner');
     if (!element) return;
     if (!readiness || readiness.calculation_status === 'unable_to_calculate') {
@@ -36,7 +112,9 @@
       element.innerHTML = `
         <div class="readiness-head"><div><div class="readiness-eyebrow">獨立市場閘門</div><div class="readiness-title">跌深反彈準備度</div></div><div class="readiness-score">N/A</div></div>
         <div class="readiness-message">無法計算</div>
-        <div class="readiness-warning">${esc((readiness?.warnings || ['缺少市場反彈準備度資料。']).join('；'))}</div>`;
+        <div class="readiness-warning">${esc((readiness?.warnings || ['缺少市場反彈準備度資料。']).join('；'))}</div>
+        ${stockListActionHtml()}`;
+      bindStockListAction(element);
       return;
     }
     const conditions = readiness.conditions || [];
@@ -67,7 +145,9 @@
             <div><b>${esc(item.label)}</b><small>${esc(conditionStateLabel(item))}｜${esc(item.value_label ?? item.value ?? 'N/A')}｜${item.points ?? 0}/${item.weight ?? 0} 分${item.note ? `｜${esc(item.note)}` : ''}</small></div>
           </div>`).join('')}
       </div>
-      ${(readiness.warnings || []).length ? `<div class="readiness-warning">${esc(readiness.warnings.join('；'))}</div>` : ''}`;
+      ${(readiness.warnings || []).length ? `<div class="readiness-warning">${esc(readiness.warnings.join('；'))}</div>` : ''}
+      ${stockListActionHtml()}`;
+    bindStockListAction(element);
   }
 
   async function loadCanonicalReadiness() {
@@ -105,7 +185,8 @@
   style.textContent = `
     .rebound-readiness-card{margin-bottom:14px;border:1px solid #bfdbfe;border-left:6px solid #2563eb;background:#f8fbff;border-radius:8px;padding:16px}.rebound-readiness-card.triggered{border-left-color:#15803d;background:#f6fff9}.rebound-readiness-card.highly_brewing{border-left-color:#65a30d;background:#fbfff4}.rebound-readiness-card.near_formation{border-left-color:#d97706;background:#fffaf2}.rebound-readiness-card.emerging{border-left-color:#ca8a04;background:#fffcf0}.rebound-readiness-card.not_formed,.rebound-readiness-card.readiness-unavailable{border-left-color:#64748b;background:#fff}
     .readiness-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.readiness-eyebrow{font-size:12px;font-weight:900;color:#1d4ed8}.readiness-title{font-size:20px;font-weight:900;margin-top:3px}.readiness-score{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums}.readiness-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.readiness-summary-grid>div{border:1px solid #dbeafe;background:#fff;border-radius:7px;padding:11px;min-width:0}.readiness-summary-grid span,.readiness-summary-grid small{display:block;color:#64748b;font-size:12px}.readiness-summary-grid b{display:block;margin-top:4px;font-size:17px;overflow-wrap:anywhere}.readiness-message{margin-top:12px;font-weight:900}.readiness-conditions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.readiness-condition{display:flex;gap:9px;align-items:flex-start;border:1px solid #e2e8f0;background:#fff;border-radius:7px;padding:9px}.readiness-condition b,.readiness-condition small{display:block}.readiness-condition small{margin-top:3px;color:#64748b;font-size:12px;line-height:1.4}.readiness-dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex:0 0 auto;background:#94a3b8}.readiness-full .readiness-dot{background:#16a34a}.readiness-partial .readiness-dot{background:#eab308}.readiness-na .readiness-dot{background:#94a3b8}.readiness-none .readiness-dot{background:#cbd5e1}.readiness-warning{margin-top:11px;border-radius:6px;background:#fff7ed;color:#9a3412;padding:8px 10px;font-size:13px;font-weight:800}
-    @media(max-width:760px){.readiness-summary-grid,.readiness-conditions{grid-template-columns:1fr 1fr}}@media(max-width:480px){.readiness-summary-grid,.readiness-conditions{grid-template-columns:1fr}}
+    .readiness-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid #dbeafe;flex-wrap:wrap}.readiness-action-summary{min-width:0}.readiness-action-summary b,.readiness-action-summary span{display:block}.readiness-action-summary span{margin-top:3px;color:#64748b;font-size:12px;line-height:1.4}.readiness-list-button{appearance:none;border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:7px;padding:9px 13px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}.readiness-list-button:hover{background:#1d4ed8}.readiness-list-button.active{background:#fff;color:#1d4ed8}.readiness-list-button:disabled{border-color:#cbd5e1;background:#e2e8f0;color:#64748b;cursor:not-allowed}
+    @media(max-width:760px){.readiness-summary-grid,.readiness-conditions{grid-template-columns:1fr 1fr}}@media(max-width:480px){.readiness-summary-grid,.readiness-conditions{grid-template-columns:1fr}.readiness-actions{align-items:stretch}.readiness-list-button{width:100%}}
   `;
   document.head.appendChild(style);
   load().catch(error => {
