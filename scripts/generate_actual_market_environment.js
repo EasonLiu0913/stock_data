@@ -103,7 +103,7 @@ function policyRuleDescription(policyState) {
     return '風險警告：確認分數至少 3 分列入核心，2 分列入觀察；相對強勢 7 日達 8 分計 2 分。';
   }
   if (policyState === 'restricted_shadow') {
-    return '衝擊後高信心核心：確認分數至少 7、7 日相對強勢至少 8、SMA20 乖離不超過 10%；其餘確認分數至少 3 者列入觀察。';
+    return '熊市時防禦抗跌股：確認分數至少 7、7 日相對強勢至少 8、SMA20 乖離不超過 10%；其餘確認分數至少 3 者列入觀察。';
   }
   if (policyState === 'unavailable') {
     return '環境資料無效：不評估政策後清單。';
@@ -336,7 +336,7 @@ function main() {
       rule: 'volume_ratio_5d >= 1.5 && rsi14 >= 70',
       policy_state: policyState,
       ...shadowEvaluation,
-      note: '所有政策分層只使用 summary.json 的事前欄位；衝擊後高信心核心為探索規則，原候選保留於觀察清單。Shadow mode 未改動正式清單。',
+      note: '所有政策分層只使用 summary.json 的事前欄位；熊市時防禦抗跌股為探索規則，原候選保留於觀察清單。Shadow mode 未改動正式清單。',
     },
   };
 
