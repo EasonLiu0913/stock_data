@@ -4,10 +4,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   FORMAL_TAG,
+  buildFormalStrategyClassification,
+  buildFormalStrategyGroup,
   formalPostShockDecision,
   updateStockTag,
   summarizeStocks,
 } = require('../scripts/apply_formal_market_strategy_tags');
+const {
+  applyFormalStrategyToDashboard,
+} = require('../scripts/generate_prediction_dashboard_data');
 
 function stock(overrides = {}) {
   return {
@@ -85,4 +90,39 @@ test('formal strategy group summary uses the same dashboard aggregation shape', 
   assert.equal(summary.bullish_ratio, 100);
   assert.equal(summary.high_risk_ratio, 0);
   assert.deepEqual(summary.directions, { '中性偏多': 1 });
+});
+
+test('formal strategy classification and group remain present with zero candidates', () => {
+  const env = environment();
+  const classification = buildFormalStrategyClassification(env, [], 'generated-at');
+  const group = buildFormalStrategyGroup(env, []);
+
+  assert.equal(classification.active, true);
+  assert.equal(classification.count, 0);
+  assert.deepEqual(classification.members, []);
+  assert.equal(group.group, FORMAL_TAG);
+  assert.equal(group.formal_strategy, true);
+  assert.equal(group.active, true);
+  assert.equal(group.count, 0);
+  assert.deepEqual(group.members, []);
+});
+
+test('dashboard generation applies the formal strategy before building groups', () => {
+  const matched = stock();
+  const rejected = stock({
+    stock_code: '2330',
+    features: { gap_sma20: 12 },
+  });
+  const result = applyFormalStrategyToDashboard(
+    [matched, rejected],
+    environment(),
+    'generated-at',
+  );
+
+  assert.equal(result.classification.count, 1);
+  assert.deepEqual(result.classification.members, ['2207']);
+  assert.equal(result.group.count, 1);
+  assert.deepEqual(result.group.members, ['2207']);
+  assert.ok(matched.strategy_tags.includes(FORMAL_TAG));
+  assert.ok(!rejected.strategy_tags.includes(FORMAL_TAG));
 });

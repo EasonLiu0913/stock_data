@@ -4,6 +4,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const {
+  FORMAL_TAG,
+  STRATEGY_ID,
+  buildFormalStrategyClassification,
+  buildFormalStrategyGroup,
+  updateStockTag,
+} = require('./apply_formal_market_strategy_tags');
 
 const ROOT = path.resolve(__dirname, '..');
 const PREDICTION_DIR = path.join(ROOT, 'data_predictions');
@@ -613,6 +620,17 @@ function industryInterpretation(summary) {
   return notes.length ? notes.join('、') : '結構中性，暫無明顯單向訊號';
 }
 
+function applyFormalStrategyToDashboard(stocks, environment, generatedAt) {
+  const selected = [];
+  for (const stock of stocks) {
+    if (updateStockTag(stock, environment)) selected.push(stock);
+  }
+  return {
+    classification: buildFormalStrategyClassification(environment, selected, generatedAt),
+    group: buildFormalStrategyGroup(environment, selected),
+  };
+}
+
 function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   if (args.help) {
@@ -628,6 +646,12 @@ function main(argv = process.argv.slice(2)) {
   const firstPayload = readJson(path.join(predictionDir, files[0]), {});
   const baseTradeDate = datedManifest.base_trade_date || firstPayload.base_trade_date;
   if (!baseTradeDate) throw new Error('base_trade_date is required for a leakage-safe dashboard build');
+  const forecastCompact = path.basename(predictionDir);
+  const marketEnvironment = readJson(
+    path.join(ROOT, 'data_market_environment', forecastCompact, 'market_environment.json'),
+    null,
+  );
+  const generatedAt = new Date().toISOString();
   const priceHistory = loadPriceHistory(baseTradeDate);
   const marketHistory = loadMarketHistory(baseTradeDate);
   const stocks = files.map((file) => {
@@ -677,6 +701,7 @@ function main(argv = process.argv.slice(2)) {
     stock.strategy_tags = strategyTags(stock);
     return stock;
   });
+  const formalStrategy = applyFormalStrategyToDashboard(stocks, marketEnvironment, generatedAt);
 
   const byIndustry = new Map();
   const byGroup = new Map();
@@ -700,15 +725,20 @@ function main(argv = process.argv.slice(2)) {
     };
   }).sort((a, b) => b.average_direction_score - a.average_direction_score || b.count - a.count);
 
-  const group_summary = [...byGroup.entries()].map(([group, members]) => ({
-    group,
-    ...summarizeStocks(members),
-    members: members.map((stock) => stock.stock_code),
-  })).sort((a, b) => b.count - a.count);
+  const group_summary = [...byGroup.entries()]
+    .filter(([group]) => group !== FORMAL_TAG)
+    .map(([group, members]) => ({
+      group,
+      ...summarizeStocks(members),
+      members: members.map((stock) => stock.stock_code),
+    }));
+  group_summary.push(formalStrategy.group);
+  group_summary.sort((a, b) => b.count - a.count
+    || String(a.group).localeCompare(String(b.group), 'zh-Hant'));
 
   const rootManifest = readJson(path.join(PREDICTION_DIR, 'manifest.json'), {});
   const dashboard = {
-    generated_at: new Date().toISOString(),
+    generated_at: generatedAt,
     methodology_version: datedManifest.methodology_version,
     forecast_date: datedManifest.forecast_date || stocks[0]?.forecast_date,
     base_trade_date: baseTradeDate,
@@ -722,6 +752,9 @@ function main(argv = process.argv.slice(2)) {
     stocks,
     industry_summary,
     group_summary,
+    formal_strategy_classifications: {
+      [STRATEGY_ID]: formalStrategy.classification,
+    },
   };
 
   const outputFiles = ['summary.json', 'industry-summary.json', 'group-summary.json'];
@@ -786,5 +819,6 @@ module.exports = {
   latestPredictionDirectory,
   shouldUpdateRootManifest,
   loadPriceHistory,
+  applyFormalStrategyToDashboard,
   main,
 };

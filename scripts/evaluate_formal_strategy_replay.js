@@ -79,6 +79,54 @@ function evaluateFormalStrategy(predictionStocks, replayRows) {
   };
 }
 
+function formalStrategyReplayGroup(evaluation, replayRows) {
+  const memberCodes = new Set((evaluation?.members || []).map(normalizeStockCode));
+  const rows = (Array.isArray(replayRows) ? replayRows : [])
+    .filter((row) => row?.verified && memberCodes.has(normalizeStockCode(row?.stock_code)));
+  const obviousHits = rows.filter((row) => row.prediction_match_label === '明顯準確').length;
+  const obviousMisses = rows.filter((row) => row.prediction_match_label === '明顯不準').length;
+  const accurate = rows.filter((row) => String(row.prediction_match_label || '').includes('準確')).length;
+  const returns = rows.map((row) => finiteNumber(row?.actual?.close_return)).filter(Number.isFinite);
+  return {
+    name: STRATEGY_LABEL,
+    count: rows.length,
+    obvious_hit_count: obviousHits,
+    obvious_miss_count: obviousMisses,
+    hit_rate: rows.length ? round(accurate / rows.length * 100) : null,
+    obvious_miss_rate: rows.length ? round(obviousMisses / rows.length * 100) : null,
+    average_close_return: returns.length
+      ? round(returns.reduce((sum, value) => sum + value, 0) / returns.length)
+      : null,
+    average_mood_score: null,
+    formal_strategy: true,
+    strategy_id: STRATEGY_ID,
+    evaluation_target: evaluation?.evaluation_target || 'relative_leadership',
+    relative_leadership_hits: evaluation?.hits || 0,
+    relative_leadership_precision: evaluation?.precision ?? null,
+  };
+}
+
+function upsertFormalStrategyReplayGroup(groups, evaluation, replayRows) {
+  const output = (Array.isArray(groups) ? groups : [])
+    .filter((group) => group?.name !== STRATEGY_LABEL);
+  output.push(formalStrategyReplayGroup(evaluation, replayRows));
+  output.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
+    || String(left.name).localeCompare(String(right.name), 'zh-Hant'));
+  return output;
+}
+
+function syncReplayDashboardFormalTags(replayDashboard, evaluation) {
+  const memberCodes = new Set((evaluation?.members || []).map(normalizeStockCode));
+  for (const row of replayDashboard?.rows || []) {
+    if (!row?.prediction) continue;
+    const tags = (Array.isArray(row.prediction.strategy_tags) ? row.prediction.strategy_tags : [])
+      .filter((tag) => tag !== STRATEGY_LABEL);
+    if (memberCodes.has(normalizeStockCode(row.stock_code))) tags.unshift(STRATEGY_LABEL);
+    row.prediction.strategy_tags = tags;
+  }
+  return replayDashboard;
+}
+
 function main() {
   const args = parseArgs();
   const date = compactDate(args.get('date'), 'date');
@@ -103,6 +151,12 @@ function main() {
   }
 
   const evaluation = evaluateFormalStrategy(summary.stocks, replayDashboard.rows);
+  replaySummary.by_strategy_tag = upsertFormalStrategyReplayGroup(
+    replaySummary.by_strategy_tag,
+    evaluation,
+    replayDashboard.rows,
+  );
+  syncReplayDashboardFormalTags(replayDashboard, evaluation);
   const generatedAt = new Date().toISOString();
   const output = {
     schemaVersion: 1,
@@ -128,6 +182,7 @@ function main() {
     ...evaluation,
   };
   atomicWriteJson(replaySummaryFile, replaySummary);
+  atomicWriteJson(replayDashboardFile, replayDashboard);
 
   const actualEnvironment = readJson(actualEnvironmentFile, null);
   if (actualEnvironment) {
@@ -164,5 +219,8 @@ module.exports = {
   normalizeStockCode,
   isFormalStrategyCandidate,
   evaluateFormalStrategy,
+  formalStrategyReplayGroup,
+  upsertFormalStrategyReplayGroup,
+  syncReplayDashboardFormalTags,
   main,
 };

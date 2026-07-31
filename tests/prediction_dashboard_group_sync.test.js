@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const {
   ensureFormalStrategyGroup,
   syncSummaryPayload,
@@ -63,5 +65,16 @@ test('dashboard group sync rejects missing group collections', () => {
   assert.throws(
     () => syncSummaryPayload({}, {}),
     /group-summary groups are required/,
+  );
+});
+
+test('replay view loads formal strategy enhancement directly', () => {
+  const html = fs.readFileSync(
+    path.resolve(__dirname, '../public/prediction-replay-dashboard-view.html'),
+    'utf8',
+  );
+  assert.match(
+    html,
+    /<script src="prediction-replay-formal-strategy-enhancement\.js\?v=2"><\/script>/,
   );
 });

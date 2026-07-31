@@ -6,6 +6,8 @@ const {
   STRATEGY_ID,
   STRATEGY_LABEL,
   evaluateFormalStrategy,
+  upsertFormalStrategyReplayGroup,
+  syncReplayDashboardFormalTags,
 } = require('../scripts/evaluate_formal_strategy_replay');
 
 function prediction(code, formal = false) {
@@ -58,4 +60,39 @@ test('formal strategy replay reports missing replay candidates without treating 
   assert.equal(result.hits, 1);
   assert.equal(result.precision, 100);
   assert.equal(result.missing_replay_candidates, 1);
+});
+
+test('formal strategy remains in replay strategy groups even with zero candidates', () => {
+  const evaluation = evaluateFormalStrategy(
+    [prediction('2330', false)],
+    [replay('2330', 'broad_market_driven')],
+  );
+  const groups = upsertFormalStrategyReplayGroup(
+    [{ name: '一般觀察', count: 1 }],
+    evaluation,
+    [replay('2330', 'broad_market_driven')],
+  );
+  const formal = groups.find((group) => group.name === STRATEGY_LABEL);
+
+  assert.equal(formal.count, 0);
+  assert.equal(formal.formal_strategy, true);
+  assert.equal(formal.relative_leadership_hits, 0);
+});
+
+test('formal strategy replay synchronization updates compact dashboard tags', () => {
+  const dashboard = {
+    rows: [
+      { stock_code: '2207', prediction: { strategy_tags: ['優先觀察'] } },
+      { stock_code: '2330', prediction: { strategy_tags: [STRATEGY_LABEL, '一般觀察'] } },
+    ],
+  };
+  syncReplayDashboardFormalTags(dashboard, {
+    members: ['2207'],
+  });
+
+  assert.deepEqual(
+    dashboard.rows[0].prediction.strategy_tags,
+    [STRATEGY_LABEL, '優先觀察'],
+  );
+  assert.deepEqual(dashboard.rows[1].prediction.strategy_tags, ['一般觀察']);
 });

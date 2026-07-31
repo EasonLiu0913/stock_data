@@ -17,6 +17,13 @@ const {
 const FORMAL_TAG = '衝擊後高信心核心';
 const STRATEGY_ID = 'post_shock_high_confidence_core_v1';
 const POST_SHOCK_CODES = new Set(['post_shock_day_1', 'post_shock_day_2']);
+const FORMAL_CRITERIA = Object.freeze([
+  '5 日量比 >= 1.5',
+  'RSI14 >= 70',
+  '確認分數 >= 7',
+  '7 日相對強勢 >= 8',
+  'SMA20 乖離 <= 10%',
+]);
 
 function compactDate(value) {
   const date = String(value || '').replaceAll('-', '').replaceAll('/', '');
@@ -89,6 +96,38 @@ function summarizeStocks(stocks) {
   };
 }
 
+function buildFormalStrategyClassification(environment, selected, generatedAt) {
+  const stocks = Array.isArray(selected) ? selected : [];
+  const environmentCode = environment?.environment?.code || null;
+  return {
+    label: FORMAL_TAG,
+    status: 'formal_label',
+    changes_direction_score: false,
+    environment_code: environmentCode,
+    active: POST_SHOCK_CODES.has(environmentCode),
+    count: stocks.length,
+    members: stocks.map((stock) => stock.stock_code),
+    criteria: [...FORMAL_CRITERIA],
+    generated_at: generatedAt,
+  };
+}
+
+function buildFormalStrategyGroup(environment, selected) {
+  const stocks = Array.isArray(selected) ? selected : [];
+  const environmentCode = environment?.environment?.code || null;
+  return {
+    group: FORMAL_TAG,
+    ...summarizeStocks(stocks),
+    formal_strategy: true,
+    strategy_id: STRATEGY_ID,
+    environment_code: environmentCode,
+    active: POST_SHOCK_CODES.has(environmentCode),
+    changes_direction_score: false,
+    criteria: [...FORMAL_CRITERIA],
+    members: stocks.map((stock) => stock.stock_code),
+  };
+}
+
 function formalPostShockDecision(stock, environment) {
   const environmentCode = environment?.environment?.code || null;
   const policyState = environment?.strategy_policy?.relative_leadership_momentum || null;
@@ -126,13 +165,7 @@ function updateStockTag(stock, environment) {
     bucket: result.decision.bucket,
     confirmation_score: result.decision.profile.score,
     confirmation_signals: result.decision.profile.signals,
-    criteria: [
-      '5 日量比 >= 1.5',
-      'RSI14 >= 70',
-      '確認分數 >= 7',
-      '7 日相對強勢 >= 8',
-      'SMA20 乖離 <= 10%',
-    ],
+    criteria: [...FORMAL_CRITERIA],
   };
   return true;
 }
@@ -158,23 +191,7 @@ function applyFormalMarketStrategyTags({ rootDir = 'data_predictions', date, env
   const generatedAt = new Date().toISOString();
   summary.formal_strategy_classifications = {
     ...(summary.formal_strategy_classifications || {}),
-    [STRATEGY_ID]: {
-      label: FORMAL_TAG,
-      status: 'formal_label',
-      changes_direction_score: false,
-      environment_code: env.environment?.code || null,
-      active: POST_SHOCK_CODES.has(env.environment?.code),
-      count: selected.length,
-      members: selected.map((stock) => stock.stock_code),
-      criteria: [
-        '5 日量比 >= 1.5',
-        'RSI14 >= 70',
-        '確認分數 >= 7',
-        '7 日相對強勢 >= 8',
-        'SMA20 乖離 <= 10%',
-      ],
-      generated_at: generatedAt,
-    },
+    [STRATEGY_ID]: buildFormalStrategyClassification(env, selected, generatedAt),
   };
 
   const groupSummary = readJson(groupSummaryFile, {
@@ -185,17 +202,7 @@ function applyFormalMarketStrategyTags({ rootDir = 'data_predictions', date, env
   });
   const groups = (Array.isArray(groupSummary.groups) ? groupSummary.groups : [])
     .filter((group) => group?.group !== FORMAL_TAG);
-  if (selected.length) {
-    groups.push({
-      group: FORMAL_TAG,
-      ...summarizeStocks(selected),
-      formal_strategy: true,
-      strategy_id: STRATEGY_ID,
-      environment_code: env.environment?.code || null,
-      changes_direction_score: false,
-      members: selected.map((stock) => stock.stock_code),
-    });
-  }
+  groups.push(buildFormalStrategyGroup(env, selected));
   groups.sort((left, right) => Number(right.count || 0) - Number(left.count || 0) || String(left.group).localeCompare(String(right.group), 'zh-Hant'));
   groupSummary.generated_at = generatedAt;
   groupSummary.forecast_date = summary.forecast_date;
@@ -250,7 +257,10 @@ module.exports = {
   FORMAL_TAG,
   STRATEGY_ID,
   POST_SHOCK_CODES,
+  FORMAL_CRITERIA,
   summarizeStocks,
+  buildFormalStrategyClassification,
+  buildFormalStrategyGroup,
   formalPostShockDecision,
   updateStockTag,
   applyFormalMarketStrategyTags,
