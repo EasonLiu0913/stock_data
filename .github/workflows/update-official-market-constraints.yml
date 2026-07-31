@@ -1,0 +1,159 @@
+name: "[03 晨間補充] 正式處置股與台指期夜盤"
+
+on:
+  schedule:
+    - cron: '5,20,35 23 * * 0-4'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '預測交易日 YYYYMMDD；留空使用台灣當日'
+        required: false
+        type: string
+      force:
+        description: '即使已有完整 snapshot 仍重新抓取與回填'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: official-market-constraints-morning
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve target date and skip completed integration
+        id: target
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.target_date || '' }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-$(TZ='Asia/Taipei' date '+%Y%m%d')}"
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target date: $date"; exit 1; }
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "TARGET_DATE=$date" >> "$GITHUB_ENV"
+
+          if [ ! -s "data_predictions/$date/summary.json" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=prediction_summary_missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$FORCE" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=forced" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if node - "$date" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const read = (file) => {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          };
+          const snapshot = read(`data_market_constraints/${date}/snapshot.json`);
+          const summary = read(`data_predictions/${date}/summary.json`);
+          const classification = summary?.formal_strategy_classifications?.oversold_electronics_rebound_v1;
+          const integrated = snapshot?.complete === true
+            && classification?.disposition_filter?.status === 'completed'
+            && summary?.market_constraints?.night_futures?.status === 'completed';
+          process.exit(integrated ? 0 : 1);
+          NODE
+          then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=already_complete" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=needs_update" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run official source and strategy tests
+        if: steps.target.outputs.run == 'true'
+        run: |
+          node --test \
+            tests/official_market_constraints.test.js \
+            tests/taifex_night_futures.test.js \
+            tests/taifex_official_night_futures.test.js \
+            tests/fetch_official_market_constraints.test.js \
+            tests/apply_official_market_constraints.test.js \
+            tests/oversold_beta_rebound.test.js \
+            tests/oversold_electronics_strategy.test.js
+
+      - name: Fetch official disposition and TX night snapshots
+        if: steps.target.outputs.run == 'true'
+        shell: bash
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+        run: |
+          set -euo pipefail
+          args=(--date "$TARGET_DATE" --allow-partial)
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          node scripts/fetch_official_market_constraints.js "${args[@]}"
+
+      - name: Rebuild readiness and fixed strategies
+        if: steps.target.outputs.run == 'true'
+        run: node scripts/backfill_prediction_dashboard_fields.js --date "$TARGET_DATE"
+
+      - name: Verify official constraint integration
+        if: steps.target.outputs.run == 'true'
+        run: node scripts/verify_official_market_constraints_integration.js --date "$TARGET_DATE"
+
+      - name: Commit official snapshots and rebuilt outputs
+        if: steps.target.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            "data_market_constraints/$TARGET_DATE" \
+            "data_market_environment/$TARGET_DATE" \
+            "data_predictions/$TARGET_DATE" \
+            "data_prediction_analysis/formal-strategy/$TARGET_DATE.json" \
+            "data_prediction_analysis/oversold-beta-rebound/$TARGET_DATE.json"
+          if git diff --cached --quiet; then
+            echo "No official market constraint changes"
+            exit 0
+          fi
+          status=$(node -e "const s=require('./data_market_constraints/' + process.argv[1] + '/snapshot.json');process.stdout.write(s.complete?'complete':'partial')" "$TARGET_DATE")
+          git commit -m "data: update $TARGET_DATE official market constraints ($status)"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
+
+      - name: Write workflow summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## 正式處置股與夜盤更新" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 目標日期：${TARGET_DATE:-未解析}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 是否執行：${{ steps.target.outputs.run || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 原因：${{ steps.target.outputs.reason || 'unknown' }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${TARGET_DATE:-}" ] && [ -f "data_market_constraints/$TARGET_DATE/snapshot.json" ]; then
+            node - "$TARGET_DATE" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const snapshot = JSON.parse(fs.readFileSync(`data_market_constraints/${date}/snapshot.json`, 'utf8'));
+          console.log(`- Snapshot：${snapshot.calculation_status}`);
+          console.log(`- 處置股唯一代號：${snapshot.disposition?.active_stock_count ?? 'N/A'}`);
+          console.log(`- 夜盤漲跌幅：${snapshot.night_futures?.change_percent ?? 'N/A'}%`);
+          NODE
+          fi
