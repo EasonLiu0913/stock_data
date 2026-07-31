@@ -9,10 +9,22 @@ const {
   finiteNumber,
   round,
 } = require('./official_market_constraints');
-const { stripHtml } = require('./taifex_date_query_probe');
 const { fetchTaifexNightFuture: fetchOpenApiNightFuture } = require('./taifex_night_futures');
 
 const TAIFEX_DATE_PAGE = 'https://www.taifex.com.tw/cht/3/futDailyMarketExcel';
+
+function stripHtml(value) {
+  return String(value || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&#x25B2;|&#9650;/gi, '▲')
+    .replace(/&#x25BC;|&#9660;/gi, '▼')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function compactToSlash(date) {
   const compact = compactDate(date);
@@ -229,6 +241,7 @@ if (require.main === module) {
 
 module.exports = {
   TAIFEX_DATE_PAGE,
+  stripHtml,
   compactToSlash,
   signedNumber,
   parseFrontMonthTxFromHtml,
