@@ -9,7 +9,7 @@ const {
   syncSummaryPayload,
 } = require('../scripts/sync_prediction_dashboard_groups');
 
-const FORMAL_TAG = '衝擊後高信心核心';
+const FORMAL_TAG = '熊市時防禦抗跌股';
 
  test('dashboard summary receives the same strategy groups as group-summary.json', () => {
   const summary = {
@@ -39,7 +39,7 @@ const FORMAL_TAG = '衝擊後高信心核心';
 test('formal strategy group remains visible when no stocks qualify', () => {
   const summary = {
     formal_strategy_classifications: {
-      post_shock_high_confidence_core_v1: {
+      bear_market_defensive_resilience_v1: {
         environment_code: 'post_shock_day_1',
         active: true,
         count: 0,
@@ -61,6 +61,23 @@ test('formal strategy group remains visible when no stocks qualify', () => {
   assert.ok(groupSummary.groups.some((item) => item.group === FORMAL_TAG));
 });
 
+test('legacy formal strategy group is renamed without creating a duplicate', () => {
+  const summary = {};
+  const groupSummary = {
+    groups: [{
+      group: '衝擊後高信心核心',
+      count: 2,
+      formal_strategy: true,
+      strategy_id: 'post_shock_high_confidence_core_v1',
+      members: ['2207', '2540'],
+    }],
+  };
+
+  const group = ensureFormalStrategyGroup(summary, groupSummary);
+  assert.equal(group.group, FORMAL_TAG);
+  assert.equal(groupSummary.groups.length, 1);
+});
+
 test('dashboard group sync rejects missing group collections', () => {
   assert.throws(
     () => syncSummaryPayload({}, {}),
@@ -75,6 +92,6 @@ test('replay view loads formal strategy enhancement directly', () => {
   );
   assert.match(
     html,
-    /<script src="prediction-replay-formal-strategy-enhancement\.js\?v=2"><\/script>/,
+    /<script src="prediction-replay-formal-strategy-enhancement\.js\?v=3"><\/script>/,
   );
 });
