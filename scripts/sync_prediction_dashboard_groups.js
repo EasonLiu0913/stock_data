@@ -9,7 +9,9 @@ const {
 } = require('./market_environment_lib');
 const {
   FORMAL_TAG,
+  LEGACY_FORMAL_TAGS,
   STRATEGY_ID,
+  LEGACY_STRATEGY_IDS,
   summarizeStocks,
 } = require('./apply_formal_market_strategy_tags');
 
@@ -38,10 +40,22 @@ function ensureFormalStrategyGroup(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
 
-  const existing = groupSummary.groups.find((group) => group?.group === FORMAL_TAG);
-  if (existing) return existing;
+  const legacyTags = new Set(LEGACY_FORMAL_TAGS);
+  const strategyIds = new Set([STRATEGY_ID, ...LEGACY_STRATEGY_IDS]);
+  const existing = groupSummary.groups.find((group) => strategyIds.has(group?.strategy_id)
+    || group?.group === FORMAL_TAG
+    || legacyTags.has(group?.group));
+  if (existing) {
+    existing.group = FORMAL_TAG;
+    existing.formal_strategy = true;
+    existing.strategy_id = STRATEGY_ID;
+    return existing;
+  }
 
-  const classification = summary.formal_strategy_classifications?.[STRATEGY_ID] || {};
+  const classifications = summary.formal_strategy_classifications || {};
+  const classification = classifications[STRATEGY_ID]
+    || LEGACY_STRATEGY_IDS.map((strategyId) => classifications[strategyId]).find(Boolean)
+    || {};
   const emptyGroup = {
     group: FORMAL_TAG,
     ...emptyFormalStrategySummary(),
