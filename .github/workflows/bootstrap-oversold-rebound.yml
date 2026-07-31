@@ -10,7 +10,7 @@ on:
     branches:
       - main
 permissions:
-  contents: write
+  contents: read
 jobs:
   install:
     runs-on: ubuntu-latest
@@ -23,8 +23,7 @@ jobs:
         with:
           node-version: '20'
       - name: Verify bootstrap transfer
-        run: |
-          git hash-object scripts/.bootstrap_oversold_rebound_parts/part*
+        run: git hash-object scripts/.bootstrap_oversold_rebound_parts/part*
       - name: Install refactor files
         run: node scripts/.bootstrap_oversold_rebound.js
       - name: Validate syntax and tests
@@ -44,13 +43,17 @@ jobs:
           if [ -s data_predictions/20260731/replay-summary.json ] && [ -s data_predictions/20260731/replay-dashboard.json ]; then
             node scripts/evaluate_formal_strategy_replay.js --date 20260731
           fi
-      - name: Commit, rebase, and publish branch
+      - name: Package verified files
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "feat: separate rebound readiness and electronics strategy"
-          git fetch origin main
-          git rebase origin/main
-          git push --force-with-lease origin HEAD:codex/oversold-rebound-separation-v1
+          git diff --cached --name-status > rebound-final-manifest.txt
+          git diff --cached --name-only --diff-filter=ACMRTUXB -z > /tmp/rebound-files
+          tar --null -T /tmp/rebound-files -czf rebound-final-files.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oversold-rebound-final
+          path: |
+            rebound-final-files.tar.gz
+            rebound-final-manifest.txt
+          if-no-files-found: error
