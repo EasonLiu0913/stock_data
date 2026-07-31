@@ -22,6 +22,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Verify bootstrap transfer
+        run: |
+          git hash-object scripts/.bootstrap_oversold_rebound_parts/part*
       - name: Install refactor files
         run: node scripts/.bootstrap_oversold_rebound.js
       - name: Validate syntax and tests
