@@ -107,8 +107,14 @@ jobs:
           fi
           node scripts/verify_market_environment.js "${args[@]}"
 
-      - name: Run market environment tests
-        run: node --test tests/market_environment.test.js
+      - name: Run market environment and fixed strategy tests
+        run: |
+          node --test \
+            tests/market_environment.test.js \
+            tests/formal_market_strategy_tags.test.js \
+            tests/prediction_dashboard_group_sync.test.js \
+            tests/oversold_beta_rebound.test.js \
+            tests/oversold_electronics_strategy.test.js
 
       - name: Check required forecast files
         if: steps.dates.outputs.run == 'true'
@@ -149,6 +155,10 @@ jobs:
             echo "$generation_status" > data_predictions/generation-status.txt
           fi
           exit 0
+
+      - name: Build rebound readiness and fixed strategy registry
+        if: always() && steps.dates.outputs.target_date != '' && (steps.dates.outputs.run != 'true' || steps.generate.outputs.exit_code == '0')
+        run: node scripts/backfill_prediction_dashboard_fields.js --date "${{ steps.dates.outputs.target_date }}"
 
       - name: Attach environment snapshot to V1 outputs
         if: always() && steps.dates.outputs.target_date != ''
