@@ -10,6 +10,7 @@ const PREDICTION_ROOT = path.join(ROOT, 'data_predictions');
 const GENERATOR = path.join(__dirname, 'generate_prediction_dashboard_data.js');
 const FORMAL_TAGGER = path.join(__dirname, 'apply_formal_market_strategy_tags.js');
 const GROUP_SYNC = path.join(__dirname, 'sync_prediction_dashboard_groups.js');
+const OFFICIAL_CONSTRAINTS = path.join(__dirname, 'apply_official_market_constraints.js');
 
 function compactDate(value) {
   const compact = String(value || '').replaceAll('-', '').replaceAll('/', '');
@@ -111,6 +112,10 @@ function main(argv = process.argv.slice(2)) {
     const syncArgs = ['--date', date];
     if (options.dryRun) syncArgs.push('--dry-run');
     runNodeScript(GROUP_SYNC, syncArgs, 'dashboard group sync', date);
+
+    const constraintArgs = ['--date', date, '--evaluate-replay-if-present'];
+    if (options.dryRun) constraintArgs.push('--dry-run');
+    runNodeScript(OFFICIAL_CONSTRAINTS, constraintArgs, 'official market constraint integration', date);
   }
   console.log(`${options.dryRun ? 'Dry-run validated' : 'Backfilled'} ${dates.length} prediction date(s).`);
   return 0;
