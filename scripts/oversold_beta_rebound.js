@@ -35,6 +35,11 @@ function finiteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function roundNullable(value, digits = 2) {
+  const number = finiteNumber(value);
+  return number === null ? null : round(number, digits);
+}
+
 function statusBand(score) {
   const value = Math.max(0, Math.min(100, finiteNumber(score) ?? 0));
   return STATUS_BANDS.find((band) => value >= band.min && value <= band.max) || STATUS_BANDS[0];
@@ -226,19 +231,19 @@ function scoreReadiness({ environment, summary, external, previousEnvironment, n
     band,
     conditions,
     inputs: {
-      sox_change_1d_pct: round(sox),
-      tsm_adr_change_1d_pct: round(adr),
-      nasdaq_change_1d_pct: round(nasdaq),
-      adr_sox_nasdaq_market_risk: round(externalRisk, 1),
-      wti_change_1d_pct: round(wti),
-      brent_change_1d_pct: round(brent),
-      twse_return_3d_pct: round(twse3d),
-      market_oversold_ratio: round(oversoldRatio),
-      market_risk_score: round(riskScore, 1),
-      previous_market_risk_score: round(previousRiskScore, 1),
-      market_risk_decline: round(riskDecline, 1),
-      foreign_futures_net_change_contracts: foreignNetChange,
-      night_futures_change_pct: round(night),
+      sox_change_1d_pct: roundNullable(sox),
+      tsm_adr_change_1d_pct: roundNullable(adr),
+      nasdaq_change_1d_pct: roundNullable(nasdaq),
+      adr_sox_nasdaq_market_risk: roundNullable(externalRisk, 1),
+      wti_change_1d_pct: roundNullable(wti),
+      brent_change_1d_pct: roundNullable(brent),
+      twse_return_3d_pct: roundNullable(twse3d),
+      market_oversold_ratio: roundNullable(oversoldRatio),
+      market_risk_score: roundNullable(riskScore, 1),
+      previous_market_risk_score: roundNullable(previousRiskScore, 1),
+      market_risk_decline: roundNullable(riskDecline, 1),
+      foreign_futures_net_change_contracts: roundNullable(foreignNetChange, 0),
+      night_futures_change_pct: roundNullable(night),
     },
   };
 }
@@ -252,18 +257,24 @@ function wilsonInterval(hits, total, z = 1.96) {
   return [round(Math.max(0, center - margin) * 100, 1), round(Math.min(1, center + margin) * 100, 1)];
 }
 
-function loadCalibration(score) {
+function loadCalibration(score, beforeDate = '') {
   const dir = path.join(ROOT, 'data_prediction_analysis', 'oversold-beta-rebound');
   let files = [];
   try {
-    files = fs.readdirSync(dir).filter((file) => /^20\d{6}\.json$/.test(file));
+    const cutoff = compactDate(beforeDate);
+    files = fs.readdirSync(dir)
+      .filter((file) => /^20\d{6}\.json$/.test(file))
+      .filter((file) => !cutoff || file.slice(0, 8) < cutoff);
   } catch {
     return { sample_count: 0, hit_count: 0, hit_rate: null, confidence_interval: null };
   }
   const band = statusBand(score);
   const samples = files
     .map((file) => readJson(path.join(dir, file), null))
-    .filter((item) => item?.readiness_score >= band.min && item?.readiness_score <= band.max)
+    .filter((item) => {
+      const readinessScore = finiteNumber(item?.readiness_score ?? item?.score);
+      return readinessScore !== null && readinessScore >= band.min && readinessScore <= band.max;
+    })
     .filter((item) => typeof item?.market_rebound_day === 'boolean');
   const hits = samples.filter((item) => item.market_rebound_day).length;
   return {
@@ -274,9 +285,9 @@ function loadCalibration(score) {
   };
 }
 
-function probabilityCalibration(score, effectiveWeight) {
+function probabilityCalibration(score, effectiveWeight, beforeDate = '') {
   const band = statusBand(score);
-  const history = loadCalibration(score);
+  const history = loadCalibration(score, beforeDate);
   if (effectiveWeight < MIN_EFFECTIVE_WEIGHT) {
     return {
       mode: 'unavailable',
@@ -323,7 +334,7 @@ function probabilityCalibration(score, effectiveWeight) {
 
 function buildReadinessPayload({ date, rootDir, environment, summary, external, previousEnvironment, nightFuturesChange = null }) {
   const scored = scoreReadiness({ environment, summary, external, previousEnvironment, nightFuturesChange });
-  const calibration = probabilityCalibration(scored.score, scored.effective_data_weight);
+  const calibration = probabilityCalibration(scored.score, scored.effective_data_weight, date);
   const warnings = [];
   if (scored.effective_data_weight < MIN_EFFECTIVE_WEIGHT) {
     warnings.push(`有效資料權重 ${scored.effective_data_weight}% 低於 ${MIN_EFFECTIVE_WEIGHT}%，機率顯示 N/A。`);
@@ -484,10 +495,12 @@ module.exports = {
   MIN_EFFECTIVE_WEIGHT,
   STATUS_BANDS,
   compactDate,
+  roundNullable,
   statusBand,
   condition,
   scoreReadiness,
   wilsonInterval,
+  loadCalibration,
   probabilityCalibration,
   buildReadinessPayload,
   generateOversoldBetaRebound,
