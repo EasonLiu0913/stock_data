@@ -88,6 +88,7 @@ test('dashboard HTML loads published data and inline script parses', () => {
   assert.match(html, /data\/oversold-rebound-dashboard/);
   assert.match(html, /0 筆/);
   assert.match(html, /N\/A/);
+  assert.match(html, /value!==null&&value!==undefined/);
   assert.match(html, /成功／失敗特徵比較/);
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.ok(scripts.length > 0);
