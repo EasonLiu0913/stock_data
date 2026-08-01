@@ -133,20 +133,41 @@ function sourceDateComplete(root, source, date) {
   return SOURCE_SPECS[source].files.every(descriptor => isFileComplete(root, descriptor, date));
 }
 
+function buildBatches(source, dates, batchSize) {
+  if (!Number.isInteger(batchSize) || batchSize < 1) throw new Error('batchSize 必須是正整數');
+  const chunks = [];
+  for (let index = 0; index < dates.length; index += batchSize) {
+    chunks.push(dates.slice(index, index + batchSize));
+  }
+  return chunks.map((batchDates, index) => ({
+    source,
+    batch_index: index + 1,
+    batch_count: chunks.length,
+    dates: batchDates.join(','),
+    date_count: batchDates.length,
+    first_date: batchDates[0],
+    last_date: batchDates[batchDates.length - 1],
+    has_next: index < chunks.length - 1,
+  }));
+}
+
 function planSource(root, researchRoot, source, options) {
   const priceDates = loadResearchDates(researchRoot);
   const eventCounts = loadEventSignalCounts(researchRoot);
   const lookbackDays = options.lookbackDays || SOURCE_SPECS[source].lookbackDays;
+  const batchSize = options.batchSize || options.maxDates || 10;
   const impacts = requiredDatesForEvents(priceDates, eventCounts, lookbackDays, options.from, options.to);
   const required = [...impacts.keys()];
   const complete = required.filter(date => sourceDateComplete(root, source, date));
   const missing = required
     .filter(date => !sourceDateComplete(root, source, date))
     .sort((left, right) => (impacts.get(right) - impacts.get(left)) || left.localeCompare(right));
-  const selected = missing.slice(0, options.maxDates);
+  const batches = buildBatches(source, missing, batchSize);
+  const selected = missing.slice(0, batchSize);
   return {
     source,
     lookback_days: lookbackDays,
+    batch_size: batchSize,
     required_date_count: required.length,
     complete_date_count: complete.length,
     missing_date_count: missing.length,
@@ -154,6 +175,10 @@ function planSource(root, researchRoot, source, options) {
     deferred_date_count: Math.max(0, missing.length - selected.length),
     selected_dates: selected,
     selected: selected.map(date => ({ date, impacted_events: impacts.get(date) || 0 })),
+    all_missing_dates: missing,
+    batch_count: batches.length,
+    batches,
+    matrix: { include: batches },
     estimated_date_coverage_pct: required.length ? Math.round((complete.length / required.length) * 10000) / 100 : 0,
   };
 }
@@ -164,7 +189,7 @@ function buildPlan(options = {}) {
   const sources = options.sources || Object.keys(SOURCE_SPECS);
   const plans = Object.fromEntries(sources.map(source => [source, planSource(root, researchRoot, source, options)]));
   return {
-    schema_version: 1,
+    schema_version: 2,
     generated_at: new Date().toISOString(),
     research_root: path.relative(root, researchRoot).replaceAll(path.sep, '/'),
     priority: 'impacted_events_desc_then_date_asc',
@@ -201,6 +226,7 @@ module.exports = {
   isMarginCsvComplete,
   requiredDatesForEvents,
   sourceDateComplete,
+  buildBatches,
   planSource,
   buildPlan,
 };
