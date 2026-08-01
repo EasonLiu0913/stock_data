@@ -1,6 +1,14 @@
 name: '[07 研究] Mine Oversold Rebound Events'
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/mine-oversold-rebound-research.yml'
+      - 'scripts/mine_oversold_rebound_events.js'
+      - 'scripts/oversold_rebound_research_lib.js'
+      - 'tests/oversold_rebound_research.test.js'
   workflow_dispatch:
     inputs:
       from_date:
@@ -64,7 +72,7 @@ jobs:
           node --test tests/oversold_rebound_research.test.js
 
       - name: Protect canonical output from partial runs
-        if: inputs.dry_run != true && inputs.stock_codes != ''
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true && inputs.stock_codes != ''
         run: |
           echo '指定 stock_codes 的部分股票執行只能使用 dry_run=true，避免覆蓋完整研究資料。'
           exit 1
@@ -72,12 +80,12 @@ jobs:
       - name: Mine historical oversold rebound events
         shell: bash
         env:
-          FROM_DATE: ${{ inputs.from_date }}
-          TO_DATE: ${{ inputs.to_date }}
-          STOCK_CODES: ${{ inputs.stock_codes }}
-          MAX_GAP: ${{ inputs.max_gap }}
-          MAX_EPISODE_SPAN: ${{ inputs.max_episode_span }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          FROM_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.from_date || '' }}
+          TO_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.to_date || '' }}
+          STOCK_CODES: ${{ github.event_name == 'workflow_dispatch' && inputs.stock_codes || '' }}
+          MAX_GAP: ${{ github.event_name == 'workflow_dispatch' && inputs.max_gap || 3 }}
+          MAX_EPISODE_SPAN: ${{ github.event_name == 'workflow_dispatch' && inputs.max_episode_span || 20 }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
         run: |
           args=(
             --max-gap "$MAX_GAP"
@@ -90,7 +98,7 @@ jobs:
           node scripts/mine_oversold_rebound_events.js "${args[@]}"
 
       - name: Verify changed-file scope
-        if: inputs.dry_run != true
+        if: github.event_name == 'push' || inputs.dry_run != true
         shell: bash
         run: |
           unexpected=$(git status --short | awk '
@@ -103,7 +111,7 @@ jobs:
           fi
 
       - name: Commit research outputs
-        if: inputs.dry_run != true
+        if: github.event_name == 'push' || inputs.dry_run != true
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
