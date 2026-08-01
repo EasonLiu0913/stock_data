@@ -5,6 +5,7 @@ const path = require('path');
 const NAVIGATION_TIMEOUT_MS = 45000;
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 5000;
+const FINALIZE_NO_DATA_AFTER_ATTEMPTS = MAX_RETRIES * 2;
 const NO_DATA_TEXT = '無此券商分點交易資料';
 const CSV_HEADER = 'BrokerName,BrokerID,BranchName,BranchID,Type,StockName,Amount,BuyAmount,SellAmount';
 
@@ -29,12 +30,21 @@ function readJsonIfExists(filePath, fallback) {
     }
 }
 
-function hasCsvDataRows(filePath) {
-    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
-    const lines = fs.readFileSync(filePath, 'utf8')
+function readCsvLines(filePath) {
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return [];
+    return fs.readFileSync(filePath, 'utf8')
         .replace(/^\uFEFF/, '')
         .split(/\r?\n/)
         .filter(line => line.trim() !== '');
+}
+
+function hasCsvHeader(filePath) {
+    const lines = readCsvLines(filePath);
+    return lines.length > 0 && lines[0] === CSV_HEADER;
+}
+
+function hasCsvDataRows(filePath) {
+    const lines = readCsvLines(filePath);
     return lines.length > 1 && lines[0] === CSV_HEADER;
 }
 
@@ -48,6 +58,16 @@ function normalizePendingRetries(status) {
         : Array.isArray(status?.failures)
             ? status.failures
             : [];
+    const map = new Map();
+    for (const item of entries) {
+        if (!item?.brokerId || !item?.branchId) continue;
+        map.set(retryKey(item.brokerId, item.branchId), { ...item });
+    }
+    return map;
+}
+
+function normalizeValidNoData(status) {
+    const entries = Array.isArray(status?.validNoData) ? status.validNoData : [];
     const map = new Map();
     for (const item of entries) {
         if (!item?.brokerId || !item?.branchId) continue;
@@ -70,6 +90,29 @@ function buildRetryItem(task, previous, reason, error, attemptsThisRun) {
         attempts: Number(previous?.attempts || 0) + attemptsThisRun,
         firstSeenAt: previous?.firstSeenAt || now,
         lastAttemptAt: now
+    };
+}
+
+function shouldFinalizeNoData(retryItem) {
+    return retryItem?.reason === 'no_data_yet'
+        && Number(retryItem?.attempts || 0) >= FINALIZE_NO_DATA_AFTER_ATTEMPTS;
+}
+
+function buildValidNoDataItem(task, retryItem) {
+    return {
+        brokerId: task.brokerId,
+        brokerName: task.brokerName,
+        branchId: task.branchId,
+        branchName: task.branchName,
+        filename: task.filename,
+        url: task.url,
+        reason: 'valid_no_data',
+        sourceReason: retryItem.reason,
+        error: retryItem.error,
+        attempts: retryItem.attempts,
+        firstSeenAt: retryItem.firstSeenAt,
+        lastAttemptAt: retryItem.lastAttemptAt,
+        confirmedAt: new Date().toISOString()
     };
 }
 
@@ -103,6 +146,7 @@ async function run() {
 
     const previousStatus = readJsonIfExists(statusPath, {});
     const pendingRetries = normalizePendingRetries(previousStatus);
+    const validNoData = normalizeValidNoData(previousStatus);
     const startedAt = previousStatus.startedAt || new Date().toISOString();
     const baseUrl = 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zgb/zgb0.djhtm';
     const tasks = [];
@@ -134,7 +178,11 @@ async function run() {
     console.log(`Target date: ${targetY}-${targetM}-${targetD}`);
     console.log(`Force download: ${forceDownload}`);
     console.log(`Loaded pending retry queue: ${pendingRetries.size}`);
-    console.log(`Navigation timeout: ${NAVIGATION_TIMEOUT_MS}ms; retries per run: ${MAX_RETRIES}`);
+    console.log(`Loaded valid no-data branches: ${validNoData.size}`);
+    console.log(
+        `Navigation timeout: ${NAVIGATION_TIMEOUT_MS}ms; retries per run: ${MAX_RETRIES}; ` +
+        `confirm no-data after ${FINALIZE_NO_DATA_AFTER_ATTEMPTS} total attempts`
+    );
 
     const browser = await chromium.launch({
         headless: true,
@@ -152,21 +200,30 @@ async function run() {
 
     function checkpoint() {
         const pendingList = [...pendingRetries.values()];
-        const completedCount = tasks.filter(task => hasCsvDataRows(task.filePath)).length;
+        const validNoDataList = [...validNoData.values()];
+        const completedDataCount = tasks.filter(task => hasCsvDataRows(task.filePath)).length;
+        const validNoDataCount = tasks.filter(task => {
+            const key = retryKey(task.brokerId, task.branchId);
+            return validNoData.has(key) && hasCsvHeader(task.filePath) && !hasCsvDataRows(task.filePath);
+        }).length;
+        const completedCount = completedDataCount + validNoDataCount;
         atomicWrite(statusPath, `${JSON.stringify({
-            schemaVersion: 2,
+            schemaVersion: 3,
             date: dateStr,
             startedAt,
             updatedAt: new Date().toISOString(),
             complete: pendingList.length === 0 && completedCount === tasks.length,
             expectedCount: tasks.length,
             completedCount,
+            completedDataCount,
+            validNoDataCount,
             visitedCount,
             skippedExistingCount,
             downloadedCount,
             retriedFromQueueCount,
             pendingRetryCount: pendingList.length,
             pendingRetries: pendingList,
+            validNoData: validNoDataList,
             failedCount: pendingList.length,
             failures: pendingList
         }, null, 2)}\n`);
@@ -179,14 +236,27 @@ async function run() {
             const task = tasks[index];
             const key = retryKey(task.brokerId, task.branchId);
             const previousPending = pendingRetries.get(key);
+            const previousValidNoData = validNoData.get(key);
             const validExisting = hasCsvDataRows(task.filePath);
+            const headerExisting = hasCsvHeader(task.filePath);
             visitedCount += 1;
 
             console.log(`[${index + 1}/${tasks.length}] ${task.brokerName}/${task.branchName}`);
 
             if (!forceDownload && validExisting && !previousPending) {
+                validNoData.delete(key);
                 skippedExistingCount += 1;
                 console.log('    ✓ Existing CSV contains data rows, skipping.');
+                checkpoint();
+                continue;
+            }
+
+            if (!forceDownload && previousValidNoData && !previousPending) {
+                if (!headerExisting || validExisting) {
+                    atomicWrite(task.filePath, `${CSV_HEADER}\n`);
+                }
+                skippedExistingCount += 1;
+                console.log('    ○ Previously confirmed as a valid no-data branch, skipping.');
                 checkpoint();
                 continue;
             }
@@ -194,6 +264,8 @@ async function run() {
             if (previousPending) {
                 retriedFromQueueCount += 1;
                 console.log(`    ↻ Retrying queued item: ${previousPending.reason || previousPending.error}`);
+            } else if (previousValidNoData && forceDownload) {
+                console.log('    ↻ Force rechecking a previously confirmed no-data branch.');
             } else if (fs.existsSync(task.filePath) && !validExisting) {
                 console.log('    ↻ Existing CSV is header-only or invalid; treating it as pending.');
             }
@@ -261,6 +333,7 @@ async function run() {
                     downloadedCount += 1;
                     succeeded = true;
                     pendingRetries.delete(key);
+                    validNoData.delete(key);
                     console.log(`    ✓ Saved ${task.filename}; rows=${result.data.length}; removed from retry queue.`);
                     break;
                 } catch (error) {
@@ -278,19 +351,31 @@ async function run() {
             }
 
             if (!succeeded) {
-                // Do not preserve a misleading header-only CSV as a successful result.
-                if (fs.existsSync(task.filePath) && !hasCsvDataRows(task.filePath)) {
-                    fs.unlinkSync(task.filePath);
-                }
                 const retryItem = buildRetryItem(
                     task,
-                    previousPending,
+                    previousPending || previousValidNoData,
                     lastReason,
                     lastError?.message || 'Unknown error',
                     attemptsThisRun
                 );
-                pendingRetries.set(key, retryItem);
-                console.error(`    ⚠ Added to pending retry queue after ${MAX_RETRIES} attempts.`);
+
+                if (shouldFinalizeNoData(retryItem)) {
+                    atomicWrite(task.filePath, `${CSV_HEADER}\n`);
+                    pendingRetries.delete(key);
+                    validNoData.set(key, buildValidNoDataItem(task, retryItem));
+                    console.log(
+                        `    ○ Confirmed valid no-data after ${retryItem.attempts} attempts; ` +
+                        'saved a header-only CSV and removed it from the retry queue.'
+                    );
+                } else {
+                    // Do not preserve a misleading header-only CSV unless it has been confirmed as valid no-data.
+                    if (fs.existsSync(task.filePath) && !hasCsvDataRows(task.filePath)) {
+                        fs.unlinkSync(task.filePath);
+                    }
+                    validNoData.delete(key);
+                    pendingRetries.set(key, retryItem);
+                    console.error(`    ⚠ Added to pending retry queue after ${MAX_RETRIES} attempts.`);
+                }
             }
 
             checkpoint();
@@ -302,7 +387,8 @@ async function run() {
         checkpoint();
         console.log(
             `Completed crawl: expected=${tasks.length}, downloaded=${downloadedCount}, ` +
-            `skipped=${skippedExistingCount}, pendingRetries=${pendingRetries.size}`
+            `skipped=${skippedExistingCount}, validNoData=${validNoData.size}, ` +
+            `pendingRetries=${pendingRetries.size}`
         );
         if (pendingRetries.size > 0) process.exitCode = 2;
     } catch (error) {
@@ -323,10 +409,15 @@ if (require.main === module) {
 
 module.exports = {
     CSV_HEADER,
+    FINALIZE_NO_DATA_AFTER_ATTEMPTS,
     NO_DATA_TEXT,
     buildRetryItem,
+    buildValidNoDataItem,
     hasCsvDataRows,
+    hasCsvHeader,
     normalizePendingRetries,
+    normalizeValidNoData,
     retryKey,
+    shouldFinalizeNoData,
     run
 };
