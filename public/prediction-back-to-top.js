@@ -3,9 +3,21 @@
 
   const BUTTON_ID = 'predictionBackToTop';
   const STYLE_ID = 'predictionBackToTopStyle';
+  const EXISTING_CONTROL_SELECTOR = [
+    '.to-top',
+    '.back-to-top',
+    '.back-to-top-button',
+    '[data-back-to-top]',
+    'button[aria-label="回到最上方"]',
+    'a[aria-label="回到最上方"]',
+  ].join(', ');
+  const WRAPPER_IFRAME_SELECTOR = 'iframe#viewer, iframe.viewer';
 
   function install() {
-    if (document.querySelector('.to-top') || document.getElementById(BUTTON_ID)) return;
+    // Replay wrapper pages contain the real scrollable report in a nested iframe.
+    // Installing a second fixed button in the wrapper creates overlapping arrows.
+    if (document.querySelector(WRAPPER_IFRAME_SELECTOR)) return;
+    if (document.querySelector(EXISTING_CONTROL_SELECTOR) || document.getElementById(BUTTON_ID)) return;
 
     if (!document.getElementById(STYLE_ID)) {
       const style = document.createElement('style');
