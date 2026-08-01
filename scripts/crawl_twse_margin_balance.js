@@ -14,6 +14,7 @@ const CSV_HEADERS = Object.freeze([
   '融券買進', '融券賣出', '融券現券償還', '融券前日餘額', '融券今日餘額', '融券限額',
   '資券互抵', '註記',
 ]);
+const CANONICAL_METRIC_COUNT = CSV_HEADERS.length - 2;
 
 function getArg(argv, flag, fallback = null) {
   const index = argv.indexOf(flag);
@@ -106,11 +107,35 @@ function normalizeField(value) {
     .trim();
 }
 
+function findFieldIndex(fields, candidates) {
+  return fields.findIndex(field => candidates.includes(field));
+}
+
+function stockTableLayout(table) {
+  const fields = (table?.fields || []).map(normalizeField);
+  const codeIndex = findFieldIndex(fields, ['代號', '股票代號', '證券代號', 'SecurityCode']);
+  const nameIndex = findFieldIndex(fields, ['名稱', '股票名稱', '證券名稱', 'SecurityName']);
+  if (codeIndex < 0 || !Array.isArray(table?.data)) return null;
+  const metricIndexes = fields
+    .map((_, index) => index)
+    .filter(index => index !== codeIndex && index !== nameIndex);
+  if (metricIndexes.length < CANONICAL_METRIC_COUNT) return null;
+  return { fields, codeIndex, nameIndex, metricIndexes: metricIndexes.slice(0, CANONICAL_METRIC_COUNT) };
+}
+
 function findStockTable(payload) {
-  return (payload?.tables || []).find(table => {
-    const fields = (table?.fields || []).map(normalizeField);
-    return fields.includes('代號') && fields.includes('名稱') && fields.length >= 16 && Array.isArray(table?.data);
-  }) || null;
+  for (const table of payload?.tables || []) {
+    const layout = stockTableLayout(table);
+    if (layout) return { table, layout };
+  }
+  return null;
+}
+
+function canonicalHistoricalRow(row, layout) {
+  const code = String(row?.[layout.codeIndex] || '').trim();
+  const name = layout.nameIndex >= 0 ? String(row?.[layout.nameIndex] || '').trim() : '';
+  const metrics = layout.metricIndexes.map(index => row?.[index] ?? '');
+  return [code, name, ...metrics];
 }
 
 function buildOpenDataCsv(payload, expectedDate = '') {
@@ -121,15 +146,12 @@ function buildOpenDataCsv(payload, expectedDate = '') {
   if (expectedDate && payloadDate && payloadDate !== expectedDate) {
     throw new Error(`TWSE returned ${payloadDate} for requested ${expectedDate}`);
   }
-  const table = findStockTable(payload);
-  if (!table) throw new Error('TWSE historical margin payload is missing the stock detail table.');
-  const rows = (table.data || [])
-    .filter(row => {
-      const code = String(row?.[0] || '').trim();
-      const name = String(row?.[1] || '').trim();
-      return code && name && name !== '合計';
-    })
-    .map(row => CSV_HEADERS.map((_, index) => csvEscape(row[index])).join(','));
+  const matched = findStockTable(payload);
+  if (!matched) throw new Error('TWSE historical margin payload is missing the stock detail table.');
+  const rows = (matched.table.data || [])
+    .map(row => canonicalHistoricalRow(row, matched.layout))
+    .filter(row => /^[0-9A-Z]{4,6}$/.test(row[0]))
+    .map(row => row.map(csvEscape).join(','));
   if (!rows.length) throw new Error('TWSE historical margin payload contains no stock rows.');
   return `${CSV_HEADERS.join(',')}\n${rows.join('\n')}\n`;
 }
@@ -167,7 +189,7 @@ async function fetchLatestCsv(fetchImpl = fetch) {
 }
 
 async function fetchHistoricalCsv(expectedDate, fetchImpl = fetch) {
-  const url = `${HISTORICAL_API_URL}?date=${expectedDate}&selectType=ALL&response=json`;
+  const url = `${HISTORICAL_API_URL}?date=${expectedDate}&selectType=STOCK&response=json`;
   const response = await fetchImpl(url, {
     headers: {
       accept: 'application/json, text/plain, */*',
@@ -271,7 +293,10 @@ module.exports = {
   parseCsv,
   validateCsv,
   csvEscape,
+  normalizeField,
+  stockTableLayout,
   findStockTable,
+  canonicalHistoricalRow,
   buildOpenDataCsv,
   refreshFilesJson,
   randomDelay,
