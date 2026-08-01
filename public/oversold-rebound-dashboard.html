@@ -51,10 +51,11 @@
       meta:document.getElementById('meta'),overviewKpis:document.getElementById('overviewKpis'),coverageList:document.getElementById('coverageList'),recurringPatterns:document.getElementById('recurringPatterns'),clearPatternFilter:document.getElementById('clearPatternFilter'),stockSearch:document.getElementById('stockSearch'),evidenceFilter:document.getElementById('evidenceFilter'),stockSort:document.getElementById('stockSort'),minimumEvents:document.getElementById('minimumEvents'),stockCount:document.getElementById('stockCount'),stockList:document.getElementById('stockList'),detailPanel:document.getElementById('detailPanel'),activePatternNote:document.getElementById('activePatternNote')
     };
     const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-    const number=value=>Number.isFinite(Number(value))?new Intl.NumberFormat('zh-TW').format(Number(value)):'N/A';
-    const decimal=(value,digits=2)=>Number.isFinite(Number(value))?Number(value).toFixed(digits):'N/A';
-    const pct=(value,digits=2)=>Number.isFinite(Number(value))?`${Number(value).toFixed(digits)}%`:'N/A';
-    const signed=(value,digits=2,suffix='')=>Number.isFinite(Number(value))?`${Number(value)>=0?'+':''}${Number(value).toFixed(digits)}${suffix}`:'N/A';
+    const hasNumber=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value));
+    const number=value=>hasNumber(value)?new Intl.NumberFormat('zh-TW').format(Number(value)):'N/A';
+    const decimal=(value,digits=2)=>hasNumber(value)?Number(value).toFixed(digits):'N/A';
+    const pct=(value,digits=2)=>hasNumber(value)?`${Number(value).toFixed(digits)}%`:'N/A';
+    const signed=(value,digits=2,suffix='')=>hasNumber(value)?`${Number(value)>=0?'+':''}${Number(value).toFixed(digits)}${suffix}`:'N/A';
     const dateText=value=>/^20\d{6}$/.test(String(value||''))?`${String(value).slice(0,4)}/${String(value).slice(4,6)}/${String(value).slice(6,8)}`:'N/A';
     const evidenceLabel=value=>({pattern_ready:'Pattern ready',exploratory:'Exploratory',insufficient:'Insufficient'})[value]||value||'N/A';
     const evidenceClass=value=>value==='pattern_ready'?'good':value==='exploratory'?'warn':'';
@@ -63,7 +64,7 @@
     const groupLabel=value=>({price_volume:'價量技術',institutional:'法人',margin:'融資融券',broker:'券商分點',other:'其他'})[value]||value;
     const directionLabel=value=>({success_higher:'成功組較高',success_lower:'成功組較低',similar:'差異接近',insufficient_data:'資料不足'})[value]||value;
     const unitValue=(value,unit)=>{
-      if(!Number.isFinite(Number(value)))return 'N/A';
+      if(!hasNumber(value))return 'N/A';
       if(unit==='pct')return pct(value);
       if(unit==='shares')return number(Math.round(Number(value)));
       if(unit==='ratio')return decimal(value,2);
@@ -83,7 +84,7 @@
       ];
       els.overviewKpis.innerHTML=kpis.map(([label,value,sub])=>`<article class="card"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></article>`).join('');
       const coverageNames={foreign:'外資',investment_trust:'投信',dealer:'自營商',margin:'融資融券',broker:'券商分點'};
-      els.coverageList.innerHTML=Object.entries(coverageNames).map(([key,label])=>{const value=Number(data.feature_coverage?.[key]?.coverage_pct);const width=Number.isFinite(value)?Math.max(0,Math.min(100,value)):0;return `<div class="coverage-row"><b>${label}</b><div class="track"><div class="fill" style="width:${width}%"></div></div><span class="num">${Number.isFinite(value)?pct(value):'N/A'}</span></div>`}).join('');
+      els.coverageList.innerHTML=Object.entries(coverageNames).map(([key,label])=>{const raw=data.feature_coverage?.[key]?.coverage_pct;const value=hasNumber(raw)?Number(raw):null;const width=value===null?0:Math.max(0,Math.min(100,value));return `<div class="coverage-row"><b>${label}</b><div class="track"><div class="fill" style="width:${width}%"></div></div><span class="num">${value===null?'N/A':pct(value)}</span></div>`}).join('');
       renderRecurringPatterns();renderStocks();
     }
     function renderRecurringPatterns(){
@@ -111,7 +112,7 @@
       try{state.detail=await fetchJson(`${DATA_ROOT}/stocks/${encodeURIComponent(code)}.json`);history.replaceState(null,'',`${location.pathname}?code=${encodeURIComponent(code)}`);renderDetail();}
       catch(error){els.detailPanel.innerHTML=`<article class="card detail-placeholder"><div><h2>個股資料載入失敗</h2><p>${esc(error.message)}</p></div></article>`;}
     }
-    function effectBar(value){if(!Number.isFinite(Number(value)))return 'N/A';const clamped=Math.max(-2,Math.min(2,Number(value)));const width=Math.abs(clamped)/2*50;const left=clamped>=0?50:50-width;return `<div class="effect-track" title="標準化差異 ${decimal(value,2)}"><div class="effect-bar ${clamped<0?'negative':''}" style="left:${left}%;width:${width}%"></div></div><div class="sub">${signed(value,2)}</div>`;}
+    function effectBar(value){if(!hasNumber(value))return 'N/A';const clamped=Math.max(-2,Math.min(2,Number(value)));const width=Math.abs(clamped)/2*50;const left=clamped>=0?50:50-width;return `<div class="effect-track" title="標準化差異 ${decimal(value,2)}"><div class="effect-bar ${clamped<0?'negative':''}" style="left:${left}%;width:${width}%"></div></div><div class="sub">${signed(value,2)}</div>`;}
     function renderDetail(){
       const d=state.detail;if(!d)return;const o=d.primary_outcome||{};const yahoo=`https://tw.stock.yahoo.com/quote/${encodeURIComponent(d.stock_code)}.TW`;
       els.detailPanel.innerHTML=`
