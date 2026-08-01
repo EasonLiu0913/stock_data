@@ -14,15 +14,15 @@ on:
         default: all
         options: [all, institutional, margin, broker]
       max_institutional_dates:
-        description: '本次最多補幾個法人交易日'
+        description: '每個法人 batch 最多補幾個交易日；所有 batch 會自動接續'
         type: number
         default: 10
       max_margin_dates:
-        description: '本次最多補幾個融資融券交易日'
+        description: '每個融資融券 batch 最多補幾個交易日；所有 batch 會自動接續'
         type: number
         default: 10
       max_broker_dates:
-        description: '本次最多補幾個券商分點交易日；建議 1'
+        description: '每個券商分點 batch 最多補幾個交易日；建議 1'
         type: number
         default: 1
       lookback_days:
@@ -38,19 +38,27 @@ on:
         type: number
         default: 15000
       min_date_pause_seconds:
-        description: '完成一個日期後最短休息秒數'
+        description: '同一 batch 內完成一個日期後最短休息秒數'
         type: number
         default: 60
       max_date_pause_seconds:
-        description: '完成一個日期後最長休息秒數'
+        description: '同一 batch 內完成一個日期後最長休息秒數'
         type: number
         default: 180
+      batch_pause_min_seconds:
+        description: '完成一個 batch 後最短長休息秒數'
+        type: number
+        default: 120
+      batch_pause_max_seconds:
+        description: '完成一個 batch 後最長長休息秒數'
+        type: number
+        default: 300
       force:
         description: '重新下載既有檔案'
         type: boolean
         default: false
       refresh_dashboard:
-        description: '有新增資料時重建研究與 Dashboard'
+        description: '所有 batch 結束後重建研究與 Dashboard'
         type: boolean
         default: true
   pull_request:
@@ -78,19 +86,22 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       source: ${{ steps.resolve.outputs.source }}
-      institutional: ${{ steps.plan.outputs.institutional }}
-      margin: ${{ steps.plan.outputs.margin }}
-      broker: ${{ steps.plan.outputs.broker }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      total_batches: ${{ steps.plan.outputs.total_batches }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
+
       - run: npm ci
+
       - name: Validate backfill code
         run: |
           node --check scripts/plan_oversold_rebound_coverage_backfill.js
@@ -102,6 +113,7 @@ jobs:
             tests/crawl_twse_margin_balance.test.js \
             tests/patch_oversold_rebound_dealer_features.test.js \
             tests/oversold_rebound_research.test.js
+
       - name: Resolve source
         id: resolve
         shell: bash
@@ -109,8 +121,10 @@ jobs:
           INPUT_SOURCE: ${{ inputs.source }}
           SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then source="${INPUT_SOURCE:-all}"
-          elif [ '${{ github.event_name }}' = 'pull_request' ]; then source=all
+          if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then
+            source="${INPUT_SOURCE:-all}"
+          elif [ '${{ github.event_name }}' = 'pull_request' ]; then
+            source=all
           else
             case "$SCHEDULE" in
               '17 18 * * 0,2,4') source=institutional ;;
@@ -120,7 +134,8 @@ jobs:
             esac
           fi
           echo "source=$source" >> "$GITHUB_OUTPUT"
-      - name: Plan highest-impact missing dates
+
+      - name: Plan all sequential batches
         id: plan
         shell: bash
         env:
@@ -131,91 +146,194 @@ jobs:
           MAX_BROKER: ${{ inputs.max_broker_dates }}
         run: |
           set -euo pipefail
-          plan_dates() {
-            local source="$1" max="$2" file="/tmp/$1-plan.json" source_lookback="${LOOKBACK:-10}"
+          mkdir -p /tmp/coverage-plans
+
+          plan_source() {
+            local source="$1"
+            local batch_size="$2"
+            local source_lookback="${LOOKBACK:-10}"
             [ "$source" = broker ] && source_lookback=1
+
             node scripts/plan_oversold_rebound_coverage_backfill.js \
-              --sources "$source" --max-dates "$max" --lookback-days "$source_lookback" > "$file"
-            cat "$file" >&2
-            node -e 'const p=require(process.argv[1]);console.log(p.sources[process.argv[2]].selected_dates.join(","))' "$file" "$source"
+              --sources "$source" \
+              --max-dates "$batch_size" \
+              --lookback-days "$source_lookback" \
+              > "/tmp/coverage-plans/${source}.json"
+            cat "/tmp/coverage-plans/${source}.json" >&2
           }
-          institutional=''; margin=''; broker=''
-          if [[ "$SOURCE" == all || "$SOURCE" == institutional ]]; then institutional=$(plan_dates institutional "${MAX_INSTITUTIONAL:-10}"); fi
-          if [[ "$SOURCE" == all || "$SOURCE" == margin ]]; then margin=$(plan_dates margin "${MAX_MARGIN:-10}"); fi
-          if [[ "$SOURCE" == all || "$SOURCE" == broker ]]; then broker=$(plan_dates broker "${MAX_BROKER:-1}"); fi
-          echo "institutional=$institutional" >> "$GITHUB_OUTPUT"
-          echo "margin=$margin" >> "$GITHUB_OUTPUT"
-          echo "broker=$broker" >> "$GITHUB_OUTPUT"
-          printf '### 覆蓋率回填計畫\n\n- 法人：%s\n- 融資融券：%s\n- 券商分點：%s\n' \
-            "${institutional:-無}" "${margin:-無}" "${broker:-無}" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$SOURCE" == all || "$SOURCE" == institutional ]]; then
+            plan_source institutional "${MAX_INSTITUTIONAL:-10}"
+          fi
+          if [[ "$SOURCE" == all || "$SOURCE" == margin ]]; then
+            plan_source margin "${MAX_MARGIN:-10}"
+          fi
+          if [[ "$SOURCE" == all || "$SOURCE" == broker ]]; then
+            plan_source broker "${MAX_BROKER:-1}"
+          fi
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const directory = '/tmp/coverage-plans';
+          const sourceOrder = new Map([['institutional.json', 0], ['margin.json', 1], ['broker.json', 2]]);
+          const files = fs.readdirSync(directory)
+            .filter(file => file.endsWith('.json'))
+            .sort((left, right) => (sourceOrder.get(left) ?? 99) - (sourceOrder.get(right) ?? 99));
+          const include = [];
+          const summary = [];
+
+          for (const file of files) {
+            const plan = JSON.parse(fs.readFileSync(`${directory}/${file}`, 'utf8'));
+            const source = Object.keys(plan.sources)[0];
+            const detail = plan.sources[source];
+            include.push(...detail.matrix.include);
+            summary.push({
+              source,
+              complete_dates: detail.complete_date_count,
+              missing_dates: detail.missing_date_count,
+              batch_size: detail.batch_size,
+              batches: detail.batch_count,
+            });
+          }
+
+          fs.writeFileSync('/tmp/coverage-matrix.json', JSON.stringify({ include }));
+          fs.writeFileSync('/tmp/coverage-summary.json', JSON.stringify(summary, null, 2));
+          NODE
+
+          matrix=$(cat /tmp/coverage-matrix.json)
+          total_batches=$(node -e 'const p=require("/tmp/coverage-matrix.json");process.stdout.write(String(p.include.length))')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "total_batches=$total_batches" >> "$GITHUB_OUTPUT"
+          if [ "$total_batches" -gt 0 ]; then
+            echo 'has_work=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_work=false' >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo '### 覆蓋率自動分批計畫'
+            echo
+            node -e '
+              const rows=require("/tmp/coverage-summary.json");
+              for (const row of rows) {
+                console.log(`- ${row.source}：已完整 ${row.complete_dates} 日；待補 ${row.missing_dates} 日；每批 ${row.batch_size} 日；共 ${row.batches} 批`);
+              }
+            '
+            echo
+            echo "總批次：${total_batches}；將以 max-parallel=1 自動依序執行。"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   backfill:
     needs: plan
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.plan.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ubuntu-latest
     timeout-minutes: 355
+    name: ${{ matrix.source }} batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} (${{ matrix.first_date }} ~ ${{ matrix.last_date }})
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
+
       - run: npm ci
-      - name: Install Playwright when broker work exists
-        if: needs.plan.outputs.broker != ''
+
+      - name: Install Playwright for broker batch
+        if: matrix.source == 'broker'
         run: npx playwright install --with-deps chromium
-      - name: Backfill selected dates and commit each completed date
+
+      - name: Backfill batch and commit every completed date
         id: run
         shell: bash
         env:
-          INSTITUTIONAL_DATES: ${{ needs.plan.outputs.institutional }}
-          MARGIN_DATES: ${{ needs.plan.outputs.margin }}
-          BROKER_DATES: ${{ needs.plan.outputs.broker }}
+          BATCH_SOURCE: ${{ matrix.source }}
+          BATCH_DATES: ${{ matrix.dates }}
+          BATCH_INDEX: ${{ matrix.batch_index }}
+          BATCH_COUNT: ${{ matrix.batch_count }}
+          HAS_NEXT_BATCH: ${{ matrix.has_next }}
           MIN_DELAY: ${{ inputs.min_request_delay_ms }}
           MAX_DELAY: ${{ inputs.max_request_delay_ms }}
           MIN_PAUSE: ${{ inputs.min_date_pause_seconds }}
           MAX_PAUSE: ${{ inputs.max_date_pause_seconds }}
+          BATCH_PAUSE_MIN: ${{ inputs.batch_pause_min_seconds }}
+          BATCH_PAUSE_MAX: ${{ inputs.batch_pause_max_seconds }}
           FORCE: ${{ inputs.force }}
         run: |
           set -uo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           mkdir -p "$RUNNER_TEMP/coverage-logs" "$RUNNER_TEMP/coverage-saved"
-          changed=false; failures=()
+          changed=false
+          failures=()
 
           pause_between_dates() {
-            local minimum="${1:-${MIN_PAUSE:-60}}" maximum="${2:-${MAX_PAUSE:-180}}"
+            local minimum="${1:-${MIN_PAUSE:-60}}"
+            local maximum="${2:-${MAX_PAUSE:-180}}"
             [ "$maximum" -lt "$minimum" ] && maximum="$minimum"
             local seconds=$((minimum + RANDOM % (maximum - minimum + 1)))
-            echo "⏳ 下一日期前休息 ${seconds}s"; sleep "$seconds"
+            echo "⏳ 下一日期前休息 ${seconds}s"
+            sleep "$seconds"
+          }
+
+          pause_between_batches() {
+            local minimum="${BATCH_PAUSE_MIN:-120}"
+            local maximum="${BATCH_PAUSE_MAX:-300}"
+            if [ "$BATCH_SOURCE" = broker ]; then
+              [ "$minimum" -lt 300 ] && minimum=300
+              [ "$maximum" -lt "$minimum" ] && maximum="$minimum"
+            fi
+            [ "$maximum" -lt "$minimum" ] && maximum="$minimum"
+            local seconds=$((minimum + RANDOM % (maximum - minimum + 1)))
+            echo "🛑 batch ${BATCH_INDEX}/${BATCH_COUNT} 完成；長休息 ${seconds}s 後自動接續下一批。"
+            sleep "$seconds"
           }
 
           push_files() {
-            local message="$1"; shift
+            local message="$1"
+            shift
             local saved="$RUNNER_TEMP/coverage-saved/push"
-            rm -rf "$saved"; mkdir -p "$saved"
+            rm -rf "$saved"
+            mkdir -p "$saved"
+
             local file
-            for file in "$@"; do [ -f "$file" ] && cp --parents "$file" "$saved"; done
+            for file in "$@"; do
+              [ -f "$file" ] && cp --parents "$file" "$saved"
+            done
             [ -n "$(find "$saved" -type f -print -quit)" ] || return 1
+
             for attempt in 1 2 3 4 5; do
-              git fetch origin main && git reset --hard origin/main
+              git fetch origin main
+              git reset --hard origin/main
               cp -a "$saved/." .
               node scripts/generate_file_lists.js --only data_twse_investment_trust,data_twse_dealers,data_twse_margin_balance,data_fubon_broker_details
               git add data_twse_investment_trust data_twse_dealers data_twse_margin_balance data_fubon_broker_details
-              if git diff --cached --quiet; then return 0; fi
+
+              if git diff --cached --quiet; then
+                echo "ℹ️ 內容已存在於 main。"
+                return 0
+              fi
+
               git commit -m "$message"
-              if git pull --rebase origin main && git push origin HEAD:main; then changed=true; return 0; fi
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                changed=true
+                return 0
+              fi
+              echo "Push failed; retry ${attempt}/5..."
               sleep $((attempt * 5))
             done
             return 1
           }
 
           backfill_institutional() {
-            [ -n "$INSTITUTIONAL_DATES" ] || return 0
-            IFS=',' read -r -a dates <<< "$INSTITUTIONAL_DATES"
+            IFS=',' read -r -a dates <<< "$BATCH_DATES"
             for index in "${!dates[@]}"; do
               date="${dates[$index]}"
               set +e
@@ -224,9 +342,16 @@ jobs:
                 --min-delay "${MIN_DELAY:-5000}" --max-delay "${MAX_DELAY:-15000}" \
                 --max-retries 4 --retry-cooldown 120000 --max-days 1 \
                 2>&1 | tee "$RUNNER_TEMP/coverage-logs/institutional-${date}.log"
-              status=${PIPESTATUS[0]}; set -e
+              status=${PIPESTATUS[0]}
+              set -e
+
               files=("data_twse_investment_trust/${date}_twse_investment_trust.json" "data_twse_dealers/${date}_twse_dealers.json")
-              [ "$status" -eq 0 ] && push_files "🏛️ Backfill oversold rebound institutional coverage ${date}" "${files[@]}" || failures+=("institutional:$date")
+              if [ "$status" -eq 0 ] && push_files "🏛️ Backfill oversold rebound institutional coverage ${date}" "${files[@]}"; then
+                echo "✅ institutional ${date}"
+              else
+                failures+=("institutional:$date")
+              fi
+
               if [ "$index" -lt "$((${#dates[@]} - 1))" ]; then
                 pause_between_dates
               fi
@@ -234,14 +359,24 @@ jobs:
           }
 
           backfill_margin() {
-            [ -n "$MARGIN_DATES" ] || return 0
-            IFS=',' read -r -a dates <<< "$MARGIN_DATES"
+            IFS=',' read -r -a dates <<< "$BATCH_DATES"
             for index in "${!dates[@]}"; do
-              date="${dates[$index]}"; args=(--date "$date" --max-retries 4 --retry-cooldown-ms 120000 --min-delay-ms "${MIN_DELAY:-5000}" --max-delay-ms "${MAX_DELAY:-15000}")
+              date="${dates[$index]}"
+              args=(--date "$date" --max-retries 4 --retry-cooldown-ms 120000 --min-delay-ms "${MIN_DELAY:-5000}" --max-delay-ms "${MAX_DELAY:-15000}")
               [ "$FORCE" = true ] && args+=(--force)
-              set +e; node scripts/crawl_twse_margin_balance.js "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/coverage-logs/margin-${date}.log"; status=${PIPESTATUS[0]}; set -e
+
+              set +e
+              node scripts/crawl_twse_margin_balance.js "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/coverage-logs/margin-${date}.log"
+              status=${PIPESTATUS[0]}
+              set -e
+
               file="data_twse_margin_balance/${date}_twse_margin_balance.csv"
-              [ "$status" -eq 0 ] && push_files "📊 Backfill oversold rebound margin coverage ${date}" "$file" || failures+=("margin:$date")
+              if [ "$status" -eq 0 ] && push_files "📊 Backfill oversold rebound margin coverage ${date}" "$file"; then
+                echo "✅ margin ${date}"
+              else
+                failures+=("margin:$date")
+              fi
+
               if [ "$index" -lt "$((${#dates[@]} - 1))" ]; then
                 pause_between_dates
               fi
@@ -249,37 +384,89 @@ jobs:
           }
 
           backfill_broker() {
-            [ -n "$BROKER_DATES" ] || return 0
-            IFS=',' read -r -a dates <<< "$BROKER_DATES"
+            IFS=',' read -r -a dates <<< "$BATCH_DATES"
             for index in "${!dates[@]}"; do
-              date="${dates[$index]}"; iso="${date:0:4}-${date:4:2}-${date:6:2}"
-              args=(--date "$iso" --final-output-dir data_fubon_broker_details --work-root "$RUNNER_TEMP/fubon-work" --concurrency 2 --retries 4 --min-delay-ms 1200 --max-delay-ms 3500 --backoff-base-ms 8000 --checkpoint-size 100)
+              date="${dates[$index]}"
+              iso="${date:0:4}-${date:4:2}-${date:6:2}"
+              args=(
+                --date "$iso"
+                --final-output-dir data_fubon_broker_details
+                --work-root "$RUNNER_TEMP/fubon-work"
+                --concurrency 2
+                --retries 4
+                --min-delay-ms 1200
+                --max-delay-ms 3500
+                --backoff-base-ms 8000
+                --checkpoint-size 100
+              )
               [ "$FORCE" = true ] && args+=(--force)
-              set +e; node scripts/crawl_fubon_broker_date_isolated.js "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/coverage-logs/broker-${date}.log"; status=${PIPESTATUS[0]}; set -e
+
+              set +e
+              node scripts/crawl_fubon_broker_date_isolated.js "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/coverage-logs/broker-${date}.log"
+              status=${PIPESTATUS[0]}
+              set -e
+
               file="data_fubon_broker_details/fubon_${date}_券商分點進出明細.json"
-              [ "$status" -eq 0 ] && push_files "🏦 Backfill oversold rebound broker coverage ${date}" "$file" || failures+=("broker:$date")
+              if [ "$status" -eq 0 ] && push_files "🏦 Backfill oversold rebound broker coverage ${date}" "$file"; then
+                echo "✅ broker ${date}"
+              else
+                failures+=("broker:$date")
+              fi
+
               if [ "$index" -lt "$((${#dates[@]} - 1))" ]; then
                 pause_between_dates 300 900
               fi
             done
           }
 
-          backfill_institutional
-          backfill_margin
-          backfill_broker
+          case "$BATCH_SOURCE" in
+            institutional) backfill_institutional ;;
+            margin) backfill_margin ;;
+            broker) backfill_broker ;;
+            *) echo "未知 batch source：$BATCH_SOURCE"; exit 1 ;;
+          esac
+
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
-          if [ "${#failures[@]}" -gt 0 ]; then printf '未完成：%s\n' "${failures[*]}"; exit 1; fi
+
+          if [ "$HAS_NEXT_BATCH" = true ]; then
+            pause_between_batches
+          fi
+
+          if [ "${#failures[@]}" -gt 0 ]; then
+            printf '未完成：%s\n' "${failures[*]}"
+            exit 1
+          fi
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oversold-rebound-coverage-${{ github.run_id }}
+          name: oversold-rebound-coverage-${{ github.run_id }}-${{ matrix.source }}-batch-${{ matrix.batch_index }}
           path: ${{ runner.temp }}/coverage-logs
           if-no-files-found: warn
           retention-days: 14
+
+  refresh:
+    needs: [plan, backfill]
+    if: >
+      always() &&
+      github.event_name != 'pull_request' &&
+      needs.plan.outputs.has_work == 'true' &&
+      (github.event_name == 'schedule' || inputs.refresh_dashboard == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report batch outcome
+        run: |
+          echo "Backfill matrix result: ${{ needs.backfill.result }}"
+          if [ '${{ needs.backfill.result }}' != 'success' ]; then
+            echo '部分 batch 失敗，但已成功 commit 的日期仍會納入本次 Dashboard 重建。'
+          fi
+
       - name: Rebuild research and Dashboard once
-        if: steps.run.outputs.changed == 'true' && (github.event_name == 'schedule' || inputs.refresh_dashboard == true)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh workflow run mine-oversold-rebound-research.yml --repo '${{ github.repository }}' --ref main -f dry_run=false
+          gh workflow run mine-oversold-rebound-research.yml \
+            --repo '${{ github.repository }}' \
+            --ref main \
+            -f dry_run=false
           echo '已派送完整研究與 Dashboard 重建。'
