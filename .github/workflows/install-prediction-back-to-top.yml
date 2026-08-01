@@ -53,17 +53,28 @@ jobs:
       - name: Install shared back-to-top control
         run: node scripts/install_prediction_back_to_top.js
 
-      - name: Verify all prediction pages include the shared script
+      - name: Verify one control per prediction view
         shell: bash
         run: |
-          missing=0
+          invalid=0
           while IFS= read -r file; do
-            if ! grep -q 'prediction-back-to-top.js' "$file"; then
-              echo "Missing shared back-to-top script: $file"
-              missing=1
-            fi
+            name=$(basename "$file")
+            case "$name" in
+              prediction-replay-dashboard.html|prediction-replay-dashboard-embedded.html)
+                if grep -q 'prediction-back-to-top.js' "$file"; then
+                  echo "Replay iframe wrapper must not install its own back-to-top control: $file"
+                  invalid=1
+                fi
+                ;;
+              *)
+                if ! grep -q 'prediction-back-to-top.js' "$file"; then
+                  echo "Missing shared back-to-top script: $file"
+                  invalid=1
+                fi
+                ;;
+            esac
           done < <(find public -maxdepth 1 -type f -name 'prediction*.html' | sort)
-          exit "$missing"
+          exit "$invalid"
 
       - name: Verify changed-file scope
         if: github.event_name != 'pull_request'
@@ -86,10 +97,10 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add public/prediction*.html
           if git diff --cached --quiet; then
-            echo 'All prediction pages already include the back-to-top control'
+            echo 'Prediction pages already have exactly one effective back-to-top control'
             exit 0
           fi
-          git commit -m 'ui: install back-to-top on prediction pages'
+          git commit -m 'ui: remove duplicate replay back-to-top controls'
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
