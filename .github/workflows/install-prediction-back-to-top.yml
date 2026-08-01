@@ -1,0 +1,100 @@
+name: '[UI] Install Prediction Back To Top'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/install-prediction-back-to-top.yml'
+      - 'public/prediction*.html'
+      - 'public/prediction-back-to-top.js'
+      - 'scripts/install_prediction_back_to_top.js'
+      - 'tests/install_prediction_back_to_top.test.js'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/install-prediction-back-to-top.yml'
+      - 'public/prediction*.html'
+      - 'public/prediction-back-to-top.js'
+      - 'scripts/install_prediction_back_to_top.js'
+      - 'tests/install_prediction_back_to_top.test.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: install-prediction-back-to-top-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate installer
+        run: |
+          node --check public/prediction-back-to-top.js
+          node --check scripts/install_prediction_back_to_top.js
+          node --test tests/install_prediction_back_to_top.test.js
+
+      - name: Install shared back-to-top control
+        run: node scripts/install_prediction_back_to_top.js
+
+      - name: Verify all prediction pages include the shared script
+        shell: bash
+        run: |
+          missing=0
+          while IFS= read -r file; do
+            if ! grep -q 'prediction-back-to-top.js' "$file"; then
+              echo "Missing shared back-to-top script: $file"
+              missing=1
+            fi
+          done < <(find public -maxdepth 1 -type f -name 'prediction*.html' | sort)
+          exit "$missing"
+
+      - name: Verify changed-file scope
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          unexpected=$(git status --short --untracked-files=all | awk '
+            $2 !~ /^public\/prediction.*\.html$/ { print }
+          ')
+          if [ -n "$unexpected" ]; then
+            echo 'Unexpected files changed:'
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit installed page references
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/prediction*.html
+          if git diff --cached --quiet; then
+            echo 'All prediction pages already include the back-to-top control'
+            exit 0
+          fi
+          git commit -m 'ui: install back-to-top on prediction pages'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed"
+            sleep $((attempt * 5))
+          done
+          exit 1
