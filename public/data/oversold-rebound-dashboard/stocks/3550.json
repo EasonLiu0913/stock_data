@@ -1,0 +1,1682 @@
+{
+  "schema_version": 1,
+  "stock_code": "3550",
+  "stock_name": "聯穎",
+  "security": {
+    "security_type": "listed_equity",
+    "is_equity": true,
+    "classification_basis": "twse_industry_stock"
+  },
+  "evidence_level": "exploratory",
+  "primary_outcome": {
+    "key": "intraday_rebound_5d_10pct",
+    "label": "5 個交易日內盤中最大反彈至少 10%",
+    "total_events": 7,
+    "verified_events": 6,
+    "successful_events": 3,
+    "unsuccessful_events": 3,
+    "unverified_events": 1,
+    "hit_rate": 50
+  },
+  "candidate_patterns": [
+    {
+      "feature_id": "gap_sma5",
+      "label": "距 SMA5 乖離",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -3.5826,
+      "mean_delta_success_minus_failure": -2.8954,
+      "median_delta_success_minus_failure": -2.5975,
+      "success": {
+        "count": 3,
+        "mean": -6.0115,
+        "median": -5.9912,
+        "standard_deviation": 0.952,
+        "minimum": -6.9735,
+        "maximum": -5.0698
+      },
+      "failure": {
+        "count": 3,
+        "mean": -3.1161,
+        "median": -3.3937,
+        "standard_deviation": 0.6325,
+        "minimum": -3.5623,
+        "maximum": -2.3923
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_5d",
+      "label": "事件日前 5 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -1.6074,
+      "mean_delta_success_minus_failure": -8.3778,
+      "median_delta_success_minus_failure": -3.5431,
+      "success": {
+        "count": 3,
+        "mean": -4.3381,
+        "median": -2.8024,
+        "standard_deviation": 4.0516,
+        "minimum": -8.933,
+        "maximum": -1.2788
+      },
+      "failure": {
+        "count": 3,
+        "mean": 4.0397,
+        "median": 0.7407,
+        "standard_deviation": 6.1574,
+        "minimum": 0.2347,
+        "maximum": 11.1437
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "rsi14",
+      "label": "RSI14",
+      "group": "price_volume",
+      "unit": "index",
+      "direction": "success_higher",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 83.33,
+      "standardized_mean_difference": 1.4378,
+      "mean_delta_success_minus_failure": 14.065,
+      "median_delta_success_minus_failure": 9.565,
+      "success": {
+        "count": 3,
+        "mean": 58.55,
+        "median": 54.05,
+        "standard_deviation": 9.9086,
+        "minimum": 51.69,
+        "maximum": 69.91
+      },
+      "failure": {
+        "count": 2,
+        "mean": 44.485,
+        "median": 44.485,
+        "standard_deviation": 9.5247,
+        "minimum": 37.75,
+        "maximum": 51.22
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "foreign_net_5d_shares",
+      "label": "外資近 5 日累積買賣超",
+      "group": "institutional",
+      "unit": "shares",
+      "direction": "success_lower",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.8233,
+      "mean_delta_success_minus_failure": -953172.3333,
+      "median_delta_success_minus_failure": -97327,
+      "success": {
+        "count": 3,
+        "mean": -489458,
+        "median": 408113,
+        "standard_deviation": 1622344.8151,
+        "minimum": -2362244,
+        "maximum": 485757
+      },
+      "failure": {
+        "count": 3,
+        "mean": 463714.3333,
+        "median": 505440,
+        "standard_deviation": 220138.5511,
+        "minimum": 225699,
+        "maximum": 660004
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "drawdown_60d",
+      "label": "距近 60 日高點跌幅",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.7642,
+      "mean_delta_success_minus_failure": -1.6167,
+      "median_delta_success_minus_failure": -0.667,
+      "success": {
+        "count": 3,
+        "mean": -16.9258,
+        "median": -17.0025,
+        "standard_deviation": 2.0982,
+        "minimum": -18.9845,
+        "maximum": -14.7903
+      },
+      "failure": {
+        "count": 3,
+        "mean": -15.3091,
+        "median": -16.3355,
+        "standard_deviation": 2.1329,
+        "minimum": -16.7347,
+        "maximum": -12.8571
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_1d",
+      "label": "事件日 1 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.6934,
+      "mean_delta_success_minus_failure": -1.4899,
+      "median_delta_success_minus_failure": -0.9021,
+      "success": {
+        "count": 3,
+        "mean": -5.2856,
+        "median": -4.2184,
+        "standard_deviation": 2.8094,
+        "minimum": -8.4722,
+        "maximum": -3.1662
+      },
+      "failure": {
+        "count": 3,
+        "mean": -3.7957,
+        "median": -3.3163,
+        "standard_deviation": 1.1579,
+        "minimum": -5.1163,
+        "maximum": -2.9545
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "volume_ratio_20d",
+      "label": "成交量／20 日均量",
+      "group": "price_volume",
+      "unit": "ratio",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.6798,
+      "mean_delta_success_minus_failure": 0.1932,
+      "median_delta_success_minus_failure": 0.4015,
+      "success": {
+        "count": 3,
+        "mean": 0.755,
+        "median": 0.9413,
+        "standard_deviation": 0.3609,
+        "minimum": 0.339,
+        "maximum": 0.9847
+      },
+      "failure": {
+        "count": 3,
+        "mean": 0.5618,
+        "median": 0.5398,
+        "standard_deviation": 0.1767,
+        "minimum": 0.3972,
+        "maximum": 0.7485
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_3d",
+      "label": "事件日前 3 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.6522,
+      "mean_delta_success_minus_failure": -1.722,
+      "median_delta_success_minus_failure": -0.2076,
+      "success": {
+        "count": 3,
+        "mean": -8.239,
+        "median": -8.2173,
+        "standard_deviation": 0.9268,
+        "minimum": -9.1765,
+        "maximum": -7.3232
+      },
+      "failure": {
+        "count": 3,
+        "mean": -6.517,
+        "median": -8.0097,
+        "standard_deviation": 3.6172,
+        "minimum": -9.1489,
+        "maximum": -2.3923
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "foreign_current_net_to_volume_pct",
+      "label": "外資當日買賣超占成交量",
+      "group": "institutional",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.61,
+      "mean_delta_success_minus_failure": 13.2884,
+      "median_delta_success_minus_failure": 7.9985,
+      "success": {
+        "count": 3,
+        "mean": 4.1615,
+        "median": 9.5949,
+        "standard_deviation": 13.8595,
+        "minimum": -11.5914,
+        "maximum": 14.4811
+      },
+      "failure": {
+        "count": 3,
+        "mean": -9.1269,
+        "median": 1.5964,
+        "standard_deviation": 27.5159,
+        "minimum": -40.3899,
+        "maximum": 11.4129
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_10d",
+      "label": "事件日前 10 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 83.33,
+      "standardized_mean_difference": 0.462,
+      "mean_delta_success_minus_failure": 4.6677,
+      "median_delta_success_minus_failure": 10.26,
+      "success": {
+        "count": 3,
+        "mean": 10.2249,
+        "median": 15.8172,
+        "standard_deviation": 11.2909,
+        "minimum": -2.7708,
+        "maximum": 17.6282
+      },
+      "failure": {
+        "count": 2,
+        "mean": 5.5572,
+        "median": 5.5572,
+        "standard_deviation": 7.1624,
+        "minimum": 0.4926,
+        "maximum": 10.6218
+      },
+      "eligible_as_candidate_pattern": true
+    }
+  ],
+  "feature_comparisons": [
+    {
+      "feature_id": "return_1d",
+      "label": "事件日 1 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.6934,
+      "mean_delta_success_minus_failure": -1.4899,
+      "median_delta_success_minus_failure": -0.9021,
+      "success": {
+        "count": 3,
+        "mean": -5.2856,
+        "median": -4.2184,
+        "standard_deviation": 2.8094,
+        "minimum": -8.4722,
+        "maximum": -3.1662
+      },
+      "failure": {
+        "count": 3,
+        "mean": -3.7957,
+        "median": -3.3163,
+        "standard_deviation": 1.1579,
+        "minimum": -5.1163,
+        "maximum": -2.9545
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_3d",
+      "label": "事件日前 3 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.6522,
+      "mean_delta_success_minus_failure": -1.722,
+      "median_delta_success_minus_failure": -0.2076,
+      "success": {
+        "count": 3,
+        "mean": -8.239,
+        "median": -8.2173,
+        "standard_deviation": 0.9268,
+        "minimum": -9.1765,
+        "maximum": -7.3232
+      },
+      "failure": {
+        "count": 3,
+        "mean": -6.517,
+        "median": -8.0097,
+        "standard_deviation": 3.6172,
+        "minimum": -9.1489,
+        "maximum": -2.3923
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_5d",
+      "label": "事件日前 5 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -1.6074,
+      "mean_delta_success_minus_failure": -8.3778,
+      "median_delta_success_minus_failure": -3.5431,
+      "success": {
+        "count": 3,
+        "mean": -4.3381,
+        "median": -2.8024,
+        "standard_deviation": 4.0516,
+        "minimum": -8.933,
+        "maximum": -1.2788
+      },
+      "failure": {
+        "count": 3,
+        "mean": 4.0397,
+        "median": 0.7407,
+        "standard_deviation": 6.1574,
+        "minimum": 0.2347,
+        "maximum": 11.1437
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_10d",
+      "label": "事件日前 10 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 83.33,
+      "standardized_mean_difference": 0.462,
+      "mean_delta_success_minus_failure": 4.6677,
+      "median_delta_success_minus_failure": 10.26,
+      "success": {
+        "count": 3,
+        "mean": 10.2249,
+        "median": 15.8172,
+        "standard_deviation": 11.2909,
+        "minimum": -2.7708,
+        "maximum": 17.6282
+      },
+      "failure": {
+        "count": 2,
+        "mean": 5.5572,
+        "median": 5.5572,
+        "standard_deviation": 7.1624,
+        "minimum": 0.4926,
+        "maximum": 10.6218
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "drawdown_20d",
+      "label": "距近 20 日高點跌幅",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.3515,
+      "mean_delta_success_minus_failure": 1.0953,
+      "median_delta_success_minus_failure": 0.5098,
+      "success": {
+        "count": 3,
+        "mean": -14.2138,
+        "median": -15.8257,
+        "standard_deviation": 3.8562,
+        "minimum": -17.0025,
+        "maximum": -9.8131
+      },
+      "failure": {
+        "count": 3,
+        "mean": -15.3091,
+        "median": -16.3355,
+        "standard_deviation": 2.1329,
+        "minimum": -16.7347,
+        "maximum": -12.8571
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "drawdown_60d",
+      "label": "距近 60 日高點跌幅",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.7642,
+      "mean_delta_success_minus_failure": -1.6167,
+      "median_delta_success_minus_failure": -0.667,
+      "success": {
+        "count": 3,
+        "mean": -16.9258,
+        "median": -17.0025,
+        "standard_deviation": 2.0982,
+        "minimum": -18.9845,
+        "maximum": -14.7903
+      },
+      "failure": {
+        "count": 3,
+        "mean": -15.3091,
+        "median": -16.3355,
+        "standard_deviation": 2.1329,
+        "minimum": -16.7347,
+        "maximum": -12.8571
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "rsi14",
+      "label": "RSI14",
+      "group": "price_volume",
+      "unit": "index",
+      "direction": "success_higher",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 83.33,
+      "standardized_mean_difference": 1.4378,
+      "mean_delta_success_minus_failure": 14.065,
+      "median_delta_success_minus_failure": 9.565,
+      "success": {
+        "count": 3,
+        "mean": 58.55,
+        "median": 54.05,
+        "standard_deviation": 9.9086,
+        "minimum": 51.69,
+        "maximum": 69.91
+      },
+      "failure": {
+        "count": 2,
+        "mean": 44.485,
+        "median": 44.485,
+        "standard_deviation": 9.5247,
+        "minimum": 37.75,
+        "maximum": 51.22
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "gap_sma5",
+      "label": "距 SMA5 乖離",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -3.5826,
+      "mean_delta_success_minus_failure": -2.8954,
+      "median_delta_success_minus_failure": -2.5975,
+      "success": {
+        "count": 3,
+        "mean": -6.0115,
+        "median": -5.9912,
+        "standard_deviation": 0.952,
+        "minimum": -6.9735,
+        "maximum": -5.0698
+      },
+      "failure": {
+        "count": 3,
+        "mean": -3.1161,
+        "median": -3.3937,
+        "standard_deviation": 0.6325,
+        "minimum": -3.5623,
+        "maximum": -2.3923
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "gap_sma20",
+      "label": "距 SMA20 乖離",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.2767,
+      "mean_delta_success_minus_failure": 2.4003,
+      "median_delta_success_minus_failure": -2.4336,
+      "success": {
+        "count": 3,
+        "mean": 6.7154,
+        "median": 1.662,
+        "standard_deviation": 9.8046,
+        "minimum": 0.4685,
+        "maximum": 18.0158
+      },
+      "failure": {
+        "count": 3,
+        "mean": 4.3151,
+        "median": 4.0956,
+        "standard_deviation": 7.377,
+        "minimum": -2.9496,
+        "maximum": 11.7994
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "gap_sma60",
+      "label": "距 SMA60 乖離",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.3446,
+      "mean_delta_success_minus_failure": 5.7525,
+      "median_delta_success_minus_failure": -2.094,
+      "success": {
+        "count": 3,
+        "mean": 20.8141,
+        "median": 10.8092,
+        "standard_deviation": 20.7836,
+        "minimum": 6.9252,
+        "maximum": 44.7079
+      },
+      "failure": {
+        "count": 3,
+        "mean": 15.0616,
+        "median": 12.9032,
+        "standard_deviation": 11.1975,
+        "minimum": 5.1005,
+        "maximum": 27.1812
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "volume_ratio_5d",
+      "label": "成交量／5 日均量",
+      "group": "price_volume",
+      "unit": "ratio",
+      "direction": "success_higher",
+      "exploratory_strength": "negligible_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.1645,
+      "mean_delta_success_minus_failure": 0.0547,
+      "median_delta_success_minus_failure": 0.2819,
+      "success": {
+        "count": 3,
+        "mean": 0.6261,
+        "median": 0.7899,
+        "standard_deviation": 0.3277,
+        "minimum": 0.2488,
+        "maximum": 0.8396
+      },
+      "failure": {
+        "count": 3,
+        "mean": 0.5714,
+        "median": 0.508,
+        "standard_deviation": 0.3373,
+        "minimum": 0.2703,
+        "maximum": 0.9359
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "volume_ratio_20d",
+      "label": "成交量／20 日均量",
+      "group": "price_volume",
+      "unit": "ratio",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.6798,
+      "mean_delta_success_minus_failure": 0.1932,
+      "median_delta_success_minus_failure": 0.4015,
+      "success": {
+        "count": 3,
+        "mean": 0.755,
+        "median": 0.9413,
+        "standard_deviation": 0.3609,
+        "minimum": 0.339,
+        "maximum": 0.9847
+      },
+      "failure": {
+        "count": 3,
+        "mean": 0.5618,
+        "median": 0.5398,
+        "standard_deviation": 0.1767,
+        "minimum": 0.3972,
+        "maximum": 0.7485
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "intraday_return",
+      "label": "事件日開收盤報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "negligible_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.0914,
+      "mean_delta_success_minus_failure": 0.2513,
+      "median_delta_success_minus_failure": -2.2052,
+      "success": {
+        "count": 3,
+        "mean": -3.6706,
+        "median": -5.1597,
+        "standard_deviation": 3.4494,
+        "minimum": -6.1254,
+        "maximum": 0.2732
+      },
+      "failure": {
+        "count": 3,
+        "mean": -3.9219,
+        "median": -2.9545,
+        "standard_deviation": 1.7929,
+        "minimum": -5.9908,
+        "maximum": -2.8205
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "intraday_range_pct",
+      "label": "事件日振幅",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.4111,
+      "mean_delta_success_minus_failure": 0.9573,
+      "median_delta_success_minus_failure": 1.3899,
+      "success": {
+        "count": 3,
+        "mean": 8.0036,
+        "median": 8.4977,
+        "standard_deviation": 3.1535,
+        "minimum": 4.6322,
+        "maximum": 10.8808
+      },
+      "failure": {
+        "count": 3,
+        "mean": 7.0463,
+        "median": 7.1078,
+        "standard_deviation": 0.9484,
+        "minimum": 6.0686,
+        "maximum": 7.9625
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "consecutive_down_days",
+      "label": "連續下跌日數",
+      "group": "price_volume",
+      "unit": "days",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.2265,
+      "mean_delta_success_minus_failure": 0.3333,
+      "median_delta_success_minus_failure": 0,
+      "success": {
+        "count": 3,
+        "mean": 3,
+        "median": 3,
+        "standard_deviation": 2,
+        "minimum": 1,
+        "maximum": 5
+      },
+      "failure": {
+        "count": 3,
+        "mean": 2.6667,
+        "median": 3,
+        "standard_deviation": 0.5774,
+        "minimum": 2,
+        "maximum": 3
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "volatility_20d",
+      "label": "20 日已實現波動",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.3459,
+      "mean_delta_success_minus_failure": 0.1979,
+      "median_delta_success_minus_failure": 0.134,
+      "success": {
+        "count": 3,
+        "mean": 4.8869,
+        "median": 4.5721,
+        "standard_deviation": 0.5694,
+        "minimum": 4.5444,
+        "maximum": 5.5442
+      },
+      "failure": {
+        "count": 3,
+        "mean": 4.689,
+        "median": 4.4381,
+        "standard_deviation": 0.5751,
+        "minimum": 4.2819,
+        "maximum": 5.3469
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "foreign_current_net_to_volume_pct",
+      "label": "外資當日買賣超占成交量",
+      "group": "institutional",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.61,
+      "mean_delta_success_minus_failure": 13.2884,
+      "median_delta_success_minus_failure": 7.9985,
+      "success": {
+        "count": 3,
+        "mean": 4.1615,
+        "median": 9.5949,
+        "standard_deviation": 13.8595,
+        "minimum": -11.5914,
+        "maximum": 14.4811
+      },
+      "failure": {
+        "count": 3,
+        "mean": -9.1269,
+        "median": 1.5964,
+        "standard_deviation": 27.5159,
+        "minimum": -40.3899,
+        "maximum": 11.4129
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "foreign_net_3d_shares",
+      "label": "外資近 3 日累積買賣超",
+      "group": "institutional",
+      "unit": "shares",
+      "direction": "success_higher",
+      "exploratory_strength": "negligible_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.1676,
+      "mean_delta_success_minus_failure": 208883.6666,
+      "median_delta_success_minus_failure": 861444,
+      "success": {
+        "count": 3,
+        "mean": -241364.6667,
+        "median": 372000,
+        "standard_deviation": 1725827.4859,
+        "minimum": -2190094,
+        "maximum": 1094000
+      },
+      "failure": {
+        "count": 3,
+        "mean": -450248.3333,
+        "median": -489444,
+        "standard_deviation": 358958.0621,
+        "minimum": -788000,
+        "maximum": -73301
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "foreign_net_5d_shares",
+      "label": "外資近 5 日累積買賣超",
+      "group": "institutional",
+      "unit": "shares",
+      "direction": "success_lower",
+      "exploratory_strength": "large_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.8233,
+      "mean_delta_success_minus_failure": -953172.3333,
+      "median_delta_success_minus_failure": -97327,
+      "success": {
+        "count": 3,
+        "mean": -489458,
+        "median": 408113,
+        "standard_deviation": 1622344.8151,
+        "minimum": -2362244,
+        "maximum": 485757
+      },
+      "failure": {
+        "count": 3,
+        "mean": 463714.3333,
+        "median": 505440,
+        "standard_deviation": 220138.5511,
+        "minimum": 225699,
+        "maximum": 660004
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "foreign_turned_to_buy",
+      "label": "外資是否由賣轉買",
+      "group": "institutional",
+      "unit": "boolean",
+      "direction": "similar",
+      "exploratory_strength": "negligible_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0,
+      "mean_delta_success_minus_failure": 0,
+      "median_delta_success_minus_failure": 0,
+      "success": {
+        "count": 3,
+        "mean": 0.3333,
+        "median": 0,
+        "standard_deviation": 0.5774,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "failure": {
+        "count": 3,
+        "mean": 0.3333,
+        "median": 0,
+        "standard_deviation": 0.5774,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "trust_current_net_to_volume_pct",
+      "label": "投信當日買賣超占成交量",
+      "group": "institutional",
+      "unit": "pct",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 0,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": 0,
+      "median_delta_success_minus_failure": 0,
+      "success": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "trust_net_3d_shares",
+      "label": "投信近 3 日累積買賣超",
+      "group": "institutional",
+      "unit": "shares",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 0,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": 0,
+      "median_delta_success_minus_failure": 0,
+      "success": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "trust_turned_to_buy",
+      "label": "投信是否由賣轉買",
+      "group": "institutional",
+      "unit": "boolean",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 0,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": 0,
+      "median_delta_success_minus_failure": 0,
+      "success": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "margin_change",
+      "label": "融資當日增減",
+      "group": "margin",
+      "unit": "source_unit",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 16.67,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": -323,
+      "median_delta_success_minus_failure": -323,
+      "success": {
+        "count": 1,
+        "mean": -323,
+        "median": -323,
+        "standard_deviation": 0,
+        "minimum": -323,
+        "maximum": -323
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "margin_change_3d",
+      "label": "融資近 3 日累積增減",
+      "group": "margin",
+      "unit": "source_unit",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 16.67,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": 320,
+      "median_delta_success_minus_failure": 320,
+      "success": {
+        "count": 1,
+        "mean": 320,
+        "median": 320,
+        "standard_deviation": 0,
+        "minimum": 320,
+        "maximum": 320
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "margin_change_5d",
+      "label": "融資近 5 日累積增減",
+      "group": "margin",
+      "unit": "source_unit",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 16.67,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": -512,
+      "median_delta_success_minus_failure": -512,
+      "success": {
+        "count": 1,
+        "mean": -512,
+        "median": -512,
+        "standard_deviation": 0,
+        "minimum": -512,
+        "maximum": -512
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "short_change",
+      "label": "融券當日增減",
+      "group": "margin",
+      "unit": "source_unit",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 16.67,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": -57,
+      "median_delta_success_minus_failure": -57,
+      "success": {
+        "count": 1,
+        "mean": -57,
+        "median": -57,
+        "standard_deviation": 0,
+        "minimum": -57,
+        "maximum": -57
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "short_change_3d",
+      "label": "融券近 3 日累積增減",
+      "group": "margin",
+      "unit": "source_unit",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 16.67,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": -26,
+      "median_delta_success_minus_failure": -26,
+      "success": {
+        "count": 1,
+        "mean": -26,
+        "median": -26,
+        "standard_deviation": 0,
+        "minimum": -26,
+        "maximum": -26
+      },
+      "failure": {
+        "count": 0,
+        "mean": 0,
+        "median": 0,
+        "standard_deviation": 0,
+        "minimum": null,
+        "maximum": null
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "broker_total_net_lots",
+      "label": "券商分點合計淨買賣超",
+      "group": "broker",
+      "unit": "lots",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 33.33,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": 293,
+      "median_delta_success_minus_failure": 293,
+      "success": {
+        "count": 1,
+        "mean": 77,
+        "median": 77,
+        "standard_deviation": 0,
+        "minimum": 77,
+        "maximum": 77
+      },
+      "failure": {
+        "count": 1,
+        "mean": -216,
+        "median": -216,
+        "standard_deviation": 0,
+        "minimum": -216,
+        "maximum": -216
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "broker_top5_buy_net_lots",
+      "label": "前 5 大買方淨買超",
+      "group": "broker",
+      "unit": "lots",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 33.33,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": -98,
+      "median_delta_success_minus_failure": -98,
+      "success": {
+        "count": 1,
+        "mean": 225,
+        "median": 225,
+        "standard_deviation": 0,
+        "minimum": 225,
+        "maximum": 225
+      },
+      "failure": {
+        "count": 1,
+        "mean": 323,
+        "median": 323,
+        "standard_deviation": 0,
+        "minimum": 323,
+        "maximum": 323
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "broker_top5_sell_net_lots",
+      "label": "前 5 大賣方淨賣超",
+      "group": "broker",
+      "unit": "lots",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 33.33,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": -289,
+      "median_delta_success_minus_failure": -289,
+      "success": {
+        "count": 1,
+        "mean": 149,
+        "median": 149,
+        "standard_deviation": 0,
+        "minimum": 149,
+        "maximum": 149
+      },
+      "failure": {
+        "count": 1,
+        "mean": 438,
+        "median": 438,
+        "standard_deviation": 0,
+        "minimum": 438,
+        "maximum": 438
+      },
+      "eligible_as_candidate_pattern": false
+    },
+    {
+      "feature_id": "broker_top5_net_concentration_lots",
+      "label": "前 5 大分點淨集中差",
+      "group": "broker",
+      "unit": "lots",
+      "direction": "insufficient_data",
+      "exploratory_strength": "insufficient_data",
+      "coverage_pct": 33.33,
+      "standardized_mean_difference": null,
+      "mean_delta_success_minus_failure": 191,
+      "median_delta_success_minus_failure": 191,
+      "success": {
+        "count": 1,
+        "mean": 76,
+        "median": 76,
+        "standard_deviation": 0,
+        "minimum": 76,
+        "maximum": 76
+      },
+      "failure": {
+        "count": 1,
+        "mean": -115,
+        "median": -115,
+        "standard_deviation": 0,
+        "minimum": -115,
+        "maximum": -115
+      },
+      "eligible_as_candidate_pattern": false
+    }
+  ],
+  "feature_coverage": {
+    "foreign": {
+      "event_count": 7,
+      "coverage_pct": 100
+    },
+    "investment_trust": {
+      "event_count": 1,
+      "coverage_pct": 14.29
+    },
+    "dealer": {
+      "event_count": 0,
+      "coverage_pct": 0
+    },
+    "margin": {
+      "event_count": 2,
+      "coverage_pct": 28.57
+    },
+    "broker": {
+      "event_count": 3,
+      "coverage_pct": 42.86
+    }
+  },
+  "history": {
+    "first_date": "20260203",
+    "last_date": "20260731",
+    "trading_days": 116
+  },
+  "events": [
+    {
+      "event_id": "3550-20260223-01",
+      "signal_date": "20260223",
+      "deepest_signal_date": "20260309",
+      "episode_end_date": "20260313",
+      "observation_count": 14,
+      "trigger_ids": [
+        "return_3d_lte",
+        "drawdown_20d_lte",
+        "return_5d_lte",
+        "drawdown_60d_lte",
+        "return_10d_lte",
+        "rsi14_lte"
+      ],
+      "result": "failure",
+      "signal": {
+        "close": 18.95,
+        "severity": 2.907,
+        "return_3d": -8.0097,
+        "return_5d": 11.1437,
+        "return_10d": null,
+        "drawdown_20d": -16.3355,
+        "drawdown_60d": -16.3355,
+        "rsi14": null,
+        "gap_sma20": 11.7994,
+        "volume_ratio_5d": 0.2703,
+        "volume_ratio_20d": 0.3972
+      },
+      "deepest_signal": {
+        "close": 15.6,
+        "severity": 7.3249,
+        "return_5d": -15.4472,
+        "drawdown_20d": -31.1258,
+        "rsi14": 43.5
+      },
+      "outcome_from_signal": {
+        "future_return_1d": 1.0554,
+        "future_return_3d": -4.2216,
+        "future_return_5d": -5.0132,
+        "future_return_10d": -16.3588,
+        "max_return_3d": 4.4855,
+        "max_return_5d": 4.4855,
+        "max_return_10d": 4.4855,
+        "max_adverse_5d": -8.4433,
+        "days_to_close_rebound_5pct": null,
+        "days_to_intraday_rebound_5pct": null,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": 29.1667,
+        "max_return_5d": 29.1667,
+        "max_adverse_5d": 0.3205
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": null,
+        "broker": true
+      }
+    },
+    {
+      "event_id": "3550-20260323-02",
+      "signal_date": "20260323",
+      "deepest_signal_date": "20260326",
+      "episode_end_date": "20260408",
+      "observation_count": 8,
+      "trigger_ids": [
+        "drawdown_20d_lte",
+        "return_3d_lte",
+        "return_5d_lte",
+        "drawdown_60d_lte"
+      ],
+      "result": "success",
+      "signal": {
+        "close": 18.35,
+        "severity": 3.813,
+        "return_3d": -7.3232,
+        "return_5d": -8.933,
+        "return_10d": 17.6282,
+        "drawdown_20d": -15.8257,
+        "drawdown_60d": -18.9845,
+        "rsi14": 51.69,
+        "gap_sma20": 1.662,
+        "volume_ratio_5d": 0.2488,
+        "volume_ratio_20d": 0.339
+      },
+      "deepest_signal": {
+        "close": 17.5,
+        "severity": 4.0795,
+        "return_5d": -10.4859,
+        "drawdown_20d": -19.7248,
+        "rsi14": 56.17
+      },
+      "outcome_from_signal": {
+        "future_return_1d": -2.9973,
+        "future_return_3d": -4.6322,
+        "future_return_5d": 1.3624,
+        "future_return_10d": -0.545,
+        "max_return_3d": 2.1798,
+        "max_return_5d": 10.8992,
+        "max_return_10d": 10.8992,
+        "max_adverse_5d": -7.9019,
+        "days_to_close_rebound_5pct": null,
+        "days_to_intraday_rebound_5pct": 5,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": 0.5714,
+        "max_return_5d": 16.2857,
+        "max_adverse_5d": -3.4286
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": null,
+        "broker": true
+      }
+    },
+    {
+      "event_id": "3550-20260423-03",
+      "signal_date": "20260423",
+      "deepest_signal_date": "20260427",
+      "episode_end_date": "20260427",
+      "observation_count": 3,
+      "trigger_ids": [
+        "return_3d_lte",
+        "return_5d_lte"
+      ],
+      "result": "success",
+      "signal": {
+        "close": 19.3,
+        "severity": 2.8534,
+        "return_3d": -9.1765,
+        "return_5d": -1.2788,
+        "return_10d": -2.7708,
+        "drawdown_20d": -9.8131,
+        "drawdown_60d": -14.7903,
+        "rsi14": 54.05,
+        "gap_sma20": 0.4685,
+        "volume_ratio_5d": 0.8396,
+        "volume_ratio_20d": 0.9847
+      },
+      "deepest_signal": {
+        "close": 18.4,
+        "severity": 4.9086,
+        "return_5d": -13.4118,
+        "drawdown_20d": -14.0187,
+        "rsi14": 53.33
+      },
+      "outcome_from_signal": {
+        "future_return_1d": -1.8135,
+        "future_return_3d": -2.3316,
+        "future_return_5d": 10.3627,
+        "future_return_10d": 10.6218,
+        "max_return_3d": 2.0725,
+        "max_return_5d": 17.6166,
+        "max_return_10d": 26.943,
+        "max_adverse_5d": -6.2176,
+        "days_to_close_rebound_5pct": 4,
+        "days_to_intraday_rebound_5pct": 4,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": 27.7174,
+        "max_return_5d": 27.7174,
+        "max_adverse_5d": -0.2717
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": null,
+        "broker": null
+      }
+    },
+    {
+      "event_id": "3550-20260508-04",
+      "signal_date": "20260508",
+      "deepest_signal_date": "20260520",
+      "episode_end_date": "20260520",
+      "observation_count": 6,
+      "trigger_ids": [
+        "return_3d_lte",
+        "return_5d_lte",
+        "drawdown_20d_lte"
+      ],
+      "result": "failure",
+      "signal": {
+        "close": 21.35,
+        "severity": 2.6436,
+        "return_3d": -9.1489,
+        "return_5d": 0.2347,
+        "return_10d": 10.6218,
+        "drawdown_20d": -12.8571,
+        "drawdown_60d": -12.8571,
+        "rsi14": 51.22,
+        "gap_sma20": 4.0956,
+        "volume_ratio_5d": 0.508,
+        "volume_ratio_20d": 0.7485
+      },
+      "deepest_signal": {
+        "close": 19.95,
+        "severity": 3.5307,
+        "return_5d": -0.4988,
+        "drawdown_20d": -18.5714,
+        "rsi14": 45.56
+      },
+      "outcome_from_signal": {
+        "future_return_1d": 0.2342,
+        "future_return_3d": -6.089,
+        "future_return_5d": -1.6393,
+        "future_return_10d": 1.8735,
+        "max_return_3d": 2.8103,
+        "max_return_5d": 5.1522,
+        "max_return_10d": 5.1522,
+        "max_adverse_5d": -7.9625,
+        "days_to_close_rebound_5pct": null,
+        "days_to_intraday_rebound_5pct": 5,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": 1.2531,
+        "max_return_5d": 12.782,
+        "max_adverse_5d": 0
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": null,
+        "broker": null
+      }
+    },
+    {
+      "event_id": "3550-20260526-05",
+      "signal_date": "20260526",
+      "deepest_signal_date": "20260528",
+      "episode_end_date": "20260529",
+      "observation_count": 4,
+      "trigger_ids": [
+        "drawdown_20d_lte"
+      ],
+      "result": "failure",
+      "signal": {
+        "close": 20.4,
+        "severity": 2.2514,
+        "return_3d": -2.3923,
+        "return_5d": 0.7407,
+        "return_10d": 0.4926,
+        "drawdown_20d": -16.7347,
+        "drawdown_60d": -16.7347,
+        "rsi14": 37.75,
+        "gap_sma20": -2.9496,
+        "volume_ratio_5d": 0.9359,
+        "volume_ratio_20d": 0.5398
+      },
+      "deepest_signal": {
+        "close": 20,
+        "severity": 3.7781,
+        "return_5d": -4.3062,
+        "drawdown_20d": -18.3673,
+        "rsi14": 40.43
+      },
+      "outcome_from_signal": {
+        "future_return_1d": -0.9804,
+        "future_return_3d": 1.2255,
+        "future_return_5d": 2.9412,
+        "future_return_10d": 26.9608,
+        "max_return_3d": 2.6961,
+        "max_return_5d": 9.3137,
+        "max_return_10d": 26.9608,
+        "max_adverse_5d": -3.4314,
+        "days_to_close_rebound_5pct": 4,
+        "days_to_intraday_rebound_5pct": 4,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": 19.75,
+        "max_return_5d": 19.75,
+        "max_adverse_5d": 0
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": null,
+        "broker": null
+      }
+    },
+    {
+      "event_id": "3550-20260625-06",
+      "signal_date": "20260625",
+      "deepest_signal_date": "20260720",
+      "episode_end_date": "20260724",
+      "observation_count": 20,
+      "trigger_ids": [
+        "return_3d_lte",
+        "drawdown_20d_lte",
+        "return_5d_lte",
+        "drawdown_60d_lte",
+        "return_10d_lte",
+        "rsi14_lte"
+      ],
+      "result": "success",
+      "signal": {
+        "close": 32.95,
+        "severity": 3.291,
+        "return_3d": -8.2173,
+        "return_5d": -2.8024,
+        "return_10d": 15.8172,
+        "drawdown_20d": -17.0025,
+        "drawdown_60d": -17.0025,
+        "rsi14": 69.91,
+        "gap_sma20": 18.0158,
+        "volume_ratio_5d": 0.7899,
+        "volume_ratio_20d": 0.9413
+      },
+      "deepest_signal": {
+        "close": 21.85,
+        "severity": 11.2054,
+        "return_5d": -19.0741,
+        "drawdown_20d": -44.9622,
+        "rsi14": 30
+      },
+      "outcome_from_signal": {
+        "future_return_1d": -4.7041,
+        "future_return_3d": -3.4901,
+        "future_return_5d": 11.3809,
+        "future_return_10d": -14.4158,
+        "max_return_3d": 4.0971,
+        "max_return_5d": 11.3809,
+        "max_return_10d": 14.264,
+        "max_adverse_5d": -10.0152,
+        "days_to_close_rebound_5pct": 5,
+        "days_to_intraday_rebound_5pct": 4,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": -2.0595,
+        "max_return_5d": 7.0938,
+        "max_adverse_5d": -3.8902
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": true,
+        "broker": null
+      }
+    },
+    {
+      "event_id": "3550-20260727-07",
+      "signal_date": "20260727",
+      "deepest_signal_date": "20260730",
+      "episode_end_date": "20260731",
+      "observation_count": 5,
+      "trigger_ids": [
+        "return_10d_lte",
+        "drawdown_20d_lte",
+        "drawdown_60d_lte",
+        "rsi14_lte",
+        "return_3d_lte",
+        "return_5d_lte"
+      ],
+      "result": "unverified",
+      "signal": {
+        "close": 21.4,
+        "severity": 8.2004,
+        "return_3d": -6.3457,
+        "return_5d": -2.0595,
+        "return_10d": -20.7407,
+        "drawdown_20d": -43.1607,
+        "drawdown_60d": -46.0957,
+        "rsi14": 9.09,
+        "gap_sma20": -21.0623,
+        "volume_ratio_5d": 0.7274,
+        "volume_ratio_20d": 0.2119
+      },
+      "deepest_signal": {
+        "close": 18.5,
+        "severity": 11.8456,
+        "return_5d": -18.1416,
+        "drawdown_20d": -50.8632,
+        "rsi14": 9.92
+      },
+      "outcome_from_signal": {
+        "future_return_1d": -5.6075,
+        "future_return_3d": -13.5514,
+        "future_return_5d": null,
+        "future_return_10d": null,
+        "max_return_3d": -2.5701,
+        "max_return_5d": -2.5701,
+        "max_return_10d": -2.5701,
+        "max_adverse_5d": -14.2523,
+        "days_to_close_rebound_5pct": null,
+        "days_to_intraday_rebound_5pct": null,
+        "verified": false
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": null,
+        "max_return_5d": 7.2973,
+        "max_adverse_5d": 4.5946
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": true,
+        "margin": true,
+        "broker": true
+      }
+    }
+  ],
+  "notes": [
+    "成功／失敗比較只使用已走完對應觀察期的事件。",
+    "候選規律是探索性差異，尚未經過樣本外驗證。"
+  ]
+}
