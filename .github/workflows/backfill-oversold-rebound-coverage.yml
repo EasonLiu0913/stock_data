@@ -227,7 +227,9 @@ jobs:
               status=${PIPESTATUS[0]}; set -e
               files=("data_twse_investment_trust/${date}_twse_investment_trust.json" "data_twse_dealers/${date}_twse_dealers.json")
               [ "$status" -eq 0 ] && push_files "🏛️ Backfill oversold rebound institutional coverage ${date}" "${files[@]}" || failures+=("institutional:$date")
-              [ "$index" -lt "$((${#dates[@]} - 1))" ] && pause_between_dates
+              if [ "$index" -lt "$((${#dates[@]} - 1))" ]; then
+                pause_between_dates
+              fi
             done
           }
 
@@ -240,7 +242,9 @@ jobs:
               set +e; node scripts/crawl_twse_margin_balance.js "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/coverage-logs/margin-${date}.log"; status=${PIPESTATUS[0]}; set -e
               file="data_twse_margin_balance/${date}_twse_margin_balance.csv"
               [ "$status" -eq 0 ] && push_files "📊 Backfill oversold rebound margin coverage ${date}" "$file" || failures+=("margin:$date")
-              [ "$index" -lt "$((${#dates[@]} - 1))" ] && pause_between_dates
+              if [ "$index" -lt "$((${#dates[@]} - 1))" ]; then
+                pause_between_dates
+              fi
             done
           }
 
@@ -254,7 +258,9 @@ jobs:
               set +e; node scripts/crawl_fubon_broker_date_isolated.js "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/coverage-logs/broker-${date}.log"; status=${PIPESTATUS[0]}; set -e
               file="data_fubon_broker_details/fubon_${date}_券商分點進出明細.json"
               [ "$status" -eq 0 ] && push_files "🏦 Backfill oversold rebound broker coverage ${date}" "$file" || failures+=("broker:$date")
-              [ "$index" -lt "$((${#dates[@]} - 1))" ] && pause_between_dates 300 900
+              if [ "$index" -lt "$((${#dates[@]} - 1))" ]; then
+                pause_between_dates 300 900
+              fi
             done
           }
 
