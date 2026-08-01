@@ -10,8 +10,17 @@ on:
       - 'scripts/oversold_rebound_research_lib.js'
       - 'scripts/oversold_rebound_outcome_verification.js'
       - 'scripts/run_oversold_rebound_research.js'
-      - 'tests/oversold_rebound_research.test.js'
-      - 'tests/oversold_rebound_outcome_verification.test.js'
+      - 'tests/oversold_rebound*.test.js'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/mine-oversold-rebound-research.yml'
+      - 'scripts/mine_oversold_rebound_events.js'
+      - 'scripts/oversold_rebound_research_lib.js'
+      - 'scripts/oversold_rebound_outcome_verification.js'
+      - 'scripts/run_oversold_rebound_research.js'
+      - 'tests/oversold_rebound*.test.js'
   workflow_dispatch:
     inputs:
       from_date:
@@ -49,8 +58,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: mine-oversold-rebound-research
-  cancel-in-progress: false
+  group: mine-oversold-rebound-research-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   mine:
@@ -92,7 +101,7 @@ jobs:
           STOCK_CODES: ${{ github.event_name == 'workflow_dispatch' && inputs.stock_codes || '' }}
           MAX_GAP: ${{ github.event_name == 'workflow_dispatch' && inputs.max_gap || 3 }}
           MAX_EPISODE_SPAN: ${{ github.event_name == 'workflow_dispatch' && inputs.max_episode_span || 20 }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         run: |
           args=(
             --max-gap "$MAX_GAP"
@@ -105,7 +114,7 @@ jobs:
           node scripts/run_oversold_rebound_research.js "${args[@]}"
 
       - name: Verify changed-file scope
-        if: github.event_name == 'push' || inputs.dry_run != true
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)
         shell: bash
         run: |
           unexpected=$(git status --short | awk '
@@ -118,7 +127,7 @@ jobs:
           fi
 
       - name: Commit research outputs
-        if: github.event_name == 'push' || inputs.dry_run != true
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
