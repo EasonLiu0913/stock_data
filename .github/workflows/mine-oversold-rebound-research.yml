@@ -8,7 +8,10 @@ on:
       - '.github/workflows/mine-oversold-rebound-research.yml'
       - 'scripts/mine_oversold_rebound_events.js'
       - 'scripts/oversold_rebound_research_lib.js'
+      - 'scripts/oversold_rebound_outcome_verification.js'
+      - 'scripts/run_oversold_rebound_research.js'
       - 'tests/oversold_rebound_research.test.js'
+      - 'tests/oversold_rebound_outcome_verification.test.js'
   workflow_dispatch:
     inputs:
       from_date:
@@ -69,7 +72,11 @@ jobs:
         run: |
           node --check scripts/oversold_rebound_research_lib.js
           node --check scripts/mine_oversold_rebound_events.js
-          node --test tests/oversold_rebound_research.test.js
+          node --check scripts/oversold_rebound_outcome_verification.js
+          node --check scripts/run_oversold_rebound_research.js
+          node --test \
+            tests/oversold_rebound_research.test.js \
+            tests/oversold_rebound_outcome_verification.test.js
 
       - name: Protect canonical output from partial runs
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true && inputs.stock_codes != ''
@@ -95,7 +102,7 @@ jobs:
           if [ -n "$TO_DATE" ]; then args+=(--to "$TO_DATE"); fi
           if [ -n "$STOCK_CODES" ]; then args+=(--stocks "$STOCK_CODES"); fi
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
-          node scripts/mine_oversold_rebound_events.js "${args[@]}"
+          node scripts/run_oversold_rebound_research.js "${args[@]}"
 
       - name: Verify changed-file scope
         if: github.event_name == 'push' || inputs.dry_run != true
