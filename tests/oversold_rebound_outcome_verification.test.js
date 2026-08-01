@@ -36,6 +36,21 @@ test('incomplete future horizon is unverified instead of a false miss', () => {
   assert.deepEqual(outcome.verification.completed_horizons, [1]);
 });
 
+test('a completed zero return remains a verified miss rather than missing data', () => {
+  const outcome = verifyOutcome({
+    future_return_1d: 0,
+    future_return_3d: 0,
+    future_return_5d: 0,
+    future_return_10d: 0,
+    max_return_3d: 0,
+    max_return_5d: 0,
+  });
+  assert.equal(outcome.labels.close_rebound_1d_5pct, false);
+  assert.equal(outcome.labels.close_rebound_3d_5pct, false);
+  assert.equal(outcome.labels.intraday_rebound_5d_10pct, false);
+  assert.deepEqual(outcome.verification.completed_horizons, [1, 3, 5, 10]);
+});
+
 test('label statistics use only verified events as denominator', () => {
   const events = [
     event(verifyOutcome({ future_return_5d: 11, max_return_5d: 12 })),
