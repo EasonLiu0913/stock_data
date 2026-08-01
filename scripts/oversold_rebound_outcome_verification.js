@@ -81,6 +81,24 @@ function buildVerifiedStockProfile(stockCode, stockName, events) {
   };
 }
 
+function normalizeDataQualityDateRanges(dataQuality) {
+  if (!dataQuality || typeof dataQuality !== 'object') return dataQuality;
+  for (const source of Object.values(dataQuality)) {
+    if (!source || typeof source !== 'object') continue;
+    const dates = [...new Set((Array.isArray(source.dates) ? source.dates : [])
+      .map(value => String(value || ''))
+      .filter(value => /^20\d{6}$/.test(value)))]
+      .sort();
+    if (!Object.hasOwn(source, 'discovered_first_date')) source.discovered_first_date = source.first_date || null;
+    if (!Object.hasOwn(source, 'discovered_last_date')) source.discovered_last_date = source.last_date || null;
+    source.first_date = dates[0] || null;
+    source.last_date = dates.at(-1) || null;
+    source.trading_date_count = dates.length;
+    source.dates = dates;
+  }
+  return dataQuality;
+}
+
 function finalizeResearchResult(result) {
   if (!result || !Array.isArray(result.stockResults)) throw new Error('Invalid research result');
   for (const stock of result.stockResults) {
@@ -94,10 +112,12 @@ function finalizeResearchResult(result) {
 
   const events = result.stockResults.flatMap(stock => stock.events);
   const outcomeCounts = Object.fromEntries(Object.keys(LABEL_SPECS).map(key => [key, labelStats(events, key)]));
+  const dataQuality = normalizeDataQualityDateRanges(result.summary?.data_quality || {});
   result.summary = {
     ...result.summary,
     schema_version: Math.max(2, Number(result.summary?.schema_version) || 1),
     outcome_counts: outcomeCounts,
+    data_quality: dataQuality,
     primary_outcome: {
       label: '5 個交易日內盤中最大反彈至少 10%',
       key: 'intraday_rebound_5d_10pct',
@@ -106,11 +126,17 @@ function finalizeResearchResult(result) {
     notes: [
       ...(Array.isArray(result.summary?.notes) ? result.summary.notes : []),
       '反彈結果採獨立驗證分母；尚未走完觀察期的事件不會被誤算為未命中。',
+      '資料日期範圍使用成功載入的交易日；發現但無法解析的檔案日期另存 discovered_first_date／discovered_last_date。',
     ],
   };
   if (result.manifest) {
     result.manifest.generated_at = result.summary.generated_at;
     result.manifest.outcome_verification_schema = 2;
+    result.manifest.date_range = {
+      ...(result.manifest.date_range || {}),
+      actual_from: dataQuality.price?.first_date || null,
+      actual_to: dataQuality.price?.last_date || null,
+    };
   }
   return result;
 }
@@ -121,5 +147,6 @@ module.exports = {
   verifyOutcome,
   labelStats,
   buildVerifiedStockProfile,
+  normalizeDataQualityDateRanges,
   finalizeResearchResult,
 };
