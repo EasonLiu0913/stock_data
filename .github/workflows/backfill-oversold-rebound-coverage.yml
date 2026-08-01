@@ -78,7 +78,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: oversold-rebound-coverage-backfill
+  group: oversold-rebound-coverage-backfill-${{ github.event_name == 'pull_request' && 'validation' || 'production' }}
   cancel-in-progress: false
 
 jobs:
