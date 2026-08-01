@@ -33,5 +33,6 @@
   async function load(){const manifest=await fetch('../data_predictions/manifest.json').then(response=>response.json());const code=params.get('code');const date=params.get('date')||manifest.latest_date||manifest.forecast_date_compact;if(!code)throw new Error('缺少股票代號 code');const response=await fetch(`../data_predictions/${date}/${code}.json`);if(!response.ok)throw new Error(`找不到 ${date}/${code}.json`);render(await response.json());}
   load().catch(error=>{document.getElementById('content').innerHTML=`<div class="error">載入失敗：${esc(error.message)}</div>`;});
 </script>
+  <script src="prediction-back-to-top.js"></script>
 </body>
 </html>
