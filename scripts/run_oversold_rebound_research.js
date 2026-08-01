@@ -8,6 +8,7 @@ const {
   runResearch,
   writeResearch,
 } = require('./mine_oversold_rebound_events');
+const { applyDealerFeatureFix } = require('./patch_oversold_rebound_dealer_features');
 const { finalizeResearchResult } = require('./oversold_rebound_outcome_verification');
 
 function printHelp() {
@@ -27,7 +28,7 @@ function printHelp() {
   --dry-run
   --help
 
-本入口會在事件挖掘後驗證各持有期間是否已完成，尚未走完觀察期的事件不計入命中率分母。
+本入口會在事件挖掘後修正自營商欄位映射，並驗證各持有期間是否已完成；尚未走完觀察期的事件不計入命中率分母。
 `);
 }
 
@@ -37,7 +38,9 @@ function execute(argv = process.argv.slice(2)) {
     printHelp();
     return null;
   }
-  const result = finalizeResearchResult(runResearch(ROOT, options));
+  const mined = runResearch(ROOT, options);
+  const dealerFixed = applyDealerFeatureFix(mined, ROOT, options);
+  const result = finalizeResearchResult(dealerFixed);
   if (!options.dryRun) writeResearch(options.outputRoot, result);
   const report = {
     research_id: result.summary.research_id,
