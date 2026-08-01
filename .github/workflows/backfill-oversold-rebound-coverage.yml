@@ -88,7 +88,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - run: npm ci
       - name: Validate backfill code
@@ -132,9 +132,10 @@ jobs:
         run: |
           set -euo pipefail
           plan_dates() {
-            local source="$1" max="$2" file="/tmp/$1-plan.json"
+            local source="$1" max="$2" file="/tmp/$1-plan.json" source_lookback="${LOOKBACK:-10}"
+            [ "$source" = broker ] && source_lookback=1
             node scripts/plan_oversold_rebound_coverage_backfill.js \
-              --sources "$source" --max-dates "$max" --lookback-days "${LOOKBACK:-10}" > "$file"
+              --sources "$source" --max-dates "$max" --lookback-days "$source_lookback" > "$file"
             cat "$file" >&2
             node -e 'const p=require(process.argv[1]);console.log(p.sources[process.argv[2]].selected_dates.join(","))' "$file" "$source"
           }
@@ -160,7 +161,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - run: npm ci
       - name: Install Playwright when broker work exists
