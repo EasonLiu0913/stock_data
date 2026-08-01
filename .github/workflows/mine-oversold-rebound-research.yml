@@ -78,7 +78,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Validate research pipeline
         run: |
@@ -120,7 +120,7 @@ jobs:
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true) || (github.event_name == 'pull_request' && github.head_ref == env.WRITE_PR_BRANCH)
         shell: bash
         run: |
-          unexpected=$(git status --short | awk '
+          unexpected=$(git status --short --untracked-files=all | awk '
             $2 !~ /^data_research\/oversold-rebound\// { print }
           ')
           if [ -n "$unexpected" ]; then
