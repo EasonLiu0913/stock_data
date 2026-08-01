@@ -10,6 +10,7 @@ on:
       - 'scripts/oversold_rebound_research_lib.js'
       - 'scripts/oversold_rebound_outcome_verification.js'
       - 'scripts/run_oversold_rebound_research.js'
+      - 'scripts/oversold_rebound_pattern_analysis.js'
       - 'tests/oversold_rebound*.test.js'
   pull_request:
     branches:
@@ -20,6 +21,7 @@ on:
       - 'scripts/oversold_rebound_research_lib.js'
       - 'scripts/oversold_rebound_outcome_verification.js'
       - 'scripts/run_oversold_rebound_research.js'
+      - 'scripts/oversold_rebound_pattern_analysis.js'
       - 'tests/oversold_rebound*.test.js'
   workflow_dispatch:
     inputs:
@@ -83,9 +85,12 @@ jobs:
           node --check scripts/mine_oversold_rebound_events.js
           node --check scripts/oversold_rebound_outcome_verification.js
           node --check scripts/run_oversold_rebound_research.js
+          node --check scripts/oversold_rebound_pattern_analysis.js
           node --test \
             tests/oversold_rebound_research.test.js \
-            tests/oversold_rebound_outcome_verification.test.js
+            tests/oversold_rebound_outcome_verification.test.js \
+            tests/oversold_rebound_data_quality.test.js \
+            tests/oversold_rebound_pattern_analysis.test.js
 
       - name: Protect canonical output from partial runs
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true && inputs.stock_codes != ''
@@ -113,6 +118,11 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           node scripts/run_oversold_rebound_research.js "${args[@]}"
 
+          pattern_args=()
+          if [ -n "$STOCK_CODES" ]; then pattern_args+=(--stocks "$STOCK_CODES"); fi
+          if [ "$DRY_RUN" = "true" ]; then pattern_args+=(--dry-run); fi
+          node scripts/oversold_rebound_pattern_analysis.js "${pattern_args[@]}"
+
       - name: Verify changed-file scope
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)
         shell: bash
@@ -137,7 +147,7 @@ jobs:
             echo 'No research output changes'
             exit 0
           fi
-          git commit -m 'data: mine historical oversold rebound events'
+          git commit -m 'data: mine and analyze historical oversold rebound events'
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
