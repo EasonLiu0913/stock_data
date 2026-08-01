@@ -11,7 +11,11 @@ on:
       - 'scripts/oversold_rebound_outcome_verification.js'
       - 'scripts/run_oversold_rebound_research.js'
       - 'scripts/oversold_rebound_pattern_analysis.js'
+      - 'scripts/generate_oversold_rebound_dashboard_data.js'
+      - 'scripts/update_public_index_oversold_rebound_dashboard.js'
+      - 'public/oversold-rebound-dashboard.html'
       - 'tests/oversold_rebound*.test.js'
+      - 'tests/update_public_index_oversold_rebound_dashboard.test.js'
   pull_request:
     branches:
       - main
@@ -22,7 +26,11 @@ on:
       - 'scripts/oversold_rebound_outcome_verification.js'
       - 'scripts/run_oversold_rebound_research.js'
       - 'scripts/oversold_rebound_pattern_analysis.js'
+      - 'scripts/generate_oversold_rebound_dashboard_data.js'
+      - 'scripts/update_public_index_oversold_rebound_dashboard.js'
+      - 'public/oversold-rebound-dashboard.html'
       - 'tests/oversold_rebound*.test.js'
+      - 'tests/update_public_index_oversold_rebound_dashboard.test.js'
   workflow_dispatch:
     inputs:
       from_date:
@@ -86,11 +94,15 @@ jobs:
           node --check scripts/oversold_rebound_outcome_verification.js
           node --check scripts/run_oversold_rebound_research.js
           node --check scripts/oversold_rebound_pattern_analysis.js
+          node --check scripts/generate_oversold_rebound_dashboard_data.js
+          node --check scripts/update_public_index_oversold_rebound_dashboard.js
           node --test \
             tests/oversold_rebound_research.test.js \
             tests/oversold_rebound_outcome_verification.test.js \
             tests/oversold_rebound_data_quality.test.js \
-            tests/oversold_rebound_pattern_analysis.test.js
+            tests/oversold_rebound_pattern_analysis.test.js \
+            tests/oversold_rebound_dashboard_data.test.js \
+            tests/update_public_index_oversold_rebound_dashboard.test.js
 
       - name: Protect canonical output from partial runs
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true && inputs.stock_codes != ''
@@ -123,12 +135,23 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then pattern_args+=(--dry-run); fi
           node scripts/oversold_rebound_pattern_analysis.js "${pattern_args[@]}"
 
+          dashboard_args=()
+          if [ -n "$STOCK_CODES" ]; then dashboard_args+=(--stocks "$STOCK_CODES"); fi
+          if [ "$DRY_RUN" = "true" ]; then dashboard_args+=(--dry-run); fi
+          node scripts/generate_oversold_rebound_dashboard_data.js "${dashboard_args[@]}"
+
+          if [ "$DRY_RUN" != "true" ]; then
+            node scripts/update_public_index_oversold_rebound_dashboard.js
+          fi
+
       - name: Verify changed-file scope
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)
         shell: bash
         run: |
           unexpected=$(git status --short --untracked-files=all | awk '
-            $2 !~ /^data_research\/oversold-rebound\// { print }
+            $2 !~ /^data_research\/oversold-rebound\// &&
+            $2 !~ /^public\/data\/oversold-rebound-dashboard\// &&
+            $2 != "public/index.html" { print }
           ')
           if [ -n "$unexpected" ]; then
             echo 'Unexpected files changed:'
@@ -142,12 +165,15 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data_research/oversold-rebound
+          git add \
+            data_research/oversold-rebound \
+            public/data/oversold-rebound-dashboard \
+            public/index.html
           if git diff --cached --quiet; then
-            echo 'No research output changes'
+            echo 'No research or dashboard output changes'
             exit 0
           fi
-          git commit -m 'data: mine and analyze historical oversold rebound events'
+          git commit -m 'data: refresh oversold rebound research dashboard'
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>跌深反彈歷史研究 Dashboard</title>
+  <style>
+    *{box-sizing:border-box}html,body{max-width:100%;overflow-x:hidden}body{margin:0;background:#f6f8fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(100%,1480px);margin:0 auto;padding:24px}.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:18px}.eyebrow{font-size:13px;font-weight:800;color:#526173}.title{margin:4px 0 0;font-size:30px;line-height:1.2}.subtitle{margin:8px 0 0;color:#64748b;line-height:1.6}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{border:1px solid #cdd6e3;background:#fff;border-radius:6px;padding:9px 12px;color:#1f3b57;text-decoration:none;font-weight:800}.nav a:hover{background:#eff6ff}.notice{border:1px solid #f0d59d;border-left:6px solid #d58b00;background:#fffaf0;border-radius:8px;padding:12px 16px;margin-bottom:14px;color:#6f4b00;font-size:13px;line-height:1.6}.grid{display:grid;gap:14px;min-width:0}.kpis{grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:14px}.card{background:#fff;border:1px solid #dce3ec;border-radius:8px;padding:16px;box-shadow:0 1px 2px rgba(22,31,44,.04);min-width:0}.label{font-size:12px;color:#697789;font-weight:800}.value{font-size:clamp(20px,2.4vw,30px);font-weight:900;margin-top:5px;line-height:1.1;font-variant-numeric:tabular-nums}.sub{font-size:13px;color:#697789;margin-top:5px;line-height:1.45}.section-title{font-size:18px;margin:0}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.section-note{font-size:13px;color:#64748b;font-weight:700}.overview-cols{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);margin-bottom:14px}.coverage-list{display:grid;gap:11px}.coverage-row{display:grid;grid-template-columns:92px minmax(0,1fr) 62px;gap:10px;align-items:center;font-size:13px}.track{height:10px;background:#edf1f6;border-radius:999px;overflow:hidden}.fill{height:100%;background:#376ca8;border-radius:999px}.pattern-list{display:grid;gap:8px}.pattern-button{appearance:none;border:1px solid #dce3ec;border-radius:7px;background:#fff;color:inherit;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;text-align:left;padding:10px 12px;cursor:pointer}.pattern-button:hover,.pattern-button.active{border-color:#2f6fae;background:#eef6ff}.pattern-button b{font-size:13px}.pattern-button span{font-size:12px;color:#64748b}.workspace{grid-template-columns:minmax(280px,.72fr) minmax(0,1.6fr);align-items:start}.sidebar{position:sticky;top:12px}.controls{display:grid;grid-template-columns:1fr 150px;gap:8px;margin-bottom:10px}input,select{height:40px;max-width:100%;border:1px solid #cbd5e1;border-radius:6px;background:#fff;padding:0 10px;color:#172033;font:inherit}input:focus,select:focus{outline:0;border-color:#2f6fae;box-shadow:0 0 0 3px rgba(47,111,174,.12)}.stock-count{font-size:12px;color:#64748b;font-weight:800;margin-bottom:8px}.stock-list{border:1px solid #dce3ec;border-radius:8px;max-height:720px;overflow:auto;background:#fff}.stock-button{appearance:none;border:0;border-bottom:1px solid #edf1f6;background:#fff;color:inherit;width:100%;padding:11px 12px;text-align:left;cursor:pointer}.stock-button:last-child{border-bottom:0}.stock-button:hover,.stock-button.active{background:#eef6ff}.stock-main{display:flex;justify-content:space-between;gap:8px;align-items:center}.stock-name{font-weight:900}.stock-code{color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.stock-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#64748b}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800;background:#eef2f7;color:#334155}.pill.good{background:#e8f7ef;color:#12623a}.pill.bad{background:#fdeaea;color:#9e2f2f}.pill.warn{background:#fff4db;color:#8a5a00}.pill.info{background:#eaf2ff;color:#245a94}.detail-placeholder{min-height:420px;display:grid;place-items:center;text-align:center;color:#64748b}.detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}.detail-title{font-size:25px;margin:0}.detail-links{display:flex;gap:8px;flex-wrap:wrap}.detail-links a{color:#1d5f99;font-weight:800;text-decoration:none}.detail-kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px}.detail-kpis .card{padding:13px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tab{appearance:none;border:1px solid #cbd5e1;border-radius:999px;background:#fff;padding:7px 11px;color:#334155;font-weight:800;cursor:pointer}.tab.active,.tab:hover{background:#2f6fae;border-color:#2f6fae;color:#fff}.table-wrap{overflow:auto;border:1px solid #dce3ec;border-radius:8px;background:#fff;max-width:100%;-webkit-overflow-scrolling:touch}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:10px 11px;border-bottom:1px solid #edf1f6;text-align:left;font-size:13px;white-space:nowrap}th{background:#f2f5f9;color:#475569;font-size:12px;position:sticky;top:0;z-index:1}tr:hover td{background:#f8fbff}.num{text-align:right;font-variant-numeric:tabular-nums}.effect-cell{min-width:150px}.effect-track{position:relative;height:10px;background:#edf1f6;border-radius:999px;overflow:hidden}.effect-track::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:#94a3b8}.effect-bar{position:absolute;top:1px;bottom:1px;border-radius:999px;background:#376ca8}.effect-bar.negative{background:#b64b4b}.empty{padding:28px;text-align:center;color:#64748b;font-weight:700}.loading{animation:pulse 1.2s ease-in-out infinite alternate}@keyframes pulse{from{opacity:.45}to{opacity:1}}.section-stack{display:grid;gap:14px}.hidden{display:none!important}.to-top{position:fixed;right:18px;bottom:18px;z-index:20;border:1px solid #2f6fae;background:#2f6fae;color:#fff;border-radius:999px;width:48px;height:48px;font-size:22px;font-weight:900;box-shadow:0 8px 20px rgba(22,31,44,.18);cursor:pointer}@media(max-width:1060px){.overview-cols,.workspace{grid-template-columns:1fr}.sidebar{position:static}.stock-list{max-height:420px}.topbar{align-items:flex-start;flex-direction:column}}@media(max-width:640px){.shell{padding:14px}.title{font-size:24px}.card{padding:12px}.controls{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr;gap:10px}.coverage-row{grid-template-columns:78px minmax(0,1fr) 54px}.nav{width:100%}.nav a{flex:1 1 auto;text-align:center}.detail-title{font-size:21px}.to-top{right:14px;bottom:14px;width:44px;height:44px}}@media(max-width:420px){.kpis,.detail-kpis{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow" id="meta">研究資料載入中…</div>
+        <h1 class="title">跌深反彈歷史研究 Dashboard</h1>
+        <p class="subtitle">從個股歷史跌深事件出發，比較反彈成功與失敗樣本的價量、法人、融資融券與券商特徵。</p>
+      </div>
+      <nav class="nav"><a href="index.html">工具首頁</a><a href="prediction-dashboard.html">預測總覽</a><a href="prediction-replay-dashboard.html">事後覆盤</a></nav>
+    </header>
+
+    <div class="notice">本頁為探索性歷史研究，不是即時買賣訊號。<b>0 筆</b>代表確實沒有符合事件；<b>N/A</b>代表資料缺漏或樣本尚未完成觀察期。</div>
+    <section class="grid kpis" id="overviewKpis"><div class="card loading"><div class="label">載入中</div><div class="value">—</div></div></section>
+
+    <section class="grid overview-cols">
+      <article class="card"><div class="section-head"><h2 class="section-title">資料覆蓋率</h2><span class="section-note">事件具備該類特徵的比例</span></div><div class="coverage-list" id="coverageList"></div></article>
+      <article class="card"><div class="section-head"><h2 class="section-title">跨股票重複線索</h2><button class="tab" id="clearPatternFilter" type="button">清除篩選</button></div><div class="pattern-list" id="recurringPatterns"></div></article>
+    </section>
+
+    <section class="grid workspace">
+      <aside class="card sidebar">
+        <div class="section-head"><h2 class="section-title">股票清單</h2><span class="section-note" id="activePatternNote">全部股票</span></div>
+        <div class="controls"><input id="stockSearch" type="search" placeholder="搜尋代號或名稱"><select id="evidenceFilter"><option value="">全部證據層級</option><option value="pattern_ready">Pattern ready</option><option value="exploratory">Exploratory</option><option value="insufficient">Insufficient</option></select></div>
+        <div class="controls"><select id="stockSort"><option value="evidence">證據層級優先</option><option value="hitRate">成功率高至低</option><option value="events">事件數多至少</option><option value="code">股票代號</option></select><select id="minimumEvents"><option value="0">不限事件數</option><option value="6">至少 6 次</option><option value="10">至少 10 次</option></select></div>
+        <div class="stock-count" id="stockCount">載入中…</div>
+        <div class="stock-list" id="stockList"></div>
+      </aside>
+
+      <section id="detailPanel" class="section-stack">
+        <article class="card detail-placeholder"><div><h2>選擇一檔股票</h2><p>查看歷史跌深事件、成功率與成功／失敗特徵差異。</p></div></article>
+      </section>
+    </section>
+  </main>
+  <button class="to-top" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="回到最上方">↑</button>
+
+  <script>
+    'use strict';
+    const DATA_ROOT='data/oversold-rebound-dashboard';
+    const state={overview:null,selectedCode:'',detail:null,activePattern:null,featureGroup:'all',eventResult:'all'};
+    const els={
+      meta:document.getElementById('meta'),overviewKpis:document.getElementById('overviewKpis'),coverageList:document.getElementById('coverageList'),recurringPatterns:document.getElementById('recurringPatterns'),clearPatternFilter:document.getElementById('clearPatternFilter'),stockSearch:document.getElementById('stockSearch'),evidenceFilter:document.getElementById('evidenceFilter'),stockSort:document.getElementById('stockSort'),minimumEvents:document.getElementById('minimumEvents'),stockCount:document.getElementById('stockCount'),stockList:document.getElementById('stockList'),detailPanel:document.getElementById('detailPanel'),activePatternNote:document.getElementById('activePatternNote')
+    };
+    const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    const hasNumber=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value));
+    const number=value=>hasNumber(value)?new Intl.NumberFormat('zh-TW').format(Number(value)):'N/A';
+    const decimal=(value,digits=2)=>hasNumber(value)?Number(value).toFixed(digits):'N/A';
+    const pct=(value,digits=2)=>hasNumber(value)?`${Number(value).toFixed(digits)}%`:'N/A';
+    const signed=(value,digits=2,suffix='')=>hasNumber(value)?`${Number(value)>=0?'+':''}${Number(value).toFixed(digits)}${suffix}`:'N/A';
+    const dateText=value=>/^20\d{6}$/.test(String(value||''))?`${String(value).slice(0,4)}/${String(value).slice(4,6)}/${String(value).slice(6,8)}`:'N/A';
+    const evidenceLabel=value=>({pattern_ready:'Pattern ready',exploratory:'Exploratory',insufficient:'Insufficient'})[value]||value||'N/A';
+    const evidenceClass=value=>value==='pattern_ready'?'good':value==='exploratory'?'warn':'';
+    const resultLabel=value=>({success:'成功',failure:'未成功',unverified:'尚未驗證'})[value]||value;
+    const resultClass=value=>value==='success'?'good':value==='failure'?'bad':'warn';
+    const groupLabel=value=>({price_volume:'價量技術',institutional:'法人',margin:'融資融券',broker:'券商分點',other:'其他'})[value]||value;
+    const directionLabel=value=>({success_higher:'成功組較高',success_lower:'成功組較低',similar:'差異接近',insufficient_data:'資料不足'})[value]||value;
+    const unitValue=(value,unit)=>{
+      if(!hasNumber(value))return 'N/A';
+      if(unit==='pct')return pct(value);
+      if(unit==='shares')return number(Math.round(Number(value)));
+      if(unit==='ratio')return decimal(value,2);
+      if(unit==='days')return decimal(value,1);
+      if(unit==='boolean')return Number(value)>=.5?'是':'否';
+      return decimal(value,2);
+    };
+    async function fetchJson(url){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`${response.status} ${response.statusText}`);return response.json();}
+    function renderOverview(){
+      const data=state.overview;const primary=data.primary_outcome||{};const range=data.date_range||{};els.meta.textContent=`資料期間 ${dateText(range.actual_from)}～${dateText(range.actual_to)}｜更新 ${new Date(data.generated_at).toLocaleString('zh-TW')}`;
+      const kpis=[
+        ['歷史跌深事件',number(data.event_count),`${number(data.event_stock_count)} 個證券有事件`],
+        ['一般股票分析',number(data.analyzed_stock_count),`排除 ${number(data.excluded_non_equity_count)} 個 ETF／非股票商品`],
+        ['5日盤中反彈≥10%',pct(primary.hit_rate),`${number(primary.hits)} 成功／${number(primary.verified)} 已驗證`],
+        ['Pattern ready',number(data.evidence_level_counts?.pattern_ready),`Exploratory ${number(data.evidence_level_counts?.exploratory)}`],
+        ['尚未完成5日觀察',number(primary.unverified),'不計入成功或失敗分母']
+      ];
+      els.overviewKpis.innerHTML=kpis.map(([label,value,sub])=>`<article class="card"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></article>`).join('');
+      const coverageNames={foreign:'外資',investment_trust:'投信',dealer:'自營商',margin:'融資融券',broker:'券商分點'};
+      els.coverageList.innerHTML=Object.entries(coverageNames).map(([key,label])=>{const raw=data.feature_coverage?.[key]?.coverage_pct;const value=hasNumber(raw)?Number(raw):null;const width=value===null?0:Math.max(0,Math.min(100,value));return `<div class="coverage-row"><b>${label}</b><div class="track"><div class="fill" style="width:${width}%"></div></div><span class="num">${value===null?'N/A':pct(value)}</span></div>`}).join('');
+      renderRecurringPatterns();renderStocks();
+    }
+    function renderRecurringPatterns(){
+      const patterns=(state.overview?.recurring_candidate_patterns||[]).slice(0,10);
+      els.recurringPatterns.innerHTML=patterns.length?patterns.map(item=>`<button class="pattern-button ${state.activePattern?.feature_id===item.feature_id&&state.activePattern?.direction===item.direction?'active':''}" type="button" data-feature="${esc(item.feature_id)}" data-direction="${esc(item.direction)}"><span><b>${esc(item.label)}</b><br><span>${esc(directionLabel(item.direction))}｜${esc(groupLabel(item.group))}</span></span><b>${number(item.stock_count)} 檔</b></button>`).join(''):'<div class="empty">沒有可顯示的跨股票線索</div>';
+      els.recurringPatterns.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{const item=(state.overview.recurring_candidate_patterns||[]).find(row=>row.feature_id===button.dataset.feature&&row.direction===button.dataset.direction);state.activePattern=item||null;renderRecurringPatterns();renderStocks();}));
+      els.activePatternNote.textContent=state.activePattern?`${state.activePattern.label}｜${directionLabel(state.activePattern.direction)}`:'全部股票';
+    }
+    function filteredStocks(){
+      const query=els.stockSearch.value.trim().toLowerCase();const evidence=els.evidenceFilter.value;const minEvents=Number(els.minimumEvents.value||0);let rows=[...(state.overview?.stocks||[])];
+      if(query)rows=rows.filter(row=>`${row.stock_code} ${row.stock_name}`.toLowerCase().includes(query));
+      if(evidence)rows=rows.filter(row=>row.evidence_level===evidence);
+      if(minEvents)rows=rows.filter(row=>Number(row.verified_events)>=minEvents);
+      if(state.activePattern){const codes=new Set(state.activePattern.stock_codes||[]);rows=rows.filter(row=>codes.has(row.stock_code));}
+      const sort=els.stockSort.value;const rank={pattern_ready:0,exploratory:1,insufficient:2};rows.sort((a,b)=>sort==='hitRate'?(Number(b.hit_rate??-1)-Number(a.hit_rate??-1)):sort==='events'?(Number(b.verified_events)-Number(a.verified_events)):sort==='code'?a.stock_code.localeCompare(b.stock_code,'zh-TW',{numeric:true}):((rank[a.evidence_level]??9)-(rank[b.evidence_level]??9)||(Number(b.verified_events)-Number(a.verified_events))));
+      return rows;
+    }
+    function renderStocks(){
+      const rows=filteredStocks();els.stockCount.textContent=`顯示 ${number(rows.length)}／${number(state.overview?.stocks?.length||0)} 檔`;
+      els.stockList.innerHTML=rows.length?rows.slice(0,400).map(row=>`<button class="stock-button ${state.selectedCode===row.stock_code?'active':''}" type="button" data-code="${esc(row.stock_code)}"><div class="stock-main"><span><span class="stock-code">${esc(row.stock_code)}</span> <span class="stock-name">${esc(row.stock_name)}</span></span><b>${pct(row.hit_rate)}</b></div><div class="stock-meta"><span class="pill ${evidenceClass(row.evidence_level)}">${esc(evidenceLabel(row.evidence_level))}</span><span>${number(row.successful_events)} 成功／${number(row.unsuccessful_events)} 未成功</span><span>${number(row.candidate_pattern_count)} 個候選特徵</span></div></button>`).join(''):'<div class="empty">沒有符合條件的股票</div>';
+      els.stockList.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>selectStock(button.dataset.code)));
+    }
+    async function selectStock(code){
+      if(!code)return;state.selectedCode=code;state.detail=null;state.featureGroup='all';state.eventResult='all';renderStocks();els.detailPanel.innerHTML='<article class="card detail-placeholder loading"><div><h2>載入個股研究資料…</h2></div></article>';
+      try{state.detail=await fetchJson(`${DATA_ROOT}/stocks/${encodeURIComponent(code)}.json`);history.replaceState(null,'',`${location.pathname}?code=${encodeURIComponent(code)}`);renderDetail();}
+      catch(error){els.detailPanel.innerHTML=`<article class="card detail-placeholder"><div><h2>個股資料載入失敗</h2><p>${esc(error.message)}</p></div></article>`;}
+    }
+    function effectBar(value){if(!hasNumber(value))return 'N/A';const clamped=Math.max(-2,Math.min(2,Number(value)));const width=Math.abs(clamped)/2*50;const left=clamped>=0?50:50-width;return `<div class="effect-track" title="標準化差異 ${decimal(value,2)}"><div class="effect-bar ${clamped<0?'negative':''}" style="left:${left}%;width:${width}%"></div></div><div class="sub">${signed(value,2)}</div>`;}
+    function renderDetail(){
+      const d=state.detail;if(!d)return;const o=d.primary_outcome||{};const yahoo=`https://tw.stock.yahoo.com/quote/${encodeURIComponent(d.stock_code)}.TW`;
+      els.detailPanel.innerHTML=`
+        <article class="card"><div class="detail-head"><div><div class="eyebrow">${esc(d.security?.security_type||'股票')}｜${esc(evidenceLabel(d.evidence_level))}</div><h2 class="detail-title">${esc(d.stock_code)} ${esc(d.stock_name)}</h2><div class="sub">歷史 ${number(o.total_events)} 次跌深事件；成功定義：${esc(o.label||'5日內盤中最大反彈至少10%')}</div></div><div class="detail-links"><a href="${yahoo}" target="_blank" rel="noopener">Yahoo 股價 ↗</a></div></div><div class="grid detail-kpis"><div class="card"><div class="label">反彈成功率</div><div class="value">${pct(o.hit_rate)}</div></div><div class="card"><div class="label">成功／未成功</div><div class="value">${number(o.successful_events)}／${number(o.unsuccessful_events)}</div></div><div class="card"><div class="label">已驗證事件</div><div class="value">${number(o.verified_events)}</div></div><div class="card"><div class="label">尚未驗證</div><div class="value">${number(o.unverified_events)}</div></div><div class="card"><div class="label">候選特徵</div><div class="value">${number(d.candidate_patterns?.length||0)}</div></div></div></article>
+        <article class="card"><div class="section-head"><h3 class="section-title">探索性候選特徵</h3><span class="section-note">依標準化差異絕對值排序；不是正式交易規則</span></div><div id="candidateTable"></div></article>
+        <article class="card"><div class="section-head"><h3 class="section-title">全部成功／失敗特徵比較</h3><span class="section-note">N/A 代表該組資料不足</span></div><div class="tabs" id="featureTabs"></div><div id="featureTable"></div></article>
+        <article class="card"><div class="section-head"><h3 class="section-title">歷史事件明細</h3><span class="section-note">首次訊號與真正低點分開呈現</span></div><div class="tabs" id="eventTabs"></div><div id="eventTable"></div></article>`;
+      renderCandidateTable();renderFeatureTabs();renderFeatureTable();renderEventTabs();renderEventTable();
+    }
+    function comparisonRows(rows){return rows.map(item=>`<tr><td><b>${esc(item.label)}</b><div class="sub">${esc(groupLabel(item.group))}｜覆蓋 ${pct(item.coverage_pct)}</div></td><td class="num">${unitValue(item.success?.mean,item.unit)}</td><td class="num">${unitValue(item.failure?.mean,item.unit)}</td><td>${effectBar(item.standardized_mean_difference)}</td><td>${esc(directionLabel(item.direction))}</td></tr>`).join('');}
+    function renderCandidateTable(){const rows=state.detail?.candidate_patterns||[];document.getElementById('candidateTable').innerHTML=rows.length?`<div class="table-wrap"><table><thead><tr><th>特徵</th><th class="num">成功組平均</th><th class="num">未成功組平均</th><th>標準化差異</th><th>方向</th></tr></thead><tbody>${comparisonRows(rows)}</tbody></table></div>`:'<div class="empty">目前樣本不足，沒有可列出的候選特徵</div>';}
+    function renderFeatureTabs(){const groups=['all','price_volume','institutional','margin','broker'];const root=document.getElementById('featureTabs');root.innerHTML=groups.map(group=>`<button class="tab ${state.featureGroup===group?'active':''}" type="button" data-group="${group}">${group==='all'?'全部':groupLabel(group)}</button>`).join('');root.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{state.featureGroup=button.dataset.group;renderFeatureTabs();renderFeatureTable();}));}
+    function renderFeatureTable(){let rows=state.detail?.feature_comparisons||[];if(state.featureGroup!=='all')rows=rows.filter(item=>item.group===state.featureGroup);document.getElementById('featureTable').innerHTML=rows.length?`<div class="table-wrap"><table><thead><tr><th>特徵</th><th class="num">成功組平均</th><th class="num">未成功組平均</th><th>標準化差異</th><th>方向</th></tr></thead><tbody>${comparisonRows(rows)}</tbody></table></div>`:'<div class="empty">此分類沒有可比較資料</div>';}
+    function renderEventTabs(){const groups=[['all','全部'],['success','成功'],['failure','未成功'],['unverified','尚未驗證']];const root=document.getElementById('eventTabs');root.innerHTML=groups.map(([value,label])=>`<button class="tab ${state.eventResult===value?'active':''}" type="button" data-result="${value}">${label}</button>`).join('');root.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{state.eventResult=button.dataset.result;renderEventTabs();renderEventTable();}));}
+    function renderEventTable(){let rows=state.detail?.events||[];if(state.eventResult!=='all')rows=rows.filter(event=>event.result===state.eventResult);document.getElementById('eventTable').innerHTML=rows.length?`<div class="table-wrap"><table><thead><tr><th>結果</th><th>首次訊號</th><th>最低觀察點</th><th>觸發條件</th><th class="num">訊號3日跌幅</th><th class="num">20日回撤</th><th class="num">5日收盤報酬</th><th class="num">5日最大反彈</th><th class="num">5日最大續跌</th><th class="num">低點後5日報酬</th></tr></thead><tbody>${rows.map(event=>`<tr><td><span class="pill ${resultClass(event.result)}">${resultLabel(event.result)}</span></td><td>${dateText(event.signal_date)}<div class="sub">${event.signal.close===null?'N/A':decimal(event.signal.close,2)}</div></td><td>${dateText(event.deepest_signal_date)}<div class="sub">${event.deepest_signal.close===null?'N/A':decimal(event.deepest_signal.close,2)}</div></td><td>${(event.trigger_ids||[]).map(id=>`<span class="pill">${esc(id)}</span>`).join(' ')||'N/A'}</td><td class="num">${signed(event.signal.return_3d,2,'%')}</td><td class="num">${signed(event.signal.drawdown_20d,2,'%')}</td><td class="num">${signed(event.outcome_from_signal.future_return_5d,2,'%')}</td><td class="num">${signed(event.outcome_from_signal.max_return_5d,2,'%')}</td><td class="num">${signed(event.outcome_from_signal.max_adverse_5d,2,'%')}</td><td class="num">${signed(event.outcome_from_deepest_signal.future_return_5d,2,'%')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">沒有符合條件的事件</div>';}
+    async function init(){
+      try{state.overview=await fetchJson(`${DATA_ROOT}/overview.json`);renderOverview();const requested=new URLSearchParams(location.search).get('code');const first=requested&&state.overview.stocks.some(row=>row.stock_code===requested)?requested:(state.overview.stocks.find(row=>row.evidence_level==='pattern_ready')||state.overview.stocks[0])?.stock_code;if(first)selectStock(first);}
+      catch(error){els.meta.textContent='研究資料載入失敗';els.overviewKpis.innerHTML=`<article class="card"><div class="label">錯誤</div><div class="value">無法載入</div><div class="sub">${esc(error.message)}</div></article>`;els.stockList.innerHTML='<div class="empty">請確認公開研究資料已產生</div>';}
+    }
+    [els.stockSearch,els.evidenceFilter,els.stockSort,els.minimumEvents].forEach(element=>element.addEventListener(element.tagName==='INPUT'?'input':'change',renderStocks));
+    els.clearPatternFilter.addEventListener('click',()=>{state.activePattern=null;renderRecurringPatterns();renderStocks();});
+    init();
+  </script>
+</body>
+</html>
