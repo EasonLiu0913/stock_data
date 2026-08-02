@@ -43,9 +43,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Confirm checked-out main commit
+      - name: Sync to latest main commit
+        shell: bash
         run: |
+          set -euo pipefail
           git fetch origin main
+          git reset --hard origin/main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
@@ -215,9 +218,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Confirm checked-out main commit
+      - name: Sync to latest main commit
+        shell: bash
         run: |
+          set -euo pipefail
           git fetch origin main
+          git reset --hard origin/main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 
       - uses: actions/setup-node@v4
