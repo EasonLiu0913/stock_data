@@ -39,7 +39,9 @@ function rowReturn(row) {
 
 function hitForTarget(row, target) {
   if (!row?.verified) return null;
-  if (target === 'relative_leadership') return row?.market_relative?.classification === 'relative_leadership';
+  if (target === 'relative_leadership') {
+    return row?.market_relative?.classification === 'relative_leadership';
+  }
   if (target === 'close_return_gt_5') {
     const value = rowReturn(row);
     return Number.isFinite(value) ? value > 5 : null;
@@ -48,13 +50,16 @@ function hitForTarget(row, target) {
 }
 
 function annotateDispositionInMemory(summary, date) {
-  if (!Array.isArray(summary?.stocks)) return { calculation_status: 'unable_to_calculate', active_stock_count: null };
+  if (!Array.isArray(summary?.stocks)) {
+    return { calculation_status: 'unable_to_calculate', active_stock_count: null };
+  }
   const file = path.join(ROOT, 'data_market_constraints', date, 'disposition.json');
   const disposition = readJson(file, null);
   const complete = disposition?.complete_market_coverage === true;
   const activeCodes = new Set(complete ? (disposition.active_stock_codes || []).map(String) : []);
   for (const stock of summary.stocks) {
     stock.is_disposition_stock = complete && activeCodes.has(String(stock.stock_code));
+    stock.disposition_data_complete = complete ? 1 : null;
     stock.disposition_stock_status = complete ? 'completed' : disposition ? 'incomplete' : 'unavailable';
   }
   return {
@@ -90,7 +95,7 @@ function evaluateStrategyClassification(definition, classification, replayRows, 
   const hits = verified.filter(item => item.hit === true);
   const misses = verified.filter(item => item.hit === false);
   const returns = verified.map(item => item.close_return).filter(Number.isFinite);
-  const excess = verified.map(item => item.market_excess_return).filter(Number.isFinite);
+  const excessReturns = verified.map(item => item.market_excess_return).filter(Number.isFinite);
   return {
     strategy_id: definition.strategy_id,
     strategy_family_id: definition.family_id,
@@ -109,7 +114,7 @@ function evaluateStrategyClassification(definition, classification, replayRows, 
     missing_replay_candidates: memberCodes.size - verified.length,
     average_return: round(average(returns)),
     median_return: round(median(returns)),
-    average_market_excess_return: round(average(excess)),
+    average_market_excess_return: round(average(excessReturns)),
     members: [...memberCodes],
     hit_members: hits.map(item => item.stock_code),
     miss_members: misses.map(item => item.stock_code),
@@ -156,7 +161,7 @@ function syncReplayRows(replayDashboard, summary) {
   return replayDashboard;
 }
 
-function evaluateSnapshot({ summary, replayDashboard, actualEnvironment, snapshot, registry }) {
+function evaluateSnapshot({ replayDashboard, actualEnvironment, snapshot, registry }) {
   const definitions = new Map(registry.strategies.map(item => [item.strategy_id, item]));
   const evaluations = {};
   for (const [strategyId, classification] of Object.entries(snapshot.strategy_classifications || {})) {
@@ -172,6 +177,16 @@ function evaluateSnapshot({ summary, replayDashboard, actualEnvironment, snapsho
   return evaluations;
 }
 
+function filterSnapshotToStrategy(snapshot, strategyId) {
+  if (!strategyId) return snapshot;
+  return {
+    ...snapshot,
+    strategy_classifications: Object.fromEntries(
+      Object.entries(snapshot.strategy_classifications || {}).filter(([id]) => id === strategyId),
+    ),
+  };
+}
+
 function applyTagStrategyReplay({
   date,
   rootDir = 'data_predictions',
@@ -181,6 +196,10 @@ function applyTagStrategyReplay({
 } = {}) {
   const compact = compactDate(date);
   if (!compact) throw new Error('date must be YYYYMMDD');
+  if (!['live_snapshot', 'historical_recalculation'].includes(evaluationMode)) {
+    throw new Error(`Unsupported evaluation mode: ${evaluationMode}`);
+  }
+
   const predictionDir = path.join(ROOT, rootDir, compact);
   const summaryFile = path.join(predictionDir, 'summary.json');
   const replayDashboardFile = path.join(predictionDir, 'replay-dashboard.json');
@@ -196,31 +215,37 @@ function applyTagStrategyReplay({
   if (!Array.isArray(replayDashboard?.rows)) throw new Error(`Missing replay rows: ${path.relative(ROOT, replayDashboardFile)}`);
   if (!replaySummary) throw new Error(`Missing replay summary: ${path.relative(ROOT, replaySummaryFile)}`);
 
-  const dispositionAnnotation = annotateDispositionInMemory(summary, compact);
   const registry = loadRegistry();
-  let snapshot = evaluationMode === 'live_snapshot' ? readJson(snapshotFile, null) : null;
-  if (!snapshot) snapshot = buildTagStrategySnapshot(summary, { registry, evaluationMode });
-  if (strategyId) {
-    snapshot = {
-      ...snapshot,
-      strategy_classifications: Object.fromEntries(
-        Object.entries(snapshot.strategy_classifications || {}).filter(([id]) => id === strategyId),
-      ),
-    };
+  let snapshot;
+  let dispositionAnnotation = summary.disposition_stock_annotation || null;
+  if (evaluationMode === 'live_snapshot') {
+    snapshot = readJson(snapshotFile, null);
+    if (!snapshot) {
+      throw new Error(`Missing live tag strategy snapshot: ${path.relative(ROOT, snapshotFile)}`);
+    }
+  } else {
+    dispositionAnnotation = annotateDispositionInMemory(summary, compact);
+    snapshot = buildTagStrategySnapshot(summary, {
+      registry,
+      evaluationMode: 'historical_recalculation',
+    });
   }
-  const evaluations = evaluateSnapshot({ summary, replayDashboard, actualEnvironment, snapshot, registry });
-  syncReplayRows(replayDashboard, summary);
+  snapshot = filterSnapshotToStrategy(snapshot, strategyId);
+  const evaluations = evaluateSnapshot({ replayDashboard, actualEnvironment, snapshot, registry });
 
-  const newDefinitions = new Map(registry.strategies
-    .filter(item => item.source_mode !== 'legacy_bridge')
-    .map(item => [item.strategy_id, item]));
-  const replacedIds = new Set(Object.keys(evaluations).filter(id => newDefinitions.has(id)));
-  replaySummary.by_strategy_tag = (Array.isArray(replaySummary.by_strategy_tag) ? replaySummary.by_strategy_tag : [])
-    .filter(group => !replacedIds.has(group?.strategy_id));
-  for (const strategyIdValue of replacedIds) replaySummary.by_strategy_tag.push(replayGroup(evaluations[strategyIdValue]));
-  replaySummary.by_strategy_tag.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
-    || String(left.name).localeCompare(String(right.name), 'zh-Hant'));
-  replaySummary.tag_strategy_evaluations = evaluations;
+  if (evaluationMode === 'live_snapshot') {
+    syncReplayRows(replayDashboard, summary);
+    const newStrategyIds = new Set(registry.strategies
+      .filter(item => item.source_mode !== 'legacy_bridge')
+      .map(item => item.strategy_id));
+    const replacedIds = new Set(Object.keys(evaluations).filter(id => newStrategyIds.has(id)));
+    replaySummary.by_strategy_tag = (Array.isArray(replaySummary.by_strategy_tag) ? replaySummary.by_strategy_tag : [])
+      .filter(group => !replacedIds.has(group?.strategy_id));
+    for (const id of replacedIds) replaySummary.by_strategy_tag.push(replayGroup(evaluations[id]));
+    replaySummary.by_strategy_tag.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
+      || String(left.name).localeCompare(String(right.name), 'zh-Hant'));
+    replaySummary.tag_strategy_evaluations = evaluations;
+  }
 
   const generatedAt = new Date().toISOString();
   const output = {
@@ -273,7 +298,13 @@ function applyTagStrategyReplay({
 }
 
 function parseArgs(argv) {
-  const options = { date: '', rootDir: 'data_predictions', dryRun: false, evaluationMode: 'live_snapshot', strategyId: '' };
+  const options = {
+    date: '',
+    rootDir: 'data_predictions',
+    dryRun: false,
+    evaluationMode: 'live_snapshot',
+    strategyId: '',
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--date') options.date = argv[++index] || '';
@@ -312,6 +343,7 @@ module.exports = {
   replayGroup,
   syncReplayRows,
   evaluateSnapshot,
+  filterSnapshotToStrategy,
   applyTagStrategyReplay,
   main,
 };
