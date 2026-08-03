@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>0050／0052／00631L 持有與市場情境比較</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #14213d;
+      --muted: #65738a;
+      --line: #dce4ef;
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --orange: #ea580c;
+      --green: #15803d;
+      --red: #b91c1c;
+      --shadow: 0 10px 30px rgba(15, 23, 42, .08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif; line-height: 1.5; }
+    button, input { font: inherit; }
+    .container { width: min(1440px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 48px; }
+    .hero, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+    .hero { padding: 24px; margin-bottom: 16px; }
+    .hero-top { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 3vw, 2.15rem); line-height: 1.25; }
+    .subtitle { color: var(--muted); max-width: 920px; }
+    .back-link { color: var(--blue); font-weight: 750; text-decoration: none; white-space: nowrap; }
+    .status { margin-top: 14px; padding: 10px 12px; background: #eff6ff; border-radius: 10px; color: #1d4ed8; font-weight: 700; }
+    .status.error { background: #fef2f2; color: var(--red); }
+    .panel { padding: 18px; margin-bottom: 16px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+    .panel h2 { margin: 0; font-size: 1.2rem; }
+    .panel-note { color: var(--muted); font-size: .9rem; }
+    .controls { display: grid; grid-template-columns: repeat(6, minmax(130px, 1fr)); gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: #334155; font-weight: 750; font-size: .9rem; }
+    .field input { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: var(--ink); }
+    .field input:focus { outline: 3px solid rgba(37, 99, 235, .12); border-color: var(--blue); }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .button { border: 1px solid #cbd5e1; border-radius: 9px; padding: 8px 12px; background: #fff; color: #334155; font-weight: 750; cursor: pointer; }
+    .button:hover { border-color: var(--blue); color: var(--blue); }
+    details.advanced { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+    details.advanced summary { cursor: pointer; font-weight: 800; color: #334155; }
+    .advanced-grid { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 12px; margin-top: 12px; }
+    .cards { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 15px; box-shadow: var(--shadow); }
+    .card-label { color: var(--muted); font-size: .86rem; font-weight: 750; }
+    .card-value { margin-top: 5px; font-size: 1.38rem; font-weight: 850; }
+    .card-sub { color: var(--muted); font-size: .82rem; margin-top: 4px; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .neutral { color: #475569; }
+    .chart-wrap { width: 100%; overflow-x: auto; }
+    #performanceChart { width: 100%; min-width: 760px; height: auto; display: block; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: #334155; font-weight: 700; font-size: .88rem; }
+    .legend-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    th { background: #f8fafc; color: #475569; font-size: .82rem; position: sticky; top: 0; z-index: 1; }
+    th:first-child, td:first-child { text-align: left; }
+    tr:last-child td { border-bottom: 0; }
+    .etf-name { font-weight: 850; }
+    .etf-desc { color: var(--muted); font-size: .78rem; margin-top: 2px; }
+    .regime-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .regime-tab { border: 1px solid #cbd5e1; border-radius: 999px; padding: 8px 13px; background: #fff; color: #475569; font-weight: 800; cursor: pointer; }
+    .regime-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .regime-tab small { opacity: .78; margin-left: 4px; }
+    .regime-layout { display: grid; grid-template-columns: minmax(330px, .8fr) minmax(460px, 1.2fr); gap: 16px; }
+    .regime-box { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fbfdff; }
+    .regime-title { font-size: 1.05rem; font-weight: 850; margin-bottom: 4px; }
+    .bar-row { display: grid; grid-template-columns: 110px 1fr 84px; gap: 10px; align-items: center; margin: 12px 0; }
+    .bar-label { font-weight: 800; }
+    .bar-track { position: relative; height: 28px; background: #eef2f7; border-radius: 7px; overflow: hidden; }
+    .bar-zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; }
+    .bar-fill { position: absolute; top: 4px; bottom: 4px; border-radius: 5px; min-width: 2px; }
+    .bar-value { text-align: right; font-weight: 850; }
+    .winner { display: inline-block; padding: 3px 7px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: .75rem; font-weight: 850; margin-left: 5px; }
+    .method-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .method-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fbfdff; }
+    .method-card h3 { margin: 0 0 6px; font-size: 1rem; }
+    .method-card p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .empty { padding: 24px; color: var(--muted); text-align: center; font-weight: 750; }
+    .footnote { color: var(--muted); font-size: .82rem; margin-top: 10px; }
+    @media (max-width: 1100px) {
+      .controls { grid-template-columns: repeat(3, 1fr); }
+      .advanced-grid { grid-template-columns: repeat(3, 1fr); }
+      .cards { grid-template-columns: repeat(3, 1fr); }
+      .regime-layout { grid-template-columns: 1fr; }
+      .method-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .container { width: min(100% - 16px, 1440px); padding-top: 8px; }
+      .hero, .panel { border-radius: 12px; padding: 14px; }
+      .hero-top { display: block; }
+      .back-link { display: inline-block; margin-top: 10px; }
+      .controls, .advanced-grid, .cards { grid-template-columns: 1fr 1fr; }
+      .card { padding: 12px; }
+      .card-value { font-size: 1.15rem; }
+    }
+    @media (max-width: 430px) { .controls, .advanced-grid, .cards { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>0050／0052／00631L 持有與市場情境比較</h1>
+          <div class="subtitle">自選日期區間，比較投入相同本金後的資產結果、總報酬、波動與最大回撤；並以加權指數滾動視窗切換五種市場情境，查看三檔 ETF 在不同環境下的歷史差異。</div>
+        </div>
+        <a class="back-link" href="index.html">← 返回工具清單</a>
+      </div>
+      <div class="status" id="status">正在載入資料…</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>分析條件</h2><div class="panel-note">日期會自動對齊加權指數及三檔 ETF 都有資料的共同交易日。</div></div></div>
+      <div class="controls">
+        <div class="field"><label for="fromDate">起始日期</label><input id="fromDate" type="date"></div>
+        <div class="field"><label for="toDate">結束日期</label><input id="toDate" type="date"></div>
+        <div class="field"><label for="investment">投入本金（元）</label><input id="investment" type="number" min="1" step="10000" value="1000000"></div>
+        <div class="field"><label for="costPct">總交易成本（%）</label><input id="costPct" type="number" min="0" max="20" step="0.01" value="0"></div>
+        <div class="field"><label for="windowDays">情境視窗（交易日）</label><input id="windowDays" type="number" min="5" max="120" step="1" value="20"></div>
+        <div class="field"><label for="stepDays">滾動間隔（交易日）</label><input id="stepDays" type="number" min="1" max="60" step="1" value="5"></div>
+      </div>
+      <div class="button-row">
+        <button class="button" id="allDataButton" type="button">使用全部資料</button>
+        <button class="button" id="last60Button" type="button">最近 60 個交易日</button>
+        <button class="button" id="last120Button" type="button">最近 120 個交易日</button>
+      </div>
+      <details class="advanced">
+        <summary>進階情境門檻</summary>
+        <div class="advanced-grid">
+          <div class="field"><label for="strongReturnPct">強趨勢報酬門檻（±%）</label><input id="strongReturnPct" type="number" min="0.1" max="50" step="0.1" value="5"></div>
+          <div class="field"><label for="slowReturnPct">緩慢趨勢門檻（±%）</label><input id="slowReturnPct" type="number" min="0" max="20" step="0.1" value="1"></div>
+          <div class="field"><label for="minTrendR2">持續趨勢 R²</label><input id="minTrendR2" type="number" min="0" max="1" step="0.05" value="0.45"></div>
+          <div class="field"><label for="minDirectionalDayRatio">同方向交易日比例</label><input id="minDirectionalDayRatio" type="number" min="0.5" max="1" step="0.05" value="0.55"></div>
+          <div class="field"><label for="sampleLimit">顯示樣本筆數</label><input id="sampleLimit" type="number" min="5" max="200" step="5" value="30"></div>
+        </div>
+      </details>
+    </section>
+
+    <section class="cards" id="summaryCards"></section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>自選區間持有比較</h2><div class="panel-note" id="rangeDescription"></div></div></div>
+      <div class="chart-wrap"><svg id="performanceChart" viewBox="0 0 1000 360" role="img" aria-label="加權指數及三檔 ETF 正規化報酬走勢"></svg></div>
+      <div class="legend" id="chartLegend"></div>
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <thead><tr><th>標的</th><th>期初還原價</th><th>期末還原價</th><th>總報酬</th><th>扣成本後</th><th>期末資產</th><th>相對 0050</th><th>年化波動</th><th>最大回撤</th><th>上漲日比例</th></tr></thead>
+          <tbody id="holdingTableBody"></tbody>
+        </table>
+      </div>
+      <div class="footnote">持有報酬採還原收盤價，納入配息與分割調整；交易成本由上方自行輸入，預設為 0%。</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>五種市場情境比較</h2><div class="panel-note">每個樣本是在同一段滾動視窗內，同時計算加權指數情境與三檔 ETF 持有結果；預設每 5 個交易日取一個樣本。</div></div></div>
+      <div class="regime-tabs" id="regimeTabs"></div>
+      <div class="regime-layout">
+        <div class="regime-box" id="regimeOverview"></div>
+        <div class="regime-box"><div class="regime-title">平均持有報酬比較</div><div class="panel-note">同一情境下各 ETF 的歷史滾動視窗平均報酬。</div><div id="regimeBars"></div></div>
+      </div>
+      <div class="table-wrap" style="margin-top:16px">
+        <table>
+          <thead><tr><th>市場情境</th><th>樣本數</th><th>市場平均</th><th>0050 平均</th><th>0052 平均</th><th>00631L 平均</th><th>0050 勝率</th><th>0052 勝率</th><th>00631L 勝率</th></tr></thead>
+          <tbody id="regimeSummaryBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2 id="sampleTitle">情境樣本明細</h2><div class="panel-note">可檢查每一段歷史視窗，避免只看平均值。</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>期間</th><th>市場報酬</th><th>趨勢 R²</th><th>上漲日比例</th><th>0050</th><th>0052</th><th>00631L</th><th>00631L 最大回撤</th></tr></thead>
+          <tbody id="sampleTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>方法與解讀</h2></div></div>
+      <div class="method-grid">
+        <div class="method-card"><h3>市場基準</h3><p>市場情境以專案既有的臺灣加權股價指數日 K 資料判定，不用任一 ETF 反推市場狀態。</p></div>
+        <div class="method-card"><h3>五種分類</h3><p>強趨勢需同時滿足報酬門檻、線性趨勢 R² 與同方向交易日比例；未達強趨勢時，再依報酬幅度分為緩慢上漲、緩慢下跌或區間震盪。</p></div>
+        <div class="method-card"><h3>槓桿 ETF 注意</h3><p>00631L 追求單日正向兩倍效果，長期持有會受到每日重設、波動耗損與路徑影響，因此不能直接假設區間報酬恆等於 0050 的兩倍。</p></div>
+      </div>
+      <div class="footnote" id="dataFootnote"></div>
+    </section>
+  </main>
+
+  <script src="assets/etf-market-regime-analysis.js"></script>
+  <script>
+    'use strict';
+
+    const A = window.EtfMarketRegimeAnalysis;
+    const state = { data: null, activeRegime: 'continuous_up', samples: [], summaries: {} };
+    const COLORS = { market: '#64748b', '0050': '#2563eb', '0052': '#0891b2', '00631L': '#ea580c' };
+    const LABELS = { market: '加權指數', '0050': '0050 元大台灣50', '0052': '0052 富邦科技', '00631L': '00631L 元大台灣50正2' };
+    const byId = (id) => document.getElementById(id);
+
+    function compactToIso(date) { return date ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : ''; }
+    function formatDate(date) { return date ? `${date.slice(0, 4)}/${date.slice(4, 6)}/${date.slice(6, 8)}` : '—'; }
+    function formatNumber(value, digits = 2) { return Number.isFinite(value) ? value.toLocaleString('zh-TW', { minimumFractionDigits: digits, maximumFractionDigits: digits }) : '—'; }
+    function formatMoney(value) { return Number.isFinite(value) ? Math.round(value).toLocaleString('zh-TW') : '—'; }
+    function formatPct(value, digits = 2) { if (!Number.isFinite(value)) return '—'; return `${value > 0 ? '+' : ''}${formatNumber(value, digits)}%`; }
+    function valueClass(value) { return value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'; }
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
+
+    function getOptions() {
+      return A.normalizeOptions({
+        windowDays: Number(byId('windowDays').value),
+        stepDays: Number(byId('stepDays').value),
+        strongReturnPct: Number(byId('strongReturnPct').value),
+        slowReturnPct: Number(byId('slowReturnPct').value),
+        minTrendR2: Number(byId('minTrendR2').value),
+        minDirectionalDayRatio: Number(byId('minDirectionalDayRatio').value)
+      });
+    }
+
+    function selectedRows() { return A.filterRowsByDate(state.data.rows, byId('fromDate').value, byId('toDate').value); }
+
+    function renderSummaryCards(rows, options) {
+      const marketState = A.classifyMarketWindow(rows, options);
+      const cards = [
+        ['共同交易日', rows.length ? `${rows.length} 日` : '—', `${formatDate(rows[0]?.date)} ～ ${formatDate(rows.at(-1)?.date)}`],
+        ['區間市場狀態', marketState?.label || '資料不足', marketState ? `市場報酬 ${formatPct(marketState.returnPct)}` : '至少需要 2 個交易日'],
+        ['趨勢 R²', marketState ? formatNumber(marketState.trendR2, 2) : '—', '越接近 1 代表路徑越接近單一趨勢'],
+        ['市場最大回撤', marketState ? formatPct(marketState.maxDrawdownPct) : '—', '自選區間內的高點至低點'],
+        ['滾動樣本', `${state.samples.length} 組`, `${options.windowDays} 日視窗／每 ${options.stepDays} 日取樣`]
+      ];
+      byId('summaryCards').innerHTML = cards.map(([label, value, sub]) => `<div class="card"><div class="card-label">${escapeHtml(label)}</div><div class="card-value">${escapeHtml(value)}</div><div class="card-sub">${escapeHtml(sub)}</div></div>`).join('');
+    }
+
+    function calculateInvestmentResult(metrics, investment, costPct) {
+      if (!metrics) return null;
+      const netMultiple = (1 + metrics.totalReturnPct / 100) * (1 - costPct / 100);
+      return { netReturnPct: (netMultiple - 1) * 100, finalValue: investment * netMultiple };
+    }
+
+    function renderHoldingTable(rows) {
+      const investment = Math.max(0, Number(byId('investment').value) || 0);
+      const costPct = Math.max(0, Number(byId('costPct').value) || 0);
+      const metricsById = Object.fromEntries(state.data.etfs.map((etf) => [etf.id, A.calculateHoldingMetrics(rows, etf.adjustedCloseField)]));
+      const base = calculateInvestmentResult(metricsById['0050'], investment, costPct);
+      byId('holdingTableBody').innerHTML = state.data.etfs.map((etf) => {
+        const metrics = metricsById[etf.id];
+        if (!metrics) return `<tr><td><div class="etf-name">${escapeHtml(etf.id)} ${escapeHtml(etf.name)}</div></td><td colspan="9">資料不足</td></tr>`;
+        const result = calculateInvestmentResult(metrics, investment, costPct);
+        const difference = result && base ? result.finalValue - base.finalValue : null;
+        return `<tr>
+          <td><div class="etf-name">${escapeHtml(etf.id)} ${escapeHtml(etf.name)}</div><div class="etf-desc">${escapeHtml(etf.description)}</div></td>
+          <td>${formatNumber(metrics.startPrice, 4)}</td><td>${formatNumber(metrics.endPrice, 4)}</td>
+          <td class="${valueClass(metrics.totalReturnPct)}">${formatPct(metrics.totalReturnPct)}</td>
+          <td class="${valueClass(result.netReturnPct)}">${formatPct(result.netReturnPct)}</td><td>${formatMoney(result.finalValue)}</td>
+          <td class="${valueClass(difference)}">${etf.id === '0050' ? '基準' : `${difference >= 0 ? '+' : ''}${formatMoney(difference)}`}</td>
+          <td>${formatPct(metrics.annualizedVolatilityPct)}</td><td class="negative">${formatPct(metrics.maxDrawdownPct)}</td><td>${formatPct(metrics.positiveDayRatePct)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderPerformanceChart(rows) {
+      const svg = byId('performanceChart');
+      if (rows.length < 2) { svg.innerHTML = '<text x="500" y="180" text-anchor="middle" fill="#64748b">至少需要兩個共同交易日</text>'; return; }
+      const series = [
+        { id: 'market', field: 'marketClose', label: LABELS.market },
+        ...state.data.etfs.map((etf) => ({ id: etf.id, field: etf.adjustedCloseField, label: LABELS[etf.id] }))
+      ].map((item) => {
+        const base = rows[0][item.field];
+        return { ...item, values: rows.map((row) => (row[item.field] / base - 1) * 100) };
+      });
+      const allValues = series.flatMap((item) => item.values).filter(Number.isFinite);
+      let min = Math.min(...allValues, 0), max = Math.max(...allValues, 0);
+      const span = Math.max(1, max - min); min -= span * .12; max += span * .12;
+      const width = 1000, height = 360, left = 68, right = 22, top = 18, bottom = 46;
+      const plotWidth = width - left - right, plotHeight = height - top - bottom;
+      const x = (index) => left + index / Math.max(1, rows.length - 1) * plotWidth;
+      const y = (value) => top + (max - value) / (max - min) * plotHeight;
+      const grid = [];
+      for (let index = 0; index <= 5; index += 1) {
+        const value = min + (max - min) * index / 5, yy = y(value);
+        grid.push(`<line x1="${left}" x2="${width - right}" y1="${yy}" y2="${yy}" stroke="#e2e8f0"/>`);
+        grid.push(`<text x="${left - 10}" y="${yy + 4}" text-anchor="end" fill="#64748b" font-size="12">${formatNumber(value, 1)}%</text>`);
+      }
+      const tickIndexes = [...new Set([0, Math.floor((rows.length - 1) / 4), Math.floor((rows.length - 1) / 2), Math.floor((rows.length - 1) * 3 / 4), rows.length - 1])];
+      const ticks = tickIndexes.map((index) => `<text x="${x(index)}" y="${height - 16}" text-anchor="middle" fill="#64748b" font-size="12">${formatDate(rows[index].date).slice(5)}</text>`).join('');
+      const paths = series.map((item) => `<path d="${item.values.map((value, index) => `${index ? 'L' : 'M'}${x(index).toFixed(2)},${y(value).toFixed(2)}`).join(' ')}" fill="none" stroke="${COLORS[item.id]}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+      svg.innerHTML = `${grid.join('')}<line x1="${left}" x2="${width - right}" y1="${y(0)}" y2="${y(0)}" stroke="#94a3b8" stroke-dasharray="5 4"/>${paths}${ticks}`;
+      byId('chartLegend').innerHTML = series.map((item) => `<div class="legend-item"><span class="legend-dot" style="background:${COLORS[item.id]}"></span>${escapeHtml(item.label)}</div>`).join('');
+    }
+
+    function renderRegimeTabs() {
+      byId('regimeTabs').innerHTML = A.REGIME_ORDER.map((regime) => `<button type="button" class="regime-tab ${state.activeRegime === regime ? 'active' : ''}" data-regime="${regime}">${escapeHtml(A.REGIMES[regime].shortLabel)}<small>${state.summaries[regime]?.sampleCount || 0}</small></button>`).join('');
+      byId('regimeTabs').querySelectorAll('[data-regime]').forEach((button) => button.addEventListener('click', () => {
+        state.activeRegime = button.dataset.regime; renderRegimeTabs(); renderActiveRegime(); renderSamples();
+      }));
+    }
+
+    function renderRegimeSummaryTable() {
+      byId('regimeSummaryBody').innerHTML = A.REGIME_ORDER.map((regime) => {
+        const summary = state.summaries[regime];
+        const returns = state.data.etfs.map((etf) => summary?.etfs?.[etf.id]?.averageReturnPct).filter(Number.isFinite);
+        const best = returns.length ? Math.max(...returns) : null;
+        const cell = (etf, key) => {
+          const value = summary?.etfs?.[etf]?.[key];
+          const winner = key === 'averageReturnPct' && Number.isFinite(best) && value === best ? '<span class="winner">最佳</span>' : '';
+          return `<td class="${valueClass(value)}">${formatPct(value)}${winner}</td>`;
+        };
+        return `<tr><td><strong>${escapeHtml(A.REGIMES[regime].label)}</strong></td><td>${summary?.sampleCount || 0}</td><td class="${valueClass(summary?.marketAverageReturnPct)}">${formatPct(summary?.marketAverageReturnPct)}</td>${cell('0050', 'averageReturnPct')}${cell('0052', 'averageReturnPct')}${cell('00631L', 'averageReturnPct')}${cell('0050', 'winRatePct')}${cell('0052', 'winRatePct')}${cell('00631L', 'winRatePct')}</tr>`;
+      }).join('');
+    }
+
+    function renderActiveRegime() {
+      const summary = state.summaries[state.activeRegime], options = getOptions();
+      if (!summary || !summary.sampleCount) {
+        byId('regimeOverview').innerHTML = `<div class="empty">目前日期區間與門檻下，沒有「${escapeHtml(A.REGIMES[state.activeRegime].label)}」樣本。</div>`;
+        byId('regimeBars').innerHTML = '<div class="empty">沒有可比較的樣本</div>'; return;
+      }
+      const ranked = state.data.etfs.map((etf) => ({ etf, metrics: summary.etfs[etf.id] })).sort((left, right) => (right.metrics.averageReturnPct ?? -Infinity) - (left.metrics.averageReturnPct ?? -Infinity));
+      byId('regimeOverview').innerHTML = `<div class="regime-title">${escapeHtml(summary.label)}</div><div class="panel-note">${summary.sampleCount} 組樣本；市場平均 ${formatPct(summary.marketAverageReturnPct)}，中位數 ${formatPct(summary.marketMedianReturnPct)}。</div><div style="margin-top:14px"><strong>歷史平均最佳：</strong>${escapeHtml(ranked[0].etf.id)} ${escapeHtml(ranked[0].etf.name)}，平均 ${formatPct(ranked[0].metrics.averageReturnPct)}。</div><div style="margin-top:8px"><strong>風險提醒：</strong>最佳平均不代表每次都勝出；該 ETF 勝率為 ${formatPct(ranked[0].metrics.winRatePct)}，平均最大回撤 ${formatPct(ranked[0].metrics.averageMaxDrawdownPct)}。</div><div class="footnote">分類設定：${options.windowDays} 日視窗、強趨勢 ±${formatNumber(options.strongReturnPct, 1)}%、緩慢趨勢 ±${formatNumber(options.slowReturnPct, 1)}%、R² ≥ ${formatNumber(options.minTrendR2, 2)}。</div>`;
+      const values = state.data.etfs.map((etf) => summary.etfs[etf.id].averageReturnPct).filter(Number.isFinite), scale = Math.max(1, ...values.map((value) => Math.abs(value)));
+      byId('regimeBars').innerHTML = state.data.etfs.map((etf) => {
+        const value = summary.etfs[etf.id].averageReturnPct, width = Number.isFinite(value) ? Math.abs(value) / scale * 48 : 0, left = value >= 0 ? 50 : 50 - width;
+        return `<div class="bar-row"><div class="bar-label">${escapeHtml(etf.id)}</div><div class="bar-track"><div class="bar-zero"></div><div class="bar-fill" style="left:${left}%;width:${width}%;background:${COLORS[etf.id]}"></div></div><div class="bar-value ${valueClass(value)}">${formatPct(value)}</div></div>`;
+      }).join('');
+    }
+
+    function renderSamples() {
+      const limit = Math.max(5, Number(byId('sampleLimit').value) || 30);
+      const samples = state.samples.filter((sample) => sample.regime === state.activeRegime).slice(-limit).reverse();
+      byId('sampleTitle').textContent = `${A.REGIMES[state.activeRegime].label}－樣本明細`;
+      byId('sampleTableBody').innerHTML = samples.length ? samples.map((sample) => `<tr><td>${formatDate(sample.startDate)} ～ ${formatDate(sample.endDate)}</td><td class="${valueClass(sample.market.returnPct)}">${formatPct(sample.market.returnPct)}</td><td>${formatNumber(sample.market.trendR2, 2)}</td><td>${formatPct(sample.market.positiveDayRatePct)}</td><td class="${valueClass(sample.etfs['0050'].totalReturnPct)}">${formatPct(sample.etfs['0050'].totalReturnPct)}</td><td class="${valueClass(sample.etfs['0052'].totalReturnPct)}">${formatPct(sample.etfs['0052'].totalReturnPct)}</td><td class="${valueClass(sample.etfs['00631L'].totalReturnPct)}">${formatPct(sample.etfs['00631L'].totalReturnPct)}</td><td class="negative">${formatPct(sample.etfs['00631L'].maxDrawdownPct)}</td></tr>`).join('') : '<tr><td colspan="8" class="empty">目前沒有此情境樣本</td></tr>';
+    }
+
+    function render() {
+      if (!state.data) return;
+      const rows = selectedRows(), options = getOptions();
+      state.samples = A.buildRollingRegimeSamples(rows, state.data.etfs, options);
+      state.summaries = A.summarizeRegimeSamples(state.samples, state.data.etfs);
+      renderSummaryCards(rows, options); renderHoldingTable(rows); renderPerformanceChart(rows); renderRegimeTabs(); renderRegimeSummaryTable(); renderActiveRegime(); renderSamples();
+      byId('rangeDescription').textContent = rows.length ? `${formatDate(rows[0].date)} ～ ${formatDate(rows.at(-1).date)}，共 ${rows.length} 個共同交易日。` : '此日期區間沒有共同交易日。';
+    }
+
+    function setRecentTradingDays(count) {
+      const rows = state.data.rows, startIndex = Math.max(0, rows.length - count);
+      byId('fromDate').value = compactToIso(rows[startIndex].date); byId('toDate').value = compactToIso(rows.at(-1).date); render();
+    }
+
+    function bindControls() {
+      ['fromDate', 'toDate', 'investment', 'costPct', 'windowDays', 'stepDays', 'strongReturnPct', 'slowReturnPct', 'minTrendR2', 'minDirectionalDayRatio', 'sampleLimit'].forEach((id) => byId(id).addEventListener('change', render));
+      byId('allDataButton').addEventListener('click', () => { byId('fromDate').value = compactToIso(state.data.startDate); byId('toDate').value = compactToIso(state.data.endDate); render(); });
+      byId('last60Button').addEventListener('click', () => setRecentTradingDays(60));
+      byId('last120Button').addEventListener('click', () => setRecentTradingDays(120));
+    }
+
+    async function load() {
+      try {
+        const response = await fetch('data/etf-market-regime-analysis/data.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        state.data = await response.json();
+        if (!Array.isArray(state.data.rows) || state.data.rows.length < 2) throw new Error('資料檔沒有足夠的共同交易日');
+        const min = compactToIso(state.data.startDate), max = compactToIso(state.data.endDate);
+        byId('fromDate').min = min; byId('fromDate').max = max; byId('toDate').min = min; byId('toDate').max = max; byId('fromDate').value = min; byId('toDate').value = max;
+        const defaults = state.data.regimeDefaults || {};
+        for (const id of ['windowDays', 'stepDays', 'strongReturnPct', 'slowReturnPct', 'minTrendR2', 'minDirectionalDayRatio']) if (Number.isFinite(defaults[id])) byId(id).value = defaults[id];
+        bindControls(); render();
+        byId('status').textContent = `資料已載入：${formatDate(state.data.startDate)} ～ ${formatDate(state.data.endDate)}，${state.data.tradingDayCount} 個共同交易日，資料對齊率 ${formatNumber(state.data.coverage?.alignedRatePct, 2)}%。`;
+        byId('dataFootnote').textContent = `資料更新時間：${new Date(state.data.generatedAt).toLocaleString('zh-TW')}；市場來源：${state.data.market?.source || 'TWSE'}；ETF 價格來源：${state.data.sources?.etfPrices || 'Yahoo Finance'}。分析為歷史統計，不代表未來績效。`;
+      } catch (error) {
+        console.error(error); byId('status').className = 'status error'; byId('status').textContent = `載入失敗：${error.message}。請先執行 ETF 市場情境資料產生流程。`;
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
