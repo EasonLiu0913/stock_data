@@ -5,11 +5,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   buildSnapshot,
+  finiteNumber,
   loadRegistry,
   registryFingerprint,
 } = require('./strategy_tag_engine');
+const { parseMarginCsv } = require('./oversold_rebound_research_lib');
 
 const ROOT = path.resolve(__dirname, '..');
+const DEFAULT_MARGIN_PERIODS = 5;
 
 function compactDate(value) {
   const normalized = String(value || '').replace(/[^0-9]/g, '');
@@ -68,20 +71,132 @@ function parseArgs(argv) {
   return options;
 }
 
+function marginFileNames(workspaceRoot) {
+  const directory = path.join(workspaceRoot, 'data_twse_margin_balance');
+  const listed = readJson(path.join(directory, 'files.json'), null);
+  if (Array.isArray(listed)) return listed;
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory);
+}
+
+function listMarginDates(workspaceRoot, cutoff, periods = DEFAULT_MARGIN_PERIODS) {
+  const normalizedCutoff = compactDate(cutoff);
+  return [...new Set(marginFileNames(workspaceRoot)
+    .map(name => String(name).match(/^(20\d{6})_twse_margin_balance\.csv$/)?.[1] || '')
+    .filter(Boolean)
+    .filter(date => !normalizedCutoff || date <= normalizedCutoff))]
+    .sort()
+    .slice(-periods);
+}
+
+function safeMarginMap(workspaceRoot, date) {
+  const file = path.join(
+    workspaceRoot,
+    'data_twse_margin_balance',
+    `${date}_twse_margin_balance.csv`,
+  );
+  try {
+    return { date, map: parseMarginCsv(fs.readFileSync(file, 'utf8')), error: null };
+  } catch (error) {
+    return { date, map: new Map(), error: error.message };
+  }
+}
+
+function earliestDataCutoff(payload, dataAsOf) {
+  return [compactDate(payload?.base_trade_date), compactDate(dataAsOf)]
+    .filter(Boolean)
+    .sort()
+    .at(0) || '';
+}
+
+function enrichMarginFeatures(payload, workspaceRoot, dataAsOf, periods = DEFAULT_MARGIN_PERIODS) {
+  const cutoff = earliestDataCutoff(payload, dataAsOf);
+  const selectedDates = listMarginDates(workspaceRoot, cutoff, periods);
+  const dailyMaps = selectedDates.map(date => safeMarginMap(workspaceRoot, date));
+  const loadedMaps = dailyMaps.filter(item => !item.error);
+  const latestDate = loadedMaps.at(-1)?.date || null;
+  const latestMap = loadedMaps.at(-1)?.map || new Map();
+  let available1dStockCount = 0;
+  let available5dStockCount = 0;
+
+  payload.stocks = (payload.stocks || []).map(stock => {
+    const code = String(stock.stock_code || '').trim();
+    const current = latestMap.get(code) || null;
+    const currentChange = finiteNumber(current?.margin_change);
+    const currentBalance = finiteNumber(current?.margin_balance);
+    const dailyChanges = loadedMaps.map(item => finiteNumber(item.map.get(code)?.margin_change));
+    const validDays = dailyChanges.filter(Number.isFinite).length;
+    const change5d = loadedMaps.length === periods && validDays === periods
+      ? dailyChanges.reduce((sum, value) => sum + value, 0)
+      : null;
+    if (Number.isFinite(currentChange)) available1dStockCount += 1;
+    if (Number.isFinite(change5d)) available5dStockCount += 1;
+    return {
+      ...stock,
+      strategy_tag_features: {
+        ...(stock.strategy_tag_features || {}),
+        margin_change: currentChange,
+        margin_change_5d: change5d,
+        margin_balance: currentBalance,
+        margin_valid_days: validDays,
+        margin_required_days: periods,
+        margin_latest_date: latestDate,
+      },
+    };
+  });
+
+  const totalStockCount = payload.stocks.length;
+  const sourceStatus = loadedMaps.length < periods || !latestDate
+    ? 'unable_to_calculate'
+    : available5dStockCount < totalStockCount ? 'partial' : 'completed';
+  const marginMetadata = {
+    calculation_status: sourceStatus,
+    calculation_message: sourceStatus === 'unable_to_calculate'
+      ? `僅載入 ${loadedMaps.length}／${periods} 個融資交易日，無法完整計算。`
+      : sourceStatus === 'partial'
+        ? `已載入 ${periods} 個融資交易日；部分股票無融資資格或缺少紀錄。`
+        : `已載入 ${periods} 個融資交易日並完成全部股票計算。`,
+    cutoff_date: cutoff || null,
+    selected_dates: selectedDates,
+    loaded_dates: loadedMaps.map(item => item.date),
+    failed_dates: dailyMaps.filter(item => item.error).map(item => ({ date: item.date, error: item.error })),
+    latest_date: latestDate,
+    required_days: periods,
+    total_stock_count: totalStockCount,
+    available_1d_stock_count: available1dStockCount,
+    available_5d_stock_count: available5dStockCount,
+    coverage_1d_pct: totalStockCount
+      ? Math.round((available1dStockCount / totalStockCount) * 10000) / 100
+      : null,
+    coverage_5d_pct: totalStockCount
+      ? Math.round((available5dStockCount / totalStockCount) * 10000) / 100
+      : null,
+  };
+  payload.strategy_tag_source_metadata = {
+    ...(payload.strategy_tag_source_metadata || {}),
+    margin: marginMetadata,
+  };
+  return marginMetadata;
+}
+
 function compactSnapshot(snapshot) {
   return {
     ...snapshot,
     stocks: (snapshot.stocks || []).map(stock => ({
       stock_code: stock.stock_code,
       stock_name: stock.stock_name || '',
+      strategy_tag_features: stock.strategy_tag_features || {},
       atomic_tags: stock.atomic_tags || [],
+      unavailable_atomic_tags: stock.unavailable_atomic_tags || [],
       registered_strategy_matches: stock.registered_strategy_matches || [],
+      unavailable_registered_strategies: stock.unavailable_registered_strategies || [],
     })),
   };
 }
 
 function applySnapshotToPayload(payload, snapshot) {
   const byCode = new Map((snapshot.stocks || []).map(stock => [String(stock.stock_code), stock]));
+  payload.strategy_tag_source_metadata = snapshot.source_metadata || {};
   payload.tag_registry = snapshot.tag_registry || [];
   payload.strategy_registry_v2 = snapshot.strategy_registry || [];
   payload.tag_classifications = snapshot.tag_classifications || {};
@@ -97,8 +212,11 @@ function applySnapshotToPayload(payload, snapshot) {
     const saved = byCode.get(String(stock.stock_code || ''));
     return {
       ...stock,
+      strategy_tag_features: saved?.strategy_tag_features || {},
       atomic_tags: saved?.atomic_tags || [],
+      unavailable_atomic_tags: saved?.unavailable_atomic_tags || [],
       registered_strategy_matches: saved?.registered_strategy_matches || [],
+      unavailable_registered_strategies: saved?.unavailable_registered_strategies || [],
     };
   });
   return payload;
@@ -111,19 +229,19 @@ function snapshotFileFor(workspaceRoot, date, evaluationMode, fingerprint, dataA
   return path.join(root, 'historical_recalculation', date, `${fingerprint}--asof-${suffix}.json`);
 }
 
-function updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot) {
-  const manifestFile = path.join(workspaceRoot, 'data_prediction_analysis', 'strategy-snapshots', 'manifest.json');
-  const manifest = readJson(manifestFile, {
-    schema_version: 1,
-    updated_at: null,
-    dates: {},
-  });
-  const date = compactDate(snapshot.forecast_date);
-  if (!manifest.dates[date]) {
-    manifest.dates[date] = { live_snapshot: null, historical_recalculations: [] };
-  }
-  const before = JSON.stringify(manifest.dates[date]);
-  const entry = {
+function snapshotHistoryFileFor(workspaceRoot, date, fingerprint) {
+  return path.join(
+    workspaceRoot,
+    'data_prediction_analysis',
+    'strategy-snapshots',
+    'live_snapshot_history',
+    date,
+    `${fingerprint || 'unknown'}.json`,
+  );
+}
+
+function manifestEntry(workspaceRoot, snapshotFile, snapshot) {
+  return {
     file: path.relative(workspaceRoot, snapshotFile).replaceAll(path.sep, '/'),
     registry_id: snapshot.registry_id,
     registry_fingerprint: snapshot.registry_fingerprint,
@@ -131,14 +249,45 @@ function updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot) {
     data_as_of: snapshot.data_as_of,
     generated_at: snapshot.generated_at,
   };
+}
+
+function normalizeManifestDateEntry(entry = {}) {
+  return {
+    live_snapshot: entry.live_snapshot || null,
+    live_snapshot_history: Array.isArray(entry.live_snapshot_history) ? entry.live_snapshot_history : [],
+    historical_recalculations: Array.isArray(entry.historical_recalculations)
+      ? entry.historical_recalculations
+      : [],
+  };
+}
+
+function updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot, options = {}) {
+  const manifestFile = path.join(workspaceRoot, 'data_prediction_analysis', 'strategy-snapshots', 'manifest.json');
+  const manifest = readJson(manifestFile, {
+    schema_version: 2,
+    updated_at: null,
+    dates: {},
+  });
+  manifest.schema_version = Math.max(Number(manifest.schema_version || 1), 2);
+  const date = compactDate(snapshot.forecast_date);
+  manifest.dates[date] = normalizeManifestDateEntry(manifest.dates[date]);
+  const before = JSON.stringify(manifest.dates[date]);
+  const entry = manifestEntry(workspaceRoot, snapshotFile, snapshot);
+  if (options.archivedEntry) {
+    const history = manifest.dates[date].live_snapshot_history
+      .filter(item => item.file !== options.archivedEntry.file);
+    history.push(options.archivedEntry);
+    history.sort((left, right) => String(left.generated_at).localeCompare(String(right.generated_at)));
+    manifest.dates[date].live_snapshot_history = history;
+  }
   if (snapshot.evaluation_mode === 'live_snapshot') {
     manifest.dates[date].live_snapshot = entry;
   } else {
-    const rows = manifest.dates[date].historical_recalculations || [];
-    const filtered = rows.filter(item => item.file !== entry.file);
-    filtered.push(entry);
-    filtered.sort((left, right) => String(left.generated_at).localeCompare(String(right.generated_at)));
-    manifest.dates[date].historical_recalculations = filtered;
+    const rows = manifest.dates[date].historical_recalculations
+      .filter(item => item.file !== entry.file);
+    rows.push(entry);
+    rows.sort((left, right) => String(left.generated_at).localeCompare(String(right.generated_at)));
+    manifest.dates[date].historical_recalculations = rows;
   }
   const changed = before !== JSON.stringify(manifest.dates[date]);
   if (changed) {
@@ -166,21 +315,43 @@ function applyRegistry(options = {}) {
   const fingerprint = registryFingerprint(registry);
   const dataAsOf = compactDate(options.dataAsOf) || compactDate(payload.base_trade_date) || date;
   const snapshotFile = snapshotFileFor(workspaceRoot, date, evaluationMode, fingerprint, dataAsOf);
+  const existingSnapshot = readJson(snapshotFile, null);
+  const invalidFingerprints = new Set(registry.replace_invalid_live_fingerprints || []);
+  const correctInvalidLive = evaluationMode === 'live_snapshot'
+    && existingSnapshot
+    && invalidFingerprints.has(existingSnapshot.registry_fingerprint);
+  let archivedEntry = null;
+  let archivedSnapshotFile = null;
 
-  let snapshot = readJson(snapshotFile, null);
-  const reusedExistingSnapshot = Boolean(snapshot);
-  if (!snapshot) {
-    snapshot = buildSnapshot(structuredClone(payload), registry, {
+  let snapshot = existingSnapshot;
+  let reusedExistingSnapshot = Boolean(existingSnapshot) && !correctInvalidLive;
+  let marginMetadata = existingSnapshot?.source_metadata?.margin || null;
+  if (!snapshot || correctInvalidLive) {
+    if (correctInvalidLive) {
+      archivedSnapshotFile = snapshotHistoryFileFor(
+        workspaceRoot,
+        date,
+        existingSnapshot.registry_fingerprint,
+      );
+      if (!options.dryRun && !fs.existsSync(archivedSnapshotFile)) {
+        writeJsonAtomic(archivedSnapshotFile, existingSnapshot);
+      }
+      archivedEntry = manifestEntry(workspaceRoot, archivedSnapshotFile, existingSnapshot);
+    }
+    const enrichedPayload = structuredClone(payload);
+    marginMetadata = enrichMarginFeatures(enrichedPayload, workspaceRoot, dataAsOf);
+    snapshot = buildSnapshot(enrichedPayload, registry, {
       forecastDate: date,
       evaluationMode,
       dataAsOf,
     });
+    reusedExistingSnapshot = false;
   }
 
   let manifestChanged = false;
   if (!options.dryRun) {
     if (!reusedExistingSnapshot) writeJsonAtomic(snapshotFile, compactSnapshot(snapshot));
-    manifestChanged = updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot).changed;
+    manifestChanged = updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot, { archivedEntry }).changed;
     if (evaluationMode === 'live_snapshot') {
       writeJsonAtomic(summaryFile, applySnapshotToPayload(payload, snapshot));
     }
@@ -195,10 +366,15 @@ function applyRegistry(options = {}) {
     tag_count: Object.keys(snapshot.tag_classifications || {}).length,
     strategy_count: Object.keys(snapshot.strategy_classifications || {}).length,
     snapshot_file: path.relative(workspaceRoot, snapshotFile).replaceAll(path.sep, '/'),
+    archived_snapshot_file: archivedSnapshotFile
+      ? path.relative(workspaceRoot, archivedSnapshotFile).replaceAll(path.sep, '/')
+      : null,
     manifest_file: 'data_prediction_analysis/strategy-snapshots/manifest.json',
     reused_existing_snapshot: reusedExistingSnapshot,
+    corrected_invalid_live_snapshot: correctInvalidLive,
     summary_enriched: evaluationMode === 'live_snapshot',
     manifest_changed: manifestChanged,
+    margin_source: marginMetadata,
     dry_run: Boolean(options.dryRun),
   };
 }
@@ -219,15 +395,24 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEFAULT_MARGIN_PERIODS,
   compactDate,
   readJson,
   isValidPredictionSummary,
   latestPredictionDate,
   writeJsonAtomic,
   parseArgs,
+  marginFileNames,
+  listMarginDates,
+  safeMarginMap,
+  earliestDataCutoff,
+  enrichMarginFeatures,
   compactSnapshot,
   applySnapshotToPayload,
   snapshotFileFor,
+  snapshotHistoryFileFor,
+  manifestEntry,
+  normalizeManifestDateEntry,
   updateSnapshotManifest,
   applyRegistry,
   main,
