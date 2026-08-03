@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 3,
+  "generated_at": "2026-08-03T15:28:44.213Z",
+  "forecast_date": "2026-08-04",
+  "forecast_date_compact": "20260804",
+  "base_trade_date": "2026-08-03",
+  "base_trade_date_compact": "20260803",
+  "information_cutoff": "2026-08-03T15:28:44.213Z",
+  "historical_reconstruction": false,
+  "mode": "shadow",
+  "data_freshness": {
+    "status": "fresh",
+    "reason": "exact_primary_market_date_match",
+    "expected_us_market_date": "20260803",
+    "actual_us_market_date": "20260803",
+    "business_day_gap": 0,
+    "source_directory_date": "20260803",
+    "source_collection_date": "20260803",
+    "primary_indicator_agreement": "5/5",
+    "primary_market_dates": {
+      "nasdaq": "20260803",
+      "sp500": "20260803",
+      "dow": "20260803",
+      "sox": "20260803",
+      "tsm_adr": "20260803"
+    },
+    "error_count": 0
+  },
+  "source_files": {
+    "external_market": "data_external_market/20260803/external_market_indicators.json",
+    "market_risk": "data_market_risk/20260803/market_risk_snapshot.json",
+    "twse_index": "data_twse_mi_index/20260803_twse_mi_index.json",
+    "foreign_futures": "data_taifex_major_institutional_traders_futures_contracts/20260803_taifex_major_institutional_traders_futures_contracts.json",
+    "previous_actual_environment": "data_market_environment/20260803/actual_market_environment.json"
+  },
+  "metrics": {
+    "sox_change_1d_pct": -0.15,
+    "sox_return_3d_pct": 8.1,
+    "tsm_adr_change_1d_pct": -0.3,
+    "twse_change_1d_pct": 0.62,
+    "twse_return_3d_pct": 8.36,
+    "twse_minus_sox_3d_pct_points": 0.26,
+    "foreign_futures_net_contracts": -90038,
+    "foreign_futures_net_change_contracts": -7523,
+    "market_risk_score": 52.1,
+    "adr_sox_nasdaq_market_risk": 13.7
+  },
+  "environment": {
+    "code": "risk_warning",
+    "label": "風險警告",
+    "score": 4,
+    "confidence": "medium",
+    "decision_gate": {
+      "passed": true,
+      "required_conditions": {
+        "taiwan_not_repriced": true,
+        "external_acceleration": true
+      },
+      "supporting_conditions": {
+        "accumulated_external_drop": false,
+        "foreign_short_acceleration": true,
+        "severe_external_one_day_drop": false
+      },
+      "explanation": "台股尚未補跌，且外部跌勢或外資空單仍在惡化。"
+    },
+    "triggers": [
+      {
+        "id": "twse_not_repriced",
+        "label": "台股前一日跌幅小於 0.5%，可能尚未補跌",
+        "value": 0.62,
+        "points": 1
+      },
+      {
+        "id": "foreign_futures_net_short",
+        "label": "外資臺股期貨淨空低於 -70,000 口",
+        "value": -90038,
+        "points": 2
+      },
+      {
+        "id": "foreign_futures_short_increase",
+        "label": "外資期貨淨空單日增加至少 2,000 口",
+        "value": -7523,
+        "points": 1
+      }
+    ]
+  },
+  "strategy_policy": {
+    "enforcement_mode": "shadow",
+    "raw_predictions_preserved": true,
+    "formal_direction_score_adjustment": 0,
+    "bearish_prediction": "normal",
+    "relative_leadership_momentum": "reduced_shadow",
+    "bullish_upgrade": "extra_confirmation_shadow",
+    "post_shock_survivor": "not_applicable",
+    "explanation": "風險警告時縮小候選清單並要求額外確認，不改正式方向分數。"
+  },
+  "notes": [
+    "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
+    "首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。",
+    "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
+    "此檔為目前流程產生的盤前環境快照。"
+  ],
+  "snapshot_hash": "151ec884d4d7a93e0df9327ff5f4ae436a5f5a6296ff61ee277d51ce6472e769"
+}
