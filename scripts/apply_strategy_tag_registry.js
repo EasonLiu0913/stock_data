@@ -10,6 +10,7 @@ const {
   registryFingerprint,
 } = require('./strategy_tag_engine');
 const { parseMarginCsv } = require('./oversold_rebound_research_lib');
+const { enrichStrategyTagSources } = require('./strategy_tag_source_enrichment');
 
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_MARGIN_PERIODS = 5;
@@ -325,7 +326,7 @@ function applyRegistry(options = {}) {
 
   let snapshot = existingSnapshot;
   let reusedExistingSnapshot = Boolean(existingSnapshot) && !correctInvalidLive;
-  let marginMetadata = existingSnapshot?.source_metadata?.margin || null;
+  let sourceMetadata = existingSnapshot?.source_metadata || {};
   if (!snapshot || correctInvalidLive) {
     if (correctInvalidLive) {
       archivedSnapshotFile = snapshotHistoryFileFor(
@@ -339,7 +340,12 @@ function applyRegistry(options = {}) {
       archivedEntry = manifestEntry(workspaceRoot, archivedSnapshotFile, existingSnapshot);
     }
     const enrichedPayload = structuredClone(payload);
-    marginMetadata = enrichMarginFeatures(enrichedPayload, workspaceRoot, dataAsOf);
+    enrichMarginFeatures(enrichedPayload, workspaceRoot, dataAsOf);
+    enrichStrategyTagSources(enrichedPayload, workspaceRoot, {
+      forecastDate: date,
+      dataAsOf,
+    });
+    sourceMetadata = enrichedPayload.strategy_tag_source_metadata || {};
     snapshot = buildSnapshot(enrichedPayload, registry, {
       forecastDate: date,
       evaluationMode,
@@ -374,7 +380,7 @@ function applyRegistry(options = {}) {
     corrected_invalid_live_snapshot: correctInvalidLive,
     summary_enriched: evaluationMode === 'live_snapshot',
     manifest_changed: manifestChanged,
-    margin_source: marginMetadata,
+    source_metadata: sourceMetadata,
     dry_run: Boolean(options.dryRun),
   };
 }
