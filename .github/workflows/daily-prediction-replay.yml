@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       replay_date:
-        description: '要覆盤的預測交易日（YYYYMMDD，例如 20260729）'
-        required: true
+        description: '要覆盤的預測交易日 YYYYMMDD；留空自動使用最新 SMA 結果日'
+        required: false
+        default: ''
         type: string
       force_comparison:
         description: '同日期已有覆盤比較時仍重新產生'
@@ -62,11 +63,19 @@ jobs:
           FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
         run: |
           set -euo pipefail
-          date="$DATE"
+
+          node --check scripts/resolve_prediction_replay_date.js
+          node scripts/resolve_prediction_replay_date.js --self-test
+
+          args=()
+          date_source="最新 SMA 結果日"
+          if [ -n "${DATE:-}" ]; then
+            args+=(--date "$DATE")
+            date_source="手動指定"
+          fi
+
+          date=$(node scripts/resolve_prediction_replay_date.js "${args[@]}")
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $date"; exit 1; }
-          test -s "data_predictions/$date/manifest.json" || { echo "Missing V1 forecast manifest"; exit 1; }
-          test -s "data_predictions_v2/$date/manifest.json" || { echo "Missing V2 forecast manifest"; exit 1; }
-          test -s "data_fubon/fubon_${date}_sma.json" || { echo "Actual result-day price file is not ready"; exit 1; }
 
           comparison_run=true
           if [ "$FORCE_RUN" != "true" ] \
@@ -93,6 +102,7 @@ jobs:
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
           echo "## 每日預測覆盤" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 日期來源：$date_source" >> "$GITHUB_STEP_SUMMARY"
           echo "- 覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
           echo "- 重新產生比較：$comparison_run" >> "$GITHUB_STEP_SUMMARY"
           echo "- 重新產生實際市場環境：$environment_run" >> "$GITHUB_STEP_SUMMARY"
