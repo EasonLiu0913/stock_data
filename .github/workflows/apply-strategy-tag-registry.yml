@@ -1,0 +1,117 @@
+name: '[04 預測覆盤] 套用標籤與版本化策略'
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '預測日期 YYYYMMDD；留空使用最新預測日期'
+        required: false
+        type: string
+      evaluation_mode:
+        description: 'live_snapshot 保存當時版本；historical_recalculation 用指定版本重算歷史'
+        required: true
+        type: choice
+        default: live_snapshot
+        options:
+          - live_snapshot
+          - historical_recalculation
+      data_as_of:
+        description: '歷史重算的資料截點 YYYYMMDD；live_snapshot 可留空'
+        required: false
+        type: string
+  workflow_run:
+    workflows:
+      - '[04 預測覆盤] 每日產生股票預測'
+    types: [completed]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'scripts/strategy_tag_engine.js'
+      - 'scripts/apply_strategy_tag_registry.js'
+      - 'tests/strategy_tag_engine.test.js'
+      - '.github/workflows/apply-strategy-tag-registry.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: strategy-tag-registry-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate registry and engine
+        run: |
+          node --check scripts/strategy_tag_engine.js
+          node --check scripts/apply_strategy_tag_registry.js
+          node --test tests/strategy_tag_engine.test.js
+          node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
+
+  apply:
+    needs: validate
+    if: >
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply fixed tag and strategy registry
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          EVALUATION_MODE: ${{ inputs.evaluation_mode }}
+          DATA_AS_OF: ${{ inputs.data_as_of }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--evaluation-mode "${EVALUATION_MODE:-live_snapshot}")
+          if [ -n "${INPUT_DATE:-}" ]; then args+=(--date "$INPUT_DATE"); else args+=(--latest); fi
+          if [ -n "${DATA_AS_OF:-}" ]; then args+=(--data-as-of "$DATA_AS_OF"); fi
+          node scripts/apply_strategy_tag_registry.js "${args[@]}"
+      - name: Verify generated output
+        run: |
+          node -e '
+            const fs=require("node:fs");
+            const path=require("node:path");
+            const roots=["data_prediction_analysis/strategy-snapshots/live_snapshot","data_prediction_analysis/strategy-snapshots/historical_recalculation"];
+            const files=roots.flatMap(root=>fs.existsSync(root)?fs.readdirSync(root).filter(f=>f.endsWith(".json")).map(f=>path.join(root,f)):[]).sort();
+            if(!files.length) throw new Error("No strategy snapshot generated");
+            const p=JSON.parse(fs.readFileSync(files.at(-1),"utf8"));
+            if(!p.tag_classifications || !p.strategy_classifications) throw new Error("Invalid strategy snapshot");
+            for(const item of Object.values(p.tag_classifications)) if(item.count===undefined) throw new Error("Tag count missing");
+            for(const item of Object.values(p.strategy_classifications)) if(item.count===undefined) throw new Error("Strategy count missing");
+          '
+      - name: Commit snapshot and enriched prediction summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_predictions data_prediction_analysis/strategy-snapshots
+          if git diff --cached --quiet; then
+            echo 'No tag or strategy snapshot changes'
+            exit 0
+          fi
+          git commit -m 'data: apply versioned tag and strategy snapshot'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            sleep $((attempt * 5))
+          done
+          exit 1
