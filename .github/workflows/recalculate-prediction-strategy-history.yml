@@ -1,0 +1,114 @@
+name: "[06 回填修復] 策略版本－歷史全面回算"
+
+on:
+  workflow_dispatch:
+    inputs:
+      strategy_family:
+        description: '策略家族；未指定 strategy_id 時自動使用最新版'
+        required: false
+        type: string
+        default: 'oversold_margin_exit_rebound'
+      strategy_id:
+        description: '指定完整版本 ID；填寫後優先於策略家族'
+        required: false
+        type: string
+        default: ''
+      from_date:
+        description: '起始預測日 YYYYMMDD'
+        required: true
+        type: string
+        default: '20260727'
+      to_date:
+        description: '結束預測日 YYYYMMDD'
+        required: true
+        type: string
+        default: '20260803'
+      dry_run:
+        description: '只計算與驗證，不提交結果'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prediction-strategy-history-recalculation
+  cancel-in-progress: false
+
+jobs:
+  recalculate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate strategy engine
+        run: |
+          node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/recalculate_prediction_strategy_history.js
+          node --test tests/prediction_tag_strategy_engine.test.js
+
+      - name: Recalculate selected strategy version
+        env:
+          STRATEGY_FAMILY: ${{ inputs.strategy_family }}
+          STRATEGY_ID: ${{ inputs.strategy_id }}
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--from "$FROM_DATE" --to "$TO_DATE")
+          if [ -n "$STRATEGY_ID" ]; then
+            args+=(--strategy "$STRATEGY_ID")
+          else
+            args+=(--family "$STRATEGY_FAMILY")
+          fi
+          if [ "$DRY_RUN" = true ]; then args+=(--dry-run); fi
+          node scripts/recalculate_prediction_strategy_history.js "${args[@]}"
+
+      - name: Verify output scope
+        if: inputs.dry_run != true
+        shell: bash
+        run: |
+          unexpected=$(git status --short --untracked-files=all | awk '
+            $2 !~ /^data_prediction_analysis\/tag-strategy-recalculation\// { print }
+          ')
+          if [ -n "$unexpected" ]; then
+            echo 'Unexpected files changed:'
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit historical recalculation
+        if: inputs.dry_run != true
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_prediction_analysis/tag-strategy-recalculation
+          if git diff --cached --quiet; then
+            echo 'No historical recalculation changes'
+            exit 0
+          fi
+          git commit -m 'data: recalculate historical strategy version results'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1

@@ -1,0 +1,72 @@
+name: '[CI] Prediction Tag Strategy Engine'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/prediction-tag-strategy-registry.json'
+      - 'scripts/prediction_tag_strategy_engine.js'
+      - 'scripts/annotate_prediction_disposition_stocks.js'
+      - 'scripts/evaluate_tag_strategy_replay.js'
+      - 'scripts/recalculate_prediction_strategy_history.js'
+      - 'scripts/attach_market_environment.js'
+      - 'scripts/backfill_prediction_dashboard_fields.js'
+      - 'tests/prediction_tag_strategy_engine.test.js'
+      - 'tests/annotate_prediction_disposition_stocks.test.js'
+      - '.github/workflows/test-prediction-tag-strategy-engine.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/prediction-tag-strategy-registry.json'
+      - 'scripts/prediction_tag_strategy_engine.js'
+      - 'scripts/annotate_prediction_disposition_stocks.js'
+      - 'scripts/evaluate_tag_strategy_replay.js'
+      - 'scripts/recalculate_prediction_strategy_history.js'
+      - 'scripts/attach_market_environment.js'
+      - 'scripts/backfill_prediction_dashboard_fields.js'
+      - 'tests/prediction_tag_strategy_engine.test.js'
+      - 'tests/annotate_prediction_disposition_stocks.test.js'
+      - '.github/workflows/test-prediction-tag-strategy-engine.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate source and tests
+        run: |
+          node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/annotate_prediction_disposition_stocks.js
+          node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/recalculate_prediction_strategy_history.js
+          node --check scripts/attach_market_environment.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node --test \
+            tests/prediction_tag_strategy_engine.test.js \
+            tests/annotate_prediction_disposition_stocks.test.js
+
+      - name: Dry-run latest available prediction data
+        shell: bash
+        run: |
+          date=$(find data_predictions -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | grep -E '^20[0-9]{6}$' | sort | tail -1)
+          test -n "$date"
+          node scripts/prediction_tag_strategy_engine.js --date "$date" --dry-run
+          if [ -s "data_predictions/$date/replay-dashboard.json" ] && [ -s "data_predictions/$date/replay-summary.json" ]; then
+            node scripts/evaluate_tag_strategy_replay.js \
+              --date "$date" \
+              --mode historical_recalculation \
+              --strategy oversold_margin_exit_rebound_v1 \
+              --dry-run
+          fi
