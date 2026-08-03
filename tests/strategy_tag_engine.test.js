@@ -3,7 +3,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  evaluateRuleState,
   evaluateRule,
+  expressionState,
   expressionMatches,
   validateRegistry,
   registryFingerprint,
@@ -29,17 +31,22 @@ const registry = {
   ],
 };
 
-test('numeric and boolean rules distinguish zero from missing', () => {
-  assert.equal(evaluateRule({ value: 0 }, { path: 'value', operator: 'lt', value: 1 }), true);
+test('numeric and boolean rules distinguish zero, false and missing', () => {
+  assert.equal(evaluateRuleState({ value: 0 }, { path: 'value', operator: 'lt', value: 1 }), true);
+  assert.equal(evaluateRuleState({}, { path: 'value', operator: 'lt', value: 1 }), null);
   assert.equal(evaluateRule({}, { path: 'value', operator: 'lt', value: 1 }), false);
-  assert.equal(evaluateRule({ flag: false }, { path: 'flag', operator: 'eq', value: false }), true);
+  assert.equal(evaluateRuleState({ flag: false }, { path: 'flag', operator: 'eq', value: false }), true);
 });
 
-test('AND OR NOT expression semantics are deterministic', () => {
+test('AND OR NOT expression semantics support unavailable inputs', () => {
   const matched = new Set(['a', 'b']);
   assert.equal(expressionMatches({ all: ['a'], any: ['b', 'c'], not: ['d'] }, matched), true);
   assert.equal(expressionMatches({ all: ['a', 'd'], any: [], not: [] }, matched), false);
   assert.equal(expressionMatches({ all: [], any: [], not: ['b'] }, matched), false);
+  assert.equal(expressionState({ all: ['a', 'b'] }, new Map([['a', true], ['b', null]])), null);
+  assert.equal(expressionState({ all: ['a', 'b'] }, new Map([['a', false], ['b', null]])), false);
+  assert.equal(expressionState({ any: ['a', 'b'] }, new Map([['a', false], ['b', null]])), null);
+  assert.equal(expressionState({ any: ['a', 'b'] }, new Map([['a', true], ['b', null]])), true);
 });
 
 test('registry rejects unknown tag references and invalid versions', () => {
@@ -63,21 +70,59 @@ test('stock receives atomic tags before strategy evaluation', () => {
     is_disposition_stock: false,
   }, registry);
   assert.deepEqual(result.tag_ids, ['drop_v1', 'margin_1d_v1', 'margin_5d_v1', 'margin_exit_v1']);
+  assert.deepEqual(result.unavailable_tag_ids, []);
   assert.deepEqual(result.strategy_ids, ['margin_rebound_v1']);
 });
 
-test('fixed tags and strategies remain in snapshot when count is zero', () => {
+test('missing margin data propagates to tag and strategy as unavailable', () => {
+  const result = evaluateStock({
+    stock_code: '2330',
+    features: { r3: -9 },
+    is_disposition_stock: false,
+  }, registry);
+  assert.deepEqual(result.unavailable_tag_ids.sort(), ['margin_1d_v1', 'margin_5d_v1', 'margin_exit_v1'].sort());
+  assert.deepEqual(result.unavailable_strategy_ids, ['margin_rebound_v1']);
+});
+
+test('fixed tags and strategies remain completed with zero true matches when data exists', () => {
   const snapshot = buildSnapshot({
     forecast_date: '20260803',
     base_trade_date: '20260731',
-    stocks: [{ stock_code: '2330', features: { r3: 1, margin_change: 10, margin_change_5d: 20 } }],
+    stocks: [{
+      stock_code: '2330',
+      features: { r3: 1, margin_change: 10, margin_change_5d: 20 },
+      is_disposition_stock: false,
+    }],
   }, registry, { generatedAt: '2026-08-03T00:00:00.000Z' });
-  assert.equal(snapshot.schema_version, 2);
+  assert.equal(snapshot.schema_version, 3);
   assert.ok(snapshot.registry_fingerprint);
+  assert.equal(snapshot.tag_classifications.margin_exit_v1.calculation_status, 'completed');
   assert.equal(snapshot.tag_classifications.margin_exit_v1.count, 0);
   assert.deepEqual(snapshot.tag_classifications.margin_exit_v1.members, []);
+  assert.equal(snapshot.strategy_classifications.margin_rebound_v1.calculation_status, 'completed');
   assert.equal(snapshot.strategy_classifications.margin_rebound_v1.count, 0);
-  assert.deepEqual(snapshot.strategy_classifications.margin_rebound_v1.members, []);
+});
+
+test('all-missing data is N/A and mixed availability is partial', () => {
+  const unavailable = buildSnapshot({
+    stocks: [{ stock_code: '1', features: { r3: -9 }, is_disposition_stock: false }],
+  }, registry);
+  assert.equal(unavailable.tag_classifications.margin_exit_v1.calculation_status, 'unable_to_calculate');
+  assert.equal(unavailable.tag_classifications.margin_exit_v1.count, null);
+  assert.equal(unavailable.strategy_classifications.margin_rebound_v1.calculation_status, 'unable_to_calculate');
+
+  const partial = buildSnapshot({
+    stocks: [
+      { stock_code: '1', features: { r3: -9, margin_change: -10, margin_change_5d: -30 }, is_disposition_stock: false },
+      { stock_code: '2', features: { r3: -9 }, is_disposition_stock: false },
+    ],
+  }, registry);
+  assert.equal(partial.tag_classifications.margin_exit_v1.calculation_status, 'partial');
+  assert.equal(partial.tag_classifications.margin_exit_v1.count, 1);
+  assert.equal(partial.tag_classifications.margin_exit_v1.available_stock_count, 1);
+  assert.equal(partial.tag_classifications.margin_exit_v1.unavailable_stock_count, 1);
+  assert.equal(partial.tag_classifications.margin_exit_v1.coverage_pct, 50);
+  assert.deepEqual(partial.stocks[1].unavailable_atomic_tags.sort(), ['margin_1d_v1', 'margin_5d_v1', 'margin_exit_v1'].sort());
 });
 
 test('live snapshot and historical recalculation remain explicitly separate', () => {
