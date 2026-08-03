@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "registry_id": "prediction_tag_strategy_registry_v1",
+  "schema_version": 2,
+  "registry_id": "prediction_tag_strategy_registry_v2",
   "replace_invalid_live_fingerprints": [
     "23345dd771de9f29",
     "dfe51eca4180803a"
@@ -35,6 +35,93 @@
       "fixed_display": true,
       "enabled": true,
       "rule": { "path": "features.rsi14", "operator": "lte", "value": 35 }
+    },
+    {
+      "tag_id": "technical_volume_ratio_5d_expansion_v1",
+      "family_id": "technical_volume_ratio_5d_expansion",
+      "version": 1,
+      "label": "五日量比放大",
+      "category": "technical",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": { "path": "features.volume_ratio_5d", "operator": "gte", "value": 1.5 }
+    },
+    {
+      "tag_id": "technical_rsi_overheated_v1",
+      "family_id": "technical_rsi_overheated",
+      "version": 1,
+      "label": "RSI 強勢高檔",
+      "category": "technical",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": { "path": "features.rsi14", "operator": "gte", "value": 70 }
+    },
+    {
+      "tag_id": "technical_relative_strength_7d_v1",
+      "family_id": "technical_relative_strength_7d",
+      "version": 1,
+      "label": "七日相對強勢",
+      "category": "technical",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": {
+        "paths": [
+          "strategy_tag_features.relative_strength_7d",
+          "relative_strength_7d.relative_strength_7d",
+          "features.relative_strength_7d",
+          "features.relative_strength"
+        ],
+        "operator": "gte",
+        "value": 8
+      }
+    },
+    {
+      "tag_id": "technical_sma20_not_overextended_v1",
+      "family_id": "technical_sma20_not_overextended",
+      "version": 1,
+      "label": "SMA20 乖離未過熱",
+      "category": "technical",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": { "path": "features.gap_sma20", "operator": "lte", "value": 10 }
+    },
+    {
+      "tag_id": "strategy_confirmation_high_v1",
+      "family_id": "strategy_confirmation_high",
+      "version": 1,
+      "label": "確認分數至少 7",
+      "category": "quality",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.bear_market_confirmation_score",
+        "operator": "gte",
+        "value": 7
+      }
+    },
+    {
+      "tag_id": "market_post_shock_restricted_v1",
+      "family_id": "market_post_shock_restricted",
+      "version": 1,
+      "label": "衝擊後限制環境",
+      "category": "market",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.bear_market_environment_active",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "data_completeness_high_v1",
+      "family_id": "data_completeness_high",
+      "version": 1,
+      "label": "資料完整度至少 80%",
+      "category": "quality",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": { "path": "data_completeness", "operator": "gte", "value": 80 }
     },
     {
       "tag_id": "margin_exit_1d_v1",
@@ -123,26 +210,46 @@
   ],
   "strategies": [
     {
-      "strategy_id": "bear_market_defensive_resilience_v1",
+      "strategy_id": "bear_market_defensive_resilience_v2",
       "family_id": "bear_market_defensive_resilience",
-      "version": 1,
+      "version": 2,
       "label": "熊市時防禦抗跌股",
       "fixed_display": true,
       "enabled": true,
       "evaluation_target": "relative_leadership",
-      "legacy_selector": { "strategy_id": "bear_market_defensive_resilience_v1", "label": "熊市時防禦抗跌股" },
-      "expression": { "all": [], "any": [], "not": [] }
+      "expression": {
+        "all": [
+          "market_post_shock_restricted_v1",
+          "technical_volume_ratio_5d_expansion_v1",
+          "technical_rsi_overheated_v1",
+          "strategy_confirmation_high_v1",
+          "technical_relative_strength_7d_v1",
+          "technical_sma20_not_overextended_v1"
+        ],
+        "any": [],
+        "not": []
+      }
     },
     {
-      "strategy_id": "oversold_electronics_rebound_v1",
+      "strategy_id": "oversold_electronics_rebound_v2",
       "family_id": "oversold_electronics_rebound",
-      "version": 1,
+      "version": 2,
       "label": "跌深反彈電子股",
       "fixed_display": true,
       "enabled": true,
       "evaluation_target": "close_return_gt_5",
-      "legacy_selector": { "strategy_id": "oversold_electronics_rebound_v1", "label": "跌深反彈電子股" },
-      "expression": { "all": [], "any": [], "not": [] }
+      "expression": {
+        "all": [
+          "technical_rsi_oversold_v1",
+          "technical_3d_sharp_drop_v1",
+          "technical_below_sma20_v1",
+          "industry_electronics_v1",
+          "data_completeness_high_v1",
+          "liquidity_qualified_v1"
+        ],
+        "any": [],
+        "not": ["disposition_stock_v1"]
+      }
     },
     {
       "strategy_id": "oversold_margin_exit_rebound_v1",
