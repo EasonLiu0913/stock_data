@@ -29,6 +29,7 @@ function annotatePredictionDispositionStocks({ rootDir = 'data_predictions', dat
   for (const stock of summary.stocks) {
     const active = complete && activeCodes.has(String(stock.stock_code));
     stock.is_disposition_stock = active;
+    stock.disposition_data_complete = complete ? 1 : null;
     stock.disposition_stock_status = complete ? 'completed' : disposition ? 'incomplete' : 'unavailable';
     if (active) activeCount += 1;
   }
