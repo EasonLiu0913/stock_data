@@ -14,6 +14,9 @@ const {
   applyFormalMarketStrategyTags,
 } = require('./apply_formal_market_strategy_tags');
 const {
+  applyTagStrategySnapshot,
+} = require('./prediction_tag_strategy_engine');
+const {
   syncPredictionDashboardGroups,
 } = require('./sync_prediction_dashboard_groups');
 
@@ -53,6 +56,9 @@ function main() {
   const formalStrategy = roots.includes('data_predictions')
     ? applyFormalMarketStrategyTags({ rootDir: 'data_predictions', date, environment })
     : null;
+  const tagStrategy = roots.includes('data_predictions')
+    ? applyTagStrategySnapshot({ rootDir: 'data_predictions', date, evaluationMode: 'live_snapshot' })
+    : null;
   const dashboardGroupSync = roots.includes('data_predictions')
     ? syncPredictionDashboardGroups({ rootDir: 'data_predictions', date })
     : null;
@@ -62,6 +68,7 @@ function main() {
     changed,
     snapshot_hash: environment.snapshot_hash,
     formal_strategy: formalStrategy,
+    tag_strategy: tagStrategy,
     dashboard_group_sync: dashboardGroupSync,
   }));
 }
