@@ -7,11 +7,13 @@ on:
     paths:
       - '.github/workflows/build-etf-market-regime-analysis.yml'
       - 'scripts/generate_etf_market_regime_data.js'
+      - 'scripts/apply_etf_corporate_actions.js'
       - 'scripts/update_public_index_etf_market_regime_analysis.js'
       - 'public/etf-market-regime-analysis.html'
       - 'public/assets/etf-market-regime-analysis.js'
       - 'tests/etf_market_regime_analysis.test.js'
       - 'tests/generate_etf_market_regime_data.test.js'
+      - 'tests/apply_etf_corporate_actions.test.js'
       - 'tests/update_public_index_etf_market_regime_analysis.test.js'
       - 'data_twse_market_chart/market_chart.json'
   pull_request:
@@ -20,11 +22,13 @@ on:
     paths:
       - '.github/workflows/build-etf-market-regime-analysis.yml'
       - 'scripts/generate_etf_market_regime_data.js'
+      - 'scripts/apply_etf_corporate_actions.js'
       - 'scripts/update_public_index_etf_market_regime_analysis.js'
       - 'public/etf-market-regime-analysis.html'
       - 'public/assets/etf-market-regime-analysis.js'
       - 'tests/etf_market_regime_analysis.test.js'
       - 'tests/generate_etf_market_regime_data.test.js'
+      - 'tests/apply_etf_corporate_actions.test.js'
       - 'tests/update_public_index_etf_market_regime_analysis.test.js'
   workflow_dispatch:
   schedule:
@@ -59,15 +63,18 @@ jobs:
         run: |
           node --check public/assets/etf-market-regime-analysis.js
           node --check scripts/generate_etf_market_regime_data.js
+          node --check scripts/apply_etf_corporate_actions.js
           node --check scripts/update_public_index_etf_market_regime_analysis.js
           node --test \
             tests/etf_market_regime_analysis.test.js \
             tests/generate_etf_market_regime_data.test.js \
+            tests/apply_etf_corporate_actions.test.js \
             tests/update_public_index_etf_market_regime_analysis.test.js
 
       - name: Build ETF market regime data
         run: |
           node scripts/generate_etf_market_regime_data.js
+          node scripts/apply_etf_corporate_actions.js
           node scripts/update_public_index_etf_market_regime_analysis.js
 
       - name: Verify generated data
@@ -80,7 +87,20 @@ jobs:
           if (!payload.rows.every(row => row.marketClose > 0 && row.etf0050AdjustedClose > 0 && row.etf0052AdjustedClose > 0 && row.etf00631LAdjustedClose > 0)) {
             throw new Error('ETF analysis contains invalid prices');
           }
+          const split = (payload.corporateActions || []).find(action => action.id === '0052-split-20251126');
+          if (!split || split.factor !== 7 || split.effectiveDate !== '20251126') {
+            throw new Error('0052 official 7-to-1 split metadata is missing');
+          }
+          for (let index = 1; index < payload.rows.length; index += 1) {
+            const previous = payload.rows[index - 1].etf0052AdjustedClose;
+            const current = payload.rows[index].etf0052AdjustedClose;
+            const dailyReturn = current / previous - 1;
+            if (dailyReturn <= -0.5) {
+              throw new Error(`0052 contains an implausible split-related loss on ${payload.rows[index].date}: ${(dailyReturn * 100).toFixed(2)}%`);
+            }
+          }
           console.log(`Verified ${payload.rows.length} aligned trading days: ${payload.startDate} - ${payload.endDate}`);
+          console.log(`0052 split adjustment: ${JSON.stringify(split.adjustment)}`);
           NODE
 
       - name: Verify changed-file scope
