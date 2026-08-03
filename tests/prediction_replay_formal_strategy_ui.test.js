@@ -24,5 +24,8 @@ test('strategy buttons do not reuse prediction accuracy tabs', () => {
 test('large candidate member lists are not rendered inside strategy cards', () => {
   assert.doesNotMatch(source, /formal-strategy-members/);
   assert.doesNotMatch(source, /<b>候選：<\/b>/);
-  assert.match(source, /下方「案例清單」顯示完整個股資料/);
+  assert.match(source, /data-scope="candidates"/);
+  assert.match(source, /查看全部候選/);
+  assert.match(source, /data-scope="hits"/);
+  assert.match(source, /data-scope="misses"/);
 });
