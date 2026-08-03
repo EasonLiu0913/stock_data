@@ -116,7 +116,25 @@ jobs:
           echo "- 資料變更：$changed" >> "$GITHUB_STEP_SUMMARY"
       - name: Recalculate registered strategy replay
         if: steps.five_day.outputs.changed == 'true'
-        run: node scripts/evaluate_tag_strategy_replay.js --date "${{ inputs.replay_date }}"
+        shell: bash
+        env:
+          DATE: ${{ inputs.replay_date }}
+        run: |
+          set -euo pipefail
+          snapshot="data_predictions/$DATE/tag-strategy-snapshot.json"
+          if [ -s "$snapshot" ]; then
+            mode="live_snapshot"
+            output="data_prediction_analysis/tag-strategy/$DATE.json"
+          else
+            mode="historical_recalculation"
+            output="data_prediction_analysis/tag-strategy-recalculation/$DATE.json"
+            echo "Live strategy snapshot is unavailable for legacy replay date $DATE."
+            echo "Using historical recalculation without pretending it was the prediction-time snapshot."
+          fi
+          node scripts/evaluate_tag_strategy_replay.js --date "$DATE" --mode "$mode"
+          test -s "$output" || { echo "Missing strategy replay output: $output"; exit 1; }
+          echo "- 策略覆盤模式：$mode" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 策略覆盤輸出：$output" >> "$GITHUB_STEP_SUMMARY"
       - name: Commit repaired replay and five-day outcomes
         shell: bash
         env:
@@ -126,10 +144,13 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add "data_predictions/$DATE"
-          strategy_output="data_prediction_analysis/tag-strategy/$DATE.json"
-          if [ -e "$strategy_output" ]; then
-            git add "$strategy_output"
-          fi
+          for strategy_output in \
+            "data_prediction_analysis/tag-strategy/$DATE.json" \
+            "data_prediction_analysis/tag-strategy-recalculation/$DATE.json"; do
+            if [ -e "$strategy_output" ]; then
+              git add "$strategy_output"
+            fi
+          done
           if git diff --cached --quiet; then
             echo 'No replay repair or five-day changes'
             exit 0
