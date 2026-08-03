@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/backfill_prediction_replay_5d_outcomes.js'
+      - 'scripts/generate_prediction_replay.js'
       - 'tests/backfill_prediction_replay_5d_outcomes.test.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
       - '.github/workflows/backfill-prediction-replay-5d.yml'
@@ -12,13 +13,14 @@ on:
     branches: [main]
     paths:
       - 'scripts/backfill_prediction_replay_5d_outcomes.js'
+      - 'scripts/generate_prediction_replay.js'
       - 'tests/backfill_prediction_replay_5d_outcomes.test.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
       - '.github/workflows/backfill-prediction-replay-5d.yml'
   workflow_dispatch:
     inputs:
       replay_date:
-        description: '預測日期 YYYYMMDD；必須已有 replay.json，資料滿五個交易日後才會寫入'
+        description: '預測日期 YYYYMMDD；必須已有預測資料，資料滿五個交易日後才會寫入'
         required: true
         type: string
 
@@ -44,6 +46,7 @@ jobs:
       - name: Validate five-day outcome pipeline
         run: |
           node --check scripts/backfill_prediction_replay_5d_outcomes.js
+          node --check scripts/generate_prediction_replay.js
           node --check scripts/evaluate_tag_strategy_replay.js
           node --test tests/backfill_prediction_replay_5d_outcomes.test.js
 
@@ -65,15 +68,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Validate date
+      - name: Validate date and prediction sources
         shell: bash
         env:
           DATE: ${{ inputs.replay_date }}
         run: |
           set -euo pipefail
           [[ "$DATE" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $DATE"; exit 1; }
-          test -s "data_predictions/$DATE/replay.json" || { echo "Missing data_predictions/$DATE/replay.json"; exit 1; }
-          test -s "data_predictions/$DATE/replay-dashboard.json" || { echo "Missing data_predictions/$DATE/replay-dashboard.json"; exit 1; }
+          test -s "data_predictions/$DATE/summary.json" || { echo "Missing data_predictions/$DATE/summary.json"; exit 1; }
+          test -s "data_fubon/fubon_${DATE}_sma.json" || { echo "Missing result-day price data for $DATE"; exit 1; }
+      - name: Repair missing or empty replay outputs
+        shell: bash
+        env:
+          DATE: ${{ inputs.replay_date }}
+        run: |
+          set -euo pipefail
+          needs_repair=false
+          for file in replay.json replay-dashboard.json replay-summary.json; do
+            if [ ! -s "data_predictions/$DATE/$file" ]; then
+              echo "Replay output needs repair: data_predictions/$DATE/$file"
+              needs_repair=true
+            fi
+          done
+          if [ "$needs_repair" = "true" ]; then
+            node scripts/generate_prediction_replay.js --date "$DATE"
+          fi
+          for file in replay.json replay-dashboard.json replay-summary.json; do
+            test -s "data_predictions/$DATE/$file" || { echo "Missing replay output after repair: $file"; exit 1; }
+            node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));' "data_predictions/$DATE/$file"
+          done
       - name: Backfill five-day intraday outcomes
         id: five_day
         shell: bash
@@ -94,8 +117,7 @@ jobs:
       - name: Recalculate registered strategy replay
         if: steps.five_day.outputs.changed == 'true'
         run: node scripts/evaluate_tag_strategy_replay.js --date "${{ inputs.replay_date }}"
-      - name: Commit five-day outcomes
-        if: steps.five_day.outputs.changed == 'true'
+      - name: Commit repaired replay and five-day outcomes
         shell: bash
         run: |
           set -euo pipefail
@@ -105,10 +127,10 @@ jobs:
             "data_predictions/${{ inputs.replay_date }}" \
             "data_prediction_analysis/tag-strategy/${{ inputs.replay_date }}.json"
           if git diff --cached --quiet; then
-            echo 'No five-day replay changes'
+            echo 'No replay repair or five-day changes'
             exit 0
           fi
-          git commit -m "data: backfill five-day replay outcome for ${{ inputs.replay_date }}"
+          git commit -m "data: repair and backfill five-day replay outcome for ${{ inputs.replay_date }}"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
