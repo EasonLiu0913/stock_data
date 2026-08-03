@@ -7,6 +7,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_DATA_PATH = path.join(ROOT, 'public', 'data', 'etf-market-regime-analysis', 'data.json');
 
+// Official corporate actions override inconsistent provider-side historical adjustments.
 const CORPORATE_ACTIONS = Object.freeze([
   Object.freeze({
     id: '0052-split-20251126',
