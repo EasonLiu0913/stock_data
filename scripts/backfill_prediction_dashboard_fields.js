@@ -9,6 +9,8 @@ const ROOT = path.resolve(__dirname, '..');
 const PREDICTION_ROOT = path.join(ROOT, 'data_predictions');
 const GENERATOR = path.join(__dirname, 'generate_prediction_dashboard_data.js');
 const FORMAL_TAGGER = path.join(__dirname, 'apply_formal_market_strategy_tags.js');
+const TAG_STRATEGY_ENGINE = path.join(__dirname, 'prediction_tag_strategy_engine.js');
+const TAG_STRATEGY_REPLAY = path.join(__dirname, 'evaluate_tag_strategy_replay.js');
 const GROUP_SYNC = path.join(__dirname, 'sync_prediction_dashboard_groups.js');
 const OFFICIAL_CONSTRAINTS = path.join(__dirname, 'apply_official_market_constraints.js');
 
@@ -90,6 +92,11 @@ function runNodeScript(script, args, label, date) {
   }
 }
 
+function replayFilesAvailable(date) {
+  const directory = path.join(PREDICTION_ROOT, date);
+  return ['replay-dashboard.json', 'replay-summary.json'].every(file => fs.existsSync(path.join(directory, file)));
+}
+
 function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.help) {
@@ -109,13 +116,23 @@ function main(argv = process.argv.slice(2)) {
     if (options.dryRun) taggerArgs.push('--dry-run');
     runNodeScript(FORMAL_TAGGER, taggerArgs, 'formal strategy tag backfill', date);
 
+    const constraintArgs = ['--date', date, '--evaluate-replay-if-present'];
+    if (options.dryRun) constraintArgs.push('--dry-run');
+    runNodeScript(OFFICIAL_CONSTRAINTS, constraintArgs, 'official market constraint integration', date);
+
+    const tagStrategyArgs = ['--date', date, '--mode', 'live_snapshot'];
+    if (options.dryRun) tagStrategyArgs.push('--dry-run');
+    runNodeScript(TAG_STRATEGY_ENGINE, tagStrategyArgs, 'tag strategy snapshot backfill', date);
+
     const syncArgs = ['--date', date];
     if (options.dryRun) syncArgs.push('--dry-run');
     runNodeScript(GROUP_SYNC, syncArgs, 'dashboard group sync', date);
 
-    const constraintArgs = ['--date', date, '--evaluate-replay-if-present'];
-    if (options.dryRun) constraintArgs.push('--dry-run');
-    runNodeScript(OFFICIAL_CONSTRAINTS, constraintArgs, 'official market constraint integration', date);
+    if (replayFilesAvailable(date)) {
+      const replayArgs = ['--date', date, '--mode', 'live_snapshot'];
+      if (options.dryRun) replayArgs.push('--dry-run');
+      runNodeScript(TAG_STRATEGY_REPLAY, replayArgs, 'tag strategy replay backfill', date);
+    }
   }
   console.log(`${options.dryRun ? 'Dry-run validated' : 'Backfilled'} ${dates.length} prediction date(s).`);
   return 0;
@@ -130,4 +147,10 @@ if (require.main === module) {
   }
 }
 
-module.exports = { compactDate, parseArgs, selectDates, main };
+module.exports = {
+  compactDate,
+  parseArgs,
+  selectDates,
+  replayFilesAvailable,
+  main,
+};
