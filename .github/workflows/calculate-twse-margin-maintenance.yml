@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Target date (YYYYMMDD). Leave empty for today in Taipei.'
+        description: 'Target date (YYYYMMDD). Leave empty to use the previous date before 08:00 Taipei time, otherwise today.'
         required: false
         default: ''
 
@@ -36,14 +36,19 @@ jobs:
           DATE_INPUT="${{ github.event.inputs.date }}"
           if [ -n "$DATE_INPUT" ]; then
             TARGET_DATE="$DATE_INPUT"
+            DATE_SOURCE="manual input"
           else
-            TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            # Use an 08:00 Taipei cutoff: before 08:00 calculate the previous calendar day.
+            TARGET_DATE=$(TZ='Asia/Taipei' date --date='8 hours ago' '+%Y%m%d')
+            DATE_SOURCE="automatic Taipei 08:00 cutoff"
           fi
 
           if [[ ! "$TARGET_DATE" =~ ^[0-9]{8}$ ]]; then
             echo "Invalid date: $TARGET_DATE (expected YYYYMMDD)"
             exit 1
           fi
+
+          echo "Resolved target date: $TARGET_DATE ($DATE_SOURCE)"
 
           MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
           PRICE_FILE="data_twse_mi_index/${TARGET_DATE}_twse_mi_index.json"
