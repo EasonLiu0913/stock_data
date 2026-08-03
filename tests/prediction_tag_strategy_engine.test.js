@@ -27,6 +27,43 @@ function writeMargin(directory, date, balance) {
   );
 }
 
+function candidateStock(overrides = {}) {
+  return {
+    stock_code: '6477',
+    stock_name: '安集',
+    industry: '光電業',
+    data_completeness: 100,
+    disposition_data_complete: 1,
+    is_disposition_stock: false,
+    features: { r3: -12, gap_sma20: -15, rsi14: 30 },
+    reversal_signals: { tags: [] },
+    strategy_tags: [],
+    formal_market_strategies: {},
+    ...overrides,
+  };
+}
+
+function completeContext(code = '6477') {
+  return {
+    margin: {
+      available: true,
+      calculation_status: 'completed',
+      reason: 'completed',
+      dates: ['20260724', '20260727', '20260728', '20260729', '20260730', '20260731'],
+      by_code: new Map([[code, {
+        change_1d_pct: -4,
+        change_5d_pct: -8,
+        current_balance: 900,
+      }]]),
+    },
+    liquidity: {
+      available: true,
+      reason: 'completed',
+      by_code: new Map([[code, { pass: true }]]),
+    },
+  };
+}
+
 test('registry keeps enabled tags and strategies versioned and internally valid', () => {
   const registry = loadRegistry();
   const tag = registry.tags.find(item => item.tag_id === 'margin_significant_exit_v1');
@@ -37,6 +74,7 @@ test('registry keeps enabled tags and strategies versioned and internally valid'
   assert.equal(strategy.family_id, 'oversold_margin_exit_rebound');
   assert.equal(strategy.version, 1);
   assert.ok(strategy.expression.all.includes('margin_significant_exit_v1'));
+  assert.ok(strategy.expression.all.includes('disposition_data_complete_v1'));
 });
 
 test('margin context calculates one-day and five-day balance changes without future files', () => {
@@ -86,6 +124,8 @@ test('snapshot always includes fixed tags and strategies even when counts are ze
       stock_name: '台積電',
       industry: '半導體業',
       data_completeness: 100,
+      disposition_data_complete: 1,
+      is_disposition_stock: false,
       features: { r3: 2, gap_sma20: 3, rsi14: 50 },
       reversal_signals: { tags: [] },
       strategy_tags: [],
@@ -124,39 +164,41 @@ test('snapshot identifies a margin-exit oversold rebound candidate', () => {
   const summary = {
     forecast_date: '2026-08-03',
     base_trade_date: '2026-07-31',
-    stocks: [{
-      stock_code: '6477',
-      stock_name: '安集',
-      industry: '光電業',
-      data_completeness: 100,
-      features: { r3: -12, gap_sma20: -15, rsi14: 30 },
-      reversal_signals: { tags: [] },
-      strategy_tags: [],
-      formal_market_strategies: {},
-    }],
+    stocks: [candidateStock()],
   };
-  const context = {
-    margin: {
-      available: true,
-      calculation_status: 'completed',
-      reason: 'completed',
-      dates: ['20260724', '20260727', '20260728', '20260729', '20260730', '20260731'],
-      by_code: new Map([['6477', {
-        change_1d_pct: -4,
-        change_5d_pct: -8,
-        current_balance: 900,
-      }]]),
-    },
-    liquidity: {
-      available: true,
-      reason: 'completed',
-      by_code: new Map([['6477', { pass: true }]]),
-    },
-  };
-  const snapshot = buildTagStrategySnapshot(summary, { registry, context });
+  const snapshot = buildTagStrategySnapshot(summary, { registry, context: completeContext() });
   assert.deepEqual(snapshot.tag_classifications.margin_significant_exit_v1.members, ['6477']);
   assert.deepEqual(snapshot.strategy_classifications.oversold_margin_exit_rebound_v1.members, ['6477']);
   assert.ok(summary.stocks[0].prediction_tags.includes('margin_significant_exit_v1'));
   assert.ok(summary.stocks[0].prediction_strategies.includes('oversold_margin_exit_rebound_v1'));
   assert.ok(summary.stocks[0].strategy_tags.includes('融資退場型跌深反彈'));
+});
+
+test('complete disposition data excludes an active disposition stock', () => {
+  const registry = loadRegistry();
+  const summary = {
+    forecast_date: '2026-08-03',
+    base_trade_date: '2026-07-31',
+    stocks: [candidateStock({ is_disposition_stock: true })],
+  };
+  const snapshot = buildTagStrategySnapshot(summary, { registry, context: completeContext() });
+  assert.deepEqual(snapshot.tag_classifications.disposition_stock_v1.members, ['6477']);
+  assert.equal(snapshot.strategy_classifications.oversold_margin_exit_rebound_v1.count, 0);
+  assert.equal(summary.stocks[0].prediction_strategy_details.oversold_margin_exit_rebound_v1.status, 'not_matched');
+  assert.deepEqual(summary.stocks[0].prediction_strategy_details.oversold_margin_exit_rebound_v1.excluded_by, ['disposition_stock_v1']);
+});
+
+test('incomplete disposition data makes strategy unavailable instead of showing zero', () => {
+  const registry = loadRegistry();
+  const summary = {
+    forecast_date: '2026-08-03',
+    base_trade_date: '2026-07-31',
+    stocks: [candidateStock({ disposition_data_complete: null, is_disposition_stock: false })],
+  };
+  const snapshot = buildTagStrategySnapshot(summary, { registry, context: completeContext() });
+  const classification = snapshot.strategy_classifications.oversold_margin_exit_rebound_v1;
+  assert.equal(classification.calculation_status, 'unable_to_calculate');
+  assert.equal(classification.count, null);
+  assert.equal(summary.stocks[0].prediction_strategy_details.oversold_margin_exit_rebound_v1.status, 'unavailable');
+  assert.ok(summary.stocks[0].prediction_strategy_details.oversold_margin_exit_rebound_v1.unavailable_tags.includes('disposition_data_complete_v1'));
 });
