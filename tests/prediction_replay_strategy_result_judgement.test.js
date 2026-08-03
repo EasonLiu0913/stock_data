@@ -11,7 +11,7 @@ const {
 test('judges current rebound strategies at 4 percent or above instead of prior direction', () => {
   const rows = [
     { stock_code: '2359', prediction_match_label: '明顯不準', actual: { close_return: 9.5 } },
-    { stock_code: '2491', prediction_match_label: '明顯不準', actual: { close_return: 4 } },
+    { stock_code: '2491', prediction_match_label: '明顯不準', actual: { close_return: 4.79 } },
     { stock_code: '2434', prediction_match_label: '明顯準確', actual: { close_return: 3.99 } },
     { stock_code: '1310', prediction_match_label: '明顯不準', actual: { close_return: null } },
   ];
@@ -52,11 +52,11 @@ test('recomputes electronics rebound hit counts using the 4 percent boundary', (
     evaluations: {
       oversold_electronics_rebound_v1: {
         evaluation_target: 'close_return_gt_5',
-        members: ['2327', '2429', '8021'],
+        members: ['2491', '2429', '8021'],
         hit_members: [],
         miss_members: [],
         stocks: [
-          { stock_code: '2327', close_return: 4 },
+          { stock_code: '2491', close_return: 4.79 },
           { stock_code: '2429', close_return: 3.99 },
           { stock_code: '8021', close_return: null },
         ],
@@ -71,6 +71,7 @@ test('recomputes electronics rebound hit counts using the 4 percent boundary', (
   assert.equal(evaluation.misses, 1);
   assert.equal(evaluation.verified, 2);
   assert.equal(evaluation.hitRate, 50);
+  assert.equal(resultLabelFor(index, 'oversold_electronics_rebound_v1', '2491'), '明顯準確');
   assert.equal(resultLabelFor(index, 'oversold_electronics_rebound_v1', '8021'), '尚未驗證');
 });
 
