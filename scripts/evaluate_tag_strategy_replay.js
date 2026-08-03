@@ -47,6 +47,23 @@ function hitForTarget(row, target) {
   return null;
 }
 
+function annotateDispositionInMemory(summary, date) {
+  if (!Array.isArray(summary?.stocks)) return { calculation_status: 'unable_to_calculate', active_stock_count: null };
+  const file = path.join(ROOT, 'data_market_constraints', date, 'disposition.json');
+  const disposition = readJson(file, null);
+  const complete = disposition?.complete_market_coverage === true;
+  const activeCodes = new Set(complete ? (disposition.active_stock_codes || []).map(String) : []);
+  for (const stock of summary.stocks) {
+    stock.is_disposition_stock = complete && activeCodes.has(String(stock.stock_code));
+    stock.disposition_stock_status = complete ? 'completed' : disposition ? 'incomplete' : 'unavailable';
+  }
+  return {
+    calculation_status: complete ? 'completed' : disposition ? 'incomplete' : 'unable_to_calculate',
+    active_stock_count: complete ? activeCodes.size : null,
+    source_file: disposition ? path.relative(ROOT, file).replaceAll(path.sep, '/') : null,
+  };
+}
+
 function evaluateStrategyClassification(definition, classification, replayRows, actualEnvironment = null) {
   const memberCodes = new Set((classification?.members || []).map(String));
   const replayByCode = new Map((Array.isArray(replayRows) ? replayRows : [])
@@ -179,6 +196,7 @@ function applyTagStrategyReplay({
   if (!Array.isArray(replayDashboard?.rows)) throw new Error(`Missing replay rows: ${path.relative(ROOT, replayDashboardFile)}`);
   if (!replaySummary) throw new Error(`Missing replay summary: ${path.relative(ROOT, replaySummaryFile)}`);
 
+  const dispositionAnnotation = annotateDispositionInMemory(summary, compact);
   const registry = loadRegistry();
   let snapshot = evaluationMode === 'live_snapshot' ? readJson(snapshotFile, null) : null;
   if (!snapshot) snapshot = buildTagStrategySnapshot(summary, { registry, evaluationMode });
@@ -212,6 +230,7 @@ function applyTagStrategyReplay({
     evaluation_mode: evaluationMode,
     data_as_of: compactDate(summary.base_trade_date),
     registry: snapshot.registry,
+    disposition_annotation: dispositionAnnotation,
     evaluations,
     source_files: {
       prediction_summary: path.relative(ROOT, summaryFile).replaceAll(path.sep, '/'),
@@ -288,6 +307,7 @@ module.exports = {
   median,
   rowReturn,
   hitForTarget,
+  annotateDispositionInMemory,
   evaluateStrategyClassification,
   replayGroup,
   syncReplayRows,
