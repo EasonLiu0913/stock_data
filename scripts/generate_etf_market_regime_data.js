@@ -9,6 +9,7 @@ const MARKET_PATH = path.join(ROOT, 'data_twse_market_chart', 'market_chart.json
 const OUTPUT_PATH = path.join(ROOT, 'public', 'data', 'etf-market-regime-analysis', 'data.json');
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
+const LOCAL_SMA_DIR = path.join(ROOT, 'data_fubon');
 
 const ETF_DEFINITIONS = Object.freeze([
   Object.freeze({
@@ -157,6 +158,155 @@ function parseYahooRows(payload) {
   return [...deduplicated.values()].sort((left, right) => left.date.localeCompare(right.date));
 }
 
+function inferSplitFactor(previousClose, currentClose) {
+  if (!(previousClose > 0) || !(currentClose > 0)) return null;
+  const ratio = currentClose / previousClose;
+  if (ratio < 0.4) {
+    const factor = Math.round(1 / ratio);
+    if (factor >= 2 && factor <= 20 && Math.abs(ratio - 1 / factor) <= 0.035) {
+      return { type: 'forward', factor };
+    }
+  }
+  if (ratio > 2.5) {
+    const factor = Math.round(ratio);
+    if (factor >= 3 && factor <= 20 && Math.abs(ratio - factor) <= 0.2) {
+      return { type: 'reverse', factor };
+    }
+  }
+  return null;
+}
+
+function backAdjustSplitRows(rows) {
+  const sorted = [...rows].sort((left, right) => left.date.localeCompare(right.date));
+  const adjusted = sorted.map((row) => ({ ...row }));
+  const splitAdjustments = [];
+  let multiplier = 1;
+  for (let index = adjusted.length - 1; index >= 0; index -= 1) {
+    adjusted[index].adjustedClose = round(adjusted[index].close * multiplier);
+    if (index === 0) continue;
+    const split = inferSplitFactor(adjusted[index - 1].close, adjusted[index].close);
+    if (!split) continue;
+    splitAdjustments.push({
+      date: adjusted[index].date,
+      type: split.type,
+      factor: split.factor,
+      previousClose: adjusted[index - 1].close,
+      currentClose: adjusted[index].close
+    });
+    if (split.type === 'forward') multiplier /= split.factor;
+    else multiplier *= split.factor;
+  }
+  return { rows: adjusted, splitAdjustments: splitAdjustments.reverse() };
+}
+
+function localDateKey(compact) {
+  return `${compact.slice(0, 4)}/${compact.slice(4, 6)}/${compact.slice(6, 8)}`;
+}
+
+function parseLocalSmaPayload(payload, date, etfs = ETF_DEFINITIONS) {
+  const result = {};
+  for (const etf of etfs) {
+    const stock = payload?.[etf.id];
+    if (!stock || typeof stock !== 'object') continue;
+    const expectedKey = localDateKey(date);
+    const key = stock[expectedKey]
+      ? expectedKey
+      : Object.keys(stock).find((value) => /^20\d{2}\/\d{2}\/\d{2}$/.test(value));
+    const row = key ? stock[key] : null;
+    const close = Number(String(row?.Price ?? row?.Close ?? row?.close ?? '').replaceAll(',', ''));
+    if (!Number.isFinite(close) || close <= 0) continue;
+    const parseOptional = (value) => {
+      const text = String(value ?? '').replaceAll(',', '').trim();
+      if (!text) return null;
+      const number = Number(text);
+      return Number.isFinite(number) ? round(number) : null;
+    };
+    result[etf.id] = {
+      date,
+      open: parseOptional(row?.Open ?? row?.open) ?? close,
+      high: parseOptional(row?.High ?? row?.high) ?? close,
+      low: parseOptional(row?.Low ?? row?.low) ?? close,
+      close: round(close),
+      adjustedClose: round(close),
+      volume: parseOptional(row?.Volume ?? row?.volume)
+    };
+  }
+  return result;
+}
+
+function loadLocalEtfSeries(options = {}) {
+  const root = options.root || ROOT;
+  const directory = options.directory || (root === ROOT ? LOCAL_SMA_DIR : path.join(root, 'data_fubon'));
+  const fromDate = options.fromDate || '00000000';
+  const toDate = options.toDate || '99999999';
+  const etfs = options.etfs || ETF_DEFINITIONS;
+  const raw = Object.fromEntries(etfs.map((etf) => [etf.id, []]));
+  if (!fs.existsSync(directory)) {
+    return { rowsById: raw, splitAdjustmentsById: Object.fromEntries(etfs.map((etf) => [etf.id, []])), filesRead: 0 };
+  }
+  const files = fs.readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const match = entry.name.match(/^fubon_(20\d{6})_sma\.json$/);
+      return match ? { name: entry.name, date: match[1] } : null;
+    })
+    .filter((item) => item && item.date >= fromDate && item.date <= toDate)
+    .sort((left, right) => left.date.localeCompare(right.date));
+  let filesRead = 0;
+  for (const item of files) {
+    try {
+      const text = fs.readFileSync(path.join(directory, item.name), 'utf8');
+      if (!text.trim()) continue;
+      const parsed = parseLocalSmaPayload(JSON.parse(text), item.date, etfs);
+      for (const etf of etfs) if (parsed[etf.id]) raw[etf.id].push(parsed[etf.id]);
+      filesRead += 1;
+    } catch (error) {
+      console.warn(`Local SMA fallback skipped ${item.name}: ${error.message}`);
+    }
+  }
+  const rowsById = {};
+  const splitAdjustmentsById = {};
+  for (const etf of etfs) {
+    const adjusted = backAdjustSplitRows(raw[etf.id]);
+    rowsById[etf.id] = adjusted.rows;
+    splitAdjustmentsById[etf.id] = adjusted.splitAdjustments;
+  }
+  return { rowsById, splitAdjustmentsById, filesRead };
+}
+
+function fillYahooGapsWithLocal(yahooRows, localRows) {
+  const yahoo = [...(yahooRows || [])].sort((left, right) => left.date.localeCompare(right.date));
+  const local = [...(localRows || [])].sort((left, right) => left.date.localeCompare(right.date));
+  const byDate = new Map(yahoo.map((row) => [row.date, { ...row }]));
+  let filledCount = 0;
+  for (const row of local) {
+    if (byDate.has(row.date)) continue;
+    let nearest = null;
+    let nearestDistance = Infinity;
+    const targetTime = new Date(`${compactToIso(row.date)}T00:00:00Z`).getTime();
+    for (const candidate of yahoo) {
+      if (!(candidate.close > 0) || !(candidate.adjustedClose > 0)) continue;
+      const distance = Math.abs(new Date(`${compactToIso(candidate.date)}T00:00:00Z`).getTime() - targetTime);
+      if (distance < nearestDistance) {
+        nearest = candidate;
+        nearestDistance = distance;
+      }
+    }
+    const adjustmentRatio = nearest ? nearest.adjustedClose / nearest.close : null;
+    byDate.set(row.date, {
+      ...row,
+      adjustedClose: Number.isFinite(adjustmentRatio) && adjustmentRatio > 0
+        ? round(row.close * adjustmentRatio)
+        : row.adjustedClose
+    });
+    filledCount += 1;
+  }
+  return {
+    rows: [...byDate.values()].sort((left, right) => left.date.localeCompare(right.date)),
+    filledCount
+  };
+}
+
 function readMarketData(filePath = MARKET_PATH) {
   if (!fs.existsSync(filePath)) throw new Error(`Missing market data: ${path.relative(ROOT, filePath)}`);
   const payload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -217,14 +367,48 @@ async function generate(options = {}) {
   const actualFrom = boundedRows[0].date;
   const actualTo = boundedRows.at(-1).date;
 
+  const local = loadLocalEtfSeries({
+    root: options.root || ROOT,
+    directory: options.localSmaDirectory,
+    fromDate: actualFrom,
+    toDate: actualTo
+  });
   const etfRowsById = {};
+  const etfPriceDetails = {};
   for (const etf of ETF_DEFINITIONS) {
-    const url = buildYahooUrl(etf.symbol, actualFrom, actualTo);
-    console.log(`Fetching ${etf.id} ${etf.name}: ${actualFrom} - ${actualTo}`);
-    const payload = await fetchJson(url, etf.symbol, options.fetchOptions);
-    const rows = parseYahooRows(payload).filter((row) => row.date >= actualFrom && row.date <= actualTo);
-    if (rows.length < 2) throw new Error(`${etf.symbol} returned insufficient rows`);
+    let rows = [];
+    let source = null;
+    let errorMessage = null;
+    let localGapFillCount = 0;
+    try {
+      const url = buildYahooUrl(etf.symbol, actualFrom, actualTo);
+      console.log(`Fetching ${etf.id} ${etf.name}: ${actualFrom} - ${actualTo}`);
+      const payload = await fetchJson(url, etf.symbol, options.fetchOptions);
+      const yahooRows = parseYahooRows(payload).filter((row) => row.date >= actualFrom && row.date <= actualTo);
+      const merged = fillYahooGapsWithLocal(yahooRows, local.rowsById[etf.id] || []);
+      rows = merged.rows;
+      localGapFillCount = merged.filledCount;
+      if (rows.length < 2) throw new Error(`Yahoo and local combined coverage too low: ${rows.length}/${boundedRows.length}`);
+      source = merged.filledCount > 0
+        ? 'yahoo_finance_adjusted_close_with_local_gap_fill'
+        : 'yahoo_finance_adjusted_close';
+    } catch (error) {
+      errorMessage = error.message;
+      rows = local.rowsById[etf.id] || [];
+      if (rows.length < 2) throw new Error(`${etf.id} has no usable Yahoo or local SMA history: ${error.message}`);
+      source = 'local_fubon_sma_split_adjusted_close';
+      console.warn(`${etf.id} uses local SMA fallback: ${error.message}`);
+    }
     etfRowsById[etf.id] = rows;
+    etfPriceDetails[etf.id] = {
+      source,
+      rowCount: rows.length,
+      yahooError: errorMessage,
+      localGapFillCount,
+      splitAdjustments: source === 'local_fubon_sma_split_adjusted_close'
+        ? local.splitAdjustmentsById[etf.id]
+        : []
+    };
   }
 
   const aligned = alignRows(boundedRows, etfRowsById);
@@ -244,7 +428,7 @@ async function generate(options = {}) {
     etfs: ETF_DEFINITIONS,
     priceBasis: {
       holdingReturn: 'adjustedClose',
-      explanation: '持有報酬使用 Yahoo Finance 還原收盤價，納入配息與分割調整；畫面另保留原始收盤價。'
+      explanation: 'Yahoo 可用時採還原收盤價（含配息與分割調整）；Yahoo 不可用時改用專案既有富邦 SMA 日價並自動回溯調整分割，該備援不含現金配息。'
     },
     regimeDefaults: {
       windowDays: 20,
@@ -261,8 +445,10 @@ async function generate(options = {}) {
       missingDates: aligned.missingDates
     },
     sources: {
-      etfPrices: 'Yahoo Finance Chart API',
-      etfSymbols: Object.fromEntries(ETF_DEFINITIONS.map((etf) => [etf.id, etf.symbol]))
+      etfPrices: 'Yahoo Finance Chart API with local data_fubon SMA fallback',
+      etfSymbols: Object.fromEntries(ETF_DEFINITIONS.map((etf) => [etf.id, etf.symbol])),
+      localSmaFilesRead: local.filesRead,
+      etfPriceDetails
     },
     rows: aligned.rows
   };
@@ -313,6 +499,11 @@ module.exports = {
   normalizeDate,
   buildYahooUrl,
   parseYahooRows,
+  inferSplitFactor,
+  backAdjustSplitRows,
+  parseLocalSmaPayload,
+  loadLocalEtfSeries,
+  fillYahooGapsWithLocal,
   readMarketData,
   alignRows,
   validateOutput,
