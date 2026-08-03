@@ -97,17 +97,38 @@ jobs:
           set -o pipefail
           set +e
 
-          args="${{ steps.target.outputs.date }}"
+          target="${{ steps.target.outputs.date }}"
+          args="$target"
           if [ "${{ inputs.force }}" = "true" ]; then
             args="$args --force"
           fi
 
-          # The job limit is 330 minutes. Stop crawling at 300 minutes so the
-          # remaining time can be used to verify, upload, commit and push partial results.
-          timeout --signal=TERM --kill-after=30s 300m \
+          crawl_log=/tmp/fubon-brokers-crawl.log
+          : > "$crawl_log"
+
+          # The job limit is 330 minutes. Reserve enough time for one automatic
+          # pending confirmation pass, verification, artifact upload and push.
+          echo "=== First crawl pass ===" | tee -a "$crawl_log"
+          timeout --signal=TERM --kill-after=30s 270m \
             node scripts/scraper_json_driven.js $args \
-            2>&1 | tee /tmp/fubon-brokers-crawl.log
-          status=${PIPESTATUS[0]}
+            2>&1 | tee -a "$crawl_log"
+          first_status=${PIPESTATUS[0]}
+          status=$first_status
+          echo "First crawler pass exit code: $first_status" | tee -a "$crawl_log"
+
+          # Exit code 2 means resumable incompleteness. Run one more pass in the
+          # same job so explicit no-data branches can reach the required second
+          # confirmation round and transient pending branches get another chance.
+          # Do not forward --force: completed CSV files must be reused.
+          if [ "$first_status" = "2" ]; then
+            echo "=== Automatic pending retry pass ===" | tee -a "$crawl_log"
+            timeout --signal=TERM --kill-after=30s 25m \
+              node scripts/scraper_json_driven.js "$target" \
+              2>&1 | tee -a "$crawl_log"
+            status=${PIPESTATUS[0]}
+            echo "Automatic retry pass exit code: $status" | tee -a "$crawl_log"
+          fi
+
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           echo "Crawler exit code: $status"
           exit 0
@@ -187,7 +208,7 @@ jobs:
           verify_status="${{ steps.verify.outputs.exit_code }}"
 
           if [ "$crawl_status" != "0" ] || [ "$verify_status" != "0" ]; then
-            echo "Broker crawl is incomplete, but completed CSV files and _crawl-status.json were preserved."
+            echo "Broker crawl is incomplete after the automatic retry pass, but completed CSV files and _crawl-status.json were preserved."
             echo "Crawler exit code: ${crawl_status:-unknown}"
             echo "Verification exit code: ${verify_status:-unknown}"
             exit 1
