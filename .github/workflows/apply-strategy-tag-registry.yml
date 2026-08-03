@@ -8,6 +8,7 @@ on:
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/apply_strategy_tag_registry.js'
+      - 'scripts/summarize_strategy_snapshot_manifest.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
   workflow_dispatch:
     inputs:
@@ -38,9 +39,11 @@ on:
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/apply_strategy_tag_registry.js'
+      - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'tests/strategy_tag_engine.test.js'
       - 'tests/strategy_tag_source_enrichment.test.js'
       - 'tests/apply_strategy_tag_registry.test.js'
+      - 'tests/summarize_strategy_snapshot_manifest.test.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
 
 permissions:
@@ -67,10 +70,12 @@ jobs:
           node --check scripts/strategy_tag_engine.js
           node --check scripts/strategy_tag_source_enrichment.js
           node --check scripts/apply_strategy_tag_registry.js
+          node --check scripts/summarize_strategy_snapshot_manifest.js
           node --test \
             tests/strategy_tag_engine.test.js \
             tests/strategy_tag_source_enrichment.test.js \
-            tests/apply_strategy_tag_registry.test.js
+            tests/apply_strategy_tag_registry.test.js \
+            tests/summarize_strategy_snapshot_manifest.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
 
   apply:
@@ -101,6 +106,8 @@ jobs:
           if [ -n "${DATA_AS_OF:-}" ]; then args+=(--data-as-of "$DATA_AS_OF"); fi
           echo "event=${GITHUB_EVENT_NAME} evaluation_mode=${EVALUATION_MODE} date=${INPUT_DATE:-latest} data_as_of=${DATA_AS_OF:-base_trade_date}"
           node scripts/apply_strategy_tag_registry.js "${args[@]}"
+      - name: Summarize snapshot classifications
+        run: node scripts/summarize_strategy_snapshot_manifest.js
       - name: Verify generated output and manifest
         run: |
           node - <<'NODE'
@@ -110,6 +117,7 @@ jobs:
           const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
           const entries = Object.values(manifest.dates || {}).flatMap(row => [
             row.live_snapshot,
+            ...(row.live_snapshot_history || []),
             ...(row.historical_recalculations || []),
           ]).filter(Boolean);
           if (!entries.length) throw new Error('No strategy snapshot generated');
@@ -119,6 +127,7 @@ jobs:
             if (!snapshot.tag_classifications || !snapshot.strategy_classifications) throw new Error(`Invalid snapshot: ${entry.file}`);
             for (const item of Object.values(snapshot.tag_classifications)) if (item.count === undefined) throw new Error('Tag count missing');
             for (const item of Object.values(snapshot.strategy_classifications)) if (item.count === undefined) throw new Error('Strategy count missing');
+            if (!entry.classification_summary) throw new Error(`Manifest summary missing: ${entry.file}`);
           }
           NODE
       - name: Commit snapshot and enriched live prediction summary
