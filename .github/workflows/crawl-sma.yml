@@ -40,13 +40,32 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
-      - name: Run SMA crawler
+      - name: Validate SMA date detector
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            node scripts/crawl_sma_data.js --date ${{ github.event.inputs.date }}
+          node --check scripts/detect_latest_sma_date.js
+          node scripts/detect_latest_sma_date.js --self-test
+
+      - name: Run SMA crawler
+        shell: bash
+        run: |
+          set -euo pipefail
+          input_date="${{ github.event.inputs.date }}"
+
+          if [ -n "$input_date" ]; then
+            target_date="$input_date"
+            echo "📅 使用手動指定日期: $target_date"
           else
-            node scripts/crawl_sma_data.js
+            target_date=$(node scripts/detect_latest_sma_date.js)
+            echo "📅 自動偵測最新市場日期: $target_date"
           fi
+
+          [[ "$target_date" =~ ^20[0-9]{6}$ ]] || {
+            echo "Invalid SMA target date: $target_date"
+            exit 1
+          }
+
+          echo "- SMA 目標日期：$target_date" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/crawl_sma_data.js --date "$target_date"
 
       - name: Generate SMA files.json only
         run: node scripts/generate_file_lists.js --only data_fubon
