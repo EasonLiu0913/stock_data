@@ -91,14 +91,15 @@ jobs:
       - name: Apply fixed tag and strategy registry
         env:
           INPUT_DATE: ${{ inputs.date }}
-          EVALUATION_MODE: ${{ inputs.evaluation_mode }}
+          EVALUATION_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.evaluation_mode || github.event_name == 'workflow_run' && 'live_snapshot' || 'historical_recalculation' }}
           DATA_AS_OF: ${{ inputs.data_as_of }}
         shell: bash
         run: |
           set -euo pipefail
-          args=(--evaluation-mode "${EVALUATION_MODE:-live_snapshot}")
+          args=(--evaluation-mode "$EVALUATION_MODE")
           if [ -n "${INPUT_DATE:-}" ]; then args+=(--date "$INPUT_DATE"); else args+=(--latest); fi
           if [ -n "${DATA_AS_OF:-}" ]; then args+=(--data-as-of "$DATA_AS_OF"); fi
+          echo "event=${GITHUB_EVENT_NAME} evaluation_mode=${EVALUATION_MODE} date=${INPUT_DATE:-latest} data_as_of=${DATA_AS_OF:-base_trade_date}"
           node scripts/apply_strategy_tag_registry.js "${args[@]}"
       - name: Verify generated output and manifest
         run: |
