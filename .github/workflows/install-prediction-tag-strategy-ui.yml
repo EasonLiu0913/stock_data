@@ -1,0 +1,94 @@
+name: '[UI] Install Prediction Tag Strategy UI'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/install-prediction-tag-strategy-ui.yml'
+      - 'scripts/install_prediction_tag_strategy_ui.js'
+      - 'public/prediction-tag-strategy-enhancement.js'
+      - 'public/prediction-replay-tag-strategy-enhancement.js'
+      - 'public/prediction-dashboard.html'
+      - 'public/prediction-replay-dashboard-view.html'
+      - 'tests/install_prediction_tag_strategy_ui.test.js'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/install-prediction-tag-strategy-ui.yml'
+      - 'scripts/install_prediction_tag_strategy_ui.js'
+      - 'public/prediction-tag-strategy-enhancement.js'
+      - 'public/prediction-replay-tag-strategy-enhancement.js'
+      - 'public/prediction-dashboard.html'
+      - 'public/prediction-replay-dashboard-view.html'
+      - 'tests/install_prediction_tag_strategy_ui.test.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prediction-tag-strategy-ui-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate installer and browser scripts
+        run: |
+          node --check scripts/install_prediction_tag_strategy_ui.js
+          node --check public/prediction-tag-strategy-enhancement.js
+          node --check public/prediction-replay-tag-strategy-enhancement.js
+          node --test tests/install_prediction_tag_strategy_ui.test.js
+
+      - name: Install shared UI references
+        run: node scripts/install_prediction_tag_strategy_ui.js
+
+      - name: Verify installed references
+        shell: bash
+        run: |
+          grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-dashboard.html
+          grep -q 'prediction-replay-tag-strategy-enhancement.js' public/prediction-replay-dashboard-view.html
+
+      - name: Verify changed-file scope
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          unexpected=$(git status --short --untracked-files=all | awk '
+            $2 != "public/prediction-dashboard.html" &&
+            $2 != "public/prediction-replay-dashboard-view.html" { print }
+          ')
+          if [ -n "$unexpected" ]; then
+            echo 'Unexpected files changed:'
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit installed references
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/prediction-dashboard.html public/prediction-replay-dashboard-view.html
+          if git diff --cached --quiet; then
+            echo 'Tag strategy UI references already installed'
+            exit 0
+          fi
+          git commit -m 'ui: install prediction tag strategy panels'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
