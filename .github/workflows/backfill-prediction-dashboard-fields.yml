@@ -45,6 +45,9 @@ jobs:
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --check scripts/oversold_beta_rebound.js
           node --check scripts/apply_formal_market_strategy_tags.js
+          node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/recalculate_prediction_strategy_history.js
           node --check scripts/sync_prediction_dashboard_groups.js
           node --check scripts/evaluate_formal_strategy_replay.js
           node --check scripts/install_market_environment_ui.js
@@ -53,6 +56,7 @@ jobs:
           node --test \
             tests/prediction_dashboard_backfill.test.js \
             tests/formal_market_strategy_tags.test.js \
+            tests/prediction_tag_strategy_engine.test.js \
             tests/prediction_dashboard_group_sync.test.js \
             tests/formal_strategy_replay.test.js \
             tests/oversold_beta_rebound.test.js \
@@ -91,13 +95,13 @@ jobs:
 
             if [ "$file" = "public/prediction-dashboard.html" ]; then
               allowed=true
-            elif [[ "$file" =~ ^data_predictions/(20[0-9]{6})/(summary|industry-summary|group-summary|replay-summary|replay-dashboard)\.json$ ]]; then
+            elif [[ "$file" =~ ^data_predictions/(20[0-9]{6})/(summary|industry-summary|group-summary|replay-summary|replay-dashboard|tag-strategy-snapshot)\.json$ ]]; then
               allowed=true
               file_date="${BASH_REMATCH[1]}"
             elif [[ "$file" =~ ^data_market_environment/(20[0-9]{6})/(oversold_beta_rebound|actual_market_environment)\.json$ ]]; then
               allowed=true
               file_date="${BASH_REMATCH[1]}"
-            elif [[ "$file" =~ ^data_prediction_analysis/(formal-strategy|oversold-beta-rebound)/(20[0-9]{6})\.json$ ]]; then
+            elif [[ "$file" =~ ^data_prediction_analysis/(formal-strategy|oversold-beta-rebound|tag-strategy)/(20[0-9]{6})\.json$ ]]; then
               allowed=true
               file_date="${BASH_REMATCH[2]}"
             fi
@@ -130,16 +134,18 @@ jobs:
             data_predictions/*/group-summary.json \
             data_predictions/*/replay-summary.json \
             data_predictions/*/replay-dashboard.json \
+            data_predictions/*/tag-strategy-snapshot.json \
             data_market_environment/*/oversold_beta_rebound.json \
             data_market_environment/*/actual_market_environment.json \
             data_prediction_analysis/formal-strategy/*.json \
             data_prediction_analysis/oversold-beta-rebound/*.json \
+            data_prediction_analysis/tag-strategy/*.json \
             public/prediction-dashboard.html
           if git diff --cached --quiet; then
             echo "No dashboard field changes"
             exit 0
           fi
-          git commit -m "data: backfill rebound readiness and fixed strategies"
+          git commit -m "data: backfill readiness and versioned tag strategies"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
