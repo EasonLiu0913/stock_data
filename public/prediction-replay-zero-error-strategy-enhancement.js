@@ -93,7 +93,20 @@
       });
   }
 
-  const API = { buildStrategyFailureGroups, buildCanonicalStrategyGroups };
+  function canonicalStrategySelection(group = {}) {
+    return {
+      kind: 'registered_strategy_scope',
+      value: String(group.strategy_id || ''),
+      label: `${group.name || group.strategy_id || '固定策略'}－全部候選`,
+      scope: 'candidates',
+    };
+  }
+
+  const API = {
+    buildStrategyFailureGroups,
+    buildCanonicalStrategyGroups,
+    canonicalStrategySelection,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   if (window.__replayZeroErrorStrategyClustersInstalled) return;
@@ -102,6 +115,7 @@
   let canonicalGroups = [];
   let genericGroups = [];
   let originalRenderClusters = null;
+  const canonicalSelectionMembers = new Map();
 
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -132,7 +146,7 @@
     const paragraph = tabs?.closest('.section-head')?.querySelector('p');
     if (paragraph) {
       paragraph.textContent =
-        '固定策略依各自的正式驗證目標計算命中；一般策略標籤則評估原始方向預測。兩種口徑分開呈現，0 筆錯誤也會保留。';
+        '固定策略依各自的正式驗證目標計算命中；點擊策略名稱可檢視該策略全部候選清單。一般策略標籤則評估原始方向預測，兩種口徑分開呈現。';
     }
   }
 
@@ -142,8 +156,8 @@
     const detail = `${group.candidates} 檔候選 · ${group.population_count} 檔有效覆盤 · ${group.hit_count} 檔策略命中 · ${group.miss_count} 檔策略未命中`;
     return `<div class="cluster-row canonical-strategy-row">
       <div class="cluster-name">
-        <button type="button" class="drill-button" data-canonical-strategy-scroll="${escapeHtml(group.strategy_id)}"><b>${escapeHtml(group.name)}</b></button>
-        <span>${escapeHtml(detail)}<br>驗證目標：${escapeHtml(targetLabel(group.evaluation_target))} · ${escapeHtml(statusLabel(group))}</span>
+        <button type="button" class="drill-button" data-canonical-strategy-list="${escapeHtml(group.strategy_id)}" title="檢視${escapeHtml(group.name)}全部候選清單"><b>${escapeHtml(group.name)}</b></button>
+        <span>${escapeHtml(detail)}<br>驗證目標：${escapeHtml(targetLabel(group.evaluation_target))} · ${escapeHtml(statusLabel(group))} · 點擊名稱檢視清單</span>
       </div>
       <div class="bar-track" aria-label="${escapeHtml(group.name)} 策略命中率 ${formatPct(hitRate)}"><div class="bar-fill canonical-hit-fill" style="width:${width}%"></div></div>
       <div class="cluster-rate"><span>策略命中率</span><b>${formatPct(hitRate)}</b></div>
@@ -197,6 +211,47 @@
       || '<div class="case-summary">目前沒有策略群組資料。</div>';
   }
 
+  function installCanonicalSelectionSupport() {
+    if (typeof rowMatchesSelection !== 'function' || window.__formalStrategySelectionSupportInstalled || window.__zeroErrorCanonicalSelectionSupportInstalled) return;
+    const originalRowMatchesSelection = rowMatchesSelection;
+    rowMatchesSelection = function enhancedCanonicalStrategySelection(row, selection) {
+      if (selection?.kind === 'registered_strategy_scope') {
+        return Boolean(
+          canonicalSelectionMembers
+            .get(String(selection.value || ''))
+            ?.has(String(row?.stock_code ?? '')),
+        );
+      }
+      return originalRowMatchesSelection(row, selection);
+    };
+    window.__zeroErrorCanonicalSelectionSupportInstalled = true;
+  }
+
+  function clearCaseControls() {
+    const search = document.getElementById('caseSearch');
+    const direction = document.getElementById('caseDirection');
+    const industry = document.getElementById('caseIndustry');
+    if (search) search.value = '';
+    if (direction) direction.value = '';
+    if (industry) industry.value = '';
+  }
+
+  function showCanonicalStrategyList(group) {
+    if (!group || typeof state === 'undefined' || typeof renderCases !== 'function') return;
+    clearCaseControls();
+    state.selection = canonicalStrategySelection(group);
+    state.caseType = 'all';
+    renderCases();
+    const caseNote = document.getElementById('caseNote');
+    if (caseNote) {
+      caseNote.textContent = `顯示「${group.name}」全部候選清單；命中與未命中依此固定策略自身的驗證規則判定。`;
+    }
+    document.getElementById('caseRows')?.closest('.section')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
+
   function installRenderer() {
     if (originalRenderClusters || typeof renderClusters !== 'function') return;
     originalRenderClusters = renderClusters;
@@ -209,12 +264,13 @@
     };
 
     document.getElementById('clusterList')?.addEventListener('click', event => {
-      const trigger = event.target.closest('[data-canonical-strategy-scroll]');
+      const trigger = event.target.closest('[data-canonical-strategy-list]');
       if (!trigger) return;
       event.preventDefault();
       event.stopPropagation();
-      const card = document.querySelector(`[data-strategy-card="${CSS.escape(trigger.dataset.canonicalStrategyScroll)}"]`);
-      card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const strategyId = String(trigger.dataset.canonicalStrategyList || '');
+      const group = canonicalGroups.find(item => item.strategy_id === strategyId);
+      showCanonicalStrategyList(group);
     }, true);
   }
 
@@ -236,9 +292,14 @@
     try {
       const canonicalPayload = await fetchCanonicalReplay();
       canonicalGroups = buildCanonicalStrategyGroups(canonicalPayload || {});
+      canonicalSelectionMembers.clear();
+      for (const group of canonicalGroups) {
+        canonicalSelectionMembers.set(group.strategy_id, new Set(group.members));
+      }
       const canonicalLabels = canonicalGroups.map(group => group.name);
       genericGroups = buildStrategyFailureGroups(state.rows, canonicalLabels);
       state.mistakes.by_strategy_tag = genericGroups;
+      installCanonicalSelectionSupport();
       installRenderer();
       updateExplanation();
       if (state.clusterKey === 'by_strategy_tag') renderStrategyClusters();
