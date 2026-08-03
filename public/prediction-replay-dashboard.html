@@ -69,7 +69,22 @@
           });
         }catch(error){console.warn('Unable to inject replay enhancements:',error);}
       };
-      const scheduleInject=()=>setTimeout(inject,150);
+      const scheduleInject=()=>{
+        let attempts=0;
+        const waitForReplayList=()=>{
+          attempts+=1;
+          try{
+            if(typeof nestedViewer.contentWindow?.setCaseView==='function'||attempts>=80){
+              inject();
+              return;
+            }
+          }catch(error){
+            console.warn('Unable to inspect replay list enhancement:',error);
+          }
+          setTimeout(waitForReplayList,50);
+        };
+        waitForReplayList();
+      };
       nestedViewer.addEventListener('load',scheduleInject);
       try{
         if(nestedViewer.getAttribute('src')&&nestedViewer.contentDocument?.readyState==='complete')scheduleInject();
