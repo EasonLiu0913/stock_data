@@ -24,11 +24,12 @@
       legacyIds: [],
       label: '融資退場型跌深反彈',
       legacyLabels: [],
-      target: 'intraday_rebound_5d_10pct',
-      targetLabel: '候選日起 5 個交易日內盤中反彈達 10%',
+      target: 'close_return_gt_5',
+      targetLabel: '當日是否出現「跌深反彈」標籤（收盤報酬 > 5%）',
     },
   ];
   const selectionMembers = new Map();
+  const strategyEvaluations = new Map();
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -219,15 +220,44 @@
     };
   }
 
+  function decorateStrategyResultRows() {
+    if (typeof state === 'undefined' || state.selection?.kind !== 'registered_strategy_scope') return;
+    const evaluation = strategyEvaluations.get(String(state.selection.value || ''));
+    if (!evaluation) return;
+    const hitSet = new Set(evaluation.hitMembers);
+    const missSet = new Set(evaluation.missMembers);
+    document.querySelectorAll('#caseRows tr').forEach(row => {
+      const code = row.querySelector('td:first-child b')?.textContent?.trim();
+      const resultCell = row.children?.[5];
+      if (!code || !resultCell) return;
+      let label = '尚未驗證';
+      let className = '';
+      if (hitSet.has(code)) {
+        label = '明顯準確';
+        className = 'hit';
+      } else if (missSet.has(code)) {
+        label = '明顯不準';
+        className = 'miss';
+      }
+      resultCell.innerHTML = `<span class="pill ${className}">${esc(label)}</span>`;
+    });
+  }
+
   function installSelectionSupport() {
-    if (typeof rowMatchesSelection !== 'function' || window.__formalStrategySelectionSupportInstalled) return;
+    if (typeof rowMatchesSelection !== 'function' || typeof renderCases !== 'function' || window.__formalStrategySelectionSupportInstalled) return;
     const originalRowMatchesSelection = rowMatchesSelection;
+    const originalRenderCases = renderCases;
     rowMatchesSelection = function enhancedRowMatchesSelection(row, selection) {
       if (selection?.kind === 'registered_strategy_scope') {
         const key = `${selection.value}:${selection.scope || 'candidates'}`;
         return Boolean(selectionMembers.get(key)?.has(String(row?.stock_code ?? '')));
       }
       return originalRowMatchesSelection(row, selection);
+    };
+    renderCases = function enhancedStrategyRenderCases(...args) {
+      const result = originalRenderCases(...args);
+      queueMicrotask(decorateStrategyResultRows);
+      return result;
     };
     window.__formalStrategySelectionSupportInstalled = true;
   }
@@ -260,8 +290,17 @@
 
   function hitMetricLabel(evaluation) {
     if (evaluation.target === 'relative_leadership') return '相對領漲命中';
+    if (evaluation.strategyId === 'oversold_margin_exit_rebound_v1') return '當日跌深反彈標籤';
     if (evaluation.target === 'intraday_rebound_5d_10pct') return '五日盤中反彈命中';
     return '漲幅 >5% 命中';
+  }
+
+  function displayTargetLabel(evaluation) {
+    if (evaluation.strategyId === 'oversold_margin_exit_rebound_v1'
+      && evaluation.target === 'close_return_gt_5') {
+      return '當日是否出現「跌深反彈」標籤（收盤報酬 > 5%）';
+    }
+    return evaluation.targetLabel;
   }
 
   function strategyHtml(evaluation) {
@@ -280,7 +319,7 @@
           <div>
             <div class="formal-strategy-badge">固定策略覆盤</div>
             <h2 style="margin-top:8px">${esc(evaluation.label)}</h2>
-            <p class="strategy-description">評估目標：${esc(evaluation.targetLabel)}。候選資格只讀取預測當時保存的版本化快照，不使用事後資料重新篩選。</p>
+            <p class="strategy-description">評估目標：${esc(displayTargetLabel(evaluation))}。候選資格只讀取預測當時保存的版本化快照，不使用事後資料重新篩選。</p>
           </div>
           <div class="strategy-result">${esc(statusLabel(evaluation))}</div>
         </div>
@@ -293,8 +332,8 @@
         </div>
         <div class="formal-strategy-actions">
           <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="candidates" ${evaluation.candidates ? '' : 'disabled'}>查看全部候選（${evaluation.candidates}）</button>
-          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="hits" ${evaluation.hits ? '' : 'disabled'}>查看命中（${evaluation.hits}）</button>
-          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="misses" ${evaluation.missMembers.length ? '' : 'disabled'}>查看未命中（${evaluation.missMembers.length}）</button>
+          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="hits" ${evaluation.hits ? '' : 'disabled'}>查看明顯準確（${evaluation.hits}）</button>
+          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="misses" ${evaluation.missMembers.length ? '' : 'disabled'}>查看明顯不準（${evaluation.missMembers.length}）</button>
         </div>
         <div class="formal-strategy-note">資料來源：${esc(evaluation.evaluationMode)}；計算狀態：${esc(evaluation.calculationStatus)}${missingNote}。</div>
       </article>`;
@@ -311,7 +350,7 @@
 
   function applyStrategySelection(section, evaluation, scope) {
     if (typeof state === 'undefined' || typeof renderCases !== 'function') return;
-    const labels = { candidates: '全部候選', hits: '命中', misses: '未命中' };
+    const labels = { candidates: '全部候選', hits: '明顯準確', misses: '明顯不準' };
     state.selection = {
       kind: 'registered_strategy_scope',
       value: evaluation.strategyId,
@@ -322,7 +361,11 @@
     clearCaseControls();
     renderCases();
     const caseNote = document.getElementById('caseNote');
-    if (caseNote) caseNote.textContent = `顯示「${evaluation.label}」${labels[scope]}，不再套用一般覆盤的明顯準確／明顯不準分類。`;
+    if (caseNote) {
+      caseNote.textContent = evaluation.strategyId === 'oversold_margin_exit_rebound_v1'
+        ? `顯示「${evaluation.label}」${labels[scope]}；明顯準確只代表當日已有「跌深反彈」標籤，不再等待五個交易日。`
+        : `顯示「${evaluation.label}」${labels[scope]}，使用該固定策略自己的驗證目標。`;
+    }
     section.querySelectorAll('.formal-strategy-action').forEach(button => {
       const active = button.dataset.strategy === evaluation.strategyId && button.dataset.scope === scope;
       button.classList.toggle('active', active);
@@ -333,7 +376,9 @@
 
   function renderSection(readiness, evaluations) {
     selectionMembers.clear();
+    strategyEvaluations.clear();
     for (const evaluation of evaluations) {
+      strategyEvaluations.set(evaluation.strategyId, evaluation);
       selectionMembers.set(`${evaluation.strategyId}:candidates`, new Set(evaluation.members));
       selectionMembers.set(`${evaluation.strategyId}:hits`, new Set(evaluation.hitMembers));
       selectionMembers.set(`${evaluation.strategyId}:misses`, new Set(evaluation.missMembers));
