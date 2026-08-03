@@ -9,6 +9,7 @@ on:
       - 'scripts/generate_etf_market_regime_data.js'
       - 'scripts/apply_etf_corporate_actions.js'
       - 'scripts/update_public_index_etf_market_regime_analysis.js'
+      - 'scripts/prepare_pages_site.sh'
       - 'public/etf-market-regime-analysis.html'
       - 'public/assets/etf-market-regime-analysis.js'
       - 'tests/etf_market_regime_analysis.test.js'
@@ -24,6 +25,7 @@ on:
       - 'scripts/generate_etf_market_regime_data.js'
       - 'scripts/apply_etf_corporate_actions.js'
       - 'scripts/update_public_index_etf_market_regime_analysis.js'
+      - 'scripts/prepare_pages_site.sh'
       - 'public/etf-market-regime-analysis.html'
       - 'public/assets/etf-market-regime-analysis.js'
       - 'tests/etf_market_regime_analysis.test.js'
@@ -160,11 +162,11 @@ jobs:
           fi
 
   deploy:
-    name: Deploy refreshed ETF research to Pages
+    name: Deploy refreshed repository-root compatible site
     needs: build
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     concurrency:
       group: github-pages
       cancel-in-progress: true
@@ -177,13 +179,16 @@ jobs:
         with:
           ref: main
 
+      - name: Prepare Pages artifact
+        run: bash scripts/prepare_pages_site.sh . _site
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload public directory
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: public
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
