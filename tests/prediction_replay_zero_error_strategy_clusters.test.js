@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const {
   buildStrategyFailureGroups,
   buildCanonicalStrategyGroups,
+  canonicalStrategySelection,
 } = require('../public/prediction-replay-zero-error-strategy-enhancement');
 
 test('keeps general strategy tags with zero obvious direction misses', () => {
@@ -101,4 +102,16 @@ test('removes registered strategy labels from generic direction clusters', () =>
 
   const groups = buildStrategyFailureGroups(rows, ['跌深反彈電子股']);
   assert.deepEqual(groups.map(item => item.name), ['技術強勢']);
+});
+
+test('builds an all-candidate selection for a fixed strategy name click', () => {
+  assert.deepEqual(canonicalStrategySelection({
+    strategy_id: 'oversold_margin_exit_rebound_v1',
+    name: '融資退場型跌深反彈',
+  }), {
+    kind: 'registered_strategy_scope',
+    value: 'oversold_margin_exit_rebound_v1',
+    label: '融資退場型跌深反彈－全部候選',
+    scope: 'candidates',
+  });
 });
