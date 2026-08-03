@@ -6,6 +6,7 @@ on:
     paths:
       - 'config/strategy-tag-registry.json'
       - 'scripts/strategy_tag_engine.js'
+      - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
   workflow_dispatch:
@@ -35,8 +36,10 @@ on:
     paths:
       - 'config/strategy-tag-registry.json'
       - 'scripts/strategy_tag_engine.js'
+      - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'tests/strategy_tag_engine.test.js'
+      - 'tests/strategy_tag_source_enrichment.test.js'
       - 'tests/apply_strategy_tag_registry.test.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
 
@@ -62,8 +65,12 @@ jobs:
       - name: Validate registry and engine
         run: |
           node --check scripts/strategy_tag_engine.js
+          node --check scripts/strategy_tag_source_enrichment.js
           node --check scripts/apply_strategy_tag_registry.js
-          node --test tests/strategy_tag_engine.test.js tests/apply_strategy_tag_registry.test.js
+          node --test \
+            tests/strategy_tag_engine.test.js \
+            tests/strategy_tag_source_enrichment.test.js \
+            tests/apply_strategy_tag_registry.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
 
   apply:
