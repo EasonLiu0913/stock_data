@@ -9,6 +9,7 @@ const ROOT = path.resolve(__dirname, '..');
 const PREDICTION_ROOT = path.join(ROOT, 'data_predictions');
 const GENERATOR = path.join(__dirname, 'generate_prediction_dashboard_data.js');
 const FORMAL_TAGGER = path.join(__dirname, 'apply_formal_market_strategy_tags.js');
+const DISPOSITION_ANNOTATOR = path.join(__dirname, 'annotate_prediction_disposition_stocks.js');
 const TAG_STRATEGY_ENGINE = path.join(__dirname, 'prediction_tag_strategy_engine.js');
 const TAG_STRATEGY_REPLAY = path.join(__dirname, 'evaluate_tag_strategy_replay.js');
 const GROUP_SYNC = path.join(__dirname, 'sync_prediction_dashboard_groups.js');
@@ -119,6 +120,10 @@ function main(argv = process.argv.slice(2)) {
     const constraintArgs = ['--date', date, '--evaluate-replay-if-present'];
     if (options.dryRun) constraintArgs.push('--dry-run');
     runNodeScript(OFFICIAL_CONSTRAINTS, constraintArgs, 'official market constraint integration', date);
+
+    const dispositionArgs = ['--date', date];
+    if (options.dryRun) dispositionArgs.push('--dry-run');
+    runNodeScript(DISPOSITION_ANNOTATOR, dispositionArgs, 'disposition stock annotation', date);
 
     const tagStrategyArgs = ['--date', date, '--mode', 'live_snapshot'];
     if (options.dryRun) tagStrategyArgs.push('--dry-run');
