@@ -170,6 +170,17 @@ function stableJson(payload) {
   return JSON.stringify(payload);
 }
 
+function withoutOutcomeUpdatedAt(payload) {
+  if (!payload?.five_day_intraday_outcome) return payload;
+  return {
+    ...payload,
+    five_day_intraday_outcome: {
+      ...payload.five_day_intraday_outcome,
+      updated_at: null,
+    },
+  };
+}
+
 function backfillFiveDayOutcomes(predictionDate, options = {}) {
   const workspaceRoot = path.resolve(options.workspaceRoot || ROOT);
   const date = compactDate(predictionDate);
@@ -211,7 +222,6 @@ function backfillFiveDayOutcomes(predictionDate, options = {}) {
     }));
   }
 
-  const updatedAt = new Date().toISOString();
   const applyOutcome = row => {
     const outcome = outcomes.get(String(row.stock_code || '')) || {
       status: 'replay_row_unavailable',
@@ -233,43 +243,56 @@ function backfillFiveDayOutcomes(predictionDate, options = {}) {
       } : row.actual,
     };
   };
-  const nextReplay = {
-    ...replay,
-    five_day_intraday_outcome: {
-      window_size: WINDOW_SIZE,
-      window_dates: dates,
-      updated_at: updatedAt,
-      corporate_action_check_status: actions.status,
-      corporate_action_source_file: actions.sourceFile
-        ? path.relative(workspaceRoot, actions.sourceFile).replaceAll(path.sep, '/')
-        : null,
-    },
-    rows: replay.rows.map(applyOutcome),
-  };
-  const nextDashboard = {
-    ...dashboard,
-    five_day_intraday_outcome: nextReplay.five_day_intraday_outcome,
-    rows: dashboard.rows.map(applyOutcome),
-  };
   const outcomeRows = [...outcomes.values()];
   const completedRows = outcomeRows.filter(item => item.status.startsWith('completed'));
-  const nextSummary = {
-    ...summary,
-    five_day_intraday_outcome: {
-      ...nextReplay.five_day_intraday_outcome,
-      total_count: outcomeRows.length,
-      completed_count: completedRows.length,
-      unavailable_count: outcomeRows.length - completedRows.length,
-      hit_10pct_count: completedRows.filter(item => item.max_return_5d >= 10).length,
-      hit_10pct_rate: round(completedRows.length
-        ? completedRows.filter(item => item.max_return_5d >= 10).length / completedRows.length * 100
-        : null),
-      unavailable_by_status: Object.fromEntries([...new Set(outcomeRows
-        .filter(item => !item.status.startsWith('completed'))
-        .map(item => item.status))].map(status => [status, outcomeRows.filter(item => item.status === status).length])),
-    },
+  const commonMetadata = {
+    window_size: WINDOW_SIZE,
+    window_dates: dates,
+    corporate_action_check_status: actions.status,
+    corporate_action_source_file: actions.sourceFile
+      ? path.relative(workspaceRoot, actions.sourceFile).replaceAll(path.sep, '/')
+      : null,
+  };
+  const existingUpdatedAt = replay.five_day_intraday_outcome?.updated_at
+    || dashboard.five_day_intraday_outcome?.updated_at
+    || summary.five_day_intraday_outcome?.updated_at
+    || null;
+  const buildPayloads = updatedAt => {
+    const metadata = { ...commonMetadata, updated_at: updatedAt };
+    const nextReplay = {
+      ...replay,
+      five_day_intraday_outcome: metadata,
+      rows: replay.rows.map(applyOutcome),
+    };
+    const nextDashboard = {
+      ...dashboard,
+      five_day_intraday_outcome: metadata,
+      rows: dashboard.rows.map(applyOutcome),
+    };
+    const hitCount = completedRows.filter(item => item.max_return_5d >= 10).length;
+    const nextSummary = {
+      ...summary,
+      five_day_intraday_outcome: {
+        ...metadata,
+        total_count: outcomeRows.length,
+        completed_count: completedRows.length,
+        unavailable_count: outcomeRows.length - completedRows.length,
+        hit_10pct_count: hitCount,
+        hit_10pct_rate: round(completedRows.length ? hitCount / completedRows.length * 100 : null),
+        unavailable_by_status: Object.fromEntries([...new Set(outcomeRows
+          .filter(item => !item.status.startsWith('completed'))
+          .map(item => item.status))].map(status => [status, outcomeRows.filter(item => item.status === status).length])),
+      },
+    };
+    return { nextReplay, nextDashboard, nextSummary };
   };
 
+  const provisional = buildPayloads(existingUpdatedAt);
+  const contentChanged = stableJson(withoutOutcomeUpdatedAt(replay)) !== stableJson(withoutOutcomeUpdatedAt(provisional.nextReplay))
+    || stableJson(withoutOutcomeUpdatedAt(dashboard)) !== stableJson(withoutOutcomeUpdatedAt(provisional.nextDashboard))
+    || stableJson(withoutOutcomeUpdatedAt(summary)) !== stableJson(withoutOutcomeUpdatedAt(provisional.nextSummary));
+  const updatedAt = contentChanged || !existingUpdatedAt ? new Date().toISOString() : existingUpdatedAt;
+  const { nextReplay, nextDashboard, nextSummary } = buildPayloads(updatedAt);
   const changed = stableJson(replay) !== stableJson(nextReplay)
     || stableJson(dashboard) !== stableJson(nextDashboard)
     || stableJson(summary) !== stableJson(nextSummary);
@@ -331,6 +354,8 @@ module.exports = {
   rocDateToCompact,
   corporateActionDates,
   outcomeForStock,
+  stableJson,
+  withoutOutcomeUpdatedAt,
   backfillFiveDayOutcomes,
   main,
 };
