@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_INDEX = path.join(ROOT, 'public', 'index.html');
+// Keep the dashboard entry stable so repeated data refreshes remain idempotent.
 const ENTRY = "            { file: 'etf-market-regime-analysis.html', title: '0050／0052／00631L 持有與市場情境比較', description: '自選日期區間，比較三檔 ETF 的持有報酬、風險與資產差異，並切換持續上漲、持續下跌、區間震盪、緩慢上漲與緩慢下跌情境。' },";
 
 function injectEntry(source) {
