@@ -1,0 +1,117 @@
+name: '[07 研究] ETF 持有與市場情境比較'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-etf-market-regime-analysis.yml'
+      - 'scripts/generate_etf_market_regime_data.js'
+      - 'scripts/update_public_index_etf_market_regime_analysis.js'
+      - 'public/etf-market-regime-analysis.html'
+      - 'public/assets/etf-market-regime-analysis.js'
+      - 'tests/etf_market_regime_analysis.test.js'
+      - 'tests/generate_etf_market_regime_data.test.js'
+      - 'tests/update_public_index_etf_market_regime_analysis.test.js'
+      - 'data_twse_market_chart/market_chart.json'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-etf-market-regime-analysis.yml'
+      - 'scripts/generate_etf_market_regime_data.js'
+      - 'scripts/update_public_index_etf_market_regime_analysis.js'
+      - 'public/etf-market-regime-analysis.html'
+      - 'public/assets/etf-market-regime-analysis.js'
+      - 'tests/etf_market_regime_analysis.test.js'
+      - 'tests/generate_etf_market_regime_data.test.js'
+      - 'tests/update_public_index_etf_market_regime_analysis.test.js'
+  workflow_dispatch:
+  schedule:
+    - cron: '45 10 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-etf-market-regime-analysis-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate analysis code
+        run: |
+          node --check public/assets/etf-market-regime-analysis.js
+          node --check scripts/generate_etf_market_regime_data.js
+          node --check scripts/update_public_index_etf_market_regime_analysis.js
+          node --test \
+            tests/etf_market_regime_analysis.test.js \
+            tests/generate_etf_market_regime_data.test.js \
+            tests/update_public_index_etf_market_regime_analysis.test.js
+
+      - name: Build ETF market regime data
+        run: |
+          node scripts/generate_etf_market_regime_data.js
+          node scripts/update_public_index_etf_market_regime_analysis.js
+
+      - name: Verify generated data
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('public/data/etf-market-regime-analysis/data.json', 'utf8'));
+          if (!Array.isArray(payload.rows) || payload.rows.length < 2) throw new Error('ETF analysis rows are missing');
+          if (!Array.isArray(payload.etfs) || payload.etfs.length !== 3) throw new Error('ETF definitions are incomplete');
+          if (!payload.rows.every(row => row.marketClose > 0 && row.etf0050AdjustedClose > 0 && row.etf0052AdjustedClose > 0 && row.etf00631LAdjustedClose > 0)) {
+            throw new Error('ETF analysis contains invalid prices');
+          }
+          console.log(`Verified ${payload.rows.length} aligned trading days: ${payload.startDate} - ${payload.endDate}`);
+          NODE
+
+      - name: Verify changed-file scope
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          unexpected=$(git status --short --untracked-files=all | awk '
+            $2 != "public/data/etf-market-regime-analysis/data.json" &&
+            $2 != "public/index.html" { print }
+          ')
+          if [ -n "$unexpected" ]; then
+            echo 'Unexpected generated files:'
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit refreshed research data
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/data/etf-market-regime-analysis/data.json public/index.html
+          if git diff --cached --quiet; then
+            echo 'No ETF analysis data changes'
+            exit 0
+          fi
+          git commit -m 'data: refresh ETF market regime analysis'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed"
+            sleep $((attempt * 5))
+          done
+          exit 1
