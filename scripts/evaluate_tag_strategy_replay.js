@@ -21,6 +21,10 @@ const VERSIONED_SNAPSHOT_MANIFEST = path.join(
   'strategy-snapshots',
   'manifest.json',
 );
+const SAME_DAY_REBOUND_STRATEGY_IDS = new Set([
+  'oversold_margin_exit_rebound_v1',
+]);
+const SAME_DAY_REBOUND_TAG = '跌深反彈';
 
 function finiteNumber(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -42,6 +46,20 @@ function median(values) {
 
 function rowReturn(row) {
   return finiteNumber(row?.actual?.close_return);
+}
+
+function normalizedEvaluationTarget(definition = {}) {
+  if (SAME_DAY_REBOUND_STRATEGY_IDS.has(String(definition.strategy_id || ''))) {
+    return 'close_return_gt_5';
+  }
+  return definition.evaluation_target || null;
+}
+
+function addSameDayReboundTag(row, hit) {
+  if (!row?.actual || hit !== true) return;
+  const tags = new Set(Array.isArray(row.actual.pattern_tags) ? row.actual.pattern_tags : []);
+  tags.add(SAME_DAY_REBOUND_TAG);
+  row.actual.pattern_tags = [...tags];
 }
 
 function hitForTarget(row, target) {
@@ -87,15 +105,20 @@ function evaluateStrategyClassification(definition, classification, replayRows, 
   const replayByCode = new Map((Array.isArray(replayRows) ? replayRows : [])
     .map(row => [String(row.stock_code), row]));
   const marketReturn = finiteNumber(actualEnvironment?.actual_environment?.metrics?.equal_weight_market_return);
+  const evaluationTarget = normalizedEvaluationTarget(definition);
+  const sameDayReboundStrategy = SAME_DAY_REBOUND_STRATEGY_IDS.has(String(definition.strategy_id || ''));
   const stocks = [...memberCodes].map(code => {
     const row = replayByCode.get(code) || null;
     const closeReturn = rowReturn(row);
-    const hit = hitForTarget(row, definition.evaluation_target);
+    const hit = hitForTarget(row, evaluationTarget);
+    if (sameDayReboundStrategy) addSameDayReboundTag(row, hit);
     return {
       stock_code: code,
       stock_name: row?.stock_name || row?.prediction?.stock_name || null,
       verified: hit !== null,
       hit,
+      verification_label: hit === true ? '明顯準確' : hit === false ? '明顯不準' : '尚未驗證',
+      outcome_tags: sameDayReboundStrategy && hit === true ? [SAME_DAY_REBOUND_TAG] : [],
       close_return: closeReturn,
       max_return_5d: finiteNumber(row?.actual?.max_return_5d),
       max_return_5d_status: row?.actual?.max_return_5d_status || null,
@@ -110,6 +133,9 @@ function evaluateStrategyClassification(definition, classification, replayRows, 
   const misses = verified.filter(item => item.hit === false);
   const returns = verified.map(item => item.close_return).filter(Number.isFinite);
   const excessReturns = verified.map(item => item.market_excess_return).filter(Number.isFinite);
+  const calculationStatus = sameDayReboundStrategy && memberCodes.size
+    ? 'completed'
+    : classification?.calculation_status || 'completed';
   return {
     strategy_id: definition.strategy_id,
     strategy_family_id: definition.family_id,
@@ -117,9 +143,9 @@ function evaluateStrategyClassification(definition, classification, replayRows, 
     label: definition.label,
     description: definition.description || '',
     source_mode: definition.source_mode || 'tag_expression',
-    evaluation_target: definition.evaluation_target || null,
+    evaluation_target: evaluationTarget,
     evaluation_mode: classification?.evaluation_mode || 'live_snapshot',
-    calculation_status: classification?.calculation_status || 'completed',
+    calculation_status: calculationStatus,
     candidates: classification?.count ?? null,
     verified_candidates: verified.length,
     hits: hits.length,
@@ -472,10 +498,14 @@ if (require.main === module) {
 
 module.exports = {
   VERSIONED_SNAPSHOT_MANIFEST,
+  SAME_DAY_REBOUND_STRATEGY_IDS,
+  SAME_DAY_REBOUND_TAG,
   finiteNumber,
   average,
   median,
   rowReturn,
+  normalizedEvaluationTarget,
+  addSameDayReboundTag,
   hitForTarget,
   annotateDispositionInMemory,
   evaluateStrategyClassification,
