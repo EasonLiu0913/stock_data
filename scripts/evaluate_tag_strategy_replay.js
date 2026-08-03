@@ -14,6 +14,13 @@ const {
   buildTagStrategySnapshot,
   compactDate,
 } = require('./prediction_tag_strategy_engine');
+const {
+  SAME_DAY_REBOUND_STRATEGY_IDS,
+  isSameDayReboundStrategy,
+  policyForDate,
+  policyForTarget,
+  hitForCloseReturn,
+} = require('../public/rebound-evaluation-policy');
 
 const VERSIONED_SNAPSHOT_MANIFEST = path.join(
   ROOT,
@@ -21,9 +28,6 @@ const VERSIONED_SNAPSHOT_MANIFEST = path.join(
   'strategy-snapshots',
   'manifest.json',
 );
-const SAME_DAY_REBOUND_STRATEGY_IDS = new Set([
-  'oversold_margin_exit_rebound_v1',
-]);
 const SAME_DAY_REBOUND_TAG = '跌深反彈';
 
 function finiteNumber(value) {
@@ -48,9 +52,9 @@ function rowReturn(row) {
   return finiteNumber(row?.actual?.close_return);
 }
 
-function normalizedEvaluationTarget(definition = {}) {
-  if (SAME_DAY_REBOUND_STRATEGY_IDS.has(String(definition.strategy_id || ''))) {
-    return 'close_return_gt_5';
+function normalizedEvaluationTarget(definition = {}, replayDate = '') {
+  if (isSameDayReboundStrategy(definition.strategy_id)) {
+    return policyForDate(replayDate).evaluation_target;
   }
   return definition.evaluation_target || null;
 }
@@ -62,7 +66,7 @@ function addSameDayReboundTag(row, hit) {
   row.actual.pattern_tags = [...tags];
 }
 
-function hitForTarget(row, target) {
+function hitForTarget(row, target, replayDate = '') {
   if (target === 'intraday_rebound_5d_10pct') {
     const status = String(row?.actual?.max_return_5d_status || '');
     const value = finiteNumber(row?.actual?.max_return_5d);
@@ -73,9 +77,10 @@ function hitForTarget(row, target) {
   if (target === 'relative_leadership') {
     return row?.market_relative?.classification === 'relative_leadership';
   }
-  if (target === 'close_return_gt_5') {
-    const value = rowReturn(row);
-    return Number.isFinite(value) ? value > 5 : null;
+  const reboundPolicy = policyForTarget(target);
+  if (reboundPolicy) return hitForCloseReturn(rowReturn(row), reboundPolicy);
+  if (target === 'close_return_gte_4') {
+    return hitForCloseReturn(rowReturn(row), policyForDate(replayDate));
   }
   return null;
 }
@@ -100,17 +105,24 @@ function annotateDispositionInMemory(summary, date) {
   };
 }
 
-function evaluateStrategyClassification(definition, classification, replayRows, actualEnvironment = null) {
+function evaluateStrategyClassification(
+  definition,
+  classification,
+  replayRows,
+  actualEnvironment = null,
+  replayDate = '',
+) {
   const memberCodes = new Set((classification?.members || []).map(String));
   const replayByCode = new Map((Array.isArray(replayRows) ? replayRows : [])
     .map(row => [String(row.stock_code), row]));
   const marketReturn = finiteNumber(actualEnvironment?.actual_environment?.metrics?.equal_weight_market_return);
-  const evaluationTarget = normalizedEvaluationTarget(definition);
-  const sameDayReboundStrategy = SAME_DAY_REBOUND_STRATEGY_IDS.has(String(definition.strategy_id || ''));
+  const evaluationTarget = normalizedEvaluationTarget(definition, replayDate);
+  const sameDayReboundStrategy = isSameDayReboundStrategy(definition.strategy_id);
+  const evaluationPolicy = sameDayReboundStrategy ? policyForDate(replayDate) : null;
   const stocks = [...memberCodes].map(code => {
     const row = replayByCode.get(code) || null;
     const closeReturn = rowReturn(row);
-    const hit = hitForTarget(row, evaluationTarget);
+    const hit = hitForTarget(row, evaluationTarget, replayDate);
     if (sameDayReboundStrategy) addSameDayReboundTag(row, hit);
     return {
       stock_code: code,
@@ -144,6 +156,11 @@ function evaluateStrategyClassification(definition, classification, replayRows, 
     description: definition.description || '',
     source_mode: definition.source_mode || 'tag_expression',
     evaluation_target: evaluationTarget,
+    evaluation_policy_id: evaluationPolicy?.policy_id || null,
+    evaluation_policy_version: evaluationPolicy?.version || null,
+    evaluation_operator: evaluationPolicy?.operator || null,
+    evaluation_threshold_percent: evaluationPolicy?.threshold_percent ?? null,
+    evaluation_target_label: evaluationPolicy?.label || null,
     evaluation_mode: classification?.evaluation_mode || 'live_snapshot',
     calculation_status: calculationStatus,
     candidates: classification?.count ?? null,
@@ -173,6 +190,11 @@ function replayGroup(evaluation) {
     source_mode: evaluation.source_mode,
     calculation_status: evaluation.calculation_status,
     evaluation_target: evaluation.evaluation_target,
+    evaluation_policy_id: evaluation.evaluation_policy_id,
+    evaluation_policy_version: evaluation.evaluation_policy_version,
+    evaluation_operator: evaluation.evaluation_operator,
+    evaluation_threshold_percent: evaluation.evaluation_threshold_percent,
+    evaluation_target_label: evaluation.evaluation_target_label,
     count: evaluation.verified_candidates,
     candidate_count: evaluation.candidates,
     verified_candidate_count: evaluation.verified_candidates,
@@ -299,7 +321,7 @@ function resolveLiveSnapshot({
   };
 }
 
-function evaluateSnapshot({ replayDashboard, actualEnvironment, snapshot, registry }) {
+function evaluateSnapshot({ replayDashboard, actualEnvironment, snapshot, registry, replayDate = '' }) {
   const definitions = new Map((registry?.strategies || []).map(item => [item.strategy_id, item]));
   const evaluations = {};
   for (const [strategyId, classification] of Object.entries(snapshot.strategy_classifications || {})) {
@@ -310,6 +332,7 @@ function evaluateSnapshot({ replayDashboard, actualEnvironment, snapshot, regist
       { ...classification, evaluation_mode: snapshot.evaluation_mode },
       replayDashboard?.rows || [],
       actualEnvironment,
+      replayDate,
     );
   }
   return evaluations;
@@ -378,7 +401,13 @@ function applyTagStrategyReplay({
     snapshotFormat = 'historical_recalculation_v1';
   }
   snapshot = filterSnapshotToStrategy(snapshot, strategyId);
-  const evaluations = evaluateSnapshot({ replayDashboard, actualEnvironment, snapshot, registry });
+  const evaluations = evaluateSnapshot({
+    replayDashboard,
+    actualEnvironment,
+    snapshot,
+    registry,
+    replayDate: compact,
+  });
 
   if (evaluationMode === 'live_snapshot') {
     syncReplayRows(replayDashboard, summary);
@@ -400,6 +429,7 @@ function applyTagStrategyReplay({
       registry_id: snapshot.registry_id || registry.registry_id || null,
       registry_fingerprint: snapshot.registry_fingerprint || registry.registry_fingerprint || null,
       evaluation_mode: snapshot.evaluation_mode,
+      rebound_evaluation_policy: policyForDate(compact),
     };
   }
 
@@ -411,6 +441,7 @@ function applyTagStrategyReplay({
     evaluation_mode: evaluationMode,
     data_as_of: compactDate(snapshot.data_as_of || summary.base_trade_date),
     registry,
+    rebound_evaluation_policy: policyForDate(compact),
     snapshot_format: snapshotFormat,
     disposition_annotation: dispositionAnnotation,
     evaluations,
@@ -426,7 +457,7 @@ function applyTagStrategyReplay({
         : null,
     },
     note: evaluationMode === 'live_snapshot'
-      ? '候選資格使用預測當時保存的版本化標籤與策略快照。'
+      ? '候選資格使用預測當時保存的版本化標籤與策略快照；反彈結果依覆盤日適用的版本化驗證規則判定。'
       : '候選資格使用指定策略版本，以各歷史日期當時可得資料重新計算；不覆蓋 live snapshot。',
   };
   const outputRoot = evaluationMode === 'live_snapshot'
@@ -446,6 +477,7 @@ function applyTagStrategyReplay({
   return {
     date: compact,
     evaluation_mode: evaluationMode,
+    rebound_evaluation_policy: policyForDate(compact),
     snapshot_format: snapshotFormat,
     snapshot_file: resolvedSnapshotFile
       ? path.relative(ROOT, resolvedSnapshotFile).replaceAll(path.sep, '/')
