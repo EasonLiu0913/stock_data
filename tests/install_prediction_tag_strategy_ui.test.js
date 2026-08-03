@@ -9,6 +9,7 @@ const vm = require('node:vm');
 const {
   TARGETS,
   injectScript,
+  injectPageAdapter,
   install,
 } = require('../scripts/install_prediction_tag_strategy_ui');
 const predictionUi = require('../public/prediction-tag-strategy-enhancement');
@@ -16,15 +17,39 @@ const replayUi = require('../public/prediction-replay-tag-strategy-enhancement')
 
 test('injectScript upgrades an existing version and keeps one reference', () => {
   const source = '<!doctype html><html><body><script src="prediction-tag-strategy-enhancement.js?v=1"></script></body></html>';
-  const updated = injectScript(source, 'prediction-tag-strategy-enhancement.js?v=2');
-  assert.match(updated, /prediction-tag-strategy-enhancement\.js\?v=2/);
+  const updated = injectScript(source, 'prediction-tag-strategy-enhancement.js?v=3');
+  assert.match(updated, /prediction-tag-strategy-enhancement\.js\?v=3/);
   assert.equal((updated.match(/prediction-tag-strategy-enhancement\.js/g) || []).length, 1);
 });
 
-test('installer targets prediction and replay content pages and is idempotent', () => {
+test('group and industry adapters expose shared quick-filter hooks', () => {
+  const groupSource = `<main><div class="topbar"></div><section class="grid group-grid"></section></main><script>
+    let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];
+    function renderStocks(){const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));}
+  </script>`;
+  const group = injectPageAdapter(groupSource, 'prediction-groups.html');
+  assert.match(group, /function matchesTagStrategyFilter\(stock\)/);
+  assert.match(group, /matchesTagStrategyFilter\(s\)&&memberSet\.has/);
+  assert.match(group, /id="marketEnvironmentBanner"/);
+
+  const industrySource = `<main><div class="topbar"></div><section class="grid layout"></section></main><script>
+    let dashboard, basePriceData=null, selected, currentManifest;
+    function renderIndustry(){const rows=dashboard.stocks.filter(s=>s.industry===selected.industry);}
+  </script>`;
+  const industry = injectPageAdapter(industrySource, 'prediction-industry-dashboard.html');
+  assert.match(industry, /function matchesTagStrategyFilter\(stock\)/);
+  assert.match(industry, /matchesTagStrategyFilter\(s\)&&s\.industry===selected\.industry/);
+  assert.match(industry, /id="marketEnvironmentBanner"/);
+});
+
+test('installer targets all prediction content pages and is idempotent', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-strategy-ui-'));
+  const fixtures = {
+    'prediction-groups.html': '<html><body><main><section class="grid group-grid"></section></main><script>let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];function renderStocks(){const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));}</script></body></html>',
+    'prediction-industry-dashboard.html': '<html><body><main><section class="grid layout"></section></main><script>let dashboard, basePriceData=null, selected, currentManifest;function renderIndustry(){const rows=dashboard.stocks.filter(s=>s.industry===selected.industry);}</script></body></html>',
+  };
   for (const filename of Object.keys(TARGETS)) {
-    fs.writeFileSync(path.join(directory, filename), '<html><body><main></main></body></html>');
+    fs.writeFileSync(path.join(directory, filename), fixtures[filename] || '<html><body><main></main></body></html>');
   }
   const first = install(directory);
   const second = install(directory);
