@@ -119,18 +119,22 @@ jobs:
         run: node scripts/evaluate_tag_strategy_replay.js --date "${{ inputs.replay_date }}"
       - name: Commit repaired replay and five-day outcomes
         shell: bash
+        env:
+          DATE: ${{ inputs.replay_date }}
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            "data_predictions/${{ inputs.replay_date }}" \
-            "data_prediction_analysis/tag-strategy/${{ inputs.replay_date }}.json"
+          git add "data_predictions/$DATE"
+          strategy_output="data_prediction_analysis/tag-strategy/$DATE.json"
+          if [ -e "$strategy_output" ]; then
+            git add "$strategy_output"
+          fi
           if git diff --cached --quiet; then
             echo 'No replay repair or five-day changes'
             exit 0
           fi
-          git commit -m "data: repair and backfill five-day replay outcome for ${{ inputs.replay_date }}"
+          git commit -m "data: repair and backfill five-day replay outcome for $DATE"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
