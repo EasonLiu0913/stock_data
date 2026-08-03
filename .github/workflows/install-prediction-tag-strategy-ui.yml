@@ -9,6 +9,8 @@ on:
       - 'public/prediction-tag-strategy-enhancement.js'
       - 'public/prediction-replay-tag-strategy-enhancement.js'
       - 'public/prediction-dashboard.html'
+      - 'public/prediction-groups.html'
+      - 'public/prediction-industry-dashboard.html'
       - 'public/prediction-replay-dashboard-view.html'
       - 'tests/install_prediction_tag_strategy_ui.test.js'
   pull_request:
@@ -19,6 +21,8 @@ on:
       - 'public/prediction-tag-strategy-enhancement.js'
       - 'public/prediction-replay-tag-strategy-enhancement.js'
       - 'public/prediction-dashboard.html'
+      - 'public/prediction-groups.html'
+      - 'public/prediction-industry-dashboard.html'
       - 'public/prediction-replay-dashboard-view.html'
       - 'tests/install_prediction_tag_strategy_ui.test.js'
   workflow_dispatch:
@@ -58,7 +62,11 @@ jobs:
         shell: bash
         run: |
           grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-dashboard.html
+          grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-groups.html
+          grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-industry-dashboard.html
           grep -q 'prediction-replay-tag-strategy-enhancement.js' public/prediction-replay-dashboard-view.html
+          grep -q 'function matchesTagStrategyFilter(stock)' public/prediction-groups.html
+          grep -q 'function matchesTagStrategyFilter(stock)' public/prediction-industry-dashboard.html
 
       - name: Verify changed-file scope
         if: github.event_name != 'pull_request'
@@ -66,6 +74,8 @@ jobs:
         run: |
           unexpected=$(git status --short --untracked-files=all | awk '
             $2 != "public/prediction-dashboard.html" &&
+            $2 != "public/prediction-groups.html" &&
+            $2 != "public/prediction-industry-dashboard.html" &&
             $2 != "public/prediction-replay-dashboard-view.html" { print }
           ')
           if [ -n "$unexpected" ]; then
@@ -80,7 +90,11 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/prediction-dashboard.html public/prediction-replay-dashboard-view.html
+          git add \
+            public/prediction-dashboard.html \
+            public/prediction-groups.html \
+            public/prediction-industry-dashboard.html \
+            public/prediction-replay-dashboard-view.html
           if git diff --cached --quiet; then
             echo 'Tag strategy UI references already installed'
             exit 0
