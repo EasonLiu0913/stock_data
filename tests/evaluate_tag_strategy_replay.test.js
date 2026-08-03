@@ -7,6 +7,8 @@ const path = require('node:path');
 const test = require('node:test');
 const {
   hitForTarget,
+  normalizedEvaluationTarget,
+  evaluateStrategyClassification,
   normalizeSnapshotRegistry,
   resolveLiveSnapshot,
   safeSnapshotPath,
@@ -109,6 +111,53 @@ test('evaluates the five-day intraday rebound target only when the window is com
       max_return_5d: 12,
     },
   }, 'intraday_rebound_5d_10pct'), null);
+});
+
+test('corrects margin exit rebound to same-day verification and adds the rebound tag', () => {
+  const definition = {
+    strategy_id: 'oversold_margin_exit_rebound_v1',
+    family_id: 'oversold_margin_exit_rebound',
+    version: 1,
+    label: '融資退場型跌深反彈',
+    evaluation_target: 'intraday_rebound_5d_10pct',
+  };
+  const rows = [
+    {
+      stock_code: '2330',
+      stock_name: '台積電',
+      verified: true,
+      actual: { close_return: 6.2, pattern_tags: ['開低走高'] },
+      market_relative: { classification: 'relative_leadership' },
+    },
+    {
+      stock_code: '2317',
+      stock_name: '鴻海',
+      verified: true,
+      actual: { close_return: 4.8, pattern_tags: ['收盤偏強'] },
+      market_relative: { classification: 'sector_driven' },
+    },
+  ];
+
+  assert.equal(normalizedEvaluationTarget(definition), 'close_return_gt_5');
+  const evaluation = evaluateStrategyClassification(definition, {
+    count: 2,
+    members: ['2330', '2317'],
+    calculation_status: 'partial',
+  }, rows);
+
+  assert.equal(evaluation.evaluation_target, 'close_return_gt_5');
+  assert.equal(evaluation.calculation_status, 'completed');
+  assert.equal(evaluation.verified_candidates, 2);
+  assert.equal(evaluation.hits, 1);
+  assert.equal(evaluation.misses, 1);
+  assert.equal(evaluation.hit_rate, 50);
+  assert.deepEqual(evaluation.hit_members, ['2330']);
+  assert.deepEqual(evaluation.miss_members, ['2317']);
+  assert.equal(evaluation.stocks[0].verification_label, '明顯準確');
+  assert.equal(evaluation.stocks[1].verification_label, '明顯不準');
+  assert.deepEqual(evaluation.stocks[0].outcome_tags, ['跌深反彈']);
+  assert.ok(rows[0].actual.pattern_tags.includes('跌深反彈'));
+  assert.ok(!rows[1].actual.pattern_tags.includes('跌深反彈'));
 });
 
 test('copies versioned atomic tags and registered strategy matches into replay rows', () => {
