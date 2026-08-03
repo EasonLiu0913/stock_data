@@ -10,6 +10,10 @@ on:
       - "normalized/**"
       - "scripts/prepare_pages_site.sh"
       - ".github/workflows/deploy-pages.yml"
+  workflow_run:
+    workflows:
+      - '[04 預測覆盤] 套用標籤與版本化策略'
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -24,6 +28,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy repository-root compatible site
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -31,8 +36,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout main
+      - name: Checkout latest main
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Prepare Pages artifact
         run: bash scripts/prepare_pages_site.sh . _site
