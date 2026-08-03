@@ -2,6 +2,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const {
+  confirmationProfile,
+  normalizePolicyState,
+} = require('./generate_actual_market_environment');
+
+const POST_SHOCK_CODES = new Set(['post_shock_day_1', 'post_shock_day_2']);
 
 function compactDate(value) {
   const normalized = String(value || '').replace(/[^0-9]/g, '');
@@ -213,9 +219,7 @@ function enrichDispositionFeatures(payload, workspaceRoot, forecastDate) {
     };
   });
   const metadata = {
-    calculation_status: complete
-      ? 'completed'
-      : source ? 'unable_to_calculate' : 'unable_to_calculate',
+    calculation_status: complete ? 'completed' : 'unable_to_calculate',
     calculation_message: complete
       ? 'TWSE 與 TPEx 官方處置資料完整，所有股票均可判定。'
       : source
@@ -237,10 +241,69 @@ function enrichDispositionFeatures(payload, workspaceRoot, forecastDate) {
   return metadata;
 }
 
+function enrichBearMarketFeatures(payload, workspaceRoot, forecastDate) {
+  const date = compactDate(forecastDate || payload?.forecast_date);
+  const sourceFile = date
+    ? path.join(workspaceRoot, 'data_market_environment', date, 'market_environment.json')
+    : '';
+  const source = sourceFile ? readJson(sourceFile, null) : null;
+  const environmentCode = source?.environment?.code || null;
+  const policyState = source
+    ? normalizePolicyState(source?.strategy_policy?.relative_leadership_momentum)
+    : null;
+  const complete = Boolean(source && environmentCode && policyState);
+  const active = complete
+    ? POST_SHOCK_CODES.has(environmentCode) && policyState === 'restricted_shadow'
+    : null;
+
+  payload.stocks = (payload.stocks || []).map(stock => {
+    const profile = confirmationProfile(stock);
+    return {
+      ...stock,
+      strategy_tag_features: {
+        ...(stock.strategy_tag_features || {}),
+        market_environment_code: complete ? environmentCode : null,
+        relative_leadership_policy_state: complete ? policyState : null,
+        bear_market_environment_active: active,
+        bear_market_confirmation_score: profile.score,
+        bear_market_confirmation_signals: profile.signals,
+        relative_strength_7d: profile.metrics.relative_strength_7d,
+      },
+    };
+  });
+
+  const metadata = {
+    calculation_status: complete ? 'completed' : 'unable_to_calculate',
+    calculation_message: complete
+      ? active
+        ? '市場環境符合衝擊後限制模式，已啟用熊市防禦標籤。'
+        : '市場環境資料完整，但目前不是衝擊後限制模式。'
+      : '缺少指定預測日期的市場環境或策略政策資料。',
+    target_date: date || null,
+    source_file: source ? `data_market_environment/${date}/market_environment.json` : null,
+    environment_code: complete ? environmentCode : null,
+    policy_state: complete ? policyState : null,
+    active,
+    total_stock_count: payload.stocks.length,
+    available_stock_count: complete ? payload.stocks.length : 0,
+    coverage_pct: payload.stocks.length ? (complete ? 100 : 0) : null,
+  };
+  payload.strategy_tag_source_metadata = {
+    ...(payload.strategy_tag_source_metadata || {}),
+    market_environment: metadata,
+  };
+  return metadata;
+}
+
 function enrichStrategyTagSources(payload, workspaceRoot, options = {}) {
+  const marketEnvironment = enrichBearMarketFeatures(
+    payload,
+    workspaceRoot,
+    options.forecastDate,
+  );
   const liquidity = enrichLiquidityFeatures(payload, workspaceRoot, options.dataAsOf);
   const disposition = enrichDispositionFeatures(payload, workspaceRoot, options.forecastDate);
-  return { liquidity, disposition };
+  return { market_environment: marketEnvironment, liquidity, disposition };
 }
 
 module.exports = {
@@ -253,5 +316,6 @@ module.exports = {
   loadLiquidityContext,
   enrichLiquidityFeatures,
   enrichDispositionFeatures,
+  enrichBearMarketFeatures,
   enrichStrategyTagSources,
 };
