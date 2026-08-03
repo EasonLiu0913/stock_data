@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-03T00:02:25.997Z",
+  "generatedAt": "2026-08-03T00:08:58.228Z",
   "startDate": "20251103",
   "endDate": "20260731",
   "tradingDayCount": 180,
@@ -39,7 +39,7 @@
   ],
   "priceBasis": {
     "holdingReturn": "adjustedClose",
-    "explanation": "持有報酬使用 Yahoo Finance 還原收盤價，納入配息與分割調整；畫面另保留原始收盤價。"
+    "explanation": "Yahoo 可用時採還原收盤價（含配息與分割調整）；Yahoo 不可用時改用專案既有富邦 SMA 日價並自動回溯調整分割，該備援不含現金配息。"
   },
   "regimeDefaults": {
     "windowDays": 20,
@@ -60,11 +60,35 @@
     }
   },
   "sources": {
-    "etfPrices": "Yahoo Finance Chart API",
+    "etfPrices": "Yahoo Finance Chart API with local data_fubon SMA fallback",
     "etfSymbols": {
       "0050": "0050.TW",
       "0052": "0052.TW",
       "00631L": "00631L.TW"
+    },
+    "localSmaFilesRead": 159,
+    "etfPriceDetails": {
+      "0050": {
+        "source": "yahoo_finance_adjusted_close",
+        "rowCount": 181,
+        "yahooError": null,
+        "localGapFillCount": 0,
+        "splitAdjustments": []
+      },
+      "0052": {
+        "source": "yahoo_finance_adjusted_close",
+        "rowCount": 181,
+        "yahooError": null,
+        "localGapFillCount": 0,
+        "splitAdjustments": []
+      },
+      "00631L": {
+        "source": "yahoo_finance_adjusted_close",
+        "rowCount": 181,
+        "yahooError": null,
+        "localGapFillCount": 0,
+        "splitAdjustments": []
+      }
     }
   },
   "rows": [
