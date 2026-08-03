@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -70,12 +71,19 @@ function validateRegistry(registry) {
   const tagIds = new Set();
   for (const tag of registry.tags) {
     if (!tag.tag_id || tagIds.has(tag.tag_id)) throw new Error(`Duplicate or missing tag_id: ${tag.tag_id}`);
+    if (!Number.isInteger(tag.version) || tag.version < 1) throw new Error(`Invalid tag version: ${tag.tag_id}`);
     tagIds.add(tag.tag_id);
+    for (const id of [...(tag.expression?.all || []), ...(tag.expression?.any || []), ...(tag.expression?.not || [])]) {
+      if (!tagIds.has(id)) throw new Error(`Tag ${tag.tag_id} references unknown or later tag ${id}`);
+    }
   }
   const strategyIds = new Set();
   for (const strategy of registry.strategies) {
     if (!strategy.strategy_id || strategyIds.has(strategy.strategy_id)) {
       throw new Error(`Duplicate or missing strategy_id: ${strategy.strategy_id}`);
+    }
+    if (!Number.isInteger(strategy.version) || strategy.version < 1) {
+      throw new Error(`Invalid strategy version: ${strategy.strategy_id}`);
     }
     strategyIds.add(strategy.strategy_id);
     for (const id of [...(strategy.expression?.all || []), ...(strategy.expression?.any || []), ...(strategy.expression?.not || [])]) {
@@ -83,6 +91,11 @@ function validateRegistry(registry) {
     }
   }
   return true;
+}
+
+function registryFingerprint(registry) {
+  validateRegistry(registry);
+  return crypto.createHash('sha256').update(JSON.stringify(registry)).digest('hex').slice(0, 16);
 }
 
 function evaluateStock(stock, registry) {
@@ -155,8 +168,9 @@ function buildSnapshot(payload, registry, options = {}) {
   }
 
   return {
-    schema_version: 1,
+    schema_version: 2,
     registry_id: registry.registry_id,
+    registry_fingerprint: registryFingerprint(registry),
     forecast_date: payload.forecast_date || options.forecastDate || null,
     base_trade_date: payload.base_trade_date || null,
     evaluation_mode: evaluationMode,
@@ -182,6 +196,7 @@ module.exports = {
   expressionMatches,
   legacyStrategyMatches,
   validateRegistry,
+  registryFingerprint,
   evaluateStock,
   buildSnapshot,
   loadRegistry,
