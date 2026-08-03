@@ -158,12 +158,17 @@
         const target = evaluation.target === 'close_return_gt_5'
           ? '當日收盤報酬 > 5%'
           : '依策略版本規則';
-        detail.innerHTML = `${evaluation.candidates} 檔候選 · ${evaluation.verified} 檔有效覆盤 · ${evaluation.hits} 檔策略命中 · ${evaluation.misses} 檔策略未命中<br>驗證目標：${escapeHtml(target)} · ${evaluation.verified ? '已完成' : evaluation.candidates ? '尚無可驗證結果' : '當日 0 檔'} · 點擊名稱檢視清單`;
+        const detailHtml = `${evaluation.candidates} 檔候選 · ${evaluation.verified} 檔有效覆盤 · ${evaluation.hits} 檔策略命中 · ${evaluation.misses} 檔策略未命中<br>驗證目標：${escapeHtml(target)} · ${evaluation.verified ? '已完成' : evaluation.candidates ? '尚無可驗證結果' : '當日 0 檔'} · 點擊名稱檢視清單`;
+        if (detail.innerHTML !== detailHtml) detail.innerHTML = detailHtml;
       }
       const hitRate = row.querySelector('.cluster-rate b');
-      if (hitRate) hitRate.textContent = formatPct(evaluation.hitRate);
+      if (hitRate && hitRate.textContent !== formatPct(evaluation.hitRate)) {
+        hitRate.textContent = formatPct(evaluation.hitRate);
+      }
       const misses = row.querySelector('.cluster-delta b');
-      if (misses) misses.textContent = String(evaluation.misses);
+      if (misses && misses.textContent !== String(evaluation.misses)) {
+        misses.textContent = String(evaluation.misses);
+      }
       const fill = row.querySelector('.canonical-hit-fill');
       if (fill) fill.style.width = `${Math.max(0, Math.min(100, evaluation.hitRate || 0))}%`;
     });
