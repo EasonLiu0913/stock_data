@@ -69,7 +69,10 @@ jobs:
           test -s "data_fubon/fubon_${date}_sma.json" || { echo "Actual result-day price file is not ready"; exit 1; }
 
           comparison_run=true
-          if [ "$FORCE_RUN" != "true" ] && [ -s "data_prediction_comparisons/$date/comparison.json" ]; then comparison_run=false; fi
+          if [ "$FORCE_RUN" != "true" ] \
+            && [ -s "data_prediction_comparisons/$date/comparison.json" ] \
+            && [ -s "data_predictions/$date/replay.json" ] \
+            && [ -s "data_predictions/$date/replay-dashboard.json" ]; then comparison_run=false; fi
           factor_run=false
           if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/industry-factor-ranges.json" ]; then factor_run=true; fi
           volume_run=false
@@ -101,10 +104,12 @@ jobs:
           node --check scripts/prediction_tag_strategy_engine.js
           node --check scripts/evaluate_tag_strategy_replay.js
           node --check scripts/recalculate_prediction_strategy_history.js
+          node --check scripts/backfill_prediction_replay_5d_outcomes.js
           node --test \
             tests/market_environment.test.js \
             tests/formal_strategy_replay.test.js \
-            tests/prediction_tag_strategy_engine.test.js
+            tests/prediction_tag_strategy_engine.test.js \
+            tests/backfill_prediction_replay_5d_outcomes.test.js
 
       - name: Replay V1
         if: steps.date.outputs.run == 'true'
@@ -113,6 +118,19 @@ jobs:
       - name: Replay V2 with five evaluation angles
         if: steps.date.outputs.run == 'true'
         run: node scripts/generate_prediction_replay_v2.js --date "${{ steps.date.outputs.date }}" --cost-bps 30
+
+      - name: Backfill five-day intraday outcomes
+        id: five_day
+        shell: bash
+        run: |
+          set -euo pipefail
+          result_file=$(mktemp)
+          node scripts/backfill_prediction_replay_5d_outcomes.js --date "${{ steps.date.outputs.date }}" | tee "$result_file"
+          changed=$(node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(Boolean(p.changed)));' "$result_file")
+          status=$(node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(p.status||"unknown"));' "$result_file")
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "- 五日盤中結果：$status（資料變更：$changed）" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Analyze low-volume exclusion impact
         if: steps.date.outputs.volume_run == 'true'
@@ -135,7 +153,7 @@ jobs:
         run: node scripts/evaluate_formal_strategy_replay.js --date "${{ steps.date.outputs.date }}"
 
       - name: Evaluate registered tag strategies
-        if: steps.date.outputs.tag_strategy_run == 'true'
+        if: steps.date.outputs.tag_strategy_run == 'true' || steps.five_day.outputs.changed == 'true'
         run: node scripts/evaluate_tag_strategy_replay.js --date "${{ steps.date.outputs.date }}"
 
       - name: Analyze relative leadership by market environment
@@ -143,7 +161,7 @@ jobs:
         run: node scripts/analyze_relative_leadership_by_environment.js --date "${{ steps.date.outputs.date }}" --max-dates 30
 
       - name: Commit replay comparison, environment, and analyses
-        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_run == 'true' || steps.date.outputs.volume_run == 'true' || steps.date.outputs.environment_run == 'true' || steps.date.outputs.formal_strategy_run == 'true' || steps.date.outputs.tag_strategy_run == 'true'
+        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_run == 'true' || steps.date.outputs.volume_run == 'true' || steps.date.outputs.environment_run == 'true' || steps.date.outputs.formal_strategy_run == 'true' || steps.date.outputs.tag_strategy_run == 'true' || steps.five_day.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
