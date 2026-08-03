@@ -113,7 +113,22 @@ test('evaluates the five-day intraday rebound target only when the window is com
   }, 'intraday_rebound_5d_10pct'), null);
 });
 
-test('corrects margin exit rebound to same-day verification and adds the rebound tag', () => {
+test('uses the 4-percent-or-above rebound boundary from 20260803', () => {
+  assert.equal(hitForTarget({
+    verified: true,
+    actual: { close_return: 4 },
+  }, 'close_return_gte_4', '20260803'), true);
+  assert.equal(hitForTarget({
+    verified: true,
+    actual: { close_return: 3.99 },
+  }, 'close_return_gte_4', '20260803'), false);
+  assert.equal(hitForTarget({
+    verified: true,
+    actual: { close_return: 5 },
+  }, 'close_return_gt_5', '20260802'), false);
+});
+
+test('corrects both rebound strategies to the versioned same-day verification rule', () => {
   const definition = {
     strategy_id: 'oversold_margin_exit_rebound_v1',
     family_id: 'oversold_margin_exit_rebound',
@@ -133,31 +148,46 @@ test('corrects margin exit rebound to same-day verification and adds the rebound
       stock_code: '2317',
       stock_name: '鴻海',
       verified: true,
-      actual: { close_return: 4.8, pattern_tags: ['收盤偏強'] },
+      actual: { close_return: 4, pattern_tags: ['收盤偏強'] },
+      market_relative: { classification: 'sector_driven' },
+    },
+    {
+      stock_code: '2454',
+      stock_name: '聯發科',
+      verified: true,
+      actual: { close_return: 3.99, pattern_tags: [] },
       market_relative: { classification: 'sector_driven' },
     },
   ];
 
-  assert.equal(normalizedEvaluationTarget(definition), 'close_return_gt_5');
+  assert.equal(normalizedEvaluationTarget(definition, '20260802'), 'close_return_gt_5');
+  assert.equal(normalizedEvaluationTarget(definition, '20260803'), 'close_return_gte_4');
   const evaluation = evaluateStrategyClassification(definition, {
-    count: 2,
-    members: ['2330', '2317'],
+    count: 3,
+    members: ['2330', '2317', '2454'],
     calculation_status: 'partial',
-  }, rows);
+  }, rows, null, '20260803');
 
-  assert.equal(evaluation.evaluation_target, 'close_return_gt_5');
+  assert.equal(evaluation.evaluation_target, 'close_return_gte_4');
+  assert.equal(evaluation.evaluation_policy_version, 2);
+  assert.equal(evaluation.evaluation_operator, 'gte');
+  assert.equal(evaluation.evaluation_threshold_percent, 4);
+  assert.equal(evaluation.evaluation_target_label, '當日收盤報酬 ≥ 4.00%');
   assert.equal(evaluation.calculation_status, 'completed');
-  assert.equal(evaluation.verified_candidates, 2);
-  assert.equal(evaluation.hits, 1);
+  assert.equal(evaluation.verified_candidates, 3);
+  assert.equal(evaluation.hits, 2);
   assert.equal(evaluation.misses, 1);
-  assert.equal(evaluation.hit_rate, 50);
-  assert.deepEqual(evaluation.hit_members, ['2330']);
-  assert.deepEqual(evaluation.miss_members, ['2317']);
+  assert.equal(evaluation.hit_rate, 66.67);
+  assert.deepEqual(evaluation.hit_members, ['2330', '2317']);
+  assert.deepEqual(evaluation.miss_members, ['2454']);
   assert.equal(evaluation.stocks[0].verification_label, '明顯準確');
-  assert.equal(evaluation.stocks[1].verification_label, '明顯不準');
+  assert.equal(evaluation.stocks[1].verification_label, '明顯準確');
+  assert.equal(evaluation.stocks[2].verification_label, '明顯不準');
   assert.deepEqual(evaluation.stocks[0].outcome_tags, ['跌深反彈']);
+  assert.deepEqual(evaluation.stocks[1].outcome_tags, ['跌深反彈']);
   assert.ok(rows[0].actual.pattern_tags.includes('跌深反彈'));
-  assert.ok(!rows[1].actual.pattern_tags.includes('跌深反彈'));
+  assert.ok(rows[1].actual.pattern_tags.includes('跌深反彈'));
+  assert.ok(!rows[2].actual.pattern_tags.includes('跌深反彈'));
 });
 
 test('copies versioned atomic tags and registered strategy matches into replay rows', () => {
