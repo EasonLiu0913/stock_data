@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {
+  enrichBearMarketFeatures,
   enrichDispositionFeatures,
   enrichLiquidityFeatures,
   enrichStrategyTagSources,
@@ -42,9 +43,17 @@ function fixturePayload() {
     forecast_date: '20260803',
     base_trade_date: '20260731',
     stocks: [
-      { stock_code: '2330', stock_name: '台積電' },
-      { stock_code: '2317', stock_name: '鴻海' },
-      { stock_code: '9999', stock_name: '歷史不足' },
+      {
+        stock_code: '2330',
+        stock_name: '台積電',
+        features: { volume_ratio_5d: 2.1, rsi14: 76, r1: 1, gap_sma20: 8 },
+        relative_strength_7d: { relative_strength_7d: 9 },
+        chip_bias: '偏多',
+        final_direction_label: '偏多',
+        breakout_precursor: { matched: true },
+      },
+      { stock_code: '2317', stock_name: '鴻海', features: {} },
+      { stock_code: '9999', stock_name: '歷史不足', features: {} },
     ],
   };
 }
@@ -102,7 +111,30 @@ test('incomplete or wrong-date disposition source remains unavailable', () => {
   assert.equal(payload.stocks[1].strategy_tag_features.disposition_stock, null);
 });
 
-test('combined enrichment stores both source metadata blocks', () => {
+test('bear market enrichment exposes environment and confirmation atoms', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-bear-market-'));
+  writeJson(path.join(root, 'data_market_environment', '20260803', 'market_environment.json'), {
+    environment: { code: 'post_shock_day_1' },
+    strategy_policy: { relative_leadership_momentum: 'restricted_shadow' },
+  });
+  const payload = fixturePayload();
+  const metadata = enrichBearMarketFeatures(payload, root, '20260803');
+  assert.equal(metadata.calculation_status, 'completed');
+  assert.equal(metadata.active, true);
+  assert.equal(payload.stocks[0].strategy_tag_features.bear_market_environment_active, true);
+  assert.equal(payload.stocks[0].strategy_tag_features.bear_market_confirmation_score, 8);
+  assert.equal(payload.stocks[0].strategy_tag_features.relative_strength_7d, 9);
+});
+
+test('missing market environment keeps the environment atom unavailable', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-bear-market-missing-'));
+  const payload = fixturePayload();
+  const metadata = enrichBearMarketFeatures(payload, root, '20260803');
+  assert.equal(metadata.calculation_status, 'unable_to_calculate');
+  assert.equal(payload.stocks[0].strategy_tag_features.bear_market_environment_active, null);
+});
+
+test('combined enrichment stores all source metadata blocks', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-sources-'));
   createPriceHistory(root);
   writeJson(path.join(root, 'data_market_constraints', '20260803', 'disposition.json'), {
@@ -110,13 +142,19 @@ test('combined enrichment stores both source metadata blocks', () => {
     complete_market_coverage: true,
     active_stock_codes: [],
   });
+  writeJson(path.join(root, 'data_market_environment', '20260803', 'market_environment.json'), {
+    environment: { code: 'normal' },
+    strategy_policy: { relative_leadership_momentum: 'normal' },
+  });
   const payload = fixturePayload();
   const result = enrichStrategyTagSources(payload, root, {
     forecastDate: '20260803',
     dataAsOf: '20260731',
   });
+  assert.equal(result.market_environment.calculation_status, 'completed');
   assert.equal(result.liquidity.calculation_status, 'completed');
   assert.equal(result.disposition.calculation_status, 'completed');
+  assert.ok(payload.strategy_tag_source_metadata.market_environment);
   assert.ok(payload.strategy_tag_source_metadata.liquidity);
   assert.ok(payload.strategy_tag_source_metadata.disposition);
 });
