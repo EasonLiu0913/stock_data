@@ -48,6 +48,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: strategy-tag-registry-${{ github.event_name }}-${{ github.ref }}
@@ -148,3 +150,9 @@ jobs:
             sleep $((attempt * 5))
           done
           exit 1
+
+  deploy_pages:
+    name: Deploy latest prediction data to Pages
+    needs: apply
+    if: github.event_name != 'pull_request' && needs.apply.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
