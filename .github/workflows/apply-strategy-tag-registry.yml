@@ -1,14 +1,21 @@
 name: '[04 預測覆盤] 套用標籤與版本化策略'
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'scripts/strategy_tag_engine.js'
+      - 'scripts/apply_strategy_tag_registry.js'
+      - '.github/workflows/apply-strategy-tag-registry.yml'
   workflow_dispatch:
     inputs:
       date:
-        description: '預測日期 YYYYMMDD；留空使用最新預測日期'
+        description: '預測日期 YYYYMMDD；留空使用最新有效預測日期'
         required: false
         type: string
       evaluation_mode:
-        description: 'live_snapshot 保存當時版本；historical_recalculation 用指定版本重算歷史'
+        description: 'live_snapshot 保存當時版本；historical_recalculation 用目前 registry 重算歷史'
         required: true
         type: choice
         default: live_snapshot
@@ -30,6 +37,7 @@ on:
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'tests/strategy_tag_engine.test.js'
+      - 'tests/apply_strategy_tag_registry.test.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
 
 permissions:
@@ -55,7 +63,7 @@ jobs:
         run: |
           node --check scripts/strategy_tag_engine.js
           node --check scripts/apply_strategy_tag_registry.js
-          node --test tests/strategy_tag_engine.test.js
+          node --test tests/strategy_tag_engine.test.js tests/apply_strategy_tag_registry.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
 
   apply:
@@ -85,20 +93,27 @@ jobs:
           if [ -n "${INPUT_DATE:-}" ]; then args+=(--date "$INPUT_DATE"); else args+=(--latest); fi
           if [ -n "${DATA_AS_OF:-}" ]; then args+=(--data-as-of "$DATA_AS_OF"); fi
           node scripts/apply_strategy_tag_registry.js "${args[@]}"
-      - name: Verify generated output
+      - name: Verify generated output and manifest
         run: |
-          node -e '
-            const fs=require("node:fs");
-            const path=require("node:path");
-            const roots=["data_prediction_analysis/strategy-snapshots/live_snapshot","data_prediction_analysis/strategy-snapshots/historical_recalculation"];
-            const files=roots.flatMap(root=>fs.existsSync(root)?fs.readdirSync(root).filter(f=>f.endsWith(".json")).map(f=>path.join(root,f)):[]).sort();
-            if(!files.length) throw new Error("No strategy snapshot generated");
-            const p=JSON.parse(fs.readFileSync(files.at(-1),"utf8"));
-            if(!p.tag_classifications || !p.strategy_classifications) throw new Error("Invalid strategy snapshot");
-            for(const item of Object.values(p.tag_classifications)) if(item.count===undefined) throw new Error("Tag count missing");
-            for(const item of Object.values(p.strategy_classifications)) if(item.count===undefined) throw new Error("Strategy count missing");
-          '
-      - name: Commit snapshot and enriched prediction summary
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifestFile = 'data_prediction_analysis/strategy-snapshots/manifest.json';
+          if (!fs.existsSync(manifestFile)) throw new Error('Strategy snapshot manifest missing');
+          const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+          const entries = Object.values(manifest.dates || {}).flatMap(row => [
+            row.live_snapshot,
+            ...(row.historical_recalculations || []),
+          ]).filter(Boolean);
+          if (!entries.length) throw new Error('No strategy snapshot generated');
+          for (const entry of entries) {
+            if (!fs.existsSync(entry.file)) throw new Error(`Snapshot file missing: ${entry.file}`);
+            const snapshot = JSON.parse(fs.readFileSync(entry.file, 'utf8'));
+            if (!snapshot.tag_classifications || !snapshot.strategy_classifications) throw new Error(`Invalid snapshot: ${entry.file}`);
+            for (const item of Object.values(snapshot.tag_classifications)) if (item.count === undefined) throw new Error('Tag count missing');
+            for (const item of Object.values(snapshot.strategy_classifications)) if (item.count === undefined) throw new Error('Strategy count missing');
+          }
+          NODE
+      - name: Commit snapshot and enriched live prediction summary
         shell: bash
         run: |
           set -euo pipefail
@@ -112,6 +127,7 @@ jobs:
           git commit -m 'data: apply versioned tag and strategy snapshot'
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
             sleep $((attempt * 5))
           done
           exit 1

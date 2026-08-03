@@ -6,6 +6,7 @@ const {
   evaluateRule,
   expressionMatches,
   validateRegistry,
+  registryFingerprint,
   evaluateStock,
   buildSnapshot,
 } = require('../scripts/strategy_tag_engine');
@@ -41,8 +42,18 @@ test('AND OR NOT expression semantics are deterministic', () => {
   assert.equal(expressionMatches({ all: [], any: [], not: ['b'] }, matched), false);
 });
 
-test('registry rejects unknown tag references', () => {
-  assert.throws(() => validateRegistry({ tags: [], strategies: [{ strategy_id: 'x', expression: { all: ['missing'] } }] }), /unknown tag/);
+test('registry rejects unknown tag references and invalid versions', () => {
+  assert.throws(() => validateRegistry({ tags: [], strategies: [{ strategy_id: 'x', version: 1, expression: { all: ['missing'] } }] }), /unknown tag/);
+  assert.throws(() => validateRegistry({ tags: [{ tag_id: 'x', version: 0 }], strategies: [] }), /Invalid tag version/);
+});
+
+test('registry fingerprint is stable and changes with rules', () => {
+  const first = registryFingerprint(registry);
+  const second = registryFingerprint(JSON.parse(JSON.stringify(registry)));
+  const changed = JSON.parse(JSON.stringify(registry));
+  changed.tags[0].rule.value = -10;
+  assert.equal(first, second);
+  assert.notEqual(first, registryFingerprint(changed));
 });
 
 test('stock receives atomic tags before strategy evaluation', () => {
@@ -61,6 +72,8 @@ test('fixed tags and strategies remain in snapshot when count is zero', () => {
     base_trade_date: '20260731',
     stocks: [{ stock_code: '2330', features: { r3: 1, margin_change: 10, margin_change_5d: 20 } }],
   }, registry, { generatedAt: '2026-08-03T00:00:00.000Z' });
+  assert.equal(snapshot.schema_version, 2);
+  assert.ok(snapshot.registry_fingerprint);
   assert.equal(snapshot.tag_classifications.margin_exit_v1.count, 0);
   assert.deepEqual(snapshot.tag_classifications.margin_exit_v1.members, []);
   assert.equal(snapshot.strategy_classifications.margin_rebound_v1.count, 0);

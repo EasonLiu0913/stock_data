@@ -7,8 +7,8 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const TARGETS = Object.freeze({
-  'prediction-dashboard.html': 'prediction-tag-strategy-enhancement.js?v=1',
-  'prediction-replay-dashboard-view.html': 'prediction-replay-tag-strategy-enhancement.js?v=1',
+  'prediction-dashboard.html': 'prediction-tag-strategy-enhancement.js?v=2',
+  'prediction-replay-dashboard-view.html': 'prediction-replay-tag-strategy-enhancement.js?v=2',
 });
 
 function scriptPattern(script) {
@@ -17,8 +17,9 @@ function scriptPattern(script) {
 }
 
 function injectScript(html, script) {
-  if (scriptPattern(script).test(html)) return html;
+  const pattern = scriptPattern(script);
   const tag = `<script src="${script}"></script>`;
+  if (pattern.test(html)) return html.replace(pattern, tag);
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `  ${tag}\n</body>`);
   if (/<\/html>/i.test(html)) return html.replace(/<\/html>/i, `${tag}\n</html>`);
   return `${html.trimEnd()}\n${tag}\n`;
