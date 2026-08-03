@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - "public/**"
+      - "data*/**"
+      - "normalized/**"
+      - "scripts/prepare_pages_site.sh"
+      - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -19,8 +23,9 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy public site
+    name: Deploy repository-root compatible site
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -29,13 +34,16 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
 
+      - name: Prepare Pages artifact
+        run: bash scripts/prepare_pages_site.sh . _site
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload public directory
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: public
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
