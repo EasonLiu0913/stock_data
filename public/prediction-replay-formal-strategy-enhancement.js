@@ -2,7 +2,7 @@
   if (window.__replayFormalStrategyEnhancementInstalled) return;
   window.__replayFormalStrategyEnhancementInstalled = true;
 
-  const DEFINITIONS = [
+  const FALLBACK_DEFINITIONS = [
     {
       strategyId: 'bear_market_defensive_resilience_v1',
       legacyIds: ['post_shock_high_confidence_core_v1'],
@@ -19,6 +19,14 @@
       target: 'close_return_gt_5',
       targetLabel: '當日收盤報酬嚴格大於 5.00%',
     },
+    {
+      strategyId: 'oversold_margin_exit_rebound_v1',
+      legacyIds: [],
+      label: '融資退場型跌深反彈',
+      legacyLabels: [],
+      target: 'intraday_rebound_5d_10pct',
+      targetLabel: '候選日起 5 個交易日內盤中反彈達 10%',
+    },
   ];
   const selectionMembers = new Map();
 
@@ -34,16 +42,24 @@
     return response.json();
   }
 
+  function targetLabel(target) {
+    return ({
+      relative_leadership: '收盤後是否成為相對領漲股',
+      close_return_gt_5: '當日收盤報酬嚴格大於 5.00%',
+      intraday_rebound_5d_10pct: '候選日起 5 個交易日內盤中反彈達 10%',
+    })[target] || target || '依策略版本定義';
+  }
+
   function metadataFor(stock, definition) {
     return stock?.formal_market_strategies?.[definition.strategyId]
-      || ([definition.strategyId, ...definition.legacyIds].includes(stock?.formal_market_strategy?.strategy_id)
+      || ([definition.strategyId, ...(definition.legacyIds || [])].includes(stock?.formal_market_strategy?.strategy_id)
         ? stock.formal_market_strategy
         : null);
   }
 
   function isCandidate(stock, definition) {
-    const ids = [definition.strategyId, ...definition.legacyIds];
-    const labels = [definition.label, ...definition.legacyLabels];
+    const ids = [definition.strategyId, ...(definition.legacyIds || [])];
+    const labels = [definition.label, ...(definition.legacyLabels || [])];
     return ids.includes(stock?.formal_market_strategy?.strategy_id)
       || ids.some(id => Boolean(stock?.formal_market_strategies?.[id]))
       || labels.some(label => (stock?.strategy_tags || []).includes(label));
@@ -54,7 +70,7 @@
     return Number.isFinite(value) ? value : null;
   }
 
-  function computeStrategyEvaluation(predictionSummary, definition, actualEnvironment) {
+  function computeLegacyEvaluation(predictionSummary, definition, actualEnvironment) {
     const candidates = (predictionSummary.stocks || []).filter(stock => isCandidate(stock, definition));
     const replayByCode = new Map(
       (state.rows || []).filter(row => row?.verified).map(row => [String(row.stock_code), row]),
@@ -67,14 +83,20 @@
       const metadata = metadataFor(stock, definition);
       const hit = definition.target === 'relative_leadership'
         ? (replay ? replay?.market_relative?.classification === 'relative_leadership' : null)
-        : (Number.isFinite(closeReturn) ? closeReturn > 5 : null);
+        : definition.target === 'close_return_gt_5'
+          ? (Number.isFinite(closeReturn) ? closeReturn > 5 : null)
+          : null;
       return {
         stock_code: code,
         stock_name: stock.stock_name || replay?.stock_name || '',
-        verified: definition.target === 'relative_leadership' ? Boolean(replay) : Boolean(replay && Number.isFinite(closeReturn)),
+        verified: definition.target === 'relative_leadership'
+          ? Boolean(replay)
+          : Boolean(replay && Number.isFinite(closeReturn)),
         hit,
         close_return: closeReturn,
-        market_excess_return: Number.isFinite(closeReturn) && Number.isFinite(marketReturn) ? closeReturn - marketReturn : null,
+        market_excess_return: Number.isFinite(closeReturn) && Number.isFinite(marketReturn)
+          ? closeReturn - marketReturn
+          : null,
         candidate_score: metadata?.candidate_score ?? null,
       };
     });
@@ -91,9 +113,12 @@
       : null;
     return {
       ...definition,
+      calculationStatus: 'completed',
+      evaluationMode: 'legacy_recomputed',
       candidates: stocks.length,
       verifiedCandidates: verified.length,
       hits: hits.length,
+      misses: misses.length,
       hitRate: verified.length ? hits.length / verified.length * 100 : null,
       missingReplayCandidates: stocks.length - verified.length,
       averageReturn: returns.length ? returns.reduce((sum, value) => sum + value, 0) / returns.length : null,
@@ -104,6 +129,74 @@
       missMembers: misses.map(stock => stock.stock_code),
       stocks,
     };
+  }
+
+  function registryDefinitions(tagStrategyReplay) {
+    const registryStrategies = tagStrategyReplay?.registry?.strategies;
+    if (!Array.isArray(registryStrategies) || !registryStrategies.length) return FALLBACK_DEFINITIONS;
+    return registryStrategies
+      .filter(item => item && item.enabled !== false && item.fixed_display !== false)
+      .map(item => ({
+        strategyId: item.strategy_id,
+        legacyIds: [],
+        label: item.label || item.strategy_id,
+        legacyLabels: [],
+        target: item.evaluation_target,
+        targetLabel: targetLabel(item.evaluation_target),
+        version: item.version,
+      }));
+  }
+
+  function canonicalEvaluation(definition, raw = {}) {
+    const members = (raw.members || []).map(String);
+    const hitMembers = (raw.hit_members || []).map(String);
+    const missMembers = (raw.miss_members || []).map(String);
+    const verifiedSet = new Set([...hitMembers, ...missMembers]);
+    const hitSet = new Set(hitMembers);
+    const replayByCode = new Map((state.rows || []).map(row => [String(row.stock_code), row]));
+    const stocks = members.map(code => {
+      const replay = replayByCode.get(code) || null;
+      return {
+        stock_code: code,
+        stock_name: replay?.stock_name || '',
+        verified: verifiedSet.has(code),
+        hit: verifiedSet.has(code) ? hitSet.has(code) : null,
+        close_return: actualReturn(replay),
+        market_excess_return: replay?.market_relative?.excess_return ?? null,
+      };
+    });
+    const verifiedCandidates = Number(raw.verified_candidates || 0);
+    return {
+      ...definition,
+      target: raw.evaluation_target || definition.target,
+      targetLabel: targetLabel(raw.evaluation_target || definition.target),
+      calculationStatus: raw.calculation_status || 'completed',
+      evaluationMode: raw.evaluation_mode || 'live_snapshot',
+      candidates: Number(raw.candidates || members.length || 0),
+      verifiedCandidates,
+      hits: Number(raw.hits || 0),
+      misses: Number(raw.misses || 0),
+      hitRate: finite(raw.hit_rate) ? Number(raw.hit_rate) : null,
+      missingReplayCandidates: Number(raw.missing_replay_candidates || 0),
+      averageReturn: verifiedCandidates && finite(raw.average_return) ? Number(raw.average_return) : null,
+      medianReturn: verifiedCandidates && finite(raw.median_return) ? Number(raw.median_return) : null,
+      averageMarketExcessReturn: verifiedCandidates && finite(raw.average_market_excess_return)
+        ? Number(raw.average_market_excess_return)
+        : null,
+      members,
+      hitMembers,
+      missMembers,
+      stocks,
+    };
+  }
+
+  function canonicalEvaluations(tagStrategyReplay) {
+    const definitions = registryDefinitions(tagStrategyReplay);
+    const rawEvaluations = tagStrategyReplay?.evaluations || {};
+    return definitions.map(definition => canonicalEvaluation(
+      definition,
+      rawEvaluations[definition.strategyId] || {},
+    ));
   }
 
   function computeReadinessEvaluation(predictionSummary, actualEnvironment) {
@@ -132,7 +225,7 @@
     rowMatchesSelection = function enhancedRowMatchesSelection(row, selection) {
       if (selection?.kind === 'registered_strategy_scope') {
         const key = `${selection.value}:${selection.scope || 'candidates'}`;
-        return row?.verified && Boolean(selectionMembers.get(key)?.has(String(row?.stock_code ?? '')));
+        return Boolean(selectionMembers.get(key)?.has(String(row?.stock_code ?? '')));
       }
       return originalRowMatchesSelection(row, selection);
     };
@@ -158,15 +251,28 @@
       </div>`;
   }
 
+  function statusLabel(evaluation) {
+    if (evaluation.calculationStatus === 'partial') return '等待後續交易日';
+    if (evaluation.calculationStatus === 'unable_to_calculate') return '資料不足';
+    if (!evaluation.verifiedCandidates) return evaluation.candidates ? '尚無可驗證結果' : '當日 0 檔';
+    return evaluation.hits ? '已有命中' : '尚未命中';
+  }
+
+  function hitMetricLabel(evaluation) {
+    if (evaluation.target === 'relative_leadership') return '相對領漲命中';
+    if (evaluation.target === 'intraday_rebound_5d_10pct') return '五日盤中反彈命中';
+    return '漲幅 >5% 命中';
+  }
+
   function strategyHtml(evaluation) {
-    const isOversold = evaluation.target === 'close_return_gt_5';
-    const extraKpis = isOversold
+    const hasReturnMetrics = evaluation.target !== 'relative_leadership';
+    const extraKpis = hasReturnMetrics
       ? `<div class="formal-strategy-kpi"><span>平均報酬</span><b>${formatPct(evaluation.averageReturn)}</b></div>
          <div class="formal-strategy-kpi"><span>報酬中位數</span><b>${formatPct(evaluation.medianReturn)}</b></div>
          <div class="formal-strategy-kpi"><span>平均市場超額</span><b>${formatPct(evaluation.averageMarketExcessReturn)}</b></div>`
       : '';
     const missingNote = evaluation.missingReplayCandidates
-      ? `；另有 ${evaluation.missingReplayCandidates} 檔缺少收盤資料，未列入有效候選`
+      ? `；另有 ${evaluation.missingReplayCandidates} 檔尚未取得完整驗證資料`
       : '';
     return `
       <article class="registered-strategy-card" data-strategy-card="${esc(evaluation.strategyId)}">
@@ -174,22 +280,23 @@
           <div>
             <div class="formal-strategy-badge">固定策略覆盤</div>
             <h2 style="margin-top:8px">${esc(evaluation.label)}</h2>
-            <p class="strategy-description">評估目標：${esc(evaluation.targetLabel)}。候選資格只讀取預測時標籤，不使用收盤資料重新篩選。</p>
+            <p class="strategy-description">評估目標：${esc(evaluation.targetLabel)}。候選資格只讀取預測當時保存的版本化快照，不使用事後資料重新篩選。</p>
           </div>
+          <div class="strategy-result">${esc(statusLabel(evaluation))}</div>
         </div>
-        <div class="formal-strategy-kpis ${isOversold ? 'strategy-kpis-wide' : ''}">
+        <div class="formal-strategy-kpis ${hasReturnMetrics ? 'strategy-kpis-wide' : ''}">
           <div class="formal-strategy-kpi"><span>事前候選</span><b>${evaluation.candidates}</b></div>
           <div class="formal-strategy-kpi"><span>有效覆盤</span><b>${evaluation.verifiedCandidates}</b></div>
-          <div class="formal-strategy-kpi"><span>${isOversold ? '漲幅 >5% 命中' : '相對領漲命中'}</span><b>${evaluation.hits}</b></div>
+          <div class="formal-strategy-kpi"><span>${esc(hitMetricLabel(evaluation))}</span><b>${evaluation.hits}</b></div>
           <div class="formal-strategy-kpi"><span>命中率</span><b>${formatPct(evaluation.hitRate)}</b></div>
           ${extraKpis}
         </div>
         <div class="formal-strategy-actions">
-          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="candidates" ${evaluation.verifiedCandidates ? '' : 'disabled'}>查看有效候選（${evaluation.verifiedCandidates}）</button>
+          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="candidates" ${evaluation.candidates ? '' : 'disabled'}>查看全部候選（${evaluation.candidates}）</button>
           <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="hits" ${evaluation.hits ? '' : 'disabled'}>查看命中（${evaluation.hits}）</button>
-          ${isOversold ? `<button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="misses" ${evaluation.missMembers.length ? '' : 'disabled'}>查看未命中（${evaluation.missMembers.length}）</button>` : ''}
+          <button type="button" class="formal-strategy-action" data-strategy="${esc(evaluation.strategyId)}" data-scope="misses" ${evaluation.missMembers.length ? '' : 'disabled'}>查看未命中（${evaluation.missMembers.length}）</button>
         </div>
-        <div class="formal-strategy-note">點擊上方按鈕後，會在下方「案例清單」顯示完整個股資料${missingNote}。</div>
+        <div class="formal-strategy-note">資料來源：${esc(evaluation.evaluationMode)}；計算狀態：${esc(evaluation.calculationStatus)}${missingNote}。</div>
       </article>`;
   }
 
@@ -204,7 +311,7 @@
 
   function applyStrategySelection(section, evaluation, scope) {
     if (typeof state === 'undefined' || typeof renderCases !== 'function') return;
-    const labels = { candidates: '全部有效候選', hits: '命中', misses: '未命中' };
+    const labels = { candidates: '全部候選', hits: '命中', misses: '未命中' };
     state.selection = {
       kind: 'registered_strategy_scope',
       value: evaluation.strategyId,
@@ -227,7 +334,7 @@
   function renderSection(readiness, evaluations) {
     selectionMembers.clear();
     for (const evaluation of evaluations) {
-      selectionMembers.set(`${evaluation.strategyId}:candidates`, new Set(evaluation.stocks.filter(stock => stock.verified).map(stock => stock.stock_code)));
+      selectionMembers.set(`${evaluation.strategyId}:candidates`, new Set(evaluation.members));
       selectionMembers.set(`${evaluation.strategyId}:hits`, new Set(evaluation.hitMembers));
       selectionMembers.set(`${evaluation.strategyId}:misses`, new Set(evaluation.missMembers));
     }
@@ -270,7 +377,14 @@
     try {
       const predictionSummary = await fetchJson(`data_predictions/${state.date}/summary.json`);
       const actualEnvironment = await fetchJson(`data_market_environment/${state.date}/actual_market_environment.json`).catch(() => null);
-      const evaluations = DEFINITIONS.map(definition => computeStrategyEvaluation(predictionSummary, definition, actualEnvironment));
+      const tagStrategyReplay = await fetchJson(`data_prediction_analysis/tag-strategy/${state.date}.json`).catch(() => null);
+      const evaluations = tagStrategyReplay?.evaluations
+        ? canonicalEvaluations(tagStrategyReplay)
+        : FALLBACK_DEFINITIONS.map(definition => computeLegacyEvaluation(
+          predictionSummary,
+          definition,
+          actualEnvironment,
+        ));
       renderSection(computeReadinessEvaluation(predictionSummary, actualEnvironment), evaluations);
     } catch (error) {
       const section = document.getElementById('formalStrategyReplay') || document.createElement('section');
