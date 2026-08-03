@@ -19,6 +19,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: build-twse-market-chart
@@ -83,3 +85,8 @@ jobs:
           git commit -m "chore: update TWSE market chart ${CURRENT_DATE}"
           git pull --rebase origin main
           git push origin main
+
+  deploy_pages:
+    name: Deploy latest TWSE market chart to Pages
+    needs: build-market-chart
+    uses: ./.github/workflows/deploy-pages.yml
