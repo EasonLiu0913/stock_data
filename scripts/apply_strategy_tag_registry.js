@@ -122,6 +122,7 @@ function updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot) {
   if (!manifest.dates[date]) {
     manifest.dates[date] = { live_snapshot: null, historical_recalculations: [] };
   }
+  const before = JSON.stringify(manifest.dates[date]);
   const entry = {
     file: path.relative(workspaceRoot, snapshotFile).replaceAll(path.sep, '/'),
     registry_id: snapshot.registry_id,
@@ -139,9 +140,12 @@ function updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot) {
     filtered.sort((left, right) => String(left.generated_at).localeCompare(String(right.generated_at)));
     manifest.dates[date].historical_recalculations = filtered;
   }
-  manifest.updated_at = new Date().toISOString();
-  writeJsonAtomic(manifestFile, manifest);
-  return manifestFile;
+  const changed = before !== JSON.stringify(manifest.dates[date]);
+  if (changed) {
+    manifest.updated_at = new Date().toISOString();
+    writeJsonAtomic(manifestFile, manifest);
+  }
+  return { manifestFile, changed };
 }
 
 function applyRegistry(options = {}) {
@@ -173,9 +177,10 @@ function applyRegistry(options = {}) {
     });
   }
 
+  let manifestChanged = false;
   if (!options.dryRun) {
     if (!reusedExistingSnapshot) writeJsonAtomic(snapshotFile, compactSnapshot(snapshot));
-    updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot);
+    manifestChanged = updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot).changed;
     if (evaluationMode === 'live_snapshot') {
       writeJsonAtomic(summaryFile, applySnapshotToPayload(payload, snapshot));
     }
@@ -193,6 +198,7 @@ function applyRegistry(options = {}) {
     manifest_file: 'data_prediction_analysis/strategy-snapshots/manifest.json',
     reused_existing_snapshot: reusedExistingSnapshot,
     summary_enriched: evaluationMode === 'live_snapshot',
+    manifest_changed: manifestChanged,
     dry_run: Boolean(options.dryRun),
   };
 }
