@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DEFAULT_OUTPUT_DIR = path.join(ROOT_DIR, 'data_fubon_broker_details');
-const NON_TRADING_DAYS_FILE = path.join(ROOT_DIR, 'data_history_sma', 'non_trading_days.json');
+const TRADING_CALENDAR_FILE = path.join(ROOT_DIR, 'data_twse_market_chart', 'market_chart.json');
 const DEFAULT_BATCH_SIZE = 5;
 
 function getArg(args, flag) {
@@ -37,14 +37,23 @@ function dateRange(start, end) {
   return dates;
 }
 
-function isWeekend(isoDate) {
-  const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
-  return day === 0 || day === 6;
+function normalizeCalendarDate(value) {
+  const match = String(value || '').match(/^(\d{4})[-/]?(\d{2})[-/]?(\d{2})$/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : '';
 }
 
-function loadNonTradingDays(file = NON_TRADING_DAYS_FILE) {
+function loadTradingCalendar(file = TRADING_CALENDAR_FILE) {
+  if (!fs.existsSync(file)) throw new Error(`交易日曆不存在：${path.relative(ROOT_DIR, file)}`);
   const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-  return new Set(Object.values(payload).flat().map(value => String(value).replaceAll('/', '-')));
+  const dates = [...new Set((payload?.data || [])
+    .map(item => normalizeCalendarDate(item?.date))
+    .filter(Boolean))].sort();
+  if (!dates.length) throw new Error(`交易日曆沒有有效日期：${path.relative(ROOT_DIR, file)}`);
+  return {
+    dates: new Set(dates),
+    firstDate: dates[0],
+    lastDate: dates.at(-1)
+  };
 }
 
 function outputPath(outputDir, isoDate) {
@@ -58,6 +67,7 @@ function isCompleteOutput(filePath) {
     const successCount = Object.keys(payload?.stocks || {}).length;
     const unavailableCount = Array.isArray(payload?.unavailableStocks) ? payload.unavailableStocks.length : 0;
     return payload?.complete === true
+      && successCount > 0
       && Number(payload?.failedStockCount || 0) === 0
       && (!Array.isArray(payload?.failedStocks) || payload.failedStocks.length === 0)
       && Number(payload?.successfulStockCount) === successCount
@@ -76,9 +86,24 @@ function chunk(items, size) {
   return batches;
 }
 
-function buildPlan({ start, end, batchSize = DEFAULT_BATCH_SIZE, force = false, outputDir = DEFAULT_OUTPUT_DIR, nonTradingDays }) {
-  const requestedDates = dateRange(normalizeDate(start), normalizeDate(end));
-  const tradingDates = requestedDates.filter(date => !isWeekend(date) && !nonTradingDays.has(date));
+function buildPlan({
+  start,
+  end,
+  batchSize = DEFAULT_BATCH_SIZE,
+  force = false,
+  outputDir = DEFAULT_OUTPUT_DIR,
+  tradingCalendar = loadTradingCalendar()
+}) {
+  const normalizedStart = normalizeDate(start);
+  const normalizedEnd = normalizeDate(end);
+  if (normalizedStart < tradingCalendar.firstDate || normalizedEnd > tradingCalendar.lastDate) {
+    throw new Error(
+      `要求區間 ${normalizedStart}～${normalizedEnd} 超出交易日曆範圍 `
+      + `${tradingCalendar.firstDate}～${tradingCalendar.lastDate}；請先更新 TWSE Market Chart`
+    );
+  }
+  const requestedDates = dateRange(normalizedStart, normalizedEnd);
+  const tradingDates = requestedDates.filter(date => tradingCalendar.dates.has(date));
   const pendingDates = force
     ? tradingDates
     : tradingDates.filter(date => !isCompleteOutput(outputPath(outputDir, date)));
@@ -94,9 +119,12 @@ function buildPlan({ start, end, batchSize = DEFAULT_BATCH_SIZE, force = false, 
   return {
     requested_date_count: requestedDates.length,
     trading_date_count: tradingDates.length,
+    non_trading_date_count: requestedDates.length - tradingDates.length,
     skipped_complete_date_count: tradingDates.length - pendingDates.length,
     pending_date_count: pendingDates.length,
     batch_size: batchSize,
+    calendar_first_date: tradingCalendar.firstDate,
+    calendar_last_date: tradingCalendar.lastDate,
     matrix: { include }
   };
 }
@@ -115,7 +143,7 @@ function parseArgs(argv) {
     batchSize,
     force: argv.includes('--force'),
     outputDir: path.resolve(getArg(argv, '--output-dir') || DEFAULT_OUTPUT_DIR),
-    nonTradingDaysFile: path.resolve(getArg(argv, '--non-trading-days-file') || NON_TRADING_DAYS_FILE)
+    tradingCalendarFile: path.resolve(getArg(argv, '--trading-calendar-file') || TRADING_CALENDAR_FILE)
   };
 }
 
@@ -123,7 +151,7 @@ function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   const plan = buildPlan({
     ...options,
-    nonTradingDays: loadNonTradingDays(options.nonTradingDaysFile)
+    tradingCalendar: loadTradingCalendar(options.tradingCalendarFile)
   });
   process.stdout.write(`${JSON.stringify(plan)}\n`);
 }
@@ -142,5 +170,6 @@ module.exports = {
   buildPlan,
   chunk,
   isCompleteOutput,
+  loadTradingCalendar,
   normalizeDate
 };
