@@ -42,7 +42,7 @@ jobs:
         run: npm ci
 
       - name: Run TWT49U safety tests
-        run: node --test tests/crawl_twse_twt49u.test.js
+        run: node --test tests/crawl_twse_twt49u.test.js tests/crawl_twse_twt49u_safe.test.js
 
       - name: Resolve requested date
         id: date
@@ -95,7 +95,7 @@ jobs:
           if [ "$FORCE_RUN" = "true" ]; then
             args+=(--force)
           fi
-          npm run crawl:twse-twt49u -- "${args[@]}"
+          node scripts/crawl_twse_twt49u_safe.js "${args[@]}"
 
       - name: Commit TWT49U data
         if: steps.date.outputs.run == 'true'
