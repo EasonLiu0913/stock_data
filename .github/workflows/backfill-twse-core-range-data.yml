@@ -1,0 +1,285 @@
+name: "[06 回填修復] TWSE MI_INDEX／融資融券－區間資料補齊"
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: '要補的原始資料來源'
+        required: true
+        type: choice
+        default: all
+        options: [all, mi_index, margin]
+      start_date:
+        description: '起始交易日 YYYYMMDD；留空使用市場圖最早交易日'
+        required: false
+        type: string
+      end_date:
+        description: '結束交易日 YYYYMMDD；留空使用市場圖最新交易日'
+        required: false
+        type: string
+      max_mi_index_dates:
+        description: '每個 MI_INDEX batch 最多補幾個交易日；所有 batch 會自動接續'
+        type: number
+        default: 10
+      max_margin_dates:
+        description: '每個融資融券 batch 最多補幾個交易日；所有 batch 會自動接續'
+        type: number
+        default: 10
+      min_request_delay_ms:
+        description: '每次 TWSE 請求前最短隨機等待毫秒'
+        type: number
+        default: 5000
+      max_request_delay_ms:
+        description: '每次 TWSE 請求前最長隨機等待毫秒'
+        type: number
+        default: 15000
+      min_date_pause_seconds:
+        description: '同一 batch 內完成一個日期後最短休息秒數'
+        type: number
+        default: 60
+      max_date_pause_seconds:
+        description: '同一 batch 內完成一個日期後最長休息秒數'
+        type: number
+        default: 180
+      batch_pause_min_seconds:
+        description: '完成一個 batch 後最短長休息秒數'
+        type: number
+        default: 120
+      batch_pause_max_seconds:
+        description: '完成一個 batch 後最長長休息秒數'
+        type: number
+        default: 300
+      force:
+        description: '重新下載日期區間內已存在且有效的檔案'
+        type: boolean
+        default: false
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/backfill-twse-core-range-data.yml'
+      - 'scripts/plan_twse_core_range_backfill.js'
+      - 'scripts/run_twse_core_range_backfill_batch.sh'
+      - 'scripts/crawl_twse_mi_index.js'
+      - 'scripts/crawl_twse_margin_balance.js'
+      - 'tests/plan_twse_core_range_backfill.test.js'
+      - 'tests/crawl_twse_margin_balance.test.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: twse-core-range-backfill-${{ github.event_name == 'pull_request' && 'validation' || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      source: ${{ steps.resolve.outputs.source }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      total_batches: ${{ steps.plan.outputs.total_batches }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Validate planner and crawlers
+        run: |
+          node --check scripts/plan_twse_core_range_backfill.js
+          node --check scripts/crawl_twse_mi_index.js
+          node --check scripts/crawl_twse_margin_balance.js
+          bash -n scripts/run_twse_core_range_backfill_batch.sh
+          node --test \
+            tests/plan_twse_core_range_backfill.test.js \
+            tests/crawl_twse_margin_balance.test.js
+
+      - name: Resolve source
+        id: resolve
+        shell: bash
+        env:
+          INPUT_SOURCE: ${{ inputs.source }}
+        run: |
+          if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then
+            source="${INPUT_SOURCE:-all}"
+          else
+            source=all
+          fi
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+
+      - name: Plan all sequential batches
+        id: plan
+        shell: bash
+        env:
+          SOURCE: ${{ steps.resolve.outputs.source }}
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          MAX_MI_INDEX: ${{ inputs.max_mi_index_dates }}
+          MAX_MARGIN: ${{ inputs.max_margin_dates }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/twse-core-plans
+
+          plan_source() {
+            local source="$1"
+            local batch_size="$2"
+            local args=(
+              --sources "$source"
+              --max-dates "$batch_size"
+            )
+            [ -n "${START_DATE:-}" ] && args+=(--from "$START_DATE")
+            [ -n "${END_DATE:-}" ] && args+=(--to "$END_DATE")
+            [ "${FORCE:-false}" = true ] && args+=(--force)
+
+            node scripts/plan_twse_core_range_backfill.js "${args[@]}" \
+              > "/tmp/twse-core-plans/${source}.json"
+            cat "/tmp/twse-core-plans/${source}.json" >&2
+          }
+
+          if [[ "$SOURCE" == all || "$SOURCE" == mi_index ]]; then
+            plan_source mi_index "${MAX_MI_INDEX:-10}"
+          fi
+          if [[ "$SOURCE" == all || "$SOURCE" == margin ]]; then
+            plan_source margin "${MAX_MARGIN:-10}"
+          fi
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const directory = '/tmp/twse-core-plans';
+          const sourceOrder = new Map([['mi_index.json', 0], ['margin.json', 1]]);
+          const files = fs.readdirSync(directory)
+            .filter(file => file.endsWith('.json'))
+            .sort((left, right) => (sourceOrder.get(left) ?? 99) - (sourceOrder.get(right) ?? 99));
+          const include = [];
+          const summary = [];
+
+          for (const file of files) {
+            const plan = JSON.parse(fs.readFileSync(`${directory}/${file}`, 'utf8'));
+            const source = Object.keys(plan.sources)[0];
+            const detail = plan.sources[source];
+            include.push(...detail.matrix.include);
+            summary.push({
+              source,
+              from: detail.from,
+              to: detail.to,
+              required_dates: detail.required_date_count,
+              complete_dates: detail.complete_date_count,
+              missing_dates: detail.missing_date_count,
+              batch_size: detail.batch_size,
+              batches: detail.batch_count,
+              coverage_pct: detail.estimated_date_coverage_pct,
+              force: detail.force,
+            });
+          }
+
+          const globalMatrix = include.map((entry, index) => ({
+            ...entry,
+            global_batch_index: index + 1,
+            global_batch_count: include.length,
+            has_next_global: index < include.length - 1,
+          }));
+          fs.writeFileSync('/tmp/twse-core-matrix.json', JSON.stringify({ include: globalMatrix }));
+          fs.writeFileSync('/tmp/twse-core-summary.json', JSON.stringify(summary, null, 2));
+          NODE
+
+          matrix=$(cat /tmp/twse-core-matrix.json)
+          total_batches=$(node -e 'const p=require("/tmp/twse-core-matrix.json");process.stdout.write(String(p.include.length))')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "total_batches=$total_batches" >> "$GITHUB_OUTPUT"
+          if [ "$total_batches" -gt 0 ]; then
+            echo 'has_work=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_work=false' >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo '### TWSE 原始資料自動分批計畫'
+            echo
+            node -e '
+              const rows=require("/tmp/twse-core-summary.json");
+              for (const row of rows) {
+                console.log(`- ${row.source}：${row.from}～${row.to}；應有 ${row.required_dates} 日；已完整 ${row.complete_dates} 日；待補 ${row.missing_dates} 日；覆蓋率 ${row.coverage_pct}%；每批 ${row.batch_size} 日；共 ${row.batches} 批${row.force ? "；強制重抓" : ""}`);
+              }
+            '
+            echo
+            echo "總批次：${total_batches}；將以 max-parallel=1 自動依序執行。"
+            echo '回填 commit 使用 GITHUB_TOKEN，不會因每個資料 commit 連續觸發 Pages；本流程也不直接部署網站。'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  backfill:
+    needs: plan
+    if: github.event_name != 'pull_request' && needs.plan.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    name: ${{ matrix.source }} batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} (${{ matrix.first_date }} ~ ${{ matrix.last_date }})
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Backfill batch and commit every completed date
+        id: run
+        shell: bash
+        env:
+          BATCH_SOURCE: ${{ matrix.source }}
+          BATCH_DATES: ${{ matrix.dates }}
+          GLOBAL_BATCH_INDEX: ${{ matrix.global_batch_index }}
+          GLOBAL_BATCH_COUNT: ${{ matrix.global_batch_count }}
+          HAS_NEXT_BATCH: ${{ matrix.has_next_global }}
+          MIN_DELAY: ${{ inputs.min_request_delay_ms }}
+          MAX_DELAY: ${{ inputs.max_request_delay_ms }}
+          MIN_PAUSE: ${{ inputs.min_date_pause_seconds }}
+          MAX_PAUSE: ${{ inputs.max_date_pause_seconds }}
+          BATCH_PAUSE_MIN: ${{ inputs.batch_pause_min_seconds }}
+          BATCH_PAUSE_MAX: ${{ inputs.batch_pause_max_seconds }}
+          FORCE: ${{ inputs.force }}
+        run: bash scripts/run_twse_core_range_backfill_batch.sh
+
+      - name: Batch summary
+        if: always()
+        run: |
+          {
+            echo '### Batch result'
+            echo "- Source: ${{ matrix.source }}"
+            echo "- Dates: ${{ matrix.first_date }}～${{ matrix.last_date }}"
+            echo "- Source batch: ${{ matrix.batch_index }}/${{ matrix.batch_count }}"
+            echo "- Global batch: ${{ matrix.global_batch_index }}/${{ matrix.global_batch_count }}"
+            echo "- New commits: ${{ steps.run.outputs.changed || 'false' }}"
+            echo '- Pages deployment: not triggered by this workflow'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  complete:
+    needs: [plan, backfill]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Final summary
+        run: |
+          {
+            echo '### TWSE 區間資料補齊結果'
+            echo "- Planned batches: ${{ needs.plan.outputs.total_batches }}"
+            echo "- Backfill result: ${{ needs.backfill.result }}"
+            echo '- 每個日期皆在重置到最新 main 後提交，降低與其他 Action push 衝突。'
+            echo '- 本 Action 不呼叫 Pages，避免每個回填 commit 造成網站重複部署。'
+          } >> "$GITHUB_STEP_SUMMARY"
