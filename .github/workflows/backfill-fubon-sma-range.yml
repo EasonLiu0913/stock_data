@@ -1,0 +1,192 @@
+name: "[06 回填修復] 富邦價量／SMA－區間資料補齊"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '起始交易日 YYYYMMDD'
+        required: true
+        default: '20251103'
+        type: string
+      end_date:
+        description: '結束交易日 YYYYMMDD；留空取市場交易日曆最後日期'
+        required: false
+        default: ''
+        type: string
+      stock_batch_size:
+        description: '每批股票數（建議 100）'
+        required: true
+        default: '100'
+        type: string
+      minimum_records:
+        description: '每日最少有效股票數'
+        required: true
+        default: '100'
+        type: string
+      force:
+        description: '即使每日檔有效也重新規劃'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-fubon-sma-range
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      has_crawl: ${{ steps.plan.outputs.has_crawl }}
+      start_date: ${{ steps.plan.outputs.start_date }}
+      end_date: ${{ steps.plan.outputs.end_date }}
+      pending_dates: ${{ steps.plan.outputs.pending_dates }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Test SMA range planner and merger
+        run: node --test tests/plan_twse_range_backfill.test.js tests/merge_history_data.test.js
+      - name: Plan missing or invalid SMA dates
+        id: plan
+        shell: bash
+        env:
+          INPUT_START: ${{ inputs.start_date }}
+          INPUT_END: ${{ inputs.end_date }}
+          STOCK_BATCH_SIZE: ${{ inputs.stock_batch_size }}
+          MINIMUM_RECORDS: ${{ inputs.minimum_records }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          end_date="$INPUT_END"
+          if [ -z "$end_date" ]; then
+            end_date=$(node -e "process.stdout.write(require('./scripts/lib/range_backfill').loadTwseTradingCalendar().lastDate)")
+          fi
+          args=(--dataset sma --start "$INPUT_START" --end "$end_date" --stock-batch-size "$STOCK_BATCH_SIZE" --minimum-records "$MINIMUM_RECORDS")
+          if [ "$FORCE" = 'true' ]; then args+=(--force); fi
+          node scripts/plan_twse_range_backfill.js "${args[@]}" > /tmp/sma-plan.json
+          cat /tmp/sma-plan.json
+          matrix=$(node -e "const p=require('/tmp/sma-plan.json');process.stdout.write(JSON.stringify(p.matrix))")
+          pending=$(node -e "const p=require('/tmp/sma-plan.json');process.stdout.write(String(p.pending_date_count))")
+          batches=$(node -e "const p=require('/tmp/sma-plan.json');process.stdout.write(String(p.stock_batch_count))")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "has_work=$([ "$pending" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "has_crawl=$([ "$batches" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "start_date=$INPUT_START" >> "$GITHUB_OUTPUT"
+          echo "end_date=$end_date" >> "$GITHUB_OUTPUT"
+          echo "pending_dates=$pending" >> "$GITHUB_OUTPUT"
+          {
+            echo '## 富邦價量／SMA 區間規劃'
+            echo "- 日期：$INPUT_START ～ $end_date"
+            echo "- 待重建／補抓：$pending 日"
+            echo "- 股票批次：$batches"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  crawl-history:
+    needs: plan
+    if: needs.plan.outputs.has_crawl == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: 股票歷史批次回填
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Crawl and safely persist one stock batch
+        env:
+          START_DATE: ${{ needs.plan.outputs.start_date }}
+          END_DATE: ${{ needs.plan.outputs.end_date }}
+          START_INDEX: ${{ matrix.start_index }}
+          LIMIT: ${{ matrix.limit }}
+        run: bash scripts/run_sma_history_stock_batch.sh
+      - name: Batch summary
+        if: always()
+        run: |
+          echo "stocks: ${{ matrix.first_stock_code }} ~ ${{ matrix.last_stock_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "index: ${{ matrix.start_index }} + ${{ matrix.limit }}" >> "$GITHUB_STEP_SUMMARY"
+
+  rebuild-daily:
+    needs: [plan, crawl-history]
+    if: always() && needs.plan.outputs.has_work == 'true' && (needs.crawl-history.result == 'success' || needs.crawl-history.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rebuild requested daily SMA files
+        run: node scripts/merge_history_data.js --sma-only --start "${{ needs.plan.outputs.start_date }}" --end "${{ needs.plan.outputs.end_date }}"
+      - name: Verify all requested trading dates
+        env:
+          START_DATE: ${{ needs.plan.outputs.start_date }}
+          END_DATE: ${{ needs.plan.outputs.end_date }}
+          MINIMUM_RECORDS: ${{ inputs.minimum_records }}
+        run: |
+          node scripts/plan_twse_range_backfill.js --dataset sma --start "$START_DATE" --end "$END_DATE" --minimum-records "$MINIMUM_RECORDS" > /tmp/final-plan.json
+          cat /tmp/final-plan.json
+          node -e "const p=require('/tmp/final-plan.json'); if(p.pending_date_count) { console.error('Still invalid dates:', p.pending_dates.join(',')); process.exit(1); }"
+      - name: Safely commit rebuilt daily files
+        shell: bash
+        env:
+          START_DATE: ${{ needs.plan.outputs.start_date }}
+          END_DATE: ${{ needs.plan.outputs.end_date }}
+          MINIMUM_RECORDS: ${{ inputs.minimum_records }}
+        run: |
+          set -euo pipefail
+          node - "$START_DATE" "$END_DATE" > /tmp/sma-files.txt <<'NODE'
+          const {loadTwseTradingCalendar}=require('./scripts/lib/range_backfill');
+          const [start,end]=process.argv.slice(2);
+          for(const d of loadTwseTradingCalendar().dates.filter(x=>x>=start&&x<=end)) console.log(`data_fubon/fubon_${d}_sma.json`);
+          NODE
+          tar -czf "$RUNNER_TEMP/sma-daily.tgz" -T /tmp/sma-files.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            tar -xzf "$RUNNER_TEMP/sma-daily.tgz"
+            node scripts/plan_twse_range_backfill.js --dataset sma --start "$START_DATE" --end "$END_DATE" --minimum-records "$MINIMUM_RECORDS" > /tmp/verify.json
+            node -e "const p=require('/tmp/verify.json');if(p.pending_date_count)process.exit(1)"
+            mapfile -t files < /tmp/sma-files.txt
+            git add -- "${files[@]}"
+            if git diff --staged --quiet; then exit 0; fi
+            git commit -m "data: rebuild Fubon SMA range ${START_DATE}-${END_DATE}"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+  complete:
+    needs: [plan, crawl-history, rebuild-daily]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "plan=${{ needs.plan.result }}"
+          echo "crawl=${{ needs.crawl-history.result }}"
+          echo "rebuild=${{ needs.rebuild-daily.result }}"
+          if [ "${{ needs.plan.result }}" != 'success' ]; then exit 1; fi
+          if [ "${{ needs.plan.outputs.has_work }}" = 'true' ] && [ "${{ needs.rebuild-daily.result }}" != 'success' ]; then exit 1; fi
