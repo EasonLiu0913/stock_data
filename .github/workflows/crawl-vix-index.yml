@@ -1,0 +1,93 @@
+name: "[02 外部市場] VIX 指數－單日爬取"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '美國市場日期 YYYYMMDD；留空依紐約時間判斷'
+        required: false
+        default: ''
+        type: string
+      force:
+        description: '覆寫既有日期'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # 台北週二至週六 06:35；約紐約收盤後 1.5～2.5 小時。
+    - cron: '35 22 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-vix-index
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node --test tests/crawl_vix_index.test.js tests/refresh_dataset_indexes.test.js
+      - name: Resolve and verify exact market date
+        id: gate
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            target=$(node scripts/crawl_vix_index.js --resolve-date --date "$INPUT_DATE")
+          else
+            target=$(node scripts/crawl_vix_index.js --resolve-date)
+          fi
+          echo "date=$target" >> "$GITHUB_OUTPUT"
+          set +e
+          node scripts/crawl_vix_index.js --plan-only --start "$target" --end "$target" --output-dir "$RUNNER_TEMP/vix-check" > /tmp/vix-plan.json
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if [ -n "$INPUT_DATE" ]; then exit "$status"; fi
+            echo 'run=false' >> "$GITHUB_OUTPUT"
+            echo 'Automatic date has no exact VIX session; skip without failure.'
+          else
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Crawl exact VIX date into isolated directory
+        if: steps.gate.outputs.run == 'true'
+        env:
+          TARGET_DATE: ${{ steps.gate.outputs.date }}
+          FORCE: ${{ inputs.force || false }}
+        run: |
+          args=(--date "$TARGET_DATE" --output-dir "$RUNNER_TEMP/vix-output")
+          [ "$FORCE" = true ] && args+=(--force)
+          node scripts/crawl_vix_index.js "${args[@]}"
+      - name: Safely publish VIX date
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.gate.outputs.date }}
+        run: |
+          set -euo pipefail
+          saved="$RUNNER_TEMP/vix-output/$TARGET_DATE/vix.json"
+          destination="data_vix/$TARGET_DATE/vix.json"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd data_vix
+            mkdir -p "$(dirname "$destination")"
+            cp "$saved" "$destination"
+            node scripts/crawl_vix_index.js --refresh-indexes
+            git add -- "$destination" data_vix/files.json data_vix/manifest.json
+            if git diff --staged --quiet; then exit 0; fi
+            git commit -m "data: update VIX index ${TARGET_DATE}"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
