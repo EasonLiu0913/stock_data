@@ -55,6 +55,7 @@ function seedRequestedStart(options) {
 
   for (const code of codes) {
     const file = path.join(options.historyDir, `${code}.json`);
+    const fileExisted = fs.existsSync(file);
     const payload = readJson(file, {});
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) continue;
 
@@ -64,7 +65,7 @@ function seedRequestedStart(options) {
 
     payload[dateKey] = { [SEED_MARKER]: true };
     writeJson(file, payload);
-    entries.push({ code, file, dateKey, hadOriginal, originalPoint });
+    entries.push({ code, file, fileExisted, dateKey, hadOriginal, originalPoint });
   }
 
   const state = {
@@ -81,6 +82,7 @@ function cleanupRequestedStart(options) {
   const state = readJson(options.stateFile, { entries: [] });
   let restoredCount = 0;
   let retainedCount = 0;
+  let removedEmptyFileCount = 0;
 
   for (const entry of state.entries || []) {
     const payload = readJson(entry.file, {});
@@ -92,11 +94,20 @@ function cleanupRequestedStart(options) {
 
     if (entry.hadOriginal) payload[entry.dateKey] = entry.originalPoint;
     else delete payload[entry.dateKey];
-    writeJson(entry.file, payload);
+
+    if (!entry.fileExisted && Object.keys(payload).length === 0) {
+      fs.rmSync(entry.file, { force: true });
+      removedEmptyFileCount += 1;
+    } else writeJson(entry.file, payload);
     restoredCount += 1;
   }
 
-  return { restoredCount, retainedCount, entryCount: (state.entries || []).length };
+  return {
+    restoredCount,
+    retainedCount,
+    removedEmptyFileCount,
+    entryCount: (state.entries || []).length
+  };
 }
 
 function countCompleteAtStart(options) {
