@@ -1,135 +1,223 @@
-name: "[06 回填修復] Crawl TWSE Institutional Investors History"
+name: "[06 回填修復] 三大法人合併明細－區間資料補齊"
 
 on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Single target date (YYYYMMDD). If set, start/end are ignored.'
+        description: '單一日期 YYYYMMDD；填寫後忽略起訖日期'
         required: false
-        default: ''
+        type: string
       start_date:
-        description: 'Start date (YYYYMMDD). Leave empty to use script default.'
+        description: '起始交易日 YYYYMMDD；留空使用市場圖最早交易日'
         required: false
-        default: ''
+        type: string
       end_date:
-        description: 'End date (YYYYMMDD). Leave empty to use Taipei today.'
+        description: '結束交易日 YYYYMMDD；留空使用市場圖最新交易日'
         required: false
-        default: ''
+        type: string
+      max_dates:
+        description: '每個 batch 最多補幾個交易日；所有 batch 會自動接續'
+        required: false
+        type: number
+        default: 10
+      min_request_delay_ms:
+        description: '每次 TWSE 請求前最短隨機等待毫秒'
+        required: false
+        type: number
+        default: 5000
+      max_request_delay_ms:
+        description: '每次 TWSE 請求前最長隨機等待毫秒'
+        required: false
+        type: number
+        default: 15000
+      min_date_pause_seconds:
+        description: '同一 batch 內完成一個日期後最短休息秒數'
+        required: false
+        type: number
+        default: 60
+      max_date_pause_seconds:
+        description: '同一 batch 內完成一個日期後最長休息秒數'
+        required: false
+        type: number
+        default: 180
+      batch_pause_min_seconds:
+        description: '完成一個 batch 後最短長休息秒數'
+        required: false
+        type: number
+        default: 120
+      batch_pause_max_seconds:
+        description: '完成一個 batch 後最長長休息秒數'
+        required: false
+        type: number
+        default: 300
       force:
-        description: 'Overwrite existing files'
+        description: '重新下載日期區間內已存在且有效的檔案'
         required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
-      min_delay:
-        description: 'Minimum random delay between dates in ms'
-        required: false
-        default: '3000'
-      max_delay:
-        description: 'Maximum random delay between dates in ms'
-        required: false
-        default: '5000'
-      rate_limit_cooldown:
-        description: 'Cooldown for 307/429/503 responses in ms'
-        required: false
-        default: '90000'
-      mismatch_cooldown:
-        description: 'Cooldown for response date mismatch in ms'
-        required: false
-        default: '90000'
+        type: boolean
+        default: false
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/crawl-twse-institutional-investors-history.yml'
+      - 'scripts/plan_twse_institutional_investors_backfill.js'
+      - 'scripts/run_twse_institutional_investors_backfill_batch.sh'
+      - 'scripts/crawl_history_twse_institutional_investors.js'
+      - 'tests/plan_twse_institutional_investors_backfill.test.js'
 
 permissions:
   contents: write
 
 concurrency:
-  group: crawl-twse-institutional-investors-history
+  group: institutional-investors-range-backfill-${{ github.event_name == 'pull_request' && 'validation' || 'production' }}
   cancel-in-progress: false
 
 jobs:
-  crawl-history:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      total_batches: ${{ steps.plan.outputs.total_batches }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
           fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Crawl TWSE institutional investors history
+      - name: Validate planner and crawler
         run: |
-          ARGS=(
-            --min-delay "${{ github.event.inputs.min_delay }}"
-            --max-delay "${{ github.event.inputs.max_delay }}"
-            --max-retries 0
-            --rate-limit-cooldown "${{ github.event.inputs.rate_limit_cooldown }}"
-            --mismatch-cooldown "${{ github.event.inputs.mismatch_cooldown }}"
-          )
+          node --check scripts/plan_twse_institutional_investors_backfill.js
+          node --check scripts/crawl_history_twse_institutional_investors.js
+          bash -n scripts/run_twse_institutional_investors_backfill_batch.sh
+          node --test tests/plan_twse_institutional_investors_backfill.test.js
 
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            ARGS+=(--date "${{ github.event.inputs.date }}")
-          else
-            if [ -n "${{ github.event.inputs.start_date }}" ]; then
-              ARGS+=(--start "${{ github.event.inputs.start_date }}")
-            fi
-            if [ -n "${{ github.event.inputs.end_date }}" ]; then
-              ARGS+=(--end "${{ github.event.inputs.end_date }}")
-            fi
-          fi
-
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then
-            ARGS+=(--force)
-          fi
-
-          node scripts/crawl_history_twse_institutional_investors.js "${ARGS[@]}"
-
-      - name: Generate TWSE institutional files.json only
-        run: node scripts/generate_file_lists.js --only data_twse_institutional_investors
-
-      - name: Commit and push changes
+      - name: Plan all sequential batches
+        id: plan
         shell: bash
+        env:
+          DATE: ${{ inputs.date }}
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          MAX_DATES: ${{ inputs.max_dates }}
+          FORCE: ${{ inputs.force }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add data_twse_institutional_investors/
+          set -euo pipefail
+          args=(--max-dates "${MAX_DATES:-10}")
 
-          if git diff --staged --quiet; then
-            if [ -n "$(git status --porcelain)" ]; then
-              echo "Unexpected uncommitted changes remain even though there are no TWSE institutional-history changes:"
-              git status --short
-              exit 1
-            fi
-            echo "No TWSE institutional investors changes"
-            exit 0
+          if [ -n "${DATE:-}" ]; then
+            args+=(--date "$DATE")
+          else
+            [ -n "${START_DATE:-}" ] && args+=(--from "$START_DATE")
+            [ -n "${END_DATE:-}" ] && args+=(--to "$END_DATE")
+          fi
+          [ "${FORCE:-false}" = true ] && args+=(--force)
+
+          node scripts/plan_twse_institutional_investors_backfill.js "${args[@]}" > /tmp/institutional-plan.json
+          cat /tmp/institutional-plan.json >&2
+
+          matrix=$(node -e 'const p=require("/tmp/institutional-plan.json");process.stdout.write(JSON.stringify(p.matrix))')
+          total_batches=$(node -e 'const p=require("/tmp/institutional-plan.json");process.stdout.write(String(p.batch_count))')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "total_batches=$total_batches" >> "$GITHUB_OUTPUT"
+          if [ "$total_batches" -gt 0 ]; then
+            echo 'has_work=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_work=false' >> "$GITHUB_OUTPUT"
           fi
 
-          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update TWSE institutional investors history ${CURRENT_DATE}"
+          {
+            echo '### 三大法人合併明細自動分批計畫'
+            echo
+            node -e '
+              const p=require("/tmp/institutional-plan.json");
+              console.log(`- 日期範圍：${p.from}～${p.to}`);
+              console.log(`- 市場交易日：${p.required_date_count} 日`);
+              console.log(`- 已完整：${p.complete_date_count} 日`);
+              console.log(`- 待補或損壞：${p.missing_date_count} 日`);
+              console.log(`- 目前覆蓋率：${p.estimated_date_coverage_pct}%`);
+              console.log(`- 每批：${p.batch_size} 日；共 ${p.batch_count} 批`);
+              console.log(`- 強制重抓：${p.force ? "是" : "否"}`);
+            '
+            echo
+            echo '所有 batch 以 max-parallel=1 依序執行；每完成一個日期立即安全提交。'
+            echo '本流程不呼叫 Pages，也沒有 workflow_run 監聽。'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Unexpected uncommitted changes remain before rebase:"
-            git status --short
-            exit 1
-          fi
+  backfill:
+    needs: plan
+    if: github.event_name != 'pull_request' && needs.plan.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    name: batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} (${{ matrix.first_date }} ~ ${{ matrix.last_date }})
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              exit 0
-            fi
-            git rebase --abort 2>/dev/null || true
-            echo "Push failed, retry ${attempt}/5..."
-            sleep 5
-          done
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
 
-          echo "Failed to push TWSE institutional investors history after 5 attempts."
-          exit 1
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Backfill batch and commit every completed date
+        id: run
+        shell: bash
+        env:
+          BATCH_DATES: ${{ matrix.dates }}
+          BATCH_INDEX: ${{ matrix.batch_index }}
+          BATCH_COUNT: ${{ matrix.batch_count }}
+          HAS_NEXT_BATCH: ${{ matrix.has_next }}
+          MIN_DELAY: ${{ inputs.min_request_delay_ms }}
+          MAX_DELAY: ${{ inputs.max_request_delay_ms }}
+          MIN_PAUSE: ${{ inputs.min_date_pause_seconds }}
+          MAX_PAUSE: ${{ inputs.max_date_pause_seconds }}
+          BATCH_PAUSE_MIN: ${{ inputs.batch_pause_min_seconds }}
+          BATCH_PAUSE_MAX: ${{ inputs.batch_pause_max_seconds }}
+        run: bash scripts/run_twse_institutional_investors_backfill_batch.sh
+
+      - name: Batch summary
+        if: always()
+        run: |
+          {
+            echo '### Batch result'
+            echo "- Dates: ${{ matrix.first_date }}～${{ matrix.last_date }}"
+            echo "- Batch: ${{ matrix.batch_index }}/${{ matrix.batch_count }}"
+            echo "- New commits: ${{ steps.run.outputs.changed || 'false' }}"
+            echo '- Pages deployment: not triggered by this workflow'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  complete:
+    needs: [plan, backfill]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Final summary
+        run: |
+          {
+            echo '### 三大法人合併明細區間補齊結果'
+            echo "- Planned batches: ${{ needs.plan.outputs.total_batches }}"
+            echo "- Backfill result: ${{ needs.backfill.result }}"
+            echo '- 每個日期均先驗證內容，再重置到最新 main 後提交。'
+            echo '- 成功日期即時保存；失敗日期會讓對應 batch 標紅。'
+            echo '- 本 Action 不部署 Pages，避免回填 commit 連續觸發網站更新。'
+          } >> "$GITHUB_STEP_SUMMARY"
