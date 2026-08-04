@@ -28,27 +28,27 @@ on:
       min_request_delay_ms:
         description: '每次 TWSE 請求前最短隨機等待毫秒'
         type: number
-        default: 5000
+        default: 3000
       max_request_delay_ms:
         description: '每次 TWSE 請求前最長隨機等待毫秒'
         type: number
-        default: 15000
+        default: 8000
       min_date_pause_seconds:
-        description: '同一 batch 內完成一個日期後最短休息秒數'
+        description: '同一 batch 內成功完成一個日期後最短休息秒數'
         type: number
-        default: 60
+        default: 20
       max_date_pause_seconds:
-        description: '同一 batch 內完成一個日期後最長休息秒數'
+        description: '同一 batch 內成功完成一個日期後最長休息秒數'
         type: number
-        default: 180
+        default: 45
       batch_pause_min_seconds:
         description: '完成一個 batch 後最短長休息秒數'
         type: number
-        default: 120
+        default: 45
       batch_pause_max_seconds:
         description: '完成一個 batch 後最長長休息秒數'
         type: number
-        default: 300
+        default: 90
       force:
         description: '重新下載日期區間內已存在且有效的檔案'
         type: boolean
@@ -216,6 +216,7 @@ jobs:
             '
             echo
             echo "總批次：${total_batches}；將以 max-parallel=1 自動依序執行。"
+            echo '正常成功日期採用較短隨機等待；真正遇到限流或來源異常時仍保留 120 秒冷卻。'
             echo 'MI_INDEX 若遇台北時間 13:30～13:45 的 TWSE 暫停時段，會等待至 13:46 後自動續跑。'
             echo '回填 commit 使用 GITHUB_TOKEN，不會因每個資料 commit 連續觸發 Pages；本流程也不直接部署網站。'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -285,6 +286,7 @@ jobs:
             echo '### TWSE 區間資料補齊結果'
             echo "- Planned batches: ${{ needs.plan.outputs.total_batches }}"
             echo "- Backfill result: ${{ needs.backfill.result }}"
+            echo '- 正常成功日期等待 20～45 秒；batch 間等待 45～90 秒；限流或來源異常仍保留 120 秒冷卻。'
             echo '- MI_INDEX 會避開台北時間 13:30～13:45 的 TWSE ALL 查詢暫停時段。'
             echo '- 每個日期皆在重置到最新 main 後提交，降低與其他 Action push 衝突。'
             echo '- 本 Action 不呼叫 Pages，避免每個回填 commit 造成網站重複部署。'
