@@ -63,7 +63,7 @@ jobs:
           FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
-          end="$END_DATE"; [ -n "$end" ] || end=$(node scripts/crawl_vix_index.js --resolve-date)
+          end="$END_DATE"; [ -n "$end" ] || end=$(node scripts/crawl_external_market_indicators.js --resolve-date)
           args=(--start "$START_DATE" --end "$end" --batch-size "$BATCH_SIZE")
           [ "$FORCE" = true ] && args+=(--force)
           node scripts/plan_external_market_range.js "${args[@]}" > /tmp/plan.json
