@@ -56,7 +56,7 @@ for index in "${!dates[@]}"; do
   args=(--date "$date" --max-retries "$MAX_RETRIES" --rate-limit-cooldown "$RATE_LIMIT_COOLDOWN_MS")
   if [ "$INPUT_FORCE" = 'true' ]; then args+=(--force); fi
   set +e
-  node scripts/crawl_twse_twt49u.js "${args[@]}"
+  node scripts/crawl_twse_twt49u_safe.js "${args[@]}"
   status=$?
   set -e
   if [ "$status" -ne 0 ] || ! validate_file "$destination" "$date"; then
