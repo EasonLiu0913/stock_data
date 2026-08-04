@@ -38,6 +38,7 @@ function validateCompletePayload(payload, isoDate) {
   const unavailableCount = Array.isArray(payload?.unavailableStocks) ? payload.unavailableStocks.length : 0;
   if (payload?.complete !== true) errors.push('complete 不是 true');
   if (payload?.date !== isoDate) errors.push(`date 不符：${payload?.date}`);
+  if (successCount === 0) errors.push('successful stocks 為 0，疑似休市日或來源整批失效');
   if (Number(payload?.failedStockCount || 0) !== 0) errors.push('failedStockCount 不是 0');
   if (Array.isArray(payload?.failedStocks) && payload.failedStocks.length > 0) errors.push('failedStocks 仍有資料');
   if (Number(payload?.successfulStockCount) !== successCount) errors.push('successfulStockCount 不符');
