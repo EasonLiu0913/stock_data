@@ -47,6 +47,22 @@ test('refuses incomplete daily payloads', () => {
   assert.equal(fs.existsSync(destination), false);
 });
 
+test('refuses all-unavailable payloads even when marked complete', () => {
+  const payload = {
+    date: '2025-12-25',
+    complete: true,
+    failedStockCount: 0,
+    failedStocks: [],
+    successfulStockCount: 0,
+    unavailableStockCount: 3,
+    stockUniverse: { expectedStockCount: 3 },
+    stocks: {},
+    unavailableStocks: [{ code: '1101' }, { code: '1102' }, { code: '3231' }]
+  };
+  const errors = validateCompletePayload(payload, '2025-12-25');
+  assert.ok(errors.some(error => error.includes('successful stocks 為 0')));
+});
+
 test('removes internal range and output arguments before invoking crawler', () => {
   assert.deepEqual(passThroughArgs([
     '--date', '20260701',
