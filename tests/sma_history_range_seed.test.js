@@ -77,3 +77,17 @@ test('cleanup removes an unreplaced temporary seed', () => {
   assert.equal(Object.hasOwn(first, '2025/11/03'), false);
   assert.equal(Object.hasOwn(second, '2025/11/03'), false);
 });
+
+test('cleanup deletes a file that only existed for the temporary seed', () => {
+  const f = fixture();
+  fs.writeFileSync(path.join(f.historyDir, '1101.json'), JSON.stringify({
+    '2026/02/02': completePoint(20)
+  }), 'utf8');
+  seedRequestedStart(f);
+
+  const newFile = path.join(f.historyDir, '1102.json');
+  assert.equal(fs.existsSync(newFile), true);
+  const cleanup = cleanupRequestedStart(f);
+  assert.equal(cleanup.removedEmptyFileCount, 1);
+  assert.equal(fs.existsSync(newFile), false);
+});
