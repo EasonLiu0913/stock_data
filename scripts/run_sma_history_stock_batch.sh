@@ -5,9 +5,8 @@ set -uo pipefail
 : "${START_INDEX:?START_INDEX is required}"
 : "${LIMIT:?LIMIT is required}"
 
-start_slash="${START_DATE:0:4}/${START_DATE:4:2}/${START_DATE:6:2}"
 set +e
-node scripts/crawl_history_sma.js "$START_INDEX" "$LIMIT" --start "$start_slash"
+node scripts/crawl_history_sma_range_batch.js "$START_INDEX" "$LIMIT" --start "$START_DATE"
 crawl_status=$?
 set -e
 if [ "$crawl_status" -ne 0 ]; then exit "$crawl_status"; fi
