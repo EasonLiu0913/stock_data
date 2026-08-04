@@ -8,8 +8,8 @@ changed=false
 failures=()
 
 pause_between_dates() {
-  local minimum="${MIN_PAUSE:-60}"
-  local maximum="${MAX_PAUSE:-180}"
+  local minimum="${MIN_PAUSE:-20}"
+  local maximum="${MAX_PAUSE:-45}"
   [ "$maximum" -lt "$minimum" ] && maximum="$minimum"
   local seconds=$((minimum + RANDOM % (maximum - minimum + 1)))
   echo "⏳ 下一日期前休息 ${seconds}s"
@@ -17,8 +17,8 @@ pause_between_dates() {
 }
 
 pause_between_batches() {
-  local minimum="${BATCH_PAUSE_MIN:-120}"
-  local maximum="${BATCH_PAUSE_MAX:-300}"
+  local minimum="${BATCH_PAUSE_MIN:-45}"
+  local maximum="${BATCH_PAUSE_MAX:-90}"
   [ "$maximum" -lt "$minimum" ] && maximum="$minimum"
   local seconds=$((minimum + RANDOM % (maximum - minimum + 1)))
   echo "🛑 全域 batch ${GLOBAL_BATCH_INDEX}/${GLOBAL_BATCH_COUNT} 完成；長休息 ${seconds}s 後自動接續下一批。"
@@ -89,8 +89,8 @@ backfill_mi_index() {
     node scripts/crawl_twse_mi_index.js \
       --date "$date" --type ALL \
       --max-retries 4 \
-      --min-delay "${MIN_DELAY:-5000}" \
-      --max-delay "${MAX_DELAY:-15000}" \
+      --min-delay "${MIN_DELAY:-3000}" \
+      --max-delay "${MAX_DELAY:-8000}" \
       --rate-limit-cooldown 120000 \
       --mismatch-cooldown 120000 \
       2>&1 | tee "$RUNNER_TEMP/twse-core-logs/mi-index-${date}.log"
@@ -119,8 +119,8 @@ backfill_margin() {
       --date "$date"
       --max-retries 4
       --retry-cooldown-ms 120000
-      --min-delay-ms "${MIN_DELAY:-5000}"
-      --max-delay-ms "${MAX_DELAY:-15000}"
+      --min-delay-ms "${MIN_DELAY:-3000}"
+      --max-delay-ms "${MAX_DELAY:-8000}"
     )
     [ "${FORCE:-false}" = true ] && args+=(--force)
 
