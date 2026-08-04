@@ -1,5 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const {
+    getTwseMiIndexMaintenanceWaitMs,
+    isTwseMiIndexMaintenanceMessage
+} = require('./twse_mi_index_maintenance');
 
 const API_URL = 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX';
 const OUTPUT_DIR = path.join(__dirname, '../data_twse_mi_index');
@@ -7,6 +11,8 @@ const RATE_LIMIT_STATUS_CODES = new Set([307, 429, 503]);
 const DEFAULT_MIN_DELAY_MS = 3000;
 const DEFAULT_MAX_DELAY_MS = 5000;
 const DEFAULT_MISMATCH_COOLDOWN_MS = 90000;
+const DEFAULT_MAINTENANCE_FALLBACK_COOLDOWN_MS = 60000;
+const TWSE_MAINTENANCE_ERROR_CODE = 'TWSE_MI_INDEX_MAINTENANCE';
 const args = process.argv.slice(2);
 
 function getArg(flag) {
@@ -15,7 +21,17 @@ function getArg(flag) {
 }
 
 function getPositionalDate() {
-    const flagsWithValue = new Set(['--date', '--type']);
+    const flagsWithValue = new Set([
+        '--date',
+        '--type',
+        '--max-retries',
+        '--min-delay',
+        '--max-delay',
+        '--rate-limit-cooldown',
+        '--mismatch-cooldown',
+        '--max-maintenance-retries',
+        '--maintenance-fallback-cooldown'
+    ]);
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (flagsWithValue.has(arg)) {
@@ -68,7 +84,12 @@ function refreshFilesJson() {
 
 function validatePayload(payload) {
     if (payload.stat !== 'OK') {
-        throw new Error(`TWSE response stat is not OK: ${payload.stat || '(empty)'}`);
+        const stat = payload.stat || '(empty)';
+        const error = new Error(`TWSE response stat is not OK: ${stat}`);
+        if (isTwseMiIndexMaintenanceMessage(stat)) {
+            error.code = TWSE_MAINTENANCE_ERROR_CODE;
+        }
+        throw error;
     }
 
     if (!payload.date || !/^\d{8}$/.test(payload.date)) {
@@ -133,21 +154,60 @@ function randomDelay(minMs, maxMs) {
     return minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
 }
 
+async function waitForScheduledMaintenanceWindow(type) {
+    if (String(type).toUpperCase() !== 'ALL') return;
+
+    const waitMs = getTwseMiIndexMaintenanceWaitMs();
+    if (waitMs <= 0) return;
+
+    console.log(
+        `🛠️ TWSE MI_INDEX ALL query is paused from 13:30 to 13:45 Taipei time; `
+        + `waiting ${Math.ceil(waitMs / 1000)}s and resuming after 13:46.`
+    );
+    await sleep(waitMs);
+}
+
 async function fetchTwseMiIndex(dateStr, type) {
     const maxRetries = getNumberArg('--max-retries', 3);
     const rateLimitCooldownMs = getNumberArg('--rate-limit-cooldown', 90000);
-    let attempt = 0;
+    const maxMaintenanceRetries = getNumberArg('--max-maintenance-retries', 3);
+    const maintenanceFallbackCooldownMs = getNumberArg(
+        '--maintenance-fallback-cooldown',
+        DEFAULT_MAINTENANCE_FALLBACK_COOLDOWN_MS
+    );
+    let rateLimitAttempt = 0;
+    let maintenanceAttempt = 0;
 
     while (true) {
+        await waitForScheduledMaintenanceWindow(type);
+
         try {
             return await fetchTwseMiIndexOnce(dateStr, type);
         } catch (error) {
-            attempt++;
-            const shouldRetry = RATE_LIMIT_STATUS_CODES.has(error.status) && attempt <= maxRetries;
+            if (error.code === TWSE_MAINTENANCE_ERROR_CODE) {
+                maintenanceAttempt++;
+                if (maintenanceAttempt > maxMaintenanceRetries) throw error;
+
+                const scheduledWaitMs = getTwseMiIndexMaintenanceWaitMs();
+                const cooldown = scheduledWaitMs > 0
+                    ? scheduledWaitMs
+                    : maintenanceFallbackCooldownMs * maintenanceAttempt;
+                console.log(
+                    `🛠️ TWSE confirmed the MI_INDEX maintenance window; waiting `
+                    + `${Math.ceil(cooldown / 1000)}s before maintenance retry `
+                    + `${maintenanceAttempt}/${maxMaintenanceRetries}.`
+                );
+                await sleep(cooldown);
+                continue;
+            }
+
+            const shouldRetry = RATE_LIMIT_STATUS_CODES.has(error.status)
+                && rateLimitAttempt < maxRetries;
             if (!shouldRetry) throw error;
 
-            const cooldown = rateLimitCooldownMs * attempt;
-            console.log(`🕒 Got ${error.status}; cooling down ${Math.round(cooldown / 1000)}s before retry ${attempt}/${maxRetries}`);
+            rateLimitAttempt++;
+            const cooldown = rateLimitCooldownMs * rateLimitAttempt;
+            console.log(`🕒 Got ${error.status}; cooling down ${Math.round(cooldown / 1000)}s before retry ${rateLimitAttempt}/${maxRetries}`);
             await sleep(cooldown);
         }
     }
