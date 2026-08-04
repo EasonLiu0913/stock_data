@@ -1,221 +1,179 @@
-const fs = require('fs');
-const path = require('path');
+#!/usr/bin/env node
+'use strict';
 
-// Configuration
-const INSTITUTIONAL_DIR = path.join(__dirname, '../data_institutional');
-const SMA_DIR = path.join(__dirname, '../data_history_sma');
-const OUTPUT_DIR = path.join(__dirname, '../data_fubon');
-const CSV_FILE = path.join(__dirname, '../data_twse/twse_industry.csv');
-const START_DATE_STR = '2025/12/02';
-const END_DATE_STR = '2026/06/08';
-const args = process.argv.slice(2);
-const SMA_ONLY = args.includes('--sma-only');
+const fs = require('node:fs');
+const path = require('node:path');
+const {
+  ROOT,
+  compactToSlash,
+  loadTwseTradingCalendar,
+  normalizeCompactDate,
+  parseArgs,
+  readJson,
+  writeJsonAtomic
+} = require('./lib/range_backfill');
 
-// Helper: Convert YYYY/MM/DD to Date object
-function parseDate(dateStr) {
-    // Format: YYYY/MM/DD or YYYY-MM-DD
-    const parts = dateStr.split(/[\/-]/);
-    const y = parseInt(parts[0]);
-    const m = parseInt(parts[1]) - 1;
-    const d = parseInt(parts[2]);
-    return new Date(y, m, d);
+const INSTITUTIONAL_DIR = path.join(ROOT, 'data_institutional');
+const SMA_DIR = path.join(ROOT, 'data_history_sma');
+const OUTPUT_DIR = path.join(ROOT, 'data_fubon');
+const CSV_FILE = path.join(ROOT, 'data_twse', 'twse_industry.csv');
+const DEFAULT_START = '20251202';
+const DEFAULT_END = '20260608';
+
+function compactToRocSlash(compact) {
+  const date = normalizeCompactDate(compact);
+  return `${Number(date.slice(0, 4)) - 1911}/${date.slice(4, 6)}/${date.slice(6, 8)}`;
 }
 
-// Helper: Format Date object to YYYYMMDD (filename)
-function formatFilenameDate(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}${m}${d}`;
+function readStockMap(csvFile = CSV_FILE) {
+  const lines = fs.readFileSync(csvFile, 'utf8').trim().split(/\r?\n/);
+  const map = new Map();
+  for (const line of lines.slice(1)) {
+    const parts = line.split(',');
+    const code = String(parts[0] || '').trim();
+    if (!code) continue;
+    map.set(code, String(parts[1] || '').trim());
+  }
+  return map;
 }
 
-// Helper: Format Date object to YYYY/MM/DD (SMA Key)
-function formatADDate(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}/${m}/${d}`;
+function formatSma(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : value;
 }
 
-// Helper: Format Date object to ROC YYY/MM/DD (Institutional Key)
-function formatROCDate(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y - 1911}/${m}/${d}`;
+function formatVolume(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? String(Math.trunc(value)) : value;
 }
 
-// Generate array of dates between start and end (inclusive)
-function getDatesInRange(startStr, endStr) {
-    const start = parseDate(startStr);
-    const end = parseDate(endStr);
-    const list = [];
-    const current = new Date(start);
-    while (current <= end) {
-        // Skip weekends? Stock market is closed.
-        // But let's check if dayOfWeek is Sat(6) or Sun(0).
-        const day = current.getDay();
-        if (day !== 0 && day !== 6) {
-            list.push(new Date(current));
-        }
-        current.setDate(current.getDate() + 1);
-    }
-    return list;
+function buildDailySma(stockMap, smaDataCache, date) {
+  const dateKey = compactToSlash(date);
+  const output = {};
+  for (const [code, name] of stockMap) {
+    const point = smaDataCache.get(code)?.[dateKey];
+    if (!point) continue;
+    output[code] = {
+      StockName: name,
+      [dateKey]: {
+        Price: formatSma(point.price),
+        Open: formatSma(point.open),
+        High: formatSma(point.high),
+        Low: formatSma(point.low),
+        Volume: formatVolume(point.volume),
+        SMA5: formatSma(point.sma5),
+        SMA20: formatSma(point.sma20),
+        SMA60: formatSma(point.sma60),
+        SMA120: formatSma(point.sma120),
+        SMA240: formatSma(point.sma240)
+      }
+    };
+  }
+  return output;
 }
 
-(async () => {
-    // 1. Read Stock List
-    if (!fs.existsSync(CSV_FILE)) {
-        console.error(`CSV file not found: ${CSV_FILE}`);
-        process.exit(1);
+function buildDailyInstitutional(stockMap, institutionalCache, date) {
+  const dateKey = compactToSlash(date);
+  const output = {};
+  for (const [code, name] of stockMap) {
+    const history = institutionalCache.get(code);
+    if (!history) continue;
+    const keys = Object.keys(history).filter((key) => key <= dateKey).sort().reverse().slice(0, 30);
+    if (!keys.length) continue;
+    const foreign = {};
+    const trust = {};
+    const dealers = {};
+    const total = {};
+    for (const key of keys) {
+      const compact = key.replaceAll('/', '');
+      const rocDate = compactToRocSlash(compact);
+      const item = history[key] || {};
+      foreign[rocDate] = item.ForeignInvestors;
+      trust[rocDate] = item.InvestmentTrust;
+      dealers[rocDate] = item.Dealers;
+      total[rocDate] = item.DailyTotal;
     }
-    const csvContent = fs.readFileSync(CSV_FILE, 'utf8');
-    const lines = csvContent.trim().split('\n');
-    const stockMap = new Map(); // Code -> Name
+    output[code] = {
+      StockName: name,
+      ForeignInvestors: foreign,
+      InvestmentTrust: trust,
+      Dealers: dealers,
+      DailyTotal: total
+    };
+  }
+  return output;
+}
 
-    for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(',');
-        if (parts.length >= 2) {
-            stockMap.set(parts[0].trim(), parts[1].trim());
-        }
+function loadCache(stockMap, directory) {
+  const cache = new Map();
+  for (const code of stockMap.keys()) {
+    const file = path.join(directory, `${code}.json`);
+    const payload = readJson(file, null);
+    if (payload && typeof payload === 'object' && !Array.isArray(payload)) cache.set(code, payload);
+  }
+  return cache;
+}
+
+function mergeRange(options = {}) {
+  const start = normalizeCompactDate(options.start || DEFAULT_START, 'start date');
+  const end = normalizeCompactDate(options.end || DEFAULT_END, 'end date');
+  if (start > end) throw new Error(`Start date ${start} is after end date ${end}`);
+  const calendar = loadTwseTradingCalendar(options.calendarFile);
+  if (start < calendar.firstDate || end > calendar.lastDate) {
+    throw new Error(`Requested range ${start}~${end} is outside TWSE calendar ${calendar.firstDate}~${calendar.lastDate}`);
+  }
+  const dates = calendar.dates.filter((date) => date >= start && date <= end);
+  const stockMap = readStockMap(options.csvFile || CSV_FILE);
+  const smaCache = loadCache(stockMap, options.smaDir || SMA_DIR);
+  const institutionalCache = options.smaOnly ? new Map() : loadCache(stockMap, options.institutionalDir || INSTITUTIONAL_DIR);
+  const outputDir = options.outputDir || OUTPUT_DIR;
+  fs.mkdirSync(outputDir, { recursive: true });
+  const results = [];
+
+  for (const date of dates) {
+    const sma = buildDailySma(stockMap, smaCache, date);
+    const smaCount = Object.keys(sma).length;
+    const smaFile = path.join(outputDir, `fubon_${date}_sma.json`);
+    if (smaCount > 0) writeJsonAtomic(smaFile, sma);
+
+    let institutionalCount = 0;
+    let institutionalFile = null;
+    if (!options.smaOnly) {
+      const institutional = buildDailyInstitutional(stockMap, institutionalCache, date);
+      institutionalCount = Object.keys(institutional).length;
+      institutionalFile = path.join(outputDir, `fubon_${date}_institutional.json`);
+      if (institutionalCount > 0) writeJsonAtomic(institutionalFile, institutional);
     }
-    console.log(`Loaded ${stockMap.size} stocks from CSV.`);
+    results.push({ date, smaCount, smaFile, institutionalCount, institutionalFile });
+    console.log(`merge ${date}: SMA ${smaCount}${options.smaOnly ? '' : `, institutional ${institutionalCount}`}`);
+  }
+  return { start, end, dateCount: dates.length, stockCount: stockMap.size, results };
+}
 
-    // 2. Prepare Data Cache to avoid re-reading files constantly (Memory intensive?)
-    // 1000 stocks * 2 small JSONs is fine in memory.
-    const smaDataCache = new Map();
-    const instDataCache = new Map();
+function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
+  const result = mergeRange({
+    start: args.get('start') || DEFAULT_START,
+    end: args.get('end') || DEFAULT_END,
+    smaOnly: args.has('sma-only'),
+    outputDir: args.get('output-dir') ? path.resolve(args.get('output-dir')) : undefined,
+    smaDir: args.get('sma-dir') ? path.resolve(args.get('sma-dir')) : undefined,
+    institutionalDir: args.get('institutional-dir') ? path.resolve(args.get('institutional-dir')) : undefined,
+    csvFile: args.get('csv-file') ? path.resolve(args.get('csv-file')) : undefined,
+    calendarFile: args.get('calendar-file') ? path.resolve(args.get('calendar-file')) : undefined
+  });
+  console.log(JSON.stringify({ start: result.start, end: result.end, dates: result.dateCount, stocks: result.stockCount }));
+}
 
-    console.log('Loading source files...');
-    for (const [code, name] of stockMap) {
-        // Load SMA
-        const smaFile = path.join(SMA_DIR, `${code}.json`);
-        if (fs.existsSync(smaFile)) {
-            try {
-                smaDataCache.set(code, JSON.parse(fs.readFileSync(smaFile, 'utf8')));
-            } catch (e) {
-                // console.error(`Error reading SMA for ${code}: ${e.message}`);
-            }
-        }
+if (require.main === module) {
+  try { main(); } catch (error) {
+    console.error(`Failed to merge historical data: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
 
-        // Load Institutional
-        const instFile = path.join(INSTITUTIONAL_DIR, `${code}.json`);
-        if (fs.existsSync(instFile)) {
-            try {
-                instDataCache.set(code, JSON.parse(fs.readFileSync(instFile, 'utf8')));
-            } catch (e) {
-                // console.error(`Error reading Inst for ${code}: ${e.message}`);
-            }
-        }
-    }
-    console.log('Source files loaded.');
-
-    // 3. Generate Daily Files
-    const targetDates = getDatesInRange(START_DATE_STR, END_DATE_STR);
-    console.log(`Generating files for ${targetDates.length} days (${START_DATE_STR} ~ ${END_DATE_STR})...`);
-
-    for (const date of targetDates) {
-        const dateFilename = formatFilenameDate(date); // YYYYMMDD
-        const dateKeyAD = formatADDate(date); // YYYY/MM/DD
-
-        const smaOutputFile = path.join(OUTPUT_DIR, `fubon_${dateFilename}_sma.json`);
-        const instOutputFile = path.join(OUTPUT_DIR, `fubon_${dateFilename}_institutional.json`);
-
-        const dailySmaResult = {};
-        const dailyInstResult = {};
-
-        let smaCount = 0;
-        let instCount = 0;
-
-        for (const [code, name] of stockMap) {
-            const smaAll = smaDataCache.get(code);
-            const instAll = SMA_ONLY ? null : instDataCache.get(code);
-
-            // --- 處理 SMA 資料 ---
-            if (smaAll && smaAll[dateKeyAD]) {
-                const smaDay = smaAll[dateKeyAD];
-                const formatSMA = (val) => (typeof val === 'number' ? val.toFixed(2) : val);
-                const formatVolume = (val) => (typeof val === 'number' ? String(Math.trunc(val)) : val);
-
-                dailySmaResult[code] = {
-                    StockName: name,
-                    [dateKeyAD]: {
-                        Price: formatSMA(smaDay.price),
-                        Open: formatSMA(smaDay.open),
-                        High: formatSMA(smaDay.high),
-                        Low: formatSMA(smaDay.low),
-                        Volume: formatVolume(smaDay.volume),
-                        SMA5: formatSMA(smaDay.sma5),
-                        SMA20: formatSMA(smaDay.sma20),
-                        SMA60: formatSMA(smaDay.sma60),
-                        SMA120: formatSMA(smaDay.sma120),
-                        SMA240: formatSMA(smaDay.sma240)
-                    }
-                };
-                smaCount++;
-            }
-
-            // --- 處理 Institutional 資料 ---
-            // Institutional data usually has history, but we want the snapshot "as of" this date
-            // The scraper extracts ~30 days relative to the query date.
-            // For backfill, we can reconstruct the object with key "ForeignInvestors", "InvestmentTrust", etc.
-            // containing dates UP TO dateKeyAD.
-
-            // Only generate if we have data for this stock at all?
-            // Or if we specifically have data for this date?
-            // The frontend displays historical table, so we need the history object.
-
-            if (instAll) {
-                const foreignInv = {};
-                const investTrust = {};
-                const dealers = {};
-                const dailyTotal = {};
-
-                const sortedKeys = Object.keys(instAll).sort((a, b) => b.localeCompare(a));
-                const validKeys = sortedKeys.filter(k => k <= dateKeyAD);
-
-                // If no data up to this date, skip this stock for institutional file
-                if (validKeys.length > 0) {
-                    // Take top 30
-                    const historyKeys = validKeys.slice(0, 30);
-
-                    historyKeys.forEach(k => {
-                        const rocDate = formatROCDate(parseDate(k));
-                        const data = instAll[k];
-                        if (data) {
-                            foreignInv[rocDate] = data.ForeignInvestors;
-                            investTrust[rocDate] = data.InvestmentTrust;
-                            dealers[rocDate] = data.Dealers;
-                            dailyTotal[rocDate] = data.DailyTotal;
-                        }
-                    });
-
-                    dailyInstResult[code] = {
-                        StockName: name,
-                        ForeignInvestors: foreignInv,
-                        InvestmentTrust: investTrust,
-                        Dealers: dealers,
-                        DailyTotal: dailyTotal
-                    };
-                    instCount++;
-                }
-            }
-        }
-
-        if (smaCount > 0) {
-            fs.writeFileSync(smaOutputFile, JSON.stringify(dailySmaResult, null, 2), 'utf8');
-            console.log(`Saved ${smaOutputFile} (${smaCount} stocks)`);
-        }
-
-        if (!SMA_ONLY && instCount > 0) {
-            fs.writeFileSync(instOutputFile, JSON.stringify(dailyInstResult, null, 2), 'utf8');
-            console.log(`Saved ${instOutputFile} (${instCount} stocks)`);
-        }
-
-        if (smaCount === 0 && instCount === 0) {
-            console.log(`Skipped ${dateFilename} (No Data)`);
-        }
-    }
-
-    console.log('Done.');
-})();
+module.exports = {
+  buildDailyInstitutional,
+  buildDailySma,
+  compactToRocSlash,
+  mergeRange,
+  readStockMap
+};
