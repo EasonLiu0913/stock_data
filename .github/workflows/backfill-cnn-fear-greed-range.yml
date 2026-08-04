@@ -38,13 +38,23 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       has_work: ${{ steps.plan.outputs.has_work }}
       pending: ${{ steps.plan.outputs.pending }}
+      source_mode: ${{ steps.plan.outputs.source_mode }}
+      source_last_date: ${{ steps.plan.outputs.source_last_date }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 1 }
+        with:
+          ref: main
+          fetch-depth: 1
+
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: node --test tests/reconstruct_cnn_fear_and_greed_history.test.js tests/refresh_dataset_indexes.test.js
-      - id: plan
+        with:
+          node-version: '20'
+
+      - name: Test CNN history reconstruction and 418 fallback
+        run: node --test tests/reconstruct_cnn_fear_and_greed_history.test.js tests/refresh_dataset_indexes.test.js
+
+      - name: Plan from live CNN source or stored CNN fallback
+        id: plan
         shell: bash
         env:
           START_DATE: ${{ inputs.start_date }}
@@ -53,26 +63,39 @@ jobs:
           FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
-          node - <<'NODE'
-          const fs=require('node:fs');
-          fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata',{headers:{referer:'https://www.cnn.com/markets/fear-and-greed','user-agent':'Mozilla/5.0'}})
-            .then(r=>{if(!r.ok)throw new Error(`${r.status}`);return r.text()})
-            .then(t=>fs.writeFileSync('/tmp/cnn-source.json',t))
-            .catch(e=>{console.error(e);process.exit(1)});
-          NODE
-          end="$END_DATE"
-          if [ -z "$end" ]; then
-            end=$(node -e "const p=require('/tmp/cnn-source.json');const d=p.fear_and_greed_historical.data.map(x=>new Date(x.x).toISOString().slice(0,10).replaceAll('-','')).sort();process.stdout.write(d.at(-1))")
-          fi
-          args=(--plan-only --input-file /tmp/cnn-source.json --start "$START_DATE" --end "$end" --batch-size "$BATCH_SIZE")
-          [ "$FORCE" = true ] && args+=(--force)
+          args=(
+            --plan-only
+            --start "$START_DATE"
+            --batch-size "$BATCH_SIZE"
+            --fetch-retries 2
+            --retry-delay-ms 5000
+          )
+          if [ -n "$END_DATE" ]; then args+=(--end "$END_DATE"); fi
+          if [ "$FORCE" = true ]; then args+=(--force); fi
+
           node scripts/reconstruct_cnn_fear_and_greed_history.js "${args[@]}" > /tmp/plan.json
           cat /tmp/plan.json
+
           matrix=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify(p.matrix))")
           pending=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.pending_date_count))")
+          source_mode=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.source_access?.mode || 'unknown'))")
+          source_last_date=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.source_last_date || ''))")
+
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "pending=$pending" >> "$GITHUB_OUTPUT"
+          echo "source_mode=$source_mode" >> "$GITHUB_OUTPUT"
+          echo "source_last_date=$source_last_date" >> "$GITHUB_OUTPUT"
           echo "has_work=$([ "$pending" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## CNN Fear & Greed 回填規劃"
+            echo
+            echo "- 資料來源模式：\`$source_mode\`"
+            echo "- historical 最後日期：\`$source_last_date\`"
+            echo "- 待補日期：\`$pending\`"
+            echo
+            echo "> CNN 官方端點若對 GitHub runner 回傳 418，會自動改用 repository 中 historical 點數最多的既有 CNN payload。"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   backfill:
     needs: plan
@@ -86,14 +109,20 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with:
+          node-version: '20'
+
       - name: Reconstruct and safely push each historical date
         env:
           BATCH_DATES: ${{ matrix.dates }}
           INPUT_FORCE: ${{ inputs.force }}
         run: bash scripts/run_cnn_fear_greed_range_batch.sh
+
       - if: always()
         run: echo "batch ${{ matrix.batch_index }}/${{ matrix.batch_count }}：${{ matrix.first_date }} ～ ${{ matrix.last_date }}" >> "$GITHUB_STEP_SUMMARY"
 
@@ -102,7 +131,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: |
+      - shell: bash
+        run: |
           echo "待補日期：${{ needs.plan.outputs.pending }}"
+          echo "來源模式：${{ needs.plan.outputs.source_mode }}"
+          echo "historical 最後日期：${{ needs.plan.outputs.source_last_date }}"
           if [ "${{ needs.plan.result }}" != success ]; then exit 1; fi
           if [ "${{ needs.plan.outputs.has_work }}" = true ] && [ "${{ needs.backfill.result }}" != success ]; then exit 1; fi
