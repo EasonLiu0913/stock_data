@@ -53,7 +53,8 @@ jobs:
         with: { ref: main, fetch-depth: 1 }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - run: node --test tests/plan_twse_range_backfill.test.js tests/crawl_twse_twt49u.test.js
+      - name: Test range planning and legal empty TWT49U snapshots
+        run: node --test tests/plan_twse_range_backfill.test.js tests/crawl_twse_twt49u.test.js tests/crawl_twse_twt49u_safe.test.js
       - id: plan
         shell: bash
         env:
@@ -97,7 +98,12 @@ jobs:
           MAX_DATE_PAUSE_SECONDS: ${{ inputs.max_date_pause_seconds }}
         run: bash scripts/run_twt49u_range_batch.sh
       - if: always()
-        run: echo "batch ${{ matrix.batch_index }}/${{ matrix.batch_count }}：${{ matrix.first_date }} ～ ${{ matrix.last_date }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo "batch ${{ matrix.batch_index }}/${{ matrix.batch_count }}：${{ matrix.first_date }} ～ ${{ matrix.last_date }}"
+            echo
+            echo "> TWSE 回覆『沒有符合條件的資料』時，會保存為已驗證的 data: [] 空快照，不視為失敗。"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   complete:
     needs: [plan, backfill]
