@@ -60,8 +60,10 @@ on:
       - 'scripts/plan_twse_core_range_backfill.js'
       - 'scripts/run_twse_core_range_backfill_batch.sh'
       - 'scripts/crawl_twse_mi_index.js'
+      - 'scripts/twse_mi_index_maintenance.js'
       - 'scripts/crawl_twse_margin_balance.js'
       - 'tests/plan_twse_core_range_backfill.test.js'
+      - 'tests/twse_mi_index_maintenance.test.js'
       - 'tests/crawl_twse_margin_balance.test.js'
 
 permissions:
@@ -96,10 +98,12 @@ jobs:
         run: |
           node --check scripts/plan_twse_core_range_backfill.js
           node --check scripts/crawl_twse_mi_index.js
+          node --check scripts/twse_mi_index_maintenance.js
           node --check scripts/crawl_twse_margin_balance.js
           bash -n scripts/run_twse_core_range_backfill_batch.sh
           node --test \
             tests/plan_twse_core_range_backfill.test.js \
+            tests/twse_mi_index_maintenance.test.js \
             tests/crawl_twse_margin_balance.test.js
 
       - name: Resolve source
@@ -212,6 +216,7 @@ jobs:
             '
             echo
             echo "總批次：${total_batches}；將以 max-parallel=1 自動依序執行。"
+            echo 'MI_INDEX 若遇台北時間 13:30～13:45 的 TWSE 暫停時段，會等待至 13:46 後自動續跑。'
             echo '回填 commit 使用 GITHUB_TOKEN，不會因每個資料 commit 連續觸發 Pages；本流程也不直接部署網站。'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -280,6 +285,7 @@ jobs:
             echo '### TWSE 區間資料補齊結果'
             echo "- Planned batches: ${{ needs.plan.outputs.total_batches }}"
             echo "- Backfill result: ${{ needs.backfill.result }}"
+            echo '- MI_INDEX 會避開台北時間 13:30～13:45 的 TWSE ALL 查詢暫停時段。'
             echo '- 每個日期皆在重置到最新 main 後提交，降低與其他 Action push 衝突。'
             echo '- 本 Action 不呼叫 Pages，避免每個回填 commit 造成網站重複部署。'
           } >> "$GITHUB_STEP_SUMMARY"
