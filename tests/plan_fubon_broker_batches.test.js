@@ -7,8 +7,18 @@ const os = require('node:os');
 const path = require('node:path');
 const {
   buildPlan,
-  isCompleteOutput
+  isCompleteOutput,
+  loadTradingCalendar
 } = require('../scripts/plan_fubon_broker_batches');
+
+function calendar(dates) {
+  const sorted = [...dates].sort();
+  return {
+    dates: new Set(sorted),
+    firstDate: sorted[0],
+    lastDate: sorted.at(-1)
+  };
+}
 
 function writeOutput(dir, date, complete = true) {
   const file = path.join(dir, `fubon_${date.replaceAll('-', '')}_券商分點進出明細.json`);
@@ -25,17 +35,27 @@ function writeOutput(dir, date, complete = true) {
   return file;
 }
 
-test('plans all missing trading dates in five-day batches', () => {
+test('plans only actual trading dates in five-day batches', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fubon-plan-'));
+  const tradingCalendar = calendar([
+    '2026-07-01',
+    '2026-07-02',
+    '2026-07-03',
+    '2026-07-07',
+    '2026-07-08',
+    '2026-07-09',
+    '2026-07-10'
+  ]);
   const plan = buildPlan({
     start: '2026-07-01',
     end: '2026-07-10',
     batchSize: 5,
     force: false,
     outputDir: dir,
-    nonTradingDays: new Set(['2026-07-06'])
+    tradingCalendar
   });
   assert.equal(plan.trading_date_count, 7);
+  assert.equal(plan.non_trading_date_count, 3);
   assert.equal(plan.pending_date_count, 7);
   assert.equal(plan.matrix.include.length, 2);
   assert.equal(plan.matrix.include[0].dates, '2026-07-01,2026-07-02,2026-07-03,2026-07-07,2026-07-08');
@@ -48,13 +68,14 @@ test('skips only complete daily outputs unless force is enabled', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fubon-plan-'));
   writeOutput(dir, '2026-07-01', true);
   writeOutput(dir, '2026-07-02', false);
+  const tradingCalendar = calendar(['2026-07-01', '2026-07-02', '2026-07-03']);
   const normal = buildPlan({
     start: '2026-07-01',
     end: '2026-07-03',
     batchSize: 5,
     force: false,
     outputDir: dir,
-    nonTradingDays: new Set()
+    tradingCalendar
   });
   assert.equal(normal.skipped_complete_date_count, 1);
   assert.equal(normal.matrix.include[0].dates, '2026-07-02,2026-07-03');
@@ -64,13 +85,49 @@ test('skips only complete daily outputs unless force is enabled', () => {
     batchSize: 5,
     force: true,
     outputDir: dir,
-    nonTradingDays: new Set()
+    tradingCalendar
   });
   assert.equal(forced.pending_date_count, 3);
 });
 
-test('rejects partial files as incomplete', () => {
+test('rejects partial and all-unavailable files as incomplete', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fubon-plan-'));
   assert.equal(isCompleteOutput(writeOutput(dir, '2026-07-01', false)), false);
   assert.equal(isCompleteOutput(writeOutput(dir, '2026-07-02', true)), true);
+
+  const allUnavailable = path.join(dir, 'fubon_20260703_券商分點進出明細.json');
+  fs.writeFileSync(allUnavailable, JSON.stringify({
+    complete: true,
+    failedStockCount: 0,
+    failedStocks: [],
+    successfulStockCount: 0,
+    unavailableStockCount: 2,
+    stockUniverse: { expectedStockCount: 2 },
+    stocks: {},
+    unavailableStocks: [{ code: '1101' }, { code: '1102' }]
+  }));
+  assert.equal(isCompleteOutput(allUnavailable), false);
+});
+
+test('rejects requested ranges outside the trading calendar', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fubon-plan-'));
+  const tradingCalendar = calendar(['2026-07-02', '2026-07-03']);
+  assert.throws(() => buildPlan({
+    start: '2026-07-01',
+    end: '2026-07-03',
+    outputDir: dir,
+    tradingCalendar
+  }), /超出交易日曆範圍/);
+});
+
+test('loads compact dates from TWSE market chart data', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fubon-calendar-'));
+  const file = path.join(dir, 'market_chart.json');
+  fs.writeFileSync(file, JSON.stringify({
+    data: [{ date: '20251224' }, { date: '20251226' }]
+  }));
+  const loaded = loadTradingCalendar(file);
+  assert.equal(loaded.firstDate, '2025-12-24');
+  assert.equal(loaded.lastDate, '2025-12-26');
+  assert.equal(loaded.dates.has('2025-12-25'), false);
 });
