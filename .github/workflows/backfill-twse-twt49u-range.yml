@@ -1,0 +1,110 @@
+name: "[06 回填修復] TWT49U 除權除息－區間資料補齊"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '起始交易日 YYYYMMDD'
+        required: true
+        default: '20251103'
+        type: string
+      end_date:
+        description: '結束交易日 YYYYMMDD；留空取市場交易日曆最後日期'
+        required: false
+        default: ''
+        type: string
+      batch_size:
+        description: '每批交易日數'
+        required: true
+        default: '10'
+        type: string
+      min_date_pause_seconds:
+        description: '日期間最短等待秒數'
+        required: true
+        default: '30'
+        type: string
+      max_date_pause_seconds:
+        description: '日期間最長等待秒數'
+        required: true
+        default: '90'
+        type: string
+      force:
+        description: '重新抓取所有交易日'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-twse-twt49u-range
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      pending: ${{ steps.plan.outputs.pending }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node --test tests/plan_twse_range_backfill.test.js tests/crawl_twse_twt49u.test.js
+      - id: plan
+        shell: bash
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          end="$END_DATE"; [ -n "$end" ] || end=$(node -e "process.stdout.write(require('./scripts/lib/range_backfill').loadTwseTradingCalendar().lastDate)")
+          args=(--dataset twt49u --start "$START_DATE" --end "$end" --batch-size "$BATCH_SIZE")
+          [ "$FORCE" = true ] && args+=(--force)
+          node scripts/plan_twse_range_backfill.js "${args[@]}" > /tmp/plan.json
+          cat /tmp/plan.json
+          matrix=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify(p.matrix))")
+          pending=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.pending_date_count))")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "pending=$pending" >> "$GITHUB_OUTPUT"
+          echo "has_work=$([ "$pending" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  backfill:
+    needs: plan
+    if: needs.plan.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: 區間批次回填
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Crawl, validate, and push each date
+        env:
+          BATCH_DATES: ${{ matrix.dates }}
+          INPUT_FORCE: ${{ inputs.force }}
+          MIN_DATE_PAUSE_SECONDS: ${{ inputs.min_date_pause_seconds }}
+          MAX_DATE_PAUSE_SECONDS: ${{ inputs.max_date_pause_seconds }}
+        run: bash scripts/run_twt49u_range_batch.sh
+      - if: always()
+        run: echo "batch ${{ matrix.batch_index }}/${{ matrix.batch_count }}：${{ matrix.first_date }} ～ ${{ matrix.last_date }}" >> "$GITHUB_STEP_SUMMARY"
+
+  complete:
+    needs: [plan, backfill]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "待補日期：${{ needs.plan.outputs.pending }}"
+          if [ "${{ needs.plan.result }}" != success ]; then exit 1; fi
+          if [ "${{ needs.plan.outputs.has_work }}" = true ] && [ "${{ needs.backfill.result }}" != success ]; then exit 1; fi
