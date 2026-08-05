@@ -10,6 +10,7 @@ on:
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/strategy_tag_source_enrichment.js'
+      - 'scripts/historical_factor_research_round_3.js'
       - 'scripts/annotate_prediction_disposition_stocks.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
       - 'scripts/recalculate_prediction_strategy_history.js'
@@ -19,6 +20,7 @@ on:
       - 'tests/evaluate_tag_strategy_replay.test.js'
       - 'tests/strategy_registry_versioning.test.js'
       - 'tests/annotate_prediction_disposition_stocks.test.js'
+      - 'tests/round_6_observation_risk_tag.test.js'
       - '.github/workflows/test-prediction-tag-strategy-engine.yml'
   pull_request:
     branches: [main]
@@ -29,6 +31,7 @@ on:
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/strategy_tag_source_enrichment.js'
+      - 'scripts/historical_factor_research_round_3.js'
       - 'scripts/annotate_prediction_disposition_stocks.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
       - 'scripts/recalculate_prediction_strategy_history.js'
@@ -38,6 +41,7 @@ on:
       - 'tests/evaluate_tag_strategy_replay.test.js'
       - 'tests/strategy_registry_versioning.test.js'
       - 'tests/annotate_prediction_disposition_stocks.test.js'
+      - 'tests/round_6_observation_risk_tag.test.js'
       - '.github/workflows/test-prediction-tag-strategy-engine.yml'
   workflow_dispatch:
 
@@ -63,6 +67,7 @@ jobs:
           node --check scripts/strategy_tag_engine.js
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/strategy_tag_source_enrichment.js
+          node --check scripts/historical_factor_research_round_3.js
           node --check scripts/annotate_prediction_disposition_stocks.js
           node --check scripts/evaluate_tag_strategy_replay.js
           node --check scripts/recalculate_prediction_strategy_history.js
@@ -72,7 +77,8 @@ jobs:
             tests/prediction_tag_strategy_engine.test.js \
             tests/evaluate_tag_strategy_replay.test.js \
             tests/strategy_registry_versioning.test.js \
-            tests/annotate_prediction_disposition_stocks.test.js
+            tests/annotate_prediction_disposition_stocks.test.js \
+            tests/round_6_observation_risk_tag.test.js
 
       - name: Dry-run latest available prediction data
         shell: bash
