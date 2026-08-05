@@ -8,6 +8,7 @@ on:
       - 'scripts/install_prediction_tag_strategy_ui.js'
       - 'public/prediction-tag-strategy-enhancement.js'
       - 'public/prediction-tag-strategy-expression-semantics.js'
+      - 'public/prediction-formula-builder.js'
       - 'public/prediction-replay-tag-strategy-enhancement.js'
       - 'public/prediction-dashboard.html'
       - 'public/prediction-groups.html'
@@ -16,6 +17,7 @@ on:
       - 'tests/install_prediction_tag_strategy_ui.test.js'
       - 'tests/prediction_tag_strategy_filter_state.test.js'
       - 'tests/prediction_tag_strategy_expression_semantics.test.js'
+      - 'tests/prediction_formula_builder.test.js'
   pull_request:
     branches: [main]
     paths:
@@ -23,6 +25,7 @@ on:
       - 'scripts/install_prediction_tag_strategy_ui.js'
       - 'public/prediction-tag-strategy-enhancement.js'
       - 'public/prediction-tag-strategy-expression-semantics.js'
+      - 'public/prediction-formula-builder.js'
       - 'public/prediction-replay-tag-strategy-enhancement.js'
       - 'public/prediction-dashboard.html'
       - 'public/prediction-groups.html'
@@ -31,6 +34,7 @@ on:
       - 'tests/install_prediction_tag_strategy_ui.test.js'
       - 'tests/prediction_tag_strategy_filter_state.test.js'
       - 'tests/prediction_tag_strategy_expression_semantics.test.js'
+      - 'tests/prediction_formula_builder.test.js'
   workflow_dispatch:
 
 permissions:
@@ -59,11 +63,13 @@ jobs:
           node --check scripts/install_prediction_tag_strategy_ui.js
           node --check public/prediction-tag-strategy-enhancement.js
           node --check public/prediction-tag-strategy-expression-semantics.js
+          node --check public/prediction-formula-builder.js
           node --check public/prediction-replay-tag-strategy-enhancement.js
           node --test \
             tests/install_prediction_tag_strategy_ui.test.js \
             tests/prediction_tag_strategy_filter_state.test.js \
-            tests/prediction_tag_strategy_expression_semantics.test.js
+            tests/prediction_tag_strategy_expression_semantics.test.js \
+            tests/prediction_formula_builder.test.js
 
       - name: Install shared UI references
         run: node scripts/install_prediction_tag_strategy_ui.js
@@ -72,6 +78,7 @@ jobs:
         shell: bash
         run: |
           grep -q 'prediction-tag-strategy-expression-semantics.js?v=1' public/prediction-dashboard.html
+          grep -q 'prediction-formula-builder.js?v=1' public/prediction-dashboard.html
           grep -q 'prediction-tag-strategy-expression-semantics.js?v=1' public/prediction-groups.html
           grep -q 'prediction-tag-strategy-expression-semantics.js?v=1' public/prediction-industry-dashboard.html
           grep -q 'prediction-replay-tag-strategy-enhancement.js' public/prediction-replay-dashboard-view.html
