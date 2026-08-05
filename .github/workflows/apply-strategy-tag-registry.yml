@@ -67,7 +67,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Validate registry and engine
+      - name: Full validation for registry or code changes
+        if: github.event_name != 'workflow_run'
         run: |
           node --check scripts/strategy_tag_engine.js
           node --check scripts/strategy_tag_source_enrichment.js
@@ -78,6 +79,12 @@ jobs:
             tests/strategy_tag_source_enrichment.test.js \
             tests/apply_strategy_tag_registry.test.js \
             tests/summarize_strategy_snapshot_manifest.test.js
+          node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
+      - name: Fast validation for routine daily prediction
+        if: github.event_name == 'workflow_run'
+        run: |
+          node --check scripts/apply_strategy_tag_registry.js
+          node --check scripts/summarize_strategy_snapshot_manifest.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
 
   apply:
@@ -95,34 +102,54 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Apply fixed tag and strategy registry
+      - name: Resolve one target prediction date
+        id: target
         env:
           INPUT_DATE: ${{ inputs.date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_DATE:-}" ]; then
+            target_date="${INPUT_DATE//[^0-9]/}"
+          else
+            target_date=$(node -e "process.stdout.write(require('./scripts/apply_strategy_tag_registry').latestPredictionDate('data_predictions'))")
+          fi
+          [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target date: $target_date"; exit 1; }
+          test -s "data_predictions/$target_date/summary.json"
+          echo "date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "TARGET_DATE=$target_date" >> "$GITHUB_ENV"
+          echo "Target prediction date: $target_date"
+      - name: Apply fixed tag and strategy registry
+        env:
           EVALUATION_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.evaluation_mode || github.event_name == 'workflow_run' && 'live_snapshot' || 'historical_recalculation' }}
           DATA_AS_OF: ${{ inputs.data_as_of }}
         shell: bash
         run: |
           set -euo pipefail
-          args=(--evaluation-mode "$EVALUATION_MODE")
-          if [ -n "${INPUT_DATE:-}" ]; then args+=(--date "$INPUT_DATE"); else args+=(--latest); fi
+          args=(--date "$TARGET_DATE" --evaluation-mode "$EVALUATION_MODE")
           if [ -n "${DATA_AS_OF:-}" ]; then args+=(--data-as-of "$DATA_AS_OF"); fi
-          echo "event=${GITHUB_EVENT_NAME} evaluation_mode=${EVALUATION_MODE} date=${INPUT_DATE:-latest} data_as_of=${DATA_AS_OF:-base_trade_date}"
+          echo "event=${GITHUB_EVENT_NAME} evaluation_mode=${EVALUATION_MODE} date=${TARGET_DATE} data_as_of=${DATA_AS_OF:-base_trade_date}"
           node scripts/apply_strategy_tag_registry.js "${args[@]}"
-      - name: Summarize snapshot classifications
-        run: node scripts/summarize_strategy_snapshot_manifest.js
-      - name: Verify generated output and manifest
+      - name: Summarize only the target snapshot date
+        run: node scripts/summarize_strategy_snapshot_manifest.js --date "$TARGET_DATE"
+      - name: Verify only the target snapshot date
+        env:
+          TARGET_DATE: ${{ steps.target.outputs.date }}
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
+          const date = process.env.TARGET_DATE;
           const manifestFile = 'data_prediction_analysis/strategy-snapshots/manifest.json';
           if (!fs.existsSync(manifestFile)) throw new Error('Strategy snapshot manifest missing');
           const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
-          const entries = Object.values(manifest.dates || {}).flatMap(row => [
+          const row = manifest.dates?.[date];
+          if (!row) throw new Error(`Strategy snapshot date missing: ${date}`);
+          const entries = [
             row.live_snapshot,
             ...(row.live_snapshot_history || []),
             ...(row.historical_recalculations || []),
-          ]).filter(Boolean);
-          if (!entries.length) throw new Error('No strategy snapshot generated');
+          ].filter(Boolean);
+          if (!entries.length) throw new Error(`No strategy snapshot generated for ${date}`);
           for (const entry of entries) {
             if (!fs.existsSync(entry.file)) throw new Error(`Snapshot file missing: ${entry.file}`);
             const snapshot = JSON.parse(fs.readFileSync(entry.file, 'utf8'));
@@ -131,6 +158,7 @@ jobs:
             for (const item of Object.values(snapshot.strategy_classifications)) if (item.count === undefined) throw new Error('Strategy count missing');
             if (!entry.classification_summary) throw new Error(`Manifest summary missing: ${entry.file}`);
           }
+          console.log(`Verified ${entries.length} snapshot entry(s) for ${date}`);
           NODE
       - name: Commit snapshot and enriched live prediction summary
         shell: bash
@@ -143,7 +171,7 @@ jobs:
             echo 'No tag or strategy snapshot changes'
             exit 0
           fi
-          git commit -m 'data: apply versioned tag and strategy snapshot'
+          git commit -m "data: apply versioned tag and strategy snapshot ${TARGET_DATE}"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
@@ -152,7 +180,7 @@ jobs:
           exit 1
 
   deploy_pages:
-    name: Deploy latest prediction data to Pages
+    name: Deploy enriched prediction data to Pages
     needs: apply
     if: github.event_name != 'pull_request' && needs.apply.result == 'success'
     uses: ./.github/workflows/deploy-pages.yml
