@@ -1,0 +1,90 @@
+name: "[08 系統安裝] 預測市場快照與收盤定稿"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/taifex_realtime_night_futures.js'
+      - 'scripts/external_market_intraday_snapshot.js'
+      - 'scripts/capture_prediction_market_context.js'
+      - 'scripts/run_prediction_market_environment.js'
+      - 'scripts/rebind_prediction_market_environment.js'
+      - 'scripts/apply_prediction_context_to_readiness.js'
+      - 'scripts/finalize_prediction_market_context.js'
+      - 'scripts/install_prediction_market_context_workflows.js'
+      - 'tests/prediction_market_context.test.js'
+      - '.github/workflows/install-prediction-market-context.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: install-prediction-market-context
+  cancel-in-progress: false
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate implementation scripts
+        run: |
+          node --check scripts/taifex_realtime_night_futures.js
+          node --check scripts/external_market_intraday_snapshot.js
+          node --check scripts/capture_prediction_market_context.js
+          node --check scripts/run_prediction_market_environment.js
+          node --check scripts/rebind_prediction_market_environment.js
+          node --check scripts/apply_prediction_context_to_readiness.js
+          node --check scripts/finalize_prediction_market_context.js
+          node --check scripts/install_prediction_market_context_workflows.js
+          node --test tests/prediction_market_context.test.js
+
+      - name: Install workflow changes
+        run: node scripts/install_prediction_market_context_workflows.js
+
+      - name: Verify workflow architecture and installed steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R "workflow_run" .github/workflows; then
+            echo "workflow_run is forbidden by AGENTS.md" >&2
+            exit 1
+          fi
+          grep -q "Capture prediction-time night and external market context" .github/workflows/daily-stock-prediction.yml
+          grep -q "run_prediction_market_environment.js" .github/workflows/daily-stock-prediction.yml
+          grep -q "Apply immutable prediction-time market context to readiness" .github/workflows/daily-stock-prediction.yml
+          grep -q "Reapply immutable prediction-time market context" .github/workflows/apply-strategy-tag-registry.yml
+          grep -q "05:10、05:40、06:10、06:40" .github/workflows/crawl-external-market-indicators.yml
+          grep -q "台指期夜盤收盤定稿" .github/workflows/update-official-market-constraints.yml
+          grep -q "uses: ./.github/workflows/apply-strategy-tag-registry.yml" .github/workflows/daily-stock-prediction.yml
+          grep -q "uses: ./.github/workflows/deploy-pages.yml" .github/workflows/apply-strategy-tag-registry.yml
+          test ! -e .github/workflows/test-current-taifex-night-snapshot.yml
+
+      - name: Commit installed workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .github/workflows
+          if git diff --cached --quiet; then
+            echo "Prediction market context workflows are already installed"
+            exit 0
+          fi
+          git commit -m "ci: install prediction market snapshot lifecycle"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
