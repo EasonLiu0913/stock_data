@@ -191,7 +191,7 @@ test('invalid live snapshot is archived and replaced with calculated margin feat
   assert.equal(second.reused_existing_snapshot, true);
 });
 
-test('a valid live snapshot remains immutable when a later registry is different', () => {
+test('a stale live snapshot is archived and rebuilt when a later registry is different', () => {
   const root = createWorkspace();
   const liveFile = path.join(root, 'data_prediction_analysis', 'strategy-snapshots', 'live_snapshot', '20260803.json');
   writeJson(liveFile, {
@@ -205,15 +205,35 @@ test('a valid live snapshot remains immutable when a later registry is different
     generated_at: '2026-08-03T00:00:00.000Z',
     tag_registry: [], strategy_registry: [], tag_classifications: {}, strategy_classifications: {}, stocks: [],
   });
+  const registry = marginRegistry([]);
   const result = applyRegistry({
     workspaceRoot: root,
     date: '20260803',
-    registry: marginRegistry([]),
+    registry,
     evaluationMode: 'live_snapshot',
   });
-  assert.equal(result.corrected_invalid_live_snapshot, false);
-  assert.equal(result.reused_existing_snapshot, true);
-  assert.equal(JSON.parse(fs.readFileSync(liveFile)).registry_fingerprint, 'valid-old-fingerprint');
+  assert.equal(result.corrected_invalid_live_snapshot, true);
+  assert.equal(result.reused_existing_snapshot, false);
+  assert.equal(result.live_snapshot_replacement_reason, 'registry_fingerprint_mismatch');
+  assert.ok(result.archived_snapshot_file);
+  const archived = JSON.parse(fs.readFileSync(path.join(root, result.archived_snapshot_file)));
+  assert.equal(archived.registry_fingerprint, 'valid-old-fingerprint');
+  const snapshot = JSON.parse(fs.readFileSync(liveFile));
+  assert.equal(snapshot.registry_fingerprint, result.registry_fingerprint);
+  assert.notEqual(snapshot.registry_fingerprint, 'valid-old-fingerprint');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'data_prediction_analysis', 'strategy-snapshots', 'manifest.json')));
+  assert.equal(manifest.dates['20260803'].live_snapshot.registry_fingerprint, result.registry_fingerprint);
+  assert.equal(manifest.dates['20260803'].live_snapshot_history.length, 1);
+  assert.equal(manifest.dates['20260803'].live_snapshot_history[0].registry_fingerprint, 'valid-old-fingerprint');
+
+  const second = applyRegistry({
+    workspaceRoot: root,
+    date: '20260803',
+    registry,
+    evaluationMode: 'live_snapshot',
+  });
+  assert.equal(second.corrected_invalid_live_snapshot, false);
+  assert.equal(second.reused_existing_snapshot, true);
 });
 
 test('historical recalculation preserves summary and stores multiple registry versions', () => {
