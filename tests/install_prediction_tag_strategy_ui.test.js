@@ -8,7 +8,9 @@ const path = require('node:path');
 const vm = require('node:vm');
 const {
   TARGETS,
+  EXTRA_SCRIPTS,
   TAG_EXPRESSION_ENTRYPOINT,
+  FORMULA_BUILDER_ENTRYPOINT,
   injectScript,
   injectPageAdapter,
   install,
@@ -73,6 +75,9 @@ test('installer targets all prediction content pages and is idempotent', () => {
     const html = fs.readFileSync(path.join(directory, filename), 'utf8');
     assert.match(html, new RegExp(script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  const dashboard = fs.readFileSync(path.join(directory, 'prediction-dashboard.html'), 'utf8');
+  assert.match(dashboard, new RegExp(FORMULA_BUILDER_ENTRYPOINT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.deepEqual(EXTRA_SCRIPTS['prediction-dashboard.html'], [FORMULA_BUILDER_ENTRYPOINT]);
   for (const filename of ['prediction-dashboard.html', 'prediction-groups.html', 'prediction-industry-dashboard.html']) {
     const html = fs.readFileSync(path.join(directory, filename), 'utf8');
     assert.doesNotMatch(html, /<script\s+src=["']prediction-tag-strategy-enhancement\.js/);
@@ -112,6 +117,7 @@ test('browser enhancement scripts parse as JavaScript', () => {
   for (const filename of [
     'prediction-tag-strategy-enhancement.js',
     'prediction-tag-strategy-expression-semantics.js',
+    'prediction-formula-builder.js',
     'prediction-replay-tag-strategy-enhancement.js',
   ]) {
     const source = fs.readFileSync(path.join(__dirname, '..', 'public', filename), 'utf8');
