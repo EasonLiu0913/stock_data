@@ -11,6 +11,16 @@ on:
       - 'tests/historical_factor_research_round_2.test.js'
       - 'tests/finalize_round_2_factor_research.test.js'
       - '.github/workflows/round-2-factor-research.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'scripts/historical_factor_research_round_2.js'
+      - 'scripts/generate_round_2_factor_research.js'
+      - 'scripts/finalize_round_2_factor_research.js'
+      - 'tests/historical_factor_research_round_2.test.js'
+      - 'tests/finalize_round_2_factor_research.test.js'
+      - '.github/workflows/round-2-factor-research.yml'
   workflow_dispatch:
     inputs:
       prediction_date:
@@ -31,7 +41,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: round-2-factor-research-${{ github.ref }}
+  group: round-2-factor-research-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -41,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -104,6 +114,7 @@ jobs:
           console.log(`Verified ${payload.events.length} round-two research events and ${finalized.summary_file}`);
           NODE
       - name: Commit research output
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
