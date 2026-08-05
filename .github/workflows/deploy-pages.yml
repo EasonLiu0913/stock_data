@@ -65,7 +65,48 @@ jobs:
           set -euo pipefail
           bash -n scripts/prepare_pages_site.sh
           bash scripts/prepare_pages_site.sh --self-test
-          bash scripts/prepare_pages_site.sh --print-dependencies . | tee /tmp/pages-dependencies.txt
+
+          {
+            bash scripts/prepare_pages_site.sh --print-dependencies .
+            node - . <<'NODE'
+          'use strict';
+
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const rootDir = path.resolve(process.argv[2]);
+          const publicRoot = path.join(rootDir, 'public');
+          const dependencies = new Set();
+          const pattern = /\$\{[^}]+\}\/((?:data|normalized|config)[A-Za-z0-9_.-]*)\//g;
+
+          function walk(directory) {
+            const files = [];
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const fullPath = path.join(directory, entry.name);
+              if (entry.isDirectory()) files.push(...walk(fullPath));
+              else if (/\.(?:html|js|mjs|css)$/i.test(entry.name)) files.push(fullPath);
+            }
+            return files;
+          }
+
+          for (const filePath of walk(publicRoot)) {
+            const text = fs.readFileSync(filePath, 'utf8');
+            pattern.lastIndex = 0;
+            for (const match of text.matchAll(pattern)) dependencies.add(match[1]);
+          }
+
+          const selfTest = "fetch(`${basePath}/data_fubon/files.json`)";
+          pattern.lastIndex = 0;
+          const selfTestMatch = pattern.exec(selfTest);
+          if (!selfTestMatch || selfTestMatch[1] !== 'data_fubon') {
+            throw new Error('Dynamic Pages dependency scanner self-test failed');
+          }
+
+          for (const dependency of [...dependencies].sort()) {
+            process.stdout.write(`${dependency}\n`);
+          }
+          NODE
+          } | sort -u | tee /tmp/pages-dependencies.txt
 
           grep -qx 'config' /tmp/pages-dependencies.txt || {
             echo 'Strategy registry dependency was not discovered from public assets.' >&2
@@ -73,6 +114,10 @@ jobs:
           }
           grep -qx 'data_prediction_analysis' /tmp/pages-dependencies.txt || {
             echo 'Strategy replay dependency was not discovered from public assets.' >&2
+            exit 1
+          }
+          grep -qx 'data_fubon' /tmp/pages-dependencies.txt || {
+            echo 'Fubon frontend dependency was not discovered from public assets.' >&2
             exit 1
           }
 
@@ -103,12 +148,36 @@ jobs:
           set -euo pipefail
           bash scripts/prepare_pages_site.sh . _site "${TARGET_DATE:-}"
 
+          # prepare_pages_site.sh 處理靜態相對路徑；這裡補入 `${basePath}/data_xxx/...`
+          # 這類執行期組合路徑，避免檔案清單失敗後錯誤退回今天日期。
+          while IFS= read -r dependency; do
+            [ -n "$dependency" ] || continue
+            [ -e "_site/$dependency" ] && continue
+
+            source_path="$dependency"
+            destination_path="_site/$dependency"
+            if [ -d "$source_path" ]; then
+              mkdir -p "$destination_path"
+              rsync -aL "$source_path/" "$destination_path/"
+            elif [ -f "$source_path" ]; then
+              mkdir -p "$(dirname "$destination_path")"
+              cp -L "$source_path" "$destination_path"
+            else
+              echo "Missing dynamically discovered Pages dependency: $dependency" >&2
+              exit 1
+            fi
+          done < /tmp/pages-dependencies.txt
+
           test -f _site/config/strategy-tag-registry.json || {
             echo 'Pages artifact is missing config/strategy-tag-registry.json.' >&2
             exit 1
           }
           test -f _site/data_prediction_analysis/strategy-snapshots/manifest.json || {
             echo 'Pages artifact is missing the strategy snapshot manifest.' >&2
+            exit 1
+          }
+          test -f _site/data_fubon/files.json || {
+            echo 'Pages artifact is missing data_fubon/files.json.' >&2
             exit 1
           }
 
