@@ -3,9 +3,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const HOLIDAY_FILE = path.join(ROOT, 'data_history_sma', 'non_trading_days.json');
+const MARKET_CONTEXT_CAPTURE = path.join(__dirname, 'capture_prediction_market_context.js');
+const MARKET_CONTEXT_PRELOAD = path.join(__dirname, 'prediction_market_context_preload.js');
 
 function readJson(file, fallback = null) {
   try {
@@ -144,6 +147,81 @@ function parseArgs(argv) {
   return args;
 }
 
+function isDailyPredictionWorkflow(args = new Map()) {
+  if (args.has('capture-market-context')) return true;
+  if (args.has('skip-market-context')) return false;
+  if (process.env.GITHUB_ACTIONS !== 'true') return false;
+  const identity = `${process.env.GITHUB_WORKFLOW_REF || ''} ${process.env.GITHUB_WORKFLOW || ''}`;
+  return identity.includes('daily-stock-prediction.yml') || identity.includes('每日產生股票預測');
+}
+
+function capturePredictionMarketContext(resolved) {
+  const forecast = resolved.forecast_target_date_compact;
+  const base = resolved.base_trade_date_compact;
+  const result = spawnSync(process.execPath, [
+    MARKET_CONTEXT_CAPTURE,
+    '--forecast-date', forecast,
+    '--base-date', base,
+  ], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, NODE_OPTIONS: '' },
+  });
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.status !== 0) {
+    if (result.stdout) process.stderr.write(result.stdout);
+    throw new Error(`Prediction market context capture failed with exit code ${result.status}`);
+  }
+
+  const latestFile = path.join(ROOT, 'data_prediction_context', forecast, 'latest.json');
+  const latest = readJson(latestFile, null);
+  if (!latest?.manifest_file || !latest?.external_market_file || !latest?.night_futures_file) {
+    throw new Error(`Prediction market context latest.json is incomplete: ${latestFile}`);
+  }
+
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    const staged = spawnSync('git', ['add', path.join('data_prediction_context', forecast)], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+    if (staged.status !== 0) {
+      throw new Error(`Unable to stage prediction market context: ${staged.stderr || staged.stdout}`);
+    }
+  }
+
+  return {
+    ...latest,
+    latest_file: path.relative(ROOT, latestFile).replaceAll(path.sep, '/'),
+    external_market_absolute: path.join(ROOT, latest.external_market_file),
+    night_futures_absolute: path.join(ROOT, latest.night_futures_file),
+    manifest_absolute: path.join(ROOT, latest.manifest_file),
+  };
+}
+
+function githubEnvLines(resolved, context = null) {
+  const lines = [
+    `FORECAST_BASE_DATE=${resolved.base_trade_date_compact}`,
+    `FORECAST_TARGET_DATE=${resolved.forecast_target_date_compact}`,
+    `FORECAST_BASE_DATE_ISO=${resolved.base_trade_date}`,
+    `FORECAST_TARGET_DATE_ISO=${resolved.forecast_target_date}`,
+  ];
+  if (context) {
+    const preloadOption = `--require=${MARKET_CONTEXT_PRELOAD}`;
+    const existingNodeOptions = String(process.env.NODE_OPTIONS || '').trim();
+    lines.push(
+      `PREDICTION_MARKET_CONTEXT_LATEST_FILE=${context.latest_file}`,
+      `PREDICTION_MARKET_CONTEXT_MANIFEST_FILE=${context.manifest_absolute}`,
+      `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE=${context.external_market_absolute}`,
+      `PREDICTION_MARKET_CONTEXT_NIGHT_FILE=${context.night_futures_absolute}`,
+      `PREDICTION_MARKET_CONTEXT_SNAPSHOT_ID=${context.snapshot_id}`,
+      `PREDICTION_MARKET_CONTEXT_SNAPSHOT_HASH=${context.snapshot_hash}`,
+      `NODE_OPTIONS=${[existingNodeOptions, preloadOption].filter(Boolean).join(' ')}`,
+    );
+  }
+  return lines;
+}
+
 if (require.main === module) {
   const args = parseArgs(process.argv.slice(2));
   const nowArg = args.get('now');
@@ -156,14 +234,12 @@ if (require.main === module) {
   const resolved = targetDateArg
     ? resolveExplicitForecastDate(targetDateArg, now)
     : resolveForecastDates(now);
+  const context = args.has('github-env') && isDailyPredictionWorkflow(args)
+    ? capturePredictionMarketContext(resolved)
+    : null;
 
   if (args.has('github-env')) {
-    process.stdout.write([
-      `FORECAST_BASE_DATE=${resolved.base_trade_date_compact}`,
-      `FORECAST_TARGET_DATE=${resolved.forecast_target_date_compact}`,
-      `FORECAST_BASE_DATE_ISO=${resolved.base_trade_date}`,
-      `FORECAST_TARGET_DATE_ISO=${resolved.forecast_target_date}`
-    ].join('\n'));
+    process.stdout.write(githubEnvLines(resolved, context).join('\n'));
     process.stdout.write('\n');
   } else {
     console.log(JSON.stringify(resolved, null, 2));
@@ -179,5 +255,8 @@ module.exports = {
   normalizeIsoDate,
   previousTradingDate,
   resolveExplicitForecastDate,
-  resolveForecastDates
+  resolveForecastDates,
+  isDailyPredictionWorkflow,
+  capturePredictionMarketContext,
+  githubEnvLines,
 };
