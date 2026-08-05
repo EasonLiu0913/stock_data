@@ -26,6 +26,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: prediction-analysis-writer
@@ -188,3 +190,8 @@ jobs:
             sleep 5
           done
           exit 1
+
+  deploy_pages:
+    name: 覆盤完成後發布 GitHub Pages
+    needs: replay_and_compare
+    uses: ./.github/workflows/deploy-pages.yml
