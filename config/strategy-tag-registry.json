@@ -3,7 +3,8 @@
   "registry_id": "prediction_tag_strategy_registry_v2",
   "feature_engine_versions": {
     "historical_factors_round_1": 1,
-    "historical_factors_round_2": 1
+    "historical_factors_round_2": 1,
+    "historical_factors_round_3": 1
   },
   "replace_invalid_live_fingerprints": [
     "23345dd771de9f29",
@@ -211,6 +212,26 @@
       "enabled": true,
       "rule": {
         "path": "strategy_tag_features.margin_crowding_risk",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "margin_crowding_capitulation_continuation_risk_v1",
+      "family_id": "margin_crowding_capitulation_continuation_risk",
+      "version": 1,
+      "label": "融資擁擠恐慌續跌風險",
+      "category": "risk",
+      "fixed_display": true,
+      "enabled": true,
+      "usage_role": "observation_only",
+      "affects_strategy_eligibility": false,
+      "affects_prediction_score": false,
+      "evaluation_target": "market_relative_underperformance_5d",
+      "description": "融資擁擠且價格已明顯破位，後續五日續跌與尾部損失風險較高。僅供觀察，不參與策略判斷或評分。",
+      "display_hint": "市場偏弱時宜提高警覺；市場趨勢不影響此標籤入選。",
+      "rule": {
+        "path": "strategy_tag_features.margin_crowding_capitulation_continuation_risk",
         "operator": "eq",
         "value": true
       }

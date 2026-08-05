@@ -94,6 +94,8 @@ jobs:
           if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ "$environment_run" = "true" ] || [ ! -s "data_prediction_analysis/formal-strategy/$date.json" ]; then formal_strategy_run=true; fi
           tag_strategy_run=false
           if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ "$environment_run" = "true" ] || [ ! -s "data_prediction_analysis/tag-strategy/$date.json" ]; then tag_strategy_run=true; fi
+          observation_tag_run=false
+          if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ "$tag_strategy_run" = "true" ] || [ ! -s "data_prediction_analysis/observation-tag/$date.json" ]; then observation_tag_run=true; fi
 
           echo "run=$comparison_run" >> "$GITHUB_OUTPUT"
           echo "factor_run=$factor_run" >> "$GITHUB_OUTPUT"
@@ -101,6 +103,7 @@ jobs:
           echo "environment_run=$environment_run" >> "$GITHUB_OUTPUT"
           echo "formal_strategy_run=$formal_strategy_run" >> "$GITHUB_OUTPUT"
           echo "tag_strategy_run=$tag_strategy_run" >> "$GITHUB_OUTPUT"
+          echo "observation_tag_run=$observation_tag_run" >> "$GITHUB_OUTPUT"
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
           echo "## 每日預測覆盤" >> "$GITHUB_STEP_SUMMARY"
@@ -110,11 +113,13 @@ jobs:
           echo "- 重新產生實際市場環境：$environment_run" >> "$GITHUB_STEP_SUMMARY"
           echo "- 計算既有正式策略：$formal_strategy_run" >> "$GITHUB_STEP_SUMMARY"
           echo "- 計算標籤組合策略：$tag_strategy_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算觀察型風險標籤：$observation_tag_run" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run market environment and strategy tests
         run: |
           node --check scripts/prediction_tag_strategy_engine.js
           node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/evaluate_observation_tag_replay.js
           node --check scripts/recalculate_prediction_strategy_history.js
           node --check scripts/backfill_prediction_replay_5d_outcomes.js
           node --test \
@@ -122,6 +127,7 @@ jobs:
             tests/formal_strategy_replay.test.js \
             tests/prediction_tag_strategy_engine.test.js \
             tests/evaluate_tag_strategy_replay.test.js \
+            tests/evaluate_observation_tag_replay.test.js \
             tests/backfill_prediction_replay_5d_outcomes.test.js
 
       - name: Replay V1
@@ -169,12 +175,16 @@ jobs:
         if: steps.date.outputs.tag_strategy_run == 'true' || steps.five_day.outputs.changed == 'true'
         run: node scripts/evaluate_tag_strategy_replay.js --date "${{ steps.date.outputs.date }}"
 
+      - name: Evaluate observation-only risk tags
+        if: steps.date.outputs.observation_tag_run == 'true' || steps.five_day.outputs.changed == 'true'
+        run: node scripts/evaluate_observation_tag_replay.js --date "${{ steps.date.outputs.date }}"
+
       - name: Analyze relative leadership by market environment
         if: steps.date.outputs.environment_run == 'true' || steps.date.outputs.run == 'true'
         run: node scripts/analyze_relative_leadership_by_environment.js --date "${{ steps.date.outputs.date }}" --max-dates 30
 
       - name: Commit replay comparison, environment, and analyses
-        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_run == 'true' || steps.date.outputs.volume_run == 'true' || steps.date.outputs.environment_run == 'true' || steps.date.outputs.formal_strategy_run == 'true' || steps.date.outputs.tag_strategy_run == 'true' || steps.five_day.outputs.changed == 'true'
+        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_run == 'true' || steps.date.outputs.volume_run == 'true' || steps.date.outputs.environment_run == 'true' || steps.date.outputs.formal_strategy_run == 'true' || steps.date.outputs.tag_strategy_run == 'true' || steps.date.outputs.observation_tag_run == 'true' || steps.five_day.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
