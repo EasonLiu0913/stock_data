@@ -101,3 +101,5 @@ module.exports = {
   rebindPredictionMarketRisk,
   main,
 };
+
+// Validation-only branch marker; removed by squash merge because main already has identical behavior.
