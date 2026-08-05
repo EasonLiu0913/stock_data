@@ -1,8 +1,154 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+
+scan_dependencies() {
+  local root_dir="$1"
+  node - "$root_dir" <<'NODE'
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+const rootDir = path.resolve(process.argv[2]);
+const publicRoot = path.join(rootDir, 'public');
+if (!fs.existsSync(publicRoot)) throw new Error(`Missing public directory: ${publicRoot}`);
+
+function walk(directory) {
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walk(fullPath));
+    else if (/\.(?:html|js|mjs|css)$/i.test(entry.name)) files.push(fullPath);
+  }
+  return files;
+}
+
+const dependencies = new Set(['data_predictions']);
+const rootDirectoryPatterns = [
+  /(?:\.\.\/)+([A-Za-z0-9_.-]+)\//g,
+  /\/stock_data\/([A-Za-z0-9_.-]+)\//g,
+];
+const rootFilePatterns = [
+  /(?:\.\.\/)+([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
+  /\/stock_data\/([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
+];
+
+for (const filePath of walk(publicRoot)) {
+  const text = fs.readFileSync(filePath, 'utf8');
+  for (const pattern of rootDirectoryPatterns) {
+    pattern.lastIndex = 0;
+    for (const match of text.matchAll(pattern)) {
+      const dependency = match[1];
+      if (dependency !== 'public' && dependency !== 'stock_data') dependencies.add(dependency);
+    }
+  }
+  for (const pattern of rootFilePatterns) {
+    pattern.lastIndex = 0;
+    for (const match of text.matchAll(pattern)) dependencies.add(match[1]);
+  }
+}
+
+for (const dependency of [...dependencies].sort()) process.stdout.write(`${dependency}\n`);
+NODE
+}
+
+resolve_target_date() {
+  local site_root="$1"
+  local requested_date="${2:-}"
+  node - "$site_root" "$requested_date" <<'NODE'
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+const siteRoot = path.resolve(process.argv[2]);
+const requested = String(process.argv[3] || '').replace(/[^0-9]/g, '');
+if (requested) {
+  if (!/^20\d{6}$/.test(requested)) throw new Error(`Invalid target date: ${requested}`);
+  process.stdout.write(requested);
+  process.exit(0);
+}
+
+const manifestFile = path.join(siteRoot, 'data_predictions', 'manifest.json');
+if (!fs.existsSync(manifestFile)) throw new Error('Missing data_predictions/manifest.json');
+const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+const candidates = [
+  manifest.forecast_date_compact,
+  manifest.target_date,
+  manifest.latest_date,
+  manifest.forecast_date,
+  Array.isArray(manifest.available_dates) ? manifest.available_dates.at(-1) : null,
+  manifest.output_directory ? path.basename(String(manifest.output_directory)) : null,
+];
+for (const candidate of candidates) {
+  const value = String(candidate || '').replace(/[^0-9]/g, '');
+  if (/^20\d{6}$/.test(value)) {
+    process.stdout.write(value);
+    process.exit(0);
+  }
+}
+throw new Error('Unable to resolve latest prediction date from data_predictions/manifest.json');
+NODE
+}
+
+run_self_test() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  trap 'rm -rf "$temp_dir"' RETURN
+
+  mkdir -p \
+    "$temp_dir/source/public" \
+    "$temp_dir/source/data_predictions/20260805" \
+    "$temp_dir/source/data_used/history" \
+    "$temp_dir/source/data_unused/history"
+
+  cat > "$temp_dir/source/public/index.html" <<'HTML'
+<!doctype html><a href="../data_used/history/value.json">used</a>
+HTML
+  for page in prediction-dashboard prediction-replay-dashboard prediction-industry-dashboard prediction-groups; do
+    cat > "$temp_dir/source/public/$page.html" <<'HTML'
+<!doctype html><script>fetch('../data_predictions/manifest.json')</script>
+HTML
+  done
+  cat > "$temp_dir/source/data_predictions/manifest.json" <<'JSON'
+{"forecast_date_compact":"20260805"}
+JSON
+  cat > "$temp_dir/source/data_predictions/20260805/manifest.json" <<'JSON'
+{"forecast_date_compact":"20260805","generated_reports":1}
+JSON
+  cat > "$temp_dir/source/data_predictions/20260805/summary.json" <<'JSON'
+{"forecast_date":"2026-08-05"}
+JSON
+  cat > "$temp_dir/source/data_predictions/20260805/group-summary.json" <<'JSON'
+{"groups":[]}
+JSON
+  printf '{}\n' > "$temp_dir/source/data_used/history/value.json"
+  printf '{}\n' > "$temp_dir/source/data_unused/history/value.json"
+
+  bash "$SCRIPT_PATH" "$temp_dir/source" "$temp_dir/site" 20260805 >/dev/null
+  test -f "$temp_dir/site/data_used/history/value.json"
+  test ! -e "$temp_dir/site/data_unused"
+  test -f "$temp_dir/site/data_predictions/20260805/summary.json"
+  echo 'prepare_pages_site self-test passed'
+}
+
+if [[ "${1:-}" == "--print-dependencies" ]]; then
+  ROOT_DIR="${2:-.}"
+  ROOT_DIR="$(cd "$ROOT_DIR" && pwd)"
+  scan_dependencies "$ROOT_DIR"
+  exit 0
+fi
+
+if [[ "${1:-}" == "--self-test" ]]; then
+  run_self_test
+  exit 0
+fi
+
 ROOT_DIR="${1:-.}"
 OUTPUT_DIR="${2:-_site}"
+TARGET_DATE="${3:-}"
 
 ROOT_DIR="$(cd "$ROOT_DIR" && pwd)"
 if [[ "$OUTPUT_DIR" != /* ]]; then
@@ -10,22 +156,30 @@ if [[ "$OUTPUT_DIR" != /* ]]; then
 fi
 
 rm -rf "$OUTPUT_DIR"
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR/public"
 
-# Keep the historical repository-root layout because pages under public/ load
-# data with ../data_* paths. Exclude development-only content to reduce the
-# Pages artifact while retaining every published data directory.
-rsync -aL \
-  --exclude='.git/' \
-  --exclude='.github/' \
-  --exclude='node_modules/' \
-  --exclude='_site/' \
-  --exclude='tests/' \
-  --exclude='scripts/' \
-  --exclude='docs/' \
-  --exclude='output/' \
-  --exclude='tmp/' \
-  "$ROOT_DIR/" "$OUTPUT_DIR/"
+rsync -aL "$ROOT_DIR/public/" "$OUTPUT_DIR/public/"
+
+mapfile -t dependencies < <(scan_dependencies "$ROOT_DIR")
+for dependency in "${dependencies[@]}"; do
+  [[ -n "$dependency" ]] || continue
+  source_path="$ROOT_DIR/$dependency"
+  destination_path="$OUTPUT_DIR/$dependency"
+  if [[ -d "$source_path" ]]; then
+    mkdir -p "$destination_path"
+    rsync -aL "$source_path/" "$destination_path/"
+  elif [[ -f "$source_path" ]]; then
+    mkdir -p "$(dirname "$destination_path")"
+    cp -L "$source_path" "$destination_path"
+  else
+    echo "Missing published dependency referenced by public assets: $dependency" >&2
+    exit 1
+  fi
+done
+
+for root_file in CNAME favicon.ico; do
+  if [[ -f "$ROOT_DIR/$root_file" ]]; then cp -L "$ROOT_DIR/$root_file" "$OUTPUT_DIR/$root_file"; fi
+done
 
 touch "$OUTPUT_DIR/.nojekyll"
 
@@ -34,15 +188,10 @@ if [[ ! -f "$OUTPUT_DIR/public/index.html" ]]; then
   exit 1
 fi
 
-# Preserve both URL styles:
-#   /stock_data/public/prediction-dashboard.html  (historical and canonical)
-#   /stock_data/prediction-dashboard.html         (temporary root-style links)
-# Root aliases redirect into public/ so ../data_* continues to resolve to the
-# repository-root data directories copied above.
 for source_page in "$OUTPUT_DIR"/public/*.html; do
   [[ -e "$source_page" ]] || continue
   page_name="$(basename "$source_page")"
-  cat > "$OUTPUT_DIR/$page_name" <<EOF
+  cat > "$OUTPUT_DIR/$page_name" <<EOF_ALIAS
 <!doctype html>
 <html lang="zh-TW">
 <head>
@@ -61,16 +210,20 @@ for source_page in "$OUTPUT_DIR"/public/*.html; do
   <p><a href="public/$page_name">前往頁面</a></p>
 </body>
 </html>
-EOF
+EOF_ALIAS
 done
 
-node - "$OUTPUT_DIR" <<'NODE'
+resolved_target_date="$(resolve_target_date "$OUTPUT_DIR" "$TARGET_DATE")"
+
+node - "$OUTPUT_DIR" "$resolved_target_date" "${dependencies[@]}" <<'NODE'
 'use strict';
 
 const fs = require('node:fs');
 const path = require('node:path');
 
 const siteRoot = path.resolve(process.argv[2]);
+const targetDate = process.argv[3];
+const dependencies = process.argv.slice(4);
 const publicRoot = path.join(siteRoot, 'public');
 const criticalFiles = [
   'public/index.html',
@@ -79,7 +232,10 @@ const criticalFiles = [
   'public/prediction-industry-dashboard.html',
   'public/prediction-groups.html',
   'data_predictions/manifest.json',
-  'prediction-dashboard.html'
+  'prediction-dashboard.html',
+  `data_predictions/${targetDate}/manifest.json`,
+  `data_predictions/${targetDate}/summary.json`,
+  `data_predictions/${targetDate}/group-summary.json`,
 ];
 
 for (const relativePath of criticalFiles) {
@@ -88,40 +244,26 @@ for (const relativePath of criticalFiles) {
   }
 }
 
-function walk(directory) {
-  const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(fullPath));
-    else if (/\.(?:html|js|css)$/i.test(entry.name)) files.push(fullPath);
-  }
-  return files;
-}
-
-const referencedRoots = new Set();
-for (const filePath of walk(publicRoot)) {
-  const text = fs.readFileSync(filePath, 'utf8');
-  for (const match of text.matchAll(/\.\.\/([A-Za-z0-9_.-]+)\//g)) {
-    const rootName = match[1];
-    if (/^(?:data|normalized)/.test(rootName)) referencedRoots.add(rootName);
+for (const dependency of dependencies) {
+  if (!fs.existsSync(path.join(siteRoot, dependency))) {
+    throw new Error(`Pages artifact missing published dependency: ${dependency}`);
   }
 }
 
-const missingRoots = [...referencedRoots].filter(
-  (rootName) => !fs.existsSync(path.join(siteRoot, rootName))
-);
-if (missingRoots.length) {
-  throw new Error(`Pages artifact missing referenced data roots: ${missingRoots.join(', ')}`);
-}
-
-const predictionHtml = fs.readFileSync(
-  path.join(publicRoot, 'prediction-dashboard.html'),
-  'utf8'
-);
-if (!predictionHtml.includes("../data_predictions/manifest.json")) {
+const predictionHtml = fs.readFileSync(path.join(publicRoot, 'prediction-dashboard.html'), 'utf8');
+if (!predictionHtml.includes('../data_predictions/manifest.json')) {
   throw new Error('Prediction dashboard manifest dependency changed unexpectedly');
 }
 
-console.log(`Prepared Pages artifact: ${siteRoot}`);
-console.log(`Validated ${referencedRoots.size} referenced data roots`);
+for (const relativePath of [
+  `data_predictions/${targetDate}/manifest.json`,
+  `data_predictions/${targetDate}/summary.json`,
+  `data_predictions/${targetDate}/group-summary.json`,
+]) {
+  JSON.parse(fs.readFileSync(path.join(siteRoot, relativePath), 'utf8'));
+}
+
+console.log(`Prepared selective Pages artifact: ${siteRoot}`);
+console.log(`Validated target date only: ${targetDate}`);
+console.log(`Published ${dependencies.length} referenced root dependencies`);
 NODE
