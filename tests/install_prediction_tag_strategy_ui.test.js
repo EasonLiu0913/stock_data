@@ -8,6 +8,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const {
   TARGETS,
+  TAG_EXPRESSION_ENTRYPOINT,
   injectScript,
   injectPageAdapter,
   install,
@@ -15,11 +16,12 @@ const {
 const predictionUi = require('../public/prediction-tag-strategy-enhancement');
 const replayUi = require('../public/prediction-replay-tag-strategy-enhancement');
 
-test('injectScript upgrades an existing version and keeps one reference', () => {
+test('injectScript replaces the legacy tag UI with one expression entrypoint', () => {
   const source = '<!doctype html><html><body><script src="prediction-tag-strategy-enhancement.js?v=1"></script></body></html>';
-  const updated = injectScript(source, 'prediction-tag-strategy-enhancement.js?v=3');
-  assert.match(updated, /prediction-tag-strategy-enhancement\.js\?v=3/);
-  assert.equal((updated.match(/prediction-tag-strategy-enhancement\.js/g) || []).length, 1);
+  const updated = injectScript(source, TAG_EXPRESSION_ENTRYPOINT);
+  assert.match(updated, /prediction-tag-strategy-expression-semantics\.js\?v=1/);
+  assert.equal((updated.match(/prediction-tag-strategy-expression-semantics\.js/g) || []).length, 1);
+  assert.equal((updated.match(/prediction-tag-strategy-enhancement\.js/g) || []).length, 0);
 });
 
 test('group and industry adapters expose shared quick-filter hooks', () => {
@@ -56,8 +58,9 @@ test('prediction groups page uses all stocks for tag experiments and group membe
 test('installer targets all prediction content pages and is idempotent', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-strategy-ui-'));
   const fixtures = {
-    'prediction-groups.html': '<html><body><main><section class="grid group-grid"></section></main><script>let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];function renderStocks(){const memberSet=new Set(selected.members||[]);const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));document.getElementById(\'stockRows\').innerHTML=rows.map(s=>s.stock_code).join(\'\')||\'<tr class="empty-row"><td colspan="15">此分類目前沒有符合股票</td></tr>\';}</script></body></html>',
-    'prediction-industry-dashboard.html': '<html><body><main><section class="grid layout"></section></main><script>let dashboard, basePriceData=null, selected, currentManifest;function renderIndustry(){const rows=dashboard.stocks.filter(s=>s.industry===selected.industry);}</script></body></html>',
+    'prediction-dashboard.html': '<html><body><main></main><script src="prediction-tag-strategy-enhancement.js?v=4"></script></body></html>',
+    'prediction-groups.html': '<html><body><main><section class="grid group-grid"></section></main><script>let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];function renderStocks(){const memberSet=new Set(selected.members||[]);const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));document.getElementById(\'stockRows\').innerHTML=rows.map(s=>s.stock_code).join(\'\')||\'<tr class="empty-row"><td colspan="15">此分類目前沒有符合股票</td></tr>\';}</script><script src="prediction-tag-strategy-enhancement.js?v=4"></script></body></html>',
+    'prediction-industry-dashboard.html': '<html><body><main><section class="grid layout"></section></main><script>let dashboard, basePriceData=null, selected, currentManifest;function renderIndustry(){const rows=dashboard.stocks.filter(s=>s.industry===selected.industry);}</script><script src="prediction-tag-strategy-enhancement.js?v=4"></script></body></html>',
   };
   for (const filename of Object.keys(TARGETS)) {
     fs.writeFileSync(path.join(directory, filename), fixtures[filename] || '<html><body><main></main></body></html>');
@@ -69,6 +72,10 @@ test('installer targets all prediction content pages and is idempotent', () => {
   for (const [filename, script] of Object.entries(TARGETS)) {
     const html = fs.readFileSync(path.join(directory, filename), 'utf8');
     assert.match(html, new RegExp(script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  for (const filename of ['prediction-dashboard.html', 'prediction-groups.html', 'prediction-industry-dashboard.html']) {
+    const html = fs.readFileSync(path.join(directory, filename), 'utf8');
+    assert.doesNotMatch(html, /<script\s+src=["']prediction-tag-strategy-enhancement\.js/);
   }
   const installedGroup = fs.readFileSync(path.join(directory, 'prediction-groups.html'), 'utf8');
   assert.match(installedGroup, /stocksForCurrentView\(memberSet\)\.filter\(s=>matchesTagStrategyFilter\(s\)/);
@@ -104,6 +111,7 @@ test('replay UI evaluates supported targets and keeps unavailable 5-day data unv
 test('browser enhancement scripts parse as JavaScript', () => {
   for (const filename of [
     'prediction-tag-strategy-enhancement.js',
+    'prediction-tag-strategy-expression-semantics.js',
     'prediction-replay-tag-strategy-enhancement.js',
   ]) {
     const source = fs.readFileSync(path.join(__dirname, '..', 'public', filename), 'utf8');
