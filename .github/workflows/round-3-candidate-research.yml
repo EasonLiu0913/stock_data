@@ -1,0 +1,169 @@
+name: '[08 研究分析] 第三輪獨立事件與市場環境候選策略'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-candidate-registry.json'
+      - 'scripts/round_3_candidate_research_lib.js'
+      - 'scripts/generate_round_3_candidate_research.js'
+      - 'tests/round_3_candidate_research.test.js'
+      - '.github/workflows/round-3-candidate-research.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-candidate-registry.json'
+      - 'scripts/round_3_candidate_research_lib.js'
+      - 'scripts/generate_round_3_candidate_research.js'
+      - 'tests/round_3_candidate_research.test.js'
+      - '.github/workflows/round-3-candidate-research.yml'
+  workflow_dispatch:
+    inputs:
+      prediction_date:
+        description: '股票母體預測日期 YYYYMMDD；留空使用最新有效預測'
+        required: false
+        type: string
+      cutoff:
+        description: '研究資料截止日 YYYYMMDD；不得晚於預測 base_trade_date'
+        required: false
+        type: string
+      max_files:
+        description: '最多讀取幾個價量與融資交易日'
+        required: true
+        type: number
+        default: 80
+
+permissions:
+  contents: write
+
+concurrency:
+  group: round-3-candidate-research-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate third-round candidate engine
+        run: |
+          set -euo pipefail
+          node --check scripts/round_3_candidate_research_lib.js
+          node --check scripts/generate_round_3_candidate_research.js
+          node --test tests/round_3_candidate_research.test.js
+          node - <<'NODE'
+          const registry = require('./config/strategy-candidate-registry.json');
+          if (registry.status !== 'research_only') throw new Error('Candidate registry must remain research_only');
+          if (registry.cooldown_trading_days !== 5) throw new Error('Expected five-trading-day cooldown');
+          const definitions = [...registry.candidate_tags, ...registry.candidate_strategies];
+          const ids = definitions.map(item => item.candidate_id);
+          if (new Set(ids).size !== ids.length) throw new Error('Duplicate candidate IDs');
+          for (const definition of definitions) {
+            if (!definition.promotion_gate) throw new Error(`Promotion gate missing: ${definition.candidate_id}`);
+          }
+          NODE
+      - name: Confirm formal strategies are untouched
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if ! git diff --quiet origin/main...HEAD -- config/strategy-tag-registry.json; then
+            echo 'Third-round research must not modify the formal strategy registry.' >&2
+            git diff origin/main...HEAD -- config/strategy-tag-registry.json
+            exit 1
+          fi
+      - name: Generate independent event and regime research
+        env:
+          INPUT_PREDICTION_DATE: ${{ inputs.prediction_date }}
+          INPUT_CUTOFF: ${{ inputs.cutoff }}
+          INPUT_MAX_FILES: ${{ inputs.max_files }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--max-files "${INPUT_MAX_FILES:-80}")
+          if [ -n "${INPUT_PREDICTION_DATE:-}" ]; then args+=(--prediction-date "$INPUT_PREDICTION_DATE"); fi
+          if [ -n "${INPUT_CUTOFF:-}" ]; then args+=(--cutoff "$INPUT_CUTOFF"); fi
+          node scripts/generate_round_3_candidate_research.js "${args[@]}" \
+            | tee /tmp/round-3-candidate-research-result.json
+      - name: Verify research safeguards and output
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/round-3-candidate-research-result.json', 'utf8'));
+          if (!result.output_file || !fs.existsSync(result.output_file)) throw new Error('Full research output missing');
+          if (!result.summary_file || !fs.existsSync(result.summary_file)) throw new Error('Compact research summary missing');
+          const payload = JSON.parse(fs.readFileSync(result.output_file, 'utf8'));
+          const summary = JSON.parse(fs.readFileSync(result.summary_file, 'utf8'));
+          if (payload.research_id !== 'round_3_independent_regime_candidate_study_v1') throw new Error('Unexpected research ID');
+          if (payload.candidate_registry_status !== 'research_only') throw new Error('Candidate registry escaped research-only status');
+          if (payload.leakage_guard?.signal_features_use_dates_lte_signal_date !== true) throw new Error('Signal leakage guard missing');
+          if (payload.leakage_guard?.random_split_used !== false) throw new Error('Random split must not be used');
+          if (payload.leakage_guard?.formal_strategy_registry_modified !== false) throw new Error('Formal strategy isolation missing');
+          if (payload.cooldown_trading_days !== 5) throw new Error('Cooldown is not five trading days');
+          const expectedIds = [
+            'margin_crowding_weakening_v2',
+            'margin_exit_relative_resilience_candidate_v1',
+            'strong_pullback_quality_candidate_v1',
+            'breakout_quality_confirmation_candidate_v1',
+          ];
+          for (const id of expectedIds) {
+            if (!payload.summaries?.[id]) throw new Error(`Candidate summary missing: ${id}`);
+            if (!summary.summaries?.[id]) throw new Error(`Compact candidate summary missing: ${id}`);
+            if (!payload.summaries[id].promotion_assessment) throw new Error(`Promotion assessment missing: ${id}`);
+            for (const split of ['train', 'validation', 'test']) {
+              if (payload.summaries[id][split]?.event_count === undefined) {
+                throw new Error(`Chronological split missing: ${id}/${split}`);
+              }
+            }
+          }
+          const orderedDates = Array.isArray(payload.eligible_signal_dates)
+            ? payload.eligible_signal_dates
+            : [];
+          if (!orderedDates.length) throw new Error('Eligible signal dates missing');
+          const dateIndex = new Map(orderedDates.map((date, index) => [date, index]));
+          const last = new Map();
+          for (const event of payload.events) {
+            const key = `${event.candidate_id}::${event.stock_code}`;
+            const current = dateIndex.get(event.signal_date);
+            const previous = last.get(key);
+            if (Number.isInteger(previous) && Number.isInteger(current) && current - previous < payload.cooldown_trading_days) {
+              throw new Error(`Cooldown violation: ${key}/${event.signal_date}`);
+            }
+            last.set(key, current);
+          }
+          if (summary.events !== undefined || summary.cooldown_suppressed_events !== undefined) {
+            throw new Error('Compact summary contains event rows');
+          }
+          if (summary.independent_event_count !== payload.events.length) throw new Error('Independent event count mismatch');
+          if (summary.cooldown_suppressed_count !== payload.cooldown_suppressed_events.length) {
+            throw new Error('Suppressed event count mismatch');
+          }
+          console.log(`Verified ${payload.events.length} independent events; suppressed ${payload.cooldown_suppressed_events.length} repeated signals.`);
+          NODE
+      - name: Commit third-round research output
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_research/strategy-factors/round-3
+          if git diff --cached --quiet; then
+            echo 'No third-round research changes'
+            exit 0
+          fi
+          cutoff=$(node -e "const r=require('/tmp/round-3-candidate-research-result.json');process.stdout.write(r.cutoff_date)")
+          git commit -m "data: update round-three candidate research ${cutoff}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
