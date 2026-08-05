@@ -10,6 +10,7 @@ const {
   normalizedEvaluationTarget,
   evaluateStrategyClassification,
   normalizeSnapshotRegistry,
+  registryNamespace,
   resolveLiveSnapshot,
   safeSnapshotPath,
   syncReplayRows,
@@ -22,32 +23,111 @@ function writeJson(rootDir, relativePath, payload) {
   return file;
 }
 
-test('resolves the versioned live snapshot through the snapshot manifest', () => {
+function versionedSnapshot() {
+  return {
+    schema_version: 3,
+    registry_id: 'prediction_tag_strategy_registry_v2',
+    registry_fingerprint: 'abc123',
+    forecast_date: '20260803',
+    evaluation_mode: 'live_snapshot',
+    tag_registry: [{ tag_id: 'tag_v1' }],
+    strategy_registry: [{
+      strategy_id: 'strategy_v2',
+      family_id: 'strategy',
+      version: 2,
+      label: '測試策略',
+      evaluation_target: 'close_return_gt_5',
+    }],
+    strategy_classifications: {
+      strategy_v2: {
+        strategy_id: 'strategy_v2',
+        count: 1,
+        members: ['2330'],
+        calculation_status: 'completed',
+      },
+    },
+  };
+}
+
+test('prefers the versioned live snapshot over a legacy prediction-directory snapshot', () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-replay-snapshot-'));
   try {
     const snapshotRelative = 'data_prediction_analysis/strategy-snapshots/live_snapshot/20260803.json';
-    writeJson(rootDir, snapshotRelative, {
-      schema_version: 3,
-      registry_id: 'prediction_tag_strategy_registry_v2',
-      registry_fingerprint: 'abc123',
-      forecast_date: '20260803',
-      evaluation_mode: 'live_snapshot',
-      tag_registry: [{ tag_id: 'tag_v1' }],
-      strategy_registry: [{
-        strategy_id: 'strategy_v2',
-        family_id: 'strategy',
-        version: 2,
-        label: '測試策略',
-        evaluation_target: 'close_return_gt_5',
-      }],
-      strategy_classifications: {
-        strategy_v2: {
-          strategy_id: 'strategy_v2',
-          count: 1,
-          members: ['2330'],
-          calculation_status: 'completed',
+    writeJson(rootDir, snapshotRelative, versionedSnapshot());
+    writeJson(rootDir, 'data_prediction_analysis/strategy-snapshots/manifest.json', {
+      schema_version: 2,
+      dates: {
+        20260803: {
+          live_snapshot: {
+            file: snapshotRelative,
+            registry_fingerprint: 'abc123',
+          },
         },
       },
+    });
+    const legacyFile = writeJson(rootDir, 'data_predictions/20260803/tag-strategy-snapshot.json', {
+      registry_id: 'prediction_tag_strategy_registry',
+      strategy_classifications: {
+        legacy_strategy_v1: { count: 0, members: [] },
+      },
+      registry: {
+        registry_id: 'prediction_tag_strategy_registry',
+        tags: [],
+        strategies: [{ strategy_id: 'legacy_strategy_v1' }],
+      },
+    });
+
+    const resolved = resolveLiveSnapshot({
+      date: '20260803',
+      legacySnapshotFile: legacyFile,
+      workspaceRoot: rootDir,
+    });
+
+    assert.equal(resolved.snapshotFormat, 'versioned_registry_v2');
+    assert.equal(resolved.registry.registry_id, 'prediction_tag_strategy_registry_v2');
+    assert.equal(resolved.registry.strategies[0].strategy_id, 'strategy_v2');
+    assert.equal(resolved.snapshot.strategy_classifications.strategy_v2.count, 1);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('falls back to the legacy snapshot only when no versioned manifest entry exists', () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-replay-legacy-'));
+  try {
+    const legacyFile = writeJson(rootDir, 'data_predictions/20260803/tag-strategy-snapshot.json', {
+      registry_id: 'prediction_tag_strategy_registry',
+      strategy_classifications: {
+        legacy_strategy_v1: { count: 1, members: ['2330'] },
+      },
+      registry: {
+        registry_id: 'prediction_tag_strategy_registry',
+        tags: [],
+        strategies: [{ strategy_id: 'legacy_strategy_v1' }],
+      },
+    });
+
+    const resolved = resolveLiveSnapshot({
+      date: '20260803',
+      legacySnapshotFile: legacyFile,
+      workspaceRoot: rootDir,
+    });
+
+    assert.equal(resolved.snapshotFormat, 'prediction_directory_v1_fallback');
+    assert.equal(resolved.registry.registry_id, 'prediction_tag_strategy_registry');
+    assert.equal(resolved.snapshot.strategy_classifications.legacy_strategy_v1.count, 1);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test('does not silently fall back when a declared versioned snapshot is invalid', () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-replay-invalid-versioned-'));
+  try {
+    const snapshotRelative = 'data_prediction_analysis/strategy-snapshots/live_snapshot/20260803.json';
+    writeJson(rootDir, snapshotRelative, {
+      ...versionedSnapshot(),
+      registry_fingerprint: 'wrong',
     });
     writeJson(rootDir, 'data_prediction_analysis/strategy-snapshots/manifest.json', {
       schema_version: 2,
@@ -60,17 +140,16 @@ test('resolves the versioned live snapshot through the snapshot manifest', () =>
         },
       },
     });
-
-    const resolved = resolveLiveSnapshot({
-      date: '20260803',
-      legacySnapshotFile: path.join(rootDir, 'data_predictions/20260803/tag-strategy-snapshot.json'),
-      workspaceRoot: rootDir,
+    const legacyFile = writeJson(rootDir, 'data_predictions/20260803/tag-strategy-snapshot.json', {
+      registry: { tags: [], strategies: [] },
+      strategy_classifications: {},
     });
 
-    assert.equal(resolved.snapshotFormat, 'versioned_registry_v2');
-    assert.equal(resolved.registry.registry_id, 'prediction_tag_strategy_registry_v2');
-    assert.equal(resolved.registry.strategies[0].strategy_id, 'strategy_v2');
-    assert.equal(resolved.snapshot.strategy_classifications.strategy_v2.count, 1);
+    assert.throws(() => resolveLiveSnapshot({
+      date: '20260803',
+      legacySnapshotFile: legacyFile,
+      workspaceRoot: rootDir,
+    }), /fingerprint mismatch/);
   } finally {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
@@ -88,6 +167,24 @@ test('normalizes a versioned snapshot registry for replay evaluation', () => {
   assert.equal(registry.registry_id, 'registry_v2');
   assert.deepEqual(registry.tags, [{ tag_id: 'tag_v1' }]);
   assert.deepEqual(registry.strategies, [{ strategy_id: 'strategy_v2' }]);
+});
+
+test('creates different historical namespaces for different registry definitions', () => {
+  const v1 = {
+    schema_version: 1,
+    registry_id: 'prediction_tag_strategy_registry',
+    tags: [],
+    strategies: [],
+  };
+  const v2 = {
+    schema_version: 2,
+    registry_id: 'prediction_tag_strategy_registry_v2',
+    tags: [],
+    strategies: [],
+  };
+  assert.notEqual(registryNamespace(v1), registryNamespace(v2));
+  assert.match(registryNamespace(v1), /^prediction_tag_strategy_registry--[a-f0-9]{16}$/);
+  assert.match(registryNamespace(v2), /^prediction_tag_strategy_registry_v2--[a-f0-9]{16}$/);
 });
 
 test('evaluates the five-day intraday rebound target only when the window is complete', () => {
@@ -130,9 +227,9 @@ test('uses the 4-percent-or-above rebound boundary from 20260803', () => {
 
 test('corrects both rebound strategies to the versioned same-day verification rule', () => {
   const definition = {
-    strategy_id: 'oversold_margin_exit_rebound_v1',
+    strategy_id: 'oversold_margin_exit_rebound_v2',
     family_id: 'oversold_margin_exit_rebound',
-    version: 1,
+    version: 2,
     label: '融資退場型跌深反彈',
     evaluation_target: 'intraday_rebound_5d_10pct',
   };
@@ -199,7 +296,7 @@ test('copies versioned atomic tags and registered strategy matches into replay r
       stock_code: '2330',
       atomic_tags: ['technical_rsi_oversold_v1'],
       unavailable_atomic_tags: ['margin_exit_5d_v1'],
-      registered_strategy_matches: ['oversold_electronics_rebound_v2'],
+      registered_strategy_matches: ['oversold_margin_exit_rebound_v2'],
       unavailable_registered_strategies: [],
     }],
   };
@@ -209,11 +306,11 @@ test('copies versioned atomic tags and registered strategy matches into replay r
   assert.deepEqual(replayDashboard.rows[0].prediction.atomic_tags, ['technical_rsi_oversold_v1']);
   assert.deepEqual(
     replayDashboard.rows[0].prediction.registered_strategy_matches,
-    ['oversold_electronics_rebound_v2'],
+    ['oversold_margin_exit_rebound_v2'],
   );
   assert.deepEqual(
     replayDashboard.rows[0].prediction.prediction_strategies,
-    ['oversold_electronics_rebound_v2'],
+    ['oversold_margin_exit_rebound_v2'],
   );
 });
 
