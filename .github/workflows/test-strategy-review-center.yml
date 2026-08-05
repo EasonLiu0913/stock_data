@@ -58,7 +58,8 @@ jobs:
           NODE
       - name: Guard workflow architecture
         run: |
-          if grep -R "workflow_run" .github/workflows/test-strategy-review-center.yml; then
-            echo 'workflow_run is forbidden by AGENTS.md' >&2
+          forbidden_pattern='^[[:space:]]*workflow[_]run:'
+          if grep -ER "$forbidden_pattern" .github/workflows/test-strategy-review-center.yml; then
+            echo 'Forbidden event-listener trigger found; use workflow_call and needs instead.' >&2
             exit 1
           fi
