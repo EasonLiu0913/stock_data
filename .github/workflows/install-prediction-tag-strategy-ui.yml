@@ -79,8 +79,15 @@ jobs:
       - name: Verify installed references
         shell: bash
         run: |
-          grep -q 'prediction-tag-strategy-expression-semantics.js?v=1' public/prediction-dashboard.html
           grep -q 'prediction-formula-builder.js?v=1' public/prediction-dashboard.html
+          if grep -q 'prediction-tag-strategy-expression-semantics.js' public/prediction-dashboard.html; then
+            echo 'Prediction dashboard must not load the legacy tag strategy section.' >&2
+            exit 1
+          fi
+          if grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-dashboard.html; then
+            echo 'Prediction dashboard must not load the legacy tag strategy enhancement.' >&2
+            exit 1
+          fi
           grep -q 'prediction-tag-strategy-expression-semantics.js?v=1' public/prediction-groups.html
           grep -q 'prediction-tag-strategy-expression-semantics.js?v=1' public/prediction-industry-dashboard.html
           grep -q 'prediction-replay-tag-strategy-enhancement.js' public/prediction-replay-dashboard-view.html
