@@ -104,6 +104,8 @@ jobs:
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/fetch_official_market_constraints.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
             tests/strategy_tag_engine.test.js \
             tests/strategy_tag_source_enrichment.test.js \
@@ -122,13 +124,15 @@ jobs:
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/fetch_official_market_constraints.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
 
   apply:
     needs: validate
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -154,6 +158,37 @@ jobs:
           echo "date=$target_date" >> "$GITHUB_OUTPUT"
           echo "TARGET_DATE=$target_date" >> "$GITHUB_ENV"
           echo "Target prediction date: $target_date"
+      - name: Refresh official disposition and TX night snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--date "$TARGET_DATE" --allow-partial)
+          snapshot="data_market_constraints/$TARGET_DATE/snapshot.json"
+          if [ ! -s "$snapshot" ] || ! node -e "const s=require('./' + process.argv[1]);process.exit(s.complete===true?0:1)" "$snapshot"; then
+            args+=(--force)
+          fi
+          node scripts/fetch_official_market_constraints.js "${args[@]}"
+      - name: Rebuild rebound readiness with official constraints
+        run: node scripts/backfill_prediction_dashboard_fields.js --date "$TARGET_DATE"
+      - name: Report official constraint integration status
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - "$TARGET_DATE" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const read = file => {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          };
+          const snapshot = read(`data_market_constraints/${date}/snapshot.json`);
+          const rebound = read(`data_market_environment/${date}/oversold_beta_rebound.json`);
+          console.log(`Official constraint status: ${snapshot?.calculation_status || 'missing'}`);
+          console.log(`Night futures change: ${snapshot?.night_futures?.change_percent ?? 'N/A'}%`);
+          console.log(`Rebound readiness night input: ${rebound?.inputs?.night_futures_change_pct ?? 'N/A'}%`);
+          if (snapshot?.complete === true && rebound?.inputs?.night_futures_change_pct == null) {
+            throw new Error('Complete official snapshot was not integrated into rebound readiness');
+          }
+          NODE
       - name: Apply fixed tag and strategy registry
         env:
           EVALUATION_MODE: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && inputs.evaluation_mode || 'historical_recalculation' }}
@@ -214,18 +249,22 @@ jobs:
           }
           console.log(`Verified ${entries.length} snapshot entry(s) and synchronized dashboard groups for ${date}`);
           NODE
-      - name: Commit snapshot and enriched live prediction summary
+      - name: Commit official constraints, snapshot, and enriched prediction summary
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data_predictions data_prediction_analysis/strategy-snapshots
+          git add \
+            data_market_constraints \
+            data_market_environment \
+            data_predictions \
+            data_prediction_analysis
           if git diff --cached --quiet; then
-            echo 'No tag, strategy snapshot, or dashboard group changes'
+            echo 'No official constraint, tag, strategy snapshot, or dashboard group changes'
             exit 0
           fi
-          git commit -m "data: apply versioned tag and strategy snapshot ${TARGET_DATE}"
+          git commit -m "data: refresh official constraints and apply strategy snapshot ${TARGET_DATE}"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
