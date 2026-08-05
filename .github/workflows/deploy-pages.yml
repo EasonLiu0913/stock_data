@@ -12,7 +12,19 @@ on:
       - ".github/workflows/build-twse-market-chart.yml"
       - ".github/workflows/deploy-pages.yml"
   workflow_call:
+    inputs:
+      target_date:
+        description: "只驗證這個交易日 YYYYMMDD；留空使用最新預測日"
+        required: false
+        default: ""
+        type: string
   workflow_dispatch:
+    inputs:
+      target_date:
+        description: "只驗證這個交易日 YYYYMMDD；留空使用最新預測日"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -25,7 +37,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy repository-root compatible site
+    name: Deploy selective repository-root compatible site
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -33,13 +45,58 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout latest main
+      - name: Checkout only Pages source files
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /public/
+            /scripts/prepare_pages_site.sh
 
-      - name: Prepare Pages artifact
-        run: bash scripts/prepare_pages_site.sh . _site
+      - name: Resolve only frontend-referenced publish dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/prepare_pages_site.sh
+          bash scripts/prepare_pages_site.sh --self-test
+          bash scripts/prepare_pages_site.sh --print-dependencies . | tee /tmp/pages-dependencies.txt
+
+          {
+            echo '/public/'
+            echo '/scripts/prepare_pages_site.sh'
+            while IFS= read -r dependency; do
+              [ -n "$dependency" ] || continue
+              object_type=$(git cat-file -t "HEAD:$dependency" 2>/dev/null || true)
+              case "$object_type" in
+                tree) echo "/$dependency/" ;;
+                blob) echo "/$dependency" ;;
+                *)
+                  echo "Missing Git object for published dependency: $dependency" >&2
+                  exit 1
+                  ;;
+              esac
+            done < /tmp/pages-dependencies.txt
+          } | sort -u > /tmp/pages-sparse-checkout.txt
+
+          git sparse-checkout set --no-cone --stdin < /tmp/pages-sparse-checkout.txt
+
+      - name: Prepare selective Pages artifact and validate target date only
+        shell: bash
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          set -euo pipefail
+          bash scripts/prepare_pages_site.sh . _site "${TARGET_DATE:-}"
+          dependency_count=$(grep -cve '^$' /tmp/pages-dependencies.txt || true)
+          artifact_size=$(du -sh _site | cut -f1)
+          echo "## GitHub Pages selective deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact size: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Unreferenced historical/raw data roots: excluded" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
