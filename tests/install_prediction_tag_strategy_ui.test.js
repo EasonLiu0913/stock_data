@@ -25,11 +25,14 @@ test('injectScript upgrades an existing version and keeps one reference', () => 
 test('group and industry adapters expose shared quick-filter hooks', () => {
   const groupSource = `<main><div class="topbar"></div><section class="grid group-grid"></section></main><script>
     let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];
-    function renderStocks(){const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));}
+    function renderStocks(){const memberSet=new Set(selected.members||[]);const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));document.getElementById('stockRows').innerHTML=rows.map(s=>s.stock_code).join('')||'<tr class="empty-row"><td colspan="15">此分類目前沒有符合股票</td></tr>';}
   </script>`;
   const group = injectPageAdapter(groupSource, 'prediction-groups.html');
   assert.match(group, /function matchesTagStrategyFilter\(stock\)/);
-  assert.match(group, /matchesTagStrategyFilter\(s\)&&memberSet\.has/);
+  assert.match(group, /function usesAllStocksForTagStrategyExperiment\(\)/);
+  assert.match(group, /function stocksForCurrentView\(memberSet\)/);
+  assert.match(group, /stocksForCurrentView\(memberSet\)\.filter\(s=>matchesTagStrategyFilter\(s\)/);
+  assert.doesNotMatch(group, /matchesTagStrategyFilter\(s\)&&memberSet\.has/);
   assert.match(group, /id="marketEnvironmentBanner"/);
 
   const industrySource = `<main><div class="topbar"></div><section class="grid layout"></section></main><script>
@@ -42,10 +45,18 @@ test('group and industry adapters expose shared quick-filter hooks', () => {
   assert.match(industry, /id="marketEnvironmentBanner"/);
 });
 
+test('prediction groups page uses all stocks for tag experiments and group members otherwise', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'prediction-groups.html'), 'utf8');
+  assert.match(html, /usesAllStocksForTagStrategyExperiment\(\)\?dashboard\.stocks:dashboard\.stocks\.filter/);
+  assert.match(html, /stocksForCurrentView\(memberSet\)\.filter\(s=>matchesTagStrategyFilter\(s\)/);
+  assert.match(html, /標籤策略實驗：/);
+  assert.doesNotMatch(html, /matchesTagStrategyFilter\(s\)&&memberSet\.has\(s\.stock_code\)/);
+});
+
 test('installer targets all prediction content pages and is idempotent', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-strategy-ui-'));
   const fixtures = {
-    'prediction-groups.html': '<html><body><main><section class="grid group-grid"></section></main><script>let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];function renderStocks(){const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));}</script></body></html>',
+    'prediction-groups.html': '<html><body><main><section class="grid group-grid"></section></main><script>let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];function renderStocks(){const memberSet=new Set(selected.members||[]);const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code));document.getElementById(\'stockRows\').innerHTML=rows.map(s=>s.stock_code).join(\'\')||\'<tr class="empty-row"><td colspan="15">此分類目前沒有符合股票</td></tr>\';}</script></body></html>',
     'prediction-industry-dashboard.html': '<html><body><main><section class="grid layout"></section></main><script>let dashboard, basePriceData=null, selected, currentManifest;function renderIndustry(){const rows=dashboard.stocks.filter(s=>s.industry===selected.industry);}</script></body></html>',
   };
   for (const filename of Object.keys(TARGETS)) {
@@ -59,6 +70,9 @@ test('installer targets all prediction content pages and is idempotent', () => {
     const html = fs.readFileSync(path.join(directory, filename), 'utf8');
     assert.match(html, new RegExp(script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  const installedGroup = fs.readFileSync(path.join(directory, 'prediction-groups.html'), 'utf8');
+  assert.match(installedGroup, /stocksForCurrentView\(memberSet\)\.filter\(s=>matchesTagStrategyFilter\(s\)/);
+  assert.doesNotMatch(installedGroup, /matchesTagStrategyFilter\(s\)&&memberSet\.has/);
 });
 
 test('prediction UI reads canonical registry fields and AND OR NOT selections', () => {
