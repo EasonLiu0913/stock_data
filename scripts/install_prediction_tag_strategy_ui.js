@@ -6,10 +6,11 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
+const TAG_EXPRESSION_ENTRYPOINT = 'prediction-tag-strategy-expression-semantics.js?v=1';
 const TARGETS = Object.freeze({
-  'prediction-dashboard.html': 'prediction-tag-strategy-expression-semantics.js?v=1',
-  'prediction-groups.html': 'prediction-tag-strategy-expression-semantics.js?v=1',
-  'prediction-industry-dashboard.html': 'prediction-tag-strategy-expression-semantics.js?v=1',
+  'prediction-dashboard.html': TAG_EXPRESSION_ENTRYPOINT,
+  'prediction-groups.html': TAG_EXPRESSION_ENTRYPOINT,
+  'prediction-industry-dashboard.html': TAG_EXPRESSION_ENTRYPOINT,
   'prediction-replay-dashboard-view.html': 'prediction-replay-tag-strategy-enhancement.js?v=2',
 });
 
@@ -22,10 +23,17 @@ function scriptPattern(script) {
   return new RegExp(`<script\\s+src=["']${base}(?:\\?[^"']*)?["']\\s*><\\/script>`, 'i');
 }
 
+function legacyPredictionScriptPattern() {
+  return /<script\s+src=["']prediction-tag-strategy-enhancement\.js(?:\?[^"']*)?["']\s*><\/script>/i;
+}
+
 function injectScript(html, script) {
   const pattern = scriptPattern(script);
   const tag = `<script src="${script}"></script>`;
   if (pattern.test(html)) return html.replace(pattern, tag);
+  if (script === TAG_EXPRESSION_ENTRYPOINT && legacyPredictionScriptPattern().test(html)) {
+    return html.replace(legacyPredictionScriptPattern(), tag);
+  }
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `  ${tag}\n</body>`);
   if (/<\/html>/i.test(html)) return html.replace(/<\/html>/i, `${tag}\n</html>`);
   return `${html.trimEnd()}\n${tag}\n`;
@@ -159,9 +167,11 @@ if (require.main === module) {
 module.exports = {
   PUBLIC_DIR,
   TARGETS,
+  TAG_EXPRESSION_ENTRYPOINT,
   FILTER_ADAPTER_MARKER,
   GROUP_EXPERIMENT_MARKER,
   scriptPattern,
+  legacyPredictionScriptPattern,
   injectScript,
   injectPageAdapter,
   install,
