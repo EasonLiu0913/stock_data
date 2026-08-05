@@ -1,6 +1,11 @@
 name: Test Official Market Constraints Integration
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/install_native_prediction_market_context.js
   pull_request:
     branches:
       - main
@@ -35,10 +40,54 @@ on:
       - .github/workflows/test-official-market-constraints-integration.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  install_native:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Apply native prediction context migration
+        run: |
+          node --check scripts/install_native_prediction_market_context.js
+          node scripts/install_native_prediction_market_context.js
+      - name: Validate migrated implementation
+        run: |
+          node --check scripts/market_environment_lib.js
+          node --check scripts/generate_market_environment.js
+          node --check scripts/generate_market_risk_snapshot.js
+          node --check scripts/rebind_prediction_market_environment.js
+          node --check scripts/rebind_prediction_market_risk.js
+          node --check scripts/resolve_forecast_dates.js
+          node --test tests/prediction_market_context.test.js
+          test ! -e scripts/prediction_market_context_preload.js
+          test ! -e scripts/run_prediction_market_environment.js
+          ! grep -q 'NODE_OPTIONS=' scripts/resolve_forecast_dates.js
+      - name: Commit native implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A scripts tests .github/workflows/test-official-market-constraints-integration.yml
+          git commit -m "refactor: use native prediction market context"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
   verify:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
