@@ -290,7 +290,11 @@ jobs:
           done
           exit 1
 
-  deploy_pages:
-    name: 3. 預測完成後發布 GitHub Pages
-    needs: generate_v2
-    uses: ./.github/workflows/deploy-pages.yml
+  apply_strategy_registry:
+    name: 3. 套用標籤策略並發布 GitHub Pages
+    needs: [generate_v1, generate_v2]
+    uses: ./.github/workflows/apply-strategy-tag-registry.yml
+    with:
+      date: ${{ needs.generate_v1.outputs.target_date }}
+      evaluation_mode: live_snapshot
+      data_as_of: ''
