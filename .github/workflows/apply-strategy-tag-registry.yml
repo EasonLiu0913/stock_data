@@ -10,6 +10,7 @@ on:
       - 'scripts/historical_factor_research.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
+      - 'scripts/sync_prediction_dashboard_groups.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
   workflow_dispatch:
     inputs:
@@ -42,11 +43,13 @@ on:
       - 'scripts/historical_factor_research.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
+      - 'scripts/sync_prediction_dashboard_groups.js'
       - 'tests/strategy_tag_engine.test.js'
       - 'tests/strategy_tag_source_enrichment.test.js'
       - 'tests/historical_factor_research.test.js'
       - 'tests/apply_strategy_tag_registry.test.js'
       - 'tests/summarize_strategy_snapshot_manifest.test.js'
+      - 'tests/prediction_dashboard_group_sync.test.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
 
 permissions:
@@ -78,18 +81,21 @@ jobs:
           node --check scripts/historical_factor_research.js
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
+          node --check scripts/sync_prediction_dashboard_groups.js
           node --test \
             tests/strategy_tag_engine.test.js \
             tests/strategy_tag_source_enrichment.test.js \
             tests/historical_factor_research.test.js \
             tests/apply_strategy_tag_registry.test.js \
-            tests/summarize_strategy_snapshot_manifest.test.js
+            tests/summarize_strategy_snapshot_manifest.test.js \
+            tests/prediction_dashboard_group_sync.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
       - name: Fast validation for routine daily prediction
         if: github.event_name == 'workflow_run'
         run: |
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
+          node --check scripts/sync_prediction_dashboard_groups.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
 
   apply:
@@ -137,6 +143,8 @@ jobs:
           node scripts/apply_strategy_tag_registry.js "${args[@]}"
       - name: Summarize only the target snapshot date
         run: node scripts/summarize_strategy_snapshot_manifest.js --date "$TARGET_DATE"
+      - name: Synchronize dashboard strategy groups with versioned results
+        run: node scripts/sync_prediction_dashboard_groups.js --date "$TARGET_DATE"
       - name: Verify only the target snapshot date
         env:
           TARGET_DATE: ${{ steps.target.outputs.date }}
@@ -163,7 +171,24 @@ jobs:
             for (const item of Object.values(snapshot.strategy_classifications)) if (item.count === undefined) throw new Error('Strategy count missing');
             if (!entry.classification_summary) throw new Error(`Manifest summary missing: ${entry.file}`);
           }
-          console.log(`Verified ${entries.length} snapshot entry(s) for ${date}`);
+
+          const summaryFile = `data_predictions/${date}/summary.json`;
+          const groupFile = `data_predictions/${date}/group-summary.json`;
+          const summary = JSON.parse(fs.readFileSync(summaryFile, 'utf8'));
+          const groups = JSON.parse(fs.readFileSync(groupFile, 'utf8')).groups || [];
+          for (const [strategyId, classification] of Object.entries(summary.strategy_classifications_v2 || {})) {
+            const group = groups.find(item => item.strategy_id === strategyId);
+            if (!group) throw new Error(`Versioned strategy group missing: ${strategyId}`);
+            if (Number(group.count) !== Number(classification.count)) {
+              throw new Error(`Versioned strategy count mismatch: ${strategyId} ${group.count} != ${classification.count}`);
+            }
+            const expectedMembers = [...new Set((classification.members || []).map(String))].sort();
+            const actualMembers = [...new Set((group.members || []).map(String))].sort();
+            if (JSON.stringify(actualMembers) !== JSON.stringify(expectedMembers)) {
+              throw new Error(`Versioned strategy members mismatch: ${strategyId}`);
+            }
+          }
+          console.log(`Verified ${entries.length} snapshot entry(s) and synchronized dashboard groups for ${date}`);
           NODE
       - name: Commit snapshot and enriched live prediction summary
         shell: bash
@@ -173,7 +198,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add data_predictions data_prediction_analysis/strategy-snapshots
           if git diff --cached --quiet; then
-            echo 'No tag or strategy snapshot changes'
+            echo 'No tag, strategy snapshot, or dashboard group changes'
             exit 0
           fi
           git commit -m "data: apply versioned tag and strategy snapshot ${TARGET_DATE}"
