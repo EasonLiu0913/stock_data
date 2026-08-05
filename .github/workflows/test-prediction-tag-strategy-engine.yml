@@ -5,26 +5,38 @@ on:
     branches: [main]
     paths:
       - 'config/prediction-tag-strategy-registry.json'
+      - 'config/strategy-tag-registry.json'
       - 'scripts/prediction_tag_strategy_engine.js'
+      - 'scripts/strategy_tag_engine.js'
+      - 'scripts/apply_strategy_tag_registry.js'
+      - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/annotate_prediction_disposition_stocks.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
       - 'scripts/recalculate_prediction_strategy_history.js'
       - 'scripts/attach_market_environment.js'
       - 'scripts/backfill_prediction_dashboard_fields.js'
       - 'tests/prediction_tag_strategy_engine.test.js'
+      - 'tests/evaluate_tag_strategy_replay.test.js'
+      - 'tests/strategy_registry_versioning.test.js'
       - 'tests/annotate_prediction_disposition_stocks.test.js'
       - '.github/workflows/test-prediction-tag-strategy-engine.yml'
   pull_request:
     branches: [main]
     paths:
       - 'config/prediction-tag-strategy-registry.json'
+      - 'config/strategy-tag-registry.json'
       - 'scripts/prediction_tag_strategy_engine.js'
+      - 'scripts/strategy_tag_engine.js'
+      - 'scripts/apply_strategy_tag_registry.js'
+      - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/annotate_prediction_disposition_stocks.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
       - 'scripts/recalculate_prediction_strategy_history.js'
       - 'scripts/attach_market_environment.js'
       - 'scripts/backfill_prediction_dashboard_fields.js'
       - 'tests/prediction_tag_strategy_engine.test.js'
+      - 'tests/evaluate_tag_strategy_replay.test.js'
+      - 'tests/strategy_registry_versioning.test.js'
       - 'tests/annotate_prediction_disposition_stocks.test.js'
       - '.github/workflows/test-prediction-tag-strategy-engine.yml'
   workflow_dispatch:
@@ -48,6 +60,9 @@ jobs:
       - name: Validate source and tests
         run: |
           node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/strategy_tag_engine.js
+          node --check scripts/apply_strategy_tag_registry.js
+          node --check scripts/strategy_tag_source_enrichment.js
           node --check scripts/annotate_prediction_disposition_stocks.js
           node --check scripts/evaluate_tag_strategy_replay.js
           node --check scripts/recalculate_prediction_strategy_history.js
@@ -55,6 +70,8 @@ jobs:
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
             tests/prediction_tag_strategy_engine.test.js \
+            tests/evaluate_tag_strategy_replay.test.js \
+            tests/strategy_registry_versioning.test.js \
             tests/annotate_prediction_disposition_stocks.test.js
 
       - name: Dry-run latest available prediction data
@@ -63,10 +80,15 @@ jobs:
           date=$(find data_predictions -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | grep -E '^20[0-9]{6}$' | sort | tail -1)
           test -n "$date"
           node scripts/prediction_tag_strategy_engine.js --date "$date" --dry-run
+          node scripts/apply_strategy_tag_registry.js \
+            --date "$date" \
+            --evaluation-mode historical_recalculation \
+            --dry-run
           if [ -s "data_predictions/$date/replay-dashboard.json" ] && [ -s "data_predictions/$date/replay-summary.json" ]; then
             node scripts/evaluate_tag_strategy_replay.js \
               --date "$date" \
               --mode historical_recalculation \
-              --strategy oversold_margin_exit_rebound_v1 \
+              --registry config/strategy-tag-registry.json \
+              --strategy oversold_margin_exit_rebound_v2 \
               --dry-run
           fi
