@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-05T20:40:41.481Z",
+  "generated_at": "2026-08-05T20:45:10.536Z",
   "forecast_date": "2026-08-06",
   "base_trade_date": "2026-08-05",
   "groups": [
@@ -3349,33 +3349,146 @@
       },
       "formal_strategy": true,
       "fixed_display": true,
-      "strategy_id": "oversold_electronics_rebound_v1",
+      "strategy_id": "oversold_electronics_rebound_v2",
       "active": true,
       "calculation_status": "completed",
-      "calculation_message": "已完成計算，共 1 筆。",
+      "calculation_message": "已完成計算，共 1 檔。",
       "changes_direction_score": false,
       "environment_gate_required": false,
       "evaluation_target": "close_return_gt_5",
       "candidate_score_average": 65.7,
       "market_readiness_score": 17,
       "market_readiness_status": "尚未形成",
-      "criteria": [
-        "RSI14 <= 35",
-        "三日報酬 <= -8%",
-        "距 SMA20 <= -10%",
-        "指定電子產業",
-        "資料完整度 >= 80%",
-        "RSI14、三日報酬、SMA20 乖離均為有效數值",
-        "至少 20 個有效交易日且二十日成交值中位數高於全市場第 30 百分位",
-        "處置股資料接入後才啟用硬排除"
-      ],
+      "criteria": {
+        "all": [
+          "technical_rsi_oversold_v1",
+          "technical_3d_sharp_drop_v1",
+          "technical_below_sma20_v1",
+          "industry_electronics_v1",
+          "data_completeness_high_v1",
+          "liquidity_qualified_v1"
+        ],
+        "any": [],
+        "not": [
+          "disposition_stock_v1"
+        ]
+      },
       "members": [
         "6743"
       ],
-      "data_warnings": [
-        "處置股資料未接入，無法完成此項排除。"
+      "data_warnings": [],
+      "disposition_filter": {
+        "status": "completed",
+        "complete_market_coverage": true,
+        "source_file": "data_market_constraints/20260806/disposition.json",
+        "active_record_count": 50,
+        "active_stock_record_count": 26,
+        "active_stock_count": 22,
+        "candidate_count_before": 1,
+        "excluded_count": 0,
+        "excluded_codes": [],
+        "candidate_count_after": 1
+      },
+      "status_label": "已完成計算，當日 1 筆",
+      "strategy_family": "oversold_electronics_rebound",
+      "strategy_version": 2,
+      "versioned_strategy": true,
+      "versioned_strategy_source": "summary.strategy_classifications_v2",
+      "enabled": true,
+      "coverage_pct": 100,
+      "available_stock_count": 1052,
+      "unavailable_stock_count": 0
+    },
+    {
+      "group": "融資退場型跌深反彈",
+      "count": 1,
+      "average_direction_score": -5,
+      "average_completeness": 100,
+      "average_r1": 0.76,
+      "average_r3": -11.56,
+      "average_gap_sma20": -11.44,
+      "average_rsi14": 30.04,
+      "bullish_ratio": 0,
+      "bearish_ratio": 100,
+      "high_risk_ratio": 0,
+      "market_high_risk_ratio": 0,
+      "low_completeness_ratio": 0,
+      "volume_expansion_ratio": 0,
+      "overheated_ratio": 0,
+      "oversold_ratio": 0,
+      "chip_bullish_ratio": 0,
+      "chip_bearish_ratio": 0,
+      "reversal_ratio": 0,
+      "reclaim_sma20_ratio": 0,
+      "reclaim_sma60_ratio": 0,
+      "macd_bullish_ratio": 0,
+      "kd_bullish_ratio": 0,
+      "relative_strength_7d_ratio": 0,
+      "relative_strength_7d_market_return": 2.24,
+      "directions": {
+        "中性偏空": 1
+      },
+      "risks": {
+        "低風險": 1
+      },
+      "market_context_risks": {
+        "中風險": 1
+      },
+      "completeness_bands": {
+        "高完整度": 1,
+        "中完整度": 0,
+        "低完整度": 0
+      },
+      "strategy_id": "oversold_margin_exit_rebound_v2",
+      "strategy_family_id": "oversold_margin_exit_rebound",
+      "strategy_version": 2,
+      "registered_strategy": true,
+      "fixed_display": true,
+      "calculation_status": "partial",
+      "status_label": "已完成計算，當日 1 筆",
+      "evaluation_target": "close_return_gt_5",
+      "expression": {
+        "all": [
+          "technical_3d_sharp_drop_v1",
+          "technical_below_sma20_v1",
+          "margin_significant_exit_v1",
+          "liquidity_qualified_v1",
+          "disposition_data_complete_v1"
+        ],
+        "any": [
+          "technical_rsi_oversold_v1",
+          "technical_reversal_signal_v1"
+        ],
+        "not": [
+          "disposition_stock_v1"
+        ]
+      },
+      "members": [
+        "6743"
       ],
-      "status_label": "已完成計算"
+      "unavailable_count": 0,
+      "strategy_family": "oversold_margin_exit_rebound",
+      "versioned_strategy": true,
+      "versioned_strategy_source": "summary.strategy_classifications_v2",
+      "enabled": true,
+      "calculation_message": "部分股票資料不足；可計算 1051／1052 檔。",
+      "coverage_pct": 99.9,
+      "available_stock_count": 1051,
+      "unavailable_stock_count": 1,
+      "criteria": {
+        "all": [
+          "technical_3d_sharp_drop_v1",
+          "technical_below_sma20_v1",
+          "margin_significant_exit_v2"
+        ],
+        "any": [
+          "technical_rsi_oversold_v1",
+          "liquidity_qualified_v1"
+        ],
+        "not": [
+          "disposition_stock_v1"
+        ]
+      }
     },
     {
       "group": "熊市時防禦抗跌股",
@@ -3413,82 +3526,35 @@
       },
       "formal_strategy": true,
       "fixed_display": true,
-      "strategy_id": "bear_market_defensive_resilience_v1",
+      "strategy_id": "bear_market_defensive_resilience_v2",
       "environment_code": "normal",
       "active": false,
       "calculation_status": "completed",
       "changes_direction_score": false,
       "evaluation_target": "relative_leadership",
-      "criteria": [
-        "5 日量比 >= 1.5",
-        "RSI14 >= 70",
-        "確認分數 >= 7",
-        "7 日相對強勢 >= 8",
-        "SMA20 乖離 <= 10%"
-      ],
-      "members": [],
-      "status_label": "已完成計算，當日 0 筆"
-    },
-    {
-      "group": "融資退場型跌深反彈",
-      "count": 0,
-      "average_direction_score": 0,
-      "average_completeness": 0,
-      "average_r1": 0,
-      "average_r3": 0,
-      "average_gap_sma20": 0,
-      "average_rsi14": 0,
-      "bullish_ratio": 0,
-      "bearish_ratio": 0,
-      "high_risk_ratio": 0,
-      "market_high_risk_ratio": 0,
-      "low_completeness_ratio": 0,
-      "volume_expansion_ratio": 0,
-      "overheated_ratio": 0,
-      "oversold_ratio": 0,
-      "chip_bullish_ratio": 0,
-      "chip_bearish_ratio": 0,
-      "reversal_ratio": 0,
-      "reclaim_sma20_ratio": 0,
-      "reclaim_sma60_ratio": 0,
-      "macd_bullish_ratio": 0,
-      "kd_bullish_ratio": 0,
-      "relative_strength_7d_ratio": 0,
-      "relative_strength_7d_market_return": null,
-      "directions": {},
-      "risks": {},
-      "market_context_risks": {},
-      "completeness_bands": {
-        "高完整度": 0,
-        "中完整度": 0,
-        "低完整度": 0
-      },
-      "strategy_id": "oversold_margin_exit_rebound_v1",
-      "strategy_family_id": "oversold_margin_exit_rebound",
-      "strategy_version": 1,
-      "registered_strategy": true,
-      "fixed_display": true,
-      "calculation_status": "completed",
-      "status_label": "已完成計算，當日 0 筆",
-      "evaluation_target": "close_return_gt_5",
-      "expression": {
+      "criteria": {
         "all": [
-          "technical_3d_sharp_drop_v1",
-          "technical_below_sma20_v1",
-          "margin_significant_exit_v1",
-          "liquidity_qualified_v1",
-          "disposition_data_complete_v1"
+          "market_post_shock_restricted_v1",
+          "technical_volume_ratio_5d_expansion_v1",
+          "technical_rsi_overheated_v1",
+          "strategy_confirmation_high_v1",
+          "technical_relative_strength_7d_v1",
+          "technical_sma20_not_overextended_v1"
         ],
-        "any": [
-          "technical_rsi_oversold_v1",
-          "technical_reversal_signal_v1"
-        ],
-        "not": [
-          "disposition_stock_v1"
-        ]
+        "any": [],
+        "not": []
       },
       "members": [],
-      "unavailable_count": 0
+      "status_label": "已完成計算，當日 0 筆",
+      "strategy_family": "bear_market_defensive_resilience",
+      "strategy_version": 2,
+      "versioned_strategy": true,
+      "versioned_strategy_source": "summary.strategy_classifications_v2",
+      "enabled": true,
+      "calculation_message": "已完成計算，當日 0 檔。",
+      "coverage_pct": 100,
+      "available_stock_count": 1052,
+      "unavailable_stock_count": 0
     }
   ],
   "tag_strategy_registry": {
@@ -3760,7 +3826,7 @@
       "members": [],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "legacy_oversold_electronics_rebound_v1": {
       "id": "legacy_oversold_electronics_rebound_v1",
@@ -3777,7 +3843,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "technical_rsi_oversold_v1": {
       "id": "technical_rsi_oversold_v1",
@@ -4055,7 +4121,7 @@
         "1589",
         "6806"
       ],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "technical_3d_sharp_drop_v1": {
       "id": "technical_3d_sharp_drop_v1",
@@ -4080,7 +4146,7 @@
       "unavailable_members": [
         "1589"
       ],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "technical_below_sma20_v1": {
       "id": "technical_below_sma20_v1",
@@ -4133,7 +4199,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "technical_reversal_signal_v1": {
       "id": "technical_reversal_signal_v1",
@@ -4542,7 +4608,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "margin_balance_declining_1d_v1": {
       "id": "margin_balance_declining_1d_v1",
@@ -5131,7 +5197,7 @@
         "9912",
         "9929"
       ],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "margin_balance_declining_5d_v1": {
       "id": "margin_balance_declining_5d_v1",
@@ -5707,7 +5773,7 @@
         "9912",
         "9929"
       ],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "margin_significant_exit_v1": {
       "id": "margin_significant_exit_v1",
@@ -5956,7 +6022,7 @@
         "9912",
         "9929"
       ],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "industry_electronics_v1": {
       "id": "industry_electronics_v1",
@@ -6406,7 +6472,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "liquidity_qualified_v1": {
       "id": "liquidity_qualified_v1",
@@ -7157,7 +7223,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "data_completeness_high_v1": {
       "id": "data_completeness_high_v1",
@@ -8210,7 +8276,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "disposition_data_complete_v1": {
       "id": "disposition_data_complete_v1",
@@ -8220,11 +8286,9 @@
       "category": "quality",
       "fixed_display": false,
       "enabled": true,
-      "calculation_status": "unable_to_calculate",
-      "count": null,
-      "members": [],
-      "unavailable_count": 1052,
-      "unavailable_members": [
+      "calculation_status": "completed",
+      "count": 1052,
+      "members": [
         "1101",
         "1102",
         "1103",
@@ -9278,7 +9342,9 @@
         "9955",
         "9958"
       ],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "unavailable_count": 0,
+      "unavailable_members": [],
+      "generated_at": "2026-08-05T20:45:10.536Z"
     },
     "disposition_stock_v1": {
       "id": "disposition_stock_v1",
@@ -9289,11 +9355,21 @@
       "fixed_display": true,
       "enabled": true,
       "calculation_status": "completed",
-      "count": 0,
-      "members": [],
+      "count": 9,
+      "members": [
+        "1515",
+        "3026",
+        "3055",
+        "3167",
+        "3532",
+        "4169",
+        "6531",
+        "8033",
+        "8046"
+      ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z"
+      "generated_at": "2026-08-05T20:45:10.536Z"
     }
   },
   "strategy_classifications": {
@@ -9310,7 +9386,7 @@
       "members": [],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z",
+      "generated_at": "2026-08-05T20:45:10.536Z",
       "description": "沿用既有正式策略成員，納入統一策略登錄表。",
       "expression": {
         "all": [
@@ -9337,7 +9413,7 @@
       ],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z",
+      "generated_at": "2026-08-05T20:45:10.536Z",
       "description": "沿用既有正式策略成員，納入統一策略登錄表。",
       "expression": {
         "all": [
@@ -9362,7 +9438,7 @@
       "members": [],
       "unavailable_count": 0,
       "unavailable_members": [],
-      "generated_at": "2026-08-05T20:40:41.481Z",
+      "generated_at": "2026-08-05T20:45:10.536Z",
       "description": "短線急跌且低於 SMA20，同時出現明顯融資退場；須具流動性，並排除處置股。",
       "expression": {
         "all": [
