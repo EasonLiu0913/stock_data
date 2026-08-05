@@ -26,38 +26,57 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Validate scripts and tests
+      - name: Run installer with diagnostics
+        id: install
+        shell: bash
         run: |
-          node --check scripts/install_prediction_market_context_workflows.js
-          node --check scripts/taifex_realtime_night_futures.js
-          node --check scripts/external_market_intraday_snapshot.js
-          node --check scripts/capture_prediction_market_context.js
-          node --check scripts/run_prediction_market_environment.js
-          node --check scripts/rebind_prediction_market_environment.js
-          node --check scripts/apply_prediction_context_to_readiness.js
-          node --check scripts/finalize_prediction_market_context.js
-          node --test tests/prediction_market_context.test.js
-      - name: Install workflow lifecycle
-        run: node scripts/install_prediction_market_context_workflows.js
-      - name: Verify installed workflow architecture
-        run: |
-          set -euo pipefail
-          ! grep -R "workflow_run" .github/workflows
-          grep -q "Capture prediction-time night and external market context" .github/workflows/daily-stock-prediction.yml
-          grep -q "Reapply immutable prediction-time market context" .github/workflows/apply-strategy-tag-registry.yml
-          grep -q "05:10、05:40、06:10、06:40" .github/workflows/crawl-external-market-indicators.yml
-          grep -q "台指期夜盤收盤定稿" .github/workflows/update-official-market-constraints.yml
-          test ! -e .github/workflows/test-current-taifex-night-snapshot.yml
-      - name: Commit installation
+          set +e
+          mkdir -p diagnostics
+          {
+            echo '=== node checks ==='
+            node --check scripts/install_prediction_market_context_workflows.js
+            node --check scripts/taifex_realtime_night_futures.js
+            node --check scripts/external_market_intraday_snapshot.js
+            node --check scripts/capture_prediction_market_context.js
+            node --check scripts/run_prediction_market_environment.js
+            node --check scripts/rebind_prediction_market_environment.js
+            node --check scripts/apply_prediction_context_to_readiness.js
+            node --check scripts/finalize_prediction_market_context.js
+            echo '=== tests ==='
+            node --test tests/prediction_market_context.test.js
+            echo '=== installer ==='
+            node scripts/install_prediction_market_context_workflows.js
+            echo '=== architecture checks ==='
+            ! grep -R "workflow_run" .github/workflows
+            grep -q "Capture prediction-time night and external market context" .github/workflows/daily-stock-prediction.yml
+            grep -q "Reapply immutable prediction-time market context" .github/workflows/apply-strategy-tag-registry.yml
+            grep -q "05:10、05:40、06:10、06:40" .github/workflows/crawl-external-market-indicators.yml
+            grep -q "台指期夜盤收盤定稿" .github/workflows/update-official-market-constraints.yml
+          } > diagnostics/prediction-market-context-installer.log 2>&1
+          status=$?
+          cat diagnostics/prediction-market-context-installer.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Commit installation or diagnostics
+        shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A .github/workflows
-          git commit -m "ci: install prediction market snapshot lifecycle"
+          git add -A .github/workflows diagnostics/prediction-market-context-installer.log
+          if git diff --cached --quiet; then exit 0; fi
+          if [ "${{ steps.install.outputs.status }}" = "0" ]; then
+            message="ci: install prediction market snapshot lifecycle"
+          else
+            message="diagnostic: record prediction context installer failure"
+          fi
+          git commit -m "$message"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
             sleep $((attempt * 5))
           done
           exit 1
+      - name: Fail when installer failed
+        if: steps.install.outputs.status != '0'
+        run: exit 1
