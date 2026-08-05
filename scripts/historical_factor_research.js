@@ -13,6 +13,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   leadershipMinWins: 5,
   alignmentSlopeLookback: 5,
   industryMinPeers: 5,
+  marketMinPeers: 20,
   preferredBenchmarkCode: '0050',
 });
 
@@ -95,7 +96,7 @@ function normalizeIndustry(stock) {
     stock?.industry
     || stock?.industry_name
     || stock?.twse_industry
-    || stock?.category
+    || stock?.stock_industry
     || '',
   ).trim();
 }
@@ -103,13 +104,11 @@ function normalizeIndustry(stock) {
 function listHistoricalPriceFiles(workspaceRoot, cutoff, maxFiles = DEFAULT_OPTIONS.maxFiles) {
   const directory = path.join(workspaceRoot, 'data_fubon');
   const manifest = readJson(path.join(directory, 'files.json'), null);
-  let names = Array.isArray(manifest) ? manifest : [];
-  if (!names.length) {
-    try {
-      names = fs.readdirSync(directory);
-    } catch {
-      return [];
-    }
+  let names = Array.isArray(manifest) ? [...manifest] : [];
+  try {
+    names.push(...fs.readdirSync(directory));
+  } catch {
+    if (!names.length) return [];
   }
   const normalizedCutoff = compactDate(cutoff);
   const rows = names
@@ -173,6 +172,7 @@ function loadHistoricalPriceContext(payload, workspaceRoot, cutoff, options = {}
   return {
     cutoff_date: compactDate(cutoff) || null,
     source_files: files.map(item => `data_fubon/${item.file}`),
+    latest_source_date: files.at(-1)?.date || null,
     by_code: byCode,
   };
 }
@@ -266,13 +266,16 @@ function calculateBullishAlignment(rows, options = {}) {
 
 function buildBenchmarkContext(stocks, priceContext, options = {}) {
   const resolved = { ...DEFAULT_OPTIONS, ...options };
-  const preferredRows = priceContext.by_code.get(resolved.preferredBenchmarkCode) || [];
+  const expectedLatestDate = priceContext.latest_source_date;
+  const rawPreferredRows = priceContext.by_code.get(resolved.preferredBenchmarkCode) || [];
+  const preferredRows = rawPreferredRows.at(-1)?.date === expectedLatestDate ? rawPreferredRows : [];
   const preferredDaily = dailyReturnMap(preferredRows);
   const returns20dByCode = new Map();
   const dailyByCode = new Map();
   for (const stock of stocks) {
     const code = String(stock.stock_code || '').trim();
-    const rows = priceContext.by_code.get(code) || [];
+    const rawRows = priceContext.by_code.get(code) || [];
+    const rows = rawRows.at(-1)?.date === expectedLatestDate ? rawRows : [];
     returns20dByCode.set(code, periodReturn(rows, resolved.relativeWindow));
     dailyByCode.set(code, dailyReturnMap(rows));
   }
@@ -361,7 +364,9 @@ function enrichHistoricalFactorFeatures(payload, workspaceRoot, dataAsOf, option
       : null);
   }
   const marketExcessValues = [...marketExcessByCode.values()].filter(Number.isFinite);
-  const marketThreshold = percentile(marketExcessValues, resolved.relativeTopPercentile);
+  const marketThreshold = marketExcessValues.length >= resolved.marketMinPeers
+    ? percentile(marketExcessValues, resolved.relativeTopPercentile)
+    : null;
 
   const industryGroups = new Map();
   for (const stock of stocks) {
@@ -392,7 +397,8 @@ function enrichHistoricalFactorFeatures(payload, workspaceRoot, dataAsOf, option
 
   payload.stocks = stocks.map(stock => {
     const code = String(stock.stock_code || '').trim();
-    const rows = priceContext.by_code.get(code) || [];
+    const rawRows = priceContext.by_code.get(code) || [];
+    const rows = rawRows.at(-1)?.date === priceContext.latest_source_date ? rawRows : [];
     const trend = calculateTrendQuality(rows, resolved);
     const alignment = calculateBullishAlignment(rows, resolved);
     const stockReturn = benchmark.returns_20d_by_code.get(code);
@@ -472,6 +478,7 @@ function enrichHistoricalFactorFeatures(payload, workspaceRoot, dataAsOf, option
       leadership_min_wins: resolved.leadershipMinWins,
       alignment_slope_lookback: resolved.alignmentSlopeLookback,
       industry_min_peers: resolved.industryMinPeers,
+      market_min_peers: resolved.marketMinPeers,
     },
     benchmark: {
       preferred_code: resolved.preferredBenchmarkCode,
@@ -482,6 +489,7 @@ function enrichHistoricalFactorFeatures(payload, workspaceRoot, dataAsOf, option
       preferred_daily_days: benchmark.preferred_daily_days,
       cross_section_fallback_daily_days: benchmark.fallback_daily_days,
     },
+    latest_source_date: priceContext.latest_source_date,
     market_top20_threshold: Number.isFinite(marketThreshold) ? round(marketThreshold) : null,
     available_stock_count: counts,
     coverage_pct: Object.fromEntries(Object.entries(counts).map(([key, value]) => [
