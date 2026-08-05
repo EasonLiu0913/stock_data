@@ -95,3 +95,25 @@ test('summarizeManifest annotates live, archived, and recalculated snapshots', (
   assert.equal(second.changed, false);
   assert.equal(second.summarized_entry_count, 0);
 });
+
+test('summarizeManifest can update only one requested date', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-summary-date-'));
+  writeJson(path.join(root, 'snapshots', '0804.json'), fixtureSnapshot());
+  writeJson(path.join(root, 'snapshots', '0805.json'), fixtureSnapshot());
+  const manifestFile = path.join(root, 'snapshots', 'manifest.json');
+  writeJson(manifestFile, {
+    schema_version: 2,
+    updated_at: null,
+    dates: {
+      '20260804': { live_snapshot: { file: 'snapshots/0804.json' } },
+      '20260805': { live_snapshot: { file: 'snapshots/0805.json' } },
+    },
+  });
+
+  const result = summarizeManifest(manifestFile, { workspaceRoot: root, date: '20260805' });
+  const saved = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+  assert.equal(result.entry_count, 1);
+  assert.equal(result.total_entry_count, 2);
+  assert.equal(saved.dates['20260804'].live_snapshot.classification_summary, undefined);
+  assert.equal(saved.dates['20260805'].live_snapshot.classification_summary.strategy_count, 1);
+});
