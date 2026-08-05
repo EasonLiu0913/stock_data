@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 4,
+  "generated_at": "2026-08-05T07:09:38.409Z",
+  "replay_date": "20260805",
+  "source_files": {
+    "prediction_summary": "data_predictions/20260805/summary.json",
+    "replay_summary": "data_predictions/20260805/replay-summary.json",
+    "replay_dashboard": "data_predictions/20260805/replay-dashboard.json",
+    "predicted_environment": "data_market_environment/20260805/market_environment.json",
+    "previous_actual_environment": "data_market_environment/20260804/actual_market_environment.json"
+  },
+  "actual_environment": {
+    "code": "normal",
+    "label": "一般環境",
+    "rules": {
+      "systemic_selloff_first_day": "down_ratio >= 80 && equal_weight_return <= -2.5 && p90_return <= 0.5",
+      "market_stress": "down_ratio >= 70 && equal_weight_return <= -1.5"
+    },
+    "metrics": {
+      "sample_count": 1046,
+      "up_ratio": 63.86,
+      "down_ratio": 27.63,
+      "equal_weight_market_return": 1.41,
+      "weighted_index_return": 0,
+      "p90_return": 4.93
+    }
+  },
+  "prediction_evaluation": {
+    "predicted_environment": "normal",
+    "actual_environment": "normal",
+    "match": true,
+    "snapshot_hash": "2b02d8a4bc124301ea90f45b3b97b5bc144296e1cdd439a698b24cf2132e8288"
+  },
+  "relative_leadership_shadow_policy": {
+    "rule": "volume_ratio_5d >= 1.5 && rsi14 >= 70",
+    "policy_state": "normal",
+    "policy_rule": "一般環境：保留全部原始候選。",
+    "raw_candidates": 1,
+    "raw_hits": 0,
+    "raw_precision": 0,
+    "policy_assessed": true,
+    "policy_candidates": 1,
+    "policy_hits": 0,
+    "policy_precision": 0,
+    "policy_precision_delta": 0,
+    "watchlist_candidates": 0,
+    "excluded_candidates": 0,
+    "avoided_false_positives": 0,
+    "suppressed_true_positives": 0,
+    "net_avoided_errors": 0,
+    "candidate_stocks": [
+      {
+        "stock_code": "6807",
+        "stock_name": "峰源-KY",
+        "volume_ratio_5d": 4.33,
+        "rsi14": 72.41,
+        "r1": 1.15,
+        "gap_sma20": 3.76,
+        "relative_strength_7d": 4.65,
+        "confirmation_score": 2,
+        "confirmation_signals": {
+          "volume_ratio_5d_at_least_2": true,
+          "rsi14_at_least_75": false,
+          "relative_strength_7d_at_least_8": false,
+          "previous_day_non_negative": true,
+          "gap_sma20_at_most_10": true,
+          "chip_bias_bullish": false,
+          "predicted_direction_bullish": false,
+          "breakout_precursor": false
+        },
+        "policy_bucket": "core",
+        "relative_leadership": false,
+        "market_percentile": 25
+      }
+    ],
+    "policy_candidate_stocks": [
+      {
+        "stock_code": "6807",
+        "stock_name": "峰源-KY",
+        "volume_ratio_5d": 4.33,
+        "rsi14": 72.41,
+        "r1": 1.15,
+        "gap_sma20": 3.76,
+        "relative_strength_7d": 4.65,
+        "confirmation_score": 2,
+        "confirmation_signals": {
+          "volume_ratio_5d_at_least_2": true,
+          "rsi14_at_least_75": false,
+          "relative_strength_7d_at_least_8": false,
+          "previous_day_non_negative": true,
+          "gap_sma20_at_most_10": true,
+          "chip_bias_bullish": false,
+          "predicted_direction_bullish": false,
+          "breakout_precursor": false
+        },
+        "policy_bucket": "core",
+        "relative_leadership": false,
+        "market_percentile": 25
+      }
+    ],
+    "watchlist_stocks": [],
+    "data_quality": {
+      "prediction_stock_count": 1052,
+      "verified_replay_rows": 1046,
+      "matched_rows": 1046,
+      "replay_without_prediction": 0,
+      "prediction_without_verified_replay": 6
+    },
+    "note": "所有政策分層只使用 summary.json 的事前欄位；熊市時防禦抗跌股為探索規則，原候選保留於觀察清單。Shadow mode 未改動正式清單。"
+  },
+  "formal_strategy_evaluation": {
+    "source_file": "data_prediction_analysis/formal-strategy/20260805.json",
+    "strategy_id": "bear_market_defensive_resilience_v1",
+    "label": "熊市時防禦抗跌股",
+    "status": "formal_label",
+    "calculation_status": "completed",
+    "changes_direction_score": false,
+    "evaluation_target": "relative_leadership",
+    "candidates": 0,
+    "verified_candidates": 0,
+    "hits": 0,
+    "precision": null,
+    "missing_replay_candidates": 0,
+    "members": [],
+    "hit_members": [],
+    "stocks": []
+  },
+  "formal_strategy_evaluations": {
+    "bear_market_defensive_resilience_v1": {
+      "strategy_id": "bear_market_defensive_resilience_v1",
+      "label": "熊市時防禦抗跌股",
+      "status": "formal_label",
+      "calculation_status": "completed",
+      "changes_direction_score": false,
+      "evaluation_target": "relative_leadership",
+      "candidates": 0,
+      "verified_candidates": 0,
+      "hits": 0,
+      "precision": null,
+      "missing_replay_candidates": 0,
+      "members": [],
+      "hit_members": [],
+      "stocks": []
+    },
+    "oversold_electronics_rebound_v1": {
+      "strategy_id": "oversold_electronics_rebound_v1",
+      "label": "跌深反彈電子股",
+      "status": "formal_label",
+      "calculation_status": "completed",
+      "changes_direction_score": false,
+      "evaluation_target": "close_return_gt_5",
+      "hit_rule": "當日收盤報酬嚴格大於 5.00%",
+      "candidates": 1,
+      "verified_candidates": 1,
+      "hits": 0,
+      "hit_rate": 0,
+      "precision": 0,
+      "missing_replay_candidates": 0,
+      "average_return": 0.76,
+      "median_return": 0.76,
+      "average_market_excess_return": -0.65,
+      "members": [
+        "6743"
+      ],
+      "hit_members": [],
+      "miss_members": [
+        "6743"
+      ],
+      "hit_stocks": [],
+      "miss_stocks": [
+        {
+          "stock_code": "6743",
+          "stock_name": "安普新",
+          "verified": true,
+          "close_return": 0.76,
+          "hit": false,
+          "market_equal_weight_return": 1.41,
+          "market_excess_return": -0.65,
+          "candidate_score": 69.3,
+          "risk_warnings": [
+            "處置股資料未接入，無法完成此項排除。"
+          ],
+          "industry": "其他電子業"
+        }
+      ],
+      "stocks": [
+        {
+          "stock_code": "6743",
+          "stock_name": "安普新",
+          "verified": true,
+          "close_return": 0.76,
+          "hit": false,
+          "market_equal_weight_return": 1.41,
+          "market_excess_return": -0.65,
+          "candidate_score": 69.3,
+          "risk_warnings": [
+            "處置股資料未接入，無法完成此項排除。"
+          ],
+          "industry": "其他電子業"
+        }
+      ]
+    }
+  },
+  "market_rebound_readiness_evaluation": {
+    "source_file": "data_prediction_analysis/oversold-beta-rebound/20260805.json",
+    "strategy_id": "oversold_beta_rebound_v1",
+    "label": "跌深反彈準備度",
+    "score": 43,
+    "status": "訊號萌芽",
+    "effective_data_weight": 85,
+    "probability": {
+      "mode": "heuristic",
+      "label": "啟發式機率區間",
+      "probability_range": [
+        20,
+        35
+      ],
+      "sample_count": 2,
+      "hit_count": 0,
+      "historical_hit_rate": 0,
+      "confidence_interval": [
+        0,
+        65.8
+      ]
+    },
+    "verified": true,
+    "market_rebound_day": false,
+    "actual_equal_weight_return": 1.41,
+    "actual_advancing_issue_ratio": 63.86,
+    "rule": "次日全市場等權重報酬 >= +2% 且上漲家數比例 >= 65%"
+  }
+}
