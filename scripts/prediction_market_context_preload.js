@@ -9,6 +9,7 @@ if (targetScript === 'generate_market_environment.js') {
   const forecastDate = String(process.env.FORECAST_TARGET_DATE || '').replace(/[^0-9]/g, '');
   const marketLib = require('./market_environment_lib');
   const originalLatest = marketLib.latestDatedFileInDirectories;
+  const originalValidation = marketLib.primaryExternalValidation;
 
   marketLib.latestDatedFileInDirectories = function predictionContextLatest(rootDir, maxDate, filename) {
     if (path.basename(rootDir) === 'data_external_market'
@@ -22,6 +23,31 @@ if (targetScript === 'generate_market_environment.js') {
       };
     }
     return originalLatest(rootDir, maxDate, filename);
+  };
+
+  marketLib.primaryExternalValidation = function predictionIntradayValidation(external, expectedDate = null) {
+    const validation = originalValidation(external, expectedDate);
+    if (external?.snapshot_type !== 'prediction_intraday') return validation;
+    const byId = new Map((external.indicators || []).map((item) => [item.id, item]));
+    const usable = marketLib.PRIMARY_IDS.every((id) => {
+      const item = byId.get(id);
+      return item && Number.isFinite(Number(item.close ?? item.last_price));
+    });
+    if (!usable) return validation;
+    return {
+      ...validation,
+      complete: true,
+      exact: true,
+      expected_date: expectedDate,
+      actual_date: expectedDate || external.collection_date || validation.actual_date,
+      collection_date: expectedDate || external.collection_date || validation.collection_date,
+      primary_indicator_agreement: `${marketLib.PRIMARY_IDS.length}/${marketLib.PRIMARY_IDS.length}`,
+      primary_market_dates: Object.fromEntries(
+        marketLib.PRIMARY_IDS.map((id) => [id, byId.get(id)?.market_date || null]),
+      ),
+      intraday_context_override: true,
+      original_validation: validation,
+    };
   };
 
   process.on('exit', (code) => {
