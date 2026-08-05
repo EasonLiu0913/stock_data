@@ -1,0 +1,128 @@
+name: "[一次性安裝] 原生預測市場快照"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/native-prediction-context-bootstrap-trigger.txt'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: bootstrap-native-prediction-context
+  cancel-in-progress: false
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download previously validated native artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api /repos/${GITHUB_REPOSITORY}/actions/artifacts/8945315062/zip > /tmp/native-prediction-context.zip
+          rm -rf /tmp/native-prediction-context
+          mkdir -p /tmp/native-prediction-context
+          unzip -q /tmp/native-prediction-context.zip -d /tmp/native-prediction-context
+          test -s /tmp/native-prediction-context/scripts/market_environment_lib.js
+          test -s /tmp/native-prediction-context/scripts/generate_market_environment.js
+          test -s /tmp/native-prediction-context/scripts/generate_market_risk_snapshot.js
+          test -s /tmp/native-prediction-context/scripts/resolve_forecast_dates.js
+          test -s /tmp/native-prediction-context/tests/prediction_market_context.test.js
+
+      - name: Verify artifact digest by Git blob SHA
+        run: |
+          set -euo pipefail
+          test "$(git hash-object /tmp/native-prediction-context/scripts/market_environment_lib.js)" = "d04afa20255bea2422619d577df501c5e032d35e"
+          test "$(git hash-object /tmp/native-prediction-context/scripts/generate_market_environment.js)" = "cdd05c63b7f207b858a53ece70b41f16c512d1d5"
+          test "$(git hash-object /tmp/native-prediction-context/scripts/generate_market_risk_snapshot.js)" = "bfe1990264c418ccf354490b233a7897b047a97f"
+          test "$(git hash-object /tmp/native-prediction-context/scripts/resolve_forecast_dates.js)" = "b75954ae4372c8398370d383e673b884b9e31582"
+          test "$(git hash-object /tmp/native-prediction-context/tests/prediction_market_context.test.js)" = "4b7afcb05b4f9d1e581f83358098eeb360025f53"
+
+      - name: Install native implementation
+        run: |
+          set -euo pipefail
+          cp /tmp/native-prediction-context/scripts/market_environment_lib.js scripts/market_environment_lib.js
+          cp /tmp/native-prediction-context/scripts/generate_market_environment.js scripts/generate_market_environment.js
+          cp /tmp/native-prediction-context/scripts/generate_market_risk_snapshot.js scripts/generate_market_risk_snapshot.js
+          cp /tmp/native-prediction-context/scripts/resolve_forecast_dates.js scripts/resolve_forecast_dates.js
+          cp /tmp/native-prediction-context/tests/prediction_market_context.test.js tests/prediction_market_context.test.js
+          rm -f \
+            scripts/prediction_market_context_preload.js \
+            scripts/run_prediction_market_environment.js \
+            scripts/install_native_prediction_market_context.js \
+            scripts/install_native_prediction_market_context_v2.js \
+            scripts/install_native_prediction_market_context_v3.js \
+            scripts/install_native_prediction_market_context_v4.js
+
+      - name: Restore permanent pull-request validation workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/.github/workflows/test-official-market-constraints-integration.yml?ref=155019ab2a88469ba52eef70277d54486bf86309" \
+            --jq .content | base64 -d > /tmp/permanent-validation.yml
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/permanent-validation.yml')
+          text = p.read_text()
+          text = text.replace("      - scripts/prediction_market_context_preload.js\n", "")
+          text = text.replace("          node --check scripts/prediction_market_context_preload.js\n", "")
+          if "      - scripts/market_environment_lib.js\n" not in text:
+              text = text.replace("      - scripts/rebind_prediction_market_environment.js\n", "      - scripts/market_environment_lib.js\n      - scripts/generate_market_environment.js\n      - scripts/generate_market_risk_snapshot.js\n      - scripts/rebind_prediction_market_environment.js\n")
+          if "      - scripts/rebind_prediction_market_risk.js\n" not in text:
+              text = text.replace("      - scripts/rebind_prediction_market_environment.js\n", "      - scripts/rebind_prediction_market_environment.js\n      - scripts/rebind_prediction_market_risk.js\n")
+          if "          node --check scripts/generate_market_risk_snapshot.js\n" not in text:
+              text = text.replace("          node --check scripts/rebind_prediction_market_environment.js\n", "          node --check scripts/market_environment_lib.js\n          node --check scripts/generate_market_environment.js\n          node --check scripts/generate_market_risk_snapshot.js\n          node --check scripts/rebind_prediction_market_environment.js\n          node --check scripts/rebind_prediction_market_risk.js\n")
+          p.write_text(text)
+          PY
+          cp /tmp/permanent-validation.yml .github/workflows/test-official-market-constraints-integration.yml
+
+      - name: Validate installed implementation
+        run: |
+          set -euo pipefail
+          node --check scripts/market_environment_lib.js
+          node --check scripts/generate_market_environment.js
+          node --check scripts/generate_market_risk_snapshot.js
+          node --check scripts/resolve_forecast_dates.js
+          node --check scripts/rebind_prediction_market_environment.js
+          node --check scripts/rebind_prediction_market_risk.js
+          node --test tests/prediction_market_context.test.js
+          ! grep -q 'NODE_OPTIONS=' scripts/resolve_forecast_dates.js
+          test ! -e scripts/prediction_market_context_preload.js
+          test ! -e scripts/run_prediction_market_environment.js
+          ruby -e "require 'yaml'; YAML.load_file('.github/workflows/test-official-market-constraints-integration.yml')"
+          if grep -R -n -E '^[[:space:]]*workflow_run:' .github/workflows; then
+            echo "workflow_run key is forbidden" >&2
+            exit 1
+          fi
+
+      - name: Remove bootstrap files and commit
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/bootstrap-native-prediction-context.yml
+          rm -f docs/native-prediction-context-bootstrap-trigger.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor: use native prediction market context"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
