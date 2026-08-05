@@ -92,8 +92,8 @@ jobs:
             .github/workflows/daily-stock-prediction.yml \
             .github/workflows/crawl-external-market-indicators.yml \
             .github/workflows/update-official-market-constraints.yml
-          if grep -R "workflow_run" .github/workflows; then
-            echo "workflow_run is forbidden" >&2
+          if grep -R -n -E '^[[:space:]]*workflow_run:' .github/workflows; then
+            echo "workflow_run key is forbidden" >&2
             exit 1
           fi
           grep -q "10 21 \* \* 1-5" .github/workflows/update-official-market-constraints.yml
