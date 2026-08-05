@@ -32,6 +32,7 @@ function rebindPredictionMarketEnvironment(forecastDate) {
   const environment = readJson(environmentFile, null);
   if (!environment) throw new Error(`Missing market environment: ${environmentFile}`);
 
+  const primaryReady = latest.external_primary_ready === true;
   const { snapshot_hash: ignored, ...withoutOldHash } = environment;
   const rebound = {
     ...withoutOldHash,
@@ -52,17 +53,25 @@ function rebindPredictionMarketEnvironment(forecastDate) {
       manifest_file: latest.manifest_file,
       external_market_file: latest.external_market_file,
       night_futures_file: latest.night_futures_file || null,
-      external_primary_ready: latest.external_primary_ready === true,
+      external_primary_ready: primaryReady,
     },
     data_freshness: {
       ...(environment.data_freshness || {}),
+      status: primaryReady ? 'intraday_live' : 'intraday_partial',
+      reason: primaryReady
+        ? 'prediction_time_primary_indicators_available'
+        : 'prediction_time_partial_or_preopen_indicators',
       source_mode: 'prediction_intraday_snapshot',
       source_snapshot_id: latest.snapshot_id,
       source_snapshot_hash: latest.snapshot_hash,
+      is_final: false,
     },
     notes: [
       ...(environment.notes || []).filter((note) => !String(note).includes('prediction-time market context')),
       'External market metrics are bound to the immutable prediction-time market context; later final data must not overwrite this snapshot.',
+      primaryReady
+        ? 'Five primary external indicators were available at prediction time.'
+        : 'Some external indicators were pre-open or partial at prediction time; available values were preserved without treating them as final closes.',
     ],
   };
   const payload = { ...rebound, snapshot_hash: sha256(rebound) };
@@ -72,6 +81,7 @@ function rebindPredictionMarketEnvironment(forecastDate) {
     environment_file: path.relative(ROOT, environmentFile).replaceAll(path.sep, '/'),
     environment_hash: payload.snapshot_hash,
     context_snapshot_hash: latest.snapshot_hash,
+    data_freshness_status: payload.data_freshness.status,
   };
 }
 
