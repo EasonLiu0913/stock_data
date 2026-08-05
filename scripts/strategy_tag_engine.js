@@ -18,7 +18,9 @@ function firstDefined(object, rule = {}) {
   const paths = Array.isArray(rule.paths) ? rule.paths : [rule.path];
   for (const item of paths.filter(Boolean)) {
     const value = getPath(object, item);
-    if (value !== undefined && value !== null && value !== '') return value;
+    // undefined means the field does not exist and may use a legacy fallback.
+    // null is an explicit "unable to calculate" result and must stop fallback.
+    if (value !== undefined && value !== '') return value;
   }
   return null;
 }
