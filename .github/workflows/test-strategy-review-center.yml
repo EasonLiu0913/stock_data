@@ -1,0 +1,64 @@
+name: '[04 預測覆盤] 驗證策略總覽與驗證中心'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'public/strategy-review-center.html'
+      - 'public/strategy-review-center.css'
+      - 'public/strategy-review-center.js'
+      - 'tests/strategy_review_center.test.js'
+      - '.github/workflows/test-strategy-review-center.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'public/strategy-review-center.html'
+      - 'public/strategy-review-center.css'
+      - 'public/strategy-review-center.js'
+      - 'tests/strategy_review_center.test.js'
+      - '.github/workflows/test-strategy-review-center.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate registry-driven strategy review page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check JavaScript and tests
+        run: |
+          node --check public/strategy-review-center.js
+          node --test tests/strategy_review_center.test.js
+      - name: Confirm every current strategy is discoverable without hardcoded IDs
+        run: |
+          node - <<'NODE'
+          'use strict';
+          const registry = require('./config/strategy-tag-registry.json');
+          const { buildDefinitions } = require('./public/strategy-review-center.js');
+          const definitions = buildDefinitions(registry, {}, {});
+          const strategyIds = new Set(definitions.filter(item => item.kind === 'strategy').map(item => item.id));
+          const observationIds = new Set(definitions.filter(item => item.kind === 'observation').map(item => item.id));
+          for (const strategy of registry.strategies || []) {
+            if (strategy.enabled === false) continue;
+            if (!strategyIds.has(strategy.strategy_id)) throw new Error(`Missing strategy: ${strategy.strategy_id}`);
+          }
+          for (const tag of registry.tags || []) {
+            if (tag.enabled === false || tag.usage_role !== 'observation_only') continue;
+            if (!observationIds.has(tag.tag_id)) throw new Error(`Missing observation tag: ${tag.tag_id}`);
+          }
+          console.log(`Discovered ${strategyIds.size} strategies and ${observationIds.size} observation tags.`);
+          NODE
+      - name: Guard workflow architecture
+        run: |
+          if grep -R "workflow_run" .github/workflows/test-strategy-review-center.yml; then
+            echo 'workflow_run is forbidden by AGENTS.md' >&2
+            exit 1
+          fi
