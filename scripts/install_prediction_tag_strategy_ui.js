@@ -7,11 +7,15 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const TAG_EXPRESSION_ENTRYPOINT = 'prediction-tag-strategy-expression-semantics.js?v=1';
+const FORMULA_BUILDER_ENTRYPOINT = 'prediction-formula-builder.js?v=1';
 const TARGETS = Object.freeze({
   'prediction-dashboard.html': TAG_EXPRESSION_ENTRYPOINT,
   'prediction-groups.html': TAG_EXPRESSION_ENTRYPOINT,
   'prediction-industry-dashboard.html': TAG_EXPRESSION_ENTRYPOINT,
   'prediction-replay-dashboard-view.html': 'prediction-replay-tag-strategy-enhancement.js?v=2',
+});
+const EXTRA_SCRIPTS = Object.freeze({
+  'prediction-dashboard.html': [FORMULA_BUILDER_ENTRYPOINT],
 });
 
 const FILTER_ADAPTER_MARKER = 'function matchesTagStrategyFilter(stock)';
@@ -37,6 +41,10 @@ function injectScript(html, script) {
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `  ${tag}\n</body>`);
   if (/<\/html>/i.test(html)) return html.replace(/<\/html>/i, `${tag}\n</html>`);
   return `${html.trimEnd()}\n${tag}\n`;
+}
+
+function injectScripts(html, scripts) {
+  return scripts.reduce((updated, script) => injectScript(updated, script), html);
 }
 
 function injectAnchor(html, sectionPattern) {
@@ -139,7 +147,8 @@ function install(publicDir = PUBLIC_DIR, options = {}) {
     }
     const source = fs.readFileSync(file, 'utf8');
     const adapted = injectPageAdapter(source, filename);
-    const updated = injectScript(adapted, script);
+    const scripts = [script, ...(EXTRA_SCRIPTS[filename] || [])];
+    const updated = injectScripts(adapted, scripts);
     if (updated === source) continue;
     changed.push(filename);
     if (!options.dryRun) fs.writeFileSync(file, updated, 'utf8');
@@ -167,12 +176,15 @@ if (require.main === module) {
 module.exports = {
   PUBLIC_DIR,
   TARGETS,
+  EXTRA_SCRIPTS,
   TAG_EXPRESSION_ENTRYPOINT,
+  FORMULA_BUILDER_ENTRYPOINT,
   FILTER_ADAPTER_MARKER,
   GROUP_EXPERIMENT_MARKER,
   scriptPattern,
   legacyPredictionScriptPattern,
   injectScript,
+  injectScripts,
   injectPageAdapter,
   install,
   main,
