@@ -25,6 +25,14 @@ function walk(directory) {
   return files;
 }
 
+function addRootDirectoryDependency(candidate) {
+  if (!candidate || candidate === 'public' || candidate === 'stock_data') return;
+  const candidatePath = path.join(rootDir, candidate);
+  if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isDirectory()) {
+    dependencies.add(candidate);
+  }
+}
+
 const dependencies = new Set(['data_predictions']);
 const rootDirectoryPatterns = [
   /(?:\.\.\/)+([A-Za-z0-9_.-]+)\//g,
@@ -34,19 +42,24 @@ const rootFilePatterns = [
   /(?:\.\.\/)+([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
   /\/stock_data\/([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
 ];
+const rootDirectoryConstantPattern =
+  /\b(?:const|let|var)\s+[A-Za-z_$][\w$]*DIR\s*=\s*['"`]([A-Za-z0-9_.-]+)['"`]/g;
 
 for (const filePath of walk(publicRoot)) {
   const text = fs.readFileSync(filePath, 'utf8');
   for (const pattern of rootDirectoryPatterns) {
     pattern.lastIndex = 0;
     for (const match of text.matchAll(pattern)) {
-      const dependency = match[1];
-      if (dependency !== 'public' && dependency !== 'stock_data') dependencies.add(dependency);
+      addRootDirectoryDependency(match[1]);
     }
   }
   for (const pattern of rootFilePatterns) {
     pattern.lastIndex = 0;
     for (const match of text.matchAll(pattern)) dependencies.add(match[1]);
+  }
+  rootDirectoryConstantPattern.lastIndex = 0;
+  for (const match of text.matchAll(rootDirectoryConstantPattern)) {
+    addRootDirectoryDependency(match[1]);
   }
 }
 
@@ -102,10 +115,15 @@ run_self_test() {
     "$temp_dir/source/public" \
     "$temp_dir/source/data_predictions/20260805" \
     "$temp_dir/source/data_used/history" \
+    "$temp_dir/source/data_dynamic/history" \
     "$temp_dir/source/data_unused/history"
 
   cat > "$temp_dir/source/public/index.html" <<'HTML'
 <!doctype html><a href="../data_used/history/value.json">used</a>
+<script>
+const DATA_DIR = 'data_dynamic';
+fetch(`${window.location.origin}/${DATA_DIR}/files.json`);
+</script>
 HTML
   for page in prediction-dashboard prediction-replay-dashboard prediction-industry-dashboard prediction-groups; do
     cat > "$temp_dir/source/public/$page.html" <<'HTML'
@@ -125,10 +143,14 @@ JSON
 {"groups":[]}
 JSON
   printf '{}\n' > "$temp_dir/source/data_used/history/value.json"
+  printf '["history/value.json"]\n' > "$temp_dir/source/data_dynamic/files.json"
+  printf '{}\n' > "$temp_dir/source/data_dynamic/history/value.json"
   printf '{}\n' > "$temp_dir/source/data_unused/history/value.json"
 
   bash "$SCRIPT_PATH" "$temp_dir/source" "$temp_dir/site" 20260805 >/dev/null
   test -f "$temp_dir/site/data_used/history/value.json"
+  test -f "$temp_dir/site/data_dynamic/files.json"
+  test -f "$temp_dir/site/data_dynamic/history/value.json"
   test ! -e "$temp_dir/site/data_unused"
   test -f "$temp_dir/site/data_predictions/20260805/summary.json"
   echo 'prepare_pages_site self-test passed'
