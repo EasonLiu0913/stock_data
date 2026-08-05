@@ -10,6 +10,7 @@ on:
       - "data*/**"
       - "normalized/**"
       - "scripts/prepare_pages_site.sh"
+      - "scripts/scan_pages_dependencies.js"
       - ".github/workflows/build-twse-market-chart.yml"
       - ".github/workflows/deploy-pages.yml"
   workflow_call:
@@ -55,75 +56,43 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /public/
-            /config/strategy-tag-registry.json
-            /data_prediction_analysis/strategy-snapshots/manifest.json
             /scripts/prepare_pages_site.sh
+            /scripts/scan_pages_dependencies.js
 
-      - name: Resolve only frontend-referenced publish dependencies
+      - name: Audit every frontend data dependency
         shell: bash
         run: |
           set -euo pipefail
           bash -n scripts/prepare_pages_site.sh
+          node --check scripts/scan_pages_dependencies.js
           bash scripts/prepare_pages_site.sh --self-test
+          node scripts/scan_pages_dependencies.js --self-test
 
-          {
-            bash scripts/prepare_pages_site.sh --print-dependencies .
-            node - . <<'NODE'
-          'use strict';
+          node scripts/scan_pages_dependencies.js . \
+            | sort -u \
+            | tee /tmp/pages-dependencies.txt
+          node scripts/scan_pages_dependencies.js --json . \
+            > /tmp/pages-dependency-audit.json
 
-          const fs = require('node:fs');
-          const path = require('node:path');
-
-          const rootDir = path.resolve(process.argv[2]);
-          const publicRoot = path.join(rootDir, 'public');
-          const dependencies = new Set();
-          const pattern = /\$\{[^}]+\}\/((?:data|normalized|config)[A-Za-z0-9_.-]*)\//g;
-
-          function walk(directory) {
-            const files = [];
-            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-              const fullPath = path.join(directory, entry.name);
-              if (entry.isDirectory()) files.push(...walk(fullPath));
-              else if (/\.(?:html|js|mjs|css)$/i.test(entry.name)) files.push(fullPath);
+          for required_dependency in \
+            config \
+            data_prediction_analysis \
+            data_fubon \
+            data_twse_margin_balance \
+            data_twse_institutional_investors \
+            data_twse_mi_index \
+            data_twse_margin_maintenance
+          do
+            grep -qx "$required_dependency" /tmp/pages-dependencies.txt || {
+              echo "Frontend dependency was not discovered: $required_dependency" >&2
+              exit 1
             }
-            return files;
-          }
-
-          for (const filePath of walk(publicRoot)) {
-            const text = fs.readFileSync(filePath, 'utf8');
-            pattern.lastIndex = 0;
-            for (const match of text.matchAll(pattern)) dependencies.add(match[1]);
-          }
-
-          const selfTest = "fetch(`${basePath}/data_fubon/files.json`)";
-          pattern.lastIndex = 0;
-          const selfTestMatch = pattern.exec(selfTest);
-          if (!selfTestMatch || selfTestMatch[1] !== 'data_fubon') {
-            throw new Error('Dynamic Pages dependency scanner self-test failed');
-          }
-
-          for (const dependency of [...dependencies].sort()) {
-            process.stdout.write(`${dependency}\n`);
-          }
-          NODE
-          } | sort -u | tee /tmp/pages-dependencies.txt
-
-          grep -qx 'config' /tmp/pages-dependencies.txt || {
-            echo 'Strategy registry dependency was not discovered from public assets.' >&2
-            exit 1
-          }
-          grep -qx 'data_prediction_analysis' /tmp/pages-dependencies.txt || {
-            echo 'Strategy replay dependency was not discovered from public assets.' >&2
-            exit 1
-          }
-          grep -qx 'data_fubon' /tmp/pages-dependencies.txt || {
-            echo 'Fubon frontend dependency was not discovered from public assets.' >&2
-            exit 1
-          }
+          done
 
           {
             echo '/public/'
             echo '/scripts/prepare_pages_site.sh'
+            echo '/scripts/scan_pages_dependencies.js'
             while IFS= read -r dependency; do
               [ -n "$dependency" ] || continue
               object_type=$(git cat-file -t "HEAD:$dependency" 2>/dev/null || true)
@@ -140,7 +109,7 @@ jobs:
 
           git sparse-checkout set --no-cone --stdin < /tmp/pages-sparse-checkout.txt
 
-      - name: Prepare selective Pages artifact and validate target date only
+      - name: Prepare and validate complete Pages artifact
         shell: bash
         env:
           TARGET_DATE: ${{ inputs.target_date }}
@@ -148,8 +117,8 @@ jobs:
           set -euo pipefail
           bash scripts/prepare_pages_site.sh . _site "${TARGET_DATE:-}"
 
-          # prepare_pages_site.sh 處理靜態相對路徑；這裡補入 `${basePath}/data_xxx/...`
-          # 這類執行期組合路徑，避免檔案清單失敗後錯誤退回今天日期。
+          # The common scanner also detects runtime paths assembled through variables.
+          # Copy any dependency that the legacy packaging pass did not recognize itself.
           while IFS= read -r dependency; do
             [ -n "$dependency" ] || continue
             [ -e "_site/$dependency" ] && continue
@@ -163,9 +132,17 @@ jobs:
               mkdir -p "$(dirname "$destination_path")"
               cp -L "$source_path" "$destination_path"
             else
-              echo "Missing dynamically discovered Pages dependency: $dependency" >&2
+              echo "Missing frontend dependency after sparse checkout: $dependency" >&2
               exit 1
             fi
+          done < /tmp/pages-dependencies.txt
+
+          while IFS= read -r dependency; do
+            [ -n "$dependency" ] || continue
+            test -e "_site/$dependency" || {
+              echo "Pages artifact is missing discovered dependency: $dependency" >&2
+              exit 1
+            }
           done < /tmp/pages-dependencies.txt
 
           test -f _site/config/strategy-tag-registry.json || {
@@ -180,14 +157,26 @@ jobs:
             echo 'Pages artifact is missing data_fubon/files.json.' >&2
             exit 1
           }
+          test -f _site/data_twse_margin_balance/files.json || {
+            echo 'Pages artifact is missing data_twse_margin_balance/files.json.' >&2
+            exit 1
+          }
+          test -f _site/data_twse_margin_balance/20260803_twse_margin_balance.csv || {
+            echo 'Pages artifact is missing the requested 20260803 margin balance file.' >&2
+            exit 1
+          }
 
           dependency_count=$(grep -cve '^$' /tmp/pages-dependencies.txt || true)
+          frontend_asset_count=$(find public -type f \
+            \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' \) \
+            | wc -l | tr -d ' ')
           artifact_size=$(du -sh _site | cut -f1)
-          echo "## GitHub Pages selective deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frontend assets scanned: $frontend_asset_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact size: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Unreferenced historical/raw data roots: excluded" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Every discovered dependency exists in the final artifact" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
