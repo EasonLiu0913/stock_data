@@ -1,0 +1,107 @@
+name: '[08 研究分析] 第二輪價量與融資因子事件研究'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'scripts/historical_factor_research_round_2.js'
+      - 'scripts/generate_round_2_factor_research.js'
+      - 'tests/historical_factor_research_round_2.test.js'
+      - '.github/workflows/round-2-factor-research.yml'
+  workflow_dispatch:
+    inputs:
+      prediction_date:
+        description: '用來取得股票母體的預測日期 YYYYMMDD；留空使用最新有效預測'
+        required: false
+        type: string
+      cutoff:
+        description: '研究資料截止日 YYYYMMDD；不得晚於預測的 base_trade_date'
+        required: false
+        type: string
+      max_files:
+        description: '最多讀取幾個價量交易日'
+        required: true
+        type: number
+        default: 60
+
+permissions:
+  contents: write
+
+concurrency:
+  group: round-2-factor-research-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate round-two factor engine
+        run: |
+          node --check scripts/historical_factor_research_round_2.js
+          node --check scripts/generate_round_2_factor_research.js
+          node --test tests/historical_factor_research_round_2.test.js
+          node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
+      - name: Generate chronological event research
+        env:
+          INPUT_PREDICTION_DATE: ${{ inputs.prediction_date }}
+          INPUT_CUTOFF: ${{ inputs.cutoff }}
+          INPUT_MAX_FILES: ${{ inputs.max_files }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--max-files "${INPUT_MAX_FILES:-60}")
+          if [ -n "${INPUT_PREDICTION_DATE:-}" ]; then args+=(--prediction-date "$INPUT_PREDICTION_DATE"); fi
+          if [ -n "${INPUT_CUTOFF:-}" ]; then args+=(--cutoff "$INPUT_CUTOFF"); fi
+          node scripts/generate_round_2_factor_research.js "${args[@]}" | tee /tmp/round-2-factor-research-result.json
+      - name: Verify research output
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/round-2-factor-research-result.json', 'utf8'));
+          if (!result.output_file || !fs.existsSync(result.output_file)) throw new Error('Round-two research output missing');
+          const payload = JSON.parse(fs.readFileSync(result.output_file, 'utf8'));
+          if (payload.research_id !== 'round_2_volume_margin_factor_event_study_v1') throw new Error('Unexpected research_id');
+          if (payload.leakage_guard?.signal_features_use_dates_lte_signal_date !== true) throw new Error('Leakage guard missing');
+          for (const factor of [
+            'volume_breakout_confirmation_v1',
+            'strong_pullback_volume_contraction_v1',
+            'margin_exit_price_resilience_v1',
+            'margin_crowding_risk_v1',
+          ]) {
+            if (!payload.summaries?.[factor]) throw new Error(`Research summary missing: ${factor}`);
+            for (const split of ['train', 'validation', 'test']) {
+              if (payload.summaries[factor][split]?.event_count === undefined) {
+                throw new Error(`Research split missing: ${factor}/${split}`);
+              }
+            }
+          }
+          console.log(`Verified ${payload.events.length} round-two research events`);
+          NODE
+      - name: Commit research output
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_research/strategy-factors/round-2
+          if git diff --cached --quiet; then
+            echo 'No round-two research changes'
+            exit 0
+          fi
+          cutoff=$(node -e "const r=require('/tmp/round-2-factor-research-result.json');process.stdout.write(r.cutoff_date)")
+          git commit -m "data: update round-two factor research ${cutoff}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
