@@ -1,0 +1,181 @@
+name: "[診斷] 測試台指期即時夜盤快照"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/test-current-taifex-night-snapshot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: taifex-realtime-night-snapshot-diagnostic
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Query TAIFEX realtime quote endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const endpoint = 'https://mis.taifex.com.tw/futures/api/getQuoteList';
+          const landing = 'https://mis.taifex.com.tw/futures/AfterHoursSession/EquityIndices/FuturesDomestic';
+          const basePayload = {
+            SymbolType: 'F',
+            KindID: '1',
+            CID: 'TXF',
+            ExpireMonth: '',
+            RowSize: '全部',
+            PageNo: '',
+            SortColumn: '',
+            AscDesc: 'A',
+          };
+          const userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/127 Safari/537.36';
+
+          function cookieHeader(response) {
+            const values = typeof response.headers.getSetCookie === 'function'
+              ? response.headers.getSetCookie()
+              : [];
+            return values.map(value => value.split(';')[0]).join('; ');
+          }
+
+          async function postQuote(marketType, cookie = '') {
+            const payload = { MarketType: String(marketType), ...basePayload };
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                accept: 'application/json, text/plain, */*',
+                'content-type': 'application/json',
+                referer: landing,
+                origin: 'https://mis.taifex.com.tw',
+                'user-agent': userAgent,
+                ...(cookie ? { cookie } : {}),
+              },
+              body: JSON.stringify(payload),
+            });
+            const text = await response.text();
+            let json = null;
+            try { json = JSON.parse(text); } catch {}
+            const rows = Array.isArray(json?.RtData?.QuoteList) ? json.RtData.QuoteList : [];
+            return {
+              market_type: String(marketType),
+              request_payload: payload,
+              http_status: response.status,
+              content_type: response.headers.get('content-type'),
+              ok: response.ok,
+              parsed_json: Boolean(json),
+              quote_count: rows.length,
+              response_preview: json ? null : text.slice(0, 1000),
+              rows: rows.slice(0, 10).map(row => ({
+                SymbolID: row.SymbolID ?? null,
+                DispCName: row.DispCName ?? null,
+                Status: row.Status ?? null,
+                CBidPrice1: row.CBidPrice1 ?? null,
+                CBidSize1: row.CBidSize1 ?? null,
+                CAskPrice1: row.CAskPrice1 ?? null,
+                CAskSize1: row.CAskSize1 ?? null,
+                CLastPrice: row.CLastPrice ?? null,
+                CDiff: row.CDiff ?? null,
+                CDiffRate: row.CDiffRate ?? null,
+                CAmpRate: row.CAmpRate ?? null,
+                CTotalVolume: row.CTotalVolume ?? null,
+                COpenPrice: row.COpenPrice ?? null,
+                CHighPrice: row.CHighPrice ?? null,
+                CLowPrice: row.CLowPrice ?? null,
+                CRefPrice: row.CRefPrice ?? null,
+                CDate: row.CDate ?? null,
+                CTime: row.CTime ?? null,
+              })),
+            };
+          }
+
+          async function main() {
+            let landingStatus = null;
+            let cookie = '';
+            let landingPreview = null;
+            try {
+              const response = await fetch(landing, {
+                headers: { accept: 'text/html,*/*', 'user-agent': userAgent },
+                redirect: 'follow',
+              });
+              landingStatus = response.status;
+              cookie = cookieHeader(response);
+              if (!response.ok) landingPreview = (await response.text()).slice(0, 500);
+            } catch (error) {
+              landingPreview = error.message;
+            }
+
+            const attempts = [];
+            for (const marketType of ['1', '0']) {
+              try {
+                attempts.push(await postQuote(marketType, cookie));
+              } catch (error) {
+                attempts.push({ market_type: marketType, ok: false, error: error.message });
+              }
+            }
+
+            const night = attempts.find(item => item.market_type === '1');
+            const selected = night?.rows?.find(row => row.CLastPrice && row.CTime) || night?.rows?.[0] || null;
+            const observedAt = new Date();
+            const output = {
+              schema_version: 1,
+              diagnostic: 'TAIFEX realtime TX quote endpoint probe',
+              observed_at_utc: observedAt.toISOString(),
+              observed_at_taipei: new Intl.DateTimeFormat('sv-SE', {
+                timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+              }).format(observedAt).replace(' ', 'T') + '+08:00',
+              endpoint,
+              landing_page: landing,
+              landing_http_status: landingStatus,
+              landing_cookie_received: Boolean(cookie),
+              landing_error_preview: landingPreview,
+              night_snapshot_obtained: Boolean(night?.ok && night?.parsed_json && selected?.CLastPrice),
+              selected_night_quote: selected,
+              attempts,
+            };
+
+            const file = 'data_market_constraints/diagnostics/current-night-snapshot.json';
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+            console.log(JSON.stringify(output, null, 2));
+          }
+
+          main().catch(error => {
+            console.error(error.stack || error.message);
+            process.exitCode = 1;
+          });
+          NODE
+
+      - name: Commit diagnostic result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_market_constraints/diagnostics/current-night-snapshot.json
+          git commit -m "diagnostic: capture current TX night snapshot"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 4))
+          done
+          exit 1
