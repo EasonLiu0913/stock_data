@@ -9,6 +9,7 @@ on:
       - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/historical_factor_research.js'
       - 'scripts/historical_factor_research_round_2.js'
+      - 'scripts/historical_factor_research_round_3.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'scripts/sync_prediction_dashboard_groups.js'
@@ -55,6 +56,7 @@ on:
       - 'scripts/strategy_tag_source_enrichment.js'
       - 'scripts/historical_factor_research.js'
       - 'scripts/historical_factor_research_round_2.js'
+      - 'scripts/historical_factor_research_round_3.js'
       - 'scripts/generate_round_2_factor_research.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
@@ -63,6 +65,7 @@ on:
       - 'tests/strategy_tag_source_enrichment.test.js'
       - 'tests/historical_factor_research.test.js'
       - 'tests/historical_factor_research_round_2.test.js'
+      - 'tests/round_6_observation_risk_tag.test.js'
       - 'tests/apply_strategy_tag_registry.test.js'
       - 'tests/summarize_strategy_snapshot_manifest.test.js'
       - 'tests/prediction_dashboard_group_sync.test.js'
@@ -96,6 +99,7 @@ jobs:
           node --check scripts/strategy_tag_source_enrichment.js
           node --check scripts/historical_factor_research.js
           node --check scripts/historical_factor_research_round_2.js
+          node --check scripts/historical_factor_research_round_3.js
           node --check scripts/generate_round_2_factor_research.js
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
@@ -105,6 +109,7 @@ jobs:
             tests/strategy_tag_source_enrichment.test.js \
             tests/historical_factor_research.test.js \
             tests/historical_factor_research_round_2.test.js \
+            tests/round_6_observation_risk_tag.test.js \
             tests/apply_strategy_tag_registry.test.js \
             tests/summarize_strategy_snapshot_manifest.test.js \
             tests/prediction_dashboard_group_sync.test.js
@@ -113,6 +118,7 @@ jobs:
         if: github.event_name == 'workflow_call'
         run: |
           node --check scripts/historical_factor_research_round_2.js
+          node --check scripts/historical_factor_research_round_3.js
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
