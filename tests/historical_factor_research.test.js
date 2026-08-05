@@ -10,6 +10,7 @@ const {
   enrichHistoricalFactorFeatures,
   linearRegression,
 } = require('../scripts/historical_factor_research');
+const { earliestCutoff } = require('../scripts/strategy_tag_source_enrichment');
 
 function writeJson(file, payload) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -97,6 +98,11 @@ test('trend quality uses log-price slope and R squared', () => {
   assert.equal(result.pass, true);
   assert.ok(Math.abs(result.slope_pct_per_day - 1) < 0.00001);
   assert.equal(result.r2, 1);
+});
+
+test('historical recalculation cannot move past the original prediction cutoff', () => {
+  assert.equal(earliestCutoff({ base_trade_date: '20260125' }, '20260126'), '20260125');
+  assert.equal(earliestCutoff({ base_trade_date: '20260125' }, '20260120'), '20260120');
 });
 
 test('round-one enrichment calculates all five candidate factors without future leakage', () => {
