@@ -39,6 +39,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: prediction-tag-strategy-ui-${{ github.event_name }}-${{ github.ref }}
@@ -123,3 +125,9 @@ jobs:
             sleep $((attempt * 5))
           done
           exit 1
+
+  deploy_pages:
+    name: Deploy GitHub Pages
+    needs: install
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/deploy-pages.yml
