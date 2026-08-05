@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "public/**"
+      - "config/**"
       - "data*/**"
       - "normalized/**"
       - "scripts/prepare_pages_site.sh"
@@ -54,6 +55,8 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /public/
+            /config/strategy-tag-registry.json
+            /data_prediction_analysis/strategy-snapshots/manifest.json
             /scripts/prepare_pages_site.sh
 
       - name: Resolve only frontend-referenced publish dependencies
@@ -63,6 +66,15 @@ jobs:
           bash -n scripts/prepare_pages_site.sh
           bash scripts/prepare_pages_site.sh --self-test
           bash scripts/prepare_pages_site.sh --print-dependencies . | tee /tmp/pages-dependencies.txt
+
+          grep -qx 'config' /tmp/pages-dependencies.txt || {
+            echo 'Strategy registry dependency was not discovered from public assets.' >&2
+            exit 1
+          }
+          grep -qx 'data_prediction_analysis' /tmp/pages-dependencies.txt || {
+            echo 'Strategy replay dependency was not discovered from public assets.' >&2
+            exit 1
+          }
 
           {
             echo '/public/'
@@ -90,6 +102,16 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/prepare_pages_site.sh . _site "${TARGET_DATE:-}"
+
+          test -f _site/config/strategy-tag-registry.json || {
+            echo 'Pages artifact is missing config/strategy-tag-registry.json.' >&2
+            exit 1
+          }
+          test -f _site/data_prediction_analysis/strategy-snapshots/manifest.json || {
+            echo 'Pages artifact is missing the strategy snapshot manifest.' >&2
+            exit 1
+          }
+
           dependency_count=$(grep -cve '^$' /tmp/pages-dependencies.txt || true)
           artifact_size=$(du -sh _site | cut -f1)
           echo "## GitHub Pages selective deployment" >> "$GITHUB_STEP_SUMMARY"
