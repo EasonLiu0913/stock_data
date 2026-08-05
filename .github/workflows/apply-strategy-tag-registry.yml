@@ -13,6 +13,22 @@ on:
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'scripts/sync_prediction_dashboard_groups.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
+  workflow_call:
+    inputs:
+      date:
+        description: '預測日期 YYYYMMDD；留空使用最新有效預測日期'
+        required: false
+        type: string
+      evaluation_mode:
+        description: 'live_snapshot 保存當時版本；historical_recalculation 用目前 registry 重算歷史'
+        required: false
+        default: live_snapshot
+        type: string
+      data_as_of:
+        description: '歷史重算的資料截點 YYYYMMDD；live_snapshot 可留空'
+        required: false
+        default: ''
+        type: string
   workflow_dispatch:
     inputs:
       date:
@@ -31,10 +47,6 @@ on:
         description: '歷史重算的資料截點 YYYYMMDD；live_snapshot 可留空'
         required: false
         type: string
-  workflow_run:
-    workflows:
-      - '04 預測覆盤 - 每日產生股票預測'
-    types: [completed]
   pull_request:
     branches: [main]
     paths:
@@ -78,7 +90,7 @@ jobs:
         with:
           node-version: '24'
       - name: Full validation for registry or code changes
-        if: github.event_name != 'workflow_run'
+        if: github.event_name != 'workflow_call'
         run: |
           node --check scripts/strategy_tag_engine.js
           node --check scripts/strategy_tag_source_enrichment.js
@@ -97,8 +109,8 @@ jobs:
             tests/summarize_strategy_snapshot_manifest.test.js \
             tests/prediction_dashboard_group_sync.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
-      - name: Fast validation for routine daily prediction
-        if: github.event_name == 'workflow_run'
+      - name: Fast validation for direct daily prediction call
+        if: github.event_name == 'workflow_call'
         run: |
           node --check scripts/historical_factor_research_round_2.js
           node --check scripts/apply_strategy_tag_registry.js
@@ -108,9 +120,7 @@ jobs:
 
   apply:
     needs: validate
-    if: >
-      github.event_name != 'pull_request' &&
-      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -140,7 +150,7 @@ jobs:
           echo "Target prediction date: $target_date"
       - name: Apply fixed tag and strategy registry
         env:
-          EVALUATION_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.evaluation_mode || github.event_name == 'workflow_run' && 'live_snapshot' || 'historical_recalculation' }}
+          EVALUATION_MODE: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && inputs.evaluation_mode || 'historical_recalculation' }}
           DATA_AS_OF: ${{ inputs.data_as_of }}
         shell: bash
         run: |
