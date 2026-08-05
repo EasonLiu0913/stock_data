@@ -10,6 +10,15 @@ on:
       - scripts/official_market_constraints.js
       - scripts/taifex_night_futures.js
       - scripts/taifex_official_night_futures.js
+      - scripts/taifex_realtime_night_futures.js
+      - scripts/external_market_intraday_snapshot.js
+      - scripts/capture_prediction_market_context.js
+      - scripts/prediction_market_context_preload.js
+      - scripts/rebind_prediction_market_environment.js
+      - scripts/apply_prediction_context_to_readiness.js
+      - scripts/finalize_prediction_market_context.js
+      - scripts/resolve_forecast_dates.js
+      - scripts/validate_external_market_snapshot.js
       - scripts/verify_official_market_constraints_integration.js
       - scripts/backfill_prediction_dashboard_fields.js
       - tests/apply_official_market_constraints.test.js
@@ -17,7 +26,11 @@ on:
       - tests/official_market_constraints.test.js
       - tests/taifex_night_futures.test.js
       - tests/taifex_official_night_futures.test.js
+      - tests/prediction_market_context.test.js
       - data_market_constraints/20260731/**
+      - .github/workflows/daily-stock-prediction.yml
+      - .github/workflows/crawl-external-market-indicators.yml
+      - .github/workflows/update-official-market-constraints.yml
       - .github/workflows/test-official-market-constraints-integration.yml
 
 permissions:
@@ -39,11 +52,21 @@ jobs:
       - name: Syntax and unit tests
         run: |
           node --check scripts/taifex_official_night_futures.js
+          node --check scripts/taifex_realtime_night_futures.js
+          node --check scripts/external_market_intraday_snapshot.js
+          node --check scripts/capture_prediction_market_context.js
+          node --check scripts/prediction_market_context_preload.js
+          node --check scripts/rebind_prediction_market_environment.js
+          node --check scripts/apply_prediction_context_to_readiness.js
+          node --check scripts/finalize_prediction_market_context.js
+          node --check scripts/resolve_forecast_dates.js
+          node --check scripts/validate_external_market_snapshot.js
           node --check scripts/fetch_official_market_constraints.js
           node --check scripts/apply_official_market_constraints.js
           node --check scripts/verify_official_market_constraints_integration.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
+            tests/prediction_market_context.test.js \
             tests/official_market_constraints.test.js \
             tests/taifex_night_futures.test.js \
             tests/taifex_official_night_futures.test.js \
@@ -53,6 +76,33 @@ jobs:
             tests/oversold_electronics_strategy.test.js \
             tests/oversold_strategy_replay.test.js
 
+      - name: Verify prediction context date resolution stays opt-in outside daily action
+        run: |
+          output=$(node scripts/resolve_forecast_dates.js --target-date 20260806 --now 2026-08-06T03:00:00+08:00 --github-env)
+          echo "$output"
+          grep -q '^FORECAST_BASE_DATE=20260805$' <<< "$output"
+          grep -q '^FORECAST_TARGET_DATE=20260806$' <<< "$output"
+          ! grep -q '^PREDICTION_MARKET_CONTEXT_' <<< "$output"
+
+      - name: Validate workflow YAML and architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e "require 'yaml'; ARGV.each { |file| YAML.load_file(file); puts \"valid yaml: #{file}\" }" \
+            .github/workflows/daily-stock-prediction.yml \
+            .github/workflows/crawl-external-market-indicators.yml \
+            .github/workflows/update-official-market-constraints.yml
+          if grep -R "workflow_run" .github/workflows; then
+            echo "workflow_run is forbidden" >&2
+            exit 1
+          fi
+          grep -q "10 21 \* \* 1-5" .github/workflows/update-official-market-constraints.yml
+          grep -q "10 23 \* \* 1-5" .github/workflows/update-official-market-constraints.yml
+          grep -q "40 23 \* \* 1-5" .github/workflows/update-official-market-constraints.yml
+          grep -q "10 21 \* \* 1-5" .github/workflows/crawl-external-market-indicators.yml
+          grep -q "40 22 \* \* 1-5" .github/workflows/crawl-external-market-indicators.yml
+          grep -q "uses: ./.github/workflows/apply-strategy-tag-registry.yml" .github/workflows/daily-stock-prediction.yml
+
       - name: Backfill verified 20260731 official constraints
         run: node scripts/backfill_prediction_dashboard_fields.js --date 20260731
 
@@ -60,7 +110,7 @@ jobs:
         run: |
           node scripts/verify_official_market_constraints_integration.js --date 20260731
           node - <<'NODE'
-          const fs = require('node:fs');
+          const fs = require('fs');
           const readiness = JSON.parse(fs.readFileSync('data_market_environment/20260731/oversold_beta_rebound.json'));
           const summary = JSON.parse(fs.readFileSync('data_predictions/20260731/summary.json'));
           const formal = JSON.parse(fs.readFileSync('data_prediction_analysis/formal-strategy/20260731.json'));
@@ -101,7 +151,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: official-constraints-integration-20260731
+          name: official-constraints-and-prediction-context-20260731
           path: |
             data_market_constraints/20260731/
             data_market_environment/20260731/oversold_beta_rebound.json
