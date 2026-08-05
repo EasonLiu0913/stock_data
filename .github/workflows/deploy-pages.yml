@@ -11,6 +11,11 @@ on:
       - "scripts/prepare_pages_site.sh"
       - ".github/workflows/build-twse-market-chart.yml"
       - ".github/workflows/deploy-pages.yml"
+  workflow_run:
+    workflows:
+      - "[04 預測覆盤] 每日預測覆盤"
+    types:
+      - completed
   workflow_call:
   workflow_dispatch:
 
@@ -26,6 +31,10 @@ concurrency:
 jobs:
   deploy:
     name: Deploy repository-root compatible site
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
