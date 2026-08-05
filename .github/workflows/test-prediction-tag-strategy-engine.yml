@@ -13,11 +13,13 @@ on:
       - 'scripts/historical_factor_research_round_3.js'
       - 'scripts/annotate_prediction_disposition_stocks.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
+      - 'scripts/evaluate_observation_tag_replay.js'
       - 'scripts/recalculate_prediction_strategy_history.js'
       - 'scripts/attach_market_environment.js'
       - 'scripts/backfill_prediction_dashboard_fields.js'
       - 'tests/prediction_tag_strategy_engine.test.js'
       - 'tests/evaluate_tag_strategy_replay.test.js'
+      - 'tests/evaluate_observation_tag_replay.test.js'
       - 'tests/strategy_registry_versioning.test.js'
       - 'tests/annotate_prediction_disposition_stocks.test.js'
       - 'tests/round_6_observation_risk_tag.test.js'
@@ -34,11 +36,13 @@ on:
       - 'scripts/historical_factor_research_round_3.js'
       - 'scripts/annotate_prediction_disposition_stocks.js'
       - 'scripts/evaluate_tag_strategy_replay.js'
+      - 'scripts/evaluate_observation_tag_replay.js'
       - 'scripts/recalculate_prediction_strategy_history.js'
       - 'scripts/attach_market_environment.js'
       - 'scripts/backfill_prediction_dashboard_fields.js'
       - 'tests/prediction_tag_strategy_engine.test.js'
       - 'tests/evaluate_tag_strategy_replay.test.js'
+      - 'tests/evaluate_observation_tag_replay.test.js'
       - 'tests/strategy_registry_versioning.test.js'
       - 'tests/annotate_prediction_disposition_stocks.test.js'
       - 'tests/round_6_observation_risk_tag.test.js'
@@ -70,12 +74,14 @@ jobs:
           node --check scripts/historical_factor_research_round_3.js
           node --check scripts/annotate_prediction_disposition_stocks.js
           node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/evaluate_observation_tag_replay.js
           node --check scripts/recalculate_prediction_strategy_history.js
           node --check scripts/attach_market_environment.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
             tests/prediction_tag_strategy_engine.test.js \
             tests/evaluate_tag_strategy_replay.test.js \
+            tests/evaluate_observation_tag_replay.test.js \
             tests/strategy_registry_versioning.test.js \
             tests/annotate_prediction_disposition_stocks.test.js \
             tests/round_6_observation_risk_tag.test.js
@@ -97,4 +103,5 @@ jobs:
               --registry config/strategy-tag-registry.json \
               --strategy oversold_margin_exit_rebound_v2 \
               --dry-run
+            node scripts/evaluate_observation_tag_replay.js --date "$date" --dry-run
           fi
