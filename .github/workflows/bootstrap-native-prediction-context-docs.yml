@@ -1,0 +1,94 @@
+name: "[一次性整理] 原生預測市場快照文件"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/native-prediction-context-docs-trigger.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bootstrap-native-prediction-context-docs
+  cancel-in-progress: false
+
+jobs:
+  update_docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update implementation documentation to native architecture
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          file = Path('docs/prediction-market-context-implementation.md')
+          text = file.read_text()
+          text = text.replace(
+          """```text
+          scripts/prediction_market_context_preload.js
+          scripts/rebind_prediction_market_environment.js
+          ```
+
+          `generate_market_environment.js` 執行時會讀取預測當下外部市場快照，而不是之後更新的正式日資料。""",
+          """```text
+          scripts/market_environment_lib.js
+          scripts/generate_market_environment.js
+          scripts/rebind_prediction_market_environment.js
+          ```
+
+          `market_environment_lib.js` 會在存在 `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE` 時直接選用不可變盤中快照；`generate_market_environment.js` 完成後再原生綁定快照 ID、hash 與資料新鮮度，不依賴 preload。""",
+          )
+          text = text.replace(
+          """```text
+          scripts/prediction_market_context_preload.js
+          scripts/rebind_prediction_market_risk.js
+          ```
+
+          `generate_market_risk_snapshot.js` 會使用同一份預測當下外部市場快照計算風險，不會混用稍早或稍晚的正式日資料。""",
+          """```text
+          scripts/generate_market_risk_snapshot.js
+          scripts/rebind_prediction_market_risk.js
+          ```
+
+          `generate_market_risk_snapshot.js` 原生辨識 `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE`，直接使用同一份預測當下外部市場快照計算風險，完成後再記錄不可變來源，不會混用稍早或稍晚的正式日資料。""",
+          )
+          text = text.replace("- `NODE_OPTIONS=--require=.../prediction_market_context_preload.js`\n", "")
+          native_note = """
+          ### 5.1 GitHub Actions 安全限制
+
+          正式版本不會透過 `GITHUB_ENV` 設定 `NODE_OPTIONS`，也不再使用 `prediction_market_context_preload.js`。市場環境與市場風險腳本本身原生支援 `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE`，避免 GitHub Actions 封鎖受限制環境變數。
+          """
+          marker = "在非每日預測 Action 的一般指令中，不會自動抓取市場快照，避免回填、測試及其他維護流程意外抓取現在資料。"
+          if native_note.strip() not in text:
+              text = text.replace(marker, marker + "\n" + native_note)
+          text = text.replace("- `scripts/prediction_market_context_preload.js`\n", "")
+          file.write_text(text)
+          PY
+          ! grep -q 'prediction_market_context_preload.js' docs/prediction-market-context-implementation.md
+          ! grep -q 'NODE_OPTIONS=--require' docs/prediction-market-context-implementation.md
+          grep -q '原生辨識' docs/prediction-market-context-implementation.md
+          grep -q 'GitHub Actions 安全限制' docs/prediction-market-context-implementation.md
+
+      - name: Remove bootstrap and commit documentation
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/bootstrap-native-prediction-context-docs.yml
+          rm -f docs/native-prediction-context-docs-trigger.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "docs: document native prediction market context"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
