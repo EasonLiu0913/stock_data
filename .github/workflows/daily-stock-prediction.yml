@@ -25,6 +25,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: daily-stock-prediction
@@ -287,3 +289,8 @@ jobs:
             sleep 5
           done
           exit 1
+
+  deploy_pages:
+    name: 3. 預測完成後發布 GitHub Pages
+    needs: generate_v2
+    uses: ./.github/workflows/deploy-pages.yml
