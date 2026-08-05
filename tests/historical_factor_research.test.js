@@ -109,7 +109,7 @@ test('round-one enrichment calculates all five candidate factors without future 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'historical-factors-'));
   createHistory(root);
   const payload = fixturePayload();
-  const metadata = enrichHistoricalFactorFeatures(payload, root, '20260125');
+  const metadata = enrichHistoricalFactorFeatures(payload, root, '20260125', { marketMinPeers: 5 });
   const leader = payload.stocks.find(stock => stock.stock_code === '1101');
 
   assert.equal(metadata.benchmark.return_20d_source, '0050');
@@ -129,9 +129,38 @@ test('benchmark falls back to cross-section median when 0050 is unavailable', ()
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'historical-factors-fallback-'));
   createHistory(root, { includeBenchmark: false });
   const payload = fixturePayload();
-  const metadata = enrichHistoricalFactorFeatures(payload, root, '20260125');
+  const metadata = enrichHistoricalFactorFeatures(payload, root, '20260125', { marketMinPeers: 5 });
   assert.equal(metadata.benchmark.return_20d_source, 'cross_section_median');
   assert.ok(metadata.benchmark.cross_section_fallback_daily_days > 0);
+});
+
+test('stale stock history stays unavailable when it misses the latest source date', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'historical-factors-stale-'));
+  createHistory(root);
+  const latestFile = path.join(root, 'data_fubon', 'fubon_20260125_sma.json');
+  const latest = JSON.parse(fs.readFileSync(latestFile, 'utf8'));
+  delete latest['1101'];
+  writeJson(latestFile, latest);
+  const payload = fixturePayload();
+  enrichHistoricalFactorFeatures(payload, root, '20260125', { marketMinPeers: 5 });
+  const stale = payload.stocks.find(stock => stock.stock_code === '1101');
+  assert.equal(stale.strategy_tag_features.historical_factor_latest_date, null);
+  assert.equal(stale.strategy_tag_features.trend_quality_20d, null);
+  assert.equal(stale.strategy_tag_features.market_relative_strength_20d_top20, null);
+  assert.equal(stale.strategy_tag_features.leadership_persistence_7d, null);
+});
+
+test('actual directory listing supplements a stale files manifest', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'historical-factors-manifest-'));
+  createHistory(root);
+  const manifestFile = path.join(root, 'data_fubon', 'files.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
+    .filter(file => file !== 'fubon_20260125_sma.json');
+  writeJson(manifestFile, manifest);
+  const payload = fixturePayload();
+  const metadata = enrichHistoricalFactorFeatures(payload, root, '20260125', { marketMinPeers: 5 });
+  assert.equal(metadata.latest_source_date, '20260125');
+  assert.equal(metadata.source_files.at(-1), 'data_fubon/fubon_20260125_sma.json');
 });
 
 test('insufficient history keeps factors unavailable instead of returning false', () => {
