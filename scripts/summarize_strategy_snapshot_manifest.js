@@ -22,6 +22,11 @@ function writeJsonAtomic(file, payload) {
   fs.renameSync(temporary, file);
 }
 
+function compactDate(value) {
+  const normalized = String(value || '').replace(/[^0-9]/g, '');
+  return /^20\d{6}$/.test(normalized) ? normalized : '';
+}
+
 function compactClassification(item = {}, kind) {
   const id = kind === 'tag' ? item.tag_id : item.strategy_id;
   return {
@@ -62,9 +67,11 @@ function snapshotSummary(snapshot = {}) {
   };
 }
 
-function manifestEntries(manifest = {}) {
+function manifestEntries(manifest = {}, requestedDate = '') {
+  const normalizedDate = compactDate(requestedDate);
   const rows = [];
   for (const [date, dateEntry] of Object.entries(manifest.dates || {})) {
+    if (normalizedDate && date !== normalizedDate) continue;
     if (dateEntry.live_snapshot) rows.push({ date, entry: dateEntry.live_snapshot });
     for (const entry of dateEntry.live_snapshot_history || []) rows.push({ date, entry });
     for (const entry of dateEntry.historical_recalculations || []) rows.push({ date, entry });
@@ -75,9 +82,15 @@ function manifestEntries(manifest = {}) {
 function summarizeManifest(manifestFile = DEFAULT_MANIFEST, options = {}) {
   const workspaceRoot = path.resolve(options.workspaceRoot || ROOT);
   const manifest = readJson(manifestFile);
+  const requestedDate = compactDate(options.date);
+  const entries = manifestEntries(manifest, requestedDate);
+  if (requestedDate && !entries.length) {
+    throw new Error(`No strategy snapshot manifest entries for date: ${requestedDate}`);
+  }
+
   let changed = false;
   let summarized = 0;
-  for (const { entry } of manifestEntries(manifest)) {
+  for (const { entry } of entries) {
     if (!entry?.file) continue;
     const snapshotFile = path.resolve(workspaceRoot, entry.file);
     if (!fs.existsSync(snapshotFile)) throw new Error(`Snapshot file missing: ${entry.file}`);
@@ -94,16 +107,32 @@ function summarizeManifest(manifestFile = DEFAULT_MANIFEST, options = {}) {
   }
   return {
     manifest_file: path.relative(workspaceRoot, manifestFile).replaceAll(path.sep, '/'),
-    entry_count: manifestEntries(manifest).length,
+    requested_date: requestedDate || null,
+    entry_count: entries.length,
+    total_entry_count: manifestEntries(manifest).length,
     summarized_entry_count: summarized,
     changed,
     dry_run: Boolean(options.dryRun),
   };
 }
 
+function parseArgs(argv) {
+  const options = { dryRun: false, date: '' };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--dry-run') options.dryRun = true;
+    else if (arg === '--date') {
+      const value = argv[++index] || '';
+      options.date = compactDate(value);
+      if (!options.date) throw new Error('--date requires YYYYMMDD');
+    } else throw new Error(`Unknown argument: ${arg}`);
+  }
+  return options;
+}
+
 function main(argv = process.argv.slice(2)) {
-  const dryRun = argv.includes('--dry-run');
-  const result = summarizeManifest(DEFAULT_MANIFEST, { dryRun });
+  const options = parseArgs(argv);
+  const result = summarizeManifest(DEFAULT_MANIFEST, options);
   console.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -122,10 +151,12 @@ module.exports = {
   DEFAULT_MANIFEST,
   readJson,
   writeJsonAtomic,
+  compactDate,
   compactClassification,
   sourceSummary,
   snapshotSummary,
   manifestEntries,
   summarizeManifest,
+  parseArgs,
   main,
 };
