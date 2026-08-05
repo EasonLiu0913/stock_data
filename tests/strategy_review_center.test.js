@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
@@ -151,4 +153,9 @@ test('sortRows toggles numeric and text columns while keeping missing values las
   ];
   assert.deepEqual(sortRows(rows, 'candidate_score', 'desc').map(row => row.stock_code), ['1', '3', '2']);
   assert.deepEqual(sortRows(rows, 'stock_code', 'asc').map(row => row.stock_code), ['1', '2', '3']);
+});
+
+test('public index links to the strategy review center', () => {
+  const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  assert.match(index, /file:\s*'strategy-review-center\.html'/);
 });
