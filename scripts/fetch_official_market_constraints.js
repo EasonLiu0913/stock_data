@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const {
   ROOT,
   TWSE_DISPOSITION_URL,
@@ -12,6 +13,7 @@ const {
   fetchJson,
 } = require('./official_market_constraints');
 const { fetchOfficialTaifexNightFuture } = require('./taifex_official_night_futures');
+const { finalizeNight } = require('./finalize_prediction_market_context');
 
 function normalizeDispositionSnapshot(snapshot) {
   const activeCodes = [...new Set((snapshot?.active_stock_codes || [])
@@ -48,6 +50,29 @@ function isReusableSnapshot(snapshot, date) {
     && snapshot?.night_futures?.available === true;
 }
 
+function stagePredictionContext(date) {
+  if (process.env.GITHUB_ACTIONS !== 'true') return;
+  const contextDir = path.join('data_prediction_context', date);
+  if (!fs.existsSync(path.join(ROOT, contextDir))) return;
+  const result = spawnSync('git', ['add', contextDir], { cwd: ROOT, encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(`Unable to stage final prediction market context: ${result.stderr || result.stdout}`);
+  }
+}
+
+function preserveOfficialNightContext(date, nightFile, normalizedNight) {
+  if (normalizedNight?.available !== true) return null;
+  const latestFile = path.join(ROOT, 'data_prediction_context', date, 'latest.json');
+  if (!fs.existsSync(latestFile)) return null;
+  const result = finalizeNight({
+    forecastDate: date,
+    nightFile: path.relative(ROOT, nightFile).replaceAll(path.sep, '/'),
+    nightKind: 'official',
+  });
+  stagePredictionContext(date);
+  return result;
+}
+
 async function fetchOfficialMarketConstraints({ date, force = false } = {}) {
   const target = compactDate(date);
   if (!target) throw new Error('date must be YYYYMMDD');
@@ -59,6 +84,7 @@ async function fetchOfficialMarketConstraints({ date, force = false } = {}) {
   const existingDisposition = readJson(dispositionFile);
   const existingNight = readJson(nightFile);
   if (!force && isReusableSnapshot(existing, target)) {
+    preserveOfficialNightContext(target, nightFile, existingNight);
     return { ...existing, reused: true };
   }
 
@@ -137,6 +163,7 @@ async function fetchOfficialMarketConstraints({ date, force = false } = {}) {
   atomicWriteJson(dispositionFile, disposition);
   atomicWriteJson(nightFile, normalizedNight);
   atomicWriteJson(snapshotFile, snapshot);
+  preserveOfficialNightContext(target, nightFile, normalizedNight);
   return snapshot;
 }
 
@@ -170,6 +197,8 @@ if (require.main === module) {
 module.exports = {
   normalizeDispositionSnapshot,
   isReusableSnapshot,
+  stagePredictionContext,
+  preserveOfficialNightContext,
   fetchOfficialMarketConstraints,
   main,
 };
