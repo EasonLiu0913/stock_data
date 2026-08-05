@@ -9,12 +9,16 @@ const {
   round,
 } = require('./market_environment_lib');
 const {
-  loadRegistry,
   compactDate,
 } = require('./prediction_tag_strategy_engine');
 const {
   applyTagStrategyReplay,
+  loadHistoricalRegistry,
+  registryFingerprint,
+  registryNamespace,
 } = require('./evaluate_tag_strategy_replay');
+
+const DEFAULT_REGISTRY_FILE = path.join(ROOT, 'config', 'strategy-tag-registry.json');
 
 function resolveStrategy(registry, options) {
   if (options.strategyId) {
@@ -30,8 +34,8 @@ function resolveStrategy(registry, options) {
   return candidates[0];
 }
 
-function listReplayDates(rootDir, from, to) {
-  const root = path.join(ROOT, rootDir);
+function listReplayDates(rootDir, from, to, workspaceRoot = ROOT) {
+  const root = path.join(workspaceRoot, rootDir);
   if (!fs.existsSync(root)) return [];
   return fs.readdirSync(root)
     .filter(name => /^20\d{6}$/.test(name))
@@ -43,12 +47,17 @@ function listReplayDates(rootDir, from, to) {
 }
 
 function recalculateHistory(options = {}) {
-  const registry = loadRegistry(options.registryFile);
+  const workspaceRoot = path.resolve(options.workspaceRoot || ROOT);
+  const registryFile = options.registryFile || DEFAULT_REGISTRY_FILE;
+  const registry = options.registryOverride
+    || loadHistoricalRegistry(registryFile, workspaceRoot);
   const strategy = resolveStrategy(registry, options);
   const from = compactDate(options.from);
   const to = compactDate(options.to);
   const rootDir = options.rootDir || 'data_predictions';
-  const dates = listReplayDates(rootDir, from, to);
+  const dates = listReplayDates(rootDir, from, to, workspaceRoot);
+  const fingerprint = registryFingerprint(registry);
+  const namespace = registryNamespace(registry);
   const results = [];
   const failures = [];
 
@@ -59,10 +68,19 @@ function recalculateHistory(options = {}) {
         rootDir,
         evaluationMode: 'historical_recalculation',
         strategyId: strategy.strategy_id,
+        registryFile,
+        registryOverride: registry,
+        workspaceRoot,
         dryRun: Boolean(options.dryRun),
       });
       const metrics = result.strategies[strategy.strategy_id] || {};
-      results.push({ date, ...metrics, output_file: result.output_file });
+      results.push({
+        date,
+        registry_id: result.registry_id,
+        registry_fingerprint: result.registry_fingerprint,
+        ...metrics,
+        output_file: result.output_file,
+      });
     } catch (error) {
       failures.push({ date, error: error.message });
     }
@@ -74,9 +92,13 @@ function recalculateHistory(options = {}) {
     hits: aggregate.hits + Number(row.hits || 0),
   }), { candidates: 0, verified_candidates: 0, hits: 0 });
   const summary = {
-    schema_version: 1,
+    schema_version: 2,
     generated_at: new Date().toISOString(),
     evaluation_mode: 'historical_recalculation',
+    registry_id: registry.registry_id || null,
+    registry_fingerprint: fingerprint,
+    registry_namespace: namespace,
+    registry_file: path.relative(workspaceRoot, path.resolve(workspaceRoot, registryFile)).replaceAll(path.sep, '/'),
     strategy_id: strategy.strategy_id,
     strategy_family_id: strategy.family_id,
     strategy_version: strategy.version,
@@ -94,19 +116,20 @@ function recalculateHistory(options = {}) {
     },
     dates: results,
     failures,
-    note: '此結果以指定策略版本全面回算歷史；各日期只使用該日期 base_trade_date 以前的資料，不覆蓋當時 live snapshot。',
+    note: '此結果以指定 registry 與策略版本全面回算歷史；輸出依 registry ID 與 fingerprint 隔離，不覆蓋其他版本或當時 live snapshot。',
   };
   const outputFile = path.join(
-    ROOT,
+    workspaceRoot,
     'data_prediction_analysis',
     'tag-strategy-recalculation',
+    namespace,
     strategy.strategy_id,
     'summary.json',
   );
   if (!options.dryRun) atomicWriteJson(outputFile, summary);
   return {
     ...summary,
-    output_file: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
+    output_file: path.relative(workspaceRoot, outputFile).replaceAll(path.sep, '/'),
     dry_run: Boolean(options.dryRun),
   };
 }
@@ -118,7 +141,7 @@ function parseArgs(argv) {
     from: '',
     to: '',
     rootDir: 'data_predictions',
-    registryFile: undefined,
+    registryFile: DEFAULT_REGISTRY_FILE,
     dryRun: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -138,6 +161,8 @@ function parseArgs(argv) {
 function main(argv = process.argv.slice(2)) {
   const result = recalculateHistory(parseArgs(argv));
   console.log(JSON.stringify({
+    registry_id: result.registry_id,
+    registry_fingerprint: result.registry_fingerprint,
     strategy_id: result.strategy_id,
     processed_dates: result.processed_dates,
     failed_dates: result.failed_dates,
@@ -158,6 +183,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEFAULT_REGISTRY_FILE,
   resolveStrategy,
   listReplayDates,
   recalculateHistory,
