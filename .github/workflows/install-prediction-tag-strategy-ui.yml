@@ -13,6 +13,7 @@ on:
       - 'public/prediction-industry-dashboard.html'
       - 'public/prediction-replay-dashboard-view.html'
       - 'tests/install_prediction_tag_strategy_ui.test.js'
+      - 'tests/prediction_tag_strategy_filter_state.test.js'
   pull_request:
     branches: [main]
     paths:
@@ -25,6 +26,7 @@ on:
       - 'public/prediction-industry-dashboard.html'
       - 'public/prediction-replay-dashboard-view.html'
       - 'tests/install_prediction_tag_strategy_ui.test.js'
+      - 'tests/prediction_tag_strategy_filter_state.test.js'
   workflow_dispatch:
 
 permissions:
@@ -53,7 +55,9 @@ jobs:
           node --check scripts/install_prediction_tag_strategy_ui.js
           node --check public/prediction-tag-strategy-enhancement.js
           node --check public/prediction-replay-tag-strategy-enhancement.js
-          node --test tests/install_prediction_tag_strategy_ui.test.js
+          node --test \
+            tests/install_prediction_tag_strategy_ui.test.js \
+            tests/prediction_tag_strategy_filter_state.test.js
 
       - name: Install shared UI references
         run: node scripts/install_prediction_tag_strategy_ui.js
@@ -61,9 +65,9 @@ jobs:
       - name: Verify installed references
         shell: bash
         run: |
-          grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-dashboard.html
-          grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-groups.html
-          grep -q 'prediction-tag-strategy-enhancement.js' public/prediction-industry-dashboard.html
+          grep -q 'prediction-tag-strategy-enhancement.js?v=4' public/prediction-dashboard.html
+          grep -q 'prediction-tag-strategy-enhancement.js?v=4' public/prediction-groups.html
+          grep -q 'prediction-tag-strategy-enhancement.js?v=4' public/prediction-industry-dashboard.html
           grep -q 'prediction-replay-tag-strategy-enhancement.js' public/prediction-replay-dashboard-view.html
           grep -q 'function matchesTagStrategyFilter(stock)' public/prediction-groups.html
           grep -q 'function matchesTagStrategyFilter(stock)' public/prediction-industry-dashboard.html
