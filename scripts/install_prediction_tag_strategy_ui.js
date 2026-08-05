@@ -7,9 +7,9 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const TARGETS = Object.freeze({
-  'prediction-dashboard.html': 'prediction-tag-strategy-enhancement.js?v=4',
-  'prediction-groups.html': 'prediction-tag-strategy-enhancement.js?v=4',
-  'prediction-industry-dashboard.html': 'prediction-tag-strategy-enhancement.js?v=4',
+  'prediction-dashboard.html': 'prediction-tag-strategy-expression-semantics.js?v=1',
+  'prediction-groups.html': 'prediction-tag-strategy-expression-semantics.js?v=1',
+  'prediction-industry-dashboard.html': 'prediction-tag-strategy-expression-semantics.js?v=1',
   'prediction-replay-dashboard-view.html': 'prediction-replay-tag-strategy-enhancement.js?v=2',
 });
 
