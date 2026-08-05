@@ -14,6 +14,8 @@ const TARGETS = Object.freeze({
 });
 
 const FILTER_ADAPTER_MARKER = 'function matchesTagStrategyFilter(stock)';
+const GROUP_EXPERIMENT_MARKER = 'function usesAllStocksForTagStrategyExperiment()';
+const GROUP_EMPTY_MESSAGE_MARKER = "const emptyMessage=usesAllStocksForTagStrategyExperiment()";
 
 function scriptPattern(script) {
   const base = script.split('?')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -34,21 +36,63 @@ function injectAnchor(html, sectionPattern) {
   return html.replace(sectionPattern, '<div id="marketEnvironmentBanner" hidden></div>\n    $&');
 }
 
+function groupFilterAdapterBlock() {
+  return `let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];
+    const quickFilters={};let activeQuickFilter='';
+    function matchesTagStrategyFilter(stock){const filter=quickFilters[activeQuickFilter];return !filter||filter.test(stock);}
+    function setQuickFilter(key){activeQuickFilter=key||'';if(dashboard)renderStocks();}
+    function usesAllStocksForTagStrategyExperiment(){return Boolean(activeQuickFilter&&quickFilters[activeQuickFilter]);}
+    function stocksForCurrentView(memberSet){return usesAllStocksForTagStrategyExperiment()?dashboard.stocks:dashboard.stocks.filter(stock=>memberSet.has(stock.stock_code));}
+    function stockListTitle(rowCount){const filter=quickFilters[activeQuickFilter];return filter?\`標籤策略實驗：\${filter.label||'自訂組合'}｜從全部 \${dashboard.stocks.length.toLocaleString('zh-TW')} 檔篩選，符合 \${rowCount.toLocaleString('zh-TW')} 檔\`:\`\${selected.group}：\${Number(selected.count||0).toLocaleString('zh-TW')} 檔\`;}`;
+}
+
 function injectGroupAdapter(html) {
   let updated = injectAnchor(html, /<section class="grid group-grid"/);
   if (!updated.includes(FILTER_ADAPTER_MARKER)) {
     updated = updated.replace(
       'let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];',
-      `let dashboard,basePriceData=null,selected,currentManifest,orderedGroups=[];
-    const quickFilters={};let activeQuickFilter='';
-    function matchesTagStrategyFilter(stock){const filter=quickFilters[activeQuickFilter];return !filter||filter.test(stock);}
-    function setQuickFilter(key){activeQuickFilter=key||'';if(dashboard)renderStocks();}`,
+      groupFilterAdapterBlock(),
+    );
+  } else if (!updated.includes(GROUP_EXPERIMENT_MARKER)) {
+    updated = updated.replace(
+      "function setQuickFilter(key){activeQuickFilter=key||'';if(dashboard)renderStocks();}",
+      `function setQuickFilter(key){activeQuickFilter=key||'';if(dashboard)renderStocks();}
+    function usesAllStocksForTagStrategyExperiment(){return Boolean(activeQuickFilter&&quickFilters[activeQuickFilter]);}
+    function stocksForCurrentView(memberSet){return usesAllStocksForTagStrategyExperiment()?dashboard.stocks:dashboard.stocks.filter(stock=>memberSet.has(stock.stock_code));}
+    function stockListTitle(rowCount){const filter=quickFilters[activeQuickFilter];return filter?\`標籤策略實驗：\${filter.label||'自訂組合'}｜從全部 \${dashboard.stocks.length.toLocaleString('zh-TW')} 檔篩選，符合 \${rowCount.toLocaleString('zh-TW')} 檔\`:\`\${selected.group}：\${Number(selected.count||0).toLocaleString('zh-TW')} 檔\`;}`,
     );
   }
+
+  updated = updated.replace(
+    'const rows=dashboard.stocks.filter(s=>matchesTagStrategyFilter(s)&&memberSet.has(s.stock_code)',
+    'const rows=stocksForCurrentView(memberSet).filter(s=>matchesTagStrategyFilter(s)',
+  );
   updated = updated.replace(
     'const rows=dashboard.stocks.filter(s=>memberSet.has(s.stock_code)',
-    'const rows=dashboard.stocks.filter(s=>matchesTagStrategyFilter(s)&&memberSet.has(s.stock_code)',
+    'const rows=stocksForCurrentView(memberSet).filter(s=>matchesTagStrategyFilter(s)',
   );
+  updated = updated.replace(
+    'function renderStocks(){if(!selected)return;document.getElementById(\'groupTitle\').textContent=`${selected.group}：${selected.count.toLocaleString()} 檔`;const q=',
+    'function renderStocks(){if(!selected)return;const q=',
+  );
+
+  if (!updated.includes(GROUP_EMPTY_MESSAGE_MARKER)) {
+    updated = updated.replace(
+      "document.getElementById('stockRows').innerHTML=rows.map",
+      "document.getElementById('groupTitle').textContent=stockListTitle(rows.length);const emptyMessage=usesAllStocksForTagStrategyExperiment()?'目前沒有股票符合這組標籤條件':'此分類目前沒有符合股票';document.getElementById('stockRows').innerHTML=rows.map",
+    );
+    updated = updated.replace(
+      "||'<tr class=\"empty-row\"><td colspan=\"15\">此分類目前沒有符合股票</td></tr>';",
+      "||`<tr class=\"empty-row\"><td colspan=\"15\">${emptyMessage}</td></tr>`;",
+    );
+  }
+
+  if (!updated.includes("document.querySelector('[data-clear-tag-strategy]')?.click()")) {
+    updated = updated.replace(
+      'function selectGroup(name){selected=orderedGroups.find(g=>g.group===decodeURIComponent(name));',
+      "function selectGroup(name){document.querySelector('[data-clear-tag-strategy]')?.click();activeQuickFilter='';selected=orderedGroups.find(g=>g.group===decodeURIComponent(name));",
+    );
+  }
   return updated;
 }
 
@@ -116,6 +160,7 @@ module.exports = {
   PUBLIC_DIR,
   TARGETS,
   FILTER_ADAPTER_MARKER,
+  GROUP_EXPERIMENT_MARKER,
   scriptPattern,
   injectScript,
   injectPageAdapter,
