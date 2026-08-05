@@ -300,7 +300,7 @@ function enrichStrategyTagSources(payload, workspaceRoot, options = {}) {
   const historicalFactors = enrichHistoricalFactorFeatures(
     payload,
     workspaceRoot,
-    options.dataAsOf,
+    earliestCutoff(payload, options.dataAsOf),
   );
   const marketEnvironment = enrichBearMarketFeatures(
     payload,
