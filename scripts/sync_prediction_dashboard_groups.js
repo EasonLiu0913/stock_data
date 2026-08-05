@@ -128,6 +128,118 @@ function ensureRegisteredStrategyGroups(summary, groupSummary) {
   return output.filter((group) => group?.formal_strategy === true);
 }
 
+function normalizeStrategyMatchId(match) {
+  if (typeof match === 'string') return match;
+  if (!match || typeof match !== 'object') return '';
+  return String(match.strategy_id || match.id || match.key || '').trim();
+}
+
+function versionedStrategyDefinitions(summary) {
+  const registry = Array.isArray(summary?.strategy_registry_v2) ? summary.strategy_registry_v2 : [];
+  const registryById = new Map(registry
+    .map((definition) => [String(definition?.strategy_id || definition?.id || '').trim(), definition])
+    .filter(([strategyId]) => strategyId));
+  const classifications = summary?.strategy_classifications_v2;
+  if (!classifications || typeof classifications !== 'object' || Array.isArray(classifications)) return [];
+
+  return Object.entries(classifications).map(([key, classification]) => {
+    const strategyId = String(classification?.strategy_id || classification?.id || key).trim();
+    return {
+      strategyId,
+      classification: classification || {},
+      definition: registryById.get(strategyId) || {},
+    };
+  }).filter((item) => item.strategyId);
+}
+
+function versionedStrategyMembers(summary, strategyId, classification = {}) {
+  if (Array.isArray(classification.members)) {
+    return [...new Set(classification.members.map((member) => String(member || '').trim()).filter(Boolean))];
+  }
+  return (summary?.stocks || [])
+    .filter((stock) => (stock.registered_strategy_matches || [])
+      .some((match) => normalizeStrategyMatchId(match) === strategyId))
+    .map((stock) => String(stock.stock_code || '').trim())
+    .filter(Boolean);
+}
+
+function versionedStrategyMatchesGroup(group, strategyId, label) {
+  if (!group) return false;
+  return group.strategy_id === strategyId || (label && group.group === label);
+}
+
+function buildVersionedStrategyGroup(summary, strategyId, classification = {}, definition = {}, existing = {}) {
+  const label = classification.label || definition.label || existing.group || strategyId;
+  const members = versionedStrategyMembers(summary, strategyId, classification);
+  const declaredCount = Number(classification.count);
+  if (Array.isArray(classification.members)
+    && Number.isFinite(declaredCount)
+    && declaredCount !== members.length) {
+    throw new Error(`Versioned strategy count/member mismatch: ${strategyId} ${declaredCount} != ${members.length}`);
+  }
+  const memberSet = new Set(members);
+  const matchedStocks = (summary.stocks || []).filter((stock) => memberSet.has(String(stock.stock_code || '')));
+  const metrics = summarizeStocks(matchedStocks);
+  const calculationStatus = classification.calculation_status || 'completed';
+  const count = Array.isArray(classification.members)
+    ? members.length
+    : Number.isFinite(declaredCount) ? declaredCount : members.length;
+
+  return {
+    ...existing,
+    ...metrics,
+    group: label,
+    strategy_id: strategyId,
+    strategy_family: classification.family_id || definition.family_id || existing.strategy_family || null,
+    strategy_version: Number(classification.version || definition.version || existing.strategy_version || 1),
+    versioned_strategy: true,
+    versioned_strategy_source: 'summary.strategy_classifications_v2',
+    fixed_display: classification.fixed_display === true || definition.fixed_display === true || existing.fixed_display === true,
+    enabled: classification.enabled !== false && definition.enabled !== false,
+    count,
+    members,
+    calculation_status: calculationStatus,
+    calculation_message: classification.calculation_message || '',
+    coverage_pct: classification.coverage_pct ?? null,
+    available_stock_count: classification.available_stock_count ?? null,
+    unavailable_stock_count: classification.unavailable_stock_count ?? null,
+    status_label: calculationStatus === 'unable_to_calculate'
+      ? classification.status_label || '無法計算'
+      : classification.status_label || `已完成計算，當日 ${count} 筆`,
+    criteria: definition.expression || existing.criteria || null,
+    evaluation_target: definition.evaluation_target || existing.evaluation_target || null,
+  };
+}
+
+function reconcileVersionedStrategyGroups(summary, groupSummary) {
+  if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
+  if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
+
+  const reconciled = [];
+  for (const { strategyId, classification, definition } of versionedStrategyDefinitions(summary)) {
+    const label = classification.label || definition.label || strategyId;
+    const matchingIndexes = groupSummary.groups
+      .map((group, index) => versionedStrategyMatchesGroup(group, strategyId, label) ? index : -1)
+      .filter((index) => index >= 0);
+    const existing = matchingIndexes.length ? groupSummary.groups[matchingIndexes[0]] : {};
+    const group = buildVersionedStrategyGroup(summary, strategyId, classification, definition, existing);
+
+    if (matchingIndexes.length) {
+      groupSummary.groups[matchingIndexes[0]] = group;
+      for (let index = matchingIndexes.length - 1; index >= 1; index -= 1) {
+        groupSummary.groups.splice(matchingIndexes[index], 1);
+      }
+    } else {
+      groupSummary.groups.push(group);
+    }
+    reconciled.push(group);
+  }
+
+  groupSummary.groups.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
+    || String(left.group).localeCompare(String(right.group), 'zh-Hant'));
+  return reconciled;
+}
+
 function ensureFormalStrategyGroup(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
@@ -153,8 +265,12 @@ function syncSummaryPayload(summary, groupSummary) {
   if (!summary || typeof summary !== 'object') throw new Error('summary payload is required');
   if (!Array.isArray(groupSummary?.groups)) throw new Error('group-summary groups are required');
   ensureRegisteredStrategyGroups(summary, groupSummary);
+  reconcileVersionedStrategyGroups(summary, groupSummary);
   summary.group_summary = groupSummary.groups;
   summary.group_summary_source = 'group-summary.json';
+  summary.group_summary_strategy_source = summary.strategy_classifications_v2
+    ? 'strategy_classifications_v2'
+    : 'legacy_group_summary';
   return summary;
 }
 
@@ -178,8 +294,9 @@ function syncPredictionDashboardGroups({ rootDir = 'data_predictions', date, dry
     };
   }
 
-  const formalGroups = ensureRegisteredStrategyGroups(summary, groupSummary);
   syncSummaryPayload(summary, groupSummary);
+  const formalGroups = groupSummary.groups.filter((group) => group?.formal_strategy === true);
+  const versionedGroups = groupSummary.groups.filter((group) => group?.versioned_strategy === true);
   if (!dryRun) {
     atomicWriteJson(groupSummaryFile, groupSummary);
     atomicWriteJson(summaryFile, summary);
@@ -191,6 +308,7 @@ function syncPredictionDashboardGroups({ rootDir = 'data_predictions', date, dry
     skipped: false,
     groups: groupSummary.groups.length,
     formal_groups: formalGroups.map((group) => group.group),
+    versioned_groups: versionedGroups.map((group) => group.group),
     dry_run: dryRun,
   };
 }
@@ -230,6 +348,12 @@ module.exports = {
   normalizeRegisteredGroup,
   buildEmptyRegisteredGroup,
   ensureRegisteredStrategyGroups,
+  normalizeStrategyMatchId,
+  versionedStrategyDefinitions,
+  versionedStrategyMembers,
+  versionedStrategyMatchesGroup,
+  buildVersionedStrategyGroup,
+  reconcileVersionedStrategyGroups,
   ensureFormalStrategyGroup,
   syncSummaryPayload,
   syncPredictionDashboardGroups,
