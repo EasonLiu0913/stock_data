@@ -46,12 +46,22 @@
     return MODE_ORDER[(index + 1) % MODE_ORDER.length];
   }
 
+  function compositeFilterTransition(currentKey, hasSelection) {
+    const targetKey = hasSelection ? COMPOSITE_FILTER_KEY : '';
+    return {
+      targetKey,
+      shouldSet: currentKey !== targetKey,
+    };
+  }
+
   const API = {
+    COMPOSITE_FILTER_KEY,
     normalizePayload,
     stockTagIds,
     stockStrategyIds,
     compositeMatches,
     cycleMode,
+    compositeFilterTransition,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -148,6 +158,11 @@
     }
   }
 
+  function refreshActiveStockView() {
+    if (typeof renderStocks === 'function') renderStocks();
+    if (typeof renderEnvironment === 'function') renderEnvironment();
+  }
+
   function statusText(classification) {
     if (!classification || classification.calculation_status === 'unable_to_calculate') return 'N/A';
     return Number(classification.count || 0).toLocaleString('zh-TW');
@@ -156,8 +171,10 @@
   function statusTitle(classification) {
     if (!classification) return '尚未產生分類資料';
     if (classification.calculation_status === 'unable_to_calculate') return '資料不足，無法計算';
-    if (classification.calculation_status === 'partial') return `部分股票資料不足；已辨識 ${classification.count || 0} 檔`;
-    return classification.count === 0 ? '已完成計算，當日 0 檔' : `已完成計算，共 ${classification.count} 檔`;
+    if (classification.calculation_status === 'partial') return `部分股票資料不足；此標籤單獨命中 ${classification.count || 0} 檔`;
+    return classification.count === 0
+      ? '已完成計算；此標籤單獨命中 0 檔'
+      : `已完成計算；此標籤單獨命中 ${classification.count} 檔`;
   }
 
   function expressionText(strategy, tagLabels) {
@@ -181,7 +198,7 @@
       title="${esc(statusTitle(classification))}" ${unavailable ? 'disabled' : ''}>
       <span class="tag-strategy-filter-label">${esc(definition.label)}</span>
       <b>${esc(statusText(classification))}</b>
-      <small>${esc(mode ? modeLabel(mode) : '點擊切換 AND → OR → NOT')}</small>
+      <small>${esc(mode ? modeLabel(mode) : '單獨命中數｜點擊切換 AND → OR → NOT')}</small>
     </button>`;
   }
 
@@ -217,7 +234,11 @@
     if (typeof setQuickFilter !== 'function' || !registerFilters(latestView)) return;
     clearStockControls();
     saveSelection();
-    setQuickFilter(hasCompositeSelection() ? COMPOSITE_FILTER_KEY : '');
+
+    const transition = compositeFilterTransition(activeFilter(), hasCompositeSelection());
+    if (transition.shouldSet) setQuickFilter(transition.targetKey);
+    else refreshActiveStockView();
+
     window.requestAnimationFrame(() => render(latestDashboard, { restore: false }));
   }
 
@@ -261,7 +282,7 @@
         <div>
           <div class="tag-strategy-eyebrow">固定顯示｜0 與 N/A 分開｜版本 ${esc(latestView.registryMetadata.registry_fingerprint || '尚未產生快照')}</div>
           <h2>標籤與多標籤策略</h2>
-          <p>標籤是單一條件；同一標籤可依序切換 AND、OR、NOT。策略是已保存、可版本化的標籤組合。</p>
+          <p>每個標籤右側數字是該標籤「單獨」命中的股票數，不是目前組合結果。AND 取交集；OR 組內至少符合一項；NOT 排除。組合後數量以「自訂組合」及下方股票清單為準。</p>
         </div>
         <button type="button" class="tag-strategy-clear" data-clear-tag-strategy>全部清除</button>
       </div>
@@ -307,7 +328,11 @@
     panel.querySelector('[data-clear-tag-strategy]')?.addEventListener('click', () => {
       clearCompositeSelection();
       saveSelection();
-      if (typeof setQuickFilter === 'function') setQuickFilter('');
+      if (typeof setQuickFilter === 'function') {
+        const transition = compositeFilterTransition(activeFilter(), false);
+        if (transition.shouldSet) setQuickFilter(transition.targetKey);
+        else refreshActiveStockView();
+      }
       window.requestAnimationFrame(() => render(latestDashboard, { restore: false }));
     });
   }
@@ -333,7 +358,11 @@
           if (snapshot) payload = { ...dashboard, ...snapshot, strategy_registry_v2: snapshot.strategy_registry };
         }
         render(payload);
-        if (hasCompositeSelection() && typeof setQuickFilter === 'function') setQuickFilter(COMPOSITE_FILTER_KEY);
+        if (hasCompositeSelection() && typeof setQuickFilter === 'function') {
+          const transition = compositeFilterTransition(activeFilter(), true);
+          if (transition.shouldSet) setQuickFilter(transition.targetKey);
+          else refreshActiveStockView();
+        }
         return;
       }
       await new Promise(resolve => setTimeout(resolve, 50));
