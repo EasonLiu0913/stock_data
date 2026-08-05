@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  STRATEGY_ENGINE_VERSION,
   firstDefined,
   evaluateRuleState,
   evaluateRule,
@@ -130,6 +131,8 @@ test('fixed tags and strategies remain completed with zero true matches when dat
     }],
   }, registry, { generatedAt: '2026-08-03T00:00:00.000Z' });
   assert.equal(snapshot.schema_version, 3);
+  assert.equal(snapshot.strategy_engine_version, STRATEGY_ENGINE_VERSION);
+  assert.equal(STRATEGY_ENGINE_VERSION, 2);
   assert.ok(snapshot.registry_fingerprint);
   assert.equal(snapshot.tag_classifications.margin_exit_v1.calculation_status, 'completed');
   assert.equal(snapshot.tag_classifications.margin_exit_v1.count, 0);
