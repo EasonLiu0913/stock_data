@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  firstDefined,
   evaluateRuleState,
   evaluateRule,
   expressionState,
@@ -36,6 +37,13 @@ test('numeric and boolean rules distinguish zero, false and missing', () => {
   assert.equal(evaluateRuleState({}, { path: 'value', operator: 'lt', value: 1 }), null);
   assert.equal(evaluateRule({}, { path: 'value', operator: 'lt', value: 1 }), false);
   assert.equal(evaluateRuleState({ flag: false }, { path: 'flag', operator: 'eq', value: false }), true);
+});
+
+test('undefined may use a fallback but explicit null blocks stale fallback values', () => {
+  const rule = { paths: ['authoritative.flag', 'legacy_flag'], operator: 'eq', value: true };
+  assert.equal(firstDefined({ legacy_flag: false }, rule), false);
+  assert.equal(firstDefined({ authoritative: { flag: null }, legacy_flag: false }, rule), null);
+  assert.equal(evaluateRuleState({ authoritative: { flag: null }, legacy_flag: false }, rule), null);
 });
 
 test('AND OR NOT expression semantics support unavailable inputs', () => {
@@ -72,6 +80,33 @@ test('stock receives atomic tags before strategy evaluation', () => {
   assert.deepEqual(result.tag_ids, ['drop_v1', 'margin_1d_v1', 'margin_5d_v1', 'margin_exit_v1']);
   assert.deepEqual(result.unavailable_tag_ids, []);
   assert.deepEqual(result.strategy_ids, ['margin_rebound_v1']);
+});
+
+test('explicitly unavailable exclusion data makes the dependent strategy unavailable', () => {
+  const protectedRegistry = JSON.parse(JSON.stringify(registry));
+  protectedRegistry.tags.find(tag => tag.tag_id === 'disposition_v1').rule = {
+    paths: ['strategy_tag_features.disposition_stock', 'is_disposition_stock'],
+    operator: 'eq',
+    value: true,
+  };
+  const unavailable = evaluateStock({
+    stock_code: '2330',
+    features: { r3: -9, margin_change: -100, margin_change_5d: -500 },
+    strategy_tag_features: { disposition_stock: null },
+    is_disposition_stock: false,
+  }, protectedRegistry);
+  assert.ok(unavailable.unavailable_tag_ids.includes('disposition_v1'));
+  assert.deepEqual(unavailable.strategy_ids, []);
+  assert.deepEqual(unavailable.unavailable_strategy_ids, ['margin_rebound_v1']);
+
+  const fallback = evaluateStock({
+    stock_code: '2330',
+    features: { r3: -9, margin_change: -100, margin_change_5d: -500 },
+    strategy_tag_features: {},
+    is_disposition_stock: false,
+  }, protectedRegistry);
+  assert.ok(!fallback.unavailable_tag_ids.includes('disposition_v1'));
+  assert.deepEqual(fallback.strategy_ids, ['margin_rebound_v1']);
 });
 
 test('missing margin data propagates to tag and strategy as unavailable', () => {
