@@ -132,6 +132,13 @@ Do not assume the Pages dependency scanner can discover only literal paths. Temp
 `${basePath}/data_fubon/fubon_${date}_institutional.json`
 ```
 
+Variable-based paths are also deployment dependencies:
+
+```js
+const DATA_DIR = 'data_twse_margin_balance';
+fetch(`${getBasePath()}/${DATA_DIR}/files.json`);
+```
+
 When adding or changing a runtime data path:
 
 1. Confirm `.github/workflows/deploy-pages.yml` discovers its root directory.
@@ -141,6 +148,34 @@ When adding or changing a runtime data path:
 5. Test the final Pages-shaped path, not only the repository file path.
 
 For a page driven by a manifest such as `files.json`, deployment must include both the manifest and every file that the manifest can direct the page to load. Publishing the HTML without its runtime data is a deployment failure.
+
+### One dependency scanner for every public page
+
+The canonical frontend dependency scanner is:
+
+```text
+scripts/scan_pages_dependencies.js
+```
+
+It must scan every HTML, JavaScript, module, and CSS asset below `public/**`. It must recognize at least:
+
+- Static relative paths such as `../data_xxx/files.json`.
+- Absolute Pages paths such as `/stock_data/data_xxx/files.json`.
+- Direct template paths such as `${basePath}/data_xxx/files.json`.
+- Paths assembled through constants such as `DATA_DIR`, `*_DIR`, or `*_ROOT`.
+- Repository-root data directory names stored in string literals.
+
+The scanner must resolve Git objects even when sparse checkout has not materialized the referenced directory yet. A missing directory in the initial sparse working tree must not be interpreted as an unused dependency.
+
+Before changing Pages path or packaging logic, run:
+
+```text
+node --check scripts/scan_pages_dependencies.js
+node scripts/scan_pages_dependencies.js --self-test
+node scripts/scan_pages_dependencies.js --json .
+```
+
+Do not add a second inline regular-expression scanner to the workflow. Update the canonical scanner and its self-test instead. The final Pages build must verify that every dependency returned by this scanner exists under `_site` before upload.
 
 ### Never hide a missing deployment dependency with today's date
 
@@ -160,7 +195,9 @@ Search `public/**` for all relevant forms, including:
 ```text
 fetch(
 basePath
+DATA_DIR
 data_fubon
+data_twse_margin_balance
 data_predictions
 data_prediction_analysis
 files.json
@@ -171,6 +208,8 @@ Then verify the generated artifact contains the exact requested resources, for e
 ```text
 _site/data_fubon/files.json
 _site/data_fubon/fubon_YYYYMMDD_institutional.json
+_site/data_twse_margin_balance/files.json
+_site/data_twse_margin_balance/YYYYMMDD_twse_margin_balance.csv
 ```
 
 Add or update a regression test whenever a path omission, date fallback, or Pages-only path problem is fixed. A repository file existing on `main` is not sufficient evidence that it exists in the deployed Pages artifact.
@@ -184,6 +223,7 @@ Add or update a regression test whenever a path omission, date fallback, or Page
 - Do not restore full-repository checkout and full-repository `rsync` packaging.
 - Preserve historical dashboard access only for data that the published frontend actually references.
 - Keep `scripts/prepare_pages_site.sh --self-test` working when deployment packaging logic changes.
+- Keep `scripts/scan_pages_dependencies.js --self-test` working when frontend data-loading patterns change.
 
 ## Safety when modifying workflows
 
