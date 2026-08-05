@@ -262,6 +262,21 @@ function normalizeManifestDateEntry(entry = {}) {
   };
 }
 
+function liveSnapshotReplacementReason(existingSnapshot, registry) {
+  if (!existingSnapshot) return null;
+  const existingFingerprint = String(existingSnapshot.registry_fingerprint || '');
+  const invalidFingerprints = new Set(registry.replace_invalid_live_fingerprints || []);
+  if (invalidFingerprints.has(existingFingerprint)) return 'listed_invalid_fingerprint';
+  if (!existingFingerprint || existingFingerprint !== registryFingerprint(registry)) {
+    return 'registry_fingerprint_mismatch';
+  }
+  return null;
+}
+
+function shouldReplaceLiveSnapshot(existingSnapshot, registry) {
+  return Boolean(liveSnapshotReplacementReason(existingSnapshot, registry));
+}
+
 function updateSnapshotManifest(workspaceRoot, snapshotFile, snapshot, options = {}) {
   const manifestFile = path.join(workspaceRoot, 'data_prediction_analysis', 'strategy-snapshots', 'manifest.json');
   const manifest = readJson(manifestFile, {
@@ -317,18 +332,18 @@ function applyRegistry(options = {}) {
   const dataAsOf = compactDate(options.dataAsOf) || compactDate(payload.base_trade_date) || date;
   const snapshotFile = snapshotFileFor(workspaceRoot, date, evaluationMode, fingerprint, dataAsOf);
   const existingSnapshot = readJson(snapshotFile, null);
-  const invalidFingerprints = new Set(registry.replace_invalid_live_fingerprints || []);
-  const correctInvalidLive = evaluationMode === 'live_snapshot'
-    && existingSnapshot
-    && invalidFingerprints.has(existingSnapshot.registry_fingerprint);
+  const replacementReason = evaluationMode === 'live_snapshot'
+    ? liveSnapshotReplacementReason(existingSnapshot, registry)
+    : null;
+  const replaceExistingLive = Boolean(replacementReason);
   let archivedEntry = null;
   let archivedSnapshotFile = null;
 
   let snapshot = existingSnapshot;
-  let reusedExistingSnapshot = Boolean(existingSnapshot) && !correctInvalidLive;
+  let reusedExistingSnapshot = Boolean(existingSnapshot) && !replaceExistingLive;
   let sourceMetadata = existingSnapshot?.source_metadata || {};
-  if (!snapshot || correctInvalidLive) {
-    if (correctInvalidLive) {
+  if (!snapshot || replaceExistingLive) {
+    if (replaceExistingLive) {
       archivedSnapshotFile = snapshotHistoryFileFor(
         workspaceRoot,
         date,
@@ -377,7 +392,8 @@ function applyRegistry(options = {}) {
       : null,
     manifest_file: 'data_prediction_analysis/strategy-snapshots/manifest.json',
     reused_existing_snapshot: reusedExistingSnapshot,
-    corrected_invalid_live_snapshot: correctInvalidLive,
+    corrected_invalid_live_snapshot: replaceExistingLive,
+    live_snapshot_replacement_reason: replacementReason,
     summary_enriched: evaluationMode === 'live_snapshot',
     manifest_changed: manifestChanged,
     source_metadata: sourceMetadata,
@@ -419,6 +435,8 @@ module.exports = {
   snapshotHistoryFileFor,
   manifestEntry,
   normalizeManifestDateEntry,
+  liveSnapshotReplacementReason,
+  shouldReplaceLiveSnapshot,
   updateSnapshotManifest,
   applyRegistry,
   main,
