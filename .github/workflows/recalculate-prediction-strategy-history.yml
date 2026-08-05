@@ -3,8 +3,13 @@ name: "[06 回填修復] 策略版本－歷史全面回算"
 on:
   workflow_dispatch:
     inputs:
+      registry_file:
+        description: '策略 registry；預設使用正式 V2，指定舊檔可回算 V1，結果會分開保存'
+        required: true
+        type: string
+        default: 'config/strategy-tag-registry.json'
       strategy_family:
-        description: '策略家族；未指定 strategy_id 時自動使用最新版'
+        description: '策略家族；未指定 strategy_id 時自動使用該 registry 的最新版'
         required: false
         type: string
         default: 'oversold_margin_exit_rebound'
@@ -22,7 +27,7 @@ on:
         description: '結束預測日 YYYYMMDD'
         required: true
         type: string
-        default: '20260803'
+        default: '20260805'
       dry_run:
         description: '只計算與驗證，不提交結果'
         required: false
@@ -55,15 +60,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validate strategy engine
+      - name: Validate strategy engine and version isolation
         run: |
           node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/strategy_tag_engine.js
+          node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/evaluate_tag_strategy_replay.js
           node --check scripts/recalculate_prediction_strategy_history.js
-          node --test tests/prediction_tag_strategy_engine.test.js
+          node --test \
+            tests/prediction_tag_strategy_engine.test.js \
+            tests/evaluate_tag_strategy_replay.test.js \
+            tests/strategy_registry_versioning.test.js
 
-      - name: Recalculate selected strategy version
+      - name: Recalculate selected registry and strategy version
         env:
+          REGISTRY_FILE: ${{ inputs.registry_file }}
           STRATEGY_FAMILY: ${{ inputs.strategy_family }}
           STRATEGY_ID: ${{ inputs.strategy_id }}
           FROM_DATE: ${{ inputs.from_date }}
@@ -72,7 +83,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          args=(--from "$FROM_DATE" --to "$TO_DATE")
+          test -f "$REGISTRY_FILE"
+          args=(--registry "$REGISTRY_FILE" --from "$FROM_DATE" --to "$TO_DATE")
           if [ -n "$STRATEGY_ID" ]; then
             args+=(--strategy "$STRATEGY_ID")
           else
@@ -105,7 +117,7 @@ jobs:
             echo 'No historical recalculation changes'
             exit 0
           fi
-          git commit -m 'data: recalculate historical strategy version results'
+          git commit -m 'data: recalculate isolated strategy registry version results'
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
