@@ -4,9 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const targetScript = path.basename(process.argv[1] || '');
+const contextFile = process.env.PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE || '';
+const forecastDate = String(process.env.FORECAST_TARGET_DATE || '').replace(/[^0-9]/g, '');
+const baseDate = String(process.env.FORECAST_BASE_DATE || '').replace(/[^0-9]/g, '');
+
 if (targetScript === 'generate_market_environment.js') {
-  const contextFile = process.env.PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE || '';
-  const forecastDate = String(process.env.FORECAST_TARGET_DATE || '').replace(/[^0-9]/g, '');
   const marketLib = require('./market_environment_lib');
   const originalLatest = marketLib.latestDatedFileInDirectories;
   const originalValidation = marketLib.primaryExternalValidation;
@@ -17,7 +19,7 @@ if (targetScript === 'generate_market_environment.js') {
       && contextFile
       && fs.existsSync(contextFile)) {
       return {
-        date: String(process.env.FORECAST_BASE_DATE || maxDate || ''),
+        date: String(baseDate || maxDate || ''),
         file: contextFile,
         payload: marketLib.readJson(contextFile, null),
       };
@@ -57,6 +59,56 @@ if (targetScript === 'generate_market_environment.js') {
       rebindPredictionMarketEnvironment(forecastDate);
     } catch (error) {
       console.error(`Prediction market context rebind failed: ${error.stack || error.message}`);
+      process.exitCode = 1;
+    }
+  });
+}
+
+if (targetScript === 'generate_market_risk_snapshot.js'
+  && contextFile
+  && /^20\d{6}$/.test(baseDate)
+  && fs.existsSync(contextFile)) {
+  const externalRoot = path.resolve(__dirname, '..', 'data_external_market');
+  const syntheticFile = path.join(externalRoot, baseDate, 'external_market_indicators.json');
+  const originalExistsSync = fs.existsSync.bind(fs);
+  const originalReadFileSync = fs.readFileSync.bind(fs);
+  const originalReaddirSync = fs.readdirSync.bind(fs);
+
+  fs.existsSync = function predictionContextExists(file) {
+    if (path.resolve(String(file)) === syntheticFile) return true;
+    return originalExistsSync(file);
+  };
+
+  fs.readFileSync = function predictionContextRead(file, ...args) {
+    if (path.resolve(String(file)) === syntheticFile) {
+      return originalReadFileSync(contextFile, ...args);
+    }
+    return originalReadFileSync(file, ...args);
+  };
+
+  fs.readdirSync = function predictionContextReaddir(directory, options) {
+    const entries = originalReaddirSync(directory, options);
+    if (path.resolve(String(directory)) !== externalRoot) return entries;
+    const names = entries.map((entry) => typeof entry === 'string' ? entry : entry.name);
+    if (names.includes(baseDate)) return entries;
+    if (options && typeof options === 'object' && options.withFileTypes) {
+      return [...entries, {
+        name: baseDate,
+        isDirectory: () => true,
+        isFile: () => false,
+        isSymbolicLink: () => false,
+      }];
+    }
+    return [...entries, baseDate];
+  };
+
+  process.on('exit', (code) => {
+    if (code !== 0) return;
+    try {
+      const { rebindPredictionMarketRisk } = require('./rebind_prediction_market_risk');
+      rebindPredictionMarketRisk(baseDate);
+    } catch (error) {
+      console.error(`Prediction market risk context rebind failed: ${error.stack || error.message}`);
       process.exitCode = 1;
     }
   });
