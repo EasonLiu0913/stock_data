@@ -154,9 +154,13 @@ scripts/capture_prediction_market_context.js
 - `PREDICTION_MARKET_CONTEXT_NIGHT_FILE`
 - `PREDICTION_MARKET_CONTEXT_SNAPSHOT_ID`
 - `PREDICTION_MARKET_CONTEXT_SNAPSHOT_HASH`
-- `NODE_OPTIONS=--require=.../prediction_market_context_preload.js`
 
 在非每日預測 Action 的一般指令中，不會自動抓取市場快照，避免回填、測試及其他維護流程意外抓取現在資料。
+
+### 5.1 GitHub Actions 安全限制
+
+正式版本不會透過 `GITHUB_ENV` 設定 `NODE_OPTIONS`，也不再使用 `prediction_market_context_preload.js`。市場環境與市場風險腳本本身原生支援 `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE`，避免 GitHub Actions 封鎖受限制環境變數。
+
 
 ---
 
@@ -165,11 +169,12 @@ scripts/capture_prediction_market_context.js
 ### 6.1 市場環境
 
 ```text
-scripts/prediction_market_context_preload.js
+scripts/market_environment_lib.js
+scripts/generate_market_environment.js
 scripts/rebind_prediction_market_environment.js
 ```
 
-`generate_market_environment.js` 執行時會讀取預測當下外部市場快照，而不是之後更新的正式日資料。
+`market_environment_lib.js` 會在存在 `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE` 時直接選用不可變盤中快照；`generate_market_environment.js` 完成後再原生綁定快照 ID、hash 與資料新鮮度，不依賴 preload。
 
 完成後，`market_environment.json` 會記錄：
 
@@ -182,11 +187,11 @@ scripts/rebind_prediction_market_environment.js
 ### 6.2 市場風險
 
 ```text
-scripts/prediction_market_context_preload.js
+scripts/generate_market_risk_snapshot.js
 scripts/rebind_prediction_market_risk.js
 ```
 
-`generate_market_risk_snapshot.js` 會使用同一份預測當下外部市場快照計算風險，不會混用稍早或稍晚的正式日資料。
+`generate_market_risk_snapshot.js` 原生辨識 `PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE`，直接使用同一份預測當下外部市場快照計算風險，完成後再記錄不可變來源，不會混用稍早或稍晚的正式日資料。
 
 ### 6.3 跌深反彈準備度
 
