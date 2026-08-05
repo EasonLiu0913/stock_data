@@ -9,7 +9,7 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const TAG_EXPRESSION_ENTRYPOINT = 'prediction-tag-strategy-expression-semantics.js?v=1';
 const FORMULA_BUILDER_ENTRYPOINT = 'prediction-formula-builder.js?v=1';
 const TARGETS = Object.freeze({
-  'prediction-dashboard.html': TAG_EXPRESSION_ENTRYPOINT,
+  'prediction-dashboard.html': FORMULA_BUILDER_ENTRYPOINT,
   'prediction-groups.html': TAG_EXPRESSION_ENTRYPOINT,
   'prediction-industry-dashboard.html': TAG_EXPRESSION_ENTRYPOINT,
   'prediction-replay-dashboard-view.html': 'prediction-replay-tag-strategy-enhancement.js?v=2',
@@ -31,16 +31,27 @@ function legacyPredictionScriptPattern() {
   return /<script\s+src=["']prediction-tag-strategy-enhancement\.js(?:\?[^"']*)?["']\s*><\/script>/i;
 }
 
+function dashboardLegacyTagUiPattern() {
+  return /[ \t]*<script\s+src=["']prediction-(?:tag-strategy-enhancement|tag-strategy-expression-semantics)\.js(?:\?[^"']*)?["']\s*><\/script>\s*/gi;
+}
+
+function removeDashboardLegacyTagUi(html) {
+  return html.replace(dashboardLegacyTagUiPattern(), '\n');
+}
+
 function injectScript(html, script) {
+  let updated = script === FORMULA_BUILDER_ENTRYPOINT
+    ? removeDashboardLegacyTagUi(html)
+    : html;
   const pattern = scriptPattern(script);
   const tag = `<script src="${script}"></script>`;
-  if (pattern.test(html)) return html.replace(pattern, tag);
-  if (script === TAG_EXPRESSION_ENTRYPOINT && legacyPredictionScriptPattern().test(html)) {
-    return html.replace(legacyPredictionScriptPattern(), tag);
+  if (pattern.test(updated)) return updated.replace(pattern, tag);
+  if (script === TAG_EXPRESSION_ENTRYPOINT && legacyPredictionScriptPattern().test(updated)) {
+    return updated.replace(legacyPredictionScriptPattern(), tag);
   }
-  if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `  ${tag}\n</body>`);
-  if (/<\/html>/i.test(html)) return html.replace(/<\/html>/i, `${tag}\n</html>`);
-  return `${html.trimEnd()}\n${tag}\n`;
+  if (/<\/body>/i.test(updated)) return updated.replace(/<\/body>/i, `  ${tag}\n</body>`);
+  if (/<\/html>/i.test(updated)) return updated.replace(/<\/html>/i, `${tag}\n</html>`);
+  return `${updated.trimEnd()}\n${tag}\n`;
 }
 
 function injectScripts(html, scripts) {
@@ -183,6 +194,8 @@ module.exports = {
   GROUP_EXPERIMENT_MARKER,
   scriptPattern,
   legacyPredictionScriptPattern,
+  dashboardLegacyTagUiPattern,
+  removeDashboardLegacyTagUi,
   injectScript,
   injectScripts,
   injectPageAdapter,
