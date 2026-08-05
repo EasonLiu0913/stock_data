@@ -4,6 +4,8 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const STRATEGY_ENGINE_VERSION = 2;
+
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
@@ -131,7 +133,10 @@ function validateRegistry(registry) {
 
 function registryFingerprint(registry) {
   validateRegistry(registry);
-  return crypto.createHash('sha256').update(JSON.stringify(registry)).digest('hex').slice(0, 16);
+  return crypto.createHash('sha256').update(JSON.stringify({
+    strategy_engine_version: STRATEGY_ENGINE_VERSION,
+    registry,
+  })).digest('hex').slice(0, 16);
 }
 
 function evaluateStock(stock, registry) {
@@ -231,6 +236,7 @@ function buildSnapshot(payload, registry, options = {}) {
 
   return {
     schema_version: 3,
+    strategy_engine_version: STRATEGY_ENGINE_VERSION,
     registry_id: registry.registry_id,
     registry_fingerprint: registryFingerprint(registry),
     forecast_date: payload.forecast_date || options.forecastDate || null,
@@ -252,6 +258,7 @@ function loadRegistry(root = path.resolve(__dirname, '..')) {
 }
 
 module.exports = {
+  STRATEGY_ENGINE_VERSION,
   getPath,
   firstDefined,
   finiteNumber,
