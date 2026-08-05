@@ -1,0 +1,196 @@
+name: '[08 研究分析] 第四輪 Walk-Forward 與尾部風險候選策略'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-candidate-registry-round-4.json'
+      - 'scripts/round_4_walk_forward_research_lib.js'
+      - 'scripts/generate_round_4_walk_forward_research.js'
+      - 'tests/round_4_walk_forward_research.test.js'
+      - '.github/workflows/round-4-walk-forward-research.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-candidate-registry-round-4.json'
+      - 'scripts/round_4_walk_forward_research_lib.js'
+      - 'scripts/generate_round_4_walk_forward_research.js'
+      - 'tests/round_4_walk_forward_research.test.js'
+      - '.github/workflows/round-4-walk-forward-research.yml'
+  workflow_dispatch:
+    inputs:
+      prediction_date:
+        description: '股票母體預測日期 YYYYMMDD；留空使用最新有效預測'
+        required: false
+        type: string
+      cutoff:
+        description: '研究資料截止日 YYYYMMDD；不得晚於預測 base_trade_date'
+        required: false
+        type: string
+      max_files:
+        description: '最多讀取幾個價量與融資交易日'
+        required: true
+        type: number
+        default: 80
+
+permissions:
+  contents: write
+
+concurrency:
+  group: round-4-walk-forward-research-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate fourth-round research engine
+        run: |
+          set -euo pipefail
+          node --check scripts/round_4_walk_forward_research_lib.js
+          node --check scripts/generate_round_4_walk_forward_research.js
+          node --test tests/round_4_walk_forward_research.test.js
+          node - <<'NODE'
+          const registry = require('./config/strategy-candidate-registry-round-4.json');
+          if (registry.status !== 'research_only') throw new Error('Fourth-round registry must remain research_only');
+          if (registry.cooldown_trading_days !== 5) throw new Error('Expected five-trading-day cooldown');
+          if (registry.walk_forward?.purge_days !== 5) throw new Error('Expected five-trading-day purge gap');
+          const definitions = registry.candidate_definitions || [];
+          const ids = definitions.map(item => item.candidate_id);
+          if (!definitions.length || new Set(ids).size !== ids.length) throw new Error('Missing or duplicate candidate IDs');
+          for (const definition of definitions) {
+            if (!definition.base_candidate_id) throw new Error(`Base candidate missing: ${definition.candidate_id}`);
+            if (!definition.promotion_gate) throw new Error(`Promotion gate missing: ${definition.candidate_id}`);
+          }
+          NODE
+      - name: Confirm workflow and formal strategy isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const text = fs.readFileSync('.github/workflows/round-4-walk-forward-research.yml', 'utf8');
+          const forbiddenEvent = ['workflow', 'run'].join('_');
+          const forbiddenDeploy = ['deploy', 'pages.yml'].join('-');
+          const localWorkflowCall = /uses:\s*\.\/.github\/workflows\//;
+          if (text.includes(forbiddenEvent) || text.includes(forbiddenDeploy) || localWorkflowCall.test(text)) {
+            throw new Error('Fourth-round research must not chain workflows or deploy Pages');
+          }
+          NODE
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            git fetch origin main
+            if ! git diff --quiet origin/main...HEAD -- config/strategy-tag-registry.json; then
+              echo 'Fourth-round research must not modify the formal strategy registry.' >&2
+              git diff origin/main...HEAD -- config/strategy-tag-registry.json
+              exit 1
+            fi
+          fi
+      - name: Generate rolling walk-forward and tail-risk research
+        env:
+          INPUT_PREDICTION_DATE: ${{ inputs.prediction_date }}
+          INPUT_CUTOFF: ${{ inputs.cutoff }}
+          INPUT_MAX_FILES: ${{ inputs.max_files }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--max-files "${INPUT_MAX_FILES:-80}")
+          if [ -n "${INPUT_PREDICTION_DATE:-}" ]; then args+=(--prediction-date "$INPUT_PREDICTION_DATE"); fi
+          if [ -n "${INPUT_CUTOFF:-}" ]; then args+=(--cutoff "$INPUT_CUTOFF"); fi
+          node scripts/generate_round_4_walk_forward_research.js "${args[@]}" \
+            | tee /tmp/round-4-walk-forward-research-result.json
+      - name: Verify walk-forward, tail-risk, and leakage safeguards
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/round-4-walk-forward-research-result.json', 'utf8'));
+          if (!result.output_file || !fs.existsSync(result.output_file)) throw new Error('Full fourth-round output missing');
+          if (!result.summary_file || !fs.existsSync(result.summary_file)) throw new Error('Compact fourth-round summary missing');
+          const payload = JSON.parse(fs.readFileSync(result.output_file, 'utf8'));
+          const summary = JSON.parse(fs.readFileSync(result.summary_file, 'utf8'));
+          if (payload.research_id !== 'round_4_walk_forward_tail_risk_candidate_study_v1') throw new Error('Unexpected research ID');
+          if (payload.candidate_registry_status !== 'research_only') throw new Error('Registry escaped research-only status');
+          if (payload.leakage_guard?.signal_features_use_dates_lte_signal_date !== true) throw new Error('Signal leakage guard missing');
+          if (payload.leakage_guard?.candidate_selector_runs_before_candidate_cooldown !== true) throw new Error('Selector/cooldown order guard missing');
+          if (payload.leakage_guard?.walk_forward_purge_days !== 5) throw new Error('Walk-forward purge gap is not five days');
+          if (payload.leakage_guard?.walk_forward_test_windows_overlap !== false) throw new Error('Test windows must not overlap');
+          if (payload.leakage_guard?.random_split_used !== false) throw new Error('Random split must not be used');
+          if (payload.leakage_guard?.formal_strategy_registry_modified !== false) throw new Error('Formal strategy isolation missing');
+          if (payload.leakage_guard?.automatic_formal_promotion_enabled !== false) throw new Error('Automatic formal promotion must remain disabled');
+          if (!Array.isArray(payload.walk_forward_folds) || payload.walk_forward_folds.length < 2) throw new Error('Insufficient walk-forward folds');
+          const testDates = [];
+          for (const fold of payload.walk_forward_folds) {
+            const start = payload.eligible_signal_dates.indexOf(fold.test[0]);
+            const end = payload.eligible_signal_dates.indexOf(fold.test[1]);
+            if (start < 0 || end < start) throw new Error(`Invalid test boundaries: ${fold.fold_id}`);
+            testDates.push(...payload.eligible_signal_dates.slice(start, end + 1));
+          }
+          if (new Set(testDates).size !== testDates.length) throw new Error('Walk-forward test dates overlap');
+          const expectedIds = [
+            'margin_crowding_breakdown_risk_v3',
+            'margin_crowding_panic_rebound_v1',
+            'margin_exit_tail_filtered_v2',
+            'strong_pullback_recovery_confirmation_v2',
+            'bull_breakout_tail_control_v2',
+          ];
+          for (const id of expectedIds) {
+            const candidate = payload.summaries?.[id];
+            if (!candidate) throw new Error(`Candidate summary missing: ${id}`);
+            if (!summary.summaries?.[id]) throw new Error(`Compact candidate summary missing: ${id}`);
+            if (!candidate.promotion_assessment) throw new Error(`Promotion assessment missing: ${id}`);
+            if (!Array.isArray(candidate.folds) || candidate.folds.length !== payload.walk_forward_folds.length) {
+              throw new Error(`Fold summaries missing: ${id}`);
+            }
+            for (const field of ['return_5d_p10_pct', 'return_5d_p05_pct', 'cvar_5pct_return_5d_pct', 'extreme_loss_rate_pct']) {
+              if (!(field in candidate.walk_forward_test)) throw new Error(`Tail metric missing: ${id}/${field}`);
+            }
+          }
+          const orderedDates = payload.eligible_signal_dates || [];
+          const dateIndex = new Map(orderedDates.map((date, index) => [date, index]));
+          const last = new Map();
+          for (const event of payload.events) {
+            const key = `${event.candidate_id}::${event.stock_code}`;
+            const current = dateIndex.get(event.signal_date);
+            const previous = last.get(key);
+            if (Number.isInteger(previous) && Number.isInteger(current) && current - previous < payload.cooldown_trading_days) {
+              throw new Error(`Candidate cooldown violation: ${key}/${event.signal_date}`);
+            }
+            if (event.outcome?.max_adverse_excursion_5d_pct === undefined) throw new Error('Missing adverse excursion');
+            last.set(key, current);
+          }
+          if (summary.events !== undefined || summary.cooldown_suppressed_events !== undefined) {
+            throw new Error('Compact summary contains event rows');
+          }
+          if (summary.independent_event_count !== payload.events.length) throw new Error('Independent event count mismatch');
+          if (summary.cooldown_suppressed_count !== payload.cooldown_suppressed_events.length) {
+            throw new Error('Suppressed event count mismatch');
+          }
+          console.log(`Verified ${payload.walk_forward_folds.length} walk-forward folds and ${payload.events.length} independent fourth-round events.`);
+          NODE
+      - name: Commit fourth-round research output
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_research/strategy-factors/round-4
+          if git diff --cached --quiet; then
+            echo 'No fourth-round research changes'
+            exit 0
+          fi
+          cutoff=$(node -e "const r=require('/tmp/round-4-walk-forward-research-result.json');process.stdout.write(r.cutoff_date)")
+          git commit -m "data: update round-four walk-forward research ${cutoff}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
