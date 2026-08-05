@@ -1,0 +1,207 @@
+name: '[08 研究分析] 第五輪條件消融與市場產業廣度'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-candidate-registry-round-5.json'
+      - 'scripts/round_5_factor_refinement_lib.js'
+      - 'scripts/generate_round_5_factor_refinement.js'
+      - 'tests/round_5_factor_refinement.test.js'
+      - '.github/workflows/round-5-factor-refinement.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-candidate-registry-round-5.json'
+      - 'scripts/round_5_factor_refinement_lib.js'
+      - 'scripts/generate_round_5_factor_refinement.js'
+      - 'tests/round_5_factor_refinement.test.js'
+      - '.github/workflows/round-5-factor-refinement.yml'
+  workflow_dispatch:
+    inputs:
+      prediction_date:
+        description: '股票母體預測日期 YYYYMMDD；留空使用最新有效預測'
+        required: false
+        type: string
+      cutoff:
+        description: '研究資料截止日 YYYYMMDD；不得晚於預測 base_trade_date'
+        required: false
+        type: string
+      max_files:
+        description: '最多讀取幾個價量與融資交易日'
+        required: true
+        type: number
+        default: 160
+
+permissions:
+  contents: write
+
+concurrency:
+  group: round-5-factor-refinement-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate fifth-round research engine
+        run: |
+          set -euo pipefail
+          node --check scripts/round_5_factor_refinement_lib.js
+          node --check scripts/generate_round_5_factor_refinement.js
+          node --test tests/round_5_factor_refinement.test.js
+          node - <<'NODE'
+          const registry = require('./config/strategy-candidate-registry-round-5.json');
+          if (registry.status !== 'research_only') throw new Error('Fifth-round registry must remain research_only');
+          if (registry.cooldown_trading_days !== 5) throw new Error('Expected five-trading-day cooldown');
+          if (registry.walk_forward?.purge_days !== 5) throw new Error('Expected five-trading-day purge gap');
+          const definitions = registry.candidate_definitions || [];
+          const ids = definitions.map(item => item.candidate_id);
+          if (definitions.length !== 12) throw new Error(`Expected 12 definitions, received ${definitions.length}`);
+          if (new Set(ids).size !== ids.length) throw new Error('Duplicate fifth-round candidate IDs');
+          const ablations = definitions.filter(item => item.analysis_role === 'ablation');
+          const breadth = definitions.filter(item => item.analysis_role === 'breadth_variant');
+          if (ablations.length !== 6) throw new Error('Expected one reference plus five pullback ablations');
+          if (breadth.length !== 3) throw new Error('Expected three breakout breadth variants');
+          NODE
+
+      - name: Confirm workflow and formal strategy isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const text = fs.readFileSync('.github/workflows/round-5-factor-refinement.yml', 'utf8');
+          const forbiddenEvent = ['workflow', 'run'].join('_');
+          const forbiddenDeploy = ['deploy', 'pages.yml'].join('-');
+          const localWorkflowCall = /uses:\s*\.\/.github\/workflows\//;
+          if (text.includes(forbiddenEvent) || text.includes(forbiddenDeploy) || localWorkflowCall.test(text)) {
+            throw new Error('Fifth-round research must not chain workflows or deploy Pages');
+          }
+          NODE
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            git fetch origin main
+            if ! git diff --quiet origin/main...HEAD -- config/strategy-tag-registry.json; then
+              echo 'Fifth-round research must not modify the formal strategy registry.' >&2
+              git diff origin/main...HEAD -- config/strategy-tag-registry.json
+              exit 1
+            fi
+          fi
+
+      - name: Generate ablation, direction-reversal, and breadth research
+        env:
+          INPUT_PREDICTION_DATE: ${{ inputs.prediction_date }}
+          INPUT_CUTOFF: ${{ inputs.cutoff }}
+          INPUT_MAX_FILES: ${{ inputs.max_files }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--max-files "${INPUT_MAX_FILES:-160}")
+          if [ -n "${INPUT_PREDICTION_DATE:-}" ]; then args+=(--prediction-date "$INPUT_PREDICTION_DATE"); fi
+          if [ -n "${INPUT_CUTOFF:-}" ]; then args+=(--cutoff "$INPUT_CUTOFF"); fi
+          node scripts/generate_round_5_factor_refinement.js "${args[@]}" \
+            | tee /tmp/round-5-factor-refinement-result.json
+
+      - name: Verify research output and safeguards
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/round-5-factor-refinement-result.json', 'utf8'));
+          if (!result.output_file || !fs.existsSync(result.output_file)) throw new Error('Full fifth-round output missing');
+          if (!result.summary_file || !fs.existsSync(result.summary_file)) throw new Error('Compact fifth-round summary missing');
+          const payload = JSON.parse(fs.readFileSync(result.output_file, 'utf8'));
+          const summary = JSON.parse(fs.readFileSync(result.summary_file, 'utf8'));
+          if (payload.research_id !== 'round_5_factor_refinement_ablation_breadth_study_v1') {
+            throw new Error('Unexpected fifth-round research ID');
+          }
+          if (payload.candidate_registry_status !== 'research_only') throw new Error('Registry escaped research-only status');
+          if (payload.source_file_count?.price < 80) throw new Error('Insufficient price history');
+          if (payload.source_file_count?.margin_failures !== 0) throw new Error('Margin source failures detected');
+          if (!Array.isArray(payload.walk_forward_folds) || payload.walk_forward_folds.length < 3) {
+            throw new Error('Insufficient walk-forward folds');
+          }
+          const guard = payload.leakage_guard || {};
+          if (guard.signal_features_use_dates_lte_signal_date !== true) throw new Error('Signal leakage guard missing');
+          if (guard.breadth_uses_signal_date_cross_section_only !== true) throw new Error('Breadth leakage guard missing');
+          if (guard.direction_reversal_reuses_prior_selector_without_retuning !== true) {
+            throw new Error('Direction-reversal selector guard missing');
+          }
+          if (guard.walk_forward_purge_days !== 5 || guard.walk_forward_test_windows_overlap !== false) {
+            throw new Error('Walk-forward purge or overlap guard failed');
+          }
+          if (guard.formal_strategy_registry_modified !== false || guard.automatic_formal_promotion_enabled !== false) {
+            throw new Error('Formal strategy isolation failed');
+          }
+          const expectedIds = [
+            'margin_crowding_breakdown_relative_resilience_v1',
+            'margin_crowding_capitulation_continuation_risk_v1',
+            'margin_exit_tail_filtered_watch_v2',
+            'strong_pullback_recovery_full_reference_v2',
+            'strong_pullback_ablation_without_positive_day_v1',
+            'strong_pullback_ablation_without_sma20_band_v1',
+            'strong_pullback_ablation_without_market_strength_v1',
+            'strong_pullback_ablation_without_drawdown_guard_v1',
+            'strong_pullback_ablation_without_volatility_guard_v1',
+            'bull_breakout_market_breadth_v3',
+            'bull_breakout_industry_sync_v3',
+            'bull_breakout_combined_breadth_v3',
+          ];
+          for (const id of expectedIds) {
+            if (!payload.summaries?.[id] || !summary.summaries?.[id]) {
+              throw new Error(`Candidate summary missing: ${id}`);
+            }
+          }
+          const ablation = payload.ablation_comparison?.strong_pullback_recovery_v2;
+          if (!ablation || ablation.rows?.length !== 6) throw new Error('Pullback ablation table is incomplete');
+          const breadth = payload.breadth_variant_comparison?.bull_breakout_breadth_v3;
+          if (!Array.isArray(breadth) || breadth.length !== 3) throw new Error('Breakout breadth comparison is incomplete');
+          const dateIndex = new Map((payload.eligible_signal_dates || []).map((date, index) => [date, index]));
+          const last = new Map();
+          for (const event of payload.events || []) {
+            const key = `${event.candidate_id}::${event.stock_code}`;
+            const current = dateIndex.get(event.signal_date);
+            const previous = last.get(key);
+            if (Number.isInteger(previous) && Number.isInteger(current)
+              && current - previous < payload.cooldown_trading_days) {
+              throw new Error(`Candidate cooldown violation: ${key}/${event.signal_date}`);
+            }
+            if (!event.signal?.breadth) throw new Error(`Breadth snapshot missing: ${key}/${event.signal_date}`);
+            last.set(key, current);
+          }
+          if (summary.events !== undefined || summary.cooldown_suppressed_events !== undefined) {
+            throw new Error('Compact summary contains event rows');
+          }
+          if (summary.independent_event_count !== payload.events.length) throw new Error('Independent event count mismatch');
+          console.log(`Verified ${payload.walk_forward_folds.length} folds, ${payload.events.length} events, 6 ablations, and 3 breadth variants.`);
+          NODE
+
+      - name: Commit fifth-round research output
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_research/strategy-factors/round-5
+          if git diff --cached --quiet; then
+            echo 'No fifth-round research changes'
+            exit 0
+          fi
+          cutoff=$(node -e "const r=require('/tmp/round-5-factor-refinement-result.json');process.stdout.write(r.cutoff_date)")
+          git commit -m "data: update round-five factor refinement research ${cutoff}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
