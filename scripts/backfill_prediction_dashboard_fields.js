@@ -14,6 +14,7 @@ const TAG_STRATEGY_ENGINE = path.join(__dirname, 'prediction_tag_strategy_engine
 const TAG_STRATEGY_REPLAY = path.join(__dirname, 'evaluate_tag_strategy_replay.js');
 const GROUP_SYNC = path.join(__dirname, 'sync_prediction_dashboard_groups.js');
 const OFFICIAL_CONSTRAINTS = path.join(__dirname, 'apply_official_market_constraints.js');
+const PREDICTION_CONTEXT_APPLIER = path.join(__dirname, 'apply_prediction_context_to_readiness.js');
 
 function compactDate(value) {
   const compact = String(value || '').replaceAll('-', '').replaceAll('/', '');
@@ -98,6 +99,20 @@ function replayFilesAvailable(date) {
   return ['replay-dashboard.json', 'replay-summary.json'].every(file => fs.existsSync(path.join(directory, file)));
 }
 
+function predictionContextAvailable(date) {
+  return fs.existsSync(path.join(ROOT, 'data_prediction_context', date, 'latest.json'));
+}
+
+function applyPredictionContext(date, dryRun = false) {
+  if (dryRun || !predictionContextAvailable(date)) return;
+  runNodeScript(
+    PREDICTION_CONTEXT_APPLIER,
+    ['--date', date],
+    'prediction market context integration',
+    date,
+  );
+}
+
 function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.help) {
@@ -112,6 +127,7 @@ function main(argv = process.argv.slice(2)) {
     const generatorArgs = ['--date', date];
     if (options.dryRun) generatorArgs.push('--dry-run');
     runNodeScript(GENERATOR, generatorArgs, 'dashboard backfill', date);
+    applyPredictionContext(date, options.dryRun);
 
     const taggerArgs = ['--date', date];
     if (options.dryRun) taggerArgs.push('--dry-run');
@@ -120,6 +136,7 @@ function main(argv = process.argv.slice(2)) {
     const constraintArgs = ['--date', date, '--evaluate-replay-if-present'];
     if (options.dryRun) constraintArgs.push('--dry-run');
     runNodeScript(OFFICIAL_CONSTRAINTS, constraintArgs, 'official market constraint integration', date);
+    applyPredictionContext(date, options.dryRun);
 
     const dispositionArgs = ['--date', date];
     if (options.dryRun) dispositionArgs.push('--dry-run');
@@ -157,5 +174,7 @@ module.exports = {
   parseArgs,
   selectDates,
   replayFilesAvailable,
+  predictionContextAvailable,
+  applyPredictionContext,
   main,
 };
