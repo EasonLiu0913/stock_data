@@ -7,6 +7,7 @@ on:
       - 'config/strategy-tag-registry.json'
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/strategy_tag_source_enrichment.js'
+      - 'scripts/historical_factor_research.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
@@ -38,10 +39,12 @@ on:
       - 'config/strategy-tag-registry.json'
       - 'scripts/strategy_tag_engine.js'
       - 'scripts/strategy_tag_source_enrichment.js'
+      - 'scripts/historical_factor_research.js'
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'tests/strategy_tag_engine.test.js'
       - 'tests/strategy_tag_source_enrichment.test.js'
+      - 'tests/historical_factor_research.test.js'
       - 'tests/apply_strategy_tag_registry.test.js'
       - 'tests/summarize_strategy_snapshot_manifest.test.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
@@ -71,11 +74,13 @@ jobs:
         run: |
           node --check scripts/strategy_tag_engine.js
           node --check scripts/strategy_tag_source_enrichment.js
+          node --check scripts/historical_factor_research.js
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --test \
             tests/strategy_tag_engine.test.js \
             tests/strategy_tag_source_enrichment.test.js \
+            tests/historical_factor_research.test.js \
             tests/apply_strategy_tag_registry.test.js \
             tests/summarize_strategy_snapshot_manifest.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
