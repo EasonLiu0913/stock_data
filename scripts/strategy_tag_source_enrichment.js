@@ -7,6 +7,7 @@ const {
   normalizePolicyState,
 } = require('./generate_actual_market_environment');
 const { enrichHistoricalFactorFeatures } = require('./historical_factor_research');
+const { enrichRound2HistoricalFactorFeatures } = require('./historical_factor_research_round_2');
 
 const POST_SHOCK_CODES = new Set(['post_shock_day_1', 'post_shock_day_2']);
 
@@ -297,10 +298,16 @@ function enrichBearMarketFeatures(payload, workspaceRoot, forecastDate) {
 }
 
 function enrichStrategyTagSources(payload, workspaceRoot, options = {}) {
+  const cutoff = earliestCutoff(payload, options.dataAsOf);
   const historicalFactors = enrichHistoricalFactorFeatures(
     payload,
     workspaceRoot,
-    earliestCutoff(payload, options.dataAsOf),
+    cutoff,
+  );
+  const historicalFactorsRound2 = enrichRound2HistoricalFactorFeatures(
+    payload,
+    workspaceRoot,
+    cutoff,
   );
   const marketEnvironment = enrichBearMarketFeatures(
     payload,
@@ -311,6 +318,7 @@ function enrichStrategyTagSources(payload, workspaceRoot, options = {}) {
   const disposition = enrichDispositionFeatures(payload, workspaceRoot, options.forecastDate);
   return {
     historical_factors_round_1: historicalFactors,
+    historical_factors_round_2: historicalFactorsRound2,
     market_environment: marketEnvironment,
     liquidity,
     disposition,
