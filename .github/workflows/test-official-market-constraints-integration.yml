@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - scripts/install_native_prediction_market_context_v2.js
+      - scripts/install_native_prediction_market_context_v3.js
       - scripts/market_environment_lib.js
       - scripts/generate_market_environment.js
       - scripts/generate_market_risk_snapshot.js
@@ -32,8 +32,8 @@ jobs:
 
       - name: Apply native migration in validation workspace
         run: |
-          node --check scripts/install_native_prediction_market_context_v2.js
-          node scripts/install_native_prediction_market_context_v2.js
+          node --check scripts/install_native_prediction_market_context_v3.js
+          node scripts/install_native_prediction_market_context_v3.js
 
       - name: Syntax and unit tests
         run: |
@@ -58,6 +58,7 @@ jobs:
           test ! -e scripts/run_prediction_market_environment.js
           test ! -e scripts/install_native_prediction_market_context.js
           test ! -e scripts/install_native_prediction_market_context_v2.js
+          test ! -e scripts/install_native_prediction_market_context_v3.js
           ! grep -q 'NODE_OPTIONS=' scripts/resolve_forecast_dates.js
           node --test \
             tests/prediction_market_context.test.js \
