@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "registry_id": "prediction_strategy_candidate_registry_round_4_v1",
+  "status": "research_only",
+  "description": "第四輪研究候選：rolling walk-forward、尾部風險、融資擁擠情境拆分與既有候選風險控制。",
+  "cooldown_trading_days": 5,
+  "market_regime": {
+    "lookback_trading_days": 20,
+    "bull_min_return_pct": 3,
+    "bear_max_return_pct": -3,
+    "benchmark_preference": [
+      "0050",
+      "cross_section_median"
+    ]
+  },
+  "walk_forward": {
+    "initial_train_days": 20,
+    "purge_days": 5,
+    "validation_days": 10,
+    "test_days": 5,
+    "step_days": 5
+  },
+  "tail_risk": {
+    "signal_lookback_days": 20,
+    "outcome_horizon_days": 5,
+    "extreme_loss_threshold_pct": -8,
+    "severe_adverse_excursion_threshold_pct": -10
+  },
+  "candidate_definitions": [
+    {
+      "candidate_id": "margin_crowding_breakdown_risk_v3",
+      "family_id": "margin_crowding_breakdown_risk",
+      "version": 3,
+      "label": "融資擁擠破位風險",
+      "kind": "atomic_tag",
+      "objective": "risk_filter",
+      "base_candidate_id": "margin_crowding_weakening_v2",
+      "selector": {
+        "all": [
+          { "path": "signal.metrics.margin_crowding_weakening_price_return_5d_pct", "op": "between", "min": -6, "max": -2 },
+          { "path": "signal.metrics.margin_crowding_weakening_sma20_gap_pct", "op": "between", "min": -8, "max": -1 },
+          { "path": "signal.metrics.margin_crowding_weakening_latest_return_1d_pct", "op": "between", "min": -4, "max": 0, "max_inclusive": false },
+          { "path": "signal.metrics.market_excess_return_20d_pct", "op": "lte", "value": 0 },
+          { "path": "signal.risk.realized_volatility_20d_pct", "op": "lte", "value": 8 }
+        ]
+      },
+      "promotion_gate": {
+        "min_total_events": 40,
+        "min_test_events_per_fold": 8,
+        "min_eligible_test_folds": 2,
+        "min_successful_test_folds": 2,
+        "max_walk_forward_test_average_excess_return_5d_pct": -0.25,
+        "max_walk_forward_test_positive_excess_return_5d_rate_pct": 47
+      }
+    },
+    {
+      "candidate_id": "margin_crowding_panic_rebound_v1",
+      "family_id": "margin_crowding_panic_rebound",
+      "version": 1,
+      "label": "融資擁擠恐慌反彈候選",
+      "kind": "candidate_strategy",
+      "objective": "long_rebound",
+      "base_candidate_id": "margin_crowding_weakening_v2",
+      "selector": {
+        "all": [
+          { "path": "signal.metrics.margin_crowding_weakening_latest_return_1d_pct", "op": "lte", "value": -2 },
+          { "path": "signal.risk.max_drawdown_20d_pct", "op": "lte", "value": -12 },
+          { "path": "signal.risk.realized_volatility_20d_pct", "op": "gte", "value": 4 }
+        ],
+        "any": [
+          { "path": "signal.metrics.margin_crowding_weakening_price_return_5d_pct", "op": "lte", "value": -8 },
+          { "path": "signal.metrics.margin_crowding_weakening_sma20_gap_pct", "op": "lte", "value": -10 }
+        ]
+      },
+      "promotion_gate": {
+        "min_total_events": 30,
+        "min_test_events_per_fold": 6,
+        "min_eligible_test_folds": 2,
+        "min_successful_test_folds": 2,
+        "min_walk_forward_test_average_excess_return_5d_pct": 0.5,
+        "min_walk_forward_test_positive_excess_return_5d_rate_pct": 55,
+        "min_walk_forward_test_return_5d_p10_pct": -8,
+        "min_walk_forward_test_cvar_5pct_return_5d_pct": -12,
+        "max_walk_forward_test_extreme_loss_rate_pct": 25
+      }
+    },
+    {
+      "candidate_id": "margin_exit_tail_filtered_v2",
+      "family_id": "margin_exit_tail_filtered",
+      "version": 2,
+      "label": "融資退場抗跌尾部控制候選",
+      "kind": "candidate_strategy",
+      "objective": "long_relative",
+      "base_candidate_id": "margin_exit_relative_resilience_candidate_v1",
+      "allowed_market_regimes": ["bull"],
+      "selector": {
+        "all": [
+          { "path": "signal.metrics.trend_r2", "op": "gte", "value": 0.45 },
+          { "path": "signal.metrics.trend_slope_pct_per_day", "op": "gt", "value": 0 },
+          { "path": "signal.metrics.market_excess_return_20d_pct", "op": "gte", "value": 0 },
+          { "path": "signal.risk.max_drawdown_20d_pct", "op": "gte", "value": -12 },
+          { "path": "signal.risk.realized_volatility_20d_pct", "op": "lte", "value": 6 },
+          { "path": "signal.risk.sma20_gap_pct", "op": "gte", "value": -1 }
+        ]
+      },
+      "promotion_gate": {
+        "min_total_events": 40,
+        "min_test_events_per_fold": 8,
+        "min_eligible_test_folds": 2,
+        "min_successful_test_folds": 2,
+        "min_walk_forward_test_average_excess_return_5d_pct": 0.5,
+        "min_walk_forward_test_positive_excess_return_5d_rate_pct": 55,
+        "min_walk_forward_test_return_5d_p10_pct": -6,
+        "min_walk_forward_test_cvar_5pct_return_5d_pct": -10,
+        "max_walk_forward_test_extreme_loss_rate_pct": 15
+      }
+    },
+    {
+      "candidate_id": "strong_pullback_recovery_confirmation_v2",
+      "family_id": "strong_pullback_recovery_confirmation",
+      "version": 2,
+      "label": "強勢量縮回檔止跌確認候選",
+      "kind": "candidate_strategy",
+      "objective": "long_relative",
+      "base_candidate_id": "strong_pullback_quality_candidate_v1",
+      "allowed_market_regimes": ["bull"],
+      "selector": {
+        "all": [
+          { "path": "signal.risk.latest_return_1d_pct", "op": "gt", "value": 0 },
+          { "path": "signal.risk.sma20_gap_pct", "op": "between", "min": 0, "max": 5 },
+          { "path": "signal.metrics.market_excess_return_20d_pct", "op": "gte", "value": 0 },
+          { "path": "signal.risk.max_drawdown_20d_pct", "op": "gte", "value": -12 },
+          { "path": "signal.risk.realized_volatility_20d_pct", "op": "lte", "value": 6 }
+        ]
+      },
+      "promotion_gate": {
+        "min_total_events": 30,
+        "min_test_events_per_fold": 6,
+        "min_eligible_test_folds": 2,
+        "min_successful_test_folds": 2,
+        "min_walk_forward_test_average_excess_return_5d_pct": 0.5,
+        "min_walk_forward_test_positive_excess_return_5d_rate_pct": 55,
+        "min_walk_forward_test_return_5d_p10_pct": -6,
+        "min_walk_forward_test_cvar_5pct_return_5d_pct": -10,
+        "max_walk_forward_test_extreme_loss_rate_pct": 15
+      }
+    },
+    {
+      "candidate_id": "bull_breakout_tail_control_v2",
+      "family_id": "bull_breakout_tail_control",
+      "version": 2,
+      "label": "牛市放量突破尾部控制候選",
+      "kind": "candidate_strategy",
+      "objective": "long_relative",
+      "base_candidate_id": "breakout_quality_confirmation_candidate_v1",
+      "allowed_market_regimes": ["bull"],
+      "selector": {
+        "all": [
+          { "path": "signal.metrics.market_excess_return_20d_pct", "op": "gte", "value": 0 },
+          { "path": "signal.metrics.price_return_20d_pct", "op": "lte", "value": 30 },
+          { "path": "signal.risk.sma20_gap_pct", "op": "lte", "value": 15 },
+          { "path": "signal.risk.max_drawdown_20d_pct", "op": "gte", "value": -10 },
+          { "path": "signal.risk.realized_volatility_20d_pct", "op": "lte", "value": 7 }
+        ]
+      },
+      "promotion_gate": {
+        "min_total_events": 30,
+        "min_test_events_per_fold": 6,
+        "min_eligible_test_folds": 2,
+        "min_successful_test_folds": 2,
+        "min_walk_forward_test_average_excess_return_5d_pct": 0.5,
+        "min_walk_forward_test_positive_excess_return_5d_rate_pct": 55,
+        "min_walk_forward_test_return_5d_p10_pct": -6,
+        "min_walk_forward_test_cvar_5pct_return_5d_pct": -10,
+        "max_walk_forward_test_extreme_loss_rate_pct": 15
+      }
+    }
+  ]
+}
