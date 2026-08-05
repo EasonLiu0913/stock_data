@@ -92,6 +92,89 @@ uses: ./.github/workflows/
 
 Confirm that the change does not create a second deployment path or duplicate an existing reusable workflow.
 
+## GitHub Pages frontend data paths
+
+These rules apply whenever a page under `public/**` reads repository data at runtime.
+
+### Repository root and Pages URL mapping
+
+GitHub Pages serves this repository below `/stock_data`:
+
+```text
+repository: data_fubon/files.json
+Pages URL: /stock_data/data_fubon/files.json
+
+repository: public/foreign.html
+Pages URL: /stock_data/public/foreign.html
+```
+
+Data directories such as `data_fubon`, `data_predictions`, `data_prediction_analysis`, `normalized_*`, and `config` remain at the published site root. Do not incorrectly place them below `/public` or request them through `/stock_data/public/data_*`.
+
+For pages that support both GitHub Pages and local viewing, preserve the established base-path pattern:
+
+```js
+const isGitHubPages = window.location.hostname.includes('github.io');
+const basePath = isGitHubPages ? '/stock_data' : '..';
+```
+
+A runtime request should therefore use a repository-root path such as:
+
+```js
+fetch(`${basePath}/data_fubon/files.json`);
+```
+
+### Dynamic paths must be packaged explicitly
+
+Do not assume the Pages dependency scanner can discover only literal paths. Template strings and dynamically assembled requests such as these are deployment dependencies:
+
+```js
+`${basePath}/data_fubon/files.json`
+`${basePath}/data_fubon/fubon_${date}_institutional.json`
+```
+
+When adding or changing a runtime data path:
+
+1. Confirm `.github/workflows/deploy-pages.yml` discovers its root directory.
+2. Confirm the directory is copied into `_site`.
+3. Add a deployment assertion for the required manifest or representative file when the page depends on it.
+4. Keep the dynamic dependency scanner and its self-test working.
+5. Test the final Pages-shaped path, not only the repository file path.
+
+For a page driven by a manifest such as `files.json`, deployment must include both the manifest and every file that the manifest can direct the page to load. Publishing the HTML without its runtime data is a deployment failure.
+
+### Never hide a missing deployment dependency with today's date
+
+A failed manifest request must not silently replace an explicitly requested date with the browser's current date. That behavior previously caused a URL requesting `date=20260804` to attempt loading `fubon_20260805_institutional.json` after `/data_fubon/files.json` was omitted from the Pages artifact.
+
+Required behavior:
+
+- Preserve a valid date supplied in the URL while loading dependencies.
+- If the manifest cannot be loaded, show the actual manifest/path error.
+- Do not present a generated "today" option as though it were available data.
+- Do not request a dated file unless that date came from the successfully loaded manifest or another verified source.
+
+### Required checks before changing public data loading or Pages packaging
+
+Search `public/**` for all relevant forms, including:
+
+```text
+fetch(
+basePath
+data_fubon
+data_predictions
+data_prediction_analysis
+files.json
+```
+
+Then verify the generated artifact contains the exact requested resources, for example:
+
+```text
+_site/data_fubon/files.json
+_site/data_fubon/fubon_YYYYMMDD_institutional.json
+```
+
+Add or update a regression test whenever a path omission, date fallback, or Pages-only path problem is fixed. A repository file existing on `main` is not sufficient evidence that it exists in the deployed Pages artifact.
+
 ## Pages deployment performance rules
 
 - Validate only the requested target prediction or replay date during deployment.
