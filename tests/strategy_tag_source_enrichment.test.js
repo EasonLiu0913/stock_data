@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { calculateTrendQuality } = require('../scripts/historical_factor_research');
 const {
   enrichBearMarketFeatures,
   enrichDispositionFeatures,
@@ -57,6 +58,17 @@ function fixturePayload() {
     ],
   };
 }
+
+test('historical factor trend core executes inside required PR validation', () => {
+  const rows = Array.from({ length: 20 }, (_, index) => ({
+    date: `202607${String(index + 1).padStart(2, '0')}`,
+    close: 100 * (1.01 ** index),
+  }));
+  const result = calculateTrendQuality(rows);
+  assert.equal(result.available, true);
+  assert.equal(result.pass, true);
+  assert.equal(result.r2, 1);
+});
 
 test('liquidity uses 20-day traded-value median and market 30th percentile', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tag-liquidity-'));
@@ -151,9 +163,11 @@ test('combined enrichment stores all source metadata blocks', () => {
     forecastDate: '20260803',
     dataAsOf: '20260731',
   });
+  assert.ok(result.historical_factors_round_1);
   assert.equal(result.market_environment.calculation_status, 'completed');
   assert.equal(result.liquidity.calculation_status, 'completed');
   assert.equal(result.disposition.calculation_status, 'completed');
+  assert.ok(payload.strategy_tag_source_metadata.historical_factors_round_1);
   assert.ok(payload.strategy_tag_source_metadata.market_environment);
   assert.ok(payload.strategy_tag_source_metadata.liquidity);
   assert.ok(payload.strategy_tag_source_metadata.disposition);
