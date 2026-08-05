@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "registry_id": "prediction_strategy_candidate_registry_v1",
+  "status": "research_only",
+  "description": "第三輪候選標籤與策略；不得直接取代正式 strategy-tag registry。",
+  "cooldown_trading_days": 5,
+  "market_regime": {
+    "lookback_trading_days": 20,
+    "bull_min_return_pct": 3,
+    "bear_max_return_pct": -3,
+    "benchmark_preference": ["0050", "cross_section_median"]
+  },
+  "candidate_tags": [
+    {
+      "candidate_id": "margin_crowding_weakening_v2",
+      "family_id": "margin_crowding_weakening",
+      "version": 2,
+      "label": "融資擁擠後轉弱",
+      "kind": "atomic_tag",
+      "objective": "risk_filter",
+      "enabled": true,
+      "fixed_display": true,
+      "rule": {
+        "requires": ["margin_crowding_risk_v1"],
+        "price_return_5d_lte_pct": -2,
+        "close_below_sma20": true,
+        "latest_return_1d_lt_pct": 0
+      },
+      "promotion_gate": {
+        "min_validation_events": 30,
+        "min_test_events": 30,
+        "min_test_regime_events": 15,
+        "min_test_regimes": 2,
+        "max_validation_average_excess_return_5d_pct": -0.25,
+        "max_test_average_excess_return_5d_pct": -0.5,
+        "max_test_positive_excess_return_5d_rate_pct": 45
+      }
+    }
+  ],
+  "candidate_strategies": [
+    {
+      "candidate_id": "margin_exit_relative_resilience_candidate_v1",
+      "family_id": "margin_exit_relative_resilience_candidate",
+      "version": 1,
+      "label": "融資退場相對抗跌候選",
+      "kind": "candidate_strategy",
+      "objective": "long_relative",
+      "enabled": true,
+      "fixed_display": true,
+      "expression": {
+        "all": ["margin_exit_price_resilience_v1"],
+        "any": [
+          "technical_trend_quality_20d_v1",
+          "relative_market_strength_20d_top20_v1",
+          "relative_industry_strength_20d_top20_v1",
+          "relative_leadership_persistence_7d_v1"
+        ],
+        "not": ["margin_crowding_weakening_v2"]
+      },
+      "promotion_gate": {
+        "min_validation_events": 30,
+        "min_test_events": 30,
+        "min_test_regime_events": 15,
+        "min_test_regimes": 2,
+        "min_validation_average_excess_return_5d_pct": 0,
+        "min_test_average_excess_return_5d_pct": 0.5,
+        "min_test_positive_excess_return_5d_rate_pct": 55
+      }
+    },
+    {
+      "candidate_id": "strong_pullback_quality_candidate_v1",
+      "family_id": "strong_pullback_quality_candidate",
+      "version": 1,
+      "label": "強勢量縮回檔品質候選",
+      "kind": "candidate_strategy",
+      "objective": "long_relative",
+      "enabled": true,
+      "fixed_display": true,
+      "expression": {
+        "all": [
+          "technical_strong_pullback_volume_contraction_v1",
+          "technical_trend_quality_20d_v1"
+        ],
+        "any": [
+          "technical_bullish_alignment_v1",
+          "relative_market_strength_20d_top20_v1",
+          "relative_industry_strength_20d_top20_v1"
+        ],
+        "not": ["margin_crowding_weakening_v2"]
+      },
+      "promotion_gate": {
+        "min_validation_events": 20,
+        "min_test_events": 20,
+        "min_test_regime_events": 10,
+        "min_test_regimes": 2,
+        "min_validation_average_excess_return_5d_pct": 0,
+        "min_test_average_excess_return_5d_pct": 0.5,
+        "min_test_positive_excess_return_5d_rate_pct": 55
+      }
+    },
+    {
+      "candidate_id": "breakout_quality_confirmation_candidate_v1",
+      "family_id": "breakout_quality_confirmation_candidate",
+      "version": 1,
+      "label": "放量突破品質確認候選",
+      "kind": "candidate_strategy",
+      "objective": "long_relative",
+      "enabled": true,
+      "fixed_display": true,
+      "expression": {
+        "all": [
+          "technical_volume_breakout_confirmation_v1",
+          "technical_trend_quality_20d_v1",
+          "technical_bullish_alignment_v1"
+        ],
+        "any": [
+          "relative_market_strength_20d_top20_v1",
+          "relative_industry_strength_20d_top20_v1",
+          "relative_leadership_persistence_7d_v1"
+        ],
+        "not": ["margin_crowding_weakening_v2"]
+      },
+      "promotion_gate": {
+        "min_validation_events": 20,
+        "min_test_events": 20,
+        "min_test_regime_events": 10,
+        "min_test_regimes": 2,
+        "min_validation_average_excess_return_5d_pct": 0,
+        "min_test_average_excess_return_5d_pct": 0.5,
+        "min_test_positive_excess_return_5d_rate_pct": 55
+      }
+    }
+  ]
+}
