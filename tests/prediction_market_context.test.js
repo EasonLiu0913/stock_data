@@ -2,6 +2,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const {
   selectRealtimeTxQuote,
   quoteTimestamp,
@@ -17,6 +20,8 @@ const {
   nightCondition,
   updatePayload,
 } = require('../scripts/apply_prediction_context_to_readiness');
+
+const ROOT = path.resolve(__dirname, '..');
 
 function chartPayload({ timestamps, close, open, high, low, volume, previousClose = 100, periods = null }) {
   return {
@@ -36,6 +41,20 @@ function chartPayload({ timestamps, close, open, high, low, volume, previousClos
       }],
     },
   };
+}
+
+function writeJson(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function preserveFile(file) {
+  return fs.existsSync(file) ? fs.readFileSync(file) : null;
+}
+
+function restoreFile(file, content) {
+  if (content === null) fs.rmSync(file, { force: true });
+  else fs.writeFileSync(file, content);
 }
 
 test('realtime TX selector chooses the liquid near-month quote', () => {
@@ -123,4 +142,96 @@ test('readiness payload replaces missing night data and recalculates score', () 
   assert.equal(updated.inputs.night_futures_change_pct, 2.1);
   assert.equal(updated.warnings.length, 0);
   assert.equal(updated.conditions.at(-1).status, 'full');
+});
+
+test('market risk generator reads and records the immutable prediction-time external snapshot', () => {
+  const baseDate = '20991230';
+  const forecastDate = '20991231';
+  const contextDir = path.join(ROOT, 'data_prediction_context', forecastDate);
+  const snapshotDir = path.join(contextDir, 'snapshots', 'test-risk-context');
+  const externalFile = path.join(snapshotDir, 'external-market.json');
+  const manifestFile = path.join(snapshotDir, 'manifest.json');
+  const latestFile = path.join(contextDir, 'latest.json');
+  const riskDir = path.join(ROOT, 'data_market_risk', baseDate);
+  const riskFile = path.join(riskDir, 'market_risk_snapshot.json');
+  const riskFilesIndex = path.join(ROOT, 'data_market_risk', 'files.json');
+  const riskManifest = path.join(ROOT, 'data_market_risk', 'manifest.json');
+  const filesBackup = preserveFile(riskFilesIndex);
+  const manifestBackup = preserveFile(riskManifest);
+  const relativeExternal = path.relative(ROOT, externalFile).replaceAll(path.sep, '/');
+  const relativeManifest = path.relative(ROOT, manifestFile).replaceAll(path.sep, '/');
+
+  try {
+    writeJson(externalFile, {
+      schemaVersion: 3,
+      snapshot_type: 'prediction_intraday',
+      generated_at: '2099-12-30T15:00:00.000Z',
+      observed_at: '2099-12-30T15:00:00.000Z',
+      collection_date: baseDate,
+      expected_market_date: baseDate,
+      primary_ready: true,
+      indicator_count: 8,
+      error_count: 0,
+      indicators: [
+        { id: 'nasdaq', symbol: '^IXIC', name: 'Nasdaq', category: 'us_equity', market_date: baseDate, close: 98, change_percent: -2 },
+        { id: 'sp500', symbol: '^GSPC', name: 'S&P 500', category: 'us_equity', market_date: baseDate, close: 99, change_percent: -1 },
+        { id: 'dow', symbol: '^DJI', name: 'Dow', category: 'us_equity', market_date: baseDate, close: 100, change_percent: 0 },
+        { id: 'sox', symbol: '^SOX', name: 'SOX', category: 'semiconductor', market_date: baseDate, close: 97, change_percent: -3 },
+        { id: 'tsm_adr', symbol: 'TSM', name: 'TSM ADR', category: 'semiconductor_adr', market_date: baseDate, close: 99, change_percent: -1 },
+        { id: 'usd_twd', symbol: 'TWD=X', name: 'USD/TWD', category: 'fx', market_date: baseDate, close: 32, change_percent: 0.5 },
+        { id: 'wti_crude_oil', symbol: 'CL=F', name: 'WTI', category: 'oil_futures', market_date: baseDate, close: 70, change_percent: 2 },
+        { id: 'brent_crude_oil', symbol: 'BZ=F', name: 'Brent', category: 'oil_futures', market_date: baseDate, close: 74, change_percent: 2.5 },
+      ],
+      errors: [],
+    });
+    writeJson(manifestFile, {
+      schema_version: 1,
+      snapshot_id: 'test-risk-context',
+      forecast_date: forecastDate,
+      base_trade_date: baseDate,
+      captured_at: '2099-12-30T15:00:00.000Z',
+      snapshot_hash: 'test-risk-hash',
+    });
+    writeJson(latestFile, {
+      schema_version: 1,
+      forecast_date: forecastDate,
+      base_trade_date: baseDate,
+      snapshot_id: 'test-risk-context',
+      snapshot_hash: 'test-risk-hash',
+      captured_at: '2099-12-30T15:00:00.000Z',
+      manifest_file: relativeManifest,
+      external_market_file: relativeExternal,
+      external_primary_ready: true,
+    });
+
+    const preload = path.join(ROOT, 'scripts', 'prediction_market_context_preload.js');
+    const result = spawnSync(process.execPath, [
+      path.join(ROOT, 'scripts', 'generate_market_risk_snapshot.js'),
+      '--date', baseDate,
+    ], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        FORECAST_TARGET_DATE: forecastDate,
+        FORECAST_BASE_DATE: baseDate,
+        PREDICTION_MARKET_CONTEXT_EXTERNAL_FILE: externalFile,
+        NODE_OPTIONS: `--require=${preload}`,
+      },
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const risk = JSON.parse(fs.readFileSync(riskFile, 'utf8'));
+    assert.equal(risk.source_files.external_market, relativeExternal);
+    assert.equal(risk.source_files.prediction_market_context, relativeManifest);
+    assert.equal(risk.prediction_market_context.snapshot_hash, 'test-risk-hash');
+    assert.equal(risk.data_freshness.status, 'intraday_live');
+    assert.ok(risk.external_market.external_market_risk_score > 0);
+    const nasdaq = risk.external_market.tracked_indicators.find((item) => item.id === 'nasdaq');
+    assert.equal(nasdaq.change_percent, -2);
+  } finally {
+    fs.rmSync(contextDir, { recursive: true, force: true });
+    fs.rmSync(riskDir, { recursive: true, force: true });
+    restoreFile(riskFilesIndex, filesBackup);
+    restoreFile(riskManifest, manifestBackup);
+  }
 });
