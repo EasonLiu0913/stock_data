@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="集中檢查所有股票策略的篩選規則、候選清單與歷史準確度。">
+  <title>策略總覽與驗證中心</title>
+  <link rel="stylesheet" href="strategy-review-center.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <nav class="breadcrumbs" aria-label="主要導覽">
+        <a href="index.html">工具首頁</a>
+        <a href="prediction-dashboard.html">預測 Dashboard</a>
+        <a href="prediction-replay-dashboard.html">覆盤 Dashboard</a>
+      </nav>
+      <div class="hero-copy">
+        <div>
+          <p class="eyebrow">Registry-driven strategy inspection</p>
+          <h1>策略總覽與驗證中心</h1>
+          <p>集中查看所有策略與觀察型標籤的篩選方式、指定日期候選、驗證結果及逐檔清單。策略名稱不寫死；新增或升版後會由 registry 自動進入本頁。</p>
+        </div>
+        <div class="hero-badge" id="registryBadge">Registry 載入中</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="control-panel" aria-labelledby="controlTitle">
+      <div>
+        <p class="section-kicker">查詢條件</p>
+        <h2 id="controlTitle">選擇檢查日期與資料視角</h2>
+      </div>
+      <div class="controls-grid">
+        <div class="date-control">
+          <label for="reviewDate">日期</label>
+          <div class="date-actions">
+            <button type="button" id="previousDate" class="icon-button" aria-label="上一個可用日期">‹</button>
+            <input id="reviewDate" type="date">
+            <button type="button" id="nextDate" class="icon-button" aria-label="下一個可用日期">›</button>
+          </div>
+        </div>
+        <div>
+          <label for="snapshotSelect">策略版本視角</label>
+          <select id="snapshotSelect"></select>
+        </div>
+        <div>
+          <label for="strategySearch">搜尋策略</label>
+          <input id="strategySearch" type="search" placeholder="策略名稱、ID、條件或標籤">
+        </div>
+        <div>
+          <label for="strategyType">顯示類型</label>
+          <select id="strategyType">
+            <option value="all">全部</option>
+            <option value="strategy">正式／固定策略</option>
+            <option value="observation">觀察型標籤</option>
+          </select>
+        </div>
+      </div>
+      <div class="data-note" id="dataNote" role="status">正在載入資料。</div>
+    </section>
+
+    <section class="summary-grid" id="summaryGrid" aria-label="整體摘要"></section>
+
+    <div class="workspace">
+      <aside class="strategy-pane" aria-labelledby="strategyListTitle">
+        <div class="pane-head">
+          <div>
+            <p class="section-kicker">自動同步 Registry</p>
+            <h2 id="strategyListTitle">策略清單</h2>
+          </div>
+          <span id="strategyCountBadge" class="count-badge">0</span>
+        </div>
+        <div id="strategyList" class="strategy-list"></div>
+      </aside>
+
+      <section class="detail-pane" aria-live="polite">
+        <div id="emptyDetail" class="empty-card">
+          <h2>請選擇一個策略</h2>
+          <p>左側會固定列出最新 registry 中的所有策略，以及指定日期快照內仍需保留的歷史版本。</p>
+        </div>
+
+        <div id="strategyDetail" hidden>
+          <section class="strategy-header-card">
+            <div class="strategy-title-row">
+              <div>
+                <div class="title-meta" id="selectedMeta"></div>
+                <h2 id="selectedTitle"></h2>
+                <p id="selectedDescription"></p>
+              </div>
+              <div id="selectedStatus" class="status-pill"></div>
+            </div>
+            <div class="rule-panel">
+              <div>
+                <h3>篩選方式</h3>
+                <p id="selectedRuleSummary"></p>
+              </div>
+              <div id="selectedRuleGroups" class="rule-groups"></div>
+              <p id="selectedHint" class="hint-text"></p>
+            </div>
+          </section>
+
+          <section class="metric-grid" id="metricGrid" aria-label="策略準確度"></section>
+
+          <section class="table-card">
+            <div class="table-toolbar">
+              <div>
+                <p class="section-kicker">候選與驗證明細</p>
+                <h2>股票清單</h2>
+              </div>
+              <div class="table-filters">
+                <label class="sr-only" for="stockSearch">搜尋股票</label>
+                <input id="stockSearch" type="search" placeholder="搜尋代碼、名稱、產業或標籤">
+                <label class="sr-only" for="resultFilter">驗證結果</label>
+                <select id="resultFilter">
+                  <option value="all">全部結果</option>
+                  <option value="hit">命中／風險印證</option>
+                  <option value="miss">未命中／風險未印證</option>
+                  <option value="pending">待驗證</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-meta" id="tableMeta"></div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th><button type="button" data-sort="result_rank">結果</button></th>
+                    <th><button type="button" data-sort="stock_code">代碼</button></th>
+                    <th><button type="button" data-sort="stock_name">名稱</button></th>
+                    <th><button type="button" data-sort="industry">產業</button></th>
+                    <th class="numeric"><button type="button" data-sort="candidate_score">分數</button></th>
+                    <th><button type="button" data-sort="direction">方向</button></th>
+                    <th class="numeric"><button type="button" data-sort="close_return">當日報酬</button></th>
+                    <th class="numeric"><button type="button" data-sort="return_5d_pct">五日報酬</button></th>
+                    <th class="numeric"><button type="button" data-sort="market_excess_return">市場超額</button></th>
+                    <th><button type="button" data-sort="tags_text">標籤</button></th>
+                    <th><button type="button" data-sort="risk_text">風險提示</button></th>
+                  </tr>
+                </thead>
+                <tbody id="stockRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <section class="catalog-card" aria-labelledby="catalogTitle">
+      <div class="pane-head">
+        <div>
+          <p class="section-kicker">策略組成字典</p>
+          <h2 id="catalogTitle">原子標籤與規則目錄</h2>
+        </div>
+        <input id="tagSearch" type="search" placeholder="搜尋標籤、分類或規則">
+      </div>
+      <div id="tagCatalog" class="tag-catalog"></div>
+    </section>
+  </main>
+
+  <template id="loadingTemplate">
+    <div class="skeleton-card"><span></span><span></span><span></span></div>
+  </template>
+  <script src="strategy-review-center.js"></script>
+</body>
+</html>
