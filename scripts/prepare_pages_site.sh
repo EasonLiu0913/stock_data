@@ -1,70 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+DEPENDENCY_SCANNER="$SCRIPT_DIR/scan_pages_dependencies.js"
 
 scan_dependencies() {
   local root_dir="$1"
-  node - "$root_dir" <<'NODE'
-'use strict';
-
-const fs = require('node:fs');
-const path = require('node:path');
-
-const rootDir = path.resolve(process.argv[2]);
-const publicRoot = path.join(rootDir, 'public');
-if (!fs.existsSync(publicRoot)) throw new Error(`Missing public directory: ${publicRoot}`);
-
-function walk(directory) {
-  const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(fullPath));
-    else if (/\.(?:html|js|mjs|css)$/i.test(entry.name)) files.push(fullPath);
-  }
-  return files;
-}
-
-function addRootDirectoryDependency(candidate) {
-  if (!candidate || candidate === 'public' || candidate === 'stock_data') return;
-  const candidatePath = path.join(rootDir, candidate);
-  if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isDirectory()) {
-    dependencies.add(candidate);
-  }
-}
-
-const dependencies = new Set(['data_predictions']);
-const rootDirectoryPatterns = [
-  /(?:\.\.\/)+([A-Za-z0-9_.-]+)\//g,
-  /\/stock_data\/([A-Za-z0-9_.-]+)\//g,
-];
-const rootFilePatterns = [
-  /(?:\.\.\/)+([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
-  /\/stock_data\/([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
-];
-const rootDirectoryConstantPattern =
-  /\b(?:const|let|var)\s+[A-Za-z_$][\w$]*DIR\s*=\s*['"`]([A-Za-z0-9_.-]+)['"`]/g;
-
-for (const filePath of walk(publicRoot)) {
-  const text = fs.readFileSync(filePath, 'utf8');
-  for (const pattern of rootDirectoryPatterns) {
-    pattern.lastIndex = 0;
-    for (const match of text.matchAll(pattern)) {
-      addRootDirectoryDependency(match[1]);
-    }
-  }
-  for (const pattern of rootFilePatterns) {
-    pattern.lastIndex = 0;
-    for (const match of text.matchAll(pattern)) dependencies.add(match[1]);
-  }
-  rootDirectoryConstantPattern.lastIndex = 0;
-  for (const match of text.matchAll(rootDirectoryConstantPattern)) {
-    addRootDirectoryDependency(match[1]);
-  }
-}
-
-for (const dependency of [...dependencies].sort()) process.stdout.write(`${dependency}\n`);
-NODE
+  if [[ ! -f "$DEPENDENCY_SCANNER" ]]; then
+    echo "Missing canonical Pages dependency scanner: $DEPENDENCY_SCANNER" >&2
+    exit 1
+  fi
+  node "$DEPENDENCY_SCANNER" "$root_dir"
 }
 
 resolve_target_date() {
