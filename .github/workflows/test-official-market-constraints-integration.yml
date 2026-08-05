@@ -1,95 +1,26 @@
 name: Test Official Market Constraints Integration
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    branches: [main]
     paths:
       - scripts/install_native_prediction_market_context.js
-  pull_request:
-    branches:
-      - main
-    paths:
-      - scripts/apply_official_market_constraints.js
-      - scripts/fetch_official_market_constraints.js
-      - scripts/official_market_constraints.js
-      - scripts/taifex_night_futures.js
-      - scripts/taifex_official_night_futures.js
-      - scripts/taifex_realtime_night_futures.js
-      - scripts/external_market_intraday_snapshot.js
-      - scripts/capture_prediction_market_context.js
-      - scripts/prediction_market_context_preload.js
+      - scripts/market_environment_lib.js
+      - scripts/generate_market_environment.js
+      - scripts/generate_market_risk_snapshot.js
+      - scripts/resolve_forecast_dates.js
       - scripts/rebind_prediction_market_environment.js
       - scripts/rebind_prediction_market_risk.js
-      - scripts/apply_prediction_context_to_readiness.js
-      - scripts/finalize_prediction_market_context.js
-      - scripts/resolve_forecast_dates.js
-      - scripts/validate_external_market_snapshot.js
-      - scripts/verify_official_market_constraints_integration.js
-      - scripts/backfill_prediction_dashboard_fields.js
-      - tests/apply_official_market_constraints.test.js
-      - tests/fetch_official_market_constraints.test.js
-      - tests/official_market_constraints.test.js
-      - tests/taifex_night_futures.test.js
-      - tests/taifex_official_night_futures.test.js
       - tests/prediction_market_context.test.js
-      - data_market_constraints/20260731/**
-      - .github/workflows/daily-stock-prediction.yml
-      - .github/workflows/crawl-external-market-indicators.yml
-      - .github/workflows/update-official-market-constraints.yml
       - .github/workflows/test-official-market-constraints-integration.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  install_native:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Apply native prediction context migration
-        run: |
-          node --check scripts/install_native_prediction_market_context.js
-          node scripts/install_native_prediction_market_context.js
-      - name: Validate migrated implementation
-        run: |
-          node --check scripts/market_environment_lib.js
-          node --check scripts/generate_market_environment.js
-          node --check scripts/generate_market_risk_snapshot.js
-          node --check scripts/rebind_prediction_market_environment.js
-          node --check scripts/rebind_prediction_market_risk.js
-          node --check scripts/resolve_forecast_dates.js
-          node --test tests/prediction_market_context.test.js
-          test ! -e scripts/prediction_market_context_preload.js
-          test ! -e scripts/run_prediction_market_environment.js
-          ! grep -q 'NODE_OPTIONS=' scripts/resolve_forecast_dates.js
-      - name: Commit native implementation
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A scripts tests .github/workflows/test-official-market-constraints-integration.yml
-          git commit -m "refactor: use native prediction market context"
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
-            git rebase --abort 2>/dev/null || true
-            sleep $((attempt * 5))
-          done
-          exit 1
-
   verify:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -99,13 +30,20 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Apply native migration in validation workspace
+        run: |
+          node --check scripts/install_native_prediction_market_context.js
+          node scripts/install_native_prediction_market_context.js
+
       - name: Syntax and unit tests
         run: |
+          node --check scripts/market_environment_lib.js
+          node --check scripts/generate_market_environment.js
+          node --check scripts/generate_market_risk_snapshot.js
           node --check scripts/taifex_official_night_futures.js
           node --check scripts/taifex_realtime_night_futures.js
           node --check scripts/external_market_intraday_snapshot.js
           node --check scripts/capture_prediction_market_context.js
-          node --check scripts/prediction_market_context_preload.js
           node --check scripts/rebind_prediction_market_environment.js
           node --check scripts/rebind_prediction_market_risk.js
           node --check scripts/apply_prediction_context_to_readiness.js
@@ -116,6 +54,9 @@ jobs:
           node --check scripts/apply_official_market_constraints.js
           node --check scripts/verify_official_market_constraints_integration.js
           node --check scripts/backfill_prediction_dashboard_fields.js
+          test ! -e scripts/prediction_market_context_preload.js
+          test ! -e scripts/run_prediction_market_environment.js
+          ! grep -q 'NODE_OPTIONS=' scripts/resolve_forecast_dates.js
           node --test \
             tests/prediction_market_context.test.js \
             tests/official_market_constraints.test.js \
@@ -127,13 +68,14 @@ jobs:
             tests/oversold_electronics_strategy.test.js \
             tests/oversold_strategy_replay.test.js
 
-      - name: Verify prediction context date resolution stays opt-in outside daily action
+      - name: Verify date resolution remains opt-in outside daily action
         run: |
           output=$(node scripts/resolve_forecast_dates.js --target-date 20260806 --now 2026-08-06T03:00:00+08:00 --github-env)
           echo "$output"
           grep -q '^FORECAST_BASE_DATE=20260805$' <<< "$output"
           grep -q '^FORECAST_TARGET_DATE=20260806$' <<< "$output"
           ! grep -q '^PREDICTION_MARKET_CONTEXT_' <<< "$output"
+          ! grep -q '^NODE_OPTIONS=' <<< "$output"
 
       - name: Validate workflow YAML and architecture
         shell: bash
@@ -154,11 +96,9 @@ jobs:
           grep -q "40 22 \* \* 1-5" .github/workflows/crawl-external-market-indicators.yml
           grep -q "uses: ./.github/workflows/apply-strategy-tag-registry.yml" .github/workflows/daily-stock-prediction.yml
 
-      - name: Backfill verified 20260731 official constraints
-        run: node scripts/backfill_prediction_dashboard_fields.js --date 20260731
-
-      - name: Verify prediction, group, readiness and replay consistency
+      - name: Backfill and verify 20260731 regression
         run: |
+          node scripts/backfill_prediction_dashboard_fields.js --date 20260731
           node scripts/verify_official_market_constraints_integration.js --date 20260731
           node - <<'NODE'
           const fs = require('fs');
@@ -176,19 +116,9 @@ jobs:
             throw new Error(`Unexpected exclusions: ${JSON.stringify(classification.disposition_filter.excluded_codes)}`);
           }
           if (evaluation.candidates !== 231) throw new Error(`Expected replay candidates 231, got ${evaluation.candidates}`);
-          console.log(JSON.stringify({
-            readiness_score: readiness.score,
-            effective_data_weight: readiness.effective_data_weight,
-            candidates: classification.count,
-            excluded: classification.disposition_filter.excluded_codes,
-            replay_candidates: evaluation.candidates,
-            replay_verified_candidates: evaluation.verified_candidates,
-            replay_hits: evaluation.hits,
-            replay_hit_rate: evaluation.hit_rate,
-          }, null, 2));
           NODE
 
-      - name: Check generated JSON and diff whitespace
+      - name: Check generated output
         run: |
           git diff --check
           node -e "for (const f of process.argv.slice(1)) JSON.parse(require('fs').readFileSync(f,'utf8'))" \
@@ -202,10 +132,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: official-constraints-and-prediction-context-20260731
+          name: native-prediction-market-context
           path: |
-            data_market_constraints/20260731/
-            data_market_environment/20260731/oversold_beta_rebound.json
-            data_predictions/20260731/group-summary.json
-            data_prediction_analysis/formal-strategy/20260731.json
+            scripts/market_environment_lib.js
+            scripts/generate_market_environment.js
+            scripts/generate_market_risk_snapshot.js
+            scripts/resolve_forecast_dates.js
+            tests/prediction_market_context.test.js
           if-no-files-found: error
