@@ -7,7 +7,9 @@ on:
       - 'config/strategy-tag-registry.json'
       - 'scripts/historical_factor_research_round_2.js'
       - 'scripts/generate_round_2_factor_research.js'
+      - 'scripts/finalize_round_2_factor_research.js'
       - 'tests/historical_factor_research_round_2.test.js'
+      - 'tests/finalize_round_2_factor_research.test.js'
       - '.github/workflows/round-2-factor-research.yml'
   workflow_dispatch:
     inputs:
@@ -48,7 +50,10 @@ jobs:
         run: |
           node --check scripts/historical_factor_research_round_2.js
           node --check scripts/generate_round_2_factor_research.js
-          node --test tests/historical_factor_research_round_2.test.js
+          node --check scripts/finalize_round_2_factor_research.js
+          node --test \
+            tests/historical_factor_research_round_2.test.js \
+            tests/finalize_round_2_factor_research.test.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
       - name: Generate chronological event research
         env:
@@ -62,29 +67,41 @@ jobs:
           if [ -n "${INPUT_PREDICTION_DATE:-}" ]; then args+=(--prediction-date "$INPUT_PREDICTION_DATE"); fi
           if [ -n "${INPUT_CUTOFF:-}" ]; then args+=(--cutoff "$INPUT_CUTOFF"); fi
           node scripts/generate_round_2_factor_research.js "${args[@]}" | tee /tmp/round-2-factor-research-result.json
-      - name: Verify research output
+          output_file=$(node -e "const r=require('/tmp/round-2-factor-research-result.json');process.stdout.write(r.output_file)")
+          node scripts/finalize_round_2_factor_research.js --input "$output_file" | tee /tmp/round-2-factor-finalize-result.json
+      - name: Verify research output and compact summary
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const result = JSON.parse(fs.readFileSync('/tmp/round-2-factor-research-result.json', 'utf8'));
-          if (!result.output_file || !fs.existsSync(result.output_file)) throw new Error('Round-two research output missing');
-          const payload = JSON.parse(fs.readFileSync(result.output_file, 'utf8'));
+          const generated = JSON.parse(fs.readFileSync('/tmp/round-2-factor-research-result.json', 'utf8'));
+          const finalized = JSON.parse(fs.readFileSync('/tmp/round-2-factor-finalize-result.json', 'utf8'));
+          if (!generated.output_file || !fs.existsSync(generated.output_file)) throw new Error('Round-two research output missing');
+          if (!finalized.summary_file || !fs.existsSync(finalized.summary_file)) throw new Error('Round-two research summary missing');
+          const payload = JSON.parse(fs.readFileSync(generated.output_file, 'utf8'));
+          const summary = JSON.parse(fs.readFileSync(finalized.summary_file, 'utf8'));
           if (payload.research_id !== 'round_2_volume_margin_factor_event_study_v1') throw new Error('Unexpected research_id');
+          if (payload.factor_id_schema !== 'strategy_tag_registry_ids_v1') throw new Error('Factor ID schema missing');
           if (payload.leakage_guard?.signal_features_use_dates_lte_signal_date !== true) throw new Error('Leakage guard missing');
-          for (const factor of [
-            'volume_breakout_confirmation_v1',
-            'strong_pullback_volume_contraction_v1',
+          const factorIds = [
+            'technical_volume_breakout_confirmation_v1',
+            'technical_strong_pullback_volume_contraction_v1',
             'margin_exit_price_resilience_v1',
             'margin_crowding_risk_v1',
-          ]) {
+          ];
+          for (const factor of factorIds) {
             if (!payload.summaries?.[factor]) throw new Error(`Research summary missing: ${factor}`);
+            if (!summary.summaries?.[factor]) throw new Error(`Compact summary missing: ${factor}`);
             for (const split of ['train', 'validation', 'test']) {
               if (payload.summaries[factor][split]?.event_count === undefined) {
                 throw new Error(`Research split missing: ${factor}/${split}`);
               }
             }
           }
-          console.log(`Verified ${payload.events.length} round-two research events`);
+          const unknownEvent = payload.events.find(event => !factorIds.includes(event.factor_id));
+          if (unknownEvent) throw new Error(`Unknown event factor id: ${unknownEvent.factor_id}`);
+          if (summary.events !== undefined) throw new Error('Compact summary must not contain event rows');
+          if (Number(summary.event_count) !== payload.events.length) throw new Error('Compact summary event count mismatch');
+          console.log(`Verified ${payload.events.length} round-two research events and ${finalized.summary_file}`);
           NODE
       - name: Commit research output
         shell: bash
