@@ -27,13 +27,47 @@ const {
 } = require('./market_environment_lib');
 const { classifyPredictedEnvironment } = require('./classify_market_environment');
 
-function taipeiToday() {
+function zonedDateTimeParts(date, timeZone) {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function taipeiToday(now = new Date()) {
+  const values = zonedDateTimeParts(now, 'Asia/Taipei');
   return `${values.year}${values.month}${values.day}`;
+}
+
+function previousCalendarDate(compact) {
+  const year = Number(compact.slice(0, 4));
+  const month = Number(compact.slice(4, 6));
+  const day = Number(compact.slice(6, 8));
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10).replaceAll('-', '');
+}
+
+function latestCompletedUsMarketDate(now = new Date()) {
+  const values = zonedDateTimeParts(now, 'America/New_York');
+  const newYorkDate = `${values.year}${values.month}${values.day}`;
+  const hour = Number(values.hour);
+  const minute = Number(values.minute);
+  const regularSessionClosed = hour > 16 || (hour === 16 && minute >= 30);
+  const candidateDate = regularSessionClosed ? newYorkDate : previousCalendarDate(newYorkDate);
+  return weekdayAtOrBefore(candidateDate);
+}
+
+function expectedUsMarketDate(baseDate, now = new Date()) {
+  const expectedFromBaseDate = weekdayAtOrBefore(baseDate);
+  const latestCompletedDate = latestCompletedUsMarketDate(now);
+  return expectedFromBaseDate < latestCompletedDate ? expectedFromBaseDate : latestCompletedDate;
 }
 
 function trigger(id, label, value, points) {
@@ -150,7 +184,7 @@ function main() {
     return;
   }
 
-  const expectedUsDate = weekdayAtOrBefore(baseDate);
+  const expectedUsDate = expectedUsMarketDate(baseDate);
   const externalSource = latestDatedFileInDirectories(
     path.join(ROOT, 'data_external_market'),
     baseDate,
@@ -284,6 +318,7 @@ function main() {
       'Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。',
       '首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。',
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
+      '美股日期依紐約最近已完成的正常交易時段判定，盤中資料不會被誤認為缺漏。',
       '未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。',
       historical ? '此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。' : '此檔為目前流程產生的盤前環境快照。',
     ],
@@ -314,4 +349,10 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, strategyPolicy, classifyExternalFreshness };
+module.exports = {
+  main,
+  strategyPolicy,
+  classifyExternalFreshness,
+  latestCompletedUsMarketDate,
+  expectedUsMarketDate,
+};
