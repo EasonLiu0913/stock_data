@@ -7,7 +7,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const TAG_EXPRESSION_ENTRYPOINT = 'prediction-tag-strategy-expression-semantics.js?v=1';
-const FORMULA_BUILDER_ENTRYPOINT = 'prediction-formula-builder.js?v=1';
+const FORMULA_BUILDER_ENTRYPOINT = 'prediction-formula-builder.js?v=2';
 const TARGETS = Object.freeze({
   'prediction-dashboard.html': FORMULA_BUILDER_ENTRYPOINT,
   'prediction-groups.html': TAG_EXPRESSION_ENTRYPOINT,
