@@ -40,3 +40,11 @@ test('mobile changes expose an undo toast', () => {
   assert.match(source, /data-a="toast-undo"/);
   assert.match(source, /showToast\(/);
 });
+
+test('mobile action buttons use dedicated rows for long labels', () => {
+  assert.match(source, /grid-template-areas:"copy copy" "not remove" "mobile mobile"/);
+  assert.match(source, /\.pf-node>button\[data-a="not"\]\{grid-area:not\}/);
+  assert.match(source, /\.pf-node>button\[data-a="del"\]\{grid-area:remove\}/);
+  assert.match(source, /white-space:nowrap/);
+  assert.match(source, /overflow:hidden;text-overflow:ellipsis/);
+});
