@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 3,
+  "generated_at": "2026-08-06T17:41:19.301Z",
+  "forecast_date": "2026-08-07",
+  "forecast_date_compact": "20260807",
+  "base_trade_date": "2026-08-06",
+  "base_trade_date_compact": "20260806",
+  "information_cutoff": "2026-08-06T17:41:19.301Z",
+  "historical_reconstruction": false,
+  "mode": "shadow",
+  "data_freshness": {
+    "status": "intraday_live",
+    "reason": "prediction_time_primary_indicators_available",
+    "expected_us_market_date": "20260805",
+    "actual_us_market_date": "20260805",
+    "business_day_gap": 0,
+    "source_directory_date": "20260806",
+    "source_collection_date": "20260805",
+    "primary_indicator_agreement": "5/5",
+    "primary_market_dates": {
+      "nasdaq": "20260806",
+      "sp500": "20260806",
+      "dow": "20260806",
+      "sox": "20260806",
+      "tsm_adr": "20260806"
+    },
+    "error_count": 0,
+    "source_mode": "prediction_intraday_snapshot",
+    "source_snapshot_id": "20260807T014119+0800",
+    "source_snapshot_hash": "4033c661b2bc3bb3eadd7423b7743567377136db03c7ffe7857524e6b5f291f3",
+    "is_final": false
+  },
+  "source_files": {
+    "external_market": "data_prediction_context/20260807/snapshots/20260807T014119+0800/external-market.json",
+    "market_risk": "data_market_risk/20260806/market_risk_snapshot.json",
+    "twse_index": "data_twse_mi_index/20260806_twse_mi_index.json",
+    "foreign_futures": "data_taifex_major_institutional_traders_futures_contracts/20260806_taifex_major_institutional_traders_futures_contracts.json",
+    "previous_actual_environment": null,
+    "prediction_market_context": "data_prediction_context/20260807/snapshots/20260807T014119+0800/manifest.json",
+    "prediction_night_futures": "data_prediction_context/20260807/snapshots/20260807T014119+0800/night-futures.json"
+  },
+  "metrics": {
+    "sox_change_1d_pct": 7.27,
+    "sox_return_3d_pct": 6.07,
+    "tsm_adr_change_1d_pct": 4.06,
+    "twse_change_1d_pct": -0.48,
+    "twse_return_3d_pct": 2.33,
+    "twse_minus_sox_3d_pct_points": -3.74,
+    "foreign_futures_net_contracts": -89383,
+    "foreign_futures_net_change_contracts": -2184,
+    "market_risk_score": 55.8,
+    "adr_sox_nasdaq_market_risk": 31.9
+  },
+  "environment": {
+    "code": "risk_warning",
+    "label": "風險警告",
+    "score": 4,
+    "confidence": "medium",
+    "decision_gate": {
+      "passed": true,
+      "required_conditions": {
+        "taiwan_not_repriced": true,
+        "external_acceleration": true
+      },
+      "supporting_conditions": {
+        "accumulated_external_drop": false,
+        "foreign_short_acceleration": true,
+        "severe_external_one_day_drop": false
+      },
+      "explanation": "台股尚未補跌，且外部跌勢或外資空單仍在惡化。"
+    },
+    "triggers": [
+      {
+        "id": "twse_not_repriced",
+        "label": "台股前一日跌幅小於 0.5%，可能尚未補跌",
+        "value": -0.48,
+        "points": 1
+      },
+      {
+        "id": "foreign_futures_net_short",
+        "label": "外資臺股期貨淨空低於 -70,000 口",
+        "value": -89383,
+        "points": 2
+      },
+      {
+        "id": "foreign_futures_short_increase",
+        "label": "外資期貨淨空單日增加至少 2,000 口",
+        "value": -2184,
+        "points": 1
+      }
+    ]
+  },
+  "strategy_policy": {
+    "enforcement_mode": "shadow",
+    "raw_predictions_preserved": true,
+    "formal_direction_score_adjustment": 0,
+    "bearish_prediction": "normal",
+    "relative_leadership_momentum": "reduced_shadow",
+    "bullish_upgrade": "extra_confirmation_shadow",
+    "post_shock_survivor": "not_applicable",
+    "explanation": "風險警告時縮小候選清單並要求額外確認，不改正式方向分數。"
+  },
+  "notes": [
+    "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
+    "首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。",
+    "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "美股日期依紐約最近已完成的正常交易時段判定，盤中資料不會被誤認為缺漏。",
+    "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
+    "此檔為目前流程產生的盤前環境快照。",
+    "External market metrics are bound to the immutable prediction-time market context; later final data must not overwrite this snapshot.",
+    "Five primary external indicators were available at prediction time."
+  ],
+  "prediction_market_context": {
+    "snapshot_id": "20260807T014119+0800",
+    "snapshot_hash": "4033c661b2bc3bb3eadd7423b7743567377136db03c7ffe7857524e6b5f291f3",
+    "captured_at": "2026-08-06T17:41:19.301Z",
+    "prediction_stage": "live_snapshot",
+    "immutable": true,
+    "manifest_file": "data_prediction_context/20260807/snapshots/20260807T014119+0800/manifest.json",
+    "external_market_file": "data_prediction_context/20260807/snapshots/20260807T014119+0800/external-market.json",
+    "night_futures_file": "data_prediction_context/20260807/snapshots/20260807T014119+0800/night-futures.json",
+    "external_primary_ready": true
+  },
+  "snapshot_hash": "212d5317238a4a8e501ea1d6abae0ff5f41286a5f14ae251b966c010d9a83436"
+}

@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "generated_at": "2026-08-06T17:41:19.301Z",
+  "strategy_id": "oversold_beta_rebound_v1",
+  "label": "跌深反彈準備度",
+  "forecast_date_compact": "20260807",
+  "forecast_date": "2026-08-07",
+  "base_trade_date": "2026-08-06",
+  "root_dir": "data_predictions",
+  "calculation_status": "completed",
+  "changes_direction_score": false,
+  "replaces_market_environment": false,
+  "score": 36,
+  "total_weight": 100,
+  "status_code": "emerging",
+  "status": "訊號萌芽",
+  "dashboard_message": "部分風險開始收斂",
+  "market_direction": "跌深電子股環境尚未確認",
+  "probability": {
+    "mode": "heuristic",
+    "label": "啟發式機率區間",
+    "probability_range": [
+      20,
+      35
+    ],
+    "sample_count": 2,
+    "hit_count": 0,
+    "historical_hit_rate": 0,
+    "confidence_interval": [
+      0,
+      65.8
+    ]
+  },
+  "effective_data_weight": 100,
+  "effective_data_ratio": 100,
+  "available_signals": 9,
+  "total_signals": 9,
+  "conditions": [
+    {
+      "id": "external_semiconductor_turn",
+      "label": "SOX ≥ +4% 或台積電 ADR ≥ +3%",
+      "weight": 15,
+      "points": 15,
+      "status": "full",
+      "value": [
+        7.27,
+        4.06
+      ],
+      "value_label": "SOX 7.27%／ADR 4.06%",
+      "note": null
+    },
+    {
+      "id": "nasdaq_turn",
+      "label": "Nasdaq ≥ +1%",
+      "weight": 8,
+      "points": 8,
+      "status": "full",
+      "value": 4.7629,
+      "value_label": "4.76%",
+      "note": null
+    },
+    {
+      "id": "external_risk_low",
+      "label": "ADR／SOX／Nasdaq 風險 ≤ 20",
+      "weight": 7,
+      "points": 4,
+      "status": "partial",
+      "value": 31.9,
+      "value_label": "31.9",
+      "note": null
+    },
+    {
+      "id": "oil_decline",
+      "label": "WTI、Brent 同步回落",
+      "weight": 5,
+      "points": 5,
+      "status": "full",
+      "value": [
+        -3.4603,
+        -1.5638
+      ],
+      "value_label": "WTI -3.46%／Brent -1.56%",
+      "note": null
+    },
+    {
+      "id": "twse_oversold_fuel",
+      "label": "台股三日報酬 ≤ -5%",
+      "weight": 15,
+      "points": 0,
+      "status": "unmet",
+      "value": 2.33,
+      "value_label": "2.33%",
+      "note": null
+    },
+    {
+      "id": "market_oversold_ratio",
+      "label": "全市場超賣比率 ≥ 35%",
+      "weight": 15,
+      "points": 0,
+      "status": "unmet",
+      "value": 8.27,
+      "value_label": "8.27%",
+      "note": "超賣比率以預測摘要中 RSI14 ≤ 30 的股票比例計算。"
+    },
+    {
+      "id": "risk_contraction",
+      "label": "市場風險分數較前日下降 ≥ 20",
+      "weight": 12,
+      "points": 0,
+      "status": "unmet",
+      "value": 0.4000000000000057,
+      "value_label": "下降 0.4",
+      "note": null
+    },
+    {
+      "id": "foreign_futures_improvement",
+      "label": "外資期貨淨空不再增加",
+      "weight": 8,
+      "points": 0,
+      "status": "unmet",
+      "value": -2184,
+      "value_label": "增加 2,184 口",
+      "note": null
+    },
+    {
+      "id": "night_futures_open_signal",
+      "label": "台指期夜盤 ≥ +2%",
+      "weight": 15,
+      "points": 4,
+      "status": "partial",
+      "value": 0.81,
+      "value_label": "0.81%",
+      "note": "預測當下夜盤快照（in_progress），截至 2026-08-07T01:41:19+08:00；不是完整夜盤收盤值。"
+    }
+  ],
+  "inputs": {
+    "sox_change_1d_pct": 7.27,
+    "tsm_adr_change_1d_pct": 4.06,
+    "nasdaq_change_1d_pct": 4.76,
+    "adr_sox_nasdaq_market_risk": 31.9,
+    "wti_change_1d_pct": -3.46,
+    "brent_change_1d_pct": -1.56,
+    "twse_return_3d_pct": 2.33,
+    "market_oversold_ratio": 8.27,
+    "market_risk_score": 55.8,
+    "previous_market_risk_score": 56.2,
+    "market_risk_decline": 0.4,
+    "foreign_futures_net_change_contracts": -2184,
+    "night_futures_change_pct": 0.81
+  },
+  "market_rebound_day_definition": {
+    "equal_weight_market_return_min_pct": 2,
+    "advancing_issue_ratio_min_pct": 65,
+    "rule": "次日全市場等權重報酬 >= +2% 且上漲家數比例 >= 65%"
+  },
+  "warnings": [],
+  "source_files": {
+    "prediction_summary": "data_predictions/20260807/summary.json",
+    "market_environment": "data_market_environment/20260807/market_environment.json",
+    "external_market": "data_prediction_context/20260807/snapshots/20260807T014119+0800/external-market.json",
+    "previous_market_environment": "data_market_environment/20260806/market_environment.json",
+    "night_futures": "data_prediction_context/20260807/snapshots/20260807T014119+0800/night-futures.json",
+    "prediction_market_context": "data_prediction_context/20260807/snapshots/20260807T014119+0800/manifest.json"
+  },
+  "notes": [
+    "這是獨立的市場反彈準備度，不取代 post_shock_day_1／post_shock_day_2 等市場環境。",
+    "這是市場閘門，不直接修改 V1/V2 原始方向分數，也不決定個股是否進入跌深反彈電子股名單。",
+    "缺資料以 N/A 表示，不會當成未符合。"
+  ],
+  "prediction_market_context": {
+    "snapshot_id": "20260807T014119+0800",
+    "snapshot_hash": "4033c661b2bc3bb3eadd7423b7743567377136db03c7ffe7857524e6b5f291f3",
+    "captured_at": "2026-08-06T17:41:19.301Z",
+    "manifest_file": "data_prediction_context/20260807/snapshots/20260807T014119+0800/manifest.json",
+    "night_futures_file": "data_prediction_context/20260807/snapshots/20260807T014119+0800/night-futures.json",
+    "is_final": false
+  }
+}
