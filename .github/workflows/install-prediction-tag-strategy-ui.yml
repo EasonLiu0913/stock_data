@@ -18,6 +18,7 @@ on:
       - 'tests/prediction_tag_strategy_filter_state.test.js'
       - 'tests/prediction_tag_strategy_expression_semantics.test.js'
       - 'tests/prediction_formula_builder.test.js'
+      - 'tests/prediction_formula_builder_responsive_ui.test.js'
   pull_request:
     branches: [main]
     paths:
@@ -35,6 +36,7 @@ on:
       - 'tests/prediction_tag_strategy_filter_state.test.js'
       - 'tests/prediction_tag_strategy_expression_semantics.test.js'
       - 'tests/prediction_formula_builder.test.js'
+      - 'tests/prediction_formula_builder_responsive_ui.test.js'
   workflow_dispatch:
 
 permissions:
@@ -71,7 +73,8 @@ jobs:
             tests/install_prediction_tag_strategy_ui.test.js \
             tests/prediction_tag_strategy_filter_state.test.js \
             tests/prediction_tag_strategy_expression_semantics.test.js \
-            tests/prediction_formula_builder.test.js
+            tests/prediction_formula_builder.test.js \
+            tests/prediction_formula_builder_responsive_ui.test.js
 
       - name: Install shared UI references
         run: node scripts/install_prediction_tag_strategy_ui.js
@@ -79,7 +82,7 @@ jobs:
       - name: Verify installed references
         shell: bash
         run: |
-          grep -q 'prediction-formula-builder.js?v=1' public/prediction-dashboard.html
+          grep -q 'prediction-formula-builder.js?v=2' public/prediction-dashboard.html
           if grep -q 'prediction-tag-strategy-expression-semantics.js' public/prediction-dashboard.html; then
             echo 'Prediction dashboard must not load the legacy tag strategy section.' >&2
             exit 1
