@@ -1,0 +1,80 @@
+name: '[一次性修復] 策略公式手機按鈕排版'
+
+# Second commit intentionally triggers the newly registered workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-formula-builder-mobile-button-layout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: patch-formula-builder-mobile-button-layout
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Patch mobile formula-card layout
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('public/prediction-formula-builder.js')
+          source = path.read_text(encoding='utf-8')
+
+          old_grid = '.pf-node{grid-template-columns:auto minmax(0,1fr) auto auto;padding:9px}'
+          new_grid = '.pf-node{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"copy copy" "not remove" "mobile mobile";align-items:stretch;padding:9px}'
+          if source.count(old_grid) != 1:
+              raise SystemExit(f'Expected exactly one mobile node grid, found {source.count(old_grid)}')
+          source = source.replace(old_grid, new_grid)
+
+          old_actions = '.pf-node .pf-mobile-actions{grid-column:1/-1}'
+          new_actions = '.pf-node>.pf-node-copy{grid-area:copy;min-width:0}.pf-node>.pf-node-copy b,.pf-node>.pf-node-copy small{overflow-wrap:anywhere;word-break:break-word}.pf-node>button[data-a="not"]{grid-area:not}.pf-node>button[data-a="del"]{grid-area:remove}.pf-node>button[data-a="not"],.pf-node>button[data-a="del"]{width:100%;min-width:0;min-height:40px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;padding-inline:8px}.pf-node .pf-mobile-actions{grid-area:mobile;grid-column:auto}'
+          if source.count(old_actions) != 1:
+              raise SystemExit(f'Expected exactly one mobile actions rule, found {source.count(old_actions)}')
+          source = source.replace(old_actions, new_actions)
+
+          path.write_text(source, encoding='utf-8')
+          PY
+
+      - name: Validate formula builder
+        run: |
+          node --check public/prediction-formula-builder.js
+          node --test \
+            tests/prediction_formula_builder.test.js \
+            tests/prediction_formula_builder_responsive_ui.test.js
+          grep -Fq 'grid-template-areas:"copy copy" "not remove" "mobile mobile"' public/prediction-formula-builder.js
+          grep -Fq 'white-space:nowrap' public/prediction-formula-builder.js
+
+      - name: Commit patch and remove bootstrap
+        shell: bash
+        run: |
+          rm .github/workflows/patch-formula-builder-mobile-button-layout.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/prediction-formula-builder.js .github/workflows/patch-formula-builder-mobile-button-layout.yml
+          git commit -m 'fix: prevent mobile formula action overlap'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
