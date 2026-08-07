@@ -48,151 +48,39 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-      - name: Validate range and build month list
-        id: range
+      - name: Run Task Framework and MOPS regression tests
+        run: |
+          node --check scripts/framework/task_manifest.js
+          node --check scripts/framework/task_retry.js
+          node --check scripts/framework/task_logger.js
+          node --check scripts/framework/task_runner.js
+          node --check scripts/framework/index.js
+          node --check scripts/backfill_mops_monthly_revenue_task.js
+          node --check scripts/run_mops_backfill_workflow.js
+          node --check scripts/crawl_mops_monthly_revenue.js
+          node --check scripts/apply_mops_snapshot_policy.js
+          node --check scripts/rebuild_mops_monthly_revenue_metadata.js
+          node --check tests/task_framework.test.js
+          node --check tests/mops_backfill_task_adapter.test.js
+          node --check tests/mops_backfill_workflow_caller.test.js
+          node --test tests/task_framework.test.js
+          node --test tests/mops_backfill_task_adapter.test.js
+          node --test tests/mops_backfill_workflow_caller.test.js
+          node --test tests/mops_monthly_revenue.test.js
+
+      - name: Backfill with resume, retry, and 3-month checkpoints
         shell: bash
         env:
           START_MONTH: ${{ inputs.start_month }}
           END_MONTH: ${{ inputs.end_month }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE' > /tmp/mops-revenue-months.txt
-          const { autoRevenueMonth, normalizeRevenueMonth } = require('./scripts/crawl_mops_monthly_revenue');
-          const start = normalizeRevenueMonth(process.env.START_MONTH);
-          const end = normalizeRevenueMonth(process.env.END_MONTH);
-          const latestAllowed = autoRevenueMonth();
-          if (start > end) throw new Error(`Invalid month range: ${start} > ${end}`);
-          if (end > latestAllowed) throw new Error(`End month ${end} is later than latest allowed revenue month ${latestAllowed}`);
-
-          function nextMonth(value) {
-            let year = Number(value.slice(0, 4));
-            let month = Number(value.slice(4, 6)) + 1;
-            if (month === 13) { year += 1; month = 1; }
-            return `${year}${String(month).padStart(2, '0')}`;
-          }
-
-          const months = [];
-          for (let month = start; month <= end; month = nextMonth(month)) {
-            months.push(month);
-            if (months.length > 36) throw new Error('Safety limit exceeded: a single backfill may include at most 36 months');
-          }
-          process.stdout.write(`${months.join('\n')}\n`);
-          NODE
-
-          count=$(wc -l < /tmp/mops-revenue-months.txt | tr -d ' ')
-          first=$(head -n 1 /tmp/mops-revenue-months.txt)
-          last=$(tail -n 1 /tmp/mops-revenue-months.txt)
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "first=$first" >> "$GITHUB_OUTPUT"
-          echo "last=$last" >> "$GITHUB_OUTPUT"
-          echo "Selected $count revenue months: $first -> $last"
-
-      - name: Run parser and metadata regression tests
-        run: |
-          node --check scripts/crawl_mops_monthly_revenue.js
-          node --check scripts/apply_mops_snapshot_policy.js
-          node --check scripts/rebuild_mops_monthly_revenue_metadata.js
-          node --test tests/mops_monthly_revenue.test.js
-
-      - name: Backfill MOPS revenue month by month
-        shell: bash
-        env:
           FORCE_NEW_SNAPSHOT: ${{ inputs.force_new_snapshot }}
         run: |
           set -euo pipefail
-          total=$(wc -l < /tmp/mops-revenue-months.txt | tr -d ' ')
-          index=0
-
-          while read -r month; do
-            [ -n "$month" ] || continue
-            index=$((index + 1))
-            echo "[$index/$total] Crawling MOPS revenue month $month"
-
-            success=false
-            for attempt in 1 2 3; do
-              if node scripts/crawl_mops_monthly_revenue.js --month "$month"; then
-                success=true
-                break
-              fi
-              if [ "$attempt" -lt 3 ]; then
-                retry_delay=$((3 + RANDOM % 6))
-                echo "Attempt $attempt failed for $month; retrying after ${retry_delay}s"
-                sleep "$retry_delay"
-              fi
-            done
-
-            if [ "$success" != "true" ]; then
-              echo "::error title=MOPS 月營收回填失敗::$month failed after 3 attempts"
-              exit 1
-            fi
-
-            policy_args=(--month "$month")
-            if [ "$FORCE_NEW_SNAPSHOT" = "true" ]; then
-              policy_args+=(--force-new-snapshot)
-            fi
-            node scripts/apply_mops_snapshot_policy.js "${policy_args[@]}"
-
-            if [ "$index" -lt "$total" ]; then
-              delay=$((3 + RANDOM % 5))
-              echo "Polite delay before next month: ${delay}s"
-              sleep "$delay"
-            fi
-          done < /tmp/mops-revenue-months.txt
-
-      - name: Rebuild baseline chain and derived metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/rebuild_mops_monthly_revenue_metadata.js --from "${{ steps.range.outputs.first }}"
-
-      - name: Validate backfilled range
-        shell: bash
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const months = fs.readFileSync('/tmp/mops-revenue-months.txt', 'utf8').trim().split(/\s+/).filter(Boolean);
-          for (const month of months) {
-            const file = `data_mops_monthly_revenue/${month}/monthly_revenue.json`;
-            if (!fs.existsSync(file)) throw new Error(`Missing output: ${file}`);
-            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-            if (payload.revenue_month !== month) throw new Error(`Month mismatch: ${file}`);
-            if (!Array.isArray(payload.companies) || payload.companies.length === 0) throw new Error(`No company rows: ${file}`);
-            if (!['baseline_seed', 'collecting', 'likely_complete'].includes(payload.collection?.status)) {
-              throw new Error(`Invalid completion status for ${month}: ${payload.collection?.status}`);
-            }
-            console.log(JSON.stringify({
-              month,
-              company_count: payload.collection.company_count,
-              baseline_month: payload.collection.baseline_month,
-              baseline_company_count: payload.collection.baseline_company_count,
-              coverage_ratio: payload.collection.coverage_ratio,
-              snapshot_count: payload.collection.snapshot_count,
-              status: payload.collection.status,
-            }));
-          }
-          NODE
-
-      - name: Commit and push verified backfill
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_mops_monthly_revenue
-          if git diff --cached --quiet; then
-            echo "No MOPS monthly revenue backfill changes"
-            exit 0
+          args=(
+            --start-month "$START_MONTH"
+            --end-month "$END_MONTH"
+          )
+          if [ "$FORCE_NEW_SNAPSHOT" = "true" ]; then
+            args+=(--force-new-snapshot)
           fi
-
-          git commit -m "data: backfill MOPS monthly revenue ${{ inputs.start_month }}-${{ inputs.end_month }}"
-          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
-
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
-            git rebase --abort 2>/dev/null || true
-            push_delay=$((4 + RANDOM % 5))
-            echo "Push attempt $attempt failed; retrying after ${push_delay}s"
-            sleep "$push_delay"
-          done
-          exit 1
+          node scripts/run_mops_backfill_workflow.js "${args[@]}"
