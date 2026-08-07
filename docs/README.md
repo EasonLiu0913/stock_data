@@ -61,6 +61,7 @@ docs/
 ├── research/
 │   └── monthly-revenue/
 │       ├── methodology.md
+│       ├── incremental-pipeline.md
 │       ├── discoveries.md
 │       ├── candidate-factors.md
 │       └── rejected-ideas.md
@@ -97,6 +98,8 @@ Describes durable system boundaries, dependencies, pipelines, and shared platfor
 ### Research
 
 Records methodology, validated findings, candidate factors, rejected ideas, uncertainty, and evidence gaps.
+
+For MOPS monthly revenue research, `research/monthly-revenue/incremental-pipeline.md` defines which monthly detail artifacts may be reused, which aggregate artifacts are rebuilt, and the fingerprint/invalidation rules used by the Phase 2 incremental workflow.
 
 ### Decisions
 
