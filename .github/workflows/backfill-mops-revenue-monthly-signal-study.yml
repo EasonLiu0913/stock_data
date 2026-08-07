@@ -43,11 +43,13 @@ jobs:
           node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
           node --check scripts/summarize_mops_revenue_factor_stability.js
+          node --check scripts/summarize_mops_revenue_industry_breakdown.js
           node --test tests/stock_price_provider.test.js
           node --test tests/mops_revenue_monthly_signal_returns.test.js
           node --test tests/mops_revenue_factor_rankings.test.js
           node --test tests/mops_revenue_yoy20_subfactors.test.js
           node --test tests/mops_revenue_factor_stability.test.js
+          node --test tests/mops_revenue_industry_breakdown.test.js
 
       - name: Validate range
         shell: bash
@@ -71,9 +73,7 @@ jobs:
             if (m === 13) { y += 1; m = 1; }
             return new Date(y, m - 1, 15, 23, 59, 59);
           };
-          if (availabilityDate(e) > now) {
-            throw new Error(`end_month ${e} is not conservatively available yet; its next-month day-15 boundary is still in the future`);
-          }
+          if (availabilityDate(e) > now) throw new Error(`end_month ${e} is not conservatively available yet; its next-month day-15 boundary is still in the future`);
           NODE
 
       - name: Generate historical monthly signal study
@@ -88,19 +88,14 @@ jobs:
           const fs = require('node:fs');
           const start = process.env.START_MONTH;
           const end = process.env.END_MONTH;
-          const next = value => {
-            let y = Number(value.slice(0,4));
-            let m = Number(value.slice(4,6)) + 1;
-            if (m === 13) { y += 1; m = 1; }
-            return `${y}${String(m).padStart(2,'0')}`;
-          };
-          for (let month = start;; month = next(month)) {
-            const source = `data_mops_monthly_revenue/${month}/monthly_revenue.json`;
-            if (!fs.existsSync(source)) throw new Error(`Missing source month: ${month}`);
+          const next = value => { let y=Number(value.slice(0,4)),m=Number(value.slice(4,6))+1; if(m===13){y++;m=1;} return `${y}${String(m).padStart(2,'0')}`; };
+          for (let month=start;;month=next(month)) {
+            const source=`data_mops_monthly_revenue/${month}/monthly_revenue.json`;
+            if(!fs.existsSync(source)) throw new Error(`Missing source month: ${month}`);
             console.log(`Generating ${month}...`);
-            const result = spawnSync(process.execPath, ['scripts/generate_mops_revenue_monthly_signal_returns.js', '--month', month], { stdio: 'inherit' });
-            if (result.status !== 0) process.exit(result.status || 1);
-            if (month === end) break;
+            const result=spawnSync(process.execPath,['scripts/generate_mops_revenue_monthly_signal_returns.js','--month',month],{stdio:'inherit'});
+            if(result.status!==0) process.exit(result.status||1);
+            if(month===end) break;
           }
           NODE
 
@@ -112,46 +107,25 @@ jobs:
         run: |
           set -euo pipefail
           node - <<'NODE'
-          const fs = require('node:fs');
-          const start = process.env.START_MONTH;
-          const end = process.env.END_MONTH;
-          const next = value => {
-            let y = Number(value.slice(0,4));
-            let m = Number(value.slice(4,6)) + 1;
-            if (m === 13) { y += 1; m = 1; }
-            return `${y}${String(m).padStart(2,'0')}`;
-          };
-          for (let month = start;; month = next(month)) {
-            const file = `data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;
-            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-            if (payload.dataset !== 'mops_monthly_revenue_conservative_signal_returns') throw new Error(`dataset mismatch: ${month}`);
-            if (payload.revenue_month !== month) throw new Error(`month mismatch: ${month}`);
-            if (!Array.isArray(payload.events) || !payload.events.length) throw new Error(`no events: ${month}`);
-            console.log(month, payload.counts);
-            if (month === end) break;
-          }
+          const fs=require('node:fs');const start=process.env.START_MONTH,end=process.env.END_MONTH;
+          const next=value=>{let y=Number(value.slice(0,4)),m=Number(value.slice(4,6))+1;if(m===13){y++;m=1;}return `${y}${String(m).padStart(2,'0')}`;};
+          for(let month=start;;month=next(month)){const file=`data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;const payload=JSON.parse(fs.readFileSync(file,'utf8'));if(payload.dataset!=='mops_monthly_revenue_conservative_signal_returns')throw new Error(`dataset mismatch: ${month}`);if(payload.revenue_month!==month)throw new Error(`month mismatch: ${month}`);if(!Array.isArray(payload.events)||!payload.events.length)throw new Error(`no events: ${month}`);console.log(month,payload.counts);if(month===end)break;}
           NODE
 
       - name: Build compact coverage summary
-        run: |
-          node scripts/summarize_mops_revenue_monthly_signal_study.js \
-            --start-month '${{ inputs.start_month }}' \
-            --end-month '${{ inputs.end_month }}'
+        run: node scripts/summarize_mops_revenue_monthly_signal_study.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Build factor rankings
-        run: |
-          node scripts/summarize_mops_revenue_factor_rankings.js \
-            --start-month '${{ inputs.start_month }}' \
-            --end-month '${{ inputs.end_month }}'
+        run: node scripts/summarize_mops_revenue_factor_rankings.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Build YoY 20 percent subfactor experiment
-        run: |
-          node scripts/summarize_mops_revenue_yoy20_subfactors.js \
-            --start-month '${{ inputs.start_month }}' \
-            --end-month '${{ inputs.end_month }}'
+        run: node scripts/summarize_mops_revenue_yoy20_subfactors.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Build factor stability summary
         run: node scripts/summarize_mops_revenue_factor_stability.js
+
+      - name: Build industry breakdown
+        run: node scripts/summarize_mops_revenue_industry_breakdown.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Commit verified study data
         shell: bash
@@ -160,10 +134,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_prediction_analysis/monthly-revenue/monthly-signals
-          if git diff --cached --quiet; then
-            echo 'No historical MOPS signal study changes'
-            exit 0
-          fi
+          if git diff --cached --quiet; then echo 'No historical MOPS signal study changes'; exit 0; fi
           git commit -m "analysis: backfill MOPS monthly revenue signals ${{ inputs.start_month }}-${{ inputs.end_month }}"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
