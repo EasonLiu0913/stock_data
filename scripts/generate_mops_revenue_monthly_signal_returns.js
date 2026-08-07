@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { getClose } = require('./lib/stock_price_provider');
 
 const ROOT = path.resolve(__dirname, '..');
 const REVENUE_ROOT = path.join(ROOT, 'data_mops_monthly_revenue');
@@ -33,20 +34,6 @@ function loadMarketSeries() {
     .map(row => ({ date: String(row.date), close: Number(row.close) }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
-function loadFubonClose(stockCode, date) {
-  const file = path.join(ROOT, 'data_fubon', `fubon_${date}_sma.json`);
-  const payload = readJson(file, null);
-  const item = payload?.[stockCode];
-  if (!item || typeof item !== 'object') return null;
-  const keys = [
-    date,
-    `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
-    `${date.slice(0, 4)}/${date.slice(4, 6)}/${date.slice(6, 8)}`,
-  ];
-  const raw = keys.map(key => item[key]).find(Boolean);
-  const close = Number(raw?.Price ?? raw?.Close);
-  return Number.isFinite(close) && close > 0 ? close : null;
-}
 function buildTradingWindow(marketRows, availabilityDate) {
   const baseIndex = marketRows.map(row => row.date).findLastIndex(date => date <= availabilityDate);
   const effectiveIndex = baseIndex + 1;
@@ -61,7 +48,7 @@ function pctReturn(start, end) {
 function calculateReturns(stockCode, marketRows, availabilityDate) {
   const window = buildTradingWindow(marketRows, availabilityDate);
   if (!window) return { effective_trading_date: null, base_trading_date: null, returns: {} };
-  const stockBase = loadFubonClose(stockCode, window.base.date);
+  const stockBase = getClose(stockCode, window.base.date, { root: ROOT });
   const returns = {};
   for (const horizon of HORIZONS) {
     const target = marketRows[window.baseIndex + horizon];
@@ -69,7 +56,7 @@ function calculateReturns(stockCode, marketRows, availabilityDate) {
       returns[`d${horizon}`] = { status: 'pending_market_data', target_trading_date: null, stock_return_pct: null, market_return_pct: null, excess_return_pct: null, stock_positive: null, outperformed_market: null };
       continue;
     }
-    const stockEnd = loadFubonClose(stockCode, target.date);
+    const stockEnd = getClose(stockCode, target.date, { root: ROOT });
     const stockReturn = pctReturn(stockBase, stockEnd);
     const marketReturn = pctReturn(window.base.close, target.close);
     const excess = Number.isFinite(stockReturn) && Number.isFinite(marketReturn) ? Number((stockReturn - marketReturn).toFixed(4)) : null;
@@ -114,7 +101,7 @@ function generateMonth(revenueMonth) {
   const marketRows = loadMarketSeries();
   const events = (source.companies || []).map(row => buildEvent(row, revenueMonth, marketRows));
   const payload = {
-    schema_version: 1,
+    schema_version: 2,
     dataset: 'mops_monthly_revenue_conservative_signal_returns',
     revenue_month: revenueMonth,
     generated_at: new Date().toISOString(),
@@ -124,6 +111,7 @@ function generateMonth(revenueMonth) {
       availability_rule: 'treat the monthly revenue dataset as usable only after calendar day 15 of the following month',
       effective_trade_rule: 'start evaluation from the first TAIEX trading day after that conservative availability date',
       return_rule: 'D1/D3/D5/D10/D20 compare target close with the close immediately before the effective trading day',
+      stock_price_rule: 'use unified provider priority: TWSE MI_INDEX, data_history_sma, legacy data_fubon',
       interpretation_warning: 'this is not a filing-day event study and must not be interpreted as immediate market reaction to an individual company filing',
     },
     counts: {
