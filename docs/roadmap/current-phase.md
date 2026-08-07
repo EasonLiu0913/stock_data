@@ -1,6 +1,6 @@
 # Current Development Phase
 
-Last updated: 2026-08-07
+Last updated: 2026-08-08
 
 ## Active area
 
@@ -24,9 +24,6 @@ Incremental historical research for the MOPS monthly-revenue research platform.
 - Industry breakdown against same-industry baseline.
 - Market-regime breakdown as research context only.
 - Structured architecture/research/ADR documentation handoff.
-- Task Framework architecture design (`docs/architecture/task-framework.md`).
-- ADR-007 hook-based business-agnostic long-task model.
-- ADR-008 incremental framework evolution from real use cases.
 - Task Framework core, MOPS adapter, production workflow migration, checkpoint persistence, and real resume validation.
 
 ## Current evidence
@@ -41,20 +38,7 @@ Goal achieved:
 
 > **MOPS historical backfill is interruptible, resumable, and recoverable from validated progress.**
 
-The production path is:
-
-```text
-.github/workflows/backfill-mops-monthly-revenue.yml
-  -> scripts/run_mops_backfill_workflow.js
-  -> scripts/backfill_mops_monthly_revenue_task.js
-  -> scripts/framework/task_runner.js
-```
-
-Real GitHub Actions validation on 2026-08-07 confirmed both checkpointed writes and a no-refetch resume rerun.
-
-The first run over `202511-202602` with `force_new_snapshot=true` produced the expected 3-month checkpoint, final 1-month partial checkpoint, final metadata/index commit, and new snapshots.
-
-The second run over the same range with `force_new_snapshot=false` preserved Task manifest timestamps and snapshot counts, produced no item checkpoint commit, and therefore proved complete months were revalidated and skipped instead of fetched again.
+Real GitHub Actions validation confirmed both checkpointed writes and a no-refetch resume rerun.
 
 ## Current Phase 2 — Incremental historical research
 
@@ -62,22 +46,12 @@ Goal:
 
 > **Adding one new or changed month must not regenerate every unchanged historical monthly detail artifact.**
 
-### Phase 2A — Dependency inventory and incremental detail runner (landed; real-run validation pending)
+### Phase 2A — Dependency inventory and incremental detail runner (landed)
 
-Dependency inventory is documented in:
+Dependency inventory:
 
 ```text
 docs/research/monthly-revenue/incremental-pipeline.md
-```
-
-The current research graph is intentionally split into two layers:
-
-```text
-Monthly signal detail YYYYMM.json
-  -> incrementally generate / validate / reuse
-
-Aggregate research outputs
-  -> rebuild from selected monthly details
 ```
 
 Monthly detail generator:
@@ -98,21 +72,14 @@ Production workflow:
 .github/workflows/backfill-mops-revenue-monthly-signal-study.yml
 ```
 
-The workflow now has:
+The workflow supports:
 
 ```text
 force_full_rebuild = false   # default incremental mode
 force_full_rebuild = true    # explicit clean/full detail rebuild
 ```
 
-### Monthly detail reuse rule
-
-A detail is reusable only when:
-
-1. the expected dataset/month identity is valid;
-2. all D1/D3/D5/D10/D20 event returns are complete;
-3. the stored input fingerprint exists;
-4. the stored fingerprint matches current research inputs.
+### Monthly detail fingerprint
 
 Current fingerprint fields:
 
@@ -123,15 +90,29 @@ market_window_sha256
 stock_price_provider_sha256
 ```
 
-`revenue_research_sha256` hashes only research-relevant company/factor fields. It deliberately ignores operational MOPS metadata such as collection timestamps, status recalculation timestamps, and snapshot count.
+Operational MOPS metadata such as collection timestamps and snapshot count are deliberately excluded from the revenue fingerprint.
 
-`market_window_sha256` hashes only the TAIEX rows required from the conservative base date through D20. Appending newer market history must not invalidate an old complete month.
+The market fingerprint covers only the conservative base date through D20, so unrelated future market rows do not invalidate old mature months.
 
-The Price Provider implementation itself is fingerprinted so a source-priority or interpretation change invalidates existing details.
+### Mature detail reuse rule
 
-Any detail with `pending_market_data` or `missing_stock_price` is regenerated on later runs rather than being treated as immutable.
+Real Phase 2 validation showed that the original rule was too strict.
 
-Known corrections to already-complete historical price data use `force_full_rebuild=true` for the affected range. Phase 2 does not yet build a per-price-observation dependency graph because there is not enough evidence to justify that complexity.
+The repository has high but not perfect historical price coverage. Requiring every one of roughly 990 stocks to have every D1/D3/D5/D10/D20 price caused all historical months to regenerate forever even when fingerprints were unchanged.
+
+Corrected rule:
+
+```text
+pending_market_data
+  -> not mature; regenerate later
+
+missing_stock_price in an otherwise mature month
+  -> may reuse when fingerprints are unchanged
+```
+
+If historical price data is later backfilled or corrected, run the affected range with `force_full_rebuild=true`.
+
+This keeps the implementation simple while matching observed repository data. Do not add a per-price-observation dependency graph without repeated evidence that it is needed.
 
 ### Aggregate behavior
 
@@ -144,50 +125,88 @@ The following remain full aggregate rebuilds from stored monthly details:
 - industry breakdown;
 - market-regime breakdown.
 
-This is intentional: these summaries are inexpensive compared with per-stock monthly return generation and may legitimately change across the selected window when one new month is added.
-
-### Automated coverage
-
-Incremental tests cover:
-
-- volatile collection metadata does not change stable revenue research input;
-- market data appended beyond a completed D20 window does not invalidate the month;
-- incomplete return details are not reusable;
-- unchanged detail is reused while invalid detail is generated;
-- full rebuild mode generates every selected month without consulting reuse.
-
-The production workflow runs these tests before historical generation.
+This is intentional because aggregate recomputation is cheap relative to per-stock detail generation and conclusions may change when the selected month window changes.
 
 ### Phase 2B — Real-run validation (current gate)
 
-The first workflow run after migration is expected to regenerate legacy monthly details once because old files do not contain the new fingerprint. Expected reason:
+Validation evidence so far:
+
+#### First incremental migration run — passed
+
+Range:
 
 ```text
-missing_input_fingerprint
+202511-202606
+force_full_rebuild=false
 ```
 
-Recommended validation sequence:
+Observed:
 
-1. Run `[07 研究] MOPS－月營收歷史因子區間回測` on the currently validated historical range with `force_full_rebuild=false`.
-2. Confirm legacy monthly details are generated once and receive fingerprints.
-3. Run the exact same range again with `force_full_rebuild=false`.
-4. Confirm complete unchanged monthly details report `REUSE` instead of `GENERATE`.
-5. Confirm aggregate summaries are still rebuilt.
-6. Run a controlled comparison with `force_full_rebuild=true` and verify aggregate conclusions are equivalent to incremental mode.
-7. Confirm a missing/corrupt monthly detail is regenerated rather than reused before declaring Phase 2 complete.
+- all eight legacy monthly details upgraded from schema v2 to v3;
+- all eight received research fingerprints;
+- aggregate outputs rebuilt successfully;
+- commit: `f826c687 analysis: refresh MOPS monthly revenue signals 202511-202606`.
 
-Do not mark Phase 2 complete from repository code alone; real workflow evidence is required just as it was for the Task Framework.
+#### Second incremental run — exposed and fixed an invalidation bug
+
+Before the second run, TWSE market data was updated. As a result, `202606` legitimately changed `market_window_sha256` and should regenerate.
+
+However, `202511-202605` had unchanged fingerprints and still regenerated. Root cause:
+
+- old `hasIncompleteReturns()` rejected a whole month if any stock/horizon was `missing_stock_price`;
+- historical price completeness is high but not 100%, so this prevented reuse from ever occurring.
+
+Fix landed:
+
+```text
+1994cbc6  fix: reuse mature MOPS details with stable missing prices
+2c8984ab  test: distinguish pending market data from missing historical prices
+62f675c5  docs: refine mature-detail reuse after real validation
+```
+
+### Next validation step
+
+Run the same research workflow again:
+
+```text
+start_month: 202511
+end_month: 202606
+force_full_rebuild: false
+```
+
+Expected behavior if there is no new material market/source change during the run:
+
+```text
+202511 REUSE
+202512 REUSE
+202601 REUSE
+202602 REUSE
+202603 REUSE
+202604 REUSE
+202605 REUSE
+202606 REUSE
+```
+
+If the newest month's D20 market window changes again before execution, only that affected month should regenerate; older mature months with unchanged fingerprints should still reuse.
+
+After reuse is proven, Phase 2 still requires:
+
+1. controlled `force_full_rebuild=true` comparison against incremental aggregate outputs;
+2. confirmation that a missing/corrupt monthly detail is rebuilt rather than reused.
+
+Do not mark Phase 2 complete until those checks pass.
 
 ## Phase 2 acceptance criteria
 
 Phase 2 is complete when:
 
 1. adding one new revenue month does not regenerate unchanged historical monthly detail artifacts;
-2. missing/corrupt or incomplete monthly detail is automatically rebuilt;
-3. a methodology/version change correctly invalidates old details or full rebuild can be selected;
-4. aggregate research outputs remain equivalent to a clean full build;
-5. incremental/full modes have automated regression tests;
-6. the workflow reports generated/reused monthly artifacts clearly.
+2. missing/corrupt monthly detail is automatically rebuilt;
+3. pending market-window detail is refreshed as new D1/D3/D5/D10/D20 data arrives;
+4. methodology/version change correctly invalidates old details or full rebuild can be selected;
+5. aggregate research outputs remain equivalent to a clean full build;
+6. incremental/full modes have automated regression tests;
+7. the workflow reports generated/reused monthly artifacts clearly.
 
 ## Planned historical extension
 
