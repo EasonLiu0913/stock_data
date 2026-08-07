@@ -40,6 +40,7 @@ jobs:
           node --check scripts/lib/stock_price_provider.js
           node --check scripts/generate_mops_revenue_monthly_signal_returns.js
           node --check scripts/summarize_mops_revenue_monthly_signal_study.js
+          node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --test tests/stock_price_provider.test.js
           node --test tests/mops_revenue_monthly_signal_returns.test.js
 
@@ -129,6 +130,12 @@ jobs:
       - name: Build compact coverage summary
         run: |
           node scripts/summarize_mops_revenue_monthly_signal_study.js \
+            --start-month '${{ inputs.start_month }}' \
+            --end-month '${{ inputs.end_month }}'
+
+      - name: Build factor rankings
+        run: |
+          node scripts/summarize_mops_revenue_factor_rankings.js \
             --start-month '${{ inputs.start_month }}' \
             --end-month '${{ inputs.end_month }}'
 
