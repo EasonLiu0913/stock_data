@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>月營收事件研究 Dashboard</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f8fafc;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:1480px;margin:0 auto;padding:20px}.panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 5px 18px rgba(15,23,42,.06);margin-bottom:16px}.header{padding:20px}.header h1{margin:0 0 8px;font-size:26px}.muted{color:#64748b}.toolbar{padding:14px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:end}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:13px;font-weight:700;color:#475569}.field input,.field select{height:38px;border:1px solid #cbd5e1;border-radius:7px;padding:0 10px;background:#fff}.btn{height:38px;border:0;border-radius:7px;padding:0 16px;font-weight:800;cursor:pointer;background:#2563eb;color:#fff}.btn:hover{filter:brightness(.96)}.cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:16px}.card{border:1px solid #e2e8f0;border-radius:10px;padding:14px;background:#fff}.card .label{font-size:12px;color:#64748b;font-weight:700}.card .value{font-size:24px;font-weight:900;margin-top:5px}.section-title{padding:16px 18px 8px;font-size:18px;font-weight:900}.section-note{padding:0 18px 12px;color:#64748b;font-size:13px}.table-wrap{overflow:auto;border-top:1px solid #e2e8f0}table{width:100%;border-collapse:collapse;min-width:980px}th,td{padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;font-size:13px}th{position:sticky;top:0;background:#f8fafc;z-index:2;color:#334155;cursor:pointer;user-select:none}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}.positive{color:#b91c1c;font-weight:800}.negative{color:#047857;font-weight:800}.pending{color:#94a3b8}.badge{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#e2e8f0;color:#475569}.badge.ok{background:#dcfce7;color:#166534}.badge.warn{background:#fef3c7;color:#92400e}.error{display:none;padding:14px 18px;color:#b91c1c;font-weight:800}.empty{text-align:center;color:#64748b;padding:28px}.factor-name{font-weight:800;text-align:left}.footer-note{padding:14px 18px;color:#64748b;font-size:12px;line-height:1.6}@media(max-width:900px){.wrap{padding:10px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.header h1{font-size:21px}.toolbar{align-items:stretch}.field{flex:1 1 140px}.btn{width:100%}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="panel header">
+    <h1>月營收事件研究 Dashboard</h1>
+    <div class="muted">MOPS 上市公司月營收 × TAIEX 基準 × 個股 D1 / D3 / D5 / D10 / D20 超額報酬</div>
+  </section>
+
+  <section class="panel toolbar">
+    <div class="field"><label for="month">營收月份 YYYYMM</label><input id="month" value="202607" inputmode="numeric" maxlength="6"></div>
+    <div class="field"><label for="horizon">因子評估期間</label><select id="horizon"><option value="d1">D1</option><option value="d3">D3</option><option value="d5" selected>D5</option><option value="d10">D10</option><option value="d20">D20</option></select></div>
+    <div class="field"><label for="statusFilter">事件狀態</label><select id="statusFilter"><option value="all">全部</option><option value="eligible">可評估</option><option value="excluded">歷史回填排除</option></select></div>
+    <div class="field" style="flex:1 1 220px"><label for="search">股票搜尋</label><input id="search" placeholder="代號 / 名稱 / 產業"></div>
+    <button class="btn" id="loadBtn">載入</button>
+  </section>
+
+  <div id="error" class="panel error"></div>
+
+  <section class="panel">
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-title">因子績效</div>
+    <div class="section-note">只統計選定期間中 <code>status=complete</code> 的事件；主要判斷為相對 TAIEX 是否勝出，同時保留絕對正報酬。</div>
+    <div class="table-wrap"><table><thead><tr><th data-factor-sort="name">因子</th><th data-factor-sort="samples">樣本</th><th data-factor-sort="relativeWinRate">相對勝率</th><th data-factor-sort="avgExcess">平均超額%</th><th data-factor-sort="medianExcess">中位超額%</th><th data-factor-sort="absoluteWinRate">絕對勝率</th><th data-factor-sort="avgStock">平均個股%</th><th data-factor-sort="avgMarket">平均大盤%</th></tr></thead><tbody id="factorBody"></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-title">股票事件明細</div>
+    <div class="section-note">點擊欄位標題可排序。歷史 backfill 若缺少真正申報時點，保留營收資料但不計事件報酬。</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th data-sort="stock_code">代號</th><th data-sort="stock_name">名稱</th><th data-sort="industry">產業</th><th data-sort="observed_date">觀測日</th><th data-sort="effective_trading_date">有效交易日</th><th data-sort="yoy_pct">YoY%</th><th data-sort="mom_pct">MoM%</th><th data-sort="acceleration">YoY加速pp</th><th data-sort="horizonStatus">期間狀態</th><th data-sort="stockReturn">個股%</th><th data-sort="marketReturn">大盤%</th><th data-sort="excessReturn">超額%</th><th data-sort="outperformed">勝大盤</th>
+    </tr></thead><tbody id="eventBody"></tbody></table></div>
+    <div class="footer-note">基準：TAIEX（TWSE MI_5MINS_HIST）。超額報酬 = 個股報酬 − 同期間 TAIEX 報酬。頁面不把市場多空當作策略門檻，而是用相對報酬公平比較不同市場環境。</div>
+  </section>
+</div>
+<script>
+const BASE = location.pathname.includes('/stock_data/') ? '/stock_data' : '';
+let payload=null, factorRows=[], eventRows=[], eventSort={key:'stock_code',dir:1}, factorSort={key:'samples',dir:-1};
+const $=id=>document.getElementById(id);
+const fmt=(v,d=2)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
+const pctClass=v=>Number(v)>0?'positive':Number(v)<0?'negative':'';
+const median=arr=>{const a=arr.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2};
+const avg=arr=>{const a=arr.filter(Number.isFinite);return a.length?a.reduce((s,v)=>s+v,0)/a.length:null};
+const val=(obj,path)=>path.split('.').reduce((o,k)=>o?.[k],obj);
+const factors=[
+  ['YoY > 0',e=>Number(e.factors?.yoy_pct)>0],['YoY ≥ 10%',e=>Number(e.factors?.yoy_pct)>=10],['YoY ≥ 20%',e=>Number(e.factors?.yoy_pct)>=20],['YoY ≥ 30%',e=>Number(e.factors?.yoy_pct)>=30],
+  ['MoM > 0',e=>Number(e.factors?.mom_pct)>0],['YoY + MoM 同為正',e=>e.factors?.yoy_and_mom_positive===true],['YoY 加速',e=>e.factors?.yoy_accelerating===true],['YoY 加速 ≥ 10pp',e=>Number(e.factors?.yoy_acceleration_pct_points)>=10]
+];
+function horizon(){return $('horizon').value}
+function completeEvents(){const h=horizon();return (payload?.events||[]).filter(e=>e.returns?.[h]?.status==='complete')}
+function buildFactors(){const h=horizon();factorRows=factors.map(([name,test])=>{const rows=completeEvents().filter(test),r=rows.map(e=>e.returns[h]);const excess=r.map(x=>Number(x.excess_return_pct)),stock=r.map(x=>Number(x.stock_return_pct)),market=r.map(x=>Number(x.market_return_pct));return{name,samples:rows.length,relativeWinRate:rows.length?100*r.filter(x=>x.outperformed_market===true).length/rows.length:null,absoluteWinRate:rows.length?100*r.filter(x=>x.stock_positive===true).length/rows.length:null,avgExcess:avg(excess),medianExcess:median(excess),avgStock:avg(stock),avgMarket:avg(market)}});renderFactors()}
+function renderFactors(){const rows=[...factorRows].sort((a,b)=>cmp(a[factorSort.key],b[factorSort.key])*factorSort.dir);$('factorBody').innerHTML=rows.length?rows.map(r=>`<tr><td class="factor-name">${r.name}</td><td>${r.samples}</td><td class="${pctClass(r.relativeWinRate-50)}">${fmt(r.relativeWinRate)}%</td><td class="${pctClass(r.avgExcess)}">${fmt(r.avgExcess)}</td><td class="${pctClass(r.medianExcess)}">${fmt(r.medianExcess)}</td><td>${fmt(r.absoluteWinRate)}%</td><td class="${pctClass(r.avgStock)}">${fmt(r.avgStock)}</td><td class="${pctClass(r.avgMarket)}">${fmt(r.avgMarket)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">目前沒有完成的事件樣本</td></tr>'}
+function normalizedEvents(){const h=horizon(),q=$('search').value.trim().toLowerCase(),sf=$('statusFilter').value;return (payload?.events||[]).map(e=>{const r=e.returns?.[h]||{};return{...e,yoy_pct:e.factors?.yoy_pct,mom_pct:e.factors?.mom_pct,acceleration:e.factors?.yoy_acceleration_pct_points,horizonStatus:r.status||'not_available',stockReturn:r.stock_return_pct,marketReturn:r.market_return_pct,excessReturn:r.excess_return_pct,outperformed:r.outperformed_market}}).filter(e=>sf==='all'||(sf==='eligible'?e.evaluation_status==='eligible':e.evaluation_status!=='eligible')).filter(e=>!q||`${e.stock_code} ${e.stock_name} ${e.industry||''}`.toLowerCase().includes(q))}
+function cmp(a,b){if(a==null&&b==null)return 0;if(a==null)return 1;if(b==null)return-1;if(typeof a==='number'||typeof b==='number'){const x=Number(a),y=Number(b);if(Number.isFinite(x)&&Number.isFinite(y))return x-y}return String(a).localeCompare(String(b),'zh-Hant')}
+function renderEvents(){eventRows=normalizedEvents().sort((a,b)=>cmp(a[eventSort.key],b[eventSort.key])*eventSort.dir);$('eventBody').innerHTML=eventRows.length?eventRows.map(e=>`<tr><td>${e.stock_code}</td><td>${e.stock_name}</td><td>${e.industry||'—'}</td><td>${e.observed_date||'—'}</td><td>${e.effective_trading_date||'—'}</td><td class="${pctClass(e.yoy_pct)}">${fmt(e.yoy_pct)}</td><td class="${pctClass(e.mom_pct)}">${fmt(e.mom_pct)}</td><td class="${pctClass(e.acceleration)}">${fmt(e.acceleration)}</td><td><span class="badge ${e.horizonStatus==='complete'?'ok':e.horizonStatus.includes('pending')?'warn':''}">${e.horizonStatus}</span></td><td class="${pctClass(e.stockReturn)}">${fmt(e.stockReturn)}</td><td class="${pctClass(e.marketReturn)}">${fmt(e.marketReturn)}</td><td class="${pctClass(e.excessReturn)}">${fmt(e.excessReturn)}</td><td>${e.outperformed===true?'✓':e.outperformed===false?'✕':'—'}</td></tr>`).join(''):'<tr><td colspan="13" class="empty">沒有符合條件的事件</td></tr>'}
+function renderCards(){const all=payload?.events||[],h=horizon(),complete=all.filter(e=>e.returns?.[h]?.status==='complete'),wins=complete.filter(e=>e.returns[h].outperformed_market===true),avgExc=avg(complete.map(e=>Number(e.returns[h].excess_return_pct)));const cards=[['營收月份',payload?.revenue_month||'—'],['事件總數',payload?.counts?.total??all.length],['可評估事件',payload?.counts?.eligible??0],['目前 '+h.toUpperCase()+' 完成',complete.length],['相對大盤勝率',complete.length?fmt(100*wins.length/complete.length)+'%':'—'],['平均超額報酬',Number.isFinite(avgExc)?fmt(avgExc)+'%':'—']];$('cards').innerHTML=cards.map(([l,v])=>`<div class="card"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('')}
+async function loadData(){const m=$('month').value.trim();const err=$('error');err.style.display='none';if(!/^20\d{4}$/.test(m)){err.textContent='月份格式必須為 YYYYMM';err.style.display='block';return}try{const res=await fetch(`${BASE}/data_prediction_analysis/monthly-revenue/events/${m}.json?ts=${Date.now()}`,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}`);payload=await res.json();renderCards();buildFactors();renderEvents();history.replaceState(null,'',`?month=${m}`)}catch(e){err.textContent=`無法載入 ${m} 事件資料：${e.message}`;err.style.display='block';payload=null;renderCards();buildFactors();renderEvents()}}
+$('loadBtn').onclick=loadData;$('horizon').onchange=()=>{renderCards();buildFactors();renderEvents()};$('statusFilter').onchange=renderEvents;$('search').oninput=renderEvents;document.querySelectorAll('[data-sort]').forEach(th=>th.onclick=()=>{const k=th.dataset.sort;if(eventSort.key===k)eventSort.dir*=-1;else eventSort={key:k,dir:1};renderEvents()});document.querySelectorAll('[data-factor-sort]').forEach(th=>th.onclick=()=>{const k=th.dataset.factorSort;if(factorSort.key===k)factorSort.dir*=-1;else factorSort={key:k,dir:k==='name'?1:-1};renderFactors()});const initial=new URLSearchParams(location.search).get('month');if(initial)$('month').value=initial;loadData();
+</script>
+</body>
+</html>
