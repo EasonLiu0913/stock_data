@@ -405,6 +405,7 @@ module.exports = {
   autoRevenueMonth,
   buildSourceUrl,
   completionSummary,
+  crawlMonth,
   decodeHtml,
   derivedForCompany,
   enrichCompanies,
