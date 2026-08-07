@@ -14,7 +14,17 @@ data_mops_monthly_revenue/
         └── YYYYMMDD_HHMMSS.json
 ```
 
-`monthly_revenue.json` 是該營收月份目前最新的標準化資料；`snapshots/` 保留申報期間每次抓取的版本，用於估計公司資料第一次被觀測到的時間，避免未來做股價反應研究時把所有公司誤視為同一天公布。
+`monthly_revenue.json` 是該營收月份目前最新的標準化資料；`snapshots/` 保留申報期間實際有變化的版本，用於估計公司資料第一次被觀測到的時間，避免未來做股價反應研究時把所有公司誤視為同一天公布。
+
+## Snapshot 規則
+
+每次爬取都會重新讀取 MOPS，並更新 `monthly_revenue.json`。`force_new_snapshot` 只控制是否一定保留一份新的 snapshot，不影響最新資料是否更新。
+
+- `force_new_snapshot = false`：如果新抓到的 MOPS 原始來源 `source.sha256` 與上一份 snapshot 相同，會刪除本次重複 snapshot，只保留最新 `monthly_revenue.json`。
+- `force_new_snapshot = true`：即使來源內容與上一份 snapshot 相同，也強制保留新的 snapshot。
+- `collection.snapshot_count` 會依實際保留的 snapshot 檔案數重新校正。
+
+因此一般定期抓取與歷史 backfill 建議維持 `false`，只有需要刻意保存「同內容、不同抓取時間」的觀測點時才勾選 `true`。
 
 ## 主要欄位
 
