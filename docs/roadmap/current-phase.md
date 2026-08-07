@@ -4,7 +4,7 @@ Last updated: 2026-08-08
 
 ## Active area
 
-Incremental historical research for the MOPS monthly-revenue research platform.
+Long-history expansion for the MOPS monthly-revenue research platform.
 
 ## Completed foundation
 
@@ -26,27 +26,19 @@ Incremental historical research for the MOPS monthly-revenue research platform.
 - Structured architecture/research/ADR documentation handoff.
 - Task Framework core, MOPS adapter, production workflow migration, checkpoint persistence, and real resume validation.
 
-## Current evidence
-
-The existing validated MOPS research history is mainly 202511-202606. This is useful but too short for strong cross-regime conclusions; the current period has insufficient weak-market observations.
-
-Do not promote a new production revenue strategy solely from this short period.
-
 ## Completed Phase 1 — Task Framework + MOPS backfill adoption
 
 Goal achieved:
 
 > **MOPS historical backfill is interruptible, resumable, and recoverable from validated progress.**
 
-Real GitHub Actions validation confirmed both checkpointed writes and a no-refetch resume rerun.
+Real GitHub Actions validation confirmed checkpointed writes, retry behavior, and no-refetch resume behavior.
 
-## Current Phase 2 — Incremental historical research
+## Completed Phase 2 — Incremental historical research
 
-Goal:
+Goal achieved:
 
-> **Adding one new or changed month must not regenerate every unchanged historical monthly detail artifact.**
-
-### Phase 2A — Dependency inventory and incremental detail runner (landed)
+> **Adding one new or changed month does not regenerate unchanged historical monthly detail artifacts.**
 
 Dependency inventory:
 
@@ -72,7 +64,7 @@ Production workflow:
 .github/workflows/backfill-mops-revenue-monthly-signal-study.yml
 ```
 
-The workflow supports:
+Supported modes:
 
 ```text
 force_full_rebuild = false   # default incremental mode
@@ -80,8 +72,6 @@ force_full_rebuild = true    # explicit clean/full detail rebuild
 ```
 
 ### Monthly detail fingerprint
-
-Current fingerprint fields:
 
 ```text
 methodology_version
@@ -95,10 +85,6 @@ Operational MOPS metadata such as collection timestamps and snapshot count are d
 The market fingerprint covers only the conservative base date through D20, so unrelated future market rows do not invalidate old mature months.
 
 ### Mature detail reuse rule
-
-Real Phase 2 validation showed that the original rule was too strict.
-
-Corrected rule:
 
 ```text
 pending_market_data
@@ -125,11 +111,9 @@ The following remain full aggregate rebuilds from stored monthly details:
 
 This is intentional because aggregate recomputation is cheap relative to per-stock detail generation and conclusions may change when the selected month window changes.
 
-### Phase 2B — Real-run validation (final gate)
+### Phase 2 real-run validation — passed
 
-Validation evidence:
-
-#### Legacy migration — passed
+#### Legacy migration
 
 `202511-202606` with `force_full_rebuild=false` upgraded eight legacy monthly details to schema v3 and added fingerprints.
 
@@ -139,7 +123,7 @@ Commit:
 f826c687  analysis: refresh MOPS monthly revenue signals 202511-202606
 ```
 
-#### Incremental reuse — passed after one evidence-driven fix
+#### Incremental reuse
 
 The first rerun exposed that `missing_stock_price` was incorrectly preventing all mature months from reuse.
 
@@ -160,7 +144,7 @@ A subsequent real run proved:
 
 Only the affected newest month was rewritten; mature historical months were not regenerated.
 
-#### Full rebuild equivalence — passed
+#### Full rebuild equivalence
 
 A clean `force_full_rebuild=true` run over `202511-202605` was followed by the exact same range in incremental mode.
 
@@ -177,7 +161,7 @@ Observed:
 - coverage, rankings, stability, industry, regime, and YoY20 aggregate outputs differed only in `generated_at`;
 - research samples, rankings, rates, and conclusions were equivalent.
 
-#### Missing/corrupt recovery — validator staged; real-run pending
+#### Missing/corrupt recovery
 
 Controlled validator:
 
@@ -185,51 +169,111 @@ Controlled validator:
 scripts/validate_mops_revenue_incremental_recovery.js
 ```
 
-The production workflow now has optional inputs:
+Real GitHub Actions validation over mature `202511-202605` with recovery month `202603` passed both controlled scenarios:
+
+1. missing monthly detail regenerated only `202603` while other months reused;
+2. corrupt JSON regenerated only `202603` while other months reused;
+3. the original monthly detail was restored after each scenario;
+4. `git diff --exit-code` passed before normal generation continued;
+5. final workflow commit contained no monthly-detail changes, only aggregate `generated_at` updates.
+
+Final evidence commit:
 
 ```text
-run_recovery_validation = false
-recovery_month = YYYYMM
+e8dd1008  analysis: refresh MOPS monthly revenue signals 202511-202605
 ```
 
-When enabled on a mature reusable range, the validator:
-
-1. hashes every monthly detail in the requested range;
-2. backs up the selected recovery month;
-3. deletes the selected detail and runs the real incremental runner;
-4. requires exactly that one month to regenerate while all others reuse;
-5. restores the original file;
-6. corrupts the selected detail with invalid JSON and repeats the same check;
-7. restores the original file again;
-8. verifies every monthly detail hash exactly matches the pre-test workspace state.
-
-The workflow also runs `git diff --exit-code` immediately afterward, so the controlled recovery test must leave zero persistent monthly-detail changes before normal research generation continues.
-
-Do not mark Phase 2 complete until this controlled recovery validation passes in a real GitHub Actions run.
-
-## Phase 2 acceptance criteria
-
-Phase 2 is complete when:
+### Phase 2 acceptance criteria
 
 1. adding one new revenue month does not regenerate unchanged historical monthly detail artifacts — **passed**;
-2. missing/corrupt monthly detail is automatically rebuilt — **real-run pending**;
+2. missing/corrupt monthly detail is automatically rebuilt — **passed**;
 3. pending market-window detail is refreshed as new D1/D3/D5/D10/D20 data arrives — **passed**;
-4. methodology/version change correctly invalidates old details or full rebuild can be selected — **implemented/tested**;
+4. methodology/version change correctly invalidates old details or full rebuild can be selected — **passed**;
 5. aggregate research outputs remain equivalent to a clean full build — **passed**;
 6. incremental/full modes have automated regression tests — **passed**;
 7. the workflow reports generated/reused monthly artifacts clearly — **passed**.
 
-## Planned historical extension
+## Current Phase 3 — Long-history expansion
 
-Only after incremental research is validated:
+Goal:
 
-1. Backfill MOPS `202401-202510`.
-2. Validate coverage, schema compatibility, company counts, price/TAIEX availability, research output, and resume behavior.
-3. Backfill `202201-202312`.
-4. Validate again.
-5. Backfill `202001-202112`.
+> **Extend evidence in staged historical blocks, validating data quality and research behavior after each block instead of performing one all-or-nothing backfill.**
 
-Do not start by requesting the entire `202001-202606` range in one all-or-nothing workflow.
+### Phase 3A — Raw MOPS backfill `202401-202510` — passed
+
+Production run:
+
+```text
+[06 回填修復] MOPS－上市公司月營收區間回填
+start_month: 202401
+end_month: 202510
+force_new_snapshot: false
+```
+
+Final commit:
+
+```text
+9b8c8466  data: backfill MOPS monthly revenue 202401-202510
+```
+
+Observed:
+
+- all 22 months `202401-202510` are `DONE` in the Task manifest;
+- company counts range from 967 to 990 and evolve smoothly through the period;
+- all non-seed monthly coverage ratios are approximately 0.9979 to 1.0041 and pass the completeness threshold;
+- `202401` is the expected `baseline_seed` because the preceding month was not yet in this staged dataset;
+- `202402-202510` are `likely_complete`;
+- only `202505` required a retry (`attempts=2`) and then completed successfully;
+- root MOPS manifest now lists the continuous range `202401-202607`;
+- checkpoint commits were created every three successfully processed months, with a final one-month partial checkpoint for `202510`.
+
+Checkpoint evidence:
+
+```text
+5dbb0b98  202401-202403
+eb270565  202404-202406
+ec1f4e4f  202407-202409
+f50dcb6e  202410-202412
+3376afee  202501-202503
+7b43e94f  202504-202506
+40bd6dd6  202507-202509
+de7ecde9  202510-202510
+```
+
+This is the first long-range production run proving the Task Framework checkpoint/retry model over 22 historical months.
+
+### Phase 3B — Research generation for `202401-202510` — current
+
+Next step:
+
+Run the incremental historical research workflow over the new raw-data block:
+
+```text
+[07 研究] MOPS－月營收歷史因子區間回測
+start_month: 202401
+end_month: 202510
+force_full_rebuild: false
+run_recovery_validation: false
+```
+
+Expected behavior:
+
+- all 22 months are new research artifacts and should `GENERATE` once;
+- each monthly detail should receive schema v3 fingerprints;
+- coverage must be checked for stock price availability and TAIEX D1/D3/D5/D10/D20 coverage;
+- aggregate rankings, stability, industry, regime, and YoY20 outputs must rebuild for the wider history;
+- do not promote a production strategy solely because a factor looks strong after this one extension; compare persistence across later historical blocks.
+
+### Planned next blocks
+
+Only after `202401-202510` research output is validated:
+
+1. backfill MOPS `202201-202312`;
+2. validate raw coverage and incremental research again;
+3. backfill `202001-202112`;
+4. validate again.
+
+Do not request the entire `202001-202606` range in one all-or-nothing workflow.
 
 ## Framework non-goals
 
