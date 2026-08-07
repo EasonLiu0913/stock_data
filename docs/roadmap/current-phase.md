@@ -44,9 +44,9 @@ The goal is:
 
 The framework must remain business-agnostic and independent of GitHub Actions.
 
-### Phase 0A — Implement the small framework core
+### Phase 0A — Framework core implementation (landed)
 
-Initial target files:
+The first implementation now exists at:
 
 ```text
 scripts/framework/
@@ -57,17 +57,19 @@ scripts/framework/
 └── index.js
 ```
 
-Required MVP capabilities:
+Implemented MVP capabilities:
 
-1. item execution;
-2. resume with output revalidation;
-3. retry for retryable failures;
-4. persistent manifest;
-5. count-based checkpoint callback;
-6. clear progress logging and final summary;
-7. lightweight lifecycle hooks needed to keep side effects outside the runner.
+1. sequential item execution;
+2. resume with current-output revalidation;
+3. retry orchestration for retryable failures;
+4. persistent JSON manifest with atomic writes;
+5. count-based checkpoint callbacks;
+6. final partial checkpoint and pre-failure partial checkpoint;
+7. clear progress logging and final summary;
+8. lightweight lifecycle hooks without a plugin/event-bus system;
+9. no GitHub Actions or Git commands inside the core framework.
 
-Required item states:
+Item states:
 
 ```text
 PENDING
@@ -79,23 +81,36 @@ FAILED
 SKIPPED
 ```
 
-Checkpoint is a task/batch operation, not an item state.
+Checkpoint remains a task/batch operation, not an item state.
 
-### Phase 0B — Framework tests
+### Phase 0B — Framework validation (current gate)
 
-Add automated tests for at least:
+Automated lifecycle coverage exists in:
+
+```text
+tests/task_framework.test.js
+```
+
+Dedicated CI exists in:
+
+```text
+.github/workflows/test-task-framework.yml
+```
+
+The validation suite covers:
 
 - successful item lifecycle;
-- existing valid item -> skipped;
-- manifest says done but output invalid -> rebuilt;
+- existing valid item -> skipped without needless manifest rewrite;
+- manifest says done but current output invalid -> rebuilt;
+- stale transient manifest state does not block resume;
 - retryable failure -> retry -> success;
 - retry exhaustion -> visible failure;
 - non-retryable failure -> no unnecessary retry;
-- checkpoint emitted after the configured validated item count;
-- stale transient state from a prior run does not block resume;
-- optional hooks do not change core behavior.
+- count checkpoint + final partial checkpoint;
+- validated partial progress checkpointed before a later failure;
+- framework works without optional lifecycle hooks.
 
-Do not add MOPS-specific rules to generic framework tests.
+**Current validation gate:** confirm `[99 測試] Task Framework` passes on GitHub Actions before migrating MOPS backfill onto the framework. Do not mark Phase 0 complete based only on files existing on `main`.
 
 ## Phase 1 — Adopt the framework in MOPS backfill
 
