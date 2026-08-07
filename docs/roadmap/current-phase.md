@@ -4,7 +4,7 @@ Last updated: 2026-08-07
 
 ## Active area
 
-MOPS monthly-revenue historical research platform.
+Long-running Task Framework MVP for the MOPS monthly-revenue historical research platform.
 
 ## Completed foundation
 
@@ -23,31 +23,104 @@ MOPS monthly-revenue historical research platform.
 - Factor stability analysis.
 - Industry breakdown against same-industry baseline.
 - Market-regime breakdown as research context only.
+- Structured architecture/research/ADR documentation handoff.
+- Task Framework architecture design (`docs/architecture/task-framework.md`).
+- ADR-007 hook-based business-agnostic long-task model.
+- ADR-008 incremental framework evolution from real use cases.
 
 ## Current evidence
 
-The existing validated history is mainly 202511-202606. This is useful but too short for strong cross-regime conclusions; the current period has insufficient weak-market observations.
+The existing validated MOPS research history is mainly 202511-202606. This is useful but too short for strong cross-regime conclusions; the current period has insufficient weak-market observations.
 
 Do not promote a new production revenue strategy solely from this short period.
 
-## Current phase: backfill infrastructure hardening
+## Current phase: Task Framework MVP
 
-Before extending MOPS history to multiple years, improve the backfill/research workflow in two steps.
+The immediate goal is not to build a generic workflow platform.
 
-### Phase 1 — Checkpoint backfill
+The goal is:
 
-Goal: long MOPS range backfills must preserve validated partial progress.
+> **Make MOPS historical backfill reliably interruptible, resumable, and recoverable.**
+
+The framework must remain business-agnostic and independent of GitHub Actions.
+
+### Phase 0A — Implement the small framework core
+
+Initial target files:
+
+```text
+scripts/framework/
+├── task_runner.js
+├── task_manifest.js
+├── task_logger.js
+├── task_retry.js
+└── index.js
+```
+
+Required MVP capabilities:
+
+1. item execution;
+2. resume with output revalidation;
+3. retry for retryable failures;
+4. persistent manifest;
+5. count-based checkpoint callback;
+6. clear progress logging and final summary;
+7. lightweight lifecycle hooks needed to keep side effects outside the runner.
+
+Required item states:
+
+```text
+PENDING
+RUNNING
+RETRY_WAIT
+VALIDATING
+DONE
+FAILED
+SKIPPED
+```
+
+Checkpoint is a task/batch operation, not an item state.
+
+### Phase 0B — Framework tests
+
+Add automated tests for at least:
+
+- successful item lifecycle;
+- existing valid item -> skipped;
+- manifest says done but output invalid -> rebuilt;
+- retryable failure -> retry -> success;
+- retry exhaustion -> visible failure;
+- non-retryable failure -> no unnecessary retry;
+- checkpoint emitted after the configured validated item count;
+- stale transient state from a prior run does not block resume;
+- optional hooks do not change core behavior.
+
+Do not add MOPS-specific rules to generic framework tests.
+
+## Phase 1 — Adopt the framework in MOPS backfill
+
+After the framework core/tests pass, migrate the MOPS monthly-revenue range backfill to use it.
 
 Requirements:
 
-- Process a bounded number of months per checkpoint (initial design target: about 3 months).
-- Validate each completed month before checkpointing.
-- Commit/push checkpoint progress.
-- On rerun, automatically skip already valid months unless force mode is selected.
-- Log planned/completed/skipped/failed months.
+- MOPS month key remains domain-owned (`YYYYMM`).
+- MOPS owns `isComplete`, processing, validation, and retry classification.
+- Process a bounded number of validated months per checkpoint (initial target: 3).
+- On rerun, skip already valid months unless force mode is selected.
+- Rebuild a month if its recorded completion is stale, missing, or invalid.
+- Log planned/completed/skipped/failed/retried months.
 - A failure in a late month must not require re-fetching all earlier valid months.
+- Preserve existing `force_new_snapshot` semantics.
 
-### Phase 2 — Incremental historical research
+### Git checkpoint boundary
+
+The core framework must not run Git commands.
+
+If GitHub Actions needs to commit/push checkpointed MOPS outputs, that remains workflow/caller responsibility, triggered around framework checkpoint boundaries.
+
+## Phase 2 — Incremental historical research
+
+After MOPS checkpoint/resume behavior is validated in real use, improve historical research updates.
 
 Goal: adding one new month should not recompute all immutable monthly return artifacts.
 
@@ -58,17 +131,39 @@ Requirements:
 - Aggregated summaries/rankings/stability/industry/regime outputs may be rebuilt from stored monthly detail artifacts.
 - Explicit force/full rebuild options must remain available.
 
+Do not automatically generalize the Task Framework further just because incremental research exists. First compare the real execution needs and only promote genuinely repeated behavior.
+
 ## Planned historical extension
 
-Only after Phase 1 and Phase 2 are validated:
+Only after Task Framework + MOPS adoption + incremental research are validated:
 
 1. Backfill MOPS `202401-202510`.
-2. Validate coverage, schema compatibility, company counts, price/TAIEX availability, and research output.
+2. Validate coverage, schema compatibility, company counts, price/TAIEX availability, research output, and resume behavior.
 3. Backfill `202201-202312`.
 4. Validate again.
 5. Backfill `202001-202112`.
 
 Do not start by requesting the entire `202001-202606` range in one all-or-nothing workflow.
+
+## Framework non-goals for this phase
+
+Do not implement yet:
+
+- scheduler;
+- dependency DAG;
+- distributed state;
+- parallel worker pool;
+- streaming item source;
+- EventEmitter event bus;
+- generic plugin registry;
+- middleware pipeline;
+- dependency injection container;
+- ETA engine;
+- generic validation schema;
+- automatic Git commit/push inside the core runner;
+- forced Prediction/Replay migration.
+
+These require evidence from later real use cases.
 
 ## After long-history validation
 
@@ -99,7 +194,10 @@ The goal is to study which market participants move before or after fundamental 
 
 ## Fixed constraints
 
+- Let evidence drive evolution.
 - Market regime remains research context, never a strategy gate.
 - Research findings do not automatically change production strategies.
 - Workflow chaining must follow `AGENTS.md`; do not introduce `workflow_run`.
 - Preserve existing prediction/replay/deployment behavior while improving research workflows.
+- The first framework implementation exists to make MOPS reliable, not to become a universal orchestration engine.
+- A new framework abstraction requires evidence from another real use case.
