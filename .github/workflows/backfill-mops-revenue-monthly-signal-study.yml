@@ -38,6 +38,7 @@ jobs:
       - name: Validate scripts
         run: |
           node --check scripts/generate_mops_revenue_monthly_signal_returns.js
+          node --check scripts/summarize_mops_revenue_monthly_signal_study.js
           node --test tests/mops_revenue_monthly_signal_returns.test.js
 
       - name: Validate range
@@ -55,6 +56,17 @@ jobs:
           const toIndex = m => Number(m.slice(0,4))*12 + Number(m.slice(4,6));
           if (toIndex(s) > toIndex(e)) throw new Error('start_month must be <= end_month');
           if (toIndex(e) - toIndex(s) > 35) throw new Error('maximum range is 36 months');
+
+          const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+          const availabilityDate = month => {
+            let y = Number(month.slice(0,4));
+            let m = Number(month.slice(4,6)) + 1;
+            if (m === 13) { y += 1; m = 1; }
+            return new Date(y, m - 1, 15, 23, 59, 59);
+          };
+          if (availabilityDate(e) > now) {
+            throw new Error(`end_month ${e} is not conservatively available yet; its next-month day-15 boundary is still in the future`);
+          }
           NODE
 
       - name: Generate historical monthly signal study
@@ -112,6 +124,12 @@ jobs:
             if (month === end) break;
           }
           NODE
+
+      - name: Build compact coverage summary
+        run: |
+          node scripts/summarize_mops_revenue_monthly_signal_study.js \
+            --start-month '${{ inputs.start_month }}' \
+            --end-month '${{ inputs.end_month }}'
 
       - name: Commit verified study data
         shell: bash
