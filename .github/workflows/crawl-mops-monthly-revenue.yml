@@ -1,0 +1,129 @@
+name: '[02 外部市場] MOPS－上市公司月營收'
+
+on:
+  schedule:
+    # 每月 1～15 日，台北時間 18:30、23:30。
+    # 目的：保留申報期間 snapshot 與 first_seen_at，不只抓 10 日最終版。
+    - cron: '30 10 1-15 * *'
+    - cron: '30 15 1-15 * *'
+  workflow_dispatch:
+    inputs:
+      revenue_month:
+        description: '營收月份 YYYYMM；留空自動抓台北時間上一個月份'
+        required: false
+        default: ''
+        type: string
+      include_previous_month:
+        description: '同時補抓前一月份，建立完整度 baseline'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-mops-monthly-revenue
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Resolve revenue months
+        id: months
+        shell: bash
+        env:
+          INPUT_MONTH: ${{ inputs.revenue_month || '' }}
+          INCLUDE_PREVIOUS: ${{ inputs.include_previous_month || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_MONTH" ]; then
+            month="$INPUT_MONTH"
+          else
+            month=$(node -e "process.stdout.write(require('./scripts/crawl_mops_monthly_revenue').autoRevenueMonth())")
+          fi
+          previous=$(node -e "process.stdout.write(require('./scripts/crawl_mops_monthly_revenue').previousRevenueMonth(process.argv[1]))" "$month")
+          if [ "$INCLUDE_PREVIOUS" = "true" ]; then
+            months="$previous,$month"
+          else
+            months="$month"
+          fi
+          echo "month=$month" >> "$GITHUB_OUTPUT"
+          echo "months=$months" >> "$GITHUB_OUTPUT"
+          echo "Target revenue months: $months"
+
+      - name: Run parser regression tests
+        run: |
+          node --check scripts/crawl_mops_monthly_revenue.js
+          node --test tests/mops_monthly_revenue.test.js
+
+      - name: Crawl MOPS monthly revenue
+        run: node scripts/crawl_mops_monthly_revenue.js --month "${{ steps.months.outputs.months }}"
+
+      - name: Validate generated payload
+        shell: bash
+        env:
+          TARGET_MONTH: ${{ steps.months.outputs.month }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const month = process.env.TARGET_MONTH;
+          const file = `data_mops_monthly_revenue/${month}/monthly_revenue.json`;
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (payload.revenue_month !== month) throw new Error('Revenue month mismatch');
+          if (!Array.isArray(payload.companies) || payload.companies.length === 0) {
+            throw new Error('No MOPS company rows were generated');
+          }
+          if (!payload.companies.every((row) => /^\d{4,6}$/.test(row.stock_code))) {
+            throw new Error('Invalid stock code in MOPS payload');
+          }
+          console.log(JSON.stringify({
+            revenue_month: month,
+            companies: payload.companies.length,
+            report_date: payload.source.report_date,
+            coverage_ratio: payload.collection.coverage_ratio,
+            completion_status: payload.collection.status,
+          }, null, 2));
+          NODE
+
+      - name: Commit verified MOPS revenue data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_mops_monthly_revenue
+          if git diff --cached --quiet; then
+            echo "No MOPS monthly revenue changes"
+            exit 0
+          fi
+          git commit -m "data: update MOPS monthly revenue ${{ steps.months.outputs.month }}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
