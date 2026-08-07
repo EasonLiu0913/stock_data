@@ -16,6 +16,16 @@ on:
         required: false
         type: boolean
         default: false
+      run_recovery_validation:
+        description: '安全模擬 missing/corrupt monthly detail，驗證只重建指定月份並於測試後完整還原'
+        required: false
+        type: boolean
+        default: false
+      recovery_month:
+        description: 'Recovery 驗證月份 YYYYMM；啟用 recovery validation 時必填，且整段範圍需為成熟可重用月份'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -45,6 +55,7 @@ jobs:
           node --check scripts/lib/stock_price_provider.js
           node --check scripts/generate_mops_revenue_monthly_signal_returns.js
           node --check scripts/run_mops_revenue_monthly_signal_incremental.js
+          node --check scripts/validate_mops_revenue_incremental_recovery.js
           node --check scripts/summarize_mops_revenue_monthly_signal_study.js
           node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
@@ -85,6 +96,25 @@ jobs:
           };
           if (availabilityDate(e) > now) throw new Error(`end_month ${e} is not conservatively available yet; its next-month day-15 boundary is still in the future`);
           NODE
+
+      - name: Controlled missing/corrupt recovery validation
+        if: ${{ inputs.run_recovery_validation }}
+        shell: bash
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+          RECOVERY_MONTH: ${{ inputs.recovery_month }}
+        run: |
+          set -euo pipefail
+          [[ "$RECOVERY_MONTH" =~ ^20[0-9]{4}$ ]] || { echo '::error::recovery_month must be YYYYMM when recovery validation is enabled'; exit 1; }
+          node scripts/validate_mops_revenue_incremental_recovery.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH" \
+            --recovery-month "$RECOVERY_MONTH"
+          git diff --exit-code -- data_prediction_analysis/monthly-revenue/monthly-signals || {
+            echo '::error::controlled recovery validation left persistent monthly-detail changes';
+            exit 1;
+          }
 
       - name: Generate or reuse historical monthly signal details
         shell: bash
