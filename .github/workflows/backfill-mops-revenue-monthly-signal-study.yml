@@ -143,7 +143,17 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs');const start=process.env.START_MONTH,end=process.env.END_MONTH;
           const next=value=>{let y=Number(value.slice(0,4)),m=Number(value.slice(4,6))+1;if(m===13){y++;m=1;}return `${y}${String(m).padStart(2,'0')}`;};
-          for(let month=start;;month=next(month)){const file=`data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;const payload=JSON.parse(fs.readFileSync(file,'utf8'));if(payload.dataset!=='mops_monthly_revenue_conservative_signal_returns')throw new Error(`dataset mismatch: ${month}`);if(payload.revenue_month!==month)throw new Error(`month mismatch: ${month}`);if(!Array.isArray(payload.events)||!payload.events.length)throw new Error(`no events: ${month}`);console.log(month,payload.counts,payload.incremental?.input_fingerprint?.methodology_version||'legacy_detail');if(month===end)break;}
+          for(let month=start;;month=next(month)){
+            const file=`data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;
+            const payload=JSON.parse(fs.readFileSync(file,'utf8'));
+            if(payload.dataset!=='mops_monthly_revenue_conservative_signal_returns')throw new Error(`dataset mismatch: ${month}`);
+            if(payload.revenue_month!==month)throw new Error(`month mismatch: ${month}`);
+            if(!Array.isArray(payload.events)||!payload.events.length)throw new Error(`no events: ${month}`);
+            if(!payload.incremental?.input_fingerprint?.market_window_sha256)throw new Error(`missing TAIEX benchmark market window: ${month}; backfill data_twse_market_chart before running research`);
+            if(!Number.isFinite(payload.counts?.with_effective_trading_date)||payload.counts.with_effective_trading_date<=0)throw new Error(`no effective trading dates: ${month}; benchmark history does not cover conservative availability date`);
+            console.log(month,payload.counts,payload.incremental?.input_fingerprint?.methodology_version||'legacy_detail');
+            if(month===end)break;
+          }
           NODE
 
       - name: Rebuild coverage summary from monthly details
