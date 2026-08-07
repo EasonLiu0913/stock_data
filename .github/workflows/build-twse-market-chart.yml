@@ -86,7 +86,12 @@ jobs:
           git pull --rebase origin main
           git push origin main
 
-  deploy_pages:
-    name: Deploy latest TWSE market chart to Pages
+  refresh_mops_revenue_events:
+    name: Refresh MOPS revenue event study
     needs: build-market-chart
+    uses: ./.github/workflows/refresh-mops-revenue-event-returns.yml
+
+  deploy_pages:
+    name: Deploy latest TWSE market chart and event study to Pages
+    needs: refresh_mops_revenue_events
     uses: ./.github/workflows/deploy-pages.yml
