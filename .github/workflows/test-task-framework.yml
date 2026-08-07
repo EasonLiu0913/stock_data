@@ -5,7 +5,12 @@ on:
   push:
     paths:
       - 'scripts/framework/**'
+      - 'scripts/backfill_mops_monthly_revenue_task.js'
+      - 'scripts/crawl_mops_monthly_revenue.js'
+      - 'scripts/apply_mops_snapshot_policy.js'
+      - 'scripts/rebuild_mops_monthly_revenue_metadata.js'
       - 'tests/task_framework.test.js'
+      - 'tests/mops_backfill_task_adapter.test.js'
       - '.github/workflows/test-task-framework.yml'
 
 permissions:
@@ -29,14 +34,24 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Syntax check framework
+      - name: Syntax check framework and MOPS adapter
         run: |
           node --check scripts/framework/task_manifest.js
           node --check scripts/framework/task_retry.js
           node --check scripts/framework/task_logger.js
           node --check scripts/framework/task_runner.js
           node --check scripts/framework/index.js
+          node --check scripts/backfill_mops_monthly_revenue_task.js
+          node --check scripts/crawl_mops_monthly_revenue.js
+          node --check scripts/apply_mops_snapshot_policy.js
+          node --check scripts/rebuild_mops_monthly_revenue_metadata.js
           node --check tests/task_framework.test.js
+          node --check tests/mops_backfill_task_adapter.test.js
 
-      - name: Run task framework tests
-        run: node --test tests/task_framework.test.js
+      - name: Run framework and MOPS adapter tests
+        run: |
+          node --test tests/task_framework.test.js
+          node --test tests/mops_backfill_task_adapter.test.js
+
+      - name: Run existing MOPS parser and metadata regression tests
+        run: node --test tests/mops_monthly_revenue.test.js
