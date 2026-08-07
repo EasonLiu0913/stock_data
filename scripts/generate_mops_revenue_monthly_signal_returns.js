@@ -154,11 +154,14 @@ function inspectReusableMonth(revenueMonth) {
   if (existing.dataset !== 'mops_monthly_revenue_conservative_signal_returns' || existing.revenue_month !== revenueMonth) {
     return { reusable: false, reason: 'output_identity_mismatch', source_file: sourceFile, output_file: outputFile };
   }
-  if (hasPendingMarketData(existing)) {
-    return { reusable: false, reason: 'pending_market_data', source_file: sourceFile, output_file: outputFile };
-  }
   const marketRows = loadMarketSeries();
   const current = buildInputFingerprint(revenueMonth, source, marketRows);
+  if (!current.market_window_sha256) {
+    return { reusable: false, reason: 'missing_market_window', source_file: sourceFile, output_file: outputFile, current };
+  }
+  if (hasPendingMarketData(existing)) {
+    return { reusable: false, reason: 'pending_market_data', source_file: sourceFile, output_file: outputFile, current };
+  }
   const stored = existing.incremental?.input_fingerprint || null;
   if (!stored) return { reusable: false, reason: 'missing_input_fingerprint', source_file: sourceFile, output_file: outputFile, current };
   for (const key of Object.keys(current)) {
@@ -174,6 +177,7 @@ function generateMonth(revenueMonth) {
   if (!source) throw new Error(`Missing MOPS revenue file: ${sourceFile}`);
   const marketRows = loadMarketSeries();
   const events = (source.companies || []).map(row => buildEvent(row, revenueMonth, marketRows));
+  const inputFingerprint = buildInputFingerprint(revenueMonth, source, marketRows);
   const payload = {
     schema_version: 3,
     dataset: 'mops_monthly_revenue_conservative_signal_returns',
@@ -189,9 +193,9 @@ function generateMonth(revenueMonth) {
       interpretation_warning: 'this is not a filing-day event study and must not be interpreted as immediate market reaction to an individual company filing',
     },
     incremental: {
-      reusable_when_market_window_mature: true,
+      reusable_when_market_window_mature: Boolean(inputFingerprint.market_window_sha256),
       historical_missing_stock_price_requires_force_rebuild_after_price_backfill: true,
-      input_fingerprint: buildInputFingerprint(revenueMonth, source, marketRows),
+      input_fingerprint: inputFingerprint,
     },
     counts: {
       total: events.length,
