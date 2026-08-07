@@ -44,12 +44,14 @@ jobs:
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
           node --check scripts/summarize_mops_revenue_factor_stability.js
           node --check scripts/summarize_mops_revenue_industry_breakdown.js
+          node --check scripts/summarize_mops_revenue_market_regime_breakdown.js
           node --test tests/stock_price_provider.test.js
           node --test tests/mops_revenue_monthly_signal_returns.test.js
           node --test tests/mops_revenue_factor_rankings.test.js
           node --test tests/mops_revenue_yoy20_subfactors.test.js
           node --test tests/mops_revenue_factor_stability.test.js
           node --test tests/mops_revenue_industry_breakdown.test.js
+          node --test tests/mops_revenue_market_regime_breakdown.test.js
 
       - name: Validate range
         shell: bash
@@ -126,6 +128,9 @@ jobs:
 
       - name: Build industry breakdown
         run: node scripts/summarize_mops_revenue_industry_breakdown.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
+
+      - name: Build market regime breakdown
+        run: node scripts/summarize_mops_revenue_market_regime_breakdown.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Commit verified study data
         shell: bash
