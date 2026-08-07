@@ -42,10 +42,12 @@ jobs:
           node --check scripts/summarize_mops_revenue_monthly_signal_study.js
           node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
+          node --check scripts/summarize_mops_revenue_factor_stability.js
           node --test tests/stock_price_provider.test.js
           node --test tests/mops_revenue_monthly_signal_returns.test.js
           node --test tests/mops_revenue_factor_rankings.test.js
           node --test tests/mops_revenue_yoy20_subfactors.test.js
+          node --test tests/mops_revenue_factor_stability.test.js
 
       - name: Validate range
         shell: bash
@@ -147,6 +149,9 @@ jobs:
           node scripts/summarize_mops_revenue_yoy20_subfactors.js \
             --start-month '${{ inputs.start_month }}' \
             --end-month '${{ inputs.end_month }}'
+
+      - name: Build factor stability summary
+        run: node scripts/summarize_mops_revenue_factor_stability.js
 
       - name: Commit verified study data
         shell: bash
