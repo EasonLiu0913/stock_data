@@ -110,28 +110,69 @@ The validation suite covers:
 - validated partial progress checkpointed before a later failure;
 - framework works without optional lifecycle hooks.
 
-**Current validation gate:** confirm `[99 測試] Task Framework` passes on GitHub Actions before migrating MOPS backfill onto the framework. Do not mark Phase 0 complete based only on files existing on `main`.
+**Current validation gate:** confirm `[99 測試] Task Framework` passes on GitHub Actions before switching the production MOPS backfill workflow. Do not mark Phase 0 complete based only on files existing on `main`.
 
 ## Phase 1 — Adopt the framework in MOPS backfill
 
-After the framework core/tests pass, migrate the MOPS monthly-revenue range backfill to use it.
+### Phase 1A — MOPS task adapter (landed, production workflow not switched yet)
+
+The domain adapter now exists at:
+
+```text
+scripts/backfill_mops_monthly_revenue_task.js
+```
+
+Adapter responsibilities remain MOPS-specific:
+
+- builds `YYYYMM` item ranges;
+- calls the existing MOPS month crawler;
+- applies the existing snapshot policy;
+- validates MOPS output structure and company counts;
+- rebuilds downstream baseline/derived metadata from the requested start month;
+- stores Task Framework state outside the MOPS dataset at `data_task_manifests/mops-monthly-revenue-backfill.json` by default.
+
+Resume semantics are intentionally stricter than "file exists":
+
+- `likely_complete` -> may be skipped after revalidation;
+- `baseline_seed` -> may be skipped after revalidation;
+- `collecting` -> remains structurally valid for the current run, but must be refreshed on a later run rather than permanently frozen;
+- missing, malformed, month-mismatched, empty, or inconsistent output -> rebuild.
+
+The existing crawler now exports `crawlMonth()` so the adapter can reuse the same implementation rather than shelling out to a duplicate crawler.
+
+Adapter regression coverage exists in:
+
+```text
+tests/mops_backfill_task_adapter.test.js
+```
+
+The `[99 測試] Task Framework` workflow now runs:
+
+- Task Framework syntax + lifecycle tests;
+- MOPS task adapter syntax + adapter tests;
+- existing `tests/mops_monthly_revenue.test.js` regressions.
+
+### Phase 1B — Production workflow migration (blocked on CI gate)
+
+After `[99 測試] Task Framework` is confirmed green, migrate `.github/workflows/backfill-mops-monthly-revenue.yml` to use the adapter/framework.
 
 Requirements:
 
 - MOPS month key remains domain-owned (`YYYYMM`).
-- MOPS owns `isComplete`, processing, validation, and retry classification.
 - Process a bounded number of validated months per checkpoint (initial target: 3).
-- On rerun, skip already valid months unless force mode is selected.
+- On rerun, skip already valid complete months unless force mode is selected.
+- Refresh `collecting` months on later runs.
 - Rebuild a month if its recorded completion is stale, missing, or invalid.
 - Log planned/completed/skipped/failed/retried months.
 - A failure in a late month must not require re-fetching all earlier valid months.
 - Preserve existing `force_new_snapshot` semantics.
+- Preserve the existing 36-month single-run safety limit until there is evidence to change it.
 
 ### Git checkpoint boundary
 
 The core framework must not run Git commands.
 
-If GitHub Actions needs to commit/push checkpointed MOPS outputs, that remains workflow/caller responsibility, triggered around framework checkpoint boundaries.
+If GitHub Actions needs to commit/push checkpointed MOPS outputs, that remains workflow/caller responsibility. The production workflow migration should persist validated progress around Task Framework checkpoint boundaries without adding Git behavior to `scripts/framework/**`.
 
 ## Phase 2 — Incremental historical research
 
