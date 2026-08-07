@@ -5,6 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../..');
+const jsonCache = new Map();
+const twseDailyQuoteCache = new Map();
 
 function normalizeDate(value) {
   const compact = String(value || '').replace(/[^\d]/g, '');
@@ -31,11 +33,21 @@ function parseNumber(value) {
 }
 
 function readJson(file) {
+  const resolved = path.resolve(file);
+  if (jsonCache.has(resolved)) return jsonCache.get(resolved);
+  let value = null;
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    value = JSON.parse(fs.readFileSync(resolved, 'utf8'));
   } catch {
-    return null;
+    value = null;
   }
+  jsonCache.set(resolved, value);
+  return value;
+}
+
+function clearCaches() {
+  jsonCache.clear();
+  twseDailyQuoteCache.clear();
 }
 
 function buildPriceRecord(values, metadata = {}) {
@@ -64,34 +76,49 @@ function findTwseQuoteTable(payload) {
   }) || null;
 }
 
-function loadFromTwseMiIndex(stockCode, date, root = DEFAULT_ROOT) {
+function buildTwseDailyQuoteMap(date, root = DEFAULT_ROOT) {
   const compact = normalizeDate(date);
+  const cacheKey = `${path.resolve(root)}::${compact}`;
+  if (twseDailyQuoteCache.has(cacheKey)) return twseDailyQuoteCache.get(cacheKey);
+
   const file = path.join(root, 'data_twse_mi_index', `${compact}_twse_mi_index.json`);
   const payload = readJson(file);
-  if (!payload) return null;
-  const table = findTwseQuoteTable(payload);
-  if (!table) return null;
+  const table = payload ? findTwseQuoteTable(payload) : null;
+  const quotes = new Map();
 
-  const fields = table.fields || [];
-  const codeIndex = fields.indexOf('證券代號');
-  const openIndex = fields.indexOf('開盤價');
-  const highIndex = fields.indexOf('最高價');
-  const lowIndex = fields.indexOf('最低價');
-  const closeIndex = fields.indexOf('收盤價');
-  const volumeIndex = fields.indexOf('成交股數');
-  const row = (table.data || []).find(item => String(item?.[codeIndex] || '').trim() === String(stockCode));
-  if (!row) return null;
+  if (table) {
+    const fields = table.fields || [];
+    const codeIndex = fields.indexOf('證券代號');
+    const openIndex = fields.indexOf('開盤價');
+    const highIndex = fields.indexOf('最高價');
+    const lowIndex = fields.indexOf('最低價');
+    const closeIndex = fields.indexOf('收盤價');
+    const volumeIndex = fields.indexOf('成交股數');
+    const sourceFile = path.relative(root, file).replaceAll(path.sep, '/');
 
-  return buildPriceRecord({
-    open: row[openIndex],
-    high: row[highIndex],
-    low: row[lowIndex],
-    close: row[closeIndex],
-    volume: volumeIndex >= 0 ? row[volumeIndex] : null,
-  }, {
-    source: 'twse_mi_index',
-    source_file: path.relative(root, file).replaceAll(path.sep, '/'),
-  });
+    for (const row of table.data || []) {
+      const code = String(row?.[codeIndex] || '').trim();
+      if (!code) continue;
+      const record = buildPriceRecord({
+        open: row[openIndex],
+        high: row[highIndex],
+        low: row[lowIndex],
+        close: row[closeIndex],
+        volume: volumeIndex >= 0 ? row[volumeIndex] : null,
+      }, {
+        source: 'twse_mi_index',
+        source_file: sourceFile,
+      });
+      if (record) quotes.set(code, record);
+    }
+  }
+
+  twseDailyQuoteCache.set(cacheKey, quotes);
+  return quotes;
+}
+
+function loadFromTwseMiIndex(stockCode, date, root = DEFAULT_ROOT) {
+  return buildTwseDailyQuoteMap(date, root).get(String(stockCode)) || null;
 }
 
 function loadFromHistorySma(stockCode, date, root = DEFAULT_ROOT) {
@@ -150,6 +177,8 @@ function getClose(stockCode, date, options = {}) {
 module.exports = {
   DEFAULT_ROOT,
   buildPriceRecord,
+  buildTwseDailyQuoteMap,
+  clearCaches,
   findTwseQuoteTable,
   getClose,
   getDailyPrice,
