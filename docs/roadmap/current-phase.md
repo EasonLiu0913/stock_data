@@ -146,9 +146,9 @@ Adapter regression coverage exists in:
 tests/mops_backfill_task_adapter.test.js
 ```
 
-### Phase 1B — Production workflow migration (landed; real-run validation pending)
+### Phase 1B — Production workflow migration (landed)
 
-The production workflow now uses the Task Framework path:
+The production workflow uses the Task Framework path:
 
 ```text
 .github/workflows/backfill-mops-monthly-revenue.yml
@@ -159,7 +159,7 @@ The production workflow now uses the Task Framework path:
 
 The GitHub Actions caller is intentionally outside `scripts/framework/**`. It owns Git-specific persistence while the core runner remains Git/GitHub-independent.
 
-Production behavior now includes:
+Production behavior includes:
 
 - preflight syntax and regression tests before crawling;
 - the existing 36-month single-run safety limit;
@@ -189,21 +189,42 @@ tests/mops_backfill_workflow_caller.test.js
 
 The `[99 測試] Task Framework` workflow also covers this caller and the production workflow path.
 
-### Phase 1C — Real-run validation (current gate)
+### Phase 1C — Real-run validation (first run passed; resume rerun pending)
 
-Do not declare the MOPS Task Framework adoption complete until a real GitHub Actions run demonstrates the checkpoint/resume behavior.
+A real GitHub Actions run on 2026-08-07 used:
 
-Recommended validation sequence:
+```text
+start_month = 202511
+end_month = 202602
+force_new_snapshot = true
+```
 
-1. Run a small historical range containing at least 4 months with `force_new_snapshot=false`.
-2. Confirm the workflow's preflight regression tests pass.
-3. Confirm a checkpoint commit is created after the first 3 validated progress items when those months require work.
-4. Confirm the final partial batch and final metadata/index commit behave correctly.
-5. Rerun the same range and confirm complete months are revalidated then skipped.
-6. Confirm any `collecting` month is refreshed rather than permanently skipped.
-7. Only after this succeeds, consider Phase 1 complete and proceed to incremental research.
+Observed repository evidence after the run:
 
-A deliberately injected production failure is not required for the first validation. The automated lifecycle suite covers the `before_failure` checkpoint path; a real failure may validate that path naturally later.
+- the Task Framework manifest was created and contains `202511`, `202512`, `202601`, and `202602` as `done`;
+- all four items completed with one attempt;
+- `202511` is a valid `baseline_seed` item;
+- `202512`, `202601`, and `202602` are `likely_complete`;
+- each selected month has `snapshot_count = 2`, confirming `force_new_snapshot=true` caused an actual new crawl/snapshot rather than a resume skip;
+- fresh snapshots were written at approximately 23:19-23:20 Taipei time;
+- baseline/derived metadata was rebuilt after the crawl (status calculation time approximately 23:20:07 Taipei time);
+- comparing the production-migration commit to `main` shows exactly three additional commits, consistent with the designed execution sequence: first 3-month checkpoint, final 1-month partial checkpoint, and final metadata/index commit;
+- downstream months `202603-202607` changed only in derived/baseline metadata, as expected from rebuilding the chain from `202511`;
+- no evidence was observed that an in-progress failed month leaked into the root MOPS index.
+
+This validates the first real checkpoint/write path on GitHub Actions.
+
+Remaining Phase 1C validation:
+
+1. Rerun the same `202511-202602` range with `force_new_snapshot=false`.
+2. Confirm the four complete months are revalidated and skipped rather than fetched again.
+3. Confirm no additional snapshots are created for those skipped months.
+4. Confirm the run does not create unnecessary data checkpoint commits when there is no new item progress.
+5. Later, when a real `collecting` month is available, confirm it refreshes rather than being permanently skipped.
+
+A deliberately injected production failure is not required. The automated lifecycle suite covers `before_failure`; a natural real failure may validate it later.
+
+Phase 1 should be considered complete after the resume rerun succeeds. Then proceed to Phase 2 incremental historical research.
 
 ## Phase 2 — Incremental historical research
 
