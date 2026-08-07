@@ -13,9 +13,10 @@ This directory is the long-term architecture, research, decision, and roadmap kn
 4. `/docs/architecture/research-platform.md`
 5. `/docs/architecture/prediction-pipeline.md`
 6. `/docs/architecture/github-actions.md`
-7. `/docs/roadmap/current-phase.md`
-8. Relevant `/docs/research/<topic>/` documents
-9. Applicable `/docs/decisions/ADR-*.md`
+7. `/docs/architecture/task-framework.md` when working on long-running tasks/backfills
+8. `/docs/roadmap/current-phase.md`
+9. Relevant `/docs/research/<topic>/` documents
+10. Applicable `/docs/decisions/ADR-*.md`
 
 For a new session or coding agent, `project-philosophy.md` explains **why**, `AGENTS.md` defines mandatory rules, and `roadmap/current-phase.md` explains **what to do next**.
 
@@ -53,7 +54,8 @@ docs/
 ├── architecture/
 │   ├── research-platform.md
 │   ├── prediction-pipeline.md
-│   └── github-actions.md
+│   ├── github-actions.md
+│   └── task-framework.md
 ├── roadmap/
 │   └── current-phase.md
 ├── research/
@@ -69,7 +71,9 @@ docs/
     ├── ADR-003-price-provider.md
     ├── ADR-004-workflow-orchestration.md
     ├── ADR-005-backfill-checkpoint-incremental.md
-    └── ADR-006-baseline-hierarchy.md
+    ├── ADR-006-baseline-hierarchy.md
+    ├── ADR-007-task-framework-hooks.md
+    └── ADR-008-incremental-framework-evolution.md
 ```
 
 Existing historical documents directly under `/docs` remain valid historical records and should not be deleted merely because the structured hierarchy exists.
@@ -83,6 +87,8 @@ Defines the highest-level principles used to evaluate research and architecture 
 ### Architecture
 
 Describes durable system boundaries, dependencies, pipelines, and shared platform capabilities.
+
+`architecture/task-framework.md` defines the intentionally small long-running task runner used first to make MOPS backfill reliable. It is not a generic workflow engine and must evolve only from proven repeated use cases.
 
 ### Roadmap
 
