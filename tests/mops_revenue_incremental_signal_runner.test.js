@@ -6,7 +6,7 @@ const {
   runIncrementalRange,
 } = require('../scripts/run_mops_revenue_monthly_signal_incremental');
 const {
-  hasIncompleteReturns,
+  hasPendingMarketData,
   marketWindowFingerprint,
   stableRevenueResearchInput,
 } = require('../scripts/generate_mops_revenue_monthly_signal_returns');
@@ -65,7 +65,7 @@ test('market window fingerprint ignores later appended market rows beyond D20 wi
   assert.equal(base, appended);
 });
 
-test('detail with any incomplete horizon is not reusable', () => {
+test('historical missing stock price does not keep a mature month perpetually invalid', () => {
   const payload = {
     events: [{
       returns: {
@@ -77,7 +77,22 @@ test('detail with any incomplete horizon is not reusable', () => {
       },
     }],
   };
-  assert.equal(hasIncompleteReturns(payload), true);
+  assert.equal(hasPendingMarketData(payload), false);
+});
+
+test('pending market horizon keeps a month non-reusable until the market window matures', () => {
+  const payload = {
+    events: [{
+      returns: {
+        d1: { status: 'complete' },
+        d3: { status: 'complete' },
+        d5: { status: 'complete' },
+        d10: { status: 'complete' },
+        d20: { status: 'pending_market_data' },
+      },
+    }],
+  };
+  assert.equal(hasPendingMarketData(payload), true);
 });
 
 test('incremental runner reuses unchanged details and generates invalidated details', () => {
@@ -88,7 +103,7 @@ test('incremental runner reuses unchanged details and generates invalidated deta
     logger: silentLogger(),
     inspectMonth(month) {
       return month === '202511'
-        ? { reusable: true, reason: 'unchanged_complete_detail' }
+        ? { reusable: true, reason: 'unchanged_mature_detail' }
         : { reusable: false, reason: 'missing_input_fingerprint' };
     },
     generate(month) {
@@ -115,7 +130,7 @@ test('force full rebuild generates every month without consulting reuse', () => 
     logger: silentLogger(),
     inspectMonth() {
       inspectCalls += 1;
-      return { reusable: true, reason: 'unchanged_complete_detail' };
+      return { reusable: true, reason: 'unchanged_mature_detail' };
     },
     generate(month) {
       generated.push(month);
