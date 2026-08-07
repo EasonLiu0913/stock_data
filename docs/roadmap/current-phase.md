@@ -4,7 +4,7 @@ Last updated: 2026-08-07
 
 ## Active area
 
-Long-running Task Framework MVP for the MOPS monthly-revenue historical research platform.
+Incremental historical research for the MOPS monthly-revenue research platform.
 
 ## Completed foundation
 
@@ -27,6 +27,7 @@ Long-running Task Framework MVP for the MOPS monthly-revenue historical research
 - Task Framework architecture design (`docs/architecture/task-framework.md`).
 - ADR-007 hook-based business-agnostic long-task model.
 - ADR-008 incremental framework evolution from real use cases.
+- Task Framework core, MOPS adapter, production workflow migration, checkpoint persistence, and real resume validation.
 
 ## Current evidence
 
@@ -34,19 +35,15 @@ The existing validated MOPS research history is mainly 202511-202606. This is us
 
 Do not promote a new production revenue strategy solely from this short period.
 
-## Current phase: Task Framework MVP
+## Completed Phase 1 — Task Framework + MOPS backfill adoption
 
-The immediate goal is not to build a generic workflow platform.
+Goal achieved:
 
-The goal is:
+> **MOPS historical backfill is interruptible, resumable, and recoverable from validated progress.**
 
-> **Make MOPS historical backfill reliably interruptible, resumable, and recoverable.**
+### Framework core
 
-The framework must remain business-agnostic and independent of GitHub Actions.
-
-### Phase 0A — Framework core implementation (landed)
-
-The first implementation exists at:
+The implementation exists at:
 
 ```text
 scripts/framework/
@@ -57,7 +54,7 @@ scripts/framework/
 └── index.js
 ```
 
-Implemented MVP capabilities:
+Implemented capabilities:
 
 1. sequential item execution;
 2. resume with current-output revalidation;
@@ -83,72 +80,9 @@ SKIPPED
 
 Checkpoint remains a task/batch operation, not an item state.
 
-### Phase 0B — Framework validation
+### MOPS adapter and production path
 
-Automated lifecycle coverage exists in:
-
-```text
-tests/task_framework.test.js
-```
-
-Dedicated CI exists in:
-
-```text
-.github/workflows/test-task-framework.yml
-```
-
-The validation suite covers:
-
-- successful item lifecycle;
-- existing valid item -> skipped without needless manifest rewrite;
-- manifest says done but current output invalid -> rebuilt;
-- stale transient manifest state does not block resume;
-- retryable failure -> retry -> success;
-- retry exhaustion -> visible failure;
-- non-retryable failure -> no unnecessary retry;
-- count checkpoint + final partial checkpoint;
-- validated partial progress checkpointed before a later failure;
-- framework works without optional lifecycle hooks.
-
-The GitHub connector used during implementation could not reliably expose push-triggered Action results, so repository state alone must not be treated as proof that CI passed. The production backfill workflow therefore runs the framework/MOPS regression suite itself before doing any crawl or write work.
-
-## Phase 1 — Adopt the framework in MOPS backfill
-
-### Phase 1A — MOPS task adapter (landed)
-
-The domain adapter exists at:
-
-```text
-scripts/backfill_mops_monthly_revenue_task.js
-```
-
-Adapter responsibilities remain MOPS-specific:
-
-- builds `YYYYMM` item ranges;
-- calls the existing MOPS month crawler;
-- applies the existing snapshot policy;
-- validates MOPS output structure and company counts;
-- rebuilds downstream baseline/derived metadata from the requested start month after a successful task run;
-- stores Task Framework state outside the MOPS dataset at `data_task_manifests/mops-monthly-revenue-backfill.json` by default.
-
-Resume semantics are intentionally stricter than "file exists":
-
-- `likely_complete` -> may be skipped after revalidation;
-- `baseline_seed` -> may be skipped after revalidation;
-- `collecting` -> remains structurally valid for the current run, but must be refreshed on a later run rather than permanently frozen;
-- missing, malformed, month-mismatched, empty, or inconsistent output -> rebuild.
-
-The existing crawler exports `crawlMonth()` so the adapter reuses the same implementation rather than creating a duplicate crawler.
-
-Adapter regression coverage exists in:
-
-```text
-tests/mops_backfill_task_adapter.test.js
-```
-
-### Phase 1B — Production workflow migration (landed)
-
-The production workflow uses the Task Framework path:
+The production path is:
 
 ```text
 .github/workflows/backfill-mops-monthly-revenue.yml
@@ -157,41 +91,32 @@ The production workflow uses the Task Framework path:
   -> scripts/framework/task_runner.js
 ```
 
-The GitHub Actions caller is intentionally outside `scripts/framework/**`. It owns Git-specific persistence while the core runner remains Git/GitHub-independent.
+The GitHub Actions caller remains outside `scripts/framework/**` and owns Git-specific persistence while the core runner remains Git/GitHub-independent.
+
+Resume semantics:
+
+- `likely_complete` -> may be skipped after revalidation;
+- `baseline_seed` -> may be skipped after revalidation;
+- `collecting` -> structurally valid for the current run but must refresh later;
+- missing, malformed, month-mismatched, empty, or inconsistent output -> rebuild.
 
 Production behavior includes:
 
-- preflight syntax and regression tests before crawling;
-- the existing 36-month single-run safety limit;
-- three attempts for retryable item failures;
+- preflight syntax and regression tests;
+- 36-month single-run safety limit;
+- three retry attempts for retryable item failures;
 - polite delay between actually crawled months;
-- resume skip for revalidated `likely_complete` / `baseline_seed` months;
-- automatic refresh for `collecting` months;
 - checkpoint after every 3 validated progress items;
-- final partial checkpoint when fewer than 3 items remain;
+- final partial checkpoint;
 - pre-failure checkpoint for earlier validated progress;
 - checkpoint commits stage only validated month directories plus the Task Framework manifest;
-- root MOPS indexes are intentionally not checkpoint-committed, preventing a failed in-progress month from leaking into published dataset indexes;
-- after a successful full run, baseline/derived metadata and root indexes are rebuilt and committed in the final commit;
-- `force_new_snapshot=true` forces selected months to actually crawl, preserving the old workflow meaning instead of allowing resume-skip to bypass the requested snapshot.
+- root MOPS indexes are excluded from partial checkpoints;
+- successful full runs rebuild baseline/derived metadata and root indexes before final commit;
+- `force_new_snapshot=true` forces actual crawling rather than allowing resume skip.
 
-Checkpoint Git persistence lives in:
+### Real GitHub Actions validation — passed
 
-```text
-scripts/run_mops_backfill_workflow.js
-```
-
-Caller regression coverage exists in:
-
-```text
-tests/mops_backfill_workflow_caller.test.js
-```
-
-The `[99 測試] Task Framework` workflow also covers this caller and the production workflow path.
-
-### Phase 1C — Real-run validation (first run passed; resume rerun pending)
-
-A real GitHub Actions run on 2026-08-07 used:
+First validation run on 2026-08-07:
 
 ```text
 start_month = 202511
@@ -199,51 +124,92 @@ end_month = 202602
 force_new_snapshot = true
 ```
 
-Observed repository evidence after the run:
+Observed repository evidence:
 
-- the Task Framework manifest was created and contains `202511`, `202512`, `202601`, and `202602` as `done`;
-- all four items completed with one attempt;
-- `202511` is a valid `baseline_seed` item;
-- `202512`, `202601`, and `202602` are `likely_complete`;
-- each selected month has `snapshot_count = 2`, confirming `force_new_snapshot=true` caused an actual new crawl/snapshot rather than a resume skip;
-- fresh snapshots were written at approximately 23:19-23:20 Taipei time;
-- baseline/derived metadata was rebuilt after the crawl (status calculation time approximately 23:20:07 Taipei time);
-- comparing the production-migration commit to `main` shows exactly three additional commits, consistent with the designed execution sequence: first 3-month checkpoint, final 1-month partial checkpoint, and final metadata/index commit;
-- downstream months `202603-202607` changed only in derived/baseline metadata, as expected from rebuilding the chain from `202511`;
-- no evidence was observed that an in-progress failed month leaked into the root MOPS index.
+- `202511`, `202512`, `202601`, and `202602` were recorded as `done` in the Task Framework manifest;
+- all four items succeeded in one attempt;
+- new snapshots were created for all four selected months;
+- `snapshot_count` increased to 2;
+- the Git history showed exactly three commits after the production migration, matching first 3-month checkpoint, final 1-month partial checkpoint, and final metadata/index commit;
+- downstream `202603-202607` only received expected baseline/derived metadata recalculation.
 
-This validates the first real checkpoint/write path on GitHub Actions.
+Resume validation run on the same range used:
 
-Remaining Phase 1C validation:
+```text
+start_month = 202511
+end_month = 202602
+force_new_snapshot = false
+```
 
-1. Rerun the same `202511-202602` range with `force_new_snapshot=false`.
-2. Confirm the four complete months are revalidated and skipped rather than fetched again.
-3. Confirm no additional snapshots are created for those skipped months.
-4. Confirm the run does not create unnecessary data checkpoint commits when there is no new item progress.
-5. Later, when a real `collecting` month is available, confirm it refreshes rather than being permanently skipped.
+Observed repository evidence:
 
-A deliberately injected production failure is not required. The automated lifecycle suite covers `before_failure`; a natural real failure may validate it later.
+- Task manifest content and timestamps did not change;
+- all four selected months retained `snapshot_count = 2`;
+- therefore no selected month was crawled again;
+- no new snapshot files were created;
+- no item-progress checkpoint commit was created;
+- only one final metadata/index commit occurred because the current implementation deterministically recalculates metadata timestamps after a successful task invocation.
 
-Phase 1 should be considered complete after the resume rerun succeeds. Then proceed to Phase 2 incremental historical research.
+This proves the production resume path revalidates and skips complete months instead of refetching them.
 
-## Phase 2 — Incremental historical research
+The `collecting` refresh path remains covered by automated adapter behavior and should also be observed naturally when a live incomplete month occurs; it is no longer a blocker for Phase 1 completion.
 
-After MOPS checkpoint/resume behavior is validated in real use, improve historical research updates.
+## Current Phase 2 — Incremental historical research
 
-Goal: adding one new month should not recompute all immutable monthly return artifacts.
+Goal:
 
-Requirements:
+> Adding one new or changed month should not recompute every immutable monthly research artifact.
 
-- Full-build mode remains available for methodology/schema changes.
-- Incremental mode generates only missing/changed monthly detail artifacts.
-- Aggregated summaries/rankings/stability/industry/regime outputs may be rebuilt from stored monthly detail artifacts.
-- Explicit force/full rebuild options must remain available.
+### Required behavior
 
-Do not automatically generalize the Task Framework further just because incremental research exists. First compare the real execution needs and only promote genuinely repeated behavior.
+- Full-build mode remains available for methodology/schema/version changes.
+- Incremental mode generates only missing or invalidated monthly detail artifacts.
+- Existing valid immutable monthly detail artifacts are revalidated and reused.
+- Aggregated outputs may be rebuilt from stored monthly detail artifacts when inexpensive and deterministic.
+- Explicit force/full rebuild options remain available.
+- Dependency/invalidation rules must be explicit so a methodology change cannot silently reuse incompatible monthly artifacts.
+
+### Initial implementation scope
+
+Start with the MOPS historical research pipeline only. Do not generalize the Task Framework further yet.
+
+First identify the current generators and their dependency graph for:
+
+- historical monthly signals / event detail;
+- D1/D3/D5/D10/D20 return detail;
+- coverage summary;
+- factor rankings;
+- YoY20 subfactor experiment;
+- factor stability;
+- industry breakdown;
+- market-regime breakdown.
+
+Classify outputs into:
+
+```text
+Monthly immutable/detail artifact
+  -> incremental generate / validate / reuse
+
+Aggregate artifact
+  -> rebuild from monthly detail when appropriate
+```
+
+Define a research artifact version or methodology fingerprint before allowing incremental reuse across methodology changes.
+
+### Phase 2 acceptance criteria
+
+Phase 2 is complete when:
+
+1. adding one new revenue month does not regenerate unchanged historical monthly detail artifacts;
+2. missing/corrupt monthly detail is automatically rebuilt;
+3. a methodology/version change can force correct invalidation/full rebuild;
+4. aggregate research outputs remain equivalent to a clean full build;
+5. incremental/full modes have automated regression tests;
+6. the workflow reports generated/reused/rebuilt monthly artifacts clearly.
 
 ## Planned historical extension
 
-Only after Task Framework + MOPS real-run validation + incremental research are validated:
+Only after incremental research is validated:
 
 1. Backfill MOPS `202401-202510`.
 2. Validate coverage, schema compatibility, company counts, price/TAIEX availability, research output, and resume behavior.
@@ -253,12 +219,12 @@ Only after Task Framework + MOPS real-run validation + incremental research are 
 
 Do not start by requesting the entire `202001-202606` range in one all-or-nothing workflow.
 
-## Framework non-goals for this phase
+## Framework non-goals
 
 Do not implement yet:
 
 - scheduler;
-- dependency DAG;
+- dependency DAG engine;
 - distributed state;
 - parallel worker pool;
 - streaming item source;
@@ -307,5 +273,4 @@ The goal is to study which market participants move before or after fundamental 
 - Research findings do not automatically change production strategies.
 - Workflow chaining must follow `AGENTS.md`; do not introduce `workflow_run`.
 - Preserve existing prediction/replay/deployment behavior while improving research workflows.
-- The first framework implementation exists to make MOPS reliable, not to become a universal orchestration engine.
-- A new framework abstraction requires evidence from another real use case.
+- Do not generalize the Task Framework until another real use case produces evidence for an additional abstraction.
