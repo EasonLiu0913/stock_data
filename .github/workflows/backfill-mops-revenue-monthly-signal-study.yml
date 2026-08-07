@@ -1,0 +1,133 @@
+name: '[07 研究] MOPS－月營收歷史因子區間回測'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始營收月份 YYYYMM（例如 202511）'
+        required: true
+        type: string
+      end_month:
+        description: '結束營收月份 YYYYMM（例如 202606）'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-mops-revenue-monthly-signal-study
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          node --check scripts/generate_mops_revenue_monthly_signal_returns.js
+          node --test tests/mops_revenue_monthly_signal_returns.test.js
+
+      - name: Validate range
+        shell: bash
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          [[ "$START_MONTH" =~ ^20[0-9]{4}$ ]] || { echo '::error::start_month must be YYYYMM'; exit 1; }
+          [[ "$END_MONTH" =~ ^20[0-9]{4}$ ]] || { echo '::error::end_month must be YYYYMM'; exit 1; }
+          node - <<'NODE'
+          const s = process.env.START_MONTH;
+          const e = process.env.END_MONTH;
+          const toIndex = m => Number(m.slice(0,4))*12 + Number(m.slice(4,6));
+          if (toIndex(s) > toIndex(e)) throw new Error('start_month must be <= end_month');
+          if (toIndex(e) - toIndex(s) > 35) throw new Error('maximum range is 36 months');
+          NODE
+
+      - name: Generate historical monthly signal study
+        shell: bash
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const { spawnSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const start = process.env.START_MONTH;
+          const end = process.env.END_MONTH;
+          const next = value => {
+            let y = Number(value.slice(0,4));
+            let m = Number(value.slice(4,6)) + 1;
+            if (m === 13) { y += 1; m = 1; }
+            return `${y}${String(m).padStart(2,'0')}`;
+          };
+          for (let month = start;; month = next(month)) {
+            const source = `data_mops_monthly_revenue/${month}/monthly_revenue.json`;
+            if (!fs.existsSync(source)) throw new Error(`Missing source month: ${month}`);
+            console.log(`Generating ${month}...`);
+            const result = spawnSync(process.execPath, ['scripts/generate_mops_revenue_monthly_signal_returns.js', '--month', month], { stdio: 'inherit' });
+            if (result.status !== 0) process.exit(result.status || 1);
+            if (month === end) break;
+          }
+          NODE
+
+      - name: Validate outputs
+        shell: bash
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const start = process.env.START_MONTH;
+          const end = process.env.END_MONTH;
+          const next = value => {
+            let y = Number(value.slice(0,4));
+            let m = Number(value.slice(4,6)) + 1;
+            if (m === 13) { y += 1; m = 1; }
+            return `${y}${String(m).padStart(2,'0')}`;
+          };
+          for (let month = start;; month = next(month)) {
+            const file = `data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (payload.dataset !== 'mops_monthly_revenue_conservative_signal_returns') throw new Error(`dataset mismatch: ${month}`);
+            if (payload.revenue_month !== month) throw new Error(`month mismatch: ${month}`);
+            if (!Array.isArray(payload.events) || !payload.events.length) throw new Error(`no events: ${month}`);
+            console.log(month, payload.counts);
+            if (month === end) break;
+          }
+          NODE
+
+      - name: Commit verified study data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/monthly-revenue/monthly-signals
+          if git diff --cached --quiet; then
+            echo 'No historical MOPS signal study changes'
+            exit 0
+          fi
+          git commit -m "analysis: backfill MOPS monthly revenue signals ${{ inputs.start_month }}-${{ inputs.end_month }}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
