@@ -1,0 +1,165 @@
+name: "[06 回填修復] TWSE MI_INDEX－個股日價區間回填"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '起始交易日 YYYYMMDD'
+        required: true
+        default: '20240101'
+        type: string
+      end_date:
+        description: '結束交易日 YYYYMMDD'
+        required: true
+        default: '20251130'
+        type: string
+      batch_size:
+        description: '每批交易日數（建議 20）'
+        required: true
+        default: '20'
+        type: string
+      force:
+        description: '即使既有 MI_INDEX 檔有效也重新抓取'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-twse-mi-index-range
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      pending_dates: ${{ steps.plan.outputs.pending_dates }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate planner
+        run: |
+          node --check scripts/plan_twse_mi_index_range_backfill.js
+          node --check scripts/run_twse_mi_index_range_batch.js
+          node --test tests/twse_mi_index_range_backfill.test.js
+      - name: Plan missing MI_INDEX trading dates
+        id: plan
+        shell: bash
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          args=(--start "$START_DATE" --end "$END_DATE" --batch-size "$BATCH_SIZE")
+          if [ "$FORCE" = 'true' ]; then args+=(--force); fi
+          node scripts/plan_twse_mi_index_range_backfill.js "${args[@]}" > /tmp/plan.json
+          cat /tmp/plan.json
+          matrix=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify(p.matrix))")
+          pending=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.pending_date_count))")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "has_work=$([ "$pending" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "pending_dates=$pending" >> "$GITHUB_OUTPUT"
+          {
+            echo '## TWSE MI_INDEX 個股日價區間回填'
+            echo "- 日期：$START_DATE ～ $END_DATE"
+            echo "- 待抓交易日：$pending"
+            echo "- 每批：$BATCH_SIZE 個交易日"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  backfill:
+    needs: plan
+    if: needs.plan.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: "MI_INDEX ${{ matrix.start_date }}-${{ matrix.end_date }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Crawl one trading-date batch
+        env:
+          DATES: ${{ matrix.dates }}
+        run: node scripts/run_twse_mi_index_range_batch.js --dates "$DATES"
+      - name: Safely persist batch
+        shell: bash
+        env:
+          DATES: ${{ matrix.dates }}
+          START_DATE: ${{ matrix.start_date }}
+          END_DATE: ${{ matrix.end_date }}
+        run: |
+          set -euo pipefail
+          save_root="$RUNNER_TEMP/mi-index-save"
+          rm -rf "$save_root"; mkdir -p "$save_root/data_twse_mi_index"
+          IFS=',' read -ra date_list <<< "$DATES"
+          files=()
+          for date in "${date_list[@]}"; do
+            file="data_twse_mi_index/${date}_twse_mi_index.json"
+            [ -f "$file" ] || { echo "::error::missing generated $file"; exit 1; }
+            cp "$file" "$save_root/$file"
+            files+=("$file")
+          done
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for file in "${files[@]}"; do cp "$save_root/$file" "$file"; done
+            node - "$DATES" <<'NODE'
+          const path=require('node:path');
+          const {validateMiIndexFile}=require('./scripts/plan_twse_mi_index_range_backfill');
+          for(const date of process.argv[2].split(',')){
+            const file=path.join('data_twse_mi_index',`${date}_twse_mi_index.json`);
+            const errors=validateMiIndexFile(file,date);
+            if(errors.length) throw new Error(`${date}: ${errors.join(',')}`);
+          }
+          NODE
+            node scripts/generate_file_lists.js
+            git add -- "${files[@]}" data_twse_mi_index/files.json
+            if git diff --staged --quiet; then exit 0; fi
+            git commit -m "data: backfill TWSE MI_INDEX ${START_DATE}-${END_DATE}"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+  verify:
+    needs: [plan, backfill]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify requested range
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.plan.result }}" != 'success' ]; then exit 1; fi
+          if [ "${{ needs.plan.outputs.has_work }}" = 'true' ] && [ "${{ needs.backfill.result }}" != 'success' ]; then exit 1; fi
+          node scripts/plan_twse_mi_index_range_backfill.js --start "$START_DATE" --end "$END_DATE" > /tmp/final.json
+          cat /tmp/final.json
+          node -e "const p=require('/tmp/final.json');if(p.pending_date_count){console.error('Remaining MI_INDEX dates:',p.pending.map(x=>x.date).join(','));process.exit(1)}"
