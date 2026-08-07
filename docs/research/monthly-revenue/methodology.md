@@ -85,6 +85,35 @@ Historical factor results
 
 No stage automatically promotes a factor into production.
 
+## Incremental historical research
+
+Historical monthly detail artifacts are now designed for incremental reuse.
+
+Canonical detail artifact:
+
+```text
+data_prediction_analysis/monthly-revenue/monthly-signals/YYYYMM.json
+```
+
+A complete monthly detail may be reused only when its stored research fingerprint still matches the current inputs.
+
+The current fingerprint covers:
+
+- explicit methodology version;
+- stable revenue/factor content relevant to the study;
+- the TAIEX rows needed from the conservative base date through D20;
+- the unified stock-price-provider implementation.
+
+Operational MOPS metadata such as collection timestamps and snapshot counts are deliberately excluded because they do not change the research meaning of the month.
+
+Any monthly detail containing `pending_market_data` or `missing_stock_price` remains non-immutable and is regenerated on a later run.
+
+Aggregate outputs such as coverage, rankings, stability, industry, and market-regime summaries are rebuilt from the selected monthly details. They are cheap relative to per-stock detail generation and legitimately change when the selected research window gains a new month.
+
+A full rebuild remains available for methodology/schema changes, known historical price corrections, or equivalence validation.
+
+See `incremental-pipeline.md` for the dependency graph and invalidation rules.
+
 ## Market regime
 
 Market regime is explanatory research context only.
@@ -105,5 +134,7 @@ When extending history:
 - Validate each month's actual MOPS company set independently.
 - Preserve source snapshots.
 - Use checkpoint/resume for long backfills.
+- Use incremental detail reuse rather than recalculating unchanged complete monthly research artifacts.
+- Keep explicit full rebuild mode available for methodology/schema/version changes and known historical price corrections.
 - Do not force every historical month through exact-live-event methodology when historical filing timestamps are unavailable.
 - Confirm price and TAIEX coverage before interpreting factor results.
