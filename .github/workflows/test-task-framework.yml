@@ -6,12 +6,15 @@ on:
     paths:
       - 'scripts/framework/**'
       - 'scripts/backfill_mops_monthly_revenue_task.js'
+      - 'scripts/run_mops_backfill_workflow.js'
       - 'scripts/crawl_mops_monthly_revenue.js'
       - 'scripts/apply_mops_snapshot_policy.js'
       - 'scripts/rebuild_mops_monthly_revenue_metadata.js'
       - 'tests/task_framework.test.js'
       - 'tests/mops_backfill_task_adapter.test.js'
+      - 'tests/mops_backfill_workflow_caller.test.js'
       - '.github/workflows/test-task-framework.yml'
+      - '.github/workflows/backfill-mops-monthly-revenue.yml'
 
 permissions:
   contents: read
@@ -34,7 +37,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Syntax check framework and MOPS adapter
+      - name: Syntax check framework and MOPS adapters
         run: |
           node --check scripts/framework/task_manifest.js
           node --check scripts/framework/task_retry.js
@@ -42,16 +45,19 @@ jobs:
           node --check scripts/framework/task_runner.js
           node --check scripts/framework/index.js
           node --check scripts/backfill_mops_monthly_revenue_task.js
+          node --check scripts/run_mops_backfill_workflow.js
           node --check scripts/crawl_mops_monthly_revenue.js
           node --check scripts/apply_mops_snapshot_policy.js
           node --check scripts/rebuild_mops_monthly_revenue_metadata.js
           node --check tests/task_framework.test.js
           node --check tests/mops_backfill_task_adapter.test.js
+          node --check tests/mops_backfill_workflow_caller.test.js
 
       - name: Run framework and MOPS adapter tests
         run: |
           node --test tests/task_framework.test.js
           node --test tests/mops_backfill_task_adapter.test.js
+          node --test tests/mops_backfill_workflow_caller.test.js
 
       - name: Run existing MOPS parser and metadata regression tests
         run: node --test tests/mops_monthly_revenue.test.js
