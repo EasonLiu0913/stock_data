@@ -49,14 +49,18 @@ test('stable revenue research input excludes volatile collection metadata', () =
 
 test('market window fingerprint ignores later appended market rows beyond D20 window', () => {
   const rows = [];
-  for (let day = 1; day <= 30; day += 1) {
+  for (let day = 1; day <= 31; day += 1) {
     rows.push({ date: `202512${String(day).padStart(2, '0')}`, close: 100 + day });
   }
+  for (let day = 1; day <= 10; day += 1) {
+    rows.push({ date: `202601${String(day).padStart(2, '0')}`, close: 140 + day });
+  }
+
   const base = marketWindowFingerprint(rows, '202511');
   const appended = marketWindowFingerprint([
     ...rows,
-    { date: '20260105', close: 150 },
-    { date: '20260106', close: 151 },
+    { date: '20260202', close: 160 },
+    { date: '20260203', close: 161 },
   ], '202511');
   assert.equal(base, appended);
 });
@@ -80,7 +84,7 @@ test('incremental runner reuses unchanged details and generates invalidated deta
   const generated = [];
   const summary = runIncrementalRange({
     startMonth: '202511',
-    endMonth: '202513'.replace('13', '12'),
+    endMonth: '202512',
     logger: silentLogger(),
     inspectMonth(month) {
       return month === '202511'
