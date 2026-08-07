@@ -48,12 +48,60 @@ data_mops_monthly_revenue/
 
 其中 `yoy_acceleration_pct_points = 本月 YoY - 上月 YoY`。
 
-## 完整度
+## 完整度與 baseline
 
-不以固定公司數或「每月 10 日」直接宣告完整。當前月份公司數會與上一個月份標準化資料的公司數比較：
+不以固定公司數或「每月 10 日」直接宣告完整。當前月份公司數會與**緊鄰的上一個營收月份**資料公司數比較。
 
+`collection` 會保存：
+
+- `baseline_month`
+- `baseline_company_count`
+- `expected_company_count`（相容欄位，等同 baseline company count）
+- `coverage_ratio`
+- `status`
+- `is_complete`
+- `status_calculated_at`
+
+狀態規則：
+
+- 緊鄰上一月份尚不存在：`baseline_seed`
 - coverage < 98%：`collecting`
 - coverage >= 98%：`likely_complete`
-- 尚無上一月 baseline：`baseline_unknown`
 
-這是資料蒐集狀態，不代表法規上的正式申報完成認定。
+`baseline_seed` 是正常的資料邊界狀態，不代表資料錯誤。最早存在的月份可作為 seed；如果日後補入更早月份，原本 seed 會在 metadata 重建後自動改為引用新補入的上一月，而新的最早月份成為新的 `baseline_seed`。
+
+例如最初只有：
+
+```text
+202606 → baseline_seed
+202607 → baseline=202606
+```
+
+之後補入 `202605` 並重建：
+
+```text
+202605 → baseline_seed
+202606 → baseline=202605
+202607 → baseline=202606
+```
+
+如果月份中間有缺口，例如只有 `202605`、`202607` 而缺 `202606`，則 `202607` 暫時視為 `baseline_seed`；之後補入 `202606` 再重建，`202607` 會自動改為引用 `202606`。
+
+## Metadata 重建
+
+補抓歷史月份或修正既有月份後，可執行：
+
+```bash
+node scripts/rebuild_mops_monthly_revenue_metadata.js --from 202605
+```
+
+這個重建只更新可重算的 metadata 與前月衍生因子，不會改寫：
+
+- MOPS 原始營收數值
+- snapshot 歷史
+- `first_seen_at`
+- `last_seen_at`
+
+自動爬取 workflow 每次抓取完成後，也會從本次最早受影響月份開始執行同樣的 metadata 重建，因此後補月份會自動向後修正 baseline chain。
+
+完整度狀態是本專案的資料蒐集判斷，不代表法規上的正式申報完成認定。
