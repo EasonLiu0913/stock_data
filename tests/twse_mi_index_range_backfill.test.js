@@ -1,0 +1,45 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { buildPlan, validateMiIndexFile } = require('../scripts/plan_twse_mi_index_range_backfill');
+
+function validPayload(date) {
+  return {
+    stat: 'OK',
+    date,
+    tables: [{
+      fields: ['證券代號', '開盤價', '最高價', '最低價', '收盤價'],
+      data: Array.from({ length: 120 }, (_, index) => [String(1000 + index), '10', '11', '9', '10.5']),
+    }],
+  };
+}
+
+test('valid MI_INDEX file requires matching date and quote table', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-'));
+  const file = path.join(dir, '20240102_twse_mi_index.json');
+  fs.writeFileSync(file, JSON.stringify(validPayload('20240102')));
+  assert.deepEqual(validateMiIndexFile(file, '20240102'), []);
+  assert.ok(validateMiIndexFile(file, '20240103').includes('date_mismatch'));
+});
+
+test('planner reuses valid dates and batches only missing dates', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-plan-'));
+  const outputDir = path.join(dir, 'output');
+  fs.mkdirSync(outputDir);
+  const marketFile = path.join(dir, 'market.json');
+  fs.writeFileSync(marketFile, JSON.stringify({ data: [
+    { date: '20240102', close: 100 },
+    { date: '20240103', close: 101 },
+    { date: '20240104', close: 102 },
+  ] }));
+  fs.writeFileSync(path.join(outputDir, '20240102_twse_mi_index.json'), JSON.stringify(validPayload('20240102')));
+  const plan = buildPlan({ start: '20240102', end: '20240104', batchSize: 1, outputDir, marketFile });
+  assert.equal(plan.trading_date_count, 3);
+  assert.equal(plan.valid_date_count, 1);
+  assert.equal(plan.pending_date_count, 2);
+  assert.deepEqual(plan.matrix.include.map(item => item.dates), ['20240103', '20240104']);
+});
