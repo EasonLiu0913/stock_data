@@ -57,13 +57,16 @@ jobs:
           INCLUDE_PREVIOUS: ${{ inputs.include_previous_month || 'false' }}
         run: |
           set -euo pipefail
+          explicit=false
           if [ -n "$INPUT_MONTH" ]; then
             month="$INPUT_MONTH"
+            explicit=true
           else
             month=$(node -e "process.stdout.write(require('./scripts/crawl_mops_monthly_revenue').autoRevenueMonth())")
           fi
           previous=$(node -e "process.stdout.write(require('./scripts/crawl_mops_monthly_revenue').previousRevenueMonth(process.argv[1]))" "$month")
-          if [ "$INCLUDE_PREVIOUS" = "true" ]; then
+          previous_file="data_mops_monthly_revenue/$previous/monthly_revenue.json"
+          if [ "$INCLUDE_PREVIOUS" = "true" ] || { [ "$explicit" = "false" ] && [ ! -s "$previous_file" ]; }; then
             months="$previous,$month"
           else
             months="$month"
