@@ -2,8 +2,6 @@ name: '[02 外部市場] MOPS－上市公司月營收'
 
 on:
   schedule:
-    # 每月 1～15 日，台北時間 18:30、23:30。
-    # 目的：保留申報期間 snapshot 與 first_seen_at，不只抓 10 日最終版。
     - cron: '30 10 1-15 * *'
     - cron: '30 15 1-15 * *'
   workflow_dispatch:
@@ -68,20 +66,27 @@ jobs:
           previous_file="data_mops_monthly_revenue/$previous/monthly_revenue.json"
           if [ "$INCLUDE_PREVIOUS" = "true" ] || { [ "$explicit" = "false" ] && [ ! -s "$previous_file" ]; }; then
             months="$previous,$month"
+            rebuild_from="$previous"
           else
             months="$month"
+            rebuild_from="$month"
           fi
           echo "month=$month" >> "$GITHUB_OUTPUT"
           echo "months=$months" >> "$GITHUB_OUTPUT"
+          echo "rebuild_from=$rebuild_from" >> "$GITHUB_OUTPUT"
           echo "Target revenue months: $months"
 
-      - name: Run parser regression tests
+      - name: Run parser and metadata regression tests
         run: |
           node --check scripts/crawl_mops_monthly_revenue.js
+          node --check scripts/rebuild_mops_monthly_revenue_metadata.js
           node --test tests/mops_monthly_revenue.test.js
 
       - name: Crawl MOPS monthly revenue
         run: node scripts/crawl_mops_monthly_revenue.js --month "${{ steps.months.outputs.months }}"
+
+      - name: Rebuild baseline chain metadata
+        run: node scripts/rebuild_mops_monthly_revenue_metadata.js --from "${{ steps.months.outputs.rebuild_from }}"
 
       - name: Validate generated payload
         shell: bash
@@ -95,16 +100,15 @@ jobs:
           const file = `data_mops_monthly_revenue/${month}/monthly_revenue.json`;
           const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
           if (payload.revenue_month !== month) throw new Error('Revenue month mismatch');
-          if (!Array.isArray(payload.companies) || payload.companies.length === 0) {
-            throw new Error('No MOPS company rows were generated');
-          }
-          if (!payload.companies.every((row) => /^\d{4,6}$/.test(row.stock_code))) {
-            throw new Error('Invalid stock code in MOPS payload');
-          }
+          if (!Array.isArray(payload.companies) || payload.companies.length === 0) throw new Error('No MOPS company rows were generated');
+          if (!payload.companies.every((row) => /^\d{4,6}$/.test(row.stock_code))) throw new Error('Invalid stock code in MOPS payload');
+          if (!['baseline_seed', 'collecting', 'likely_complete'].includes(payload.collection.status)) throw new Error('Invalid completion status');
           console.log(JSON.stringify({
             revenue_month: month,
             companies: payload.companies.length,
             report_date: payload.source.report_date,
+            baseline_month: payload.collection.baseline_month,
+            baseline_company_count: payload.collection.baseline_company_count,
             coverage_ratio: payload.collection.coverage_ratio,
             completion_status: payload.collection.status,
           }, null, 2));
@@ -123,9 +127,7 @@ jobs:
           fi
           git commit -m "data: update MOPS monthly revenue ${{ steps.months.outputs.month }}"
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              exit 0
-            fi
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
             sleep $((attempt * 5))
           done
