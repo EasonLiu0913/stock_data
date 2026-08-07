@@ -58,9 +58,7 @@ function autoRevenueMonth(now = new Date()) {
 
 function normalizeRevenueMonth(value) {
   const compact = String(value || '').replace(/[^\d]/g, '');
-  if (!/^20\d{4}$/.test(compact)) {
-    throw new Error(`Invalid revenue month: ${value || '(empty)'}`);
-  }
+  if (!/^20\d{4}$/.test(compact)) throw new Error(`Invalid revenue month: ${value || '(empty)'}`);
   const month = Number(compact.slice(4, 6));
   if (month < 1 || month > 12) throw new Error(`Invalid revenue month: ${value}`);
   return compact;
@@ -98,9 +96,7 @@ function decodeHtml(buffer, contentType = '') {
 }
 
 function decodeEntities(text) {
-  const named = {
-    amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
-  };
+  const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
   return String(text || '')
     .replace(/&#(\d+);/g, (_, value) => String.fromCodePoint(Number(value)))
     .replace(/&#x([0-9a-f]+);/gi, (_, value) => String.fromCodePoint(parseInt(value, 16)))
@@ -108,11 +104,7 @@ function decodeEntities(text) {
 }
 
 function cleanCell(html) {
-  return decodeEntities(
-    String(html || '')
-      .replace(/<br\s*\/?>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-  )
+  return decodeEntities(String(html || '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' '))
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -145,23 +137,19 @@ function parseMopsRevenueHtml(html, revenueMonth) {
   const rows = [...String(html).matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)];
   let industry = null;
   const companies = [];
-
   for (const rowMatch of rows) {
     const cellMatches = [...rowMatch[1].matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)];
     const cells = cellMatches.map((match) => cleanCell(match[1])).filter((value) => value !== '');
     if (!cells.length) continue;
-
     const detectedIndustry = parseIndustryLabel(cells);
     if (detectedIndustry) {
       industry = detectedIndustry;
       continue;
     }
-
     const codeIndex = cells.findIndex((value) => /^\d{4,6}$/.test(value));
     if (codeIndex < 0) continue;
     const values = cells.slice(codeIndex);
     if (values.length < 9) continue;
-
     const [stockCode, stockName] = values;
     const monthlyRevenue = parseNumber(values[2]);
     const previousMonthRevenue = parseNumber(values[3]);
@@ -172,9 +160,7 @@ function parseMopsRevenueHtml(html, revenueMonth) {
     const lastYearYtdRevenue = parseNumber(values[8]);
     const ytdYoyPct = parseNumber(values[9]);
     const note = values.slice(10).join(' ').trim();
-
     if (!stockName || monthlyRevenue === null || ytdRevenue === null) continue;
-
     companies.push({
       stock_code: stockCode,
       stock_name: stockName,
@@ -191,16 +177,11 @@ function parseMopsRevenueHtml(html, revenueMonth) {
       note: note && note !== '-' ? note : null,
     });
   }
-
   const unique = new Map();
   for (const row of companies) unique.set(row.stock_code, row);
   const result = [...unique.values()].sort((a, b) => a.stock_code.localeCompare(b.stock_code));
-
   if (!result.length) throw new Error('MOPS revenue page contained no company rows.');
-  return {
-    report_date: parseReportDate(html),
-    companies: result,
-  };
+  return { report_date: parseReportDate(html), companies: result };
 }
 
 async function fetchHtml(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
@@ -227,11 +208,7 @@ async function fetchHtml(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
 }
 
 function readJson(file, fallback = null) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return fallback;
-  }
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
 }
 
 function writeJson(file, value) {
@@ -250,45 +227,60 @@ function compactTimestamp(now = new Date()) {
   return `${p.year}${p.month}${p.day}_${p.hour}${p.minute}${p.second}`;
 }
 
+function derivedForCompany(row, priorMonth) {
+  const priorYoy = Number(priorMonth?.yoy_pct);
+  const yoyAcceleration = Number.isFinite(row.yoy_pct) && Number.isFinite(priorYoy)
+    ? Number((row.yoy_pct - priorYoy).toFixed(4))
+    : null;
+  return {
+    yoy_positive: Number.isFinite(row.yoy_pct) ? row.yoy_pct > 0 : null,
+    yoy_ge_10: Number.isFinite(row.yoy_pct) ? row.yoy_pct >= 10 : null,
+    yoy_ge_20: Number.isFinite(row.yoy_pct) ? row.yoy_pct >= 20 : null,
+    yoy_ge_30: Number.isFinite(row.yoy_pct) ? row.yoy_pct >= 30 : null,
+    mom_positive: Number.isFinite(row.mom_pct) ? row.mom_pct > 0 : null,
+    ytd_yoy_positive: Number.isFinite(row.ytd_yoy_pct) ? row.ytd_yoy_pct > 0 : null,
+    yoy_and_mom_positive: Number.isFinite(row.yoy_pct) && Number.isFinite(row.mom_pct)
+      ? row.yoy_pct > 0 && row.mom_pct > 0
+      : null,
+    previous_month_yoy_pct: Number.isFinite(priorYoy) ? priorYoy : null,
+    yoy_acceleration_pct_points: yoyAcceleration,
+    yoy_accelerating: Number.isFinite(yoyAcceleration) ? yoyAcceleration > 0 : null,
+  };
+}
+
 function enrichCompanies(companies, previousPayload, existingPayload, collectedAt) {
   const previousMap = new Map((previousPayload?.companies || []).map((row) => [row.stock_code, row]));
   const existingMap = new Map((existingPayload?.companies || []).map((row) => [row.stock_code, row]));
   return companies.map((row) => {
-    const priorMonth = previousMap.get(row.stock_code);
     const priorSeen = existingMap.get(row.stock_code);
-    const priorYoy = Number(priorMonth?.yoy_pct);
-    const yoyAcceleration = Number.isFinite(row.yoy_pct) && Number.isFinite(priorYoy)
-      ? Number((row.yoy_pct - priorYoy).toFixed(4))
-      : null;
     return {
       ...row,
       first_seen_at: priorSeen?.first_seen_at || collectedAt,
       last_seen_at: collectedAt,
-      derived: {
-        yoy_positive: Number.isFinite(row.yoy_pct) ? row.yoy_pct > 0 : null,
-        yoy_ge_10: Number.isFinite(row.yoy_pct) ? row.yoy_pct >= 10 : null,
-        yoy_ge_20: Number.isFinite(row.yoy_pct) ? row.yoy_pct >= 20 : null,
-        yoy_ge_30: Number.isFinite(row.yoy_pct) ? row.yoy_pct >= 30 : null,
-        mom_positive: Number.isFinite(row.mom_pct) ? row.mom_pct > 0 : null,
-        ytd_yoy_positive: Number.isFinite(row.ytd_yoy_pct) ? row.ytd_yoy_pct > 0 : null,
-        yoy_and_mom_positive: Number.isFinite(row.yoy_pct) && Number.isFinite(row.mom_pct)
-          ? row.yoy_pct > 0 && row.mom_pct > 0
-          : null,
-        previous_month_yoy_pct: Number.isFinite(priorYoy) ? priorYoy : null,
-        yoy_acceleration_pct_points: yoyAcceleration,
-        yoy_accelerating: Number.isFinite(yoyAcceleration) ? yoyAcceleration > 0 : null,
-      },
+      derived: derivedForCompany(row, previousMap.get(row.stock_code)),
     };
   });
 }
 
-function completionSummary(companyCount, previousPayload) {
+function rebuildDerivedCompanies(companies, previousPayload) {
+  const previousMap = new Map((previousPayload?.companies || []).map((row) => [row.stock_code, row]));
+  return (companies || []).map((row) => ({
+    ...row,
+    derived: derivedForCompany(row, previousMap.get(row.stock_code)),
+  }));
+}
+
+function completionSummary(companyCount, previousPayload, { baselineMonth = null, calculatedAt = null } = {}) {
   const previousCount = Number(previousPayload?.collection?.company_count);
-  const expectedCompanyCount = Number.isFinite(previousCount) && previousCount > 0 ? previousCount : null;
-  const coverageRatio = expectedCompanyCount
-    ? Number((companyCount / expectedCompanyCount).toFixed(4))
+  const hasBaseline = Boolean(previousPayload) && Number.isFinite(previousCount) && previousCount > 0;
+  const resolvedBaselineMonth = hasBaseline
+    ? (baselineMonth || previousPayload?.revenue_month || null)
     : null;
-  let status = 'baseline_unknown';
+  const baselineCompanyCount = hasBaseline ? previousCount : null;
+  const coverageRatio = baselineCompanyCount
+    ? Number((companyCount / baselineCompanyCount).toFixed(4))
+    : null;
+  let status = 'baseline_seed';
   let isComplete = false;
   if (coverageRatio !== null) {
     if (coverageRatio >= 0.98) {
@@ -300,11 +292,14 @@ function completionSummary(companyCount, previousPayload) {
   }
   return {
     company_count: companyCount,
-    expected_company_count: expectedCompanyCount,
+    baseline_month: resolvedBaselineMonth,
+    baseline_company_count: baselineCompanyCount,
+    expected_company_count: baselineCompanyCount,
     coverage_ratio: coverageRatio,
     status,
     is_complete: isComplete,
-    completeness_rule: 'likely_complete when current company count reaches at least 98% of previous month baseline',
+    status_calculated_at: calculatedAt,
+    completeness_rule: 'baseline_seed when the immediately previous revenue month is unavailable; otherwise likely_complete when current company count reaches at least 98% of previous month baseline',
   };
 }
 
@@ -314,16 +309,14 @@ function updateRootIndexes(revenueMonth, payload) {
     .filter((entry) => entry.isDirectory() && /^20\d{4}$/.test(entry.name))
     .map((entry) => entry.name)
     .sort();
-
   const files = monthDirs
     .map((month) => `${month}/monthly_revenue.json`)
     .filter((relative) => fs.existsSync(path.join(OUTPUT_ROOT, relative)));
   writeJson(path.join(OUTPUT_ROOT, 'files.json'), files);
-
   const manifestPath = path.join(OUTPUT_ROOT, 'manifest.json');
   const oldManifest = readJson(manifestPath, {});
   writeJson(manifestPath, {
-    schema_version: 1,
+    schema_version: 2,
     dataset: 'mops_monthly_revenue',
     market: 'TWSE',
     updated_at: payload.collection.last_collected_at,
@@ -343,14 +336,15 @@ async function crawlMonth(revenueMonth, { now = new Date(), forceSnapshot = fals
   const existing = readJson(outputFile, null);
   const previousMonth = previousRevenueMonth(month);
   const previousPayload = readJson(path.join(monthOutputDir(previousMonth), 'monthly_revenue.json'), null);
-
   const response = await fetchHtml(url);
   const parsed = parseMopsRevenueHtml(response.html, month);
   const companies = enrichCompanies(parsed.companies, previousPayload, existing, collectedAt);
-  const collection = completionSummary(companies.length, previousPayload);
-
+  const collection = completionSummary(companies.length, previousPayload, {
+    baselineMonth: previousMonth,
+    calculatedAt: collectedAt,
+  });
   const payload = {
-    schema_version: 1,
+    schema_version: 2,
     market: 'TWSE',
     revenue_month: month,
     roc_year: Number(month.slice(0, 4)) - 1911,
@@ -371,21 +365,17 @@ async function crawlMonth(revenueMonth, { now = new Date(), forceSnapshot = fals
     },
     companies,
   };
-
   writeJson(outputFile, payload);
-
   const snapshotDir = path.join(outputDir, 'snapshots');
   const snapshotFile = path.join(snapshotDir, `${compactTimestamp(now)}.json`);
-  if (forceSnapshot || !fs.existsSync(snapshotFile)) {
-    writeJson(snapshotFile, payload);
-  }
+  if (forceSnapshot || !fs.existsSync(snapshotFile)) writeJson(snapshotFile, payload);
   updateRootIndexes(month, payload);
-
   return {
     revenue_month: month,
     source_url: url,
     report_date: parsed.report_date,
     company_count: companies.length,
+    baseline_month: collection.baseline_month,
     coverage_ratio: collection.coverage_ratio,
     completion_status: collection.status,
     output_file: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
@@ -398,9 +388,7 @@ async function main() {
   const requested = args.get('month') || args.get('revenue-month') || autoRevenueMonth();
   const months = String(requested).split(',').map((value) => normalizeRevenueMonth(value.trim()));
   const summaries = [];
-  for (const month of months) {
-    summaries.push(await crawlMonth(month, { forceSnapshot: args.has('force-snapshot') }));
-  }
+  for (const month of months) summaries.push(await crawlMonth(month, { forceSnapshot: args.has('force-snapshot') }));
   console.log(JSON.stringify({ ok: true, summaries }, null, 2));
 }
 
@@ -412,12 +400,21 @@ if (require.main === module) {
 }
 
 module.exports = {
+  ROOT,
+  OUTPUT_ROOT,
   autoRevenueMonth,
   buildSourceUrl,
   completionSummary,
   decodeHtml,
+  derivedForCompany,
   enrichCompanies,
+  monthOutputDir,
   normalizeRevenueMonth,
   parseMopsRevenueHtml,
   previousRevenueMonth,
+  readJson,
+  rebuildDerivedCompanies,
+  taipeiIso,
+  updateRootIndexes,
+  writeJson,
 };
