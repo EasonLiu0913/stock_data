@@ -1,0 +1,94 @@
+name: '[07 研究] MOPS－月營收事件與大盤超額報酬'
+
+on:
+  workflow_dispatch:
+    inputs:
+      revenue_month:
+        description: '營收月份 YYYYMM（例如 202607）'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analyze-mops-revenue-event-returns
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Validate input and source data
+        shell: bash
+        env:
+          REVENUE_MONTH: ${{ inputs.revenue_month }}
+        run: |
+          set -euo pipefail
+          [[ "$REVENUE_MONTH" =~ ^20[0-9]{4}$ ]] || { echo '::error::revenue_month must be YYYYMM'; exit 1; }
+          test -s "data_mops_monthly_revenue/$REVENUE_MONTH/monthly_revenue.json"
+          test -s data_twse_market_chart/market_chart.json
+
+      - name: Run event-study regression tests
+        run: |
+          node --check scripts/generate_mops_revenue_event_returns.js
+          node --test tests/mops_revenue_event_returns.test.js
+
+      - name: Generate revenue event returns
+        run: node scripts/generate_mops_revenue_event_returns.js --month "${{ inputs.revenue_month }}"
+
+      - name: Validate generated research payload
+        shell: bash
+        env:
+          REVENUE_MONTH: ${{ inputs.revenue_month }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const month = process.env.REVENUE_MONTH;
+          const file = `data_prediction_analysis/monthly-revenue/events/${month}.json`;
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (payload.revenue_month !== month) throw new Error('revenue_month mismatch');
+          if (payload.benchmark?.code !== 'TAIEX') throw new Error('TAIEX benchmark missing');
+          if (!Array.isArray(payload.events) || payload.events.length === 0) throw new Error('No revenue events generated');
+          if (payload.counts.total !== payload.events.length) throw new Error('Event count mismatch');
+          console.log(JSON.stringify({ month, benchmark: payload.benchmark.code, counts: payload.counts }, null, 2));
+          NODE
+
+      - name: Commit verified research data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/monthly-revenue/events
+          if git diff --cached --quiet; then
+            echo 'No MOPS revenue event research changes'
+            exit 0
+          fi
+          git commit -m "analysis: update MOPS revenue event returns ${{ inputs.revenue_month }}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
