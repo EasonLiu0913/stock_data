@@ -19,6 +19,13 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
+function comparablePayload(value) {
+  if (!value || typeof value !== 'object') return value;
+  const copy = JSON.parse(JSON.stringify(value));
+  delete copy.generated_at;
+  return copy;
+}
+
 function compactDate(value) {
   const text = String(value || '');
   const match = text.match(/(20\d{2})-(\d{2})-(\d{2})/);
@@ -165,11 +172,13 @@ function generateMonth(revenueMonth) {
   if (!source) throw new Error(`Missing MOPS revenue file: ${sourceFile}`);
   const marketRows = loadMarketSeries();
   const events = (source.companies || []).map(row => buildEvent(row, revenueMonth, marketRows));
+  const output = path.join(OUTPUT_ROOT, `${revenueMonth}.json`);
+  const previous = readJson(output, null);
   const payload = {
     schema_version: 1,
     dataset: 'mops_monthly_revenue_event_returns',
     revenue_month: revenueMonth,
-    generated_at: new Date().toISOString(),
+    generated_at: previous?.generated_at || new Date().toISOString(),
     benchmark: {
       code: 'TAIEX',
       source: 'TWSE MI_5MINS_HIST via data_twse_market_chart/market_chart.json',
@@ -189,9 +198,14 @@ function generateMonth(revenueMonth) {
     },
     events,
   };
-  const output = path.join(OUTPUT_ROOT, `${revenueMonth}.json`);
+
+  if (previous && JSON.stringify(comparablePayload(previous)) === JSON.stringify(comparablePayload(payload))) {
+    return { output: path.relative(ROOT, output), counts: payload.counts, changed: false };
+  }
+
+  payload.generated_at = new Date().toISOString();
   writeJson(output, payload);
-  return { output: path.relative(ROOT, output), counts: payload.counts };
+  return { output: path.relative(ROOT, output), counts: payload.counts, changed: true };
 }
 
 function main() {
@@ -212,5 +226,6 @@ module.exports = {
   HORIZONS,
   buildTradingWindow,
   classifyObservedTiming,
+  generateMonth,
   pctReturn,
 };
