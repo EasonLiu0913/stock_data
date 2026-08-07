@@ -57,14 +57,18 @@ function loadFubonClose(stockCode, date) {
   const payload = readJson(file, null);
   const item = payload?.[stockCode];
   if (!item || typeof item !== 'object') return null;
-  const direct = item[date] || item[`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`] || item[`${date.slice(0,4)}/${date.slice(4,6)}/${date.slice(6,8)}`];
-  const raw = direct || Object.values(item).find(value => value && typeof value === 'object' && Number.isFinite(Number(value.Price ?? value.Close)));
+  const keys = [
+    date,
+    `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
+    `${date.slice(0, 4)}/${date.slice(4, 6)}/${date.slice(6, 8)}`,
+  ];
+  const raw = keys.map(key => item[key]).find(Boolean);
   const close = Number(raw?.Price ?? raw?.Close);
   return Number.isFinite(close) && close > 0 ? close : null;
 }
 
 function buildTradingWindow(marketRows, observedDate) {
-  const priorIndex = [...marketRows].map(row => row.date).findLastIndex(date => date <= observedDate);
+  const priorIndex = marketRows.map(row => row.date).findLastIndex(date => date <= observedDate);
   const baseIndex = priorIndex >= 0 ? priorIndex : -1;
   const effectiveIndex = baseIndex + 1;
   if (effectiveIndex < 0 || effectiveIndex >= marketRows.length) return null;
@@ -81,7 +85,7 @@ function pctReturn(start, end) {
 
 function calculateEventReturns(stockCode, observedDate, marketRows) {
   const window = buildTradingWindow(marketRows, observedDate);
-  if (!window || !window.base) return { effective_trading_date: window?.effective?.date || null, returns: {} };
+  if (!window || !window.base) return { effective_trading_date: null, base_trading_date: null, returns: {} };
   const baseDate = window.base.date;
   const stockBase = loadFubonClose(stockCode, baseDate);
   const marketBase = window.base.close;
@@ -89,7 +93,15 @@ function calculateEventReturns(stockCode, observedDate, marketRows) {
   for (const horizon of HORIZONS) {
     const target = marketRows[window.baseIndex + horizon];
     if (!target) {
-      returns[`d${horizon}`] = { status: 'pending_market_data', stock_return_pct: null, market_return_pct: null, excess_return_pct: null, stock_positive: null, outperformed_market: null };
+      returns[`d${horizon}`] = {
+        status: 'pending_market_data',
+        target_trading_date: null,
+        stock_return_pct: null,
+        market_return_pct: null,
+        excess_return_pct: null,
+        stock_positive: null,
+        outperformed_market: null,
+      };
       continue;
     }
     const stockEnd = loadFubonClose(stockCode, target.date);
@@ -130,9 +142,21 @@ function buildEvent(row, revenueMonth, marketRows) {
     },
     benchmark: { code: 'TAIEX', source: 'data_twse_market_chart/market_chart.json' },
   };
-  if (!timing.usable) return { ...base, effective_trading_date: null, base_trading_date: null, returns: {}, evaluation_status: 'excluded_missing_original_event_time' };
+  if (!timing.usable) {
+    return {
+      ...base,
+      effective_trading_date: null,
+      base_trading_date: null,
+      returns: {},
+      evaluation_status: 'excluded_missing_original_event_time',
+    };
+  }
   const calculated = calculateEventReturns(row.stock_code, timing.observed_date, marketRows);
-  return { ...base, ...calculated, evaluation_status: 'eligible' };
+  return {
+    ...base,
+    ...calculated,
+    evaluation_status: calculated.effective_trading_date ? 'eligible' : 'pending_next_trading_day',
+  };
 }
 
 function generateMonth(revenueMonth) {
@@ -146,17 +170,22 @@ function generateMonth(revenueMonth) {
     dataset: 'mops_monthly_revenue_event_returns',
     revenue_month: revenueMonth,
     generated_at: new Date().toISOString(),
-    benchmark: { code: 'TAIEX', source: 'TWSE MI_5MINS_HIST via data_twse_market_chart/market_chart.json' },
+    benchmark: {
+      code: 'TAIEX',
+      source: 'TWSE MI_5MINS_HIST via data_twse_market_chart/market_chart.json',
+    },
     methodology: {
       event_time_rule: 'first_seen_at must fall in days 1-15 of the calendar month after revenue_month',
       effective_trade_rule: 'always start evaluation from the next TAIEX trading day after observed_date',
       return_rule: 'D1/D3/D5/D10/D20 compare target close with the close immediately before the effective trading day',
       historical_backfill_rule: 'backfilled first_seen_at values outside the reporting window are excluded to avoid look-ahead bias',
+      stock_price_rule: 'stock close must come from the exact matching data_fubon/fubon_YYYYMMDD_sma.json trading-date key',
     },
     counts: {
       total: events.length,
       eligible: events.filter(event => event.evaluation_status === 'eligible').length,
-      excluded_missing_original_event_time: events.filter(event => event.evaluation_status !== 'eligible').length,
+      pending_next_trading_day: events.filter(event => event.evaluation_status === 'pending_next_trading_day').length,
+      excluded_missing_original_event_time: events.filter(event => event.evaluation_status === 'excluded_missing_original_event_time').length,
     },
     events,
   };
@@ -169,7 +198,9 @@ function main() {
   const arg = process.argv.find(value => /^--month=20\d{4}$/.test(value));
   const index = process.argv.indexOf('--month');
   const month = arg ? arg.split('=')[1] : (index >= 0 ? process.argv[index + 1] : null);
-  if (!/^20\d{4}$/.test(String(month || ''))) throw new Error('Usage: node scripts/generate_mops_revenue_event_returns.js --month YYYYMM');
+  if (!/^20\d{4}$/.test(String(month || ''))) {
+    throw new Error('Usage: node scripts/generate_mops_revenue_event_returns.js --month YYYYMM');
+  }
   console.log(JSON.stringify(generateMonth(String(month)), null, 2));
 }
 
@@ -177,4 +208,9 @@ if (require.main === module) {
   try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; }
 }
 
-module.exports = { HORIZONS, buildTradingWindow, classifyObservedTiming, pctReturn };
+module.exports = {
+  HORIZONS,
+  buildTradingWindow,
+  classifyObservedTiming,
+  pctReturn,
+};
