@@ -2,6 +2,31 @@
 
 This file defines mandatory repository-level instructions for coding agents working in `EasonLiu0913/stock_data`.
 
+## Mandatory documentation handoff
+
+Before substantial architecture, research, strategy, backfill, or workflow work, read:
+
+1. `docs/README.md`
+2. `docs/roadmap/current-phase.md`
+3. The relevant `docs/architecture/**` document
+4. The relevant `docs/research/**` document
+5. Applicable `docs/decisions/ADR-*.md`
+
+The documentation is a living project handoff. Do not rely only on prior chat history when the repository documents contain the current decision or roadmap.
+
+When a major architecture decision, research conclusion, rejected approach, or active development phase changes, update the corresponding document in the same development cycle.
+
+### Research-first architecture rules
+
+- New data or a promising backtest must not directly become a production strategy.
+- Research should proceed through historical validation, baseline-relative ranking, stability, industry analysis, and market-regime analysis before explicit strategy promotion.
+- Market environment is research/dashboard context only. It must not gate a fixed strategy, hide otherwise matching stocks, or make a strategy disappear.
+- Historical stock-price research should use the unified price provider rather than adding new direct legacy price-source dependencies.
+- Long historical backfills must prefer checkpoint/resume behavior, and recurring research updates should prefer incremental monthly detail generation over unnecessary full-history recomputation.
+- Baseline choice must be explicit: broad factor research compares with the same-month listed-stock universe; industry conclusions compare with the same-month same-industry universe.
+
+See `docs/README.md` and `docs/decisions/` for rationale and details.
+
 ## GitHub Actions workflow architecture
 
 These rules apply to every change under `.github/workflows/**`.
