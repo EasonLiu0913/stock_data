@@ -41,47 +41,6 @@ Goal achieved:
 
 > **MOPS historical backfill is interruptible, resumable, and recoverable from validated progress.**
 
-### Framework core
-
-The implementation exists at:
-
-```text
-scripts/framework/
-├── task_runner.js
-├── task_manifest.js
-├── task_logger.js
-├── task_retry.js
-└── index.js
-```
-
-Implemented capabilities:
-
-1. sequential item execution;
-2. resume with current-output revalidation;
-3. retry orchestration for retryable failures;
-4. persistent JSON manifest with atomic writes;
-5. count-based checkpoint callbacks;
-6. final partial checkpoint and pre-failure partial checkpoint;
-7. clear progress logging and final summary;
-8. lightweight lifecycle hooks without a plugin/event-bus system;
-9. no GitHub Actions or Git commands inside the core framework.
-
-Item states:
-
-```text
-PENDING
-RUNNING
-RETRY_WAIT
-VALIDATING
-DONE
-FAILED
-SKIPPED
-```
-
-Checkpoint remains a task/batch operation, not an item state.
-
-### MOPS adapter and production path
-
 The production path is:
 
 ```text
@@ -91,92 +50,93 @@ The production path is:
   -> scripts/framework/task_runner.js
 ```
 
-The GitHub Actions caller remains outside `scripts/framework/**` and owns Git-specific persistence while the core runner remains Git/GitHub-independent.
+Real GitHub Actions validation on 2026-08-07 confirmed both checkpointed writes and a no-refetch resume rerun.
 
-Resume semantics:
+The first run over `202511-202602` with `force_new_snapshot=true` produced the expected 3-month checkpoint, final 1-month partial checkpoint, final metadata/index commit, and new snapshots.
 
-- `likely_complete` -> may be skipped after revalidation;
-- `baseline_seed` -> may be skipped after revalidation;
-- `collecting` -> structurally valid for the current run but must refresh later;
-- missing, malformed, month-mismatched, empty, or inconsistent output -> rebuild.
-
-Production behavior includes:
-
-- preflight syntax and regression tests;
-- 36-month single-run safety limit;
-- three retry attempts for retryable item failures;
-- polite delay between actually crawled months;
-- checkpoint after every 3 validated progress items;
-- final partial checkpoint;
-- pre-failure checkpoint for earlier validated progress;
-- checkpoint commits stage only validated month directories plus the Task Framework manifest;
-- root MOPS indexes are excluded from partial checkpoints;
-- successful full runs rebuild baseline/derived metadata and root indexes before final commit;
-- `force_new_snapshot=true` forces actual crawling rather than allowing resume skip.
-
-### Real GitHub Actions validation — passed
-
-First validation run on 2026-08-07:
-
-```text
-start_month = 202511
-end_month = 202602
-force_new_snapshot = true
-```
-
-Observed repository evidence:
-
-- `202511`, `202512`, `202601`, and `202602` were recorded as `done` in the Task Framework manifest;
-- all four items succeeded in one attempt;
-- new snapshots were created for all four selected months;
-- `snapshot_count` increased to 2;
-- the Git history showed exactly three commits after the production migration, matching first 3-month checkpoint, final 1-month partial checkpoint, and final metadata/index commit;
-- downstream `202603-202607` only received expected baseline/derived metadata recalculation.
-
-Resume validation run on the same range used:
-
-```text
-start_month = 202511
-end_month = 202602
-force_new_snapshot = false
-```
-
-Observed repository evidence:
-
-- Task manifest content and timestamps did not change;
-- all four selected months retained `snapshot_count = 2`;
-- therefore no selected month was crawled again;
-- no new snapshot files were created;
-- no item-progress checkpoint commit was created;
-- only one final metadata/index commit occurred because the current implementation deterministically recalculates metadata timestamps after a successful task invocation.
-
-This proves the production resume path revalidates and skips complete months instead of refetching them.
-
-The `collecting` refresh path remains covered by automated adapter behavior and should also be observed naturally when a live incomplete month occurs; it is no longer a blocker for Phase 1 completion.
+The second run over the same range with `force_new_snapshot=false` preserved Task manifest timestamps and snapshot counts, produced no item checkpoint commit, and therefore proved complete months were revalidated and skipped instead of fetched again.
 
 ## Current Phase 2 — Incremental historical research
 
 Goal:
 
-> Adding one new or changed month should not recompute every immutable monthly research artifact.
+> **Adding one new or changed month must not regenerate every unchanged historical monthly detail artifact.**
 
-### Required behavior
+### Phase 2A — Dependency inventory and incremental detail runner (landed; real-run validation pending)
 
-- Full-build mode remains available for methodology/schema/version changes.
-- Incremental mode generates only missing or invalidated monthly detail artifacts.
-- Existing valid immutable monthly detail artifacts are revalidated and reused.
-- Aggregated outputs may be rebuilt from stored monthly detail artifacts when inexpensive and deterministic.
-- Explicit force/full rebuild options remain available.
-- Dependency/invalidation rules must be explicit so a methodology change cannot silently reuse incompatible monthly artifacts.
+Dependency inventory is documented in:
 
-### Initial implementation scope
+```text
+docs/research/monthly-revenue/incremental-pipeline.md
+```
 
-Start with the MOPS historical research pipeline only. Do not generalize the Task Framework further yet.
+The current research graph is intentionally split into two layers:
 
-First identify the current generators and their dependency graph for:
+```text
+Monthly signal detail YYYYMM.json
+  -> incrementally generate / validate / reuse
 
-- historical monthly signals / event detail;
-- D1/D3/D5/D10/D20 return detail;
+Aggregate research outputs
+  -> rebuild from selected monthly details
+```
+
+Monthly detail generator:
+
+```text
+scripts/generate_mops_revenue_monthly_signal_returns.js
+```
+
+Incremental runner:
+
+```text
+scripts/run_mops_revenue_monthly_signal_incremental.js
+```
+
+Production workflow:
+
+```text
+.github/workflows/backfill-mops-revenue-monthly-signal-study.yml
+```
+
+The workflow now has:
+
+```text
+force_full_rebuild = false   # default incremental mode
+force_full_rebuild = true    # explicit clean/full detail rebuild
+```
+
+### Monthly detail reuse rule
+
+A detail is reusable only when:
+
+1. the expected dataset/month identity is valid;
+2. all D1/D3/D5/D10/D20 event returns are complete;
+3. the stored input fingerprint exists;
+4. the stored fingerprint matches current research inputs.
+
+Current fingerprint fields:
+
+```text
+methodology_version
+revenue_research_sha256
+market_window_sha256
+stock_price_provider_sha256
+```
+
+`revenue_research_sha256` hashes only research-relevant company/factor fields. It deliberately ignores operational MOPS metadata such as collection timestamps, status recalculation timestamps, and snapshot count.
+
+`market_window_sha256` hashes only the TAIEX rows required from the conservative base date through D20. Appending newer market history must not invalidate an old complete month.
+
+The Price Provider implementation itself is fingerprinted so a source-priority or interpretation change invalidates existing details.
+
+Any detail with `pending_market_data` or `missing_stock_price` is regenerated on later runs rather than being treated as immutable.
+
+Known corrections to already-complete historical price data use `force_full_rebuild=true` for the affected range. Phase 2 does not yet build a per-price-observation dependency graph because there is not enough evidence to justify that complexity.
+
+### Aggregate behavior
+
+The following remain full aggregate rebuilds from stored monthly details:
+
 - coverage summary;
 - factor rankings;
 - YoY20 subfactor experiment;
@@ -184,28 +144,50 @@ First identify the current generators and their dependency graph for:
 - industry breakdown;
 - market-regime breakdown.
 
-Classify outputs into:
+This is intentional: these summaries are inexpensive compared with per-stock monthly return generation and may legitimately change across the selected window when one new month is added.
+
+### Automated coverage
+
+Incremental tests cover:
+
+- volatile collection metadata does not change stable revenue research input;
+- market data appended beyond a completed D20 window does not invalidate the month;
+- incomplete return details are not reusable;
+- unchanged detail is reused while invalid detail is generated;
+- full rebuild mode generates every selected month without consulting reuse.
+
+The production workflow runs these tests before historical generation.
+
+### Phase 2B — Real-run validation (current gate)
+
+The first workflow run after migration is expected to regenerate legacy monthly details once because old files do not contain the new fingerprint. Expected reason:
 
 ```text
-Monthly immutable/detail artifact
-  -> incremental generate / validate / reuse
-
-Aggregate artifact
-  -> rebuild from monthly detail when appropriate
+missing_input_fingerprint
 ```
 
-Define a research artifact version or methodology fingerprint before allowing incremental reuse across methodology changes.
+Recommended validation sequence:
 
-### Phase 2 acceptance criteria
+1. Run `[07 研究] MOPS－月營收歷史因子區間回測` on the currently validated historical range with `force_full_rebuild=false`.
+2. Confirm legacy monthly details are generated once and receive fingerprints.
+3. Run the exact same range again with `force_full_rebuild=false`.
+4. Confirm complete unchanged monthly details report `REUSE` instead of `GENERATE`.
+5. Confirm aggregate summaries are still rebuilt.
+6. Run a controlled comparison with `force_full_rebuild=true` and verify aggregate conclusions are equivalent to incremental mode.
+7. Confirm a missing/corrupt monthly detail is regenerated rather than reused before declaring Phase 2 complete.
+
+Do not mark Phase 2 complete from repository code alone; real workflow evidence is required just as it was for the Task Framework.
+
+## Phase 2 acceptance criteria
 
 Phase 2 is complete when:
 
 1. adding one new revenue month does not regenerate unchanged historical monthly detail artifacts;
-2. missing/corrupt monthly detail is automatically rebuilt;
-3. a methodology/version change can force correct invalidation/full rebuild;
+2. missing/corrupt or incomplete monthly detail is automatically rebuilt;
+3. a methodology/version change correctly invalidates old details or full rebuild can be selected;
 4. aggregate research outputs remain equivalent to a clean full build;
 5. incremental/full modes have automated regression tests;
-6. the workflow reports generated/reused/rebuilt monthly artifacts clearly.
+6. the workflow reports generated/reused monthly artifacts clearly.
 
 ## Planned historical extension
 
@@ -234,7 +216,8 @@ Do not implement yet:
 - dependency injection container;
 - ETA engine;
 - generic validation schema;
-- automatic Git commit/push inside the core runner;
+- generic artifact hash database;
+- per-price-observation dependency graph;
 - forced Prediction/Replay migration.
 
 These require evidence from later real use cases.
