@@ -1,0 +1,72 @@
+name: '[07 研究] MOPS－月營收事件每日續算'
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-mops-revenue-event-returns
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Validate event-study scripts
+        run: |
+          node --check scripts/generate_mops_revenue_event_returns.js
+          node --check scripts/refresh_mops_revenue_event_returns.js
+          node --test tests/mops_revenue_event_returns.test.js tests/refresh_mops_revenue_event_returns.test.js
+
+      - name: Refresh incomplete live MOPS event studies
+        run: node scripts/refresh_mops_revenue_event_returns.js
+
+      - name: Commit verified research updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/monthly-revenue/events
+
+          if git diff --cached --quiet; then
+            echo 'No MOPS event-study changes to commit'
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "analysis: refresh MOPS revenue event returns ${CURRENT_DATE}"
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep $((attempt * 5))
+          done
+
+          echo 'Failed to push MOPS event-study refresh after 5 attempts.'
+          exit 1
