@@ -6,6 +6,9 @@ const {
   runIncrementalRange,
 } = require('../scripts/run_mops_revenue_monthly_signal_incremental');
 const {
+  validateRecoverySummary,
+} = require('../scripts/validate_mops_revenue_incremental_recovery');
+const {
   hasPendingMarketData,
   marketWindowFingerprint,
   stableRevenueResearchInput,
@@ -118,6 +121,36 @@ test('incremental runner reuses unchanged details and generates invalidated deta
   assert.equal(summary.generated, 1);
   assert.equal(summary.items[0].action, 'reused');
   assert.equal(summary.items[1].action, 'generated');
+});
+
+test('controlled recovery accepts exactly one regenerated target month', () => {
+  const months = ['202511', '202512', '202601'];
+  const summary = {
+    total: 3,
+    generated: 1,
+    reused: 2,
+    items: [
+      { month: '202511', action: 'reused' },
+      { month: '202512', action: 'generated', reason: 'missing_output' },
+      { month: '202601', action: 'reused' },
+    ],
+  };
+  assert.doesNotThrow(() => validateRecoverySummary(summary, '202512', months));
+});
+
+test('controlled recovery rejects collateral regeneration', () => {
+  const months = ['202511', '202512', '202601'];
+  const summary = {
+    total: 3,
+    generated: 2,
+    reused: 1,
+    items: [
+      { month: '202511', action: 'generated' },
+      { month: '202512', action: 'generated' },
+      { month: '202601', action: 'reused' },
+    ],
+  };
+  assert.throws(() => validateRecoverySummary(summary, '202512', months), /exactly one generated month/);
 });
 
 test('force full rebuild generates every month without consulting reuse', () => {
