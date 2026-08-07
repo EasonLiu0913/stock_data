@@ -151,7 +151,11 @@ jobs:
             if(!Array.isArray(payload.events)||!payload.events.length)throw new Error(`no events: ${month}`);
             if(!payload.incremental?.input_fingerprint?.market_window_sha256)throw new Error(`missing TAIEX benchmark market window: ${month}; backfill data_twse_market_chart before running research`);
             if(!Number.isFinite(payload.counts?.with_effective_trading_date)||payload.counts.with_effective_trading_date<=0)throw new Error(`no effective trading dates: ${month}; benchmark history does not cover conservative availability date`);
-            console.log(month,payload.counts,payload.incremental?.input_fingerprint?.methodology_version||'legacy_detail');
+            const d20=payload.events.map(event=>event.returns?.d20?.status||'missing_status');
+            const pending=d20.filter(status=>status==='pending_market_data').length;
+            const complete=d20.filter(status=>status==='complete').length;
+            if(pending===0&&complete===0)throw new Error(`zero D20 stock-price coverage: ${month}; backfill data_twse_mi_index/data_history_sma/data_fubon before running mature historical research`);
+            console.log(month,payload.counts,{d20_complete:complete,d20_pending:pending},payload.incremental?.input_fingerprint?.methodology_version||'legacy_detail');
             if(month===end)break;
           }
           NODE
