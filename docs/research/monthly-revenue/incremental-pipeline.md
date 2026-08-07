@@ -4,7 +4,7 @@
 
 This document defines the dependency and invalidation model for Phase 2 incremental historical research.
 
-The goal is not to cache everything. The goal is to avoid recomputing monthly detail artifacts that are already complete and whose research inputs have not changed.
+The goal is not to cache everything. The goal is to avoid recomputing monthly detail artifacts that are already mature and whose research inputs have not changed.
 
 ## Current dependency graph
 
@@ -68,7 +68,7 @@ They are relatively inexpensive compared with regenerating all per-stock monthly
 
 ## Reuse fingerprint
 
-A monthly detail may be reused only when it is structurally complete and its stored input fingerprint matches the current research inputs.
+A monthly detail may be reused only when its market window is mature and its stored input fingerprint matches the current research inputs.
 
 The current fingerprint contains:
 
@@ -119,20 +119,23 @@ Hashes the unified Price Provider implementation.
 
 A provider implementation change invalidates stored monthly details because source-selection or price interpretation may have changed.
 
-## Incomplete details are not immutable
+## Mature vs pending details
 
-A monthly detail is not reusable when any D1/D3/D5/D10/D20 observation has a status other than `complete`.
+A month remains non-reusable while any required horizon is still `pending_market_data` or missing entirely. This means the market window has not matured yet and a later run can legitimately fill new D1/D3/D5/D10/D20 observations.
 
-Examples:
+Historical `missing_stock_price` is treated differently. Real validation showed that a small number of historical stocks may remain unavailable even after the month is fully mature. If any single missing stock price made the whole month non-reusable, every historical month would be regenerated forever despite unchanged inputs.
+
+Current rule:
 
 ```text
 pending_market_data
-missing_stock_price
+  -> GENERATE again later
+
+missing_stock_price in an otherwise mature month
+  -> may REUSE when fingerprints are unchanged
 ```
 
-Such a month is regenerated on a later run so newly available market or stock-price data can complete the research result.
-
-This is intentionally conservative.
+Aggregate analysis continues to include only observations whose requested horizon status is `complete`, so preserving a mature month with a small number of missing stock prices does not silently treat missing rows as valid results.
 
 ## Price-data correction boundary
 
@@ -140,11 +143,14 @@ Phase 2 does not fingerprint every underlying stock-price file or every historic
 
 Current rule:
 
-- incomplete details are automatically regenerated;
-- Price Provider implementation changes invalidate all affected details;
-- known corrections to already-complete historical price data should use `force_full_rebuild=true` for the affected research range.
+- pending market-window data automatically invalidates the detail;
+- Price Provider implementation changes invalidate affected details;
+- stable historical `missing_stock_price` does not repeatedly invalidate a mature month;
+- after a historical price-data backfill or known historical price correction, run the affected research range with `force_full_rebuild=true`.
 
-If repeated real price-correction use cases demonstrate a need for finer invalidation, add that capability based on evidence rather than prebuilding it now.
+This trade-off came directly from real Phase 2 validation: the existing historical dataset has high but not perfect price coverage, so requiring 100% per-stock completeness prevented incremental reuse from ever occurring.
+
+If repeated real price-correction use cases demonstrate a need for finer automatic price-data invalidation, add that capability based on evidence rather than prebuilding it now.
 
 ## Incremental runner
 
@@ -159,9 +165,9 @@ For each selected month:
 ```text
 inspect current detail
         |
-        +-- reusable --> REUSE
+        +-- mature + fingerprint unchanged --> REUSE
         |
-        +-- missing / incomplete / fingerprint changed --> GENERATE
+        +-- missing / pending / fingerprint changed --> GENERATE
 ```
 
 The runner reports per-month action and totals for generated vs reused details.
@@ -177,7 +183,7 @@ force_full_rebuild = true
 Use it when:
 
 - methodology/schema changes;
-- known historical price corrections require regeneration;
+- historical price data was backfilled or corrected;
 - validating incremental output against a clean build;
 - debugging suspected stale detail artifacts.
 
@@ -207,19 +213,20 @@ validate scripts/tests
   -> commit verified research artifacts
 ```
 
-## Expected first-run behavior after migration
+## Real validation findings
 
-Existing legacy monthly details do not contain the new fingerprint.
+### First migration run
 
-Therefore, the first incremental workflow run over an old range is expected to regenerate those details once with reason:
+The first `202511-202606` run after incremental support was added regenerated all legacy detail files, upgraded them from schema v2 to v3, and stored input fingerprints. This was expected because legacy artifacts had no fingerprint.
 
-```text
-missing_input_fingerprint
-```
+### Second run
 
-A second run over the same unchanged complete range should report reuse instead of regeneration.
+A second run revealed two distinct invalidation causes:
 
-This one-time migration is intentional and provides a clean evidence boundary between legacy details and incrementally reusable details.
+1. `202606` received a legitimate `market_window_sha256` change because the TWSE market chart was updated between runs. Recalculation was correct.
+2. `202511-202605` had unchanged fingerprints but were still regenerated because the original reuse rule rejected a whole month when any stock/horizon had `missing_stock_price`.
+
+The second behavior was too strict for the observed 98%-99% historical price coverage and was corrected. Mature months now tolerate stable `missing_stock_price`; only pending market data automatically prevents reuse.
 
 ## Validation sequence
 
@@ -227,12 +234,13 @@ Before declaring Phase 2 complete:
 
 1. Run a historical range in default incremental mode.
 2. Confirm legacy details are generated and receive fingerprints.
-3. Run the same range again without source/methodology changes.
-4. Confirm complete monthly details are reused.
-5. Confirm aggregate outputs are still rebuilt.
-6. Run the same range with `force_full_rebuild=true`.
-7. Compare clean-full and incremental aggregate conclusions for equivalence.
-8. Confirm a deliberately missing/corrupt detail is regenerated rather than reused.
+3. Run the same range again without material source/methodology changes.
+4. Confirm mature monthly details are reused.
+5. Confirm a month whose D20 market window changes is correctly regenerated.
+6. Confirm aggregate outputs are still rebuilt.
+7. Run the same range with `force_full_rebuild=true`.
+8. Compare clean-full and incremental aggregate conclusions for equivalence.
+9. Confirm a deliberately missing/corrupt detail is regenerated rather than reused.
 
 ## Non-goals
 
