@@ -57,14 +57,15 @@ item = compositeKey
 
 but the MVP must not implement speculative streaming sources, DAGs, distributed workers, or generic scheduling.
 
-## Proposed MVP API
+## MVP API
 
-The initial contract should remain explicit and small:
+The initial contract remains explicit and small:
 
 ```js
 await runTask({
   taskId: 'mops-monthly-revenue-backfill',
   items,
+  manifestPath,
 
   async isComplete(item, context) {
     // Verify existing output is still present and valid.
@@ -100,7 +101,7 @@ await runTask({
 });
 ```
 
-This is an architectural target, not a requirement to implement every callback in the first commit if the MOPS use case does not require it.
+The current implementation is intentionally smaller than a generic workflow engine. New API surface requires evidence from additional real use cases.
 
 ## Item state model
 
@@ -166,6 +167,8 @@ This protects against deleted files, damaged output, schema changes, or stale ma
 
 A stale prior run state such as `RUNNING` must never permanently block a new run.
 
+Existing valid output may also be adopted into the manifest when the framework is introduced to data that predates the manifest. This avoids forcing a destructive full rebuild simply to initialize task state.
+
 ## Persistent manifest vs run state
 
 Do not mix durable completion evidence with transient execution state.
@@ -191,6 +194,8 @@ Long-lived state used for resume decisions:
 
 The exact stored metadata should remain minimal until a real need requires more fields.
 
+Manifest writes use a temporary file followed by rename so an interrupted write does not intentionally leave a partially written JSON file as the normal persistence path.
+
 ### Per-run state / summary
 
 Describes only the current execution:
@@ -207,13 +212,13 @@ Describes only the current execution:
 }
 ```
 
-This may be persisted for diagnostics, but it is not the authority for whether a future run should skip an item.
+This may be persisted for diagnostics later, but it is not the authority for whether a future run should skip an item.
 
 ## Checkpoint model
 
-Checkpoint occurs after validated item progress.
+Checkpoint occurs only after validated progress.
 
-The MVP requirement is count-based checkpointing:
+The MVP uses count-based checkpointing:
 
 ```text
 checkpoint.everyItems = 3
@@ -221,12 +226,60 @@ checkpoint.everyItems = 3
 
 A later real use case may justify time-based checkpointing such as `everyMinutes`, but do not add it until needed.
 
+The current recovery semantics intentionally include three checkpoint reasons:
+
+### `count`
+
+Emitted when validated progress reaches `everyItems`.
+
+Example:
+
+```text
+month 1 DONE
+month 2 DONE
+month 3 DONE
+→ checkpoint(reason=count)
+```
+
+### `final`
+
+If the task finishes with validated progress smaller than the next count boundary, that partial progress is still checkpointed.
+
+Example with `everyItems = 3`:
+
+```text
+month 1 DONE
+month 2 DONE
+end of task
+→ checkpoint(reason=final, validated=2)
+```
+
+This prevents the last partial batch from depending on another future run to be persisted externally.
+
+### `before_failure`
+
+If a later item fails while earlier validated progress has not yet reached the next count boundary, the earlier progress is checkpointed before the task reports failure.
+
+Example:
+
+```text
+month 1 DONE
+month 2 DONE
+month 3 FAILED
+→ checkpoint(reason=before_failure, validated=2)
+→ task fails visibly
+```
+
+This behavior is central to the original reliability goal: a late failure must not discard earlier validated work merely because the configured batch size was not reached.
+
 A checkpoint should:
 
-1. ensure all included completed items are validated;
-2. persist the durable manifest;
+1. include only validated/adopted progress;
+2. have the durable manifest already updated locally;
 3. emit an `onCheckpoint` hook/event;
 4. allow the caller or adapter to persist external progress if required.
+
+A checkpoint hook failure is itself a task failure and must not be silently treated as successful persistence.
 
 ### Git is outside the core framework
 
@@ -267,7 +320,7 @@ Do not hide the final error after retries are exhausted.
 
 ## Validation contract
 
-Validation remains a domain plugin/callback, not a generic `requiredFields` framework feature.
+Validation remains a domain callback, not a generic `requiredFields` framework feature.
 
 A validator may return structured metadata:
 
@@ -292,13 +345,12 @@ Hooks allow side effects without coupling them to `TaskRunner`:
 Task Runner
    ↓
 Hook callback
-   ├─ console logger
-   ├─ GitHub summary caller
+   ├─ console / CI integration
    ├─ checkpoint persistence caller
    └─ future metrics/plugin adapter
 ```
 
-Initial hooks may include:
+Initial hooks include:
 
 - `onTaskStart`
 - `onItemStart`
@@ -307,13 +359,13 @@ Initial hooks may include:
 - `onCheckpoint`
 - `onTaskFinish`
 
-The runner must still work when no optional hooks are supplied.
+The runner works when no optional hooks are supplied.
 
 Do not implement a generic Event Bus, plugin registry, middleware pipeline, or dependency injection container in the MVP.
 
 ## Logging and summary
 
-First-version logging should favor clarity over visual sophistication.
+First-version logging favors clarity over visual sophistication.
 
 Example:
 
@@ -321,10 +373,10 @@ Example:
 [MOPS] [12/22] 202412 START
 [MOPS] [12/22] 202412 RETRY 1/3
 [MOPS] [12/22] 202412 DONE 4.8s
-[MOPS] CHECKPOINT 12/22
+[MOPS] CHECKPOINT count done=12 skipped=3 failed=0
 ```
 
-Final summary should expose at least:
+Final summary exposes at least:
 
 ```text
 Total
@@ -332,14 +384,15 @@ Done
 Skipped
 Failed
 Retries
+Checkpoints
 Elapsed
 ```
 
 ETA and progress bars are intentionally out of MVP scope because crawler duration is highly variable.
 
-## Proposed initial files
+## Initial files
 
-Keep the first implementation compact:
+The first implementation stays compact:
 
 ```text
 scripts/framework/
@@ -350,9 +403,19 @@ scripts/framework/
 └── index.js
 ```
 
-Do not create large directory trees for imagined future capabilities.
+Lifecycle regression coverage lives at:
 
-Tests should live with the repository's existing test convention and cover lifecycle behavior rather than MOPS-only behavior.
+```text
+tests/task_framework.test.js
+```
+
+Dedicated CI lives at:
+
+```text
+.github/workflows/test-task-framework.yml
+```
+
+Do not create large directory trees for imagined future capabilities.
 
 ## MVP capabilities
 
@@ -413,8 +476,9 @@ The first implementation is successful when:
 - invalid/missing prior outputs are rebuilt even when manifest says done;
 - transient errors retry without losing prior validated progress;
 - exhausted/non-retryable failures are visible;
+- partial validated work is checkpointed at task end and before a later failure;
 - checkpoint persistence does not require the runner to know Git or GitHub Actions;
 - existing prediction/replay/deployment behavior is unchanged;
-- framework lifecycle behavior has automated tests.
+- framework lifecycle behavior has automated tests and CI validation.
 
 Only after these are demonstrated should the framework be proposed for a second domain.
