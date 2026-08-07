@@ -1,54 +1,119 @@
-# Stock Data Dashboard (股票數據儀表板)
+# stock_data
 
-這是一個專注於台股籌碼面分析的資料視覺化專案，主要追蹤主力籌碼與外資動向。
+> **An evidence-driven quantitative research platform for Taiwan equities.**
+>
+> **Let evidence drive evolution.**  
+> Evidence before Strategy. Evidence before Abstraction.
 
-## 📊 主要功能
+`stock_data` collects, normalizes, studies, validates, and presents Taiwan-equity market data. Prediction is one production application of the platform; the longer-term goal is to accumulate reproducible evidence and turn validated knowledge into maintainable strategies.
 
-### 1. 股票數據瀏覽器 (Stock Data Browser)
-入口：[Stock Data Browser](https://easonliu0913.github.io/stock_data/public/stock-data-browser.html)
+The project follows two core maxims:
 
-提供每日更新的籌碼排行數據，支援多種篩選條件：
-- **主力買賣超排行**：支援 1、2、3、4、5、10、20、30 日區間統計。
-- **市值/量能排行**：上市值增/值縮、量增/量縮排行。
-- **URL 參數連動**：選擇日期或分類時會自動更新 URL，方便分享特定數據頁面。
+> **Let evidence drive evolution.**  
+> **Build platforms from proven patterns, not predicted needs.**
 
-### 2. 外資連續買超追蹤 (Foreign Investors Tracker)
-入口：[Foreign Investors Tracker](https://easonliu0913.github.io/stock_data/public/foreign.html)
+Before a research idea becomes a production strategy, the intended lifecycle is:
 
-專門針對外資動向的進階分析工具：
-- **連續買超排行**：找出外資連續多日買進的潛力股（支援顯示完整 10 日數據）。
-- **多種排序模式**：
-    - 4 日累計買超
-    - 短期成長率 (第1天 vs 第2天)
-    - 區間佈局 (4天內3天買超)
-    - **連續天數排行** (由長到短排序，並顯示 10 日累計與平均)
-- **視覺化圖表**：以顏色區分買賣超強度（紅買綠賣）。
+```text
+Idea
+  -> Historical Evidence
+  -> Ranking
+  -> Stability
+  -> Industry Validation
+  -> Market Context Validation
+  -> Candidate
+  -> Explicit Strategy Promotion
+```
 
-### 3. 其他分析工具
-- **[工具清單](https://easonliu0913.github.io/stock_data/public/index.html)**：瀏覽所有 HTML 工具頁，並以新分頁開啟。
-- **[分析工具](https://easonliu0913.github.io/stock_data/public/analyze.html)**：個股深入分析工具。
-- **[比較工具](https://easonliu0913.github.io/stock_data/public/compare.html)**：多檔股票比較工具。
+Before a repeated implementation becomes a shared platform abstraction, it should first be proven by real use cases.
 
----
+## Project documentation
 
-## 🚀 如何使用
+Start here when working on the repository:
 
-### 線上瀏覽 (GitHub Pages)
-直接訪問上述連結即可使用。
+1. [`docs/project-philosophy.md`](docs/project-philosophy.md) — project principles and long-term direction.
+2. [`AGENTS.md`](AGENTS.md) — mandatory repository rules for coding agents.
+3. [`docs/README.md`](docs/README.md) — documentation map and reading order.
+4. [`docs/roadmap/current-phase.md`](docs/roadmap/current-phase.md) — current active development phase.
+5. [`docs/decisions/`](docs/decisions/) — Architecture Decision Records.
 
-### 本地開發
-1. Clone 此專案：
-   ```bash
-   git clone https://github.com/EasonLiu0913/stock_data.git
-   ```
-2. 直接用瀏覽器打開 `public/` 資料夾下的 HTML 檔案即可使用。
+Architecture and research details live under `docs/architecture/` and `docs/research/`.
 
----
+## Platform areas
 
-## 🛠 資料更新 (Data Update)
+The repository currently spans several connected areas:
 
-本專案使用自動化流程每日更新數據：
+- Taiwan market and chip-flow data collection.
+- Prediction generation and replay/validation.
+- Historical quantitative research.
+- Strategy registry and versioned strategy evaluation.
+- Market and industry context analysis.
+- GitHub Pages dashboards and research tools.
+- Reusable platform capabilities such as the unified historical Price Provider.
 
-- **排程執行**：系統會每日自動執行爬蟲腳本更新數據。
-- **資料位置**：所有處理後的 JSON/CSV 檔案存放在 `data_fubon/` 目錄中。
-- **自動化**：透過 Crontab 每日固定時間自動執行更新。
+The project is intentionally research-first: new data or an attractive backtest must not directly alter production prediction behavior.
+
+## Main dashboards and tools
+
+### Stock Data Browser
+
+[Stock Data Browser](https://easonliu0913.github.io/stock_data/public/stock-data-browser.html)
+
+Provides daily chip-flow ranking data and multiple filtering/sorting views.
+
+### Foreign Investors Tracker
+
+[Foreign Investors Tracker](https://easonliu0913.github.io/stock_data/public/foreign.html)
+
+Tracks consecutive foreign-investor buying and related ranking views.
+
+### Tool index
+
+[All published tools](https://easonliu0913.github.io/stock_data/public/index.html)
+
+The public index is the preferred entry point for prediction, replay, research, market, and other dashboards as the project evolves.
+
+## Development principles
+
+Substantial changes should answer four questions before implementation:
+
+1. What real problem does this solve now?
+2. Is this the first use case, or is there repeated evidence of the same need?
+3. Should the solution remain domain-specific, or has it earned promotion into a platform capability?
+4. Which architecture, research, roadmap, or ADR document must be updated with the change?
+
+Additional fixed principles include:
+
+- Market environment is research/dashboard context, never a strategy gate.
+- Historical price research uses the unified Price Provider rather than adding new direct legacy price dependencies.
+- Long-running historical work should support checkpoint/resume and eventually incremental rebuilds.
+- GitHub Actions chaining uses reusable workflows and `workflow_call`; do not introduce `workflow_run` chaining.
+- Prefer maintainability, observability, and reproducibility over cleverness.
+
+See [`docs/project-philosophy.md`](docs/project-philosophy.md) for the complete rationale.
+
+## Local use
+
+Clone the repository:
+
+```bash
+git clone https://github.com/EasonLiu0913/stock_data.git
+cd stock_data
+```
+
+Most published dashboards are static HTML under `public/`, but many runtime pages expect repository-root data directories to be served alongside `public/`. Follow the data-path and Pages rules in `AGENTS.md` when testing or changing frontend loading behavior.
+
+## Data and automation
+
+The repository contains multiple source-specific data directories rather than a single `data_fubon/` source of truth. Data is collected through GitHub Actions and supporting Node.js scripts, then consumed by prediction, replay, research, and dashboard layers.
+
+Workflow architecture and deployment rules are documented in:
+
+- [`docs/architecture/github-actions.md`](docs/architecture/github-actions.md)
+- [`docs/architecture/prediction-pipeline.md`](docs/architecture/prediction-pipeline.md)
+
+## Long-term direction
+
+The project should accumulate trustworthy evidence across monthly revenue, institutional investors, brokers, margin data, ETFs, financial statements, market context, and future data sources.
+
+The goal is not to maximize the number of strategies. The goal is to maximize the quality and reproducibility of the knowledge from which strategies are promoted.
