@@ -35,6 +35,9 @@ function median(values) {
 function round(value, digits = 4) {
   return Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
 }
+function clamp(value, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, value));
+}
 function parseArgs(argv) {
   const map = new Map();
   for (let i = 0; i < argv.length; i++) {
@@ -51,40 +54,77 @@ function loadMonths(startMonth, endMonth) {
     .sort();
   return files.map(month => ({ month, payload: readJson(path.join(SIGNAL_ROOT, `${month}.json`), {}) }));
 }
+function summarizeResults(results) {
+  const sampleCount = results.length;
+  const excess = results.map(r => Number(r.excess_return_pct)).filter(Number.isFinite);
+  return {
+    samples: sampleCount,
+    relative_win_rate: sampleCount ? results.filter(r => r.outperformed_market === true).length / sampleCount * 100 : null,
+    absolute_win_rate: sampleCount ? results.filter(r => r.stock_positive === true).length / sampleCount * 100 : null,
+    avg_excess_return_pct: mean(excess),
+    median_excess_return_pct: median(excess),
+  };
+}
+function buildUniverseBaselines(months, horizon) {
+  return new Map(months.map(({ month, payload }) => {
+    const results = (payload.events || [])
+      .filter(event => event.returns?.[horizon]?.status === 'complete')
+      .map(event => event.returns[horizon]);
+    return [month, summarizeResults(results)];
+  }));
+}
 function summarizeFactor(months, factor, horizon) {
+  const universeByMonth = buildUniverseBaselines(months, horizon);
   const all = [];
+  const universeAll = [];
   const monthly = [];
+
   for (const { month, payload } of months) {
-    const rows = (payload.events || []).filter(event => factor.test(event) && event.returns?.[horizon]?.status === 'complete');
+    const completeEvents = (payload.events || []).filter(event => event.returns?.[horizon]?.status === 'complete');
+    const rows = completeEvents.filter(event => factor.test(event));
     const results = rows.map(event => event.returns[horizon]);
-    const excess = results.map(r => Number(r.excess_return_pct)).filter(Number.isFinite);
-    const relativeWins = results.filter(r => r.outperformed_market === true).length;
-    const absoluteWins = results.filter(r => r.stock_positive === true).length;
+    const universeResults = completeEvents.map(event => event.returns[horizon]);
+    const factorStats = summarizeResults(results);
+    const universeStats = universeByMonth.get(month) || summarizeResults([]);
+
     if (rows.length) {
       monthly.push({
         month,
         samples: rows.length,
-        relative_win_rate: round(relativeWins / rows.length * 100),
-        avg_excess_return_pct: round(mean(excess)),
-        median_excess_return_pct: round(median(excess)),
+        universe_samples: universeStats.samples,
+        relative_win_rate: round(factorStats.relative_win_rate),
+        universe_relative_win_rate: round(universeStats.relative_win_rate),
+        relative_win_rate_uplift_pp: round(factorStats.relative_win_rate - universeStats.relative_win_rate),
+        avg_excess_return_pct: round(factorStats.avg_excess_return_pct),
+        universe_avg_excess_return_pct: round(universeStats.avg_excess_return_pct),
+        avg_excess_uplift_pct: round(factorStats.avg_excess_return_pct - universeStats.avg_excess_return_pct),
+        median_excess_return_pct: round(factorStats.median_excess_return_pct),
       });
       all.push(...results);
     }
+    universeAll.push(...universeResults);
   }
-  const sampleCount = all.length;
-  const excess = all.map(r => Number(r.excess_return_pct)).filter(Number.isFinite);
-  const relativeWinRate = sampleCount ? all.filter(r => r.outperformed_market === true).length / sampleCount * 100 : null;
-  const absoluteWinRate = sampleCount ? all.filter(r => r.stock_positive === true).length / sampleCount * 100 : null;
-  const positiveMonths = monthly.filter(row => Number(row.avg_excess_return_pct) > 0).length;
-  const outperformMonths = monthly.filter(row => Number(row.relative_win_rate) > 50).length;
+
+  const factorStats = summarizeResults(all);
+  const universeStats = summarizeResults(universeAll);
+  const sampleCount = factorStats.samples;
   const coveredMonths = monthly.length;
-  const stability = coveredMonths ? (positiveMonths / coveredMonths + outperformMonths / coveredMonths) / 2 * 100 : null;
+  const positiveWinUpliftMonths = monthly.filter(row => Number(row.relative_win_rate_uplift_pp) > 0).length;
+  const positiveExcessUpliftMonths = monthly.filter(row => Number(row.avg_excess_uplift_pct) > 0).length;
+  const stability = coveredMonths
+    ? (positiveWinUpliftMonths / coveredMonths + positiveExcessUpliftMonths / coveredMonths) / 2 * 100
+    : null;
+  const relativeWinRateUplift = Number.isFinite(factorStats.relative_win_rate) && Number.isFinite(universeStats.relative_win_rate)
+    ? factorStats.relative_win_rate - universeStats.relative_win_rate : null;
+  const avgExcessUplift = Number.isFinite(factorStats.avg_excess_return_pct) && Number.isFinite(universeStats.avg_excess_return_pct)
+    ? factorStats.avg_excess_return_pct - universeStats.avg_excess_return_pct : null;
+
   const sampleScore = Math.min(100, Math.log10(Math.max(sampleCount, 1)) / 3 * 100);
-  const winScore = Number.isFinite(relativeWinRate) ? Math.max(0, Math.min(100, relativeWinRate)) : 0;
-  const excessScore = Number.isFinite(mean(excess)) ? Math.max(0, Math.min(100, 50 + mean(excess) * 10)) : 0;
+  const winUpliftScore = Number.isFinite(relativeWinRateUplift) ? clamp(50 + relativeWinRateUplift * 5) : 0;
+  const excessUpliftScore = Number.isFinite(avgExcessUplift) ? clamp(50 + avgExcessUplift * 20) : 0;
   const stabilityScore = Number.isFinite(stability) ? stability : 0;
   const rankingScore = sampleCount
-    ? 0.35 * winScore + 0.30 * excessScore + 0.25 * stabilityScore + 0.10 * sampleScore
+    ? 0.35 * winUpliftScore + 0.30 * excessUpliftScore + 0.25 * stabilityScore + 0.10 * sampleScore
     : null;
 
   return {
@@ -93,12 +133,16 @@ function summarizeFactor(months, factor, horizon) {
     horizon,
     samples: sampleCount,
     covered_months: coveredMonths,
-    relative_win_rate: round(relativeWinRate),
-    absolute_win_rate: round(absoluteWinRate),
-    avg_excess_return_pct: round(mean(excess)),
-    median_excess_return_pct: round(median(excess)),
-    positive_excess_month_rate: coveredMonths ? round(positiveMonths / coveredMonths * 100) : null,
-    outperform_month_rate: coveredMonths ? round(outperformMonths / coveredMonths * 100) : null,
+    relative_win_rate: round(factorStats.relative_win_rate),
+    universe_relative_win_rate: round(universeStats.relative_win_rate),
+    relative_win_rate_uplift_pp: round(relativeWinRateUplift),
+    absolute_win_rate: round(factorStats.absolute_win_rate),
+    avg_excess_return_pct: round(factorStats.avg_excess_return_pct),
+    universe_avg_excess_return_pct: round(universeStats.avg_excess_return_pct),
+    avg_excess_uplift_pct: round(avgExcessUplift),
+    median_excess_return_pct: round(factorStats.median_excess_return_pct),
+    positive_win_uplift_month_rate: coveredMonths ? round(positiveWinUpliftMonths / coveredMonths * 100) : null,
+    positive_excess_uplift_month_rate: coveredMonths ? round(positiveExcessUpliftMonths / coveredMonths * 100) : null,
     stability_score: round(stability),
     ranking_score: round(rankingScore),
     monthly,
@@ -112,7 +156,7 @@ function main(argv = process.argv.slice(2)) {
   if (!months.length) throw new Error('No monthly signal files found');
   const rankings = HORIZONS.flatMap(horizon => FACTORS.map(factor => summarizeFactor(months, factor, horizon)));
   const payload = {
-    schema_version: 1,
+    schema_version: 2,
     dataset: 'mops_monthly_revenue_factor_rankings',
     generated_at: new Date().toISOString(),
     start_month: months[0].month,
@@ -120,7 +164,8 @@ function main(argv = process.argv.slice(2)) {
     methodology: {
       sample_rule: 'only status=complete observations are included',
       benchmark: 'TAIEX',
-      ranking_score: '35% relative win rate + 30% average excess-return score + 25% cross-month stability + 10% sample-size score',
+      comparison_baseline: 'all listed-stock observations in the same months and horizon',
+      ranking_score: '35% relative-win-rate uplift vs universe + 30% average-excess-return uplift vs universe + 25% cross-month uplift stability + 10% sample-size score',
       caution: 'ranking_score is a research prioritization metric, not a production trading score',
     },
     horizons: HORIZONS,
@@ -135,4 +180,4 @@ if (require.main === module) {
   try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; }
 }
 
-module.exports = { FACTORS, HORIZONS, summarizeFactor };
+module.exports = { FACTORS, HORIZONS, buildUniverseBaselines, summarizeFactor, summarizeResults };
