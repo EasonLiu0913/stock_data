@@ -2,15 +2,42 @@
 
 This file defines mandatory repository-level instructions for coding agents working in `EasonLiu0913/stock_data`.
 
-## Mandatory documentation handoff
+## Project philosophy
 
-Before substantial architecture, research, strategy, backfill, or workflow work, read:
+Before making a substantial architecture, research, strategy, backfill, workflow, or shared-framework decision, read:
 
-1. `docs/README.md`
+1. `docs/project-philosophy.md`
 2. `docs/roadmap/current-phase.md`
 3. The relevant `docs/architecture/**` document
 4. The relevant `docs/research/**` document
 5. Applicable `docs/decisions/ADR-*.md`
+
+All implementation must follow the project philosophy:
+
+> **Let evidence drive evolution.**  
+> **Build platforms from proven patterns, not predicted needs.**
+
+Mandatory interpretation:
+
+- Evidence before Strategy.
+- Evidence before Abstraction.
+- Research before Automation.
+- Extract shared platform capabilities only after real repeated use cases demonstrate the pattern.
+- Prefer one source of truth for core concepts.
+- Preserve traceability/version identity for important strategies, schemas, registries, and research methodology.
+- Prefer small validated evolution over speculative large redesigns.
+- Optimize for maintainability, observability, and reproducibility rather than cleverness.
+
+Before introducing a major feature or abstraction, answer:
+
+1. What real problem does this solve now?
+2. Is this the first use case, or is there repeated evidence of the same need?
+3. Should this remain domain-specific, or is there enough evidence to promote it into a platform capability?
+4. Which architecture, research, roadmap, or ADR document must be updated with the change?
+
+See `docs/project-philosophy.md` and `docs/decisions/ADR-000-project-philosophy.md` for the canonical rationale.
+
+## Mandatory documentation handoff
 
 The documentation is a living project handoff. Do not rely only on prior chat history when the repository documents contain the current decision or roadmap.
 
