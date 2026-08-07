@@ -11,8 +11,8 @@ on:
         description: '結束營收月份 YYYYMM（例如 202607）'
         required: true
         type: string
-      force_snapshot:
-        description: '即使同秒 snapshot 已存在仍強制寫入（一般不需勾選）'
+      force_new_snapshot:
+        description: '即使來源內容與上一份相同，也強制保留新的 snapshot'
         required: false
         type: boolean
         default: false
@@ -58,31 +58,23 @@ jobs:
           set -euo pipefail
           node - <<'NODE' > /tmp/mops-revenue-months.txt
           const { autoRevenueMonth, normalizeRevenueMonth } = require('./scripts/crawl_mops_monthly_revenue');
-
           const start = normalizeRevenueMonth(process.env.START_MONTH);
           const end = normalizeRevenueMonth(process.env.END_MONTH);
           const latestAllowed = autoRevenueMonth();
           if (start > end) throw new Error(`Invalid month range: ${start} > ${end}`);
-          if (end > latestAllowed) {
-            throw new Error(`End month ${end} is later than latest allowed revenue month ${latestAllowed}`);
-          }
+          if (end > latestAllowed) throw new Error(`End month ${end} is later than latest allowed revenue month ${latestAllowed}`);
 
           function nextMonth(value) {
             let year = Number(value.slice(0, 4));
             let month = Number(value.slice(4, 6)) + 1;
-            if (month === 13) {
-              year += 1;
-              month = 1;
-            }
+            if (month === 13) { year += 1; month = 1; }
             return `${year}${String(month).padStart(2, '0')}`;
           }
 
           const months = [];
           for (let month = start; month <= end; month = nextMonth(month)) {
             months.push(month);
-            if (months.length > 36) {
-              throw new Error('Safety limit exceeded: a single backfill may include at most 36 months');
-            }
+            if (months.length > 36) throw new Error('Safety limit exceeded: a single backfill may include at most 36 months');
           }
           process.stdout.write(`${months.join('\n')}\n`);
           NODE
@@ -98,13 +90,14 @@ jobs:
       - name: Run parser and metadata regression tests
         run: |
           node --check scripts/crawl_mops_monthly_revenue.js
+          node --check scripts/apply_mops_snapshot_policy.js
           node --check scripts/rebuild_mops_monthly_revenue_metadata.js
           node --test tests/mops_monthly_revenue.test.js
 
       - name: Backfill MOPS revenue month by month
         shell: bash
         env:
-          FORCE_SNAPSHOT: ${{ inputs.force_snapshot }}
+          FORCE_NEW_SNAPSHOT: ${{ inputs.force_new_snapshot }}
         run: |
           set -euo pipefail
           total=$(wc -l < /tmp/mops-revenue-months.txt | tr -d ' ')
@@ -115,14 +108,9 @@ jobs:
             index=$((index + 1))
             echo "[$index/$total] Crawling MOPS revenue month $month"
 
-            args=(--month "$month")
-            if [ "$FORCE_SNAPSHOT" = "true" ]; then
-              args+=(--force-snapshot)
-            fi
-
             success=false
             for attempt in 1 2 3; do
-              if node scripts/crawl_mops_monthly_revenue.js "${args[@]}"; then
+              if node scripts/crawl_mops_monthly_revenue.js --month "$month"; then
                 success=true
                 break
               fi
@@ -137,6 +125,12 @@ jobs:
               echo "::error title=MOPS 月營收回填失敗::$month failed after 3 attempts"
               exit 1
             fi
+
+            policy_args=(--month "$month")
+            if [ "$FORCE_NEW_SNAPSHOT" = "true" ]; then
+              policy_args+=(--force-new-snapshot)
+            fi
+            node scripts/apply_mops_snapshot_policy.js "${policy_args[@]}"
 
             if [ "$index" -lt "$total" ]; then
               delay=$((3 + RANDOM % 5))
@@ -163,9 +157,7 @@ jobs:
             if (!fs.existsSync(file)) throw new Error(`Missing output: ${file}`);
             const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
             if (payload.revenue_month !== month) throw new Error(`Month mismatch: ${file}`);
-            if (!Array.isArray(payload.companies) || payload.companies.length === 0) {
-              throw new Error(`No company rows: ${file}`);
-            }
+            if (!Array.isArray(payload.companies) || payload.companies.length === 0) throw new Error(`No company rows: ${file}`);
             if (!['baseline_seed', 'collecting', 'likely_complete'].includes(payload.collection?.status)) {
               throw new Error(`Invalid completion status for ${month}: ${payload.collection?.status}`);
             }
@@ -175,6 +167,7 @@ jobs:
               baseline_month: payload.collection.baseline_month,
               baseline_company_count: payload.collection.baseline_company_count,
               coverage_ratio: payload.collection.coverage_ratio,
+              snapshot_count: payload.collection.snapshot_count,
               status: payload.collection.status,
             }));
           }
@@ -196,9 +189,7 @@ jobs:
           test -z "$(git status --porcelain)" || { git status --short; exit 1; }
 
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              exit 0
-            fi
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
             push_delay=$((4 + RANDOM % 5))
             echo "Push attempt $attempt failed; retrying after ${push_delay}s"
