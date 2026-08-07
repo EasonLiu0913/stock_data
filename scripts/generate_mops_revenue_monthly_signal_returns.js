@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getClose } = require('./lib/stock_price_provider');
@@ -9,7 +10,9 @@ const ROOT = path.resolve(__dirname, '..');
 const REVENUE_ROOT = path.join(ROOT, 'data_mops_monthly_revenue');
 const OUTPUT_ROOT = path.join(ROOT, 'data_prediction_analysis', 'monthly-revenue', 'monthly-signals');
 const MARKET_FILE = path.join(ROOT, 'data_twse_market_chart', 'market_chart.json');
+const PRICE_PROVIDER_FILE = path.join(ROOT, 'scripts', 'lib', 'stock_price_provider.js');
 const HORIZONS = [1, 3, 5, 10, 20];
+const METHODOLOGY_VERSION = 'mops-conservative-signal-returns-v3';
 
 function readJson(file, fallback = null) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
@@ -17,6 +20,12 @@ function readJson(file, fallback = null) {
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+function fileSha256(file) {
+  return sha256(fs.readFileSync(file));
 }
 function nextMonth(month) {
   let y = Number(month.slice(0, 4));
@@ -94,6 +103,68 @@ function buildEvent(row, revenueMonth, marketRows) {
     ...calculateReturns(row.stock_code, marketRows, availabilityDate),
   };
 }
+function stableRevenueResearchInput(source) {
+  return {
+    schema_version: source?.schema_version ?? null,
+    revenue_month: source?.revenue_month ?? null,
+    companies: (source?.companies || []).map(row => ({
+      stock_code: row.stock_code,
+      stock_name: row.stock_name,
+      industry: row.industry || null,
+      mom_pct: row.mom_pct ?? null,
+      yoy_pct: row.yoy_pct ?? null,
+      ytd_yoy_pct: row.ytd_yoy_pct ?? null,
+      previous_month_yoy_pct: row.derived?.previous_month_yoy_pct ?? null,
+      yoy_acceleration_pct_points: row.derived?.yoy_acceleration_pct_points ?? null,
+      yoy_accelerating: row.derived?.yoy_accelerating ?? null,
+      yoy_and_mom_positive: row.derived?.yoy_and_mom_positive ?? null,
+    })),
+  };
+}
+function marketWindowFingerprint(marketRows, revenueMonth) {
+  const availabilityDate = conservativeAvailabilityDate(revenueMonth);
+  const window = buildTradingWindow(marketRows, availabilityDate);
+  if (!window) return null;
+  const rows = marketRows.slice(window.baseIndex, window.baseIndex + Math.max(...HORIZONS) + 1);
+  return sha256(JSON.stringify(rows));
+}
+function buildInputFingerprint(revenueMonth, source, marketRows) {
+  return {
+    methodology_version: METHODOLOGY_VERSION,
+    revenue_research_sha256: sha256(JSON.stringify(stableRevenueResearchInput(source))),
+    market_window_sha256: marketWindowFingerprint(marketRows, revenueMonth),
+    stock_price_provider_sha256: fileSha256(PRICE_PROVIDER_FILE),
+  };
+}
+function hasIncompleteReturns(payload) {
+  const events = Array.isArray(payload?.events) ? payload.events : [];
+  if (!events.length) return true;
+  return events.some(event => HORIZONS.some(horizon => event.returns?.[`d${horizon}`]?.status !== 'complete'));
+}
+function inspectReusableMonth(revenueMonth) {
+  const sourceFile = path.join(REVENUE_ROOT, revenueMonth, 'monthly_revenue.json');
+  const outputFile = path.join(OUTPUT_ROOT, `${revenueMonth}.json`);
+  const source = readJson(sourceFile, null);
+  if (!source) return { reusable: false, reason: 'missing_source', source_file: sourceFile, output_file: outputFile };
+  const existing = readJson(outputFile, null);
+  if (!existing) return { reusable: false, reason: 'missing_output', source_file: sourceFile, output_file: outputFile };
+  if (existing.dataset !== 'mops_monthly_revenue_conservative_signal_returns' || existing.revenue_month !== revenueMonth) {
+    return { reusable: false, reason: 'output_identity_mismatch', source_file: sourceFile, output_file: outputFile };
+  }
+  if (hasIncompleteReturns(existing)) {
+    return { reusable: false, reason: 'incomplete_returns', source_file: sourceFile, output_file: outputFile };
+  }
+  const marketRows = loadMarketSeries();
+  const current = buildInputFingerprint(revenueMonth, source, marketRows);
+  const stored = existing.incremental?.input_fingerprint || null;
+  if (!stored) return { reusable: false, reason: 'missing_input_fingerprint', source_file: sourceFile, output_file: outputFile, current };
+  for (const key of Object.keys(current)) {
+    if (stored[key] !== current[key]) {
+      return { reusable: false, reason: `fingerprint_changed:${key}`, source_file: sourceFile, output_file: outputFile, current, stored };
+    }
+  }
+  return { reusable: true, reason: 'unchanged_complete_detail', source_file: sourceFile, output_file: outputFile, current };
+}
 function generateMonth(revenueMonth) {
   const sourceFile = path.join(REVENUE_ROOT, revenueMonth, 'monthly_revenue.json');
   const source = readJson(sourceFile, null);
@@ -101,7 +172,7 @@ function generateMonth(revenueMonth) {
   const marketRows = loadMarketSeries();
   const events = (source.companies || []).map(row => buildEvent(row, revenueMonth, marketRows));
   const payload = {
-    schema_version: 2,
+    schema_version: 3,
     dataset: 'mops_monthly_revenue_conservative_signal_returns',
     revenue_month: revenueMonth,
     generated_at: new Date().toISOString(),
@@ -113,6 +184,10 @@ function generateMonth(revenueMonth) {
       return_rule: 'D1/D3/D5/D10/D20 compare target close with the close immediately before the effective trading day',
       stock_price_rule: 'use unified provider priority: TWSE MI_INDEX, data_history_sma, legacy data_fubon',
       interpretation_warning: 'this is not a filing-day event study and must not be interpreted as immediate market reaction to an individual company filing',
+    },
+    incremental: {
+      reusable_only_when_complete: true,
+      input_fingerprint: buildInputFingerprint(revenueMonth, source, marketRows),
     },
     counts: {
       total: events.length,
@@ -135,4 +210,16 @@ function main() {
 if (require.main === module) {
   try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; }
 }
-module.exports = { conservativeAvailabilityDate, buildTradingWindow, pctReturn };
+module.exports = {
+  HORIZONS,
+  METHODOLOGY_VERSION,
+  buildInputFingerprint,
+  buildTradingWindow,
+  conservativeAvailabilityDate,
+  generateMonth,
+  hasIncompleteReturns,
+  inspectReusableMonth,
+  marketWindowFingerprint,
+  pctReturn,
+  stableRevenueResearchInput,
+};
