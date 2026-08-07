@@ -11,6 +11,11 @@ on:
         description: '結束營收月份 YYYYMM（例如 202606）'
         required: true
         type: string
+      force_full_rebuild:
+        description: '忽略既有可重用 monthly detail，強制整段重新計算（methodology/schema/價格規則變更時使用）'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -39,14 +44,17 @@ jobs:
         run: |
           node --check scripts/lib/stock_price_provider.js
           node --check scripts/generate_mops_revenue_monthly_signal_returns.js
+          node --check scripts/run_mops_revenue_monthly_signal_incremental.js
           node --check scripts/summarize_mops_revenue_monthly_signal_study.js
           node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
           node --check scripts/summarize_mops_revenue_factor_stability.js
           node --check scripts/summarize_mops_revenue_industry_breakdown.js
           node --check scripts/summarize_mops_revenue_market_regime_breakdown.js
+          node --check tests/mops_revenue_incremental_signal_runner.test.js
           node --test tests/stock_price_provider.test.js
           node --test tests/mops_revenue_monthly_signal_returns.test.js
+          node --test tests/mops_revenue_incremental_signal_runner.test.js
           node --test tests/mops_revenue_factor_rankings.test.js
           node --test tests/mops_revenue_yoy20_subfactors.test.js
           node --test tests/mops_revenue_factor_stability.test.js
@@ -78,30 +86,24 @@ jobs:
           if (availabilityDate(e) > now) throw new Error(`end_month ${e} is not conservatively available yet; its next-month day-15 boundary is still in the future`);
           NODE
 
-      - name: Generate historical monthly signal study
+      - name: Generate or reuse historical monthly signal details
         shell: bash
         env:
           START_MONTH: ${{ inputs.start_month }}
           END_MONTH: ${{ inputs.end_month }}
+          FORCE_FULL_REBUILD: ${{ inputs.force_full_rebuild }}
         run: |
           set -euo pipefail
-          node - <<'NODE'
-          const { spawnSync } = require('node:child_process');
-          const fs = require('node:fs');
-          const start = process.env.START_MONTH;
-          const end = process.env.END_MONTH;
-          const next = value => { let y=Number(value.slice(0,4)),m=Number(value.slice(4,6))+1; if(m===13){y++;m=1;} return `${y}${String(m).padStart(2,'0')}`; };
-          for (let month=start;;month=next(month)) {
-            const source=`data_mops_monthly_revenue/${month}/monthly_revenue.json`;
-            if(!fs.existsSync(source)) throw new Error(`Missing source month: ${month}`);
-            console.log(`Generating ${month}...`);
-            const result=spawnSync(process.execPath,['scripts/generate_mops_revenue_monthly_signal_returns.js','--month',month],{stdio:'inherit'});
-            if(result.status!==0) process.exit(result.status||1);
-            if(month===end) break;
-          }
-          NODE
+          args=(
+            --start-month "$START_MONTH"
+            --end-month "$END_MONTH"
+          )
+          if [ "$FORCE_FULL_REBUILD" = "true" ]; then
+            args+=(--force-full-rebuild)
+          fi
+          node scripts/run_mops_revenue_monthly_signal_incremental.js "${args[@]}"
 
-      - name: Validate outputs
+      - name: Validate monthly detail outputs
         shell: bash
         env:
           START_MONTH: ${{ inputs.start_month }}
@@ -111,25 +113,25 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs');const start=process.env.START_MONTH,end=process.env.END_MONTH;
           const next=value=>{let y=Number(value.slice(0,4)),m=Number(value.slice(4,6))+1;if(m===13){y++;m=1;}return `${y}${String(m).padStart(2,'0')}`;};
-          for(let month=start;;month=next(month)){const file=`data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;const payload=JSON.parse(fs.readFileSync(file,'utf8'));if(payload.dataset!=='mops_monthly_revenue_conservative_signal_returns')throw new Error(`dataset mismatch: ${month}`);if(payload.revenue_month!==month)throw new Error(`month mismatch: ${month}`);if(!Array.isArray(payload.events)||!payload.events.length)throw new Error(`no events: ${month}`);console.log(month,payload.counts);if(month===end)break;}
+          for(let month=start;;month=next(month)){const file=`data_prediction_analysis/monthly-revenue/monthly-signals/${month}.json`;const payload=JSON.parse(fs.readFileSync(file,'utf8'));if(payload.dataset!=='mops_monthly_revenue_conservative_signal_returns')throw new Error(`dataset mismatch: ${month}`);if(payload.revenue_month!==month)throw new Error(`month mismatch: ${month}`);if(!Array.isArray(payload.events)||!payload.events.length)throw new Error(`no events: ${month}`);console.log(month,payload.counts,payload.incremental?.input_fingerprint?.methodology_version||'legacy_detail');if(month===end)break;}
           NODE
 
-      - name: Build compact coverage summary
+      - name: Rebuild coverage summary from monthly details
         run: node scripts/summarize_mops_revenue_monthly_signal_study.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
-      - name: Build factor rankings
+      - name: Rebuild factor rankings from monthly details
         run: node scripts/summarize_mops_revenue_factor_rankings.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
-      - name: Build YoY 20 percent subfactor experiment
+      - name: Rebuild YoY 20 percent subfactor experiment
         run: node scripts/summarize_mops_revenue_yoy20_subfactors.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
-      - name: Build factor stability summary
+      - name: Rebuild factor stability summary
         run: node scripts/summarize_mops_revenue_factor_stability.js
 
-      - name: Build industry breakdown
+      - name: Rebuild industry breakdown
         run: node scripts/summarize_mops_revenue_industry_breakdown.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
-      - name: Build market regime breakdown
+      - name: Rebuild market regime breakdown
         run: node scripts/summarize_mops_revenue_market_regime_breakdown.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Commit verified study data
@@ -140,7 +142,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_prediction_analysis/monthly-revenue/monthly-signals
           if git diff --cached --quiet; then echo 'No historical MOPS signal study changes'; exit 0; fi
-          git commit -m "analysis: backfill MOPS monthly revenue signals ${{ inputs.start_month }}-${{ inputs.end_month }}"
+          git commit -m "analysis: refresh MOPS monthly revenue signals ${{ inputs.start_month }}-${{ inputs.end_month }}"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
