@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      force_new_snapshot:
+        description: '即使來源內容與上一份相同，也強制保留新的 snapshot'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -79,11 +84,26 @@ jobs:
       - name: Run parser and metadata regression tests
         run: |
           node --check scripts/crawl_mops_monthly_revenue.js
+          node --check scripts/apply_mops_snapshot_policy.js
           node --check scripts/rebuild_mops_monthly_revenue_metadata.js
           node --test tests/mops_monthly_revenue.test.js
 
       - name: Crawl MOPS monthly revenue
-        run: node scripts/crawl_mops_monthly_revenue.js --month "${{ steps.months.outputs.months }}"
+        shell: bash
+        env:
+          MONTHS: ${{ steps.months.outputs.months }}
+          FORCE_NEW_SNAPSHOT: ${{ inputs.force_new_snapshot || 'false' }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra month_list <<< "$MONTHS"
+          for month in "${month_list[@]}"; do
+            node scripts/crawl_mops_monthly_revenue.js --month "$month"
+            policy_args=(--month "$month")
+            if [ "$FORCE_NEW_SNAPSHOT" = "true" ]; then
+              policy_args+=(--force-new-snapshot)
+            fi
+            node scripts/apply_mops_snapshot_policy.js "${policy_args[@]}"
+          done
 
       - name: Rebuild baseline chain metadata
         run: node scripts/rebuild_mops_monthly_revenue_metadata.js --from "${{ steps.months.outputs.rebuild_from }}"
@@ -110,6 +130,7 @@ jobs:
             baseline_month: payload.collection.baseline_month,
             baseline_company_count: payload.collection.baseline_company_count,
             coverage_ratio: payload.collection.coverage_ratio,
+            snapshot_count: payload.collection.snapshot_count,
             completion_status: payload.collection.status,
           }, null, 2));
           NODE
