@@ -136,10 +136,13 @@ function buildInputFingerprint(revenueMonth, source, marketRows) {
     stock_price_provider_sha256: fileSha256(PRICE_PROVIDER_FILE),
   };
 }
-function hasIncompleteReturns(payload) {
+function hasPendingMarketData(payload) {
   const events = Array.isArray(payload?.events) ? payload.events : [];
   if (!events.length) return true;
-  return events.some(event => HORIZONS.some(horizon => event.returns?.[`d${horizon}`]?.status !== 'complete'));
+  return events.some(event => HORIZONS.some(horizon => {
+    const status = event.returns?.[`d${horizon}`]?.status;
+    return !status || status === 'pending_market_data';
+  }));
 }
 function inspectReusableMonth(revenueMonth) {
   const sourceFile = path.join(REVENUE_ROOT, revenueMonth, 'monthly_revenue.json');
@@ -151,8 +154,8 @@ function inspectReusableMonth(revenueMonth) {
   if (existing.dataset !== 'mops_monthly_revenue_conservative_signal_returns' || existing.revenue_month !== revenueMonth) {
     return { reusable: false, reason: 'output_identity_mismatch', source_file: sourceFile, output_file: outputFile };
   }
-  if (hasIncompleteReturns(existing)) {
-    return { reusable: false, reason: 'incomplete_returns', source_file: sourceFile, output_file: outputFile };
+  if (hasPendingMarketData(existing)) {
+    return { reusable: false, reason: 'pending_market_data', source_file: sourceFile, output_file: outputFile };
   }
   const marketRows = loadMarketSeries();
   const current = buildInputFingerprint(revenueMonth, source, marketRows);
@@ -163,7 +166,7 @@ function inspectReusableMonth(revenueMonth) {
       return { reusable: false, reason: `fingerprint_changed:${key}`, source_file: sourceFile, output_file: outputFile, current, stored };
     }
   }
-  return { reusable: true, reason: 'unchanged_complete_detail', source_file: sourceFile, output_file: outputFile, current };
+  return { reusable: true, reason: 'unchanged_mature_detail', source_file: sourceFile, output_file: outputFile, current };
 }
 function generateMonth(revenueMonth) {
   const sourceFile = path.join(REVENUE_ROOT, revenueMonth, 'monthly_revenue.json');
@@ -186,7 +189,8 @@ function generateMonth(revenueMonth) {
       interpretation_warning: 'this is not a filing-day event study and must not be interpreted as immediate market reaction to an individual company filing',
     },
     incremental: {
-      reusable_only_when_complete: true,
+      reusable_when_market_window_mature: true,
+      historical_missing_stock_price_requires_force_rebuild_after_price_backfill: true,
       input_fingerprint: buildInputFingerprint(revenueMonth, source, marketRows),
     },
     counts: {
@@ -217,7 +221,7 @@ module.exports = {
   buildTradingWindow,
   conservativeAvailabilityDate,
   generateMonth,
-  hasIncompleteReturns,
+  hasPendingMarketData,
   inspectReusableMonth,
   marketWindowFingerprint,
   pctReturn,
