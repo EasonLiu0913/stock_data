@@ -11,6 +11,7 @@ on:
       - "normalized/**"
       - "scripts/prepare_pages_site.sh"
       - "scripts/scan_pages_dependencies.js"
+      - "scripts/trim_pages_artifact.js"
       - ".github/workflows/build-twse-market-chart.yml"
       - ".github/workflows/deploy-pages.yml"
   workflow_call:
@@ -58,6 +59,7 @@ jobs:
             /public/
             /scripts/prepare_pages_site.sh
             /scripts/scan_pages_dependencies.js
+            /scripts/trim_pages_artifact.js
 
       - name: Audit every frontend data dependency
         shell: bash
@@ -65,8 +67,10 @@ jobs:
           set -euo pipefail
           bash -n scripts/prepare_pages_site.sh
           node --check scripts/scan_pages_dependencies.js
+          node --check scripts/trim_pages_artifact.js
           bash scripts/prepare_pages_site.sh --self-test
           node scripts/scan_pages_dependencies.js --self-test
+          node scripts/trim_pages_artifact.js --self-test
 
           node scripts/scan_pages_dependencies.js . \
             | sort -u \
@@ -93,6 +97,7 @@ jobs:
             echo '/public/'
             echo '/scripts/prepare_pages_site.sh'
             echo '/scripts/scan_pages_dependencies.js'
+            echo '/scripts/trim_pages_artifact.js'
             while IFS= read -r dependency; do
               [ -n "$dependency" ] || continue
               object_type=$(git cat-file -t "HEAD:$dependency" 2>/dev/null || true)
@@ -166,17 +171,52 @@ jobs:
             exit 1
           }
 
+          # Historical raw datasets remain complete in the repository, but Pages only
+          # publishes a bounded recent window. The generated files.json is rewritten
+          # to match the files that are actually present in the artifact.
+          node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
+
+          test -f _site/data_fubon/files.json
+          test -f _site/data_twse_mi_index/files.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          for(const dataset of ['data_fubon','data_twse_mi_index']){
+            const root=`_site/${dataset}`;
+            const list=JSON.parse(fs.readFileSync(`${root}/files.json`,'utf8'));
+            for(const file of list){
+              if(file==='files.json') continue;
+              if(!fs.existsSync(`${root}/${file}`)) throw new Error(`${dataset}/files.json references missing ${file}`);
+            }
+          }
+          NODE
+
           dependency_count=$(grep -cve '^$' /tmp/pages-dependencies.txt || true)
           frontend_asset_count=$(find public -type f \
             \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' \) \
             | wc -l | tr -d ' ')
           artifact_size=$(du -sh _site | cut -f1)
+          artifact_bytes=$(du -sb _site | cut -f1)
+          warning_bytes=$((500 * 1024 * 1024))
+          maximum_bytes=$((800 * 1024 * 1024))
+
+          echo 'Largest published roots after trimming:'
+          du -sh _site/* 2>/dev/null | sort -hr | head -20 || true
+
+          if [ "$artifact_bytes" -gt "$maximum_bytes" ]; then
+            echo "::error::Pages artifact is ${artifact_size}, above the repository safety cap of 800 MiB. See largest published roots above."
+            exit 1
+          elif [ "$artifact_bytes" -gt "$warning_bytes" ]; then
+            echo "::warning::Pages artifact is ${artifact_size}; consider further windowing before it approaches the GitHub Pages limit."
+          fi
+
           echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
           echo "- Frontend assets scanned: $frontend_asset_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Artifact size: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Every discovered dependency exists in the final artifact" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact size after trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
+          echo "- data_fubon: latest 45 trading dates only" >> "$GITHUB_STEP_SUMMARY"
+          echo "- data_twse_mi_index: latest 90 trading dates only" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Repository historical data remains untouched" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
