@@ -14,9 +14,9 @@ on:
         default: '20251130'
         type: string
       batch_size:
-        description: '每批交易日數（建議 20）'
+        description: '每批交易日數（建議 10；TWSE 歷史查詢需節流）'
         required: true
-        default: '20'
+        default: '10'
         type: string
       force:
         description: '即使既有 MI_INDEX 檔有效也重新抓取'
@@ -86,7 +86,7 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     name: "MI_INDEX ${{ matrix.start_date }}-${{ matrix.end_date }}"
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
