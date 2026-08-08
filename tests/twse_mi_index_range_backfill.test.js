@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { buildPlan, validateMiIndexFile } = require('../scripts/plan_twse_mi_index_range_backfill');
+const { buildPlan, loadTradingDates, validateMiIndexFile } = require('../scripts/plan_twse_mi_index_range_backfill');
 
 function validPayload(date) {
   return {
@@ -42,4 +42,30 @@ test('planner reuses valid dates and batches only missing dates', () => {
   assert.equal(plan.valid_date_count, 1);
   assert.equal(plan.pending_date_count, 2);
   assert.deepEqual(plan.matrix.include.map(item => item.dates), ['20240103', '20240104']);
+});
+
+test('planner rejects a requested range that begins before market chart history', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-calendar-'));
+  const marketFile = path.join(dir, 'market.json');
+  fs.writeFileSync(marketFile, JSON.stringify({ data: [
+    { date: '20251103', close: 100 },
+    { date: '20251104', close: 101 },
+  ] }));
+  assert.throws(
+    () => loadTradingDates('20240101', '20251104', marketFile),
+    /truncated: requested start 20240101, but market chart starts at 20251103/
+  );
+});
+
+test('planner rejects a requested range that extends past market chart history', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-calendar-end-'));
+  const marketFile = path.join(dir, 'market.json');
+  fs.writeFileSync(marketFile, JSON.stringify({ data: [
+    { date: '20240102', close: 100 },
+    { date: '20240103', close: 101 },
+  ] }));
+  assert.throws(
+    () => loadTradingDates('20240102', '20240131', marketFile),
+    /does not reach requested end 20240131; latest available date is 20240103/
+  );
 });
