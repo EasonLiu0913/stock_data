@@ -55,6 +55,11 @@ function validateMiIndexFile(file, date) {
   return errors;
 }
 
+function validCoverageDate(value) {
+  const compact = String(value || '').replace(/[^\d]/g, '');
+  return /^20\d{6}$/.test(compact) ? compact : '';
+}
+
 function loadTradingDates(start, end, marketFile = MARKET_FILE) {
   const payload = readJson(marketFile, null);
   if (!payload || !Array.isArray(payload.data)) throw new Error(`Missing market chart: ${marketFile}`);
@@ -64,17 +69,25 @@ function loadTradingDates(start, end, marketFile = MARKET_FILE) {
     .sort();
   if (!allDates.length) throw new Error(`No TAIEX trading dates found in ${marketFile}`);
 
-  const firstDate = allDates[0];
-  const lastDate = allDates.at(-1);
-  if (start < firstDate) {
+  const firstTradingDate = allDates[0];
+  const lastTradingDate = allDates.at(-1);
+  // market_chart.startDate records the requested coverage boundary and may itself be
+  // a holiday/weekend (for example 2024-01-01). The first data row is necessarily
+  // the first trading day on or after that boundary, so use startDate when present
+  // instead of incorrectly treating a non-trading requested start as truncation.
+  const coverageStart = validCoverageDate(payload.startDate) || firstTradingDate;
+  const coverageEnd = validCoverageDate(payload.endDate) || lastTradingDate;
+
+  if (start < coverageStart) {
     throw new Error(
-      `TAIEX trading calendar is truncated: requested start ${start}, but market chart starts at ${firstDate}. `
-      + 'Backfill [03 市場環境] Build TWSE Market Chart first.'
+      `TAIEX trading calendar is truncated: requested start ${start}, but market chart coverage starts at ${coverageStart} `
+      + `(first trading date ${firstTradingDate}). Backfill [03 市場環境] Build TWSE Market Chart first.`
     );
   }
-  if (end > lastDate) {
+  if (end > coverageEnd) {
     throw new Error(
-      `TAIEX trading calendar does not reach requested end ${end}; latest available date is ${lastDate}.`
+      `TAIEX trading calendar does not reach requested end ${end}; coverage ends at ${coverageEnd} `
+      + `(latest trading date ${lastTradingDate}).`
     );
   }
 
@@ -136,4 +149,4 @@ if (require.main === module) {
   try { main(); } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
 
-module.exports = { buildPlan, findQuoteTable, loadTradingDates, validateMiIndexFile };
+module.exports = { buildPlan, findQuoteTable, loadTradingDates, validateMiIndexFile, validCoverageDate };
