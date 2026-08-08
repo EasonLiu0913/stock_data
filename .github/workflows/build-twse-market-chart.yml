@@ -15,7 +15,7 @@ on:
       start_date:
         description: 'History Start Date (YYYYMMDD)'
         required: false
-        default: '20251103'
+        default: ''
 
 permissions:
   contents: write
@@ -53,7 +53,17 @@ jobs:
           if [ -n "$START_DATE_INPUT" ]; then
             START_DATE="$START_DATE_INPUT"
           else
-            START_DATE="20251103"
+            START_DATE=$(node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'data_twse_market_chart/market_chart.json';
+          let start = '20251103';
+          try {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (/^20\d{6}$/.test(String(payload.startDate || ''))) start = payload.startDate;
+          } catch {}
+          process.stdout.write(start);
+          NODE
+            )
           fi
 
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
