@@ -31,7 +31,7 @@ test('planner reuses valid dates and batches only missing dates', () => {
   const outputDir = path.join(dir, 'output');
   fs.mkdirSync(outputDir);
   const marketFile = path.join(dir, 'market.json');
-  fs.writeFileSync(marketFile, JSON.stringify({ data: [
+  fs.writeFileSync(marketFile, JSON.stringify({ startDate: '20240102', endDate: '20240104', data: [
     { date: '20240102', close: 100 },
     { date: '20240103', close: 101 },
     { date: '20240104', close: 102 },
@@ -44,28 +44,46 @@ test('planner reuses valid dates and batches only missing dates', () => {
   assert.deepEqual(plan.matrix.include.map(item => item.dates), ['20240103', '20240104']);
 });
 
-test('planner rejects a requested range that begins before market chart history', () => {
+test('planner accepts a requested start that is a non-trading day inside market coverage', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-holiday-start-'));
+  const marketFile = path.join(dir, 'market.json');
+  fs.writeFileSync(marketFile, JSON.stringify({
+    startDate: '20240101',
+    endDate: '20240104',
+    data: [
+      { date: '20240102', close: 100 },
+      { date: '20240103', close: 101 },
+      { date: '20240104', close: 102 },
+    ],
+  }));
+  assert.deepEqual(
+    loadTradingDates('20240101', '20240104', marketFile),
+    ['20240102', '20240103', '20240104']
+  );
+});
+
+test('planner rejects a requested range that begins before market chart coverage', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-calendar-'));
   const marketFile = path.join(dir, 'market.json');
-  fs.writeFileSync(marketFile, JSON.stringify({ data: [
+  fs.writeFileSync(marketFile, JSON.stringify({ startDate: '20251103', endDate: '20251104', data: [
     { date: '20251103', close: 100 },
     { date: '20251104', close: 101 },
   ] }));
   assert.throws(
     () => loadTradingDates('20240101', '20251104', marketFile),
-    /truncated: requested start 20240101, but market chart starts at 20251103/
+    /truncated: requested start 20240101, but market chart coverage starts at 20251103/
   );
 });
 
-test('planner rejects a requested range that extends past market chart history', () => {
+test('planner rejects a requested range that extends past market chart coverage', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-index-calendar-end-'));
   const marketFile = path.join(dir, 'market.json');
-  fs.writeFileSync(marketFile, JSON.stringify({ data: [
+  fs.writeFileSync(marketFile, JSON.stringify({ startDate: '20240102', endDate: '20240103', data: [
     { date: '20240102', close: 100 },
     { date: '20240103', close: 101 },
   ] }));
   assert.throws(
     () => loadTradingDates('20240102', '20240131', marketFile),
-    /does not reach requested end 20240131; latest available date is 20240103/
+    /does not reach requested end 20240131; coverage ends at 20240103/
   );
 });
