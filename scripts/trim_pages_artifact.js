@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 function parseArgs(argv) {
@@ -33,6 +34,14 @@ function normalizeListedFile(value) {
   return normalized;
 }
 
+function removeEmptyDirectories(directory, stopAt) {
+  if (!fs.existsSync(directory) || path.resolve(directory) === path.resolve(stopAt)) return;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory()) removeEmptyDirectories(path.join(directory, entry.name), stopAt);
+  }
+  if (fs.readdirSync(directory).length === 0) fs.rmdirSync(directory);
+}
+
 function trimDataset(siteRoot, dataset, maxDates) {
   const datasetDir = path.join(siteRoot, dataset);
   const filesJson = path.join(datasetDir, 'files.json');
@@ -56,6 +65,17 @@ function trimDataset(siteRoot, dataset, maxDates) {
   const keptSet = new Set(kept);
 
   let removedFiles = 0;
+  for (const relative of listed) {
+    if (relative === 'files.json' || keptSet.has(relative)) continue;
+    const absolute = path.join(datasetDir, relative);
+    if (!fs.existsSync(absolute)) continue;
+    const stats = fs.lstatSync(absolute);
+    if (!stats.isFile() && !stats.isSymbolicLink()) continue;
+    fs.rmSync(absolute, { force: true });
+    removedFiles += 1;
+  }
+
+  // Also remove root-level dated files that were not present in a stale files.json.
   for (const entry of fs.readdirSync(datasetDir, { withFileTypes: true })) {
     if (!entry.isFile() && !entry.isSymbolicLink()) continue;
     const relative = entry.name;
@@ -64,6 +84,10 @@ function trimDataset(siteRoot, dataset, maxDates) {
     if (!date || keepDates.has(date)) continue;
     fs.rmSync(path.join(datasetDir, relative), { force: true });
     removedFiles += 1;
+  }
+
+  for (const entry of fs.readdirSync(datasetDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) removeEmptyDirectories(path.join(datasetDir, entry.name), datasetDir);
   }
 
   const published = kept.filter(file => file !== 'files.json' && fs.existsSync(path.join(datasetDir, file)));
@@ -83,6 +107,56 @@ function trimDataset(siteRoot, dataset, maxDates) {
   };
 }
 
+function trimPredictionDates(siteRoot, maxDates = 3) {
+  const dataset = 'data_predictions';
+  const datasetDir = path.join(siteRoot, dataset);
+  const manifestFile = path.join(datasetDir, 'manifest.json');
+  if (!fs.existsSync(datasetDir)) return { dataset, skipped: true, reason: 'dataset_missing' };
+  if (!fs.existsSync(manifestFile)) throw new Error(`${dataset}/manifest.json is required`);
+
+  const manifest = readJson(manifestFile);
+  const dateDirectories = fs.readdirSync(datasetDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && /^20\d{6}$/.test(entry.name))
+    .map(entry => entry.name)
+    .sort();
+  const declaredDates = Array.isArray(manifest.available_dates)
+    ? manifest.available_dates.map(value => String(value).replace(/[^0-9]/g, '')).filter(value => /^20\d{6}$/.test(value))
+    : [];
+  const allDates = [...new Set([...dateDirectories, ...declaredDates])].sort();
+  const latest = String(manifest.forecast_date_compact || manifest.latest_date || '').replace(/[^0-9]/g, '');
+  const keepDates = new Set(allDates.slice(-maxDates));
+  if (/^20\d{6}$/.test(latest)) keepDates.add(latest);
+
+  let removedDirectories = 0;
+  for (const date of dateDirectories) {
+    if (keepDates.has(date)) continue;
+    fs.rmSync(path.join(datasetDir, date), { recursive: true, force: true });
+    removedDirectories += 1;
+  }
+
+  const publishedDates = [...keepDates]
+    .filter(date => fs.existsSync(path.join(datasetDir, date)))
+    .sort();
+  manifest.available_dates = publishedDates;
+  if (publishedDates.length) {
+    manifest.latest_date = publishedDates.at(-1);
+    if (!/^20\d{6}$/.test(String(manifest.forecast_date_compact || ''))) {
+      manifest.forecast_date_compact = publishedDates.at(-1);
+    }
+  }
+  fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+  return {
+    dataset,
+    max_dates: maxDates,
+    original_dates: allDates.length,
+    published_dates: publishedDates.length,
+    removed_directories: removedDirectories,
+    first_published_date: publishedDates[0] || null,
+    last_published_date: publishedDates.at(-1) || null,
+  };
+}
+
 function directoryBytes(root) {
   let total = 0;
   if (!fs.existsSync(root)) return 0;
@@ -95,14 +169,13 @@ function directoryBytes(root) {
 }
 
 function runSelfTest() {
-  const os = require('node:os');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-trim-'));
   const dataset = path.join(root, 'data_sample');
-  fs.mkdirSync(dataset);
+  fs.mkdirSync(path.join(dataset, 'nested'), { recursive: true });
   const files = ['files.json'];
   for (const date of ['20260102', '20260103', '20260104']) {
     for (const suffix of ['a.json', 'b.csv']) {
-      const name = `sample_${date}_${suffix}`;
+      const name = `nested/sample_${date}_${suffix}`;
       files.push(name);
       fs.writeFileSync(path.join(dataset, name), date);
     }
@@ -115,7 +188,25 @@ function runSelfTest() {
   if (result.published_dates !== 2) throw new Error('self-test expected two published dates');
   if (published.some(file => file.includes('20260102'))) throw new Error('self-test retained an expired date');
   if (!published.includes('meta.json')) throw new Error('self-test dropped undated metadata');
-  if (!fs.existsSync(path.join(dataset, 'sample_20260104_a.json'))) throw new Error('self-test dropped latest file');
+  if (fs.existsSync(path.join(dataset, 'nested/sample_20260102_a.json'))) throw new Error('self-test retained nested expired file');
+  if (!fs.existsSync(path.join(dataset, 'nested/sample_20260104_a.json'))) throw new Error('self-test dropped latest nested file');
+
+  const predictions = path.join(root, 'data_predictions');
+  fs.mkdirSync(predictions);
+  for (const date of ['20260102', '20260103', '20260104', '20260105']) {
+    fs.mkdirSync(path.join(predictions, date));
+    fs.writeFileSync(path.join(predictions, date, 'summary.json'), '{}');
+  }
+  fs.writeFileSync(path.join(predictions, 'manifest.json'), JSON.stringify({
+    forecast_date_compact: '20260105',
+    latest_date: '20260105',
+    available_dates: ['20260102', '20260103', '20260104', '20260105'],
+  }));
+  const predictionResult = trimPredictionDates(root, 2);
+  const predictionManifest = readJson(path.join(predictions, 'manifest.json'));
+  if (predictionResult.published_dates !== 2) throw new Error('prediction self-test expected two dates');
+  if (fs.existsSync(path.join(predictions, '20260102'))) throw new Error('prediction self-test retained expired directory');
+  if (predictionManifest.available_dates.join(',') !== '20260104,20260105') throw new Error('prediction manifest was not trimmed');
   console.log('trim_pages_artifact self-test passed');
 }
 
@@ -127,10 +218,15 @@ function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const siteRoot = path.resolve(String(args.get('site') || '_site'));
   const policies = [
-    ['data_fubon', 45],
-    ['data_twse_mi_index', 90],
+    ['data_fubon', 15],
+    ['data_twse_mi_index', 10],
+    ['data_twse_institutional_investors', 10],
+    ['data_twse_dealers', 10],
+    ['data_twse_foreign_investors', 10],
+    ['data_normalized', 10],
   ];
   const results = policies.map(([dataset, maxDates]) => trimDataset(siteRoot, dataset, maxDates));
+  results.push(trimPredictionDates(siteRoot, 3));
   const bytes = directoryBytes(siteRoot);
   const summary = { site: siteRoot, bytes, mebibytes: Number((bytes / 1024 / 1024).toFixed(1)), results };
   console.log(JSON.stringify(summary, null, 2));
@@ -143,4 +239,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { directoryBytes, extractDate, trimDataset };
+module.exports = { directoryBytes, extractDate, trimDataset, trimPredictionDates };
