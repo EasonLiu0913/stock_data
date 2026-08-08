@@ -58,10 +58,27 @@ function validateMiIndexFile(file, date) {
 function loadTradingDates(start, end, marketFile = MARKET_FILE) {
   const payload = readJson(marketFile, null);
   if (!payload || !Array.isArray(payload.data)) throw new Error(`Missing market chart: ${marketFile}`);
-  const dates = payload.data
+  const allDates = payload.data
     .map(row => String(row?.date || ''))
-    .filter(date => /^20\d{6}$/.test(date) && date >= start && date <= end)
+    .filter(date => /^20\d{6}$/.test(date))
     .sort();
+  if (!allDates.length) throw new Error(`No TAIEX trading dates found in ${marketFile}`);
+
+  const firstDate = allDates[0];
+  const lastDate = allDates.at(-1);
+  if (start < firstDate) {
+    throw new Error(
+      `TAIEX trading calendar is truncated: requested start ${start}, but market chart starts at ${firstDate}. `
+      + 'Backfill [03 市場環境] Build TWSE Market Chart first.'
+    );
+  }
+  if (end > lastDate) {
+    throw new Error(
+      `TAIEX trading calendar does not reach requested end ${end}; latest available date is ${lastDate}.`
+    );
+  }
+
+  const dates = allDates.filter(date => date >= start && date <= end);
   if (!dates.length) throw new Error(`No TAIEX trading dates found in ${start}-${end}`);
   return dates;
 }
