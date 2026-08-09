@@ -1,0 +1,101 @@
+name: '[07 研究] 基本面加速候選池'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月份 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月份 YYYYMM'
+        required: true
+        type: string
+        default: '202606'
+      min_score:
+        description: 'Fundamental Acceleration Score 最低門檻'
+        required: true
+        type: string
+        default: '7'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-fundamental-acceleration-universe
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate builder
+        run: |
+          node --check scripts/build_fundamental_acceleration_universe.js
+          node --check scripts/summarize_mops_revenue_fundamental_acceleration_score.js
+
+      - name: Build candidate universe
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+          MIN_SCORE: ${{ inputs.min_score }}
+        run: |
+          set -euo pipefail
+          node scripts/build_fundamental_acceleration_universe.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH" \
+            --min-score "$MIN_SCORE"
+
+      - name: Verify output
+        env:
+          MIN_SCORE: ${{ inputs.min_score }}
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const f='data_prediction_analysis/monthly-revenue/fundamental-acceleration-universe.json';
+          if(!fs.existsSync(f)) throw new Error('candidate universe output missing');
+          const j=JSON.parse(fs.readFileSync(f));
+          if(!Array.isArray(j.stocks) || j.stocks.length===0) throw new Error('candidate universe is empty');
+          if(Number(j.methodology?.min_score)!==Number(process.env.MIN_SCORE)) throw new Error('min score mismatch');
+          for(const s of j.stocks){
+            if(!s.stock_id || !s.first_match_month || !s.first_known_date) throw new Error(`invalid candidate row: ${JSON.stringify(s)}`);
+            if(Number(s.max_score)<Number(process.env.MIN_SCORE)) throw new Error(`candidate below threshold: ${s.stock_id}`);
+          }
+          console.log(JSON.stringify({unique_stocks:j.counts.unique_stocks,selected_events:j.counts.selected_events},null,2));
+          NODE
+
+      - name: Commit candidate universe
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/monthly-revenue/fundamental-acceleration-universe.json
+          if git diff --cached --quiet; then
+            echo 'No candidate universe changes'
+            exit 0
+          fi
+          git commit -m "analysis: build fundamental acceleration candidate universe"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
