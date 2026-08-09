@@ -1,0 +1,126 @@
+name: '[07 研究] FinMind－季財報品質候選池分批回填'
+
+on:
+  workflow_dispatch:
+    inputs:
+      score_threshold:
+        description: '月營收基本面加速分數門檻'
+        required: true
+        type: number
+        default: 9
+      min_hits:
+        description: '至少命中幾個月份'
+        required: true
+        type: number
+        default: 2
+      batch_index:
+        description: '0-based 批次編號'
+        required: true
+        type: number
+        default: 0
+      batch_size:
+        description: '每批股票數，建議 20'
+        required: true
+        type: number
+        default: 20
+      start_quarter:
+        description: '起始季度'
+        required: true
+        type: string
+        default: '2023Q1'
+      end_quarter:
+        description: '結束季度'
+        required: true
+        type: string
+        default: '2026Q2'
+      force:
+        description: '強制重抓已完成股票'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finmind-quarterly-financial-quality-batch-${{ inputs.batch_index }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate batch backfill scripts
+        run: |
+          node --check scripts/backfill_finmind_quarterly_financial_quality.js
+          node --check scripts/backfill_finmind_quarterly_financial_quality_batch.js
+          node --check scripts/generate_financial_quality_score_timeline.js
+          node --test tests/mops_quarterly_financial_quality.test.js
+
+      - name: Backfill selected candidate batch
+        env:
+          SCORE_THRESHOLD: ${{ inputs.score_threshold }}
+          MIN_HITS: ${{ inputs.min_hits }}
+          BATCH_INDEX: ${{ inputs.batch_index }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          START_QUARTER: ${{ inputs.start_quarter }}
+          END_QUARTER: ${{ inputs.end_quarter }}
+          FORCE: ${{ inputs.force }}
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node scripts/backfill_finmind_quarterly_financial_quality_batch.js \
+            --score-threshold "$SCORE_THRESHOLD" \
+            --min-hits "$MIN_HITS" \
+            --batch-index "$BATCH_INDEX" \
+            --batch-size "$BATCH_SIZE" \
+            --start-quarter "$START_QUARTER" \
+            --end-quarter "$END_QUARTER" \
+            --force "$FORCE"
+
+      - name: Commit batch progress
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_finmind_quarterly_financial_quality data_prediction_analysis/quarterly-financial-quality/batch-status
+          if git diff --cached --quiet; then
+            echo 'No quarterly financial quality changes'
+            exit 0
+          fi
+          git commit -m "data: backfill FinMind financial quality batch ${{ inputs.batch_index }}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summarize next batch
+        if: always()
+        env:
+          SCORE_THRESHOLD: ${{ inputs.score_threshold }}
+          MIN_HITS: ${{ inputs.min_hits }}
+          BATCH_INDEX: ${{ inputs.batch_index }}
+        run: |
+          echo "## FinMind 季財報品質候選池分批回填" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 規則：score >= $SCORE_THRESHOLD，至少 $MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本批 batch_index：$BATCH_INDEX" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 下一批請使用 batch_index：$((BATCH_INDEX + 1))" >> "$GITHUB_STEP_SUMMARY"
