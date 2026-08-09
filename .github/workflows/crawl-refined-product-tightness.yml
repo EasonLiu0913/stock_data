@@ -52,6 +52,12 @@ jobs:
           fi
           echo "EIA_API_KEY is configured."
 
+      - name: Validate factor implementation
+        run: |
+          set -euo pipefail
+          node --check scripts/crawl_refined_product_tightness.js
+          node --test tests/refined_product_tightness.test.js
+
       - name: Generate refined-product tightness factor
         id: generate
         shell: bash
@@ -65,39 +71,23 @@ jobs:
           if [ -n "$INPUT_DATE" ]; then
             args+=(--date "$INPUT_DATE")
           fi
+          if [ "$FORCE_OVERWRITE" = "true" ]; then
+            args+=(--force)
+          fi
 
           result=$(node scripts/crawl_refined_product_tightness.js "${args[@]}")
           echo "$result"
-          observation_date=$(printf '%s' "$result" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s);process.stdout.write(String(p.observation_date||''));});")
+          parsed=$(printf '%s' "$result" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s);const date=String(p.observation_date||'');const changed=p.reused===true?'false':'true';process.stdout.write(date+' '+changed);});")
+          observation_date="${parsed%% *}"
+          changed="${parsed##* }"
 
           if ! [[ "$observation_date" =~ ^[0-9]{8}$ ]]; then
-            echo "Unable to resolve generated observation_date" >&2
+            echo "Unable to resolve observation_date" >&2
             exit 1
           fi
 
-          output="data_refined_product_tightness/${observation_date}/refined_product_tightness.json"
-          existed=false
-          if git cat-file -e "HEAD:${output}" 2>/dev/null; then
-            existed=true
-          fi
-
           echo "observation_date=$observation_date" >> "$GITHUB_OUTPUT"
-          echo "output=$output" >> "$GITHUB_OUTPUT"
-          echo "existed=$existed" >> "$GITHUB_OUTPUT"
-
-          if [ "$existed" = "true" ] && [ "$FORCE_OVERWRITE" != "true" ]; then
-            echo "Observation $observation_date already exists; preserving immutable research snapshot."
-            git restore -- "$output" data_refined_product_tightness/files.json data_refined_product_tightness/manifest.json
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Validate factor implementation
-        run: |
-          set -euo pipefail
-          node --check scripts/crawl_refined_product_tightness.js
-          node --test tests/refined_product_tightness.test.js
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
 
       - name: Report unchanged observation
         if: steps.generate.outputs.changed != 'true'
@@ -105,7 +95,7 @@ jobs:
           echo "No new EIA aligned observation."
           echo "Latest observation: ${{ steps.generate.outputs.observation_date }}"
 
-      - name: Commit and push new factor snapshot
+      - name: Commit and push factor snapshot
         if: steps.generate.outputs.changed == 'true'
         shell: bash
         run: |
