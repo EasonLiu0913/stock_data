@@ -54,6 +54,7 @@ jobs:
         run: |
           node --check scripts/lib/stock_price_provider.js
           node --check scripts/generate_mops_revenue_monthly_signal_returns.js
+          node --check scripts/generate_mops_revenue_stock_event_timeline.js
           node --check scripts/run_mops_revenue_monthly_signal_incremental.js
           node --check scripts/validate_mops_revenue_incremental_recovery.js
           node --check scripts/summarize_mops_revenue_monthly_signal_study.js
@@ -173,6 +174,9 @@ jobs:
 
       - name: Rebuild fundamental acceleration breakout experiment
         run: node scripts/summarize_mops_revenue_fundamental_acceleration_breakout.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
+
+      - name: Build 2059 monthly revenue event timeline
+        run: node scripts/generate_mops_revenue_stock_event_timeline.js --stock 2059 --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Rebuild factor stability summary
         run: node scripts/summarize_mops_revenue_factor_stability.js
