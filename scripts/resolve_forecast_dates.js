@@ -8,7 +8,6 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
 const HOLIDAY_FILE = path.join(ROOT, 'data_history_sma', 'non_trading_days.json');
 const MARKET_CONTEXT_CAPTURE = path.join(__dirname, 'capture_prediction_market_context.js');
-const MARKET_CONTEXT_PRELOAD = path.join(__dirname, 'prediction_market_context_preload.js');
 
 function readJson(file, fallback = null) {
   try {
@@ -207,8 +206,6 @@ function githubEnvLines(resolved, context = null) {
     `FORECAST_TARGET_DATE_ISO=${resolved.forecast_target_date}`,
   ];
   if (context) {
-    const preloadOption = `--require=${MARKET_CONTEXT_PRELOAD}`;
-    const existingNodeOptions = String(process.env.NODE_OPTIONS || '').trim();
     lines.push(
       `PREDICTION_MARKET_CONTEXT_LATEST_FILE=${context.latest_file}`,
       `PREDICTION_MARKET_CONTEXT_MANIFEST_FILE=${context.manifest_absolute}`,
@@ -216,7 +213,6 @@ function githubEnvLines(resolved, context = null) {
       `PREDICTION_MARKET_CONTEXT_NIGHT_FILE=${context.night_futures_absolute}`,
       `PREDICTION_MARKET_CONTEXT_SNAPSHOT_ID=${context.snapshot_id}`,
       `PREDICTION_MARKET_CONTEXT_SNAPSHOT_HASH=${context.snapshot_hash}`,
-      `NODE_OPTIONS=${[existingNodeOptions, preloadOption].filter(Boolean).join(' ')}`,
     );
   }
   return lines;
