@@ -63,7 +63,6 @@ function safeDivide(n, d) {
 }
 
 function conservativeAvailabilityDate(year, quarter) {
-  // Conservative period-level dates, intentionally later than many actual filings.
   if (quarter === 1) return `${year}-05-15`;
   if (quarter === 2) return `${year}-08-14`;
   if (quarter === 3) return `${year}-11-14`;
@@ -87,8 +86,12 @@ function standaloneFromYtd(current, previous) {
   return out;
 }
 
+function normalizeHeader(value) {
+  return String(value || '').replace(/\s+/g, '').replace(/[（）()]/g, '');
+}
+
 function normalizeRow(cells, headers, year, quarter) {
-  const map = Object.fromEntries(headers.map((h, i) => [h.replace(/\s+/g, ''), cells[i] ?? '']));
+  const map = Object.fromEntries(headers.map((h, i) => [normalizeHeader(h), cells[i] ?? '']));
   const find = (patterns) => {
     for (const [key, value] of Object.entries(map)) {
       if (patterns.some((p) => key.includes(p))) return value;
@@ -125,21 +128,26 @@ function normalizeRow(cells, headers, year, quarter) {
 
 async function fetchQuarter(page, year, quarter) {
   const rocYear = year - 1911;
+  const season = String(quarter).padStart(2, '0');
   await page.goto('https://mops.twse.com.tw/mops/web/t163sb04', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const html = await page.evaluate(async ({ url, rocYear, quarter }) => {
+  const html = await page.evaluate(async ({ url, rocYear, season }) => {
     const body = new URLSearchParams({
       encodeURIComponent: '1', step: '1', firstin: '1', off: '1', TYPEK: 'sii',
-      year: String(rocYear), season: String(quarter),
+      year: String(rocYear), season,
     });
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: body.toString(),
       credentials: 'include',
     });
-    if (!response.ok) throw new Error(`MOPS HTTP ${response.status}`);
-    return await response.text();
-  }, { url: MOPS_URL, rocYear, quarter });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`MOPS HTTP ${response.status}: ${text.slice(0, 300)}`);
+    return text;
+  }, { url: MOPS_URL, rocYear, season });
 
   await page.setContent(html, { waitUntil: 'domcontentloaded' });
   const tables = await page.locator('table').evaluateAll((els) => els.map((table) => {
@@ -150,7 +158,7 @@ async function fetchQuarter(page, year, quarter) {
   const companies = [];
   for (const rows of tables) {
     if (rows.length < 2) continue;
-    let headerIndex = rows.findIndex((r) => r.some((x) => x.includes('公司代號')) && r.some((x) => x.includes('營業收入')) && r.some((x) => x.includes('營業毛利')));
+    const headerIndex = rows.findIndex((r) => r.some((x) => x.includes('公司代號')) && r.some((x) => x.includes('營業收入')) && r.some((x) => x.includes('營業毛利')));
     if (headerIndex < 0) continue;
     const headers = rows[headerIndex];
     for (const cells of rows.slice(headerIndex + 1)) {
@@ -159,7 +167,14 @@ async function fetchQuarter(page, year, quarter) {
     }
   }
   const unique = [...new Map(companies.map((row) => [row.stock_code, row])).values()].sort((a, b) => a.stock_code.localeCompare(b.stock_code));
-  if (unique.length < 100) throw new Error(`Too few general-industry rows for ${year}Q${quarter}: ${unique.length}`);
+  if (unique.length < 100) {
+    const diagnostic = await page.evaluate(() => ({
+      title: document.title,
+      body: (document.body?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 1000),
+      tableCount: document.querySelectorAll('table').length,
+    }));
+    throw new Error(`Too few general-industry rows for ${year}Q${quarter}: ${unique.length}; season=${season}; tables=${diagnostic.tableCount}; title=${JSON.stringify(diagnostic.title)}; body=${JSON.stringify(diagnostic.body)}`);
+  }
   return unique;
 }
 
