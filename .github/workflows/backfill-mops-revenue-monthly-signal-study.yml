@@ -61,6 +61,7 @@ jobs:
           node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
           node --check scripts/summarize_mops_revenue_fundamental_acceleration_breakout.js
+          node --check scripts/summarize_mops_revenue_fundamental_acceleration_score.js
           node --check scripts/summarize_mops_revenue_factor_stability.js
           node --check scripts/summarize_mops_revenue_industry_breakdown.js
           node --check scripts/summarize_mops_revenue_market_regime_breakdown.js
@@ -174,6 +175,9 @@ jobs:
 
       - name: Rebuild fundamental acceleration breakout experiment
         run: node scripts/summarize_mops_revenue_fundamental_acceleration_breakout.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
+
+      - name: Rebuild fundamental acceleration score experiment
+        run: node scripts/summarize_mops_revenue_fundamental_acceleration_score.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Build 2059 monthly revenue event timeline
         run: node scripts/generate_mops_revenue_stock_event_timeline.js --stock 2059 --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
