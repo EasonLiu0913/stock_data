@@ -59,6 +59,7 @@ jobs:
           node --check scripts/summarize_mops_revenue_monthly_signal_study.js
           node --check scripts/summarize_mops_revenue_factor_rankings.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
+          node --check scripts/summarize_mops_revenue_fundamental_acceleration_breakout.js
           node --check scripts/summarize_mops_revenue_factor_stability.js
           node --check scripts/summarize_mops_revenue_industry_breakdown.js
           node --check scripts/summarize_mops_revenue_market_regime_breakdown.js
@@ -68,6 +69,7 @@ jobs:
           node --test tests/mops_revenue_incremental_signal_runner.test.js
           node --test tests/mops_revenue_factor_rankings.test.js
           node --test tests/mops_revenue_yoy20_subfactors.test.js
+          node --test tests/mops_revenue_fundamental_acceleration_breakout.test.js
           node --test tests/mops_revenue_factor_stability.test.js
           node --test tests/mops_revenue_industry_breakdown.test.js
           node --test tests/mops_revenue_market_regime_breakdown.test.js
@@ -168,6 +170,9 @@ jobs:
 
       - name: Rebuild YoY 20 percent subfactor experiment
         run: node scripts/summarize_mops_revenue_yoy20_subfactors.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
+
+      - name: Rebuild fundamental acceleration breakout experiment
+        run: node scripts/summarize_mops_revenue_fundamental_acceleration_breakout.js --start-month '${{ inputs.start_month }}' --end-month '${{ inputs.end_month }}'
 
       - name: Rebuild factor stability summary
         run: node scripts/summarize_mops_revenue_factor_stability.js
