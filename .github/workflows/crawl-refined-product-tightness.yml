@@ -1,0 +1,133 @@
+name: "[02 外部市場] EIA－成品油緊張程度"
+
+on:
+  schedule:
+    # 台灣時間週二至週六 07:20；對應美國週一至週五晚間。
+    # EIA APIv2 並非所有資料都有固定更新時間，因此每日檢查一次，
+    # 同 observation_date 預設不覆寫，避免沒有新資料時產生垃圾 commit。
+    - cron: '20 23 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '查詢上限日期 YYYYMMDD；留空使用目前日期'
+        required: false
+        default: ''
+      force_overwrite:
+        description: '即使 observation_date 已存在也重新寫入（用於 EIA 修訂或研究重建）'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-refined-product-tightness
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate EIA API key
+        shell: bash
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EIA_API_KEY:-}" ]; then
+            echo "Missing repository secret: EIA_API_KEY" >&2
+            exit 1
+          fi
+          echo "EIA_API_KEY is configured."
+
+      - name: Generate refined-product tightness factor
+        id: generate
+        shell: bash
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          INPUT_DATE: ${{ inputs.date || '' }}
+          FORCE_OVERWRITE: ${{ inputs.force_overwrite || 'false' }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$INPUT_DATE" ]; then
+            args+=(--date "$INPUT_DATE")
+          fi
+
+          result=$(node scripts/crawl_refined_product_tightness.js "${args[@]}")
+          echo "$result"
+          observation_date=$(printf '%s' "$result" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s);process.stdout.write(String(p.observation_date||''));});")
+
+          if ! [[ "$observation_date" =~ ^[0-9]{8}$ ]]; then
+            echo "Unable to resolve generated observation_date" >&2
+            exit 1
+          fi
+
+          output="data_refined_product_tightness/${observation_date}/refined_product_tightness.json"
+          existed=false
+          if git cat-file -e "HEAD:${output}" 2>/dev/null; then
+            existed=true
+          fi
+
+          echo "observation_date=$observation_date" >> "$GITHUB_OUTPUT"
+          echo "output=$output" >> "$GITHUB_OUTPUT"
+          echo "existed=$existed" >> "$GITHUB_OUTPUT"
+
+          if [ "$existed" = "true" ] && [ "$FORCE_OVERWRITE" != "true" ]; then
+            echo "Observation $observation_date already exists; preserving immutable research snapshot."
+            git restore -- "$output" data_refined_product_tightness/files.json data_refined_product_tightness/manifest.json
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate factor implementation
+        run: |
+          set -euo pipefail
+          node --check scripts/crawl_refined_product_tightness.js
+          node --test tests/refined_product_tightness.test.js
+
+      - name: Report unchanged observation
+        if: steps.generate.outputs.changed != 'true'
+        run: |
+          echo "No new EIA aligned observation."
+          echo "Latest observation: ${{ steps.generate.outputs.observation_date }}"
+
+      - name: Commit and push new factor snapshot
+        if: steps.generate.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_refined_product_tightness/
+
+          if git diff --staged --quiet; then
+            echo "No refined-product tightness changes."
+            exit 0
+          fi
+
+          observation_date="${{ steps.generate.outputs.observation_date }}"
+          git commit -m "data: update refined product tightness ${observation_date}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
