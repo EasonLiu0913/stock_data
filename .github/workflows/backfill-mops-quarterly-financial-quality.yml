@@ -9,10 +9,10 @@ on:
         type: string
         default: '2059'
       start_quarter:
-        description: '起始季度，例如 2024Q1'
+        description: '起始季度，例如 2023Q1'
         required: true
         type: string
-        default: '2024Q1'
+        default: '2023Q1'
       end_quarter:
         description: '結束季度，例如 2026Q2'
         required: true
@@ -50,6 +50,7 @@ jobs:
       - name: Validate quarterly history backfill
         run: |
           node --check scripts/backfill_finmind_quarterly_financial_quality.js
+          node --check scripts/generate_financial_quality_score_timeline.js
           node --test tests/mops_quarterly_financial_quality.test.js
 
       - name: Backfill FinMind quarterly financial quality for one stock
@@ -59,6 +60,13 @@ jobs:
           END_QUARTER: ${{ inputs.end_quarter }}
           FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
         run: node scripts/backfill_finmind_quarterly_financial_quality.js --stock-id "$STOCK_ID" --start-quarter "$START_QUARTER" --end-quarter "$END_QUARTER"
+
+      - name: Build financial quality score timeline
+        env:
+          STOCK_ID: ${{ inputs.stock_id }}
+          START_QUARTER: ${{ inputs.start_quarter }}
+          END_QUARTER: ${{ inputs.end_quarter }}
+        run: node scripts/generate_financial_quality_score_timeline.js --stock-id "$STOCK_ID" --start-quarter "$START_QUARTER" --end-quarter "$END_QUARTER"
 
       - name: Verify requested stock coverage
         env:
@@ -72,6 +80,8 @@ jobs:
           const j=JSON.parse(fs.readFileSync(f));
           if(String(j.stock_id)!==String(process.env.STOCK_ID)) throw new Error('stock id mismatch');
           if(!j.standalone_quarter || !Number.isFinite(j.standalone_quarter.revenue)) throw new Error('standalone quarter is incomplete');
+          const timeline=`data_finmind_quarterly_financial_quality/${process.env.STOCK_ID}/financial-quality-score-timeline.json`;
+          if(!fs.existsSync(timeline)) throw new Error(`missing financial quality timeline: ${timeline}`);
           NODE
 
       - name: Commit backfilled quarterly history
