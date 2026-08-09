@@ -33,13 +33,23 @@ on:
         required: true
         type: number
         default: 20
+      delay_ms:
+        description: '每檔股票之間基本延遲毫秒，建議 2000'
+        required: true
+        type: number
+        default: 2000
+      jitter_ms:
+        description: '額外隨機延遲毫秒，建議 750'
+        required: true
+        type: number
+        default: 750
       start_quarter:
         description: '起始季度'
         required: true
         type: string
         default: '2023Q1'
       end_quarter:
-        description: '結束季度'
+        description: '結束季度；尚未到保守公布日會標記 pending 而非失敗'
         required: true
         type: string
         default: '2026Q2'
@@ -59,7 +69,7 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -92,6 +102,8 @@ jobs:
           PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
           BATCH_INDEX: ${{ inputs.batch_index }}
           BATCH_SIZE: ${{ inputs.batch_size }}
+          DELAY_MS: ${{ inputs.delay_ms }}
+          JITTER_MS: ${{ inputs.jitter_ms }}
           START_QUARTER: ${{ inputs.start_quarter }}
           END_QUARTER: ${{ inputs.end_quarter }}
           FORCE: ${{ inputs.force }}
@@ -105,6 +117,8 @@ jobs:
             --persistent-min-hits "$PERSISTENT_MIN_HITS" \
             --batch-index "$BATCH_INDEX" \
             --batch-size "$BATCH_SIZE" \
+            --delay-ms "$DELAY_MS" \
+            --jitter-ms "$JITTER_MS" \
             --start-quarter "$START_QUARTER" \
             --end-quarter "$END_QUARTER" \
             --force "$FORCE"
@@ -135,9 +149,13 @@ jobs:
           PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
           PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
           BATCH_INDEX: ${{ inputs.batch_index }}
+          DELAY_MS: ${{ inputs.delay_ms }}
+          JITTER_MS: ${{ inputs.jitter_ms }}
         run: |
           echo "## FinMind 季財報品質候選池分批回填" >> "$GITHUB_STEP_SUMMARY"
           echo "- 高強度軌：score >= $CORE_SCORE_THRESHOLD，至少 $CORE_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
           echo "- 持續強度軌：score >= $PERSISTENT_SCORE_THRESHOLD，至少 $PERSISTENT_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 請求節奏：每檔至少 ${DELAY_MS}ms + 0~${JITTER_MS}ms jitter" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 429/5xx/timeout：2s → 5s → 10s 退避重試" >> "$GITHUB_STEP_SUMMARY"
           echo "- 本批 batch_index：$BATCH_INDEX" >> "$GITHUB_STEP_SUMMARY"
           echo "- 下一批請使用 batch_index：$((BATCH_INDEX + 1))" >> "$GITHUB_STEP_SUMMARY"
