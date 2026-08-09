@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const SIGNAL_ROOT = path.join(ROOT, 'data_prediction_analysis', 'monthly-revenue', 'monthly-signals');
 const REVENUE_ROOT = path.join(ROOT, 'data_mops_monthly_revenue');
 const OUTPUT = path.join(SIGNAL_ROOT, 'fundamental-acceleration-score-experiment.json');
+const COMPACT_OUTPUT = path.join(SIGNAL_ROOT, 'fundamental-acceleration-score-summary.json');
 const HORIZONS = ['d1', 'd3', 'd5', 'd10', 'd20'];
 
 function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } }
@@ -72,6 +73,24 @@ function summarizeBucket(study, minScore, horizon) {
   return { min_score: minScore, horizon, samples: n, covered_months: monthly.length, relative_win_rate: round(win), universe_relative_win_rate: round(uwin), relative_win_rate_uplift_pp: round(win - uwin), avg_excess_return_pct: round(ex), universe_avg_excess_return_pct: round(uex), avg_excess_uplift_pct: round(ex - uex), positive_win_uplift_month_rate: round(posWin), positive_excess_uplift_month_rate: round(posEx), stability_score: round((posWin + posEx) / 2), monthly };
 }
 
+function compactRow(row) {
+  return {
+    min_score: row.min_score,
+    horizon: row.horizon,
+    samples: row.samples,
+    covered_months: row.covered_months,
+    relative_win_rate: row.relative_win_rate,
+    universe_relative_win_rate: row.universe_relative_win_rate,
+    relative_win_rate_uplift_pp: row.relative_win_rate_uplift_pp,
+    avg_excess_return_pct: row.avg_excess_return_pct,
+    universe_avg_excess_return_pct: row.universe_avg_excess_return_pct,
+    avg_excess_uplift_pct: row.avg_excess_uplift_pct,
+    positive_win_uplift_month_rate: row.positive_win_uplift_month_rate,
+    positive_excess_uplift_month_rate: row.positive_excess_uplift_month_rate,
+    stability_score: row.stability_score,
+  };
+}
+
 function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv); const start = args.get('start-month') || null; const end = args.get('end-month') || null;
   const history = loadRevenueHistory();
@@ -79,10 +98,14 @@ function main(argv = process.argv.slice(2)) {
   if (!study.length) throw new Error('No study months found');
   const thresholds = [3,4,5,6,7,8,9,10,11,12];
   const rankings = HORIZONS.flatMap(h => thresholds.map(score => summarizeBucket(study, score, h)));
-  const output = { schema_version: 1, dataset: 'mops_monthly_revenue_fundamental_acceleration_score_experiment', generated_at: new Date().toISOString(), start_month: study[0].month, end_month: study.at(-1).month, methodology: { status: 'research_only', baseline: 'same-month listed-stock universe', purpose: 'replace brittle all-AND thresholds with an interpretable revenue momentum score', scoring: { yoy_score: '0..4 for YoY <20, >=20, >=40, >=70, >=100', mom_score: '0..3 for MoM <=0, >0, >=10, >=30', acceleration_score: '0..3 for YoY acceleration <=0, >0, >=10pp, >=20pp', revenue_high_score: '0..3 for no high, 3m, 6m, 12m high', persistence_score: '1 when current and previous month YoY are both >=20%' }, maximum_score: 14, caution: 'research score only; weights are heuristic and must be validated before any production use' }, thresholds, horizons: HORIZONS, rankings };
+  const methodology = { status: 'research_only', baseline: 'same-month listed-stock universe', purpose: 'replace brittle all-AND thresholds with an interpretable revenue momentum score', scoring: { yoy_score: '0..4 for YoY <20, >=20, >=40, >=70, >=100', mom_score: '0..3 for MoM <=0, >0, >=10, >=30', acceleration_score: '0..3 for YoY acceleration <=0, >0, >=10pp, >=20pp', revenue_high_score: '0..3 for no high, 3m, 6m, 12m high', persistence_score: '1 when current and previous month YoY are both >=20%' }, maximum_score: 14, caution: 'research score only; weights are heuristic and must be validated before any production use' };
+  const generatedAt = new Date().toISOString();
+  const output = { schema_version: 1, dataset: 'mops_monthly_revenue_fundamental_acceleration_score_experiment', generated_at: generatedAt, start_month: study[0].month, end_month: study.at(-1).month, methodology, thresholds, horizons: HORIZONS, rankings };
+  const compact = { schema_version: 1, dataset: 'mops_monthly_revenue_fundamental_acceleration_score_summary', generated_at: generatedAt, start_month: study[0].month, end_month: study.at(-1).month, thresholds, horizons: HORIZONS, rankings: rankings.map(compactRow) };
   fs.writeFileSync(OUTPUT, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
-  console.log(JSON.stringify({ output: path.relative(ROOT, OUTPUT), rows: rankings.length }, null, 2));
+  fs.writeFileSync(COMPACT_OUTPUT, `${JSON.stringify(compact, null, 2)}\n`, 'utf8');
+  console.log(JSON.stringify({ output: path.relative(ROOT, OUTPUT), compact_output: path.relative(ROOT, COMPACT_OUTPUT), rows: rankings.length }, null, 2));
 }
 
 if (require.main === module) { try { main(); } catch (e) { console.error(e.stack || e.message); process.exitCode = 1; } }
-module.exports = { scoreComponents, summarizeBucket, revenueHigh, prevMonth };
+module.exports = { scoreComponents, summarizeBucket, revenueHigh, prevMonth, compactRow };
