@@ -8,6 +8,7 @@ const https = require('node:https');
 const ROOT = path.resolve(__dirname, '..');
 const OUTPUT_ROOT = path.join(ROOT, 'data_twse_quarterly_financial_quality');
 const ENDPOINT = 'https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci';
+const MAX_ATTEMPTS = 5;
 
 function parseNumber(value) {
   if (value == null || value === '' || value === '--') return null;
@@ -64,8 +65,8 @@ function normalizeRow(row) {
     stock_name: name || null,
     fiscal_year: fiscalYear,
     fiscal_quarter: quarter,
-    period_basis: 'cumulative_ytd',
     industry_statement_type: 'general_industry',
+    statement_period_basis: 'cumulative_ytd',
     revenue,
     gross_profit: grossProfit,
     operating_income: operatingIncome,
@@ -78,20 +79,69 @@ function normalizeRow(row) {
   };
 }
 
-function getJson(url) {
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function looksLikeHtml(body, contentType = '') {
+  const trimmed = String(body || '').trimStart().toLowerCase();
+  return /text\/html/i.test(contentType) || trimmed.startsWith('<!doctype html') || trimmed.startsWith('<html');
+}
+
+function requestText(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'stock_data research crawler', Accept: 'application/json' } }, res => {
+    const req = https.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 stock_data-research/1.0',
+        Accept: 'application/json,text/plain;q=0.9,*/*;q=0.1',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.7',
+        'Cache-Control': 'no-cache',
+      },
+    }, res => {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', chunk => { body += chunk; });
       res.on('end', () => {
-        if (res.statusCode < 200 || res.statusCode >= 300) return reject(new Error(`HTTP ${res.statusCode}: ${body.slice(0, 300)}`));
-        try { resolve(JSON.parse(body)); } catch (error) { reject(new Error(`Invalid JSON: ${error.message}`)); }
+        resolve({
+          statusCode: res.statusCode || 0,
+          contentType: String(res.headers['content-type'] || ''),
+          location: res.headers.location || null,
+          body,
+        });
       });
     });
     req.setTimeout(30000, () => req.destroy(new Error('TWSE OpenAPI request timed out')));
     req.on('error', reject);
   });
+}
+
+async function getJson(url, attempts = MAX_ATTEMPTS) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await requestText(url);
+      const preview = response.body.replace(/\s+/g, ' ').slice(0, 180);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(`HTTP ${response.statusCode}${response.location ? ` redirect=${response.location}` : ''}: ${preview}`);
+      }
+      if (looksLikeHtml(response.body, response.contentType)) {
+        throw new Error(`TWSE OpenAPI returned HTML instead of JSON (content-type=${response.contentType || 'unknown'}): ${preview}`);
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(response.body);
+      } catch (error) {
+        throw new Error(`Invalid JSON from TWSE OpenAPI (content-type=${response.contentType || 'unknown'}): ${error.message}; body=${preview}`);
+      }
+      if (!Array.isArray(parsed)) throw new Error(`Unexpected TWSE OpenAPI payload type: ${typeof parsed}`);
+      return parsed;
+    } catch (error) {
+      lastError = error;
+      console.warn(`[TWSE quarterly financial quality] attempt ${attempt}/${attempts} failed: ${error.message}`);
+      if (attempt < attempts) await sleep(Math.min(30000, 2000 * attempt * attempt));
+    }
+  }
+  throw new Error(`TWSE OpenAPI failed after ${attempts} attempts: ${lastError?.message || 'unknown error'}`);
 }
 
 function assertSnapshot(rows) {
@@ -101,30 +151,6 @@ function assertSnapshot(rows) {
   const periods = new Set(usable.filter(row => row.fiscal_year && row.fiscal_quarter).map(row => `${row.fiscal_year}Q${row.fiscal_quarter}`));
   if (periods.size > 1) throw new Error(`Mixed fiscal periods in one TWSE snapshot: ${[...periods].join(', ')}`);
   return { usable, period: [...periods][0] || 'unknown-period' };
-}
-
-function writeStockEventSnapshot(period, generatedAt, usable, stockCode = '2059') {
-  const company = usable.find(row => String(row.stock_code) === String(stockCode)) || null;
-  const outputDir = path.join(OUTPUT_ROOT, 'stock-events');
-  fs.mkdirSync(outputDir, { recursive: true });
-  const outputFile = path.join(outputDir, `${stockCode}-latest.json`);
-  const payload = {
-    schema_version: 1,
-    dataset: 'twse_quarterly_financial_quality_stock_snapshot',
-    generated_at: generatedAt,
-    stock_code: String(stockCode),
-    fiscal_period: period,
-    period_basis: 'cumulative_ytd',
-    company,
-    research_guardrails: {
-      standalone_quarter_required_for_qoq: true,
-      direct_qoq_from_cumulative_ytd_prohibited: true,
-      historical_backfill_required_for_yoy_and_backtest: true,
-      note: 'Q2/Q3/Q4 income-statement amounts from this snapshot are cumulative YTD. Standalone-quarter amounts must be derived from adjacent cumulative filings before QoQ scoring.',
-    },
-  };
-  fs.writeFileSync(outputFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  return outputFile;
 }
 
 async function main() {
@@ -145,29 +171,36 @@ async function main() {
       statement_type: 'listed-company income statement - general industry',
     },
     fiscal_period: period,
-    period_basis: 'cumulative_ytd',
+    statement_period_basis: 'cumulative_ytd',
     methodology: {
       status: 'research_only',
       scope: 'listed general-industry companies only; financial, insurance, securities and other non-comparable statement types are intentionally excluded',
-      ratios: 'gross/operating/net margins are recomputed from reported cumulative-YTD statement amounts; no forward estimates are used',
-      quarter_conversion: 'Q1 equals standalone Q1. Q2/Q3/Q4 standalone-quarter amounts must be derived by subtracting the preceding cumulative filing before any QoQ comparison.',
-      history_warning: 'this endpoint is used as an immutable latest-quarter snapshot source going forward; historical backfill must use archived MOPS/XBRL quarter data and preserve report availability dates before backtesting',
-    },
-    research_guardrails: {
-      direct_qoq_from_cumulative_ytd_prohibited: true,
-      standalone_quarter_required_for_qoq: true,
-      historical_backfill_required_for_yoy_and_backtest: true,
+      ratios: 'gross/operating/net margins are recomputed from reported cumulative YTD statement amounts; no forward estimates are used',
+      quarterization_warning: 'Q2/Q3/Q4 amounts are cumulative YTD and must be differenced against the previous fiscal-quarter YTD statement before any single-quarter QoQ comparison',
+      history_warning: 'this endpoint is used as an immutable snapshot source going forward; historical backfill requires separately archived MOPS/XBRL quarter data and must preserve report availability dates before backtesting',
     },
     counts: { raw: raw.length, usable: usable.length },
     companies: usable.sort((a, b) => String(a.stock_code).localeCompare(String(b.stock_code))),
   };
   fs.writeFileSync(outputFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  const stockEventFile = writeStockEventSnapshot(period, generatedAt, usable, '2059');
-  console.log(JSON.stringify({ output: path.relative(ROOT, outputFile), stock_event_output: path.relative(ROOT, stockEventFile), fiscal_period: period, period_basis: 'cumulative_ytd', companies: usable.length }, null, 2));
+
+  const stock2059 = usable.find(row => row.stock_code === '2059');
+  if (stock2059) {
+    fs.writeFileSync(path.join(outputDir, '2059-latest.json'), `${JSON.stringify({
+      schema_version: 1,
+      dataset: 'twse_quarterly_financial_quality_stock_snapshot',
+      generated_at: generatedAt,
+      fiscal_period: period,
+      statement_period_basis: 'cumulative_ytd',
+      company: stock2059,
+    }, null, 2)}\n`, 'utf8');
+  }
+
+  console.log(JSON.stringify({ output: path.relative(ROOT, outputFile), fiscal_period: period, companies: usable.length, stock_2059_found: Boolean(stock2059) }, null, 2));
 }
 
 if (require.main === module) {
   main().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });
 }
 
-module.exports = { parseNumber, normalizeFiscalYear, normalizeQuarter, safeDivide, normalizeRow, assertSnapshot, writeStockEventSnapshot };
+module.exports = { parseNumber, normalizeFiscalYear, normalizeQuarter, safeDivide, normalizeRow, assertSnapshot, looksLikeHtml, getJson };
