@@ -64,6 +64,7 @@ function normalizeRow(row) {
     stock_name: name || null,
     fiscal_year: fiscalYear,
     fiscal_quarter: quarter,
+    period_basis: 'cumulative_ytd',
     industry_statement_type: 'general_industry',
     revenue,
     gross_profit: grossProfit,
@@ -102,6 +103,30 @@ function assertSnapshot(rows) {
   return { usable, period: [...periods][0] || 'unknown-period' };
 }
 
+function writeStockEventSnapshot(period, generatedAt, usable, stockCode = '2059') {
+  const company = usable.find(row => String(row.stock_code) === String(stockCode)) || null;
+  const outputDir = path.join(OUTPUT_ROOT, 'stock-events');
+  fs.mkdirSync(outputDir, { recursive: true });
+  const outputFile = path.join(outputDir, `${stockCode}-latest.json`);
+  const payload = {
+    schema_version: 1,
+    dataset: 'twse_quarterly_financial_quality_stock_snapshot',
+    generated_at: generatedAt,
+    stock_code: String(stockCode),
+    fiscal_period: period,
+    period_basis: 'cumulative_ytd',
+    company,
+    research_guardrails: {
+      standalone_quarter_required_for_qoq: true,
+      direct_qoq_from_cumulative_ytd_prohibited: true,
+      historical_backfill_required_for_yoy_and_backtest: true,
+      note: 'Q2/Q3/Q4 income-statement amounts from this snapshot are cumulative YTD. Standalone-quarter amounts must be derived from adjacent cumulative filings before QoQ scoring.',
+    },
+  };
+  fs.writeFileSync(outputFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  return outputFile;
+}
+
 async function main() {
   const raw = await getJson(ENDPOINT);
   const normalized = raw.map(normalizeRow);
@@ -111,7 +136,7 @@ async function main() {
   fs.mkdirSync(outputDir, { recursive: true });
   const outputFile = path.join(outputDir, 'income-statement-general.json');
   const payload = {
-    schema_version: 1,
+    schema_version: 2,
     dataset: 'twse_quarterly_financial_quality_snapshot',
     generated_at: generatedAt,
     source: {
@@ -120,21 +145,29 @@ async function main() {
       statement_type: 'listed-company income statement - general industry',
     },
     fiscal_period: period,
+    period_basis: 'cumulative_ytd',
     methodology: {
       status: 'research_only',
       scope: 'listed general-industry companies only; financial, insurance, securities and other non-comparable statement types are intentionally excluded',
-      ratios: 'gross/operating/net margins are recomputed from reported statement amounts; no forward estimates are used',
-      history_warning: 'this endpoint is used as an immutable snapshot source going forward; historical backfill requires separately archived MOPS/XBRL quarter data and must preserve report availability dates before backtesting',
+      ratios: 'gross/operating/net margins are recomputed from reported cumulative-YTD statement amounts; no forward estimates are used',
+      quarter_conversion: 'Q1 equals standalone Q1. Q2/Q3/Q4 standalone-quarter amounts must be derived by subtracting the preceding cumulative filing before any QoQ comparison.',
+      history_warning: 'this endpoint is used as an immutable latest-quarter snapshot source going forward; historical backfill must use archived MOPS/XBRL quarter data and preserve report availability dates before backtesting',
+    },
+    research_guardrails: {
+      direct_qoq_from_cumulative_ytd_prohibited: true,
+      standalone_quarter_required_for_qoq: true,
+      historical_backfill_required_for_yoy_and_backtest: true,
     },
     counts: { raw: raw.length, usable: usable.length },
     companies: usable.sort((a, b) => String(a.stock_code).localeCompare(String(b.stock_code))),
   };
   fs.writeFileSync(outputFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  console.log(JSON.stringify({ output: path.relative(ROOT, outputFile), fiscal_period: period, companies: usable.length }, null, 2));
+  const stockEventFile = writeStockEventSnapshot(period, generatedAt, usable, '2059');
+  console.log(JSON.stringify({ output: path.relative(ROOT, outputFile), stock_event_output: path.relative(ROOT, stockEventFile), fiscal_period: period, period_basis: 'cumulative_ytd', companies: usable.length }, null, 2));
 }
 
 if (require.main === module) {
   main().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });
 }
 
-module.exports = { parseNumber, normalizeFiscalYear, normalizeQuarter, safeDivide, normalizeRow, assertSnapshot };
+module.exports = { parseNumber, normalizeFiscalYear, normalizeQuarter, safeDivide, normalizeRow, assertSnapshot, writeStockEventSnapshot };
