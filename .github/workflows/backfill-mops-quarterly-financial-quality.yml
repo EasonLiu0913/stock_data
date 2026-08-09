@@ -1,8 +1,13 @@
-name: '[07 研究] MOPS－季財報品質歷史回填'
+name: '[07 研究] 季財報品質歷史回填'
 
 on:
   workflow_dispatch:
     inputs:
+      stock_id:
+        description: '先驗證單一股票，例如川湖 2059'
+        required: true
+        type: string
+        default: '2059'
       start_quarter:
         description: '起始季度，例如 2024Q1'
         required: true
@@ -18,13 +23,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: backfill-mops-quarterly-financial-quality
+  group: backfill-quarterly-financial-quality
   cancel-in-progress: false
 
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -42,39 +47,31 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Validate quarterly backfill
+      - name: Validate quarterly history backfill
         run: |
-          node --check scripts/backfill_mops_quarterly_financial_quality.js
+          node --check scripts/backfill_finmind_quarterly_financial_quality.js
           node --test tests/mops_quarterly_financial_quality.test.js
 
-      - name: Backfill MOPS quarterly financial quality
+      - name: Backfill FinMind quarterly financial quality for one stock
         env:
+          STOCK_ID: ${{ inputs.stock_id }}
           START_QUARTER: ${{ inputs.start_quarter }}
           END_QUARTER: ${{ inputs.end_quarter }}
-        run: node scripts/backfill_mops_quarterly_financial_quality.js --start-quarter "$START_QUARTER" --end-quarter "$END_QUARTER"
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+        run: node scripts/backfill_finmind_quarterly_financial_quality.js --stock-id "$STOCK_ID" --start-quarter "$START_QUARTER" --end-quarter "$END_QUARTER"
 
-      - name: Verify 2059 coverage when included
+      - name: Verify requested stock coverage
         env:
+          STOCK_ID: ${{ inputs.stock_id }}
           START_QUARTER: ${{ inputs.start_quarter }}
-          END_QUARTER: ${{ inputs.end_quarter }}
         run: |
           node - <<'NODE'
           const fs=require('fs');
-          const path=require('path');
-          function idx(p){const m=p.match(/^(\d{4})Q([1-4])$/);return Number(m[1])*4+Number(m[2])-1;}
-          const start=process.env.START_QUARTER,end=process.env.END_QUARTER;
-          if(idx(start)<=idx('2024Q1') && idx(end)>=idx('2024Q1')){
-            const f='data_mops_quarterly_financial_quality/2024Q1/income-statement-general.json';
-            if(!fs.existsSync(f)) throw new Error('missing 2024Q1 output');
-            const j=JSON.parse(fs.readFileSync(f));
-            if(!j.ytd_companies.some(x=>String(x.stock_code)==='2059')) throw new Error('2059 missing from 2024Q1 MOPS financial quality output');
-          }
+          const f=`data_finmind_quarterly_financial_quality/${process.env.STOCK_ID}/${process.env.START_QUARTER}.json`;
+          if(!fs.existsSync(f)) throw new Error(`missing quarterly history output: ${f}`);
+          const j=JSON.parse(fs.readFileSync(f));
+          if(String(j.stock_id)!==String(process.env.STOCK_ID)) throw new Error('stock id mismatch');
+          if(!j.standalone_quarter || !Number.isFinite(j.standalone_quarter.revenue)) throw new Error('standalone quarter is incomplete');
           NODE
 
       - name: Commit backfilled quarterly history
@@ -82,12 +79,12 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_mops_quarterly_financial_quality
+          git add data_finmind_quarterly_financial_quality
           if git diff --cached --quiet; then
             echo 'No quarterly history changes'
             exit 0
           fi
-          git commit -m "data: backfill MOPS quarterly financial quality ${{ inputs.start_quarter }}-${{ inputs.end_quarter }}"
+          git commit -m "data: backfill ${{ inputs.stock_id }} quarterly financial quality ${{ inputs.start_quarter }}-${{ inputs.end_quarter }}"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
