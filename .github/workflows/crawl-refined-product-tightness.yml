@@ -66,9 +66,10 @@ jobs:
             args+=(--date "$INPUT_DATE")
           fi
 
-          node scripts/crawl_refined_product_tightness.js "${args[@]}"
+          result=$(node scripts/crawl_refined_product_tightness.js "${args[@]}")
+          echo "$result"
+          observation_date=$(printf '%s' "$result" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s);process.stdout.write(String(p.observation_date||''));});")
 
-          observation_date=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('data_refined_product_tightness/manifest.json','utf8'));process.stdout.write(String(p.latest_date||''));")
           if ! [[ "$observation_date" =~ ^[0-9]{8}$ ]]; then
             echo "Unable to resolve generated observation_date" >&2
             exit 1
