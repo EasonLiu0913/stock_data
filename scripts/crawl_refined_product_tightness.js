@@ -239,6 +239,7 @@ function refreshIndexes(generatedAt) {
 async function main() {
   const args = parseArgs();
   const targetDate = compactDate(args.get('date') || todayCompact());
+  const force = args.has('force');
   const apiKey = process.env.EIA_API_KEY;
   if (!apiKey) throw new Error('EIA_API_KEY is required. Register a free EIA Open Data API key and provide it as an environment variable.');
 
@@ -252,9 +253,21 @@ async function main() {
 
   const aligned = alignSeries(jetRows, dieselRows, brentRows);
   const factor = buildFactor(aligned, targetDate);
-  const generatedAt = new Date().toISOString();
   const outputDir = path.join(OUTPUT_ROOT, factor.observation_date);
   const outputFile = path.join(outputDir, 'refined_product_tightness.json');
+
+  if (!force && fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0) {
+    console.log(JSON.stringify({
+      reused: true,
+      output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
+      requested_date: targetDate,
+      observation_date: factor.observation_date,
+      reason: 'observation-date artifact already exists; use --force to refresh a revised EIA observation',
+    }));
+    return;
+  }
+
+  const generatedAt = new Date().toISOString();
   const payload = {
     schemaVersion: 1,
     methodology_version: 'refined_product_tightness_v1',
@@ -282,6 +295,7 @@ async function main() {
   fs.writeFileSync(outputFile, `${JSON.stringify(payload, null, 2)}\n`);
   refreshIndexes(generatedAt);
   console.log(JSON.stringify({
+    reused: false,
     output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
     observation_date: factor.observation_date,
     score: factor.score,
