@@ -121,11 +121,11 @@ function normalizeReportedQuarter(rows, period, stockId) {
     const available = [...new Set(rows.map(row => `${row.type}:${row.origin_name}`))].slice(0, 30).join(' | ');
     throw new Error(`Missing core FinMind fields for ${stockId} ${period}; available=${available}`);
   }
-  return {
+  const out = {
     stock_code: stockId,
     fiscal_year: year,
     fiscal_quarter: quarter,
-    statement_period_basis: 'reported_source_basis_pending_validation',
+    statement_period_basis: 'standalone_quarter',
     revenue,
     gross_profit: grossProfit,
     operating_income: operatingIncome,
@@ -133,22 +133,6 @@ function normalizeReportedQuarter(rows, period, stockId) {
     parent_net_income: parentNetIncome,
     eps,
   };
-}
-
-function standaloneFromYtd(current, previous) {
-  if (current.fiscal_quarter === 1) {
-    const out = { ...current, statement_period_basis: 'standalone_quarter' };
-    out.gross_margin_pct = round(safeDivide(out.gross_profit, out.revenue));
-    out.operating_margin_pct = round(safeDivide(out.operating_income, out.revenue));
-    out.net_margin_pct = round(safeDivide(out.parent_net_income ?? out.net_income, out.revenue));
-    return out;
-  }
-  if (!previous || previous.fiscal_year !== current.fiscal_year || previous.fiscal_quarter !== current.fiscal_quarter - 1) return null;
-  const out = { ...current, statement_period_basis: 'standalone_quarter' };
-  for (const field of ['revenue', 'gross_profit', 'operating_income', 'net_income', 'parent_net_income', 'eps']) {
-    const a = Number(current[field]), b = Number(previous[field]);
-    out[field] = Number.isFinite(a) && Number.isFinite(b) ? a - b : null;
-  }
   out.gross_margin_pct = round(safeDivide(out.gross_profit, out.revenue));
   out.operating_margin_pct = round(safeDivide(out.operating_income, out.revenue));
   out.net_margin_pct = round(safeDivide(out.parent_net_income ?? out.net_income, out.revenue));
@@ -161,17 +145,54 @@ function readOfficial2059Q2() {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')).company || null; } catch { return null; }
 }
 
-function inferYtdScale(stockId, reportedByPeriod) {
-  if (String(stockId) !== '2059') return { confirmed: false, scale: null, reason: 'official_crosscheck_only_configured_for_2059' };
+function sumFinite(a, b) {
+  return Number.isFinite(Number(a)) && Number.isFinite(Number(b)) ? Number(a) + Number(b) : null;
+}
+
+function relativeError(actual, expected) {
+  if (!Number.isFinite(actual) || !Number.isFinite(expected) || actual === 0) return null;
+  return Math.abs(actual - expected) / Math.abs(actual);
+}
+
+function validateStandaloneAgainstOfficialYtd(stockId, reportedByPeriod) {
+  if (String(stockId) !== '2059') return { confirmed: false, reason: 'official_crosscheck_only_configured_for_2059' };
   const official = readOfficial2059Q2();
-  const finmind = reportedByPeriod.get('2026Q2');
-  if (!official || !finmind || !Number.isFinite(official.revenue) || !Number.isFinite(finmind.revenue)) return { confirmed: false, scale: null, reason: 'missing_2026Q2_crosscheck' };
-  const ratio = finmind.revenue / official.revenue;
-  const candidates = [1, 1000, 1000000];
-  const scale = candidates.reduce((best, x) => Math.abs(ratio - x) < Math.abs(ratio - best) ? x : best, candidates[0]);
-  const relativeError = Math.abs(finmind.revenue - official.revenue * scale) / Math.abs(finmind.revenue);
-  if (relativeError > 0.01) throw new Error(`2059 FinMind/TWSE 2026Q2 revenue crosscheck failed: FinMind=${finmind.revenue}; TWSE=${official.revenue}; inferred_scale=${scale}; relative_error=${relativeError}`);
-  return { confirmed: true, scale, relative_error: relativeError, reason: 'matched_TWSE_2026Q2_cumulative_ytd_revenue' };
+  const q1 = reportedByPeriod.get('2026Q1');
+  const q2 = reportedByPeriod.get('2026Q2');
+  if (!official || !q1 || !q2) return { confirmed: false, reason: 'missing_2026Q1_or_Q2_crosscheck' };
+
+  // TWSE snapshot amounts are reported in thousands of TWD; FinMind statement amounts are in TWD.
+  const scale = 1000;
+  const checks = {};
+  const fields = ['revenue', 'gross_profit', 'operating_income', 'net_income', 'parent_net_income'];
+  for (const field of fields) {
+    const finmindYtd = sumFinite(q1[field], q2[field]);
+    const twseYtd = Number.isFinite(Number(official[field])) ? Number(official[field]) * scale : null;
+    if (!Number.isFinite(finmindYtd) || !Number.isFinite(twseYtd)) continue;
+    const error = relativeError(finmindYtd, twseYtd);
+    checks[field] = { finmind_q1_plus_q2: finmindYtd, twse_q2_ytd_scaled: twseYtd, relative_error: error };
+    if (error > 0.02) {
+      throw new Error(`2059 FinMind standalone/TWSE YTD crosscheck failed for ${field}: FinMindQ1Q2=${finmindYtd}; TWSEYTD=${twseYtd}; relative_error=${error}`);
+    }
+  }
+  if (!checks.revenue) throw new Error('2059 revenue crosscheck could not be evaluated');
+
+  const finmindEpsYtd = sumFinite(q1.eps, q2.eps);
+  const twseEpsYtd = Number(official.eps);
+  if (Number.isFinite(finmindEpsYtd) && Number.isFinite(twseEpsYtd)) {
+    checks.eps = { finmind_q1_plus_q2: finmindEpsYtd, twse_q2_ytd: twseEpsYtd, relative_error: relativeError(finmindEpsYtd, twseEpsYtd) };
+    if (checks.eps.relative_error > 0.02) {
+      throw new Error(`2059 FinMind standalone/TWSE YTD EPS crosscheck failed: FinMindQ1Q2=${finmindEpsYtd}; TWSEYTD=${twseEpsYtd}; relative_error=${checks.eps.relative_error}`);
+    }
+  }
+
+  return {
+    confirmed: true,
+    statement_period_basis: 'standalone_quarter',
+    amount_scale_to_twse_thousands: scale,
+    reason: 'FinMind Q1+Q2 matches official TWSE 2026Q2 cumulative YTD snapshot',
+    checks,
+  };
 }
 
 async function main(argv = process.argv.slice(2)) {
@@ -200,21 +221,18 @@ async function main(argv = process.argv.slice(2)) {
     reportedByPeriod.set(period, normalizeReportedQuarter(quarterRows, period, stockId));
   }
 
-  const basisValidation = inferYtdScale(stockId, reportedByPeriod);
-  if (String(stockId) === '2059' && periods.includes('2026Q2') && !basisValidation.confirmed) {
-    throw new Error(`Unable to confirm 2059 FinMind reported basis against TWSE official 2026Q2 snapshot: ${basisValidation.reason}`);
+  const basisValidation = validateStandaloneAgainstOfficialYtd(stockId, reportedByPeriod);
+  if (String(stockId) === '2059' && periods.includes('2026Q1') && periods.includes('2026Q2') && !basisValidation.confirmed) {
+    throw new Error(`Unable to confirm 2059 FinMind standalone basis against TWSE official 2026Q2 snapshot: ${basisValidation.reason}`);
   }
 
-  let previous = null;
   const stockDir = path.join(OUTPUT_ROOT, stockId);
   fs.mkdirSync(stockDir, { recursive: true });
   for (const period of periods) {
-    const reported = reportedByPeriod.get(period);
-    const standalone = standaloneFromYtd(reported, previous);
-    if (!standalone) throw new Error(`Unable to derive standalone quarter for ${stockId} ${period}`);
+    const standalone = reportedByPeriod.get(period);
     const { year, quarter } = periodToParts(period);
     const payload = {
-      schema_version: 1,
+      schema_version: 2,
       dataset: 'finmind_quarterly_financial_quality_history',
       generated_at: new Date().toISOString(),
       stock_id: stockId,
@@ -226,22 +244,20 @@ async function main(argv = process.argv.slice(2)) {
       },
       methodology: {
         status: 'research_only',
-        reported_basis: 'cumulative_ytd_confirmed_by_2059_TWSE_crosscheck',
-        standalone_rule: 'Q1 equals reported YTD; Q2-Q4 standalone is current YTD minus prior-quarter YTD in same fiscal year',
+        reported_basis: 'standalone_quarter',
+        standalone_rule: 'FinMind quarter-end financial-statement values are used directly; no YTD subtraction is applied',
         availability_policy: 'conservative_period_deadline',
         conservative_known_date: conservativeAvailabilityDate(year, quarter),
         official_crosscheck: basisValidation,
-        caution: 'historical provider data is cross-checked against official TWSE latest-quarter snapshot; company-specific filing timestamps are not yet applied',
+        caution: '2059 Q1+Q2 values are cross-checked against official TWSE 2026Q2 cumulative YTD snapshot; company-specific filing timestamps are not yet applied',
       },
-      reported_ytd: { ...reported, statement_period_basis: 'cumulative_ytd' },
       standalone_quarter: standalone,
     };
     fs.writeFileSync(path.join(stockDir, `${period}.json`), `${JSON.stringify(payload, null, 2)}\n`);
-    previous = reported;
   }
   console.log(JSON.stringify({ stock_id: stockId, start_quarter: start, end_quarter: end, periods: periods.length, basis_validation: basisValidation, output_dir: path.relative(ROOT, stockDir) }, null, 2));
 }
 
 if (require.main === module) main().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });
 
-module.exports = { periodToParts, enumeratePeriods, quarterEnd, conservativeAvailabilityDate, standaloneFromYtd, normalizeReportedQuarter };
+module.exports = { periodToParts, enumeratePeriods, quarterEnd, conservativeAvailabilityDate, normalizeReportedQuarter, validateStandaloneAgainstOfficialYtd };
