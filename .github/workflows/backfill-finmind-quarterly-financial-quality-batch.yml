@@ -23,11 +23,16 @@ on:
         required: true
         type: number
         default: 3
-      batch_index:
-        description: '0-based 批次編號'
+      start_batch:
+        description: '0-based 起始批次；batch 0 已驗證時可從 1 開始'
         required: true
         type: number
-        default: 0
+        default: 1
+      end_batch:
+        description: '0-based 結束批次（含）；目前 551 檔 / 20 = batch 0~27'
+        required: true
+        type: number
+        default: 27
       batch_size:
         description: '每批股票數，建議 20'
         required: true
@@ -43,6 +48,11 @@ on:
         required: true
         type: number
         default: 750
+      batch_pause_seconds:
+        description: '每個 batch checkpoint 後休息秒數，建議 20'
+        required: true
+        type: number
+        default: 20
       start_quarter:
         description: '起始季度'
         required: true
@@ -63,13 +73,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: finmind-quarterly-financial-quality-batch-${{ inputs.batch_index }}
+  group: finmind-quarterly-financial-quality-continuous
   cancel-in-progress: false
 
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 360
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -94,68 +104,123 @@ jobs:
           node --check scripts/generate_financial_quality_score_timeline.js
           node --test tests/mops_quarterly_financial_quality.test.js
 
-      - name: Backfill selected candidate batch
+      - name: Backfill batches with checkpoint commits
         env:
           CORE_SCORE_THRESHOLD: ${{ inputs.core_score_threshold }}
           CORE_MIN_HITS: ${{ inputs.core_min_hits }}
           PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
           PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
-          BATCH_INDEX: ${{ inputs.batch_index }}
+          START_BATCH: ${{ inputs.start_batch }}
+          END_BATCH: ${{ inputs.end_batch }}
           BATCH_SIZE: ${{ inputs.batch_size }}
           DELAY_MS: ${{ inputs.delay_ms }}
           JITTER_MS: ${{ inputs.jitter_ms }}
+          BATCH_PAUSE_SECONDS: ${{ inputs.batch_pause_seconds }}
           START_QUARTER: ${{ inputs.start_quarter }}
           END_QUARTER: ${{ inputs.end_quarter }}
           FORCE: ${{ inputs.force }}
           FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
         run: |
           set -euo pipefail
-          node scripts/backfill_finmind_quarterly_financial_quality_batch.js \
-            --core-score-threshold "$CORE_SCORE_THRESHOLD" \
-            --core-min-hits "$CORE_MIN_HITS" \
-            --persistent-score-threshold "$PERSISTENT_SCORE_THRESHOLD" \
-            --persistent-min-hits "$PERSISTENT_MIN_HITS" \
-            --batch-index "$BATCH_INDEX" \
-            --batch-size "$BATCH_SIZE" \
-            --delay-ms "$DELAY_MS" \
-            --jitter-ms "$JITTER_MS" \
-            --start-quarter "$START_QUARTER" \
-            --end-quarter "$END_QUARTER" \
-            --force "$FORCE"
 
-      - name: Commit batch progress
-        run: |
-          set -euo pipefail
+          if [ "$START_BATCH" -gt "$END_BATCH" ]; then
+            echo "start_batch must be <= end_batch: $START_BATCH > $END_BATCH" >&2
+            exit 1
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_finmind_quarterly_financial_quality data_prediction_analysis/quarterly-financial-quality/batch-status
-          if git diff --cached --quiet; then
-            echo 'No quarterly financial quality changes'
-            exit 0
-          fi
-          git commit -m "data: backfill FinMind financial quality batch ${{ inputs.batch_index }}"
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
-            git rebase --abort 2>/dev/null || true
-            sleep $((attempt * 5))
-          done
-          exit 1
 
-      - name: Summarize next batch
+          checkpoint_commit() {
+            local batch="$1"
+            git add data_finmind_quarterly_financial_quality data_prediction_analysis/quarterly-financial-quality/batch-status
+            if git diff --cached --quiet; then
+              echo "[checkpoint] batch $batch has no changes"
+              return 0
+            fi
+
+            git commit -m "data: backfill FinMind financial quality batch $batch"
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                echo "[checkpoint] batch $batch committed and pushed"
+                return 0
+              fi
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt * 5))
+            done
+            echo "[checkpoint] unable to push batch $batch" >&2
+            return 1
+          }
+
+          for batch in $(seq "$START_BATCH" "$END_BATCH"); do
+            echo "========================================"
+            echo "[batch] start $batch / $END_BATCH"
+            echo "========================================"
+
+            node scripts/backfill_finmind_quarterly_financial_quality_batch.js \
+              --core-score-threshold "$CORE_SCORE_THRESHOLD" \
+              --core-min-hits "$CORE_MIN_HITS" \
+              --persistent-score-threshold "$PERSISTENT_SCORE_THRESHOLD" \
+              --persistent-min-hits "$PERSISTENT_MIN_HITS" \
+              --batch-index "$batch" \
+              --batch-size "$BATCH_SIZE" \
+              --delay-ms "$DELAY_MS" \
+              --jitter-ms "$JITTER_MS" \
+              --start-quarter "$START_QUARTER" \
+              --end-quarter "$END_QUARTER" \
+              --force "$FORCE"
+
+            checkpoint_commit "$batch"
+
+            status_file="data_prediction_analysis/quarterly-financial-quality/batch-status/dual-track-batch$(printf '%03d' "$batch").json"
+            if [ ! -s "$status_file" ]; then
+              echo "Missing batch status after checkpoint: $status_file" >&2
+              exit 1
+            fi
+
+            fatal_count="$(node - "$status_file" <<'NODE'
+          const fs = require('node:fs');
+          const file = process.argv[2];
+          const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const counts = data.counts || {};
+          const fatal = Number(counts.backfill_failed || 0) + Number(counts.timeline_failed || 0);
+          process.stdout.write(String(fatal));
+          NODE
+            )"
+
+            if [ "$fatal_count" -gt 0 ]; then
+              echo "[stop] batch $batch has $fatal_count true backfill/timeline failures." >&2
+              echo "[stop] progress through batch $batch is already checkpointed; inspect $status_file and resume from this batch after fixing." >&2
+              exit 1
+            fi
+
+            if [ "$batch" -lt "$END_BATCH" ]; then
+              echo "[batch pause] sleeping ${BATCH_PAUSE_SECONDS}s before batch $((batch + 1))"
+              sleep "$BATCH_PAUSE_SECONDS"
+            fi
+          done
+
+          echo "[complete] processed batches $START_BATCH through $END_BATCH"
+
+      - name: Summarize continuous backfill
         if: always()
         env:
           CORE_SCORE_THRESHOLD: ${{ inputs.core_score_threshold }}
           CORE_MIN_HITS: ${{ inputs.core_min_hits }}
           PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
           PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
-          BATCH_INDEX: ${{ inputs.batch_index }}
+          START_BATCH: ${{ inputs.start_batch }}
+          END_BATCH: ${{ inputs.end_batch }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
           DELAY_MS: ${{ inputs.delay_ms }}
           JITTER_MS: ${{ inputs.jitter_ms }}
+          BATCH_PAUSE_SECONDS: ${{ inputs.batch_pause_seconds }}
         run: |
-          echo "## FinMind 季財報品質候選池分批回填" >> "$GITHUB_STEP_SUMMARY"
+          echo "## FinMind 季財報品質候選池連續回填" >> "$GITHUB_STEP_SUMMARY"
           echo "- 高強度軌：score >= $CORE_SCORE_THRESHOLD，至少 $CORE_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
           echo "- 持續強度軌：score >= $PERSISTENT_SCORE_THRESHOLD，至少 $PERSISTENT_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 請求節奏：每檔至少 ${DELAY_MS}ms + 0~${JITTER_MS}ms jitter" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 批次範圍：$START_BATCH → $END_BATCH；每批 $BATCH_SIZE 檔" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 股票間節奏：至少 ${DELAY_MS}ms + 0~${JITTER_MS}ms jitter" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 批次間休息：${BATCH_PAUSE_SECONDS}s" >> "$GITHUB_STEP_SUMMARY"
           echo "- 429/5xx/timeout：2s → 5s → 10s 退避重試" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 本批 batch_index：$BATCH_INDEX" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 下一批請使用 batch_index：$((BATCH_INDEX + 1))" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 每批完成即 checkpoint commit；真正 backfill/timeline failure 會在保留進度後停止" >> "$GITHUB_STEP_SUMMARY"
