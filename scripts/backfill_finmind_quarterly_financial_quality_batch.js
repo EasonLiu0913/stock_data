@@ -36,18 +36,31 @@ function qualifyingHits(stock, threshold) {
   return (stock.hit_events || []).filter(event => Number(event.score) >= threshold).length;
 }
 
-function selectCandidates(universe, threshold, minHits) {
+function selectCandidates(universe, rule = {}) {
+  const coreThreshold = finiteInt(rule.coreThreshold, 9, 0);
+  const coreMinHits = finiteInt(rule.coreMinHits, 2, 1);
+  const persistentThreshold = finiteInt(rule.persistentThreshold, 8, 0);
+  const persistentMinHits = finiteInt(rule.persistentMinHits, 3, 1);
+
   return (universe.stocks || [])
-    .map(stock => ({
-      stock_id: String(stock.stock_id),
-      stock_name: stock.stock_name || null,
-      max_score: Number(stock.max_score),
-      qualifying_hits: qualifyingHits(stock, threshold),
-      first_match_month: stock.first_match_month || null,
-      first_known_date: stock.first_known_date || null,
-    }))
-    .filter(stock => stock.qualifying_hits >= minHits)
-    .sort((a, b) => b.qualifying_hits - a.qualifying_hits || b.max_score - a.max_score || a.stock_id.localeCompare(b.stock_id));
+    .map(stock => {
+      const coreHits = qualifyingHits(stock, coreThreshold);
+      const persistentHits = qualifyingHits(stock, persistentThreshold);
+      const coreMatch = coreHits >= coreMinHits;
+      const persistentMatch = persistentHits >= persistentMinHits;
+      return {
+        stock_id: String(stock.stock_id),
+        stock_name: stock.stock_name || null,
+        max_score: Number(stock.max_score),
+        core_hits: coreHits,
+        persistent_hits: persistentHits,
+        candidate_tracks: [coreMatch ? 'high_intensity' : null, persistentMatch ? 'persistent_strength' : null].filter(Boolean),
+        first_match_month: stock.first_match_month || null,
+        first_known_date: stock.first_known_date || null,
+      };
+    })
+    .filter(stock => stock.candidate_tracks.length > 0)
+    .sort((a, b) => b.core_hits - a.core_hits || b.persistent_hits - a.persistent_hits || b.max_score - a.max_score || a.stock_id.localeCompare(b.stock_id));
 }
 
 function runNode(script, args, env = process.env) {
@@ -80,8 +93,10 @@ function compactError(result) {
 
 function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
-  const threshold = finiteInt(args.get('score-threshold'), 9, 0);
-  const minHits = finiteInt(args.get('min-hits'), 2, 1);
+  const coreThreshold = finiteInt(args.get('core-score-threshold'), 9, 0);
+  const coreMinHits = finiteInt(args.get('core-min-hits'), 2, 1);
+  const persistentThreshold = finiteInt(args.get('persistent-score-threshold'), 8, 0);
+  const persistentMinHits = finiteInt(args.get('persistent-min-hits'), 3, 1);
   const batchIndex = finiteInt(args.get('batch-index'), 0, 0);
   const batchSize = finiteInt(args.get('batch-size'), 20, 1);
   const startQuarter = String(args.get('start-quarter') || '2023Q1');
@@ -91,7 +106,19 @@ function main(argv = process.argv.slice(2)) {
   const universe = readJson(UNIVERSE_FILE);
   if (!universe || !Array.isArray(universe.stocks)) throw new Error(`Missing or invalid universe: ${path.relative(ROOT, UNIVERSE_FILE)}`);
 
-  const candidates = selectCandidates(universe, threshold, minHits);
+  const rule = { coreThreshold, coreMinHits, persistentThreshold, persistentMinHits };
+  const candidates = selectCandidates(universe, rule);
+  const includes2059 = candidates.some(row => row.stock_id === '2059');
+  console.log(JSON.stringify({
+    candidate_rule: `score>=${coreThreshold} in >=${coreMinHits} months OR score>=${persistentThreshold} in >=${persistentMinHits} months`,
+    unique_candidates: candidates.length,
+    includes_2059: includes2059,
+  }, null, 2));
+
+  if (!includes2059) {
+    throw new Error('Candidate rule excludes calibration sample 2059; stop before consuming FinMind API. Adjust the general rule rather than hard-coding a stock exception.');
+  }
+
   const totalBatches = Math.ceil(candidates.length / batchSize);
   if (batchIndex >= totalBatches) {
     throw new Error(`batch-index ${batchIndex} out of range; candidates=${candidates.length}, batch_size=${batchSize}, valid_batch_indexes=0-${Math.max(0, totalBatches - 1)}`);
@@ -108,7 +135,7 @@ function main(argv = process.argv.slice(2)) {
       continue;
     }
 
-    console.log(`[backfill] ${stockId} (${candidate.stock_name || ''}) hits=${candidate.qualifying_hits} max=${candidate.max_score}`);
+    console.log(`[backfill] ${stockId} (${candidate.stock_name || ''}) core_hits=${candidate.core_hits} persistent_hits=${candidate.persistent_hits} max=${candidate.max_score}`);
     const backfill = runNode('backfill_finmind_quarterly_financial_quality.js', [
       '--stock-id', stockId,
       '--start-quarter', startQuarter,
@@ -142,13 +169,13 @@ function main(argv = process.argv.slice(2)) {
   const completedOrSkipped = (counts.complete || 0) + (counts.skipped_complete || 0);
 
   const status = {
-    schema_version: 1,
+    schema_version: 2,
     dataset: 'finmind_quarterly_financial_quality_batch_status',
     generated_at: new Date().toISOString(),
     methodology: {
-      candidate_rule: `monthly fundamental acceleration score >= ${threshold} in at least ${minHits} months`,
-      score_threshold: threshold,
-      min_hits: minHits,
+      candidate_rule: `monthly acceleration score >= ${coreThreshold} in at least ${coreMinHits} months OR score >= ${persistentThreshold} in at least ${persistentMinHits} months`,
+      core: { score_threshold: coreThreshold, min_hits: coreMinHits },
+      persistent: { score_threshold: persistentThreshold, min_hits: persistentMinHits },
       start_quarter: startQuarter,
       end_quarter: endQuarter,
       batch_index: batchIndex,
@@ -157,7 +184,7 @@ function main(argv = process.argv.slice(2)) {
     },
     universe: {
       unique_candidates: candidates.length,
-      includes_2059: candidates.some(row => row.stock_id === '2059'),
+      includes_2059: includes2059,
       total_batches: totalBatches,
       selected_start_offset: start,
       selected_count: selected.length,
@@ -167,13 +194,13 @@ function main(argv = process.argv.slice(2)) {
   };
 
   fs.mkdirSync(STATUS_ROOT, { recursive: true });
-  const statusFile = path.join(STATUS_ROOT, `score${threshold}-hits${minHits}-batch${String(batchIndex).padStart(3, '0')}.json`);
+  const statusFile = path.join(STATUS_ROOT, `dual-track-batch${String(batchIndex).padStart(3, '0')}.json`);
   fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
 
   console.log(JSON.stringify({
     output: path.relative(ROOT, statusFile),
     unique_candidates: candidates.length,
-    includes_2059: status.universe.includes_2059,
+    includes_2059: includes2059,
     total_batches: totalBatches,
     batch_index: batchIndex,
     batch_size: batchSize,
