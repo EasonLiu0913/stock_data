@@ -3,16 +3,26 @@ name: '[07 研究] FinMind－季財報品質候選池分批回填'
 on:
   workflow_dispatch:
     inputs:
-      score_threshold:
-        description: '月營收基本面加速分數門檻'
+      core_score_threshold:
+        description: '高強度軌：月營收分數門檻'
         required: true
         type: number
         default: 9
-      min_hits:
-        description: '至少命中幾個月份'
+      core_min_hits:
+        description: '高強度軌：至少命中月份數'
         required: true
         type: number
         default: 2
+      persistent_score_threshold:
+        description: '持續強度軌：月營收分數門檻'
+        required: true
+        type: number
+        default: 8
+      persistent_min_hits:
+        description: '持續強度軌：至少命中月份數'
+        required: true
+        type: number
+        default: 3
       batch_index:
         description: '0-based 批次編號'
         required: true
@@ -76,8 +86,10 @@ jobs:
 
       - name: Backfill selected candidate batch
         env:
-          SCORE_THRESHOLD: ${{ inputs.score_threshold }}
-          MIN_HITS: ${{ inputs.min_hits }}
+          CORE_SCORE_THRESHOLD: ${{ inputs.core_score_threshold }}
+          CORE_MIN_HITS: ${{ inputs.core_min_hits }}
+          PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
+          PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
           BATCH_INDEX: ${{ inputs.batch_index }}
           BATCH_SIZE: ${{ inputs.batch_size }}
           START_QUARTER: ${{ inputs.start_quarter }}
@@ -87,8 +99,10 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/backfill_finmind_quarterly_financial_quality_batch.js \
-            --score-threshold "$SCORE_THRESHOLD" \
-            --min-hits "$MIN_HITS" \
+            --core-score-threshold "$CORE_SCORE_THRESHOLD" \
+            --core-min-hits "$CORE_MIN_HITS" \
+            --persistent-score-threshold "$PERSISTENT_SCORE_THRESHOLD" \
+            --persistent-min-hits "$PERSISTENT_MIN_HITS" \
             --batch-index "$BATCH_INDEX" \
             --batch-size "$BATCH_SIZE" \
             --start-quarter "$START_QUARTER" \
@@ -116,11 +130,14 @@ jobs:
       - name: Summarize next batch
         if: always()
         env:
-          SCORE_THRESHOLD: ${{ inputs.score_threshold }}
-          MIN_HITS: ${{ inputs.min_hits }}
+          CORE_SCORE_THRESHOLD: ${{ inputs.core_score_threshold }}
+          CORE_MIN_HITS: ${{ inputs.core_min_hits }}
+          PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
+          PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
           BATCH_INDEX: ${{ inputs.batch_index }}
         run: |
           echo "## FinMind 季財報品質候選池分批回填" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 規則：score >= $SCORE_THRESHOLD，至少 $MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 高強度軌：score >= $CORE_SCORE_THRESHOLD，至少 $CORE_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 持續強度軌：score >= $PERSISTENT_SCORE_THRESHOLD，至少 $PERSISTENT_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
           echo "- 本批 batch_index：$BATCH_INDEX" >> "$GITHUB_STEP_SUMMARY"
           echo "- 下一批請使用 batch_index：$((BATCH_INDEX + 1))" >> "$GITHUB_STEP_SUMMARY"
