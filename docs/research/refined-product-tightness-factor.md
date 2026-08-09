@@ -108,13 +108,44 @@ data_refined_product_tightness/manifest.json
 
 ## 執行方式
 
-EIA API 需要免費 API key：
+EIA API 需要免費 API key，Repository Actions secret 名稱固定為：
+
+```text
+EIA_API_KEY
+```
+
+本機可直接執行：
 
 ```bash
 EIA_API_KEY=... node scripts/crawl_refined_product_tightness.js --date 20260807
 ```
 
 未指定 `--date` 時，使用目前 UTC 日期作為查詢上限；實際輸出日期使用三個 EIA 系列最後一個共同有效交易日。
+
+## GitHub Actions 自動收集
+
+Workflow：
+
+```text
+.github/workflows/crawl-refined-product-tightness.yml
+```
+
+顯示名稱：
+
+```text
+[02 外部市場] EIA－成品油緊張程度
+```
+
+排程為台灣時間週二至週六約 07:20，每日檢查一次 EIA 是否已出現新的共同 observation date。
+
+EIA APIv2 的資料庫持續更新，不假設所有產品都有共同固定發布時間。因此 workflow 採「每日檢查、日期不變則不寫入」模式：
+
+- 新 observation date：產生新 snapshot、更新 manifest 並 commit 到 `main`。
+- observation date 已存在：預設保留既有 immutable research snapshot，不產生 commit。
+- EIA 後續修訂同一天資料：手動執行 workflow 並設定 `force_overwrite=true` 才覆寫。
+- `date` 可指定歷史查詢上限，支援日後研究與回填。
+
+這個 workflow 不使用 `workflow_run`，也不串接 Prediction、Replay 或 Pages deployment。
 
 ## 下一階段研究
 
