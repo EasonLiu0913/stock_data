@@ -1,0 +1,56 @@
+name: '[07 研究] TWSE－季財報品質快照'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 13 * * 1-5'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-quarterly-financial-quality
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate crawler
+        run: |
+          node --check scripts/crawl_twse_quarterly_financial_quality.js
+          node --test tests/twse_quarterly_financial_quality.test.js
+
+      - name: Fetch latest TWSE quarterly financial quality snapshot
+        run: node scripts/crawl_twse_quarterly_financial_quality.js
+
+      - name: Commit verified snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_twse_quarterly_financial_quality
+          if git diff --cached --quiet; then
+            echo 'No quarterly financial quality changes'
+            exit 0
+          fi
+          git commit -m "data: update TWSE quarterly financial quality snapshot"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
