@@ -1,0 +1,107 @@
+name: '[07 研究] 基本面雙確認－電子股回檔進場 Policy Backtest'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM；未成熟 D20/D40/D60 自動公平排除'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-entry-policy
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_entry_policy.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build entry policy backtest
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_entry_policy.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-policy.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(p.dataset!=='two_stage_fundamental_quality_entry_policy') throw new Error('unexpected dataset');
+          if(!(p.coverage?.candidate_events>0)) throw new Error('zero candidate events');
+          if(!Array.isArray(p.rows)||p.rows.length!==27) throw new Error(`expected 27 rows, got ${p.rows?.length}`);
+          const ids=new Set(p.rows.map(r=>r.policy_id));
+          for(const id of ['direct','pullback_5_skip','pullback_5_fallback_d5','pullback_5_fallback_d10','pullback_5_fallback_d20','pullback_10_skip','pullback_10_fallback_d5','pullback_10_fallback_d10','pullback_10_fallback_d20']) {
+            if(!ids.has(id)) throw new Error(`missing policy ${id}`);
+          }
+          const focus=p.rows.filter(r=>r.horizon==='d60').map(r=>({policy:r.policy_id,trades:r.trades,participation:r.participation_rate_pct,median_endpoint:r.endpoint?.median_pct,positive_rate:r.endpoint?.positive_rate_pct,median_mfe:r.mfe?.median_pct,median_mae:r.mae?.median_pct,missed:p.missed_winners,vs_direct:r.vs_direct}));
+          console.log(JSON.stringify({coverage:p.coverage,d60:focus},null,2));
+          NODE
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-policy.json
+          if git diff --cached --quiet; then
+            echo 'No entry policy research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild entry policy backtest"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－電子股回檔進場 Policy Backtest' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Universe：電子股 FAS >=8 + FQ >=10，所有原始候選都納入' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 比較：直接買、-5%/-10% 等不到放棄、以及第 5/10/20 日 fallback 收盤進場' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 所有策略使用公平成熟樣本：預留最多 20 日等待 + D20/D40/D60 持有期間' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 指標：平均/中位 endpoint、勝率、MFE、MAE、參與率、等待天數、missed winners' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 不計 CAGR：訊號會重疊，尚未定義組合資金配置，避免產生虛假的年化結果' >> "$GITHUB_STEP_SUMMARY"
