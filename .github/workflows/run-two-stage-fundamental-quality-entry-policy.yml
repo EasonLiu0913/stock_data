@@ -74,7 +74,7 @@ jobs:
           for(const id of ['direct','pullback_5_skip','pullback_5_fallback_d5','pullback_5_fallback_d10','pullback_5_fallback_d20','pullback_10_skip','pullback_10_fallback_d5','pullback_10_fallback_d10','pullback_10_fallback_d20']) {
             if(!ids.has(id)) throw new Error(`missing policy ${id}`);
           }
-          const focus=p.rows.filter(r=>r.horizon==='d60').map(r=>({policy:r.policy_id,trades:r.trades,participation:r.participation_rate_pct,median_endpoint:r.endpoint?.median_pct,positive_rate:r.endpoint?.positive_rate_pct,median_mfe:r.mfe?.median_pct,median_mae:r.mae?.median_pct,missed:p.missed_winners,vs_direct:r.vs_direct}));
+          const focus=p.rows.filter(r=>r.horizon==='d60').map(r=>({policy:r.policy_id,trades:r.trades,participation:r.participation_rate_pct,median_endpoint:r.endpoint?.median_pct,positive_rate:r.endpoint?.positive_rate_pct,median_mfe:r.mfe?.median_pct,median_mae:r.mae?.median_pct,missed:r.missed_winners,vs_direct:r.vs_direct}));
           console.log(JSON.stringify({coverage:p.coverage,d60:focus},null,2));
           NODE
 
