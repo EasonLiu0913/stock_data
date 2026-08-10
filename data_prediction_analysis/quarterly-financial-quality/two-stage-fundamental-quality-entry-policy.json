@@ -1,0 +1,1349 @@
+{
+  "schema_version": 1,
+  "dataset": "two_stage_fundamental_quality_entry_policy",
+  "generated_at": "2026-08-10T17:02:36.642Z",
+  "start_month": "202401",
+  "end_month": "202606",
+  "methodology": {
+    "status": "research_only",
+    "universe": "electronic FAS>=8 + latest-known FQ>=10",
+    "candidate_events": 199,
+    "max_wait_trading_days": 20,
+    "horizons": [
+      "d20",
+      "d40",
+      "d60"
+    ],
+    "policies": [
+      {
+        "id": "direct",
+        "name": "訊號日直接進場",
+        "type": "direct"
+      },
+      {
+        "id": "pullback_5_skip",
+        "name": "最多等20日 -5%，未觸發放棄",
+        "type": "pullback",
+        "threshold": 0.95,
+        "pullback_pct": -5,
+        "fallback_day": null
+      },
+      {
+        "id": "pullback_5_fallback_d5",
+        "name": "等 -5%，第5日未觸發則收盤進場",
+        "type": "pullback",
+        "threshold": 0.95,
+        "pullback_pct": -5,
+        "fallback_day": 5
+      },
+      {
+        "id": "pullback_5_fallback_d10",
+        "name": "等 -5%，第10日未觸發則收盤進場",
+        "type": "pullback",
+        "threshold": 0.95,
+        "pullback_pct": -5,
+        "fallback_day": 10
+      },
+      {
+        "id": "pullback_5_fallback_d20",
+        "name": "等 -5%，第20日未觸發則收盤進場",
+        "type": "pullback",
+        "threshold": 0.95,
+        "pullback_pct": -5,
+        "fallback_day": 20
+      },
+      {
+        "id": "pullback_10_skip",
+        "name": "最多等20日 -10%，未觸發放棄",
+        "type": "pullback",
+        "threshold": 0.9,
+        "pullback_pct": -10,
+        "fallback_day": null
+      },
+      {
+        "id": "pullback_10_fallback_d5",
+        "name": "等 -10%，第5日未觸發則收盤進場",
+        "type": "pullback",
+        "threshold": 0.9,
+        "pullback_pct": -10,
+        "fallback_day": 5
+      },
+      {
+        "id": "pullback_10_fallback_d10",
+        "name": "等 -10%，第10日未觸發則收盤進場",
+        "type": "pullback",
+        "threshold": 0.9,
+        "pullback_pct": -10,
+        "fallback_day": 10
+      },
+      {
+        "id": "pullback_10_fallback_d20",
+        "name": "等 -10%，第20日未觸發則收盤進場",
+        "type": "pullback",
+        "threshold": 0.9,
+        "pullback_pct": -10,
+        "fallback_day": 20
+      }
+    ],
+    "pullback_fill_rule": "limit assumed filled when daily low touches base close * threshold; no gap/slippage modeling",
+    "fallback_rule": "if pullback has not filled by fallback day, enter at that day close",
+    "holding_rule": "each executed trade holds D20/D40/D60 trading days after its actual entry",
+    "fair_maturity_rule": "for each horizon, only events with enough history for maximum 20-day wait plus the holding horizon are eligible for every policy",
+    "missed_winner_rule": "for skip policies, evaluate skipped events using direct-entry outcomes to quantify winners forfeited by waiting",
+    "cagr_note": "CAGR is intentionally not reported because event signals overlap and no portfolio capital-allocation model is defined; event-level average/median returns and participation are reported instead",
+    "anti_lookahead": "factor membership, pullback triggers, and fallback entries only use information available by the corresponding date"
+  },
+  "coverage": {
+    "candidate_events": 199,
+    "diagnostics": {
+      "electronic_fas8_events": 1604,
+      "missing_known_financial": 160,
+      "financial_below_10": 1245,
+      "included": 199
+    }
+  },
+  "rows": [
+    {
+      "policy_id": "direct",
+      "policy_name": "訊號日直接進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 0,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 0,
+      "median_wait_days": 0,
+      "endpoint": {
+        "average_pct": 10.8096,
+        "median_pct": 7.2626,
+        "positive_rate_pct": 67.2316,
+        "ge30_rate_pct": 15.2542
+      },
+      "mfe": {
+        "average_pct": 23.0752,
+        "median_pct": 17.7033,
+        "ge50_rate_pct": 9.6045
+      },
+      "mae": {
+        "average_pct": -8.8132,
+        "median_pct": -6.4394
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0,
+        "median_endpoint_delta_pct": 0,
+        "positive_rate_delta_pp": 0,
+        "endpoint_ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_delta_pct": 0,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "direct",
+      "policy_name": "訊號日直接進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 0,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 0,
+      "median_wait_days": 0,
+      "endpoint": {
+        "average_pct": 18.6577,
+        "median_pct": 14.3035,
+        "positive_rate_pct": 74.5455,
+        "ge30_rate_pct": 23.6364
+      },
+      "mfe": {
+        "average_pct": 36.4371,
+        "median_pct": 30.9164,
+        "ge50_rate_pct": 23.6364
+      },
+      "mae": {
+        "average_pct": -10.5378,
+        "median_pct": -8.1967
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0,
+        "median_endpoint_delta_pct": 0,
+        "positive_rate_delta_pp": 0,
+        "endpoint_ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_delta_pct": 0,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "direct",
+      "policy_name": "訊號日直接進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 0,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 0,
+      "median_wait_days": 0,
+      "endpoint": {
+        "average_pct": 30.6828,
+        "median_pct": 19.774,
+        "positive_rate_pct": 79.3939,
+        "ge30_rate_pct": 39.3939
+      },
+      "mfe": {
+        "average_pct": 53.5654,
+        "median_pct": 40.1914,
+        "ge50_rate_pct": 38.7879
+      },
+      "mae": {
+        "average_pct": -11.838,
+        "median_pct": -9.9609
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0,
+        "median_endpoint_delta_pct": 0,
+        "positive_rate_delta_pp": 0,
+        "endpoint_ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_delta_pct": 0,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_skip",
+      "policy_name": "最多等20日 -5%，未觸發放棄",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 106,
+      "skipped_events": 71,
+      "participation_rate_pct": 59.887,
+      "trigger_fill_rate_pct": 59.887,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 5.3302,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 10.4487,
+        "median_pct": 6.3316,
+        "positive_rate_pct": 59.434,
+        "ge30_rate_pct": 13.2075
+      },
+      "mfe": {
+        "average_pct": 24.077,
+        "median_pct": 20.0198,
+        "ge50_rate_pct": 7.5472
+      },
+      "mae": {
+        "average_pct": -9.0385,
+        "median_pct": -8.9501
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 71,
+        "direct_endpoint_ge30_count": 19,
+        "direct_endpoint_ge30_rate_pct": 26.7606,
+        "direct_mfe_ge50_count": 12,
+        "direct_mfe_ge50_rate_pct": 16.9014,
+        "direct_positive_count": 67,
+        "direct_positive_rate_pct": 94.3662
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -0.3609,
+        "median_endpoint_delta_pct": -0.931,
+        "positive_rate_delta_pp": -7.7976,
+        "endpoint_ge30_rate_delta_pp": -2.0467,
+        "median_mfe_delta_pct": 2.3165,
+        "median_mae_delta_pct": -2.5107,
+        "participation_rate_delta_pp": -40.113
+      }
+    },
+    {
+      "policy_id": "pullback_5_skip",
+      "policy_name": "最多等20日 -5%，未觸發放棄",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 98,
+      "skipped_events": 67,
+      "participation_rate_pct": 59.3939,
+      "trigger_fill_rate_pct": 59.3939,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 5.6633,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 23.4751,
+        "median_pct": 18.2161,
+        "positive_rate_pct": 74.4898,
+        "ge30_rate_pct": 36.7347
+      },
+      "mfe": {
+        "average_pct": 40.2296,
+        "median_pct": 33.5293,
+        "ge50_rate_pct": 26.5306
+      },
+      "mae": {
+        "average_pct": -10.3109,
+        "median_pct": -9.3403
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 67,
+        "direct_endpoint_ge30_count": 20,
+        "direct_endpoint_ge30_rate_pct": 29.8507,
+        "direct_mfe_ge50_count": 23,
+        "direct_mfe_ge50_rate_pct": 34.3284,
+        "direct_positive_count": 58,
+        "direct_positive_rate_pct": 86.5672
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 4.8174,
+        "median_endpoint_delta_pct": 3.9126,
+        "positive_rate_delta_pp": -0.0557,
+        "endpoint_ge30_rate_delta_pp": 13.0983,
+        "median_mfe_delta_pct": 2.6129,
+        "median_mae_delta_pct": -1.1436,
+        "participation_rate_delta_pp": -40.6061
+      }
+    },
+    {
+      "policy_id": "pullback_5_skip",
+      "policy_name": "最多等20日 -5%，未觸發放棄",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 98,
+      "skipped_events": 67,
+      "participation_rate_pct": 59.3939,
+      "trigger_fill_rate_pct": 59.3939,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 5.6633,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 34.6061,
+        "median_pct": 24.2178,
+        "positive_rate_pct": 78.5714,
+        "ge30_rate_pct": 44.898
+      },
+      "mfe": {
+        "average_pct": 57.5869,
+        "median_pct": 42.2033,
+        "ge50_rate_pct": 37.7551
+      },
+      "mae": {
+        "average_pct": -11.5426,
+        "median_pct": -9.8038
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 67,
+        "direct_endpoint_ge30_count": 32,
+        "direct_endpoint_ge30_rate_pct": 47.7612,
+        "direct_mfe_ge50_count": 35,
+        "direct_mfe_ge50_rate_pct": 52.2388,
+        "direct_positive_count": 56,
+        "direct_positive_rate_pct": 83.5821
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 3.9233,
+        "median_endpoint_delta_pct": 4.4438,
+        "positive_rate_delta_pp": -0.8225,
+        "endpoint_ge30_rate_delta_pp": 5.5041,
+        "median_mfe_delta_pct": 2.0119,
+        "median_mae_delta_pct": 0.1571,
+        "participation_rate_delta_pp": -40.6061
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d5",
+      "policy_name": "等 -5%，第5日未觸發則收盤進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 35.5932,
+      "fallback_fill_rate_pct": 64.4068,
+      "avg_wait_days": 4.1638,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 7.8213,
+        "median_pct": 5.026,
+        "positive_rate_pct": 59.322,
+        "ge30_rate_pct": 11.2994
+      },
+      "mfe": {
+        "average_pct": 21.3757,
+        "median_pct": 17.1797,
+        "ge50_rate_pct": 5.6497
+      },
+      "mae": {
+        "average_pct": -9.4626,
+        "median_pct": -9.0133
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -2.9883,
+        "median_endpoint_delta_pct": -2.2366,
+        "positive_rate_delta_pp": -7.9096,
+        "endpoint_ge30_rate_delta_pp": -3.9548,
+        "median_mfe_delta_pct": -0.5236,
+        "median_mae_delta_pct": -2.5739,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d5",
+      "policy_name": "等 -5%，第5日未觸發則收盤進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 164,
+      "skipped_events": 0,
+      "participation_rate_pct": 99.3939,
+      "trigger_fill_rate_pct": 33.3333,
+      "fallback_fill_rate_pct": 66.6667,
+      "avg_wait_days": 4.2805,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 18.2351,
+        "median_pct": 13.1283,
+        "positive_rate_pct": 70.7317,
+        "ge30_rate_pct": 25.6098
+      },
+      "mfe": {
+        "average_pct": 35.6816,
+        "median_pct": 28.5858,
+        "ge50_rate_pct": 21.9512
+      },
+      "mae": {
+        "average_pct": -11.3061,
+        "median_pct": -9.8307
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -0.4226,
+        "median_endpoint_delta_pct": -1.1752,
+        "positive_rate_delta_pp": -3.8138,
+        "endpoint_ge30_rate_delta_pp": 1.9734,
+        "median_mfe_delta_pct": -2.3306,
+        "median_mae_delta_pct": -1.634,
+        "participation_rate_delta_pp": -0.6061
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d5",
+      "policy_name": "等 -5%，第5日未觸發則收盤進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 33.3333,
+      "fallback_fill_rate_pct": 66.6667,
+      "avg_wait_days": 4.2848,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 28.0635,
+        "median_pct": 18.6256,
+        "positive_rate_pct": 70.9091,
+        "ge30_rate_pct": 36.9697
+      },
+      "mfe": {
+        "average_pct": 52.935,
+        "median_pct": 38.587,
+        "ge50_rate_pct": 37.5758
+      },
+      "mae": {
+        "average_pct": -13.2114,
+        "median_pct": -11.4977
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -2.6193,
+        "median_endpoint_delta_pct": -1.1484,
+        "positive_rate_delta_pp": -8.4848,
+        "endpoint_ge30_rate_delta_pp": -2.4242,
+        "median_mfe_delta_pct": -1.6044,
+        "median_mae_delta_pct": -1.5368,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d10",
+      "policy_name": "等 -5%，第10日未觸發則收盤進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 51.4124,
+      "fallback_fill_rate_pct": 48.5876,
+      "avg_wait_days": 6.9661,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 9.2118,
+        "median_pct": 6.1047,
+        "positive_rate_pct": 60.452,
+        "ge30_rate_pct": 12.9944
+      },
+      "mfe": {
+        "average_pct": 22.5283,
+        "median_pct": 18.9661,
+        "ge50_rate_pct": 7.3446
+      },
+      "mae": {
+        "average_pct": -8.7677,
+        "median_pct": -8.0671
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -1.5978,
+        "median_endpoint_delta_pct": -1.1579,
+        "positive_rate_delta_pp": -6.7796,
+        "endpoint_ge30_rate_delta_pp": -2.2598,
+        "median_mfe_delta_pct": 1.2628,
+        "median_mae_delta_pct": -1.6277,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d10",
+      "policy_name": "等 -5%，第10日未觸發則收盤進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 164,
+      "skipped_events": 0,
+      "participation_rate_pct": 99.3939,
+      "trigger_fill_rate_pct": 50.303,
+      "fallback_fill_rate_pct": 49.697,
+      "avg_wait_days": 7.1524,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 18.1616,
+        "median_pct": 11.6326,
+        "positive_rate_pct": 68.9024,
+        "ge30_rate_pct": 28.0488
+      },
+      "mfe": {
+        "average_pct": 37.4203,
+        "median_pct": 29.0923,
+        "ge50_rate_pct": 23.7805
+      },
+      "mae": {
+        "average_pct": -10.7714,
+        "median_pct": -9.1723
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -0.4961,
+        "median_endpoint_delta_pct": -2.6709,
+        "positive_rate_delta_pp": -5.6431,
+        "endpoint_ge30_rate_delta_pp": 4.4124,
+        "median_mfe_delta_pct": -1.8241,
+        "median_mae_delta_pct": -0.9756,
+        "participation_rate_delta_pp": -0.6061
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d10",
+      "policy_name": "等 -5%，第10日未觸發則收盤進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 50.303,
+      "fallback_fill_rate_pct": 49.697,
+      "avg_wait_days": 7.1697,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 30.3023,
+        "median_pct": 18.5316,
+        "positive_rate_pct": 70.9091,
+        "ge30_rate_pct": 38.1818
+      },
+      "mfe": {
+        "average_pct": 54.5179,
+        "median_pct": 40.6491,
+        "ge50_rate_pct": 37.5758
+      },
+      "mae": {
+        "average_pct": -12.5096,
+        "median_pct": -9.7458
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -0.3805,
+        "median_endpoint_delta_pct": -1.2424,
+        "positive_rate_delta_pp": -8.4848,
+        "endpoint_ge30_rate_delta_pp": -1.2121,
+        "median_mfe_delta_pct": 0.4577,
+        "median_mae_delta_pct": 0.2151,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d20",
+      "policy_name": "等 -5%，第20日未觸發則收盤進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 59.887,
+      "fallback_fill_rate_pct": 40.113,
+      "avg_wait_days": 11.2147,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 7.4898,
+        "median_pct": 2.6958,
+        "positive_rate_pct": 54.2373,
+        "ge30_rate_pct": 11.2994
+      },
+      "mfe": {
+        "average_pct": 21.3837,
+        "median_pct": 16.047,
+        "ge50_rate_pct": 6.2147
+      },
+      "mae": {
+        "average_pct": -9.6041,
+        "median_pct": -9.0069
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.3198,
+        "median_endpoint_delta_pct": -4.5668,
+        "positive_rate_delta_pp": -12.9943,
+        "endpoint_ge30_rate_delta_pp": -3.9548,
+        "median_mfe_delta_pct": -1.6563,
+        "median_mae_delta_pct": -2.5675,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d20",
+      "policy_name": "等 -5%，第20日未觸發則收盤進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 59.3939,
+      "fallback_fill_rate_pct": 40.6061,
+      "avg_wait_days": 11.4848,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 19.9004,
+        "median_pct": 11.7267,
+        "positive_rate_pct": 68.4848,
+        "ge30_rate_pct": 32.7273
+      },
+      "mfe": {
+        "average_pct": 37.5454,
+        "median_pct": 27.8855,
+        "ge50_rate_pct": 22.4242
+      },
+      "mae": {
+        "average_pct": -11.9374,
+        "median_pct": -10.1772
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 1.2427,
+        "median_endpoint_delta_pct": -2.5768,
+        "positive_rate_delta_pp": -6.0607,
+        "endpoint_ge30_rate_delta_pp": 9.0909,
+        "median_mfe_delta_pct": -3.0309,
+        "median_mae_delta_pct": -1.9805,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_5_fallback_d20",
+      "policy_name": "等 -5%，第20日未觸發則收盤進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 59.3939,
+      "fallback_fill_rate_pct": 40.6061,
+      "avg_wait_days": 11.4848,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 29.2287,
+        "median_pct": 18.6256,
+        "positive_rate_pct": 73.3333,
+        "ge30_rate_pct": 39.3939
+      },
+      "mfe": {
+        "average_pct": 51.2332,
+        "median_pct": 38.3459,
+        "ge50_rate_pct": 33.9394
+      },
+      "mae": {
+        "average_pct": -14.0873,
+        "median_pct": -11.5343
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -1.4541,
+        "median_endpoint_delta_pct": -1.1484,
+        "positive_rate_delta_pp": -6.0606,
+        "endpoint_ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": -1.8455,
+        "median_mae_delta_pct": -1.5734,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_skip",
+      "policy_name": "最多等20日 -10%，未觸發放棄",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 65,
+      "skipped_events": 112,
+      "participation_rate_pct": 36.7232,
+      "trigger_fill_rate_pct": 36.7232,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 9.8308,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 12.0458,
+        "median_pct": 7.5186,
+        "positive_rate_pct": 66.1538,
+        "ge30_rate_pct": 16.9231
+      },
+      "mfe": {
+        "average_pct": 25.6417,
+        "median_pct": 17.4041,
+        "ge50_rate_pct": 13.8462
+      },
+      "mae": {
+        "average_pct": -8.8492,
+        "median_pct": -6.7917
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 112,
+        "direct_endpoint_ge30_count": 25,
+        "direct_endpoint_ge30_rate_pct": 22.3214,
+        "direct_mfe_ge50_count": 15,
+        "direct_mfe_ge50_rate_pct": 13.3929,
+        "direct_positive_count": 100,
+        "direct_positive_rate_pct": 89.2857
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 1.2362,
+        "median_endpoint_delta_pct": 0.256,
+        "positive_rate_delta_pp": -1.0778,
+        "endpoint_ge30_rate_delta_pp": 1.6689,
+        "median_mfe_delta_pct": -0.2992,
+        "median_mae_delta_pct": -0.3523,
+        "participation_rate_delta_pp": -63.2768
+      }
+    },
+    {
+      "policy_id": "pullback_10_skip",
+      "policy_name": "最多等20日 -10%，未觸發放棄",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 60,
+      "skipped_events": 105,
+      "participation_rate_pct": 36.3636,
+      "trigger_fill_rate_pct": 36.3636,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 10.0667,
+      "median_wait_days": 10.5,
+      "endpoint": {
+        "average_pct": 29.6559,
+        "median_pct": 21.9835,
+        "positive_rate_pct": 83.3333,
+        "ge30_rate_pct": 38.3333
+      },
+      "mfe": {
+        "average_pct": 44.0359,
+        "median_pct": 36.3123,
+        "ge50_rate_pct": 36.6667
+      },
+      "mae": {
+        "average_pct": -9.5751,
+        "median_pct": -7.9732
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 105,
+        "direct_endpoint_ge30_count": 30,
+        "direct_endpoint_ge30_rate_pct": 28.5714,
+        "direct_mfe_ge50_count": 32,
+        "direct_mfe_ge50_rate_pct": 30.4762,
+        "direct_positive_count": 89,
+        "direct_positive_rate_pct": 84.7619
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 10.9982,
+        "median_endpoint_delta_pct": 7.68,
+        "positive_rate_delta_pp": 8.7878,
+        "endpoint_ge30_rate_delta_pp": 14.6969,
+        "median_mfe_delta_pct": 5.3959,
+        "median_mae_delta_pct": 0.2235,
+        "participation_rate_delta_pp": -63.6364
+      }
+    },
+    {
+      "policy_id": "pullback_10_skip",
+      "policy_name": "最多等20日 -10%，未觸發放棄",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 60,
+      "skipped_events": 105,
+      "participation_rate_pct": 36.3636,
+      "trigger_fill_rate_pct": 36.3636,
+      "fallback_fill_rate_pct": 0,
+      "avg_wait_days": 10.0667,
+      "median_wait_days": 10.5,
+      "endpoint": {
+        "average_pct": 37.9904,
+        "median_pct": 27.3437,
+        "positive_rate_pct": 81.6667,
+        "ge30_rate_pct": 46.6667
+      },
+      "mfe": {
+        "average_pct": 60.2031,
+        "median_pct": 48.0467,
+        "ge50_rate_pct": 46.6667
+      },
+      "mae": {
+        "average_pct": -11.1433,
+        "median_pct": -7.9732
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 105,
+        "direct_endpoint_ge30_count": 48,
+        "direct_endpoint_ge30_rate_pct": 45.7143,
+        "direct_mfe_ge50_count": 51,
+        "direct_mfe_ge50_rate_pct": 48.5714,
+        "direct_positive_count": 88,
+        "direct_positive_rate_pct": 83.8095
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 7.3076,
+        "median_endpoint_delta_pct": 7.5697,
+        "positive_rate_delta_pp": 2.2728,
+        "endpoint_ge30_rate_delta_pp": 7.2728,
+        "median_mfe_delta_pct": 7.8553,
+        "median_mae_delta_pct": 1.9877,
+        "participation_rate_delta_pp": -63.6364
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d5",
+      "policy_name": "等 -10%，第5日未觸發則收盤進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 5.6497,
+      "fallback_fill_rate_pct": 94.3503,
+      "avg_wait_days": 4.8983,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 7.4891,
+        "median_pct": 4.4614,
+        "positive_rate_pct": 58.1921,
+        "ge30_rate_pct": 12.9944
+      },
+      "mfe": {
+        "average_pct": 21.0313,
+        "median_pct": 16,
+        "ge50_rate_pct": 7.3446
+      },
+      "mae": {
+        "average_pct": -9.8356,
+        "median_pct": -9.2896
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.3205,
+        "median_endpoint_delta_pct": -2.8012,
+        "positive_rate_delta_pp": -9.0395,
+        "endpoint_ge30_rate_delta_pp": -2.2598,
+        "median_mfe_delta_pct": -1.7033,
+        "median_mae_delta_pct": -2.8502,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d5",
+      "policy_name": "等 -10%，第5日未觸發則收盤進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 164,
+      "skipped_events": 0,
+      "participation_rate_pct": 99.3939,
+      "trigger_fill_rate_pct": 4.2424,
+      "fallback_fill_rate_pct": 95.7576,
+      "avg_wait_days": 4.939,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 18.2282,
+        "median_pct": 14.0564,
+        "positive_rate_pct": 71.9512,
+        "ge30_rate_pct": 25.6098
+      },
+      "mfe": {
+        "average_pct": 35.4821,
+        "median_pct": 28.8581,
+        "ge50_rate_pct": 20.7317
+      },
+      "mae": {
+        "average_pct": -11.5464,
+        "median_pct": -10.2409
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -0.4295,
+        "median_endpoint_delta_pct": -0.2471,
+        "positive_rate_delta_pp": -2.5943,
+        "endpoint_ge30_rate_delta_pp": 1.9734,
+        "median_mfe_delta_pct": -2.0583,
+        "median_mae_delta_pct": -2.0442,
+        "participation_rate_delta_pp": -0.6061
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d5",
+      "policy_name": "等 -10%，第5日未觸發則收盤進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 4.2424,
+      "fallback_fill_rate_pct": 95.7576,
+      "avg_wait_days": 4.9394,
+      "median_wait_days": 5,
+      "endpoint": {
+        "average_pct": 27.081,
+        "median_pct": 17.713,
+        "positive_rate_pct": 70.9091,
+        "ge30_rate_pct": 35.7576
+      },
+      "mfe": {
+        "average_pct": 51.8693,
+        "median_pct": 38.3513,
+        "ge50_rate_pct": 36.3636
+      },
+      "mae": {
+        "average_pct": -13.4529,
+        "median_pct": -11.5942
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.6018,
+        "median_endpoint_delta_pct": -2.061,
+        "positive_rate_delta_pp": -8.4848,
+        "endpoint_ge30_rate_delta_pp": -3.6363,
+        "median_mfe_delta_pct": -1.8401,
+        "median_mae_delta_pct": -1.6333,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d10",
+      "policy_name": "等 -10%，第10日未觸發則收盤進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 18.6441,
+      "fallback_fill_rate_pct": 81.3559,
+      "avg_wait_days": 9.2768,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 9.1727,
+        "median_pct": 6.0445,
+        "positive_rate_pct": 61.5819,
+        "ge30_rate_pct": 15.2542
+      },
+      "mfe": {
+        "average_pct": 22.6057,
+        "median_pct": 16.7883,
+        "ge50_rate_pct": 10.7345
+      },
+      "mae": {
+        "average_pct": -9.0328,
+        "median_pct": -7.9602
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -1.6369,
+        "median_endpoint_delta_pct": -1.2181,
+        "positive_rate_delta_pp": -5.6497,
+        "endpoint_ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": -0.915,
+        "median_mae_delta_pct": -1.5208,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d10",
+      "policy_name": "等 -10%，第10日未觸發則收盤進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 164,
+      "skipped_events": 0,
+      "participation_rate_pct": 99.3939,
+      "trigger_fill_rate_pct": 18.1818,
+      "fallback_fill_rate_pct": 81.8182,
+      "avg_wait_days": 9.3598,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 18.9043,
+        "median_pct": 11.2429,
+        "positive_rate_pct": 70.122,
+        "ge30_rate_pct": 27.439
+      },
+      "mfe": {
+        "average_pct": 37.9646,
+        "median_pct": 29.3679,
+        "ge50_rate_pct": 25
+      },
+      "mae": {
+        "average_pct": -10.8349,
+        "median_pct": -8.4942
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0.2466,
+        "median_endpoint_delta_pct": -3.0606,
+        "positive_rate_delta_pp": -4.4235,
+        "endpoint_ge30_rate_delta_pp": 3.8026,
+        "median_mfe_delta_pct": -1.5485,
+        "median_mae_delta_pct": -0.2975,
+        "participation_rate_delta_pp": -0.6061
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d10",
+      "policy_name": "等 -10%，第10日未觸發則收盤進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 18.1818,
+      "fallback_fill_rate_pct": 81.8182,
+      "avg_wait_days": 9.3636,
+      "median_wait_days": 10,
+      "endpoint": {
+        "average_pct": 29.4815,
+        "median_pct": 17.3581,
+        "positive_rate_pct": 69.697,
+        "ge30_rate_pct": 35.7576
+      },
+      "mfe": {
+        "average_pct": 53.5566,
+        "median_pct": 40.0911,
+        "ge50_rate_pct": 37.5758
+      },
+      "mae": {
+        "average_pct": -12.6122,
+        "median_pct": -9.4991
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -1.2013,
+        "median_endpoint_delta_pct": -2.4159,
+        "positive_rate_delta_pp": -9.6969,
+        "endpoint_ge30_rate_delta_pp": -3.6363,
+        "median_mfe_delta_pct": -0.1003,
+        "median_mae_delta_pct": 0.4618,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d20",
+      "policy_name": "等 -10%，第20日未觸發則收盤進場",
+      "horizon": "d20",
+      "eligible_events": 177,
+      "trades": 177,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 36.7232,
+      "fallback_fill_rate_pct": 63.2768,
+      "avg_wait_days": 16.2655,
+      "median_wait_days": 20,
+      "endpoint": {
+        "average_pct": 7.5463,
+        "median_pct": 3.1128,
+        "positive_rate_pct": 57.6271,
+        "ge30_rate_pct": 12.4294
+      },
+      "mfe": {
+        "average_pct": 21.034,
+        "median_pct": 14.7754,
+        "ge50_rate_pct": 7.9096
+      },
+      "mae": {
+        "average_pct": -9.6853,
+        "median_pct": -7.9305
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.2633,
+        "median_endpoint_delta_pct": -4.1498,
+        "positive_rate_delta_pp": -9.6045,
+        "endpoint_ge30_rate_delta_pp": -2.8248,
+        "median_mfe_delta_pct": -2.9279,
+        "median_mae_delta_pct": -1.4911,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d20",
+      "policy_name": "等 -10%，第20日未觸發則收盤進場",
+      "horizon": "d40",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 36.3636,
+      "fallback_fill_rate_pct": 63.6364,
+      "avg_wait_days": 16.3879,
+      "median_wait_days": 20,
+      "endpoint": {
+        "average_pct": 20.2002,
+        "median_pct": 13.828,
+        "positive_rate_pct": 69.697,
+        "ge30_rate_pct": 29.697
+      },
+      "mfe": {
+        "average_pct": 37.4505,
+        "median_pct": 28.2398,
+        "ge50_rate_pct": 24.8485
+      },
+      "mae": {
+        "average_pct": -12.034,
+        "median_pct": -10.3261
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 1.5425,
+        "median_endpoint_delta_pct": -0.4755,
+        "positive_rate_delta_pp": -4.8485,
+        "endpoint_ge30_rate_delta_pp": 6.0606,
+        "median_mfe_delta_pct": -2.6766,
+        "median_mae_delta_pct": -2.1294,
+        "participation_rate_delta_pp": 0
+      }
+    },
+    {
+      "policy_id": "pullback_10_fallback_d20",
+      "policy_name": "等 -10%，第20日未觸發則收盤進場",
+      "horizon": "d60",
+      "eligible_events": 165,
+      "trades": 165,
+      "skipped_events": 0,
+      "participation_rate_pct": 100,
+      "trigger_fill_rate_pct": 36.3636,
+      "fallback_fill_rate_pct": 63.6364,
+      "avg_wait_days": 16.3879,
+      "median_wait_days": 20,
+      "endpoint": {
+        "average_pct": 27.4444,
+        "median_pct": 19.6196,
+        "positive_rate_pct": 72.1212,
+        "ge30_rate_pct": 39.3939
+      },
+      "mfe": {
+        "average_pct": 48.6629,
+        "median_pct": 37.9427,
+        "ge50_rate_pct": 35.7576
+      },
+      "mae": {
+        "average_pct": -14.6543,
+        "median_pct": -11.7994
+      },
+      "missed_winners": {
+        "skipped_with_direct_stats": 0,
+        "direct_endpoint_ge30_count": 0,
+        "direct_endpoint_ge30_rate_pct": null,
+        "direct_mfe_ge50_count": 0,
+        "direct_mfe_ge50_rate_pct": null,
+        "direct_positive_count": 0,
+        "direct_positive_rate_pct": null
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.2384,
+        "median_endpoint_delta_pct": -0.1544,
+        "positive_rate_delta_pp": -7.2727,
+        "endpoint_ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": -2.2487,
+        "median_mae_delta_pct": -1.8385,
+        "participation_rate_delta_pp": 0
+      }
+    }
+  ]
+}
