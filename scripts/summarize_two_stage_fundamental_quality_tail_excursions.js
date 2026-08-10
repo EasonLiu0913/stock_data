@@ -3,7 +3,13 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { getDailyPrice } = require('./lib/stock_price_provider');
+const {
+  getDailyPrice,
+  clearCaches,
+  loadFromHistorySma,
+  loadFromLegacyFubon,
+  loadFromTwseMiIndex,
+} = require('./lib/stock_price_provider');
 const { scoreComponents } = require('./summarize_mops_revenue_fundamental_acceleration_score');
 const { latestKnownFinancial } = require('./summarize_two_stage_fundamental_quality_long_horizons');
 
@@ -15,6 +21,7 @@ const MARKET_FILE = path.join(ROOT, 'data_twse_market_chart', 'market_chart.json
 const OUTPUT = path.join(ROOT, 'data_prediction_analysis', 'quarterly-financial-quality', 'two-stage-fundamental-quality-tail-excursions.json');
 const HORIZONS = [20, 40, 60];
 const THRESHOLDS = [20, 30, 50];
+const PRICE_LOADERS = [loadFromHistorySma, loadFromLegacyFubon, loadFromTwseMiIndex];
 const FACTORS = [
   { id: 'monthly8_financial10', name: '月營收 ≥8 + 財報品質 ≥10', test: e => e.monthly_score >= 8 && e.financial_score >= 10 },
   { id: 'monthly9_financial10', name: '月營收 ≥9 + 財報品質 ≥10', test: e => e.monthly_score >= 9 && e.financial_score >= 10 },
@@ -48,25 +55,31 @@ function loadEvents(start,end,history,financialByStock){
       const stockId=String(event.stock_code), row=revMap.get(stockId)||{}, monthly=scoreComponents(event,month,history.byStock.get(stockId));
       const eventDate=event.effective_trading_date||event.conservative_availability_date||null;
       const financial=latestKnownFinancial(financialByStock.get(stockId)||[],eventDate);
-      out.push({
+      const compact={
         month, stock_id:stockId, industry:row.industry||'未分類', is_electronic:ELECTRONIC_INDUSTRIES.has(row.industry||'未分類'),
         base_trading_date:event.base_trading_date||null, monthly_score:Number(monthly.total_score), financial_score:Number(financial?.financial_quality_score), returns:event.returns||{},
-      });
+      };
+      // The broadest factor (monthly>=8 + financial>=10) contains every event needed
+      // by this study. Discard the other ~29k events before touching daily OHLC.
+      if (FACTORS[0].test(compact)) out.push(compact);
     }
   }
   return out;
+}
+function getPrice(stockId,date){
+  return getDailyPrice(stockId,date,{root:ROOT,loaders:PRICE_LOADERS});
 }
 function excursion(event,horizon,marketRows,indexByDate){
   const baseDate=event.base_trading_date, baseIndex=indexByDate.get(baseDate);
   if(!Number.isInteger(baseIndex)) return null;
   const target=marketRows[baseIndex+horizon];
   if(!target) return null;
-  const basePrice=getDailyPrice(event.stock_id,baseDate,{root:ROOT});
+  const basePrice=getPrice(event.stock_id,baseDate);
   if(!basePrice?.close) return null;
   let maxHigh=-Infinity,minLow=Infinity,validDays=0;
   for(let i=1;i<=horizon;i++){
     const date=marketRows[baseIndex+i]?.date; if(!date) return null;
-    const price=getDailyPrice(event.stock_id,date,{root:ROOT}); if(!price) continue;
+    const price=getPrice(event.stock_id,date); if(!price) continue;
     if(Number.isFinite(price.high)){maxHigh=Math.max(maxHigh,price.high);validDays++;}
     if(Number.isFinite(price.low))minLow=Math.min(minLow,price.low);
   }
@@ -88,10 +101,17 @@ function main(argv=process.argv.slice(2)){
   const history=loadRevenueHistory(), financialByStock=loadFinancialMaster(), marketRows=loadMarketRows(), indexByDate=new Map(marketRows.map((r,i)=>[r.date,i]));
   const events=loadEvents(start,end,history,financialByStock);
   const segments=[['all','全部',()=>true],['electronic','電子股',e=>e.is_electronic],['non_electronic','非電子股',e=>!e.is_electronic]];
-  const rows=[]; const coverage={};
+  const rows=[]; const coverage={ candidate_events:events.length };
   for(const horizon of HORIZONS){
     const cache=new Map();
-    for(const e of events){ const x=excursion(e,horizon,marketRows,indexByDate); if(x)cache.set(e,x); }
+    let processed=0;
+    for(const e of events){
+      const x=excursion(e,horizon,marketRows,indexByDate); if(x)cache.set(e,x);
+      processed++;
+      // stock_price_provider caches parsed source JSON. Bound memory on long studies.
+      if(processed%25===0) clearCaches();
+    }
+    clearCaches();
     coverage[`d${horizon}`]={complete_excursion_events:cache.size};
     for(const factor of FACTORS){
       for(const [segmentId,segmentName,segmentTest] of segments){
@@ -100,7 +120,7 @@ function main(argv=process.argv.slice(2)){
       }
     }
   }
-  const out={schema_version:1,dataset:'two_stage_fundamental_quality_tail_excursions',generated_at:new Date().toISOString(),start_month:start,end_month:end,methodology:{status:'research_only',horizons:HORIZONS.map(h=>`d${h}`),thresholds_pct:THRESHOLDS,mae:'minimum intraperiod low return relative to signal base close; negative is adverse',mfe:'maximum intraperiod high return relative to signal base close',endpoint_threshold:'stock return at exact D20/D40/D60 target trading date',mfe_threshold:'whether stock touched threshold at any point after base date through horizon',price_source:'scripts/lib/stock_price_provider.js OHLC',anti_lookahead:'factor membership uses only monthly event data and latest financial score known by event date'},coverage,rows};
+  const out={schema_version:2,dataset:'two_stage_fundamental_quality_tail_excursions',generated_at:new Date().toISOString(),start_month:start,end_month:end,methodology:{status:'research_only',horizons:HORIZONS.map(h=>`d${h}`),thresholds_pct:THRESHOLDS,mae:'minimum intraperiod low return relative to signal base close; negative is adverse',mfe:'maximum intraperiod high return relative to signal base close',endpoint_threshold:'stock return at exact D20/D40/D60 target trading date',mfe_threshold:'whether stock touched threshold at any point after base date through horizon',price_source:'scripts/lib/stock_price_provider.js OHLC; prefer per-stock history before daily TWSE fallback',candidate_prefilter:'compute OHLC excursions only for broadest study factor monthly>=8 + financial>=10; monthly>=9 subset is contained within it',memory_rule:'clear price-provider caches every 25 candidate events and after each horizon',anti_lookahead:'factor membership uses only monthly event data and latest financial score known by event date'},coverage,rows};
   fs.mkdirSync(path.dirname(OUTPUT),{recursive:true}); fs.writeFileSync(OUTPUT,JSON.stringify(out,null,2)+'\n');
   console.log(JSON.stringify({output:path.relative(ROOT,OUTPUT),coverage,rows:rows.length},null,2));
 }
