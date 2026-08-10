@@ -20,7 +20,8 @@
 6. 選股因子與 timing 因子應拆開：
    - 選股：FAS / FQ
    - Timing：前 20 日波動、前 5 日漲幅、前 20 日漲幅、距 20 日高點
-7. 下一階段不應繼續微調固定分批比例，而應驗證：**能不能在訊號當下預測哪些股票容易回檔，進而做分流進場。**
+7. 下一階段不應繼續微調固定分批比例，而應以 OOS 驗證決定 timing 是否值得進入分流策略。
+8. **Timing 四因子的 in-sample 辨識力未能穩定通過 OOS / walk-forward；目前維持 100% 訊號日直接進場為預設，timing 僅保留研究用途。**
 
 ---
 
@@ -430,3 +431,45 @@ spread 很大，但分桶不單調，疑似受到市場 regime / 月份集中影
 ## 10. 目前一句話版本
 
 > **先用 FAS + FQ 找出值得買的股票；目前不要因為期待回檔而錯過強勢股。回檔應作為加碼 / 風控工具，而下一個真正值得驗證的是：能否用事前價格波動與漲幅因子，OOS 預測哪些股票比較可能先回檔。**
+
+---
+
+<!-- WALK_FORWARD_OOS_START -->
+## Round 5 — Timing Walk-forward / OOS 驗證
+
+研究問題：上一輪挑出的四個 timing 因子（`pre20_vol_pct`、`pre5_return_pct`、`pre20_return_pct`、`dist_from_20d_high_pct`）在未見資料上，是否真的能區分「容易回檔」與「不容易回檔」？
+
+方法：
+
+- 固定 OOS：`202601` 起為測試集。
+- 訓練資料截止 `202511`，`202512` 保留為 embargo，避免最近訊號的 20 日回檔標籤尚未成熟。
+- 模型只使用上述 4 個 timing 因子；每個因子僅依訓練集 quintile 回檔率形成分數，再對測試集評分。
+- 另外使用季度 expanding-window walk-forward，且每折都保留 1 個月 embargo。
+- 評估 AUC 與預測 high / low tercile 的實際回檔率差距。
+
+固定 OOS 結果：
+
+| Target | Train | OOS | OOS baseline | AUC | High-Low spread | 結論 |
+|---|---:|---:|---:|---:|---:|---|
+| -5% | 109 | 65 | 58.4615% | 0.4703 | -1.7316pp | **未通過 OOS 驗證** |
+| -10% | 109 | 65 | 32.3077% | 0.6017 | 11.0389pp | **有潛力但未通過** |
+
+Walk-forward 穩定性：
+
+| Target | Folds | Median AUC | Avg AUC | Median high-low spread | 正 spread folds | AUC >= 0.55 folds |
+|---|---:|---:|---:|---:|---:|---:|
+| -5% | 5 | 0.4091 | 0.5353 | -19.0476pp | 40% | 40% |
+| -10% | 5 | 0.5672 | 0.476 | 9.5238pp | 80% | 60% |
+
+本輪結論：
+
+> **四個 timing 因子的 in-sample spread 尚未轉化成足夠穩定的 OOS 優勢；目前沒有證據支持取代 100% 訊號日直接進場。Timing 因子保留研究用途，不應因上一輪漂亮分桶而直接做進場 gate。**
+
+機器判定：
+
+- -5%：`not_validated`
+- -10%：`promising_but_not_validated`
+- Routed-entry ready：`false`
+
+JSON：`data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-pullback-walk-forward.json`
+<!-- WALK_FORWARD_OOS_END -->

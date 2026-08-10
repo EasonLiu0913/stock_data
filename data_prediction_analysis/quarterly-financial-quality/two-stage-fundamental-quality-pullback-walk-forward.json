@@ -1,0 +1,455 @@
+{
+  "schema_version": 1,
+  "dataset": "two_stage_fundamental_quality_pullback_walk_forward",
+  "generated_at": "2026-08-10T18:19:57.729Z",
+  "start_month": "202401",
+  "end_month": "202606",
+  "features": [
+    "pre20_vol_pct",
+    "pre5_return_pct",
+    "pre20_return_pct",
+    "dist_from_20d_high_pct"
+  ],
+  "methodology": {
+    "status": "research_only",
+    "universe": "electronic FAS>=8 + latest-known FQ>=10",
+    "model": "training-only quintile conditional pullback rates averaged across four timing factors",
+    "fixed_oos": "202601..202606",
+    "embargo": "one full signal month immediately before each OOS test window is excluded from training",
+    "walk_forward": "expanding-window quarterly tests from 2025 onward",
+    "promotion_rule": "validated requires fixed OOS AUC>=0.60, high-low spread>=15pp, walk-forward median AUC>=0.57 and >=2/3 folds positive spread"
+  },
+  "coverage": {
+    "candidate_events": 187,
+    "diagnostics": {
+      "electronic_fas8_events": 1604,
+      "missing_known_financial": 160,
+      "financial_below_10": 1245,
+      "included": 187,
+      "missing_price_features": 12
+    }
+  },
+  "fixed_oos": {
+    "oos_start_month": "202601",
+    "embargo_month": "202512",
+    "train_end_month": "202511",
+    "train_samples": 109,
+    "test_samples": 65,
+    "pb5": {
+      "train_samples": 109,
+      "test_samples": 65,
+      "train_base_rate_pct": 61.4679,
+      "test_base_rate_pct": 58.4615,
+      "auc": 0.4703,
+      "brier": 0.2524,
+      "terciles": [
+        {
+          "group": "low",
+          "samples": 22,
+          "avg_score_pct": 57.0568,
+          "actual_rate_pct": 63.6364
+        },
+        {
+          "group": "mid",
+          "samples": 22,
+          "avg_score_pct": 63.4593,
+          "actual_rate_pct": 50
+        },
+        {
+          "group": "high",
+          "samples": 21,
+          "avg_score_pct": 71.7197,
+          "actual_rate_pct": 61.9048
+        }
+      ],
+      "high_low_spread_pp": -1.7316
+    },
+    "pb10": {
+      "train_samples": 109,
+      "test_samples": 65,
+      "train_base_rate_pct": 37.6147,
+      "test_base_rate_pct": 32.3077,
+      "auc": 0.6017,
+      "brier": 0.2179,
+      "terciles": [
+        {
+          "group": "low",
+          "samples": 22,
+          "avg_score_pct": 34.2877,
+          "actual_rate_pct": 31.8182
+        },
+        {
+          "group": "mid",
+          "samples": 22,
+          "avg_score_pct": 39.8613,
+          "actual_rate_pct": 22.7273
+        },
+        {
+          "group": "high",
+          "samples": 21,
+          "avg_score_pct": 45.3824,
+          "actual_rate_pct": 42.8571
+        }
+      ],
+      "high_low_spread_pp": 11.0389
+    }
+  },
+  "walk_forward": {
+    "folds": [
+      {
+        "test_start_month": "202504",
+        "test_end_month": "202506",
+        "train_end_month": "202502",
+        "embargo_month": "202503",
+        "train_samples": 55,
+        "test_samples": 15,
+        "pb5": {
+          "train_samples": 55,
+          "test_samples": 15,
+          "train_base_rate_pct": 65.4545,
+          "test_base_rate_pct": 26.6667,
+          "auc": 0.4091,
+          "brier": 0.3782,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 5,
+              "avg_score_pct": 60,
+              "actual_rate_pct": 40
+            },
+            {
+              "group": "mid",
+              "samples": 5,
+              "avg_score_pct": 67.2727,
+              "actual_rate_pct": 20
+            },
+            {
+              "group": "high",
+              "samples": 5,
+              "avg_score_pct": 76.3636,
+              "actual_rate_pct": 20
+            }
+          ],
+          "high_low_spread_pp": -20
+        },
+        "pb10": {
+          "train_samples": 55,
+          "test_samples": 15,
+          "train_base_rate_pct": 47.2727,
+          "test_base_rate_pct": 6.6667,
+          "auc": 0.0357,
+          "brier": 0.2471,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 5,
+              "avg_score_pct": 44.5455,
+              "actual_rate_pct": 20
+            },
+            {
+              "group": "mid",
+              "samples": 5,
+              "avg_score_pct": 48.1818,
+              "actual_rate_pct": 0
+            },
+            {
+              "group": "high",
+              "samples": 5,
+              "avg_score_pct": 53.1818,
+              "actual_rate_pct": 0
+            }
+          ],
+          "high_low_spread_pp": -20
+        }
+      },
+      {
+        "test_start_month": "202507",
+        "test_end_month": "202509",
+        "train_end_month": "202505",
+        "embargo_month": "202506",
+        "train_samples": 72,
+        "test_samples": 20,
+        "pb5": {
+          "train_samples": 72,
+          "test_samples": 20,
+          "train_base_rate_pct": 62.5,
+          "test_base_rate_pct": 70,
+          "auc": 0.4048,
+          "brier": 0.2195,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 7,
+              "avg_score_pct": 57.9487,
+              "actual_rate_pct": 85.7143
+            },
+            {
+              "group": "mid",
+              "samples": 7,
+              "avg_score_pct": 62.1133,
+              "actual_rate_pct": 57.1429
+            },
+            {
+              "group": "high",
+              "samples": 6,
+              "avg_score_pct": 67.6937,
+              "actual_rate_pct": 66.6667
+            }
+          ],
+          "high_low_spread_pp": -19.0476
+        },
+        "pb10": {
+          "train_samples": 72,
+          "test_samples": 20,
+          "train_base_rate_pct": 40.2778,
+          "test_base_rate_pct": 30,
+          "auc": 0.5476,
+          "brier": 0.2178,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 7,
+              "avg_score_pct": 36.5506,
+              "actual_rate_pct": 14.2857
+            },
+            {
+              "group": "mid",
+              "samples": 7,
+              "avg_score_pct": 40.6122,
+              "actual_rate_pct": 57.1429
+            },
+            {
+              "group": "high",
+              "samples": 6,
+              "avg_score_pct": 44.5775,
+              "actual_rate_pct": 16.6667
+            }
+          ],
+          "high_low_spread_pp": 2.381
+        }
+      },
+      {
+        "test_start_month": "202510",
+        "test_end_month": "202512",
+        "train_end_month": "202508",
+        "embargo_month": "202509",
+        "train_samples": 89,
+        "test_samples": 25,
+        "pb5": {
+          "train_samples": 89,
+          "test_samples": 25,
+          "train_base_rate_pct": 59.5506,
+          "test_base_rate_pct": 72,
+          "auc": 0.7937,
+          "brier": 0.1946,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 9,
+              "avg_score_pct": 54.9292,
+              "actual_rate_pct": 55.5556
+            },
+            {
+              "group": "mid",
+              "samples": 8,
+              "avg_score_pct": 60.9681,
+              "actual_rate_pct": 75
+            },
+            {
+              "group": "high",
+              "samples": 8,
+              "avg_score_pct": 66.5952,
+              "actual_rate_pct": 87.5
+            }
+          ],
+          "high_low_spread_pp": 31.9444
+        },
+        "pb10": {
+          "train_samples": 89,
+          "test_samples": 25,
+          "train_base_rate_pct": 37.0787,
+          "test_base_rate_pct": 52,
+          "auc": 0.5673,
+          "brier": 0.2666,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 9,
+              "avg_score_pct": 33.415,
+              "actual_rate_pct": 22.2222
+            },
+            {
+              "group": "mid",
+              "samples": 8,
+              "avg_score_pct": 38.3987,
+              "actual_rate_pct": 87.5
+            },
+            {
+              "group": "high",
+              "samples": 8,
+              "avg_score_pct": 44.0564,
+              "actual_rate_pct": 50
+            }
+          ],
+          "high_low_spread_pp": 27.7778
+        }
+      },
+      {
+        "test_start_month": "202601",
+        "test_end_month": "202603",
+        "train_end_month": "202511",
+        "embargo_month": "202512",
+        "train_samples": 109,
+        "test_samples": 43,
+        "pb5": {
+          "train_samples": 109,
+          "test_samples": 43,
+          "train_base_rate_pct": 61.4679,
+          "test_base_rate_pct": 48.8372,
+          "auc": 0.3864,
+          "brier": 0.2867,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 15,
+              "avg_score_pct": 56.8831,
+              "actual_rate_pct": 66.6667
+            },
+            {
+              "group": "mid",
+              "samples": 14,
+              "avg_score_pct": 62.4923,
+              "actual_rate_pct": 35.7143
+            },
+            {
+              "group": "high",
+              "samples": 14,
+              "avg_score_pct": 71.6334,
+              "actual_rate_pct": 42.8571
+            }
+          ],
+          "high_low_spread_pp": -23.8096
+        },
+        "pb10": {
+          "train_samples": 109,
+          "test_samples": 43,
+          "train_base_rate_pct": 37.6147,
+          "test_base_rate_pct": 27.907,
+          "auc": 0.5672,
+          "brier": 0.2103,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 15,
+              "avg_score_pct": 33.456,
+              "actual_rate_pct": 33.3333
+            },
+            {
+              "group": "mid",
+              "samples": 14,
+              "avg_score_pct": 39.4944,
+              "actual_rate_pct": 7.1429
+            },
+            {
+              "group": "high",
+              "samples": 14,
+              "avg_score_pct": 45.0835,
+              "actual_rate_pct": 42.8571
+            }
+          ],
+          "high_low_spread_pp": 9.5238
+        }
+      },
+      {
+        "test_start_month": "202604",
+        "test_end_month": "202606",
+        "train_end_month": "202602",
+        "embargo_month": "202603",
+        "train_samples": 140,
+        "test_samples": 22,
+        "pb5": {
+          "train_samples": 140,
+          "test_samples": 22,
+          "train_base_rate_pct": 65.7143,
+          "test_base_rate_pct": 77.2727,
+          "auc": 0.6824,
+          "brier": 0.1764,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 8,
+              "avg_score_pct": 64.1741,
+              "actual_rate_pct": 62.5
+            },
+            {
+              "group": "mid",
+              "samples": 7,
+              "avg_score_pct": 67.9847,
+              "actual_rate_pct": 85.7143
+            },
+            {
+              "group": "high",
+              "samples": 7,
+              "avg_score_pct": 74.1071,
+              "actual_rate_pct": 85.7143
+            }
+          ],
+          "high_low_spread_pp": 23.2143
+        },
+        "pb10": {
+          "train_samples": 140,
+          "test_samples": 22,
+          "train_base_rate_pct": 40.7143,
+          "test_base_rate_pct": 40.9091,
+          "auc": 0.6624,
+          "brier": 0.2344,
+          "terciles": [
+            {
+              "group": "low",
+              "samples": 8,
+              "avg_score_pct": 39.6205,
+              "actual_rate_pct": 25
+            },
+            {
+              "group": "mid",
+              "samples": 7,
+              "avg_score_pct": 44.7704,
+              "actual_rate_pct": 28.5714
+            },
+            {
+              "group": "high",
+              "samples": 7,
+              "avg_score_pct": 50.3827,
+              "actual_rate_pct": 71.4286
+            }
+          ],
+          "high_low_spread_pp": 46.4286
+        }
+      }
+    ],
+    "summary": {
+      "pb5": {
+        "folds": 5,
+        "median_auc": 0.4091,
+        "avg_auc": 0.5353,
+        "median_high_low_spread_pp": -19.0476,
+        "positive_spread_fold_rate_pct": 40,
+        "auc_ge_0_55_fold_rate_pct": 40
+      },
+      "pb10": {
+        "folds": 5,
+        "median_auc": 0.5672,
+        "avg_auc": 0.476,
+        "median_high_low_spread_pp": 9.5238,
+        "positive_spread_fold_rate_pct": 80,
+        "auc_ge_0_55_fold_rate_pct": 60
+      }
+    }
+  },
+  "conclusion": {
+    "pb5_status": "not_validated",
+    "pb10_status": "promising_but_not_validated",
+    "routing_ready": false,
+    "decision": "Current four-factor timing model does not show enough repeatable OOS separation to justify changing the 100% direct-entry baseline. Keep timing factors research-only and retain direct entry as the default."
+  }
+}
