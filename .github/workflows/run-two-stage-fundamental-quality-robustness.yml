@@ -24,7 +24,7 @@ concurrency:
 jobs:
   robustness:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -46,20 +46,41 @@ jobs:
       - name: Validate scripts
         run: |
           set -euo pipefail
-          node --check scripts/enrich_mops_revenue_monthly_signal_long_horizons.js
           node --check scripts/summarize_two_stage_fundamental_quality_robustness.js
           node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
           node --check scripts/summarize_mops_revenue_market_regime_breakdown.js
 
-      - name: Ensure D40 and D60 returns are enriched
+      - name: Validate existing D20 D40 D60 coverage
         env:
           START_MONTH: ${{ inputs.start_month }}
           END_MONTH: ${{ inputs.end_month }}
         run: |
           set -euo pipefail
-          node scripts/enrich_mops_revenue_monthly_signal_long_horizons.js \
-            --start-month "$START_MONTH" \
-            --end-month "$END_MONTH"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const start = process.env.START_MONTH;
+          const end = process.env.END_MONTH;
+          const root = path.join('data_prediction_analysis','monthly-revenue','monthly-signals');
+          const months = fs.readdirSync(root)
+            .filter(n => /^20\d{4}\.json$/.test(n))
+            .map(n => n.slice(0,6))
+            .filter(m => m >= start && m <= end)
+            .sort();
+          const coverage = { d20: 0, d40: 0, d60: 0 };
+          for (const month of months) {
+            const payload = JSON.parse(fs.readFileSync(path.join(root, `${month}.json`), 'utf8'));
+            for (const event of payload.events || []) {
+              for (const h of Object.keys(coverage)) {
+                if (event.returns?.[h]?.status === 'complete') coverage[h]++;
+              }
+            }
+          }
+          for (const h of Object.keys(coverage)) {
+            if (!(coverage[h] > 0)) throw new Error(`zero mature ${h} coverage; run the D40-D60 extension study first`);
+          }
+          console.log(JSON.stringify({ months: months.length, coverage }, null, 2));
+          NODE
 
       - name: Build robustness breakdown
         env:
@@ -100,8 +121,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_prediction_analysis/monthly-revenue/monthly-signals \
-                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-robustness.json
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-robustness.json
           if git diff --cached --quiet; then
             echo 'No robustness research changes'
             exit 0
@@ -118,9 +138,10 @@ jobs:
         if: always()
         run: |
           echo '## 基本面雙確認－年份／產業／市場環境穩健性分析' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 純分析：不重寫 monthly-signals、不重新抓 FinMind' >> "$GITHUB_STEP_SUMMARY"
           echo '- 比較：月營收 >=8 + 財報品質 >=10；月營收 >=9 + 財報品質 >=10' >> "$GITHUB_STEP_SUMMARY"
           echo '- Horizon：D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
           echo '- 年份：逐年檢查，並額外做排除 2026 測試' >> "$GITHUB_STEP_SUMMARY"
           echo '- 產業：以同產業成熟事件為 baseline；另做排除電子股測試' >> "$GITHUB_STEP_SUMMARY"
-          echo '- 市場環境：沿用 TAIEX 前 20 交易日 strong / sideways / weak 描述性分類，不作策略 gate' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 市場環境：TAIEX 前 20 交易日 strong / sideways / weak 描述性分類，不作策略 gate' >> "$GITHUB_STEP_SUMMARY"
           echo '- 額外壓力測試：同時排除 2026 與電子股' >> "$GITHUB_STEP_SUMMARY"
