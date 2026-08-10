@@ -1,0 +1,102 @@
+name: '[07 研究] 基本面雙確認－回檔機率預測因子'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-pullback-predictors
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_pullback_predictors.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build pullback predictor study
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_pullback_predictors.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-pullback-predictors.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(p.dataset!=='two_stage_fundamental_quality_pullback_predictors') throw new Error('unexpected dataset');
+          if(!(p.coverage?.candidate_events>0)) throw new Error('zero candidate events');
+          if(!Array.isArray(p.factors)||p.factors.length<8) throw new Error('too few factors');
+          console.log(JSON.stringify({coverage:p.coverage,top:p.factors.slice(0,8).map(x=>({factor:x.factor,pb5_spread:x.spread_pb5_pp,pb10_spread:x.spread_pb10_pp,bins:x.bins}))},null,2));
+          NODE
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-pullback-predictors.json
+          if git diff --cached --quiet; then
+            echo 'No pullback predictor research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild pullback predictor factor study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－回檔機率預測因子' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Target：訊號後 20 個交易日內是否觸發 -5% / -10%' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 僅使用訊號當下可知資料，避免 look-ahead' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 因子：FAS/FQ、訊號前 5/20 日報酬、20 日波動、距 20 日高點、大盤 20 日動能' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 先做單因子分桶與回檔率 spread，尚不建立 production classifier' >> "$GITHUB_STEP_SUMMARY"
