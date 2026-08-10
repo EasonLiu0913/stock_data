@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/migrations/install_two_stage_fundamental_direct_entry_signal.js'
+      - '.github/workflows/install-two-stage-fundamental-direct-entry-signal.yml'
   workflow_dispatch:
 
 permissions:
@@ -47,7 +48,6 @@ jobs:
           node --check scripts/two_stage_fundamental_quality_signal.js
           node --check scripts/apply_strategy_tag_registry.js
           node - <<'NODE'
-          const path=require('node:path');
           const {loadRegistry,validateRegistry,evaluateStock}=require('./scripts/strategy_tag_engine');
           const {evaluateTwoStageFundamentalSignalDay}=require('./scripts/two_stage_fundamental_quality_signal');
           const root=process.cwd();
