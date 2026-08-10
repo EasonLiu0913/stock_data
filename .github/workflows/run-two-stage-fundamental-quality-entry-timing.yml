@@ -1,0 +1,103 @@
+name: '[07 研究] 基本面雙確認－電子股 Entry Timing 回測'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM；未成熟 D40/D60 自動不納入'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-entry-timing
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_entry_timing.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build entry timing study
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_entry_timing.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-timing.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(p.dataset!=='two_stage_fundamental_quality_entry_timing') throw new Error('unexpected dataset');
+          if(!(p.coverage?.candidate_events>0)) throw new Error('zero candidate events');
+          if(!Array.isArray(p.rows)||p.rows.length!==15) throw new Error(`expected 15 rows, got ${p.rows?.length}`);
+          const focus=p.rows.filter(r=>r.horizon==='d60').map(r=>({rule:r.rule_id,samples:r.samples,trigger:r.trigger_rate_pct,median_return:r.median_endpoint_pct,median_mfe:r.median_mfe_pct,median_mae:r.median_mae_pct,mfe50:r.mfe_ge50_rate,delta:r.vs_immediate}));
+          console.log(JSON.stringify({candidates:p.coverage.candidate_events,d60:focus},null,2));
+          NODE
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-timing.json
+          if git diff --cached --quiet; then
+            echo 'No entry timing research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild fundamental quality entry timing study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－電子股 Entry Timing 回測' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Universe：電子股 FAS >=8 + FQ >=10' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Entry：直接 / 回檔 -5% / 回檔 -10% / 10日高突破 / 站回 SMA20' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Entry window：訊號後 20 個交易日；未觸發即不進場' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 持有：進場後 D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 比較：trigger rate、endpoint、MAE、MFE、大波段觸及率、相對直接進場改善' >> "$GITHUB_STEP_SUMMARY"
