@@ -1,0 +1,142 @@
+name: '[07 研究] 基本面雙確認 D40-D60 延伸回測'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM；未成熟 D40/D60 會保留 pending，不列入回測'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-long-horizon-study
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/enrich_mops_revenue_monthly_signal_long_horizons.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+          node --check scripts/summarize_mops_revenue_fundamental_acceleration_score.js
+          node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
+
+      - name: Enrich monthly signals with D40 and D60
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/enrich_mops_revenue_monthly_signal_long_horizons.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate long-horizon coverage
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const start = process.env.START_MONTH;
+          const end = process.env.END_MONTH;
+          const next = value => { let y=Number(value.slice(0,4)),m=Number(value.slice(4,6))+1;if(m===13){y++;m=1;}return `${y}${String(m).padStart(2,'0')}`; };
+          let d40Complete=0,d60Complete=0,d40Pending=0,d60Pending=0;
+          for(let month=start;;month=next(month)){
+            const file=path.join('data_prediction_analysis','monthly-revenue','monthly-signals',`${month}.json`);
+            const payload=JSON.parse(fs.readFileSync(file,'utf8'));
+            if(!payload.long_horizon_enrichment) throw new Error(`missing long_horizon_enrichment: ${month}`);
+            for(const event of payload.events||[]){
+              const a=event.returns?.d40?.status,b=event.returns?.d60?.status;
+              if(a==='complete')d40Complete++; if(a==='pending_market_data')d40Pending++;
+              if(b==='complete')d60Complete++; if(b==='pending_market_data')d60Pending++;
+            }
+            if(month===end)break;
+          }
+          if(d40Complete===0) throw new Error('zero mature D40 coverage');
+          if(d60Complete===0) throw new Error('zero mature D60 coverage');
+          console.log(JSON.stringify({d40_complete:d40Complete,d40_pending:d40Pending,d60_complete:d60Complete,d60_pending:d60Pending},null,2));
+          NODE
+
+      - name: Build D40 D60 two-stage summary
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_long_horizons.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate research output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-long-horizon-summary.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(!Array.isArray(p.focus_d40_d60)||p.focus_d40_d60.length!==16) throw new Error('expected 16 D40/D60 factor rows');
+          if(!(p.coverage?.d40?.complete_events>0)||!(p.coverage?.d60?.complete_events>0)) throw new Error('D40/D60 mature coverage missing');
+          console.log(JSON.stringify({coverage:p.coverage,top_d40:p.focus_d40_d60.find(x=>x.horizon==='d40'),top_d60:p.focus_d40_d60.find(x=>x.horizon==='d60')},null,2));
+          NODE
+
+      - name: Commit long-horizon research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/monthly-revenue/monthly-signals \
+                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-long-horizon-summary.json
+          if git diff --cached --quiet; then
+            echo 'No D40/D60 research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild D40 D60 fundamental quality study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認 D40 / D60 延伸回測' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 沿用既有月營收事件 base_trading_date，不改 D1-D20' >> "$GITHUB_STEP_SUMMARY"
+          echo '- D40/D60：同一股票價格 provider + TAIEX benchmark' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 未成熟月份：pending_market_data，不納入回測' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 主要觀察：月營收 >=9 + 財報品質 >=10 是否從 D20 延續到 D40/D60' >> "$GITHUB_STEP_SUMMARY"
