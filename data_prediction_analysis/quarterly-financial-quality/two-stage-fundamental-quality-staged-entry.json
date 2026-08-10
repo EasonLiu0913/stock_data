@@ -1,0 +1,757 @@
+{
+  "schema_version": 1,
+  "dataset": "two_stage_fundamental_quality_staged_entry",
+  "generated_at": "2026-08-10T17:51:06.220Z",
+  "start_month": "202401",
+  "end_month": "202606",
+  "methodology": {
+    "status": "research_only",
+    "universe": "electronic FAS>=8 + latest-known FQ>=10",
+    "candidate_events": 199,
+    "max_wait_trading_days": 20,
+    "horizons": [
+      "d20",
+      "d40",
+      "d60"
+    ],
+    "policies": [
+      {
+        "id": "direct_100",
+        "name": "100% 訊號日",
+        "tranches": [
+          {
+            "kind": "direct",
+            "weight": 1
+          }
+        ]
+      },
+      {
+        "id": "direct50_pb5_50",
+        "name": "50% 訊號日 + 50% -5%",
+        "tranches": [
+          {
+            "kind": "direct",
+            "weight": 0.5
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.95,
+            "label": "-5%",
+            "weight": 0.5
+          }
+        ]
+      },
+      {
+        "id": "direct50_pb10_50",
+        "name": "50% 訊號日 + 50% -10%",
+        "tranches": [
+          {
+            "kind": "direct",
+            "weight": 0.5
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.9,
+            "label": "-10%",
+            "weight": 0.5
+          }
+        ]
+      },
+      {
+        "id": "direct50_pb5_25_pb10_25",
+        "name": "50% 訊號日 + 25% -5% + 25% -10%",
+        "tranches": [
+          {
+            "kind": "direct",
+            "weight": 0.5
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.95,
+            "label": "-5%",
+            "weight": 0.25
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.9,
+            "label": "-10%",
+            "weight": 0.25
+          }
+        ]
+      },
+      {
+        "id": "direct33_pb5_33_pb10_34",
+        "name": "33% 訊號日 + 33% -5% + 34% -10%",
+        "tranches": [
+          {
+            "kind": "direct",
+            "weight": 0.33
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.95,
+            "label": "-5%",
+            "weight": 0.33
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.9,
+            "label": "-10%",
+            "weight": 0.34
+          }
+        ]
+      },
+      {
+        "id": "direct25_pb5_25_pb10_50",
+        "name": "25% 訊號日 + 25% -5% + 50% -10%",
+        "tranches": [
+          {
+            "kind": "direct",
+            "weight": 0.25
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.95,
+            "label": "-5%",
+            "weight": 0.25
+          },
+          {
+            "kind": "pullback",
+            "threshold": 0.9,
+            "label": "-10%",
+            "weight": 0.5
+          }
+        ]
+      }
+    ],
+    "capital_rule": "each signal starts with capital=1; unfilled staged tranches remain cash with 0% return and are never chased",
+    "exit_rule": "all filled tranches are marked to the same direct-signal D20/D40/D60 calendar exit date",
+    "fill_rule": "pullback tranche fills at base close * 0.95 or 0.90 when daily low first touches that level; no gap/slippage modeling",
+    "portfolio_return_rule": "total-capital return is the weighted sum of each filled tranche return; unfilled cash contributes zero",
+    "path_rule": "portfolio MFE/MAE are mark-to-market total-capital returns using only tranches filled by each date",
+    "anti_lookahead": "factor membership and pullback fills use only information available by the corresponding date"
+  },
+  "coverage": {
+    "candidate_events": 199,
+    "diagnostics": {
+      "electronic_fas8_events": 1604,
+      "missing_known_financial": 160,
+      "financial_below_10": 1245,
+      "included": 199
+    }
+  },
+  "rows": [
+    {
+      "policy_id": "direct_100",
+      "policy_name": "100% 訊號日",
+      "horizon": "d20",
+      "samples": 187,
+      "avg_deployed_weight_pct": 100,
+      "median_deployed_weight_pct": 100,
+      "full_deployment_rate_pct": 100,
+      "pullback_5_fill_event_rate_pct": 0,
+      "pullback_10_fill_event_rate_pct": 0,
+      "endpoint": {
+        "average_pct": 10.2459,
+        "median_pct": 6.1538,
+        "positive_rate_pct": 67.3797,
+        "ge30_rate_pct": 14.4385
+      },
+      "mfe": {
+        "average_pct": 23.018,
+        "median_pct": 17.7033,
+        "ge50_rate_pct": 9.6257
+      },
+      "mae": {
+        "average_pct": -9.4558,
+        "median_pct": -6.9027
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0,
+        "median_endpoint_delta_pct": 0,
+        "positive_rate_delta_pp": 0,
+        "ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_delta_pct": 0
+      }
+    },
+    {
+      "policy_id": "direct_100",
+      "policy_name": "100% 訊號日",
+      "horizon": "d40",
+      "samples": 177,
+      "avg_deployed_weight_pct": 100,
+      "median_deployed_weight_pct": 100,
+      "full_deployment_rate_pct": 100,
+      "pullback_5_fill_event_rate_pct": 0,
+      "pullback_10_fill_event_rate_pct": 0,
+      "endpoint": {
+        "average_pct": 17.8473,
+        "median_pct": 13.5321,
+        "positive_rate_pct": 73.4463,
+        "ge30_rate_pct": 23.1638
+      },
+      "mfe": {
+        "average_pct": 36.4632,
+        "median_pct": 30.9164,
+        "ge50_rate_pct": 23.1638
+      },
+      "mae": {
+        "average_pct": -11.1592,
+        "median_pct": -8.4362
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0,
+        "median_endpoint_delta_pct": 0,
+        "positive_rate_delta_pp": 0,
+        "ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_delta_pct": 0
+      }
+    },
+    {
+      "policy_id": "direct_100",
+      "policy_name": "100% 訊號日",
+      "horizon": "d60",
+      "samples": 165,
+      "avg_deployed_weight_pct": 100,
+      "median_deployed_weight_pct": 100,
+      "full_deployment_rate_pct": 100,
+      "pullback_5_fill_event_rate_pct": 0,
+      "pullback_10_fill_event_rate_pct": 0,
+      "endpoint": {
+        "average_pct": 30.6828,
+        "median_pct": 19.774,
+        "positive_rate_pct": 79.3939,
+        "ge30_rate_pct": 39.3939
+      },
+      "mfe": {
+        "average_pct": 53.5967,
+        "median_pct": 40.1914,
+        "ge50_rate_pct": 38.7879
+      },
+      "mae": {
+        "average_pct": -12.0955,
+        "median_pct": -9.9609
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": 0,
+        "median_endpoint_delta_pct": 0,
+        "positive_rate_delta_pp": 0,
+        "ge30_rate_delta_pp": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_delta_pct": 0
+      }
+    },
+    {
+      "policy_id": "direct50_pb5_50",
+      "policy_name": "50% 訊號日 + 50% -5%",
+      "horizon": "d20",
+      "samples": 187,
+      "avg_deployed_weight_pct": 80.7487,
+      "median_deployed_weight_pct": 100,
+      "full_deployment_rate_pct": 61.4973,
+      "pullback_5_fill_event_rate_pct": 61.4973,
+      "pullback_10_fill_event_rate_pct": 0,
+      "endpoint": {
+        "average_pct": 7.72,
+        "median_pct": 6.1106,
+        "positive_rate_pct": 72.1925,
+        "ge30_rate_pct": 6.4171
+      },
+      "mfe": {
+        "average_pct": 17.1327,
+        "median_pct": 13.3935,
+        "ge50_rate_pct": 3.7433
+      },
+      "mae": {
+        "average_pct": -7.46,
+        "median_pct": -4.1057
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -2.5259,
+        "median_endpoint_delta_pct": -0.0432,
+        "positive_rate_delta_pp": 4.8128,
+        "ge30_rate_delta_pp": -8.0214,
+        "median_mfe_delta_pct": -4.3098,
+        "median_mae_delta_pct": 2.797
+      }
+    },
+    {
+      "policy_id": "direct50_pb5_50",
+      "policy_name": "50% 訊號日 + 50% -5%",
+      "horizon": "d40",
+      "samples": 177,
+      "avg_deployed_weight_pct": 79.9435,
+      "median_deployed_weight_pct": 100,
+      "full_deployment_rate_pct": 59.887,
+      "pullback_5_fill_event_rate_pct": 59.887,
+      "pullback_10_fill_event_rate_pct": 0,
+      "endpoint": {
+        "average_pct": 14.5783,
+        "median_pct": 10.1732,
+        "positive_rate_pct": 76.2712,
+        "ge30_rate_pct": 20.339
+      },
+      "mfe": {
+        "average_pct": 28.8719,
+        "median_pct": 20.7305,
+        "ge50_rate_pct": 12.4294
+      },
+      "mae": {
+        "average_pct": -8.8586,
+        "median_pct": -5.6754
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.269,
+        "median_endpoint_delta_pct": -3.3589,
+        "positive_rate_delta_pp": 2.8249,
+        "ge30_rate_delta_pp": -2.8248,
+        "median_mfe_delta_pct": -10.1859,
+        "median_mae_delta_pct": 2.7608
+      }
+    },
+    {
+      "policy_id": "direct50_pb5_50",
+      "policy_name": "50% 訊號日 + 50% -5%",
+      "horizon": "d60",
+      "samples": 165,
+      "avg_deployed_weight_pct": 79.697,
+      "median_deployed_weight_pct": 100,
+      "full_deployment_rate_pct": 59.3939,
+      "pullback_5_fill_event_rate_pct": 59.3939,
+      "pullback_10_fill_event_rate_pct": 0,
+      "endpoint": {
+        "average_pct": 24.628,
+        "median_pct": 17.2572,
+        "positive_rate_pct": 80.6061,
+        "ge30_rate_pct": 32.7273
+      },
+      "mfe": {
+        "average_pct": 42.4562,
+        "median_pct": 30.9511,
+        "ge50_rate_pct": 27.8788
+      },
+      "mae": {
+        "average_pct": -9.4722,
+        "median_pct": -6.6986
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -6.0548,
+        "median_endpoint_delta_pct": -2.5168,
+        "positive_rate_delta_pp": 1.2122,
+        "ge30_rate_delta_pp": -6.6666,
+        "median_mfe_delta_pct": -9.2403,
+        "median_mae_delta_pct": 3.2623
+      }
+    },
+    {
+      "policy_id": "direct50_pb10_50",
+      "policy_name": "50% 訊號日 + 50% -10%",
+      "horizon": "d20",
+      "samples": 187,
+      "avg_deployed_weight_pct": 68.1818,
+      "median_deployed_weight_pct": 50,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 0,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 6.3073,
+        "median_pct": 4.8295,
+        "positive_rate_pct": 72.7273,
+        "ge30_rate_pct": 5.3476
+      },
+      "mfe": {
+        "average_pct": 14.0073,
+        "median_pct": 10.9524,
+        "ge50_rate_pct": 1.0695
+      },
+      "mae": {
+        "average_pct": -6.3013,
+        "median_pct": -3.4513
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.9386,
+        "median_endpoint_delta_pct": -1.3243,
+        "positive_rate_delta_pp": 5.3476,
+        "ge30_rate_delta_pp": -9.0909,
+        "median_mfe_delta_pct": -6.7509,
+        "median_mae_delta_pct": 3.4514
+      }
+    },
+    {
+      "policy_id": "direct50_pb10_50",
+      "policy_name": "50% 訊號日 + 50% -10%",
+      "horizon": "d40",
+      "samples": 177,
+      "avg_deployed_weight_pct": 68.3616,
+      "median_deployed_weight_pct": 50,
+      "full_deployment_rate_pct": 36.7232,
+      "pullback_5_fill_event_rate_pct": 0,
+      "pullback_10_fill_event_rate_pct": 36.7232,
+      "endpoint": {
+        "average_pct": 12.2354,
+        "median_pct": 9.0038,
+        "positive_rate_pct": 76.8362,
+        "ge30_rate_pct": 13.5593
+      },
+      "mfe": {
+        "average_pct": 24.3498,
+        "median_pct": 17.8431,
+        "ge50_rate_pct": 9.6045
+      },
+      "mae": {
+        "average_pct": -7.5068,
+        "median_pct": -4.2181
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -5.6119,
+        "median_endpoint_delta_pct": -4.5283,
+        "positive_rate_delta_pp": 3.3899,
+        "ge30_rate_delta_pp": -9.6045,
+        "median_mfe_delta_pct": -13.0733,
+        "median_mae_delta_pct": 4.2181
+      }
+    },
+    {
+      "policy_id": "direct50_pb10_50",
+      "policy_name": "50% 訊號日 + 50% -10%",
+      "horizon": "d60",
+      "samples": 165,
+      "avg_deployed_weight_pct": 68.1818,
+      "median_deployed_weight_pct": 50,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 0,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 21.5887,
+        "median_pct": 13.6364,
+        "positive_rate_pct": 81.2121,
+        "ge30_rate_pct": 29.0909
+      },
+      "mfe": {
+        "average_pct": 36.4574,
+        "median_pct": 27.2177,
+        "ge50_rate_pct": 21.2121
+      },
+      "mae": {
+        "average_pct": -8.0254,
+        "median_pct": -4.9805
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -9.0941,
+        "median_endpoint_delta_pct": -6.1376,
+        "positive_rate_delta_pp": 1.8182,
+        "ge30_rate_delta_pp": -10.303,
+        "median_mfe_delta_pct": -12.9737,
+        "median_mae_delta_pct": 4.9804
+      }
+    },
+    {
+      "policy_id": "direct50_pb5_25_pb10_25",
+      "policy_name": "50% 訊號日 + 25% -5% + 25% -10%",
+      "horizon": "d20",
+      "samples": 187,
+      "avg_deployed_weight_pct": 74.4652,
+      "median_deployed_weight_pct": 75,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 61.4973,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 7.0136,
+        "median_pct": 4.9462,
+        "positive_rate_pct": 71.6578,
+        "ge30_rate_pct": 4.8128
+      },
+      "mfe": {
+        "average_pct": 15.4799,
+        "median_pct": 12.2388,
+        "ge50_rate_pct": 2.139
+      },
+      "mae": {
+        "average_pct": -6.8802,
+        "median_pct": -3.7634
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -3.2323,
+        "median_endpoint_delta_pct": -1.2076,
+        "positive_rate_delta_pp": 4.2781,
+        "ge30_rate_delta_pp": -9.6257,
+        "median_mfe_delta_pct": -5.4645,
+        "median_mae_delta_pct": 3.1393
+      }
+    },
+    {
+      "policy_id": "direct50_pb5_25_pb10_25",
+      "policy_name": "50% 訊號日 + 25% -5% + 25% -10%",
+      "horizon": "d40",
+      "samples": 177,
+      "avg_deployed_weight_pct": 74.1525,
+      "median_deployed_weight_pct": 75,
+      "full_deployment_rate_pct": 36.7232,
+      "pullback_5_fill_event_rate_pct": 59.887,
+      "pullback_10_fill_event_rate_pct": 36.7232,
+      "endpoint": {
+        "average_pct": 13.4068,
+        "median_pct": 9.5705,
+        "positive_rate_pct": 76.2712,
+        "ge30_rate_pct": 16.9492
+      },
+      "mfe": {
+        "average_pct": 26.5602,
+        "median_pct": 20.7748,
+        "ge50_rate_pct": 10.1695
+      },
+      "mae": {
+        "average_pct": -8.1822,
+        "median_pct": -4.9315
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -4.4405,
+        "median_endpoint_delta_pct": -3.9616,
+        "positive_rate_delta_pp": 2.8249,
+        "ge30_rate_delta_pp": -6.2146,
+        "median_mfe_delta_pct": -10.1416,
+        "median_mae_delta_pct": 3.5047
+      }
+    },
+    {
+      "policy_id": "direct50_pb5_25_pb10_25",
+      "policy_name": "50% 訊號日 + 25% -5% + 25% -10%",
+      "horizon": "d60",
+      "samples": 165,
+      "avg_deployed_weight_pct": 73.9394,
+      "median_deployed_weight_pct": 75,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 59.3939,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 23.1084,
+        "median_pct": 16.5717,
+        "positive_rate_pct": 80.6061,
+        "ge30_rate_pct": 30.9091
+      },
+      "mfe": {
+        "average_pct": 39.4314,
+        "median_pct": 30.8756,
+        "ge50_rate_pct": 24.8485
+      },
+      "mae": {
+        "average_pct": -8.7483,
+        "median_pct": -6.1718
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -7.5744,
+        "median_endpoint_delta_pct": -3.2023,
+        "positive_rate_delta_pp": 1.2122,
+        "ge30_rate_delta_pp": -8.4848,
+        "median_mfe_delta_pct": -9.3158,
+        "median_mae_delta_pct": 3.7891
+      }
+    },
+    {
+      "policy_id": "direct33_pb5_33_pb10_34",
+      "policy_name": "33% 訊號日 + 33% -5% + 34% -10%",
+      "horizon": "d20",
+      "samples": 187,
+      "avg_deployed_weight_pct": 65.6578,
+      "median_deployed_weight_pct": 66,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 61.4973,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 5.9006,
+        "median_pct": 4.8616,
+        "positive_rate_pct": 74.3316,
+        "ge30_rate_pct": 4.8128
+      },
+      "mfe": {
+        "average_pct": 13.1614,
+        "median_pct": 9.4052,
+        "ge50_rate_pct": 2.139
+      },
+      "mae": {
+        "average_pct": -5.9943,
+        "median_pct": -2.7098
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -4.3453,
+        "median_endpoint_delta_pct": -1.2922,
+        "positive_rate_delta_pp": 6.9519,
+        "ge30_rate_delta_pp": -9.6257,
+        "median_mfe_delta_pct": -8.2981,
+        "median_mae_delta_pct": 4.1929
+      }
+    },
+    {
+      "policy_id": "direct33_pb5_33_pb10_34",
+      "policy_name": "33% 訊號日 + 33% -5% + 34% -10%",
+      "horizon": "d40",
+      "samples": 177,
+      "avg_deployed_weight_pct": 65.2486,
+      "median_deployed_weight_pct": 66,
+      "full_deployment_rate_pct": 36.7232,
+      "pullback_5_fill_event_rate_pct": 59.887,
+      "pullback_10_fill_event_rate_pct": 36.7232,
+      "endpoint": {
+        "average_pct": 11.8736,
+        "median_pct": 8.0441,
+        "positive_rate_pct": 77.4011,
+        "ge30_rate_pct": 11.8644
+      },
+      "mfe": {
+        "average_pct": 23.2878,
+        "median_pct": 16.5621,
+        "ge50_rate_pct": 9.0395
+      },
+      "mae": {
+        "average_pct": -7.158,
+        "median_pct": -3.7458
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -5.9737,
+        "median_endpoint_delta_pct": -5.488,
+        "positive_rate_delta_pp": 3.9548,
+        "ge30_rate_delta_pp": -11.2994,
+        "median_mfe_delta_pct": -14.3543,
+        "median_mae_delta_pct": 4.6904
+      }
+    },
+    {
+      "policy_id": "direct33_pb5_33_pb10_34",
+      "policy_name": "33% 訊號日 + 33% -5% + 34% -10%",
+      "horizon": "d60",
+      "samples": 165,
+      "avg_deployed_weight_pct": 64.9636,
+      "median_deployed_weight_pct": 66,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 59.3939,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 20.5027,
+        "median_pct": 13.0263,
+        "positive_rate_pct": 81.2121,
+        "ge30_rate_pct": 24.8485
+      },
+      "mfe": {
+        "average_pct": 34.6524,
+        "median_pct": 23.1612,
+        "ge50_rate_pct": 16.9697
+      },
+      "mae": {
+        "average_pct": -7.5974,
+        "median_pct": -4.4211
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -10.1801,
+        "median_endpoint_delta_pct": -6.7477,
+        "positive_rate_delta_pp": 1.8182,
+        "ge30_rate_delta_pp": -14.5454,
+        "median_mfe_delta_pct": -17.0302,
+        "median_mae_delta_pct": 5.5398
+      }
+    },
+    {
+      "policy_id": "direct25_pb5_25_pb10_50",
+      "policy_name": "25% 訊號日 + 25% -5% + 50% -10%",
+      "horizon": "d20",
+      "samples": 187,
+      "avg_deployed_weight_pct": 58.5561,
+      "median_deployed_weight_pct": 50,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 61.4973,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 5.0444,
+        "median_pct": 3.9526,
+        "positive_rate_pct": 74.3316,
+        "ge30_rate_pct": 4.2781
+      },
+      "mfe": {
+        "average_pct": 11.3978,
+        "median_pct": 7.9241,
+        "ge50_rate_pct": 2.139
+      },
+      "mae": {
+        "average_pct": -5.3046,
+        "median_pct": -2.0529
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -5.2015,
+        "median_endpoint_delta_pct": -2.2012,
+        "positive_rate_delta_pp": 6.9519,
+        "ge30_rate_delta_pp": -10.1604,
+        "median_mfe_delta_pct": -9.7792,
+        "median_mae_delta_pct": 4.8498
+      }
+    },
+    {
+      "policy_id": "direct25_pb5_25_pb10_50",
+      "policy_name": "25% 訊號日 + 25% -5% + 50% -10%",
+      "horizon": "d40",
+      "samples": 177,
+      "avg_deployed_weight_pct": 58.3333,
+      "median_deployed_weight_pct": 50,
+      "full_deployment_rate_pct": 36.7232,
+      "pullback_5_fill_event_rate_pct": 59.887,
+      "pullback_10_fill_event_rate_pct": 36.7232,
+      "endpoint": {
+        "average_pct": 10.6009,
+        "median_pct": 6.5266,
+        "positive_rate_pct": 78.5311,
+        "ge30_rate_pct": 9.6045
+      },
+      "mfe": {
+        "average_pct": 20.7079,
+        "median_pct": 14.1109,
+        "ge50_rate_pct": 9.6045
+      },
+      "mae": {
+        "average_pct": -6.3577,
+        "median_pct": -2.8377
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -7.2464,
+        "median_endpoint_delta_pct": -7.0055,
+        "positive_rate_delta_pp": 5.0848,
+        "ge30_rate_delta_pp": -13.5593,
+        "median_mfe_delta_pct": -16.8055,
+        "median_mae_delta_pct": 5.5985
+      }
+    },
+    {
+      "policy_id": "direct25_pb5_25_pb10_50",
+      "policy_name": "25% 訊號日 + 25% -5% + 50% -10%",
+      "horizon": "d60",
+      "samples": 165,
+      "avg_deployed_weight_pct": 58.0303,
+      "median_deployed_weight_pct": 50,
+      "full_deployment_rate_pct": 36.3636,
+      "pullback_5_fill_event_rate_pct": 59.3939,
+      "pullback_10_fill_event_rate_pct": 36.3636,
+      "endpoint": {
+        "average_pct": 18.5613,
+        "median_pct": 11.1532,
+        "positive_rate_pct": 82.4242,
+        "ge30_rate_pct": 20.6061
+      },
+      "mfe": {
+        "average_pct": 31.0028,
+        "median_pct": 19.1512,
+        "ge50_rate_pct": 17.5758
+      },
+      "mae": {
+        "average_pct": -6.7152,
+        "median_pct": -3.3493
+      },
+      "vs_direct": {
+        "avg_endpoint_delta_pct": -12.1215,
+        "median_endpoint_delta_pct": -8.6208,
+        "positive_rate_delta_pp": 3.0303,
+        "ge30_rate_delta_pp": -18.7878,
+        "median_mfe_delta_pct": -21.0402,
+        "median_mae_delta_pct": 6.6116
+      }
+    }
+  ]
+}
