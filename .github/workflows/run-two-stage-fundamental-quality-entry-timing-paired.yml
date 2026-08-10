@@ -1,0 +1,104 @@
+name: '[07 研究] 基本面雙確認－電子股回檔進場 Paired Counterfactual'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM；未成熟 D40/D60 自動不納入'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-entry-timing-paired
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_entry_timing_paired.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build paired entry timing counterfactual study
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_entry_timing_paired.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-timing-paired.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(p.dataset!=='two_stage_fundamental_quality_entry_timing_paired') throw new Error('unexpected dataset');
+          if(!(p.coverage?.candidate_events>0)) throw new Error('zero candidate events');
+          if(!Array.isArray(p.rows)||p.rows.length!==12) throw new Error(`expected 12 rows, got ${p.rows?.length}`);
+          for(const id of ['pullback_5','pullback_10']) if(!(p.coverage?.triggered?.[id]?.triggered_events>0)) throw new Error(`zero triggers for ${id}`);
+          const focus=p.rows.filter(r=>r.horizon==='d60').map(r=>({rule:r.rule_id,mode:r.comparison_mode,samples:r.samples,direct:r.direct?.median_endpoint_pct,delayed:r.delayed?.median_endpoint_pct,delta:r.paired_delta}));
+          console.log(JSON.stringify({coverage:p.coverage,d60:focus},null,2));
+          NODE
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-timing-paired.json
+          if git diff --cached --quiet; then
+            echo 'No paired entry timing research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild paired entry timing counterfactual study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－電子股回檔進場 Paired Counterfactual' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Universe：電子股 FAS >=8 + FQ >=10' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 只比較確實觸發 -5% / -10% 回檔的同一批股票' >> "$GITHUB_STEP_SUMMARY"
+          echo '- same_holding：直接買與回檔買，各自持有 D20/D40/D60' >> "$GITHUB_STEP_SUMMARY"
+          echo '- same_exit_date：兩者在同一日曆退出日結算，隔離純 entry-price 優勢' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 觀察 paired endpoint / MFE / MAE 差值與改善比例' >> "$GITHUB_STEP_SUMMARY"
