@@ -1,0 +1,415 @@
+{
+  "schema_version": 2,
+  "dataset": "two_stage_fundamental_quality_entry_timing",
+  "generated_at": "2026-08-10T11:22:24.514Z",
+  "start_month": "202401",
+  "end_month": "202606",
+  "methodology": {
+    "status": "research_only",
+    "universe": "electronic stocks with FAS>=8 and latest-known FQ>=10",
+    "entry_window_trading_days": 20,
+    "entry_rules": [
+      {
+        "id": "immediate",
+        "name": "訊號基準日直接進場"
+      },
+      {
+        "id": "pullback_5",
+        "name": "20日內首次回檔 -5%"
+      },
+      {
+        "id": "pullback_10",
+        "name": "20日內首次回檔 -10%"
+      },
+      {
+        "id": "breakout_10d",
+        "name": "20日內首次收盤突破前10日最高收盤"
+      },
+      {
+        "id": "sma20_reclaim",
+        "name": "20日內首次收盤站回 SMA20"
+      }
+    ],
+    "horizons": [
+      "d20",
+      "d40",
+      "d60"
+    ],
+    "pullback_fill_rule": "assume limit price fills when daily low touches base close * threshold; no intraday ordering assumptions beyond touch",
+    "breakout_rule": "first close within 20 trading days above prior 10 trading-day highest close",
+    "sma20_rule": "first close within 20 trading days at or above contemporaneous 20-day SMA",
+    "anti_lookahead": "all entry decisions use only prices available through the entry date; events with no financial score known by signal date are excluded rather than inferred",
+    "caution": "research only; transaction costs, gaps and slippage are not modeled"
+  },
+  "coverage": {
+    "candidate_events": 199,
+    "electronic_fas8_events": 1604,
+    "missing_known_financial": 160,
+    "invalid_financial_score": 0,
+    "financial_below_10": 1245,
+    "missing_base_trading_date": 0,
+    "included": 199
+  },
+  "rows": [
+    {
+      "rule_id": "immediate",
+      "rule_name": "訊號基準日直接進場",
+      "horizon": "d20",
+      "samples": 187,
+      "trigger_rate_pct": 93.9698,
+      "avg_wait_days": 0,
+      "median_wait_days": 0,
+      "avg_endpoint_pct": 10.2459,
+      "median_endpoint_pct": 6.1538,
+      "avg_mfe_pct": 22.9198,
+      "median_mfe_pct": 17.7033,
+      "avg_mae_pct": -9.0836,
+      "median_mae_pct": -6.5646,
+      "endpoint_ge20_rate": 27.2727,
+      "endpoint_ge30_rate": 14.4385,
+      "mfe_ge30_rate": 24.0642,
+      "mfe_ge50_rate": 9.6257,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_improvement_pct": 0
+      }
+    },
+    {
+      "rule_id": "immediate",
+      "rule_name": "訊號基準日直接進場",
+      "horizon": "d40",
+      "samples": 177,
+      "trigger_rate_pct": 88.9447,
+      "avg_wait_days": 0,
+      "median_wait_days": 0,
+      "avg_endpoint_pct": 17.8473,
+      "median_endpoint_pct": 13.5321,
+      "avg_mfe_pct": 36.4201,
+      "median_mfe_pct": 30.9164,
+      "avg_mae_pct": -10.8259,
+      "median_mae_pct": -8.4362,
+      "endpoint_ge20_rate": 38.4181,
+      "endpoint_ge30_rate": 23.1638,
+      "mfe_ge30_rate": 51.9774,
+      "mfe_ge50_rate": 23.1638,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_improvement_pct": 0
+      }
+    },
+    {
+      "rule_id": "immediate",
+      "rule_name": "訊號基準日直接進場",
+      "horizon": "d60",
+      "samples": 165,
+      "trigger_rate_pct": 82.9146,
+      "avg_wait_days": 0,
+      "median_wait_days": 0,
+      "avg_endpoint_pct": 30.6828,
+      "median_endpoint_pct": 19.774,
+      "avg_mfe_pct": 53.5654,
+      "median_mfe_pct": 40.1914,
+      "avg_mae_pct": -11.838,
+      "median_mae_pct": -9.9609,
+      "endpoint_ge20_rate": 49.697,
+      "endpoint_ge30_rate": 39.3939,
+      "mfe_ge30_rate": 63.6364,
+      "mfe_ge50_rate": 38.7879,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 0,
+        "median_mfe_delta_pct": 0,
+        "median_mae_improvement_pct": 0
+      }
+    },
+    {
+      "rule_id": "pullback_5",
+      "rule_name": "20日內首次回檔 -5%",
+      "horizon": "d20",
+      "samples": 113,
+      "trigger_rate_pct": 56.7839,
+      "avg_wait_days": 5.3717,
+      "median_wait_days": 5,
+      "avg_endpoint_pct": 9.5988,
+      "median_endpoint_pct": 4.3148,
+      "avg_mfe_pct": 23.7749,
+      "median_mfe_pct": 19.9413,
+      "avg_mae_pct": -9.5372,
+      "median_mae_pct": -8.9864,
+      "endpoint_ge20_rate": 26.5487,
+      "endpoint_ge30_rate": 13.2743,
+      "mfe_ge30_rate": 29.2035,
+      "mfe_ge50_rate": 7.9646,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -1.839,
+        "median_mfe_delta_pct": 2.238,
+        "median_mae_improvement_pct": -2.4218
+      }
+    },
+    {
+      "rule_id": "pullback_5",
+      "rule_name": "20日內首次回檔 -5%",
+      "horizon": "d40",
+      "samples": 106,
+      "trigger_rate_pct": 53.2663,
+      "avg_wait_days": 5.3302,
+      "median_wait_days": 5,
+      "avg_endpoint_pct": 22.276,
+      "median_endpoint_pct": 16.6024,
+      "avg_mfe_pct": 39.856,
+      "median_mfe_pct": 32.9425,
+      "avg_mae_pct": -10.7445,
+      "median_mae_pct": -9.4426,
+      "endpoint_ge20_rate": 42.4528,
+      "endpoint_ge30_rate": 34.9057,
+      "mfe_ge30_rate": 51.8868,
+      "mfe_ge50_rate": 25.4717,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 3.0703,
+        "median_mfe_delta_pct": 2.0261,
+        "median_mae_improvement_pct": -1.0064
+      }
+    },
+    {
+      "rule_id": "pullback_5",
+      "rule_name": "20日內首次回檔 -5%",
+      "horizon": "d60",
+      "samples": 98,
+      "trigger_rate_pct": 49.2462,
+      "avg_wait_days": 5.6633,
+      "median_wait_days": 5,
+      "avg_endpoint_pct": 34.6061,
+      "median_endpoint_pct": 24.2178,
+      "avg_mfe_pct": 57.5869,
+      "median_mfe_pct": 42.2033,
+      "avg_mae_pct": -11.5426,
+      "median_mae_pct": -9.8038,
+      "endpoint_ge20_rate": 54.0816,
+      "endpoint_ge30_rate": 44.898,
+      "mfe_ge30_rate": 69.3878,
+      "mfe_ge50_rate": 37.7551,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 4.4438,
+        "median_mfe_delta_pct": 2.0119,
+        "median_mae_improvement_pct": 0.1571
+      }
+    },
+    {
+      "rule_id": "pullback_10",
+      "rule_name": "20日內首次回檔 -10%",
+      "horizon": "d20",
+      "samples": 69,
+      "trigger_rate_pct": 34.6734,
+      "avg_wait_days": 9.6957,
+      "median_wait_days": 10,
+      "avg_endpoint_pct": 10.5689,
+      "median_endpoint_pct": 6.9563,
+      "avg_mfe_pct": 24.769,
+      "median_mfe_pct": 16.1972,
+      "avg_mae_pct": -9.5464,
+      "median_mae_pct": -6.893,
+      "endpoint_ge20_rate": 26.087,
+      "endpoint_ge30_rate": 15.942,
+      "mfe_ge30_rate": 33.3333,
+      "mfe_ge50_rate": 13.0435,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 0.8025,
+        "median_mfe_delta_pct": -1.5061,
+        "median_mae_improvement_pct": -0.3284
+      }
+    },
+    {
+      "rule_id": "pullback_10",
+      "rule_name": "20日內首次回檔 -10%",
+      "horizon": "d40",
+      "samples": 65,
+      "trigger_rate_pct": 32.6633,
+      "avg_wait_days": 9.8308,
+      "median_wait_days": 10,
+      "avg_endpoint_pct": 26.7021,
+      "median_endpoint_pct": 20.6206,
+      "avg_mfe_pct": 42.599,
+      "median_mfe_pct": 34.9903,
+      "avg_mae_pct": -10.6761,
+      "median_mae_pct": -9.4453,
+      "endpoint_ge20_rate": 53.8462,
+      "endpoint_ge30_rate": 35.3846,
+      "mfe_ge30_rate": 55.3846,
+      "mfe_ge50_rate": 35.3846,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 7.0885,
+        "median_mfe_delta_pct": 4.0739,
+        "median_mae_improvement_pct": -1.0091
+      }
+    },
+    {
+      "rule_id": "pullback_10",
+      "rule_name": "20日內首次回檔 -10%",
+      "horizon": "d60",
+      "samples": 60,
+      "trigger_rate_pct": 30.1508,
+      "avg_wait_days": 10.0667,
+      "median_wait_days": 10.5,
+      "avg_endpoint_pct": 37.9904,
+      "median_endpoint_pct": 27.3437,
+      "avg_mfe_pct": 60.2031,
+      "median_mfe_pct": 48.0467,
+      "avg_mae_pct": -11.1433,
+      "median_mae_pct": -7.9732,
+      "endpoint_ge20_rate": 60,
+      "endpoint_ge30_rate": 46.6667,
+      "mfe_ge30_rate": 65,
+      "mfe_ge50_rate": 46.6667,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": 7.5697,
+        "median_mfe_delta_pct": 7.8553,
+        "median_mae_improvement_pct": 1.9877
+      }
+    },
+    {
+      "rule_id": "breakout_10d",
+      "rule_name": "20日內首次收盤突破前10日最高收盤",
+      "horizon": "d20",
+      "samples": 170,
+      "trigger_rate_pct": 85.4271,
+      "avg_wait_days": 4.9647,
+      "median_wait_days": 3,
+      "avg_endpoint_pct": 7.3331,
+      "median_endpoint_pct": 4.3381,
+      "avg_mfe_pct": 21.8555,
+      "median_mfe_pct": 18.0703,
+      "avg_mae_pct": -9.6065,
+      "median_mae_pct": -7.8843,
+      "endpoint_ge20_rate": 22.3529,
+      "endpoint_ge30_rate": 12.9412,
+      "mfe_ge30_rate": 25.2941,
+      "mfe_ge50_rate": 9.4118,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -1.8157,
+        "median_mfe_delta_pct": 0.367,
+        "median_mae_improvement_pct": -1.3197
+      }
+    },
+    {
+      "rule_id": "breakout_10d",
+      "rule_name": "20日內首次收盤突破前10日最高收盤",
+      "horizon": "d40",
+      "samples": 163,
+      "trigger_rate_pct": 81.9095,
+      "avg_wait_days": 4.9632,
+      "median_wait_days": 3,
+      "avg_endpoint_pct": 18.8331,
+      "median_endpoint_pct": 13.0435,
+      "avg_mfe_pct": 37.7727,
+      "median_mfe_pct": 27.6404,
+      "avg_mae_pct": -11.9477,
+      "median_mae_pct": -9.2308,
+      "endpoint_ge20_rate": 34.9693,
+      "endpoint_ge30_rate": 24.5399,
+      "mfe_ge30_rate": 45.3988,
+      "mfe_ge50_rate": 23.9264,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -0.4886,
+        "median_mfe_delta_pct": -3.276,
+        "median_mae_improvement_pct": -0.7946
+      }
+    },
+    {
+      "rule_id": "breakout_10d",
+      "rule_name": "20日內首次收盤突破前10日最高收盤",
+      "horizon": "d60",
+      "samples": 151,
+      "trigger_rate_pct": 75.8794,
+      "avg_wait_days": 4.8411,
+      "median_wait_days": 3,
+      "avg_endpoint_pct": 28.1359,
+      "median_endpoint_pct": 16.9473,
+      "avg_mfe_pct": 53.0556,
+      "median_mfe_pct": 37.1711,
+      "avg_mae_pct": -12.9043,
+      "median_mae_pct": -10.2837,
+      "endpoint_ge20_rate": 45.0331,
+      "endpoint_ge30_rate": 36.4238,
+      "mfe_ge30_rate": 58.9404,
+      "mfe_ge50_rate": 40.3974,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -2.8267,
+        "median_mfe_delta_pct": -3.0203,
+        "median_mae_improvement_pct": -0.3228
+      }
+    },
+    {
+      "rule_id": "sma20_reclaim",
+      "rule_name": "20日內首次收盤站回 SMA20",
+      "horizon": "d20",
+      "samples": 184,
+      "trigger_rate_pct": 92.4623,
+      "avg_wait_days": 2.163,
+      "median_wait_days": 1,
+      "avg_endpoint_pct": 8.3227,
+      "median_endpoint_pct": 4.9065,
+      "avg_mfe_pct": 22.063,
+      "median_mfe_pct": 17.4037,
+      "avg_mae_pct": -9.5265,
+      "median_mae_pct": -7.3506,
+      "endpoint_ge20_rate": 26.087,
+      "endpoint_ge30_rate": 14.1304,
+      "mfe_ge30_rate": 25.5435,
+      "mfe_ge50_rate": 8.6957,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -1.2473,
+        "median_mfe_delta_pct": -0.2996,
+        "median_mae_improvement_pct": -0.786
+      }
+    },
+    {
+      "rule_id": "sma20_reclaim",
+      "rule_name": "20日內首次收盤站回 SMA20",
+      "horizon": "d40",
+      "samples": 174,
+      "trigger_rate_pct": 87.4372,
+      "avg_wait_days": 2.1207,
+      "median_wait_days": 1,
+      "avg_endpoint_pct": 19.3921,
+      "median_endpoint_pct": 12.845,
+      "avg_mfe_pct": 37.9329,
+      "median_mfe_pct": 29.5608,
+      "avg_mae_pct": -11.5601,
+      "median_mae_pct": -9.1934,
+      "endpoint_ge20_rate": 40.8046,
+      "endpoint_ge30_rate": 25.2874,
+      "mfe_ge30_rate": 48.8506,
+      "mfe_ge50_rate": 22.9885,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -0.6871,
+        "median_mfe_delta_pct": -1.3556,
+        "median_mae_improvement_pct": -0.7572
+      }
+    },
+    {
+      "rule_id": "sma20_reclaim",
+      "rule_name": "20日內首次收盤站回 SMA20",
+      "horizon": "d60",
+      "samples": 162,
+      "trigger_rate_pct": 81.407,
+      "avg_wait_days": 2.1235,
+      "median_wait_days": 1,
+      "avg_endpoint_pct": 28.7693,
+      "median_endpoint_pct": 17.6735,
+      "avg_mfe_pct": 52.9225,
+      "median_mfe_pct": 38.6402,
+      "avg_mae_pct": -12.8828,
+      "median_mae_pct": -10.2374,
+      "endpoint_ge20_rate": 47.5309,
+      "endpoint_ge30_rate": 36.4198,
+      "mfe_ge30_rate": 62.3457,
+      "mfe_ge50_rate": 38.2716,
+      "vs_immediate": {
+        "median_endpoint_delta_pct": -2.1005,
+        "median_mfe_delta_pct": -1.5512,
+        "median_mae_improvement_pct": -0.2765
+      }
+    }
+  ]
+}
