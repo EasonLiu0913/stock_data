@@ -122,18 +122,27 @@ function looksLikeFinancialIndustry(rows) {
   return /NetInterestIncome|NetNonInterestIncome|Insurance|利息淨收益|利息以外淨收益|保險負債|呆帳費用|淨收益/.test(text);
 }
 
+function looksLikeNonGrossMarginStatement(rows) {
+  const types = new Set(rows.map(row => String(row.type || '')));
+  const hasProfitCore = ['OperatingIncome', 'IncomeAfterTaxes', 'IncomeAfterTax', 'EPS', 'PreTaxIncome']
+    .some(type => types.has(type));
+  const hasRevenueLike = ['Revenue', 'OperatingRevenue', 'GrossProfit', 'GrossProfitLossFromOperations']
+    .some(type => types.has(type));
+  return hasProfitCore && !hasRevenueLike;
+}
+
 function normalizeReportedQuarter(rows, period, stockId) {
   const { year, quarter } = periodToParts(period);
   const revenue = fieldFromRows(rows, ['Revenue', 'OperatingRevenue', '營業收入合計', '營業收入']);
   const grossProfit = fieldFromRows(rows, ['GrossProfit', 'GrossProfitLossFromOperations', '營業毛利（毛損）淨額', '營業毛利(毛損)淨額', '營業毛利']);
   const operatingIncome = fieldFromRows(rows, ['OperatingIncome', 'OperatingIncomeLoss', '營業利益（損失）', '營業利益(損失)', '營業利益']);
-  const netIncome = fieldFromRows(rows, ['IncomeAfterTaxes', 'NetIncomeLoss', '本期淨利（淨損）', '本期淨利(淨損)', '本期淨利']);
+  const netIncome = fieldFromRows(rows, ['IncomeAfterTaxes', 'IncomeAfterTax', 'NetIncomeLoss', '本期淨利（淨損）', '本期淨利(淨損)', '本期淨利']);
   const parentNetIncome = fieldFromRows(rows, ['IncomeAttributableToOwnersOfParent', 'ProfitLossAttributableToOwnersOfParent', '淨利（淨損）歸屬於母公司業主', '淨利(淨損)歸屬於母公司業主']);
   const eps = fieldFromRows(rows, ['EPS', 'BasicEarningsLossPerShare', '基本每股盈餘（元）', '基本每股盈餘']);
   if (!Number.isFinite(revenue) || !Number.isFinite(grossProfit) || !Number.isFinite(operatingIncome)) {
     const available = [...new Set(rows.map(row => `${row.type}:${row.origin_name}`))].slice(0, 30).join(' | ');
-    if (looksLikeFinancialIndustry(rows)) {
-      throw new UnsupportedFinancialModelError(`unsupported_financial_model ${stockId} ${period}; general-industry gross-margin model does not apply; available=${available}`);
+    if (looksLikeFinancialIndustry(rows) || looksLikeNonGrossMarginStatement(rows)) {
+      throw new UnsupportedFinancialModelError(`unsupported_financial_model ${stockId} ${period}; current revenue/gross-margin model does not apply to this statement structure; available=${available}`);
     }
     throw new Error(`Missing core FinMind fields for ${stockId} ${period}; available=${available}`);
   }
@@ -234,15 +243,28 @@ async function main(argv = process.argv.slice(2)) {
         standalone_rule: 'FinMind quarter-end financial-statement values are used directly; no YTD subtraction is applied',
         availability_policy: 'conservative_period_deadline', conservative_known_date: conservativeAvailabilityDate(year, quarter),
         official_crosscheck: basisValidation,
-        caution: 'Missing quarters are classified separately; company-specific filing timestamps are not yet applied',
+        caution: '2059 Q1+Q2 values are cross-checked against official TWSE 2026Q2 cumulative YTD snapshot; company-specific filing timestamps are not yet applied',
       },
       standalone_quarter: standalone,
     };
     fs.writeFileSync(path.join(stockDir, `${period}.json`), `${JSON.stringify(payload, null, 2)}\n`);
   }
-  fs.writeFileSync(path.join(stockDir, 'coverage-status.json'), `${JSON.stringify({ schema_version: 1, stock_id: stockId, requested: { start_quarter: start, end_quarter: end, as_of_date: asOfDate }, first_available_date: firstAvailableDate, available_periods: [...reportedByPeriod.keys()], missing_periods: missingPeriods }, null, 2)}\n`);
-  console.log(JSON.stringify({ stock_id: stockId, start_quarter: start, end_quarter: end, requested_periods: periods.length, available_periods: reportedByPeriod.size, missing_periods: missingPeriods, basis_validation: basisValidation, output_dir: path.relative(ROOT, stockDir) }, null, 2));
+
+  const coverage = {
+    schema_version: 1,
+    dataset: 'finmind_quarterly_financial_quality_coverage',
+    generated_at: new Date().toISOString(),
+    stock_id: stockId,
+    requested_start_quarter: start,
+    requested_end_quarter: end,
+    as_of_date: asOfDate,
+    available_periods: [...reportedByPeriod.keys()],
+    missing_periods: missingPeriods,
+  };
+  fs.writeFileSync(path.join(stockDir, 'coverage-status.json'), `${JSON.stringify(coverage, null, 2)}\n`);
+  console.log(JSON.stringify({ stock_id: stockId, start_quarter: start, end_quarter: end, available_periods: reportedByPeriod.size, missing_periods: missingPeriods, basis_validation: basisValidation, output_dir: path.relative(ROOT, stockDir) }, null, 2));
 }
 
 if (require.main === module) main().catch(error => { console.error(error.stack || error.message); process.exitCode = error.exitCode || 1; });
-module.exports = { periodToParts, enumeratePeriods, quarterEnd, conservativeAvailabilityDate, normalizeReportedQuarter, validateStandaloneAgainstOfficialYtd, looksLikeFinancialIndustry };
+
+module.exports = { periodToParts, enumeratePeriods, quarterEnd, conservativeAvailabilityDate, normalizeReportedQuarter, validateStandaloneAgainstOfficialYtd, looksLikeFinancialIndustry, looksLikeNonGrossMarginStatement };
