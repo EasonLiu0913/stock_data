@@ -52,6 +52,7 @@ function loadMarketRows(){ const p=readJson(MARKET_FILE,{}); return (p.data||[])
 function getPrice(stockId,date){ return getDailyPrice(stockId,date,{root:ROOT,loaders:PRICE_LOADERS}); }
 function loadCandidates(start,end,history,financialByStock){
   const out=[];
+  const diagnostics={electronic_fas8_events:0,missing_known_financial:0,invalid_financial_score:0,financial_below_10:0,missing_base_trading_date:0,included:0};
   const months=fs.readdirSync(SIGNAL_ROOT).filter(n=>/^20\d{4}\.json$/.test(n)).map(n=>n.slice(0,6)).filter(m=>(!start||m>=start)&&(!end||m<=end)).sort();
   for(const month of months){
     const payload=readJson(path.join(SIGNAL_ROOT,`${month}.json`),{}),revMap=history.byMonth.get(month)||new Map();
@@ -60,14 +61,19 @@ function loadCandidates(start,end,history,financialByStock){
       if(!ELECTRONIC_INDUSTRIES.has(row.industry||'未分類'))continue;
       const monthly=scoreComponents(event,month,history.byStock.get(stockId));
       if(Number(monthly.total_score)<8)continue;
+      diagnostics.electronic_fas8_events++;
       const eventDate=event.effective_trading_date||event.conservative_availability_date||null;
       const financial=latestKnownFinancial(financialByStock.get(stockId)||[],eventDate);
-      if(Number(financial?.financial_quality_score)<10)continue;
-      if(!event.base_trading_date)continue;
-      out.push({month,stock_id:stockId,industry:row.industry||'未分類',base_trading_date:event.base_trading_date,monthly_score:Number(monthly.total_score),financial_score:Number(financial.financial_quality_score)});
+      if(!financial){ diagnostics.missing_known_financial++; continue; }
+      const financialScore=Number(financial.financial_quality_score);
+      if(!Number.isFinite(financialScore)){ diagnostics.invalid_financial_score++; continue; }
+      if(financialScore<10){ diagnostics.financial_below_10++; continue; }
+      if(!event.base_trading_date){ diagnostics.missing_base_trading_date++; continue; }
+      out.push({month,stock_id:stockId,industry:row.industry||'未分類',base_trading_date:event.base_trading_date,monthly_score:Number(monthly.total_score),financial_score:financialScore});
+      diagnostics.included++;
     }
   }
-  return out;
+  return {candidates:out,diagnostics};
 }
 function sma(values,n){ if(values.length<n)return null; const a=values.slice(-n).filter(Number.isFinite); return a.length===n?a.reduce((s,v)=>s+v,0)/n:null; }
 function findEntry(event,rule,marketRows,indexByDate){
@@ -114,7 +120,7 @@ function summarize(rows,totalCandidates){
 function main(argv=process.argv.slice(2)){
   const args=parseArgs(argv),start=args.get('start-month')||'202401',end=args.get('end-month')||'202606';
   const history=loadRevenueHistory(),financialByStock=loadFinancialMaster(),marketRows=loadMarketRows(),indexByDate=new Map(marketRows.map((r,i)=>[r.date,i]));
-  const candidates=loadCandidates(start,end,history,financialByStock),rows=[];
+  const loaded=loadCandidates(start,end,history,financialByStock),candidates=loaded.candidates,rows=[];
   for(const rule of ENTRY_RULES){
     const entries=[]; let processed=0;
     for(const event of candidates){ const e=findEntry(event,rule,marketRows,indexByDate); if(e)entries.push([event,e]); if(++processed%20===0)clearCaches(); }
@@ -128,9 +134,9 @@ function main(argv=process.argv.slice(2)){
   }
   const direct=Object.fromEntries(rows.filter(r=>r.rule_id==='immediate').map(r=>[r.horizon,r]));
   for(const row of rows){ const b=direct[row.horizon]; row.vs_immediate={median_endpoint_delta_pct:round((row.median_endpoint_pct??NaN)-(b?.median_endpoint_pct??NaN)),median_mfe_delta_pct:round((row.median_mfe_pct??NaN)-(b?.median_mfe_pct??NaN)),median_mae_improvement_pct:round((row.median_mae_pct??NaN)-(b?.median_mae_pct??NaN))}; }
-  const out={schema_version:1,dataset:'two_stage_fundamental_quality_entry_timing',generated_at:new Date().toISOString(),start_month:start,end_month:end,methodology:{status:'research_only',universe:'electronic stocks with FAS>=8 and latest-known FQ>=10',entry_window_trading_days:ENTRY_WINDOW,entry_rules:ENTRY_RULES,horizons:HORIZONS.map(h=>`d${h}`),pullback_fill_rule:'assume limit price fills when daily low touches base close * threshold; no intraday ordering assumptions beyond touch',breakout_rule:'first close within 20 trading days above prior 10 trading-day highest close',sma20_rule:'first close within 20 trading days at or above contemporaneous 20-day SMA',anti_lookahead:'all entry decisions use only prices available through the entry date; financial membership uses only latest score known by signal date',caution:'research only; transaction costs, gaps and slippage are not modeled'},coverage:{candidate_events:candidates.length},rows};
+  const out={schema_version:2,dataset:'two_stage_fundamental_quality_entry_timing',generated_at:new Date().toISOString(),start_month:start,end_month:end,methodology:{status:'research_only',universe:'electronic stocks with FAS>=8 and latest-known FQ>=10',entry_window_trading_days:ENTRY_WINDOW,entry_rules:ENTRY_RULES,horizons:HORIZONS.map(h=>`d${h}`),pullback_fill_rule:'assume limit price fills when daily low touches base close * threshold; no intraday ordering assumptions beyond touch',breakout_rule:'first close within 20 trading days above prior 10 trading-day highest close',sma20_rule:'first close within 20 trading days at or above contemporaneous 20-day SMA',anti_lookahead:'all entry decisions use only prices available through the entry date; events with no financial score known by signal date are excluded rather than inferred',caution:'research only; transaction costs, gaps and slippage are not modeled'},coverage:{candidate_events:candidates.length,...loaded.diagnostics},rows};
   fs.mkdirSync(path.dirname(OUTPUT),{recursive:true}); fs.writeFileSync(OUTPUT,JSON.stringify(out,null,2)+'\n');
-  console.log(JSON.stringify({output:path.relative(ROOT,OUTPUT),candidates:candidates.length,rows:rows.length},null,2));
+  console.log(JSON.stringify({output:path.relative(ROOT,OUTPUT),candidates:candidates.length,candidate_diagnostics:loaded.diagnostics,rows:rows.length},null,2));
 }
 if(require.main===module){try{main();}catch(e){console.error(e.stack||e.message);process.exitCode=1;}}
-module.exports={ENTRY_RULES,HORIZONS,findEntry,evaluate,summarize};
+module.exports={ENTRY_RULES,HORIZONS,findEntry,evaluate,summarize,loadCandidates};
