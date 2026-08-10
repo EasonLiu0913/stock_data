@@ -149,8 +149,12 @@ function normalizeReportedQuarter(rows, period, stockId) {
   const eps = fieldFromRows(rows, ['EPS', 'BasicEarningsLossPerShare', '基本每股盈餘（元）', '基本每股盈餘']);
   if (!Number.isFinite(revenue) || !Number.isFinite(grossProfit) || !Number.isFinite(operatingIncome)) {
     const available = [...new Set(rows.map(row => `${row.type}:${row.origin_name}`))].slice(0, 30).join(' | ');
-    if (looksLikeFinancialIndustry(rows) || looksLikeNonGrossMarginStatement(rows)) {
-      throw new UnsupportedFinancialModelError(`unsupported_financial_model ${stockId} ${period}; current revenue/gross-margin model does not apply to this statement structure; available=${available}`);
+    const hasProfitEvidence = Number.isFinite(netIncome) || Number.isFinite(parentNetIncome) || Number.isFinite(eps);
+    const unsupportedStructure = looksLikeFinancialIndustry(rows)
+      || looksLikeNonGrossMarginStatement(rows)
+      || (Number.isFinite(revenue) && Number.isFinite(grossProfit) && !Number.isFinite(operatingIncome) && hasProfitEvidence);
+    if (unsupportedStructure) {
+      throw new UnsupportedFinancialModelError(`unsupported_financial_model ${stockId} ${period}; current revenue/gross-margin/operating-income model does not apply to this statement structure; available=${available}`);
     }
     throw new Error(`Missing core FinMind fields for ${stockId} ${period}; available=${available}`);
   }
@@ -253,23 +257,18 @@ async function main(argv = process.argv.slice(2)) {
   for (const [period, standalone] of reportedByPeriod) {
     const { year, quarter } = periodToParts(period);
     const payload = {
-      schema_version: 4,
+      schema_version: 3,
       dataset: 'finmind_quarterly_financial_quality_history',
       generated_at: new Date().toISOString(),
       stock_id: stockId,
       fiscal_period: period,
       source: { provider: 'FinMind', dataset: 'TaiwanStockFinancialStatements', source_role: 'historical research provider' },
       methodology: {
-        status: 'research_only',
-        reported_basis: 'standalone_quarter',
+        status: 'research_only', reported_basis: 'standalone_quarter',
         standalone_rule: 'FinMind quarter-end financial-statement values are used directly; no YTD subtraction is applied',
-        gross_profit_rule: standalone.gross_profit_source === 'derived_revenue_minus_cost_of_goods_sold'
-          ? 'gross profit derived as revenue minus cost of goods sold because FinMind did not provide a direct gross-profit field'
-          : 'FinMind direct gross-profit field used',
-        availability_policy: 'conservative_period_deadline',
-        conservative_known_date: conservativeAvailabilityDate(year, quarter),
+        availability_policy: 'conservative_period_deadline', conservative_known_date: conservativeAvailabilityDate(year, quarter),
         official_crosscheck: basisValidation,
-        caution: 'Historical research provider; statement structures that do not support revenue/gross-margin analysis are excluded rather than force-filled.',
+        caution: '2059 Q1+Q2 values are cross-checked against official TWSE 2026Q2 cumulative YTD snapshot; company-specific filing timestamps are not yet applied',
       },
       standalone_quarter: standalone,
     };
@@ -277,40 +276,22 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   const coverage = {
-    schema_version: 2,
+    schema_version: 1,
     dataset: 'finmind_quarterly_financial_quality_coverage',
     generated_at: new Date().toISOString(),
     stock_id: stockId,
-    requested_start_quarter: start,
-    requested_end_quarter: end,
-    as_of_date: asOfDate,
+    requested: { start_quarter: start, end_quarter: end, periods: periods.length, as_of_date: asOfDate },
     available_periods: [...reportedByPeriod.keys()],
     missing_periods: missingPeriods,
+    missing_reason_counts: missingPeriods.reduce((acc, row) => { acc[row.reason] = (acc[row.reason] || 0) + 1; return acc; }, {}),
   };
   fs.writeFileSync(path.join(stockDir, 'coverage-status.json'), `${JSON.stringify(coverage, null, 2)}\n`);
-  console.log(JSON.stringify({
-    stock_id: stockId,
-    start_quarter: start,
-    end_quarter: end,
-    requested_periods: periods.length,
-    available_periods: reportedByPeriod.size,
-    missing_periods: missingPeriods,
-    derived_gross_profit_periods: [...reportedByPeriod.entries()].filter(([, q]) => q.gross_profit_source === 'derived_revenue_minus_cost_of_goods_sold').map(([period]) => period),
-    basis_validation: basisValidation,
-    output_dir: path.relative(ROOT, stockDir),
-  }, null, 2));
+  console.log(JSON.stringify({ stock_id: stockId, requested_periods: periods.length, available_periods: reportedByPeriod.size, missing_periods: missingPeriods.length, missing_reason_counts: coverage.missing_reason_counts, basis_validation: basisValidation, output_dir: path.relative(ROOT, stockDir) }, null, 2));
 }
 
 if (require.main === module) main().catch(error => {
   console.error(error.stack || error.message);
-  process.exitCode = error.exitCode || 1;
+  process.exitCode = Number(error.exitCode || 1);
 });
 
-module.exports = {
-  periodToParts,
-  enumeratePeriods,
-  quarterEnd,
-  conservativeAvailabilityDate,
-  normalizeReportedQuarter,
-  validateStandaloneAgainstOfficialYtd,
-};
+module.exports = { periodToParts, enumeratePeriods, quarterEnd, conservativeAvailabilityDate, normalizeReportedQuarter, validateStandaloneAgainstOfficialYtd, looksLikeFinancialIndustry, looksLikeNonGrossMarginStatement };
