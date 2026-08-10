@@ -1,0 +1,106 @@
+name: '[07 研究] 基本面雙確認－電子非電子大波段 MAE-MFE 分析'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM；未成熟 D40/D60 自動不納入'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-tail-excursions
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_tail_excursions.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build electronic vs non-electronic MAE MFE study
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_tail_excursions.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const file='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-tail-excursions.json';
+          const p=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(!Array.isArray(p.rows)||p.rows.length!==18) throw new Error(`expected 18 rows, got ${p.rows?.length}`);
+          for(const h of ['d20','d40','d60']) if(!(p.coverage?.[h]?.complete_excursion_events>0)) throw new Error(`zero ${h} excursion coverage`);
+          for(const row of p.rows){
+            if(row.samples>0 && (!Number.isFinite(row.avg_mfe_pct)||!Number.isFinite(row.avg_mae_pct))) throw new Error(`invalid MAE/MFE ${row.factor_id}/${row.segment}/${row.horizon}`);
+          }
+          const focus=p.rows.filter(r=>r.horizon==='d60').map(r=>({factor:r.factor_id,segment:r.segment,samples:r.samples,endpoint30:r.endpoint_ge_30_rate,mfe30:r.mfe_ge_30_rate,endpoint50:r.endpoint_ge_50_rate,mfe50:r.mfe_ge_50_rate,median_mfe:r.median_mfe_pct,median_mae:r.median_mae_pct}));
+          console.log(JSON.stringify({coverage:p.coverage,d60:focus},null,2));
+          NODE
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-tail-excursions.json
+          if git diff --cached --quiet; then
+            echo 'No tail excursion research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild fundamental quality tail excursion study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－電子 / 非電子大波段 MAE-MFE 分析' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 因子：月營收 >=8 + 財報品質 >=10；月營收 >=9 + 財報品質 >=10' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 分組：全部 / 電子股 / 非電子股' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Horizon：D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 期末大漲率：+20% / +30% / +50%' >> "$GITHUB_STEP_SUMMARY"
+          echo '- MFE 觸及率：持有期間曾達 +20% / +30% / +50%' >> "$GITHUB_STEP_SUMMARY"
+          echo '- MAE/MFE 使用每日 low/high，相對訊號基準收盤價計算' >> "$GITHUB_STEP_SUMMARY"
