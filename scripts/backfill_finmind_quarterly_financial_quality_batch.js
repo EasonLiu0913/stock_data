@@ -50,6 +50,10 @@ function coverageMatches(stockId, startQuarter, endQuarter) {
   return Boolean(coverage && coverage.requested?.start_quarter === startQuarter && coverage.requested?.end_quarter === endQuarter && fs.existsSync(timeline));
 }
 function compactError(result) { return (result.stderr || result.stdout || `exit status ${result.status}`).replace(/\s+/g, ' ').slice(0, 1200); }
+function isQuotaExhausted(result) {
+  const text = `${result.stderr || ''} ${result.stdout || ''}`;
+  return /FinMind HTTP 402|Requests reach the upper limit|quota[_ -]?exhausted/i.test(text);
+}
 
 function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
@@ -71,6 +75,7 @@ function main(argv = process.argv.slice(2)) {
   const totalBatches = Math.ceil(candidates.length / batchSize);
   if (batchIndex >= totalBatches) throw new Error(`batch-index ${batchIndex} out of range; candidates=${candidates.length}, batch_size=${batchSize}`);
   const selected = candidates.slice(batchIndex * batchSize, batchIndex * batchSize + batchSize), results = [];
+  let quotaExhausted = false;
 
   for (let i = 0; i < selected.length; i += 1) {
     const candidate = selected[i], stockId = candidate.stock_id;
@@ -81,6 +86,12 @@ function main(argv = process.argv.slice(2)) {
       console.log(`[backfill] ${stockId} (${candidate.stock_name || ''}) core_hits=${candidate.core_hits} persistent_hits=${candidate.persistent_hits} max=${candidate.max_score}`);
       const backfill = runNode('backfill_finmind_quarterly_financial_quality.js', ['--stock-id', stockId, '--start-quarter', startQuarter, '--end-quarter', endQuarter, '--as-of-date', asOfDate]);
       if (!backfill.ok) {
+        if (isQuotaExhausted(backfill)) {
+          results.push({ ...candidate, status: 'quota_exhausted', error: compactError(backfill) });
+          console.error(`[quota exhausted] ${stockId}: ${compactError(backfill)}`);
+          quotaExhausted = true;
+          break;
+        }
         if (backfill.status === 3 || /unsupported_financial_model/i.test(`${backfill.stderr} ${backfill.stdout}`)) {
           results.push({ ...candidate, status: 'unsupported_financial_model', error: compactError(backfill) });
           console.warn(`[unsupported] ${stockId}: general-industry financial-quality model does not apply`);
@@ -102,7 +113,7 @@ function main(argv = process.argv.slice(2)) {
       }
     }
 
-    if (i < selected.length - 1) {
+    if (!quotaExhausted && i < selected.length - 1) {
       const wait = delayMs + (jitterMs > 0 ? Math.floor(Math.random() * (jitterMs + 1)) : 0);
       console.log(`[pace] wait ${wait}ms before next stock`);
       sleepSync(wait);
@@ -112,16 +123,24 @@ function main(argv = process.argv.slice(2)) {
   const counts = results.reduce((acc, row) => { acc[row.status] = (acc[row.status] || 0) + 1; return acc; }, {});
   const usable = (counts.complete || 0) + (counts.skipped_complete || 0) + (counts.unsupported_financial_model || 0);
   const status = {
-    schema_version: 3, dataset: 'finmind_quarterly_financial_quality_batch_status', generated_at: new Date().toISOString(),
+    schema_version: 4, dataset: 'finmind_quarterly_financial_quality_batch_status', generated_at: new Date().toISOString(),
     methodology: { candidate_rule: `monthly acceleration score >= ${coreThreshold} in at least ${coreMinHits} months OR score >= ${persistentThreshold} in at least ${persistentMinHits} months`, core: { score_threshold: coreThreshold, min_hits: coreMinHits }, persistent: { score_threshold: persistentThreshold, min_hits: persistentMinHits }, start_quarter: startQuarter, end_quarter: endQuarter, as_of_date: asOfDate, batch_index: batchIndex, batch_size: batchSize, delay_ms: delayMs, jitter_ms: jitterMs, force },
-    universe: { unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, selected_start_offset: batchIndex * batchSize, selected_count: selected.length }, counts, results,
+    universe: { unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, selected_start_offset: batchIndex * batchSize, selected_count: selected.length },
+    execution: { quota_exhausted: quotaExhausted, processed_count: results.length, unprocessed_count: selected.length - results.length },
+    counts, results,
   };
   fs.mkdirSync(STATUS_ROOT, { recursive: true });
   const statusFile = path.join(STATUS_ROOT, `dual-track-batch${String(batchIndex).padStart(3, '0')}.json`);
   fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
-  console.log(JSON.stringify({ output: path.relative(ROOT, statusFile), unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, batch_index: batchIndex, batch_size: batchSize, selected_count: selected.length, counts }, null, 2));
+  console.log(JSON.stringify({ output: path.relative(ROOT, statusFile), unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, batch_index: batchIndex, batch_size: batchSize, selected_count: selected.length, processed_count: results.length, quota_exhausted: quotaExhausted, counts }, null, 2));
+
+  if (quotaExhausted) {
+    const error = new Error(`FinMind quota exhausted during batch ${batchIndex}; progress/status saved. Resume from batch ${batchIndex} after quota is available again.`);
+    error.code = 'FINMIND_QUOTA_EXHAUSTED';
+    throw error;
+  }
   if (usable === 0) throw new Error(`Batch ${batchIndex} produced zero usable/classified stocks; inspect ${path.relative(ROOT, statusFile)}`);
 }
 
 if (require.main === module) { try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; } }
-module.exports = { qualifyingHits, selectCandidates };
+module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted };
