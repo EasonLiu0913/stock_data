@@ -47,6 +47,7 @@ jobs:
           set -euo pipefail
           node --check scripts/build_financial_quality_master.js
           node --check scripts/summarize_two_stage_fundamental_quality.js
+          node --check scripts/build_two_stage_fundamental_quality_compact_summary.js
           node --check scripts/summarize_mops_revenue_fundamental_acceleration_score.js
           node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
 
@@ -63,6 +64,9 @@ jobs:
             --start-month "$START_MONTH" \
             --end-month "$END_MONTH"
 
+      - name: Build compact summary
+        run: node scripts/build_two_stage_fundamental_quality_compact_summary.js
+
       - name: Validate outputs
         run: |
           set -euo pipefail
@@ -70,10 +74,12 @@ jobs:
           const fs = require('node:fs');
           const master = JSON.parse(fs.readFileSync('data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json','utf8'));
           const study = JSON.parse(fs.readFileSync('data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-experiment.json','utf8'));
+          const summary = JSON.parse(fs.readFileSync('data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-summary.json','utf8'));
           if (!master.counts?.stocks) throw new Error('financial quality master has zero stocks');
           if (!study.coverage?.events_with_known_financial_score) throw new Error('two-stage study has zero financially-enriched events');
           if (!Array.isArray(study.rankings) || study.rankings.length === 0) throw new Error('two-stage study has zero rankings');
-          console.log(JSON.stringify({master: master.counts, coverage: study.coverage, rankings: study.rankings.length}, null, 2));
+          if (!Array.isArray(summary.focus_d10_d20) || summary.focus_d10_d20.length === 0) throw new Error('compact summary has zero D10/D20 rows');
+          console.log(JSON.stringify({master: master.counts, coverage: study.coverage, rankings: study.rankings.length, compact_focus_rows: summary.focus_d10_d20.length}, null, 2));
           NODE
 
       - name: Commit research outputs
@@ -82,7 +88,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json \
-                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-experiment.json
+                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-experiment.json \
+                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-summary.json
           if git diff --cached --quiet; then
             echo 'No two-stage study changes'
             exit 0
@@ -103,4 +110,5 @@ jobs:
           echo '- 財報確認：Financial Quality Score + QoQ score jump' >> "$GITHUB_STEP_SUMMARY"
           echo '- 防偷看：只 join conservative_known_date <= 月營收事件日期的季財報' >> "$GITHUB_STEP_SUMMARY"
           echo '- 現有可測 horizon：D1 / D3 / D5 / D10 / D20' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 另產出 compact summary，便於直接比較 D10 / D20' >> "$GITHUB_STEP_SUMMARY"
           echo '- D40 / D60：待下一輪擴充 monthly return enrichment 後加入' >> "$GITHUB_STEP_SUMMARY"
