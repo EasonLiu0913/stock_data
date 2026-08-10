@@ -1,0 +1,93 @@
+name: '[07 研究] 基本面雙確認－正式接入股票預測'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/migrations/install_two_stage_fundamental_direct_entry_signal.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: install-two-stage-fundamental-direct-entry-signal
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Apply production integration migration
+        run: |
+          set -euo pipefail
+          node scripts/migrations/install_two_stage_fundamental_direct_entry_signal.js
+
+      - name: Validate integration
+        run: |
+          set -euo pipefail
+          node --check scripts/two_stage_fundamental_quality_signal.js
+          node --check scripts/apply_strategy_tag_registry.js
+          node - <<'NODE'
+          const path=require('node:path');
+          const {loadRegistry,validateRegistry,evaluateStock}=require('./scripts/strategy_tag_engine');
+          const {evaluateTwoStageFundamentalSignalDay}=require('./scripts/two_stage_fundamental_quality_signal');
+          const root=process.cwd();
+          const registry=loadRegistry(root);
+          validateRegistry(registry);
+          const strategyId='two_stage_fundamental_quality_direct_entry_v1';
+          const tagId='fundamental_two_stage_signal_day_v1';
+          if(!registry.tags.some(x=>x.tag_id===tagId)) throw new Error('missing two-stage tag');
+          if(!registry.strategies.some(x=>x.strategy_id===strategyId)) throw new Error('missing two-stage strategy');
+          const negative=evaluateTwoStageFundamentalSignalDay({workspaceRoot:root,stockId:'__NO_STOCK__',baseTradeDate:'20260102'});
+          if(negative.available!==true||negative.is_signal_day!==false) throw new Error(`unexpected no-event state: ${JSON.stringify(negative)}`);
+          const evaluated=evaluateStock({stock_code:'TEST',strategy_tag_features:{two_stage_fundamental_signal_day:true}},registry);
+          if(!evaluated.tag_ids.includes(tagId)||!evaluated.strategy_ids.includes(strategyId)) throw new Error('registry does not promote true signal feature');
+          console.log(JSON.stringify({strategy_id:strategyId,tag_id:tagId,negative_state:{available:negative.available,is_signal_day:negative.is_signal_day}},null,2));
+          NODE
+          grep -q 'PRODUCTION_DIRECT_ENTRY_SIGNAL_START' docs/two-stage-fundamental-quality-research-log.md
+
+      - name: Commit production integration
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/apply_strategy_tag_registry.js config/strategy-tag-registry.json docs/two-stage-fundamental-quality-research-log.md
+          if git diff --cached --quiet; then
+            echo 'No production integration changes'
+            exit 0
+          fi
+          git commit -m "feat: add two-stage fundamental direct-entry prediction signal"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－正式接入股票預測' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Strategy: two_stage_fundamental_quality_direct_entry_v1' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Rule: 電子股 + FAS >= 8 + latest-known FQ >= 10' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 僅在 monthly signal base_trading_date 當日命中' >> "$GITHUB_STEP_SUMMARY"
+          echo '- -5%/-10% timing 不作為 production entry gate' >> "$GITHUB_STEP_SUMMARY"
