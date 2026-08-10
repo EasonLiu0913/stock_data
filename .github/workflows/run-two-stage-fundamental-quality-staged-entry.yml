@@ -1,0 +1,108 @@
+name: '[07 研究] 基本面雙確認－電子股分批進場 Staged Entry'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-staged-entry
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_staged_entry.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build staged entry backtest
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_staged_entry.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-staged-entry.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(p.dataset!=='two_stage_fundamental_quality_staged_entry') throw new Error('unexpected dataset');
+          if(!(p.coverage?.candidate_events>0)) throw new Error('zero candidate events');
+          if(!Array.isArray(p.rows)||p.rows.length!==18) throw new Error(`expected 18 rows, got ${p.rows?.length}`);
+          const expected=['direct_100','direct50_pb5_50','direct50_pb10_50','direct50_pb5_25_pb10_25','direct33_pb5_33_pb10_34','direct25_pb5_25_pb10_50'];
+          const ids=new Set(p.rows.map(r=>r.policy_id));
+          for(const id of expected) if(!ids.has(id)) throw new Error(`missing policy ${id}`);
+          const d60=p.rows.filter(r=>r.horizon==='d60').map(r=>({policy:r.policy_id,samples:r.samples,deployed:r.avg_deployed_weight_pct,full:r.full_deployment_rate_pct,avg:r.endpoint?.average_pct,median:r.endpoint?.median_pct,positive:r.endpoint?.positive_rate_pct,ge30:r.endpoint?.ge30_rate_pct,mfe:r.mfe?.median_pct,mae:r.mae?.median_pct,vs_direct:r.vs_direct}));
+          console.log(JSON.stringify({coverage:p.coverage,d60},null,2));
+          NODE
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-staged-entry.json
+          if git diff --cached --quiet; then
+            echo 'No staged entry research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild staged entry backtest"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－電子股分批進場 Staged Entry' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Universe：電子股 FAS >=8 + FQ >=10' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 比較：100% 直接買，以及多種訊號日 / -5% / -10% 分批配置' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 未觸發的加碼資金保持現金，不追價' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 全部部位使用訊號日起相同 D20/D40/D60 日曆退出日' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 報酬以總資金計算，因此現金部位會真實稀釋報酬' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 同時比較 deployed weight、完整建倉率、endpoint、MFE、MAE' >> "$GITHUB_STEP_SUMMARY"
