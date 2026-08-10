@@ -1,0 +1,106 @@
+name: '[07 研究] 基本面加速 × 財報品質二階段回測'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-study
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate research scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/build_financial_quality_master.js
+          node --check scripts/summarize_two_stage_fundamental_quality.js
+          node --check scripts/summarize_mops_revenue_fundamental_acceleration_score.js
+          node --check scripts/summarize_mops_revenue_yoy20_subfactors.js
+
+      - name: Build financial quality master
+        run: node scripts/build_financial_quality_master.js
+
+      - name: Run two-stage study
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate outputs
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const master = JSON.parse(fs.readFileSync('data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json','utf8'));
+          const study = JSON.parse(fs.readFileSync('data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-experiment.json','utf8'));
+          if (!master.counts?.stocks) throw new Error('financial quality master has zero stocks');
+          if (!study.coverage?.events_with_known_financial_score) throw new Error('two-stage study has zero financially-enriched events');
+          if (!Array.isArray(study.rankings) || study.rankings.length === 0) throw new Error('two-stage study has zero rankings');
+          console.log(JSON.stringify({master: master.counts, coverage: study.coverage, rankings: study.rankings.length}, null, 2));
+          NODE
+
+      - name: Commit research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json \
+                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-experiment.json
+          if git diff --cached --quiet; then
+            echo 'No two-stage study changes'
+            exit 0
+          fi
+          git commit -m 'analysis: rebuild two-stage fundamental quality study'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面加速 × 財報品質二階段回測' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 月營收訊號：Fundamental Acceleration Score' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 財報確認：Financial Quality Score + QoQ score jump' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 防偷看：只 join conservative_known_date <= 月營收事件日期的季財報' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 現有可測 horizon：D1 / D3 / D5 / D10 / D20' >> "$GITHUB_STEP_SUMMARY"
+          echo '- D40 / D60：待下一輪擴充 monthly return enrichment 後加入' >> "$GITHUB_STEP_SUMMARY"
