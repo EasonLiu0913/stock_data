@@ -11,6 +11,9 @@ const {
 } = require('./strategy_tag_engine');
 const { parseMarginCsv } = require('./oversold_rebound_research_lib');
 const { enrichStrategyTagSources } = require('./strategy_tag_source_enrichment');
+const {
+  evaluateTwoStageFundamentalSignalDay,
+} = require('./two_stage_fundamental_quality_signal');
 
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_MARGIN_PERIODS = 5;
@@ -178,6 +181,77 @@ function enrichMarginFeatures(payload, workspaceRoot, dataAsOf, periods = DEFAUL
     margin: marginMetadata,
   };
   return marginMetadata;
+}
+
+function enrichTwoStageFundamentalFeatures(payload, workspaceRoot) {
+  const baseTradeDate = compactDate(payload?.base_trade_date);
+  let availableStockCount = 0;
+  let unavailableStockCount = 0;
+  let signalStockCount = 0;
+  const sourceFiles = new Set();
+
+  payload.stocks = (payload.stocks || []).map(stock => {
+    const result = evaluateTwoStageFundamentalSignalDay({
+      workspaceRoot,
+      stockId: stock.stock_code,
+      baseTradeDate,
+    });
+    for (const file of result.source_files || []) sourceFiles.add(file);
+    if (result.available) availableStockCount += 1;
+    else unavailableStockCount += 1;
+    if (result.is_signal_day === true) signalStockCount += 1;
+    return {
+      ...stock,
+      strategy_tag_features: {
+        ...(stock.strategy_tag_features || {}),
+        two_stage_fundamental_signal_day: result.available ? result.is_signal_day : null,
+        two_stage_fundamental_source_available: result.available === true,
+        two_stage_fundamental_electronic: result.electronic ?? null,
+        two_stage_fundamental_fas_total: result.fas_total ?? null,
+        two_stage_fundamental_fq_score: result.fq_score ?? null,
+        two_stage_fundamental_signal_month: result.signal_month ?? null,
+        two_stage_fundamental_signal_date: result.signal_date ?? null,
+        two_stage_fundamental_event_date: result.event_date ?? null,
+        two_stage_fundamental_industry: result.industry ?? null,
+        two_stage_fundamental_financial_period: result.financial_period ?? null,
+        two_stage_fundamental_financial_known_date: result.financial_known_date ?? null,
+        two_stage_fundamental_reason: result.reason || null,
+      },
+    };
+  });
+
+  const totalStockCount = payload.stocks.length;
+  const status = availableStockCount === 0
+    ? 'unable_to_calculate'
+    : unavailableStockCount > 0 ? 'partial' : 'completed';
+  const metadata = {
+    calculation_status: status,
+    calculation_message: status === 'unable_to_calculate'
+      ? '基本面雙確認訊號來源無法計算。'
+      : status === 'partial'
+        ? `基本面雙確認訊號部分可計算；可計算 ${availableStockCount}／${totalStockCount} 檔。`
+        : signalStockCount
+          ? `已完成基本面雙確認訊號日判斷，共 ${signalStockCount} 檔。`
+          : '已完成基本面雙確認訊號日判斷，當日 0 檔。',
+    base_trade_date: baseTradeDate || null,
+    rule_version: 1,
+    universe: 'electronic FAS>=8 + latest-known FQ>=10',
+    entry_policy: 'signal_day_direct_entry_baseline',
+    research_status: 'current_best_total-capital baseline; timing routing not OOS validated',
+    total_stock_count: totalStockCount,
+    available_stock_count: availableStockCount,
+    unavailable_stock_count: unavailableStockCount,
+    signal_stock_count: status === 'unable_to_calculate' ? null : signalStockCount,
+    coverage_pct: totalStockCount
+      ? Math.round((availableStockCount / totalStockCount) * 10000) / 100
+      : null,
+    source_files: [...sourceFiles].sort(),
+  };
+  payload.strategy_tag_source_metadata = {
+    ...(payload.strategy_tag_source_metadata || {}),
+    two_stage_fundamental_quality: metadata,
+  };
+  return metadata;
 }
 
 function compactSnapshot(snapshot) {
@@ -360,6 +434,7 @@ function applyRegistry(options = {}) {
       forecastDate: date,
       dataAsOf,
     });
+    enrichTwoStageFundamentalFeatures(enrichedPayload, workspaceRoot);
     sourceMetadata = enrichedPayload.strategy_tag_source_metadata || {};
     snapshot = buildSnapshot(enrichedPayload, registry, {
       forecastDate: date,
@@ -429,6 +504,7 @@ module.exports = {
   safeMarginMap,
   earliestDataCutoff,
   enrichMarginFeatures,
+  enrichTwoStageFundamentalFeatures,
   compactSnapshot,
   applySnapshotToPayload,
   snapshotFileFor,

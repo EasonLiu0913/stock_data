@@ -19,7 +19,11 @@
       "category": "technical",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "features.r3", "operator": "lte", "value": -8 }
+      "rule": {
+        "path": "features.r3",
+        "operator": "lte",
+        "value": -8
+      }
     },
     {
       "tag_id": "technical_below_sma20_v1",
@@ -29,7 +33,11 @@
       "category": "technical",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "features.gap_sma20", "operator": "lte", "value": -10 }
+      "rule": {
+        "path": "features.gap_sma20",
+        "operator": "lte",
+        "value": -10
+      }
     },
     {
       "tag_id": "technical_rsi_oversold_v1",
@@ -39,7 +47,11 @@
       "category": "technical",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "features.rsi14", "operator": "lte", "value": 35 }
+      "rule": {
+        "path": "features.rsi14",
+        "operator": "lte",
+        "value": 35
+      }
     },
     {
       "tag_id": "technical_volume_ratio_5d_expansion_v1",
@@ -49,7 +61,11 @@
       "category": "technical",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "features.volume_ratio_5d", "operator": "gte", "value": 1.5 }
+      "rule": {
+        "path": "features.volume_ratio_5d",
+        "operator": "gte",
+        "value": 1.5
+      }
     },
     {
       "tag_id": "technical_rsi_overheated_v1",
@@ -59,7 +75,11 @@
       "category": "technical",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "features.rsi14", "operator": "gte", "value": 70 }
+      "rule": {
+        "path": "features.rsi14",
+        "operator": "gte",
+        "value": 70
+      }
     },
     {
       "tag_id": "technical_relative_strength_7d_v1",
@@ -88,7 +108,11 @@
       "category": "technical",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "features.gap_sma20", "operator": "lte", "value": 10 }
+      "rule": {
+        "path": "features.gap_sma20",
+        "operator": "lte",
+        "value": 10
+      }
     },
     {
       "tag_id": "technical_trend_quality_20d_v1",
@@ -272,7 +296,11 @@
       "category": "quality",
       "fixed_display": true,
       "enabled": true,
-      "rule": { "path": "data_completeness", "operator": "gte", "value": 80 }
+      "rule": {
+        "path": "data_completeness",
+        "operator": "gte",
+        "value": 80
+      }
     },
     {
       "tag_id": "margin_exit_1d_v1",
@@ -283,7 +311,12 @@
       "fixed_display": true,
       "enabled": true,
       "rule": {
-        "paths": ["strategy_tag_features.margin_change", "features.margin_change", "margin.margin_change", "oversold_rebound_features.margin_change"],
+        "paths": [
+          "strategy_tag_features.margin_change",
+          "features.margin_change",
+          "margin.margin_change",
+          "oversold_rebound_features.margin_change"
+        ],
         "operator": "lt",
         "value": 0
       }
@@ -297,7 +330,12 @@
       "fixed_display": true,
       "enabled": true,
       "rule": {
-        "paths": ["strategy_tag_features.margin_change_5d", "features.margin_change_5d", "margin.margin_change_5d", "oversold_rebound_features.margin_change_5d"],
+        "paths": [
+          "strategy_tag_features.margin_change_5d",
+          "features.margin_change_5d",
+          "margin.margin_change_5d",
+          "oversold_rebound_features.margin_change_5d"
+        ],
         "operator": "lt",
         "value": 0
       }
@@ -311,7 +349,10 @@
       "fixed_display": true,
       "enabled": true,
       "expression": {
-        "all": ["margin_exit_1d_v1", "margin_exit_5d_v1"],
+        "all": [
+          "margin_exit_1d_v1",
+          "margin_exit_5d_v1"
+        ],
         "any": [],
         "not": []
       }
@@ -327,7 +368,15 @@
       "rule": {
         "path": "industry",
         "operator": "in",
-        "value": ["半導體業", "電子零組件業", "電腦及週邊設備業", "光電業", "通信網路業", "其他電子業", "電子通路業"]
+        "value": [
+          "半導體業",
+          "電子零組件業",
+          "電腦及週邊設備業",
+          "光電業",
+          "通信網路業",
+          "其他電子業",
+          "電子通路業"
+        ]
       }
     },
     {
@@ -339,7 +388,11 @@
       "fixed_display": true,
       "enabled": true,
       "rule": {
-        "paths": ["strategy_tag_features.liquidity_qualified", "oversold_electronics_rebound.liquidity_qualified", "liquidity_qualified"],
+        "paths": [
+          "strategy_tag_features.liquidity_qualified",
+          "oversold_electronics_rebound.liquidity_qualified",
+          "liquidity_qualified"
+        ],
         "operator": "eq",
         "value": true
       }
@@ -353,7 +406,26 @@
       "fixed_display": true,
       "enabled": true,
       "rule": {
-        "paths": ["strategy_tag_features.disposition_stock", "market_constraints.disposition_stock", "is_disposition_stock"],
+        "paths": [
+          "strategy_tag_features.disposition_stock",
+          "market_constraints.disposition_stock",
+          "is_disposition_stock"
+        ],
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "fundamental_two_stage_signal_day_v1",
+      "family_id": "fundamental_two_stage_signal_day",
+      "version": 1,
+      "label": "基本面雙確認訊號日",
+      "category": "fundamental",
+      "fixed_display": true,
+      "enabled": true,
+      "description": "僅在月營收訊號 base_trading_date 當日判定；電子股、FAS >= 8，且 latest-known FQ >= 10。",
+      "rule": {
+        "path": "strategy_tag_features.two_stage_fundamental_signal_day",
         "operator": "eq",
         "value": true
       }
@@ -399,7 +471,9 @@
           "liquidity_qualified_v1"
         ],
         "any": [],
-        "not": ["disposition_stock_v1"]
+        "not": [
+          "disposition_stock_v1"
+        ]
       }
     },
     {
@@ -411,9 +485,35 @@
       "enabled": true,
       "evaluation_target": "close_return_gt_5",
       "expression": {
-        "all": ["technical_3d_sharp_drop_v1", "technical_below_sma20_v1", "margin_significant_exit_v2"],
-        "any": ["technical_rsi_oversold_v1", "liquidity_qualified_v1"],
-        "not": ["disposition_stock_v1"]
+        "all": [
+          "technical_3d_sharp_drop_v1",
+          "technical_below_sma20_v1",
+          "margin_significant_exit_v2"
+        ],
+        "any": [
+          "technical_rsi_oversold_v1",
+          "liquidity_qualified_v1"
+        ],
+        "not": [
+          "disposition_stock_v1"
+        ]
+      }
+    },
+    {
+      "strategy_id": "two_stage_fundamental_quality_direct_entry_v1",
+      "family_id": "two_stage_fundamental_quality_direct_entry",
+      "version": 1,
+      "label": "基本面雙確認－訊號日直接進場",
+      "category": "fundamental",
+      "fixed_display": true,
+      "enabled": true,
+      "description": "研究目前支持的總資金報酬 baseline：電子股 FAS >= 8 + latest-known FQ >= 10，僅列在實際訊號日。-5%/-10% timing 尚未通過 OOS，不作為必要 entry gate。",
+      "expression": {
+        "all": [
+          "fundamental_two_stage_signal_day_v1"
+        ],
+        "any": [],
+        "not": []
       }
     }
   ]

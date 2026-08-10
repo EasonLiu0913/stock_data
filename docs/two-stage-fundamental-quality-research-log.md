@@ -473,3 +473,26 @@ Walk-forward 穩定性：
 
 JSON：`data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-pullback-walk-forward.json`
 <!-- WALK_FORWARD_OOS_END -->
+
+---
+
+<!-- PRODUCTION_DIRECT_ENTRY_SIGNAL_START -->
+## Production promotion — 基本面雙確認訊號日
+
+研究結論已正式接到股票預測的 Strategy Registry，但定位仍是「可觀測研究訊號」，不是保證買進建議。
+
+- Strategy ID：`two_stage_fundamental_quality_direct_entry_v1`
+- 顯示名稱：**基本面雙確認－訊號日直接進場**
+- Atomic tag：`fundamental_two_stage_signal_day_v1` / **基本面雙確認訊號日**
+- Universe：電子股
+- FAS：`>= 8`
+- FQ：`latest-known financial_quality_score >= 10`
+- 日期規則：**只在 monthly signal event 的 `base_trading_date` 當日命中**；之後不會因曾經出現過訊號而每天持續掛標籤。
+- Anti-lookahead：FQ 沿用 `conservative_known_date <= event date` 的 latest-known join；FAS 沿用原月營收研究 scoring。
+- Timing：目前不加入 -5% / -10% 等待 gate。Round 5 OOS 已證實 -5% timing 未通過，-10% 也僅 promising but not validated。
+- Production source：`strategy_tag_features.two_stage_fundamental_signal_day`，由 Registry 統一產生預測與覆盤分類，避免 Dashboard 另寫一套條件。
+
+目前 production 決策：
+
+> **FAS >= 8 + FQ >= 10 的電子股，在實際訊號日列入「基本面雙確認－訊號日直接進場」清單；未來若研究門檻改變，必須新增版本，不覆寫 v1 歷史定義。**
+<!-- PRODUCTION_DIRECT_ENTRY_SIGNAL_END -->
