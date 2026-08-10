@@ -1,0 +1,126 @@
+name: '[07 研究] 基本面雙確認－年份產業市場環境穩健性分析'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '結束月 YYYYMM；D40/D60 未成熟事件不納入對應 horizon'
+        required: true
+        type: string
+        default: '202606'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-robustness
+  cancel-in-progress: false
+
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/enrich_mops_revenue_monthly_signal_long_horizons.js
+          node --check scripts/summarize_two_stage_fundamental_quality_robustness.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+          node --check scripts/summarize_mops_revenue_market_regime_breakdown.js
+
+      - name: Ensure D40 and D60 returns are enriched
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/enrich_mops_revenue_monthly_signal_long_horizons.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Build robustness breakdown
+        env:
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_robustness.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH"
+
+      - name: Validate robustness output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-robustness.json';
+          const p = JSON.parse(fs.readFileSync(file, 'utf8'));
+          for (const h of ['d20','d40','d60']) {
+            if (!(p.coverage?.[h]?.complete_events > 0)) throw new Error(`zero mature ${h} coverage`);
+          }
+          if (!Array.isArray(p.overall) || p.overall.length !== 6) throw new Error('expected 6 overall rows');
+          if (!Array.isArray(p.yearly) || p.yearly.length === 0) throw new Error('yearly breakdown missing');
+          if (!Array.isArray(p.industry) || p.industry.length === 0) throw new Error('industry breakdown missing');
+          if (!Array.isArray(p.market_regime) || p.market_regime.length === 0) throw new Error('market-regime breakdown missing');
+          if (!Array.isArray(p.exclusions) || p.exclusions.length !== 18) throw new Error('expected 18 exclusion rows');
+          const key = id => p.exclusions.filter(x => x.test_id === id && x.horizon === 'd60').map(x => ({factor_id:x.factor_id,samples:x.samples,win_uplift:x.relative_win_rate_uplift_pp,excess_uplift:x.avg_excess_uplift_pct,median_excess:x.median_excess_return_pct}));
+          console.log(JSON.stringify({
+            coverage: p.coverage,
+            d60_exclude_2026: key('exclude_2026'),
+            d60_exclude_electronics: key('exclude_electronics'),
+            d60_exclude_both: key('exclude_2026_and_electronics'),
+          }, null, 2));
+          NODE
+
+      - name: Commit robustness research output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/monthly-revenue/monthly-signals \
+                  data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-robustness.json
+          if git diff --cached --quiet; then
+            echo 'No robustness research changes'
+            exit 0
+          fi
+          git commit -m "analysis: rebuild fundamental quality robustness study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 基本面雙確認－年份／產業／市場環境穩健性分析' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 比較：月營收 >=8 + 財報品質 >=10；月營收 >=9 + 財報品質 >=10' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Horizon：D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 年份：逐年檢查，並額外做排除 2026 測試' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 產業：以同產業成熟事件為 baseline；另做排除電子股測試' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 市場環境：沿用 TAIEX 前 20 交易日 strong / sideways / weak 描述性分類，不作策略 gate' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 額外壓力測試：同時排除 2026 與電子股' >> "$GITHUB_STEP_SUMMARY"
