@@ -1,0 +1,115 @@
+name: '[07 研究] 基本面雙確認－回檔 Timing Walk-forward OOS'
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: '研究起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202401'
+      end_month:
+        description: '研究結束月 YYYYMM'
+        required: true
+        type: string
+        default: '202606'
+      oos_start_month:
+        description: '固定 OOS 起始月 YYYYMM'
+        required: true
+        type: string
+        default: '202601'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/summarize_two_stage_fundamental_quality_pullback_walk_forward.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: two-stage-fundamental-quality-pullback-walk-forward
+  cancel-in-progress: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/stock_price_provider.js
+          node --check scripts/summarize_two_stage_fundamental_quality_pullback_walk_forward.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+
+      - name: Build walk-forward OOS study
+        env:
+          START_MONTH: ${{ github.event.inputs.start_month || '202401' }}
+          END_MONTH: ${{ github.event.inputs.end_month || '202606' }}
+          OOS_START_MONTH: ${{ github.event.inputs.oos_start_month || '202601' }}
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          node scripts/summarize_two_stage_fundamental_quality_pullback_walk_forward.js \
+            --start-month "$START_MONTH" \
+            --end-month "$END_MONTH" \
+            --oos-start-month "$OOS_START_MONTH"
+
+      - name: Validate output and research log update
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const f='data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-pullback-walk-forward.json';
+          const p=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(p.dataset!=='two_stage_fundamental_quality_pullback_walk_forward') throw new Error('unexpected dataset');
+          if(!(p.fixed_oos?.test_samples>0)) throw new Error('zero OOS samples');
+          if(!Array.isArray(p.walk_forward?.folds)||!p.walk_forward.folds.length) throw new Error('no walk-forward folds');
+          const doc=fs.readFileSync('docs/two-stage-fundamental-quality-research-log.md','utf8');
+          if(!doc.includes('<!-- WALK_FORWARD_OOS_START -->')||!doc.includes('<!-- WALK_FORWARD_OOS_END -->')) throw new Error('research log was not updated');
+          console.log(JSON.stringify({fixed_oos:p.fixed_oos,walk_forward:p.walk_forward.summary,conclusion:p.conclusion},null,2));
+          NODE
+
+      - name: Commit research output and updated log
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-pullback-walk-forward.json docs/two-stage-fundamental-quality-research-log.md
+          if git diff --cached --quiet; then
+            echo 'No walk-forward research changes'
+            exit 0
+          fi
+          git commit -m "analysis: validate pullback timing factors out of sample"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          echo '## 回檔 Timing Walk-forward / OOS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 核心 timing：pre20_vol / pre5_return / pre20_return / dist_from_20d_high' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 固定 OOS：2026-01 起；訓練集保留一個月 embargo' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Walk-forward：季度 expanding-window，亦保留一個月 embargo' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 輸出會自動回寫 docs/two-stage-fundamental-quality-research-log.md' >> "$GITHUB_STEP_SUMMARY"
