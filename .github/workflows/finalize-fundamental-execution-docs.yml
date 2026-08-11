@@ -1,0 +1,83 @@
+name: '[07 研究] 財報品質訊號－文件最終清理'
+
+on:
+  push:
+    paths:
+      - '.github/workflows/finalize-fundamental-execution-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Finalize research documentation
+        run: |
+          set -euo pipefail
+          node --check scripts/finalize_fundamental_execution_research_log.js
+          node scripts/finalize_fundamental_execution_research_log.js
+
+      - name: Validate cleanup
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const files = [
+            'docs/two-stage-fundamental-quality-research-log.md',
+            'docs/research/fundamental-events/phase-1-shadow-timeline.md',
+            'data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-policy.json',
+          ];
+          for (const file of files) {
+            const text = fs.readFileSync(file, 'utf8');
+            if (text.includes('訊號日直接進場')) throw new Error(`legacy strategy label remains in ${file}`);
+          }
+          const log = fs.readFileSync(files[0], 'utf8');
+          const start = log.indexOf('## 1. 目前有效研究結論');
+          const end = log.indexOf('## 2. Production V1 訊號顯示規則');
+          const current = log.slice(start, end);
+          if (current.includes('+26.1619%')) throw new Error('stale sparse-price headline remains in current conclusion');
+          if (!current.includes('104 筆實際 trades')) throw new Error('current conclusion missing 104-trade evidence');
+          if (!current.includes('`next_close`')) throw new Error('current conclusion missing next_close');
+          const policy = JSON.parse(fs.readFileSync('config/strategy-execution-policies.json', 'utf8'));
+          if (policy.policies?.two_stage_fundamental_quality_direct_entry_v1?.policy_id !== 'next_close') throw new Error('execution policy mismatch');
+          NODE
+
+      - name: Commit cleanup
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            docs/two-stage-fundamental-quality-research-log.md \
+            docs/research/fundamental-events/phase-1-shadow-timeline.md \
+            data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-policy.json
+          if git diff --cached --quiet; then
+            echo 'No cleanup changes'
+            exit 0
+          fi
+          git commit -m "docs: clean final fundamental execution conclusions"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 3))
+          done
+          exit 1
