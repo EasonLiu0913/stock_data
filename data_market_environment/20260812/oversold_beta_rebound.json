@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated_at": "2026-08-11T15:19:57.022Z",
+  "generated_at": "2026-08-11T15:16:20.386Z",
   "strategy_id": "oversold_beta_rebound_v1",
   "label": "跌深反彈準備度",
   "forecast_date_compact": "20260812",
@@ -10,7 +10,7 @@
   "calculation_status": "completed",
   "changes_direction_score": false,
   "replaces_market_environment": false,
-  "score": 8,
+  "score": 12,
   "total_weight": 100,
   "status_code": "not_formed",
   "status": "尚未形成",
@@ -31,9 +31,9 @@
       49
     ]
   },
-  "effective_data_weight": 85,
-  "effective_data_ratio": 85,
-  "available_signals": 8,
+  "effective_data_weight": 100,
+  "effective_data_ratio": 100,
+  "available_signals": 9,
   "total_signals": 9,
   "conditions": [
     {
@@ -126,11 +126,11 @@
       "id": "night_futures_open_signal",
       "label": "台指期夜盤 ≥ +2%",
       "weight": 15,
-      "points": 0,
-      "status": "na",
-      "value": null,
-      "value_label": "N/A",
-      "note": "缺台指期夜盤結構化資料。"
+      "points": 4,
+      "status": "partial",
+      "value": 0.7,
+      "value_label": "0.7%",
+      "note": "預測當下夜盤快照（in_progress），截至 2026-08-11T23:16:20+08:00；不是完整夜盤收盤值。"
     }
   ],
   "inputs": {
@@ -146,26 +146,33 @@
     "previous_market_risk_score": 48.3,
     "market_risk_decline": -23.4,
     "foreign_futures_net_change_contracts": 277,
-    "night_futures_change_pct": null
+    "night_futures_change_pct": 0.7
   },
   "market_rebound_day_definition": {
     "equal_weight_market_return_min_pct": 2,
     "advancing_issue_ratio_min_pct": 65,
     "rule": "次日全市場等權重報酬 >= +2% 且上漲家數比例 >= 65%"
   },
-  "warnings": [
-    "缺台指期夜盤結構化資料。"
-  ],
+  "warnings": [],
   "source_files": {
     "prediction_summary": "data_predictions/20260812/summary.json",
     "market_environment": "data_market_environment/20260812/market_environment.json",
     "external_market": "data_external_market/20260810/external_market_indicators.json",
     "previous_market_environment": "data_market_environment/20260811/market_environment.json",
-    "night_futures": null
+    "night_futures": "data_prediction_context/20260812/snapshots/20260811T231620+0800/night-futures.json",
+    "prediction_market_context": "data_prediction_context/20260812/snapshots/20260811T231620+0800/manifest.json"
   },
   "notes": [
     "這是獨立的市場反彈準備度，不取代 post_shock_day_1／post_shock_day_2 等市場環境。",
     "這是市場閘門，不直接修改 V1/V2 原始方向分數，也不決定個股是否進入跌深反彈電子股名單。",
     "缺資料以 N/A 表示，不會當成未符合。"
-  ]
+  ],
+  "prediction_market_context": {
+    "snapshot_id": "20260811T231620+0800",
+    "snapshot_hash": "f0c1132e812e72c69f925ee6feaf6088a1db3e0e8aaacfbef9957d838b11755f",
+    "captured_at": "2026-08-11T15:16:20.386Z",
+    "manifest_file": "data_prediction_context/20260812/snapshots/20260811T231620+0800/manifest.json",
+    "night_futures_file": "data_prediction_context/20260812/snapshots/20260811T231620+0800/night-futures.json",
+    "is_final": false
+  }
 }
