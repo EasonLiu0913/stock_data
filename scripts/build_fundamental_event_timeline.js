@@ -95,10 +95,19 @@ function normalizePeriod(value) {
   return null;
 }
 
+function inferMonthlyRevenuePeriod(text) {
+  const value = String(text || '');
+  let match = value.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月/);
+  if (match) return `${match[1]}${String(match[2]).padStart(2, '0')}`;
+  match = value.match(/民國\s*(\d{2,3})\s*年\s*(\d{1,2})\s*月/);
+  if (match) return `${Number(match[1]) + 1911}${String(match[2]).padStart(2, '0')}`;
+  return null;
+}
+
 function normalizeMonthlyRevenue(row, market, provider, tradingDates) {
   const stockId = normalizeStockId(pick(row, ['公司代號', '公司代碼', '證券代號', 'SecuritiesCompanyCode', 'Code']));
   if (!stockId) return null;
-  const publishedDate = parseRocDate(pick(row, ['出表日期', '資料日期', 'Date', 'ReportDate']));
+  const snapshotDate = parseRocDate(pick(row, ['出表日期', '資料日期', 'Date', 'ReportDate']));
   const period = normalizePeriod(pick(row, ['資料年月', '年月', 'YearMonth', 'RevenueMonth']));
   if (!period) return null;
   return finalizeEvent({
@@ -107,18 +116,26 @@ function normalizeMonthlyRevenue(row, market, provider, tradingDates) {
     market,
     event_type: EVENT_TYPES.MONTHLY_REVENUE,
     period,
-    published_date: publishedDate,
-    timestamp_precision: 'date',
-    availability_confidence: publishedDate ? 'official_date' : 'unknown',
-    title: `${period} 月營收`,
+    published_at: null,
+    published_date: null,
+    timestamp_precision: 'fallback',
+    fallback_known_date: snapshotDate,
+    availability_confidence: snapshotDate ? 'aggregate_snapshot_date' : 'unknown',
+    title: `${period} 月營收（官方彙總值）`,
     metrics: {
       revenue: numberValue(pick(row, ['當月營收', '本月營業收入淨額', '營業收入-當月營收', 'CurrentMonthRevenue'])),
-      previous_month_revenue: numberValue(pick(row, ['上月營收', 'PreviousMonthRevenue'])),
-      previous_year_revenue: numberValue(pick(row, ['去年當月營收', '去年同月營收', 'PreviousYearRevenue'])),
-      yoy_pct: numberValue(pick(row, ['去年同月增減(%)', '去年同月增減％', 'YoY'])),
-      mom_pct: numberValue(pick(row, ['上月比較增減(%)', '上月比較增減％', 'MoM'])),
+      previous_month_revenue: numberValue(pick(row, ['上月營收', '營業收入-上月營收', 'PreviousMonthRevenue'])),
+      previous_year_revenue: numberValue(pick(row, ['去年當月營收', '去年同月營收', '營業收入-去年當月營收', 'PreviousYearRevenue'])),
+      yoy_pct: numberValue(pick(row, ['去年同月增減(%)', '去年同月增減％', '營業收入-去年同月增減(%)', 'YoY'])),
+      mom_pct: numberValue(pick(row, ['上月比較增減(%)', '上月比較增減％', '營業收入-上月比較增減(%)', 'MoM'])),
     },
-    source: { provider, dataset: market === 'TWSE' ? 't187ap05_L' : 'mopsfin_t187ap05_O', role: 'official_monthly_revenue' },
+    source: {
+      provider,
+      dataset: market === 'TWSE' ? 't187ap05_L' : 'mopsfin_t187ap05_O',
+      role: 'official_monthly_revenue_value_snapshot',
+      observed_date: snapshotDate,
+      warning: 'OpenAPI 出表日期 is treated as aggregate snapshot date, not company publication time',
+    },
     raw: row,
   }, tradingDates);
 }
@@ -131,11 +148,15 @@ function normalizeMaterial(row, market, provider, tradingDates) {
   const title = String(pick(row, ['主旨', '標題', 'Subject']) || '').trim();
   const description = String(pick(row, ['說明', '內容', 'Description']) || '').trim();
   const eventType = classifyMaterialInformation(title, description);
+  const period = eventType === EVENT_TYPES.MONTHLY_REVENUE
+    ? inferMonthlyRevenuePeriod(`${title}\n${description}`)
+    : null;
   return finalizeEvent({
     stock_id: stockId,
     stock_name: pick(row, ['公司名稱', '公司簡稱', 'CompanyName']),
     market,
     event_type: eventType,
+    period,
     published_at: date && time ? taipeiIso(date, time) : null,
     published_date: date,
     timestamp_precision: date && time ? 'second' : 'date',
@@ -145,7 +166,7 @@ function normalizeMaterial(row, market, provider, tradingDates) {
     source: {
       provider,
       dataset: market === 'TWSE' ? 't187ap04_L' : 'mopsfin_t187ap04_O',
-      role: 'official_material_information',
+      role: eventType === EVENT_TYPES.MONTHLY_REVENUE ? 'official_monthly_revenue_disclosure' : 'official_material_information',
       sequence: pick(row, ['序號', 'SeqNo', 'Sequence']),
       fact_date: parseRocDate(pick(row, ['事實發生日', 'FactDate'])),
       article: pick(row, ['符合條款', '符合條款第幾款', 'Article']),
@@ -205,11 +226,12 @@ function readSupplementalEvents(file, tradingDates) {
 
 function dedupeEvents(events) {
   const byId = new Map();
+  const confidenceOrder = ['official_timestamp','official_date','curated_supplemental','aggregate_snapshot_date','fallback_deadline','unknown'];
   for (const event of events) {
     const existing = byId.get(event.event_id);
     if (!existing) { byId.set(event.event_id, event); continue; }
-    const existingRank = ['official_timestamp','official_date','curated_supplemental','fallback_deadline','unknown'].indexOf(existing.availability_confidence);
-    const newRank = ['official_timestamp','official_date','curated_supplemental','fallback_deadline','unknown'].indexOf(event.availability_confidence);
+    const existingRank = confidenceOrder.indexOf(existing.availability_confidence);
+    const newRank = confidenceOrder.indexOf(event.availability_confidence);
     if (newRank !== -1 && (existingRank === -1 || newRank < existingRank)) byId.set(event.event_id, event);
   }
   return [...byId.values()].sort((a, b) => String(a.published_at || a.published_date || a.fallback_known_date || '').localeCompare(String(b.published_at || b.published_date || b.fallback_known_date || '')) || a.event_id.localeCompare(b.event_id));
@@ -328,4 +350,4 @@ async function main(argv = process.argv.slice(2)) {
 
 if (require.main === module) main().catch(error => { console.error(error.stack || error.message); process.exit(1); });
 
-module.exports = { normalizeMonthlyRevenue, normalizeMaterial, normalizePeriod, fallbackFormalEvents, dedupeEvents };
+module.exports = { normalizeMonthlyRevenue, normalizeMaterial, normalizePeriod, inferMonthlyRevenuePeriod, fallbackFormalEvents, dedupeEvents };
