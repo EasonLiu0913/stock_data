@@ -148,7 +148,7 @@ function collectMonthlyFundamentalPool({ date, rootDir = 'data_predictions', wor
   const signalCutoff = compactDate(targetSummary?.base_trade_date);
   if (!signalCutoff) return [];
 
-  const holidays = loadHolidaySet(path.join(workspaceRoot, 'config', 'twse-holidays.json'));
+  const holidays = loadHolidaySet();
   const byStock = new Map();
   for (const { event } of monthlySignalEvents({ workspaceRoot })) {
     const stockCode = String(event?.stock_code || '').trim();
