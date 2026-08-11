@@ -13,6 +13,7 @@ on:
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'scripts/sync_prediction_dashboard_groups.js'
+      - 'scripts/sync_fundamental_signal_metadata.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
   workflow_call:
     inputs:
@@ -61,6 +62,7 @@ on:
       - 'scripts/apply_strategy_tag_registry.js'
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'scripts/sync_prediction_dashboard_groups.js'
+      - 'scripts/sync_fundamental_signal_metadata.js'
       - 'tests/strategy_tag_engine.test.js'
       - 'tests/strategy_tag_source_enrichment.test.js'
       - 'tests/historical_factor_research.test.js'
@@ -104,6 +106,7 @@ jobs:
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/sync_fundamental_signal_metadata.js
           node --check scripts/fetch_official_market_constraints.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
@@ -124,6 +127,7 @@ jobs:
           node --check scripts/apply_strategy_tag_registry.js
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/sync_fundamental_signal_metadata.js
           node --check scripts/fetch_official_market_constraints.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
@@ -204,6 +208,8 @@ jobs:
         run: node scripts/summarize_strategy_snapshot_manifest.js --date "$TARGET_DATE"
       - name: Synchronize dashboard strategy groups with versioned results
         run: node scripts/sync_prediction_dashboard_groups.js --date "$TARGET_DATE"
+      - name: Persist fundamental signal and execution dates
+        run: node scripts/sync_fundamental_signal_metadata.js --date "$TARGET_DATE"
       - name: Verify only the target snapshot date
         env:
           TARGET_DATE: ${{ steps.target.outputs.date }}
@@ -247,7 +253,24 @@ jobs:
               throw new Error(`Versioned strategy members mismatch: ${strategyId}`);
             }
           }
-          console.log(`Verified ${entries.length} snapshot entry(s) and synchronized dashboard groups for ${date}`);
+
+          const directId = 'two_stage_fundamental_quality_direct_entry_v1';
+          for (const stock of summary.stocks || []) {
+            const matches = (stock.registered_strategy_matches || []).map(item => typeof item === 'string' ? item : item?.strategy_id);
+            const metadata = stock.fundamental_signal;
+            if (matches.includes(directId)) {
+              if (!metadata?.signal_date || !metadata?.execution_date) {
+                throw new Error(`Fundamental signal dates missing from summary stock ${stock.stock_code}`);
+              }
+              const stockFile = `data_predictions/${date}/${stock.stock_code}.json`;
+              if (!fs.existsSync(stockFile)) throw new Error(`Prediction stock file missing: ${stockFile}`);
+              const stockPayload = JSON.parse(fs.readFileSync(stockFile, 'utf8'));
+              if (JSON.stringify(stockPayload.fundamental_signal || null) !== JSON.stringify(metadata)) {
+                throw new Error(`Fundamental signal metadata mismatch: ${stock.stock_code}`);
+              }
+            }
+          }
+          console.log(`Verified ${entries.length} snapshot entry(s), synchronized dashboard groups, and fundamental signal dates for ${date}`);
           NODE
       - name: Commit official constraints, snapshot, and enriched prediction summary
         shell: bash
