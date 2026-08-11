@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stock_data/fundamental-event-schema.v1.json",
+  "title": "Fundamental Event",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "stock_id",
+    "event_type",
+    "timestamp_precision",
+    "availability_confidence"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "event_id": { "type": "string", "minLength": 1 },
+    "stock_id": { "type": "string", "pattern": "^[0-9]{4,6}$" },
+    "stock_name": { "type": ["string", "null"] },
+    "market": { "type": ["string", "null"], "enum": ["TWSE", "TPEx", null] },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "monthly_revenue",
+        "preliminary_earnings",
+        "formal_financial_report",
+        "investor_conference",
+        "material_information"
+      ]
+    },
+    "period": { "type": ["string", "null"] },
+    "fiscal_period": { "type": ["string", "null"], "pattern": "^(20[0-9]{2}Q[1-4])?$" },
+    "published_at": { "type": ["string", "null"] },
+    "published_date": { "type": ["string", "null"], "pattern": "^(20[0-9]{2}-[0-9]{2}-[0-9]{2})?$" },
+    "timestamp_precision": {
+      "type": "string",
+      "enum": ["second", "minute", "date", "inferred", "fallback"]
+    },
+    "effective_trading_date": { "type": ["string", "null"], "pattern": "^(20[0-9]{2}-[0-9]{2}-[0-9]{2})?$" },
+    "fallback_known_date": { "type": ["string", "null"], "pattern": "^(20[0-9]{2}-[0-9]{2}-[0-9]{2})?$" },
+    "availability_confidence": { "type": "string", "minLength": 1 },
+    "title": { "type": ["string", "null"] },
+    "description": { "type": ["string", "null"] },
+    "metrics": { "type": ["object", "null"] },
+    "source": { "type": ["object", "null"] },
+    "raw": { "type": ["object", "array", "string", "number", "boolean", "null"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "timestamp_precision": { "const": "fallback" } } },
+      "then": { "required": ["fallback_known_date"] }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "monthly_revenue" } } },
+      "then": { "required": ["period"] }
+    }
+  ],
+  "additionalProperties": false
+}
