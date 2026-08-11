@@ -61,18 +61,45 @@ function signalMetadata(stock, summary) {
   };
 }
 
+function relabelDirectEntryStrategy(summary, groupSummary) {
+  let changed = false;
+  for (const definition of summary?.strategy_registry_v2 || []) {
+    if (definition?.strategy_id !== STRATEGY_ID || definition.label === DISPLAY_LABEL) continue;
+    definition.label = DISPLAY_LABEL;
+    changed = true;
+  }
+  const classification = summary?.strategy_classifications_v2?.[STRATEGY_ID];
+  if (classification && classification.label !== DISPLAY_LABEL) {
+    classification.label = DISPLAY_LABEL;
+    changed = true;
+  }
+  for (const group of summary?.group_summary || []) {
+    if (group?.strategy_id !== STRATEGY_ID || group.group === DISPLAY_LABEL) continue;
+    group.group = DISPLAY_LABEL;
+    changed = true;
+  }
+  for (const group of groupSummary?.groups || []) {
+    if (group?.strategy_id !== STRATEGY_ID || group.group === DISPLAY_LABEL) continue;
+    group.group = DISPLAY_LABEL;
+    changed = true;
+  }
+  return changed;
+}
+
 function syncFundamentalSignalMetadata({ date, rootDir = 'data_predictions', workspaceRoot = ROOT, dryRun = false } = {}) {
   const compact = compactDate(date);
   if (!compact) throw new Error('date must be YYYYMMDD');
   const predictionDir = path.join(workspaceRoot, rootDir, compact);
   const summaryFile = path.join(predictionDir, 'summary.json');
+  const groupSummaryFile = path.join(predictionDir, 'group-summary.json');
   const summary = readJson(summaryFile, null);
+  const groupSummary = readJson(groupSummaryFile, null);
   if (!summary || !Array.isArray(summary.stocks)) throw new Error(`Missing summary: ${summaryFile}`);
 
   let matched = 0;
   let updatedStockFiles = 0;
   let missingStockFiles = 0;
-  let summaryChanged = false;
+  let summaryChanged = relabelDirectEntryStrategy(summary, groupSummary);
 
   summary.stocks = summary.stocks.map(stock => {
     const metadata = signalMetadata(stock, summary);
@@ -99,7 +126,10 @@ function syncFundamentalSignalMetadata({ date, rootDir = 'data_predictions', wor
     updatedStockFiles += 1;
   }
 
-  if (summaryChanged && !dryRun) writeJsonAtomic(summaryFile, summary);
+  if (!dryRun) {
+    if (summaryChanged) writeJsonAtomic(summaryFile, summary);
+    if (groupSummary && Array.isArray(groupSummary.groups)) writeJsonAtomic(groupSummaryFile, groupSummary);
+  }
 
   return {
     date: compact,
@@ -148,6 +178,7 @@ module.exports = {
   isoDate,
   strategyIds,
   signalMetadata,
+  relabelDirectEntryStrategy,
   syncFundamentalSignalMetadata,
   parseArgs,
   main,
