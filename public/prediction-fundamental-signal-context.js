@@ -7,6 +7,13 @@
   const DASHBOARD_CONTEXT_ID = 'fundamentalSignalDashboardContext';
   const STOCK_SIGNAL_DATE_ID = 'fundamentalSignalDatePill';
   const STOCK_EXECUTION_DATE_ID = 'fundamentalExecutionDatePill';
+  const HIGHLIGHTED_GROUPS = new Set([
+    '財報品質訊號',
+    '跌深反彈電子股',
+    '融資退場型跌深反彈',
+    '三日突破前兆候選',
+    '多日盤整+趨勢轉強',
+  ]);
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -48,6 +55,12 @@
         background: #f7f9fc;
         white-space: nowrap;
       }
+      #groupRows a.strategy-summary-highlight {
+        color: #d97979;
+      }
+      #groupRows a.strategy-summary-highlight:hover {
+        color: #c85f5f;
+      }
       @media (max-width: 640px) {
         .fundamental-signal-dashboard-context {
           display: flex;
@@ -83,6 +96,14 @@
       .forEach(node => { if (node.textContent !== DISPLAY_LABEL) node.textContent = DISPLAY_LABEL; });
   }
 
+  function highlightStrategySummaryTitles() {
+    ensureStyle();
+    document.querySelectorAll('#groupRows a.link').forEach(link => {
+      const label = String(link.textContent || '').trim();
+      link.classList.toggle('strategy-summary-highlight', HIGHLIGHTED_GROUPS.has(label));
+    });
+  }
+
   function activeDirectEntryButton() {
     const button = document.querySelector(`[data-strategy-id="${STRATEGY_ID}"]`);
     if (!button || button.disabled) return null;
@@ -94,6 +115,7 @@
     if (!payload) return;
     relabelDashboardData(payload);
     relabelVisibleStrategy();
+    highlightStrategySummaryTitles();
 
     const title = document.getElementById('stockListTitle');
     if (!title) return;
