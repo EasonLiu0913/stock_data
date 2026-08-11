@@ -25,11 +25,13 @@
     "historical_preliminary_scoreable": 1
   },
   "corrected_direct_d60": {
-    "eligible_events": 106,
-    "average_pct": 26.1619,
-    "median_pct": 17.4917,
-    "positive_rate_pct": 78.2609,
-    "ge30_rate_pct": 43.4783
+    "source": "fundamental-quality-execution-revalidation.json",
+    "role": "signal_close_benchmark_only",
+    "trades": 104,
+    "average_pct": 11.2474,
+    "median_pct": 2.7665,
+    "positive_rate_pct": 53.8462,
+    "ge30_rate_pct": 25.9615
   },
   "conditional_pullback_d60": {
     "pullback_5_skip": {
@@ -49,13 +51,43 @@
     "signal_close_direct_entry_baseline_retained": true,
     "event_driven_changes_current_202401_202606_universe": false,
     "event_driven_production_migration_ready": false,
-    "next_day_execution_validated": false,
-    "next_day_execution_note": "The current direct-entry backtest enters at base_trading_date close. A user who sees the V1 prediction after the close can only trade on the next trading day, so next-day open/close execution must be revalidated before treating the D60 metrics as operational performance."
+    "next_day_execution_validated": true,
+    "next_day_execution_note": "Execution revalidation completed on 2026-08-11. Production recommendation is next trading day close; signal-day close is benchmark only.",
+    "production_execution_policy": "next_close"
   },
   "ci_evidence": {
     "workflow": "[07 研究] 基本面雙確認－Phase 3 Corrected Revalidation",
     "run_id": 31481035734,
     "result": "success",
     "artifact_id": 9097214941
+  },
+  "corrected_direct_d60_legacy_sparse_price_coverage": {
+    "eligible_events": 106,
+    "average_pct": 26.1619,
+    "median_pct": 17.4917,
+    "positive_rate_pct": 78.2609,
+    "ge30_rate_pct": 43.4783
+  },
+  "execution_revalidation": {
+    "status": "validated",
+    "candidate_events": 131,
+    "execution_price_complete_events": 130,
+    "execution_price_coverage_pct": 99.2366,
+    "prior_phase3_price_coverage_issue": "The prior Phase 3 artifact reported 106 eligible events but only 23 D60 direct trades because sparse checkout omitted complete price sources; its +26.1619% headline is superseded for execution evidence.",
+    "next_open_d60": {
+      "trades": 104,
+      "average_pct": 10.1624,
+      "median_pct": 1.0775,
+      "positive_rate_pct": 50.9615
+    },
+    "next_close_d60": {
+      "trades": 104,
+      "average_pct": 10.516,
+      "median_pct": 1.7659,
+      "positive_rate_pct": 51.9231
+    },
+    "production_execution_policy": "next_close",
+    "production_execution_label": "隔日收盤",
+    "research_source": "data_prediction_analysis/quarterly-financial-quality/fundamental-quality-execution-revalidation.json"
   }
 }

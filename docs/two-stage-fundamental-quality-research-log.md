@@ -35,6 +35,63 @@ Regression 已鎖定：
 
 ---
 
+<!-- EXECUTION_REVALIDATION_20260811_START -->
+## 0A. 2026-08-11 可執行進場價 Revalidation（正式取代舊 execution headline）
+
+本輪直接驗證 production V1 真正能成交的價格：**訊號日收盤 benchmark vs 隔日開盤 vs 隔日收盤**。研究窗仍為 `202401～202606`，universe 仍為 corrected anti-lookahead 的電子股 `FAS >= 8 + latest-known FQ >= 10`。
+
+### 先修正上一輪一個重要的證據解讀問題
+
+Phase 3 corrected workflow 當時採 sparse checkout，沒有 checkout 完整 TWSE MI_INDEX / legacy price sources。舊 summary 雖寫 `eligible_events = 106`，但 artifact 中 **D60 direct 實際只有 23 trades**；因此舊 `D60 +26.1619% / median +17.4917% / positive 78.2609%` 不可再解讀成 106 筆完整價格樣本。
+
+本輪使用 repository 內完整 OHLC provider 後：
+
+- corrected candidates：**131**
+- signal / next-session OHLC 完整：**130**（99.2366%）
+- D60 實際 price-complete trades：**104**
+
+因此從現在開始，execution headline 改以本輪完整價格 coverage 為準。
+
+### D60：完整價格樣本結果
+
+| 執行方式 | 角色 | Trades | 平均報酬 | 中位報酬 | 正報酬率 | Median MFE | Median MAE |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 訊號日收盤 | benchmark only | 104 | 11.2474% | 2.7665% | 53.8462% | 24.6789% | -16.6803% |
+| 隔日開盤 | 最早可執行 | 104 | 10.1624% | 1.0775% | 50.9615% | 22.6944% | -17.1253% |
+| 隔日收盤 | 可執行 | 104 | 10.5160% | 1.7659% | 51.9231% | 25.4262% | -16.2930% |
+
+### Production execution 結論
+
+**正式建議：`next_close`（隔日收盤）**。它不是新策略，也不改 `two_stage_fundamental_quality_direct_entry_v1` 的 strategy ID/version；它是獨立 execution policy。
+
+主要 horizons 的 next-close 都比 next-open 有更好的中位報酬與勝率：
+
+| Horizon | Next Open median / 勝率 | Next Close median / 勝率 |
+|---|---:|---:|
+| D5 | 0.5841% / 51.1628% | 0.7018% / 55.0388% |
+| D20 | 1.9588% / 53.3333% | 2.5371% / 55.0000% |
+| D60 | 1.0775% / 50.9615% | 1.7659% / 51.9231% |
+
+### Overnight gap
+
+- 全樣本平均 gap：**0.5272%**
+- 中位 gap：**0.4979%**
+- `gap > 5%` 比例只有 **0.7692%**，成熟樣本不足，不建立 >5% 硬 gate。
+- 但 next-open D60 有明顯梯度：`gap <= 0` 的 median 約 **7.7938%**、勝率 **59.3750%**；`gap 2～5%` 的 median 約 **-0.4219%**、勝率 **48.0000%**。
+
+因此目前只把「高 gap 不宜開盤追價」保留為觀察提示，**不新增 entry gate**；production execution 直接採隔日收盤，未來等 gap-up 樣本增加後再做 OOS threshold 驗證。
+
+### 本輪狀態
+
+- next-day execution：**validated**
+- production execution policy：**`next_close`**
+- signal close：**只保留 benchmark，不視為使用者可成交績效**
+- strategy ID/version：**不變**
+- execution policy config：`config/strategy-execution-policies.json`
+- 研究輸出：`data_prediction_analysis/quarterly-financial-quality/fundamental-quality-execution-revalidation.json`
+
+<!-- EXECUTION_REVALIDATION_20260811_END -->
+
 ## 1. 目前有效研究結論
 
 截至 2026-08-11，**只以 corrected anti-lookahead 結果為正式證據**：
