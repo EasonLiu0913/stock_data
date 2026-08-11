@@ -10,6 +10,7 @@ const {
   buildEventDrivenFinancialRows,
   latestKnownScore,
 } = require('../scripts/event_driven_financial_quality');
+const { latestKnownFinancial } = require('../scripts/summarize_two_stage_fundamental_quality_long_horizons');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -52,4 +53,15 @@ test('mixed compact event date never sees a future dashed preliminary effective 
   assert.notEqual(feb?.fiscal_period, '2026Q2');
   assert.notEqual(jul16?.fiscal_period, '2026Q2');
   assert.equal(jul17?.fiscal_period, '2026Q2');
+});
+
+test('corrected conservative resolver normalizes dashed known dates against compact event dates', () => {
+  const rows = [
+    { fiscal_period: '2023Q4', conservative_known_date: '2024-04-01', financial_quality_score: 3 },
+    { fiscal_period: '2024Q1', conservative_known_date: '2024-05-15', financial_quality_score: 11 },
+    { fiscal_period: '2024Q3', conservative_known_date: '2024-11-14', financial_quality_score: 14 },
+  ];
+  assert.equal(latestKnownFinancial(rows, '20240416')?.fiscal_period, '2023Q4');
+  assert.equal(latestKnownFinancial(rows, '20240516')?.fiscal_period, '2024Q1');
+  assert.notEqual(latestKnownFinancial(rows, '20240516')?.fiscal_period, '2024Q3');
 });
