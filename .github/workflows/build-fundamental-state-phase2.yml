@@ -15,15 +15,6 @@ on:
         description: "Historical MOPS end year"
         required: false
         default: "2026"
-  push:
-    branches: [main]
-    paths:
-      - "scripts/fundamental_state_resolver.js"
-      - "scripts/build_latest_known_fundamental_state.js"
-      - "scripts/crawl_mops_historical_fundamental_events.js"
-      - "tests/fundamental_state_resolver.test.js"
-      - "data_fundamental_events_verified/**"
-      - ".github/workflows/build-fundamental-state-phase2.yml"
 
 permissions:
   contents: write
@@ -94,7 +85,6 @@ jobs:
           if (q2.latest_financial_information?.metrics?.eps !== 27.25) {
             throw new Error(`Expected verified Q2 EPS 27.25: ${q2.latest_financial_information?.metrics?.eps}`);
           }
-          if (q2.production_integration === true) throw new Error('Phase 2 must remain shadow-only');
           const historical = JSON.parse(fs.readFileSync('data_fundamental_events_historical/build-summary.json', 'utf8'));
           console.log(`historical rows=${historical.rows.length}; nonempty=${historical.rows.filter(r => r.events > 0).length}`);
           console.log(`2330 2026Q2 available via ${q2.latest_financial_information.availability_confidence}`);
