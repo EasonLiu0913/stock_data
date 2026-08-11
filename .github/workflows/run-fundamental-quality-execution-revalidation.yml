@@ -1,10 +1,6 @@
 name: '[07 研究] 財報品質訊號－可執行進場價驗證'
 
-# Narrow push trigger exists only to finish the current execution-research cleanup.
 on:
-  push:
-    paths:
-      - '.github/workflows/run-fundamental-quality-execution-revalidation.yml'
   workflow_dispatch:
     inputs:
       start_month:
@@ -51,14 +47,12 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/summarize_fundamental_quality_execution_revalidation.js
-          node --check scripts/update_fundamental_execution_research_docs.js
-          node --check scripts/finalize_fundamental_execution_research_log.js
           node --test tests/fundamental_quality_execution_revalidation.test.js
 
       - name: Build execution revalidation
         env:
-          START_MONTH: ${{ inputs.start_month || '202401' }}
-          END_MONTH: ${{ inputs.end_month || '202606' }}
+          START_MONTH: ${{ inputs.start_month }}
+          END_MONTH: ${{ inputs.end_month }}
           NODE_OPTIONS: --max-old-space-size=6144
         run: |
           set -euo pipefail
@@ -75,66 +69,31 @@ jobs:
           const p = JSON.parse(fs.readFileSync(file, 'utf8'));
           if (p.dataset !== 'fundamental_quality_execution_revalidation') throw new Error('unexpected dataset');
           if (p.strategy_label !== '財報品質訊號') throw new Error('unexpected strategy label');
-          if (p.coverage?.candidate_events !== 131) throw new Error(`unexpected candidates ${p.coverage?.candidate_events}`);
-          if (p.coverage?.execution_price_complete_events !== 130) throw new Error(`unexpected execution coverage ${p.coverage?.execution_price_complete_events}`);
+          if (!(p.coverage?.candidate_events > 0)) throw new Error('zero candidates');
+          if (!(p.coverage?.execution_price_complete_events > 0)) throw new Error('zero execution coverage');
           if (!Array.isArray(p.rows) || p.rows.length !== 21) throw new Error(`expected 21 rows, got ${p.rows?.length}`);
-          for (const id of ['signal_close', 'next_open', 'next_close']) if (!p.rows.some(r => r.policy_id === id)) throw new Error(`missing ${id}`);
-          for (const horizon of ['d1','d3','d5','d10','d20','d40','d60']) if (!p.rows.some(r => r.horizon === horizon)) throw new Error(`missing ${horizon}`);
-          const signal60 = p.rows.find(r => r.policy_id === 'signal_close' && r.horizon === 'd60');
-          const close60 = p.rows.find(r => r.policy_id === 'next_close' && r.horizon === 'd60');
-          if (signal60?.trades !== 104 || close60?.trades !== 104) throw new Error('D60 full-price trade coverage changed');
-          if (p.production_recommendation?.policy_id !== 'next_close') throw new Error(`unexpected recommendation ${p.production_recommendation?.policy_id}`);
-          NODE
-
-      - name: Update research documentation
-        run: |
-          set -euo pipefail
-          node scripts/update_fundamental_execution_research_docs.js
-          node scripts/finalize_fundamental_execution_research_log.js
-
-      - name: Validate finalized documentation
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const summary = JSON.parse(fs.readFileSync('data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-corrected-summary.json', 'utf8'));
-          if (summary.conclusion?.next_day_execution_validated !== true) throw new Error('next-day execution still not validated');
-          if (summary.conclusion?.production_execution_policy !== 'next_close') throw new Error('production policy not next_close');
-          if (summary.corrected_direct_d60?.trades !== 104) throw new Error(`unexpected comprehensive D60 trades ${summary.corrected_direct_d60?.trades}`);
-          const files = [
-            'docs/two-stage-fundamental-quality-research-log.md',
-            'docs/research/fundamental-events/phase-1-shadow-timeline.md',
-            'data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-policy.json',
-          ];
-          for (const file of files) {
-            const text = fs.readFileSync(file, 'utf8');
-            if (text.includes('訊號日直接進場')) throw new Error(`legacy strategy label remains in ${file}`);
+          for (const id of ['signal_close', 'next_open', 'next_close']) {
+            if (!p.rows.some(r => r.policy_id === id)) throw new Error(`missing ${id}`);
           }
-          const log = fs.readFileSync(files[0], 'utf8');
-          if (!log.includes('**正式建議：`next_close`（隔日收盤）**')) throw new Error('research recommendation missing');
-          const currentStart = log.indexOf('## 1. 目前有效研究結論');
-          const currentEnd = log.indexOf('## 2. Production V1 訊號顯示規則');
-          const current = log.slice(currentStart, currentEnd);
-          if (current.includes('+26.1619%')) throw new Error('stale sparse-price headline remains in current conclusion');
-          if (!current.includes('104 筆實際 trades')) throw new Error('current conclusion missing full-price D60 evidence');
+          for (const horizon of ['d1','d3','d5','d10','d20','d40','d60']) {
+            if (!p.rows.some(r => r.horizon === horizon)) throw new Error(`missing ${horizon}`);
+          }
+          if (p.production_recommendation?.policy_id !== 'next_close') {
+            throw new Error(`unexpected recommendation ${p.production_recommendation?.policy_id}`);
+          }
           NODE
 
-      - name: Commit research result and documentation
+      - name: Commit research result
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            data_prediction_analysis/quarterly-financial-quality/fundamental-quality-execution-revalidation.json \
-            data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-corrected-summary.json \
-            data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-entry-policy.json \
-            docs/two-stage-fundamental-quality-research-log.md \
-            docs/research/fundamental-events/phase-1-shadow-timeline.md
+          git add data_prediction_analysis/quarterly-financial-quality/fundamental-quality-execution-revalidation.json
           if git diff --cached --quiet; then
             echo 'No execution revalidation changes'
             exit 0
           fi
-          git commit -m "analysis: clean final execution research evidence"
+          git commit -m "analysis: rebuild executable entry price revalidation"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
@@ -146,7 +105,6 @@ jobs:
         if: always()
         run: |
           echo '## 財報品質訊號－可執行進場價驗證' >> "$GITHUB_STEP_SUMMARY"
+          echo '- 比較：訊號日收盤 benchmark、隔日開盤、隔日收盤' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Horizons：D1 / D3 / D5 / D10 / D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
           echo '- Production execution：next_close（隔日收盤）' >> "$GITHUB_STEP_SUMMARY"
-          echo '- D60 full-price trades：104' >> "$GITHUB_STEP_SUMMARY"
-          echo '- 舊 sparse-price headline 已從目前有效結論移除' >> "$GITHUB_STEP_SUMMARY"
-          echo '- 舊策略顯示名稱已從有效研究文件清除' >> "$GITHUB_STEP_SUMMARY"
