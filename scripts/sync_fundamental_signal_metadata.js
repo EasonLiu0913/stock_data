@@ -3,10 +3,15 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const {
+  summarizeStocks,
+} = require('./apply_formal_market_strategy_tags');
 
 const ROOT = path.resolve(__dirname, '..');
 const STRATEGY_ID = 'two_stage_fundamental_quality_direct_entry_v1';
 const DISPLAY_LABEL = '財報品質訊號';
+const MONTHLY_POOL_ID = 'monthly_fundamental_quality_active_pool_v1';
+const MONTHLY_POOL_LABEL = '本月有效財報品質池';
 
 function compactDate(value) {
   const compact = String(value || '').replace(/[^0-9]/g, '');
@@ -86,6 +91,128 @@ function relabelDirectEntryStrategy(summary, groupSummary) {
   return changed;
 }
 
+function monthlyPredictionDates({ date, rootDir = 'data_predictions', workspaceRoot = ROOT } = {}) {
+  const compact = compactDate(date);
+  if (!compact) return [];
+  const month = compact.slice(0, 6);
+  const root = path.join(workspaceRoot, rootDir);
+  try {
+    return fs.readdirSync(root, { withFileTypes: true })
+      .filter(entry => entry.isDirectory() && /^20\d{6}$/.test(entry.name))
+      .map(entry => entry.name)
+      .filter(target => target.startsWith(month) && target <= compact)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function collectMonthlyFundamentalPool({ date, rootDir = 'data_predictions', workspaceRoot = ROOT } = {}) {
+  const compact = compactDate(date);
+  if (!compact) throw new Error('date must be YYYYMMDD');
+  const month = compact.slice(0, 6);
+  const byStock = new Map();
+
+  for (const targetDate of monthlyPredictionDates({ date: compact, rootDir, workspaceRoot })) {
+    const summaryFile = path.join(workspaceRoot, rootDir, targetDate, 'summary.json');
+    const dailySummary = readJson(summaryFile, null);
+    if (!dailySummary || !Array.isArray(dailySummary.stocks)) continue;
+
+    for (const stock of dailySummary.stocks) {
+      const metadata = stock?.fundamental_signal?.strategy_id === STRATEGY_ID
+        ? stock.fundamental_signal
+        : signalMetadata(stock, dailySummary);
+      if (!metadata || metadata.strategy_id !== STRATEGY_ID) continue;
+
+      const executionDate = compactDate(metadata.execution_date || dailySummary.forecast_date);
+      if (!executionDate || !executionDate.startsWith(month) || executionDate > compact) continue;
+      const stockCode = String(stock.stock_code || '').trim();
+      if (!stockCode) continue;
+
+      const signalDate = isoDate(metadata.signal_date || dailySummary.base_trade_date);
+      const record = byStock.get(stockCode) || {
+        stock_code: stockCode,
+        stock_name: stock.stock_name || '',
+        first_signal_date: signalDate,
+        latest_signal_date: signalDate,
+        execution_date: isoDate(executionDate),
+        fas_score: metadata.fas_score ?? null,
+        fq_score: metadata.fq_score ?? null,
+        financial_period: metadata.financial_period || null,
+      };
+
+      if (signalDate && (!record.first_signal_date || signalDate < record.first_signal_date)) {
+        record.first_signal_date = signalDate;
+      }
+      if (signalDate && (!record.latest_signal_date || signalDate > record.latest_signal_date)) {
+        record.latest_signal_date = signalDate;
+      }
+      if (executionDate >= compactDate(record.execution_date || '')) {
+        record.execution_date = isoDate(executionDate);
+        record.fas_score = metadata.fas_score ?? record.fas_score;
+        record.fq_score = metadata.fq_score ?? record.fq_score;
+        record.financial_period = metadata.financial_period || record.financial_period;
+        if (stock.stock_name) record.stock_name = stock.stock_name;
+      }
+      byStock.set(stockCode, record);
+    }
+  }
+
+  return [...byStock.values()].sort((left, right) => left.stock_code.localeCompare(right.stock_code));
+}
+
+function monthlyPoolGroup(summary, records) {
+  const members = records.map(record => record.stock_code);
+  const memberSet = new Set(members);
+  const matchedStocks = (summary?.stocks || []).filter(stock => memberSet.has(String(stock.stock_code || '')));
+  const metrics = summarizeStocks(matchedStocks);
+  return {
+    ...metrics,
+    group: MONTHLY_POOL_LABEL,
+    strategy_id: MONTHLY_POOL_ID,
+    strategy_family: 'monthly_fundamental_quality_active_pool',
+    strategy_version: 1,
+    fixed_display: true,
+    monthly_pool: true,
+    changes_direction_score: false,
+    count: members.length,
+    members,
+    member_metadata: records,
+    calculation_status: 'completed',
+    status_label: members.length === 0
+      ? '已完成計算，本月 0 筆'
+      : `本月累積 ${members.length} 筆有效財報品質訊號`,
+    evaluation_target: '當月截至目標日曾觸發財報品質訊號的上市電子股聯集',
+    criteria: [
+      `來源策略：${DISPLAY_LABEL}`,
+      '僅納入同月份且執行日不晚於目前預測日的正式訊號',
+      '同一股票當月只保留一筆，並保存首次／最近訊號日與 FAS、FQ',
+    ],
+  };
+}
+
+function upsertMonthlyPool(summary, groupSummary, records) {
+  if (!groupSummary || !Array.isArray(groupSummary.groups)) return false;
+  const nextGroup = monthlyPoolGroup(summary, records);
+  const indexes = groupSummary.groups
+    .map((group, index) => group?.strategy_id === MONTHLY_POOL_ID || group?.group === MONTHLY_POOL_LABEL ? index : -1)
+    .filter(index => index >= 0);
+
+  if (indexes.length) {
+    groupSummary.groups[indexes[0]] = nextGroup;
+    for (let index = indexes.length - 1; index >= 1; index -= 1) {
+      groupSummary.groups.splice(indexes[index], 1);
+    }
+  } else {
+    groupSummary.groups.push(nextGroup);
+  }
+  groupSummary.groups.sort((left, right) => Number(right.count || 0) - Number(left.count || 0)
+    || String(left.group || '').localeCompare(String(right.group || ''), 'zh-Hant'));
+  summary.group_summary = groupSummary.groups;
+  summary.group_summary_source = 'group-summary.json';
+  return true;
+}
+
 function syncFundamentalSignalMetadata({ date, rootDir = 'data_predictions', workspaceRoot = ROOT, dryRun = false } = {}) {
   const compact = compactDate(date);
   if (!compact) throw new Error('date must be YYYYMMDD');
@@ -109,6 +236,13 @@ function syncFundamentalSignalMetadata({ date, rootDir = 'data_predictions', wor
     if (before !== after) summaryChanged = true;
     return { ...stock, fundamental_signal: metadata };
   });
+
+  const monthlyPool = collectMonthlyFundamentalPool({
+    date: compact,
+    rootDir,
+    workspaceRoot,
+  });
+  if (upsertMonthlyPool(summary, groupSummary, monthlyPool)) summaryChanged = true;
 
   for (const stock of summary.stocks) {
     const code = String(stock.stock_code || '').trim();
@@ -137,6 +271,10 @@ function syncFundamentalSignalMetadata({ date, rootDir = 'data_predictions', wor
     strategy_id: STRATEGY_ID,
     label: DISPLAY_LABEL,
     matched_stocks: matched,
+    monthly_pool_id: MONTHLY_POOL_ID,
+    monthly_pool_label: MONTHLY_POOL_LABEL,
+    monthly_pool_count: monthlyPool.length,
+    monthly_pool_members: monthlyPool.map(item => item.stock_code),
     summary_changed: summaryChanged,
     updated_stock_files: updatedStockFiles,
     missing_stock_files: missingStockFiles,
@@ -174,11 +312,17 @@ if (require.main === module) {
 module.exports = {
   STRATEGY_ID,
   DISPLAY_LABEL,
+  MONTHLY_POOL_ID,
+  MONTHLY_POOL_LABEL,
   compactDate,
   isoDate,
   strategyIds,
   signalMetadata,
   relabelDirectEntryStrategy,
+  monthlyPredictionDates,
+  collectMonthlyFundamentalPool,
+  monthlyPoolGroup,
+  upsertMonthlyPool,
   syncFundamentalSignalMetadata,
   parseArgs,
   main,
