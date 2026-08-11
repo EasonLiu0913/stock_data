@@ -4,7 +4,7 @@
   const BUTTON_ID = 'predictionBackToTop';
   const STYLE_ID = 'predictionBackToTopStyle';
   const FUNDAMENTAL_SIGNAL_SCRIPT_ID = 'predictionFundamentalSignalContextScript';
-  const FUNDAMENTAL_SIGNAL_SCRIPT = 'prediction-fundamental-signal-context.js?v=2';
+  const FUNDAMENTAL_SIGNAL_SCRIPT = 'prediction-fundamental-signal-context.js?v=3';
   const EXISTING_CONTROL_SELECTOR = [
     '.to-top',
     '.back-to-top',
