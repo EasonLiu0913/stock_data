@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const STRATEGY_ID = 'two_stage_fundamental_quality_direct_entry_v1';
-const DISPLAY_LABEL = '訊號日直接進場';
+const DISPLAY_LABEL = '財報品質訊號';
 
 function compactDate(value) {
   const compact = String(value || '').replace(/[^0-9]/g, '');
