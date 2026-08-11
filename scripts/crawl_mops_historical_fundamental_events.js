@@ -3,7 +3,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { chromium } = require('playwright');
 const {
   EVENT_TYPES,
   parseRocDate,
@@ -144,6 +143,9 @@ function writeEvents(stockId, year, events) {
 }
 
 async function main(argv = process.argv.slice(2)) {
+  // Keep Playwright optional for pure parsing/state-resolver consumers and unit tests.
+  // The browser dependency is required only when the historical crawler is executed.
+  const { chromium } = require('playwright');
   const args = parseArgs(argv);
   const stockIds = String(args.get('stock-ids') || '2330,2317,2454,2059').split(',').map(v => v.trim()).filter(Boolean);
   const startYear = Number(args.get('start-year') || 2024);
