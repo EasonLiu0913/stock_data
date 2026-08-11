@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "dataset": "two_stage_fundamental_quality_phase3_corrected_summary",
+  "generated_at": "2026-08-11T10:11:18.170Z",
+  "research_window": {
+    "start_month": "202401",
+    "end_month": "202606"
+  },
+  "status": "research_only",
+  "anti_lookahead_correction": {
+    "prior_199_event_research_status": "invalidated_by_mixed_date_format_lookahead",
+    "issue": "conservative_known_date used YYYY-MM-DD while monthly event dates used YYYYMMDD; lexicographic comparison could admit future quarters",
+    "corrected_rule": "normalize both known date and event date to YYYYMMDD before requiring known_date <= event_date"
+  },
+  "coverage": {
+    "total_monthly_events": 29466,
+    "electronic_fas8_events": 1604,
+    "missing_asof_financial": 160,
+    "financial_below_10": 1313,
+    "corrected_conservative_candidates": 131,
+    "event_driven_candidates": 131,
+    "event_driven_unchanged": 131,
+    "event_driven_added": 0,
+    "event_driven_removed": 0,
+    "historical_preliminary_scoreable": 1
+  },
+  "corrected_direct_d60": {
+    "eligible_events": 106,
+    "average_pct": 26.1619,
+    "median_pct": 17.4917,
+    "positive_rate_pct": 78.2609,
+    "ge30_rate_pct": 43.4783
+  },
+  "conditional_pullback_d60": {
+    "pullback_5_skip": {
+      "average_pct": 36.388,
+      "participation_rate_pct": 10.3774,
+      "skipped_direct_positive_rate_pct": 75,
+      "skipped_direct_ge30_rate_pct": 33.3333
+    },
+    "pullback_10_skip": {
+      "average_pct": 47.6607,
+      "participation_rate_pct": 5.6604,
+      "skipped_direct_positive_rate_pct": 82.3529,
+      "skipped_direct_ge30_rate_pct": 41.1765
+    }
+  },
+  "conclusion": {
+    "signal_close_direct_entry_baseline_retained": true,
+    "event_driven_changes_current_202401_202606_universe": false,
+    "event_driven_production_migration_ready": false,
+    "next_day_execution_validated": false,
+    "next_day_execution_note": "The current direct-entry backtest enters at base_trading_date close. A user who sees the V1 prediction after the close can only trade on the next trading day, so next-day open/close execution must be revalidated before treating the D60 metrics as operational performance."
+  },
+  "ci_evidence": {
+    "workflow": "[07 研究] 基本面雙確認－Phase 3 Corrected Revalidation",
+    "run_id": 31481035734,
+    "result": "success",
+    "artifact_id": 9097214941
+  }
+}
