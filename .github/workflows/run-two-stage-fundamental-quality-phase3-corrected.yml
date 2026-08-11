@@ -1,0 +1,108 @@
+name: "[07 研究] 基本面雙確認－Phase 3 Corrected Revalidation"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: "Start month YYYYMM"
+        required: true
+        default: "202401"
+      end_month:
+        description: "End month YYYYMM"
+        required: true
+        default: "202606"
+  pull_request:
+    paths:
+      - "phase3-validation-trigger.txt"
+      - "scripts/summarize_two_stage_fundamental_quality_phase3_corrected.js"
+      - "scripts/summarize_two_stage_fundamental_quality_long_horizons.js"
+      - "scripts/event_driven_financial_quality.js"
+      - "tests/event_driven_financial_quality.test.js"
+      - ".github/workflows/run-two-stage-fundamental-quality-phase3-corrected.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase3-corrected-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - name: Checkout research dependencies
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/**
+            tests/event_driven_financial_quality.test.js
+            tests/fundamental_state_resolver.test.js
+            tests/fundamental_event_timeline.test.js
+            data_finmind_quarterly_financial_quality/**
+            data_fundamental_events_verified/**
+            data_fundamental_events_historical/**
+            data_fundamental_events/**
+            data_prediction_analysis/monthly-revenue/monthly-signals/**
+            data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json
+            data_mops_monthly_revenue/**
+            data_twse_market_chart/**
+            data_history_sma/**
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax checks
+        run: |
+          node --check scripts/event_driven_financial_quality.js
+          node --check scripts/summarize_two_stage_fundamental_quality_long_horizons.js
+          node --check scripts/summarize_two_stage_fundamental_quality_phase3_corrected.js
+
+      - name: Regression tests
+        run: |
+          node --test tests/event_driven_financial_quality.test.js
+          node --test tests/fundamental_state_resolver.test.js
+          node --test tests/fundamental_event_timeline.test.js
+
+      - name: Run corrected Phase 3 research
+        env:
+          START_MONTH: ${{ github.event.inputs.start_month || '202401' }}
+          END_MONTH: ${{ github.event.inputs.end_month || '202606' }}
+        run: |
+          node scripts/summarize_two_stage_fundamental_quality_phase3_corrected.js \
+            --start-month "$START_MONTH" --end-month "$END_MONTH" | tee /tmp/phase3-corrected.log
+
+      - name: Validate corrected research output
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-corrected.json';
+          const p = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (p.dataset !== 'two_stage_fundamental_quality_phase3_corrected_revalidation') throw new Error('unexpected dataset');
+          if (p.conclusion?.prior_199_event_research_status !== 'invalidated_by_mixed_date_format_lookahead') throw new Error('prior leakage not recorded');
+          if (!p.corrected_conservative_general_baseline_decision?.direct_d60) throw new Error('missing corrected conservative D60');
+          if (!p.event_driven_general_baseline_decision?.direct_d60) throw new Error('missing event-driven D60');
+          console.log('PHASE3_CORRECTED_ACCEPTANCE=' + JSON.stringify({
+            coverage: p.coverage,
+            universe: p.universe_comparison,
+            conservative_d60: p.corrected_conservative_general_baseline_decision.direct_d60,
+            event_driven_d60: p.event_driven_general_baseline_decision.direct_d60,
+            conservative_decision: p.corrected_conservative_general_baseline_decision,
+            event_driven_decision: p.event_driven_general_baseline_decision,
+            conclusion: p.conclusion,
+          }));
+          NODE
+
+      - name: Upload corrected Phase 3 result
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-corrected-result
+          path: data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-corrected.json
+          retention-days: 7
