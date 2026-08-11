@@ -15,6 +15,7 @@ const HORIZONS = ['d40', 'd60'];
 
 function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } }
 function parseArgs(argv) { const out = new Map(); for (let i = 0; i < argv.length; i += 1) { if (!argv[i].startsWith('--')) continue; out.set(argv[i].slice(2), argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : true); } return out; }
+function dateKey(value) { const normalized = String(value || '').replace(/[^0-9]/g, ''); return /^20\d{6}$/.test(normalized) ? normalized : null; }
 function loadRevenueHistory() {
   const byStock = new Map();
   if (!fs.existsSync(REVENUE_ROOT)) return byStock;
@@ -35,9 +36,13 @@ function loadFinancialMaster() {
   return new Map(master.stocks.map(s => [String(s.stock_id), s.rows || []]));
 }
 function latestKnownFinancial(rows, eventDate) {
-  if (!eventDate) return null;
-  return rows.filter(r => r.conservative_known_date && r.conservative_known_date <= eventDate)
-    .sort((a, b) => String(a.conservative_known_date).localeCompare(String(b.conservative_known_date)) || String(a.fiscal_period).localeCompare(String(b.fiscal_period)))
+  const eventKey = dateKey(eventDate);
+  if (!eventKey) return null;
+  return rows.filter(r => {
+    const knownKey = dateKey(r.conservative_known_date);
+    return knownKey && knownKey <= eventKey;
+  })
+    .sort((a, b) => String(dateKey(a.conservative_known_date) || '').localeCompare(String(dateKey(b.conservative_known_date) || '')) || String(a.fiscal_period).localeCompare(String(b.fiscal_period)))
     .at(-1) || null;
 }
 function loadStudy(start, end, revenueHistory, financialByStock) {
@@ -106,7 +111,7 @@ function main(argv = process.argv.slice(2)) {
     end_month: end,
     methodology: {
       status: 'research_only',
-      anti_lookahead: 'financial rows are joined only when conservative_known_date <= monthly event date',
+      anti_lookahead: 'financial rows are joined only after normalizing conservative_known_date and monthly event date to YYYYMMDD and requiring known_date <= event date',
       return_extension: 'D40/D60 reuse the exact base_trading_date from existing monthly signal events, TAIEX benchmark, and unified stock price provider',
       interpretation: 'compare persistence or decay of the previously observed D20 two-stage effect at approximately 2-3 month horizons',
     },
@@ -123,4 +128,4 @@ function main(argv = process.argv.slice(2)) {
 if (require.main === module) {
   try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; }
 }
-module.exports = { FACTORS, HORIZONS, latestKnownFinancial, loadStudy, rankRows };
+module.exports = { FACTORS, HORIZONS, dateKey, latestKnownFinancial, loadStudy, rankRows };
