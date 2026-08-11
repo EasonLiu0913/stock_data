@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "dataset": "latest_known_fundamental_state_schema",
+  "shadow_mode": true,
+  "required": [
+    "stock_id",
+    "cutoff",
+    "latest_monthly_revenue",
+    "latest_preliminary_earnings",
+    "latest_formal_financial_report",
+    "latest_financial_information",
+    "latest_investor_conference",
+    "availability_summary"
+  ],
+  "selection_policy": {
+    "availability": "event must be available by the requested cutoff; daily cutoffs use effective_trading_date",
+    "monthly": "latest available YYYYMM period",
+    "financial": "latest available fiscal period wins; formal report supersedes preliminary earnings only for the same fiscal period",
+    "confidence_order": [
+      "official_timestamp",
+      "official_date",
+      "verified_company_ir",
+      "curated_supplemental",
+      "aggregate_snapshot_date",
+      "fallback_deadline",
+      "unknown"
+    ]
+  },
+  "production_integration": false
+}
