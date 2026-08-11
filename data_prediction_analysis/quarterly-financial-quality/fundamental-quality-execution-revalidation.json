@@ -1,0 +1,3511 @@
+{
+  "schema_version": 1,
+  "dataset": "fundamental_quality_execution_revalidation",
+  "generated_at": "2026-08-11T13:33:08.623Z",
+  "start_month": "202401",
+  "end_month": "202606",
+  "strategy_id": "two_stage_fundamental_quality_direct_entry_v1",
+  "strategy_label": "財報品質訊號",
+  "methodology": {
+    "universe": "電子股 FAS >= 8 + corrected latest-known FQ >= 10",
+    "signal_close_role": "benchmark_only; production V1 is generated after the signal-day close",
+    "execution_policies": [
+      {
+        "id": "signal_close",
+        "label": "訊號日收盤",
+        "timing": "benchmark_only"
+      },
+      {
+        "id": "next_open",
+        "label": "隔日開盤",
+        "timing": "earliest_executable"
+      },
+      {
+        "id": "next_close",
+        "label": "隔日收盤",
+        "timing": "executable"
+      }
+    ],
+    "horizons": [
+      "d1",
+      "d3",
+      "d5",
+      "d10",
+      "d20",
+      "d40",
+      "d60"
+    ],
+    "holding_rule": "D1/D3/D5/D10/D20/D40/D60 are measured from each policy actual entry timestamp using later trading-day closes.",
+    "fair_sample_rule": "A horizon is compared only when enough market history exists through next trading day plus that holding horizon. Missing required OHLC excludes the trade.",
+    "anti_lookahead": "candidate membership uses corrected latest-known FQ; next-open/next-close prices are read only from the next trading session.",
+    "gap_definition": "next_open / signal_close - 1"
+  },
+  "coverage": {
+    "candidate_events": 131,
+    "execution_price_complete_events": 130,
+    "execution_price_coverage_pct": 99.2366,
+    "diagnostics": {
+      "electronic_fas8_events": 1604,
+      "missing_known_financial": 160,
+      "financial_below_10": 1313,
+      "included": 131
+    }
+  },
+  "execution_events": [
+    {
+      "month": "202404",
+      "stock_id": "2059",
+      "stock_name": null,
+      "signal_date": "20240515",
+      "execution_date": "20240516",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1280,
+      "next_open": 1315,
+      "next_close": 1290,
+      "overnight_gap_pct": 2.7344,
+      "next_close_vs_signal_close_pct": 0.7813,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202404",
+      "stock_id": "2383",
+      "stock_name": null,
+      "signal_date": "20240515",
+      "execution_date": "20240516",
+      "fas_score": 8,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 420.5,
+      "next_open": 428,
+      "next_close": 433.5,
+      "overnight_gap_pct": 1.7836,
+      "next_close_vs_signal_close_pct": 3.0916,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202404",
+      "stock_id": "2438",
+      "stock_name": null,
+      "signal_date": "20240515",
+      "execution_date": "20240516",
+      "fas_score": 12,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 21.65,
+      "next_open": 19.7,
+      "next_close": 22,
+      "overnight_gap_pct": -9.0069,
+      "next_close_vs_signal_close_pct": 1.6166,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202404",
+      "stock_id": "3406",
+      "stock_name": null,
+      "signal_date": "20240515",
+      "execution_date": "20240516",
+      "fas_score": 8,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 513,
+      "next_open": 519,
+      "next_close": 524,
+      "overnight_gap_pct": 1.1696,
+      "next_close_vs_signal_close_pct": 2.1442,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202404",
+      "stock_id": "6206",
+      "stock_name": null,
+      "signal_date": "20240515",
+      "execution_date": "20240516",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 90,
+      "next_open": 90.2,
+      "next_close": 89.8,
+      "overnight_gap_pct": 0.2222,
+      "next_close_vs_signal_close_pct": -0.2222,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202404",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20240515",
+      "execution_date": "20240516",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 176,
+      "next_open": 179,
+      "next_close": 180,
+      "overnight_gap_pct": 1.7045,
+      "next_close_vs_signal_close_pct": 2.2727,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "2059",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1195,
+      "next_open": 1185,
+      "next_close": 1195,
+      "overnight_gap_pct": -0.8368,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "2368",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 9,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 192,
+      "next_open": 193,
+      "next_close": 189,
+      "overnight_gap_pct": 0.5208,
+      "next_close_vs_signal_close_pct": -1.5625,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "3622",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 76.5,
+      "next_open": 80,
+      "next_close": 84.1,
+      "overnight_gap_pct": 4.5752,
+      "next_close_vs_signal_close_pct": 9.9346,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "5269",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 2210,
+      "next_open": 2200,
+      "next_close": 2210,
+      "overnight_gap_pct": -0.4525,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "6197",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 9,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 195,
+      "next_open": 200,
+      "next_close": 193.5,
+      "overnight_gap_pct": 2.5641,
+      "next_close_vs_signal_close_pct": -0.7692,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "6216",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 47.8,
+      "next_open": 47.2,
+      "next_close": 46.8,
+      "overnight_gap_pct": -1.2552,
+      "next_close_vs_signal_close_pct": -2.0921,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202405",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20240614",
+      "execution_date": "20240617",
+      "fas_score": 12,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 282.5,
+      "next_open": 296.5,
+      "next_close": 309,
+      "overnight_gap_pct": 4.9558,
+      "next_close_vs_signal_close_pct": 9.3805,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202406",
+      "stock_id": "2438",
+      "stock_name": null,
+      "signal_date": "20240715",
+      "execution_date": "20240716",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 75,
+      "next_open": 74.2,
+      "next_close": 67.5,
+      "overnight_gap_pct": -1.0667,
+      "next_close_vs_signal_close_pct": -10,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202406",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20240715",
+      "execution_date": "20240716",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 468,
+      "next_open": 478,
+      "next_close": 514,
+      "overnight_gap_pct": 2.1368,
+      "next_close_vs_signal_close_pct": 9.8291,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202406",
+      "stock_id": "8210",
+      "stock_name": null,
+      "signal_date": "20240715",
+      "execution_date": "20240716",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 300,
+      "next_open": 301.5,
+      "next_close": 315.5,
+      "overnight_gap_pct": 0.5,
+      "next_close_vs_signal_close_pct": 5.1667,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "3013",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 8,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 114.5,
+      "next_open": 118,
+      "next_close": 123.5,
+      "overnight_gap_pct": 3.0568,
+      "next_close_vs_signal_close_pct": 7.8603,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "3030",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 9,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 153.5,
+      "next_open": 155.5,
+      "next_close": 153,
+      "overnight_gap_pct": 1.3029,
+      "next_close_vs_signal_close_pct": -0.3257,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "3047",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 40.5,
+      "next_open": 41.5,
+      "next_close": 44.55,
+      "overnight_gap_pct": 2.4691,
+      "next_close_vs_signal_close_pct": 10,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "3189",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 102.5,
+      "next_open": 105.5,
+      "next_close": 105.5,
+      "overnight_gap_pct": 2.9268,
+      "next_close_vs_signal_close_pct": 2.9268,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "3450",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 134,
+      "next_open": 137,
+      "next_close": 137,
+      "overnight_gap_pct": 2.2388,
+      "next_close_vs_signal_close_pct": 2.2388,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "4967",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 11,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 121.5,
+      "next_open": 123.5,
+      "next_close": 121.5,
+      "overnight_gap_pct": 1.6461,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 8,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 402,
+      "next_open": 415,
+      "next_close": 400,
+      "overnight_gap_pct": 3.2338,
+      "next_close_vs_signal_close_pct": -0.4975,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202407",
+      "stock_id": "6743",
+      "stock_name": null,
+      "signal_date": "20240815",
+      "execution_date": "20240816",
+      "fas_score": 13,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 57.8,
+      "next_open": 59.7,
+      "next_close": 58.8,
+      "overnight_gap_pct": 3.2872,
+      "next_close_vs_signal_close_pct": 1.7301,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202408",
+      "stock_id": "3622",
+      "stock_name": null,
+      "signal_date": "20240913",
+      "execution_date": "20240916",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 57.6,
+      "next_open": 57.8,
+      "next_close": 58.1,
+      "overnight_gap_pct": 0.3472,
+      "next_close_vs_signal_close_pct": 0.8681,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202408",
+      "stock_id": "3712",
+      "stock_name": null,
+      "signal_date": "20240913",
+      "execution_date": "20240916",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 52.2,
+      "next_open": 52.6,
+      "next_close": 53,
+      "overnight_gap_pct": 0.7663,
+      "next_close_vs_signal_close_pct": 1.5326,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202408",
+      "stock_id": "6216",
+      "stock_name": null,
+      "signal_date": "20240913",
+      "execution_date": "20240916",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 48.2,
+      "next_open": 48.35,
+      "next_close": 48.45,
+      "overnight_gap_pct": 0.3112,
+      "next_close_vs_signal_close_pct": 0.5187,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202408",
+      "stock_id": "6743",
+      "stock_name": null,
+      "signal_date": "20240913",
+      "execution_date": "20240916",
+      "fas_score": 12,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 67.2,
+      "next_open": 67.6,
+      "next_close": 66.8,
+      "overnight_gap_pct": 0.5952,
+      "next_close_vs_signal_close_pct": -0.5952,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202409",
+      "stock_id": "3030",
+      "stock_name": null,
+      "signal_date": "20241015",
+      "execution_date": "20241016",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 144,
+      "next_open": 144,
+      "next_close": 142.5,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -1.0417,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202409",
+      "stock_id": "3450",
+      "stock_name": null,
+      "signal_date": "20241015",
+      "execution_date": "20241016",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 234,
+      "next_open": 234,
+      "next_close": 229.5,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -1.9231,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202409",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20241015",
+      "execution_date": "20241016",
+      "fas_score": 10,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 457,
+      "next_open": 450,
+      "next_close": 459.5,
+      "overnight_gap_pct": -1.5317,
+      "next_close_vs_signal_close_pct": 0.547,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202410",
+      "stock_id": "3450",
+      "stock_name": null,
+      "signal_date": "20241115",
+      "execution_date": "20241118",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 230,
+      "next_open": 226.5,
+      "next_close": 222.5,
+      "overnight_gap_pct": -1.5217,
+      "next_close_vs_signal_close_pct": -3.2609,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202410",
+      "stock_id": "3712",
+      "stock_name": null,
+      "signal_date": "20241115",
+      "execution_date": "20241118",
+      "fas_score": 12,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 61.6,
+      "next_open": 61.4,
+      "next_close": 62.3,
+      "overnight_gap_pct": -0.3247,
+      "next_close_vs_signal_close_pct": 1.1364,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202410",
+      "stock_id": "6515",
+      "stock_name": null,
+      "signal_date": "20241115",
+      "execution_date": "20241118",
+      "fas_score": 8,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1325,
+      "next_open": 1315,
+      "next_close": 1265,
+      "overnight_gap_pct": -0.7547,
+      "next_close_vs_signal_close_pct": -4.5283,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202410",
+      "stock_id": "6743",
+      "stock_name": null,
+      "signal_date": "20241115",
+      "execution_date": "20241118",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 48,
+      "next_open": 48,
+      "next_close": 48.35,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": 0.7292,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202410",
+      "stock_id": "8114",
+      "stock_name": null,
+      "signal_date": "20241115",
+      "execution_date": "20241118",
+      "fas_score": 8,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 279,
+      "next_open": 279,
+      "next_close": 270.5,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -3.0466,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202411",
+      "stock_id": "3025",
+      "stock_name": null,
+      "signal_date": "20241213",
+      "execution_date": "20241216",
+      "fas_score": 9,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 76.6,
+      "next_open": 77.5,
+      "next_close": 73.3,
+      "overnight_gap_pct": 1.1749,
+      "next_close_vs_signal_close_pct": -4.3081,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202411",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20241213",
+      "execution_date": "20241216",
+      "fas_score": 8,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 627,
+      "next_open": 606,
+      "next_close": 565,
+      "overnight_gap_pct": -3.3493,
+      "next_close_vs_signal_close_pct": -9.8884,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202411",
+      "stock_id": "8114",
+      "stock_name": null,
+      "signal_date": "20241213",
+      "execution_date": "20241216",
+      "fas_score": 13,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 338,
+      "next_open": 340,
+      "next_close": 335.5,
+      "overnight_gap_pct": 0.5917,
+      "next_close_vs_signal_close_pct": -0.7396,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202412",
+      "stock_id": "3013",
+      "stock_name": null,
+      "signal_date": "20250115",
+      "execution_date": "20250116",
+      "fas_score": 13,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 140.5,
+      "next_open": 145,
+      "next_close": 143,
+      "overnight_gap_pct": 3.2028,
+      "next_close_vs_signal_close_pct": 1.7794,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202412",
+      "stock_id": "3712",
+      "stock_name": null,
+      "signal_date": "20250115",
+      "execution_date": "20250116",
+      "fas_score": 9,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 57.4,
+      "next_open": 58.1,
+      "next_close": 57.8,
+      "overnight_gap_pct": 1.2195,
+      "next_close_vs_signal_close_pct": 0.6969,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202412",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20250115",
+      "execution_date": "20250116",
+      "fas_score": 14,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 570,
+      "next_open": 585,
+      "next_close": 598,
+      "overnight_gap_pct": 2.6316,
+      "next_close_vs_signal_close_pct": 4.9123,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202412",
+      "stock_id": "6515",
+      "stock_name": null,
+      "signal_date": "20250115",
+      "execution_date": "20250116",
+      "fas_score": 9,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1230,
+      "next_open": 1265,
+      "next_close": 1270,
+      "overnight_gap_pct": 2.8455,
+      "next_close_vs_signal_close_pct": 3.252,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202412",
+      "stock_id": "8114",
+      "stock_name": null,
+      "signal_date": "20250115",
+      "execution_date": "20250116",
+      "fas_score": 13,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 334,
+      "next_open": 339,
+      "next_close": 336.5,
+      "overnight_gap_pct": 1.497,
+      "next_close_vs_signal_close_pct": 0.7485,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202412",
+      "stock_id": "8210",
+      "stock_name": null,
+      "signal_date": "20250115",
+      "execution_date": "20250116",
+      "fas_score": 9,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 237,
+      "next_open": 241.5,
+      "next_close": 243,
+      "overnight_gap_pct": 1.8987,
+      "next_close_vs_signal_close_pct": 2.5316,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202501",
+      "stock_id": "3712",
+      "stock_name": null,
+      "signal_date": "20250214",
+      "execution_date": "20250217",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 63.9,
+      "next_open": 64.1,
+      "next_close": 64.9,
+      "overnight_gap_pct": 0.313,
+      "next_close_vs_signal_close_pct": 1.5649,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202501",
+      "stock_id": "6515",
+      "stock_name": null,
+      "signal_date": "20250214",
+      "execution_date": "20250217",
+      "fas_score": 8,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1300,
+      "next_open": 1305,
+      "next_close": 1340,
+      "overnight_gap_pct": 0.3846,
+      "next_close_vs_signal_close_pct": 3.0769,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202502",
+      "stock_id": "3013",
+      "stock_name": null,
+      "signal_date": "20250314",
+      "execution_date": "20250317",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 137,
+      "next_open": 138,
+      "next_close": 134.5,
+      "overnight_gap_pct": 0.7299,
+      "next_close_vs_signal_close_pct": -1.8248,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202502",
+      "stock_id": "3450",
+      "stock_name": null,
+      "signal_date": "20250314",
+      "execution_date": "20250317",
+      "fas_score": 13,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 268.5,
+      "next_open": 277,
+      "next_close": 274,
+      "overnight_gap_pct": 3.1657,
+      "next_close_vs_signal_close_pct": 2.0484,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202502",
+      "stock_id": "3712",
+      "stock_name": null,
+      "signal_date": "20250314",
+      "execution_date": "20250317",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 54,
+      "next_open": 54.5,
+      "next_close": 54.5,
+      "overnight_gap_pct": 0.9259,
+      "next_close_vs_signal_close_pct": 0.9259,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202502",
+      "stock_id": "6515",
+      "stock_name": null,
+      "signal_date": "20250314",
+      "execution_date": "20250317",
+      "fas_score": 14,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1270,
+      "next_open": 1270,
+      "next_close": 1210,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -4.7244,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202502",
+      "stock_id": "8114",
+      "stock_name": null,
+      "signal_date": "20250314",
+      "execution_date": "20250317",
+      "fas_score": 14,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 301.5,
+      "next_open": 302.5,
+      "next_close": 294,
+      "overnight_gap_pct": 0.3317,
+      "next_close_vs_signal_close_pct": -2.4876,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202502",
+      "stock_id": "8210",
+      "stock_name": null,
+      "signal_date": "20250314",
+      "execution_date": "20250317",
+      "fas_score": 9,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 288.5,
+      "next_open": 294,
+      "next_close": 289.5,
+      "overnight_gap_pct": 1.9064,
+      "next_close_vs_signal_close_pct": 0.3466,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202503",
+      "stock_id": "2059",
+      "stock_name": null,
+      "signal_date": "20250415",
+      "execution_date": "20250416",
+      "fas_score": 8,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1640,
+      "next_open": 1600,
+      "next_close": 1570,
+      "overnight_gap_pct": -2.439,
+      "next_close_vs_signal_close_pct": -4.2683,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202503",
+      "stock_id": "3450",
+      "stock_name": null,
+      "signal_date": "20250415",
+      "execution_date": "20250416",
+      "fas_score": 9,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 206.5,
+      "next_open": 207,
+      "next_close": 199.5,
+      "overnight_gap_pct": 0.2421,
+      "next_close_vs_signal_close_pct": -3.3898,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202503",
+      "stock_id": "8101",
+      "stock_name": null,
+      "signal_date": "20250415",
+      "execution_date": "20250416",
+      "fas_score": 9,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 16.35,
+      "next_open": 17.5,
+      "next_close": 16.1,
+      "overnight_gap_pct": 7.0336,
+      "next_close_vs_signal_close_pct": -1.5291,
+      "gap_bucket": "gap_gt_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202503",
+      "stock_id": "8114",
+      "stock_name": null,
+      "signal_date": "20250415",
+      "execution_date": "20250416",
+      "fas_score": 13,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 258.5,
+      "next_open": 253.5,
+      "next_close": 246.5,
+      "overnight_gap_pct": -1.9342,
+      "next_close_vs_signal_close_pct": -4.6422,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202504",
+      "stock_id": "2059",
+      "stock_name": null,
+      "signal_date": "20250515",
+      "execution_date": "20250516",
+      "fas_score": 9,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 2000,
+      "next_open": 2015,
+      "next_close": 2020,
+      "overnight_gap_pct": 0.75,
+      "next_close_vs_signal_close_pct": 1,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202504",
+      "stock_id": "3017",
+      "stock_name": null,
+      "signal_date": "20250515",
+      "execution_date": "20250516",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 605,
+      "next_open": 608,
+      "next_close": 601,
+      "overnight_gap_pct": 0.4959,
+      "next_close_vs_signal_close_pct": -0.6612,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202504",
+      "stock_id": "3563",
+      "stock_name": null,
+      "signal_date": "20250515",
+      "execution_date": "20250516",
+      "fas_score": 9,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 537,
+      "next_open": 537,
+      "next_close": 537,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202504",
+      "stock_id": "8210",
+      "stock_name": null,
+      "signal_date": "20250515",
+      "execution_date": "20250516",
+      "fas_score": 12,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 295,
+      "next_open": 295,
+      "next_close": 293.5,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -0.5085,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202505",
+      "stock_id": "2364",
+      "stock_name": null,
+      "signal_date": "20250613",
+      "execution_date": "20250616",
+      "fas_score": 11,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 89.4,
+      "next_open": 89.6,
+      "next_close": 88.2,
+      "overnight_gap_pct": 0.2237,
+      "next_close_vs_signal_close_pct": -1.3423,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202505",
+      "stock_id": "3017",
+      "stock_name": null,
+      "signal_date": "20250613",
+      "execution_date": "20250616",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 763,
+      "next_open": 749,
+      "next_close": 750,
+      "overnight_gap_pct": -1.8349,
+      "next_close_vs_signal_close_pct": -1.7038,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202505",
+      "stock_id": "3563",
+      "stock_name": null,
+      "signal_date": "20250613",
+      "execution_date": "20250616",
+      "fas_score": 9,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 576,
+      "next_open": 571,
+      "next_close": 578,
+      "overnight_gap_pct": -0.8681,
+      "next_close_vs_signal_close_pct": 0.3472,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202506",
+      "stock_id": "2404",
+      "stock_name": null,
+      "signal_date": "20250715",
+      "execution_date": "20250716",
+      "fas_score": 11,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 741,
+      "next_open": 745,
+      "next_close": 725,
+      "overnight_gap_pct": 0.5398,
+      "next_close_vs_signal_close_pct": -2.1592,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202506",
+      "stock_id": "3017",
+      "stock_name": null,
+      "signal_date": "20250715",
+      "execution_date": "20250716",
+      "fas_score": 8,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 853,
+      "next_open": 869,
+      "next_close": 848,
+      "overnight_gap_pct": 1.8757,
+      "next_close_vs_signal_close_pct": -0.5862,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202506",
+      "stock_id": "3712",
+      "stock_name": null,
+      "signal_date": "20250715",
+      "execution_date": "20250716",
+      "fas_score": 13,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 51.4,
+      "next_open": 51.8,
+      "next_close": 51.2,
+      "overnight_gap_pct": 0.7782,
+      "next_close_vs_signal_close_pct": -0.3891,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202508",
+      "stock_id": "6698",
+      "stock_name": null,
+      "signal_date": "20250915",
+      "execution_date": "20250916",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 36.85,
+      "next_open": 36.75,
+      "next_close": 36.75,
+      "overnight_gap_pct": -0.2714,
+      "next_close_vs_signal_close_pct": -0.2714,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202509",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20251015",
+      "execution_date": "20251016",
+      "fas_score": 11,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 778,
+      "next_open": 779,
+      "next_close": 771,
+      "overnight_gap_pct": 0.1285,
+      "next_close_vs_signal_close_pct": -0.8997,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202509",
+      "stock_id": "6477",
+      "stock_name": null,
+      "signal_date": "20251015",
+      "execution_date": "20251016",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 39.95,
+      "next_open": 40.1,
+      "next_close": 39.85,
+      "overnight_gap_pct": 0.3755,
+      "next_close_vs_signal_close_pct": -0.2503,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202509",
+      "stock_id": "6698",
+      "stock_name": null,
+      "signal_date": "20251015",
+      "execution_date": "20251016",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 34.55,
+      "next_open": 34.8,
+      "next_close": 35.3,
+      "overnight_gap_pct": 0.7236,
+      "next_close_vs_signal_close_pct": 2.1708,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202509",
+      "stock_id": "8210",
+      "stock_name": null,
+      "signal_date": "20251015",
+      "execution_date": "20251016",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 651,
+      "next_open": 670,
+      "next_close": 680,
+      "overnight_gap_pct": 2.9186,
+      "next_close_vs_signal_close_pct": 4.4547,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202510",
+      "stock_id": "2451",
+      "stock_name": null,
+      "signal_date": "20251114",
+      "execution_date": "20251117",
+      "fas_score": 13,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 196,
+      "next_open": 204.5,
+      "next_close": 199,
+      "overnight_gap_pct": 4.3367,
+      "next_close_vs_signal_close_pct": 1.5306,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202510",
+      "stock_id": "3017",
+      "stock_name": null,
+      "signal_date": "20251114",
+      "execution_date": "20251117",
+      "fas_score": 11,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1420,
+      "next_open": 1435,
+      "next_close": 1420,
+      "overnight_gap_pct": 1.0563,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202510",
+      "stock_id": "8271",
+      "stock_name": null,
+      "signal_date": "20251114",
+      "execution_date": "20251117",
+      "fas_score": 8,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 114,
+      "next_open": 118.5,
+      "next_close": 109,
+      "overnight_gap_pct": 3.9474,
+      "next_close_vs_signal_close_pct": -4.386,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "2059",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 3625,
+      "next_open": 3625,
+      "next_close": 3590,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -0.9655,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "2451",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 13,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 177.5,
+      "next_open": 174.5,
+      "next_close": 170,
+      "overnight_gap_pct": -1.6901,
+      "next_close_vs_signal_close_pct": -4.2254,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "3017",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1380,
+      "next_open": 1365,
+      "next_close": 1345,
+      "overnight_gap_pct": -1.087,
+      "next_close_vs_signal_close_pct": -2.5362,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "3257",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 11,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 62.9,
+      "next_open": 63.3,
+      "next_close": 62.5,
+      "overnight_gap_pct": 0.6359,
+      "next_close_vs_signal_close_pct": -0.6359,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "4967",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 9,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 136,
+      "next_open": 135.5,
+      "next_close": 132,
+      "overnight_gap_pct": -0.3676,
+      "next_close_vs_signal_close_pct": -2.9412,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "6133",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 22.2,
+      "next_open": 22.5,
+      "next_close": 22.25,
+      "overnight_gap_pct": 1.3514,
+      "next_close_vs_signal_close_pct": 0.2252,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "6139",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 590,
+      "next_open": 590,
+      "next_close": 597,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": 1.1864,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "6805",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 9,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1550,
+      "next_open": 1525,
+      "next_close": 1480,
+      "overnight_gap_pct": -1.6129,
+      "next_close_vs_signal_close_pct": -4.5161,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202511",
+      "stock_id": "8131",
+      "stock_name": null,
+      "signal_date": "20251215",
+      "execution_date": "20251216",
+      "fas_score": 11,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 46.5,
+      "next_open": 46.4,
+      "next_close": 45.45,
+      "overnight_gap_pct": -0.2151,
+      "next_close_vs_signal_close_pct": -2.2581,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202512",
+      "stock_id": "2451",
+      "stock_name": null,
+      "signal_date": "20260115",
+      "execution_date": "20260116",
+      "fas_score": 14,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 238,
+      "next_open": 245,
+      "next_close": 254,
+      "overnight_gap_pct": 2.9412,
+      "next_close_vs_signal_close_pct": 6.7227,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "twse_mi_index",
+        "next": "twse_mi_index"
+      }
+    },
+    {
+      "month": "202512",
+      "stock_id": "4967",
+      "stock_name": null,
+      "signal_date": "20260115",
+      "execution_date": "20260116",
+      "fas_score": 14,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 196.5,
+      "next_open": 200,
+      "next_close": 203.5,
+      "overnight_gap_pct": 1.7812,
+      "next_close_vs_signal_close_pct": 3.5623,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202512",
+      "stock_id": "6139",
+      "stock_name": null,
+      "signal_date": "20260115",
+      "execution_date": "20260116",
+      "fas_score": 8,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 606,
+      "next_open": 634,
+      "next_close": 584,
+      "overnight_gap_pct": 4.6205,
+      "next_close_vs_signal_close_pct": -3.6304,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202601",
+      "stock_id": "2368",
+      "stock_name": null,
+      "signal_date": "20260211",
+      "execution_date": "20260223",
+      "fas_score": 11,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 829,
+      "next_open": 845,
+      "next_close": 818,
+      "overnight_gap_pct": 1.93,
+      "next_close_vs_signal_close_pct": -1.3269,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202601",
+      "stock_id": "2451",
+      "stock_name": null,
+      "signal_date": "20260211",
+      "execution_date": "20260223",
+      "fas_score": 14,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 219,
+      "next_open": 224,
+      "next_close": 219,
+      "overnight_gap_pct": 2.2831,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202601",
+      "stock_id": "3017",
+      "stock_name": null,
+      "signal_date": "20260211",
+      "execution_date": "20260223",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1605,
+      "next_open": 1650,
+      "next_close": 1520,
+      "overnight_gap_pct": 2.8037,
+      "next_close_vs_signal_close_pct": -5.296,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202601",
+      "stock_id": "6805",
+      "stock_name": null,
+      "signal_date": "20260211",
+      "execution_date": "20260223",
+      "fas_score": 10,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1545,
+      "next_open": 1555,
+      "next_close": 1480,
+      "overnight_gap_pct": 0.6472,
+      "next_close_vs_signal_close_pct": -4.2071,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202601",
+      "stock_id": "8045",
+      "stock_name": null,
+      "signal_date": "20260211",
+      "execution_date": "20260223",
+      "fas_score": 13,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 82.4,
+      "next_open": 81.6,
+      "next_close": 86,
+      "overnight_gap_pct": -0.9709,
+      "next_close_vs_signal_close_pct": 4.3689,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202601",
+      "stock_id": "8271",
+      "stock_name": null,
+      "signal_date": "20260211",
+      "execution_date": "20260223",
+      "fas_score": 14,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 118,
+      "next_open": 120,
+      "next_close": 121,
+      "overnight_gap_pct": 1.6949,
+      "next_close_vs_signal_close_pct": 2.5424,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "2308",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 8,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 1785,
+      "next_open": 1835,
+      "next_close": 1845,
+      "overnight_gap_pct": 2.8011,
+      "next_close_vs_signal_close_pct": 3.3613,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "2368",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 1165,
+      "next_open": 1195,
+      "next_close": 1165,
+      "overnight_gap_pct": 2.5751,
+      "next_close_vs_signal_close_pct": 0,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "2451",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 14,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 248,
+      "next_open": 249,
+      "next_close": 247,
+      "overnight_gap_pct": 0.4032,
+      "next_close_vs_signal_close_pct": -0.4032,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "3006",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 14,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 156,
+      "next_open": 156.5,
+      "next_close": 157,
+      "overnight_gap_pct": 0.3205,
+      "next_close_vs_signal_close_pct": 0.641,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "3031",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 32.35,
+      "next_open": 31.6,
+      "next_close": 33,
+      "overnight_gap_pct": -2.3184,
+      "next_close_vs_signal_close_pct": 2.0093,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "3135",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 11,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 125,
+      "next_open": 125,
+      "next_close": 122,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -2.4,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "3528",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 11,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 70.5,
+      "next_open": 71,
+      "next_close": 70.4,
+      "overnight_gap_pct": 0.7092,
+      "next_close_vs_signal_close_pct": -0.1418,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "6805",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 13,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1825,
+      "next_open": 1860,
+      "next_close": 1900,
+      "overnight_gap_pct": 1.9178,
+      "next_close_vs_signal_close_pct": 4.1096,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "8021",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 9,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 340,
+      "next_open": 351,
+      "next_close": 355,
+      "overnight_gap_pct": 3.2353,
+      "next_close_vs_signal_close_pct": 4.4118,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "8046",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 10,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 656,
+      "next_open": 665,
+      "next_close": 721,
+      "overnight_gap_pct": 1.372,
+      "next_close_vs_signal_close_pct": 9.9085,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "8112",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 14,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 83.4,
+      "next_open": 84.5,
+      "next_close": 85.8,
+      "overnight_gap_pct": 1.3189,
+      "next_close_vs_signal_close_pct": 2.8777,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202603",
+      "stock_id": "8271",
+      "stock_name": null,
+      "signal_date": "20260415",
+      "execution_date": "20260416",
+      "fas_score": 14,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 159.5,
+      "next_open": 160,
+      "next_close": 163.5,
+      "overnight_gap_pct": 0.3135,
+      "next_close_vs_signal_close_pct": 2.5078,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "2360",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 13,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 2240,
+      "next_open": 2125,
+      "next_close": 2185,
+      "overnight_gap_pct": -5.1339,
+      "next_close_vs_signal_close_pct": -2.4554,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "2451",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 14,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 336,
+      "next_open": 328,
+      "next_close": 328.5,
+      "overnight_gap_pct": -2.381,
+      "next_close_vs_signal_close_pct": -2.2321,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "2465",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 13,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 77.3,
+      "next_open": 75.2,
+      "next_close": 76,
+      "overnight_gap_pct": -2.7167,
+      "next_close_vs_signal_close_pct": -1.6818,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "3135",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 14,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 216,
+      "next_open": 206.5,
+      "next_close": 208,
+      "overnight_gap_pct": -4.3981,
+      "next_close_vs_signal_close_pct": -3.7037,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "4949",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 8,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 85.7,
+      "next_open": 85.3,
+      "next_close": 87.5,
+      "overnight_gap_pct": -0.4667,
+      "next_close_vs_signal_close_pct": 2.1004,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "6139",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 693,
+      "next_open": 693,
+      "next_close": 721,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": 4.0404,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "6166",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 112,
+      "next_open": 113.5,
+      "next_close": 113.5,
+      "overnight_gap_pct": 1.3393,
+      "next_close_vs_signal_close_pct": 1.3393,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "6215",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 11,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 130.5,
+      "next_open": 132,
+      "next_close": 127,
+      "overnight_gap_pct": 1.1494,
+      "next_close_vs_signal_close_pct": -2.682,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "8021",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 441.5,
+      "next_open": 418,
+      "next_close": 400.5,
+      "overnight_gap_pct": -5.3228,
+      "next_close_vs_signal_close_pct": -9.2865,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202604",
+      "stock_id": "8271",
+      "stock_name": null,
+      "signal_date": "20260515",
+      "execution_date": "20260518",
+      "fas_score": 13,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 242,
+      "next_open": 236.5,
+      "next_close": 236,
+      "overnight_gap_pct": -2.2727,
+      "next_close_vs_signal_close_pct": -2.4793,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202605",
+      "stock_id": "2368",
+      "stock_name": null,
+      "signal_date": "20260615",
+      "execution_date": "20260616",
+      "fas_score": 12,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 1320,
+      "next_open": 1330,
+      "next_close": 1345,
+      "overnight_gap_pct": 0.7576,
+      "next_close_vs_signal_close_pct": 1.8939,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202605",
+      "stock_id": "2467",
+      "stock_name": null,
+      "signal_date": "20260615",
+      "execution_date": "20260616",
+      "fas_score": 9,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 576,
+      "next_open": 590,
+      "next_close": 564,
+      "overnight_gap_pct": 2.4306,
+      "next_close_vs_signal_close_pct": -2.0833,
+      "gap_bucket": "gap_2_5",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202605",
+      "stock_id": "4967",
+      "stock_name": null,
+      "signal_date": "20260615",
+      "execution_date": "20260616",
+      "fas_score": 10,
+      "fq_score": 14,
+      "financial_period": null,
+      "signal_close": 277,
+      "next_open": 281,
+      "next_close": 275,
+      "overnight_gap_pct": 1.444,
+      "next_close_vs_signal_close_pct": -0.722,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202605",
+      "stock_id": "6139",
+      "stock_name": null,
+      "signal_date": "20260615",
+      "execution_date": "20260616",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 885,
+      "next_open": 884,
+      "next_close": 812,
+      "overnight_gap_pct": -0.113,
+      "next_close_vs_signal_close_pct": -8.2486,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202605",
+      "stock_id": "6442",
+      "stock_name": null,
+      "signal_date": "20260615",
+      "execution_date": "20260616",
+      "fas_score": 13,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 1920,
+      "next_open": 1940,
+      "next_close": 1875,
+      "overnight_gap_pct": 1.0417,
+      "next_close_vs_signal_close_pct": -2.3438,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202605",
+      "stock_id": "8021",
+      "stock_name": null,
+      "signal_date": "20260615",
+      "execution_date": "20260616",
+      "fas_score": 12,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 506,
+      "next_open": 495,
+      "next_close": 518,
+      "overnight_gap_pct": -2.1739,
+      "next_close_vs_signal_close_pct": 2.3715,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "2308",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 1890,
+      "next_open": 1865,
+      "next_close": 1905,
+      "overnight_gap_pct": -1.3228,
+      "next_close_vs_signal_close_pct": 0.7937,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "2330",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 10,
+      "fq_score": 11,
+      "financial_period": null,
+      "signal_close": 2440,
+      "next_open": 2430,
+      "next_close": 2470,
+      "overnight_gap_pct": -0.4098,
+      "next_close_vs_signal_close_pct": 1.2295,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "2465",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 13,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 83.3,
+      "next_open": 82.8,
+      "next_close": 80.8,
+      "overnight_gap_pct": -0.6002,
+      "next_close_vs_signal_close_pct": -3.0012,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "4588",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 9,
+      "fq_score": 10,
+      "financial_period": null,
+      "signal_close": 55.3,
+      "next_open": 54.6,
+      "next_close": 54.2,
+      "overnight_gap_pct": -1.2658,
+      "next_close_vs_signal_close_pct": -1.9892,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "4949",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 10,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 78.9,
+      "next_open": 78.4,
+      "next_close": 76.7,
+      "overnight_gap_pct": -0.6337,
+      "next_close_vs_signal_close_pct": -2.7883,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "8021",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 532,
+      "next_open": 514,
+      "next_close": 505,
+      "overnight_gap_pct": -3.3835,
+      "next_close_vs_signal_close_pct": -5.0752,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "8046",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 9,
+      "fq_score": 13,
+      "financial_period": null,
+      "signal_close": 1415,
+      "next_open": 1405,
+      "next_close": 1275,
+      "overnight_gap_pct": -0.7067,
+      "next_close_vs_signal_close_pct": -9.894,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "8131",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 9,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 81.2,
+      "next_open": 81.2,
+      "next_close": 76.6,
+      "overnight_gap_pct": 0,
+      "next_close_vs_signal_close_pct": -5.665,
+      "gap_bucket": "gap_le_0",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    },
+    {
+      "month": "202606",
+      "stock_id": "8210",
+      "stock_name": null,
+      "signal_date": "20260715",
+      "execution_date": "20260716",
+      "fas_score": 12,
+      "fq_score": 12,
+      "financial_period": null,
+      "signal_close": 1145,
+      "next_open": 1150,
+      "next_close": 1175,
+      "overnight_gap_pct": 0.4367,
+      "next_close_vs_signal_close_pct": 2.6201,
+      "gap_bucket": "gap_0_2",
+      "sources": {
+        "signal": "data_history_sma",
+        "next": "data_history_sma"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d1",
+      "eligible_events": 130,
+      "trades": 130,
+      "endpoint": {
+        "average_pct": -0.0933,
+        "median_pct": -0.0709,
+        "positive_rate_pct": 44.6154,
+        "ge10_rate_pct": 0,
+        "ge30_rate_pct": 0
+      },
+      "mfe": {
+        "average_pct": 2.5894,
+        "median_pct": 2.2346
+      },
+      "mae": {
+        "average_pct": -2.1652,
+        "median_pct": -1.7609
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d1",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": -0.7956,
+        "median_pct": -0.9307,
+        "positive_rate_pct": 40.3101,
+        "ge10_rate_pct": 3.876,
+        "ge30_rate_pct": 0
+      },
+      "mfe": {
+        "average_pct": 1.8733,
+        "median_pct": 1.1173
+      },
+      "mae": {
+        "average_pct": -2.7892,
+        "median_pct": -2.3707
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.7023,
+        "median_endpoint_delta_pct": -0.8598,
+        "positive_rate_delta_pp": -4.3053,
+        "median_mfe_delta_pct": -1.1173,
+        "median_mae_delta_pct": -0.6098
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d1",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": -0.2513,
+        "median_pct": -0.2024,
+        "positive_rate_pct": 45.7364,
+        "ge10_rate_pct": 0.7752,
+        "ge30_rate_pct": 0
+      },
+      "mfe": {
+        "average_pct": 2.4332,
+        "median_pct": 2.0576
+      },
+      "mae": {
+        "average_pct": -2.2578,
+        "median_pct": -1.5571
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.158,
+        "median_endpoint_delta_pct": -0.1315,
+        "positive_rate_delta_pp": 1.121,
+        "median_mfe_delta_pct": -0.177,
+        "median_mae_delta_pct": 0.2038
+      }
+    },
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d3",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": -0.3123,
+        "median_pct": 0.5,
+        "positive_rate_pct": 51.938,
+        "ge10_rate_pct": 5.4264,
+        "ge30_rate_pct": 0
+      },
+      "mfe": {
+        "average_pct": 4.7743,
+        "median_pct": 3.4602
+      },
+      "mae": {
+        "average_pct": -4.4161,
+        "median_pct": -3.125
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d3",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 0.7109,
+        "median_pct": 1.0417,
+        "positive_rate_pct": 56.5891,
+        "ge10_rate_pct": 7.7519,
+        "ge30_rate_pct": 0.7752
+      },
+      "mfe": {
+        "average_pct": 4.3888,
+        "median_pct": 3.7099
+      },
+      "mae": {
+        "average_pct": -4.3309,
+        "median_pct": -3.6325
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": 1.0232,
+        "median_endpoint_delta_pct": 0.5417,
+        "positive_rate_delta_pp": 4.6511,
+        "median_mfe_delta_pct": 0.2497,
+        "median_mae_delta_pct": -0.5075
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d3",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 1.2612,
+        "median_pct": 1.2552,
+        "positive_rate_pct": 60.4651,
+        "ge10_rate_pct": 6.2016,
+        "ge30_rate_pct": 0.7752
+      },
+      "mfe": {
+        "average_pct": 4.964,
+        "median_pct": 3.8085
+      },
+      "mae": {
+        "average_pct": -3.809,
+        "median_pct": -2.7228
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": 1.5735,
+        "median_endpoint_delta_pct": 0.7552,
+        "positive_rate_delta_pp": 8.5271,
+        "median_mfe_delta_pct": 0.3483,
+        "median_mae_delta_pct": 0.4022
+      }
+    },
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d5",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 2.171,
+        "median_pct": 1.1364,
+        "positive_rate_pct": 58.9147,
+        "ge10_rate_pct": 14.7287,
+        "ge30_rate_pct": 1.5504
+      },
+      "mfe": {
+        "average_pct": 7.3614,
+        "median_pct": 5.5556
+      },
+      "mae": {
+        "average_pct": -5.1863,
+        "median_pct": -3.6101
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d5",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 1.5309,
+        "median_pct": 0.5841,
+        "positive_rate_pct": 51.1628,
+        "ge10_rate_pct": 16.2791,
+        "ge30_rate_pct": 1.5504
+      },
+      "mfe": {
+        "average_pct": 7.4936,
+        "median_pct": 5.4726
+      },
+      "mae": {
+        "average_pct": -5.5698,
+        "median_pct": -4.7934
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.6401,
+        "median_endpoint_delta_pct": -0.5523,
+        "positive_rate_delta_pp": -7.7519,
+        "median_mfe_delta_pct": -0.083,
+        "median_mae_delta_pct": -1.1833
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d5",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 2.1021,
+        "median_pct": 0.7018,
+        "positive_rate_pct": 55.0388,
+        "ge10_rate_pct": 17.0543,
+        "ge30_rate_pct": 1.5504
+      },
+      "mfe": {
+        "average_pct": 8.0858,
+        "median_pct": 5.902
+      },
+      "mae": {
+        "average_pct": -5.0437,
+        "median_pct": -3.6386
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.0689,
+        "median_endpoint_delta_pct": -0.4346,
+        "positive_rate_delta_pp": -3.8759,
+        "median_mfe_delta_pct": 0.3464,
+        "median_mae_delta_pct": -0.0285
+      }
+    },
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d10",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 2.7219,
+        "median_pct": 2.4793,
+        "positive_rate_pct": 59.6899,
+        "ge10_rate_pct": 26.3566,
+        "ge30_rate_pct": 2.3256
+      },
+      "mfe": {
+        "average_pct": 11.7049,
+        "median_pct": 8.3141
+      },
+      "mae": {
+        "average_pct": -7.7824,
+        "median_pct": -5.9028
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d10",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 1.8849,
+        "median_pct": 1.0057,
+        "positive_rate_pct": 53.4884,
+        "ge10_rate_pct": 26.3566,
+        "ge30_rate_pct": 3.876
+      },
+      "mfe": {
+        "average_pct": 11.3962,
+        "median_pct": 8.0931
+      },
+      "mae": {
+        "average_pct": -8.2313,
+        "median_pct": -6.5574
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.837,
+        "median_endpoint_delta_pct": -1.4736,
+        "positive_rate_delta_pp": -6.2015,
+        "median_mfe_delta_pct": -0.221,
+        "median_mae_delta_pct": -0.6546
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d10",
+      "eligible_events": 130,
+      "trades": 129,
+      "endpoint": {
+        "average_pct": 2.3881,
+        "median_pct": 2.0755,
+        "positive_rate_pct": 56.5891,
+        "ge10_rate_pct": 26.3566,
+        "ge30_rate_pct": 3.876
+      },
+      "mfe": {
+        "average_pct": 11.9929,
+        "median_pct": 8.4746
+      },
+      "mae": {
+        "average_pct": -7.7507,
+        "median_pct": -6.2992
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.3338,
+        "median_endpoint_delta_pct": -0.4038,
+        "positive_rate_delta_pp": -3.1008,
+        "median_mfe_delta_pct": 0.1605,
+        "median_mae_delta_pct": -0.3964
+      }
+    },
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d20",
+      "eligible_events": 121,
+      "trades": 120,
+      "endpoint": {
+        "average_pct": 6.0266,
+        "median_pct": 2.3562,
+        "positive_rate_pct": 55.8333,
+        "ge10_rate_pct": 34.1667,
+        "ge30_rate_pct": 12.5
+      },
+      "mfe": {
+        "average_pct": 20.7652,
+        "median_pct": 16.2037
+      },
+      "mae": {
+        "average_pct": -10.7633,
+        "median_pct": -9.6098
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d20",
+      "eligible_events": 121,
+      "trades": 120,
+      "endpoint": {
+        "average_pct": 5.0816,
+        "median_pct": 1.9588,
+        "positive_rate_pct": 53.3333,
+        "ge10_rate_pct": 32.5,
+        "ge30_rate_pct": 11.6667
+      },
+      "mfe": {
+        "average_pct": 20.655,
+        "median_pct": 14.4915
+      },
+      "mae": {
+        "average_pct": -10.8873,
+        "median_pct": -9.6061
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.945,
+        "median_endpoint_delta_pct": -0.3974,
+        "positive_rate_delta_pp": -2.5,
+        "median_mfe_delta_pct": -1.7122,
+        "median_mae_delta_pct": 0.0037
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d20",
+      "eligible_events": 121,
+      "trades": 120,
+      "endpoint": {
+        "average_pct": 5.5322,
+        "median_pct": 2.5371,
+        "positive_rate_pct": 55,
+        "ge10_rate_pct": 31.6667,
+        "ge30_rate_pct": 12.5
+      },
+      "mfe": {
+        "average_pct": 21.1873,
+        "median_pct": 16.3488
+      },
+      "mae": {
+        "average_pct": -10.485,
+        "median_pct": -9.5406
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.4944,
+        "median_endpoint_delta_pct": 0.1809,
+        "positive_rate_delta_pp": -0.8333,
+        "median_mfe_delta_pct": 0.1451,
+        "median_mae_delta_pct": 0.0692
+      }
+    },
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d40",
+      "eligible_events": 115,
+      "trades": 114,
+      "endpoint": {
+        "average_pct": 10.8607,
+        "median_pct": 2.7443,
+        "positive_rate_pct": 51.7544,
+        "ge10_rate_pct": 42.1053,
+        "ge30_rate_pct": 17.5439
+      },
+      "mfe": {
+        "average_pct": 32.4238,
+        "median_pct": 21.1649
+      },
+      "mae": {
+        "average_pct": -14.5511,
+        "median_pct": -13.3843
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d40",
+      "eligible_events": 115,
+      "trades": 114,
+      "endpoint": {
+        "average_pct": 11.2456,
+        "median_pct": 1.1626,
+        "positive_rate_pct": 50.8772,
+        "ge10_rate_pct": 41.2281,
+        "ge30_rate_pct": 20.1754
+      },
+      "mfe": {
+        "average_pct": 32.7764,
+        "median_pct": 20.4417
+      },
+      "mae": {
+        "average_pct": -14.6064,
+        "median_pct": -14.0112
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": 0.3849,
+        "median_endpoint_delta_pct": -1.5817,
+        "positive_rate_delta_pp": -0.8772,
+        "median_mfe_delta_pct": -0.7232,
+        "median_mae_delta_pct": -0.6269
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d40",
+      "eligible_events": 115,
+      "trades": 114,
+      "endpoint": {
+        "average_pct": 11.4966,
+        "median_pct": 1.0632,
+        "positive_rate_pct": 50.8772,
+        "ge10_rate_pct": 42.1053,
+        "ge30_rate_pct": 19.2982
+      },
+      "mfe": {
+        "average_pct": 33.0681,
+        "median_pct": 20.2581
+      },
+      "mae": {
+        "average_pct": -14.2711,
+        "median_pct": -12.9053
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": 0.6359,
+        "median_endpoint_delta_pct": -1.6811,
+        "positive_rate_delta_pp": -0.8772,
+        "median_mfe_delta_pct": -0.9068,
+        "median_mae_delta_pct": 0.479
+      }
+    },
+    {
+      "policy_id": "signal_close",
+      "policy_label": "訊號日收盤",
+      "timing": "benchmark_only",
+      "horizon": "d60",
+      "eligible_events": 105,
+      "trades": 104,
+      "endpoint": {
+        "average_pct": 11.2474,
+        "median_pct": 2.7665,
+        "positive_rate_pct": 53.8462,
+        "ge10_rate_pct": 38.4615,
+        "ge30_rate_pct": 25.9615
+      },
+      "mfe": {
+        "average_pct": 39.5895,
+        "median_pct": 24.6789
+      },
+      "mae": {
+        "average_pct": -17.4397,
+        "median_pct": -16.6803
+      }
+    },
+    {
+      "policy_id": "next_open",
+      "policy_label": "隔日開盤",
+      "timing": "earliest_executable",
+      "horizon": "d60",
+      "eligible_events": 105,
+      "trades": 104,
+      "endpoint": {
+        "average_pct": 10.1624,
+        "median_pct": 1.0775,
+        "positive_rate_pct": 50.9615,
+        "ge10_rate_pct": 38.4615,
+        "ge30_rate_pct": 23.0769
+      },
+      "mfe": {
+        "average_pct": 38.8188,
+        "median_pct": 22.6944
+      },
+      "mae": {
+        "average_pct": -17.9003,
+        "median_pct": -17.1253
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -1.085,
+        "median_endpoint_delta_pct": -1.689,
+        "positive_rate_delta_pp": -2.8847,
+        "median_mfe_delta_pct": -1.9845,
+        "median_mae_delta_pct": -0.445
+      }
+    },
+    {
+      "policy_id": "next_close",
+      "policy_label": "隔日收盤",
+      "timing": "executable",
+      "horizon": "d60",
+      "eligible_events": 105,
+      "trades": 104,
+      "endpoint": {
+        "average_pct": 10.516,
+        "median_pct": 1.7659,
+        "positive_rate_pct": 51.9231,
+        "ge10_rate_pct": 37.5,
+        "ge30_rate_pct": 24.0385
+      },
+      "mfe": {
+        "average_pct": 39.2115,
+        "median_pct": 25.4262
+      },
+      "mae": {
+        "average_pct": -17.5161,
+        "median_pct": -16.293
+      },
+      "vs_signal_close": {
+        "average_endpoint_delta_pct": -0.7314,
+        "median_endpoint_delta_pct": -1.0006,
+        "positive_rate_delta_pp": -1.9231,
+        "median_mfe_delta_pct": 0.7473,
+        "median_mae_delta_pct": 0.3873
+      }
+    }
+  ],
+  "gap_analysis": {
+    "overall": {
+      "events": 130,
+      "average_gap_pct": 0.5272,
+      "median_gap_pct": 0.4979,
+      "gap_gt_5_rate_pct": 0.7692
+    },
+    "horizons": {
+      "d5": [
+        {
+          "bucket": "gap_le_0",
+          "trades": 50,
+          "endpoint": {
+            "average_pct": 2.7225,
+            "median_pct": 1.2847,
+            "positive_rate_pct": 58,
+            "ge10_rate_pct": 26,
+            "ge30_rate_pct": 0
+          },
+          "mfe": {
+            "average_pct": 6.9551,
+            "median_pct": 5.4765
+          },
+          "mae": {
+            "average_pct": -6.6005,
+            "median_pct": -4.97
+          }
+        },
+        {
+          "bucket": "gap_0_2",
+          "trades": 53,
+          "endpoint": {
+            "average_pct": 1.2704,
+            "median_pct": -0.2577,
+            "positive_rate_pct": 49.0566,
+            "ge10_rate_pct": 11.3208,
+            "ge30_rate_pct": 1.8868
+          },
+          "mfe": {
+            "average_pct": 7.533,
+            "median_pct": 5.4324
+          },
+          "mae": {
+            "average_pct": -4.1556,
+            "median_pct": -3.6824
+          }
+        },
+        {
+          "bucket": "gap_2_5",
+          "trades": 26,
+          "endpoint": {
+            "average_pct": -0.2298,
+            "median_pct": -1.8945,
+            "positive_rate_pct": 42.3077,
+            "ge10_rate_pct": 7.6923,
+            "ge30_rate_pct": 3.8462
+          },
+          "mfe": {
+            "average_pct": 8.4488,
+            "median_pct": 8.3277
+          },
+          "mae": {
+            "average_pct": -6.4707,
+            "median_pct": -5.8894
+          }
+        },
+        {
+          "bucket": "gap_gt_5",
+          "trades": 0,
+          "endpoint": {
+            "average_pct": null,
+            "median_pct": null,
+            "positive_rate_pct": null,
+            "ge10_rate_pct": null,
+            "ge30_rate_pct": null
+          },
+          "mfe": {
+            "average_pct": null,
+            "median_pct": null
+          },
+          "mae": {
+            "average_pct": null,
+            "median_pct": null
+          }
+        }
+      ],
+      "d20": [
+        {
+          "bucket": "gap_le_0",
+          "trades": 42,
+          "endpoint": {
+            "average_pct": 7.1984,
+            "median_pct": 2.1853,
+            "positive_rate_pct": 54.7619,
+            "ge10_rate_pct": 33.3333,
+            "ge30_rate_pct": 14.2857
+          },
+          "mfe": {
+            "average_pct": 22.5174,
+            "median_pct": 16.6106
+          },
+          "mae": {
+            "average_pct": -9.2807,
+            "median_pct": -8.8259
+          }
+        },
+        {
+          "bucket": "gap_0_2",
+          "trades": 52,
+          "endpoint": {
+            "average_pct": 4.4872,
+            "median_pct": 1.6153,
+            "positive_rate_pct": 53.8462,
+            "ge10_rate_pct": 32.6923,
+            "ge30_rate_pct": 9.6154
+          },
+          "mfe": {
+            "average_pct": 19.661,
+            "median_pct": 13.0888
+          },
+          "mae": {
+            "average_pct": -11.1217,
+            "median_pct": -8.602
+          }
+        },
+        {
+          "bucket": "gap_2_5",
+          "trades": 26,
+          "endpoint": {
+            "average_pct": 2.8508,
+            "median_pct": -0.8111,
+            "positive_rate_pct": 50,
+            "ge10_rate_pct": 30.7692,
+            "ge30_rate_pct": 11.5385
+          },
+          "mfe": {
+            "average_pct": 19.6345,
+            "median_pct": 14.3435
+          },
+          "mae": {
+            "average_pct": -13.0139,
+            "median_pct": -13.5841
+          }
+        },
+        {
+          "bucket": "gap_gt_5",
+          "trades": 0,
+          "endpoint": {
+            "average_pct": null,
+            "median_pct": null,
+            "positive_rate_pct": null,
+            "ge10_rate_pct": null,
+            "ge30_rate_pct": null
+          },
+          "mfe": {
+            "average_pct": null,
+            "median_pct": null
+          },
+          "mae": {
+            "average_pct": null,
+            "median_pct": null
+          }
+        }
+      ],
+      "d60": [
+        {
+          "bucket": "gap_le_0",
+          "trades": 32,
+          "endpoint": {
+            "average_pct": 18.3906,
+            "median_pct": 7.7938,
+            "positive_rate_pct": 59.375,
+            "ge10_rate_pct": 46.875,
+            "ge30_rate_pct": 25
+          },
+          "mfe": {
+            "average_pct": 43.8673,
+            "median_pct": 21.7901
+          },
+          "mae": {
+            "average_pct": -15.0144,
+            "median_pct": -14.4711
+          }
+        },
+        {
+          "bucket": "gap_0_2",
+          "trades": 47,
+          "endpoint": {
+            "average_pct": 8.7519,
+            "median_pct": -0.4959,
+            "positive_rate_pct": 46.8085,
+            "ge10_rate_pct": 34.0426,
+            "ge30_rate_pct": 21.2766
+          },
+          "mfe": {
+            "average_pct": 37.378,
+            "median_pct": 22.3118
+          },
+          "mae": {
+            "average_pct": -17.6065,
+            "median_pct": -16.7406
+          }
+        },
+        {
+          "bucket": "gap_2_5",
+          "trades": 25,
+          "endpoint": {
+            "average_pct": 2.2821,
+            "median_pct": -0.4219,
+            "positive_rate_pct": 48,
+            "ge10_rate_pct": 36,
+            "ge30_rate_pct": 24
+          },
+          "mfe": {
+            "average_pct": 35.0655,
+            "median_pct": 28.6432
+          },
+          "mae": {
+            "average_pct": -22.1464,
+            "median_pct": -21.273
+          }
+        },
+        {
+          "bucket": "gap_gt_5",
+          "trades": 0,
+          "endpoint": {
+            "average_pct": null,
+            "median_pct": null,
+            "positive_rate_pct": null,
+            "ge10_rate_pct": null,
+            "ge30_rate_pct": null
+          },
+          "mfe": {
+            "average_pct": null,
+            "median_pct": null
+          },
+          "mae": {
+            "average_pct": null,
+            "median_pct": null
+          }
+        }
+      ]
+    }
+  },
+  "production_recommendation": {
+    "policy_id": "next_close",
+    "status": "recommended",
+    "rationale": [
+      {
+        "horizon": "d5",
+        "next_open_median_pct": 0.5841,
+        "next_close_median_pct": 0.7018,
+        "next_open_positive_rate_pct": 51.1628,
+        "next_close_positive_rate_pct": 55.0388
+      },
+      {
+        "horizon": "d20",
+        "next_open_median_pct": 1.9588,
+        "next_close_median_pct": 2.5371,
+        "next_open_positive_rate_pct": 53.3333,
+        "next_close_positive_rate_pct": 55
+      },
+      {
+        "horizon": "d60",
+        "next_open_median_pct": 1.0775,
+        "next_close_median_pct": 1.7659,
+        "next_open_positive_rate_pct": 50.9615,
+        "next_close_positive_rate_pct": 51.9231
+      }
+    ],
+    "reason": "隔日收盤在主要 horizons 的中位報酬與勝率綜合比較較佳，足以補償延後一天內的價格風險。"
+  }
+}
