@@ -86,7 +86,7 @@ function numberValue(value) {
 
 function normalizePeriod(value) {
   const text = String(value || '').replace(/[^0-9]/g, '');
-  if (text.length >= 6) {
+  if (text.length >= 5) {
     const y = Number(text.slice(0, text.length - 2));
     const m = Number(text.slice(-2));
     const year = y < 1911 ? y + 1911 : y;
@@ -113,7 +113,7 @@ function normalizeMonthlyRevenue(row, market, provider, tradingDates) {
     title: `${period} 月營收`,
     metrics: {
       revenue: numberValue(pick(row, ['當月營收', '本月營業收入淨額', '營業收入-當月營收', 'CurrentMonthRevenue'])),
-      previous_month_revenue: numberValue(pick(row, ['上月營收', '上月比較增減(%)', 'PreviousMonthRevenue'])),
+      previous_month_revenue: numberValue(pick(row, ['上月營收', 'PreviousMonthRevenue'])),
       previous_year_revenue: numberValue(pick(row, ['去年當月營收', '去年同月營收', 'PreviousYearRevenue'])),
       yoy_pct: numberValue(pick(row, ['去年同月增減(%)', '去年同月增減％', 'YoY'])),
       mom_pct: numberValue(pick(row, ['上月比較增減(%)', '上月比較增減％', 'MoM'])),
@@ -302,6 +302,7 @@ async function main(argv = process.argv.slice(2)) {
   const written = [];
   for (const [stockId, events] of byStock) written.push(...writeStockEvents(stockId, events, asOfDate));
   fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
+  const allRows = [...byStock.values()].flat();
   const summary = {
     schema_version: 1,
     dataset: 'fundamental_event_timeline_build_summary',
@@ -310,8 +311,8 @@ async function main(argv = process.argv.slice(2)) {
     as_of_date: asOfDate,
     requested_stock_ids: [...requestedStocks],
     stock_count: byStock.size,
-    event_count: [...byStock.values()].reduce((sum, rows) => sum + rows.length, 0),
-    event_type_counts: Object.fromEntries(Object.values(EVENT_TYPES).map(type => [type, [...byStock.values()].flat().filter(event => event.event_type === type).length])),
+    event_count: allRows.length,
+    event_type_counts: Object.fromEntries(Object.values(EVENT_TYPES).map(type => [type, allRows.filter(event => event.event_type === type).length])),
     source_status: sourceStatus,
     trading_date_count: tradingDates.length,
     supplemental_event_count: supplementalEvents.length,
