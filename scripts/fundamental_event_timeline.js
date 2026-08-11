@@ -129,19 +129,24 @@ function resolveEffectiveTradingDate({ publishedAt = null, publishedDate = null,
     if (isKnownTradingDate && Number.isFinite(minutes) && minutes < MARKET_OPEN_MINUTES) return date;
     return strictlyNextTradingDate(date, tradingDates);
   }
-  // Date-only/inferred/fallback availability is deliberately conservative for daily backtests.
   return strictlyNextTradingDate(date, tradingDates);
 }
 
 function pick(row, candidates) {
-  for (const key of candidates) {
-    if (Object.prototype.hasOwnProperty.call(row || {}, key) && row[key] !== '' && row[key] != null) return row[key];
+  const source = row || {};
+  const normalizedKeys = new Map(Object.keys(source).map(key => [String(key).trim(), key]));
+  for (const candidate of candidates) {
+    const actualKey = Object.prototype.hasOwnProperty.call(source, candidate)
+      ? candidate
+      : normalizedKeys.get(String(candidate).trim());
+    if (actualKey != null && source[actualKey] !== '' && source[actualKey] != null) return source[actualKey];
   }
   return null;
 }
 
 function classifyMaterialInformation(title, description = '') {
   const text = `${title || ''}\n${description || ''}`;
+  if (/月營收|營收報告|monthly\s*(sales|revenue)/i.test(text)) return EVENT_TYPES.MONTHLY_REVENUE;
   if (/法人說明會|法說會|法說|investor\s*conference|earnings\s*conference/i.test(text)) return EVENT_TYPES.INVESTOR_CONFERENCE;
   if (/自結|自結損益|初步財務|初步損益|營運成果|earnings\s*release|每股盈餘|EPS/i.test(text)) return EVENT_TYPES.PRELIMINARY_EARNINGS;
   if (/財務報告|財務報表/.test(text) && /董事會|通過|申報|公告/.test(text)) return EVENT_TYPES.PRELIMINARY_EARNINGS;
