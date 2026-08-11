@@ -91,6 +91,99 @@ jobs:
           echo "- 預測交易日：$FORECAST_TARGET_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
           echo "- 市場環境模式：Shadow" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Ensure required external market indicators
+        id: external_market
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Keep the date rule identical to generate_market_environment.js:
+          # use the base-date U.S. weekday, capped at the latest completed
+          # New York session (16:30 close buffer). This also works for
+          # historical prediction regeneration.
+          expected_us_date=$(node <<'NODE'
+          const { weekdayAtOrBefore } = require('./scripts/market_environment_lib');
+
+          function zonedParts(date, timeZone) {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+              timeZone,
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hourCycle: 'h23',
+            }).formatToParts(date);
+            return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+          }
+
+          function previousCalendarDate(compact) {
+            const date = new Date(Date.UTC(
+              Number(compact.slice(0, 4)),
+              Number(compact.slice(4, 6)) - 1,
+              Number(compact.slice(6, 8)),
+            ));
+            date.setUTCDate(date.getUTCDate() - 1);
+            return date.toISOString().slice(0, 10).replaceAll('-', '');
+          }
+
+          const baseDate = String(process.env.FORECAST_BASE_DATE || '');
+          if (!/^20\d{6}$/.test(baseDate)) throw new Error(`Invalid FORECAST_BASE_DATE: ${baseDate}`);
+
+          const now = new Date();
+          const ny = zonedParts(now, 'America/New_York');
+          const nyDate = `${ny.year}${ny.month}${ny.day}`;
+          const hour = Number(ny.hour);
+          const minute = Number(ny.minute);
+          const closed = hour > 16 || (hour === 16 && minute >= 30);
+          const latestCompleted = weekdayAtOrBefore(closed ? nyDate : previousCalendarDate(nyDate));
+          const expectedFromBase = weekdayAtOrBefore(baseDate);
+          process.stdout.write(expectedFromBase < latestCompleted ? expectedFromBase : latestCompleted);
+          NODE
+          )
+
+          [[ "$expected_us_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid expected U.S. market date: $expected_us_date"; exit 1; }
+          external_file="data_external_market/$expected_us_date/external_market_indicators.json"
+          risk_file="data_market_risk/$expected_us_date/market_risk_snapshot.json"
+          crawled=false
+
+          echo "Expected completed U.S. market date: $expected_us_date"
+          echo "External-market file: $external_file"
+
+          external_ready=false
+          if [ -s "$external_file" ]; then
+            if node scripts/validate_external_market_snapshot.js \
+              --expected-date "$expected_us_date" \
+              --file "$external_file" \
+              --strict; then
+              external_ready=true
+            else
+              echo "Existing external-market snapshot is incomplete or date-mismatched; recrawling in this workflow."
+            fi
+          else
+            echo "External-market snapshot is missing; crawling it in this workflow."
+          fi
+
+          if [ "$external_ready" != "true" ]; then
+            node scripts/crawl_external_market_indicators.js --date "$expected_us_date"
+            node scripts/validate_external_market_snapshot.js \
+              --expected-date "$expected_us_date" \
+              --file "$external_file" \
+              --strict
+            crawled=true
+          fi
+
+          if [ "$crawled" = "true" ] || [ ! -s "$risk_file" ]; then
+            node scripts/generate_market_risk_snapshot.js --date "$expected_us_date"
+          fi
+
+          node scripts/generate_file_lists.js --only data_external_market,data_market_risk
+
+          echo "expected_us_date=$expected_us_date" >> "$GITHUB_OUTPUT"
+          echo "crawled=$crawled" >> "$GITHUB_OUTPUT"
+          echo "- 外部市場需求日：$expected_us_date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- External Market 自動補抓：$crawled" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Generate or reuse market environment snapshot
         shell: bash
         env:
@@ -188,8 +281,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_normalized data_market_risk data_market_environment data_predictions data_prediction_ui public/index.html public/prediction-version-dashboard.html public/prediction-dashboard.html
-          if git diff --cached --quiet; then echo "No V1 or environment changes"; exit 0; fi
+          git add data_normalized data_external_market data_market_risk data_market_environment data_predictions data_prediction_context data_prediction_ui public/index.html public/prediction-version-dashboard.html public/prediction-dashboard.html
+          if git diff --cached --quiet; then echo "No V1, external market, or environment changes"; exit 0; fi
           if [ "${{ steps.dates.outputs.run }}" != "true" ]; then
             message="feat: attach ${FORECAST_TARGET_DATE} market environment to V1"
           elif [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
