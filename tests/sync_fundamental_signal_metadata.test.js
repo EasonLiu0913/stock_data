@@ -41,7 +41,7 @@ test('signalMetadata preserves signal and next-session execution dates', () => {
   });
 });
 
-test('sync writes individual metadata, clears non-matches, and shortens display label', () => {
+test('sync writes individual metadata, clears non-matches, and keeps final display label', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fundamental-signal-sync-'));
   const predictionDir = path.join(root, 'data_predictions', '20260812');
   const matchingStock = {
@@ -63,15 +63,15 @@ test('sync writes individual metadata, clears non-matches, and shortens display 
   writeJson(path.join(predictionDir, 'summary.json'), {
     base_trade_date: '2026-08-11',
     forecast_date: '2026-08-12',
-    strategy_registry_v2: [{ strategy_id: STRATEGY_ID, label: '基本面雙確認－訊號日直接進場' }],
+    strategy_registry_v2: [{ strategy_id: STRATEGY_ID, label: DISPLAY_LABEL }],
     strategy_classifications_v2: {
-      [STRATEGY_ID]: { label: '基本面雙確認－訊號日直接進場', count: 1, members: ['2330'] },
+      [STRATEGY_ID]: { label: DISPLAY_LABEL, count: 1, members: ['2330'] },
     },
-    group_summary: [{ strategy_id: STRATEGY_ID, group: '基本面雙確認－訊號日直接進場', count: 1 }],
+    group_summary: [{ strategy_id: STRATEGY_ID, group: DISPLAY_LABEL, count: 1 }],
     stocks: [matchingStock, nonMatchingStock],
   });
   writeJson(path.join(predictionDir, 'group-summary.json'), {
-    groups: [{ strategy_id: STRATEGY_ID, group: '基本面雙確認－訊號日直接進場', count: 1 }],
+    groups: [{ strategy_id: STRATEGY_ID, group: DISPLAY_LABEL, count: 1 }],
   });
   writeJson(path.join(predictionDir, '2330.json'), { stock_code: '2330' });
   writeJson(path.join(predictionDir, '2317.json'), { stock_code: '2317', fundamental_signal: { stale: true } });
