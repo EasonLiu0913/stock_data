@@ -14,6 +14,8 @@ on:
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'scripts/sync_prediction_dashboard_groups.js'
       - 'scripts/sync_fundamental_signal_metadata.js'
+      - 'scripts/sync_mops_monthly_signal_artifacts.js'
+      - 'scripts/repair_fundamental_live_snapshot_sources.js'
       - '.github/workflows/apply-strategy-tag-registry.yml'
   workflow_call:
     inputs:
@@ -63,6 +65,8 @@ on:
       - 'scripts/summarize_strategy_snapshot_manifest.js'
       - 'scripts/sync_prediction_dashboard_groups.js'
       - 'scripts/sync_fundamental_signal_metadata.js'
+      - 'scripts/sync_mops_monthly_signal_artifacts.js'
+      - 'scripts/repair_fundamental_live_snapshot_sources.js'
       - 'tests/strategy_tag_engine.test.js'
       - 'tests/strategy_tag_source_enrichment.test.js'
       - 'tests/historical_factor_research.test.js'
@@ -107,6 +111,8 @@ jobs:
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
           node --check scripts/sync_fundamental_signal_metadata.js
+          node --check scripts/sync_mops_monthly_signal_artifacts.js
+          node --check scripts/repair_fundamental_live_snapshot_sources.js
           node --check scripts/fetch_official_market_constraints.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
@@ -128,6 +134,8 @@ jobs:
           node --check scripts/summarize_strategy_snapshot_manifest.js
           node --check scripts/sync_prediction_dashboard_groups.js
           node --check scripts/sync_fundamental_signal_metadata.js
+          node --check scripts/sync_mops_monthly_signal_artifacts.js
+          node --check scripts/repair_fundamental_live_snapshot_sources.js
           node --check scripts/fetch_official_market_constraints.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
@@ -162,6 +170,18 @@ jobs:
           echo "date=$target_date" >> "$GITHUB_OUTPUT"
           echo "TARGET_DATE=$target_date" >> "$GITHUB_ENV"
           echo "Target prediction date: $target_date"
+      - name: Repair missing fundamental signal sources
+        id: fundamental_source_repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/repair_fundamental_live_snapshot_sources.js --date "$TARGET_DATE" | tee /tmp/fundamental-source-repair.json
+          repaired=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('/tmp/fundamental-source-repair.json','utf8'));process.stdout.write(String(p.repaired===true))")
+          months=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('/tmp/fundamental-source-repair.json','utf8'));process.stdout.write((p.generated_months||[]).join(','))")
+          echo "repaired=$repaired" >> "$GITHUB_OUTPUT"
+          echo "generated_months=$months" >> "$GITHUB_OUTPUT"
+          echo "- 財報訊號來源修復：$repaired" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 自動補齊月份：${months:-無}" >> "$GITHUB_STEP_SUMMARY"
       - name: Refresh official disposition and TX night snapshot
         shell: bash
         run: |
