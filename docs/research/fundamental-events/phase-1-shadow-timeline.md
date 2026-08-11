@@ -98,7 +98,7 @@ Still required before production migration:
 
 ## Production decision
 
-Do **not** switch the current `基本面雙確認－訊號日直接進場` production strategy to the new timeline during Phase 1.
+Do **not** switch the current `財報品質訊號` production strategy to the new timeline during Phase 1.
 
 The current strategy remains unchanged until the new availability layer passes shadow coverage and historical reconstruction checks.
 
