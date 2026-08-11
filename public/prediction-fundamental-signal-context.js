@@ -9,6 +9,7 @@
   const STOCK_EXECUTION_DATE_ID = 'fundamentalExecutionDatePill';
   const HIGHLIGHTED_GROUPS = new Set([
     '財報品質訊號',
+    '本月有效財報品質池',
     '跌深反彈電子股',
     '融資退場型跌深反彈',
     '三日突破前兆候選',
