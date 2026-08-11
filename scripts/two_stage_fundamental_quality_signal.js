@@ -9,6 +9,9 @@ const {
 const {
   latestKnownFinancial,
 } = require('./summarize_two_stage_fundamental_quality_long_horizons');
+const {
+  syncMissingMonths,
+} = require('./sync_mops_monthly_signal_artifacts');
 
 const ELECTRONIC_INDUSTRIES = new Set([
   '半導體業',
@@ -46,15 +49,33 @@ function rootState(workspaceRoot) {
       revenue_months: new Map(),
       financial_by_stock: null,
       financial_source_available: null,
+      signal_sync_result: null,
     });
   }
   return ROOT_CACHE.get(root);
+}
+
+function ensureMonthlySignalArtifacts(workspaceRoot) {
+  const root = path.resolve(workspaceRoot);
+  const state = rootState(root);
+  if (state.signal_sync_result) return state.signal_sync_result;
+
+  const defaultRoot = path.resolve(__dirname, '..');
+  if (root !== defaultRoot) {
+    state.signal_sync_result = { skipped: true, reason: 'non_default_workspace_root' };
+    return state.signal_sync_result;
+  }
+
+  state.signal_sync_result = syncMissingMonths();
+  return state.signal_sync_result;
 }
 
 function loadSignalIndex(workspaceRoot) {
   const root = path.resolve(workspaceRoot);
   const state = rootState(root);
   if (state.signal_index) return state;
+
+  ensureMonthlySignalArtifacts(root);
 
   const signalRoot = path.join(
     root,
@@ -324,6 +345,7 @@ function clearTwoStageFundamentalSignalCache(workspaceRoot = null) {
 
 module.exports = {
   ELECTRONIC_INDUSTRIES,
+  ensureMonthlySignalArtifacts,
   evaluateTwoStageFundamentalSignalDay,
   clearTwoStageFundamentalSignalCache,
 };
