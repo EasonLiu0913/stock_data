@@ -1,0 +1,120 @@
+name: "[07 研究] Fundamental Event Timeline－Phase 2 State Build"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stock_ids:
+        description: "Comma-separated stock IDs"
+        required: false
+        default: "2330,2317,2454,2059"
+      start_year:
+        description: "Historical MOPS start year"
+        required: false
+        default: "2024"
+      end_year:
+        description: "Historical MOPS end year"
+        required: false
+        default: "2026"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/fundamental_state_resolver.js"
+      - "scripts/build_latest_known_fundamental_state.js"
+      - "scripts/crawl_mops_historical_fundamental_events.js"
+      - "tests/fundamental_state_resolver.test.js"
+      - "data_fundamental_events_verified/**"
+      - ".github/workflows/build-fundamental-state-phase2.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fundamental-event-phase2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate_phase2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Syntax checks
+        run: |
+          node --check scripts/fundamental_state_resolver.js
+          node --check scripts/build_latest_known_fundamental_state.js
+          node --check scripts/crawl_mops_historical_fundamental_events.js
+
+      - name: Regression tests
+        run: |
+          node --test tests/fundamental_event_timeline.test.js
+          node --test tests/fundamental_state_resolver.test.js
+
+      - name: Crawl historical MOPS event summaries
+        env:
+          STOCK_IDS: ${{ github.event.inputs.stock_ids || '2330,2317,2454,2059' }}
+          START_YEAR: ${{ github.event.inputs.start_year || '2024' }}
+          END_YEAR: ${{ github.event.inputs.end_year || '2026' }}
+        run: node scripts/crawl_mops_historical_fundamental_events.js --stock-ids "$STOCK_IDS" --start-year "$START_YEAR" --end-year "$END_YEAR"
+
+      - name: Build state at TSMC Q2 acceptance cutoff
+        run: node scripts/build_latest_known_fundamental_state.js --stock-ids 2330 --cutoff 2026-07-17
+
+      - name: Build current shadow state
+        env:
+          STOCK_IDS: ${{ github.event.inputs.stock_ids || '2330,2317,2454,2059' }}
+        run: node scripts/build_latest_known_fundamental_state.js --stock-ids "$STOCK_IDS" --cutoff 2026-08-11
+
+      - name: Validate Phase 2 acceptance
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const q2 = JSON.parse(fs.readFileSync('data_fundamental_state/20260717/2330.json', 'utf8'));
+          if (q2.latest_financial_information?.fiscal_period !== '2026Q2') {
+            throw new Error(`2330 Q2 was not known by 2026-07-17: ${JSON.stringify(q2.availability_summary)}`);
+          }
+          if (q2.latest_financial_information?.event_type !== 'preliminary_earnings') {
+            throw new Error(`Expected preliminary_earnings before formal filing: ${q2.latest_financial_information?.event_type}`);
+          }
+          if (q2.latest_financial_information?.metrics?.eps !== 27.25) {
+            throw new Error(`Expected verified Q2 EPS 27.25: ${q2.latest_financial_information?.metrics?.eps}`);
+          }
+          if (q2.production_integration === true) throw new Error('Phase 2 must remain shadow-only');
+          const historical = JSON.parse(fs.readFileSync('data_fundamental_events_historical/build-summary.json', 'utf8'));
+          console.log(`historical rows=${historical.rows.length}; nonempty=${historical.rows.filter(r => r.events > 0).length}`);
+          console.log(`2330 2026Q2 available via ${q2.latest_financial_information.availability_confidence}`);
+          NODE
+
+      - name: Commit Phase 2 shadow artifacts
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_fundamental_events_historical data_fundamental_state
+          if git diff --cached --quiet; then
+            echo "No Phase 2 shadow artifact changes."
+            exit 0
+          fi
+          git commit -m "data: refresh fundamental event phase 2 shadow state"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main
+            sleep $((attempt * 2))
+          done
+          exit 1
