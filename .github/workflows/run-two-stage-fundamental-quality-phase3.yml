@@ -26,10 +26,25 @@ jobs:
     env:
       NODE_OPTIONS: --max-old-space-size=6144
     steps:
-      - name: Checkout
+      - name: Checkout research dependencies
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/**
+            tests/event_driven_financial_quality.test.js
+            tests/fundamental_state_resolver.test.js
+            tests/fundamental_event_timeline.test.js
+            data_finmind_quarterly_financial_quality/**
+            data_fundamental_events_verified/**
+            data_fundamental_events_historical/**
+            data_fundamental_events/**
+            data_prediction_analysis/monthly-revenue/monthly-signals/**
+            data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json
+            data_mops_monthly_revenue/**
+            data_twse_market_chart/**
+            data_history_sma/**
 
       - name: Setup Node
         uses: actions/setup-node@v4
