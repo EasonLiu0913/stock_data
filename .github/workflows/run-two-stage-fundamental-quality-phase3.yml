@@ -1,0 +1,84 @@
+name: "[07 研究] 基本面雙確認－Phase 3 Event-driven Revalidation"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_month:
+        description: "Start revenue month YYYYMM"
+        required: false
+        default: "202401"
+      end_month:
+        description: "End revenue month YYYYMM"
+        required: false
+        default: "202606"
+  pull_request:
+    branches: [main]
+    paths:
+      - "phase3-validation-trigger.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Syntax checks
+        run: |
+          node --check scripts/event_driven_financial_quality.js
+          node --check scripts/summarize_two_stage_fundamental_quality_phase3.js
+
+      - name: Regression tests
+        run: |
+          node --test tests/event_driven_financial_quality.test.js
+          node --test tests/fundamental_state_resolver.test.js
+          node --test tests/fundamental_event_timeline.test.js
+
+      - name: Run Phase 3 research
+        env:
+          START_MONTH: ${{ github.event.inputs.start_month || '202401' }}
+          END_MONTH: ${{ github.event.inputs.end_month || '202606' }}
+        run: node scripts/summarize_two_stage_fundamental_quality_phase3.js --start-month "$START_MONTH" --end-month "$END_MONTH" | tee /tmp/phase3.log
+
+      - name: Validate research output
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-event-driven.json';
+          const p = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (p.dataset !== 'two_stage_fundamental_quality_phase3_event_driven_revalidation') throw new Error('unexpected dataset');
+          if (!p.coverage?.electronic_fas8_events) throw new Error('missing FAS8 research universe');
+          if (!p.old_general_baseline_decision?.direct_d60) throw new Error('missing old D60 direct baseline');
+          if (!p.event_driven_general_baseline_decision?.direct_d60) throw new Error('missing event-driven D60 direct baseline');
+          const verified = require('./data_fundamental_events_verified/2330/2026.json');
+          const q2 = verified.events.find(e => e.event_type === 'preliminary_earnings' && e.fiscal_period === '2026Q2');
+          if (!q2) throw new Error('missing verified 2330 2026Q2 preliminary event');
+          console.log('PHASE3_ACCEPTANCE=' + JSON.stringify({
+            candidates: p.universe_comparison,
+            old_d60: p.old_general_baseline_decision.direct_d60,
+            event_driven_d60: p.event_driven_general_baseline_decision.direct_d60,
+            decision: p.conclusion,
+            preliminary_scoreable: p.coverage.preliminary_scoreable,
+            preliminary_rejected: p.coverage.preliminary_rejected,
+          }));
+          NODE
+
+      - name: Upload Phase 3 result
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-event-driven-result
+          path: data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-event-driven.json
+          retention-days: 7
