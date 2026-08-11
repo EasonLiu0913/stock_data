@@ -25,8 +25,7 @@ function requiredFiles(baseDate) {
     ['基準日融資融券', `data_twse_margin_balance/${baseDate}_twse_margin_balance.csv`],
     ['基準日券商分點', `data_fubon_broker_details/fubon_${baseDate}_券商分點進出明細.json`],
     ['基準日大盤指數', `data_twse_mi_index/${baseDate}_twse_mi_index.json`],
-    ['基準日市場新聞', `data_market_news/${baseDate}/market_news.json`],
-    ['基準日外部市場指標', `data_external_market/${baseDate}/external_market_indicators.json`]
+    ['基準日市場新聞', `data_market_news/${baseDate}/market_news.json`]
   ].map(([label, relativePath]) => ({ label, relativePath }));
 }
 
@@ -71,7 +70,7 @@ function main() {
   const problems = inspectRequiredFiles(ROOT, baseDate);
 
   if (problems.length === 0) {
-    console.log(`必要檔案檢查通過：基準交易日 ${baseDate}，共 ${requiredFiles(baseDate).length} 個檔案。`);
+    console.log(`必要檔案檢查通過：基準交易日 ${baseDate}，共 ${requiredFiles(baseDate).length} 個台股／專案必要檔案。External Market 由 daily-stock-prediction.yml 的獨立 exact-date 驗證負責。`);
     return;
   }
 
