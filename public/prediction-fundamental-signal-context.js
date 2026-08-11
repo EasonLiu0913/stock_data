@@ -2,7 +2,7 @@
   'use strict';
 
   const STRATEGY_ID = 'two_stage_fundamental_quality_direct_entry_v1';
-  const DISPLAY_LABEL = '訊號日直接進場';
+  const DISPLAY_LABEL = '財報品質訊號';
   const OLD_LABEL = '基本面雙確認－訊號日直接進場';
   const STYLE_ID = 'fundamentalSignalContextStyle';
   const DASHBOARD_CONTEXT_ID = 'fundamentalSignalDashboardContext';
