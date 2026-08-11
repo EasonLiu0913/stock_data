@@ -82,8 +82,11 @@ permissions:
   pages: write
   id-token: write
 
+# Standalone push/manual runs all write the same prediction data, so serialize them.
+# workflow_call is already protected by the caller's daily-stock-prediction lock;
+# give it a distinct group to avoid deadlocking with the caller.
 concurrency:
-  group: strategy-tag-registry-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.event_name == 'workflow_call' && format('strategy-tag-registry-called-{0}', github.run_id) || 'prediction-data-main' }}
   cancel-in-progress: false
 
 jobs:
