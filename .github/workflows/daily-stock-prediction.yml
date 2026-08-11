@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       forecast_date:
-        description: '要產生預測的交易日（YYYYMMDD，例如 20260730）'
-        required: true
+        description: '要產生預測的交易日 YYYYMMDD；留空時依最新完整資料基準日自動推算下一交易日'
+        required: false
         type: string
       force_v1:
         description: '同日期已有成功 V1 結果時仍重新產生'
@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve requested forecast date
+      - name: Resolve forecast date
         id: dates
         shell: bash
         env:
@@ -69,13 +69,33 @@ jobs:
           FORCE_RUN: ${{ inputs.force_v1 }}
         run: |
           set -euo pipefail
-          node scripts/resolve_forecast_dates.js --target-date "$INPUT_FORECAST_DATE" --github-env > /tmp/forecast-dates.env
+
+          if [ -n "${INPUT_FORECAST_DATE:-}" ]; then
+            target_date="$INPUT_FORECAST_DATE"
+            date_mode="manual"
+          else
+            node --check scripts/resolve_latest_complete_prediction_base.js
+            auto_json=$(node scripts/resolve_latest_complete_prediction_base.js --json)
+            target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.forecast_target_date);' "$auto_json")
+            auto_base=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.base_trade_date);' "$auto_json")
+            auto_eligible=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.latest_eligible_base_date);' "$auto_json")
+            auto_checked=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.checked_candidates));' "$auto_json")
+            date_mode="auto_latest_complete_base"
+            echo "Auto date resolution: base=$auto_base target=$target_date latest_eligible=$auto_eligible checked=$auto_checked"
+          fi
+
+          node scripts/resolve_forecast_dates.js \
+            --target-date "$target_date" \
+            --github-env \
+            --skip-market-context > /tmp/forecast-dates.env
           cat /tmp/forecast-dates.env >> "$GITHUB_ENV"
           set -a
           source /tmp/forecast-dates.env
           set +a
+
           echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
           echo "target_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "date_mode=$date_mode" >> "$GITHUB_OUTPUT"
 
           existing_manifest="data_predictions/$FORECAST_TARGET_DATE/manifest.json"
           existing_status="data_predictions/$FORECAST_TARGET_DATE/generation-status.txt"
@@ -87,6 +107,7 @@ jobs:
           fi
 
           echo "## 每日產生股票預測：V1" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 日期模式：$date_mode" >> "$GITHUB_STEP_SUMMARY"
           echo "- 資料基準交易日：$FORECAST_BASE_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
           echo "- 預測交易日：$FORECAST_TARGET_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
           echo "- 市場環境模式：Shadow" >> "$GITHUB_STEP_SUMMARY"
@@ -183,6 +204,16 @@ jobs:
           echo "crawled=$crawled" >> "$GITHUB_OUTPUT"
           echo "- 外部市場需求日：$expected_us_date" >> "$GITHUB_STEP_SUMMARY"
           echo "- External Market 自動補抓：$crawled" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Capture immutable prediction market context
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/resolve_forecast_dates.js \
+            --target-date "$FORECAST_TARGET_DATE" \
+            --github-env \
+            --capture-market-context > /tmp/prediction-context.env
+          cat /tmp/prediction-context.env >> "$GITHUB_ENV"
 
       - name: Generate or reuse market environment snapshot
         shell: bash
