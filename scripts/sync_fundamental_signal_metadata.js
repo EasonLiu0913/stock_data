@@ -6,6 +6,13 @@ const path = require('node:path');
 const {
   summarizeStocks,
 } = require('./apply_formal_market_strategy_tags');
+const {
+  evaluateTwoStageFundamentalSignalDay,
+} = require('./two_stage_fundamental_quality_signal');
+const {
+  loadHolidaySet,
+  nextTradingDate,
+} = require('./resolve_forecast_dates');
 
 const ROOT = path.resolve(__dirname, '..');
 const STRATEGY_ID = 'two_stage_fundamental_quality_direct_entry_v1';
@@ -107,55 +114,85 @@ function monthlyPredictionDates({ date, rootDir = 'data_predictions', workspaceR
   }
 }
 
+function monthlySignalEvents({ workspaceRoot = ROOT } = {}) {
+  const signalRoot = path.join(
+    workspaceRoot,
+    'data_prediction_analysis',
+    'monthly-revenue',
+    'monthly-signals',
+  );
+  let files = [];
+  try {
+    files = fs.readdirSync(signalRoot)
+      .filter(name => /^20\d{4}\.json$/.test(name))
+      .sort();
+  } catch {
+    return [];
+  }
+
+  const events = [];
+  for (const file of files) {
+    const payload = readJson(path.join(signalRoot, file), null);
+    for (const event of payload?.events || []) {
+      events.push({ month: file.slice(0, 6), event });
+    }
+  }
+  return events;
+}
+
 function collectMonthlyFundamentalPool({ date, rootDir = 'data_predictions', workspaceRoot = ROOT } = {}) {
   const compact = compactDate(date);
   if (!compact) throw new Error('date must be YYYYMMDD');
   const month = compact.slice(0, 6);
+  const targetSummary = readJson(path.join(workspaceRoot, rootDir, compact, 'summary.json'), null);
+  const signalCutoff = compactDate(targetSummary?.base_trade_date);
+  if (!signalCutoff) return [];
+
+  const holidays = loadHolidaySet(path.join(workspaceRoot, 'config', 'twse-holidays.json'));
   const byStock = new Map();
+  for (const { event } of monthlySignalEvents({ workspaceRoot })) {
+    const stockCode = String(event?.stock_code || '').trim();
+    const signalDate = compactDate(event?.base_trading_date);
+    if (!stockCode || !signalDate || signalDate > signalCutoff) continue;
 
-  for (const targetDate of monthlyPredictionDates({ date: compact, rootDir, workspaceRoot })) {
-    const summaryFile = path.join(workspaceRoot, rootDir, targetDate, 'summary.json');
-    const dailySummary = readJson(summaryFile, null);
-    if (!dailySummary || !Array.isArray(dailySummary.stocks)) continue;
+    const executionIso = nextTradingDate(isoDate(signalDate), holidays, false);
+    const executionDate = compactDate(executionIso);
+    if (!executionDate || !executionDate.startsWith(month) || executionDate > compact) continue;
 
-    for (const stock of dailySummary.stocks) {
-      const metadata = stock?.fundamental_signal?.strategy_id === STRATEGY_ID
-        ? stock.fundamental_signal
-        : signalMetadata(stock, dailySummary);
-      if (!metadata || metadata.strategy_id !== STRATEGY_ID) continue;
+    const evaluation = evaluateTwoStageFundamentalSignalDay({
+      workspaceRoot,
+      stockId: stockCode,
+      baseTradeDate: signalDate,
+    });
+    if (evaluation?.is_signal_day !== true) continue;
 
-      const executionDate = compactDate(metadata.execution_date || dailySummary.forecast_date);
-      if (!executionDate || !executionDate.startsWith(month) || executionDate > compact) continue;
-      const stockCode = String(stock.stock_code || '').trim();
-      if (!stockCode) continue;
+    const signalIso = isoDate(signalDate);
+    const existing = byStock.get(stockCode);
+    const record = existing || {
+      stock_code: stockCode,
+      stock_name: event.stock_name || '',
+      first_signal_date: signalIso,
+      latest_signal_date: signalIso,
+      execution_date: isoDate(executionDate),
+      fas_score: evaluation.fas_total ?? null,
+      fq_score: evaluation.fq_score ?? null,
+      financial_period: evaluation.financial_period || null,
+    };
 
-      const signalDate = isoDate(metadata.signal_date || dailySummary.base_trade_date);
-      const record = byStock.get(stockCode) || {
-        stock_code: stockCode,
-        stock_name: stock.stock_name || '',
-        first_signal_date: signalDate,
-        latest_signal_date: signalDate,
-        execution_date: isoDate(executionDate),
-        fas_score: metadata.fas_score ?? null,
-        fq_score: metadata.fq_score ?? null,
-        financial_period: metadata.financial_period || null,
-      };
-
-      if (signalDate && (!record.first_signal_date || signalDate < record.first_signal_date)) {
-        record.first_signal_date = signalDate;
-      }
-      if (signalDate && (!record.latest_signal_date || signalDate > record.latest_signal_date)) {
-        record.latest_signal_date = signalDate;
-      }
-      if (executionDate >= compactDate(record.execution_date || '')) {
-        record.execution_date = isoDate(executionDate);
-        record.fas_score = metadata.fas_score ?? record.fas_score;
-        record.fq_score = metadata.fq_score ?? record.fq_score;
-        record.financial_period = metadata.financial_period || record.financial_period;
-        if (stock.stock_name) record.stock_name = stock.stock_name;
-      }
-      byStock.set(stockCode, record);
+    if (signalIso && (!record.first_signal_date || signalIso < record.first_signal_date)) {
+      record.first_signal_date = signalIso;
     }
+    if (signalIso && (!record.latest_signal_date || signalIso > record.latest_signal_date)) {
+      record.latest_signal_date = signalIso;
+    }
+    if (!existing || executionDate >= compactDate(record.execution_date || '')) {
+      record.execution_date = isoDate(executionDate);
+      record.fas_score = evaluation.fas_total ?? record.fas_score;
+      record.fq_score = evaluation.fq_score ?? record.fq_score;
+      record.financial_period = evaluation.financial_period || record.financial_period;
+      if (event.stock_name) record.stock_name = event.stock_name;
+    }
+    byStock.set(stockCode, record);
   }
 
   return [...byStock.values()].sort((left, right) => left.stock_code.localeCompare(right.stock_code));
@@ -182,10 +219,11 @@ function monthlyPoolGroup(summary, records) {
     status_label: members.length === 0
       ? '已完成計算，本月 0 筆'
       : `本月累積 ${members.length} 筆有效財報品質訊號`,
-    evaluation_target: '當月截至目標日曾觸發財報品質訊號的上市電子股聯集',
+    evaluation_target: '當月截至目標日曾觸發財報品質訊號且已到可執行日的上市電子股聯集',
     criteria: [
       `來源策略：${DISPLAY_LABEL}`,
-      '僅納入同月份且執行日不晚於目前預測日的正式訊號',
+      '依原始 monthly-signal artifact 逐日重建，不依賴歷史 Dashboard 是否曾成功產生',
+      '僅納入同月份且可執行日不晚於目前預測日的正式訊號',
       '同一股票當月只保留一筆，並保存首次／最近訊號日與 FAS、FQ',
     ],
   };
@@ -320,6 +358,7 @@ module.exports = {
   signalMetadata,
   relabelDirectEntryStrategy,
   monthlyPredictionDates,
+  monthlySignalEvents,
   collectMonthlyFundamentalPool,
   monthlyPoolGroup,
   upsertMonthlyPool,
