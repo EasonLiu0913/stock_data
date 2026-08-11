@@ -26,7 +26,7 @@ const ELECTRONIC_INDUSTRIES = new Set([
   '半導體業','電腦及週邊設備業','光電業','通信網路業','電子零組件業','電子通路業','資訊服務業','其他電子業','電子工業',
 ]);
 const POLICIES = [
-  { id: 'direct', name: '訊號日直接進場', type: 'direct' },
+  { id: 'direct', name: '財報品質訊號', type: 'direct' },
   { id: 'pullback_5_skip', name: '最多等20日 -5%，未觸發放棄', type: 'pullback', threshold: 0.95, pullback_pct: -5, fallback_day: null },
   { id: 'pullback_5_fallback_d5', name: '等 -5%，第5日未觸發則收盤進場', type: 'pullback', threshold: 0.95, pullback_pct: -5, fallback_day: 5 },
   { id: 'pullback_5_fallback_d10', name: '等 -5%，第10日未觸發則收盤進場', type: 'pullback', threshold: 0.95, pullback_pct: -5, fallback_day: 10 },
