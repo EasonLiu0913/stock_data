@@ -3,6 +3,8 @@
 
   const BUTTON_ID = 'predictionBackToTop';
   const STYLE_ID = 'predictionBackToTopStyle';
+  const FUNDAMENTAL_SIGNAL_SCRIPT_ID = 'predictionFundamentalSignalContextScript';
+  const FUNDAMENTAL_SIGNAL_SCRIPT = 'prediction-fundamental-signal-context.js?v=1';
   const EXISTING_CONTROL_SELECTOR = [
     '.to-top',
     '.back-to-top',
@@ -13,7 +15,18 @@
   ].join(', ');
   const WRAPPER_IFRAME_SELECTOR = 'iframe#viewer, iframe.viewer';
 
+  function installFundamentalSignalContext() {
+    if (document.getElementById(FUNDAMENTAL_SIGNAL_SCRIPT_ID)) return;
+    const script = document.createElement('script');
+    script.id = FUNDAMENTAL_SIGNAL_SCRIPT_ID;
+    script.src = FUNDAMENTAL_SIGNAL_SCRIPT;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+
   function install() {
+    installFundamentalSignalContext();
+
     // Replay wrapper pages contain the real scrollable report in a nested iframe.
     // Installing a second fixed button in the wrapper creates overlapping arrows.
     if (document.querySelector(WRAPPER_IFRAME_SELECTOR)) return;
