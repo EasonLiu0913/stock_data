@@ -3,7 +3,6 @@
 
   const STRATEGY_ID = 'two_stage_fundamental_quality_direct_entry_v1';
   const DISPLAY_LABEL = '財報品質訊號';
-  const OLD_LABEL = '基本面雙確認－訊號日直接進場';
   const STYLE_ID = 'fundamentalSignalContextStyle';
   const DASHBOARD_CONTEXT_ID = 'fundamentalSignalDashboardContext';
   const STOCK_SIGNAL_DATE_ID = 'fundamentalSignalDatePill';
@@ -82,10 +81,6 @@
   function relabelVisibleStrategy() {
     document.querySelectorAll(`[data-strategy-id="${STRATEGY_ID}"] .tag-strategy-filter-label`)
       .forEach(node => { if (node.textContent !== DISPLAY_LABEL) node.textContent = DISPLAY_LABEL; });
-
-    document.querySelectorAll('a,button,td,span').forEach(node => {
-      if (node.children.length === 0 && node.textContent.trim() === OLD_LABEL) node.textContent = DISPLAY_LABEL;
-    });
   }
 
   function activeDirectEntryButton() {
