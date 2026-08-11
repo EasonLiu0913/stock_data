@@ -1,0 +1,96 @@
+name: "[07 研究] Fundamental Event Timeline－Shadow Build"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stock_ids:
+        description: "Comma-separated stock IDs; empty means all returned stocks"
+        required: false
+        default: "2330,2317,2454,2059"
+      as_of_date:
+        description: "Taipei as-of date YYYY-MM-DD; empty uses workflow date"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths:
+      - "scripts/fundamental_event_timeline.js"
+      - "scripts/build_fundamental_event_timeline.js"
+      - "tests/fundamental_event_timeline.test.js"
+      - ".github/workflows/build-fundamental-event-timeline.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fundamental-event-shadow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate_and_build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Syntax check
+        run: |
+          node --check scripts/fundamental_event_timeline.js
+          node --check scripts/build_fundamental_event_timeline.js
+
+      - name: Regression tests
+        run: node --test tests/fundamental_event_timeline.test.js
+
+      - name: Build live shadow timeline
+        env:
+          INPUT_STOCK_IDS: ${{ github.event.inputs.stock_ids || '2330,2317,2454,2059' }}
+          INPUT_AS_OF_DATE: ${{ github.event.inputs.as_of_date || '' }}
+        run: |
+          set -euo pipefail
+          args=(--stock-ids "$INPUT_STOCK_IDS")
+          if [ -n "$INPUT_AS_OF_DATE" ]; then
+            args+=(--as-of-date "$INPUT_AS_OF_DATE")
+          fi
+          node scripts/build_fundamental_event_timeline.js "${args[@]}"
+
+      - name: Validate build summary
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const summary = JSON.parse(fs.readFileSync('data_fundamental_events/build-summary.json', 'utf8'));
+          if (summary.dataset !== 'fundamental_event_timeline_build_summary') throw new Error('unexpected dataset');
+          if (summary.shadow_mode !== true || summary.production_integration !== false) throw new Error('Phase 1 must remain shadow-only');
+          const official = summary.source_status.filter(s => s.status === 'ok');
+          if (official.length < 2) throw new Error(`too few healthy official sources: ${JSON.stringify(summary.source_status)}`);
+          const failed = summary.source_status.filter(s => s.status === 'error');
+          console.log(`healthy official source calls=${official.length}; failed=${failed.length}; events=${summary.event_count}`);
+          NODE
+
+      - name: Commit shadow artifacts
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_fundamental_events
+          if git diff --cached --quiet; then
+            echo "No shadow artifact changes."
+            exit 0
+          fi
+          git commit -m "data: refresh fundamental event shadow timeline"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main
+            sleep $((attempt * 2))
+          done
+          echo "Failed to push shadow artifacts after retries" >&2
+          exit 1
