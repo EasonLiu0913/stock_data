@@ -18,6 +18,10 @@ function readJson(file, fallback = null) {
 function round(v, d = 4) { return Number.isFinite(v) ? Number(v.toFixed(d)) : null; }
 function pctChange(a, b) { return Number.isFinite(a) && Number.isFinite(b) && b !== 0 ? (a / b - 1) * 100 : null; }
 function diff(a, b) { return Number.isFinite(a) && Number.isFinite(b) ? a - b : null; }
+function dateKey(value) {
+  const normalized = String(value || '').replace(/[^0-9]/g, '');
+  return /^20\d{6}$/.test(normalized) ? normalized : null;
+}
 function periodIndex(period) {
   const m = String(period || '').match(/^(20\d{2})Q([1-4])$/);
   if (!m) return null;
@@ -76,7 +80,8 @@ function scorePreliminaryEvent(event, options = {}) {
   const stockId = String(event?.stock_id || '');
   const period = event?.fiscal_period || null;
   const effectiveDate = event?.effective_trading_date || null;
-  if (!stockId || !period || !effectiveDate) return { scoreable: false, reason: 'missing_stock_period_or_effective_date' };
+  const effectiveKey = dateKey(effectiveDate);
+  if (!stockId || !period || !effectiveDate || !effectiveKey) return { scoreable: false, reason: 'missing_stock_period_or_effective_date' };
   const normalized = normalizeCurrentQuarterMetrics(event);
   if (normalized.missing.length) return { scoreable: false, reason: 'missing_current_metrics', missing: normalized.missing };
   const prevPeriod = previousPeriod(period, 1);
@@ -88,7 +93,10 @@ function scorePreliminaryEvent(event, options = {}) {
     period: item.payload.fiscal_period,
     effective_date: conservativeEffectiveDate(item.payload, tradingDates),
   }));
-  const futureComparison = comparisonAvailability.find(item => !item.effective_date || item.effective_date > effectiveDate);
+  const futureComparison = comparisonAvailability.find(item => {
+    const comparisonKey = dateKey(item.effective_date);
+    return !comparisonKey || comparisonKey > effectiveKey;
+  });
   if (futureComparison) return { scoreable: false, reason: 'comparison_quarter_not_yet_known', comparison: futureComparison };
   const metrics = calculateMetrics(normalized.values, prev.q, yoy.q);
   const scored = scoreRow(metrics);
@@ -161,21 +169,23 @@ function buildEventDrivenFinancialRows(stockId, options = {}) {
   }
 
   const rows = [...formalRows, ...scoredPreliminary].sort((a, b) =>
-    String(a.effective_known_date || a.effective_date).localeCompare(String(b.effective_known_date || b.effective_date)) ||
+    String(dateKey(a.effective_known_date || a.effective_date) || '').localeCompare(String(dateKey(b.effective_known_date || b.effective_date) || '')) ||
     String(a.fiscal_period).localeCompare(String(b.fiscal_period)) ||
     confidenceRank(a.availability_confidence) - confidenceRank(b.availability_confidence));
   return { rows, formalRows, scoredPreliminary, rejectedPreliminary };
 }
 function latestKnownScore(rows, eventDate) {
+  const eventKey = dateKey(eventDate);
+  if (!eventKey) return null;
   const eligible = (rows || []).filter(row => {
-    const known = row.effective_known_date || row.effective_date;
-    return known && known <= eventDate && Number.isFinite(Number(row.financial_quality_score));
+    const knownKey = dateKey(row.effective_known_date || row.effective_date);
+    return knownKey && knownKey <= eventKey && Number.isFinite(Number(row.financial_quality_score));
   });
   if (!eligible.length) return null;
   eligible.sort((a, b) => {
     const periodCmp = (periodIndex(a.fiscal_period) || 0) - (periodIndex(b.fiscal_period) || 0);
     if (periodCmp !== 0) return periodCmp;
-    const dateCmp = String(a.effective_known_date || a.effective_date).localeCompare(String(b.effective_known_date || b.effective_date));
+    const dateCmp = String(dateKey(a.effective_known_date || a.effective_date) || '').localeCompare(String(dateKey(b.effective_known_date || b.effective_date) || ''));
     if (dateCmp !== 0) return dateCmp;
     return confidenceRank(b.availability_confidence) - confidenceRank(a.availability_confidence);
   });
@@ -183,6 +193,7 @@ function latestKnownScore(rows, eventDate) {
 }
 
 module.exports = {
+  dateKey,
   periodIndex,
   previousPeriod,
   normalizeCurrentQuarterMetrics,
