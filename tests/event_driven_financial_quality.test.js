@@ -43,3 +43,13 @@ test('latest-known score switches from formal Q1 to preliminary Q2 only on effec
   assert.equal(after.financial_quality_score, 11);
   assert.equal(after.score_basis, 'preliminary_event_recomputed');
 });
+
+test('mixed compact event date never sees a future dashed preliminary effective date', () => {
+  const built = buildEventDrivenFinancialRows('2330', { root: ROOT });
+  const feb = latestKnownScore(built.rows, '20260223');
+  const jul16 = latestKnownScore(built.rows, '20260716');
+  const jul17 = latestKnownScore(built.rows, '20260717');
+  assert.notEqual(feb?.fiscal_period, '2026Q2');
+  assert.notEqual(jul16?.fiscal_period, '2026Q2');
+  assert.equal(jul17?.fiscal_period, '2026Q2');
+});
