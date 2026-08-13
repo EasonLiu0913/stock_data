@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/generate_eps_valuation_lab.js"
       - "scripts/generate_eps_valuation_coverage.js"
+      - "scripts/generate_formal_report_event_gap_report.js"
       - "scripts/generate_prediction_version_ui.js"
       - "public/eps-valuation-lab.html"
       - "public/eps-valuation-lab-v2.html"
@@ -69,27 +70,36 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Generate and validate valuation and coverage
+      - name: Generate and validate valuation, coverage, and event gap plan
         run: |
           set -euo pipefail
           node --check scripts/generate_eps_valuation_lab.js
           node --check scripts/generate_eps_valuation_coverage.js
+          node --check scripts/generate_formal_report_event_gap_report.js
           node scripts/generate_eps_valuation_lab.js
           node scripts/generate_eps_valuation_coverage.js
+          node scripts/generate_formal_report_event_gap_report.js
           test -s data_prediction_analysis/eps-valuation/valuation-backtest.json
           test -s data_prediction_analysis/eps-valuation/coverage-report.json
+          test -s data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json
           node - <<'NODE'
           const valuation=require('./data_prediction_analysis/eps-valuation/valuation-backtest.json');
           const coverage=require('./data_prediction_analysis/eps-valuation/coverage-report.json');
+          const gap=require('./data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json');
           if(!Array.isArray(valuation.formula_summary)||!Array.isArray(valuation.rows)) process.exit(1);
           if(!Array.isArray(coverage.stocks)||!coverage.summary||coverage.stocks.length!==coverage.summary.total_stocks) process.exit(1);
+          if(gap.mode!=='investigation_only'||gap.mutates_fundamental_events!==false) process.exit(1);
+          if(!Array.isArray(gap.stocks)||!gap.summary||gap.stocks.length!==gap.summary.total_stocks) process.exit(1);
           console.log({
             valuationStocks:valuation.stock_count,
             samples:valuation.sample_count,
             formulas:valuation.formula_summary.length,
             coverageStocks:coverage.summary.total_stocks,
             eligibleStocks:coverage.summary.eligible_stocks,
-            missingStocks:coverage.summary.missing_stocks
+            missingStocks:coverage.summary.missing_stocks,
+            directFallbackStocks:gap.summary.stocks_with_direct_fallback_candidates,
+            directFallbackEvents:gap.summary.direct_fallback_candidate_events,
+            unbuildableEvents:gap.summary.unbuildable_missing_events
           });
           NODE
 
@@ -98,13 +108,13 @@ jobs:
           set -euo pipefail
           output_dir="data_prediction_analysis/eps-valuation"
           if [ -z "$(git status --porcelain -- "$output_dir")" ]; then
-            echo "No valuation or coverage data changes."
+            echo "No valuation, coverage, or gap-plan data changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$output_dir"
-          git commit -m "research: update EPS valuation backtest and coverage"
+          git commit -m "research: update EPS valuation coverage and event gap plan"
           git pull --rebase origin main
           git push origin HEAD:main
 
