@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: research-eps-valuation-lab
@@ -78,3 +80,15 @@ jobs:
           git commit -m "research: update EPS valuation backtest"
           git pull --rebase origin main
           git push origin HEAD:main
+
+  deploy_pages:
+    name: Deploy EPS valuation lab to GitHub Pages
+    needs: build
+    if: ${{ success() }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ""
