@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/generate_eps_valuation_lab.js"
+      - "scripts/generate_eps_valuation_coverage.js"
       - "scripts/generate_prediction_version_ui.js"
       - "public/eps-valuation-lab.html"
       - ".github/workflows/research-eps-valuation-lab.yml"
@@ -35,6 +36,7 @@ jobs:
           sparse-checkout: |
             /scripts/
             /public/index.html
+            /data_twse/twse_industry_Stock.json
             /data_finmind_quarterly_financial_quality/
             /data_fundamental_events/
             /data_twse_market_chart/
@@ -59,26 +61,42 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Generate and validate
+      - name: Generate and validate valuation and coverage
         run: |
           set -euo pipefail
           node --check scripts/generate_eps_valuation_lab.js
+          node --check scripts/generate_eps_valuation_coverage.js
           node scripts/generate_eps_valuation_lab.js
+          node scripts/generate_eps_valuation_coverage.js
           test -s data_prediction_analysis/eps-valuation/valuation-backtest.json
-          node -e "const p=require('./data_prediction_analysis/eps-valuation/valuation-backtest.json'); if(!Array.isArray(p.formula_summary)||!Array.isArray(p.rows)) process.exit(1); console.log({stocks:p.stock_count,samples:p.sample_count,formulas:p.formula_summary.length})"
+          test -s data_prediction_analysis/eps-valuation/coverage-report.json
+          node - <<'NODE'
+          const valuation=require('./data_prediction_analysis/eps-valuation/valuation-backtest.json');
+          const coverage=require('./data_prediction_analysis/eps-valuation/coverage-report.json');
+          if(!Array.isArray(valuation.formula_summary)||!Array.isArray(valuation.rows)) process.exit(1);
+          if(!Array.isArray(coverage.stocks)||!coverage.summary||coverage.stocks.length!==coverage.summary.total_stocks) process.exit(1);
+          console.log({
+            valuationStocks:valuation.stock_count,
+            samples:valuation.sample_count,
+            formulas:valuation.formula_summary.length,
+            coverageStocks:coverage.summary.total_stocks,
+            eligibleStocks:coverage.summary.eligible_stocks,
+            missingStocks:coverage.summary.missing_stocks
+          });
+          NODE
 
       - name: Commit research output
         run: |
           set -euo pipefail
-          output="data_prediction_analysis/eps-valuation/valuation-backtest.json"
-          if [ -z "$(git status --porcelain -- "$output")" ]; then
-            echo "No valuation data changes."
+          output_dir="data_prediction_analysis/eps-valuation"
+          if [ -z "$(git status --porcelain -- "$output_dir")" ]; then
+            echo "No valuation or coverage data changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$output"
-          git commit -m "research: update EPS valuation backtest"
+          git add "$output_dir"
+          git commit -m "research: update EPS valuation backtest and coverage"
           git pull --rebase origin main
           git push origin HEAD:main
 
