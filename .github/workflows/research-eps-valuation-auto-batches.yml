@@ -1,0 +1,258 @@
+name: "[07 研究] EPS 估值公式歷史驗證－自動分批"
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: "每個 batch 處理股票數；所有 batch 會自動接續"
+        required: false
+        type: number
+        default: 20
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: research-eps-valuation-auto-batches
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan EPS valuation batches
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      total_batches: ${{ steps.matrix.outputs.total_batches }}
+      total_stocks: ${{ steps.matrix.outputs.total_stocks }}
+    steps:
+      - name: Checkout required research data
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /data_finmind_quarterly_financial_quality/
+            /data_prediction_analysis/eps-valuation/
+
+      - name: Validate and build plan
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_eps_valuation_lab.js
+          node --check scripts/run_eps_valuation_batches.js
+          node scripts/run_eps_valuation_batches.js \
+            --mode plan \
+            --batch-size "${{ inputs.batch_size }}"
+          test -s data_prediction_analysis/eps-valuation/valuation-batch-plan.json
+
+      - name: Commit plan checkpoint
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/eps-valuation/valuation-batch-plan.json
+          if git diff --cached --quiet; then
+            echo "Plan is unchanged."
+          else
+            git commit -m "research: plan automatic EPS valuation batches"
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                break
+              fi
+              if [ "$attempt" -eq 5 ]; then exit 1; fi
+              sleep $((attempt * 5))
+            done
+          fi
+
+      - name: Export sequential batch matrix
+        id: matrix
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('fs');
+          const plan = JSON.parse(fs.readFileSync('data_prediction_analysis/eps-valuation/valuation-batch-plan.json', 'utf8'));
+          const include = plan.batches.map((batch, index) => ({
+            batch_index: index + 1,
+            batch_count: plan.batches.length,
+            offset: batch.offset,
+            batch_size: batch.batch_size,
+            first_stock: batch.start_stock,
+            last_stock: batch.end_stock,
+            output_file: batch.output_file,
+          }));
+          console.log(`matrix=${JSON.stringify({ include })}`);
+          console.log(`total_batches=${include.length}`);
+          console.log(`total_stocks=${plan.stock_count}`);
+          NODE
+          {
+            echo "### EPS 估值自動分批計畫"
+            echo
+            echo "- 股票：$(node -p \"require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').stock_count\") 檔"
+            echo "- 每批：${{ inputs.batch_size }} 檔"
+            echo "- 批次：$(node -p \"require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').expected_batch_count\") 批"
+            echo "- 執行方式：max-parallel=1，自動依序接續，每批完成立即 commit。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  backfill:
+    name: "Batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} · ${{ matrix.first_stock }}~${{ matrix.last_stock }}"
+    needs: plan
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /data_finmind_quarterly_financial_quality/
+            /data_fundamental_events/
+            /data_twse_market_chart/
+            /data_twse_mi_index/
+            /data_history_sma/
+            /data_fubon/
+            /data_prediction_analysis/eps-valuation/
+
+      - name: Run valuation batch
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_eps_valuation_lab.js
+          node --check scripts/run_eps_valuation_batches.js
+          test -s data_prediction_analysis/eps-valuation/valuation-batch-plan.json
+          node scripts/run_eps_valuation_batches.js \
+            --mode batch \
+            --offset "${{ matrix.offset }}" \
+            --batch-size "${{ matrix.batch_size }}"
+          test -s "${{ matrix.output_file }}"
+
+      - name: Commit batch checkpoint
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ matrix.output_file }}"
+          if git diff --cached --quiet; then
+            echo "Batch checkpoint already exists with identical content."
+            exit 0
+          fi
+          git commit -m "research: EPS valuation batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} (${{ matrix.first_stock }}-${{ matrix.last_stock }})"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push failed; retry ${attempt}/5..."
+            if [ "$attempt" -eq 5 ]; then exit 1; fi
+            sleep $((attempt * 5))
+          done
+
+  finalize:
+    name: Finalize EPS valuation research
+    needs: [plan, backfill]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout all completed checkpoints
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /public/index.html
+            /data_twse/twse_industry_Stock.json
+            /data_finmind_quarterly_financial_quality/
+            /data_fundamental_events/
+            /data_twse_market_chart/
+            /data_twse_mi_index/
+            /data_history_sma/
+            /data_fubon/
+            /data_prediction_analysis/eps-valuation/
+
+      - name: Merge batches and refresh reports
+        run: |
+          set -euo pipefail
+          node --check scripts/run_eps_valuation_batches.js
+          node --check scripts/generate_eps_valuation_coverage.js
+          node --check scripts/generate_formal_report_event_gap_report.js
+          node scripts/run_eps_valuation_batches.js --mode finalize
+          node scripts/generate_eps_valuation_coverage.js
+          node scripts/generate_formal_report_event_gap_report.js
+          test -s data_prediction_analysis/eps-valuation/valuation-backtest.json
+          test -s data_prediction_analysis/eps-valuation/coverage-report.json
+          test -s data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json
+          node - <<'NODE'
+          const valuation = require('./data_prediction_analysis/eps-valuation/valuation-backtest.json');
+          const coverage = require('./data_prediction_analysis/eps-valuation/coverage-report.json');
+          const gap = require('./data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json');
+          if (!Array.isArray(valuation.formula_summary) || !Array.isArray(valuation.rows)) process.exit(1);
+          if (!Array.isArray(coverage.stocks) || !coverage.summary || coverage.stocks.length !== coverage.summary.total_stocks) process.exit(1);
+          if (gap.mode !== 'investigation_only' || gap.mutates_fundamental_events !== false) process.exit(1);
+          console.log({
+            plannedStocks: valuation.planned_stock_count,
+            valuationStocks: valuation.stock_count,
+            samples: valuation.sample_count,
+            formulas: valuation.formula_summary.length,
+            coverageStocks: coverage.summary.total_stocks,
+            eligibleStocks: coverage.summary.eligible_stocks,
+            directFallbackStocks: gap.summary.stocks_with_direct_fallback_candidates,
+            directFallbackEvents: gap.summary.direct_fallback_candidate_events,
+          });
+          NODE
+
+      - name: Ensure homepage points to EPS valuation coverage UI
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_prediction_version_ui.js
+          node -e "const ui=require('./scripts/generate_prediction_version_ui'); ui.updateIndex();"
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'public/index.html';
+          let html = fs.readFileSync(file, 'utf8');
+          html = html.replace(/file: 'eps-valuation-lab\.html'/g, "file: 'eps-valuation-lab-v2.html'");
+          fs.writeFileSync(file, html, 'utf8');
+          NODE
+
+      - name: Commit finalized output
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/eps-valuation public/index.html
+          if git diff --cached --quiet; then
+            echo "No finalized research changes."
+            exit 0
+          fi
+          git commit -m "research: finalize automatic batched EPS valuation backtest"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push failed; retry ${attempt}/5..."
+            if [ "$attempt" -eq 5 ]; then exit 1; fi
+            sleep $((attempt * 5))
+          done
+
+  deploy_pages:
+    name: Deploy EPS valuation lab to GitHub Pages
+    needs: finalize
+    if: ${{ success() }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ""
