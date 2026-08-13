@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "methodology_version": "refined_product_tightness_v1",
+  "generated_at": "2026-08-13T00:04:00.532Z",
+  "requested_date": "20260813",
+  "observation_date": "20260811",
+  "role": "research_market_context_only",
+  "interpretation_warning": "This factor describes refined-product market tightness. It is not a production strategy gate and does not isolate demand from refinery outages, geopolitics, seasonality, or other supply effects.",
+  "methodology": {
+    "jet_crack": "US Gulf Coast jet spot USD/gal * 42 - Brent spot USD/bbl",
+    "diesel_crack": "US Gulf Coast ULSD spot USD/gal * 42 - Brent spot USD/bbl",
+    "history_window": "approximately trailing 5 years of aligned EIA daily observations",
+    "score": "70% average crack level percentile + 30% average 20-trading-day crack-change percentile",
+    "state_bands": {
+      "very_loose": "<20",
+      "loose": "20-39.9",
+      "balanced": "40-59.9",
+      "tight": "60-79.9",
+      "very_tight": ">=80"
+    }
+  },
+  "sources": {
+    "provider": "U.S. Energy Information Administration Open Data API",
+    "series": {
+      "jet": {
+        "id": "PET.EER_EPJK_PF4_RGC_DPG.D",
+        "name": "U.S. Gulf Coast Kerosene-Type Jet Fuel Spot Price FOB",
+        "unit": "usd_per_gallon"
+      },
+      "diesel": {
+        "id": "PET.EER_EPD2DXL0_PF4_RGC_DPG.D",
+        "name": "U.S. Gulf Coast Ultra-Low Sulfur No. 2 Diesel Spot Price",
+        "unit": "usd_per_gallon"
+      },
+      "brent": {
+        "id": "PET.RBRTE.D",
+        "name": "Europe Brent Spot Price FOB",
+        "unit": "usd_per_barrel"
+      }
+    }
+  },
+  "factor": {
+    "observation_date": "20260811",
+    "score": 91.2,
+    "state": {
+      "code": "very_tight",
+      "label": "非常緊張"
+    },
+    "level_score": 99.6,
+    "momentum_score": 71.5,
+    "confirmation": "both_rising_20d",
+    "jet": {
+      "spot_usd_per_gallon": 3.814,
+      "crack_usd_per_barrel": 66.93,
+      "percentile_5y": 99.4,
+      "change_5d_usd_per_barrel": 13.87,
+      "change_20d_usd_per_barrel": 1.43,
+      "change_60d_usd_per_barrel": 6.69,
+      "momentum_20d_percentile_5y": 64.8
+    },
+    "diesel": {
+      "spot_usd_per_gallon": 4.248,
+      "crack_usd_per_barrel": 85.16,
+      "percentile_5y": 99.8,
+      "change_5d_usd_per_barrel": 15.3,
+      "change_20d_usd_per_barrel": 2.74,
+      "change_60d_usd_per_barrel": 34.16,
+      "momentum_20d_percentile_5y": 78.2
+    },
+    "brent": {
+      "spot_usd_per_barrel": 93.26
+    }
+  },
+  "aligned_observation_count": 4928
+}
