@@ -70,13 +70,14 @@ jobs:
       - name: Commit research output
         run: |
           set -euo pipefail
-          if git diff --quiet -- data_prediction_analysis/eps-valuation/valuation-backtest.json; then
+          output="data_prediction_analysis/eps-valuation/valuation-backtest.json"
+          if [ -z "$(git status --porcelain -- "$output")" ]; then
             echo "No valuation data changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_prediction_analysis/eps-valuation/valuation-backtest.json
+          git add "$output"
           git commit -m "research: update EPS valuation backtest"
           git pull --rebase origin main
           git push origin HEAD:main
