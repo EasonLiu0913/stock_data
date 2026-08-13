@@ -1,0 +1,56 @@
+name: "[07 研究] EPS 估值公式歷史驗證"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-eps-valuation-lab
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Generate EPS valuation backtest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout required research data
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /data_finmind_quarterly_financial_quality/
+            /data_fundamental_events/
+            /data_twse_market_chart/
+            /data_twse_mi_index/
+            /data_history_sma/
+            /data_fubon/
+            /data_prediction_analysis/eps-valuation/
+
+      - name: Generate and validate
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_eps_valuation_lab.js
+          node scripts/generate_eps_valuation_lab.js
+          test -s data_prediction_analysis/eps-valuation/valuation-backtest.json
+          node -e "const p=require('./data_prediction_analysis/eps-valuation/valuation-backtest.json'); if(!Array.isArray(p.formula_summary)||!Array.isArray(p.rows)) process.exit(1); console.log({stocks:p.stock_count,samples:p.sample_count,formulas:p.formula_summary.length})"
+
+      - name: Commit research output
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data_prediction_analysis/eps-valuation/valuation-backtest.json; then
+            echo "No valuation data changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/eps-valuation/valuation-backtest.json
+          git commit -m "research: update EPS valuation backtest"
+          git pull --rebase origin main
+          git push origin HEAD:main
