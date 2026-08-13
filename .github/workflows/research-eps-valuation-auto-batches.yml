@@ -88,12 +88,15 @@ jobs:
           console.log(`total_batches=${include.length}`);
           console.log(`total_stocks=${plan.stock_count}`);
           NODE
+
+          stock_count=$(node -p "require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').stock_count")
+          batch_count=$(node -p "require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').expected_batch_count")
           {
             echo "### EPS 估值自動分批計畫"
             echo
-            echo "- 股票：$(node -p \"require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').stock_count\") 檔"
+            echo "- 股票：${stock_count} 檔"
             echo "- 每批：${{ inputs.batch_size }} 檔"
-            echo "- 批次：$(node -p \"require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').expected_batch_count\") 批"
+            echo "- 批次：${batch_count} 批"
             echo "- 執行方式：max-parallel=1，自動依序接續，每批完成立即 commit。"
           } >> "$GITHUB_STEP_SUMMARY"
 
