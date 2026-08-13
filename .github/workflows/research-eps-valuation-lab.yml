@@ -8,6 +8,7 @@ on:
       - "scripts/generate_eps_valuation_coverage.js"
       - "scripts/generate_prediction_version_ui.js"
       - "public/eps-valuation-lab.html"
+      - "public/eps-valuation-lab-v2.html"
       - ".github/workflows/research-eps-valuation-lab.yml"
   workflow_dispatch:
 
@@ -50,13 +51,20 @@ jobs:
           set -euo pipefail
           node --check scripts/generate_prediction_version_ui.js
           node -e "const ui=require('./scripts/generate_prediction_version_ui'); const changed=ui.updateIndex(); console.log({index_updated:changed});"
+          node - <<'NODE'
+          const fs=require('fs');
+          const file='public/index.html';
+          let html=fs.readFileSync(file,'utf8');
+          html=html.replace(/file: 'eps-valuation-lab\.html'/g,"file: 'eps-valuation-lab-v2.html'");
+          fs.writeFileSync(file,html,'utf8');
+          NODE
           if git diff --quiet -- public/index.html; then
-            echo "Homepage already contains EPS valuation lab."
+            echo "Homepage already points to EPS valuation coverage UI."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add public/index.html
-            git commit -m "docs: list EPS valuation lab on homepage"
+            git commit -m "docs: point EPS valuation lab to coverage UI"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
