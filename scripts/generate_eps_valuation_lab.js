@@ -26,6 +26,9 @@ function loadMarketDates() {
   const p=readJson(MARKET_FILE,{});
   return (p.data||[]).map(r=>String(r.date||'').replace(/\D/g,'')).filter(d=>/^20\d{6}$/.test(d)).sort();
 }
+function listStocks() {
+  return fs.existsSync(FIN_ROOT)?fs.readdirSync(FIN_ROOT,{withFileTypes:true}).filter(d=>d.isDirectory()&&/^\d{4,6}$/.test(d.name)).map(d=>d.name).sort():[];
+}
 function loadQuarterFiles(stock) {
   const dir=path.join(FIN_ROOT,stock); if(!fs.existsSync(dir))return [];
   return fs.readdirSync(dir).filter(f=>/^20\d{2}Q[1-4]\.json$/.test(f)).map(f=>{
@@ -127,7 +130,7 @@ function analyzeStock(stock,marketDates){
 function summarize(rows){ const map=new Map(); for(const r of rows){const k=`${r.eps_method}__${r.pe_method}`; if(!map.has(k))map.set(k,[]); map.get(k).push(r);} return [...map.entries()].map(([formula,a])=>({formula,eps_method:a[0].eps_method,eps_method_label:a[0].eps_method_label,pe_method:a[0].pe_method,pe_method_label:a[0].pe_method_label,samples:a.length,hit_rate_pct:round(a.filter(x=>x.hit_range).length/a.length*100,2),mean_range_error_pct:round(a.reduce((s,x)=>s+x.range_error_pct,0)/a.length,2),median_center_error_pct:round(median(a.map(x=>x.center_error_pct)),2)})).sort((a,b)=>a.mean_range_error_pct-b.mean_range_error_pct||b.hit_rate_pct-a.hit_rate_pct); }
 function main(){
   const marketDates=loadMarketDates();
-  const stocks=fs.existsSync(FIN_ROOT)?fs.readdirSync(FIN_ROOT,{withFileTypes:true}).filter(d=>d.isDirectory()&&/^\d{4,6}$/.test(d.name)).map(d=>d.name):[];
+  const stocks=listStocks();
   const rows=[];
   for(let i=0;i<stocks.length;i++){
     const s=stocks[i];
@@ -139,4 +142,4 @@ function main(){
   console.log(JSON.stringify({output:path.relative(ROOT,OUT_FILE),stocks:payload.stock_count,samples:payload.sample_count,formulas:payload.formula_summary.length},null,2));
 }
 if(require.main===module){try{main();}catch(e){console.error(e.stack||e.message);process.exitCode=1;}}
-module.exports={forecastAnnualEps,ttmEps,ytdEps,rangeError,centerError,peRange,futureHigh,priceOnOrBefore};
+module.exports={forecastAnnualEps,ttmEps,ytdEps,rangeError,centerError,peRange,futureHigh,priceOnOrBefore,analyzeStock,loadMarketDates,listStocks,summarize,EPS_METHODS,PE_METHODS,ROOT,OUT_DIR};
