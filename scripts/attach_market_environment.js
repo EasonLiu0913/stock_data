@@ -22,6 +22,9 @@ const {
 const {
   syncPredictionDashboardGroups,
 } = require('./sync_prediction_dashboard_groups');
+const {
+  annotatePredictionDataLineage,
+} = require('./annotate_prediction_data_lineage');
 
 function attach(rootDir, date, environment) {
   const dir = path.join(ROOT, rootDir, date);
@@ -68,6 +71,9 @@ function main() {
   const dashboardGroupSync = roots.includes('data_predictions')
     ? syncPredictionDashboardGroups({ rootDir: 'data_predictions', date })
     : null;
+  const dataLineage = roots.includes('data_predictions')
+    ? annotatePredictionDataLineage({ rootDir: 'data_predictions', date, strict: true })
+    : null;
   console.log(JSON.stringify({
     date,
     version,
@@ -77,6 +83,7 @@ function main() {
     disposition_annotation: dispositionAnnotation,
     tag_strategy: tagStrategy,
     dashboard_group_sync: dashboardGroupSync,
+    data_lineage: dataLineage,
   }));
 }
 
