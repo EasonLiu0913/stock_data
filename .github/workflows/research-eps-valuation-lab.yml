@@ -1,17 +1,25 @@
 name: "[07 研究] EPS 估值公式歷史驗證"
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/generate_eps_valuation_lab.js"
-      - "scripts/generate_eps_valuation_coverage.js"
-      - "scripts/generate_formal_report_event_gap_report.js"
-      - "scripts/generate_prediction_version_ui.js"
-      - "public/eps-valuation-lab.html"
-      - "public/eps-valuation-lab-v2.html"
-      - ".github/workflows/research-eps-valuation-lab.yml"
   workflow_dispatch:
+    inputs:
+      operation:
+        description: "plan=建立分批清單；batch=跑單一批次並 commit；finalize=合併全部批次、重建 coverage 並部署"
+        required: true
+        type: choice
+        options:
+          - plan
+          - batch
+          - finalize
+        default: plan
+      offset:
+        description: "batch 模式起始 index；plan/finalize 可忽略"
+        required: false
+        default: "0"
+      batch_size:
+        description: "plan 的預設批次大小，或 batch 本次處理檔數；建議 20"
+        required: false
+        default: "20"
 
 permissions:
   contents: write
@@ -19,12 +27,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: research-eps-valuation-lab
+  group: research-eps-valuation-lab-${{ github.event.inputs.operation || 'manual' }}-${{ github.event.inputs.offset || '0' }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Generate EPS valuation backtest
+  process:
+    name: EPS valuation ${{ github.event.inputs.operation }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -47,36 +55,39 @@ jobs:
             /data_fubon/
             /data_prediction_analysis/eps-valuation/
 
-      - name: Ensure EPS valuation lab is listed on homepage
-        run: |
-          set -euo pipefail
-          node --check scripts/generate_prediction_version_ui.js
-          node -e "const ui=require('./scripts/generate_prediction_version_ui'); const changed=ui.updateIndex(); console.log({index_updated:changed});"
-          node - <<'NODE'
-          const fs=require('fs');
-          const file='public/index.html';
-          let html=fs.readFileSync(file,'utf8');
-          html=html.replace(/file: 'eps-valuation-lab\.html'/g,"file: 'eps-valuation-lab-v2.html'");
-          fs.writeFileSync(file,html,'utf8');
-          NODE
-          if git diff --quiet -- public/index.html; then
-            echo "Homepage already points to EPS valuation coverage UI."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add public/index.html
-            git commit -m "docs: point EPS valuation lab to coverage UI"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-
-      - name: Generate and validate valuation, coverage, and event gap plan
+      - name: Validate batch runner
         run: |
           set -euo pipefail
           node --check scripts/generate_eps_valuation_lab.js
+          node --check scripts/run_eps_valuation_batches.js
           node --check scripts/generate_eps_valuation_coverage.js
           node --check scripts/generate_formal_report_event_gap_report.js
-          node scripts/generate_eps_valuation_lab.js
+
+      - name: Plan valuation batches
+        if: ${{ github.event.inputs.operation == 'plan' }}
+        run: |
+          set -euo pipefail
+          node scripts/run_eps_valuation_batches.js \
+            --mode plan \
+            --batch-size "${{ github.event.inputs.batch_size }}"
+          test -s data_prediction_analysis/eps-valuation/valuation-batch-plan.json
+
+      - name: Run one valuation batch
+        if: ${{ github.event.inputs.operation == 'batch' }}
+        run: |
+          set -euo pipefail
+          test -s data_prediction_analysis/eps-valuation/valuation-batch-plan.json
+          node scripts/run_eps_valuation_batches.js \
+            --mode batch \
+            --offset "${{ github.event.inputs.offset }}" \
+            --batch-size "${{ github.event.inputs.batch_size }}"
+
+      - name: Finalize valuation and refresh coverage
+        if: ${{ github.event.inputs.operation == 'finalize' }}
+        run: |
+          set -euo pipefail
+          test -s data_prediction_analysis/eps-valuation/valuation-batch-plan.json
+          node scripts/run_eps_valuation_batches.js --mode finalize
           node scripts/generate_eps_valuation_coverage.js
           node scripts/generate_formal_report_event_gap_report.js
           test -s data_prediction_analysis/eps-valuation/valuation-backtest.json
@@ -91,6 +102,7 @@ jobs:
           if(gap.mode!=='investigation_only'||gap.mutates_fundamental_events!==false) process.exit(1);
           if(!Array.isArray(gap.stocks)||!gap.summary||gap.stocks.length!==gap.summary.total_stocks) process.exit(1);
           console.log({
+            plannedStocks:valuation.planned_stock_count,
             valuationStocks:valuation.stock_count,
             samples:valuation.sample_count,
             formulas:valuation.formula_summary.length,
@@ -103,25 +115,59 @@ jobs:
           });
           NODE
 
-      - name: Commit research output
+      - name: Ensure EPS valuation lab is listed on homepage
+        if: ${{ github.event.inputs.operation == 'finalize' }}
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_prediction_version_ui.js
+          node -e "const ui=require('./scripts/generate_prediction_version_ui'); const changed=ui.updateIndex(); console.log({index_updated:changed});"
+          node - <<'NODE'
+          const fs=require('fs');
+          const file='public/index.html';
+          let html=fs.readFileSync(file,'utf8');
+          html=html.replace(/file: 'eps-valuation-lab\.html'/g,"file: 'eps-valuation-lab-v2.html'");
+          fs.writeFileSync(file,html,'utf8');
+          NODE
+
+      - name: Commit plan or batch result
+        if: ${{ github.event.inputs.operation == 'plan' || github.event.inputs.operation == 'batch' }}
         run: |
           set -euo pipefail
           output_dir="data_prediction_analysis/eps-valuation"
           if [ -z "$(git status --porcelain -- "$output_dir")" ]; then
-            echo "No valuation, coverage, or gap-plan data changes."
+            echo "No plan or batch changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$output_dir"
-          git commit -m "research: update EPS valuation coverage and event gap plan"
+          git add "$output_dir/valuation-batch-plan.json" "$output_dir/valuation-batches" 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No staged plan or batch changes."
+            exit 0
+          fi
+          git commit -m "research: process EPS valuation ${{ github.event.inputs.operation }} offset ${{ github.event.inputs.offset }}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Commit finalized research output
+        if: ${{ github.event.inputs.operation == 'finalize' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/eps-valuation public/index.html
+          if git diff --cached --quiet; then
+            echo "No finalized research changes."
+            exit 0
+          fi
+          git commit -m "research: finalize batched EPS valuation backtest"
           git pull --rebase origin main
           git push origin HEAD:main
 
   deploy_pages:
     name: Deploy EPS valuation lab to GitHub Pages
-    needs: build
-    if: ${{ success() }}
+    needs: process
+    if: ${{ success() && github.event.inputs.operation == 'finalize' }}
     permissions:
       contents: read
       pages: write
