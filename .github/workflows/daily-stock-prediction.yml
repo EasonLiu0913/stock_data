@@ -1,6 +1,12 @@
 name: '[04 預測覆盤] 每日產生股票預測'
 
 on:
+  schedule:
+    # GitHub cron uses UTC.
+    # Taiwan Mon-Fri 07:52 = UTC Sun-Thu 23:52.
+    - cron: '52 23 * * 0-4'
+    # Taiwan Mon-Fri 08:22 = UTC Mon-Fri 00:22.
+    - cron: '22 0 * * 1-5'
   workflow_dispatch:
     inputs:
       forecast_date:
@@ -39,6 +45,7 @@ jobs:
     outputs:
       target_date: ${{ steps.dates.outputs.target_date }}
       environment_hash: ${{ steps.environment.outputs.snapshot_hash }}
+      should_run: ${{ steps.dates.outputs.run }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,7 +68,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve forecast date
+      - name: Resolve forecast date and skip existing success
         id: dates
         shell: bash
         env:
@@ -102,8 +109,11 @@ jobs:
           if [ "$FORCE_RUN" != "true" ] && [ -s "$existing_manifest" ] \
             && { [ ! -f "$existing_status" ] || [ "$(tr -d '\r\n' < "$existing_status")" = "success" ]; }; then
             echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Existing successful prediction found: $existing_manifest"
+            echo "- 已存在成功預測：是，後續 V1 / V2 / 策略發布全部跳過" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "- 已存在成功預測：否，繼續執行" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           echo "## 每日產生股票預測：V1" >> "$GITHUB_STEP_SUMMARY"
@@ -113,109 +123,59 @@ jobs:
           echo "- 市場環境模式：Shadow" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Ensure required external market indicators
+        if: steps.dates.outputs.run == 'true'
         id: external_market
         shell: bash
         run: |
           set -euo pipefail
-
-          # Keep the date rule identical to generate_market_environment.js:
-          # use the base-date U.S. weekday, capped at the latest completed
-          # New York session (16:30 close buffer). This also works for
-          # historical prediction regeneration.
           expected_us_date=$(node <<'NODE'
           const { weekdayAtOrBefore } = require('./scripts/market_environment_lib');
-
           function zonedParts(date, timeZone) {
-            const parts = new Intl.DateTimeFormat('en-CA', {
-              timeZone,
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              hourCycle: 'h23',
-            }).formatToParts(date);
+            const parts = new Intl.DateTimeFormat('en-CA', {timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
             return Object.fromEntries(parts.map((part) => [part.type, part.value]));
           }
-
           function previousCalendarDate(compact) {
-            const date = new Date(Date.UTC(
-              Number(compact.slice(0, 4)),
-              Number(compact.slice(4, 6)) - 1,
-              Number(compact.slice(6, 8)),
-            ));
-            date.setUTCDate(date.getUTCDate() - 1);
-            return date.toISOString().slice(0, 10).replaceAll('-', '');
+            const date = new Date(Date.UTC(Number(compact.slice(0,4)),Number(compact.slice(4,6))-1,Number(compact.slice(6,8))));
+            date.setUTCDate(date.getUTCDate()-1);
+            return date.toISOString().slice(0,10).replaceAll('-','');
           }
-
-          const baseDate = String(process.env.FORECAST_BASE_DATE || '');
-          if (!/^20\d{6}$/.test(baseDate)) throw new Error(`Invalid FORECAST_BASE_DATE: ${baseDate}`);
-
-          const now = new Date();
-          const ny = zonedParts(now, 'America/New_York');
-          const nyDate = `${ny.year}${ny.month}${ny.day}`;
-          const hour = Number(ny.hour);
-          const minute = Number(ny.minute);
-          const closed = hour > 16 || (hour === 16 && minute >= 30);
-          const latestCompleted = weekdayAtOrBefore(closed ? nyDate : previousCalendarDate(nyDate));
-          const expectedFromBase = weekdayAtOrBefore(baseDate);
-          process.stdout.write(expectedFromBase < latestCompleted ? expectedFromBase : latestCompleted);
+          const baseDate=String(process.env.FORECAST_BASE_DATE||'');
+          if(!/^20\d{6}$/.test(baseDate)) throw new Error(`Invalid FORECAST_BASE_DATE: ${baseDate}`);
+          const now=new Date(); const ny=zonedParts(now,'America/New_York'); const nyDate=`${ny.year}${ny.month}${ny.day}`;
+          const hour=Number(ny.hour), minute=Number(ny.minute); const closed=hour>16||(hour===16&&minute>=30);
+          const latestCompleted=weekdayAtOrBefore(closed?nyDate:previousCalendarDate(nyDate));
+          const expectedFromBase=weekdayAtOrBefore(baseDate);
+          process.stdout.write(expectedFromBase<latestCompleted?expectedFromBase:latestCompleted);
           NODE
           )
-
           [[ "$expected_us_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid expected U.S. market date: $expected_us_date"; exit 1; }
           external_file="data_external_market/$expected_us_date/external_market_indicators.json"
           risk_file="data_market_risk/$expected_us_date/market_risk_snapshot.json"
           crawled=false
-
-          echo "Expected completed U.S. market date: $expected_us_date"
-          echo "External-market file: $external_file"
-
           external_ready=false
           if [ -s "$external_file" ]; then
-            if node scripts/validate_external_market_snapshot.js \
-              --expected-date "$expected_us_date" \
-              --file "$external_file" \
-              --strict; then
-              external_ready=true
-            else
-              echo "Existing external-market snapshot is incomplete or date-mismatched; recrawling in this workflow."
-            fi
-          else
-            echo "External-market snapshot is missing; crawling it in this workflow."
+            if node scripts/validate_external_market_snapshot.js --expected-date "$expected_us_date" --file "$external_file" --strict; then external_ready=true; fi
           fi
-
           if [ "$external_ready" != "true" ]; then
             node scripts/crawl_external_market_indicators.js --date "$expected_us_date"
-            node scripts/validate_external_market_snapshot.js \
-              --expected-date "$expected_us_date" \
-              --file "$external_file" \
-              --strict
+            node scripts/validate_external_market_snapshot.js --expected-date "$expected_us_date" --file "$external_file" --strict
             crawled=true
           fi
-
-          if [ "$crawled" = "true" ] || [ ! -s "$risk_file" ]; then
-            node scripts/generate_market_risk_snapshot.js --date "$expected_us_date"
-          fi
-
+          if [ "$crawled" = "true" ] || [ ! -s "$risk_file" ]; then node scripts/generate_market_risk_snapshot.js --date "$expected_us_date"; fi
           node scripts/generate_file_lists.js --only data_external_market,data_market_risk
-
           echo "expected_us_date=$expected_us_date" >> "$GITHUB_OUTPUT"
           echo "crawled=$crawled" >> "$GITHUB_OUTPUT"
-          echo "- 外部市場需求日：$expected_us_date" >> "$GITHUB_STEP_SUMMARY"
-          echo "- External Market 自動補抓：$crawled" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Capture immutable prediction market context
+        if: steps.dates.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/resolve_forecast_dates.js \
-            --target-date "$FORECAST_TARGET_DATE" \
-            --github-env \
-            --capture-market-context > /tmp/prediction-context.env
+          node scripts/resolve_forecast_dates.js --target-date "$FORECAST_TARGET_DATE" --github-env --capture-market-context > /tmp/prediction-context.env
           cat /tmp/prediction-context.env >> "$GITHUB_ENV"
 
       - name: Generate or reuse market environment snapshot
+        if: steps.dates.outputs.run == 'true'
         shell: bash
         env:
           FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
@@ -226,24 +186,19 @@ jobs:
           node scripts/generate_market_environment.js "${args[@]}"
 
       - name: Verify immutable market environment snapshot
+        if: steps.dates.outputs.run == 'true'
         id: environment
         shell: bash
         run: |
           set -euo pipefail
           args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
-          if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then
-            args+=(--allow-historical-reconstruction)
-          fi
+          if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then args+=(--allow-historical-reconstruction); fi
           node scripts/verify_market_environment.js "${args[@]}"
 
       - name: Run market environment and fixed strategy tests
+        if: steps.dates.outputs.run == 'true'
         run: |
-          node --test \
-            tests/market_environment.test.js \
-            tests/formal_market_strategy_tags.test.js \
-            tests/prediction_dashboard_group_sync.test.js \
-            tests/oversold_beta_rebound.test.js \
-            tests/oversold_electronics_strategy.test.js
+          node --test tests/market_environment.test.js tests/formal_market_strategy_tags.test.js tests/prediction_dashboard_group_sync.test.js tests/oversold_beta_rebound.test.js tests/oversold_electronics_strategy.test.js
 
       - name: Check required forecast files
         if: steps.dates.outputs.run == 'true'
@@ -286,15 +241,15 @@ jobs:
           exit 0
 
       - name: Build rebound readiness and fixed strategy registry
-        if: always() && steps.dates.outputs.target_date != '' && (steps.dates.outputs.run != 'true' || steps.generate.outputs.exit_code == '0')
+        if: steps.dates.outputs.run == 'true' && steps.generate.outputs.exit_code == '0'
         run: node scripts/backfill_prediction_dashboard_fields.js --date "${{ steps.dates.outputs.target_date }}"
 
       - name: Attach environment snapshot to V1 outputs
-        if: always() && steps.dates.outputs.target_date != ''
+        if: steps.dates.outputs.run == 'true'
         run: node scripts/attach_market_environment.js --date "${{ steps.dates.outputs.target_date }}" --version v1
 
       - name: Install market environment banner
-        if: always()
+        if: steps.dates.outputs.run == 'true'
         run: node scripts/install_market_environment_ui.js
 
       - name: Restore temporary source normalization
@@ -302,11 +257,11 @@ jobs:
         run: git restore --worktree -- data_history_sma/non_trading_days.json
 
       - name: Generate V1 V2 HTML viewer data
-        if: always() && steps.dates.outputs.target_date != ''
+        if: steps.dates.outputs.run == 'true'
         run: node scripts/generate_prediction_version_ui.js --date "${{ steps.dates.outputs.target_date }}"
 
       - name: Commit V1 result, environment, and viewer
-        if: always() && steps.dates.outputs.target_date != ''
+        if: steps.dates.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -314,13 +269,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_normalized data_external_market data_market_risk data_market_environment data_predictions data_prediction_context data_prediction_ui public/index.html public/prediction-version-dashboard.html public/prediction-dashboard.html
           if git diff --cached --quiet; then echo "No V1, external market, or environment changes"; exit 0; fi
-          if [ "${{ steps.dates.outputs.run }}" != "true" ]; then
-            message="feat: attach ${FORECAST_TARGET_DATE} market environment to V1"
-          elif [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then
-            message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 forecasts with market environment"
-          else
-            message="fix: record ${FORECAST_TARGET_DATE} V1 generation failure"
-          fi
+          if [ "${{ steps.generate.outputs.exit_code }}" = "0" ]; then message="feat: regenerate verified ${FORECAST_TARGET_DATE} V1 forecasts with market environment"; else message="fix: record ${FORECAST_TARGET_DATE} V1 generation failure"; fi
           git commit -m "$message"
           test -z "$(git status --porcelain)" || { git status --short; exit 1; }
           for attempt in 1 2 3 4 5; do
@@ -337,6 +286,7 @@ jobs:
   generate_v2:
     name: 2. 產生 V2 預測
     needs: generate_v1
+    if: needs.generate_v1.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -417,6 +367,7 @@ jobs:
   apply_strategy_registry:
     name: 3. 套用標籤策略並發布 GitHub Pages
     needs: [generate_v1, generate_v2]
+    if: needs.generate_v1.outputs.should_run == 'true'
     uses: ./.github/workflows/apply-strategy-tag-registry.yml
     with:
       date: ${{ needs.generate_v1.outputs.target_date }}
