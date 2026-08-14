@@ -1,0 +1,59 @@
+name: "[07 研究] EPS YoY 年增倍率異常值研究"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/research-eps-yoy-scaled-outliers.yml"
+      - "scripts/analyze_eps_yoy_scaled_outliers.js"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-eps-yoy-scaled-outliers
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze yoy_scaled_remaining outliers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout research inputs
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/analyze_eps_yoy_scaled_outliers.js
+            /data_prediction_analysis/eps-valuation/valuation-backtest.json
+            /data_finmind_quarterly_financial_quality/
+
+      - name: Run outlier study
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_eps_yoy_scaled_outliers.js
+          node scripts/analyze_eps_yoy_scaled_outliers.js
+
+      - name: Commit research report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_prediction_analysis/eps-valuation/yoy-scaled-outlier-study.json \
+            data_prediction_analysis/eps-valuation/yoy-scaled-outlier-study.md
+          if git diff --cached --quiet; then
+            echo "Outlier study is unchanged."
+            exit 0
+          fi
+          git commit -m "research: update EPS YoY scaled outlier study"
+          git pull --rebase origin main
+          git push origin HEAD:main
