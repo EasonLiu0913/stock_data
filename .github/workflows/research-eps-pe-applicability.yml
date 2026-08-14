@@ -1,0 +1,57 @@
+name: "[07 研究] EPS P/E 適用區間研究"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/research-eps-pe-applicability.yml"
+      - "scripts/analyze_eps_pe_outliers.js"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-eps-pe-applicability
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout research inputs
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/analyze_eps_pe_outliers.js
+            /data_prediction_analysis/eps-valuation/
+
+      - name: Run P/E applicability study
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_eps_pe_outliers.js
+          node scripts/analyze_eps_pe_outliers.js
+
+      - name: Commit research report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --sparse \
+            data_prediction_analysis/eps-valuation/pe-applicability-study.json \
+            data_prediction_analysis/eps-valuation/pe-applicability-study.md
+          if git diff --cached --quiet; then
+            echo "P/E applicability study unchanged."
+            exit 0
+          fi
+          git commit -m "research: update EPS PE applicability study"
+          git pull --rebase origin main
+          git push origin HEAD:main
