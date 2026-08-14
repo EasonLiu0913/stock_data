@@ -3,12 +3,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { updateIndex: updateCanonicalIndex } = require('./generate_public_index');
 
 const ROOT = path.resolve(__dirname, '..');
 const V1_ROOT = path.join(ROOT, 'data_predictions');
 const V2_ROOT = path.join(ROOT, 'data_predictions_v2');
 const UI_ROOT = path.join(ROOT, 'data_prediction_ui');
-const INDEX_FILE = path.join(ROOT, 'public', 'index.html');
 
 function readJson(file, fallback = null) {
   try {
@@ -97,37 +97,8 @@ function normalizeVersion(payload, version) {
   };
 }
 
-function ensureToolEntry(html, file, title, description) {
-  if (html.includes(`file: '${file}'`)) return html;
-  const entry = `            { file: '${file}', title: '${title}', description: '${description}' },\n`;
-  return html.replace(/(const tools = \[\s*\n)/, `$1${entry}`);
-}
-
 function updateIndex() {
-  if (!fs.existsSync(INDEX_FILE)) return false;
-  let html = fs.readFileSync(INDEX_FILE, 'utf8');
-  const original = html;
-
-  html = ensureToolEntry(
-    html,
-    'eps-valuation-lab.html',
-    'EPS 估值公式實驗室',
-    '依每季當時可得 EPS 與本益比模型估算合理價格區間，並用未來一季最高價驗證各估值公式準確度。'
-  );
-  html = ensureToolEntry(
-    html,
-    'prediction-version-dashboard.html',
-    'V1 / V2 股票預測切換',
-    '切換正式 V1 與實驗 V2，查看方向、分數差異、規則調整與個股明細。'
-  );
-
-  html = html.replace(
-    /prediction-stock\.html\?date=/g,
-    'prediction-version-dashboard.html?version=v1&date='
-  );
-
-  if (html !== original) fs.writeFileSync(INDEX_FILE, html, 'utf8');
-  return html !== original;
+  return updateCanonicalIndex().changed;
 }
 
 function main() {
