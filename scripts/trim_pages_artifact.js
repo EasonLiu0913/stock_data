@@ -157,10 +157,14 @@ function trimPredictionDates(siteRoot, maxDates = 3) {
 }
 
 function trimNonPublishedWorkfiles(siteRoot) {
+  // These are repository research/checkpoint assets, not browser runtime dependencies.
+  // Remove them only from the prepared Pages artifact; source files remain in git/main.
   const removals = [
     'data_prediction_analysis/eps-valuation/valuation-batches',
     'data_prediction_analysis/eps-valuation/formal-report-backfill-runs',
     'data_prediction_analysis/eps-valuation/valuation-batch-plan.json',
+    'data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json',
+    'data_prediction_analysis/quarterly-financial-quality',
   ];
   const removed = [];
   let removedBytes = 0;
@@ -234,17 +238,23 @@ function runSelfTest() {
   if (predictionManifest.available_dates.join(',') !== '20260104,20260105') throw new Error('prediction manifest was not trimmed');
 
   const epsRoot = path.join(root, 'data_prediction_analysis', 'eps-valuation');
+  const quarterlyResearchRoot = path.join(root, 'data_prediction_analysis', 'quarterly-financial-quality');
   fs.mkdirSync(path.join(epsRoot, 'valuation-batches'), { recursive: true });
   fs.mkdirSync(path.join(epsRoot, 'formal-report-backfill-runs'), { recursive: true });
+  fs.mkdirSync(quarterlyResearchRoot, { recursive: true });
   fs.writeFileSync(path.join(epsRoot, 'valuation-batches', 'batch.json'), 'checkpoint');
   fs.writeFileSync(path.join(epsRoot, 'formal-report-backfill-runs', 'run.json'), 'run');
   fs.writeFileSync(path.join(epsRoot, 'valuation-batch-plan.json'), '{}');
+  fs.writeFileSync(path.join(epsRoot, 'formal-report-event-gap-report.json'), 'gap');
   fs.writeFileSync(path.join(epsRoot, 'valuation-backtest.json'), '{}');
   fs.writeFileSync(path.join(epsRoot, 'coverage-report.json'), '{}');
+  fs.writeFileSync(path.join(quarterlyResearchRoot, 'experiment.json'), 'research-only');
   const workfileResult = trimNonPublishedWorkfiles(root);
-  if (workfileResult.removed_entries !== 3) throw new Error('workfile self-test expected three removals');
+  if (workfileResult.removed_entries !== 5) throw new Error('workfile self-test expected five removals');
   if (fs.existsSync(path.join(epsRoot, 'valuation-batches'))) throw new Error('workfile self-test retained valuation batches');
   if (fs.existsSync(path.join(epsRoot, 'valuation-batch-plan.json'))) throw new Error('workfile self-test retained batch plan');
+  if (fs.existsSync(path.join(epsRoot, 'formal-report-event-gap-report.json'))) throw new Error('workfile self-test retained non-public gap report');
+  if (fs.existsSync(quarterlyResearchRoot)) throw new Error('workfile self-test retained non-public quarterly research');
   if (!fs.existsSync(path.join(epsRoot, 'valuation-backtest.json'))) throw new Error('workfile self-test removed published valuation output');
   if (!fs.existsSync(path.join(epsRoot, 'coverage-report.json'))) throw new Error('workfile self-test removed published coverage output');
   console.log('trim_pages_artifact self-test passed');
