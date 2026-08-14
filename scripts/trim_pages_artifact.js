@@ -75,7 +75,6 @@ function trimDataset(siteRoot, dataset, maxDates) {
     removedFiles += 1;
   }
 
-  // Also remove root-level dated files that were not present in a stale files.json.
   for (const entry of fs.readdirSync(datasetDir, { withFileTypes: true })) {
     if (!entry.isFile() && !entry.isSymbolicLink()) continue;
     const relative = entry.name;
@@ -157,9 +156,35 @@ function trimPredictionDates(siteRoot, maxDates = 3) {
   };
 }
 
+function trimNonPublishedWorkfiles(siteRoot) {
+  const removals = [
+    'data_prediction_analysis/eps-valuation/valuation-batches',
+    'data_prediction_analysis/eps-valuation/formal-report-backfill-runs',
+    'data_prediction_analysis/eps-valuation/valuation-batch-plan.json',
+  ];
+  const removed = [];
+  let removedBytes = 0;
+  for (const relative of removals) {
+    const absolute = path.join(siteRoot, relative);
+    if (!fs.existsSync(absolute)) continue;
+    removedBytes += directoryBytes(absolute);
+    fs.rmSync(absolute, { recursive: true, force: true });
+    removed.push(relative);
+  }
+  return {
+    dataset: 'pages_workfiles',
+    removed_entries: removed.length,
+    removed_bytes: removedBytes,
+    removed_mebibytes: Number((removedBytes / 1024 / 1024).toFixed(1)),
+    removed,
+  };
+}
+
 function directoryBytes(root) {
-  let total = 0;
   if (!fs.existsSync(root)) return 0;
+  const stats = fs.statSync(root);
+  if (stats.isFile()) return stats.size;
+  let total = 0;
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const full = path.join(root, entry.name);
     if (entry.isDirectory()) total += directoryBytes(full);
@@ -207,6 +232,21 @@ function runSelfTest() {
   if (predictionResult.published_dates !== 2) throw new Error('prediction self-test expected two dates');
   if (fs.existsSync(path.join(predictions, '20260102'))) throw new Error('prediction self-test retained expired directory');
   if (predictionManifest.available_dates.join(',') !== '20260104,20260105') throw new Error('prediction manifest was not trimmed');
+
+  const epsRoot = path.join(root, 'data_prediction_analysis', 'eps-valuation');
+  fs.mkdirSync(path.join(epsRoot, 'valuation-batches'), { recursive: true });
+  fs.mkdirSync(path.join(epsRoot, 'formal-report-backfill-runs'), { recursive: true });
+  fs.writeFileSync(path.join(epsRoot, 'valuation-batches', 'batch.json'), 'checkpoint');
+  fs.writeFileSync(path.join(epsRoot, 'formal-report-backfill-runs', 'run.json'), 'run');
+  fs.writeFileSync(path.join(epsRoot, 'valuation-batch-plan.json'), '{}');
+  fs.writeFileSync(path.join(epsRoot, 'valuation-backtest.json'), '{}');
+  fs.writeFileSync(path.join(epsRoot, 'coverage-report.json'), '{}');
+  const workfileResult = trimNonPublishedWorkfiles(root);
+  if (workfileResult.removed_entries !== 3) throw new Error('workfile self-test expected three removals');
+  if (fs.existsSync(path.join(epsRoot, 'valuation-batches'))) throw new Error('workfile self-test retained valuation batches');
+  if (fs.existsSync(path.join(epsRoot, 'valuation-batch-plan.json'))) throw new Error('workfile self-test retained batch plan');
+  if (!fs.existsSync(path.join(epsRoot, 'valuation-backtest.json'))) throw new Error('workfile self-test removed published valuation output');
+  if (!fs.existsSync(path.join(epsRoot, 'coverage-report.json'))) throw new Error('workfile self-test removed published coverage output');
   console.log('trim_pages_artifact self-test passed');
 }
 
@@ -227,6 +267,7 @@ function main(argv = process.argv.slice(2)) {
   ];
   const results = policies.map(([dataset, maxDates]) => trimDataset(siteRoot, dataset, maxDates));
   results.push(trimPredictionDates(siteRoot, 3));
+  results.push(trimNonPublishedWorkfiles(siteRoot));
   const bytes = directoryBytes(siteRoot);
   const summary = { site: siteRoot, bytes, mebibytes: Number((bytes / 1024 / 1024).toFixed(1)), results };
   console.log(JSON.stringify(summary, null, 2));
@@ -239,4 +280,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { directoryBytes, extractDate, trimDataset, trimPredictionDates };
+module.exports = { directoryBytes, extractDate, trimDataset, trimPredictionDates, trimNonPublishedWorkfiles };
