@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       batch_size:
-        description: "每個 batch 處理股票數；所有 batch 會自動接續"
+        description: "每個 batch 處理股票數；所有 batch 會自動接續；重跑時自動略過已完成 checkpoint"
         required: false
         type: number
         default: 20
@@ -24,7 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      has_work: ${{ steps.matrix.outputs.has_work }}
       total_batches: ${{ steps.matrix.outputs.total_batches }}
+      completed_batches: ${{ steps.matrix.outputs.completed_batches }}
+      pending_batches: ${{ steps.matrix.outputs.pending_batches }}
       total_stocks: ${{ steps.matrix.outputs.total_stocks }}
     steps:
       - name: Checkout required research data
@@ -39,7 +42,7 @@ jobs:
             /data_finmind_quarterly_financial_quality/
             /data_prediction_analysis/eps-valuation/
 
-      - name: Validate and build plan
+      - name: Validate and build stable plan
         run: |
           set -euo pipefail
           node --check scripts/generate_eps_valuation_lab.js
@@ -49,14 +52,14 @@ jobs:
             --batch-size "${{ inputs.batch_size }}"
           test -s data_prediction_analysis/eps-valuation/valuation-batch-plan.json
 
-      - name: Commit plan checkpoint
+      - name: Commit plan checkpoint when layout changed
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_prediction_analysis/eps-valuation/valuation-batch-plan.json
           if git diff --cached --quiet; then
-            echo "Plan is unchanged."
+            echo "Plan layout is unchanged; preserving existing plan identity."
           else
             git commit -m "research: plan automatic EPS valuation batches"
             for attempt in 1 2 3 4 5; do
@@ -68,41 +71,99 @@ jobs:
             done
           fi
 
-      - name: Export sequential batch matrix
+      - name: Export resume-aware sequential batch matrix
         id: matrix
         run: |
           set -euo pipefail
-          node - <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs = require('fs');
-          const plan = JSON.parse(fs.readFileSync('data_prediction_analysis/eps-valuation/valuation-batch-plan.json', 'utf8'));
-          const include = plan.batches.map((batch, index) => ({
-            batch_index: index + 1,
-            batch_count: plan.batches.length,
-            offset: batch.offset,
-            batch_size: batch.batch_size,
-            first_stock: batch.start_stock,
-            last_stock: batch.end_stock,
-            output_file: batch.output_file,
+          node - <<'NODE' > "$RUNNER_TEMP/eps-resume-matrix.json"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const planFile = 'data_prediction_analysis/eps-valuation/valuation-batch-plan.json';
+          const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
+          const pending = [];
+          const completed = [];
+          const invalid = [];
+
+          function readJson(file) {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          }
+
+          for (let index = 0; index < plan.batches.length; index++) {
+            const batch = plan.batches[index];
+            const expectedStocks = plan.stock_codes.slice(batch.offset, batch.offset + batch.batch_size);
+            const payload = readJson(batch.output_file);
+            const valid = Boolean(
+              payload &&
+              payload.dataset === 'eps_valuation_batch_result' &&
+              payload.offset === batch.offset &&
+              payload.batch_size === batch.batch_size &&
+              Array.isArray(payload.selected_stock_codes) &&
+              JSON.stringify(payload.selected_stock_codes) === JSON.stringify(expectedStocks) &&
+              Array.isArray(payload.rows) &&
+              Array.isArray(payload.stock_summaries)
+            );
+            const item = {
+              batch_index: index + 1,
+              batch_count: plan.batches.length,
+              offset: batch.offset,
+              batch_size: batch.batch_size,
+              first_stock: batch.start_stock,
+              last_stock: batch.end_stock,
+              output_file: batch.output_file,
+            };
+            if (valid) {
+              completed.push(item);
+            } else {
+              if (fs.existsSync(batch.output_file)) invalid.push(item);
+              pending.push(item);
+            }
+          }
+
+          process.stdout.write(JSON.stringify({
+            matrix: { include: pending },
+            total_stocks: plan.stock_count,
+            total_batches: plan.batches.length,
+            completed_batches: completed.length,
+            pending_batches: pending.length,
+            invalid_batches: invalid.length,
+            completed,
+            pending,
+            invalid,
           }));
-          console.log(`matrix=${JSON.stringify({ include })}`);
-          console.log(`total_batches=${include.length}`);
-          console.log(`total_stocks=${plan.stock_count}`);
+          NODE
+
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json', 'utf8'));
+          console.log(`matrix=${JSON.stringify(result.matrix)}`);
+          console.log(`has_work=${result.pending_batches > 0 ? 'true' : 'false'}`);
+          console.log(`total_batches=${result.total_batches}`);
+          console.log(`completed_batches=${result.completed_batches}`);
+          console.log(`pending_batches=${result.pending_batches}`);
+          console.log(`total_stocks=${result.total_stocks}`);
           NODE
 
           stock_count=$(node -p "require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').stock_count")
           batch_count=$(node -p "require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').expected_batch_count")
+          completed_count=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).completed_batches")
+          pending_count=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).pending_batches")
+          invalid_count=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).invalid_batches")
           {
-            echo "### EPS 估值自動分批計畫"
+            echo "### EPS 估值自動分批 / Resume 計畫"
             echo
             echo "- 股票：${stock_count} 檔"
             echo "- 每批：${{ inputs.batch_size }} 檔"
-            echo "- 批次：${batch_count} 批"
-            echo "- 執行方式：max-parallel=1，自動依序接續，每批完成立即 commit。"
+            echo "- 總批次：${batch_count} 批"
+            echo "- 已完成且驗證有效：${completed_count} 批（自動 skip）"
+            echo "- 待執行：${pending_count} 批"
+            echo "- 存在但不相容 checkpoint：${invalid_count} 批（視為待執行並覆寫）"
+            echo "- 執行方式：max-parallel=1，只跑缺少／不相容批次；每批完成立即 commit。"
           } >> "$GITHUB_STEP_SUMMARY"
 
   backfill:
     name: "Batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} · ${{ matrix.first_stock }}~${{ matrix.last_stock }}"
     needs: plan
+    if: ${{ needs.plan.outputs.has_work == 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -127,7 +188,7 @@ jobs:
             /data_fubon/
             /data_prediction_analysis/eps-valuation/
 
-      - name: Run valuation batch
+      - name: Run valuation batch with isolated stock workers
         run: |
           set -euo pipefail
           node --check scripts/generate_eps_valuation_lab.js
@@ -138,6 +199,15 @@ jobs:
             --offset "${{ matrix.offset }}" \
             --batch-size "${{ matrix.batch_size }}"
           test -s "${{ matrix.output_file }}"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = process.env.BATCH_OUTPUT;
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (payload.dataset !== 'eps_valuation_batch_result') throw new Error('Invalid batch dataset');
+          if (payload.execution_mode !== 'isolated_stock_workers') throw new Error('Batch did not use isolated stock workers');
+          NODE
+        env:
+          BATCH_OUTPUT: ${{ matrix.output_file }}
 
       - name: Commit batch checkpoint
         run: |
@@ -162,6 +232,7 @@ jobs:
   finalize:
     name: Finalize EPS valuation research
     needs: [plan, backfill]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.backfill.result == 'success' || needs.backfill.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
