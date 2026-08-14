@@ -2,7 +2,9 @@
 'use strict';
 
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { clearCaches, getDailyPrice } = require('./lib/stock_price_provider');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -11,6 +13,7 @@ const FIN_ROOT = path.join(ROOT, 'data_finmind_quarterly_financial_quality');
 const EVENT_ROOT = path.join(ROOT, 'data_fundamental_events');
 const MARKET_FILE = path.join(ROOT, 'data_twse_market_chart', 'market_chart.json');
 const OUT_FILE = path.join(ROOT, 'data_prediction_analysis', 'eps-valuation', 'coverage-report.json');
+const DEFAULT_WORKER_SIZE = 25;
 
 function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } }
 function writeJson(file, value) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n'); }
@@ -19,6 +22,8 @@ function parsePeriod(p) { const m=String(p).match(/^(20\d{2})Q([1-4])$/); return
 function nextPeriod(p) { const x=parsePeriod(p); return !x?null:x.quarter===4?periodKey(x.year+1,1):periodKey(x.year,x.quarter+1); }
 function previousPeriod(p) { const x=parsePeriod(p); return !x?null:x.quarter===1?periodKey(x.year-1,4):periodKey(x.year,x.quarter-1); }
 function finiteNumber(v){ if(v===null||v===undefined||v==='')return null; const n=Number(v); return Number.isFinite(n)?n:null; }
+function arg(name, fallback = null) { const i=process.argv.indexOf(`--${name}`); return i>=0 && process.argv[i+1]!=null ? process.argv[i+1] : fallback; }
+function intArg(name, fallback) { const n=Number(arg(name,fallback)); if(!Number.isInteger(n)||n<0) throw new Error(`Invalid --${name}: ${n}`); return n; }
 
 const REASONS={
   missing_quarterly_eps_data:'缺季度 EPS 資料',
@@ -62,29 +67,40 @@ function epsMethodAvailability(rows,current){
   const priorYtd=[];for(let q=1;q<=x.quarter;q++)priorYtd.push(map.get(periodKey(x.year-1,q)));let yoy=Number.isFinite(ytd)&&priorYtd.every(Number.isFinite)&&priorYtd.reduce((s,v)=>s+v,0)>0;if(yoy)for(let q=x.quarter+1;q<=4;q++)if(!Number.isFinite(map.get(periodKey(x.year-1,q))))yoy=false;(yoy&&ytd>0?available:missing).push('yoy_scaled_remaining');
   return {available,missing};
 }
-function priceOnOrBefore(stock,date,marketDates){const target=String(date).replace(/\D/g,'');for(let i=marketDates.length-1;i>=0;i--){const d=marketDates[i];if(d>target)continue;const p=getDailyPrice(stock,d,{root:ROOT});if(p)return {date:d,...p};}return null;}
-function hasFuturePrice(stock,start,end,marketDates){for(const d of marketDates){if(d<start)continue;if(d>=end)break;const p=getDailyPrice(stock,d,{root:ROOT});if(p&&Number.isFinite(p.high))return true;}return false;}
-function historicalPeObservations(stock,rows,events,current,marketDates){let n=0;for(const r of rows){if(r.period>=current)break;const ev=events.get(r.period),ttm=ttmEps(rows,r.period);if(!ev||!(ttm>0))continue;if(priceOnOrBefore(stock,ev.effective_trading_date,marketDates))n++;}return Math.min(n,12);}
+function createPriceReader(stock){
+  const scalarCache=new Map();
+  return (date)=>{
+    const key=String(date).replace(/\D/g,'');
+    if(scalarCache.has(key)) return scalarCache.get(key);
+    const value=getDailyPrice(stock,key,{root:ROOT})||null;
+    clearCaches();
+    scalarCache.set(key,value);
+    return value;
+  };
+}
+function priceOnOrBefore(readPrice,date,marketDates){const target=String(date).replace(/\D/g,'');for(let i=marketDates.length-1;i>=0;i--){const d=marketDates[i];if(d>target)continue;const p=readPrice(d);if(p)return {date:d,...p};}return null;}
+function hasFuturePrice(readPrice,start,end,marketDates){for(const d of marketDates){if(d<start)continue;if(d>=end)break;const p=readPrice(d);if(p&&Number.isFinite(p.high))return true;}return false;}
+function historicalPeObservations(readPrice,rows,events,current,marketDates){let n=0;for(const r of rows){if(r.period>=current)break;const ev=events.get(r.period),ttm=ttmEps(rows,r.period);if(!ev||!(ttm>0))continue;if(priceOnOrBefore(readPrice,ev.effective_trading_date,marketDates))n++;}return Math.min(n,12);}
 
 function inspectStock(meta,marketDates){
-  const stock=meta.stock_code,rows=loadQuarterRows(stock),events=loadEvents(stock),stockReasons=[],periodDetails=[];
+  const stock=meta.stock_code,rows=loadQuarterRows(stock),events=loadEvents(stock),stockReasons=[],periodDetails=[],readPrice=createPriceReader(stock);
   if(!rows.length)stockReasons.push(reason('missing_quarterly_eps_data'));
   else if(rows.length<4)stockReasons.push(reason('insufficient_quarterly_eps_history'));
   if(!events.size)stockReasons.push(reason('missing_formal_financial_report_events'));
   const latest=rows.at(-1)?.period||null;
   let eligiblePeriods=0,estimatedFormulaRows=0;
   for(const r of rows){
-    clearCaches();const missing=[],ev=events.get(r.period);
+    const missing=[],ev=events.get(r.period);
     if(!ev){missing.push(reason('missing_formal_event_for_period'));periodDetails.push({fiscal_period:r.period,eps:r.eps,eps_source_file:r.source_file,status:'excluded',estimated_formula_rows:0,missing});continue;}
     const np=nextPeriod(r.period),nextEv=events.get(np);
     if(!nextEv){missing.push(reason('missing_next_formal_report',r.period===latest?'future_pending':'data_gap'));periodDetails.push({fiscal_period:r.period,eps:r.eps,eps_source_file:r.source_file,event_source_file:ev.source_file,effective_trading_date:ev.effective_trading_date,next_fiscal_period:np,status:'excluded',estimated_formula_rows:0,missing});continue;}
     const start=String(ev.effective_trading_date).replace(/\D/g,''),end=String(nextEv.effective_trading_date).replace(/\D/g,'');
-    const base=priceOnOrBefore(stock,start,marketDates),ttm=ttmEps(rows,r.period),futureOk=hasFuturePrice(stock,start,end,marketDates);
+    const base=priceOnOrBefore(readPrice,start,marketDates),ttm=ttmEps(rows,r.period),futureOk=hasFuturePrice(readPrice,start,end,marketDates);
     if(!futureOk)missing.push(reason('missing_future_price_window'));
     if(!base)missing.push(reason('missing_event_day_price'));
     if(!(ttm>0))missing.push(reason('incomplete_or_nonpositive_ttm_eps'));
     if(!futureOk||!base||!(ttm>0)){periodDetails.push({fiscal_period:r.period,eps:r.eps,eps_source_file:r.source_file,event_source_file:ev.source_file,effective_trading_date:start,next_report_date:end,status:'excluded',estimated_formula_rows:0,missing:uniqueReasons(missing)});continue;}
-    const epsMethods=epsMethodAvailability(rows,r.period),hist=historicalPeObservations(stock,rows,events,r.period,marketDates);
+    const epsMethods=epsMethodAvailability(rows,r.period),hist=historicalPeObservations(readPrice,rows,events,r.period,marketDates);
     if(epsMethods.missing.length)missing.push(reason('missing_eps_formula_inputs'));
     if(hist===0)missing.push(reason('missing_historical_pe_inputs'));
     const peMethods=hist>0?6:4,formulaRows=epsMethods.available.length*peMethods;
@@ -96,6 +112,37 @@ function inspectStock(meta,marketDates){
   return {stock_code:stock,stock_name:meta.stock_name,industry:meta.industry,quarterly_eps_count:rows.length,quarterly_eps_periods:rows.map(r=>r.period),formal_report_event_count:events.size,formal_report_periods:[...events.keys()].sort(),eligible_period_count:eligiblePeriods,estimated_formula_rows:estimatedFormulaRows,eligible_for_any_backtest:eligiblePeriods>0,coverage_status:eligiblePeriods>0?(blocking.length?'partial':'eligible'):'missing',missing_requirements:blocking,pending_requirements:pending,period_details:periodDetails};
 }
 function summarize(stocks){const counts=new Map();let eligible=0,partial=0,missing=0,pending=0;for(const s of stocks){if(s.eligible_for_any_backtest)eligible++;if(s.coverage_status==='partial')partial++;if(s.coverage_status==='missing')missing++;if(s.pending_requirements.length)pending++;for(const r of s.missing_requirements){if(!counts.has(r.code))counts.set(r.code,{code:r.code,label:r.label,stocks:0});counts.get(r.code).stocks++;}}return {total_stocks:stocks.length,eligible_stocks:eligible,partial_stocks:partial,missing_stocks:missing,stocks_with_future_pending:pending,reason_counts:[...counts.values()].sort((a,b)=>b.stocks-a.stocks||a.label.localeCompare(b.label,'zh-Hant'))};}
-function main(){const marketDates=loadMarketDates(),universe=loadUniverse(),stocks=[];for(let i=0;i<universe.length;i++){stocks.push(inspectStock(universe[i],marketDates));if((i+1)%25===0||i===universe.length-1)console.log(`[eps-coverage] ${i+1}/${universe.length} stocks, ${stocks.filter(x=>x.eligible_for_any_backtest).length} eligible`);}const payload={schema_version:1,dataset:'eps_valuation_coverage',generated_at:new Date().toISOString(),universe_source:path.relative(ROOT,STOCK_LIST_FILE),reason_definitions:REASONS,summary:summarize(stocks),stocks};writeJson(OUT_FILE,payload);console.log(JSON.stringify({output:path.relative(ROOT,OUT_FILE),...payload.summary},null,2));}
+
+function runWorker(offset,limit,output){
+  const universe=loadUniverse(),marketDates=loadMarketDates(),selected=universe.slice(offset,offset+limit),stocks=[];
+  for(let i=0;i<selected.length;i++){
+    stocks.push(inspectStock(selected[i],marketDates));
+    const rss=Math.round(process.memoryUsage().rss/1024/1024);
+    console.log(`[eps-coverage-worker] ${offset+i+1}/${universe.length} stock=${selected[i].stock_code} eligible=${stocks.at(-1).eligible_for_any_backtest?'yes':'no'} rss_mb=${rss}`);
+  }
+  writeJson(output,stocks);
+}
+function runIsolatedCoverage(){
+  const universe=loadUniverse(),workerSize=intArg('worker-size',DEFAULT_WORKER_SIZE),stocks=[];
+  for(let offset=0;offset<universe.length;offset+=workerSize){
+    const limit=Math.min(workerSize,universe.length-offset);
+    const tempDir=fs.mkdtempSync(path.join(os.tmpdir(),'eps-coverage-'));
+    const output=path.join(tempDir,'coverage.json');
+    const result=spawnSync(process.execPath,[__filename,'--worker-offset',String(offset),'--worker-limit',String(limit),'--worker-output',output],{cwd:ROOT,stdio:['ignore','inherit','inherit']});
+    if(result.status!==0){fs.rmSync(tempDir,{recursive:true,force:true});throw new Error(`Coverage worker failed offset=${offset} limit=${limit} exit=${result.status}`);}
+    const part=readJson(output,[]);if(!Array.isArray(part)||part.length!==limit){fs.rmSync(tempDir,{recursive:true,force:true});throw new Error(`Invalid coverage worker output offset=${offset}`);}
+    stocks.push(...part);fs.rmSync(tempDir,{recursive:true,force:true});
+    const eligible=stocks.filter(x=>x.eligible_for_any_backtest).length;
+    const rss=Math.round(process.memoryUsage().rss/1024/1024);
+    console.log(`[eps-coverage] ${stocks.length}/${universe.length} stocks, ${eligible} eligible, parent_rss_mb=${rss}`);
+  }
+  const payload={schema_version:1,dataset:'eps_valuation_coverage',generated_at:new Date().toISOString(),execution_mode:'isolated_coverage_workers',worker_size:workerSize,universe_source:path.relative(ROOT,STOCK_LIST_FILE),reason_definitions:REASONS,summary:summarize(stocks),stocks};
+  writeJson(OUT_FILE,payload);console.log(JSON.stringify({output:path.relative(ROOT,OUT_FILE),execution_mode:payload.execution_mode,worker_size:workerSize,...payload.summary},null,2));
+}
+function main(){
+  const workerOutput=arg('worker-output');
+  if(workerOutput){runWorker(intArg('worker-offset',0),intArg('worker-limit',DEFAULT_WORKER_SIZE),path.resolve(workerOutput));return;}
+  runIsolatedCoverage();
+}
 if(require.main===module){try{main();}catch(e){console.error(e.stack||e.message);process.exitCode=1;}}
-module.exports={inspectStock,summarize};
+module.exports={inspectStock,summarize,createPriceReader,runIsolatedCoverage};
