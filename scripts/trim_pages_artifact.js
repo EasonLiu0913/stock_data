@@ -165,6 +165,7 @@ function trimNonPublishedWorkfiles(siteRoot) {
     'data_prediction_analysis/eps-valuation/valuation-batch-plan.json',
     'data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json',
     'data_prediction_analysis/quarterly-financial-quality',
+    'data_prediction_analysis/relative-leadership',
   ];
   const removed = [];
   let removedBytes = 0;
@@ -239,9 +240,11 @@ function runSelfTest() {
 
   const epsRoot = path.join(root, 'data_prediction_analysis', 'eps-valuation');
   const quarterlyResearchRoot = path.join(root, 'data_prediction_analysis', 'quarterly-financial-quality');
+  const relativeLeadershipRoot = path.join(root, 'data_prediction_analysis', 'relative-leadership');
   fs.mkdirSync(path.join(epsRoot, 'valuation-batches'), { recursive: true });
   fs.mkdirSync(path.join(epsRoot, 'formal-report-backfill-runs'), { recursive: true });
   fs.mkdirSync(quarterlyResearchRoot, { recursive: true });
+  fs.mkdirSync(relativeLeadershipRoot, { recursive: true });
   fs.writeFileSync(path.join(epsRoot, 'valuation-batches', 'batch.json'), 'checkpoint');
   fs.writeFileSync(path.join(epsRoot, 'formal-report-backfill-runs', 'run.json'), 'run');
   fs.writeFileSync(path.join(epsRoot, 'valuation-batch-plan.json'), '{}');
@@ -249,12 +252,14 @@ function runSelfTest() {
   fs.writeFileSync(path.join(epsRoot, 'valuation-backtest.json'), '{}');
   fs.writeFileSync(path.join(epsRoot, 'coverage-report.json'), '{}');
   fs.writeFileSync(path.join(quarterlyResearchRoot, 'experiment.json'), 'research-only');
+  fs.writeFileSync(path.join(relativeLeadershipRoot, 'analysis.json'), 'research-only');
   const workfileResult = trimNonPublishedWorkfiles(root);
-  if (workfileResult.removed_entries !== 5) throw new Error('workfile self-test expected five removals');
+  if (workfileResult.removed_entries !== 6) throw new Error('workfile self-test expected six removals');
   if (fs.existsSync(path.join(epsRoot, 'valuation-batches'))) throw new Error('workfile self-test retained valuation batches');
   if (fs.existsSync(path.join(epsRoot, 'valuation-batch-plan.json'))) throw new Error('workfile self-test retained batch plan');
   if (fs.existsSync(path.join(epsRoot, 'formal-report-event-gap-report.json'))) throw new Error('workfile self-test retained non-public gap report');
   if (fs.existsSync(quarterlyResearchRoot)) throw new Error('workfile self-test retained non-public quarterly research');
+  if (fs.existsSync(relativeLeadershipRoot)) throw new Error('workfile self-test retained non-public relative leadership research');
   if (!fs.existsSync(path.join(epsRoot, 'valuation-backtest.json'))) throw new Error('workfile self-test removed published valuation output');
   if (!fs.existsSync(path.join(epsRoot, 'coverage-report.json'))) throw new Error('workfile self-test removed published coverage output');
   console.log('trim_pages_artifact self-test passed');
