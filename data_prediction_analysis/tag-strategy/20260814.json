@@ -1,0 +1,683 @@
+{
+  "schema_version": 3,
+  "generated_at": "2026-08-14T08:09:51.995Z",
+  "replay_date": "20260814",
+  "evaluation_mode": "live_snapshot",
+  "data_as_of": "20260813",
+  "registry_id": "prediction_tag_strategy_registry_v2",
+  "registry_fingerprint": "6a0ecd34b1da0407",
+  "registry": {
+    "schema_version": 3,
+    "registry_id": "prediction_tag_strategy_registry_v2",
+    "registry_fingerprint": "6a0ecd34b1da0407",
+    "tags": [
+      {
+        "tag_id": "technical_3d_sharp_drop_v1",
+        "family_id": "technical_3d_sharp_drop",
+        "version": 1,
+        "label": "近三日急跌",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "features.r3",
+          "operator": "lte",
+          "value": -8
+        }
+      },
+      {
+        "tag_id": "technical_below_sma20_v1",
+        "family_id": "technical_below_sma20",
+        "version": 1,
+        "label": "明顯低於 SMA20",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "features.gap_sma20",
+          "operator": "lte",
+          "value": -10
+        }
+      },
+      {
+        "tag_id": "technical_rsi_oversold_v1",
+        "family_id": "technical_rsi_oversold",
+        "version": 1,
+        "label": "RSI 超賣",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "features.rsi14",
+          "operator": "lte",
+          "value": 35
+        }
+      },
+      {
+        "tag_id": "technical_volume_ratio_5d_expansion_v1",
+        "family_id": "technical_volume_ratio_5d_expansion",
+        "version": 1,
+        "label": "五日量比放大",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "features.volume_ratio_5d",
+          "operator": "gte",
+          "value": 1.5
+        }
+      },
+      {
+        "tag_id": "technical_rsi_overheated_v1",
+        "family_id": "technical_rsi_overheated",
+        "version": 1,
+        "label": "RSI 強勢高檔",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "features.rsi14",
+          "operator": "gte",
+          "value": 70
+        }
+      },
+      {
+        "tag_id": "technical_relative_strength_7d_v1",
+        "family_id": "technical_relative_strength_7d",
+        "version": 1,
+        "label": "七日相對強勢",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "paths": [
+            "strategy_tag_features.relative_strength_7d",
+            "relative_strength_7d.relative_strength_7d",
+            "features.relative_strength_7d",
+            "features.relative_strength"
+          ],
+          "operator": "gte",
+          "value": 8
+        }
+      },
+      {
+        "tag_id": "technical_sma20_not_overextended_v1",
+        "family_id": "technical_sma20_not_overextended",
+        "version": 1,
+        "label": "SMA20 乖離未過熱",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "features.gap_sma20",
+          "operator": "lte",
+          "value": 10
+        }
+      },
+      {
+        "tag_id": "technical_trend_quality_20d_v1",
+        "family_id": "technical_trend_quality_20d",
+        "version": 1,
+        "label": "二十日趨勢品質良好",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.trend_quality_20d",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "technical_bullish_alignment_v1",
+        "family_id": "technical_bullish_alignment",
+        "version": 1,
+        "label": "多頭排列且均線走升",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.trend_bullish_alignment",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "relative_market_strength_20d_top20_v1",
+        "family_id": "relative_market_strength_20d_top20",
+        "version": 1,
+        "label": "二十日市場相對強勢前 20%",
+        "category": "relative_strength",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.market_relative_strength_20d_top20",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "relative_industry_strength_20d_top20_v1",
+        "family_id": "relative_industry_strength_20d_top20",
+        "version": 1,
+        "label": "二十日產業相對強勢前 20%",
+        "category": "relative_strength",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.industry_relative_strength_20d_top20",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "relative_leadership_persistence_7d_v1",
+        "family_id": "relative_leadership_persistence_7d",
+        "version": 1,
+        "label": "七日領先至少五日",
+        "category": "relative_strength",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.leadership_persistence_7d",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "technical_volume_breakout_confirmation_v1",
+        "family_id": "technical_volume_breakout_confirmation",
+        "version": 1,
+        "label": "放量突破確認",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.volume_breakout_confirmation",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "technical_strong_pullback_volume_contraction_v1",
+        "family_id": "technical_strong_pullback_volume_contraction",
+        "version": 1,
+        "label": "強勢股回檔量縮",
+        "category": "technical",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.strong_pullback_volume_contraction",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "margin_exit_price_resilience_v1",
+        "family_id": "margin_exit_price_resilience",
+        "version": 1,
+        "label": "融資退場但股價抗跌",
+        "category": "margin",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.margin_exit_price_resilience",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "margin_crowding_risk_v1",
+        "family_id": "margin_crowding_risk",
+        "version": 1,
+        "label": "融資擁擠風險",
+        "category": "margin",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.margin_crowding_risk",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "margin_crowding_capitulation_continuation_risk_v1",
+        "family_id": "margin_crowding_capitulation_continuation_risk",
+        "version": 1,
+        "label": "融資擁擠恐慌續跌風險",
+        "category": "risk",
+        "fixed_display": true,
+        "enabled": true,
+        "usage_role": "observation_only",
+        "affects_strategy_eligibility": false,
+        "affects_prediction_score": false,
+        "evaluation_target": "market_relative_underperformance_5d",
+        "description": "融資擁擠且價格已明顯破位，後續五日續跌與尾部損失風險較高。僅供觀察，不參與策略判斷或評分。",
+        "display_hint": "市場偏弱時宜提高警覺；市場趨勢不影響此標籤入選。",
+        "rule": {
+          "path": "strategy_tag_features.margin_crowding_capitulation_continuation_risk",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "strategy_confirmation_high_v1",
+        "family_id": "strategy_confirmation_high",
+        "version": 1,
+        "label": "確認分數至少 7",
+        "category": "quality",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.bear_market_confirmation_score",
+          "operator": "gte",
+          "value": 7
+        }
+      },
+      {
+        "tag_id": "market_post_shock_restricted_v1",
+        "family_id": "market_post_shock_restricted",
+        "version": 1,
+        "label": "衝擊後限制環境",
+        "category": "market",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "strategy_tag_features.bear_market_environment_active",
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "data_completeness_high_v1",
+        "family_id": "data_completeness_high",
+        "version": 1,
+        "label": "資料完整度至少 80%",
+        "category": "quality",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "data_completeness",
+          "operator": "gte",
+          "value": 80
+        }
+      },
+      {
+        "tag_id": "margin_exit_1d_v1",
+        "family_id": "margin_exit_1d",
+        "version": 1,
+        "label": "融資當日退場",
+        "category": "margin",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "paths": [
+            "strategy_tag_features.margin_change",
+            "features.margin_change",
+            "margin.margin_change",
+            "oversold_rebound_features.margin_change"
+          ],
+          "operator": "lt",
+          "value": 0
+        }
+      },
+      {
+        "tag_id": "margin_exit_5d_v1",
+        "family_id": "margin_exit_5d",
+        "version": 1,
+        "label": "融資近五日退場",
+        "category": "margin",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "paths": [
+            "strategy_tag_features.margin_change_5d",
+            "features.margin_change_5d",
+            "margin.margin_change_5d",
+            "oversold_rebound_features.margin_change_5d"
+          ],
+          "operator": "lt",
+          "value": 0
+        }
+      },
+      {
+        "tag_id": "margin_significant_exit_v2",
+        "family_id": "margin_significant_exit",
+        "version": 2,
+        "label": "融資明顯退場",
+        "category": "margin",
+        "fixed_display": true,
+        "enabled": true,
+        "expression": {
+          "all": [
+            "margin_exit_1d_v1",
+            "margin_exit_5d_v1"
+          ],
+          "any": [],
+          "not": []
+        }
+      },
+      {
+        "tag_id": "industry_electronics_v1",
+        "family_id": "industry_electronics",
+        "version": 1,
+        "label": "電子產業",
+        "category": "classification",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "path": "industry",
+          "operator": "in",
+          "value": [
+            "半導體業",
+            "電子零組件業",
+            "電腦及週邊設備業",
+            "光電業",
+            "通信網路業",
+            "其他電子業",
+            "電子通路業"
+          ]
+        }
+      },
+      {
+        "tag_id": "liquidity_qualified_v1",
+        "family_id": "liquidity_qualified",
+        "version": 1,
+        "label": "流動性合格",
+        "category": "quality",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "paths": [
+            "strategy_tag_features.liquidity_qualified",
+            "oversold_electronics_rebound.liquidity_qualified",
+            "liquidity_qualified"
+          ],
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "disposition_stock_v1",
+        "family_id": "disposition_stock",
+        "version": 1,
+        "label": "處置股",
+        "category": "risk",
+        "fixed_display": true,
+        "enabled": true,
+        "rule": {
+          "paths": [
+            "strategy_tag_features.disposition_stock",
+            "market_constraints.disposition_stock",
+            "is_disposition_stock"
+          ],
+          "operator": "eq",
+          "value": true
+        }
+      },
+      {
+        "tag_id": "fundamental_two_stage_signal_day_v1",
+        "family_id": "fundamental_two_stage_signal_day",
+        "version": 1,
+        "label": "基本面雙確認訊號日",
+        "category": "fundamental",
+        "fixed_display": true,
+        "enabled": true,
+        "description": "僅在月營收訊號 base_trading_date 當日判定；電子股、FAS >= 8，且 latest-known FQ >= 10。",
+        "rule": {
+          "path": "strategy_tag_features.two_stage_fundamental_signal_day",
+          "operator": "eq",
+          "value": true
+        }
+      }
+    ],
+    "strategies": [
+      {
+        "strategy_id": "bear_market_defensive_resilience_v2",
+        "family_id": "bear_market_defensive_resilience",
+        "version": 2,
+        "label": "熊市時防禦抗跌股",
+        "fixed_display": true,
+        "enabled": true,
+        "evaluation_target": "relative_leadership",
+        "expression": {
+          "all": [
+            "market_post_shock_restricted_v1",
+            "technical_volume_ratio_5d_expansion_v1",
+            "technical_rsi_overheated_v1",
+            "strategy_confirmation_high_v1",
+            "technical_relative_strength_7d_v1",
+            "technical_sma20_not_overextended_v1"
+          ],
+          "any": [],
+          "not": []
+        }
+      },
+      {
+        "strategy_id": "oversold_electronics_rebound_v2",
+        "family_id": "oversold_electronics_rebound",
+        "version": 2,
+        "label": "跌深反彈電子股",
+        "fixed_display": true,
+        "enabled": true,
+        "evaluation_target": "close_return_gt_5",
+        "expression": {
+          "all": [
+            "technical_rsi_oversold_v1",
+            "technical_3d_sharp_drop_v1",
+            "technical_below_sma20_v1",
+            "industry_electronics_v1",
+            "data_completeness_high_v1",
+            "liquidity_qualified_v1"
+          ],
+          "any": [],
+          "not": [
+            "disposition_stock_v1"
+          ]
+        }
+      },
+      {
+        "strategy_id": "oversold_margin_exit_rebound_v2",
+        "family_id": "oversold_margin_exit_rebound",
+        "version": 2,
+        "label": "融資退場型跌深反彈",
+        "fixed_display": true,
+        "enabled": true,
+        "evaluation_target": "close_return_gt_5",
+        "expression": {
+          "all": [
+            "technical_3d_sharp_drop_v1",
+            "technical_below_sma20_v1",
+            "margin_significant_exit_v2"
+          ],
+          "any": [
+            "technical_rsi_oversold_v1",
+            "liquidity_qualified_v1"
+          ],
+          "not": [
+            "disposition_stock_v1"
+          ]
+        }
+      },
+      {
+        "strategy_id": "two_stage_fundamental_quality_direct_entry_v1",
+        "family_id": "two_stage_fundamental_quality_direct_entry",
+        "version": 1,
+        "label": "財報品質訊號",
+        "category": "fundamental",
+        "fixed_display": true,
+        "enabled": true,
+        "description": "研究目前支持的總資金報酬 baseline：電子股 FAS >= 8 + latest-known FQ >= 10，僅列在實際訊號日。-5%/-10% timing 尚未通過 OOS，不作為必要 entry gate。",
+        "expression": {
+          "all": [
+            "fundamental_two_stage_signal_day_v1"
+          ],
+          "any": [],
+          "not": []
+        }
+      }
+    ]
+  },
+  "rebound_evaluation_policy": {
+    "policy_id": "same_day_rebound_close_return_v2",
+    "version": 2,
+    "effective_from": "20260803",
+    "effective_to": null,
+    "evaluation_target": "close_return_gte_4",
+    "operator": "gte",
+    "threshold_percent": 4,
+    "label": "當日收盤報酬 ≥ 4.00%"
+  },
+  "snapshot_format": "versioned_registry_v2",
+  "disposition_annotation": {
+    "calculation_status": "completed",
+    "source_file": "data_market_constraints/20260814/disposition.json",
+    "active_stock_count": 35,
+    "matched_prediction_stock_count": 18
+  },
+  "evaluations": {
+    "bear_market_defensive_resilience_v2": {
+      "strategy_id": "bear_market_defensive_resilience_v2",
+      "strategy_family_id": "bear_market_defensive_resilience",
+      "strategy_version": 2,
+      "label": "熊市時防禦抗跌股",
+      "description": "",
+      "source_mode": "tag_expression",
+      "evaluation_target": "relative_leadership",
+      "evaluation_policy_id": null,
+      "evaluation_policy_version": null,
+      "evaluation_operator": null,
+      "evaluation_threshold_percent": null,
+      "evaluation_target_label": null,
+      "evaluation_mode": "live_snapshot",
+      "calculation_status": "completed",
+      "candidates": 0,
+      "verified_candidates": 0,
+      "hits": 0,
+      "misses": 0,
+      "hit_rate": null,
+      "missing_replay_candidates": 0,
+      "average_return": 0,
+      "median_return": 0,
+      "average_market_excess_return": 0,
+      "members": [],
+      "hit_members": [],
+      "miss_members": [],
+      "stocks": []
+    },
+    "oversold_electronics_rebound_v2": {
+      "strategy_id": "oversold_electronics_rebound_v2",
+      "strategy_family_id": "oversold_electronics_rebound",
+      "strategy_version": 2,
+      "label": "跌深反彈電子股",
+      "description": "",
+      "source_mode": "tag_expression",
+      "evaluation_target": "close_return_gte_4",
+      "evaluation_policy_id": "same_day_rebound_close_return_v2",
+      "evaluation_policy_version": 2,
+      "evaluation_operator": "gte",
+      "evaluation_threshold_percent": 4,
+      "evaluation_target_label": "當日收盤報酬 ≥ 4.00%",
+      "evaluation_mode": "live_snapshot",
+      "calculation_status": "completed",
+      "candidates": 0,
+      "verified_candidates": 0,
+      "hits": 0,
+      "misses": 0,
+      "hit_rate": null,
+      "missing_replay_candidates": 0,
+      "average_return": 0,
+      "median_return": 0,
+      "average_market_excess_return": 0,
+      "members": [],
+      "hit_members": [],
+      "miss_members": [],
+      "stocks": []
+    },
+    "oversold_margin_exit_rebound_v2": {
+      "strategy_id": "oversold_margin_exit_rebound_v2",
+      "strategy_family_id": "oversold_margin_exit_rebound",
+      "strategy_version": 2,
+      "label": "融資退場型跌深反彈",
+      "description": "",
+      "source_mode": "tag_expression",
+      "evaluation_target": "close_return_gte_4",
+      "evaluation_policy_id": "same_day_rebound_close_return_v2",
+      "evaluation_policy_version": 2,
+      "evaluation_operator": "gte",
+      "evaluation_threshold_percent": 4,
+      "evaluation_target_label": "當日收盤報酬 ≥ 4.00%",
+      "evaluation_mode": "live_snapshot",
+      "calculation_status": "completed",
+      "candidates": 1,
+      "verified_candidates": 1,
+      "hits": 0,
+      "misses": 1,
+      "hit_rate": 0,
+      "missing_replay_candidates": 0,
+      "average_return": -2.27,
+      "median_return": -2.27,
+      "average_market_excess_return": -1.72,
+      "members": [
+        "6873"
+      ],
+      "hit_members": [],
+      "miss_members": [
+        "6873"
+      ],
+      "stocks": [
+        {
+          "stock_code": "6873",
+          "stock_name": "泓德能源",
+          "verified": true,
+          "hit": false,
+          "verification_label": "明顯不準",
+          "outcome_tags": [],
+          "close_return": -2.27,
+          "max_return_5d": null,
+          "max_return_5d_status": null,
+          "market_excess_return": -1.72,
+          "market_classification": "mixed_or_unclear"
+        }
+      ]
+    },
+    "two_stage_fundamental_quality_direct_entry_v1": {
+      "strategy_id": "two_stage_fundamental_quality_direct_entry_v1",
+      "strategy_family_id": "two_stage_fundamental_quality_direct_entry",
+      "strategy_version": 1,
+      "label": "財報品質訊號",
+      "description": "研究目前支持的總資金報酬 baseline：電子股 FAS >= 8 + latest-known FQ >= 10，僅列在實際訊號日。-5%/-10% timing 尚未通過 OOS，不作為必要 entry gate。",
+      "source_mode": "tag_expression",
+      "evaluation_target": null,
+      "evaluation_policy_id": null,
+      "evaluation_policy_version": null,
+      "evaluation_operator": null,
+      "evaluation_threshold_percent": null,
+      "evaluation_target_label": null,
+      "evaluation_mode": "live_snapshot",
+      "calculation_status": "completed",
+      "candidates": 0,
+      "verified_candidates": 0,
+      "hits": 0,
+      "misses": 0,
+      "hit_rate": null,
+      "missing_replay_candidates": 0,
+      "average_return": 0,
+      "median_return": 0,
+      "average_market_excess_return": 0,
+      "members": [],
+      "hit_members": [],
+      "miss_members": [],
+      "stocks": []
+    }
+  },
+  "source_files": {
+    "prediction_summary": "data_predictions/20260814/summary.json",
+    "replay_dashboard": "data_predictions/20260814/replay-dashboard.json",
+    "replay_summary": "data_predictions/20260814/replay-summary.json",
+    "registry_file": null,
+    "tag_strategy_snapshot": "data_prediction_analysis/strategy-snapshots/live_snapshot/20260814.json",
+    "strategy_snapshot_manifest": "data_prediction_analysis/strategy-snapshots/manifest.json"
+  },
+  "note": "候選資格優先使用預測當時保存的版本化標籤與策略快照；僅在版本化快照不存在時回退 legacy snapshot。"
+}
