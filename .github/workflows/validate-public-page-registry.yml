@@ -1,0 +1,63 @@
+name: "[00 網站部署] Public Page Registry CI"
+
+on:
+  pull_request:
+    paths:
+      - "public/*.html"
+      - "config/public-page-registry.json"
+      - "scripts/generate_public_index.js"
+      - "scripts/validate_public_pages.js"
+      - ".github/workflows/validate-public-page-registry.yml"
+      - ".github/workflows/deploy-pages.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "public/*.html"
+      - "config/public-page-registry.json"
+      - "scripts/generate_public_index.js"
+      - "scripts/validate_public_pages.js"
+      - ".github/workflows/validate-public-page-registry.yml"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-page-registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate homepage registry and public HTML classification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout public page sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /public/
+            /config/public-page-registry.json
+            /scripts/generate_public_index.js
+            /scripts/validate_public_pages.js
+
+      - name: Validate canonical homepage source of truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_public_index.js
+          node --check scripts/validate_public_pages.js
+          node scripts/generate_public_index.js --check
+          node scripts/validate_public_pages.js
+
+          {
+            echo "## Public Page Registry"
+            echo
+            echo "- index.html 與 registry 同步：✅"
+            echo "- canonical / legacy / non-homepage HTML 分類：✅"
+            echo "- 未分類 public root HTML：0"
+          } >> "$GITHUB_STEP_SUMMARY"
