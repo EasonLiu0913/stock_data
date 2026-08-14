@@ -46,13 +46,13 @@ It currently verifies:
 
 ## Phase 1 scope — completed
 
-Phase 1 establishes the registry, generator, validator, and migrates the existing visible homepage tool list into the registry.
+Phase 1 established the registry, generator, validator, and migrated the existing visible homepage tool list into the registry.
 
-The homepage visual design and search behavior are intentionally unchanged.
+The homepage visual design and search behavior were intentionally unchanged.
 
 The unused historical per-stock `predictions` payload was reduced to a compatibility slot; the current homepage renders only the registry-driven tool list. The daily prediction generator may still repopulate that block.
 
-The EPS valuation lab now has one canonical homepage entry:
+The EPS valuation lab has one canonical homepage entry:
 
 ```text
 eps-valuation-lab-v2.html
@@ -64,11 +64,9 @@ with legacy URL:
 eps-valuation-lab.html
 ```
 
-## Phase 2 — not yet completed
+## Phase 2 — completed
 
-Existing scripts that independently mutate `public/index.html` still need to be migrated. Until Phase 2 is finished, they are compatibility writers and must not be treated as canonical sources.
-
-Known examples include:
+Legacy homepage-entry writers no longer construct or inject their own `tools` entries. The following compatibility scripts now delegate to `scripts/generate_public_index.js`:
 
 ```text
 scripts/generate_prediction_version_ui.js
@@ -77,7 +75,24 @@ scripts/update_public_index_etf_market_regime_analysis.js
 scripts/add_three_day_breakout_report_to_index.js
 ```
 
-Phase 2 should remove their direct homepage mutation responsibility and route homepage updates through `scripts/generate_public_index.js`.
+The EPS valuation research workflow also no longer performs a targeted `eps-valuation-lab.html` string replacement. Its finalize step checks out `config/public-page-registry.json`, regenerates the homepage through the canonical generator, and runs `scripts/validate_public_pages.js`.
+
+This establishes the ownership rule:
+
+```text
+homepage-visible tool entries
+  -> config/public-page-registry.json
+  -> scripts/generate_public_index.js
+  -> public/index.html const tools block
+```
+
+One deliberate compatibility exception remains:
+
+```text
+scripts/generate_all_stock_predictions.js
+```
+
+It may still rewrite the separate `const predictions = [...]` block. That block is dynamic prediction payload data, is not rendered as the homepage tool registry, and must not add or modify entries inside `const tools = [...]`.
 
 ## Phase 3 — planned
 
@@ -90,12 +105,14 @@ node scripts/validate_public_pages.js
 
 before Pages publication. Later validation may also report unregistered `public/*.html` files, but it must distinguish intentional detail/debug/embedded/legacy pages from homepage-visible pages rather than automatically publishing every HTML file.
 
+Phase 3 should also add a regression guard that rejects new scripts or workflows which independently construct homepage-visible tool entries instead of using the registry.
+
 ## Rule for new public homepage entries
 
-During and after migration, new homepage-visible pages should be registered in:
+New homepage-visible pages must be registered in:
 
 ```text
 config/public-page-registry.json
 ```
 
-Do not add another independent homepage registry or generator.
+Do not add another independent homepage registry or generator. Do not directly insert or replace entries inside the `const tools = [...]` block from feature-specific scripts or workflows.
