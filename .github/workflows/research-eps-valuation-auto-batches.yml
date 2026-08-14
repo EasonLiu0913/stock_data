@@ -77,7 +77,6 @@ jobs:
           set -euo pipefail
           node - <<'NODE' > "$RUNNER_TEMP/eps-resume-matrix.json"
           const fs = require('node:fs');
-          const path = require('node:path');
           const planFile = 'data_prediction_analysis/eps-valuation/valuation-batch-plan.json';
           const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
           const pending = [];
@@ -245,6 +244,7 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /scripts/
+            /config/public-page-registry.json
             /public/index.html
             /data_twse/twse_industry_Stock.json
             /data_finmind_quarterly_financial_quality/
@@ -286,18 +286,12 @@ jobs:
           });
           NODE
 
-      - name: Ensure homepage points to EPS valuation coverage UI
+      - name: Regenerate homepage from canonical public page registry
         run: |
           set -euo pipefail
-          node --check scripts/generate_prediction_version_ui.js
-          node -e "const ui=require('./scripts/generate_prediction_version_ui'); ui.updateIndex();"
-          node - <<'NODE'
-          const fs = require('fs');
-          const file = 'public/index.html';
-          let html = fs.readFileSync(file, 'utf8');
-          html = html.replace(/file: 'eps-valuation-lab\.html'/g, "file: 'eps-valuation-lab-v2.html'");
-          fs.writeFileSync(file, html, 'utf8');
-          NODE
+          node --check scripts/generate_public_index.js
+          node scripts/generate_public_index.js
+          node scripts/validate_public_pages.js
 
       - name: Commit finalized output
         run: |
