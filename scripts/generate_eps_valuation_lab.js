@@ -56,28 +56,40 @@ function forecastAnnualEps(rows,current,method){
   if(method==='ttm') return ttmEps(rows,current);
   return null;
 }
-function priceOnOrBefore(stock,date,marketDates){
+
+function getStockPrice(stock,date,priceCache=null){
+  const key=String(date).replace(/\D/g,'');
+  if(priceCache&&priceCache.has(key)) return priceCache.get(key);
+  const price=getDailyPrice(stock,key,{root:ROOT});
+  // stock_price_provider caches whole-market MI_INDEX maps by trading date.
+  // EPS valuation only needs one scalar record for this stock, so release those
+  // large provider caches immediately and retain only the scalar result locally.
+  clearCaches();
+  if(priceCache) priceCache.set(key,price||null);
+  return price||null;
+}
+function priceOnOrBefore(stock,date,marketDates,priceCache=null){
   const target=String(date).replace(/\D/g,'');
   for(let i=marketDates.length-1;i>=0;i--){
     const d=marketDates[i];
     if(d>target)continue;
-    const p=getDailyPrice(stock,d,{root:ROOT});
+    const p=getStockPrice(stock,d,priceCache);
     if(p)return {date:d,...p};
   }
   return null;
 }
-function futureHigh(stock,startDate,endDate,marketDates){
+function futureHigh(stock,startDate,endDate,marketDates,priceCache=null){
   if(!endDate)return null;
   let best=null;
   for(const d of marketDates){
     if(d<startDate)continue;
     if(d>=endDate)break;
-    const p=getDailyPrice(stock,d,{root:ROOT});
+    const p=getStockPrice(stock,d,priceCache);
     if(p&&Number.isFinite(p.high)&&(!best||p.high>best.high)) best={date:d,high:p.high};
   }
   return best;
 }
-function buildHistoricalPeSeries(stock,rows,events,currentPeriod,marketDates){ const out=[]; for(const r of rows){ if(r.period>=currentPeriod)break; const ev=events.get(r.period); if(!ev)continue; const ttm=ttmEps(rows,r.period); const px=priceOnOrBefore(stock,ev.effective_trading_date,marketDates); if(Number.isFinite(ttm)&&ttm>0&&px)out.push(px.close/ttm); } return out.slice(-12); }
+function buildHistoricalPeSeries(stock,rows,events,currentPeriod,marketDates,priceCache=null){ const out=[]; for(const r of rows){ if(r.period>=currentPeriod)break; const ev=events.get(r.period); if(!ev)continue; const ttm=ttmEps(rows,r.period); const px=priceOnOrBefore(stock,ev.effective_trading_date,marketDates,priceCache); if(Number.isFinite(ttm)&&ttm>0&&px)out.push(px.close/ttm); } return out.slice(-12); }
 function rangeError(low,high,target){ if(!Number.isFinite(target)||!Number.isFinite(low)||!Number.isFinite(high))return null; if(target<low)return (low-target)/target*100; if(target>high)return (target-high)/target*100; return 0; }
 function centerError(center,target){ return Number.isFinite(center)&&Number.isFinite(target)&&target>0 ? Math.abs(center-target)/target*100 : null; }
 
@@ -104,17 +116,18 @@ function peRange(method,hist,currentPe){
 function analyzeStock(stock,marketDates){
   const rows=loadQuarterFiles(stock), events=loadEvents(stock); if(rows.length<4||!events.size)return [];
   const results=[];
+  const priceCache=new Map();
+  clearCaches();
   for(const r of rows){
-    clearCaches();
     const ev=events.get(r.period); if(!ev)continue;
     const nextEv=events.get(nextPeriod(r.period));
     if(!nextEv)continue;
     const start=String(ev.effective_trading_date).replace(/\D/g,'');
     const end=String(nextEv.effective_trading_date).replace(/\D/g,'');
-    const high=futureHigh(stock,start,end,marketDates); if(!high)continue;
-    const base=priceOnOrBefore(stock,start,marketDates), ttm=ttmEps(rows,r.period); if(!base||!(ttm>0))continue;
+    const high=futureHigh(stock,start,end,marketDates,priceCache); if(!high)continue;
+    const base=priceOnOrBefore(stock,start,marketDates,priceCache), ttm=ttmEps(rows,r.period); if(!base||!(ttm>0))continue;
     const currentPe=base.close/ttm;
-    const hist=buildHistoricalPeSeries(stock,rows,events,r.period,marketDates);
+    const hist=buildHistoricalPeSeries(stock,rows,events,r.period,marketDates,priceCache);
     for(const [em,el] of EPS_METHODS){
       const annual=forecastAnnualEps(rows,r.period,em); if(!(annual>0))continue;
       for(const [pm,pl] of PE_METHODS){
@@ -125,6 +138,7 @@ function analyzeStock(stock,marketDates){
     }
   }
   clearCaches();
+  priceCache.clear();
   return results;
 }
 function summarize(rows){ const map=new Map(); for(const r of rows){const k=`${r.eps_method}__${r.pe_method}`; if(!map.has(k))map.set(k,[]); map.get(k).push(r);} return [...map.entries()].map(([formula,a])=>({formula,eps_method:a[0].eps_method,eps_method_label:a[0].eps_method_label,pe_method:a[0].pe_method,pe_method_label:a[0].pe_method_label,samples:a.length,hit_rate_pct:round(a.filter(x=>x.hit_range).length/a.length*100,2),mean_range_error_pct:round(a.reduce((s,x)=>s+x.range_error_pct,0)/a.length,2),median_center_error_pct:round(median(a.map(x=>x.center_error_pct)),2)})).sort((a,b)=>a.mean_range_error_pct-b.mean_range_error_pct||b.hit_rate_pct-a.hit_rate_pct); }
