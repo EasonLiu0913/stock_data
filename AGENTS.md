@@ -144,6 +144,42 @@ uses: ./.github/workflows/
 
 Confirm that the change does not create a second deployment path or duplicate an existing reusable workflow.
 
+## Canonical public page registry
+
+Homepage-visible public tools have exactly one source of truth:
+
+```text
+config/public-page-registry.json
+```
+
+Before adding, removing, renaming, versioning, or replacing a public HTML destination, read:
+
+```text
+docs/architecture/public-page-registry.md
+```
+
+Mandatory rules:
+
+- Do not directly insert, append, or replace homepage-visible entries inside `public/index.html`.
+- Do not create another homepage registry or feature-specific homepage writer.
+- Add homepage-visible pages to `pages[]` in `config/public-page-registry.json`.
+- Put historical/redirect URLs in the owning page's `legacy_files[]`.
+- Root-level `public/*.html` files that intentionally should not appear on the homepage must be listed in `non_homepage_html[]` with a reason.
+- Every root `public/*.html` file must be classified as canonical, legacy, non-homepage, or `index.html`.
+- Regenerate homepage tools only through `scripts/generate_public_index.js`.
+- `scripts/generate_all_stock_predictions.js` may update only the separate `const predictions = [...]` compatibility block; it must not modify `const tools = [...]`.
+
+Required checks after changing public page identity or homepage behavior:
+
+```text
+node scripts/generate_public_index.js
+node scripts/generate_public_index.js --check
+node scripts/validate_public_pages.js
+node scripts/validate_public_index_writers.js
+```
+
+The canonical Pages workflow and `[00 網站部署] Public Page Registry CI` both enforce these rules. Do not bypass or remove these checks to make a deployment pass.
+
 ## GitHub Pages frontend data paths
 
 These rules apply whenever a page under `public/**` reads repository data at runtime.
