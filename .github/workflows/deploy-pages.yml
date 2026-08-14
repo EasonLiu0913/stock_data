@@ -9,6 +9,8 @@ on:
       - "config/**"
       - "data*/**"
       - "normalized/**"
+      - "scripts/generate_public_index.js"
+      - "scripts/validate_public_pages.js"
       - "scripts/prepare_pages_site.sh"
       - "scripts/scan_pages_dependencies.js"
       - "scripts/trim_pages_artifact.js"
@@ -57,9 +59,21 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /public/
+            /config/public-page-registry.json
+            /scripts/generate_public_index.js
+            /scripts/validate_public_pages.js
             /scripts/prepare_pages_site.sh
             /scripts/scan_pages_dependencies.js
             /scripts/trim_pages_artifact.js
+
+      - name: Enforce canonical public page registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_public_index.js
+          node --check scripts/validate_public_pages.js
+          node scripts/generate_public_index.js --check
+          node scripts/validate_public_pages.js
 
       - name: Audit every frontend data dependency
         shell: bash
@@ -95,6 +109,9 @@ jobs:
 
           {
             echo '/public/'
+            echo '/config/public-page-registry.json'
+            echo '/scripts/generate_public_index.js'
+            echo '/scripts/validate_public_pages.js'
             echo '/scripts/prepare_pages_site.sh'
             echo '/scripts/scan_pages_dependencies.js'
             echo '/scripts/trim_pages_artifact.js'
@@ -210,6 +227,7 @@ jobs:
           fi
 
           echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Public page registry: validated" >> "$GITHUB_STEP_SUMMARY"
           echo "- Frontend assets scanned: $frontend_asset_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
