@@ -1,6 +1,12 @@
 name: "[04 預測覆盤] 每日預測覆盤"
 
 on:
+  schedule:
+    # GitHub cron uses UTC; Taiwan time is UTC+8.
+    # Daily 13:52 Asia/Taipei = 05:52 UTC.
+    - cron: '52 5 * * *'
+    # Daily 14:52 Asia/Taipei = 06:52 UTC.
+    - cron: '52 6 * * *'
   workflow_dispatch:
     inputs:
       replay_date:
@@ -34,8 +40,76 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  preflight:
+    name: 檢查覆盤是否已存在
+    runs-on: ubuntu-latest
+    outputs:
+      date: ${{ steps.check.outputs.date }}
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main commit
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve replay date and check existing result
+        id: check
+        shell: bash
+        env:
+          DATE: ${{ inputs.replay_date }}
+          FORCE_RUN: ${{ inputs.force_comparison }}
+        run: |
+          set -euo pipefail
+          node --check scripts/resolve_prediction_replay_date.js
+
+          args=()
+          date_source="最新 SMA 結果日"
+          if [ -n "${DATE:-}" ]; then
+            args+=(--date "$DATE")
+            date_source="手動指定"
+          fi
+
+          date=$(node scripts/resolve_prediction_replay_date.js "${args[@]}")
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $date"; exit 1; }
+
+          comparison_file="data_prediction_comparisons/$date/comparison.json"
+          replay_file="data_predictions/$date/replay.json"
+          dashboard_file="data_predictions/$date/replay-dashboard.json"
+
+          should_run=true
+          if [ "$FORCE_RUN" != "true" ] \
+            && [ -s "$comparison_file" ] \
+            && [ -s "$replay_file" ] \
+            && [ -s "$dashboard_file" ]; then
+            should_run=false
+          fi
+
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+
+          echo "## 每日預測覆盤：Preflight" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 日期來源：$date_source" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- comparison.json：$([ -s "$comparison_file" ] && echo '存在' || echo '缺少')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- replay.json：$([ -s "$replay_file" ] && echo '存在' || echo '缺少')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- replay-dashboard.json：$([ -s "$dashboard_file" ] && echo '存在' || echo '缺少')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次是否執行：$should_run" >> "$GITHUB_STEP_SUMMARY"
+
   replay_and_compare:
     name: 產生 V1／V2 覆盤、環境驗證與比較
+    needs: preflight
+    if: needs.preflight.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +134,7 @@ jobs:
         id: date
         shell: bash
         env:
-          DATE: ${{ inputs.replay_date }}
+          DATE: ${{ needs.preflight.outputs.date }}
           FORCE_RUN: ${{ inputs.force_comparison }}
           FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
         run: |
@@ -69,12 +143,8 @@ jobs:
           node --check scripts/resolve_prediction_replay_date.js
           node scripts/resolve_prediction_replay_date.js --self-test
 
-          args=()
-          date_source="最新 SMA 結果日"
-          if [ -n "${DATE:-}" ]; then
-            args+=(--date "$DATE")
-            date_source="手動指定"
-          fi
+          args=(--date "$DATE")
+          date_source="preflight"
 
           date=$(node scripts/resolve_prediction_replay_date.js "${args[@]}")
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $date"; exit 1; }
@@ -203,5 +273,6 @@ jobs:
 
   deploy_pages:
     name: 覆盤完成後發布 GitHub Pages
-    needs: replay_and_compare
+    needs: [preflight, replay_and_compare]
+    if: needs.preflight.outputs.should_run == 'true' && needs.replay_and_compare.result == 'success'
     uses: ./.github/workflows/deploy-pages.yml
