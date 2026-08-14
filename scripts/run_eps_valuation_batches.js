@@ -41,7 +41,19 @@ function batchFile(offset, count) {
   const end = Math.max(offset, offset + count - 1);
   return path.join(BATCH_DIR, `batch-${pad(offset)}-${pad(end)}.json`);
 }
-
+function planIdentity(plan) {
+  if (!plan || !Array.isArray(plan.stock_codes) || !Array.isArray(plan.batches)) return null;
+  return JSON.stringify({
+    stock_codes: plan.stock_codes,
+    batches: plan.batches.map(batch => ({
+      offset: batch.offset,
+      batch_size: batch.batch_size,
+      start_stock: batch.start_stock,
+      end_stock: batch.end_stock,
+      output_file: batch.output_file,
+    })),
+  });
+}
 function buildPlan(batchSize) {
   const stocks = listStocks();
   const batches = [];
@@ -55,7 +67,8 @@ function buildPlan(batchSize) {
       output_file: path.relative(ROOT, batchFile(offset, selected.length)),
     });
   }
-  const payload = {
+  const existing = readJson(PLAN_FILE);
+  const candidate = {
     schema_version: 1,
     dataset: 'eps_valuation_batch_plan',
     generated_at: new Date().toISOString(),
@@ -65,77 +78,65 @@ function buildPlan(batchSize) {
     stock_codes: stocks,
     batches,
   };
-  writeJson(PLAN_FILE, payload);
+  if (planIdentity(existing) === planIdentity(candidate)) {
+    candidate.generated_at = existing.generated_at || candidate.generated_at;
+  }
+  writeJson(PLAN_FILE, candidate);
   console.log(JSON.stringify({
     mode: 'plan',
     output: path.relative(ROOT, PLAN_FILE),
     stocks: stocks.length,
     batches: batches.length,
     batch_size: batchSize,
+    reused_plan_identity: planIdentity(existing) === planIdentity(candidate),
   }, null, 2));
 }
-
-function runStockWorker(stock, outputFile) {
-  if (!/^\d{4,6}$/.test(String(stock || ''))) throw new Error(`Invalid --stock: ${stock}`);
-  if (!outputFile) throw new Error('Missing --output for stock worker.');
-  const marketDates = loadMarketDates();
-  const rows = analyzeStock(String(stock), marketDates);
-  writeJson(outputFile, {
-    schema_version: 1,
-    dataset: 'eps_valuation_stock_worker_result',
-    stock_code: String(stock),
-    formula_rows: rows.length,
-    rows,
-  });
-  console.log(`[eps-valuation-worker] stock=${stock} rows=${rows.length}`);
-}
-
-function analyzeStockIsolated(stock, tempDir) {
-  const outputFile = path.join(tempDir, `${stock}.json`);
-  const child = spawnSync(process.execPath, [
-    __filename,
-    '--mode', 'stock-worker',
-    '--stock', String(stock),
-    '--output', outputFile,
-  ], {
+function analyzeStockIsolated(stock, marketDates) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `eps-valuation-${stock}-`));
+  const outputFile = path.join(tempDir, 'rows.json');
+  const workerCode = `
+    const fs = require('node:fs');
+    const { analyzeStock } = require(${JSON.stringify(path.join(__dirname, 'generate_eps_valuation_lab.js'))});
+    const stock = process.argv[1];
+    const marketDates = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+    const rows = analyzeStock(stock, marketDates);
+    fs.writeFileSync(process.argv[3], JSON.stringify(rows));
+    console.log('[eps-valuation-worker] stock=' + stock + ' rows=' + rows.length);
+  `;
+  const marketFile = path.join(tempDir, 'market-dates.json');
+  fs.writeFileSync(marketFile, JSON.stringify(marketDates));
+  const result = spawnSync(process.execPath, ['-e', workerCode, stock, marketFile, outputFile], {
     cwd: ROOT,
-    stdio: 'inherit',
-    env: process.env,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 16 * 1024 * 1024,
   });
-  if (child.error) throw child.error;
-  if (child.status !== 0) {
-    throw new Error(`EPS valuation worker failed for stock ${stock} with exit code ${child.status}`);
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.status !== 0) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    throw new Error(`Isolated valuation worker failed for ${stock} with exit code ${result.status}`);
   }
-  const payload = readJson(outputFile);
-  if (!payload || payload.dataset !== 'eps_valuation_stock_worker_result' || payload.stock_code !== String(stock) || !Array.isArray(payload.rows)) {
-    throw new Error(`Invalid EPS valuation worker output for stock ${stock}`);
-  }
-  fs.rmSync(outputFile, { force: true });
-  return payload.rows;
+  const rows = readJson(outputFile, []);
+  fs.rmSync(tempDir, { recursive: true, force: true });
+  return Array.isArray(rows) ? rows : [];
 }
-
 function runBatch(offset, batchSize) {
   const plan = readJson(PLAN_FILE);
   if (!plan || !Array.isArray(plan.stock_codes)) throw new Error('Missing valuation-batch-plan.json. Run --mode plan first.');
   const selected = plan.stock_codes.slice(offset, offset + batchSize);
   if (!selected.length) throw new Error(`No stocks selected for offset=${offset}, batch-size=${batchSize}`);
-
+  const marketDates = loadMarketDates();
   const rows = [];
   const stockSummaries = [];
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eps-valuation-workers-'));
-  try {
-    for (let i = 0; i < selected.length; i++) {
-      const stock = selected[i];
-      const stockRows = analyzeStockIsolated(stock, tempDir);
-      rows.push(...stockRows);
-      stockSummaries.push({ stock_code: stock, formula_rows: stockRows.length });
-      const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
-      console.log(`[eps-valuation-batch] ${i + 1}/${selected.length} stock=${stock} rows=${stockRows.length} cumulative=${rows.length} parent_rss_mb=${rssMb}`);
-    }
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
+  for (let i = 0; i < selected.length; i++) {
+    const stock = selected[i];
+    const stockRows = analyzeStockIsolated(stock, marketDates);
+    rows.push(...stockRows);
+    stockSummaries.push({ stock_code: stock, formula_rows: stockRows.length });
+    const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
+    console.log(`[eps-valuation-batch] ${i + 1}/${selected.length} stock=${stock} rows=${stockRows.length} cumulative=${rows.length} parent_rss_mb=${rssMb}`);
   }
-
   const file = batchFile(offset, selected.length);
   const payload = {
     schema_version: 1,
@@ -154,15 +155,14 @@ function runBatch(offset, batchSize) {
   writeJson(file, payload);
   console.log(JSON.stringify({
     mode: 'batch',
-    execution_mode: payload.execution_mode,
     output: path.relative(ROOT, file),
     offset,
     selected_stocks: selected.length,
     stocks_with_rows: payload.stock_count_with_rows,
     samples: rows.length,
+    execution_mode: payload.execution_mode,
   }, null, 2));
 }
-
 function finalize() {
   const plan = readJson(PLAN_FILE);
   if (!plan || !Array.isArray(plan.batches)) throw new Error('Missing valuation-batch-plan.json.');
@@ -177,8 +177,8 @@ function finalize() {
       continue;
     }
     const expected = plan.stock_codes.slice(batch.offset, batch.offset + batch.batch_size);
-    if (JSON.stringify(payload.selected_stock_codes) !== JSON.stringify(expected)) {
-      throw new Error(`Batch stock set mismatch: ${batch.output_file}`);
+    if (payload.offset !== batch.offset || payload.batch_size !== batch.batch_size || JSON.stringify(payload.selected_stock_codes) !== JSON.stringify(expected)) {
+      throw new Error(`Batch checkpoint mismatch: ${batch.output_file}`);
     }
     for (const stock of payload.selected_stock_codes) {
       if (seenStocks.has(stock)) throw new Error(`Duplicate stock across batch files: ${stock}`);
@@ -201,7 +201,7 @@ function finalize() {
       target_rule: 'Future-quarter target is the maximum daily high from the report effective trading date until the next quarterly report effective trading date, exclusive. Samples without a known next quarterly report are excluded as incomplete.',
       pe_history_rule: 'Historical P/E uses only earlier report events and at most the previous 12 observations.',
       price_source: 'scripts/lib/stock_price_provider.js',
-      execution_mode: 'plan_plus_committed_batches_with_isolated_stock_workers',
+      execution_mode: 'plan_plus_committed_batches',
       batch_plan_file: path.relative(ROOT, PLAN_FILE),
     },
     formula_count: EPS_METHODS.length * PE_METHODS.length,
@@ -227,9 +227,8 @@ function main() {
   const mode = arg('mode', 'plan');
   if (mode === 'plan') return buildPlan(intArg('batch-size', 20));
   if (mode === 'batch') return runBatch(intArg('offset', 0), intArg('batch-size', 20));
-  if (mode === 'stock-worker') return runStockWorker(arg('stock'), arg('output'));
   if (mode === 'finalize') return finalize();
-  throw new Error(`Unknown --mode ${mode}; use plan, batch, stock-worker, or finalize.`);
+  throw new Error(`Unknown --mode ${mode}; use plan, batch, or finalize.`);
 }
 
 if (require.main === module) {
