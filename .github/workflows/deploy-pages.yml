@@ -13,6 +13,7 @@ on:
       - "scripts/validate_public_pages.js"
       - "scripts/validate_public_index_writers.js"
       - "scripts/prepare_pages_site.sh"
+      - "scripts/prepare_eps_valuation_pages_payload.js"
       - "scripts/scan_pages_dependencies.js"
       - "scripts/trim_pages_artifact.js"
       - ".github/workflows/build-twse-market-chart.yml"
@@ -82,9 +83,11 @@ jobs:
           bash -n scripts/prepare_pages_site.sh
           node --check scripts/scan_pages_dependencies.js
           node --check scripts/trim_pages_artifact.js
+          node --check scripts/prepare_eps_valuation_pages_payload.js
           bash scripts/prepare_pages_site.sh --self-test
           node scripts/scan_pages_dependencies.js --self-test
           node scripts/trim_pages_artifact.js --self-test
+          node scripts/prepare_eps_valuation_pages_payload.js --self-test
 
           node scripts/scan_pages_dependencies.js . \
             | sort -u \
@@ -183,6 +186,12 @@ jobs:
             exit 1
           }
 
+          node scripts/prepare_eps_valuation_pages_payload.js --site _site | tee /tmp/eps-pages-payload-summary.json
+          test -s _site/data_prediction_analysis/eps-valuation/valuation-summary.json
+          test -s _site/data_prediction_analysis/eps-valuation/coverage-summary.json
+          test -d _site/data_prediction_analysis/eps-valuation/valuation-by-stock
+          test -d _site/data_prediction_analysis/eps-valuation/coverage-by-stock
+
           node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
 
           test -f _site/data_fubon/files.json
@@ -225,8 +234,9 @@ jobs:
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact size after trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
-          echo "- data_fubon: latest 45 trading dates only" >> "$GITHUB_STEP_SUMMARY"
-          echo "- data_twse_mi_index: latest 90 trading dates only" >> "$GITHUB_STEP_SUMMARY"
+          echo "- EPS valuation Pages payload: summary + per-stock lazy files" >> "$GITHUB_STEP_SUMMARY"
+          echo "- data_fubon: latest 15 trading dates only" >> "$GITHUB_STEP_SUMMARY"
+          echo "- data_twse_mi_index: latest 10 trading dates only" >> "$GITHUB_STEP_SUMMARY"
           echo "- Repository historical data remains untouched" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure GitHub Pages
