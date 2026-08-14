@@ -11,6 +11,7 @@ on:
       - "normalized/**"
       - "scripts/generate_public_index.js"
       - "scripts/validate_public_pages.js"
+      - "scripts/validate_public_index_writers.js"
       - "scripts/prepare_pages_site.sh"
       - "scripts/scan_pages_dependencies.js"
       - "scripts/trim_pages_artifact.js"
@@ -60,11 +61,8 @@ jobs:
           sparse-checkout: |
             /public/
             /config/public-page-registry.json
-            /scripts/generate_public_index.js
-            /scripts/validate_public_pages.js
-            /scripts/prepare_pages_site.sh
-            /scripts/scan_pages_dependencies.js
-            /scripts/trim_pages_artifact.js
+            /scripts/
+            /.github/workflows/
 
       - name: Enforce canonical public page registry
         shell: bash
@@ -72,8 +70,10 @@ jobs:
           set -euo pipefail
           node --check scripts/generate_public_index.js
           node --check scripts/validate_public_pages.js
+          node --check scripts/validate_public_index_writers.js
           node scripts/generate_public_index.js --check
           node scripts/validate_public_pages.js
+          node scripts/validate_public_index_writers.js
 
       - name: Audit every frontend data dependency
         shell: bash
@@ -110,11 +110,8 @@ jobs:
           {
             echo '/public/'
             echo '/config/public-page-registry.json'
-            echo '/scripts/generate_public_index.js'
-            echo '/scripts/validate_public_pages.js'
-            echo '/scripts/prepare_pages_site.sh'
-            echo '/scripts/scan_pages_dependencies.js'
-            echo '/scripts/trim_pages_artifact.js'
+            echo '/scripts/'
+            echo '/.github/workflows/'
             while IFS= read -r dependency; do
               [ -n "$dependency" ] || continue
               object_type=$(git cat-file -t "HEAD:$dependency" 2>/dev/null || true)
@@ -139,8 +136,6 @@ jobs:
           set -euo pipefail
           bash scripts/prepare_pages_site.sh . _site "${TARGET_DATE:-}"
 
-          # The common scanner also detects runtime paths assembled through variables.
-          # Copy any dependency that the legacy packaging pass did not recognize itself.
           while IFS= read -r dependency; do
             [ -n "$dependency" ] || continue
             [ -e "_site/$dependency" ] && continue
@@ -188,9 +183,6 @@ jobs:
             exit 1
           }
 
-          # Historical raw datasets remain complete in the repository, but Pages only
-          # publishes a bounded recent window. The generated files.json is rewritten
-          # to match the files that are actually present in the artifact.
           node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
 
           test -f _site/data_fubon/files.json
@@ -228,6 +220,7 @@ jobs:
 
           echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
           echo "- Public page registry: validated" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Public index writer ownership: validated" >> "$GITHUB_STEP_SUMMARY"
           echo "- Frontend assets scanned: $frontend_asset_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
