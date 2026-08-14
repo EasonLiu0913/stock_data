@@ -8,6 +8,11 @@ on:
         required: false
         type: number
         default: 20
+      force_finalize:
+        description: "即使既有 batch 與正式輸出都完整，也強制重跑 coverage / gap / finalize"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,6 +34,7 @@ jobs:
       completed_batches: ${{ steps.matrix.outputs.completed_batches }}
       pending_batches: ${{ steps.matrix.outputs.pending_batches }}
       total_stocks: ${{ steps.matrix.outputs.total_stocks }}
+      final_outputs_ready: ${{ steps.matrix.outputs.final_outputs_ready }}
     steps:
       - name: Checkout required research data
         uses: actions/checkout@v4
@@ -118,6 +124,15 @@ jobs:
             }
           }
 
+          const finalFiles = [
+            'data_prediction_analysis/eps-valuation/valuation-backtest.json',
+            'data_prediction_analysis/eps-valuation/coverage-report.json',
+            'data_prediction_analysis/eps-valuation/formal-report-event-gap-report.json',
+          ];
+          const finalOutputsReady = finalFiles.every(file => {
+            try { return fs.statSync(file).size > 0; } catch { return false; }
+          });
+
           process.stdout.write(JSON.stringify({
             matrix: { include: pending },
             total_stocks: plan.stock_count,
@@ -125,6 +140,7 @@ jobs:
             completed_batches: completed.length,
             pending_batches: pending.length,
             invalid_batches: invalid.length,
+            final_outputs_ready: finalOutputsReady,
             completed,
             pending,
             invalid,
@@ -140,6 +156,7 @@ jobs:
           console.log(`completed_batches=${result.completed_batches}`);
           console.log(`pending_batches=${result.pending_batches}`);
           console.log(`total_stocks=${result.total_stocks}`);
+          console.log(`final_outputs_ready=${result.final_outputs_ready ? 'true' : 'false'}`);
           NODE
 
           stock_count=$(node -p "require('./data_prediction_analysis/eps-valuation/valuation-batch-plan.json').stock_count")
@@ -147,6 +164,7 @@ jobs:
           completed_count=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).completed_batches")
           pending_count=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).pending_batches")
           invalid_count=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).invalid_batches")
+          final_ready=$(node -p "JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/eps-resume-matrix.json','utf8')).final_outputs_ready")
           {
             echo "### EPS 估值自動分批 / Resume 計畫"
             echo
@@ -156,6 +174,8 @@ jobs:
             echo "- 已完成且驗證有效：${completed_count} 批（自動 skip）"
             echo "- 待執行：${pending_count} 批"
             echo "- 存在但不相容 checkpoint：${invalid_count} 批（視為待執行並覆寫）"
+            echo "- 正式輸出已存在：${final_ready}"
+            echo "- 強制重跑 finalize：${{ inputs.force_finalize }}"
             echo "- 執行方式：max-parallel=1，只跑缺少／不相容批次；每批完成立即 commit。"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -231,7 +251,7 @@ jobs:
   finalize:
     name: Finalize EPS valuation research
     needs: [plan, backfill]
-    if: ${{ always() && needs.plan.result == 'success' && (needs.backfill.result == 'success' || needs.backfill.result == 'skipped') }}
+    if: ${{ always() && needs.plan.result == 'success' && (needs.backfill.result == 'success' || needs.backfill.result == 'skipped') && (needs.plan.outputs.has_work == 'true' || needs.plan.outputs.final_outputs_ready != 'true' || inputs.force_finalize == true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -315,8 +335,8 @@ jobs:
 
   deploy_pages:
     name: Deploy EPS valuation lab to GitHub Pages
-    needs: finalize
-    if: ${{ success() }}
+    needs: [plan, finalize]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.finalize.result == 'success' || (needs.finalize.result == 'skipped' && needs.plan.outputs.final_outputs_ready == 'true')) }}
     permissions:
       contents: read
       pages: write
