@@ -1,12 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "dataset": "eps_formula_selection_study",
-  "generated_at": "2026-08-16T04:34:57.982Z",
+  "generated_at": "2026-08-16T04:35:53.236Z",
   "source_generated_at": "2026-08-14T10:10:31.783Z",
   "policy_generated_at": "2026-08-14T17:22:16.212Z",
   "filtered_samples": 69709,
   "formula_count": 24,
-  "ranking_rule": "robust_score = 45% median range error + 30% P95 range error + 15% median center error + 10% miss-rate. Lower is better. TTM × current TTM P/E is flagged benchmark_only because it algebraically collapses to current price ±20%.",
+  "unique_formula_count": 18,
+  "ranking_rule": "Robust score is diagnostic only: 45% median range error + 30% P95 range error + 15% median center error + 10% miss-rate. Final retention also considers algebraic redundancy and paired incremental value versus TTM.",
   "formulas": [
     {
       "formula": "ttm__current_pe20",
@@ -24,9 +25,9 @@
       "p99_range_error_pct": 46.86,
       "mean_range_error_pct": 4.55,
       "median_center_error_pct": 9.48,
-      "structural_baseline": true,
       "robust_score": 12.72,
-      "recommendation": "benchmark_only"
+      "recommendation": "benchmark_only",
+      "reason": "TTM EPS × current TTM P/E collapses to current price; the interval is simply current price ±20%."
     },
     {
       "formula": "seasonal_prior_year__current_pe20",
@@ -44,9 +45,9 @@
       "p99_range_error_pct": 46.86,
       "mean_range_error_pct": 4.55,
       "median_center_error_pct": 9.48,
-      "structural_baseline": false,
       "robust_score": 12.72,
-      "recommendation": "keep_core"
+      "recommendation": "duplicate_of_ttm",
+      "reason": "With standalone quarterly EPS, current YTD plus prior-year remaining quarters is algebraically identical to trailing four-quarter EPS."
     },
     {
       "formula": "yoy_scaled_remaining__current_pe20",
@@ -64,9 +65,9 @@
       "p99_range_error_pct": 84.47,
       "mean_range_error_pct": 11.45,
       "median_center_error_pct": 15.33,
-      "structural_baseline": false,
       "robust_score": 23.85,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "annualized_ytd__current_pe20",
@@ -84,9 +85,9 @@
       "p99_range_error_pct": 98.16,
       "mean_range_error_pct": 14.58,
       "median_center_error_pct": 16.07,
-      "structural_baseline": false,
       "robust_score": 27.86,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "ttm__hist_p20",
@@ -104,9 +105,9 @@
       "p99_range_error_pct": 268.73,
       "mean_range_error_pct": 23.23,
       "median_center_error_pct": 23.61,
-      "structural_baseline": false,
       "robust_score": 36.93,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "keep_core",
+      "reason": "Best independent stock-specific valuation formula after removing the current-price identity baseline."
     },
     {
       "formula": "seasonal_prior_year__hist_p20",
@@ -124,9 +125,9 @@
       "p99_range_error_pct": 268.73,
       "mean_range_error_pct": 23.23,
       "median_center_error_pct": 23.61,
-      "structural_baseline": false,
       "robust_score": 36.93,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "duplicate_of_ttm",
+      "reason": "With standalone quarterly EPS, current YTD plus prior-year remaining quarters is algebraically identical to trailing four-quarter EPS."
     },
     {
       "formula": "ttm__hist_q25_q75",
@@ -144,9 +145,9 @@
       "p99_range_error_pct": 164.1,
       "mean_range_error_pct": 25.73,
       "median_center_error_pct": 23.07,
-      "structural_baseline": false,
       "robust_score": 41.71,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "keep_secondary",
+      "reason": "Useful historical-valuation sensitivity band, but hit rate is much lower than hist_p20."
     },
     {
       "formula": "seasonal_prior_year__hist_q25_q75",
@@ -164,9 +165,9 @@
       "p99_range_error_pct": 164.1,
       "mean_range_error_pct": 25.73,
       "median_center_error_pct": 23.07,
-      "structural_baseline": false,
       "robust_score": 41.71,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "duplicate_of_ttm",
+      "reason": "With standalone quarterly EPS, current YTD plus prior-year remaining quarters is algebraically identical to trailing four-quarter EPS."
     },
     {
       "formula": "yoy_scaled_remaining__hist_p20",
@@ -184,9 +185,9 @@
       "p99_range_error_pct": 151.7,
       "mean_range_error_pct": 25.61,
       "median_center_error_pct": 30.8,
-      "structural_baseline": false,
       "robust_score": 42.26,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "annualized_ytd__hist_p20",
@@ -204,9 +205,9 @@
       "p99_range_error_pct": 279.55,
       "mean_range_error_pct": 29.96,
       "median_center_error_pct": 30.13,
-      "structural_baseline": false,
       "robust_score": 44.56,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "yoy_scaled_remaining__hist_q25_q75",
@@ -224,9 +225,9 @@
       "p99_range_error_pct": 148.69,
       "mean_range_error_pct": 31.52,
       "median_center_error_pct": 30,
-      "structural_baseline": false,
       "robust_score": 49.32,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "yoy_scaled_remaining__fixed_10_20",
@@ -244,9 +245,9 @@
       "p99_range_error_pct": 98.91,
       "mean_range_error_pct": 30.59,
       "median_center_error_pct": 45.42,
-      "structural_baseline": false,
       "robust_score": 49.36,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "annualized_ytd__hist_q25_q75",
@@ -264,9 +265,9 @@
       "p99_range_error_pct": 264.25,
       "mean_range_error_pct": 35.58,
       "median_center_error_pct": 30.58,
-      "structural_baseline": false,
       "robust_score": 51.65,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "yoy_scaled_remaining__fixed_15_25",
@@ -284,9 +285,9 @@
       "p99_range_error_pct": 161.17,
       "mean_range_error_pct": 33.51,
       "median_center_error_pct": 45.82,
-      "structural_baseline": false,
       "robust_score": 52.06,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "drop",
+      "reason": "Higher fixed-P/E bands show clearly weaker robust error and hit-rate results."
     },
     {
       "formula": "ttm__fixed_15_25",
@@ -304,9 +305,9 @@
       "p99_range_error_pct": 187.5,
       "mean_range_error_pct": 35.3,
       "median_center_error_pct": 45,
-      "structural_baseline": false,
       "robust_score": 52.34,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "drop",
+      "reason": "Higher fixed-P/E bands show clearly weaker robust error and hit-rate results."
     },
     {
       "formula": "seasonal_prior_year__fixed_15_25",
@@ -324,9 +325,9 @@
       "p99_range_error_pct": 187.5,
       "mean_range_error_pct": 35.3,
       "median_center_error_pct": 45,
-      "structural_baseline": false,
       "robust_score": 52.34,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "duplicate_of_ttm",
+      "reason": "With standalone quarterly EPS, current YTD plus prior-year remaining quarters is algebraically identical to trailing four-quarter EPS."
     },
     {
       "formula": "annualized_ytd__fixed_10_20",
@@ -344,9 +345,9 @@
       "p99_range_error_pct": 99.48,
       "mean_range_error_pct": 33.44,
       "median_center_error_pct": 46.84,
-      "structural_baseline": false,
       "robust_score": 52.34,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "research_only",
+      "reason": "Paired event study does not show stable incremental improvement over TTM under the same P/E method."
     },
     {
       "formula": "ttm__fixed_10_20",
@@ -364,9 +365,9 @@
       "p99_range_error_pct": 99.69,
       "mean_range_error_pct": 33.98,
       "median_center_error_pct": 47.31,
-      "structural_baseline": false,
       "robust_score": 52.64,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "benchmark_only",
+      "reason": "Keep one simple market-agnostic fixed-P/E benchmark; higher fixed bands add little value."
     },
     {
       "formula": "seasonal_prior_year__fixed_10_20",
@@ -384,9 +385,9 @@
       "p99_range_error_pct": 99.69,
       "mean_range_error_pct": 33.98,
       "median_center_error_pct": 47.31,
-      "structural_baseline": false,
       "robust_score": 52.64,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "duplicate_of_ttm",
+      "reason": "With standalone quarterly EPS, current YTD plus prior-year remaining quarters is algebraically identical to trailing four-quarter EPS."
     },
     {
       "formula": "annualized_ytd__fixed_15_25",
@@ -404,9 +405,9 @@
       "p99_range_error_pct": 189.44,
       "mean_range_error_pct": 35.15,
       "median_center_error_pct": 45.15,
-      "structural_baseline": false,
       "robust_score": 52.65,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "drop",
+      "reason": "Higher fixed-P/E bands show clearly weaker robust error and hit-rate results."
     },
     {
       "formula": "ttm__fixed_20_30",
@@ -424,9 +425,9 @@
       "p99_range_error_pct": 283.34,
       "mean_range_error_pct": 44.57,
       "median_center_error_pct": 50.89,
-      "structural_baseline": false,
       "robust_score": 66.21,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "drop",
+      "reason": "Higher fixed-P/E bands show clearly weaker robust error and hit-rate results."
     },
     {
       "formula": "seasonal_prior_year__fixed_20_30",
@@ -444,9 +445,9 @@
       "p99_range_error_pct": 283.34,
       "mean_range_error_pct": 44.57,
       "median_center_error_pct": 50.89,
-      "structural_baseline": false,
       "robust_score": 66.21,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "duplicate_of_ttm",
+      "reason": "With standalone quarterly EPS, current YTD plus prior-year remaining quarters is algebraically identical to trailing four-quarter EPS."
     },
     {
       "formula": "annualized_ytd__fixed_20_30",
@@ -464,9 +465,9 @@
       "p99_range_error_pct": 285.92,
       "mean_range_error_pct": 44.77,
       "median_center_error_pct": 51.39,
-      "structural_baseline": false,
       "robust_score": 66.23,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "drop",
+      "reason": "Higher fixed-P/E bands show clearly weaker robust error and hit-rate results."
     },
     {
       "formula": "yoy_scaled_remaining__fixed_20_30",
@@ -484,39 +485,35 @@
       "p99_range_error_pct": 248.22,
       "mean_range_error_pct": 44.84,
       "median_center_error_pct": 53.89,
-      "structural_baseline": false,
       "robust_score": 68.46,
-      "recommendation": "drop_or_baseline"
+      "recommendation": "drop",
+      "reason": "Higher fixed-P/E bands show clearly weaker robust error and hit-rate results."
     }
   ],
   "by_eps_method": {
     "ttm": {
       "label": "近四季實際 EPS",
-      "median_robust_score": 52.34,
-      "median_hit_rate_pct": 29.93,
-      "median_p95_error_pct": 91.34,
-      "core_count": 0
+      "median_robust_score": 47.03,
+      "median_hit_rate_pct": 30.88,
+      "median_p95_error_pct": 88.37
     },
     "seasonal_prior_year": {
       "label": "已公布 YTD + 去年同期剩餘季度",
       "median_robust_score": 47.03,
       "median_hit_rate_pct": 30.88,
-      "median_p95_error_pct": 88.37,
-      "core_count": 1
+      "median_p95_error_pct": 88.37
     },
     "yoy_scaled_remaining": {
       "label": "已公布 YTD + 去年剩餘季度×今年 YTD 年增倍率",
       "median_robust_score": 49.34,
       "median_hit_rate_pct": 32.07,
-      "median_p95_error_pct": 90.43,
-      "core_count": 0
+      "median_p95_error_pct": 90.43
     },
     "annualized_ytd": {
       "label": "YTD 年化 EPS",
       "median_robust_score": 52,
       "median_hit_rate_pct": 31.09,
-      "median_p95_error_pct": 95.37,
-      "core_count": 0
+      "median_p95_error_pct": 95.37
     }
   },
   "by_pe_method": {
@@ -524,43 +521,37 @@
       "label": "事件日 TTM P/E ±20%",
       "median_robust_score": 23.85,
       "median_hit_rate_pct": 55.98,
-      "median_p95_error_pct": 57.16,
-      "core_count": 1
+      "median_p95_error_pct": 57.16
     },
     "hist_p20": {
       "label": "個股歷史 P/E 中位數 ±20%",
-      "median_robust_score": 39.59,
-      "median_hit_rate_pct": 39.81,
-      "median_p95_error_pct": 86.06,
-      "core_count": 0
+      "median_robust_score": 42.26,
+      "median_hit_rate_pct": 35.83,
+      "median_p95_error_pct": 86.74
     },
     "hist_q25_q75": {
       "label": "個股歷史 P/E 25%–75% 區間",
-      "median_robust_score": 45.52,
-      "median_hit_rate_pct": 18.21,
-      "median_p95_error_pct": 84.76,
-      "core_count": 0
+      "median_robust_score": 49.32,
+      "median_hit_rate_pct": 16.73,
+      "median_p95_error_pct": 90.42
     },
     "fixed_10_20": {
       "label": "固定 10–20 倍（基準組）",
-      "median_robust_score": 52.49,
-      "median_hit_rate_pct": 32,
-      "median_p95_error_pct": 91.34,
-      "core_count": 0
+      "median_robust_score": 52.34,
+      "median_hit_rate_pct": 32.17,
+      "median_p95_error_pct": 91.34
     },
     "fixed_15_25": {
       "label": "固定 15–25 倍（基準組）",
       "median_robust_score": 52.34,
       "median_hit_rate_pct": 29.93,
-      "median_p95_error_pct": 95.99,
-      "core_count": 0
+      "median_p95_error_pct": 95.99
     },
     "fixed_20_30": {
       "label": "固定 20–30 倍（基準組）",
-      "median_robust_score": 66.22,
-      "median_hit_rate_pct": 21.01,
-      "median_p95_error_pct": 123.02,
-      "core_count": 0
+      "median_robust_score": 66.23,
+      "median_hit_rate_pct": 20.98,
+      "median_p95_error_pct": 123.02
     }
   }
 }
