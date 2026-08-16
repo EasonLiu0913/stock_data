@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "policy_version": "2026-08-16-v1",
+  "generated_from_research": "formula-selection-study + formula-incremental-value-study",
+  "decision": "Show two evidence-backed valuation views and two explicit benchmarks on the main EPS Lab surface. Keep the full 24-formula matrix available as research detail.",
+  "primary_formulas": [
+    {
+      "formula": "ttm__hist_p20",
+      "role": "core",
+      "display_label": "主合理價",
+      "display_note": "TTM EPS × 個股歷史 P/E 中位數 ±20%；目前最適合作為正式主估值。"
+    },
+    {
+      "formula": "ttm__hist_q25_q75",
+      "role": "core",
+      "display_label": "歷史估值帶",
+      "display_note": "TTM EPS × 個股歷史 P/E Q25–Q75；用來觀察公司自身估值分布寬度。"
+    },
+    {
+      "formula": "ttm__current_pe20",
+      "role": "benchmark",
+      "display_label": "現價 ±20% 基準",
+      "display_note": "結構上等於事件日股價 ±20%，只作價格 benchmark，不視為獨立 EPS 估值模型。"
+    },
+    {
+      "formula": "ttm__fixed_10_20",
+      "role": "benchmark",
+      "display_label": "固定 10–20 倍基準",
+      "display_note": "簡單固定 P/E baseline，用來檢查個股歷史估值模型是否真的增加價值。"
+    }
+  ],
+  "research_only_eps_methods": [
+    {
+      "eps_method": "annualized_ytd",
+      "reason": "同事件配對尚未證明能穩定優於 TTM。"
+    },
+    {
+      "eps_method": "yoy_scaled_remaining",
+      "reason": "套用 guard 後仍未證明對 TTM 有穩定增量預測力。"
+    }
+  ],
+  "duplicate_eps_methods": [
+    {
+      "eps_method": "seasonal_prior_year",
+      "duplicate_of": "ttm",
+      "reason": "已公布 YTD + 去年同期剩餘季度在目前季度定義下與 TTM 為同一數學量。"
+    }
+  ],
+  "baseline_only_pe_methods": ["fixed_15_25", "fixed_20_30"],
+  "default_main_formula_count": 4
+}
