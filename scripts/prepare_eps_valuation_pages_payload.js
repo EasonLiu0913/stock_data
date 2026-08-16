@@ -183,7 +183,7 @@ function selfTest() {
     dataset: 'eps_valuation_backtest', generated_at: '2026-01-01T00:00:00Z', planned_stock_count: 2,
     rows: [
       { stock_code: '1101', fiscal_period: '2025Q1', eps_method: 'yoy_scaled_remaining', eps_method_label: 'YoY', pe_method: 'fixed_10_20', pe_method_label: 'Fixed', pe_low: 10, pe_high: 20, range_error_pct: 10, center_error_pct: 12, hit_range: false },
-      { stock_code: '1101', fiscal_period: '2025Q2', eps_method: 'ttm', eps_method_label: 'TTM', pe_method: 'current_pe20', pe_method_label: 'Current', pe_low: 80, pe_high: 120, range_error_pct: 20, center_error_pct: 22, hit_range: false },
+      { stock_code: '1101', fiscal_period: '2025Q2', eps_method: 'ttm', eps_method_label: 'TTM', pe_method: 'current_pe20', pe_method_label: 'Current', pe_low: 60, pe_high: 80, range_error_pct: 20, center_error_pct: 22, hit_range: false },
       { stock_code: '2330', fiscal_period: '2025Q1', eps_method: 'ttm', eps_method_label: 'TTM', pe_method: 'fixed_10_20', pe_method_label: 'Fixed', pe_low: 10, pe_high: 20, range_error_pct: 0, center_error_pct: 5, hit_range: true },
     ],
   });
