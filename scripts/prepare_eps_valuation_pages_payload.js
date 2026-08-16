@@ -57,10 +57,39 @@ function buildPolicyFilter(policy) {
     return true;
   };
 }
-function compactValuationSummary(payload, rows, policy) {
-  const summaries = summarizeRows(rows);
+function decorateFormulaSummaries(summaries, displayPolicy) {
+  const primary = new Map((displayPolicy?.primary_formulas || []).map(item => [item.formula, item]));
+  const researchOnly = new Map((displayPolicy?.research_only_eps_methods || []).map(item => [item.eps_method, item]));
+  const duplicates = new Map((displayPolicy?.duplicate_eps_methods || []).map(item => [item.eps_method, item]));
+  const baselinePe = new Set(displayPolicy?.baseline_only_pe_methods || []);
+  return summaries.map(summary => {
+    const selected = primary.get(summary.formula);
+    const duplicate = duplicates.get(summary.eps_method);
+    const research = researchOnly.get(summary.eps_method);
+    let display_role = selected?.role || 'research_detail';
+    let display_note = selected?.display_note || null;
+    if (!selected && duplicate) {
+      display_role = 'duplicate';
+      display_note = duplicate.reason || null;
+    } else if (!selected && research) {
+      display_role = 'research_only';
+      display_note = research.reason || null;
+    } else if (!selected && baselinePe.has(summary.pe_method)) {
+      display_role = 'baseline_only';
+    }
+    return {
+      ...summary,
+      display_role,
+      display_label: selected?.display_label || null,
+      display_note,
+      default_visible: Boolean(selected),
+    };
+  });
+}
+function compactValuationSummary(payload, rows, policy, displayPolicy = null) {
+  const summaries = decorateFormulaSummaries(summarizeRows(rows), displayPolicy);
   return {
-    schema_version: 2,
+    schema_version: 3,
     dataset: 'eps_valuation_pages_summary',
     generated_at: payload.generated_at || null,
     methodology: {
@@ -71,8 +100,19 @@ function compactValuationSummary(payload, rows, policy) {
         yoy_excluded_events: policy.yoy_scaled_remaining?.excluded_events ?? null,
         dynamic_pe_max: policy.dynamic_pe?.max_pe ?? null,
       } : null,
-      ranking_rule: 'Default ranking uses median range error, then P95 range error, then hit rate. Mean is retained for reference but is not the primary rank key.',
+      ranking_rule: 'Default research ranking uses median range error, then P95 range error, then hit rate. Mean is retained for reference but is not the primary rank key.',
+      formula_display_policy_version: displayPolicy?.policy_version || null,
     },
+    formula_display_policy: displayPolicy ? {
+      schema_version: displayPolicy.schema_version || 1,
+      policy_version: displayPolicy.policy_version || null,
+      decision: displayPolicy.decision || null,
+      primary_formulas: displayPolicy.primary_formulas || [],
+      research_only_eps_methods: displayPolicy.research_only_eps_methods || [],
+      duplicate_eps_methods: displayPolicy.duplicate_eps_methods || [],
+      baseline_only_pe_methods: displayPolicy.baseline_only_pe_methods || [],
+      default_main_formula_count: displayPolicy.default_main_formula_count || 0,
+    } : null,
     formula_count: summaries.length,
     stock_count: new Set(rows.map(row => row.stock_code)).size,
     planned_stock_count: payload.planned_stock_count || 0,
@@ -93,6 +133,7 @@ function splitValuation(root) {
   const payload = readJson(source);
   if (payload?.dataset !== 'eps_valuation_backtest' || !Array.isArray(payload.rows)) throw new Error('valuation-backtest.json has unexpected shape');
   const policy = readJson(path.join(dir, 'valuation-applicability-policy.json'));
+  const displayPolicy = readJson(path.join(dir, 'formula-display-policy.json'));
   const keep = buildPolicyFilter(policy);
   const filteredRows = payload.rows.filter(keep);
   const byStock = new Map();
@@ -107,12 +148,12 @@ function splitValuation(root) {
   fs.mkdirSync(outputDir, { recursive: true });
   let rowsWritten = 0;
   for (const [stock, rows] of byStock) {
-    writeJson(path.join(outputDir, `${stock}.json`), { schema_version: 2, dataset: 'eps_valuation_stock_rows', generated_at: payload.generated_at || null, policy_generated_at: policy?.generated_at || null, stock_code: stock, sample_count: rows.length, rows });
+    writeJson(path.join(outputDir, `${stock}.json`), { schema_version: 2, dataset: 'eps_valuation_stock_rows', generated_at: payload.generated_at || null, policy_generated_at: policy?.generated_at || null, display_policy_version: displayPolicy?.policy_version || null, stock_code: stock, sample_count: rows.length, rows });
     rowsWritten += rows.length;
   }
-  writeJson(path.join(dir, 'valuation-summary.json'), compactValuationSummary(payload, filteredRows, policy));
+  writeJson(path.join(dir, 'valuation-summary.json'), compactValuationSummary(payload, filteredRows, policy, displayPolicy));
   fs.rmSync(source, { force: true });
-  return { dataset: 'eps_valuation', stocks: byStock.size, original_rows: payload.rows.length, rows: rowsWritten, excluded_rows: payload.rows.length - rowsWritten, policy_applied: Boolean(policy), removed_source: 'valuation-backtest.json' };
+  return { dataset: 'eps_valuation', stocks: byStock.size, original_rows: payload.rows.length, rows: rowsWritten, excluded_rows: payload.rows.length - rowsWritten, policy_applied: Boolean(policy), display_policy_applied: Boolean(displayPolicy), removed_source: 'valuation-backtest.json' };
 }
 function splitCoverage(root) {
   const dir = path.join(root, 'data_prediction_analysis', 'eps-valuation');
@@ -147,11 +188,27 @@ function selfTest() {
     ],
   });
   writeJson(path.join(dir, 'valuation-applicability-policy.json'), { yoy_scaled_remaining: { excluded_event_keys: ['1101:2025Q1'] }, dynamic_pe: { methods: ['current_pe20'], max_pe: 100 } });
+  writeJson(path.join(dir, 'formula-display-policy.json'), {
+    schema_version: 1,
+    policy_version: 'self-test-v1',
+    primary_formulas: [
+      { formula: 'ttm__current_pe20', role: 'benchmark', display_label: 'Price benchmark', display_note: 'test' },
+      { formula: 'ttm__fixed_10_20', role: 'core', display_label: 'Core', display_note: 'test' },
+    ],
+    research_only_eps_methods: [{ eps_method: 'yoy_scaled_remaining', reason: 'research' }],
+    duplicate_eps_methods: [],
+    baseline_only_pe_methods: [],
+    default_main_formula_count: 2,
+  });
   writeJson(path.join(dir, 'coverage-report.json'), { generated_at: '2026-01-01T00:00:00Z', summary: { total_stocks: 2, reason_counts: [] }, stocks: [{ stock_code: '1101' }, { stock_code: '2330' }] });
   const result = run(root);
-  if (result.valuation.rows !== 1 || result.valuation.excluded_rows !== 2) throw new Error('policy filter self-test failed');
+  if (result.valuation.rows !== 2 || result.valuation.excluded_rows !== 1) throw new Error('policy filter self-test failed');
+  if (!result.valuation.display_policy_applied) throw new Error('display policy was not applied');
   const summary = readJson(path.join(dir, 'valuation-summary.json'));
-  if (summary.sample_count !== 1 || summary.formula_summary[0].median_range_error_pct !== 0) throw new Error('robust summary self-test failed');
+  if (summary.sample_count !== 2 || summary.formula_display_policy?.policy_version !== 'self-test-v1') throw new Error('display policy summary self-test failed');
+  const benchmark = summary.formula_summary.find(item => item.formula === 'ttm__current_pe20');
+  const core = summary.formula_summary.find(item => item.formula === 'ttm__fixed_10_20');
+  if (benchmark?.display_role !== 'benchmark' || core?.display_role !== 'core') throw new Error('formula role decoration self-test failed');
   if (!fs.existsSync(path.join(dir, 'valuation-by-stock', '2330.json'))) throw new Error('valuation stock file missing');
   if (fs.existsSync(path.join(dir, 'valuation-backtest.json'))) throw new Error('large valuation source was not removed');
   if (!fs.existsSync(path.join(dir, 'coverage-summary.json'))) throw new Error('coverage summary missing');
@@ -159,4 +216,4 @@ function selfTest() {
 }
 
 if (require.main === module) { try { if (process.argv.includes('--self-test')) selfTest(); else { const i = process.argv.indexOf('--site'); run(path.resolve(i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : '_site')); } } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; } }
-module.exports = { summarizeRows, buildPolicyFilter, compactValuationSummary, splitValuation, splitCoverage, run };
+module.exports = { summarizeRows, buildPolicyFilter, decorateFormulaSummaries, compactValuationSummary, splitValuation, splitCoverage, run };
