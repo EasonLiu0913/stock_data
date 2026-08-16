@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/research-eps-formula-selection.yml"
       - "scripts/analyze_eps_formula_selection.js"
+      - "scripts/analyze_eps_formula_incremental_value.js"
       - "data_prediction_analysis/eps-valuation/valuation-applicability-policy.json"
 
 permissions:
@@ -30,13 +31,16 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /scripts/analyze_eps_formula_selection.js
+            /scripts/analyze_eps_formula_incremental_value.js
             /data_prediction_analysis/eps-valuation/
       - name: Rank guarded formulas
         shell: bash
         run: |
           set -euo pipefail
           node --check scripts/analyze_eps_formula_selection.js
+          node --check scripts/analyze_eps_formula_incremental_value.js
           node scripts/analyze_eps_formula_selection.js
+          node scripts/analyze_eps_formula_incremental_value.js
       - name: Commit compact study
         shell: bash
         run: |
@@ -45,7 +49,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --sparse \
             data_prediction_analysis/eps-valuation/formula-selection-study.json \
-            data_prediction_analysis/eps-valuation/formula-selection-study.md
+            data_prediction_analysis/eps-valuation/formula-selection-study.md \
+            data_prediction_analysis/eps-valuation/formula-incremental-value-study.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "research: update EPS formula selection study"
           git pull --rebase origin main
