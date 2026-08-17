@@ -11,11 +11,11 @@
   "primary_outcome": {
     "key": "intraday_rebound_5d_10pct",
     "label": "5 個交易日內盤中最大反彈至少 10%",
-    "total_events": 9,
+    "total_events": 10,
     "verified_events": 9,
     "successful_events": 6,
     "unsuccessful_events": 3,
-    "unverified_events": 0,
+    "unverified_events": 1,
     "hit_rate": 66.67
   },
   "candidate_patterns": [
@@ -1243,29 +1243,29 @@
   "feature_coverage": {
     "foreign": {
       "event_count": 9,
-      "coverage_pct": 100
+      "coverage_pct": 90
     },
     "investment_trust": {
       "event_count": 5,
-      "coverage_pct": 55.56
+      "coverage_pct": 50
     },
     "dealer": {
       "event_count": 9,
-      "coverage_pct": 100
+      "coverage_pct": 90
     },
     "margin": {
       "event_count": 9,
-      "coverage_pct": 100
+      "coverage_pct": 90
     },
     "broker": {
       "event_count": 9,
-      "coverage_pct": 100
+      "coverage_pct": 90
     }
   },
   "history": {
     "first_date": "20260203",
-    "last_date": "20260731",
-    "trading_days": 116
+    "last_date": "20260817",
+    "trading_days": 127
   },
   "events": [
     {
@@ -1732,15 +1732,16 @@
     {
       "event_id": "3532-20260717-09",
       "signal_date": "20260717",
-      "deepest_signal_date": "20260731",
-      "episode_end_date": "20260731",
-      "observation_count": 11,
+      "deepest_signal_date": "20260803",
+      "episode_end_date": "20260814",
+      "observation_count": 21,
       "trigger_ids": [
         "return_3d_lte",
         "drawdown_20d_lte",
         "drawdown_60d_lte",
         "return_5d_lte",
-        "return_10d_lte"
+        "return_10d_lte",
+        "rsi14_lte"
       ],
       "result": "success",
       "signal": {
@@ -1757,11 +1758,11 @@
         "volume_ratio_20d": 1.7809
       },
       "deepest_signal": {
-        "close": 271.5,
-        "severity": 13.7488,
-        "return_5d": -28.4585,
-        "drawdown_20d": -50.8152,
-        "rsi14": 29
+        "close": 265,
+        "severity": 13.8592,
+        "return_5d": -30.1713,
+        "drawdown_20d": -51.9928,
+        "rsi14": 21.11
       },
       "outcome_from_signal": {
         "future_return_1d": 9.9057,
@@ -1777,15 +1778,71 @@
         "verified": true
       },
       "outcome_from_deepest_signal": {
-        "future_return_5d": null,
-        "max_return_5d": null,
-        "max_adverse_5d": null
+        "future_return_5d": 6.7925,
+        "max_return_5d": 20.3774,
+        "max_adverse_5d": 6.2264
       },
       "feature_availability": {
         "foreign": true,
         "investment_trust": true,
         "margin": true,
         "broker": true
+      }
+    },
+    {
+      "event_id": "3532-20260817-10",
+      "signal_date": "20260817",
+      "deepest_signal_date": "20260817",
+      "episode_end_date": "20260817",
+      "observation_count": 1,
+      "trigger_ids": [
+        "drawdown_20d_lte",
+        "drawdown_60d_lte"
+      ],
+      "result": "unverified",
+      "signal": {
+        "close": 371.5,
+        "severity": 3.3384,
+        "return_3d": 19.0705,
+        "return_5d": 31.2721,
+        "return_10d": 40.1887,
+        "drawdown_20d": -25.5511,
+        "drawdown_60d": -32.6993,
+        "rsi14": 55.89,
+        "gap_sma20": 10.3684,
+        "volume_ratio_5d": 1.5549,
+        "volume_ratio_20d": 2.2026
+      },
+      "deepest_signal": {
+        "close": 371.5,
+        "severity": 3.3384,
+        "return_5d": 31.2721,
+        "drawdown_20d": -25.5511,
+        "rsi14": 55.89
+      },
+      "outcome_from_signal": {
+        "future_return_1d": null,
+        "future_return_3d": null,
+        "future_return_5d": null,
+        "future_return_10d": null,
+        "max_return_3d": null,
+        "max_return_5d": null,
+        "max_return_10d": null,
+        "max_adverse_5d": null,
+        "days_to_close_rebound_5pct": null,
+        "days_to_intraday_rebound_5pct": null,
+        "verified": false
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": null,
+        "max_return_5d": null,
+        "max_adverse_5d": null
+      },
+      "feature_availability": {
+        "foreign": false,
+        "investment_trust": false,
+        "margin": null,
+        "broker": null
       }
     }
   ],

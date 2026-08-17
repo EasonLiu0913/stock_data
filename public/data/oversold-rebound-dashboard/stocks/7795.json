@@ -11,12 +11,12 @@
   "primary_outcome": {
     "key": "intraday_rebound_5d_10pct",
     "label": "5 個交易日內盤中最大反彈至少 10%",
-    "total_events": 6,
-    "verified_events": 6,
-    "successful_events": 2,
+    "total_events": 7,
+    "verified_events": 7,
+    "successful_events": 3,
     "unsuccessful_events": 4,
     "unverified_events": 0,
-    "hit_rate": 33.33
+    "hit_rate": 42.86
   },
   "candidate_patterns": [
     {
@@ -27,16 +27,16 @@
       "direction": "success_higher",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 2.456,
-      "mean_delta_success_minus_failure": 120.75,
-      "median_delta_success_minus_failure": 134,
+      "standardized_mean_difference": 2.0682,
+      "mean_delta_success_minus_failure": 198.75,
+      "median_delta_success_minus_failure": 140,
       "success": {
-        "count": 2,
-        "mean": 236,
-        "median": 236,
-        "standard_deviation": 8.4853,
+        "count": 3,
+        "mean": 314,
+        "median": 242,
+        "standard_deviation": 135.2331,
         "minimum": 230,
-        "maximum": 242
+        "maximum": 470
       },
       "failure": {
         "count": 4,
@@ -49,64 +49,6 @@
       "eligible_as_candidate_pattern": true
     },
     {
-      "feature_id": "broker_top5_net_concentration_lots",
-      "label": "前 5 大分點淨集中差",
-      "group": "broker",
-      "unit": "lots",
-      "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
-      "coverage_pct": 100,
-      "standardized_mean_difference": 1.9403,
-      "mean_delta_success_minus_failure": 144,
-      "median_delta_success_minus_failure": 120,
-      "success": {
-        "count": 2,
-        "mean": 65,
-        "median": 65,
-        "standard_deviation": 22.6274,
-        "minimum": 49,
-        "maximum": 81
-      },
-      "failure": {
-        "count": 4,
-        "mean": -79,
-        "median": -55,
-        "standard_deviation": 84.6955,
-        "minimum": -201,
-        "maximum": -5
-      },
-      "eligible_as_candidate_pattern": true
-    },
-    {
-      "feature_id": "return_1d",
-      "label": "事件日 1 日報酬",
-      "group": "price_volume",
-      "unit": "pct",
-      "direction": "success_lower",
-      "exploratory_strength": "large_exploratory_difference",
-      "coverage_pct": 100,
-      "standardized_mean_difference": -1.8492,
-      "mean_delta_success_minus_failure": -3.3301,
-      "median_delta_success_minus_failure": -3.7841,
-      "success": {
-        "count": 2,
-        "mean": -7.3086,
-        "median": -7.3086,
-        "standard_deviation": 2.6663,
-        "minimum": -9.194,
-        "maximum": -5.4233
-      },
-      "failure": {
-        "count": 4,
-        "mean": -3.9785,
-        "median": -3.5245,
-        "standard_deviation": 1.3981,
-        "minimum": -5.9625,
-        "maximum": -2.9024
-      },
-      "eligible_as_candidate_pattern": true
-    },
-    {
       "feature_id": "drawdown_20d",
       "label": "距近 20 日高點跌幅",
       "group": "price_volume",
@@ -114,15 +56,15 @@
       "direction": "success_lower",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -1.722,
-      "mean_delta_success_minus_failure": -1.3892,
-      "median_delta_success_minus_failure": -1.1535,
+      "standardized_mean_difference": -1.4853,
+      "mean_delta_success_minus_failure": -3.3215,
+      "median_delta_success_minus_failure": -1.496,
       "success": {
-        "count": 2,
-        "mean": -18.0365,
-        "median": -18.0365,
-        "standard_deviation": 0.4843,
-        "minimum": -18.379,
+        "count": 3,
+        "mean": -19.9688,
+        "median": -18.379,
+        "standard_deviation": 3.3642,
+        "minimum": -23.8333,
         "maximum": -17.6941
       },
       "failure": {
@@ -136,89 +78,31 @@
       "eligible_as_candidate_pattern": true
     },
     {
-      "feature_id": "volatility_20d",
-      "label": "20 日已實現波動",
+      "feature_id": "volume_ratio_20d",
+      "label": "成交量／20 日均量",
       "group": "price_volume",
-      "unit": "pct",
-      "direction": "success_lower",
-      "exploratory_strength": "large_exploratory_difference",
-      "coverage_pct": 100,
-      "standardized_mean_difference": -1.5649,
-      "mean_delta_success_minus_failure": -1.8325,
-      "median_delta_success_minus_failure": -1.8956,
-      "success": {
-        "count": 2,
-        "mean": 3.5161,
-        "median": 3.5161,
-        "standard_deviation": 2.1524,
-        "minimum": 1.9941,
-        "maximum": 5.0381
-      },
-      "failure": {
-        "count": 4,
-        "mean": 5.3486,
-        "median": 5.4117,
-        "standard_deviation": 0.5329,
-        "minimum": 4.7349,
-        "maximum": 5.8363
-      },
-      "eligible_as_candidate_pattern": true
-    },
-    {
-      "feature_id": "foreign_net_3d_shares",
-      "label": "外資近 3 日累積買賣超",
-      "group": "institutional",
-      "unit": "shares",
+      "unit": "ratio",
       "direction": "success_higher",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 1.4392,
-      "mean_delta_success_minus_failure": 543624,
-      "median_delta_success_minus_failure": 572849.5,
+      "standardized_mean_difference": 0.992,
+      "mean_delta_success_minus_failure": 0.8816,
+      "median_delta_success_minus_failure": 0.2451,
       "success": {
-        "count": 2,
-        "mean": 391150,
-        "median": 391150,
-        "standard_deviation": 634911.1788,
-        "minimum": -57800,
-        "maximum": 840100
+        "count": 3,
+        "mean": 1.6019,
+        "median": 0.9075,
+        "standard_deviation": 1.3789,
+        "minimum": 0.7083,
+        "maximum": 3.19
       },
       "failure": {
         "count": 4,
-        "mean": -152474,
-        "median": -181699.5,
-        "standard_deviation": 236352.8785,
-        "minimum": -388497,
-        "maximum": 142000
-      },
-      "eligible_as_candidate_pattern": true
-    },
-    {
-      "feature_id": "broker_total_net_lots",
-      "label": "券商分點合計淨買賣超",
-      "group": "broker",
-      "unit": "lots",
-      "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
-      "coverage_pct": 100,
-      "standardized_mean_difference": 1.2841,
-      "mean_delta_success_minus_failure": 92,
-      "median_delta_success_minus_failure": 68.5,
-      "success": {
-        "count": 2,
-        "mean": 4.5,
-        "median": 4.5,
-        "standard_deviation": 48.7904,
-        "minimum": -30,
-        "maximum": 39
-      },
-      "failure": {
-        "count": 4,
-        "mean": -87.5,
-        "median": -64,
-        "standard_deviation": 77.7882,
-        "minimum": -197,
-        "maximum": -25
+        "mean": 0.7203,
+        "median": 0.6624,
+        "standard_deviation": 0.2212,
+        "minimum": 0.5284,
+        "maximum": 1.028
       },
       "eligible_as_candidate_pattern": true
     },
@@ -230,15 +114,15 @@
       "direction": "success_higher",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 1.2836,
-      "mean_delta_success_minus_failure": 27.7076,
-      "median_delta_success_minus_failure": 26.9153,
+      "standardized_mean_difference": 0.9035,
+      "mean_delta_success_minus_failure": 19.3196,
+      "median_delta_success_minus_failure": 21.5551,
       "success": {
-        "count": 2,
-        "mean": 10.2338,
-        "median": 10.2338,
-        "standard_deviation": 7.5804,
-        "minimum": 4.8736,
+        "count": 3,
+        "mean": 1.8458,
+        "median": 4.8736,
+        "standard_deviation": 15.4857,
+        "minimum": -14.9302,
         "maximum": 15.5939
       },
       "failure": {
@@ -252,60 +136,176 @@
       "eligible_as_candidate_pattern": true
     },
     {
-      "feature_id": "foreign_net_5d_shares",
-      "label": "外資近 5 日累積買賣超",
-      "group": "institutional",
-      "unit": "shares",
-      "direction": "success_higher",
+      "feature_id": "drawdown_60d",
+      "label": "距近 60 日高點跌幅",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 0.9105,
-      "mean_delta_success_minus_failure": 761308.75,
-      "median_delta_success_minus_failure": 1081466,
+      "standardized_mean_difference": -0.848,
+      "mean_delta_success_minus_failure": -4.5249,
+      "median_delta_success_minus_failure": -1.496,
       "success": {
-        "count": 2,
-        "mean": 749650,
-        "median": 749650,
-        "standard_deviation": 1124936.1782,
-        "minimum": -45800,
-        "maximum": 1545100
+        "count": 3,
+        "mean": -22.4848,
+        "median": -18.379,
+        "standard_deviation": 7.7123,
+        "minimum": -31.3814,
+        "maximum": -17.6941
       },
       "failure": {
         "count": 4,
-        "mean": -11658.75,
-        "median": -331816,
-        "standard_deviation": 714344.1513,
-        "minimum": -440000,
-        "maximum": 1056997
+        "mean": -17.9599,
+        "median": -16.883,
+        "standard_deviation": 2.7937,
+        "minimum": -22.0918,
+        "maximum": -15.9817
       },
       "eligible_as_candidate_pattern": true
     },
     {
-      "feature_id": "consecutive_down_days",
-      "label": "連續下跌日數",
+      "feature_id": "volume_ratio_5d",
+      "label": "成交量／5 日均量",
       "group": "price_volume",
-      "unit": "days",
+      "unit": "ratio",
       "direction": "success_higher",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 0.8528,
-      "mean_delta_success_minus_failure": 1,
-      "median_delta_success_minus_failure": 1,
+      "standardized_mean_difference": 0.8132,
+      "mean_delta_success_minus_failure": 0.301,
+      "median_delta_success_minus_failure": 0.1698,
       "success": {
-        "count": 2,
-        "mean": 4.5,
-        "median": 4.5,
-        "standard_deviation": 0.7071,
-        "minimum": 4,
-        "maximum": 5
+        "count": 3,
+        "mean": 1.0966,
+        "median": 0.9382,
+        "standard_deviation": 0.5096,
+        "minimum": 0.685,
+        "maximum": 1.6665
       },
       "failure": {
         "count": 4,
-        "mean": 3.5,
-        "median": 3.5,
-        "standard_deviation": 1.291,
-        "minimum": 2,
-        "maximum": 5
+        "mean": 0.7956,
+        "median": 0.7684,
+        "standard_deviation": 0.2349,
+        "minimum": 0.5405,
+        "maximum": 1.1053
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "broker_top5_sell_net_lots",
+      "label": "前 5 大賣方淨賣超",
+      "group": "broker",
+      "unit": "lots",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.7374,
+      "mean_delta_success_minus_failure": 142.4167,
+      "median_delta_success_minus_failure": 16,
+      "success": {
+        "count": 3,
+        "mean": 336.6667,
+        "median": 193,
+        "standard_deviation": 287.7852,
+        "minimum": 149,
+        "maximum": 668
+      },
+      "failure": {
+        "count": 4,
+        "mean": 194.25,
+        "median": 177,
+        "standard_deviation": 83.4121,
+        "minimum": 115,
+        "maximum": 308
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "return_3d",
+      "label": "事件日前 3 日報酬",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.6986,
+      "mean_delta_success_minus_failure": 5.354,
+      "median_delta_success_minus_failure": -0.8848,
+      "success": {
+        "count": 3,
+        "mean": -4.9791,
+        "median": -9.6081,
+        "standard_deviation": 10.7194,
+        "minimum": -12.6061,
+        "maximum": 7.277
+      },
+      "failure": {
+        "count": 4,
+        "mean": -10.3331,
+        "median": -8.7233,
+        "standard_deviation": 4.6157,
+        "minimum": -17.1171,
+        "maximum": -6.7688
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "gap_sma5",
+      "label": "距 SMA5 乖離",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": 0.642,
+      "mean_delta_success_minus_failure": 3.4615,
+      "median_delta_success_minus_failure": -0.0713,
+      "success": {
+        "count": 3,
+        "mean": -3.1389,
+        "median": -6.3401,
+        "standard_deviation": 8.2712,
+        "minimum": -9.331,
+        "maximum": 6.2544
+      },
+      "failure": {
+        "count": 4,
+        "mean": -6.6004,
+        "median": -6.2688,
+        "standard_deviation": 1.687,
+        "minimum": -8.9409,
+        "maximum": -4.9232
+      },
+      "eligible_as_candidate_pattern": true
+    },
+    {
+      "feature_id": "volatility_20d",
+      "label": "20 日已實現波動",
+      "group": "price_volume",
+      "unit": "pct",
+      "direction": "success_lower",
+      "exploratory_strength": "moderate_exploratory_difference",
+      "coverage_pct": 100,
+      "standardized_mean_difference": -0.6248,
+      "mean_delta_success_minus_failure": -0.9095,
+      "median_delta_success_minus_failure": -0.3736,
+      "success": {
+        "count": 3,
+        "mean": 4.4391,
+        "median": 5.0381,
+        "standard_deviation": 2.2073,
+        "minimum": 1.9941,
+        "maximum": 6.285
+      },
+      "failure": {
+        "count": 4,
+        "mean": 5.3486,
+        "median": 5.4117,
+        "standard_deviation": 0.5329,
+        "minimum": 4.7349,
+        "maximum": 5.8363
       },
       "eligible_as_candidate_pattern": true
     }
@@ -316,19 +316,19 @@
       "label": "事件日 1 日報酬",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "success_lower",
-      "exploratory_strength": "large_exploratory_difference",
+      "direction": "success_higher",
+      "exploratory_strength": "small_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -1.8492,
-      "mean_delta_success_minus_failure": -3.3301,
-      "median_delta_success_minus_failure": -3.7841,
+      "standardized_mean_difference": 0.2475,
+      "mean_delta_success_minus_failure": 1.3231,
+      "median_delta_success_minus_failure": -1.8988,
       "success": {
-        "count": 2,
-        "mean": -7.3086,
-        "median": -7.3086,
-        "standard_deviation": 2.6663,
+        "count": 3,
+        "mean": -2.6554,
+        "median": -5.4233,
+        "standard_deviation": 8.2772,
         "minimum": -9.194,
-        "maximum": -5.4233
+        "maximum": 6.6511
       },
       "failure": {
         "count": 4,
@@ -345,19 +345,19 @@
       "label": "事件日前 3 日報酬",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "success_lower",
-      "exploratory_strength": "negligible_difference",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.1872,
-      "mean_delta_success_minus_failure": -0.774,
-      "median_delta_success_minus_failure": -2.3838,
+      "standardized_mean_difference": 0.6986,
+      "mean_delta_success_minus_failure": 5.354,
+      "median_delta_success_minus_failure": -0.8848,
       "success": {
-        "count": 2,
-        "mean": -11.1071,
-        "median": -11.1071,
-        "standard_deviation": 2.1199,
+        "count": 3,
+        "mean": -4.9791,
+        "median": -9.6081,
+        "standard_deviation": 10.7194,
         "minimum": -12.6061,
-        "maximum": -9.6081
+        "maximum": 7.277
       },
       "failure": {
         "count": 4,
@@ -374,19 +374,19 @@
       "label": "事件日前 5 日報酬",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "success_lower",
+      "direction": "success_higher",
       "exploratory_strength": "moderate_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.7956,
-      "mean_delta_success_minus_failure": -3.766,
-      "median_delta_success_minus_failure": -3.0217,
+      "standardized_mean_difference": 0.5539,
+      "mean_delta_success_minus_failure": 6.8623,
+      "median_delta_success_minus_failure": -2.8165,
       "success": {
-        "count": 2,
-        "mean": -13.3377,
-        "median": -13.3377,
-        "standard_deviation": 0.2902,
+        "count": 3,
+        "mean": -2.7094,
+        "median": -13.1325,
+        "standard_deviation": 18.41,
         "minimum": -13.5429,
-        "maximum": -13.1325
+        "maximum": 18.5473
       },
       "failure": {
         "count": 4,
@@ -403,19 +403,19 @@
       "label": "事件日前 10 日報酬",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "insufficient_data",
-      "exploratory_strength": "insufficient_data",
-      "coverage_pct": 83.33,
-      "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": -10.9164,
-      "median_delta_success_minus_failure": -8.1393,
+      "direction": "success_lower",
+      "exploratory_strength": "negligible_difference",
+      "coverage_pct": 85.71,
+      "standardized_mean_difference": -0.0742,
+      "mean_delta_success_minus_failure": -1.4559,
+      "median_delta_success_minus_failure": 1.3212,
       "success": {
-        "count": 1,
-        "mean": -5.3806,
-        "median": -5.3806,
-        "standard_deviation": 0,
+        "count": 2,
+        "mean": 4.0799,
+        "median": 4.0799,
+        "standard_deviation": 13.3792,
         "minimum": -5.3806,
-        "maximum": -5.3806
+        "maximum": 13.5404
       },
       "failure": {
         "count": 4,
@@ -425,7 +425,7 @@
         "minimum": -15.1163,
         "maximum": 31.7422
       },
-      "eligible_as_candidate_pattern": false
+      "eligible_as_candidate_pattern": true
     },
     {
       "feature_id": "drawdown_20d",
@@ -435,15 +435,15 @@
       "direction": "success_lower",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -1.722,
-      "mean_delta_success_minus_failure": -1.3892,
-      "median_delta_success_minus_failure": -1.1535,
+      "standardized_mean_difference": -1.4853,
+      "mean_delta_success_minus_failure": -3.3215,
+      "median_delta_success_minus_failure": -1.496,
       "success": {
-        "count": 2,
-        "mean": -18.0365,
-        "median": -18.0365,
-        "standard_deviation": 0.4843,
-        "minimum": -18.379,
+        "count": 3,
+        "mean": -19.9688,
+        "median": -18.379,
+        "standard_deviation": 3.3642,
+        "minimum": -23.8333,
         "maximum": -17.6941
       },
       "failure": {
@@ -462,17 +462,17 @@
       "group": "price_volume",
       "unit": "pct",
       "direction": "success_lower",
-      "exploratory_strength": "negligible_difference",
+      "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.0315,
-      "mean_delta_success_minus_failure": -0.0766,
-      "median_delta_success_minus_failure": -1.1535,
+      "standardized_mean_difference": -0.848,
+      "mean_delta_success_minus_failure": -4.5249,
+      "median_delta_success_minus_failure": -1.496,
       "success": {
-        "count": 2,
-        "mean": -18.0365,
-        "median": -18.0365,
-        "standard_deviation": 0.4843,
-        "minimum": -18.379,
+        "count": 3,
+        "mean": -22.4848,
+        "median": -18.379,
+        "standard_deviation": 7.7123,
+        "minimum": -31.3814,
         "maximum": -17.6941
       },
       "failure": {
@@ -492,17 +492,17 @@
       "unit": "index",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 66.67,
+      "coverage_pct": 71.43,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": -59.8525,
-      "median_delta_success_minus_failure": -61.005,
+      "mean_delta_success_minus_failure": -2.3225,
+      "median_delta_success_minus_failure": -3.475,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 57.53,
+        "median": 57.53,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 57.53,
+        "maximum": 57.53
       },
       "failure": {
         "count": 4,
@@ -519,19 +519,19 @@
       "label": "距 SMA5 乖離",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "success_lower",
+      "direction": "success_higher",
       "exploratory_strength": "moderate_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.6849,
-      "mean_delta_success_minus_failure": -1.2351,
-      "median_delta_success_minus_failure": -1.5667,
+      "standardized_mean_difference": 0.642,
+      "mean_delta_success_minus_failure": 3.4615,
+      "median_delta_success_minus_failure": -0.0713,
       "success": {
-        "count": 2,
-        "mean": -7.8355,
-        "median": -7.8355,
-        "standard_deviation": 2.1149,
+        "count": 3,
+        "mean": -3.1389,
+        "median": -6.3401,
+        "standard_deviation": 8.2712,
         "minimum": -9.331,
-        "maximum": -6.3401
+        "maximum": 6.2544
       },
       "failure": {
         "count": 4,
@@ -548,19 +548,19 @@
       "label": "距 SMA20 乖離",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "insufficient_data",
-      "exploratory_strength": "insufficient_data",
-      "coverage_pct": 83.33,
-      "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": -9.7428,
-      "median_delta_success_minus_failure": -7.8568,
+      "direction": "success_lower",
+      "exploratory_strength": "small_exploratory_difference",
+      "coverage_pct": 85.71,
+      "standardized_mean_difference": -0.2767,
+      "mean_delta_success_minus_failure": -2.6137,
+      "median_delta_success_minus_failure": -0.7277,
       "success": {
-        "count": 1,
-        "mean": -8.7642,
-        "median": -8.7642,
-        "standard_deviation": 0,
+        "count": 2,
+        "mean": -1.6351,
+        "median": -1.6351,
+        "standard_deviation": 10.0821,
         "minimum": -8.7642,
-        "maximum": -8.7642
+        "maximum": 5.494
       },
       "failure": {
         "count": 4,
@@ -570,7 +570,7 @@
         "minimum": -7.0895,
         "maximum": 12.8188
       },
-      "eligible_as_candidate_pattern": false
+      "eligible_as_candidate_pattern": true
     },
     {
       "feature_id": "gap_sma60",
@@ -579,17 +579,17 @@
       "unit": "pct",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 50,
+      "coverage_pct": 57.14,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": -8.6937,
-      "median_delta_success_minus_failure": -0.9566,
+      "mean_delta_success_minus_failure": -4.4914,
+      "median_delta_success_minus_failure": 3.2457,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 4.2023,
+        "median": 4.2023,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 4.2023,
+        "maximum": 4.2023
       },
       "failure": {
         "count": 3,
@@ -607,18 +607,18 @@
       "group": "price_volume",
       "unit": "ratio",
       "direction": "success_higher",
-      "exploratory_strength": "negligible_difference",
+      "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 0.0719,
-      "mean_delta_success_minus_failure": 0.016,
-      "median_delta_success_minus_failure": 0.0432,
+      "standardized_mean_difference": 0.8132,
+      "mean_delta_success_minus_failure": 0.301,
+      "median_delta_success_minus_failure": 0.1698,
       "success": {
-        "count": 2,
-        "mean": 0.8116,
-        "median": 0.8116,
-        "standard_deviation": 0.179,
+        "count": 3,
+        "mean": 1.0966,
+        "median": 0.9382,
+        "standard_deviation": 0.5096,
         "minimum": 0.685,
-        "maximum": 0.9382
+        "maximum": 1.6665
       },
       "failure": {
         "count": 4,
@@ -636,18 +636,18 @@
       "group": "price_volume",
       "unit": "ratio",
       "direction": "success_higher",
-      "exploratory_strength": "small_exploratory_difference",
+      "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 0.4292,
-      "mean_delta_success_minus_failure": 0.0876,
-      "median_delta_success_minus_failure": 0.1455,
+      "standardized_mean_difference": 0.992,
+      "mean_delta_success_minus_failure": 0.8816,
+      "median_delta_success_minus_failure": 0.2451,
       "success": {
-        "count": 2,
-        "mean": 0.8079,
-        "median": 0.8079,
-        "standard_deviation": 0.1409,
+        "count": 3,
+        "mean": 1.6019,
+        "median": 0.9075,
+        "standard_deviation": 1.3789,
         "minimum": 0.7083,
-        "maximum": 0.9075
+        "maximum": 3.19
       },
       "failure": {
         "count": 4,
@@ -664,19 +664,19 @@
       "label": "事件日開收盤報酬",
       "group": "price_volume",
       "unit": "pct",
-      "direction": "success_lower",
-      "exploratory_strength": "small_exploratory_difference",
+      "direction": "success_higher",
+      "exploratory_strength": "negligible_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.3901,
-      "mean_delta_success_minus_failure": -1.5733,
-      "median_delta_success_minus_failure": -1.5706,
+      "standardized_mean_difference": 0.1831,
+      "mean_delta_success_minus_failure": 0.8162,
+      "median_delta_success_minus_failure": 1.3582,
       "success": {
-        "count": 2,
-        "mean": -3.0685,
-        "median": -3.0685,
-        "standard_deviation": 4.142,
+        "count": 3,
+        "mean": -0.679,
+        "median": -0.1397,
+        "standard_deviation": 5.0704,
         "minimum": -5.9974,
-        "maximum": -0.1397
+        "maximum": 4.1002
       },
       "failure": {
         "count": 4,
@@ -694,18 +694,18 @@
       "group": "price_volume",
       "unit": "pct",
       "direction": "success_lower",
-      "exploratory_strength": "moderate_exploratory_difference",
+      "exploratory_strength": "small_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.5419,
-      "mean_delta_success_minus_failure": -1.1408,
-      "median_delta_success_minus_failure": -1.5242,
+      "standardized_mean_difference": -0.2253,
+      "mean_delta_success_minus_failure": -0.4567,
+      "median_delta_success_minus_failure": -0.3697,
       "success": {
-        "count": 2,
-        "mean": 7.0286,
-        "median": 7.0286,
-        "standard_deviation": 1.6327,
+        "count": 3,
+        "mean": 7.7127,
+        "median": 8.1831,
+        "standard_deviation": 1.6544,
         "minimum": 5.8741,
-        "maximum": 8.1831
+        "maximum": 9.081
       },
       "failure": {
         "count": 4,
@@ -722,18 +722,18 @@
       "label": "連續下跌日數",
       "group": "price_volume",
       "unit": "days",
-      "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
+      "direction": "success_lower",
+      "exploratory_strength": "small_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 0.8528,
-      "mean_delta_success_minus_failure": 1,
-      "median_delta_success_minus_failure": 1,
+      "standardized_mean_difference": -0.2565,
+      "mean_delta_success_minus_failure": -0.5,
+      "median_delta_success_minus_failure": 0.5,
       "success": {
-        "count": 2,
-        "mean": 4.5,
-        "median": 4.5,
-        "standard_deviation": 0.7071,
-        "minimum": 4,
+        "count": 3,
+        "mean": 3,
+        "median": 4,
+        "standard_deviation": 2.6458,
+        "minimum": 0,
         "maximum": 5
       },
       "failure": {
@@ -752,18 +752,18 @@
       "group": "price_volume",
       "unit": "pct",
       "direction": "success_lower",
-      "exploratory_strength": "large_exploratory_difference",
+      "exploratory_strength": "moderate_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -1.5649,
-      "mean_delta_success_minus_failure": -1.8325,
-      "median_delta_success_minus_failure": -1.8956,
+      "standardized_mean_difference": -0.6248,
+      "mean_delta_success_minus_failure": -0.9095,
+      "median_delta_success_minus_failure": -0.3736,
       "success": {
-        "count": 2,
-        "mean": 3.5161,
-        "median": 3.5161,
-        "standard_deviation": 2.1524,
+        "count": 3,
+        "mean": 4.4391,
+        "median": 5.0381,
+        "standard_deviation": 2.2073,
         "minimum": 1.9941,
-        "maximum": 5.0381
+        "maximum": 6.285
       },
       "failure": {
         "count": 4,
@@ -783,15 +783,15 @@
       "direction": "success_higher",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 1.2836,
-      "mean_delta_success_minus_failure": 27.7076,
-      "median_delta_success_minus_failure": 26.9153,
+      "standardized_mean_difference": 0.9035,
+      "mean_delta_success_minus_failure": 19.3196,
+      "median_delta_success_minus_failure": 21.5551,
       "success": {
-        "count": 2,
-        "mean": 10.2338,
-        "median": 10.2338,
-        "standard_deviation": 7.5804,
-        "minimum": 4.8736,
+        "count": 3,
+        "mean": 1.8458,
+        "median": 4.8736,
+        "standard_deviation": 15.4857,
+        "minimum": -14.9302,
         "maximum": 15.5939
       },
       "failure": {
@@ -809,18 +809,18 @@
       "label": "外資近 3 日累積買賣超",
       "group": "institutional",
       "unit": "shares",
-      "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
+      "direction": "success_lower",
+      "exploratory_strength": "small_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 1.4392,
-      "mean_delta_success_minus_failure": 543624,
-      "median_delta_success_minus_failure": 572849.5,
+      "standardized_mean_difference": -0.2151,
+      "mean_delta_success_minus_failure": -186824.3333,
+      "median_delta_success_minus_failure": 123899.5,
       "success": {
-        "count": 2,
-        "mean": 391150,
-        "median": 391150,
-        "standard_deviation": 634911.1788,
-        "minimum": -57800,
+        "count": 3,
+        "mean": -339298.3333,
+        "median": -57800,
+        "standard_deviation": 1342468.0277,
+        "minimum": -1800195,
         "maximum": 840100
       },
       "failure": {
@@ -838,18 +838,18 @@
       "label": "外資近 5 日累積買賣超",
       "group": "institutional",
       "unit": "shares",
-      "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
+      "direction": "success_lower",
+      "exploratory_strength": "negligible_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 0.9105,
-      "mean_delta_success_minus_failure": 761308.75,
-      "median_delta_success_minus_failure": 1081466,
+      "standardized_mean_difference": -0.1866,
+      "mean_delta_success_minus_failure": -249267.9167,
+      "median_delta_success_minus_failure": 286016,
       "success": {
-        "count": 2,
-        "mean": 749650,
-        "median": 749650,
-        "standard_deviation": 1124936.1782,
-        "minimum": -45800,
+        "count": 3,
+        "mean": -260926.6667,
+        "median": -45800,
+        "standard_deviation": 1922637.8494,
+        "minimum": -2282080,
         "maximum": 1545100
       },
       "failure": {
@@ -874,7 +874,7 @@
       "mean_delta_success_minus_failure": 0,
       "median_delta_success_minus_failure": 0,
       "success": {
-        "count": 2,
+        "count": 3,
         "mean": 0,
         "median": 0,
         "standard_deviation": 0,
@@ -898,7 +898,7 @@
       "unit": "pct",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 33.33,
+      "coverage_pct": 28.57,
       "standardized_mean_difference": null,
       "mean_delta_success_minus_failure": 5.8655,
       "median_delta_success_minus_failure": 5.8655,
@@ -927,7 +927,7 @@
       "unit": "shares",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 33.33,
+      "coverage_pct": 28.57,
       "standardized_mean_difference": null,
       "mean_delta_success_minus_failure": 45577,
       "median_delta_success_minus_failure": 45577,
@@ -956,7 +956,7 @@
       "unit": "boolean",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 16.67,
+      "coverage_pct": 14.29,
       "standardized_mean_difference": null,
       "mean_delta_success_minus_failure": 0,
       "median_delta_success_minus_failure": 0,
@@ -985,17 +985,17 @@
       "unit": "source_unit",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 0,
+      "coverage_pct": 14.29,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": 0,
-      "median_delta_success_minus_failure": 0,
+      "mean_delta_success_minus_failure": 331,
+      "median_delta_success_minus_failure": 331,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 331,
+        "median": 331,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 331,
+        "maximum": 331
       },
       "failure": {
         "count": 0,
@@ -1014,17 +1014,17 @@
       "unit": "source_unit",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 0,
+      "coverage_pct": 14.29,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": 0,
-      "median_delta_success_minus_failure": 0,
+      "mean_delta_success_minus_failure": 548,
+      "median_delta_success_minus_failure": 548,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 548,
+        "median": 548,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 548,
+        "maximum": 548
       },
       "failure": {
         "count": 0,
@@ -1043,17 +1043,17 @@
       "unit": "source_unit",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 0,
+      "coverage_pct": 14.29,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": 0,
-      "median_delta_success_minus_failure": 0,
+      "mean_delta_success_minus_failure": 903,
+      "median_delta_success_minus_failure": 903,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 903,
+        "median": 903,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 903,
+        "maximum": 903
       },
       "failure": {
         "count": 0,
@@ -1072,17 +1072,17 @@
       "unit": "source_unit",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 0,
+      "coverage_pct": 14.29,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": 0,
-      "median_delta_success_minus_failure": 0,
+      "mean_delta_success_minus_failure": 1,
+      "median_delta_success_minus_failure": 1,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 1,
+        "median": 1,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 1,
+        "maximum": 1
       },
       "failure": {
         "count": 0,
@@ -1101,17 +1101,17 @@
       "unit": "source_unit",
       "direction": "insufficient_data",
       "exploratory_strength": "insufficient_data",
-      "coverage_pct": 0,
+      "coverage_pct": 14.29,
       "standardized_mean_difference": null,
-      "mean_delta_success_minus_failure": 0,
-      "median_delta_success_minus_failure": 0,
+      "mean_delta_success_minus_failure": 2,
+      "median_delta_success_minus_failure": 2,
       "success": {
-        "count": 0,
-        "mean": 0,
-        "median": 0,
+        "count": 1,
+        "mean": 2,
+        "median": 2,
         "standard_deviation": 0,
-        "minimum": null,
-        "maximum": null
+        "minimum": 2,
+        "maximum": 2
       },
       "failure": {
         "count": 0,
@@ -1129,17 +1129,17 @@
       "group": "broker",
       "unit": "lots",
       "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
+      "exploratory_strength": "negligible_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 1.2841,
-      "mean_delta_success_minus_failure": 92,
-      "median_delta_success_minus_failure": 68.5,
+      "standardized_mean_difference": 0.1259,
+      "mean_delta_success_minus_failure": 13.5,
+      "median_delta_success_minus_failure": 34,
       "success": {
-        "count": 2,
-        "mean": 4.5,
-        "median": 4.5,
-        "standard_deviation": 48.7904,
-        "minimum": -30,
+        "count": 3,
+        "mean": -74,
+        "median": -30,
+        "standard_deviation": 140.2747,
+        "minimum": -231,
         "maximum": 39
       },
       "failure": {
@@ -1160,16 +1160,16 @@
       "direction": "success_higher",
       "exploratory_strength": "large_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 2.456,
-      "mean_delta_success_minus_failure": 120.75,
-      "median_delta_success_minus_failure": 134,
+      "standardized_mean_difference": 2.0682,
+      "mean_delta_success_minus_failure": 198.75,
+      "median_delta_success_minus_failure": 140,
       "success": {
-        "count": 2,
-        "mean": 236,
-        "median": 236,
-        "standard_deviation": 8.4853,
+        "count": 3,
+        "mean": 314,
+        "median": 242,
+        "standard_deviation": 135.2331,
         "minimum": 230,
-        "maximum": 242
+        "maximum": 470
       },
       "failure": {
         "count": 4,
@@ -1186,19 +1186,19 @@
       "label": "前 5 大賣方淨賣超",
       "group": "broker",
       "unit": "lots",
-      "direction": "success_lower",
-      "exploratory_strength": "small_exploratory_difference",
+      "direction": "success_higher",
+      "exploratory_strength": "moderate_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": -0.3146,
-      "mean_delta_success_minus_failure": -23.25,
-      "median_delta_success_minus_failure": -6,
+      "standardized_mean_difference": 0.7374,
+      "mean_delta_success_minus_failure": 142.4167,
+      "median_delta_success_minus_failure": 16,
       "success": {
-        "count": 2,
-        "mean": 171,
-        "median": 171,
-        "standard_deviation": 31.1127,
+        "count": 3,
+        "mean": 336.6667,
+        "median": 193,
+        "standard_deviation": 287.7852,
         "minimum": 149,
-        "maximum": 193
+        "maximum": 668
       },
       "failure": {
         "count": 4,
@@ -1216,17 +1216,17 @@
       "group": "broker",
       "unit": "lots",
       "direction": "success_higher",
-      "exploratory_strength": "large_exploratory_difference",
+      "exploratory_strength": "small_exploratory_difference",
       "coverage_pct": 100,
-      "standardized_mean_difference": 1.9403,
-      "mean_delta_success_minus_failure": 144,
-      "median_delta_success_minus_failure": 120,
+      "standardized_mean_difference": 0.4825,
+      "mean_delta_success_minus_failure": 56.3333,
+      "median_delta_success_minus_failure": 104,
       "success": {
-        "count": 2,
-        "mean": 65,
-        "median": 65,
-        "standard_deviation": 22.6274,
-        "minimum": 49,
+        "count": 3,
+        "mean": -22.6667,
+        "median": 49,
+        "standard_deviation": 152.6838,
+        "minimum": -198,
         "maximum": 81
       },
       "failure": {
@@ -1242,30 +1242,30 @@
   ],
   "feature_coverage": {
     "foreign": {
-      "event_count": 6,
+      "event_count": 7,
       "coverage_pct": 100
     },
     "investment_trust": {
       "event_count": 2,
-      "coverage_pct": 33.33
+      "coverage_pct": 28.57
     },
     "dealer": {
-      "event_count": 4,
-      "coverage_pct": 66.67
+      "event_count": 5,
+      "coverage_pct": 71.43
     },
     "margin": {
-      "event_count": 0,
-      "coverage_pct": 0
+      "event_count": 1,
+      "coverage_pct": 14.29
     },
     "broker": {
-      "event_count": 6,
+      "event_count": 7,
       "coverage_pct": 100
     }
   },
   "history": {
     "first_date": "20260203",
-    "last_date": "20260731",
-    "trading_days": 116
+    "last_date": "20260817",
+    "trading_days": 127
   },
   "events": [
     {
@@ -1563,8 +1563,8 @@
       "event_id": "7795-20260709-06",
       "signal_date": "20260709",
       "deepest_signal_date": "20260730",
-      "episode_end_date": "20260731",
-      "observation_count": 15,
+      "episode_end_date": "20260807",
+      "observation_count": 20,
       "trigger_ids": [
         "return_3d_lte",
         "drawdown_20d_lte",
@@ -1608,14 +1608,70 @@
         "verified": true
       },
       "outcome_from_deepest_signal": {
-        "future_return_5d": null,
-        "max_return_5d": 9.9398,
-        "max_adverse_5d": 5.4217
+        "future_return_5d": 26.8072,
+        "max_return_5d": 36.5964,
+        "max_adverse_5d": 4.5181
       },
       "feature_availability": {
         "foreign": true,
         "investment_trust": false,
         "margin": null,
+        "broker": true
+      }
+    },
+    {
+      "event_id": "7795-20260810-07",
+      "signal_date": "20260810",
+      "deepest_signal_date": "20260810",
+      "episode_end_date": "20260812",
+      "observation_count": 3,
+      "trigger_ids": [
+        "drawdown_20d_lte",
+        "drawdown_60d_lte"
+      ],
+      "result": "success",
+      "signal": {
+        "close": 457,
+        "severity": 3.158,
+        "return_3d": 7.277,
+        "return_5d": 18.5473,
+        "return_10d": 13.5404,
+        "drawdown_20d": -23.8333,
+        "drawdown_60d": -31.3814,
+        "rsi14": 57.53,
+        "gap_sma20": 5.494,
+        "volume_ratio_5d": 1.6665,
+        "volume_ratio_20d": 3.19
+      },
+      "deepest_signal": {
+        "close": 457,
+        "severity": 3.158,
+        "return_5d": 18.5473,
+        "drawdown_20d": -23.8333,
+        "rsi14": 57.53
+      },
+      "outcome_from_signal": {
+        "future_return_1d": 0.6565,
+        "future_return_3d": 21.663,
+        "future_return_5d": 20.1313,
+        "future_return_10d": null,
+        "max_return_3d": 21.663,
+        "max_return_5d": 29.9781,
+        "max_return_10d": 29.9781,
+        "max_adverse_5d": -3.7199,
+        "days_to_close_rebound_5pct": 2,
+        "days_to_intraday_rebound_5pct": 2,
+        "verified": true
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": 20.1313,
+        "max_return_5d": 29.9781,
+        "max_adverse_5d": -3.7199
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": false,
+        "margin": true,
         "broker": true
       }
     }
