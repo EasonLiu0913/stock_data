@@ -81,7 +81,6 @@ jobs:
           D: ${{ steps.target.outputs.date }}
         run: |
           set -euo pipefail
-          # The TWSE dealer split file uses code at row[0], unlike foreign/trust row[1].
           python - <<'PY'
           from pathlib import Path
           p=Path('scripts/backfill_daily_gainers_research.js')
@@ -109,7 +108,6 @@ jobs:
           const dealer=JSON.parse(fs.readFileSync(`data_twse_dealers/${d}_twse_dealers.json`,'utf8'));
           const dealerNet=new Map(dealer.data.map(row=>[String(row[0]??'').trim(), Math.round(Number(String(row.at(-1)??'0').replaceAll(',',''))/1000)]));
           const catalystByCode=new Map((catalyst.analyses||[]).map(x=>[String(x.code),x]));
-
           if(flow.target_date!==d || flow.angle!=='flow_and_positioning') throw new Error('flow metadata mismatch');
           if(flow.stock_count!==list.stock_count || flow.analyses.length!==list.stock_count) throw new Error('flow count mismatch');
           const required=['code','name','change_pct','institutional_summary','foreign_net','trust_net','dealer_net','margin_signal','broker_signal','volume_signal','technical_signal','flow_interpretation','confidence','follow_up','data_sources'];
@@ -117,19 +115,13 @@ jobs:
             for(const k of required){ if(!(k in a)) throw new Error(`missing ${k} for ${a.code}`); }
             const expected=dealerNet.get(String(a.code))||0;
             if(a.dealer_net!==expected) throw new Error(`dealer mismatch ${a.code}: ${a.dealer_net} != ${expected}`);
-
-            const dealerStrong=Math.abs(a.dealer_net)>=1000;
-            if(dealerStrong){
+            if(Math.abs(a.dealer_net)>=1000){
               const phrase=a.dealer_net>0 ? `自營商另明顯買超 ${a.dealer_net.toLocaleString('zh-TW')} 張` : `自營商則明顯賣超 ${Math.abs(a.dealer_net).toLocaleString('zh-TW')} 張`;
               if(!String(a.flow_interpretation).includes('自營商')) a.flow_interpretation += `；${phrase}。`;
               if(a.dealer_net>1000 && a.confidence==='low') a.confidence='medium';
             }
-
-            const c=catalystByCode.get(String(a.code));
-            const text=String(c?.reason_summary||'');
-            if(/族群|供應鏈|CPO|光通訊|PCB|AI伺服器|面板|航運|被動元件/.test(text)){
-              a.flow_interpretation += '；與既有催化分析的產業／族群背景相符，具族群共振特徵。';
-            }
+            const text=String(catalystByCode.get(String(a.code))?.reason_summary||'');
+            if(/族群|供應鏈|CPO|光通訊|PCB|AI伺服器|面板|航運|被動元件/.test(text)) a.flow_interpretation += '；與既有催化分析的產業／族群背景相符，具族群共振特徵。';
           }
           fs.writeFileSync(flowPath,JSON.stringify(flow,null,2)+'\n');
           NODE
@@ -140,6 +132,7 @@ jobs:
           D: ${{ steps.target.outputs.date }}
         run: |
           set -euo pipefail
+          git restore scripts/backfill_daily_gainers_research.js scripts/refine_daily_gainers_research.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "data_daily_gain_over_5/analysis-flow/$D.json"
