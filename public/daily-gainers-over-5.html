@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 24px 16px 48px; }
     .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
     header { padding: 20px; margin-bottom: 16px; }
     h1 { margin: 0 0 8px; font-size: 1.55rem; }
@@ -16,18 +16,21 @@
     label { display: block; font-weight: 700; margin-bottom: 6px; }
     select { min-width: 180px; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
     .summary { margin-left: auto; font-weight: 800; }
-    .analysis-meta { padding: 14px 20px; margin-bottom: 16px; color: #475569; line-height: 1.6; }
+    .analysis-status { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .analysis-meta { padding: 14px 20px; color: #475569; line-height: 1.6; }
     .analysis-meta strong { color: #0f172a; }
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    table { width: 100%; border-collapse: collapse; min-width: 1360px; }
     th, td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; vertical-align: top; }
     th { background: #f8fafc; color: #475569; font-size: .9rem; }
-    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:last-child, td:last-child { text-align: left; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:nth-last-child(-n+2), td:nth-last-child(-n+2) { text-align: left; }
     .gain { font-weight: 900; color: #dc2626; }
-    .reason { min-width: 320px; max-width: 520px; white-space: normal; line-height: 1.55; }
+    .analysis-cell { min-width: 330px; max-width: 520px; white-space: normal; line-height: 1.55; }
     .reason-title { font-weight: 800; margin-bottom: 6px; color: #0f172a; }
     .reason-detail { color: #475569; font-size: .92rem; }
     .reason-detail + .reason-detail { margin-top: 5px; }
+    .flow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 10px; margin: 7px 0; }
+    .flow-grid span { color: #475569; font-size: .88rem; }
     .sources { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 10px; }
     .sources a { color: #2563eb; text-decoration: none; font-size: .88rem; }
     .sources a:hover { text-decoration: underline; }
@@ -38,10 +41,11 @@
     .pending { color: #64748b; font-style: italic; }
     .empty, .error { padding: 32px 20px; text-align: center; color: #64748b; }
     .error { color: #b91c1c; }
-    @media (max-width: 640px) {
+    @media (max-width: 760px) {
       .wrap { padding: 12px 8px 32px; }
       .toolbar { align-items: stretch; flex-direction: column; }
       .summary { margin-left: 0; }
+      .analysis-status { grid-template-columns: 1fr; }
       .analysis-meta { padding: 12px 14px; }
     }
   </style>
@@ -50,7 +54,7 @@
   <main class="wrap">
     <header class="card">
       <h1>每日漲幅 5% 以上股票</h1>
-      <div class="desc">以 SMA 每日收盤資料計算：當日收盤價相對前一個交易日收盤價漲幅 ≥ 5%。下午 3 點後會另外載入 ChatGPT 研究的上漲可能原因。</div>
+      <div class="desc">以 SMA 每日收盤資料計算：當日收盤價相對前一個交易日收盤價漲幅 ≥ 5%。平日下午 3 點補充上漲原因研究，晚上 7 點再補充三大法人、籌碼與資金流角度。</div>
       <div class="meta" id="meta">載入資料中…</div>
     </header>
 
@@ -62,8 +66,9 @@
       <div class="summary" id="summary"></div>
     </section>
 
-    <section class="analysis-meta card" id="analysisMeta">
-      <strong>上漲原因研究：</strong>載入中…
+    <section class="analysis-status">
+      <div class="analysis-meta card" id="analysisMeta"><strong>上漲原因研究：</strong>載入中…</div>
+      <div class="analysis-meta card" id="flowMeta"><strong>籌碼與資金流研究：</strong>載入中…</div>
     </section>
 
     <section class="card table-wrap" id="content">
@@ -74,13 +79,15 @@
   <script>
     const DATA_ROOT = '../data_daily_gain_over_5';
     const ANALYSIS_ROOT = '../data_daily_gain_over_5/analysis';
+    const ANALYSIS_FLOW_ROOT = '../data_daily_gain_over_5/analysis-flow';
     const dateSelect = document.getElementById('dateSelect');
     const content = document.getElementById('content');
     const meta = document.getElementById('meta');
     const summary = document.getElementById('summary');
     const analysisMeta = document.getElementById('analysisMeta');
+    const flowMeta = document.getElementById('flowMeta');
 
-    const formatNumber = (value) => value == null ? '—' : Number(value).toLocaleString('zh-TW');
+    const formatNumber = (value) => value == null || value === 'unavailable' ? '—' : Number(value).toLocaleString('zh-TW');
     const formatPrice = (value) => value == null ? '—' : Number(value).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
     const formatDate = (value) => value && value.length === 8 ? `${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}` : value;
     const formatDateTime = (value) => {
@@ -113,9 +120,9 @@
       return response.json();
     }
 
-    async function fetchAnalysis(date) {
+    async function fetchOptional(root, date) {
       try {
-        return await fetchJson(`${ANALYSIS_ROOT}/${date}.json`);
+        return await fetchJson(`${root}/${date}.json`);
       } catch (error) {
         if (String(error.message).startsWith('404 ')) return null;
         throw error;
@@ -143,9 +150,7 @@
     function renderReason(analysis) {
       if (!analysis) return '<span class="pending">分析尚未產生</span>';
       const [confidenceText, confidenceClass] = confidenceLabel(analysis.confidence);
-      const evidence = Array.isArray(analysis.evidence)
-        ? analysis.evidence.filter(Boolean).join('；')
-        : String(analysis.evidence || '');
+      const evidence = Array.isArray(analysis.evidence) ? analysis.evidence.filter(Boolean).join('；') : String(analysis.evidence || '');
       return `
         <div class="reason-title">${escapeHtml(analysis.reason_summary || '未找到明確公開催化劑')}</div>
         <div class="reason-detail"><span class="confidence ${confidenceClass}">可信度 ${confidenceText}</span></div>
@@ -154,16 +159,42 @@
         ${renderSources(analysis.sources)}`;
     }
 
-    function render(payload, analysisPayload) {
+    function renderFlow(flow) {
+      if (!flow) return '<span class="pending">籌碼研究尚未產生</span>';
+      const [confidenceText, confidenceClass] = confidenceLabel(flow.confidence);
+      const net = (value) => value == null || value === 'unavailable' ? '—' : `${Number(value).toLocaleString('zh-TW')} 張`;
+      const detail = flow.flow_interpretation || flow.institutional_summary || '尚無明確籌碼結論';
+      return `
+        <div class="reason-title">${escapeHtml(detail)}</div>
+        <div class="reason-detail"><span class="confidence ${confidenceClass}">可信度 ${confidenceText}</span></div>
+        <div class="flow-grid">
+          <span><strong>外資</strong> ${escapeHtml(net(flow.foreign_net))}</span>
+          <span><strong>投信</strong> ${escapeHtml(net(flow.trust_net))}</span>
+          <span><strong>自營商</strong> ${escapeHtml(net(flow.dealer_net))}</span>
+        </div>
+        ${flow.institutional_summary ? `<div class="reason-detail"><strong>法人：</strong>${escapeHtml(flow.institutional_summary)}</div>` : ''}
+        ${flow.margin_signal && flow.margin_signal !== 'unavailable' ? `<div class="reason-detail"><strong>融資融券：</strong>${escapeHtml(flow.margin_signal)}</div>` : ''}
+        ${flow.broker_signal && flow.broker_signal !== 'unavailable' ? `<div class="reason-detail"><strong>分點：</strong>${escapeHtml(flow.broker_signal)}</div>` : ''}
+        ${flow.volume_signal && flow.volume_signal !== 'unavailable' ? `<div class="reason-detail"><strong>價量：</strong>${escapeHtml(flow.volume_signal)}</div>` : ''}
+        ${flow.technical_signal && flow.technical_signal !== 'unavailable' ? `<div class="reason-detail"><strong>技術：</strong>${escapeHtml(flow.technical_signal)}</div>` : ''}
+        ${flow.follow_up ? `<div class="reason-detail"><strong>後續觀察：</strong>${escapeHtml(flow.follow_up)}</div>` : ''}`;
+    }
+
+    function render(payload, analysisPayload, flowPayload) {
       const rows = Array.isArray(payload.stocks) ? payload.stocks : [];
       const analyses = Array.isArray(analysisPayload?.analyses) ? analysisPayload.analyses : [];
+      const flows = Array.isArray(flowPayload?.analyses) ? flowPayload.analyses : [];
       const analysisByCode = new Map(analyses.map(item => [String(item.code || ''), item]));
+      const flowByCode = new Map(flows.map(item => [String(item.code || ''), item]));
 
       meta.textContent = `比較 ${formatDate(payload.previous_date)} → ${formatDate(payload.target_date)}；門檻 ≥ ${payload.threshold_pct}%`;
       summary.textContent = `符合 ${rows.length} 檔`;
       analysisMeta.innerHTML = analysisPayload
         ? `<strong>上漲原因研究：</strong>已完成 ${analysisByCode.size}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(analysisPayload.generated_at))}`
         : '<strong>上漲原因研究：</strong>尚未產生；平日下午 3:00 排程完成後會自動顯示。';
+      flowMeta.innerHTML = flowPayload
+        ? `<strong>籌碼與資金流研究：</strong>已完成 ${flowByCode.size}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(flowPayload.generated_at))}`
+        : '<strong>籌碼與資金流研究：</strong>尚未產生；平日晚上 7:00 排程完成後會自動顯示。';
 
       if (!rows.length) {
         content.innerHTML = '<div class="empty">這個交易日沒有漲幅達 5% 的股票。</div>';
@@ -174,16 +205,7 @@
         <table>
           <thead>
             <tr>
-              <th>代號</th>
-              <th>名稱</th>
-              <th>前收</th>
-              <th>收盤</th>
-              <th>單日漲幅</th>
-              <th>開盤</th>
-              <th>最高</th>
-              <th>最低</th>
-              <th>成交量</th>
-              <th>上漲可能原因</th>
+              <th>代號</th><th>名稱</th><th>前收</th><th>收盤</th><th>單日漲幅</th><th>開盤</th><th>最高</th><th>最低</th><th>成交量</th><th>上漲可能原因</th><th>籌碼與資金流</th>
             </tr>
           </thead>
           <tbody>
@@ -198,7 +220,8 @@
                 <td>${formatPrice(row.high)}</td>
                 <td>${formatPrice(row.low)}</td>
                 <td>${formatNumber(row.volume)}</td>
-                <td class="reason">${renderReason(analysisByCode.get(String(row.code)))}</td>
+                <td class="analysis-cell">${renderReason(analysisByCode.get(String(row.code)))}</td>
+                <td class="analysis-cell">${renderFlow(flowByCode.get(String(row.code)))}</td>
               </tr>`).join('')}
           </tbody>
         </table>`;
@@ -208,14 +231,17 @@
       content.innerHTML = '<div class="empty">載入資料中…</div>';
       summary.textContent = '';
       analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>載入中…';
+      flowMeta.innerHTML = '<strong>籌碼與資金流研究：</strong>載入中…';
       try {
-        const [payload, analysisPayload] = await Promise.all([
+        const [payload, analysisPayload, flowPayload] = await Promise.all([
           fetchJson(`${DATA_ROOT}/${date}.json`),
-          fetchAnalysis(date),
+          fetchOptional(ANALYSIS_ROOT, date),
+          fetchOptional(ANALYSIS_FLOW_ROOT, date),
         ]);
-        render(payload, analysisPayload);
+        render(payload, analysisPayload, flowPayload);
       } catch (error) {
         analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>載入失敗';
+        flowMeta.innerHTML = '<strong>籌碼與資金流研究：</strong>載入失敗';
         content.innerHTML = `<div class="error">無法載入 ${formatDate(date)}：${escapeHtml(error.message)}</div>`;
       }
     }
@@ -234,6 +260,7 @@
       } catch (error) {
         meta.textContent = '尚無每日清單資料';
         analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>無法取得交易日';
+        flowMeta.innerHTML = '<strong>籌碼與資金流研究：</strong>無法取得交易日';
         content.innerHTML = `<div class="error">無法載入資料清單：${escapeHtml(error.message)}</div>`;
       }
     }
