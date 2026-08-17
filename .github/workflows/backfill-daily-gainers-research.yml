@@ -12,6 +12,7 @@ on:
       - main
     paths:
       - '.github/workflows/backfill-daily-gainers-research.yml'
+      - 'scripts/refine_daily_gainers_research.js'
 
 permissions:
   contents: write
@@ -39,6 +40,7 @@ jobs:
           sparse-checkout: |
             /data_daily_gain_over_5/
             /scripts/backfill_daily_gainers_research.js
+            /scripts/refine_daily_gainers_research.js
             /.github/workflows/
 
       - name: Materialize exact historical inputs
@@ -52,6 +54,7 @@ jobs:
           patterns=(
             '/data_daily_gain_over_5/'
             '/scripts/backfill_daily_gainers_research.js'
+            '/scripts/refine_daily_gainers_research.js'
             '/.github/workflows/'
             '/data_fubon/fubon_20260807_sma.json'
           )
@@ -73,8 +76,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validate research generator
-        run: node --check scripts/backfill_daily_gainers_research.js
+      - name: Validate research generators
+        run: |
+          node --check scripts/backfill_daily_gainers_research.js
+          node --check scripts/refine_daily_gainers_research.js
 
       - name: Generate cause and flow analyses
         id: run
@@ -93,6 +98,7 @@ jobs:
             last="$d"
           done
           node scripts/backfill_daily_gainers_research.js "${clean[@]}"
+          node scripts/refine_daily_gainers_research.js "${clean[@]}"
           echo "target_date=$last" >> "$GITHUB_OUTPUT"
           echo "## 歷史 5% 上漲研究回填" >> "$GITHUB_STEP_SUMMARY"
           for d in "${clean[@]}"; do
@@ -100,7 +106,7 @@ jobs:
             echo "- $d：原因分析 $count 檔；籌碼分析 $count 檔" >> "$GITHUB_STEP_SUMMARY"
           done
 
-      - name: Validate generated JSON
+      - name: Validate generated JSON and missing-data semantics
         shell: bash
         env:
           DATES: ${{ steps.inputs.outputs.dates }}
@@ -111,12 +117,16 @@ jobs:
             d="$(echo "$raw" | xargs)"
             [ -n "$d" ] || continue
             node - <<NODE
+          const fs=require('node:fs');
           const list=require('./data_daily_gain_over_5/$d.json');
           const cause=require('./data_daily_gain_over_5/analysis/$d.json');
           const flow=require('./data_daily_gain_over_5/analysis-flow/$d.json');
           if (cause.target_date !== '$d' || flow.target_date !== '$d') throw new Error('date mismatch $d');
           if (cause.stock_count !== list.stock_count || flow.stock_count !== list.stock_count) throw new Error('count mismatch $d');
           if (cause.analyses.length !== list.stock_count || flow.analyses.length !== list.stock_count) throw new Error('analysis length mismatch $d');
+          const dealer='./data_twse_dealers/${d}_twse_dealers.json';
+          const raw=fs.existsSync(dealer)?fs.readFileSync(dealer,'utf8').trim():'';
+          if (!raw && flow.analyses.some(x=>x.dealer_net!=='unavailable')) throw new Error('empty dealer file must be unavailable $d');
           NODE
           done
 
