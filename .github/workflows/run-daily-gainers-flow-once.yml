@@ -1,0 +1,116 @@
+name: "[06 回填修復] 當日 5% 籌碼與資金流研究"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-daily-gainers-flow-once.yml'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '目標交易日 YYYYMMDD'
+        required: true
+        default: '20260817'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-flow-research
+  cancel-in-progress: true
+
+jobs:
+  flow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact inputs
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /data_daily_gain_over_5/
+            /data_fubon/
+            /data_twse_foreign_investors/
+            /data_twse_investment_trust/
+            /data_twse_dealers/
+            /data_twse_margin_balance/
+            /scripts/backfill_daily_gainers_research.js
+            /scripts/refine_daily_gainers_research.js
+
+      - name: Resolve target and verify same-day institutional inputs
+        id: target
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.target_date }}
+        run: |
+          set -euo pipefail
+          d="${INPUT_DATE:-20260817}"
+          [[ "$d" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $d" >&2; exit 1; }
+          test -s "data_daily_gain_over_5/$d.json" || { echo "Missing same-day 5% list: $d" >&2; exit 1; }
+          test -s "data_daily_gain_over_5/analysis/$d.json" || { echo "Missing same-day catalyst analysis: $d" >&2; exit 1; }
+          for f in \
+            "data_twse_foreign_investors/${d}_twse_foreign_investors.json" \
+            "data_twse_investment_trust/${d}_twse_investment_trust.json" \
+            "data_twse_dealers/${d}_twse_dealers.json"
+          do
+            test -s "$f" || { echo "Same-day institutional input not ready: $f" >&2; exit 1; }
+          done
+          node - "$d" <<'NODE'
+          const fs=require('node:fs');
+          const d=process.argv[2];
+          for(const [label,file] of [
+            ['foreign',`data_twse_foreign_investors/${d}_twse_foreign_investors.json`],
+            ['trust',`data_twse_investment_trust/${d}_twse_investment_trust.json`],
+            ['dealer',`data_twse_dealers/${d}_twse_dealers.json`],
+          ]){
+            const p=JSON.parse(fs.readFileSync(file,'utf8'));
+            if(String(p.date)!==d || !Array.isArray(p.data) || p.data.length===0) throw new Error(`${label} not ready for ${d}`);
+          }
+          NODE
+          echo "date=$d" >> "$GITHUB_OUTPUT"
+
+      - name: Generate flow view without replacing catalyst analysis
+        shell: bash
+        env:
+          D: ${{ steps.target.outputs.date }}
+        run: |
+          set -euo pipefail
+          node --check scripts/backfill_daily_gainers_research.js
+          node --check scripts/refine_daily_gainers_research.js
+          catalyst="data_daily_gain_over_5/analysis/$D.json"
+          cp "$catalyst" /tmp/catalyst.json
+          node scripts/backfill_daily_gainers_research.js "$D"
+          node scripts/refine_daily_gainers_research.js "$D"
+          cp /tmp/catalyst.json "$catalyst"
+          node - "$D" <<'NODE'
+          const fs=require('node:fs');
+          const d=process.argv[2];
+          const list=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/${d}.json`,'utf8'));
+          const flow=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/analysis-flow/${d}.json`,'utf8'));
+          if(flow.target_date!==d || flow.angle!=='flow_and_positioning') throw new Error('flow metadata mismatch');
+          if(flow.stock_count!==list.stock_count || flow.analyses.length!==list.stock_count) throw new Error('flow count mismatch');
+          const required=['code','name','change_pct','institutional_summary','foreign_net','trust_net','dealer_net','margin_signal','broker_signal','volume_signal','technical_signal','flow_interpretation','confidence','follow_up','data_sources'];
+          for(const a of flow.analyses){ for(const k of required){ if(!(k in a)) throw new Error(`missing ${k} for ${a.code}`); } }
+          NODE
+
+      - name: Commit flow analysis only
+        shell: bash
+        env:
+          D: ${{ steps.target.outputs.date }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "data_daily_gain_over_5/analysis-flow/$D.json"
+          git diff --cached --quiet && { echo 'No flow changes'; exit 0; }
+          git commit -m "analysis: add flow view for daily 5% gainers $D"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 3
+          done
+          exit 1
