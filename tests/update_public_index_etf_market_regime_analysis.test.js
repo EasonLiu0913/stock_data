@@ -2,18 +2,25 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { injectEntry } = require('../scripts/update_public_index_etf_market_regime_analysis');
+const { generateIndex } = require('../scripts/generate_public_index');
 
-test('index updater inserts the ETF analysis once at the top of tools', () => {
+test('canonical index generator inserts the ETF analysis once in registry order', () => {
   const source = '<script>\n        const tools = [\n            { file: \'old.html\' }\n        ];\n</script>';
-  const once = injectEntry(source);
-  const twice = injectEntry(once);
+  const registry = {
+    schema_version: 1,
+    pages: [
+      { id: 'old', file: 'old.html', title: 'Old', description: 'old', order: 20 },
+      { id: 'etf', file: 'etf-market-regime-analysis.html', title: 'ETF', description: 'etf', order: 10 },
+    ],
+  };
+  const once = generateIndex(source, registry);
+  const twice = generateIndex(once, registry);
   assert.match(once, /etf-market-regime-analysis\.html/);
   assert.equal((once.match(/etf-market-regime-analysis\.html/g) || []).length, 1);
   assert.equal(twice, once);
   assert.ok(once.indexOf('etf-market-regime-analysis.html') < once.indexOf('old.html'));
 });
 
-test('index updater fails on an unknown index shape', () => {
-  assert.throws(() => injectEntry('<html></html>'), /找不到/);
+test('canonical index generator fails on an unknown index shape', () => {
+  assert.throws(() => generateIndex('<html></html>', { schema_version: 1, pages: [] }), /missing the canonical/);
 });
