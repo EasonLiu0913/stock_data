@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日漲幅 5% 以上股票</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
+    header { padding: 20px; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px; font-size: 1.55rem; }
+    .desc, .meta { color: #64748b; line-height: 1.6; }
+    .toolbar { display: flex; gap: 12px; align-items: end; padding: 16px 20px; margin-bottom: 16px; }
+    label { display: block; font-weight: 700; margin-bottom: 6px; }
+    select { min-width: 180px; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+    .summary { margin-left: auto; font-weight: 800; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
+    th { background: #f8fafc; color: #475569; font-size: .9rem; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+    .gain { font-weight: 900; color: #dc2626; }
+    .empty, .error { padding: 32px 20px; text-align: center; color: #64748b; }
+    .error { color: #b91c1c; }
+    @media (max-width: 640px) {
+      .wrap { padding: 12px 8px 32px; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .summary { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="card">
+      <h1>每日漲幅 5% 以上股票</h1>
+      <div class="desc">以 SMA 每日收盤資料計算：當日收盤價相對前一個交易日收盤價漲幅 ≥ 5%。</div>
+      <div class="meta" id="meta">載入資料中…</div>
+    </header>
+
+    <section class="toolbar card">
+      <div>
+        <label for="dateSelect">交易日</label>
+        <select id="dateSelect"></select>
+      </div>
+      <div class="summary" id="summary"></div>
+    </section>
+
+    <section class="card table-wrap" id="content">
+      <div class="empty">載入資料中…</div>
+    </section>
+  </main>
+
+  <script>
+    const DATA_ROOT = '../data_daily_gain_over_5';
+    const dateSelect = document.getElementById('dateSelect');
+    const content = document.getElementById('content');
+    const meta = document.getElementById('meta');
+    const summary = document.getElementById('summary');
+
+    const formatNumber = (value) => value == null ? '—' : Number(value).toLocaleString('zh-TW');
+    const formatPrice = (value) => value == null ? '—' : Number(value).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+    const formatDate = (value) => value && value.length === 8 ? `${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}` : value;
+
+    async function fetchJson(url) {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      return response.json();
+    }
+
+    function render(payload) {
+      const rows = Array.isArray(payload.stocks) ? payload.stocks : [];
+      meta.textContent = `比較 ${formatDate(payload.previous_date)} → ${formatDate(payload.target_date)}；門檻 ≥ ${payload.threshold_pct}%`;
+      summary.textContent = `符合 ${rows.length} 檔`;
+
+      if (!rows.length) {
+        content.innerHTML = '<div class="empty">這個交易日沒有漲幅達 5% 的股票。</div>';
+        return;
+      }
+
+      content.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>代號</th>
+              <th>名稱</th>
+              <th>前收</th>
+              <th>收盤</th>
+              <th>單日漲幅</th>
+              <th>開盤</th>
+              <th>最高</th>
+              <th>最低</th>
+              <th>成交量</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                <td>${row.code}</td>
+                <td>${row.name || ''}</td>
+                <td>${formatPrice(row.previous_close)}</td>
+                <td>${formatPrice(row.close)}</td>
+                <td class="gain">+${Number(row.change_pct).toFixed(2)}%</td>
+                <td>${formatPrice(row.open)}</td>
+                <td>${formatPrice(row.high)}</td>
+                <td>${formatPrice(row.low)}</td>
+                <td>${formatNumber(row.volume)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    async function loadDate(date) {
+      content.innerHTML = '<div class="empty">載入資料中…</div>';
+      summary.textContent = '';
+      try {
+        render(await fetchJson(`${DATA_ROOT}/${date}.json`));
+      } catch (error) {
+        content.innerHTML = `<div class="error">無法載入 ${formatDate(date)}：${error.message}</div>`;
+      }
+    }
+
+    async function init() {
+      try {
+        const index = await fetchJson(`${DATA_ROOT}/files.json`);
+        const files = Array.isArray(index.files) ? index.files : [];
+        if (!files.length) throw new Error('目前沒有可用資料');
+        dateSelect.innerHTML = files.map(file => {
+          const date = file.replace('.json', '');
+          return `<option value="${date}">${formatDate(date)}</option>`;
+        }).join('');
+        dateSelect.addEventListener('change', () => loadDate(dateSelect.value));
+        await loadDate(dateSelect.value);
+      } catch (error) {
+        meta.textContent = '尚無每日清單資料';
+        content.innerHTML = `<div class="error">無法載入資料清單：${error.message}</div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

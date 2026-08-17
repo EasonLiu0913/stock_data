@@ -1,0 +1,97 @@
+name: "[05 清單] 每日漲幅 5% 以上股票"
+
+on:
+  schedule:
+    # 參考 [01 台股資料] Crawl SMA Data 13:32，延後 20 分鐘。
+    - cron: '52 5 * * *'
+    # 參考 [01 台股資料] Crawl SMA Data 14:27，延後 20 分鐘。
+    - cron: '47 6 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '指定交易日 YYYYMMDD；留空使用最新 SMA 日期'
+        required: false
+        default: ''
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/daily-gainers-over-5.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-over-5
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: 產生每日漲幅 5% 以上清單
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate generator
+        run: |
+          node --check scripts/generate_daily_gainers_over_5.js
+          node scripts/generate_daily_gainers_over_5.js --self-test
+
+      - name: Generate daily list
+        id: generate
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "${INPUT_DATE:-}" ]; then
+            args+=(--date "$INPUT_DATE")
+          fi
+          result=$(node scripts/generate_daily_gainers_over_5.js "${args[@]}")
+          echo "$result"
+          target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date)' "$result")
+          stock_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
+          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "stock_count=$stock_count" >> "$GITHUB_OUTPUT"
+          echo "## 每日漲幅 5% 以上股票" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 交易日：$target_date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 符合檔數：$stock_count" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 條件：收盤價相對前一個 SMA 交易日收盤價漲幅 ≥ 5%" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit generated list
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_daily_gain_over_5/
+          if git diff --cached --quiet; then
+            echo "No daily-gainers changes"
+            exit 0
+          fi
+          git commit -m "data: update daily gainers over 5% ${{ steps.generate.outputs.target_date }}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
