@@ -20,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: daily-gainers-over-5
@@ -29,6 +31,9 @@ jobs:
   generate:
     name: 產生每日漲幅 5% 以上清單
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.generate.outputs.target_date }}
+      stock_count: ${{ steps.generate.outputs.stock_count }}
     steps:
       - name: Checkout latest main
         uses: actions/checkout@v4
@@ -95,3 +100,11 @@ jobs:
             sleep 5
           done
           exit 1
+
+  deploy:
+    name: 發布每日漲幅清單到 GitHub Pages
+    needs: generate
+    if: needs.generate.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.generate.outputs.target_date }}
