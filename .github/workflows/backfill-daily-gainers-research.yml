@@ -1,0 +1,151 @@
+name: "[06 回填修復] 每日漲幅 5% 原因與籌碼研究"
+
+on:
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: '逗號分隔交易日 YYYYMMDD'
+        required: true
+        default: '20260810,20260811,20260812,20260813,20260814'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/backfill-daily-gainers-research.yml'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: backfill-daily-gainers-research
+  cancel-in-progress: true
+
+jobs:
+  research:
+    name: 回填歷史上漲原因與籌碼分析
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.run.outputs.target_date }}
+    steps:
+      - name: Checkout generator and output roots
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /data_daily_gain_over_5/
+            /scripts/backfill_daily_gainers_research.js
+            /.github/workflows/
+
+      - name: Materialize exact historical inputs
+        id: inputs
+        shell: bash
+        env:
+          INPUT_DATES: ${{ github.event.inputs.dates }}
+        run: |
+          set -euo pipefail
+          dates="${INPUT_DATES:-20260810,20260811,20260812,20260813,20260814}"
+          patterns=(
+            '/data_daily_gain_over_5/'
+            '/scripts/backfill_daily_gainers_research.js'
+            '/.github/workflows/'
+            '/data_fubon/fubon_20260807_sma.json'
+          )
+          IFS=',' read -ra arr <<< "$dates"
+          for raw in "${arr[@]}"; do
+            d="$(echo "$raw" | xargs)"
+            [ -n "$d" ] || continue
+            patterns+=("/data_fubon/fubon_${d}_sma.json")
+            patterns+=("/data_twse_foreign_investors/${d}_twse_foreign_investors.json")
+            patterns+=("/data_twse_investment_trust/${d}_twse_investment_trust.json")
+            patterns+=("/data_twse_dealers/${d}_twse_dealers.json")
+            patterns+=("/data_twse_margin_balance/${d}_twse_margin_balance.csv")
+          done
+          git sparse-checkout set --no-cone "${patterns[@]}"
+          echo "dates=$dates" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate research generator
+        run: node --check scripts/backfill_daily_gainers_research.js
+
+      - name: Generate cause and flow analyses
+        id: run
+        shell: bash
+        env:
+          DATES: ${{ steps.inputs.outputs.dates }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra arr <<< "$DATES"
+          clean=()
+          last=""
+          for raw in "${arr[@]}"; do
+            d="$(echo "$raw" | xargs)"
+            [ -n "$d" ] || continue
+            clean+=("$d")
+            last="$d"
+          done
+          node scripts/backfill_daily_gainers_research.js "${clean[@]}"
+          echo "target_date=$last" >> "$GITHUB_OUTPUT"
+          echo "## 歷史 5% 上漲研究回填" >> "$GITHUB_STEP_SUMMARY"
+          for d in "${clean[@]}"; do
+            count=$(node -e "const p=require('./data_daily_gain_over_5/analysis/$d.json');process.stdout.write(String(p.stock_count))")
+            echo "- $d：原因分析 $count 檔；籌碼分析 $count 檔" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Validate generated JSON
+        shell: bash
+        env:
+          DATES: ${{ steps.inputs.outputs.dates }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra arr <<< "$DATES"
+          for raw in "${arr[@]}"; do
+            d="$(echo "$raw" | xargs)"
+            [ -n "$d" ] || continue
+            node - <<NODE
+          const list=require('./data_daily_gain_over_5/$d.json');
+          const cause=require('./data_daily_gain_over_5/analysis/$d.json');
+          const flow=require('./data_daily_gain_over_5/analysis-flow/$d.json');
+          if (cause.target_date !== '$d' || flow.target_date !== '$d') throw new Error('date mismatch $d');
+          if (cause.stock_count !== list.stock_count || flow.stock_count !== list.stock_count) throw new Error('count mismatch $d');
+          if (cause.analyses.length !== list.stock_count || flow.analyses.length !== list.stock_count) throw new Error('analysis length mismatch $d');
+          NODE
+          done
+
+      - name: Commit analyses
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_daily_gain_over_5/analysis/ data_daily_gain_over_5/analysis-flow/
+          if git diff --cached --quiet; then
+            echo "No analysis changes"
+            exit 0
+          fi
+          git commit -m "analysis: backfill daily 5% research 20260810-20260814"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
+
+  deploy:
+    name: 發布歷史研究到 GitHub Pages
+    needs: research
+    if: needs.research.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.research.outputs.target_date }}
