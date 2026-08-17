@@ -29,7 +29,7 @@ permissions:
 
 concurrency:
   group: daily-gainers-over-5
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   generate:
@@ -39,18 +39,18 @@ jobs:
       target_date: ${{ steps.generate.outputs.target_date }}
       stock_count: ${{ steps.generate.outputs.stock_count }}
     steps:
-      - name: Checkout latest main
+      - name: Checkout only required data
         uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
-
-      - name: Sync to latest main commit
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git reset --hard origin/main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /data_fubon/
+            /data_daily_gain_over_5/
+            /scripts/generate_daily_gainers_over_5.js
+            /.github/workflows/
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -123,7 +123,8 @@ jobs:
           fi
           git commit -m "data: update daily gainers over 5% ${{ steps.generate.outputs.target_date }}"
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
