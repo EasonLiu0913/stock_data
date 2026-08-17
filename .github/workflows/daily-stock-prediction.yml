@@ -2,10 +2,7 @@ name: '[04 預測覆盤] 每日產生股票預測'
 
 on:
   schedule:
-    # GitHub cron uses UTC.
-    # Taiwan Mon-Fri 07:52 = UTC Sun-Thu 23:52.
     - cron: '52 23 * * 0-4'
-    # Taiwan Mon-Fri 08:22 = UTC Mon-Fri 00:22.
     - cron: '22 0 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -14,12 +11,12 @@ on:
         required: false
         type: string
       force_v1:
-        description: '同日期已有成功 V1 結果時仍重新產生'
+        description: '同日期已有完整成功 V1 結果時仍重新產生'
         required: false
         type: boolean
         default: false
       force_v2:
-        description: '同日期已有 V2 結果時仍重新產生'
+        description: '同日期已有完整成功 V2 結果時仍重新產生'
         required: false
         type: boolean
         default: false
@@ -40,12 +37,12 @@ concurrency:
 
 jobs:
   generate_v1:
-    name: 1. 產生 V1 預測
+    name: 1. 產生或沿用 V1 預測
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.dates.outputs.target_date }}
-      environment_hash: ${{ steps.environment.outputs.snapshot_hash }}
-      should_run: ${{ steps.dates.outputs.run }}
+      environment_hash: ${{ steps.final_state.outputs.environment_hash }}
+      v1_generated: ${{ steps.dates.outputs.run }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,7 +65,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve forecast date and skip existing success
+      - name: Resolve forecast date and inspect V1 completion
         id: dates
         shell: bash
         env:
@@ -100,27 +97,32 @@ jobs:
           source /tmp/forecast-dates.env
           set +a
 
-          echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
           echo "target_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "date_mode=$date_mode" >> "$GITHUB_OUTPUT"
 
-          existing_manifest="data_predictions/$FORECAST_TARGET_DATE/manifest.json"
-          existing_status="data_predictions/$FORECAST_TARGET_DATE/generation-status.txt"
-          if [ "$FORCE_RUN" != "true" ] && [ -s "$existing_manifest" ] \
-            && { [ ! -f "$existing_status" ] || [ "$(tr -d '\r\n' < "$existing_status")" = "success" ]; }; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Existing successful prediction found: $existing_manifest"
-            echo "- 已存在成功預測：是，後續 V1 / V2 / 策略發布全部跳過" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "- 已存在成功預測：否，繼續執行" >> "$GITHUB_STEP_SUMMARY"
+          manifest="data_predictions/$FORECAST_TARGET_DATE/manifest.json"
+          status_file="data_predictions/$FORECAST_TARGET_DATE/generation-status.txt"
+          reusable=false
+          if [ "$FORCE_RUN" != "true" ] && [ -s "$manifest" ] && [ -s "$status_file" ] \
+            && [ "$(tr -d '\r\n' < "$status_file")" = "success" ]; then
+            if node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])process.exit(1);if(Number(m.generated_reports)<1)process.exit(1);if(!m.market_environment?.snapshot_hash)process.exit(1);" "$manifest" "$FORECAST_TARGET_DATE"; then
+              reusable=true
+            fi
           fi
 
-          echo "## 每日產生股票預測：V1" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$reusable" = "true" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "V1 complete; reuse $manifest"
+            echo "- V1：完整，沿用既有成果；仍會繼續檢查 V2 與後續發布" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "- V1：缺少或不完整，重新產生" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "## 每日產生股票預測" >> "$GITHUB_STEP_SUMMARY"
           echo "- 日期模式：$date_mode" >> "$GITHUB_STEP_SUMMARY"
           echo "- 資料基準交易日：$FORECAST_BASE_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
           echo "- 預測交易日：$FORECAST_TARGET_DATE_ISO" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 市場環境模式：Shadow" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Ensure required external market indicators
         if: steps.dates.outputs.run == 'true'
@@ -148,13 +150,13 @@ jobs:
           process.stdout.write(expectedFromBase<latestCompleted?expectedFromBase:latestCompleted);
           NODE
           )
-          [[ "$expected_us_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid expected U.S. market date: $expected_us_date"; exit 1; }
+          [[ "$expected_us_date" =~ ^20[0-9]{6}$ ]] || exit 1
           external_file="data_external_market/$expected_us_date/external_market_indicators.json"
           risk_file="data_market_risk/$expected_us_date/market_risk_snapshot.json"
           crawled=false
           external_ready=false
-          if [ -s "$external_file" ]; then
-            if node scripts/validate_external_market_snapshot.js --expected-date "$expected_us_date" --file "$external_file" --strict; then external_ready=true; fi
+          if [ -s "$external_file" ] && node scripts/validate_external_market_snapshot.js --expected-date "$expected_us_date" --file "$external_file" --strict; then
+            external_ready=true
           fi
           if [ "$external_ready" != "true" ]; then
             node scripts/crawl_external_market_indicators.js --date "$expected_us_date"
@@ -163,12 +165,9 @@ jobs:
           fi
           if [ "$crawled" = "true" ] || [ ! -s "$risk_file" ]; then node scripts/generate_market_risk_snapshot.js --date "$expected_us_date"; fi
           node scripts/generate_file_lists.js --only data_external_market,data_market_risk
-          echo "expected_us_date=$expected_us_date" >> "$GITHUB_OUTPUT"
-          echo "crawled=$crawled" >> "$GITHUB_OUTPUT"
 
       - name: Capture immutable prediction market context
         if: steps.dates.outputs.run == 'true'
-        shell: bash
         run: |
           set -euo pipefail
           node scripts/resolve_forecast_dates.js --target-date "$FORECAST_TARGET_DATE" --github-env --capture-market-context > /tmp/prediction-context.env
@@ -176,7 +175,6 @@ jobs:
 
       - name: Generate or reuse market environment snapshot
         if: steps.dates.outputs.run == 'true'
-        shell: bash
         env:
           FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
         run: |
@@ -187,8 +185,6 @@ jobs:
 
       - name: Verify immutable market environment snapshot
         if: steps.dates.outputs.run == 'true'
-        id: environment
-        shell: bash
         run: |
           set -euo pipefail
           args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
@@ -197,8 +193,7 @@ jobs:
 
       - name: Run market environment and fixed strategy tests
         if: steps.dates.outputs.run == 'true'
-        run: |
-          node --test tests/market_environment.test.js tests/formal_market_strategy_tags.test.js tests/prediction_dashboard_group_sync.test.js tests/oversold_beta_rebound.test.js tests/oversold_electronics_strategy.test.js
+        run: node --test tests/market_environment.test.js tests/formal_market_strategy_tags.test.js tests/prediction_dashboard_group_sync.test.js tests/oversold_beta_rebound.test.js tests/oversold_electronics_strategy.test.js
 
       - name: Check required forecast files
         if: steps.dates.outputs.run == 'true'
@@ -245,11 +240,11 @@ jobs:
         run: node scripts/backfill_prediction_dashboard_fields.js --date "${{ steps.dates.outputs.target_date }}"
 
       - name: Attach environment snapshot to V1 outputs
-        if: steps.dates.outputs.run == 'true'
+        if: steps.dates.outputs.run == 'true' && steps.generate.outputs.exit_code == '0'
         run: node scripts/attach_market_environment.js --date "${{ steps.dates.outputs.target_date }}" --version v1
 
       - name: Install market environment banner
-        if: steps.dates.outputs.run == 'true'
+        if: steps.dates.outputs.run == 'true' && steps.generate.outputs.exit_code == '0'
         run: node scripts/install_market_environment_ui.js
 
       - name: Restore temporary source normalization
@@ -257,7 +252,7 @@ jobs:
         run: git restore --worktree -- data_history_sma/non_trading_days.json
 
       - name: Generate V1 V2 HTML viewer data
-        if: steps.dates.outputs.run == 'true'
+        if: steps.dates.outputs.run == 'true' && steps.generate.outputs.exit_code == '0'
         run: node scripts/generate_prediction_version_ui.js --date "${{ steps.dates.outputs.target_date }}"
 
       - name: Commit V1 result, environment, and viewer
@@ -279,15 +274,31 @@ jobs:
           done
           exit 1
 
+      - name: Verify final V1 completion state
+        id: final_state
+        shell: bash
+        env:
+          DATE: ${{ steps.dates.outputs.target_date }}
+        run: |
+          set -euo pipefail
+          manifest="data_predictions/$DATE/manifest.json"
+          status_file="data_predictions/$DATE/generation-status.txt"
+          test -s "$manifest"
+          test -s "$status_file"
+          test "$(tr -d '\r\n' < "$status_file")" = "success"
+          environment_hash=$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V1 date mismatch');if(Number(m.generated_reports)<1)throw Error('V1 has no reports');const h=m.market_environment?.snapshot_hash;if(!h)throw Error('V1 missing environment hash');process.stdout.write(h);" "$manifest" "$DATE")
+          echo "environment_hash=$environment_hash" >> "$GITHUB_OUTPUT"
+
       - name: Mark V1 generation failure
         if: steps.dates.outputs.run == 'true' && steps.generate.outputs.exit_code != '0'
         run: exit 1
 
   generate_v2:
-    name: 2. 產生 V2 預測
+    name: 2. 產生或沿用 V2 預測
     needs: generate_v1
-    if: needs.generate_v1.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      v2_generated: ${{ steps.source.outputs.run }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -295,7 +306,6 @@ jobs:
           fetch-depth: 0
 
       - name: Sync to latest main commit
-        shell: bash
         run: |
           set -euo pipefail
           git fetch origin main
@@ -309,7 +319,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve and verify V1 source date and environment hash
+      - name: Resolve and verify V1 source, then inspect V2 completion
         id: source
         shell: bash
         env:
@@ -320,12 +330,29 @@ jobs:
           set -euo pipefail
           date="$DATE"
           [[ "$date" =~ ^20[0-9]{6}$ ]] || exit 1
-          source_manifest="data_predictions/$date/manifest.json"
-          test -s "$source_manifest"
-          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V1 date mismatch');if(Number(m.generated_reports)<1)throw Error('V1 has no reports');if(m.market_environment?.snapshot_hash!==process.argv[3])throw Error('V1 environment hash mismatch');" "$source_manifest" "$date" "$EXPECTED_ENV_HASH"
-          status_file="data_predictions/$date/generation-status.txt"
-          if [ -f "$status_file" ] && [ "$(tr -d '\r\n' < "$status_file")" != "success" ]; then exit 1; fi
-          if [ "$FORCE_RUN" != "true" ] && [ -s "data_predictions_v2/$date/manifest.json" ]; then echo "run=false" >> "$GITHUB_OUTPUT"; else echo "run=true" >> "$GITHUB_OUTPUT"; fi
+
+          v1_manifest="data_predictions/$date/manifest.json"
+          v1_status="data_predictions/$date/generation-status.txt"
+          test -s "$v1_manifest"
+          test -s "$v1_status"
+          test "$(tr -d '\r\n' < "$v1_status")" = "success"
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V1 date mismatch');if(Number(m.generated_reports)<1)throw Error('V1 has no reports');if(m.market_environment?.snapshot_hash!==process.argv[3])throw Error('V1 environment hash mismatch');" "$v1_manifest" "$date" "$EXPECTED_ENV_HASH"
+
+          v2_manifest="data_predictions_v2/$date/manifest.json"
+          reusable=false
+          if [ "$FORCE_RUN" != "true" ] && [ -s "$v2_manifest" ]; then
+            if node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])process.exit(1);if(Number(m.generated_reports)<1)process.exit(1);if(m.market_environment?.snapshot_hash!==process.argv[3])process.exit(1);" "$v2_manifest" "$date" "$EXPECTED_ENV_HASH"; then
+              reusable=true
+            fi
+          fi
+
+          if [ "$reusable" = "true" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "- V2：完整，沿用既有成果" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "- V2：缺少或不完整，繼續產生" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
       - name: Verify V2 uses the same market environment snapshot
@@ -342,12 +369,23 @@ jobs:
         run: node scripts/generate_all_stock_predictions_v2.js --date "${{ steps.source.outputs.date }}"
 
       - name: Attach environment snapshot to V2 outputs
+        if: steps.source.outputs.run == 'true'
         run: node scripts/attach_market_environment.js --date "${{ steps.source.outputs.date }}" --version v2
 
       - name: Generate V1 V2 HTML viewer data
+        if: steps.source.outputs.run == 'true'
         run: node scripts/generate_prediction_version_ui.js --date "${{ steps.source.outputs.date }}"
 
+      - name: Verify final V2 completion state
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="data_predictions_v2/${{ steps.source.outputs.date }}/manifest.json"
+          test -s "$manifest"
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V2 date mismatch');if(Number(m.generated_reports)<1)throw Error('V2 has no reports');if(m.market_environment?.snapshot_hash!==process.argv[3])throw Error('V2 environment hash mismatch');" "$manifest" "${{ steps.source.outputs.date }}" "${{ needs.generate_v1.outputs.environment_hash }}"
+
       - name: Commit V2 outputs and viewer
+        if: steps.source.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -367,7 +405,6 @@ jobs:
   apply_strategy_registry:
     name: 3. 套用標籤策略並發布 GitHub Pages
     needs: [generate_v1, generate_v2]
-    if: needs.generate_v1.outputs.should_run == 'true'
     uses: ./.github/workflows/apply-strategy-tag-registry.yml
     with:
       date: ${{ needs.generate_v1.outputs.target_date }}
