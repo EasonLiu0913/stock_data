@@ -2,9 +2,7 @@ name: "[05 清單] 每日漲幅 5% 以上股票"
 
 on:
   schedule:
-    # 參考 [01 台股資料] Crawl SMA Data 13:32，延後 20 分鐘。
     - cron: '52 5 * * *'
-    # 參考 [01 台股資料] Crawl SMA Data 14:27，延後 20 分鐘。
     - cron: '47 6 * * *'
   workflow_dispatch:
     inputs:
@@ -39,7 +37,7 @@ jobs:
       target_date: ${{ steps.generate.outputs.target_date }}
       stock_count: ${{ steps.generate.outputs.stock_count }}
     steps:
-      - name: Checkout only required data
+      - name: Checkout generator and output only
         uses: actions/checkout@v4
         with:
           ref: main
@@ -47,10 +45,71 @@ jobs:
           filter: blob:none
           sparse-checkout-cone-mode: false
           sparse-checkout: |
-            /data_fubon/
             /data_daily_gain_over_5/
             /scripts/generate_daily_gainers_over_5.js
             /.github/workflows/
+
+      - name: Resolve dates and materialize required SMA files
+        id: resolve
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+          INPUT_DATES: ${{ github.event.inputs.dates }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t all_dates < <(
+            git ls-tree -r --name-only HEAD data_fubon \
+              | sed -n 's#^data_fubon/fubon_\(20[0-9]\{6\}\)_sma\.json$#\1#p' \
+              | sort
+          )
+          if [ "${#all_dates[@]}" -lt 2 ]; then
+            echo "Not enough SMA files in git tree" >&2
+            exit 1
+          fi
+
+          dates_raw="${INPUT_DATES:-}"
+          if [ -z "$dates_raw" ] && [[ "${COMMIT_MESSAGE:-}" == *"[backfill-daily-gainers-20260810-20260814]"* ]]; then
+            dates_raw="20260810,20260811,20260812,20260813,20260814"
+          elif [ -z "$dates_raw" ] && [ -n "${INPUT_DATE:-}" ]; then
+            dates_raw="$INPUT_DATE"
+          elif [ -z "$dates_raw" ]; then
+            dates_raw="${all_dates[${#all_dates[@]}-1]}"
+          fi
+
+          IFS=',' read -ra requested_dates <<< "$dates_raw"
+          declare -A needed=()
+          for raw_date in "${requested_dates[@]}"; do
+            target_date="$(echo "$raw_date" | xargs)"
+            [ -n "$target_date" ] || continue
+            found=-1
+            for i in "${!all_dates[@]}"; do
+              if [ "${all_dates[$i]}" = "$target_date" ]; then
+                found=$i
+                break
+              fi
+            done
+            if [ "$found" -le 0 ]; then
+              echo "SMA target or previous trading date missing: $target_date" >&2
+              exit 1
+            fi
+            needed["${all_dates[$((found-1))]}"]=1
+            needed["$target_date"]=1
+          done
+
+          patterns=(
+            '/data_daily_gain_over_5/'
+            '/scripts/generate_daily_gainers_over_5.js'
+            '/.github/workflows/'
+          )
+          for d in "${!needed[@]}"; do
+            patterns+=("/data_fubon/fubon_${d}_sma.json")
+          done
+          git sparse-checkout set --no-cone "${patterns[@]}"
+
+          echo "dates=$dates_raw" >> "$GITHUB_OUTPUT"
+          echo "Materialized SMA dates: ${!needed[*]}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -66,46 +125,23 @@ jobs:
         id: generate
         shell: bash
         env:
-          INPUT_DATE: ${{ github.event.inputs.date }}
-          INPUT_DATES: ${{ github.event.inputs.dates }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          RESOLVED_DATES: ${{ steps.resolve.outputs.dates }}
         run: |
           set -euo pipefail
-
-          dates_raw="${INPUT_DATES:-}"
-          if [ -z "$dates_raw" ] && [[ "${COMMIT_MESSAGE:-}" == *"[backfill-daily-gainers-20260810-20260814]"* ]]; then
-            dates_raw="20260810,20260811,20260812,20260813,20260814"
-          fi
-
+          IFS=',' read -ra requested_dates <<< "$RESOLVED_DATES"
           total_count=0
           last_date=""
-          if [ -n "$dates_raw" ]; then
-            IFS=',' read -ra requested_dates <<< "$dates_raw"
-            echo "## 每日漲幅 5% 以上股票－區間回填" >> "$GITHUB_STEP_SUMMARY"
-            for target_date in "${requested_dates[@]}"; do
-              target_date="$(echo "$target_date" | xargs)"
-              [ -n "$target_date" ] || continue
-              result=$(node scripts/generate_daily_gainers_over_5.js --date "$target_date")
-              echo "$result"
-              stock_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
-              total_count=$((total_count + stock_count))
-              last_date="$target_date"
-              echo "- $target_date：$stock_count 檔" >> "$GITHUB_STEP_SUMMARY"
-            done
-          else
-            args=()
-            if [ -n "${INPUT_DATE:-}" ]; then
-              args+=(--date "$INPUT_DATE")
-            fi
-            result=$(node scripts/generate_daily_gainers_over_5.js "${args[@]}")
+          echo "## 每日漲幅 5% 以上股票" >> "$GITHUB_STEP_SUMMARY"
+          for raw_date in "${requested_dates[@]}"; do
+            target_date="$(echo "$raw_date" | xargs)"
+            [ -n "$target_date" ] || continue
+            result=$(node scripts/generate_daily_gainers_over_5.js --date "$target_date")
             echo "$result"
-            last_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date)' "$result")
-            total_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
-            echo "## 每日漲幅 5% 以上股票" >> "$GITHUB_STEP_SUMMARY"
-            echo "- 交易日：$last_date" >> "$GITHUB_STEP_SUMMARY"
-            echo "- 符合檔數：$total_count" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
+            stock_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
+            total_count=$((total_count + stock_count))
+            last_date="$target_date"
+            echo "- $target_date：$stock_count 檔" >> "$GITHUB_STEP_SUMMARY"
+          done
           echo "target_date=$last_date" >> "$GITHUB_OUTPUT"
           echo "stock_count=$total_count" >> "$GITHUB_OUTPUT"
           echo "- 條件：收盤價相對前一個 SMA 交易日收盤價漲幅 ≥ 5%" >> "$GITHUB_STEP_SUMMARY"
