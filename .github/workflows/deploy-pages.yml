@@ -214,17 +214,17 @@ jobs:
             | wc -l | tr -d ' ')
           artifact_size=$(du -sh _site | cut -f1)
           artifact_bytes=$(du -sb _site | cut -f1)
-          warning_bytes=$((500 * 1024 * 1024))
-          maximum_bytes=$((800 * 1024 * 1024))
+          warning_bytes=$((850 * 1024 * 1024))
+          maximum_bytes=$((950 * 1024 * 1024))
 
           echo 'Largest published roots after trimming:'
           du -sh _site/* 2>/dev/null | sort -hr | head -20 || true
 
           if [ "$artifact_bytes" -gt "$maximum_bytes" ]; then
-            echo "::error::Pages artifact is ${artifact_size}, above the repository safety cap of 800 MiB. See largest published roots above."
+            echo "::error::Pages artifact is ${artifact_size}, above the repository safety cap of 950 MiB. GitHub Pages published sites are limited to 1 GiB; reduce published data before deploying."
             exit 1
           elif [ "$artifact_bytes" -gt "$warning_bytes" ]; then
-            echo "::warning::Pages artifact is ${artifact_size}; consider further windowing before it approaches the GitHub Pages limit."
+            echo "::warning::Pages artifact is ${artifact_size}, above the 850 MiB warning threshold; reduce published data before it approaches the 1 GiB GitHub Pages limit."
           fi
 
           echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
@@ -234,6 +234,7 @@ jobs:
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact size after trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pages size warning / hard cap: 850 MiB / 950 MiB" >> "$GITHUB_STEP_SUMMARY"
           echo "- EPS valuation Pages payload: summary + per-stock lazy files" >> "$GITHUB_STEP_SUMMARY"
           echo "- data_fubon: latest 15 trading dates only" >> "$GITHUB_STEP_SUMMARY"
           echo "- data_twse_mi_index: latest 10 trading dates only" >> "$GITHUB_STEP_SUMMARY"
