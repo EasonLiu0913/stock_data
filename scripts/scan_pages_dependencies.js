@@ -53,9 +53,9 @@ function extractCandidates(text) {
     /\/stock_data\/([A-Za-z0-9_.-]+\.(?:json|csv|txt|xml|html|js|mjs|css))/g,
   ];
   const assignedDirectoryPattern =
-    /\b(?:const|let|var)\s+[A-Za-z_$][\w$]*(?:dir|root|path|base|folder)\s*=\s*['"`]([A-Za-z0-9_.-]+)['"`]/gi;
+    /\b(?:const|let|var)\s+[A-Za-z_$][\w$]*(?:dir|root|path|base|folder)\s*=\s*['"`](?:(?:\.\.\/)+|\.\/)?([A-Za-z0-9_.-]+)['"`]/gi;
   const quotedDataRootPattern =
-    /['"`]((?:data|normalized|config)[A-Za-z0-9_.-]*)['"`]/g;
+    /['"`](?:(?:\.\.\/)+|\.\/)?((?:data|normalized|config)[A-Za-z0-9_.-]*)['"`]/g;
 
   for (const pattern of directoryPatterns) {
     pattern.lastIndex = 0;
@@ -122,9 +122,11 @@ function runSelfTest() {
     const DATA_DIR = 'data_twse_margin_balance';
     const sourceRoot = 'data_twse_mi_index';
     const reportFolder = 'custom_report_root';
+    const RELATIVE_DATA_ROOT = '../data_daily_gain_over_5';
     fetch(\`${'${getBasePath()}'}\/${'${DATA_DIR}'}/files.json\`);
     fetch(\`${'${basePath}'}/data_fubon/files.json\`);
     fetch(\`${'${basePath}'}/${'${reportFolder}'}/manifest.json\`);
+    fetch(\`${'${RELATIVE_DATA_ROOT}'}/files.json\`);
     fetch('../config/strategy-tag-registry.json');
     fetch('/stock_data/data_prediction_analysis/strategy-snapshots/manifest.json');
   `;
@@ -134,6 +136,7 @@ function runSelfTest() {
     'data_twse_mi_index',
     'data_fubon',
     'custom_report_root',
+    'data_daily_gain_over_5',
     'config',
     'data_prediction_analysis',
   ]) {
