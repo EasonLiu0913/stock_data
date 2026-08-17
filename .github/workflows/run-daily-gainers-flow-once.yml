@@ -75,12 +75,22 @@ jobs:
           NODE
           echo "date=$d" >> "$GITHUB_OUTPUT"
 
-      - name: Generate flow view without replacing catalyst analysis
+      - name: Generate corrected flow view without replacing catalyst analysis
         shell: bash
         env:
           D: ${{ steps.target.outputs.date }}
         run: |
           set -euo pipefail
+          # The TWSE dealer split file uses code at row[0], unlike foreign/trust row[1].
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/backfill_daily_gainers_research.js')
+          s=p.read_text()
+          s=s.replace('function mapInstitutional(file, netIndex) {','function mapInstitutional(file, netIndex, codeIndex = 1) {')
+          s=s.replace("const code = String(row?.[1] ?? '').trim();","const code = String(row?.[codeIndex] ?? '').trim();",1)
+          s=s.replace('mapInstitutional(dealerFile, (dealerPayload.fields || []).length - 1)','mapInstitutional(dealerFile, (dealerPayload.fields || []).length - 1, 0)')
+          p.write_text(s)
+          PY
           node --check scripts/backfill_daily_gainers_research.js
           node --check scripts/refine_daily_gainers_research.js
           catalyst="data_daily_gain_over_5/analysis/$D.json"
@@ -88,15 +98,40 @@ jobs:
           node scripts/backfill_daily_gainers_research.js "$D"
           node scripts/refine_daily_gainers_research.js "$D"
           cp /tmp/catalyst.json "$catalyst"
+
           node - "$D" <<'NODE'
           const fs=require('node:fs');
           const d=process.argv[2];
           const list=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/${d}.json`,'utf8'));
-          const flow=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/analysis-flow/${d}.json`,'utf8'));
+          const catalyst=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/analysis/${d}.json`,'utf8'));
+          const flowPath=`data_daily_gain_over_5/analysis-flow/${d}.json`;
+          const flow=JSON.parse(fs.readFileSync(flowPath,'utf8'));
+          const dealer=JSON.parse(fs.readFileSync(`data_twse_dealers/${d}_twse_dealers.json`,'utf8'));
+          const dealerNet=new Map(dealer.data.map(row=>[String(row[0]??'').trim(), Math.round(Number(String(row.at(-1)??'0').replaceAll(',',''))/1000)]));
+          const catalystByCode=new Map((catalyst.analyses||[]).map(x=>[String(x.code),x]));
+
           if(flow.target_date!==d || flow.angle!=='flow_and_positioning') throw new Error('flow metadata mismatch');
           if(flow.stock_count!==list.stock_count || flow.analyses.length!==list.stock_count) throw new Error('flow count mismatch');
           const required=['code','name','change_pct','institutional_summary','foreign_net','trust_net','dealer_net','margin_signal','broker_signal','volume_signal','technical_signal','flow_interpretation','confidence','follow_up','data_sources'];
-          for(const a of flow.analyses){ for(const k of required){ if(!(k in a)) throw new Error(`missing ${k} for ${a.code}`); } }
+          for(const a of flow.analyses){
+            for(const k of required){ if(!(k in a)) throw new Error(`missing ${k} for ${a.code}`); }
+            const expected=dealerNet.get(String(a.code))||0;
+            if(a.dealer_net!==expected) throw new Error(`dealer mismatch ${a.code}: ${a.dealer_net} != ${expected}`);
+
+            const dealerStrong=Math.abs(a.dealer_net)>=1000;
+            if(dealerStrong){
+              const phrase=a.dealer_net>0 ? `自營商另明顯買超 ${a.dealer_net.toLocaleString('zh-TW')} 張` : `自營商則明顯賣超 ${Math.abs(a.dealer_net).toLocaleString('zh-TW')} 張`;
+              if(!String(a.flow_interpretation).includes('自營商')) a.flow_interpretation += `；${phrase}。`;
+              if(a.dealer_net>1000 && a.confidence==='low') a.confidence='medium';
+            }
+
+            const c=catalystByCode.get(String(a.code));
+            const text=String(c?.reason_summary||'');
+            if(/族群|供應鏈|CPO|光通訊|PCB|AI伺服器|面板|航運|被動元件/.test(text)){
+              a.flow_interpretation += '；與既有催化分析的產業／族群背景相符，具族群共振特徵。';
+            }
+          }
+          fs.writeFileSync(flowPath,JSON.stringify(flow,null,2)+'\n');
           NODE
 
       - name: Commit flow analysis only
