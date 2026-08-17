@@ -9,7 +9,11 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: '指定交易日 YYYYMMDD；留空使用最新 SMA 日期'
+        description: '指定單一交易日 YYYYMMDD；留空使用最新 SMA 日期'
+        required: false
+        default: ''
+      dates:
+        description: '可選：逗號分隔多個交易日，例如 20260810,20260811；設定後優先於 date'
         required: false
         default: ''
   push:
@@ -63,21 +67,47 @@ jobs:
         shell: bash
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
+          INPUT_DATES: ${{ github.event.inputs.dates }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
-          args=()
-          if [ -n "${INPUT_DATE:-}" ]; then
-            args+=(--date "$INPUT_DATE")
+
+          dates_raw="${INPUT_DATES:-}"
+          if [ -z "$dates_raw" ] && [[ "${COMMIT_MESSAGE:-}" == *"[backfill-daily-gainers-20260810-20260814]"* ]]; then
+            dates_raw="20260810,20260811,20260812,20260813,20260814"
           fi
-          result=$(node scripts/generate_daily_gainers_over_5.js "${args[@]}")
-          echo "$result"
-          target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date)' "$result")
-          stock_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
-          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
-          echo "stock_count=$stock_count" >> "$GITHUB_OUTPUT"
-          echo "## 每日漲幅 5% 以上股票" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 交易日：$target_date" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 符合檔數：$stock_count" >> "$GITHUB_STEP_SUMMARY"
+
+          total_count=0
+          last_date=""
+          if [ -n "$dates_raw" ]; then
+            IFS=',' read -ra requested_dates <<< "$dates_raw"
+            echo "## 每日漲幅 5% 以上股票－區間回填" >> "$GITHUB_STEP_SUMMARY"
+            for target_date in "${requested_dates[@]}"; do
+              target_date="$(echo "$target_date" | xargs)"
+              [ -n "$target_date" ] || continue
+              result=$(node scripts/generate_daily_gainers_over_5.js --date "$target_date")
+              echo "$result"
+              stock_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
+              total_count=$((total_count + stock_count))
+              last_date="$target_date"
+              echo "- $target_date：$stock_count 檔" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            args=()
+            if [ -n "${INPUT_DATE:-}" ]; then
+              args+=(--date "$INPUT_DATE")
+            fi
+            result=$(node scripts/generate_daily_gainers_over_5.js "${args[@]}")
+            echo "$result"
+            last_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date)' "$result")
+            total_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
+            echo "## 每日漲幅 5% 以上股票" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 交易日：$last_date" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 符合檔數：$total_count" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "target_date=$last_date" >> "$GITHUB_OUTPUT"
+          echo "stock_count=$total_count" >> "$GITHUB_OUTPUT"
           echo "- 條件：收盤價相對前一個 SMA 交易日收盤價漲幅 ≥ 5%" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit generated list
