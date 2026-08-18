@@ -80,8 +80,8 @@ jobs:
             exit 0
           fi
 
-          echo "Refreshing flow analysis with margin data for $TARGET_DATE"
-          node scripts/backfill_daily_gainers_research.js "$TARGET_DATE"
+          echo "Refreshing flow analysis with margin data for $TARGET_DATE while preserving researched cause analysis"
+          node scripts/refresh_daily_gainers_flow_preserve_cause.js "$TARGET_DATE"
 
       - name: Commit and push changes
         run: |
