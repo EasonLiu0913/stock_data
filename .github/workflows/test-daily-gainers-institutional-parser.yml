@@ -1,0 +1,38 @@
+name: "[CI] 每日漲幅研究法人 Parser Guard"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/backfill_daily_gainers_research.js'
+      - 'scripts/test_daily_gainers_institutional_parser.js'
+      - '.github/workflows/test-daily-gainers-institutional-parser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parser-guard:
+    name: 驗證法人股票代號欄位解析
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax check
+        run: |
+          node --check scripts/backfill_daily_gainers_research.js
+          node --check scripts/test_daily_gainers_institutional_parser.js
+
+      - name: Dealer row-index regression test
+        run: node scripts/test_daily_gainers_institutional_parser.js
