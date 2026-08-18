@@ -14,6 +14,18 @@ on:
         description: '可選：逗號分隔多個交易日，例如 20260810,20260811；設定後優先於 date'
         required: false
         default: ''
+  workflow_call:
+    inputs:
+      date:
+        description: '指定單一交易日 YYYYMMDD；留空使用最新 SMA 日期'
+        required: false
+        type: string
+        default: ''
+      dates:
+        description: '可選：逗號分隔多個交易日；設定後優先於 date'
+        required: false
+        type: string
+        default: ''
   push:
     branches:
       - main
@@ -54,8 +66,8 @@ jobs:
         id: resolve
         shell: bash
         env:
-          INPUT_DATE: ${{ github.event.inputs.date }}
-          INPUT_DATES: ${{ github.event.inputs.dates }}
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_DATES: ${{ inputs.dates }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
