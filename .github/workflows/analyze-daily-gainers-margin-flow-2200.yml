@@ -45,9 +45,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Guard institutional parser regression
+      - name: Guard daily-gainers research refresh
         run: |
           node --check scripts/backfill_daily_gainers_research.js
+          node --check scripts/refresh_daily_gainers_flow_preserve_cause.js
           node --check scripts/test_daily_gainers_institutional_parser.js
           node scripts/test_daily_gainers_institutional_parser.js
 
@@ -96,7 +97,7 @@ jobs:
         if: steps.inputs.outputs.ready == 'true'
         run: |
           set -euo pipefail
-          node scripts/backfill_daily_gainers_research.js "${{ steps.inputs.outputs.target_date }}"
+          node scripts/refresh_daily_gainers_flow_preserve_cause.js "${{ steps.inputs.outputs.target_date }}"
 
       - name: Validate refreshed margin signals
         if: steps.inputs.outputs.ready == 'true'
