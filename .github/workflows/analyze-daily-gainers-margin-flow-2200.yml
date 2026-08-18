@@ -1,0 +1,142 @@
+name: "[07 研究] 22:00 融資融券籌碼補分析"
+
+on:
+  schedule:
+    # 平日 22:00 台北時間 (14:00 UTC)
+    - cron: '0 14 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '分析日期 YYYYMMDD；留空時使用台北當日'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-margin-flow-2200
+  cancel-in-progress: false
+
+jobs:
+  refresh-margin-flow:
+    name: 22:00 補入融資融券籌碼
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Guard institutional parser regression
+        run: |
+          node --check scripts/backfill_daily_gainers_research.js
+          node --check scripts/test_daily_gainers_institutional_parser.js
+          node scripts/test_daily_gainers_institutional_parser.js
+
+      - name: Resolve target date and required inputs
+        id: inputs
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_DATE:-}" ]; then
+            target_date="$INPUT_DATE"
+          else
+            target_date="$(TZ='Asia/Taipei' date '+%Y%m%d')"
+          fi
+
+          [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $target_date" >&2; exit 1; }
+
+          list_file="data_daily_gain_over_5/${target_date}.json"
+          margin_file="data_twse_margin_balance/${target_date}_twse_margin_balance.csv"
+
+          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "list_file=$list_file" >> "$GITHUB_OUTPUT"
+          echo "margin_file=$margin_file" >> "$GITHUB_OUTPUT"
+
+          ready=true
+          if [ ! -s "$list_file" ]; then
+            ready=false
+            echo "Daily >=5% list not available: $list_file"
+          fi
+          if [ ! -s "$margin_file" ]; then
+            ready=false
+            echo "Same-day margin file not available at 22:00: $margin_file"
+          fi
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+
+          echo "## 22:00 融資融券籌碼補分析" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 目標日期：$target_date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 漲幅 5% 清單：$([ -s "$list_file" ] && echo available || echo unavailable)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 同日融資融券：$([ -s "$margin_file" ] && echo available || echo unavailable)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ready" != true ]; then
+            echo "- 結果：資料尚未到齊，不使用前一交易日資料補值，本次安全跳過。" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Rebuild flow analysis with same-day margin data
+        if: steps.inputs.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          node scripts/backfill_daily_gainers_research.js "${{ steps.inputs.outputs.target_date }}"
+
+      - name: Validate refreshed margin signals
+        if: steps.inputs.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - "${{ steps.inputs.outputs.target_date }}" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const file = `data_daily_gain_over_5/analysis-flow/${date}.json`;
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (payload.target_date !== date) throw new Error(`target_date mismatch: ${payload.target_date}`);
+          if (payload.angle !== 'flow_and_positioning') throw new Error(`unexpected angle: ${payload.angle}`);
+          if (!Array.isArray(payload.analyses) || payload.analyses.length !== payload.stock_count) {
+            throw new Error('analysis count mismatch');
+          }
+          const withMargin = payload.analyses.filter(x => x.margin_signal && x.margin_signal !== 'unavailable').length;
+          if (payload.stock_count > 0 && withMargin === 0) {
+            throw new Error('same-day margin file exists but no stock received a margin signal');
+          }
+          const expectedSource = `data_twse_margin_balance/${date}_twse_margin_balance.csv`;
+          if (withMargin > 0 && !payload.analyses.some(x => Array.isArray(x.data_sources) && x.data_sources.includes(expectedSource))) {
+            throw new Error('margin source is not recorded in flow analysis');
+          }
+          console.log(JSON.stringify({ date, stock_count: payload.stock_count, margin_signals: withMargin }));
+          NODE
+
+      - name: Commit refreshed analysis
+        if: steps.inputs.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- \
+            "data_daily_gain_over_5/analysis/${{ steps.inputs.outputs.target_date }}.json" \
+            "data_daily_gain_over_5/analysis-flow/${{ steps.inputs.outputs.target_date }}.json"
+
+          if git diff --cached --quiet; then
+            echo "No analysis changes"
+            exit 0
+          fi
+
+          git commit -m "analysis: refresh margin flow ${{ steps.inputs.outputs.target_date }} at 22:00"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
