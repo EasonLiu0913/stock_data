@@ -64,20 +64,38 @@ jobs:
         run: |
           node scripts/crawl_twse_margin_balance.js --date "${{ steps.existing.outputs.target_date }}"
 
+      - name: Refresh daily-gainers flow analysis when source list exists
+        if: always()
+        run: |
+          TARGET_DATE="${{ steps.existing.outputs.target_date }}"
+          LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
+          MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+
+          if [ ! -f "$LIST_FILE" ]; then
+            echo "Skip flow refresh: daily gainer list does not exist: $LIST_FILE"
+            exit 0
+          fi
+          if [ ! -s "$MARGIN_FILE" ]; then
+            echo "Skip flow refresh: margin file is not available yet: $MARGIN_FILE"
+            exit 0
+          fi
+
+          echo "Refreshing flow analysis with margin data for $TARGET_DATE"
+          node scripts/backfill_daily_gainers_research.js "$TARGET_DATE"
+
       - name: Commit and push changes
-        if: steps.existing.outputs.exists != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add -- data_twse_margin_balance/
+          git add -- data_twse_margin_balance/ data_daily_gain_over_5/analysis/ data_daily_gain_over_5/analysis-flow/
 
           if git diff --staged --quiet; then
-            echo "No TWSE margin balance changes"
+            echo "No TWSE margin balance or flow-analysis changes"
             exit 0
           fi
 
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update TWSE margin balance data ${CURRENT_DATE}"
+          git commit -m "chore: update TWSE margin balance and flow analysis ${CURRENT_DATE}"
 
           git pull --rebase origin main
           git push origin main
