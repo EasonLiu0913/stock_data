@@ -144,6 +144,52 @@ uses: ./.github/workflows/
 
 Confirm that the change does not create a second deployment path or duplicate an existing reusable workflow.
 
+## Playwright and browser-install workflow rules
+
+These rules apply to workflows that use Playwright, Chromium, or another browser runtime.
+
+- Do not remove Playwright, Chromium, or required Linux browser dependencies merely to make a workflow faster. Preserve the runtime requirements of the scraper first.
+- If the workflow currently requires `npx playwright install --with-deps chromium`, keep that functional requirement unless the scraper has been explicitly verified to work without it.
+- Prefer dependency caching over deleting required install steps.
+- When `package-lock.json` exists, configure `actions/setup-node` with npm cache:
+
+```yaml
+- name: Setup Node.js
+  uses: actions/setup-node@v4
+  with:
+    node-version: '22'
+    cache: 'npm'
+    cache-dependency-path: package-lock.json
+```
+
+- For Playwright browser downloads, cache the browser directory with a key tied to the dependency lock file:
+
+```yaml
+- name: Cache Playwright browsers
+  uses: actions/cache@v4
+  with:
+    path: ~/.cache/ms-playwright
+    key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-playwright-
+```
+
+- Keep deterministic dependency installation with `npm ci`.
+- Keep the browser installation command after cache restore so a cache miss, Playwright version change, or incomplete cache can self-heal safely.
+- Treat the first run after adding or invalidating the cache as a cold run; later runs should reuse cached npm metadata and Playwright browser binaries.
+- If a workflow repeatedly stalls in dependency installation, inspect whether it is downloading npm packages, Linux packages, or Playwright browser binaries before changing scraper logic.
+- Do not assume a long install step means the scraper itself is broken. Distinguish runner/network failures such as HTTP 429 or 503 from application failures.
+- Preserve existing triggers, permissions, concurrency, data-generation commands, and commit/push behavior when applying this caching optimization.
+
+Known workflows using this pattern include:
+
+```text
+.github/workflows/warrant-scraper.yml
+.github/workflows/update-twse-industry.yml
+```
+
+Apply the same safe pattern to other Playwright-based workflows when the same repeated-install problem is observed.
+
 ## Canonical public page registry
 
 Homepage-visible public tools have exactly one source of truth:
