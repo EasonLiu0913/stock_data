@@ -15,6 +15,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: crawl-sma
@@ -23,6 +25,8 @@ concurrency:
 jobs:
   crawl-sma:
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.crawl.outputs.target_date }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,10 +50,11 @@ jobs:
           node scripts/detect_latest_sma_date.js --self-test
 
       - name: Run SMA crawler
+        id: crawl
         shell: bash
         run: |
           set -euo pipefail
-          input_date="${{ github.event.inputs.date }}"
+          input_date="${{ inputs.date }}"
 
           if [ -n "$input_date" ]; then
             target_date="$input_date"
@@ -64,6 +69,7 @@ jobs:
             exit 1
           }
 
+          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
           echo "- SMA 目標日期：$target_date" >> "$GITHUB_STEP_SUMMARY"
           node scripts/crawl_sma_data.js --date "$target_date"
 
@@ -107,3 +113,10 @@ jobs:
 
           echo "Failed to push SMA data after 5 attempts."
           exit 1
+
+  daily-gainers:
+    name: 產生當日 5% 漲幅清單並發布
+    needs: crawl-sma
+    uses: ./.github/workflows/daily-gainers-over-5.yml
+    with:
+      date: ${{ needs.crawl-sma.outputs.target_date }}
