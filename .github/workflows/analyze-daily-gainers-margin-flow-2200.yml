@@ -10,9 +10,16 @@ on:
         description: '分析日期 YYYYMMDD；留空時使用台北當日'
         required: false
         default: ''
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: daily-gainers-margin-flow-2200
@@ -22,6 +29,9 @@ jobs:
   refresh-margin-flow:
     name: 22:00 補入融資融券籌碼
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.inputs.outputs.target_date }}
+      ready: ${{ steps.inputs.outputs.ready }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -140,3 +150,11 @@ jobs:
             sleep 5
           done
           exit 1
+
+  deploy:
+    name: 發布每日 5% 漲幅研究到 GitHub Pages
+    needs: refresh-margin-flow
+    if: needs.refresh-margin-flow.outputs.ready == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.refresh-margin-flow.outputs.target_date }}
