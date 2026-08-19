@@ -20,13 +20,15 @@ on:
 permissions:
   contents: read
 
+# This CI job does not deploy or write data, so superseding an older validation
+# run is safe. Deployment-reachable workflows are audited separately below.
 concurrency:
   group: public-page-registry-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    name: Validate homepage registry and public HTML classification
+    name: Validate homepage registry and workflow deployment safety
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -52,11 +54,26 @@ jobs:
           node scripts/validate_public_pages.js
           node scripts/validate_public_index_writers.js
 
+      - name: Audit every workflow that can reach GitHub Pages deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/audit_workflow_deployment_races.js
+          node scripts/audit_workflow_deployment_races.js --self-test
+          node scripts/audit_workflow_deployment_races.js
+
+      - name: Summarize validation
+        shell: bash
+        run: |
           {
-            echo "## Public Page Registry"
+            echo "## Public Page Registry / Deployment Safety"
             echo
             echo "- index.html 與 registry 同步：✅"
             echo "- canonical / legacy / non-homepage HTML 分類：✅"
             echo "- 未分類 public root HTML：0"
             echo "- 非 canonical tools writer：0"
+            echo "- Pages canonical concurrency group：github-pages"
+            echo "- Pages cancel-in-progress：false"
+            echo "- deployment chain workflow_run：禁止"
+            echo "- deployment-reachable cancel-in-progress=true：禁止"
           } >> "$GITHUB_STEP_SUMMARY"
