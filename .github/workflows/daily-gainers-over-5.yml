@@ -2,8 +2,10 @@ name: "[05 清單] 每日漲幅 5% 以上股票"
 
 on:
   schedule:
-    - cron: '52 5 * * *'
-    - cron: '47 6 * * *'
+    # 平日 16:30、17:00、18:00 台北時間，分三次確認當日清單是否已完成
+    - cron: '30 8 * * 1-5'
+    - cron: '0 9 * * 1-5'
+    - cron: '0 10 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
