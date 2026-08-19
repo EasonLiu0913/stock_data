@@ -2,8 +2,8 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
-const NAVIGATION_TIMEOUT_MS = 90000;
-const SELECTOR_TIMEOUT_MS = 30000;
+const NAVIGATION_COMMIT_TIMEOUT_MS = 30000;
+const SELECTOR_TIMEOUT_MS = 90000;
 const MAX_NAVIGATION_ATTEMPTS = 3;
 
 async function wait(ms) {
@@ -16,21 +16,54 @@ async function gotoWithRetry(page, url) {
     for (let attempt = 1; attempt <= MAX_NAVIGATION_ATTEMPTS; attempt++) {
         try {
             console.log(`Navigating to ${url} (attempt ${attempt}/${MAX_NAVIGATION_ATTEMPTS})...`);
+
+            // TWSE's ISIN page occasionally keeps subresources/connections open long enough
+            // that Playwright never observes DOMContentLoaded, even though the document and
+            // target table are already usable. Wait only for the navigation to commit, then
+            // use the table itself as the real readiness signal.
             const response = await page.goto(url, {
-                waitUntil: 'domcontentloaded',
-                timeout: NAVIGATION_TIMEOUT_MS
+                waitUntil: 'commit',
+                timeout: NAVIGATION_COMMIT_TIMEOUT_MS
             });
             logNavigationResponse(response);
 
-            await page.waitForSelector('table.h4', { timeout: SELECTOR_TIMEOUT_MS });
-            console.log(`Navigation ready. currentUrl=${page.url()}`);
+            await page.waitForSelector('table.h4', {
+                state: 'attached',
+                timeout: SELECTOR_TIMEOUT_MS
+            });
+
+            const rowCount = await page.locator('table.h4 tr').count();
+            if (rowCount < 2) {
+                throw new Error(`TWSE industry table is present but incomplete (rows=${rowCount})`);
+            }
+
+            const readyState = await page.evaluate(() => document.readyState);
+            console.log(`Navigation ready. currentUrl=${page.url()}, readyState=${readyState}, rows=${rowCount}`);
             return;
         } catch (error) {
             lastError = error;
             console.warn(`⚠️ Navigation attempt ${attempt} failed: ${error.message}`);
             console.warn(`   currentUrl=${page.url()}`);
 
+            try {
+                const debug = await page.evaluate(() => ({
+                    readyState: document.readyState,
+                    hasTable: Boolean(document.querySelector('table.h4')),
+                    bodyLength: document.body ? document.body.innerText.length : 0
+                }));
+                console.warn(`   pageState=${JSON.stringify(debug)}`);
+            } catch (_) {
+                // The page may be between navigations; diagnostics are best-effort only.
+            }
+
             if (attempt < MAX_NAVIGATION_ATTEMPTS) {
+                // Stop a half-open navigation before retrying so the next page.goto does not
+                // inherit a stuck request from the previous attempt.
+                try {
+                    await page.evaluate(() => window.stop());
+                } catch (_) {
+                    // Best effort only.
+                }
                 await wait(attempt * 5000);
             }
         }
