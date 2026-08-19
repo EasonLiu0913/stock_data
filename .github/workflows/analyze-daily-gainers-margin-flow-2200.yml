@@ -2,7 +2,7 @@ name: "[07 研究] 晚間 6/7/10 籌碼資料補分析"
 
 on:
   schedule:
-    # 平日 21:30、22:00、22:30 台北時間；缺 6/7/10 任一資料時安全跳過，下一時段再確認
+    # 平日 21:30、22:00、22:30 台北時間；只負責 deterministic 資料補齊與 AI facts 產生。
     - cron: '30 13 * * 1-5'
     - cron: '0 14 * * 1-5'
     - cron: '30 14 * * 1-5'
@@ -13,11 +13,11 @@ on:
         required: false
         default: ''
   push:
-    # 保留一個可觀測的直接觸發入口；正式跨 workflow 串接仍使用 workflow_call/needs。
     branches:
       - main
     paths:
       - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
+      - 'scripts/build_daily_gainers_ai_facts.js'
 
 permissions:
   contents: write
@@ -29,8 +29,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh-margin-flow:
-    name: 晚間確認 6/7/10 並補入籌碼分析
+  prepare-ai-facts:
+    name: 確認 6/7/10 並建立 AI 事實包
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.inputs.outputs.target_date }}
@@ -47,10 +47,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Guard daily-gainers research refresh
+      - name: Validate deterministic generators
         run: |
+          set -euo pipefail
           node --check scripts/backfill_daily_gainers_research.js
           node --check scripts/refresh_daily_gainers_flow_preserve_cause.js
+          node --check scripts/build_daily_gainers_ai_facts.js
+          node --check scripts/validate_daily_gainers_ai_analysis.js
           node --check scripts/test_daily_gainers_institutional_parser.js
           node scripts/test_daily_gainers_institutional_parser.js
 
@@ -66,20 +69,14 @@ jobs:
           else
             target_date="$(TZ='Asia/Taipei' date '+%Y%m%d')"
           fi
-
           [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $target_date" >&2; exit 1; }
 
           list_file="data_daily_gain_over_5/${target_date}.json"
           margin_file="data_twse_margin_balance/${target_date}_twse_margin_balance.csv"
           broker_file="data_fubon_broker_details/fubon_${target_date}_券商分點進出明細.json"
           mi_index_file="data_twse_mi_index/${target_date}_twse_mi_index.json"
+          cause_file="data_daily_gain_over_5/analysis/${target_date}.json"
           check_time="$(TZ='Asia/Taipei' date '+%H:%M')"
-
-          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
-          echo "list_file=$list_file" >> "$GITHUB_OUTPUT"
-          echo "margin_file=$margin_file" >> "$GITHUB_OUTPUT"
-          echo "broker_file=$broker_file" >> "$GITHUB_OUTPUT"
-          echo "mi_index_file=$mi_index_file" >> "$GITHUB_OUTPUT"
 
           valid_json_nonempty() {
             local file="$1"
@@ -93,12 +90,11 @@ jobs:
             if (Array.isArray(payload)) ok = payload.length > 0;
             else if (payload && typeof payload === 'object') {
               if (Array.isArray(payload.data)) ok = payload.data.length > 0;
+              else if (payload.stocks && typeof payload.stocks === 'object') ok = Object.keys(payload.stocks).length > 0;
               else ok = Object.keys(payload).length > 0;
             }
             process.exit(ok ? 0 : 1);
-          } catch {
-            process.exit(1);
-          }
+          } catch { process.exit(1); }
           NODE
           }
 
@@ -107,66 +103,50 @@ jobs:
             [ -s "$file" ] || return 1
             node - "$file" <<'NODE'
           const fs = require('node:fs');
-          const file = process.argv[2];
-          try {
-            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-            const tables = Array.isArray(payload?.tables) ? payload.tables : [];
-            const rows = tables.reduce((sum, table) => sum + (Array.isArray(table?.data) ? table.data.length : 0), 0);
-            process.exit(tables.length > 0 && rows > 0 ? 0 : 1);
-          } catch {
-            process.exit(1);
-          }
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const tables = Array.isArray(payload?.tables) ? payload.tables : [];
+          const rows = tables.reduce((sum, table) => sum + (Array.isArray(table?.data) ? table.data.length : 0), 0);
+          process.exit(tables.length > 0 && rows > 0 ? 0 : 1);
           NODE
           }
 
-          list_ready=false
-          margin_ready=false
-          broker_ready=false
-          mi_index_ready=false
-
+          list_ready=false; margin_ready=false; broker_ready=false; mi_index_ready=false; cause_ready=false
           [ -s "$list_file" ] && list_ready=true
           [ -s "$margin_file" ] && margin_ready=true
           valid_json_nonempty "$broker_file" && broker_ready=true || true
           valid_mi_index "$mi_index_file" && mi_index_ready=true || true
+          valid_json_nonempty "$cause_file" && cause_ready=true || true
 
           ready=true
-          if [ "$list_ready" != true ]; then
-            ready=false
-            echo "Daily >=5% list not available: $list_file"
-          fi
-          if [ "$margin_ready" != true ]; then
-            ready=false
-            echo "⑥ Same-day margin data not ready: $margin_file"
-          fi
-          if [ "$broker_ready" != true ]; then
-            ready=false
-            echo "⑦ Same-day broker-detail data not ready or invalid: $broker_file"
-          fi
-          if [ "$mi_index_ready" != true ]; then
-            ready=false
-            echo "⑩ Same-day MI_INDEX data not ready or invalid: $mi_index_file"
-          fi
-          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          for state in "$list_ready" "$margin_ready" "$broker_ready" "$mi_index_ready" "$cause_ready"; do
+            [ "$state" = true ] || ready=false
+          done
 
-          echo "## 晚間 5% 漲幅籌碼資料確認（$check_time）" >> "$GITHUB_STEP_SUMMARY"
+          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "## 晚間 5% AI facts 資料確認（$check_time）" >> "$GITHUB_STEP_SUMMARY"
           echo "- 目標日期：$target_date" >> "$GITHUB_STEP_SUMMARY"
           echo "- 5% 清單：$list_ready" >> "$GITHUB_STEP_SUMMARY"
-          echo "- ⑥ 融資融券／信用交易：$margin_ready" >> "$GITHUB_STEP_SUMMARY"
-          echo "- ⑦ 券商分點籌碼：$broker_ready" >> "$GITHUB_STEP_SUMMARY"
-          echo "- ⑩ 產業／大盤背景 MI_INDEX：$mi_index_ready" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$ready" != true ]; then
-            echo "- 結果：6/7/10 尚未全部到齊，本次不失敗、不使用舊資料補值，等待下一個 21:30/22:00/22:30 時段重新確認。" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 既有催化原因研究：$cause_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⑥ 融資融券：$margin_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⑦ 券商分點：$broker_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⑩ MI_INDEX：$mi_index_ready" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ready" = true ]; then
+            echo "- 結果：資料齊全，建立 deterministic AI facts；本 workflow 不撰寫 AI 結論。" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "- 結果：6/7/10 已全部到齊，執行當日籌碼分析刷新。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 結果：資料未齊，本輪安全結束，不以舊交易日替代。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Rebuild flow analysis with same-day late data ready
+      - name: Rebuild compatibility flow and AI fact package
         if: steps.inputs.outputs.ready == 'true'
+        shell: bash
         run: |
           set -euo pipefail
-          node scripts/refresh_daily_gainers_flow_preserve_cause.js "${{ steps.inputs.outputs.target_date }}"
+          target_date="${{ steps.inputs.outputs.target_date }}"
+          node scripts/refresh_daily_gainers_flow_preserve_cause.js "$target_date"
+          node scripts/build_daily_gainers_ai_facts.js "$target_date"
 
-      - name: Validate refreshed margin signals
+      - name: Validate fact package
         if: steps.inputs.outputs.ready == 'true'
         shell: bash
         run: |
@@ -174,68 +154,46 @@ jobs:
           node - "${{ steps.inputs.outputs.target_date }}" <<'NODE'
           const fs = require('node:fs');
           const date = process.argv[2];
-          const file = `data_daily_gain_over_5/analysis-flow/${date}.json`;
+          const file = `data_daily_gain_over_5/analysis-facts/${date}.json`;
           const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-          if (payload.target_date !== date) throw new Error(`target_date mismatch: ${payload.target_date}`);
-          if (payload.angle !== 'flow_and_positioning') throw new Error(`unexpected angle: ${payload.angle}`);
-          if (!Array.isArray(payload.analyses) || payload.analyses.length !== payload.stock_count) {
-            throw new Error('analysis count mismatch');
-          }
-          const withMargin = payload.analyses.filter(x => x.margin_signal && x.margin_signal !== 'unavailable').length;
-          if (payload.stock_count > 0 && withMargin === 0) {
-            throw new Error('same-day margin file exists but no stock received a margin signal');
-          }
-          const expectedSource = `data_twse_margin_balance/${date}_twse_margin_balance.csv`;
-          if (withMargin > 0 && !payload.analyses.some(x => Array.isArray(x.data_sources) && x.data_sources.includes(expectedSource))) {
-            throw new Error('margin source is not recorded in flow analysis');
-          }
-          console.log(JSON.stringify({ date, stock_count: payload.stock_count, margin_signals: withMargin }));
+          if (payload.target_date !== date) throw new Error('target_date mismatch');
+          if (payload.methodology_version !== 'daily-gainers-ai-facts-v1') throw new Error('methodology mismatch');
+          if (!Array.isArray(payload.stocks) || payload.stocks.length !== payload.stock_count) throw new Error('stock count mismatch');
+          const withBroker = payload.stocks.filter(x => x.broker).length;
+          const withMargin = payload.stocks.filter(x => x.margin).length;
+          if (payload.stock_count > 0 && withBroker === 0) throw new Error('broker facts missing for all stocks');
+          if (payload.stock_count > 0 && withMargin === 0) throw new Error('margin facts missing for all stocks');
+          console.log(JSON.stringify({ date, stock_count: payload.stock_count, withBroker, withMargin }));
           NODE
 
-      - name: Commit refreshed analysis
+      - name: Commit latest deterministic facts safely
         if: steps.inputs.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           target_date="${{ steps.inputs.outputs.target_date }}"
-          analysis_file="data_daily_gain_over_5/analysis/${target_date}.json"
           flow_file="data_daily_gain_over_5/analysis-flow/${target_date}.json"
+          facts_file="data_daily_gain_over_5/analysis-facts/${target_date}.json"
 
           for attempt in 1 2 3 4 5; do
-            echo "Push attempt ${attempt}: refresh from latest origin/main before regenerating"
+            echo "Publish attempt ${attempt}: regenerate from newest main"
             git fetch origin main
             git reset --hard origin/main
-
-            # Another data workflow may have updated the same day's source or flow file
-            # after this job checked out main. Recompute from the newest repository state
-            # instead of rebasing a stale generated JSON commit and creating conflicts.
             node scripts/refresh_daily_gainers_flow_preserve_cause.js "$target_date"
-
-            git add -- "$analysis_file" "$flow_file"
+            node scripts/build_daily_gainers_ai_facts.js "$target_date"
+            git add -- "$flow_file" "$facts_file"
             if git diff --cached --quiet; then
-              echo "Latest main already contains equivalent refreshed analysis"
+              echo "Latest main already contains equivalent deterministic facts"
               exit 0
             fi
-
-            git commit -m "analysis: refresh late 5% flow ${target_date}"
+            git commit -m "analysis: prepare AI facts for 5% gainers ${target_date}"
             if git push origin HEAD:main; then
               exit 0
             fi
-
-            echo "Push raced with another main update; discarding stale generated commit and retrying from newest main"
+            echo "Main changed during push; retrying from newest inputs"
             sleep 5
           done
-
-          echo "Failed to publish refreshed analysis after 5 regenerate-and-push attempts" >&2
+          echo "Failed to publish AI facts after 5 regenerate-and-push attempts" >&2
           exit 1
-
-  deploy:
-    name: 發布每日 5% 漲幅研究到 GitHub Pages
-    needs: refresh-margin-flow
-    if: needs.refresh-margin-flow.outputs.ready == 'true'
-    uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.refresh-margin-flow.outputs.target_date }}
