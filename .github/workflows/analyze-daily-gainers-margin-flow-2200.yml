@@ -1,9 +1,11 @@
-name: "[07 研究] 22:00 融資融券籌碼補分析"
+name: "[07 研究] 晚間 6/7/10 籌碼資料補分析"
 
 on:
   schedule:
-    # 平日 22:00 台北時間 (14:00 UTC)
+    # 平日 21:30、22:00、22:30 台北時間；缺 6/7/10 任一資料時安全跳過，下一時段再確認
+    - cron: '30 13 * * 1-5'
     - cron: '0 14 * * 1-5'
+    - cron: '30 14 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
@@ -28,7 +30,7 @@ concurrency:
 
 jobs:
   refresh-margin-flow:
-    name: 22:00 補入融資融券籌碼
+    name: 晚間確認 6/7/10 並補入籌碼分析
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.inputs.outputs.target_date }}
@@ -52,7 +54,7 @@ jobs:
           node --check scripts/test_daily_gainers_institutional_parser.js
           node scripts/test_daily_gainers_institutional_parser.js
 
-      - name: Resolve target date and required inputs
+      - name: Resolve target date and required late inputs
         id: inputs
         shell: bash
         env:
@@ -69,31 +71,96 @@ jobs:
 
           list_file="data_daily_gain_over_5/${target_date}.json"
           margin_file="data_twse_margin_balance/${target_date}_twse_margin_balance.csv"
+          broker_file="data_fubon_broker_details/fubon_${target_date}_券商分點進出明細.json"
+          mi_index_file="data_twse_mi_index/${target_date}_twse_mi_index.json"
+          check_time="$(TZ='Asia/Taipei' date '+%H:%M')"
 
           echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
           echo "list_file=$list_file" >> "$GITHUB_OUTPUT"
           echo "margin_file=$margin_file" >> "$GITHUB_OUTPUT"
+          echo "broker_file=$broker_file" >> "$GITHUB_OUTPUT"
+          echo "mi_index_file=$mi_index_file" >> "$GITHUB_OUTPUT"
+
+          valid_json_nonempty() {
+            local file="$1"
+            [ -s "$file" ] || return 1
+            node - "$file" <<'NODE'
+          const fs = require('node:fs');
+          const file = process.argv[2];
+          try {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            let ok = false;
+            if (Array.isArray(payload)) ok = payload.length > 0;
+            else if (payload && typeof payload === 'object') {
+              if (Array.isArray(payload.data)) ok = payload.data.length > 0;
+              else ok = Object.keys(payload).length > 0;
+            }
+            process.exit(ok ? 0 : 1);
+          } catch {
+            process.exit(1);
+          }
+          NODE
+          }
+
+          valid_mi_index() {
+            local file="$1"
+            [ -s "$file" ] || return 1
+            node - "$file" <<'NODE'
+          const fs = require('node:fs');
+          const file = process.argv[2];
+          try {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const tables = Array.isArray(payload?.tables) ? payload.tables : [];
+            const rows = tables.reduce((sum, table) => sum + (Array.isArray(table?.data) ? table.data.length : 0), 0);
+            process.exit(tables.length > 0 && rows > 0 ? 0 : 1);
+          } catch {
+            process.exit(1);
+          }
+          NODE
+          }
+
+          list_ready=false
+          margin_ready=false
+          broker_ready=false
+          mi_index_ready=false
+
+          [ -s "$list_file" ] && list_ready=true
+          [ -s "$margin_file" ] && margin_ready=true
+          valid_json_nonempty "$broker_file" && broker_ready=true || true
+          valid_mi_index "$mi_index_file" && mi_index_ready=true || true
 
           ready=true
-          if [ ! -s "$list_file" ]; then
+          if [ "$list_ready" != true ]; then
             ready=false
             echo "Daily >=5% list not available: $list_file"
           fi
-          if [ ! -s "$margin_file" ]; then
+          if [ "$margin_ready" != true ]; then
             ready=false
-            echo "Same-day margin file not available at 22:00: $margin_file"
+            echo "⑥ Same-day margin data not ready: $margin_file"
+          fi
+          if [ "$broker_ready" != true ]; then
+            ready=false
+            echo "⑦ Same-day broker-detail data not ready or invalid: $broker_file"
+          fi
+          if [ "$mi_index_ready" != true ]; then
+            ready=false
+            echo "⑩ Same-day MI_INDEX data not ready or invalid: $mi_index_file"
           fi
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
 
-          echo "## 22:00 融資融券籌碼補分析" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 晚間 5% 漲幅籌碼資料確認（$check_time）" >> "$GITHUB_STEP_SUMMARY"
           echo "- 目標日期：$target_date" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 漲幅 5% 清單：$([ -s "$list_file" ] && echo available || echo unavailable)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 同日融資融券：$([ -s "$margin_file" ] && echo available || echo unavailable)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 5% 清單：$list_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⑥ 融資融券／信用交易：$margin_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⑦ 券商分點籌碼：$broker_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⑩ 產業／大盤背景 MI_INDEX：$mi_index_ready" >> "$GITHUB_STEP_SUMMARY"
           if [ "$ready" != true ]; then
-            echo "- 結果：資料尚未到齊，不使用前一交易日資料補值，本次安全跳過。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 結果：6/7/10 尚未全部到齊，本次不失敗、不使用舊資料補值，等待下一個 21:30/22:00/22:30 時段重新確認。" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- 結果：6/7/10 已全部到齊，執行當日籌碼分析刷新。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Rebuild flow analysis with same-day margin data
+      - name: Rebuild flow analysis with same-day late data ready
         if: steps.inputs.outputs.ready == 'true'
         run: |
           set -euo pipefail
@@ -142,7 +209,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "analysis: refresh margin flow ${{ steps.inputs.outputs.target_date }} at 22:00"
+          git commit -m "analysis: refresh late 5% flow ${{ steps.inputs.outputs.target_date }}"
           for attempt in 1 2 3 4 5; do
             git fetch origin main
             if git rebase origin/main && git push origin HEAD:main; then
