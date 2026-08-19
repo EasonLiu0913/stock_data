@@ -1,0 +1,118 @@
+name: "[07 研究] 5% 漲幅 AI 籌碼解讀驗證發布"
+
+on:
+  schedule:
+    # ChatGPT 22:45 產生 pending JSON；23:00 驗證，23:30 補一次容錯。
+    - cron: '0 15 * * 1-5'
+    - cron: '30 15 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '分析日期 YYYYMMDD；留空時使用台北當日'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-ai-publish
+  cancel-in-progress: false
+
+jobs:
+  validate-and-publish:
+    name: 驗證 AI JSON 並升級為正式研究資料
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_DATE:-}" ]; then
+            target_date="$INPUT_DATE"
+          else
+            target_date="$(TZ='Asia/Taipei' date '+%Y%m%d')"
+          fi
+          [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $target_date" >&2; exit 1; }
+          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+
+      - name: Check pending AI synthesis
+        id: pending
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.target_date }}"
+          facts="data_daily_gain_over_5/analysis-facts/${date}.json"
+          pending="research_pending/daily-gainers-ai/${date}.json"
+          ready=true
+          [ -s "$facts" ] || ready=false
+          [ -s "$pending" ] || ready=false
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          if [ "$ready" != true ]; then
+            echo "## AI 籌碼解讀尚未可發布" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
+            echo "- facts exists: $([ -s "$facts" ] && echo true || echo false)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- pending AI exists: $([ -s "$pending" ] && echo true || echo false)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 本輪安全結束；不使用前一交易日 AI 結果。" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Validate pending AI schema against facts
+        if: steps.pending.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.target_date }}"
+          node --check scripts/validate_daily_gainers_ai_analysis.js
+          node scripts/validate_daily_gainers_ai_analysis.js "$date" "research_pending/daily-gainers-ai/${date}.json"
+
+      - name: Promote validated AI JSON to published data
+        if: steps.pending.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          date="${{ steps.date.outputs.target_date }}"
+          pending="research_pending/daily-gainers-ai/${date}.json"
+          published="data_daily_gain_over_5/analysis-ai/${date}.json"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            if [ ! -s "$pending" ]; then
+              echo "Pending AI file disappeared before publish: $pending" >&2
+              exit 1
+            fi
+            node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
+            mkdir -p "$(dirname "$published")"
+            cp "$pending" "$published"
+            git add -- "$published"
+            if git diff --cached --quiet; then
+              echo "Published AI analysis is already current"
+              exit 0
+            fi
+            git commit -m "analysis: publish AI synthesis for 5% gainers ${date}"
+            if git push origin HEAD:main; then
+              echo "## AI 籌碼解讀已通過 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
+              echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
+              echo "- 正式檔：$published" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Failed to publish validated AI analysis after 5 attempts" >&2
+          exit 1
