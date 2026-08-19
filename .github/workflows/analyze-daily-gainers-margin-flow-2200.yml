@@ -200,24 +200,36 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add -- \
-            "data_daily_gain_over_5/analysis/${{ steps.inputs.outputs.target_date }}.json" \
-            "data_daily_gain_over_5/analysis-flow/${{ steps.inputs.outputs.target_date }}.json"
+          target_date="${{ steps.inputs.outputs.target_date }}"
+          analysis_file="data_daily_gain_over_5/analysis/${target_date}.json"
+          flow_file="data_daily_gain_over_5/analysis-flow/${target_date}.json"
 
-          if git diff --cached --quiet; then
-            echo "No analysis changes"
-            exit 0
-          fi
-
-          git commit -m "analysis: refresh late 5% flow ${{ steps.inputs.outputs.target_date }}"
           for attempt in 1 2 3 4 5; do
+            echo "Push attempt ${attempt}: refresh from latest origin/main before regenerating"
             git fetch origin main
-            if git rebase origin/main && git push origin HEAD:main; then
+            git reset --hard origin/main
+
+            # Another data workflow may have updated the same day's source or flow file
+            # after this job checked out main. Recompute from the newest repository state
+            # instead of rebasing a stale generated JSON commit and creating conflicts.
+            node scripts/refresh_daily_gainers_flow_preserve_cause.js "$target_date"
+
+            git add -- "$analysis_file" "$flow_file"
+            if git diff --cached --quiet; then
+              echo "Latest main already contains equivalent refreshed analysis"
               exit 0
             fi
-            git rebase --abort 2>/dev/null || true
+
+            git commit -m "analysis: refresh late 5% flow ${target_date}"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Push raced with another main update; discarding stale generated commit and retrying from newest main"
             sleep 5
           done
+
+          echo "Failed to publish refreshed analysis after 5 regenerate-and-push attempts" >&2
           exit 1
 
   deploy:
