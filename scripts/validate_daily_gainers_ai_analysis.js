@@ -28,6 +28,12 @@ function main() {
   const facts = JSON.parse(fs.readFileSync(factsFile, 'utf8'));
   const ai = JSON.parse(fs.readFileSync(aiFile, 'utf8'));
   assert(facts.target_date === date, 'facts target_date mismatch');
+  assert(facts.schema_version === 1, 'facts schema_version must be 1');
+  assert(facts.methodology_version === 'daily-gainers-ai-facts-v1', 'unexpected facts methodology_version');
+  assert(Array.isArray(facts.stocks), 'facts stocks must be an array');
+  assert(Number.isInteger(facts.stock_count), 'facts stock_count must be an integer');
+  assert(facts.stock_count === facts.stocks.length, `facts stock_count ${facts.stock_count} != stocks length ${facts.stocks.length}`);
+
   assert(ai.target_date === date, 'AI target_date mismatch');
   assert(ai.schema_version === 1, 'AI schema_version must be 1');
   assert(ai.methodology_version === 'daily-gainers-ai-synthesis-v1', 'unexpected AI methodology_version');
@@ -65,6 +71,8 @@ function main() {
     valid: true,
     date,
     stock_count: facts.stock_count,
+    ai_analysis_count: ai.analyses.length,
+    stock_order_verified: true,
     ai_file: path.relative(ROOT, aiFile),
   }, null, 2));
 }
