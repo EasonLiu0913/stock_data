@@ -38,9 +38,12 @@ permissions:
   pages: write
   id-token: write
 
+# Pages artifact is large and expensive to prepare. A newer data commit must not
+# cancel a deployment that has already spent minutes preparing/uploading it.
+# Serialize deployments and let later runs queue behind the active one.
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
