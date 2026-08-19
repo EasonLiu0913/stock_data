@@ -26,21 +26,17 @@ on:
         required: false
         type: string
         default: ''
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/daily-gainers-over-5.yml'
-      - 'data_fubon/fubon_*_sma.json'
 
 permissions:
   contents: write
   pages: write
   id-token: write
 
+# SMA 正式流程由 crawl-sma.yml 透過 workflow_call 串接。
+# 不再監聽 data_fubon push，避免同一份 SMA commit 同時啟動 push + workflow_call 兩份 run。
 concurrency:
   group: daily-gainers-over-5
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   generate:
