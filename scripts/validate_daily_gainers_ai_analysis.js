@@ -17,10 +17,11 @@ function isText(value) {
 
 function main() {
   const date = process.argv[2];
-  assert(/^20\d{6}$/.test(String(date || '')), 'Usage: node scripts/validate_daily_gainers_ai_analysis.js YYYYMMDD');
+  const inputArg = process.argv[3] || `research_pending/daily-gainers-ai/${date}.json`;
+  assert(/^20\d{6}$/.test(String(date || '')), 'Usage: node scripts/validate_daily_gainers_ai_analysis.js YYYYMMDD [ai-json-path]');
 
   const factsFile = path.join(BASE, 'analysis-facts', `${date}.json`);
-  const aiFile = path.join(BASE, 'analysis-ai', `${date}.json`);
+  const aiFile = path.resolve(ROOT, inputArg);
   assert(fs.existsSync(factsFile), `Missing facts file: ${path.relative(ROOT, factsFile)}`);
   assert(fs.existsSync(aiFile), `Missing AI analysis file: ${path.relative(ROOT, aiFile)}`);
 
@@ -56,6 +57,9 @@ function main() {
   assert(isText(ai.market_summary.summary), 'market_summary.summary is required');
   assert(Array.isArray(ai.market_summary.common_flow_clues), 'market_summary.common_flow_clues must be array');
   assert(Array.isArray(ai.priority_watchlist), 'priority_watchlist must be array');
+  for (const code of ai.priority_watchlist) {
+    assert(factCodes.includes(String(code)), `priority_watchlist contains unknown code ${code}`);
+  }
 
   console.log(JSON.stringify({
     valid: true,
