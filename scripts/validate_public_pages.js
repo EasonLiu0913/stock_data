@@ -119,7 +119,9 @@ function validateDailyGainersResponsiveContract() {
   if (!html.includes('class="stock-list" id="content"')) {
     fail('daily-gainers-over-5.html must keep the unified stock-list container');
   }
-  if (!html.includes('class="card stock-card"')) {
+  const hasUnifiedCardMarkup = /class=["'][^"']*\bstock-card\b[^"']*\bcard\b[^"']*["']/i.test(html)
+    || /class=["'][^"']*\bcard\b[^"']*\bstock-card\b[^"']*["']/i.test(html);
+  if (!hasUnifiedCardMarkup) {
     fail('daily-gainers-over-5.html must render unified stock-card markup');
   }
   if (!html.includes('class="stock-card-grid"')) {
