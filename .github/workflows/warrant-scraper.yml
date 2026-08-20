@@ -18,6 +18,7 @@ concurrency:
 jobs:
   scrape-warrant:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -34,6 +35,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Cache Playwright browsers
+        id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
@@ -41,10 +43,52 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
-      - name: Install dependencies
+      - name: Install Node dependencies
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Install Playwright Chromium on cache miss
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+        timeout-minutes: 5
+
+      - name: Verify Chromium runtime
+        id: chromium-smoke-test
+        continue-on-error: true
+        timeout-minutes: 2
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          node - <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            await browser.close();
+            console.log('Chromium runtime is ready.');
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Install Playwright system dependencies only when needed
+        if: steps.chromium-smoke-test.outcome == 'failure'
+        run: npx playwright install-deps chromium
+        timeout-minutes: 5
+
+      - name: Verify Chromium runtime after dependency install
+        if: steps.chromium-smoke-test.outcome == 'failure'
+        timeout-minutes: 2
+        run: |
+          node - <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            await browser.close();
+            console.log('Chromium runtime is ready after installing system dependencies.');
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
 
       - name: Run TWSE warrant extractor
         run: |
