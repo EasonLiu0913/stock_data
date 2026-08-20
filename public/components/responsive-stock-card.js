@@ -8,7 +8,9 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .rsc-list{display:grid;gap:12px}
+      .rsc-list:not(.mobile-content){display:grid;gap:12px}
+      .rsc-list.mobile-content{gap:12px}
+      .rsc-list.mobile-content .rsc-card + .rsc-card{margin-top:12px}
       .rsc-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,.07);overflow:hidden;color:#0f172a}
       .rsc-main{padding:14px}
       .rsc-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -52,7 +54,7 @@
   function esc(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      .replace(/\"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function formatSigned(value, suffix = '') {
