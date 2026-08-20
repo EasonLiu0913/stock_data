@@ -20,6 +20,7 @@
     .analysis-meta { padding: 14px 20px; color: #475569; line-height: 1.6; }
     .analysis-meta strong { color: #0f172a; }
     .table-wrap { overflow-x: auto; }
+    .mobile-content { display: none; }
     table { width: 100%; border-collapse: collapse; min-width: 1360px; }
     th, td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; vertical-align: top; }
     th { background: #f8fafc; color: #475569; font-size: .9rem; }
@@ -43,10 +44,20 @@
     .error { color: #b91c1c; }
     @media (max-width: 760px) {
       .wrap { padding: 12px 8px 32px; }
-      .toolbar { align-items: stretch; flex-direction: column; }
+      header { padding: 16px 14px; }
+      h1 { font-size: 1.3rem; }
+      .desc { font-size: .9rem; }
+      .toolbar { align-items: stretch; flex-direction: column; padding: 14px; }
       .summary { margin-left: 0; }
-      .analysis-status { grid-template-columns: 1fr; }
-      .analysis-meta { padding: 12px 14px; }
+      .analysis-status { grid-template-columns: 1fr; gap: 8px; }
+      .analysis-meta { padding: 11px 12px; font-size: .86rem; }
+    }
+    @media (max-width: 476px) {
+      .wrap { padding: 10px 8px 28px; }
+      .table-wrap { display: none; }
+      .mobile-content { display: block; }
+      .toolbar { position: sticky; top: 0; z-index: 10; box-shadow: 0 8px 20px rgba(15,23,42,.08); }
+      select { width: 100%; min-width: 0; min-height: 42px; }
     }
   </style>
 </head>
@@ -54,7 +65,7 @@
   <main class="wrap">
     <header class="card">
       <h1>每日漲幅 5% 以上股票</h1>
-      <div class="desc">以 SMA 每日收盤資料計算：當日收盤價相對前一個交易日收盤價漲幅 ≥ 5%。平日下午 3 點補充上漲原因研究，晚上 7 點再補充三大法人、籌碼與資金流角度。</div>
+      <div class="desc">以 SMA 每日收盤資料計算：當日收盤價相對前一個交易日收盤價漲幅 ≥ 5%。下午補充上漲原因研究，晚間再補充 deterministic 籌碼 facts 與 AI 綜合解讀。</div>
       <div class="meta" id="meta">載入資料中…</div>
     </header>
 
@@ -68,20 +79,29 @@
 
     <section class="analysis-status">
       <div class="analysis-meta card" id="analysisMeta"><strong>上漲原因研究：</strong>載入中…</div>
-      <div class="analysis-meta card" id="flowMeta"><strong>籌碼與資金流研究：</strong>載入中…</div>
+      <div class="analysis-meta card" id="flowMeta"><strong>籌碼與 AI 綜合解讀：</strong>載入中…</div>
     </section>
 
     <section class="card table-wrap" id="content">
       <div class="empty">載入資料中…</div>
     </section>
+
+    <section class="mobile-content" id="mobileContent">
+      <div class="empty">載入手機卡片中…</div>
+    </section>
   </main>
 
+  <script src="components/responsive-stock-card.js"></script>
+  <script src="components/daily-gainers-mobile-cards.js"></script>
   <script>
     const DATA_ROOT = '../data_daily_gain_over_5';
     const ANALYSIS_ROOT = '../data_daily_gain_over_5/analysis';
     const ANALYSIS_FLOW_ROOT = '../data_daily_gain_over_5/analysis-flow';
+    const ANALYSIS_FACTS_ROOT = '../data_daily_gain_over_5/analysis-facts';
+    const ANALYSIS_AI_ROOT = '../data_daily_gain_over_5/analysis-ai';
     const dateSelect = document.getElementById('dateSelect');
     const content = document.getElementById('content');
+    const mobileContent = document.getElementById('mobileContent');
     const meta = document.getElementById('meta');
     const summary = document.getElementById('summary');
     const analysisMeta = document.getElementById('analysisMeta');
@@ -180,24 +200,28 @@
         ${flow.follow_up ? `<div class="reason-detail"><strong>後續觀察：</strong>${escapeHtml(flow.follow_up)}</div>` : ''}`;
     }
 
-    function render(payload, analysisPayload, flowPayload) {
+    function render(payload, analysisPayload, flowPayload, factsPayload, aiPayload) {
       const rows = Array.isArray(payload.stocks) ? payload.stocks : [];
       const analyses = Array.isArray(analysisPayload?.analyses) ? analysisPayload.analyses : [];
       const flows = Array.isArray(flowPayload?.analyses) ? flowPayload.analyses : [];
       const analysisByCode = new Map(analyses.map(item => [String(item.code || ''), item]));
       const flowByCode = new Map(flows.map(item => [String(item.code || ''), item]));
+      const aiCount = Array.isArray(aiPayload?.analyses) ? aiPayload.analyses.length : 0;
 
       meta.textContent = `比較 ${formatDate(payload.previous_date)} → ${formatDate(payload.target_date)}；門檻 ≥ ${payload.threshold_pct}%`;
       summary.textContent = `符合 ${rows.length} 檔`;
       analysisMeta.innerHTML = analysisPayload
         ? `<strong>上漲原因研究：</strong>已完成 ${analysisByCode.size}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(analysisPayload.generated_at))}`
-        : '<strong>上漲原因研究：</strong>尚未產生；平日下午 3:00 排程完成後會自動顯示。';
-      flowMeta.innerHTML = flowPayload
-        ? `<strong>籌碼與資金流研究：</strong>已完成 ${flowByCode.size}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(flowPayload.generated_at))}`
-        : '<strong>籌碼與資金流研究：</strong>尚未產生；平日晚上 7:00 排程完成後會自動顯示。';
+        : '<strong>上漲原因研究：</strong>尚未產生；下午研究完成後會自動顯示。';
+      flowMeta.innerHTML = aiPayload
+        ? `<strong>籌碼與 AI 綜合解讀：</strong>正式 AI 已完成 ${aiCount}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(aiPayload.generated_at))}`
+        : flowPayload
+          ? `<strong>籌碼與 AI 綜合解讀：</strong>deterministic 籌碼已完成 ${flowByCode.size}/${rows.length} 檔；AI 解讀尚待產生。`
+          : '<strong>籌碼與 AI 綜合解讀：</strong>尚未產生。';
 
       if (!rows.length) {
         content.innerHTML = '<div class="empty">這個交易日沒有漲幅達 5% 的股票。</div>';
+        mobileContent.innerHTML = '<div class="empty">這個交易日沒有漲幅達 5% 的股票。</div>';
         return;
       }
 
@@ -225,24 +249,34 @@
               </tr>`).join('')}
           </tbody>
         </table>`;
+
+      try {
+        DailyGainersMobileCards.render(mobileContent, payload, analysisPayload, flowPayload, factsPayload, aiPayload);
+      } catch (error) {
+        mobileContent.innerHTML = `<div class="error">手機卡片無法建立：${escapeHtml(error.message)}</div>`;
+      }
     }
 
     async function loadDate(date) {
       content.innerHTML = '<div class="empty">載入資料中…</div>';
+      mobileContent.innerHTML = '<div class="empty">載入手機卡片中…</div>';
       summary.textContent = '';
       analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>載入中…';
-      flowMeta.innerHTML = '<strong>籌碼與資金流研究：</strong>載入中…';
+      flowMeta.innerHTML = '<strong>籌碼與 AI 綜合解讀：</strong>載入中…';
       try {
-        const [payload, analysisPayload, flowPayload] = await Promise.all([
+        const [payload, analysisPayload, flowPayload, factsPayload, aiPayload] = await Promise.all([
           fetchJson(`${DATA_ROOT}/${date}.json`),
           fetchOptional(ANALYSIS_ROOT, date),
           fetchOptional(ANALYSIS_FLOW_ROOT, date),
+          fetchOptional(ANALYSIS_FACTS_ROOT, date),
+          fetchOptional(ANALYSIS_AI_ROOT, date),
         ]);
-        render(payload, analysisPayload, flowPayload);
+        render(payload, analysisPayload, flowPayload, factsPayload, aiPayload);
       } catch (error) {
         analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>載入失敗';
-        flowMeta.innerHTML = '<strong>籌碼與資金流研究：</strong>載入失敗';
+        flowMeta.innerHTML = '<strong>籌碼與 AI 綜合解讀：</strong>載入失敗';
         content.innerHTML = `<div class="error">無法載入 ${formatDate(date)}：${escapeHtml(error.message)}</div>`;
+        mobileContent.innerHTML = `<div class="error">無法載入 ${formatDate(date)}：${escapeHtml(error.message)}</div>`;
       }
     }
 
@@ -260,8 +294,9 @@
       } catch (error) {
         meta.textContent = '尚無每日清單資料';
         analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>無法取得交易日';
-        flowMeta.innerHTML = '<strong>籌碼與資金流研究：</strong>無法取得交易日';
+        flowMeta.innerHTML = '<strong>籌碼與 AI 綜合解讀：</strong>無法取得交易日';
         content.innerHTML = `<div class="error">無法載入資料清單：${escapeHtml(error.message)}</div>`;
+        mobileContent.innerHTML = `<div class="error">無法載入資料清單：${escapeHtml(error.message)}</div>`;
       }
     }
 
