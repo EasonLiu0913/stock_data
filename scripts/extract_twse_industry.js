@@ -7,7 +7,9 @@ const SELECTOR_TIMEOUT_MS = 90000;
 const MAX_NAVIGATION_ATTEMPTS = 3;
 const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
-const MIN_TABLE_ROWS_BEFORE_EXTRACT = 1000;
+const MIN_TABLE_ROWS_FLOOR = 1000;
+const TABLE_STABILITY_POLL_MS = 1000;
+const TABLE_STABILITY_POLLS = 5;
 const MAX_DROP_RATIO = 0.10;
 const REQUIRED_STOCK_CODES = ['1101', '2317', '2330', '2882'];
 
@@ -15,17 +17,56 @@ async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function gotoWithRetry(page, url) {
+async function waitForStableTable(page, minimumRows) {
+    await page.waitForFunction(
+        requiredRows => document.querySelectorAll('table.h4 tr').length >= requiredRows,
+        minimumRows,
+        { timeout: SELECTOR_TIMEOUT_MS }
+    );
+
+    let previousRows = -1;
+    let stablePolls = 0;
+    const deadline = Date.now() + SELECTOR_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+        const state = await page.evaluate(() => ({
+            rows: document.querySelectorAll('table.h4 tr').length,
+            readyState: document.readyState
+        }));
+
+        if (state.rows === previousRows) {
+            stablePolls += 1;
+        } else {
+            stablePolls = 0;
+            previousRows = state.rows;
+        }
+
+        console.log(
+            `Waiting for TWSE table stability: rows=${state.rows}, readyState=${state.readyState}, ` +
+            `stable=${stablePolls}/${TABLE_STABILITY_POLLS}`
+        );
+
+        if (state.rows >= minimumRows && stablePolls >= TABLE_STABILITY_POLLS) {
+            return state;
+        }
+
+        await wait(TABLE_STABILITY_POLL_MS);
+    }
+
+    throw new Error(`TWSE industry table did not stabilize within ${SELECTOR_TIMEOUT_MS}ms`);
+}
+
+async function gotoWithRetry(page, url, minimumRows) {
     let lastError = null;
 
     for (let attempt = 1; attempt <= MAX_NAVIGATION_ATTEMPTS; attempt++) {
         try {
             console.log(`Navigating to ${url} (attempt ${attempt}/${MAX_NAVIGATION_ATTEMPTS})...`);
 
-            // TWSE's ISIN page occasionally keeps subresources/connections open long enough
-            // that Playwright never observes DOMContentLoaded. Wait only for the navigation
-            // to commit, then explicitly wait for the progressively-rendered table to reach a
-            // plausible complete size. Snapshot validation below remains the final authority.
+            // TWSE's ISIN page progressively renders a large table and can remain in
+            // readyState=loading for a long time. Navigation commit/table existence alone
+            // are therefore insufficient. Require a row count derived from the existing
+            // production snapshot, then require the DOM row count to remain stable.
             const response = await page.goto(url, {
                 waitUntil: 'commit',
                 timeout: NAVIGATION_COMMIT_TIMEOUT_MS
@@ -37,21 +78,17 @@ async function gotoWithRetry(page, url) {
                 timeout: SELECTOR_TIMEOUT_MS
             });
 
-            await page.waitForFunction(
-                minimumRows => document.querySelectorAll('table.h4 tr').length >= minimumRows,
-                MIN_TABLE_ROWS_BEFORE_EXTRACT,
-                { timeout: SELECTOR_TIMEOUT_MS }
+            const stableState = await waitForStableTable(page, minimumRows);
+            console.log(
+                `Navigation table ready. currentUrl=${page.url()}, readyState=${stableState.readyState}, ` +
+                `rows=${stableState.rows}, requiredRows=${minimumRows}`
             );
-
-            const rowCount = await page.locator('table.h4 tr').count();
-            const readyState = await page.evaluate(() => document.readyState);
-            console.log(`Navigation table ready. currentUrl=${page.url()}, readyState=${readyState}, rows=${rowCount}`);
             return;
         } catch (error) {
             lastError = error;
             const rowCount = await page.locator('table.h4 tr').count().catch(() => 0);
             console.warn(`⚠️ Navigation attempt ${attempt} failed: ${error.message}`);
-            console.warn(`   currentUrl=${page.url()}, rows=${rowCount}`);
+            console.warn(`   currentUrl=${page.url()}, rows=${rowCount}, requiredRows=${minimumRows}`);
 
             try {
                 const debug = await page.evaluate(() => ({
@@ -169,6 +206,17 @@ function writeFileAtomic(filePath, content) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
+    const mainFile = path.join(outputDir, 'twse_industry.csv');
+    const previousCount = countCsvRecords(mainFile);
+    const minimumRowsBeforeExtract = Math.max(
+        MIN_TABLE_ROWS_FLOOR,
+        previousCount > 0 ? Math.floor(previousCount * (1 - MAX_DROP_RATIO)) : 0
+    );
+    console.log(
+        `TWSE readiness threshold: previous consolidated=${previousCount || 'none'}, ` +
+        `minimum table rows=${minimumRowsBeforeExtract}`
+    );
+
     console.log('Launching browser...');
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
@@ -190,7 +238,7 @@ function writeFileAtomic(filePath, content) {
     });
 
     try {
-        await gotoWithRetry(page, url);
+        await gotoWithRetry(page, url, minimumRowsBeforeExtract);
 
         console.log('Extracting data...');
         const data = await page.evaluate(() => {
@@ -277,7 +325,6 @@ function writeFileAtomic(filePath, content) {
             }
         }
 
-        const mainFile = path.join(outputDir, 'twse_industry.csv');
         validateSnapshot(data, allStocksForMainList, mainFile);
 
         // No production file is touched until the entire snapshot passes validation.
