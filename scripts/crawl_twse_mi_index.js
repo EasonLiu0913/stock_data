@@ -8,8 +8,21 @@ const {
 const API_URL = 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX';
 const OUTPUT_DIR = path.join(__dirname, '../data_twse_mi_index');
 const RATE_LIMIT_STATUS_CODES = new Set([307, 429, 503]);
+const TRANSIENT_NETWORK_ERROR_CODES = new Set([
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'ENETUNREACH',
+    'EHOSTUNREACH',
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_HEADERS_TIMEOUT',
+    'UND_ERR_BODY_TIMEOUT',
+    'UND_ERR_SOCKET'
+]);
 const DEFAULT_MIN_DELAY_MS = 3000;
 const DEFAULT_MAX_DELAY_MS = 5000;
+const DEFAULT_NETWORK_COOLDOWN_MS = 15000;
 const DEFAULT_MISMATCH_COOLDOWN_MS = 90000;
 const DEFAULT_MAINTENANCE_FALLBACK_COOLDOWN_MS = 60000;
 const TWSE_MAINTENANCE_ERROR_CODE = 'TWSE_MI_INDEX_MAINTENANCE';
@@ -28,6 +41,7 @@ function getPositionalDate() {
         '--min-delay',
         '--max-delay',
         '--rate-limit-cooldown',
+        '--network-cooldown',
         '--mismatch-cooldown',
         '--max-maintenance-retries',
         '--maintenance-fallback-cooldown'
@@ -154,6 +168,13 @@ function randomDelay(minMs, maxMs) {
     return minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
 }
 
+function isTransientNetworkError(error) {
+    if (!error) return false;
+    const codes = [error.code, error.cause?.code].filter(Boolean);
+    if (codes.some(code => TRANSIENT_NETWORK_ERROR_CODES.has(code))) return true;
+    return error instanceof TypeError && /fetch failed/i.test(error.message || '');
+}
+
 async function waitForScheduledMaintenanceWindow(type) {
     if (String(type).toUpperCase() !== 'ALL') return;
 
@@ -170,12 +191,13 @@ async function waitForScheduledMaintenanceWindow(type) {
 async function fetchTwseMiIndex(dateStr, type) {
     const maxRetries = getNumberArg('--max-retries', 3);
     const rateLimitCooldownMs = getNumberArg('--rate-limit-cooldown', 90000);
+    const networkCooldownMs = getNumberArg('--network-cooldown', DEFAULT_NETWORK_COOLDOWN_MS);
     const maxMaintenanceRetries = getNumberArg('--max-maintenance-retries', 3);
     const maintenanceFallbackCooldownMs = getNumberArg(
         '--maintenance-fallback-cooldown',
         DEFAULT_MAINTENANCE_FALLBACK_COOLDOWN_MS
     );
-    let rateLimitAttempt = 0;
+    let retryAttempt = 0;
     let maintenanceAttempt = 0;
 
     while (true) {
@@ -201,13 +223,21 @@ async function fetchTwseMiIndex(dateStr, type) {
                 continue;
             }
 
-            const shouldRetry = RATE_LIMIT_STATUS_CODES.has(error.status)
-                && rateLimitAttempt < maxRetries;
+            const rateLimited = RATE_LIMIT_STATUS_CODES.has(error.status);
+            const transientNetworkFailure = isTransientNetworkError(error);
+            const shouldRetry = (rateLimited || transientNetworkFailure)
+                && retryAttempt < maxRetries;
             if (!shouldRetry) throw error;
 
-            rateLimitAttempt++;
-            const cooldown = rateLimitCooldownMs * rateLimitAttempt;
-            console.log(`🕒 Got ${error.status}; cooling down ${Math.round(cooldown / 1000)}s before retry ${rateLimitAttempt}/${maxRetries}`);
+            retryAttempt++;
+            const cooldown = rateLimited
+                ? rateLimitCooldownMs * retryAttempt
+                : networkCooldownMs * retryAttempt;
+            const reason = rateLimited ? `HTTP ${error.status}` : (error.cause?.code || error.message);
+            console.log(
+                `🕒 TWSE transient failure (${reason}); cooling down `
+                + `${Math.round(cooldown / 1000)}s before retry ${retryAttempt}/${maxRetries}`
+            );
             await sleep(cooldown);
         }
     }
