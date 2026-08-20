@@ -5,6 +5,10 @@
   const STYLE_ID = 'predictionBackToTopStyle';
   const FUNDAMENTAL_SIGNAL_SCRIPT_ID = 'predictionFundamentalSignalContextScript';
   const FUNDAMENTAL_SIGNAL_SCRIPT = 'prediction-fundamental-signal-context.js?v=3';
+  const RESPONSIVE_CARD_SCRIPT_ID = 'predictionResponsiveStockCardScript';
+  const RESPONSIVE_CARD_SCRIPT = 'components/responsive-stock-card.js?v=2';
+  const PREDICTION_MOBILE_CARDS_SCRIPT_ID = 'predictionDashboardMobileCardsScript';
+  const PREDICTION_MOBILE_CARDS_SCRIPT = 'components/prediction-dashboard-mobile-cards.js?v=1';
   const EXISTING_CONTROL_SELECTOR = [
     '.to-top',
     '.back-to-top',
@@ -24,8 +28,42 @@
     document.head.appendChild(script);
   }
 
+  function loadScript(id, src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.getElementById(id);
+      if (existing) {
+        if (existing.dataset.loaded === 'true') resolve();
+        else {
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', reject, { once: true });
+        }
+        return;
+      }
+      const script = document.createElement('script');
+      script.id = id;
+      script.src = src;
+      script.defer = true;
+      script.addEventListener('load', () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      }, { once: true });
+      script.addEventListener('error', reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  async function installPredictionDashboardMobileCards() {
+    if (!document.getElementById('stockRows') || !document.getElementById('listHead')) return;
+    if (!window.ResponsiveStockCard) await loadScript(RESPONSIVE_CARD_SCRIPT_ID, RESPONSIVE_CARD_SCRIPT);
+    if (!window.PredictionDashboardMobileCards) await loadScript(PREDICTION_MOBILE_CARDS_SCRIPT_ID, PREDICTION_MOBILE_CARDS_SCRIPT);
+    window.PredictionDashboardMobileCards?.install();
+  }
+
   function install() {
     installFundamentalSignalContext();
+    installPredictionDashboardMobileCards().catch(error => {
+      console.error('Unable to install prediction dashboard mobile cards:', error);
+    });
 
     // Replay wrapper pages contain the real scrollable report in a nested iframe.
     // Installing a second fixed button in the wrapper creates overlapping arrows.
