@@ -28,9 +28,6 @@
       #${CONTAINER_ID} .rsc-card .prediction-risk-badge{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
       #${CONTAINER_ID} .rsc-card .prediction-completeness-badge{background:#f8fafc;color:#475569;border-color:#e2e8f0}
       @media(max-width:${MOBILE_MAX_WIDTH}px){
-        body.prediction-mobile-stock-view #stockRows{display:none}
-        body.prediction-mobile-stock-view #listHead{display:none}
-        body.prediction-mobile-stock-view #listHead.closest-table{display:none}
         body.prediction-mobile-stock-view .prediction-stock-table-wrap{display:none!important}
         body.prediction-mobile-stock-view #${CONTAINER_ID}{display:block}
       }
@@ -132,11 +129,18 @@
         `籌碼：${stock?.chip_bias || 'NA'}`,
         `RS 型態：${relative?.relative_strength_mode || 'NA'}`,
       ],
-      conflictingSignals: signals.length ? [] : ['目前沒有翻轉訊號'],
+      conflictingSignals: [],
       risks: [stock?.risk_label ? `個股風險：${stock.risk_label}` : '個股風險：NA'],
-      followUp: signals.length ? [`翻轉訊號：${signals.join('、')}`] : [],
+      followUp: [signals.length ? `翻轉訊號：${signals.join('、')}` : '翻轉訊號：目前沒有'],
       verification: { status: 'not_required', summary: '', sources: [] },
     };
+  }
+
+  function renameDetailSections(card) {
+    card.querySelectorAll('.rsc-section h4').forEach(title => {
+      if (title.textContent.trim() === '支持訊號') title.textContent = '完整指標';
+      if (title.textContent.trim() === '後續觀察') title.textContent = '翻轉訊號';
+    });
   }
 
   function decorateCard(card, stock) {
@@ -145,6 +149,8 @@
 
     const verificationBadge = [...card.querySelectorAll('.rsc-badge')].find(node => node.textContent.trim() === '資料完整');
     verificationBadge?.remove();
+    card.querySelector('.rsc-verification')?.remove();
+    renameDetailSections(card);
 
     const badges = card.querySelector('.rsc-badges');
     if (badges) {
