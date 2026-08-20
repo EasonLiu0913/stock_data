@@ -7,6 +7,7 @@ const SELECTOR_TIMEOUT_MS = 90000;
 const MAX_NAVIGATION_ATTEMPTS = 3;
 const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
+const MIN_TABLE_ROWS_BEFORE_EXTRACT = 1000;
 const MAX_DROP_RATIO = 0.10;
 const REQUIRED_STOCK_CODES = ['1101', '2317', '2330', '2882'];
 
@@ -23,8 +24,8 @@ async function gotoWithRetry(page, url) {
 
             // TWSE's ISIN page occasionally keeps subresources/connections open long enough
             // that Playwright never observes DOMContentLoaded. Wait only for the navigation
-            // to commit and for the target table to exist. Completeness is validated from the
-            // extracted snapshot later; a tiny row count must never be treated as scrape success.
+            // to commit, then explicitly wait for the progressively-rendered table to reach a
+            // plausible complete size. Snapshot validation below remains the final authority.
             const response = await page.goto(url, {
                 waitUntil: 'commit',
                 timeout: NAVIGATION_COMMIT_TIMEOUT_MS
@@ -36,19 +37,27 @@ async function gotoWithRetry(page, url) {
                 timeout: SELECTOR_TIMEOUT_MS
             });
 
+            await page.waitForFunction(
+                minimumRows => document.querySelectorAll('table.h4 tr').length >= minimumRows,
+                MIN_TABLE_ROWS_BEFORE_EXTRACT,
+                { timeout: SELECTOR_TIMEOUT_MS }
+            );
+
             const rowCount = await page.locator('table.h4 tr').count();
             const readyState = await page.evaluate(() => document.readyState);
-            console.log(`Navigation table detected. currentUrl=${page.url()}, readyState=${readyState}, rows=${rowCount}`);
+            console.log(`Navigation table ready. currentUrl=${page.url()}, readyState=${readyState}, rows=${rowCount}`);
             return;
         } catch (error) {
             lastError = error;
+            const rowCount = await page.locator('table.h4 tr').count().catch(() => 0);
             console.warn(`⚠️ Navigation attempt ${attempt} failed: ${error.message}`);
-            console.warn(`   currentUrl=${page.url()}`);
+            console.warn(`   currentUrl=${page.url()}, rows=${rowCount}`);
 
             try {
                 const debug = await page.evaluate(() => ({
                     readyState: document.readyState,
                     hasTable: Boolean(document.querySelector('table.h4')),
+                    rowCount: document.querySelectorAll('table.h4 tr').length,
                     bodyLength: document.body ? document.body.innerText.length : 0
                 }));
                 console.warn(`   pageState=${JSON.stringify(debug)}`);
