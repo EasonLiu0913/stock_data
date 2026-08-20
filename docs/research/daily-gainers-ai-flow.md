@@ -24,6 +24,23 @@ If institutional verification is unresolved:
   -> pending-file push immediately triggers the same GitHub validator/promote gate
 ```
 
+## Latest-rules-only policy
+
+This research pipeline intentionally does **not** preserve historical methodology compatibility as a production requirement.
+
+Once the facts schema, AI methodology, verification policy, or interpretation rules are upgraded, the newest rule set becomes canonical for **all dates**. Any date that is regenerated, backfilled, rechecked, or re-analyzed must be overwritten using the current schema and current methodology.
+
+Required behavior:
+
+- do not keep v1/v2 side-by-side merely to preserve old research output;
+- do not route historical dates through an old parser or old AI prompt;
+- do not refuse to overwrite an older artifact because its methodology version differs;
+- a backfill/recheck is an explicit request to recompute that date under the latest rules;
+- `analysis-facts/YYYYMMDD.json`, pending AI JSON, and `analysis-ai/YYYYMMDD.json` should converge to the current contracts whenever that date is touched;
+- historical traceability, when useful, comes from Git history/commits rather than keeping stale methodology active in the production data tree.
+
+Therefore the validator accepts only the current contracts. Old artifacts may physically remain until touched, but they are not considered canonical and must not be selected in preference to a newer methodology.
+
 ## Layer 1 — deterministic facts
 
 Owner: GitHub Actions + Node.js.
@@ -135,13 +152,15 @@ Triggers:
 
 Validator: `scripts/validate_daily_gainers_ai_analysis.js`.
 
-It checks facts v2 / AI v2 versions, exact date, exact stock count and order, required fields and enums, and institutional verification status. If a fact requires web verification, AI cannot use `not_required`.
+It checks current facts / AI methodology versions, exact date, exact stock count and order, required fields and enums, and institutional verification status. If a fact requires web verification, AI cannot use `not_required`.
 
 Only validated pending JSON is copied to `data_daily_gain_over_5/analysis-ai/YYYYMMDD.json`.
 
 ## Next-morning recheck
 
-A separate ChatGPT automation runs at 09:45 Asia/Taipei on weekdays. It finds the most recent prior `daily-gainers-ai-synthesis-v2` pending result containing `pending_publication` or `inconclusive`, rechecks only those stocks/actors on the web, and updates the same pending JSON if evidence changed.
+A separate ChatGPT automation runs at 09:45 Asia/Taipei on weekdays. It finds the most recent prior pending result containing `pending_publication` or `inconclusive`, rechecks only those stocks/actors on the web, and updates the same pending JSON if evidence changed.
+
+The recheck always uses the **current** facts and AI methodology. If the prior pending artifact is from an older methodology, regenerate/re-analyze that date under the latest rules rather than preserving the old output.
 
 Because the validation workflow watches pending-file pushes, an updated recheck is immediately validated/promoted; the 10:15/10:45 schedules are only fallback safety windows.
 
@@ -151,9 +170,9 @@ If the next-morning search still cannot confirm the data, keep `inconclusive` wi
 
 - `analysis/YYYYMMDD.json`: catalyst/cause research.
 - `analysis-flow/YYYYMMDD.json`: legacy deterministic flow compatibility data; not canonical AI.
-- `analysis-facts/YYYYMMDD.json`: canonical machine-readable deterministic evidence.
-- `research_pending/daily-gainers-ai/YYYYMMDD.json`: unvalidated ChatGPT output/recheck state.
-- `analysis-ai/YYYYMMDD.json`: canonical validated AI synthesis.
+- `analysis-facts/YYYYMMDD.json`: canonical machine-readable deterministic evidence under the latest methodology.
+- `research_pending/daily-gainers-ai/YYYYMMDD.json`: unvalidated ChatGPT output/recheck state under the latest methodology.
+- `analysis-ai/YYYYMMDD.json`: canonical validated AI synthesis under the latest methodology.
 
 Do not allow ChatGPT and Node.js to write the same canonical derived file.
 
@@ -165,14 +184,15 @@ Do not allow ChatGPT and Node.js to write the same canonical derived file.
 - If publication timing is uncertain, mark `pending_publication` and recheck next morning.
 - If sources conflict, mark `inconclusive` and preserve the conflict.
 - AI JSON failing schema validation remains pending and is not promoted.
+- An old methodology is never a fallback. Regenerate with the current methodology instead.
 
-## Methodology versions
+## Current methodology
 
-Current:
+Canonical contracts:
 
 ```text
 daily-gainers-ai-facts-v2
 daily-gainers-ai-synthesis-v2
 ```
 
-Historical v1 artifacts remain traceable as v1 and are not silently rewritten by the v2 validator.
+When these versions are replaced in the future, the replacements immediately become canonical for both current and historical dates whenever those dates are regenerated or rechecked.
