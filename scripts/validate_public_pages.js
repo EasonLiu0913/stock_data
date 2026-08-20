@@ -131,9 +131,14 @@ function validateDailyGainersResponsiveContract() {
     fail('daily-gainers-over-5.html mobile card container contract changed');
   }
 
-  const mobileMedia = html.match(/@media\s*\(max-width:\s*760px\)\s*\{([\s\S]*?)\n\s*\}/);
-  if (!mobileMedia) fail('daily-gainers-over-5.html must define the canonical 760px mobile breakpoint');
-  const mobileCss = mobileMedia[1];
+  const mobileMarker = '@media (max-width: 760px) {';
+  const narrowMarker = '@media (max-width: 476px) {';
+  const mobileStart = html.indexOf(mobileMarker);
+  const narrowStart = html.indexOf(narrowMarker, mobileStart + mobileMarker.length);
+  if (mobileStart < 0) fail('daily-gainers-over-5.html must define the canonical 760px mobile breakpoint');
+  if (narrowStart < 0) fail('daily-gainers-over-5.html must keep the optional narrow-screen breakpoint after the 760px contract');
+  const mobileCss = html.slice(mobileStart, narrowStart);
+
   if (!/\.table-wrap\s*\{\s*display:\s*none;\s*\}/.test(mobileCss)) {
     fail('daily-gainers-over-5.html must hide the desktop table at <=760px');
   }
