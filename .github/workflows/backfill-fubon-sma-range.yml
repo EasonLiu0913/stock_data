@@ -47,13 +47,13 @@ jobs:
       end_date: ${{ steps.plan.outputs.end_date }}
       pending_dates: ${{ steps.plan.outputs.pending_dates }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Test SMA range planner and merger
         run: node --test tests/plan_twse_range_backfill.test.js tests/merge_history_data.test.js tests/sma_history_range_seed.test.js
       - name: Plan missing or invalid SMA dates
@@ -102,13 +102,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
@@ -130,13 +130,13 @@ jobs:
     if: always() && needs.plan.outputs.has_work == 'true' && (needs.crawl-history.result == 'success' || needs.crawl-history.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Rebuild requested daily SMA files
         run: node scripts/merge_history_data.js --sma-only --start "${{ needs.plan.outputs.start_date }}" --end "${{ needs.plan.outputs.end_date }}"
       - name: Verify all requested trading dates

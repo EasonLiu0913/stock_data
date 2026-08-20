@@ -44,7 +44,7 @@ jobs:
       environment_hash: ${{ steps.final_state.outputs.environment_hash }}
       v1_generated: ${{ steps.dates.outputs.run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -58,10 +58,9 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
-
+          node-version: '24'
       - name: Install dependencies
         run: npm ci
 
@@ -300,7 +299,7 @@ jobs:
     outputs:
       v2_generated: ${{ steps.source.outputs.run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -312,10 +311,9 @@ jobs:
           git reset --hard origin/main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
-
+          node-version: '24'
       - name: Install dependencies
         run: npm ci
 

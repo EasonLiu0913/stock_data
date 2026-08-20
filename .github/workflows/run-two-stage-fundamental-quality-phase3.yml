@@ -27,7 +27,7 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - name: Checkout research dependencies
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           sparse-checkout-cone-mode: false
@@ -47,10 +47,9 @@ jobs:
             data_history_sma/**
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
-
+          node-version: '24'
       - name: Syntax checks
         run: |
           node --check scripts/event_driven_financial_quality.js
@@ -92,7 +91,7 @@ jobs:
           NODE
 
       - name: Upload Phase 3 result
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: phase3-event-driven-result
           path: data_prediction_analysis/quarterly-financial-quality/two-stage-fundamental-quality-phase3-event-driven.json

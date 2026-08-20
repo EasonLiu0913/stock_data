@@ -39,9 +39,9 @@ jobs:
       has_work: ${{ steps.plan.outputs.has_work }}
       pending: ${{ steps.plan.outputs.pending }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main, fetch-depth: 1 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '20' }
       - run: node --test tests/crawl_vix_index.test.js tests/refresh_dataset_indexes.test.js
       - id: plan
@@ -75,9 +75,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: main, fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '20' }
       - name: Crawl and safely push each VIX date
         env:

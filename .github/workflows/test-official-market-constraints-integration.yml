@@ -48,13 +48,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Apply native prediction context migration
         run: |
           node --check scripts/install_native_prediction_market_context.js
@@ -91,14 +91,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
-
+          node-version: '24'
       - name: Syntax and unit tests
         run: |
           node --check scripts/taifex_official_night_futures.js
@@ -199,7 +198,7 @@ jobs:
             data_predictions/20260731/group-summary.json \
             data_prediction_analysis/formal-strategy/20260731.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: official-constraints-and-prediction-context-20260731

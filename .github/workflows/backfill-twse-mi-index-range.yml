@@ -39,13 +39,13 @@ jobs:
       has_work: ${{ steps.plan.outputs.has_work }}
       pending_dates: ${{ steps.plan.outputs.pending_dates }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Validate planner
         run: |
           node --check scripts/plan_twse_mi_index_range_backfill.js
@@ -88,13 +88,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Crawl one trading-date batch
         env:
           DATES: ${{ matrix.dates }}
@@ -146,12 +146,12 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Verify requested range
         env:
           START_DATE: ${{ inputs.start_date }}
