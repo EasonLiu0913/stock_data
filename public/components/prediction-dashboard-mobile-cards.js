@@ -17,7 +17,7 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      #${CONTAINER_ID}{display:none;margin-top:10px}
+      #${CONTAINER_ID}{display:none;margin-top:10px;gap:12px}
       .prediction-mobile-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
       .prediction-mobile-action{display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:9px;border:1px solid #cbd5e1;background:#fff;color:#1d5f99;text-decoration:none;font-size:.82rem;font-weight:850}
       .prediction-mobile-action.primary{border-color:#2563eb;background:#2563eb;color:#fff}
@@ -29,7 +29,7 @@
       #${CONTAINER_ID} .rsc-card .prediction-completeness-badge{background:#f8fafc;color:#475569;border-color:#e2e8f0}
       @media(max-width:${MOBILE_MAX_WIDTH}px){
         body.prediction-mobile-stock-view .prediction-stock-table-wrap{display:none!important}
-        body.prediction-mobile-stock-view #${CONTAINER_ID}{display:block}
+        body.prediction-mobile-stock-view #${CONTAINER_ID}{display:grid}
       }
     `;
     document.head.appendChild(style);
