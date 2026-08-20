@@ -2,7 +2,6 @@ name: "[07 研究] 晚間 6/7/10 籌碼資料補分析"
 
 on:
   schedule:
-    # 平日 21:30、22:00、22:30 台北時間；只負責 deterministic 資料補齊與 AI facts 產生。
     - cron: '30 13 * * 1-5'
     - cron: '0 14 * * 1-5'
     - cron: '30 14 * * 1-5'
@@ -17,6 +16,9 @@ on:
       - main
     paths:
       - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
+      - 'config/daily-gainers-ai-contract.json'
+      - 'scripts/lib/daily_gainers_ai_contract.js'
+      - 'scripts/daily_gainers_ai_contract_cli.js'
       - 'scripts/build_daily_gainers_ai_facts.js'
 
 permissions:
@@ -47,14 +49,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validate deterministic generators
+      - name: Validate deterministic generators and central contract
         run: |
           set -euo pipefail
           node --check scripts/backfill_daily_gainers_research.js
           node --check scripts/refresh_daily_gainers_flow_preserve_cause.js
           node --check scripts/build_daily_gainers_ai_facts.js
           node --check scripts/validate_daily_gainers_ai_analysis.js
+          node --check scripts/lib/daily_gainers_ai_contract.js
+          node --check scripts/daily_gainers_ai_contract_cli.js
           node --check scripts/test_daily_gainers_institutional_parser.js
+          node scripts/daily_gainers_ai_contract_cli.js print | jq .
           node scripts/test_daily_gainers_institutional_parser.js
 
       - name: Resolve target date and required late inputs
@@ -132,7 +137,7 @@ jobs:
           echo "- ⑦ 券商分點：$broker_ready" >> "$GITHUB_STEP_SUMMARY"
           echo "- ⑩ MI_INDEX：$mi_index_ready" >> "$GITHUB_STEP_SUMMARY"
           if [ "$ready" = true ]; then
-            echo "- 結果：資料齊全，建立 deterministic AI facts；本 workflow 不撰寫 AI 結論。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 結果：資料齊全，依 central contract 建立 deterministic AI facts。" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- 結果：資料未齊，本輪安全結束，不以舊交易日替代。" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -146,24 +151,26 @@ jobs:
           node scripts/refresh_daily_gainers_flow_preserve_cause.js "$target_date"
           node scripts/build_daily_gainers_ai_facts.js "$target_date"
 
-      - name: Validate fact package
+      - name: Validate fact package against central contract
         if: steps.inputs.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          node - "${{ steps.inputs.outputs.target_date }}" <<'NODE'
+          target_date="${{ steps.inputs.outputs.target_date }}"
+          facts="data_daily_gain_over_5/analysis-facts/${target_date}.json"
+          node scripts/daily_gainers_ai_contract_cli.js assert-facts "$facts"
+          node - "$facts" "$target_date" <<'NODE'
           const fs = require('node:fs');
-          const date = process.argv[2];
-          const file = `data_daily_gain_over_5/analysis-facts/${date}.json`;
+          const file = process.argv[2];
+          const date = process.argv[3];
           const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
           if (payload.target_date !== date) throw new Error('target_date mismatch');
-          if (payload.methodology_version !== 'daily-gainers-ai-facts-v1') throw new Error('methodology mismatch');
           if (!Array.isArray(payload.stocks) || payload.stocks.length !== payload.stock_count) throw new Error('stock count mismatch');
-          const withBroker = payload.stocks.filter(x => x.broker).length;
-          const withMargin = payload.stocks.filter(x => x.margin).length;
+          const withBroker = payload.stocks.filter((x) => x.broker).length;
+          const withMargin = payload.stocks.filter((x) => x.margin).length;
           if (payload.stock_count > 0 && withBroker === 0) throw new Error('broker facts missing for all stocks');
           if (payload.stock_count > 0 && withMargin === 0) throw new Error('margin facts missing for all stocks');
-          console.log(JSON.stringify({ date, stock_count: payload.stock_count, withBroker, withMargin }));
+          console.log(JSON.stringify({ date, stock_count: payload.stock_count, withBroker, withMargin, methodology_version: payload.methodology_version }));
           NODE
 
       - name: Commit latest deterministic facts safely
@@ -183,6 +190,7 @@ jobs:
             git reset --hard origin/main
             node scripts/refresh_daily_gainers_flow_preserve_cause.js "$target_date"
             node scripts/build_daily_gainers_ai_facts.js "$target_date"
+            node scripts/daily_gainers_ai_contract_cli.js assert-facts "$facts_file"
             git add -- "$flow_file" "$facts_file"
             if git diff --cached --quiet; then
               echo "Latest main already contains equivalent deterministic facts"
