@@ -38,12 +38,12 @@ permissions:
   pages: write
   id-token: write
 
-# Every Pages run checks out ref: main, so a newer deployment supersedes an older
-# snapshot. Keep only the newest run instead of wasting minutes building and
-# uploading artifacts that will immediately be replaced.
+# Pages artifact is large and expensive to prepare. A newer data commit must not
+# cancel a deployment that has already spent minutes preparing/uploading it.
+# Serialize deployments and let later runs queue behind the active one.
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
