@@ -96,7 +96,7 @@ jobs:
         if: steps.existing.outputs.exists != 'true'
         shell: bash
         run: |
-          ARGS=(--date "${{ steps.existing.outputs.target_date }}" --max-retries 0)
+          ARGS=(--date "${{ steps.existing.outputs.target_date }}" --max-retries 3)
 
           if [ -n "${{ github.event.inputs.type }}" ]; then
             ARGS+=(--type "${{ github.event.inputs.type }}")
