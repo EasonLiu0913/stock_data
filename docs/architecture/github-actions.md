@@ -48,6 +48,69 @@ All Pages publication must reuse:
 
 Do not create a second deployment implementation or a legacy Pages rebuild API path.
 
+## Concurrency layering
+
+Workflow cancellation is intentionally split into two layers.
+
+### Data / repository write layer — do not cancel in progress
+
+Any workflow that may persist repository state is a write-layer workflow. Typical signals include:
+
+- `permissions: contents: write`;
+- `git commit`;
+- `git push`;
+- checkpoint commits during crawls, research, normalization, prediction, replay, or backfill.
+
+If such a workflow uses a concurrency group, it must use:
+
+```yaml
+cancel-in-progress: false
+```
+
+Omitting cancellation is also acceptable when no shared serialization group is needed.
+
+Reason: a runner may have generated and validated new data that has not yet reached `main`. Cancelling the workflow at that point can discard uncommitted progress.
+
+### Pages publication layer — stale runs may be cancelled
+
+The canonical Pages workflow is different:
+
+- it must not commit or push repository data;
+- it must checkout `ref: main` before packaging;
+- it rebuilds a complete Pages artifact from the latest committed `main`;
+- cancelling an older Pages-only run therefore cannot remove committed repository data.
+
+Required configuration:
+
+```yaml
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+```
+
+This prevents old Pages builds from forming a long queue while newer committed site state is waiting to publish.
+
+The safety boundary is therefore:
+
+```text
+generate / validate / commit / push main
+  -> non-cancelable data-write layer
+
+checkout latest main / package / upload / deploy Pages
+  -> cancelable publication layer
+```
+
+Deployment jobs should remain terminal stages after successful data commits, normally enforced with `needs:`.
+
+The repository-wide guard is:
+
+```text
+node scripts/audit_workflow_deployment_races.js --self-test
+node scripts/audit_workflow_deployment_races.js
+```
+
+It scans every workflow under `.github/workflows/**`, not only the workflows currently known to call Pages.
+
 ## Before editing a workflow
 
 Search the repository for:
@@ -57,6 +120,9 @@ workflow_run
 deploy-pages.yml
 workflow_call
 uses: ./.github/workflows/
+cancel-in-progress
+contents: write
+git push
 ```
 
 Also confirm:
@@ -65,6 +131,7 @@ Also confirm:
 - Existing triggers.
 - Permissions.
 - Concurrency group.
+- Whether the workflow can persist repository data.
 - Existing downstream callers.
 - Pages packaging dependencies if public runtime paths are affected.
 
