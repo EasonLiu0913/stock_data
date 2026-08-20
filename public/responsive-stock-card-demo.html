@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Stock Card Demo</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f1f5f9;color:#0f172a;padding:18px}
+    .page{max-width:1180px;margin:0 auto}.hero{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 8px 24px rgba(15,23,42,.07)}
+    h1{margin:0 0 8px;font-size:1.55rem}.hero p{margin:0;color:#64748b;line-height:1.6}.demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+    .phone{margin:0 auto;width:100%;background:#e2e8f0;border-radius:28px;padding:10px;box-shadow:0 18px 40px rgba(15,23,42,.16)}
+    .phone[data-width="320"]{max-width:320px}.phone[data-width="390"]{max-width:390px}.phone[data-width="476"]{max-width:476px}
+    .screen{background:#f8fafc;border-radius:20px;overflow:hidden;min-height:700px}.screen-head{padding:13px 12px 10px;background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:2}
+    .screen-title{font-size:.95rem;font-weight:900}.chips{display:flex;gap:6px;overflow:auto;margin-top:8px;padding-bottom:2px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{flex:0 0 auto;border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:6px 9px;font-size:.72rem;font-weight:800;color:#475569}.chip.active{background:#0f172a;color:#fff;border-color:#0f172a}
+    .screen-body{padding:10px}.label{text-align:center;font-size:.8rem;font-weight:850;color:#475569;margin:0 0 9px}
+    @media(max-width:1050px){.demo-grid{grid-template-columns:1fr}.phone{max-width:476px!important}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>共用 Mobile Stock Card Demo</h1>
+      <p>示範 320px、390px、476px 寬度。手機版以「股票 → AI 判讀 → 核心籌碼 → 展開細節」為資訊階層，不再縮小桌機表格。</p>
+    </section>
+    <section class="demo-grid">
+      <div><p class="label">320px</p><div class="phone" data-width="320"><div class="screen"><div class="screen-head"><div class="screen-title">5% 漲幅 AI 籌碼</div><div class="chips"><span class="chip active">全部</span><span class="chip">偏多</span><span class="chip">待查證</span></div></div><div class="screen-body" id="cards320"></div></div></div></div>
+      <div><p class="label">390px</p><div class="phone" data-width="390"><div class="screen"><div class="screen-head"><div class="screen-title">5% 漲幅 AI 籌碼</div><div class="chips"><span class="chip active">全部</span><span class="chip">偏多</span><span class="chip">待查證</span></div></div><div class="screen-body" id="cards390"></div></div></div></div>
+      <div><p class="label">476px</p><div class="phone" data-width="476"><div class="screen"><div class="screen-head"><div class="screen-title">5% 漲幅 AI 籌碼</div><div class="chips"><span class="chip active">全部</span><span class="chip">偏多</span><span class="chip">待查證</span></div></div><div class="screen-body" id="cards476"></div></div></div></div>
+    </section>
+  </div>
+  <script src="components/responsive-stock-card.js"></script>
+  <script>
+    const rows = [
+      {
+        code:'3090',name:'日電貿',changePct:9.91,continuationBias:'bullish',confidence:'high',
+        summary:'法人買超、融資下降與分點承接同向，籌碼結構相對健康；續強關鍵是量能是否維持且外資沒有快速反手。',
+        institutional:{foreign:{net_lots:4269,record_status:'reported'},trust:{net_lots:-236,record_status:'reported'},dealer:{net_lots:36,record_status:'reported'}},
+        marginDelta:-1054,top5BuySharePct:41.7,volume:28743,
+        verification:{status:'not_required',summary:'三大法人原始資料完整，未觸發額外網路查證。'},
+        supportingSignals:['外資單日明顯買超','融資下降，籌碼槓桿同步收斂','買方分點沒有過度集中於單一券商'],
+        conflictingSignals:['投信小幅賣超'],risks:['隔日若爆量不漲，需留意短線獲利了結'],followUp:['觀察外資是否連續買超','觀察融資是否持續下降']
+      },
+      {
+        code:'8101',name:'華冠',changePct:10,continuationBias:'cautious',confidence:'medium',
+        summary:'漲停但成交量極低，法人原始表未見個股紀錄；已透過外部來源確認當日法人參與度極低，更像低流動性下的短線集中買盤。',
+        institutional:{foreign:{net_lots:null,record_status:'no_record'},trust:{net_lots:null,record_status:'no_record'},dealer:{net_lots:null,record_status:'no_record'}},
+        marginDelta:3,top5BuySharePct:78.4,volume:37,
+        verification:{status:'verified',summary:'官方表有效但無 8101 個股紀錄，外部資料亦未顯示顯著法人交易；不將 no_record 假裝成 0。',sources:[{title:'法人資料交叉確認示意',url:'#'}]},
+        supportingSignals:['股價收漲停','買方分點集中度高'],conflictingSignals:['成交量僅 37 張','三大法人無有效個股紀錄'],risks:['低流動性容易出現價格跳動','高集中度買盤若撤退，承接風險較高'],followUp:['隔日觀察是否能有效放量','追蹤主要買方分點是否延續']
+      },
+      {
+        code:'6573',name:'虹揚-KY',changePct:8.6,continuationBias:'neutral',confidence:'low',
+        summary:'價格動能明顯，但法人來源仍有未公布狀態，因此暫時不把「0」當成真實籌碼結論；等待隔日上午補查後再調整判讀。',
+        institutional:{foreign:{net_lots:null,record_status:'unavailable'},trust:{net_lots:0,record_status:'zero_net'},dealer:{net_lots:null,record_status:'unavailable'}},
+        marginDelta:126,top5BuySharePct:52.1,volume:1820,
+        verification:{status:'pending_publication',summary:'部分法人來源尚未確認完成，已排入隔日上午重新查證。'},
+        supportingSignals:['當日價格動能強','買方分點有一定集中度'],conflictingSignals:['法人資料未完整公布','融資增加'],risks:['法人數據補齊後可能改變目前資金結構判斷'],followUp:['隔日上午重新查外資與自營商','確認法人資料後重算 confidence']
+      }
+    ];
+    ResponsiveStockCard.render('#cards320', rows);
+    ResponsiveStockCard.render('#cards390', rows);
+    ResponsiveStockCard.render('#cards476', rows);
+  </script>
+</body>
+</html>
