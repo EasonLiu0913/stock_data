@@ -98,13 +98,13 @@ jobs:
           echo "date=$date" >> "$GITHUB_OUTPUT"
           echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
 
-          echo "## 每日預測覆盤：Preflight" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 日期來源：$date_source" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
-          echo "- comparison.json：$([ -s "$comparison_file" ] && echo '存在' || echo '缺少')" >> "$GITHUB_STEP_SUMMARY"
-          echo "- replay.json：$([ -s "$replay_file" ] && echo '存在' || echo '缺少')" >> "$GITHUB_STEP_SUMMARY"
-          echo "- replay-dashboard.json：$([ -s "$dashboard_file" ] && echo '存在' || echo '缺少')" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 本次是否執行：$should_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 每日預測覆盤：執行前檢查" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤日期來源：$date_source" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- V1／V2 比較結果（comparison.json）：$([ -s "$comparison_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 核心覆盤結果（replay.json）：$([ -s "$replay_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤 Dashboard 資料（replay-dashboard.json）：$([ -s "$dashboard_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次需要執行覆盤：$should_run" >> "$GITHUB_STEP_SUMMARY"
 
   replay_and_compare:
     name: 產生 V1／V2 覆盤、環境驗證與比較
@@ -176,14 +176,14 @@ jobs:
           echo "observation_tag_run=$observation_tag_run" >> "$GITHUB_OUTPUT"
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
-          echo "## 每日預測覆盤" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 日期來源：$date_source" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 重新產生比較：$comparison_run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 重新產生實際市場環境：$environment_run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 計算既有正式策略：$formal_strategy_run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 計算標籤組合策略：$tag_strategy_run" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 計算觀察型風險標籤：$observation_tag_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 每日預測覆盤：本次處理項目" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤日期來源：執行前檢查（Preflight）" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 產生／更新 V1／V2 比較結果：$comparison_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 產生／更新實際市場環境：$environment_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算既有正式策略覆盤：$formal_strategy_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算標籤組合策略覆盤：$tag_strategy_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算觀察型風險標籤覆盤：$observation_tag_run" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run market environment and strategy tests
         run: |
@@ -219,7 +219,11 @@ jobs:
           status=$(node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(p.status||"unknown"));' "$result_file")
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
           echo "status=$status" >> "$GITHUB_OUTPUT"
-          echo "- 五日盤中結果：$status（資料變更：$changed）" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" = "pending_five_trading_days" ]; then
+            echo "- 五日盤中績效：尚未滿 5 個交易日，暫待後續交易日補齊（本次無新資料可寫入）" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- 五日盤中績效：$status（本次是否有新資料寫入：$changed）" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Analyze low-volume exclusion impact
         if: steps.date.outputs.volume_run == 'true'
