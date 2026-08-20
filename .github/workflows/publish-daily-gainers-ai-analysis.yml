@@ -2,13 +2,16 @@ name: "[07 研究] 5% 漲幅 AI 籌碼解讀驗證發布"
 
 on:
   schedule:
-    # ChatGPT 22:45 產生 pending JSON；23:00 驗證，23:30 補一次容錯。
+    # ChatGPT 22:45 產生當日 pending；23:00/23:30 驗證。
     - cron: '0 15 * * 1-5'
     - cron: '30 15 * * 1-5'
+    # ChatGPT 次日 09:45 補查 unresolved institutional data；10:15/10:45 再驗證發布最近 pending 日期。
+    - cron: '15 2 * * 1-5'
+    - cron: '45 2 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: '分析日期 YYYYMMDD；留空時使用台北當日'
+        description: '分析日期 YYYYMMDD；留空時晚間用台北當日、上午用最近 pending 日期'
         required: false
         default: ''
 
@@ -44,11 +47,26 @@ jobs:
           set -euo pipefail
           if [ -n "${INPUT_DATE:-}" ]; then
             target_date="$INPUT_DATE"
+            mode="manual"
           else
-            target_date="$(TZ='Asia/Taipei' date '+%Y%m%d')"
+            hour="$(TZ='Asia/Taipei' date '+%H')"
+            if [ "$hour" -lt 12 ]; then
+              target_date="$(find research_pending/daily-gainers-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+              mode="next_day_recheck"
+              if [ -z "$target_date" ]; then
+                echo "No pending AI synthesis exists for morning recheck"
+                echo "target_date=" >> "$GITHUB_OUTPUT"
+                echo "mode=$mode" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            else
+              target_date="$(TZ='Asia/Taipei' date '+%Y%m%d')"
+              mode="same_day"
+            fi
           fi
           [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $target_date" >&2; exit 1; }
           echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Check pending AI synthesis
         id: pending
@@ -56,6 +74,10 @@ jobs:
         run: |
           set -euo pipefail
           date="${{ steps.date.outputs.target_date }}"
+          if [ -z "$date" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           facts="data_daily_gain_over_5/analysis-facts/${date}.json"
           pending="research_pending/daily-gainers-ai/${date}.json"
           ready=true
@@ -65,9 +87,9 @@ jobs:
           if [ "$ready" != true ]; then
             echo "## AI 籌碼解讀尚未可發布" >> "$GITHUB_STEP_SUMMARY"
             echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
             echo "- facts exists: $([ -s "$facts" ] && echo true || echo false)" >> "$GITHUB_STEP_SUMMARY"
             echo "- pending AI exists: $([ -s "$pending" ] && echo true || echo false)" >> "$GITHUB_STEP_SUMMARY"
-            echo "- 本輪安全結束；不使用前一交易日 AI 結果。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Validate pending AI schema against facts
@@ -109,6 +131,7 @@ jobs:
             if git push origin HEAD:main; then
               echo "## AI 籌碼解讀已通過 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
               echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
+              echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
               echo "- 正式檔：$published" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
