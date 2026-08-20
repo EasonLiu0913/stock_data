@@ -4,7 +4,9 @@ const path = require('path');
 
 const NAVIGATION_TIMEOUT_MS = 45000;
 const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 5000;
+const NORMAL_DELAY_MIN_MS = 1500;
+const NORMAL_DELAY_MAX_MS = 4000;
+const RETRY_BASE_DELAY_MS = 3000;
 
 const targets = [
     { url: 'https://fubon-ebrokerdj.fbs.com.tw/z/zg/zg_D_0_1.djhtm', name: '上市外資買超1日排行' },
@@ -26,6 +28,16 @@ const targets = [
 ];
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function randomDelay(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+async function waitWithLog(label, min, max) {
+    const delay = randomDelay(min, max);
+    console.log(`⏳ ${label}: waiting ${delay}ms`);
+    await wait(delay);
+}
 
 function csvEscape(value) {
     const text = String(value ?? '');
@@ -102,7 +114,8 @@ async function extractTarget(browser, target) {
         }
 
         if (attempt < MAX_ATTEMPTS) {
-            await wait(RETRY_DELAY_MS * attempt);
+            const base = RETRY_BASE_DELAY_MS * (2 ** (attempt - 1));
+            await waitWithLog(`Retry backoff for ${target.name}`, base, base * 2);
         }
     }
 
@@ -116,7 +129,8 @@ async function extractTarget(browser, target) {
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
 
     try {
-        for (const target of targets) {
+        for (let index = 0; index < targets.length; index++) {
+            const target = targets[index];
             try {
                 const { data, pageDate } = await extractTarget(browser, target);
                 const csvContent = [
@@ -134,7 +148,9 @@ async function extractTarget(browser, target) {
                 console.error(`❌ Giving up on ${target.name} after ${MAX_ATTEMPTS} attempts: ${error.message}`);
             }
 
-            await wait(1000);
+            if (index < targets.length - 1) {
+                await waitWithLog('Normal pacing before next ranking page', NORMAL_DELAY_MIN_MS, NORMAL_DELAY_MAX_MS);
+            }
         }
 
         if (failedTargets.length > 0) {
