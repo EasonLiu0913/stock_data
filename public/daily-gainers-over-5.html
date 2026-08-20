@@ -7,8 +7,8 @@
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; }
-    .wrap { max-width: 1440px; margin: 0 auto; padding: 24px 16px 48px; }
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
+    .wrap { max-width: 1600px; margin: 0 auto; padding: 24px 16px 48px; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
     header { padding: 20px; margin-bottom: 16px; }
     h1 { margin: 0 0 8px; font-size: 1.55rem; }
     .desc, .meta { color: #64748b; line-height: 1.6; }
@@ -19,45 +19,77 @@
     .analysis-status { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .analysis-meta { padding: 14px 20px; color: #475569; line-height: 1.6; }
     .analysis-meta strong { color: #0f172a; }
-    .table-wrap { overflow-x: auto; }
-    .mobile-content { display: none; }
-    table { width: 100%; border-collapse: collapse; min-width: 1360px; }
-    th, td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; vertical-align: top; }
-    th { background: #f8fafc; color: #475569; font-size: .9rem; }
-    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:nth-last-child(-n+2), td:nth-last-child(-n+2) { text-align: left; }
-    .gain { font-weight: 900; color: #dc2626; }
-    .analysis-cell { min-width: 330px; max-width: 520px; white-space: normal; line-height: 1.55; }
-    .reason-title { font-weight: 800; margin-bottom: 6px; color: #0f172a; }
-    .reason-detail { color: #475569; font-size: .92rem; }
-    .reason-detail + .reason-detail { margin-top: 5px; }
-    .flow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 10px; margin: 7px 0; }
-    .flow-grid span { color: #475569; font-size: .88rem; }
-    .sources { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 10px; }
-    .sources a { color: #2563eb; text-decoration: none; font-size: .88rem; }
+
+    .stock-list { display: grid; gap: 16px; }
+    .stock-card { overflow: hidden; }
+    .stock-card-grid { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(320px, 1.15fr) minmax(360px, 1.35fr); }
+    .stock-pane { min-width: 0; padding: 18px 20px; }
+    .stock-pane + .stock-pane { border-left: 1px solid #e2e8f0; }
+    .pane-label { margin-bottom: 12px; color: #64748b; font-size: .78rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+
+    .stock-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .stock-identity { min-width: 0; }
+    .stock-code { color: #64748b; font-size: .88rem; font-weight: 800; }
+    .stock-name { margin-top: 2px; font-size: 1.25rem; line-height: 1.25; font-weight: 900; overflow-wrap: anywhere; }
+    .gain-block { text-align: right; flex: 0 0 auto; }
+    .gain { color: #dc2626; font-size: 1.32rem; font-weight: 950; }
+    .close-price { margin-top: 3px; color: #475569; font-size: .86rem; }
+    .price-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; margin-top: 16px; }
+    .metric { padding: 9px 10px; border-radius: 9px; background: #f8fafc; }
+    .metric-label { display: block; color: #64748b; font-size: .76rem; font-weight: 700; }
+    .metric-value { display: block; margin-top: 3px; font-size: .96rem; font-weight: 850; }
+    .volume-box { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 9px; background: #f8fafc; }
+    .volume-box .metric-value { margin-top: 0; }
+
+    .reason-title { font-weight: 850; margin-bottom: 7px; color: #0f172a; line-height: 1.5; }
+    .reason-detail { color: #475569; font-size: .92rem; line-height: 1.6; overflow-wrap: anywhere; }
+    .reason-detail + .reason-detail { margin-top: 6px; }
+    .flow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 9px 0 11px; }
+    .flow-grid span { padding: 7px 8px; border-radius: 8px; background: #f8fafc; color: #475569; font-size: .84rem; line-height: 1.35; }
+    .flow-grid strong { display: block; margin-bottom: 2px; color: #0f172a; font-size: .76rem; }
+    .sources { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 6px 10px; }
+    .sources a { color: #2563eb; text-decoration: none; font-size: .86rem; }
     .sources a:hover { text-decoration: underline; }
-    .confidence { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: .78rem; font-weight: 800; }
+    .confidence { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: .76rem; font-weight: 850; }
     .confidence-high { background: #dcfce7; color: #166534; }
     .confidence-medium { background: #fef3c7; color: #92400e; }
     .confidence-low { background: #f1f5f9; color: #475569; }
+    .ai-block { margin-top: 12px; padding: 11px 12px; border-radius: 10px; background: #f8fafc; }
+    .ai-block-title { margin-bottom: 5px; color: #334155; font-size: .78rem; font-weight: 900; }
+    .signal-list { margin: 5px 0 0; padding-left: 18px; color: #475569; font-size: .88rem; line-height: 1.55; }
     .pending { color: #64748b; font-style: italic; }
     .empty, .error { padding: 32px 20px; text-align: center; color: #64748b; }
     .error { color: #b91c1c; }
+
+    @media (max-width: 1120px) {
+      .stock-card-grid { grid-template-columns: minmax(240px, .8fr) minmax(0, 1.2fr); }
+      .stock-pane-flow { grid-column: 1 / -1; border-left: 0 !important; border-top: 1px solid #e2e8f0; }
+    }
     @media (max-width: 760px) {
       .wrap { padding: 12px 8px 32px; }
       header { padding: 16px 14px; }
       h1 { font-size: 1.3rem; }
       .desc { font-size: .9rem; }
-      .toolbar { align-items: stretch; flex-direction: column; padding: 14px; }
+      .toolbar { position: sticky; top: 0; z-index: 10; align-items: stretch; flex-direction: column; padding: 14px; box-shadow: 0 8px 20px rgba(15,23,42,.08); }
       .summary { margin-left: 0; }
       .analysis-status { grid-template-columns: 1fr; gap: 8px; }
       .analysis-meta { padding: 11px 12px; font-size: .86rem; }
-      .table-wrap { display: none; }
-      .mobile-content { display: block; }
-      .toolbar { position: sticky; top: 0; z-index: 10; box-shadow: 0 8px 20px rgba(15,23,42,.08); }
       select { width: 100%; min-width: 0; min-height: 42px; }
+      .stock-card-grid { display: block; }
+      .stock-pane { padding: 16px 14px; }
+      .stock-pane + .stock-pane { border-left: 0; border-top: 1px solid #e2e8f0; }
+      .stock-pane-flow { border-top: 1px solid #e2e8f0 !important; }
+      .pane-label { margin-bottom: 10px; }
+      .stock-name { font-size: 1.18rem; }
+      .gain { font-size: 1.2rem; }
+      .flow-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 476px) {
       .wrap { padding: 10px 8px 28px; }
+      .price-grid { gap: 7px; }
+      .metric { padding: 8px; }
+      .flow-grid { gap: 5px; }
+      .flow-grid span { padding: 7px 6px; font-size: .79rem; }
     }
   </style>
 </head>
@@ -82,17 +114,11 @@
       <div class="analysis-meta card" id="flowMeta"><strong>籌碼與 AI 綜合解讀：</strong>載入中…</div>
     </section>
 
-    <section class="card table-wrap" id="content">
-      <div class="empty">載入資料中…</div>
-    </section>
-
-    <section class="mobile-content" id="mobileContent">
-      <div class="empty">載入手機卡片中…</div>
+    <section class="stock-list" id="content">
+      <div class="card empty">載入資料中…</div>
     </section>
   </main>
 
-  <script src="components/responsive-stock-card.js"></script>
-  <script src="components/daily-gainers-mobile-cards.js"></script>
   <script>
     const DATA_ROOT = '../data_daily_gain_over_5';
     const ANALYSIS_ROOT = '../data_daily_gain_over_5/analysis';
@@ -101,14 +127,13 @@
     const ANALYSIS_AI_ROOT = '../data_daily_gain_over_5/analysis-ai';
     const dateSelect = document.getElementById('dateSelect');
     const content = document.getElementById('content');
-    const mobileContent = document.getElementById('mobileContent');
     const meta = document.getElementById('meta');
     const summary = document.getElementById('summary');
     const analysisMeta = document.getElementById('analysisMeta');
     const flowMeta = document.getElementById('flowMeta');
 
-    const formatNumber = (value) => value == null || value === 'unavailable' ? '—' : Number(value).toLocaleString('zh-TW');
-    const formatPrice = (value) => value == null ? '—' : Number(value).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+    const formatNumber = (value) => value == null || value === 'unavailable' || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('zh-TW');
+    const formatPrice = (value) => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
     const formatDate = (value) => value && value.length === 8 ? `${value.slice(0,4)}-${value.slice(4,6)}-${value.slice(6,8)}` : value;
     const formatDateTime = (value) => {
       if (!value) return '—';
@@ -179,34 +204,78 @@
         ${renderSources(analysis.sources)}`;
     }
 
-    function renderFlow(flow) {
-      if (!flow) return '<span class="pending">籌碼研究尚未產生</span>';
-      const [confidenceText, confidenceClass] = confidenceLabel(flow.confidence);
-      const net = (value) => value == null || value === 'unavailable' ? '—' : `${Number(value).toLocaleString('zh-TW')} 張`;
-      const detail = flow.flow_interpretation || flow.institutional_summary || '尚無明確籌碼結論';
+    function renderAi(ai) {
+      if (!ai) return '';
+      const [confidenceText, confidenceClass] = confidenceLabel(ai.confidence);
+      const support = Array.isArray(ai.supporting_signals) ? ai.supporting_signals.filter(Boolean).slice(0, 4) : [];
+      const conflicts = Array.isArray(ai.conflicting_signals) ? ai.conflicting_signals.filter(Boolean).slice(0, 3) : [];
       return `
-        <div class="reason-title">${escapeHtml(detail)}</div>
-        <div class="reason-detail"><span class="confidence ${confidenceClass}">可信度 ${confidenceText}</span></div>
-        <div class="flow-grid">
-          <span><strong>外資</strong> ${escapeHtml(net(flow.foreign_net))}</span>
-          <span><strong>投信</strong> ${escapeHtml(net(flow.trust_net))}</span>
-          <span><strong>自營商</strong> ${escapeHtml(net(flow.dealer_net))}</span>
+        <div class="ai-block">
+          <div class="ai-block-title">AI 綜合判讀</div>
+          ${ai.funding_structure ? `<div class="reason-detail"><strong>資金結構：</strong>${escapeHtml(ai.funding_structure)}</div>` : ''}
+          ${ai.synthesis ? `<div class="reason-detail">${escapeHtml(ai.synthesis)}</div>` : ''}
+          <div class="reason-detail"><span class="confidence ${confidenceClass}">可信度 ${confidenceText}</span>${ai.continuation_bias ? `　<strong>延續：</strong>${escapeHtml(ai.continuation_bias)}` : ''}</div>
+          ${support.length ? `<div class="reason-detail"><strong>支持訊號：</strong></div><ul class="signal-list">${support.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+          ${conflicts.length ? `<div class="reason-detail"><strong>矛盾訊號：</strong></div><ul class="signal-list">${conflicts.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+        </div>`;
+    }
+
+    function renderFlow(flow, ai) {
+      if (!flow && !ai) return '<span class="pending">籌碼研究尚未產生</span>';
+      const net = (value) => value == null || value === 'unavailable' || !Number.isFinite(Number(value)) ? '—' : `${Number(value).toLocaleString('zh-TW')} 張`;
+      let body = '';
+      if (flow) {
+        const [confidenceText, confidenceClass] = confidenceLabel(flow.confidence);
+        const detail = flow.flow_interpretation || flow.institutional_summary || '尚無明確籌碼結論';
+        body = `
+          <div class="reason-title">${escapeHtml(detail)}</div>
+          <div class="reason-detail"><span class="confidence ${confidenceClass}">可信度 ${confidenceText}</span></div>
+          <div class="flow-grid">
+            <span><strong>外資</strong>${escapeHtml(net(flow.foreign_net))}</span>
+            <span><strong>投信</strong>${escapeHtml(net(flow.trust_net))}</span>
+            <span><strong>自營商</strong>${escapeHtml(net(flow.dealer_net))}</span>
+          </div>
+          ${flow.institutional_summary ? `<div class="reason-detail"><strong>法人：</strong>${escapeHtml(flow.institutional_summary)}</div>` : ''}
+          ${flow.margin_signal && flow.margin_signal !== 'unavailable' ? `<div class="reason-detail"><strong>融資融券：</strong>${escapeHtml(flow.margin_signal)}</div>` : ''}
+          ${flow.broker_signal && flow.broker_signal !== 'unavailable' ? `<div class="reason-detail"><strong>分點：</strong>${escapeHtml(flow.broker_signal)}</div>` : ''}
+          ${flow.volume_signal && flow.volume_signal !== 'unavailable' ? `<div class="reason-detail"><strong>價量：</strong>${escapeHtml(flow.volume_signal)}</div>` : ''}
+          ${flow.technical_signal && flow.technical_signal !== 'unavailable' ? `<div class="reason-detail"><strong>技術：</strong>${escapeHtml(flow.technical_signal)}</div>` : ''}
+          ${flow.follow_up ? `<div class="reason-detail"><strong>後續觀察：</strong>${escapeHtml(flow.follow_up)}</div>` : ''}`;
+      }
+      return body + renderAi(ai);
+    }
+
+    function renderMarketPane(row) {
+      const change = Number(row.change_pct);
+      const changeText = Number.isFinite(change) ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—';
+      return `
+        <div class="stock-heading">
+          <div class="stock-identity">
+            <div class="stock-code">${escapeHtml(row.code)}</div>
+            <div class="stock-name">${escapeHtml(row.name || '')}</div>
+          </div>
+          <div class="gain-block">
+            <div class="gain">${escapeHtml(changeText)}</div>
+            <div class="close-price">收盤 ${formatPrice(row.close)}</div>
+          </div>
         </div>
-        ${flow.institutional_summary ? `<div class="reason-detail"><strong>法人：</strong>${escapeHtml(flow.institutional_summary)}</div>` : ''}
-        ${flow.margin_signal && flow.margin_signal !== 'unavailable' ? `<div class="reason-detail"><strong>融資融券：</strong>${escapeHtml(flow.margin_signal)}</div>` : ''}
-        ${flow.broker_signal && flow.broker_signal !== 'unavailable' ? `<div class="reason-detail"><strong>分點：</strong>${escapeHtml(flow.broker_signal)}</div>` : ''}
-        ${flow.volume_signal && flow.volume_signal !== 'unavailable' ? `<div class="reason-detail"><strong>價量：</strong>${escapeHtml(flow.volume_signal)}</div>` : ''}
-        ${flow.technical_signal && flow.technical_signal !== 'unavailable' ? `<div class="reason-detail"><strong>技術：</strong>${escapeHtml(flow.technical_signal)}</div>` : ''}
-        ${flow.follow_up ? `<div class="reason-detail"><strong>後續觀察：</strong>${escapeHtml(flow.follow_up)}</div>` : ''}`;
+        <div class="price-grid">
+          <div class="metric"><span class="metric-label">前收</span><span class="metric-value">${formatPrice(row.previous_close)}</span></div>
+          <div class="metric"><span class="metric-label">開盤</span><span class="metric-value">${formatPrice(row.open)}</span></div>
+          <div class="metric"><span class="metric-label">最高</span><span class="metric-value">${formatPrice(row.high)}</span></div>
+          <div class="metric"><span class="metric-label">最低</span><span class="metric-value">${formatPrice(row.low)}</span></div>
+        </div>
+        <div class="volume-box"><span class="metric-label">成交量</span><span class="metric-value">${formatNumber(row.volume)}</span></div>`;
     }
 
     function render(payload, analysisPayload, flowPayload, factsPayload, aiPayload) {
       const rows = Array.isArray(payload.stocks) ? payload.stocks : [];
       const analyses = Array.isArray(analysisPayload?.analyses) ? analysisPayload.analyses : [];
       const flows = Array.isArray(flowPayload?.analyses) ? flowPayload.analyses : [];
+      const ais = Array.isArray(aiPayload?.analyses) ? aiPayload.analyses : [];
       const analysisByCode = new Map(analyses.map(item => [String(item.code || ''), item]));
       const flowByCode = new Map(flows.map(item => [String(item.code || ''), item]));
-      const aiCount = Array.isArray(aiPayload?.analyses) ? aiPayload.analyses.length : 0;
+      const aiByCode = new Map(ais.map(item => [String(item.code || ''), item]));
 
       meta.textContent = `比較 ${formatDate(payload.previous_date)} → ${formatDate(payload.target_date)}；門檻 ≥ ${payload.threshold_pct}%`;
       summary.textContent = `符合 ${rows.length} 檔`;
@@ -214,52 +283,40 @@
         ? `<strong>上漲原因研究：</strong>已完成 ${analysisByCode.size}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(analysisPayload.generated_at))}`
         : '<strong>上漲原因研究：</strong>尚未產生；下午研究完成後會自動顯示。';
       flowMeta.innerHTML = aiPayload
-        ? `<strong>籌碼與 AI 綜合解讀：</strong>正式 AI 已完成 ${aiCount}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(aiPayload.generated_at))}`
+        ? `<strong>籌碼與 AI 綜合解讀：</strong>正式 AI 已完成 ${aiByCode.size}/${rows.length} 檔；更新時間 ${escapeHtml(formatDateTime(aiPayload.generated_at))}`
         : flowPayload
           ? `<strong>籌碼與 AI 綜合解讀：</strong>deterministic 籌碼已完成 ${flowByCode.size}/${rows.length} 檔；AI 解讀尚待產生。`
           : '<strong>籌碼與 AI 綜合解讀：</strong>尚未產生。';
 
       if (!rows.length) {
-        content.innerHTML = '<div class="empty">這個交易日沒有漲幅達 5% 的股票。</div>';
-        mobileContent.innerHTML = '<div class="empty">這個交易日沒有漲幅達 5% 的股票。</div>';
+        content.innerHTML = '<div class="card empty">這個交易日沒有漲幅達 5% 的股票。</div>';
         return;
       }
 
-      content.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>代號</th><th>名稱</th><th>前收</th><th>收盤</th><th>單日漲幅</th><th>開盤</th><th>最高</th><th>最低</th><th>成交量</th><th>上漲可能原因</th><th>籌碼與資金流</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(row => `
-              <tr>
-                <td>${escapeHtml(row.code)}</td>
-                <td>${escapeHtml(row.name || '')}</td>
-                <td>${formatPrice(row.previous_close)}</td>
-                <td>${formatPrice(row.close)}</td>
-                <td class="gain">+${Number(row.change_pct).toFixed(2)}%</td>
-                <td>${formatPrice(row.open)}</td>
-                <td>${formatPrice(row.high)}</td>
-                <td>${formatPrice(row.low)}</td>
-                <td>${formatNumber(row.volume)}</td>
-                <td class="analysis-cell">${renderReason(analysisByCode.get(String(row.code)))}</td>
-                <td class="analysis-cell">${renderFlow(flowByCode.get(String(row.code)))}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>`;
-
-      try {
-        DailyGainersMobileCards.render(mobileContent, payload, analysisPayload, flowPayload, factsPayload, aiPayload);
-      } catch (error) {
-        mobileContent.innerHTML = `<div class="error">手機卡片無法建立：${escapeHtml(error.message)}</div>`;
-      }
+      content.innerHTML = rows.map(row => {
+        const code = String(row.code || '');
+        return `
+          <article class="stock-card card">
+            <div class="stock-card-grid">
+              <section class="stock-pane stock-pane-market">
+                <div class="pane-label">股票與行情</div>
+                ${renderMarketPane(row)}
+              </section>
+              <section class="stock-pane stock-pane-reason">
+                <div class="pane-label">上漲可能原因</div>
+                ${renderReason(analysisByCode.get(code))}
+              </section>
+              <section class="stock-pane stock-pane-flow">
+                <div class="pane-label">籌碼與資金流</div>
+                ${renderFlow(flowByCode.get(code), aiByCode.get(code))}
+              </section>
+            </div>
+          </article>`;
+      }).join('');
     }
 
     async function loadDate(date) {
-      content.innerHTML = '<div class="empty">載入資料中…</div>';
-      mobileContent.innerHTML = '<div class="empty">載入手機卡片中…</div>';
+      content.innerHTML = '<div class="card empty">載入資料中…</div>';
       summary.textContent = '';
       analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>載入中…';
       flowMeta.innerHTML = '<strong>籌碼與 AI 綜合解讀：</strong>載入中…';
@@ -275,8 +332,7 @@
       } catch (error) {
         analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>載入失敗';
         flowMeta.innerHTML = '<strong>籌碼與 AI 綜合解讀：</strong>載入失敗';
-        content.innerHTML = `<div class="error">無法載入 ${formatDate(date)}：${escapeHtml(error.message)}</div>`;
-        mobileContent.innerHTML = `<div class="error">無法載入 ${formatDate(date)}：${escapeHtml(error.message)}</div>`;
+        content.innerHTML = `<div class="card error">無法載入 ${formatDate(date)}：${escapeHtml(error.message)}</div>`;
       }
     }
 
@@ -295,8 +351,7 @@
         meta.textContent = '尚無每日清單資料';
         analysisMeta.innerHTML = '<strong>上漲原因研究：</strong>無法取得交易日';
         flowMeta.innerHTML = '<strong>籌碼與 AI 綜合解讀：</strong>無法取得交易日';
-        content.innerHTML = `<div class="error">無法載入資料清單：${escapeHtml(error.message)}</div>`;
-        mobileContent.innerHTML = `<div class="error">無法載入資料清單：${escapeHtml(error.message)}</div>`;
+        content.innerHTML = `<div class="card error">無法載入資料清單：${escapeHtml(error.message)}</div>`;
       }
     }
 
