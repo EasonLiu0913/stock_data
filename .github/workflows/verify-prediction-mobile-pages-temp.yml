@@ -1,0 +1,53 @@
+name: "[TEMP] Verify prediction mobile Pages deployment"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/verify-prediction-mobile-pages-temp.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Wait for deployed mobile card assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset="https://easonliu0913.github.io/stock_data/public/components/prediction-dashboard-mobile-cards.js"
+          loader="https://easonliu0913.github.io/stock_data/public/prediction-back-to-top.js"
+          ok=0
+          for attempt in $(seq 1 60); do
+            asset_body="$(curl -fsSL --max-time 15 "$asset" || true)"
+            loader_body="$(curl -fsSL --max-time 15 "$loader" || true)"
+            if grep -q "PredictionDashboardMobileCards" <<<"$asset_body" \
+              && grep -q "prediction-dashboard-mobile-cards.js?v=2" <<<"$loader_body" \
+              && grep -q "翻轉訊號：目前沒有" <<<"$asset_body"; then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "Pages did not expose the expected prediction mobile assets in time." >&2
+            exit 1
+          fi
+          mkdir -p .deployment-verification
+          printf '{"verified":true,"feature":"prediction-dashboard-mobile-cards-v2","verified_at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .deployment-verification/prediction-mobile-pages.json
+      - name: Commit verification marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .deployment-verification/prediction-mobile-pages.json
+          git commit -m "chore: confirm prediction mobile Pages deployment"
+          git push origin HEAD:main
