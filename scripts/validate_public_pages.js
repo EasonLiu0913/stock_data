@@ -105,59 +105,77 @@ function validatePublicHtmlCoverage(classification) {
 
 function validateDailyGainersResponsiveContract() {
   const htmlFile = path.join(PUBLIC_DIR, 'daily-gainers-over-5.html');
-  const adapterFile = path.join(PUBLIC_DIR, 'components', 'daily-gainers-mobile-cards.js');
-  const cardFile = path.join(PUBLIC_DIR, 'components', 'responsive-stock-card.js');
-
-  for (const file of [htmlFile, adapterFile, cardFile]) {
-    if (!fs.existsSync(file)) fail(`Daily gainers responsive dependency is missing: ${path.relative(ROOT, file)}`);
+  if (!fs.existsSync(htmlFile)) {
+    fail(`Daily gainers responsive dependency is missing: ${path.relative(ROOT, htmlFile)}`);
   }
 
   const html = fs.readFileSync(htmlFile, 'utf8');
-  const adapter = fs.readFileSync(adapterFile, 'utf8');
 
   if (!html.includes('<meta name="viewport" content="width=device-width, initial-scale=1.0">')) {
     fail('daily-gainers-over-5.html must keep the mobile viewport meta tag');
   }
-  if (!html.includes('<script src="components/responsive-stock-card.js"></script>')) {
-    fail('daily-gainers-over-5.html must load responsive-stock-card.js');
+
+  // Canonical layout contract: one card DOM for desktop/tablet/mobile.
+  if (!html.includes('class="stock-list" id="content"')) {
+    fail('daily-gainers-over-5.html must keep the unified stock-list container');
   }
-  if (!html.includes('<script src="components/daily-gainers-mobile-cards.js"></script>')) {
-    fail('daily-gainers-over-5.html must load daily-gainers-mobile-cards.js');
+  if (!html.includes('class="card stock-card"')) {
+    fail('daily-gainers-over-5.html must render unified stock-card markup');
   }
-  if (!html.includes('class="card table-wrap" id="content"')) {
-    fail('daily-gainers-over-5.html desktop table container contract changed');
+  if (!html.includes('class="stock-card-grid"')) {
+    fail('daily-gainers-over-5.html must keep the three-pane stock-card grid');
   }
-  if (!html.includes('class="mobile-content" id="mobileContent"')) {
-    fail('daily-gainers-over-5.html mobile card container contract changed');
+  for (const paneClass of ['stock-pane-market', 'stock-pane-reason', 'stock-pane-flow']) {
+    if (!html.includes(paneClass)) {
+      fail(`daily-gainers-over-5.html must keep ${paneClass}`);
+    }
   }
 
+  // The old split desktop-table/mobile-adapter architecture must not return.
+  if (/<table(?:\s|>)/i.test(html)) {
+    fail('daily-gainers-over-5.html must not render a desktop table; use unified stock cards');
+  }
+  if (html.includes('mobileContent') || html.includes('DailyGainersMobileCards.render')) {
+    fail('daily-gainers-over-5.html must not keep a separate mobile-only render path');
+  }
+  if (html.includes('components/daily-gainers-mobile-cards.js') || html.includes('components/responsive-stock-card.js')) {
+    fail('daily-gainers-over-5.html must not depend on the retired split-layout adapters');
+  }
+
+  const tabletMarker = '@media (max-width: 1120px) {';
   const mobileMarker = '@media (max-width: 760px) {';
   const narrowMarker = '@media (max-width: 476px) {';
+  const tabletStart = html.indexOf(tabletMarker);
   const mobileStart = html.indexOf(mobileMarker);
   const narrowStart = html.indexOf(narrowMarker, mobileStart + mobileMarker.length);
+  if (tabletStart < 0) fail('daily-gainers-over-5.html must define the canonical 1120px tablet breakpoint');
   if (mobileStart < 0) fail('daily-gainers-over-5.html must define the canonical 760px mobile breakpoint');
-  if (narrowStart < 0) fail('daily-gainers-over-5.html must keep the optional narrow-screen breakpoint after the 760px contract');
+  if (narrowStart < 0) fail('daily-gainers-over-5.html must keep the optional 476px narrow-screen breakpoint');
+  if (!(tabletStart < mobileStart && mobileStart < narrowStart)) {
+    fail('daily-gainers-over-5.html responsive breakpoints must remain ordered 1120px > 760px > 476px');
+  }
+
+  const desktopGrid = /\.stock-card-grid\s*\{[^}]*grid-template-columns:\s*minmax\(230px,\s*\.8fr\)\s+minmax\(320px,\s*1\.15fr\)\s+minmax\(360px,\s*1\.35fr\)/s;
+  if (!desktopGrid.test(html)) {
+    fail('daily-gainers-over-5.html must keep the desktop three-column card layout');
+  }
+
+  const tabletCss = html.slice(tabletStart, mobileStart);
+  if (!/\.stock-pane-flow\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/s.test(tabletCss)) {
+    fail('daily-gainers-over-5.html tablet layout must place flow across the full second row');
+  }
+
   const mobileCss = html.slice(mobileStart, narrowStart);
-
-  if (!/\.table-wrap\s*\{\s*display:\s*none;\s*\}/.test(mobileCss)) {
-    fail('daily-gainers-over-5.html must hide the desktop table at <=760px');
-  }
-  if (!/\.mobile-content\s*\{\s*display:\s*block;\s*\}/.test(mobileCss)) {
-    fail('daily-gainers-over-5.html must show mobile cards at <=760px');
-  }
-
-  if (!adapter.includes('DailyGainersMobileCards') || !adapter.includes('ResponsiveStockCard.render')) {
-    fail('daily-gainers-mobile-cards.js must render through ResponsiveStockCard');
-  }
-  if (!html.includes('DailyGainersMobileCards.render(mobileContent')) {
-    fail('daily-gainers-over-5.html must render the mobile adapter for every loaded date');
+  if (!/\.stock-card-grid\s*\{\s*display:\s*block;\s*\}/.test(mobileCss)) {
+    fail('daily-gainers-over-5.html mobile layout must stack the shared card panes');
   }
 
   return {
-    breakpoint_px: 760,
+    layout: 'unified_stock_cards',
+    desktop_columns: 3,
+    tablet_breakpoint_px: 1120,
+    mobile_breakpoint_px: 760,
     html: path.relative(ROOT, htmlFile),
-    adapter: path.relative(ROOT, adapterFile),
-    card_component: path.relative(ROOT, cardFile),
   };
 }
 
