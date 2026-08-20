@@ -95,6 +95,69 @@ All GitHub Pages deployments must reuse:
 
 Do not create another Pages deployment workflow when the existing reusable workflow can support the requirement.
 
+## Workflow concurrency layering
+
+Concurrency rules are intentionally different for repository/data writers and for the final Pages publication layer.
+
+### Data / repository write layer: never cancel in progress
+
+Any workflow that may persist repository state is a write-layer workflow. This includes workflows with any of these characteristics:
+
+- `permissions: contents: write`;
+- `git commit`;
+- `git push`;
+- checkpoint commits during crawls, prediction, replay, research, normalization, or backfills.
+
+If such a workflow uses a concurrency group, it must use:
+
+```yaml
+cancel-in-progress: false
+```
+
+It may omit cancellation when no shared serialization group is required, but it must not use `cancel-in-progress: true`.
+
+Reason: generated or validated data may still exist only on the runner before the final push. Cancelling the writer can discard that uncommitted progress.
+
+### Pages publication layer: stale runs should be cancelled
+
+The canonical `.github/workflows/deploy-pages.yml` is a publication-only workflow. It must:
+
+- never commit or push repository data;
+- checkout `ref: main` before packaging;
+- use the shared `github-pages` concurrency group;
+- use `cancel-in-progress: true`.
+
+Required configuration:
+
+```yaml
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+```
+
+Because every Pages run rebuilds from the latest committed `main`, cancelling an older Pages-only run cannot remove committed data. A newer run simply rebuilds and publishes the newer complete `main` state.
+
+The required boundary is:
+
+```text
+generate / validate / commit / push main
+→ non-cancelable data-write layer
+
+checkout latest main / package / upload / deploy Pages
+→ cancelable publication layer
+```
+
+A Pages job must remain downstream of the successful data-writing job, normally through `needs:`. Never move repository writes into `deploy-pages.yml`.
+
+The repository-wide guard is:
+
+```text
+node scripts/audit_workflow_deployment_races.js --self-test
+node scripts/audit_workflow_deployment_races.js
+```
+
+It scans every `.yml` / `.yaml` file in `.github/workflows`, not only currently known Pages callers.
+
 ## Required workflow chains
 
 ### Daily stock prediction
@@ -140,9 +203,12 @@ workflow_run
 deploy-pages.yml
 workflow_call
 uses: ./.github/workflows/
+cancel-in-progress
+contents: write
+git push
 ```
 
-Confirm that the change does not create a second deployment path or duplicate an existing reusable workflow.
+Confirm that the change does not create a second deployment path, duplicate an existing reusable workflow, or violate the write-layer/publication-layer concurrency boundary.
 
 ## Playwright and browser-install workflow rules
 
@@ -179,7 +245,7 @@ These rules apply to workflows that use Playwright, Chromium, or another browser
 - Treat the first run after adding or invalidating the cache as a cold run; later runs should reuse cached npm metadata and Playwright browser binaries.
 - If a workflow repeatedly stalls in dependency installation, inspect whether it is downloading npm packages, Linux packages, or Playwright browser binaries before changing scraper logic.
 - Do not assume a long install step means the scraper itself is broken. Distinguish runner/network failures such as HTTP 429 or 503 from application failures.
-- Preserve existing triggers, permissions, concurrency, data-generation commands, and commit/push behavior when applying this caching optimization.
+- Preserve existing triggers, permissions, data-generation commands, and commit/push behavior when applying this caching optimization. Preserve concurrency only when it remains consistent with the repository-wide write-layer/publication-layer rule above.
 
 Known workflows using this pattern include:
 
@@ -362,7 +428,8 @@ Add or update a regression test whenever a path omission, date fallback, or Page
 ## Safety when modifying workflows
 
 - Fetch the latest `main` version before editing.
-- Preserve unrelated triggers, permissions, concurrency settings, and reusable workflow inputs.
+- Preserve unrelated triggers, permissions, and reusable workflow inputs.
+- Preserve or change concurrency according to the mandatory write-layer/publication-layer rule above; do not blindly retain an unsafe legacy setting.
 - Check caller permissions before adding a reusable workflow call; reusable workflows cannot elevate permissions beyond the caller.
 - Avoid parallel writes to the same workflow file.
 - Re-read the updated file after committing and verify the resulting commit SHA.
