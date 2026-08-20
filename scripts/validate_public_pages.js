@@ -103,10 +103,64 @@ function validatePublicHtmlCoverage(classification) {
   return { rootHtmlFiles, unclassified };
 }
 
+function validateDailyGainersResponsiveContract() {
+  const htmlFile = path.join(PUBLIC_DIR, 'daily-gainers-over-5.html');
+  const adapterFile = path.join(PUBLIC_DIR, 'components', 'daily-gainers-mobile-cards.js');
+  const cardFile = path.join(PUBLIC_DIR, 'components', 'responsive-stock-card.js');
+
+  for (const file of [htmlFile, adapterFile, cardFile]) {
+    if (!fs.existsSync(file)) fail(`Daily gainers responsive dependency is missing: ${path.relative(ROOT, file)}`);
+  }
+
+  const html = fs.readFileSync(htmlFile, 'utf8');
+  const adapter = fs.readFileSync(adapterFile, 'utf8');
+
+  if (!html.includes('<meta name="viewport" content="width=device-width, initial-scale=1.0">')) {
+    fail('daily-gainers-over-5.html must keep the mobile viewport meta tag');
+  }
+  if (!html.includes('<script src="components/responsive-stock-card.js"></script>')) {
+    fail('daily-gainers-over-5.html must load responsive-stock-card.js');
+  }
+  if (!html.includes('<script src="components/daily-gainers-mobile-cards.js"></script>')) {
+    fail('daily-gainers-over-5.html must load daily-gainers-mobile-cards.js');
+  }
+  if (!html.includes('class="card table-wrap" id="content"')) {
+    fail('daily-gainers-over-5.html desktop table container contract changed');
+  }
+  if (!html.includes('class="mobile-content" id="mobileContent"')) {
+    fail('daily-gainers-over-5.html mobile card container contract changed');
+  }
+
+  const mobileMedia = html.match(/@media\s*\(max-width:\s*760px\)\s*\{([\s\S]*?)\n\s*\}/);
+  if (!mobileMedia) fail('daily-gainers-over-5.html must define the canonical 760px mobile breakpoint');
+  const mobileCss = mobileMedia[1];
+  if (!/\.table-wrap\s*\{\s*display:\s*none;\s*\}/.test(mobileCss)) {
+    fail('daily-gainers-over-5.html must hide the desktop table at <=760px');
+  }
+  if (!/\.mobile-content\s*\{\s*display:\s*block;\s*\}/.test(mobileCss)) {
+    fail('daily-gainers-over-5.html must show mobile cards at <=760px');
+  }
+
+  if (!adapter.includes('DailyGainersMobileCards') || !adapter.includes('ResponsiveStockCard.render')) {
+    fail('daily-gainers-mobile-cards.js must render through ResponsiveStockCard');
+  }
+  if (!html.includes('DailyGainersMobileCards.render(mobileContent')) {
+    fail('daily-gainers-over-5.html must render the mobile adapter for every loaded date');
+  }
+
+  return {
+    breakpoint_px: 760,
+    html: path.relative(ROOT, htmlFile),
+    adapter: path.relative(ROOT, adapterFile),
+    card_component: path.relative(ROOT, cardFile),
+  };
+}
+
 function main() {
   const classification = validateRegistry();
   validateIndex();
   const coverage = validatePublicHtmlCoverage(classification);
+  const dailyGainersResponsive = validateDailyGainersResponsiveContract();
   console.log(JSON.stringify({
     ok: true,
     registered_pages: classification.registry.pages.length,
@@ -114,6 +168,7 @@ function main() {
     legacy_files: classification.legacyFiles.size,
     non_homepage_html: classification.nonHomepageFiles.size,
     classified_root_html: coverage.rootHtmlFiles.length,
+    daily_gainers_responsive: dailyGainersResponsive,
     index: path.relative(ROOT, INDEX_FILE),
   }, null, 2));
 }
@@ -122,4 +177,9 @@ if (require.main === module) {
   try { main(); } catch (error) { console.error(error.stack || error.message); process.exit(1); }
 }
 
-module.exports = { validateIndex, validatePublicHtmlCoverage, validateRegistry };
+module.exports = {
+  validateDailyGainersResponsiveContract,
+  validateIndex,
+  validatePublicHtmlCoverage,
+  validateRegistry,
+};
