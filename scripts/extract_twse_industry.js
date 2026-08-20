@@ -22,8 +22,9 @@ async function gotoWithRetry(page, url) {
             console.log(`Navigating to ${url} (attempt ${attempt}/${MAX_NAVIGATION_ATTEMPTS})...`);
 
             // TWSE's ISIN page occasionally keeps subresources/connections open long enough
-            // that Playwright never observes DOMContentLoaded. Wait for the navigation to
-            // commit, then validate the extracted snapshot before any production file write.
+            // that Playwright never observes DOMContentLoaded. Wait only for the navigation
+            // to commit and for the target table to exist. Completeness is validated from the
+            // extracted snapshot later; a tiny row count must never be treated as scrape success.
             const response = await page.goto(url, {
                 waitUntil: 'commit',
                 timeout: NAVIGATION_COMMIT_TIMEOUT_MS
@@ -36,12 +37,8 @@ async function gotoWithRetry(page, url) {
             });
 
             const rowCount = await page.locator('table.h4 tr').count();
-            if (rowCount < 2) {
-                throw new Error(`TWSE industry table is present but incomplete (rows=${rowCount})`);
-            }
-
             const readyState = await page.evaluate(() => document.readyState);
-            console.log(`Navigation ready. currentUrl=${page.url()}, readyState=${readyState}, rows=${rowCount}`);
+            console.log(`Navigation table detected. currentUrl=${page.url()}, readyState=${readyState}, rows=${rowCount}`);
             return;
         } catch (error) {
             lastError = error;
