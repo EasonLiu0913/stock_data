@@ -1,17 +1,22 @@
 name: "[07 研究] 5% 漲幅 AI 籌碼解讀驗證發布"
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'research_pending/daily-gainers-ai/*.json'
   schedule:
-    # ChatGPT 22:45 產生當日 pending；23:00/23:30 驗證。
+    # ChatGPT 22:45 產生當日 pending；23:00/23:30 為容錯驗證。
     - cron: '0 15 * * 1-5'
     - cron: '30 15 * * 1-5'
-    # ChatGPT 次日 09:45 補查 unresolved institutional data；10:15/10:45 再驗證發布最近 pending 日期。
+    # ChatGPT 次日 09:45 補查 unresolved institutional data；10:15/10:45 再容錯驗證最近 pending 日期。
     - cron: '15 2 * * 1-5'
     - cron: '45 2 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: '分析日期 YYYYMMDD；留空時晚間用台北當日、上午用最近 pending 日期'
+        description: '分析日期 YYYYMMDD；留空時 push 取異動 pending 日期、晚間用台北當日、上午用最近 pending 日期'
         required: false
         default: ''
 
@@ -43,11 +48,22 @@ jobs:
         shell: bash
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           if [ -n "${INPUT_DATE:-}" ]; then
             target_date="$INPUT_DATE"
             mode="manual"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            changed_path="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
+            target_date="$(basename "$changed_path" .json)"
+            mode="pending_push"
+            if [ -z "$target_date" ]; then
+              echo "No daily-gainers pending JSON found in push payload"
+              echo "target_date=" >> "$GITHUB_OUTPUT"
+              echo "mode=$mode" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           else
             hour="$(TZ='Asia/Taipei' date '+%H')"
             if [ "$hour" -lt 12 ]; then
