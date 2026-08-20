@@ -6,18 +6,21 @@ on:
       - main
     paths:
       - 'research_pending/daily-gainers-ai/*.json'
+      - 'config/daily-gainers-ai-contract.json'
+      - 'scripts/lib/daily_gainers_ai_contract.js'
+      - 'scripts/daily_gainers_ai_contract_cli.js'
+      - 'scripts/build_daily_gainers_ai_facts.js'
+      - 'scripts/validate_daily_gainers_ai_analysis.js'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
   schedule:
-    # ChatGPT 22:45 產生當日 pending；23:00/23:30 為容錯驗證。
     - cron: '0 15 * * 1-5'
     - cron: '30 15 * * 1-5'
-    # ChatGPT 次日 09:45 補查 unresolved institutional data；10:15/10:45 再容錯驗證最近 pending 日期。
     - cron: '15 2 * * 1-5'
     - cron: '45 2 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: '分析日期 YYYYMMDD；留空時 push 取異動 pending 日期、晚間用台北當日、上午用最近 pending 日期'
+        description: '分析日期 YYYYMMDD；留空時 push/升版取最近 pending 日期、晚間用台北當日、上午用最近 pending 日期'
         required: false
         default: ''
 
@@ -44,6 +47,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Validate central contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/daily_gainers_ai_contract.js
+          node --check scripts/daily_gainers_ai_contract_cli.js
+          node scripts/daily_gainers_ai_contract_cli.js print | jq .
+
       - name: Resolve target date
         id: date
         shell: bash
@@ -62,9 +73,9 @@ jobs:
               mode="pending_push"
             else
               target_date="$(find research_pending/daily-gainers-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
-              mode="workflow_upgrade"
+              mode="contract_or_workflow_upgrade"
               if [ -z "$target_date" ]; then
-                echo "No pending AI synthesis exists for workflow-upgrade validation"
+                echo "No pending AI synthesis exists for contract/workflow upgrade validation"
                 echo "target_date=" >> "$GITHUB_OUTPUT"
                 echo "mode=$mode" >> "$GITHUB_OUTPUT"
                 exit 0
@@ -90,7 +101,7 @@ jobs:
           echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
-      - name: Upgrade deterministic facts to latest methodology
+      - name: Upgrade deterministic facts to current contract
         if: steps.date.outputs.target_date != ''
         id: facts
         shell: bash
@@ -100,60 +111,46 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           date="${{ steps.date.outputs.target_date }}"
           facts="data_daily_gain_over_5/analysis-facts/${date}.json"
-          latest=false
 
-          if [ -s "$facts" ]; then
-            latest="$(node - "$facts" <<'NODE'
-          const fs = require('node:fs');
-          const file = process.argv[2];
-          try {
-            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-            process.stdout.write(String(payload.schema_version === 2 && payload.methodology_version === 'daily-gainers-ai-facts-v2'));
-          } catch {
-            process.stdout.write('false');
-          }
-          NODE
-            )"
+          latest=false
+          if [ -s "$facts" ] && node scripts/daily_gainers_ai_contract_cli.js facts-latest "$facts"; then
+            latest=true
           fi
 
           if [ "$latest" != true ]; then
-            echo "Facts are missing or outdated; regenerating ${date} with latest methodology"
+            echo "Facts are missing or outside current contract; regenerating ${date}"
             node --check scripts/build_daily_gainers_ai_facts.js
             node scripts/build_daily_gainers_ai_facts.js "$date"
-
-            node - "$facts" "$date" <<'NODE'
-          const fs = require('node:fs');
-          const file = process.argv[2];
-          const date = process.argv[3];
-          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-          if (payload.schema_version !== 2) throw new Error('regenerated facts schema_version must be 2');
-          if (payload.methodology_version !== 'daily-gainers-ai-facts-v2') throw new Error('regenerated facts methodology_version mismatch');
-          if (payload.target_date !== date) throw new Error('regenerated facts target_date mismatch');
-          NODE
+            node scripts/daily_gainers_ai_contract_cli.js assert-facts "$facts"
 
             git add -- "$facts"
             if ! git diff --cached --quiet; then
-              git commit -m "analysis: upgrade 5% AI facts ${date} to latest methodology"
+              git commit -m "analysis: upgrade 5% AI facts ${date} to current contract"
+              pushed=false
               for attempt in 1 2 3 4 5; do
                 if git push origin HEAD:main; then
+                  pushed=true
                   break
                 fi
                 git fetch origin main
                 git reset --hard origin/main
                 node scripts/build_daily_gainers_ai_facts.js "$date"
+                node scripts/daily_gainers_ai_contract_cli.js assert-facts "$facts"
                 git add -- "$facts"
                 if git diff --cached --quiet; then
+                  pushed=true
                   break
                 fi
-                git commit -m "analysis: upgrade 5% AI facts ${date} to latest methodology"
+                git commit -m "analysis: upgrade 5% AI facts ${date} to current contract"
                 sleep 5
               done
+              [ "$pushed" = true ] || { echo "Failed to push upgraded facts" >&2; exit 1; }
             fi
           fi
 
           echo "latest=true" >> "$GITHUB_OUTPUT"
 
-      - name: Check pending AI synthesis
+      - name: Check pending AI against current contract
         id: pending
         shell: bash
         run: |
@@ -170,22 +167,9 @@ jobs:
           [ -s "$facts" ] || { ready=false; reason="facts_missing"; }
           [ -s "$pending" ] || { ready=false; reason="pending_missing"; }
 
-          if [ "$ready" = true ]; then
-            pending_latest="$(node - "$pending" <<'NODE'
-          const fs = require('node:fs');
-          const file = process.argv[2];
-          try {
-            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-            process.stdout.write(String(payload.schema_version === 2 && payload.methodology_version === 'daily-gainers-ai-synthesis-v2'));
-          } catch {
-            process.stdout.write('false');
-          }
-          NODE
-            )"
-            if [ "$pending_latest" != true ]; then
-              ready=false
-              reason="pending_outdated"
-            fi
+          if [ "$ready" = true ] && ! node scripts/daily_gainers_ai_contract_cli.js ai-latest "$pending"; then
+            ready=false
+            reason="pending_outdated"
           fi
 
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
@@ -195,7 +179,7 @@ jobs:
             echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
             echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
             echo "- 原因：$reason" >> "$GITHUB_STEP_SUMMARY"
-            echo "- facts 已自動升級至 latest-rules-only；若 pending_outdated，需由 ChatGPT 使用最新版 facts 重新產生 AI v2，不再驗證或發布舊 AI。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- facts 已依 central contract 自動升級；pending_outdated 時不得驗證或發布舊 AI，需由 ChatGPT 依 central contract 重新分析。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Validate pending AI schema against facts
@@ -205,6 +189,7 @@ jobs:
           set -euo pipefail
           date="${{ steps.date.outputs.target_date }}"
           node --check scripts/validate_daily_gainers_ai_analysis.js
+          node scripts/daily_gainers_ai_contract_cli.js assert-ai "research_pending/daily-gainers-ai/${date}.json"
           node scripts/validate_daily_gainers_ai_analysis.js "$date" "research_pending/daily-gainers-ai/${date}.json"
 
       - name: Promote validated AI JSON to published data
@@ -221,10 +206,9 @@ jobs:
           for attempt in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
-            if [ ! -s "$pending" ]; then
-              echo "Pending AI file disappeared before publish: $pending" >&2
-              exit 1
-            fi
+            [ -s "$pending" ] || { echo "Pending AI file disappeared before publish: $pending" >&2; exit 1; }
+            node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
+            node scripts/daily_gainers_ai_contract_cli.js assert-ai "$pending"
             node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
             mkdir -p "$(dirname "$published")"
             cp "$pending" "$published"
@@ -235,7 +219,7 @@ jobs:
             fi
             git commit -m "analysis: publish AI synthesis for 5% gainers ${date}"
             if git push origin HEAD:main; then
-              echo "## AI 籌碼解讀已通過 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
+              echo "## AI 籌碼解讀已通過 central contract 與 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
               echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
               echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
               echo "- 正式檔：$published" >> "$GITHUB_STEP_SUMMARY"
