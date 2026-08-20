@@ -1,0 +1,138 @@
+name: "[07 維護更新] Migrate GitHub Actions to Node 24"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/migrate-github-actions-node24.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrate-github-actions-node24
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Upgrade official Actions and project Node runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          replacements = {
+              'actions/checkout@v4': 'actions/checkout@v7',
+              'actions/checkout@v5': 'actions/checkout@v7',
+              'actions/checkout@v6': 'actions/checkout@v7',
+              'actions/setup-node@v4': 'actions/setup-node@v7',
+              'actions/setup-node@v5': 'actions/setup-node@v7',
+              'actions/setup-node@v6': 'actions/setup-node@v7',
+              'actions/cache@v4': 'actions/cache@v5',
+              'actions/cache/restore@v4': 'actions/cache/restore@v5',
+              'actions/cache/save@v4': 'actions/cache/save@v5',
+              'actions/upload-artifact@v4': 'actions/upload-artifact@v7',
+              'actions/upload-artifact@v5': 'actions/upload-artifact@v7',
+              'actions/upload-artifact@v6': 'actions/upload-artifact@v7',
+              'actions/download-artifact@v4': 'actions/download-artifact@v7',
+              'actions/download-artifact@v5': 'actions/download-artifact@v7',
+              'actions/download-artifact@v6': 'actions/download-artifact@v7',
+              'actions/github-script@v7': 'actions/github-script@v8',
+              'actions/configure-pages@v5': 'actions/configure-pages@v6',
+              'actions/upload-pages-artifact@v4': 'actions/upload-pages-artifact@v5',
+              'actions/deploy-pages@v4': 'actions/deploy-pages@v5',
+              'actions/setup-python@v5': 'actions/setup-python@v6',
+          }
+
+          changed = []
+          for path in sorted(Path('.github/workflows').glob('*.yml')):
+              original = path.read_text(encoding='utf-8')
+              text = original
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              text = re.sub(
+                  r"(?m)^(\s*node-version:\s*)['\"]?(?:20|22)(?:\.x)?['\"]?\s*$",
+                  r"\1'24'",
+                  text,
+              )
+              if text != original:
+                  path.write_text(text, encoding='utf-8')
+                  changed.append(str(path))
+
+          print(f'Changed workflow files: {len(changed)}')
+          for path in changed:
+              print(path)
+          PY
+
+      - name: Audit for obsolete Node 20-era official Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          banned = [
+              re.compile(r'actions/checkout@v[456](?:\s|$)'),
+              re.compile(r'actions/setup-node@v[456](?:\s|$)'),
+              re.compile(r'actions/cache(?:/(?:restore|save))?@v4(?:\s|$)'),
+              re.compile(r'actions/upload-artifact@v[456](?:\s|$)'),
+              re.compile(r'actions/download-artifact@v[456](?:\s|$)'),
+              re.compile(r'actions/github-script@v7(?:\s|$)'),
+              re.compile(r'actions/configure-pages@v5(?:\s|$)'),
+              re.compile(r'actions/upload-pages-artifact@v4(?:\s|$)'),
+              re.compile(r'actions/deploy-pages@v4(?:\s|$)'),
+              re.compile(r'actions/setup-python@v5(?:\s|$)'),
+              re.compile(r"(?m)^\s*node-version:\s*['\"]?(?:20|22)(?:\.x)?['\"]?\s*$"),
+          ]
+
+          failures = []
+          official_uses = set()
+          for path in sorted(Path('.github/workflows').glob('*.yml')):
+              text = path.read_text(encoding='utf-8')
+              for match in re.finditer(r'(?m)^\s*uses:\s*(actions/[^\s#]+)', text):
+                  official_uses.add(match.group(1))
+              for pattern in banned:
+                  for match in pattern.finditer(text):
+                      line = text.count('\n', 0, match.start()) + 1
+                      failures.append(f'{path}:{line}: {match.group(0).strip()}')
+
+          print('Official actions after migration:')
+          for item in sorted(official_uses):
+              print(f'  {item}')
+
+          if failures:
+              print('\nObsolete runtime references remain:', file=sys.stderr)
+              for failure in failures:
+                  print(failure, file=sys.stderr)
+              sys.exit(1)
+          print('\nNode 20-era runtime audit passed.')
+          PY
+
+      - name: Commit migration as one repository-wide change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/
+          if git diff --cached --quiet; then
+            echo 'No workflow runtime migration changes required.'
+            exit 0
+          fi
+          git commit -m 'chore: upgrade workflows to Node 24 Actions runtimes'
+          git pull --rebase origin main
+          git push origin HEAD:main
