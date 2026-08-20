@@ -1,6 +1,19 @@
 (() => {
   'use strict';
 
+  function installResponsiveVisibility() {
+    if (document.getElementById('dailyGainersMobileVisibilityStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'dailyGainersMobileVisibilityStyle';
+    style.textContent = `
+      @media (max-width: 760px) {
+        .table-wrap { display: none !important; }
+        .mobile-content { display: block !important; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function asArray(value) {
     return Array.isArray(value) ? value : [];
   }
@@ -121,5 +134,6 @@
     return window.ResponsiveStockCard.render(container, rows);
   }
 
+  installResponsiveVisibility();
   window.DailyGainersMobileCards = { buildRows, render };
 })();
