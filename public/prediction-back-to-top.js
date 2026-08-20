@@ -8,7 +8,7 @@
   const RESPONSIVE_CARD_SCRIPT_ID = 'predictionResponsiveStockCardScript';
   const RESPONSIVE_CARD_SCRIPT = 'components/responsive-stock-card.js?v=2';
   const PREDICTION_MOBILE_CARDS_SCRIPT_ID = 'predictionDashboardMobileCardsScript';
-  const PREDICTION_MOBILE_CARDS_SCRIPT = 'components/prediction-dashboard-mobile-cards.js?v=1';
+  const PREDICTION_MOBILE_CARDS_SCRIPT = 'components/prediction-dashboard-mobile-cards.js?v=2';
   const EXISTING_CONTROL_SELECTOR = [
     '.to-top',
     '.back-to-top',
