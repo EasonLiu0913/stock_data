@@ -173,32 +173,25 @@ jobs:
           fi
 
           if [ "$ready" = true ]; then
-            node - "$facts" "$pending" <<'NODE' || { ready=false; reason="facts_changed_after_ai"; }
+            if ! node - "$facts" "$pending" <<'NODE'
           const fs = require('node:fs');
           const facts = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
           const ai = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
           const factsTime = Date.parse(facts.generated_at || '');
           const aiTime = Date.parse(ai.generated_at || '');
-          if (!Number.isFinite(factsTime) || !Number.isFinite(aiTime)) {
-            throw new Error('generated_at missing or invalid');
-          }
-          if (factsTime > aiTime) {
-            console.error(JSON.stringify({facts_generated_at:facts.generated_at, ai_generated_at:ai.generated_at}));
-            process.exit(1);
-          }
-          if (Number(facts.stock_count) !== Number(ai.stock_count)) {
-            console.error(JSON.stringify({facts_stock_count:facts.stock_count, ai_stock_count:ai.stock_count}));
-            process.exit(1);
-          }
+          if (!Number.isFinite(factsTime) || !Number.isFinite(aiTime)) throw new Error('generated_at missing or invalid');
+          if (factsTime > aiTime) process.exit(1);
+          if (Number(facts.stock_count) !== Number(ai.stock_count)) process.exit(1);
           const factCodes = new Set((facts.stocks || []).map(x => String(x.code || '')).filter(Boolean));
           const aiCodes = new Set((ai.analyses || []).map(x => String(x.code || '')).filter(Boolean));
           const missing = [...factCodes].filter(code => !aiCodes.has(code));
           const extra = [...aiCodes].filter(code => !factCodes.has(code));
-          if (missing.length || extra.length || factCodes.size !== aiCodes.size) {
-            console.error(JSON.stringify({missing, extra, facts:factCodes.size, ai:aiCodes.size}));
-            process.exit(1);
-          }
+          if (missing.length || extra.length || factCodes.size !== aiCodes.size) process.exit(1);
           NODE
+            then
+              ready=false
+              reason="facts_changed_after_ai"
+            fi
           fi
 
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
