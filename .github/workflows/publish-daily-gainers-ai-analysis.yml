@@ -36,11 +36,11 @@ jobs:
     name: 驗證 AI JSON 並升級為正式研究資料
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout main with facts history
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -150,7 +150,7 @@ jobs:
 
           echo "latest=true" >> "$GITHUB_OUTPUT"
 
-      - name: Check pending AI against current facts
+      - name: Check pending AI against semantic facts snapshot
         id: pending
         shell: bash
         run: |
@@ -173,24 +173,52 @@ jobs:
           fi
 
           if [ "$ready" = true ]; then
-            if ! node - "$facts" "$pending" <<'NODE'
+            ai_time="$(node -e 'const p=require("./'"$pending"'"); process.stdout.write(String(p.generated_at||""))')"
+            base_commit="$(git log --format='%H %cI' -- "$facts" | awk -v t="$ai_time" '$2 <= t {print $1; exit}')"
+            if [ -z "$base_commit" ]; then
+              ready=false
+              reason="facts_snapshot_not_found"
+            else
+              tmp_base="$(mktemp)"
+              git show "$base_commit:$facts" > "$tmp_base"
+              if ! node - "$tmp_base" "$facts" "$pending" <<'NODE'
           const fs = require('node:fs');
-          const facts = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          const ai = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
-          const factsTime = Date.parse(facts.generated_at || '');
-          const aiTime = Date.parse(ai.generated_at || '');
-          if (!Number.isFinite(factsTime) || !Number.isFinite(aiTime)) throw new Error('generated_at missing or invalid');
-          if (factsTime > aiTime) process.exit(1);
-          if (Number(facts.stock_count) !== Number(ai.stock_count)) process.exit(1);
-          const factCodes = new Set((facts.stocks || []).map(x => String(x.code || '')).filter(Boolean));
+          const crypto = require('node:crypto');
+          const base = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const current = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          const ai = JSON.parse(fs.readFileSync(process.argv[4], 'utf8'));
+          const stripVolatile = (value) => {
+            if (Array.isArray(value)) return value.map(stripVolatile);
+            if (value && typeof value === 'object') {
+              const out = {};
+              for (const key of Object.keys(value).sort()) {
+                if (key === 'generated_at') continue;
+                out[key] = stripVolatile(value[key]);
+              }
+              return out;
+            }
+            return value;
+          };
+          const digest = (obj) => crypto.createHash('sha256').update(JSON.stringify(stripVolatile(obj))).digest('hex');
+          const baseHash = digest(base);
+          const currentHash = digest(current);
+          if (baseHash !== currentHash) {
+            console.error(JSON.stringify({baseHash,currentHash}));
+            process.exit(1);
+          }
+          if (Number(current.stock_count) !== Number(ai.stock_count)) process.exit(1);
+          const factCodes = new Set((current.stocks || []).map(x => String(x.code || '')).filter(Boolean));
           const aiCodes = new Set((ai.analyses || []).map(x => String(x.code || '')).filter(Boolean));
           const missing = [...factCodes].filter(code => !aiCodes.has(code));
           const extra = [...aiCodes].filter(code => !factCodes.has(code));
           if (missing.length || extra.length || factCodes.size !== aiCodes.size) process.exit(1);
+          console.log(JSON.stringify({semanticFactsHash: currentHash, stocks: factCodes.size}));
           NODE
-            then
-              ready=false
-              reason="facts_changed_after_ai"
+              then
+                ready=false
+                reason="facts_semantically_changed_after_ai"
+              fi
+              rm -f "$tmp_base"
             fi
           fi
 
@@ -201,7 +229,7 @@ jobs:
             echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
             echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
             echo "- 原因：$reason" >> "$GITHUB_STEP_SUMMARY"
-            echo "- 若為 facts_changed_after_ai，代表 AI 完成後 deterministic facts 又更新；禁止發布舊 AI，需依最新 facts 重新分析。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- facts 只更新 generated_at 不會阻擋發布；只有實際籌碼內容改變才要求重新做 AI synthesis。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Validate pending AI schema against facts
@@ -232,14 +260,6 @@ jobs:
             node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
             node scripts/daily_gainers_ai_contract_cli.js assert-ai "$pending"
             node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
-            node - "data_daily_gain_over_5/analysis-facts/${date}.json" "$pending" <<'NODE'
-          const fs = require('node:fs');
-          const facts = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          const ai = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
-          if (Date.parse(facts.generated_at || '') > Date.parse(ai.generated_at || '')) {
-            throw new Error(`facts changed after AI synthesis: facts=${facts.generated_at}, ai=${ai.generated_at}`);
-          }
-          NODE
             mkdir -p "$(dirname "$published")"
             cp "$pending" "$published"
             git add -- "$published"
@@ -249,7 +269,7 @@ jobs:
             fi
             git commit -m "analysis: publish AI synthesis for 5% gainers ${date}"
             if git push origin HEAD:main; then
-              echo "## AI 籌碼解讀已通過 current-facts 與 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
+              echo "## AI 籌碼解讀已通過 semantic-facts 與 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
               echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
               echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
               echo "- 正式檔：$published" >> "$GITHUB_STEP_SUMMARY"
