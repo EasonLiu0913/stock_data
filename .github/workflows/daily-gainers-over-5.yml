@@ -179,6 +179,42 @@ jobs:
           done
           exit 1
 
+  validate-analysis-coverage:
+    name: 檢查既有原因分析 coverage
+    needs: generate
+    if: needs.generate.result == 'success' && needs.generate.outputs.target_date != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Report cause-analysis coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ needs.generate.outputs.target_date }}"
+          list="data_daily_gain_over_5/${date}.json"
+          cause="data_daily_gain_over_5/analysis/${date}.json"
+          node - "$list" "$cause" <<'NODE'
+          const fs = require('node:fs');
+          const listFile = process.argv[2];
+          const causeFile = process.argv[3];
+          const list = JSON.parse(fs.readFileSync(listFile, 'utf8'));
+          const stocks = Array.isArray(list?.stocks) ? list.stocks : [];
+          let analyses = [];
+          if (fs.existsSync(causeFile)) {
+            try { analyses = JSON.parse(fs.readFileSync(causeFile, 'utf8'))?.analyses || []; } catch {}
+          }
+          const expected = new Set(stocks.map(x => String(x.code || '')).filter(Boolean));
+          const actual = new Set(analyses.map(x => String(x.code || '')).filter(Boolean));
+          const missing = [...expected].filter(code => !actual.has(code));
+          console.log(JSON.stringify({date: list.target_date || '', expected: expected.size, completed: actual.size, missing}, null, 2));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            `## 5% 上漲原因 coverage\n- 日期：${list.target_date || ''}\n- 應分析：${expected.size}\n- 已分析：${actual.size}\n- 缺漏：${missing.length ? missing.join(', ') : '無'}\n`);
+          NODE
+
   deploy:
     name: 發布每日漲幅清單到 GitHub Pages
     needs: generate
