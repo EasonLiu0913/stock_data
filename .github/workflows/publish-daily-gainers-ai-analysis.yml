@@ -46,6 +46,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Validate central contract
         shell: bash
         run: |
@@ -149,7 +150,7 @@ jobs:
 
           echo "latest=true" >> "$GITHUB_OUTPUT"
 
-      - name: Check pending AI against current contract
+      - name: Check pending AI against current facts
         id: pending
         shell: bash
         run: |
@@ -171,6 +172,35 @@ jobs:
             reason="pending_outdated"
           fi
 
+          if [ "$ready" = true ]; then
+            node - "$facts" "$pending" <<'NODE' || { ready=false; reason="facts_changed_after_ai"; }
+          const fs = require('node:fs');
+          const facts = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const ai = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          const factsTime = Date.parse(facts.generated_at || '');
+          const aiTime = Date.parse(ai.generated_at || '');
+          if (!Number.isFinite(factsTime) || !Number.isFinite(aiTime)) {
+            throw new Error('generated_at missing or invalid');
+          }
+          if (factsTime > aiTime) {
+            console.error(JSON.stringify({facts_generated_at:facts.generated_at, ai_generated_at:ai.generated_at}));
+            process.exit(1);
+          }
+          if (Number(facts.stock_count) !== Number(ai.stock_count)) {
+            console.error(JSON.stringify({facts_stock_count:facts.stock_count, ai_stock_count:ai.stock_count}));
+            process.exit(1);
+          }
+          const factCodes = new Set((facts.stocks || []).map(x => String(x.code || '')).filter(Boolean));
+          const aiCodes = new Set((ai.analyses || []).map(x => String(x.code || '')).filter(Boolean));
+          const missing = [...factCodes].filter(code => !aiCodes.has(code));
+          const extra = [...aiCodes].filter(code => !factCodes.has(code));
+          if (missing.length || extra.length || factCodes.size !== aiCodes.size) {
+            console.error(JSON.stringify({missing, extra, facts:factCodes.size, ai:aiCodes.size}));
+            process.exit(1);
+          }
+          NODE
+          fi
+
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
           if [ "$ready" != true ]; then
@@ -178,7 +208,7 @@ jobs:
             echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
             echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
             echo "- 原因：$reason" >> "$GITHUB_STEP_SUMMARY"
-            echo "- facts 已依 central contract 自動升級；pending_outdated 時不得驗證或發布舊 AI，需由 ChatGPT 依 central contract 重新分析。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 若為 facts_changed_after_ai，代表 AI 完成後 deterministic facts 又更新；禁止發布舊 AI，需依最新 facts 重新分析。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Validate pending AI schema against facts
@@ -209,6 +239,14 @@ jobs:
             node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
             node scripts/daily_gainers_ai_contract_cli.js assert-ai "$pending"
             node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
+            node - "data_daily_gain_over_5/analysis-facts/${date}.json" "$pending" <<'NODE'
+          const fs = require('node:fs');
+          const facts = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const ai = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          if (Date.parse(facts.generated_at || '') > Date.parse(ai.generated_at || '')) {
+            throw new Error(`facts changed after AI synthesis: facts=${facts.generated_at}, ai=${ai.generated_at}`);
+          }
+          NODE
             mkdir -p "$(dirname "$published")"
             cp "$pending" "$published"
             git add -- "$published"
@@ -218,7 +256,7 @@ jobs:
             fi
             git commit -m "analysis: publish AI synthesis for 5% gainers ${date}"
             if git push origin HEAD:main; then
-              echo "## AI 籌碼解讀已通過 central contract 與 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
+              echo "## AI 籌碼解讀已通過 current-facts 與 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
               echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
               echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
               echo "- 正式檔：$published" >> "$GITHUB_STEP_SUMMARY"
