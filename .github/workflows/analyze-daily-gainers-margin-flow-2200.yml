@@ -48,6 +48,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Validate deterministic generators and central contract
         run: |
           set -euo pipefail
@@ -114,12 +115,32 @@ jobs:
           NODE
           }
 
+          complete_cause_coverage() {
+            local list="$1"
+            local cause="$2"
+            [ -s "$list" ] && [ -s "$cause" ] || return 1
+            node - "$list" "$cause" <<'NODE'
+          const fs = require('node:fs');
+          const list = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const cause = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          const stocks = Array.isArray(list?.stocks) ? list.stocks : [];
+          const analyses = Array.isArray(cause?.analyses) ? cause.analyses : [];
+          const expected = new Set(stocks.map(x => String(x.code || '')).filter(Boolean));
+          const actual = new Set(analyses.map(x => String(x.code || '')).filter(Boolean));
+          const missing = [...expected].filter(code => !actual.has(code));
+          const extra = [...actual].filter(code => !expected.has(code));
+          const ok = expected.size === actual.size && missing.length === 0 && extra.length === 0;
+          if (!ok) console.error(JSON.stringify({expected: expected.size, actual: actual.size, missing, extra}));
+          process.exit(ok ? 0 : 1);
+          NODE
+          }
+
           list_ready=false; margin_ready=false; broker_ready=false; mi_index_ready=false; cause_ready=false
           [ -s "$list_file" ] && list_ready=true
           [ -s "$margin_file" ] && margin_ready=true
           valid_json_nonempty "$broker_file" && broker_ready=true || true
           valid_mi_index "$mi_index_file" && mi_index_ready=true || true
-          valid_json_nonempty "$cause_file" && cause_ready=true || true
+          complete_cause_coverage "$list_file" "$cause_file" && cause_ready=true || true
 
           ready=true
           for state in "$list_ready" "$margin_ready" "$broker_ready" "$mi_index_ready" "$cause_ready"; do
@@ -131,14 +152,14 @@ jobs:
           echo "## 晚間 5% AI facts 資料確認（$check_time）" >> "$GITHUB_STEP_SUMMARY"
           echo "- 目標日期：$target_date" >> "$GITHUB_STEP_SUMMARY"
           echo "- 5% 清單：$list_ready" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 既有催化原因研究：$cause_ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 既有催化原因研究（完整 coverage）：$cause_ready" >> "$GITHUB_STEP_SUMMARY"
           echo "- ⑥ 融資融券：$margin_ready" >> "$GITHUB_STEP_SUMMARY"
           echo "- ⑦ 券商分點：$broker_ready" >> "$GITHUB_STEP_SUMMARY"
           echo "- ⑩ MI_INDEX：$mi_index_ready" >> "$GITHUB_STEP_SUMMARY"
           if [ "$ready" = true ]; then
-            echo "- 結果：資料齊全，依 central contract 建立 deterministic AI facts。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 結果：資料齊全且原因分析 coverage 完整，依 central contract 建立 deterministic AI facts。" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "- 結果：資料未齊，本輪安全結束，不以舊交易日替代。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 結果：資料未齊或原因分析未覆蓋全部股票，本輪安全結束，不以半成品繼續 AI facts。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Rebuild compatibility flow and AI fact package
