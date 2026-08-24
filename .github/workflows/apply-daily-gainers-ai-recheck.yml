@@ -23,14 +23,14 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 1
+          fetch-depth: 2
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Resolve date
         id: date
@@ -38,18 +38,47 @@ jobs:
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_PATH: ${{ github.event_path }}
+          PUSH_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          date=""
+          changed=""
+
           if [ -n "${INPUT_DATE:-}" ]; then
             date="$INPUT_DATE"
+            echo "Date source: workflow_dispatch input"
           elif [ "$EVENT_NAME" = push ]; then
-            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai-rechecks/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
-            date="$(basename "$changed" .json)"
-          else
-            date=""
+            # First choice: changed path reported by the push payload.
+            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai-rechecks/20[0-9]{6}\\.json$"))) | last // empty' "$EVENT_PATH")"
+
+            # Some push payloads do not expose the changed-file arrays reliably.
+            # Fall back to the checked-out commit itself rather than returning an empty date.
+            if [ -z "$changed" ]; then
+              changed="$(git diff-tree --no-commit-id --name-only -r "$PUSH_SHA" -- 'research_pending/daily-gainers-ai-rechecks/*.json' | tail -n 1)"
+            fi
+
+            # Path filtering guarantees that this workflow only runs for this directory,
+            # but retain a final filesystem fallback for unusual payload/merge shapes.
+            if [ -z "$changed" ]; then
+              changed="$(find research_pending/daily-gainers-ai-rechecks -maxdepth 1 -type f -name '20??????.json' -print 2>/dev/null | sort | tail -n 1)"
+            fi
+
+            if [ -n "$changed" ]; then
+              date="$(basename "$changed" .json)"
+            fi
+            echo "Date source: push path ${changed:-<none>}"
           fi
+
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+
+          decision="research_pending/daily-gainers-ai-rechecks/${date}.json"
+          [ -s "$decision" ] || { echo "Missing recheck decision: $decision" >&2; exit 1; }
+          decision_date="$(jq -r '.target_date // empty' "$decision")"
+          [ "$decision_date" = "$date" ] || { echo "Decision target_date mismatch: filename=$date payload=$decision_date" >&2; exit 1; }
+
           echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "Resolved recheck date: $date"
 
       - name: Apply verified recheck decision
         shell: bash
@@ -75,6 +104,7 @@ jobs:
           if (!Array.isArray(decision.resolve_from) || !decision.resolve_from.length) throw new Error('decision.resolve_from required');
           if (!contract.institutional_verification.allowed_statuses.includes(decision.status)) throw new Error('decision status not allowed by contract');
           if (decision.status !== 'verified') throw new Error('this deterministic applier only promotes externally verified decisions');
+          if (!decision.checked_at || Number.isNaN(Date.parse(decision.checked_at))) throw new Error('decision.checked_at must be a valid timestamp');
           if (!decision.web_verification || !Array.isArray(decision.web_verification.sources) || !decision.web_verification.sources.length) throw new Error('web verification sources required');
           const factByCode = new Map(facts.stocks.map(x => [String(x.code), x]));
           const aiCodes = pending.analyses.map(x => String(x.code));
