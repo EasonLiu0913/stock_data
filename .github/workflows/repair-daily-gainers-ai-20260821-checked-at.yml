@@ -1,0 +1,81 @@
+name: "[07 修復] 20260821 AI 法人查證時間戳"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/repair-daily-gainers-ai-20260821-checked-at.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Backfill only the legacy 20260821 verification timestamps
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const date = '20260821';
+          const factsPath = `data_daily_gain_over_5/analysis-facts/${date}.json`;
+          const pendingPath = `research_pending/daily-gainers-ai/${date}.json`;
+          const facts = JSON.parse(fs.readFileSync(factsPath, 'utf8'));
+          const pending = JSON.parse(fs.readFileSync(pendingPath, 'utf8'));
+          if (!pending.generated_at || Number.isNaN(Date.parse(pending.generated_at))) {
+            throw new Error('legacy pending generated_at is missing or invalid');
+          }
+          const factByCode = new Map(facts.stocks.map((x) => [String(x.code), x]));
+          let updated = 0;
+          for (const item of pending.analyses || []) {
+            const fact = factByCode.get(String(item.code));
+            const verification = item.institutional_verification;
+            if (fact?.institutional?.verification_required !== true || !verification) continue;
+            if (verification.checked_at) continue;
+            verification.checked_at = pending.generated_at;
+            verification.checked_at_source = 'legacy_ai_generated_at_backfill_20260821';
+            updated += 1;
+          }
+          if (!updated) throw new Error('no missing legacy verification timestamps found');
+          fs.writeFileSync(pendingPath, JSON.stringify(pending, null, 2) + '\n');
+          console.log(JSON.stringify({ date, updated, checked_at: pending.generated_at }, null, 2));
+          NODE
+
+      - name: Validate repaired pending file
+        run: |
+          set -euo pipefail
+          node --check scripts/validate_daily_gainers_ai_analysis.js
+          node scripts/validate_daily_gainers_ai_analysis.js 20260821 research_pending/daily-gainers-ai/20260821.json
+
+      - name: Commit repair and remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research_pending/daily-gainers-ai/20260821.json
+          git rm .github/workflows/repair-daily-gainers-ai-20260821-checked-at.yml
+          git commit -m "fix: repair 20260821 AI verification timestamps"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git fetch origin main
+            git rebase origin/main
+            sleep 5
+          done
+          exit 1
