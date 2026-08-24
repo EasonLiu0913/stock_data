@@ -79,7 +79,10 @@ jobs:
         run: |
           set -euo pipefail
           args=(--replay-lookback "${INPUT_LOOKBACK:-10}")
-          if [ -n "${INPUT_DATE:-}" ]; then
+          if [ "$GITHUB_EVENT_NAME" = 'pull_request' ]; then
+            # PR 首次正式產生最近兩個有效 prediction dates，讓最新訊號立即有 previous score。
+            args+=(--latest-count 2)
+          elif [ -n "${INPUT_DATE:-}" ]; then
             args+=(--date "$INPUT_DATE")
           elif [ -n "${INPUT_START:-}" ] || [ -n "${INPUT_END:-}" ]; then
             [ -z "${INPUT_START:-}" ] || args+=(--start "$INPUT_START")
