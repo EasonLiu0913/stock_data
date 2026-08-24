@@ -59,13 +59,12 @@ jobs:
 
   generate:
     needs: validate
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
@@ -96,6 +95,8 @@ jobs:
           console.log(`Replay refreshed: ${p.refreshed_replays.length}`);
           NODE
       - name: Commit momentum research data
+        env:
+          TARGET_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || 'main' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -108,9 +109,10 @@ jobs:
           fi
           git commit -m 'data: refresh momentum history and replay'
           for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
+            if git fetch origin "$TARGET_BRANCH" && git rebase "origin/$TARGET_BRANCH" && git push origin HEAD:"$TARGET_BRANCH"; then
               exit 0
             fi
+            git rebase --abort || true
             sleep $((attempt * 5))
           done
           echo 'Failed to push momentum research data after retries' >&2
