@@ -1,16 +1,18 @@
 name: "[07 研究] 套用 5% 法人隔日補查"
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'research_pending/daily-gainers-ai-rechecks/*.json'
+  workflow_call:
+    inputs:
+      date:
+        description: '補查日期 YYYYMMDD'
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       date:
         description: '補查日期 YYYYMMDD'
         required: true
+        type: string
 
 permissions:
   contents: write
@@ -36,39 +38,10 @@ jobs:
         id: date
         shell: bash
         env:
-          INPUT_DATE: ${{ github.event.inputs.date }}
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_PATH: ${{ github.event_path }}
-          PUSH_SHA: ${{ github.sha }}
+          INPUT_DATE: ${{ inputs.date }}
         run: |
           set -euo pipefail
-          date=""
-          changed=""
-
-          if [ -n "${INPUT_DATE:-}" ]; then
-            date="$INPUT_DATE"
-            echo "Date source: workflow_dispatch input"
-          elif [ "$EVENT_NAME" = push ]; then
-            # First choice: changed path reported by the push payload.
-            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai-rechecks/20[0-9]{6}\\.json$"))) | last // empty' "$EVENT_PATH")"
-
-            # Some push payloads do not expose the changed-file arrays reliably.
-            # Fall back to the checked-out commit itself rather than returning an empty date.
-            if [ -z "$changed" ]; then
-              changed="$(git diff-tree --no-commit-id --name-only -r "$PUSH_SHA" -- 'research_pending/daily-gainers-ai-rechecks/*.json' | tail -n 1)"
-            fi
-
-            # Path filtering guarantees that this workflow only runs for this directory,
-            # but retain a final filesystem fallback for unusual payload/merge shapes.
-            if [ -z "$changed" ]; then
-              changed="$(find research_pending/daily-gainers-ai-rechecks -maxdepth 1 -type f -name '20??????.json' -print 2>/dev/null | sort | tail -n 1)"
-            fi
-
-            if [ -n "$changed" ]; then
-              date="$(basename "$changed" .json)"
-            fi
-            echo "Date source: push path ${changed:-<none>}"
-          fi
+          date="${INPUT_DATE:-}"
 
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
 
@@ -78,6 +51,7 @@ jobs:
           [ "$decision_date" = "$date" ] || { echo "Decision target_date mismatch: filename=$date payload=$decision_date" >&2; exit 1; }
 
           echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "Date source: explicit workflow input"
           echo "Resolved recheck date: $date"
 
       - name: Apply verified recheck decision
