@@ -22,6 +22,10 @@ function loadDailyGainersAiContract() {
   assert(typeof contract.ai.model_role === 'string' && contract.ai.model_role.length > 0, 'ai.model_role is required');
   assert(Array.isArray(contract.institutional_verification?.required_record_statuses), 'institutional_verification.required_record_statuses must be an array');
   assert(Array.isArray(contract.institutional_verification?.allowed_statuses), 'institutional_verification.allowed_statuses must be an array');
+  assert(Array.isArray(contract.institutional_verification?.required_fields_when_verification_required), 'institutional_verification.required_fields_when_verification_required must be an array');
+  for (const field of ['status', 'summary', 'checked_at', 'sources']) {
+    assert(contract.institutional_verification.required_fields_when_verification_required.includes(field), `institutional_verification.required_fields_when_verification_required must include ${field}`);
+  }
   return Object.freeze(contract);
 }
 
