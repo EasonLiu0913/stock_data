@@ -3,8 +3,9 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { enrichMomentumFeatures } = require('./momentum_tag_features');
 
-const STRATEGY_ENGINE_VERSION = 2;
+const STRATEGY_ENGINE_VERSION = 3;
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -206,7 +207,9 @@ function buildSnapshot(payload, registry, options = {}) {
   validateRegistry(registry);
   const generatedAt = options.generatedAt || new Date().toISOString();
   const evaluationMode = options.evaluationMode || 'live_snapshot';
-  const stocks = Array.isArray(payload?.stocks) ? payload.stocks : [];
+  const originalStocks = Array.isArray(payload?.stocks) ? payload.stocks : [];
+  const stocks = enrichMomentumFeatures(originalStocks);
+  payload.stocks = stocks;
   const evaluations = stocks.map(stock => evaluateStock(stock, registry));
   const byCode = new Map(evaluations.map(item => [item.stock_code, item]));
 
@@ -254,7 +257,26 @@ function buildSnapshot(payload, registry, options = {}) {
 }
 
 function loadRegistry(root = path.resolve(__dirname, '..')) {
-  return readJson(path.join(root, 'config', 'strategy-tag-registry.json'));
+  const base = readJson(path.join(root, 'config', 'strategy-tag-registry.json'));
+  const extensionFile = path.join(root, 'config', 'momentum-tag-registry.json');
+  if (!fs.existsSync(extensionFile)) return base;
+  const extension = readJson(extensionFile);
+  const merged = {
+    ...base,
+    registry_id: `${base.registry_id}+${extension.registry_id}`,
+    tags: [...base.tags, ...(extension.tags || [])],
+    strategies: [...base.strategies],
+    extensions: [
+      ...(Array.isArray(base.extensions) ? base.extensions : []),
+      {
+        registry_id: extension.registry_id,
+        schema_version: extension.schema_version,
+        source: 'config/momentum-tag-registry.json',
+      },
+    ],
+  };
+  validateRegistry(merged);
+  return merged;
 }
 
 module.exports = {
