@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { enrichMomentumFeatures } = require('./momentum_tag_features');
 
-const STRATEGY_ENGINE_VERSION = 3;
+const STRATEGY_ENGINE_VERSION = 2;
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
