@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "registry_id": "momentum_surge_tag_registry_v1",
+  "description": "動能飆股觀察標籤。僅使用訊號日當下或更早可得資料；不把市場牛熊作為入選條件。",
+  "tags": [
+    {
+      "tag_id": "momentum_score_50_v1",
+      "family_id": "momentum_score_50",
+      "version": 1,
+      "label": "動能分數至少 50",
+      "category": "momentum_internal",
+      "fixed_display": false,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.momentum_score",
+        "operator": "gte",
+        "value": 50
+      }
+    },
+    {
+      "tag_id": "momentum_score_65_v1",
+      "family_id": "momentum_score_65",
+      "version": 1,
+      "label": "動能分數至少 65",
+      "category": "momentum_internal",
+      "fixed_display": false,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.momentum_score",
+        "operator": "gte",
+        "value": 65
+      }
+    },
+    {
+      "tag_id": "momentum_score_80_v1",
+      "family_id": "momentum_score_80",
+      "version": 1,
+      "label": "動能分數至少 80",
+      "category": "momentum_internal",
+      "fixed_display": false,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.momentum_score",
+        "operator": "gte",
+        "value": 80
+      }
+    },
+    {
+      "tag_id": "momentum_watch_v1",
+      "family_id": "momentum_watch",
+      "version": 1,
+      "label": "動能準備",
+      "category": "momentum",
+      "fixed_display": true,
+      "enabled": true,
+      "description": "Momentum Score 50–64；動能條件開始累積，但尚未進入加速區。",
+      "expression": {
+        "all": ["momentum_score_50_v1"],
+        "any": [],
+        "not": ["momentum_score_65_v1"]
+      }
+    },
+    {
+      "tag_id": "momentum_accelerating_v1",
+      "family_id": "momentum_accelerating",
+      "version": 1,
+      "label": "動能加速",
+      "category": "momentum",
+      "fixed_display": true,
+      "enabled": true,
+      "description": "Momentum Score 65–79；價量、趨勢或籌碼已形成較明顯共振。",
+      "expression": {
+        "all": ["momentum_score_65_v1"],
+        "any": [],
+        "not": ["momentum_score_80_v1"]
+      }
+    },
+    {
+      "tag_id": "momentum_surge_v1",
+      "family_id": "momentum_surge",
+      "version": 1,
+      "label": "動能飆股",
+      "category": "momentum",
+      "fixed_display": true,
+      "enabled": true,
+      "description": "Momentum Score >= 80；A 級動能候選。",
+      "rule": {
+        "path": "strategy_tag_features.momentum_score",
+        "operator": "gte",
+        "value": 80
+      }
+    },
+    {
+      "tag_id": "momentum_price_volume_sync_v1",
+      "family_id": "momentum_price_volume_sync",
+      "version": 1,
+      "label": "量價共振",
+      "category": "momentum",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.momentum_price_volume_sync",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "momentum_chip_sync_v1",
+      "family_id": "momentum_chip_sync",
+      "version": 1,
+      "label": "籌碼共振",
+      "category": "momentum",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.momentum_chip_sync",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "momentum_breakout_v1",
+      "family_id": "momentum_breakout",
+      "version": 1,
+      "label": "強勢突破",
+      "category": "momentum",
+      "fixed_display": true,
+      "enabled": true,
+      "rule": {
+        "path": "strategy_tag_features.momentum_breakout",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "momentum_overheated_v1",
+      "family_id": "momentum_overheated",
+      "version": 1,
+      "label": "動能過熱",
+      "category": "risk",
+      "fixed_display": true,
+      "enabled": true,
+      "usage_role": "observation_only",
+      "affects_strategy_eligibility": false,
+      "affects_prediction_score": false,
+      "description": "A 級動能同時 RSI >= 80 且五日漲幅 >= 15%，提示追價風險。",
+      "rule": {
+        "path": "strategy_tag_features.momentum_overheated",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "momentum_distribution_risk_v1",
+      "family_id": "momentum_distribution_risk",
+      "version": 1,
+      "label": "疑似爆量出貨",
+      "category": "risk",
+      "fixed_display": true,
+      "enabled": true,
+      "usage_role": "observation_only",
+      "affects_strategy_eligibility": false,
+      "affects_prediction_score": false,
+      "description": "五日量比 >= 2.5 且收盤落在當日振幅下方 40%，提示爆量但收盤弱勢。",
+      "rule": {
+        "path": "strategy_tag_features.momentum_distribution_risk",
+        "operator": "eq",
+        "value": true
+      }
+    },
+    {
+      "tag_id": "momentum_score_acceleration_10_v1",
+      "family_id": "momentum_score_acceleration_10",
+      "version": 1,
+      "label": "動能分數加速度 +10",
+      "category": "momentum",
+      "fixed_display": false,
+      "enabled": true,
+      "description": "僅在已有前一期 Momentum Score 時判斷；不作為 A/B/C 必要條件。",
+      "rule": {
+        "path": "strategy_tag_features.momentum_acceleration",
+        "operator": "gte",
+        "value": 10
+      }
+    }
+  ]
+}
