@@ -17,6 +17,10 @@ function isText(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function isIsoTimestamp(value) {
+  return isText(value) && !Number.isNaN(Date.parse(value));
+}
+
 function main() {
   const date = process.argv[2];
   const inputArg = process.argv[3] || `research_pending/daily-gainers-ai/${date}.json`;
@@ -52,6 +56,8 @@ function main() {
   const validBias = new Set(['bullish', 'neutral', 'cautious', 'bearish']);
   const validConfidence = new Set(['high', 'medium', 'low']);
   const validVerification = new Set(CONTRACT.institutional_verification.allowed_statuses);
+  const requiredVerificationFields = CONTRACT.institutional_verification.required_fields_when_verification_required;
+  assert(Array.isArray(requiredVerificationFields) && requiredVerificationFields.length > 0, 'institutional verification required-fields contract is missing');
 
   for (let i = 0; i < ai.analyses.length; i += 1) {
     const item = ai.analyses[i];
@@ -73,9 +79,13 @@ function main() {
 
     const required = fact?.institutional?.verification_required === true;
     if (required) {
+      for (const field of requiredVerificationFields) {
+        assert(Object.prototype.hasOwnProperty.call(verification, field), `institutional verification ${field} required for ${item.code}`);
+      }
       assert(verification.status !== 'not_required', `institutional verification cannot be not_required for ${item.code}`);
       assert(isText(verification.summary), `institutional verification summary required for ${item.code}`);
-      assert(verification.checked_at, `institutional verification checked_at required for ${item.code}`);
+      assert(isIsoTimestamp(verification.checked_at), `institutional verification checked_at must be an ISO timestamp for ${item.code}`);
+      assert(Array.isArray(verification.sources), `institutional verification sources must be array for ${item.code}`);
     } else {
       assert(verification.status === 'not_required' || verification.status === 'verified', `unexpected institutional verification status for ${item.code}`);
     }
