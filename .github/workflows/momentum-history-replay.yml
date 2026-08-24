@@ -1,0 +1,117 @@
+name: '[07 研究] 動能飆股歷史與覆盤'
+
+on:
+  schedule:
+    # 台北時間週二至週六 03:30，承接前一交易日晚間至凌晨的預測/覆盤資料。
+    - cron: '30 19 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '單一 prediction date YYYYMMDD；留空則使用最新有效日期'
+        required: false
+        type: string
+      start:
+        description: '回填起始 prediction date YYYYMMDD（與 date 二擇一）'
+        required: false
+        type: string
+      end:
+        description: '回填結束 prediction date YYYYMMDD'
+        required: false
+        type: string
+      replay_lookback:
+        description: '每次重新刷新最近幾個訊號日的 T+1/T+3/T+5'
+        required: true
+        default: '10'
+        type: string
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/momentum_history_replay.js'
+      - 'scripts/run_momentum_history_replay.js'
+      - 'tests/momentum_history_replay.test.js'
+      - '.github/workflows/momentum-history-replay.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: momentum-history-replay
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate momentum history and replay engine
+        run: |
+          node --check scripts/momentum_history_replay.js
+          node --check scripts/run_momentum_history_replay.js
+          node --test tests/momentum_tag_features.test.js tests/momentum_history_replay.test.js
+      - name: Dry-run latest prediction
+        run: node scripts/run_momentum_history_replay.js --latest --dry-run
+
+  generate:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Generate history and refresh replay outcomes
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_START: ${{ inputs.start }}
+          INPUT_END: ${{ inputs.end }}
+          INPUT_LOOKBACK: ${{ inputs.replay_lookback }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--replay-lookback "${INPUT_LOOKBACK:-10}")
+          if [ -n "${INPUT_DATE:-}" ]; then
+            args+=(--date "$INPUT_DATE")
+          elif [ -n "${INPUT_START:-}" ] || [ -n "${INPUT_END:-}" ]; then
+            [ -z "${INPUT_START:-}" ] || args+=(--start "$INPUT_START")
+            [ -z "${INPUT_END:-}" ] || args+=(--end "$INPUT_END")
+          else
+            args+=(--latest)
+          fi
+          node scripts/run_momentum_history_replay.js "${args[@]}" | tee /tmp/momentum-history-replay.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync('/tmp/momentum-history-replay.json', 'utf8'));
+          console.log(`History dates: ${p.histories.map(x => x.signal_date).join(', ') || 'none'}`);
+          console.log(`Replay refreshed: ${p.refreshed_replays.length}`);
+          NODE
+      - name: Commit momentum research data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data_prediction_analysis/momentum-history data_prediction_analysis/momentum-replay
+          if git diff --cached --quiet; then
+            echo 'No momentum history/replay changes'
+            exit 0
+          fi
+          git commit -m 'data: refresh momentum history and replay'
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo 'Failed to push momentum research data after retries' >&2
+          exit 1
