@@ -29,6 +29,7 @@ function parseArgs(argv) {
   const options = {
     date: '',
     latest: false,
+    latestCount: 0,
     start: '',
     end: '',
     dryRun: false,
@@ -38,6 +39,7 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === '--date') options.date = compactDate(argv[++index]);
     else if (arg === '--latest') options.latest = true;
+    else if (arg === '--latest-count') options.latestCount = Math.max(1, Number(argv[++index]) || 1);
     else if (arg === '--start') options.start = compactDate(argv[++index]);
     else if (arg === '--end') options.end = compactDate(argv[++index]);
     else if (arg === '--dry-run') options.dryRun = true;
@@ -50,6 +52,7 @@ function parseArgs(argv) {
 function resolveDates(options, workspaceRoot = ROOT) {
   const dates = listPredictionDates(workspaceRoot);
   if (options.date) return dates.includes(options.date) ? [options.date] : [];
+  if (options.latestCount > 0) return dates.slice(-options.latestCount);
   if (options.latest) return dates.length ? [dates.at(-1)] : [];
   if (options.start || options.end) {
     return dates.filter(date => (!options.start || date >= options.start) && (!options.end || date <= options.end));
