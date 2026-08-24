@@ -1,0 +1,138 @@
+name: "[07 研究] 套用 5% 法人隔日補查"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'research_pending/daily-gainers-ai-rechecks/*.json'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '補查日期 YYYYMMDD'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-ai-recheck-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_DATE:-}" ]; then
+            date="$INPUT_DATE"
+          elif [ "$EVENT_NAME" = push ]; then
+            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai-rechecks/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
+            date="$(basename "$changed" .json)"
+          else
+            date=""
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Apply verified recheck decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          node - "$date" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const contract = JSON.parse(fs.readFileSync('config/daily-gainers-ai-contract.json','utf8'));
+          const factsPath = `data_daily_gain_over_5/analysis-facts/${date}.json`;
+          const pendingPath = `research_pending/daily-gainers-ai/${date}.json`;
+          const decisionPath = `research_pending/daily-gainers-ai-rechecks/${date}.json`;
+          for (const file of [factsPath,pendingPath,decisionPath]) {
+            if (!fs.existsSync(file)) throw new Error(`Missing ${file}`);
+          }
+          const facts = JSON.parse(fs.readFileSync(factsPath,'utf8'));
+          const pending = JSON.parse(fs.readFileSync(pendingPath,'utf8'));
+          const decision = JSON.parse(fs.readFileSync(decisionPath,'utf8'));
+          if (facts.schema_version !== contract.facts.schema_version || facts.methodology_version !== contract.facts.methodology_version) throw new Error('facts not current contract');
+          if (pending.schema_version !== contract.ai.schema_version || pending.methodology_version !== contract.ai.methodology_version || pending.model_role !== contract.ai.model_role) throw new Error('pending not current contract');
+          if (facts.target_date !== date || pending.target_date !== date || decision.target_date !== date) throw new Error('target_date mismatch');
+          if (!Array.isArray(decision.resolve_from) || !decision.resolve_from.length) throw new Error('decision.resolve_from required');
+          if (!contract.institutional_verification.allowed_statuses.includes(decision.status)) throw new Error('decision status not allowed by contract');
+          if (decision.status !== 'verified') throw new Error('this deterministic applier only promotes externally verified decisions');
+          if (!decision.web_verification || !Array.isArray(decision.web_verification.sources) || !decision.web_verification.sources.length) throw new Error('web verification sources required');
+          const factByCode = new Map(facts.stocks.map(x => [String(x.code), x]));
+          const aiCodes = pending.analyses.map(x => String(x.code));
+          const factCodes = facts.stocks.map(x => String(x.code));
+          if (JSON.stringify(aiCodes) !== JSON.stringify(factCodes)) throw new Error('pending/facts stock order mismatch');
+          let updated = 0;
+          for (const item of pending.analyses) {
+            const v = item.institutional_verification;
+            if (!v || !decision.resolve_from.includes(v.status)) continue;
+            const fact = factByCode.get(String(item.code));
+            const actors = ['foreign','trust','dealer'].map(key => ({ key, ...(fact?.institutional?.[key] || {}) }));
+            const required = actors.filter(x => x.requires_external_verification === true);
+            if (!required.length) continue;
+            for (const actor of required) {
+              if (!contract.institutional_verification.required_record_statuses.includes(actor.record_status)) throw new Error(`unexpected record_status ${actor.record_status} for ${item.code}/${actor.key}`);
+              const sourceState = facts.institutional_source_status?.[actor.key]?.status;
+              if (sourceState !== 'available') throw new Error(`source not available for ${item.code}/${actor.key}`);
+            }
+            const actorText = required.map(actor => `${actor.key}:${actor.record_status}`).join(', ');
+            item.institutional_verification = {
+              status: 'verified',
+              summary: `隔日重新查證：該交易日官方法人來源已完整產製且可用；需查證欄位為 ${actorText}。no_record 保持「官方有效日表無該股票紀錄」語意，不改寫成數字 0；zero_net 表示原始列存在且淨額確為 0。repository facts 與本次查證一致。`,
+              checked_at: decision.checked_at,
+              sources: decision.web_verification.sources
+            };
+            updated += 1;
+          }
+          if (!updated) {
+            console.log(JSON.stringify({date,updated:0,message:'no matching unresolved items'}));
+            process.exit(0);
+          }
+          pending.generated_at = new Date().toISOString();
+          fs.writeFileSync(pendingPath, JSON.stringify(pending, null, 2) + '\n');
+          console.log(JSON.stringify({date,updated,pendingPath},null,2));
+          NODE
+
+      - name: Validate and commit pending update
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          pending="research_pending/daily-gainers-ai/${date}.json"
+          node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$pending"
+          if git diff --cached --quiet; then
+            echo "No pending AI changes to commit"
+            exit 0
+          fi
+          git commit -m "analysis: recheck institutional data for 5% gainers ${date}"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git fetch origin main
+            git rebase origin/main
+            sleep 5
+          done
+          echo "Failed to push rechecked pending AI" >&2
+          exit 1
