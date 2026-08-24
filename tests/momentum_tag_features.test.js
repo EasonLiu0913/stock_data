@@ -18,7 +18,7 @@ function strongMomentumStock(overrides = {}) {
   return {
     stock_code: '2330',
     stock_name: '測試股',
-    close: 120,
+    close: 121,
     high: 122,
     low: 110,
     features: {
