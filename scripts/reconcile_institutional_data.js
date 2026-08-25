@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
+  filterInstitutionalDataToUniverse,
   hasTargetDate,
   readEligibleStockUniverse,
   toRocDate,
@@ -218,7 +219,18 @@ function main(argv = process.argv.slice(2)) {
   const failedFile = path.join(dataDir, `fubon_${targetDateStr}_institutional_failedList.json`);
   const statusFile = path.join(dataDir, `fubon_${targetDateStr}_institutional_status.json`);
 
-  const data = readJson(dataFile, {});
+  const rawData = readJson(dataFile, {});
+  const data = filterInstitutionalDataToUniverse(rawData, stockInfo);
+  let dataChanged = false;
+  if (fs.existsSync(dataFile)) {
+    if (Object.keys(data).length === 0) {
+      fs.unlinkSync(dataFile);
+      dataChanged = true;
+    } else {
+      dataChanged = writeJsonIfChanged(dataFile, data);
+    }
+  }
+
   const failedList = readJson(failedFile, []);
   const reference = findPreviousReference(dataDir, targetDateStr, stockNumbers);
   const { status, reconciledFailed } = buildStatus({ targetDateStr, stockInfo, data, failedList, reference });
@@ -239,6 +251,7 @@ function main(argv = process.argv.slice(2)) {
     anomaly_flags: status.anomaly_flags,
     quality_flags: status.quality_flags,
     reference: status.reference,
+    data_file_changed: dataChanged,
     failed_list_changed: failedChanged,
     status_changed: statusChanged,
   }, null, 2));
