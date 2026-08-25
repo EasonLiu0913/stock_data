@@ -2,7 +2,11 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { hasTargetDate, toRocDate } = require('./lib/institutional_data_common');
+const {
+  hasTargetDate,
+  readEligibleStockUniverse,
+  toRocDate,
+} = require('./lib/institutional_data_common');
 const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 const SENTINEL_STOCKS = ['1101', '2330', '2317', '2882'];
@@ -32,34 +36,6 @@ function resolveTargetDate(explicitDate) {
   const taipei = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei', hour12: false }));
   if (taipei.getHours() < 14) taipei.setDate(taipei.getDate() - 1);
   return formatDate(taipei);
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-  for (const char of line) {
-    if (char === '"') inQuotes = !inQuotes;
-    else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
-    else current += char;
-  }
-  result.push(current.trim());
-  return result;
-}
-
-function readStockUniverse(csvPath) {
-  if (!fs.existsSync(csvPath)) throw new Error(`找不到股票清單: ${csvPath}`);
-  const stockInfo = new Map();
-  const lines = fs.readFileSync(csvPath, 'utf8').split(/\r?\n/);
-  for (let i = 1; i < lines.length; i += 1) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const parts = parseCSVLine(line);
-    const code = String(parts[0] || '').trim();
-    const name = String(parts[1] || '').trim();
-    if (/^\d{4}$/.test(code)) stockInfo.set(code, name);
-  }
-  return stockInfo;
 }
 
 function readJson(file, fallback) {
@@ -236,7 +212,7 @@ function main(argv = process.argv.slice(2)) {
 
   const repoRoot = path.resolve(__dirname, '..');
   const dataDir = path.join(repoRoot, 'data_fubon');
-  const stockInfo = readStockUniverse(path.join(repoRoot, 'data_twse', 'twse_industry.csv'));
+  const stockInfo = readEligibleStockUniverse(path.join(repoRoot, 'data_twse', 'twse_industry.csv'));
   const stockNumbers = [...stockInfo.keys()].sort();
   const dataFile = path.join(dataDir, `fubon_${targetDateStr}_institutional.json`);
   const failedFile = path.join(dataDir, `fubon_${targetDateStr}_institutional_failedList.json`);
