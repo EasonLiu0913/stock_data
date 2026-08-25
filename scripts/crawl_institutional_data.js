@@ -1,7 +1,12 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { hasInstitutionalRows, hasTargetDate, toRocDate } = require('./lib/institutional_data_common');
+const {
+ filterInstitutionalDataToUniverse,
+ hasTargetDate,
+ readEligibleStockUniverse,
+ toRocDate,
+} = require('./lib/institutional_data_common');
 const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 // --- 設定區 ---
@@ -9,11 +14,11 @@ const MAX_CONCURRENCY = 5; // 最大並發數
 
 /**
  * 三大法人買賣超資料爬取腳本
- * 
+ *
  * 使用方式:
  *   node scripts/crawl_institutional_data.js --date 20260204
  *   node scripts/crawl_institutional_data.js --start 2026-1-1 --end 2026-2-4
- * 
+ *
  * 輸出檔案:
  *   data_fubon/fubon_YYYYMMDD_institutional.json
  */
@@ -43,19 +48,16 @@ const MAX_CONCURRENCY = 5; // 最大並發數
 
  const twseIndustryCsvPath = path.join(__dirname, '../data_twse/twse_industry.csv');
  const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional.json`);
- const stockInfoMap = new Map();
- function parseCSVLine(line) {
-  const result = []; let current = ''; let inQuotes = false;
-  for (let i = 0; i < line.length; i++) { const char = line[i]; if (char === '"') inQuotes = !inQuotes; else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; } else current += char; }
-  result.push(current.trim()); return result;
- }
- if (fs.existsSync(twseIndustryCsvPath)) {
+ let stockInfoMap;
+ try {
   console.log(`📁 讀取股票清單: ${twseIndustryCsvPath}`);
-  const lines = fs.readFileSync(twseIndustryCsvPath, 'utf8').split('\n');
-  for (let i = 1; i < lines.length; i++) { const line = lines[i].trim(); if (!line) continue; const parts = parseCSVLine(line); if (parts.length >= 2) { const stockCode = parts[0]; const stockName = parts[1]; if (stockCode && /^\d+/.test(stockCode)) stockInfoMap.set(stockCode, stockName); } }
- } else { console.error(`❌ 找不到股票清單檔案: ${twseIndustryCsvPath}`); process.exit(1); }
- let stockNumbers = Array.from(stockInfoMap.keys()).sort();
- console.log(`📊 共 ${stockNumbers.length} 個股票代碼\n`);
+  stockInfoMap = readEligibleStockUniverse(twseIndustryCsvPath);
+ } catch (error) {
+  console.error(`❌ ${error.message}`);
+  process.exit(1);
+ }
+ const stockNumbers = Array.from(stockInfoMap.keys()).sort();
+ console.log(`📊 共 ${stockNumbers.length} 個法人 eligible 股票代碼（四位數上市股票）\n`);
 
  const year = parseInt(targetDateStr.substring(0, 4));
  const month = parseInt(targetDateStr.substring(4, 6)) - 1;
@@ -71,13 +73,17 @@ const MAX_CONCURRENCY = 5; // 最大並發數
 
  let existingData = {};
  if (fs.existsSync(outputFilePath)) {
-  try { existingData = JSON.parse(fs.readFileSync(outputFilePath, 'utf8')); existingData = Object.fromEntries(Object.entries(existingData).filter(([, data]) => hasInstitutionalRows(data))); console.log(`📋 發現現有有效資料，已有 ${Object.keys(existingData).length} 個股票\n`); }
-  catch { console.log(`⚠️ 讀取現有資料失敗，將重新建立\n`); }
+  try {
+   existingData = filterInstitutionalDataToUniverse(JSON.parse(fs.readFileSync(outputFilePath, 'utf8')), stockInfoMap);
+   console.log(`📋 發現現有 eligible 有效資料，已有 ${Object.keys(existingData).length} 個股票\n`);
+  } catch {
+   console.log(`⚠️ 讀取現有資料失敗，將重新建立\n`);
+  }
  }
  const stockNumbersToProcess = stockNumbers.filter(stock => !hasTargetDate(existingData[stock], targetRocDate));
  const skippedCount = stockNumbers.length - stockNumbersToProcess.length;
  if (skippedCount > 0) console.log(`⏭️  跳過 ${skippedCount} 個目標日期資料完整的股票\n`);
- if (stockNumbersToProcess.length === 0) { console.log('✅ 所有股票的目標日期資料都完整，無需處理！'); return; }
+ if (stockNumbersToProcess.length === 0) { console.log('✅ 所有 eligible 股票的目標日期資料都完整，無需處理！'); return; }
  console.log(`🚀 開始處理 ${stockNumbersToProcess.length} 個股票 (並發數: ${MAX_CONCURRENCY})...\n`);
 
  const browser = await chromium.launch({ headless: true });
@@ -130,7 +136,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  const workers = [];
  for (let i = 0; i < MAX_CONCURRENCY; i++) workers.push((async () => { const page = await browser.newPage(); await page.waitForTimeout(i * 500); while (queue.length > 0) { const stockNumber = queue.shift(); if (stockNumber) await processStock(page, stockNumber); } await page.close(); })());
  await Promise.all(workers); await browser.close();
- console.log('\n\n=== 處理完成 ==='); console.log(`✅ 成功: ${successCount} 個`); console.log(`❌ 失敗: ${failCount} 個`); console.log(`⏭️  跳過: ${skippedCount} 個（目標日期資料完整）`); console.log(`📊 總計: ${stockNumbers.length} 個股票\n`);
+ console.log('\n\n=== 處理完成 ==='); console.log(`✅ 成功: ${successCount} 個`); console.log(`❌ 失敗: ${failCount} 個`); console.log(`⏭️  跳過: ${skippedCount} 個（目標日期資料完整）`); console.log(`📊 總計: ${stockNumbers.length} 個 eligible 股票\n`);
  if (successCount > 0) {
   fs.writeFileSync(outputFilePath, JSON.stringify(result, null, 2), 'utf8'); console.log(`💾 結果已儲存到: ${outputFilePath}`);
   if (failedStocks.length > 0) { const failedListFile = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional_failedList.json`); fs.writeFileSync(failedListFile, JSON.stringify(failedStocks, null, 2), 'utf8'); console.log(`📋 失敗清單已儲存到: ${failedListFile}`); }
