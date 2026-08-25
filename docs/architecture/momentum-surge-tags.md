@@ -95,7 +95,7 @@ Momentum v1 的每日研究資料分為兩層：
 
 ```text
 data_prediction_analysis/momentum-history/v1/YYYYMMDD.json
-  -> 凍結 signal date 當時的分數、等級、五構面、共振事實與 acceleration
+  -> 凍結 signal date 當時的分數、等級、五構面、共振事實、產業與 acceleration
 
 data_prediction_analysis/momentum-replay/v1/YYYYMMDD.json
   -> 僅在未來交易日真正發生後加入 T+1 / T+3 / T+5 outcome
@@ -105,17 +105,27 @@ History 的 canonical source 是 versioned Strategy Snapshot manifest；同日�
 
 Replay maturity 依市場後續交易日判斷，而不是要求所有股票都有價格。個股缺價只降低 `horizon_coverage`，不能把已發生的整個市場 T+1 誤判成尚未成熟。
 
-## Evidence aggregation v1
+## Evidence aggregation v1 → methodology v2
 
-下一層研究聚合固定寫入：
+研究聚合固定寫入：
 
 ```text
 data_prediction_analysis/momentum-research/v1/summary.json
 ```
 
-方法版本：`methodology_version = 1`。
+`v1` 代表 Momentum model version；研究方法可獨立升版。現在：
 
-目前比較的研究分組：
+```text
+schema_version = 2
+methodology_version = 2
+momentum_model_version = 1
+```
+
+因此這次升版只增加 evidence 解讀，不改 Momentum v1 分數、A/B/C 或 Registry。
+
+### 既有分組績效
+
+持續比較：
 
 - A / B / C；
 - Score `50–64 / 65–79 / 80–89 / 90+`；
@@ -123,30 +133,107 @@ data_prediction_analysis/momentum-research/v1/summary.json
 - 單一事實：量價共振、籌碼共振、強勢突破；
 - 組合：量價+籌碼、量價+突破、籌碼+突破、三者同時成立。
 
-每個 group 對 T+1 / T+3 / T+5 分別保存：
+每個 group 對 T+1 / T+3 / T+5 保存成熟樣本、coverage、平均／中位報酬、上漲率、MFE／MAE 與 +4% / +7% / +10% MFE 命中率。尚未成熟的 horizon 一律保持空值，不以 0 補值。
 
-- 選中樣本數與成熟樣本數；
-- coverage；
-- 平均與中位報酬；
-- 上漲率；
-- 平均 MFE / MAE；
-- MFE 觸及 +4% / +7% / +10% 的比率。
+### 跨日期穩定性
 
-尚未成熟的 horizon 一律保持空值，不以 0 補值。研究頁面為：
+Methodology v2 對每個研究 group / horizon 另外以「signal date」為觀測單位：
+
+- 每日成熟樣本數與 coverage；
+- 每日平均／中位報酬；
+- 每日上漲率；
+- 跨日的平均 date-mean return；
+- date-mean return 標準差；
+- 正報酬日期率；
+- 方向一致率；
+- 最佳／最差日期。
+
+這一層避免單一大樣本日期因股票數很多而壓過其他日期。
+
+日期證據門檻：
+
+- `< 5` 個成熟 signal dates：`insufficient`；
+- `5–19`：`observe`；
+- `>= 20`：`research_ready`。
+
+`research_ready` 仍只代表可以進一步研究，不代表可自動升版。
+
+### Momentum 排名持續性
+
+每個 signal date 將當日股票依 `momentum_score DESC, stock_code ASC` 做 deterministic ranking，保存：
+
+- Top 20 與前一 signal date 的重疊數／重疊率；
+- Top 50 重疊數／重疊率；
+- Top 20 新進與退出名單；
+- 最新 Top 50 個股目前排名、前次排名、排名變化、目前／前次 Score 與 Score 變化。
+
+`rank_change > 0` 表示名次往前。只比較 repository 中已存在的前一個 signal date，不用未來日期或日曆推測補值。
+
+這一層用來區分「分數高且持續」與「單日突然跳榜」。排名重疊率不直接成為 production eligibility。
+
+### 產業分布與 baseline
+
+History 已凍結 signal-date 當時的 `industry`，所以 Methodology v2 不需要另抓產業資料。
+
+研究分段：
+
+- Momentum Score >= 50；
+- A；
+- B；
+- C。
+
+每個產業保存：
+
+- 候選數與候選占比；
+- 同一 signal-date universe 的產業股票數與 universe 占比；
+- `lift = 候選占比 / universe 占比`；
+- Top 3 產業占比；
+- HHI 集中度。
+
+日期資料使用同日 listed-stock universe 作 baseline；overall 是所有 signal-date stock observations 的 aggregate。這不是拿固定產業大小做比較，也不把產業當作策略 gate。
+
+若 Score >= 50 的前三大產業占比 `>= 70%`，研究 summary 會顯示集中警告；這只是防止把集中行情錯誤泛化到全市場，不會排除股票。
+
+## Dashboard
+
+研究頁面：
 
 ```text
 public/momentum-research-dashboard.html
 ```
 
+Methodology v2 增加：
+
+1. 分組績效；
+2. 跨日期穩定性；
+3. Top 20 / Top 50 排名持續性與最新 Top 50 movers；
+4. 產業占比、universe baseline、lift、Top3 share、HHI；
+5. Signal Date 成熟度與研究警告。
+
+桌面使用完整表格；手機保留績效卡片，其他研究表可水平捲動，不隱藏證據欄位。
+
 ## 證據門檻與升版規則
 
 研究聚合只提供 evidence status，不自動改變 production：
 
-- `< 30` 個成熟樣本：`insufficient`；
+- 樣本數 `< 30`：`insufficient`；
 - `30–99`：`observe`；
-- `>= 100`：`research_ready`，代表可以進一步比較，不代表可以直接升版。
+- `>= 100`：`research_ready`；
+- 成熟日期 `< 5`：跨日期穩定性 `insufficient`；
+- `5–19`：跨日期穩定性 `observe`；
+- `>= 20`：跨日期穩定性 `research_ready`。
 
-任何 Momentum v2 門檻調整仍需另行檢查跨日期穩定性、產業分布、不同市場背景與樣本品質，並以新的 version 保存；不得用當前少量樣本直接修改 v1。
+任何 Momentum v2 門檻調整至少仍需另行檢查：
+
+```text
+sample_size
+cross_date_stability
+rank_persistence
+industry_distribution
+market_context
+```
+
+這些檢查通過後仍需人工／明確策略 promotion，並以新的 model / registry version 保存；不得直接修改 v1。
 
 ## 版本規則
 
@@ -156,3 +243,4 @@ public/momentum-research-dashboard.html
 4. 風險標籤是事實標籤，不自動從 A 級清單剔除股票。
 5. 覆盤以 T 日分數對 T+1／T+3／T+5 報酬驗證，禁止把事後結果回寫成 T 日因子。
 6. Research summary 只能累積證據，不得自動修改 Registry、固定策略或 prediction score。
+7. Research methodology 可獨立升版；方法升版不得冒充 Momentum model 升版。
