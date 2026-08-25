@@ -12,8 +12,26 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout only verification inputs
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            .github/workflows/crawl-institutional.yml
+            .github/workflows/retry-institutional.yml
+            scripts/crawl_institutional_data.js
+            scripts/retry_institutional_failed.js
+            scripts/reconcile_institutional_data.js
+            scripts/write_institutional_actions_summary.js
+            scripts/lib/institutional_data_common.js
+            scripts/lib/twse_trading_day.js
+            config/twse_non_trading_days.json
+            public/foreign.html
+            tests/twse_trading_day.test.js
+            tests/institutional_reconcile.test.js
+            tests/institutional_pipeline_regression.test.js
+            tests/foreign_page_script_syntax.test.js
+          sparse-checkout-cone-mode: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
