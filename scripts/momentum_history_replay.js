@@ -78,7 +78,10 @@ function injectPreviousScores(stocks, previous) {
   return (stocks || []).map(stock => {
     const code = String(stock.stock_code || '').trim();
     const prior = previous?.by_code?.get(code);
-    const previousScore = Number(prior?.momentum_score);
+    const rawPreviousScore = prior?.momentum_score;
+    const previousScore = rawPreviousScore === null || rawPreviousScore === undefined || rawPreviousScore === ''
+      ? Number.NaN
+      : Number(rawPreviousScore);
     return {
       ...stock,
       strategy_tag_features: {
@@ -98,7 +101,10 @@ function frozenMomentumFeatures(stock) {
   const storedScore = Number(stored.momentum_score);
   const storedVersion = Number(stored.momentum_model_version);
   if (storedVersion === MOMENTUM_MODEL_VERSION && Number.isFinite(storedScore)) {
-    const previousScore = Number(stored.previous_momentum_score);
+    const rawPreviousScore = stored.previous_momentum_score;
+    const previousScore = rawPreviousScore === null || rawPreviousScore === undefined || rawPreviousScore === ''
+      ? Number.NaN
+      : Number(rawPreviousScore);
     return {
       momentum_model_version: storedVersion,
       momentum_score: storedScore,
