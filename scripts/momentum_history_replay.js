@@ -286,8 +286,21 @@ function buildMomentumReplay(history, priceContext, options = {}) {
       next_day_weakness: one ? one.return_pct < 0 : null,
     };
   });
-  const completedHorizon = horizons.filter(horizon => stocks.length > 0
-    && stocks.every(stock => stock.outcomes[`t_plus_${horizon}`] !== null)).at(-1) || 0;
+  const forwardTradingDates = [...new Set((priceContext.files || [])
+    .map(item => compactDate(item.date))
+    .filter(date => date && date > history.signal_date))]
+    .sort();
+  const completedHorizon = horizons.filter(horizon => forwardTradingDates.length >= horizon).at(-1) || 0;
+  const horizonCoverage = Object.fromEntries(horizons.map(horizon => {
+    const key = `t_plus_${horizon}`;
+    const availableStockCount = stocks.filter(stock => stock.outcomes[key] !== null).length;
+    return [key, {
+      available_stock_count: availableStockCount,
+      unavailable_stock_count: Math.max(0, stocks.length - availableStockCount),
+      coverage_pct: stocks.length ? round((availableStockCount / stocks.length) * 100, 2) : 0,
+      market_horizon_available: forwardTradingDates.length >= horizon,
+    }];
+  }));
   return {
     schema_version: REPLAY_SCHEMA_VERSION,
     momentum_model_version: history.momentum_model_version,
@@ -296,6 +309,8 @@ function buildMomentumReplay(history, priceContext, options = {}) {
     source_history_file: `data_prediction_analysis/momentum-history/v${history.momentum_model_version}/${history.signal_date}.json`,
     stock_count: stocks.length,
     completed_horizon: completedHorizon,
+    forward_trading_dates: forwardTradingDates,
+    horizon_coverage: horizonCoverage,
     price_source_files: (priceContext.files || []).map(item => item.file),
     stocks,
   };
