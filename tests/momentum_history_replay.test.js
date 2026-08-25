@@ -182,6 +182,26 @@ test('replay horizons follow trading rows and calculate T+1/T+3/T+5 without cale
   assert.equal(row.outcomes.t_plus_5.max_drawdown_pct, -2);
   assert.equal(row.reached_plus_10_pct_5d, true);
   assert.equal(replay.completed_horizon, 5);
+  assert.equal(replay.horizon_coverage.t_plus_5.coverage_pct, 100);
+});
+
+test('market replay maturity is not reduced by one stock with missing price rows', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-replay-coverage-'));
+  const source = payload('20260821');
+  source.stocks.push(stock('2317'));
+  const history = persistMomentumHistory(source, { workspaceRoot: root }).history;
+  writeSma(root, '20260821', 100, 101, 99, '2330');
+  writeSma(root, '20260824', 102, 104, 98, '2330');
+
+  const context = loadForwardPriceRows(root, history, 12);
+  const replay = buildMomentumReplay(history, context);
+  assert.equal(replay.completed_horizon, 1);
+  assert.deepEqual(replay.forward_trading_dates, ['20260824']);
+  assert.equal(replay.horizon_coverage.t_plus_1.available_stock_count, 1);
+  assert.equal(replay.horizon_coverage.t_plus_1.unavailable_stock_count, 1);
+  assert.equal(replay.horizon_coverage.t_plus_1.coverage_pct, 50);
+  assert.ok(replay.stocks.find(row => row.stock_code === '2330').outcomes.t_plus_1);
+  assert.equal(replay.stocks.find(row => row.stock_code === '2317').outcomes.t_plus_1, null);
 });
 
 test('incomplete future data remains null instead of being guessed', () => {
@@ -192,6 +212,7 @@ test('incomplete future data remains null instead of being guessed', () => {
   const context = loadForwardPriceRows(root, history, 12);
   const replay = buildMomentumReplay(history, context);
   assert.ok(replay.stocks[0].outcomes.t_plus_1);
+  assert.equal(replay.completed_horizon, 1);
   assert.equal(replay.stocks[0].outcomes.t_plus_3, null);
   assert.equal(replay.stocks[0].outcomes.t_plus_5, null);
   assert.equal(replay.stocks[0].reached_plus_4_pct_5d, null);
