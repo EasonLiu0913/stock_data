@@ -1,6 +1,8 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const { hasInstitutionalRows } = require('./lib/institutional_data_common');
+const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 /**
  * 重爬三大法人失敗的股票
@@ -48,6 +50,13 @@ const MAX_CONCURRENCY = 3;
 
  console.log(`\n🔄 三大法人失敗股票重爬`);
  console.log(`📅 目標日期: ${targetDateStr}\n`);
+
+ const tradingDay = getTradingDayStatus(targetDateStr);
+ if (!tradingDay.isTradingDay) {
+  console.log(`📅 目標日期為非交易日（${tradingDay.reason}），跳過重爬。`);
+  return;
+ }
+ if (tradingDay.warning) console.warn(`⚠️ ${tradingDay.warning}`);
 
  // 檔案路徑
  const failedListPath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional_failedList.json`);
@@ -118,12 +127,6 @@ const MAX_CONCURRENCY = 3;
   } catch (e) {
    console.log(`⚠️ 無法讀取現有三大法人資料`);
   }
- }
-
- function hasInstitutionalRows(data) {
-  if (!data || typeof data !== 'object') return false;
-  return ['ForeignInvestors', 'InvestmentTrust', 'Dealers', 'DailyTotal']
-   .some(key => data[key] && typeof data[key] === 'object' && Object.keys(data[key]).length > 0);
  }
 
  // 計算日期參數
