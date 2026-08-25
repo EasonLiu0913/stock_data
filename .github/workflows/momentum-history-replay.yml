@@ -42,7 +42,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: momentum-history-replay
+  # PR 驗證與 main 正式資料流程分流，避免大型 repo checkout 互相阻塞。
+  group: ${{ github.event_name == 'pull_request' && format('momentum-history-replay-pr-{0}', github.event.pull_request.number) || 'momentum-history-replay-main' }}
   cancel-in-progress: false
 
 jobs:
