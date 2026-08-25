@@ -8,10 +8,12 @@ on:
       - 'scripts/run_momentum_history_replay.js'
       - 'tests/momentum_history_replay.test.js'
       - '.github/workflows/momentum-history-replay.yml'
-      # live snapshot 只會在標籤 enrichment 完成後寫入；用它承接每日正式資料，避免讀到半成品 summary。
+      # Strategy snapshot 完成後才觸發；支援 live 與 versioned historical recalculation。
       - 'data_prediction_analysis/strategy-snapshots/live_snapshot/**'
+      - 'data_prediction_analysis/strategy-snapshots/historical_recalculation/**'
+      - 'data_prediction_analysis/strategy-snapshots/manifest.json'
   schedule:
-    # 台北時間週二至週六 03:30；只會選擇已完成 Momentum snapshot 的 prediction summary。
+    # 台北時間週二至週六 03:30；只選 manifest 中已完成 Momentum v1 的 versioned snapshot。
     - cron: '30 19 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -90,7 +92,7 @@ jobs:
           set -euo pipefail
           args=(--replay-lookback "${INPUT_LOOKBACK:-10}")
           if [ "$GITHUB_EVENT_NAME" = 'pull_request' ] || [ "$GITHUB_EVENT_NAME" = 'push' ]; then
-            # 程式/規則更新或完成 live snapshot 時，重建最近兩個「已完成」prediction dates，確保 previous score 鏈完整。
+            # 程式/規則更新或 versioned snapshot 完成時，重建最近兩個可用 prediction dates。
             args+=(--latest-count 2)
           elif [ -n "${INPUT_DATE:-}" ]; then
             args+=(--date "$INPUT_DATE")
@@ -104,6 +106,7 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const p = JSON.parse(fs.readFileSync('/tmp/momentum-history-replay.json', 'utf8'));
+          console.log(`Snapshot source: ${p.source}`);
           console.log(`History dates: ${p.histories.map(x => x.signal_date).join(', ') || 'none'}`);
           console.log(`Replay refreshed: ${p.refreshed_replays.length}`);
           NODE
