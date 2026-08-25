@@ -12,10 +12,20 @@ const {
 
 const ROOT = path.resolve(__dirname, '..');
 
+function summaryHasCompletedMomentumSnapshot(payload) {
+  if (!payload || !Array.isArray(payload.stocks) || !payload.stocks.length) return false;
+  if (!payload.strategy_snapshot_metadata?.registry_fingerprint) return false;
+  return payload.stocks.some(stock => {
+    const features = stock?.strategy_tag_features || {};
+    return Number(features.momentum_model_version) === 1
+      && Number.isFinite(Number(features.momentum_score));
+  });
+}
+
 function validSummaryDate(date, workspaceRoot = ROOT) {
   const file = path.join(workspaceRoot, 'data_predictions', date, 'summary.json');
   const payload = readJson(file, null);
-  return Boolean(payload && Array.isArray(payload.stocks));
+  return summaryHasCompletedMomentumSnapshot(payload);
 }
 
 function listPredictionDates(workspaceRoot = ROOT) {
@@ -62,12 +72,12 @@ function resolveDates(options, workspaceRoot = ROOT) {
 
 function run(options = {}, workspaceRoot = ROOT) {
   const dates = resolveDates(options, workspaceRoot);
-  if (!dates.length) throw new Error('No valid prediction summary matched the requested date range');
+  if (!dates.length) throw new Error('No completed momentum prediction summary matched the requested date range');
   const histories = [];
   for (const predictionDate of dates) {
     const summaryFile = path.join(workspaceRoot, 'data_predictions', predictionDate, 'summary.json');
     const payload = readJson(summaryFile, null);
-    if (!payload?.stocks) continue;
+    if (!summaryHasCompletedMomentumSnapshot(payload)) continue;
     const result = persistMomentumHistory(payload, {
       workspaceRoot,
       dryRun: options.dryRun,
@@ -111,6 +121,7 @@ if (require.main === module) {
 
 module.exports = {
   ROOT,
+  summaryHasCompletedMomentumSnapshot,
   validSummaryDate,
   listPredictionDates,
   parseArgs,
