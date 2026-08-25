@@ -273,7 +273,7 @@ function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const siteRoot = path.resolve(String(args.get('site') || '_site'));
   const policies = [
-    ['data_fubon', 15],
+    ['data_fubon', 14],
     ['data_twse_mi_index', 10],
     ['data_twse_institutional_investors', 10],
     ['data_twse_dealers', 10],
