@@ -8,13 +8,15 @@ on:
       - 'scripts/run_momentum_history_replay.js'
       - 'tests/momentum_history_replay.test.js'
       - '.github/workflows/momentum-history-replay.yml'
+      # live snapshot 只會在標籤 enrichment 完成後寫入；用它承接每日正式資料，避免讀到半成品 summary。
+      - 'data_prediction_analysis/strategy-snapshots/live_snapshot/**'
   schedule:
-    # 台北時間週二至週六 03:30，承接前一交易日晚間至凌晨的預測/覆盤資料。
+    # 台北時間週二至週六 03:30；只會選擇已完成 Momentum snapshot 的 prediction summary。
     - cron: '30 19 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: '單一 prediction date YYYYMMDD；留空則使用最新有效日期'
+        description: '單一 prediction date YYYYMMDD；留空則使用最新已完成 Momentum snapshot 的日期'
         required: false
         type: string
       start:
@@ -62,7 +64,7 @@ jobs:
           node --check scripts/momentum_history_replay.js
           node --check scripts/run_momentum_history_replay.js
           node --test tests/momentum_tag_features.test.js tests/momentum_history_replay.test.js
-      - name: Dry-run latest prediction
+      - name: Dry-run latest completed momentum prediction
         run: node scripts/run_momentum_history_replay.js --latest --dry-run
 
   generate:
@@ -88,7 +90,7 @@ jobs:
           set -euo pipefail
           args=(--replay-lookback "${INPUT_LOOKBACK:-10}")
           if [ "$GITHUB_EVENT_NAME" = 'pull_request' ] || [ "$GITHUB_EVENT_NAME" = 'push' ]; then
-            # PR/首次 merge bootstrap 最近兩個有效 prediction dates，讓最新訊號立即有 previous score。
+            # 程式/規則更新或完成 live snapshot 時，重建最近兩個「已完成」prediction dates，確保 previous score 鏈完整。
             args+=(--latest-count 2)
           elif [ -n "${INPUT_DATE:-}" ]; then
             args+=(--date "$INPUT_DATE")
