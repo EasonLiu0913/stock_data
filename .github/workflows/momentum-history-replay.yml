@@ -6,7 +6,12 @@ on:
     paths:
       - 'scripts/momentum_history_replay.js'
       - 'scripts/run_momentum_history_replay.js'
+      - 'scripts/momentum_research_summary.js'
+      - 'scripts/generate_momentum_research_summary.js'
       - 'tests/momentum_history_replay.test.js'
+      - 'tests/momentum_research_summary.test.js'
+      - 'public/momentum-research-dashboard.html'
+      - 'config/public-page-registry.json'
       - '.github/workflows/momentum-history-replay.yml'
       # Strategy snapshot 完成後才觸發；支援 live 與 versioned historical recalculation。
       - 'data_prediction_analysis/strategy-snapshots/live_snapshot/**'
@@ -39,16 +44,23 @@ on:
     paths:
       - 'scripts/momentum_history_replay.js'
       - 'scripts/run_momentum_history_replay.js'
+      - 'scripts/momentum_research_summary.js'
+      - 'scripts/generate_momentum_research_summary.js'
       - 'tests/momentum_history_replay.test.js'
+      - 'tests/momentum_research_summary.test.js'
+      - 'public/momentum-research-dashboard.html'
+      - 'config/public-page-registry.json'
       - '.github/workflows/momentum-history-replay.yml'
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
-  # PR 驗證與 main 正式資料流程分流；main 為可重建冪等資料，僅保留最新 run。
+  # 這是 repository/data writer；依 AGENTS.md 不可取消進行中的未提交資料。
   group: ${{ github.event_name == 'pull_request' && format('momentum-history-replay-pr-{0}', github.event.pull_request.number) || 'momentum-history-replay-main' }}
-  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   validate:
@@ -61,13 +73,17 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate momentum history and replay engine
+      - name: Validate momentum history, replay, and research engines
         run: |
           node --check scripts/momentum_history_replay.js
           node --check scripts/run_momentum_history_replay.js
-          node --test tests/momentum_tag_features.test.js tests/momentum_history_replay.test.js
+          node --check scripts/momentum_research_summary.js
+          node --check scripts/generate_momentum_research_summary.js
+          node --test tests/momentum_tag_features.test.js tests/momentum_history_replay.test.js tests/momentum_research_summary.test.js
       - name: Dry-run latest completed momentum prediction
-        run: node scripts/run_momentum_history_replay.js --latest --dry-run
+        run: |
+          node scripts/run_momentum_history_replay.js --latest --dry-run
+          node scripts/generate_momentum_research_summary.js --dry-run
 
   generate:
     needs: validate
@@ -110,6 +126,8 @@ jobs:
           console.log(`History dates: ${p.histories.map(x => x.signal_date).join(', ') || 'none'}`);
           console.log(`Replay refreshed: ${p.refreshed_replays.length}`);
           NODE
+      - name: Build Momentum research group summary
+        run: node scripts/generate_momentum_research_summary.js | tee /tmp/momentum-research-summary.json
       - name: Commit momentum research data
         env:
           TARGET_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || 'main' }}
@@ -118,12 +136,12 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data_prediction_analysis/momentum-history data_prediction_analysis/momentum-replay
+          git add data_prediction_analysis/momentum-history data_prediction_analysis/momentum-replay data_prediction_analysis/momentum-research
           if git diff --cached --quiet; then
-            echo 'No momentum history/replay changes'
+            echo 'No momentum history/replay/research changes'
             exit 0
           fi
-          git commit -m 'data: refresh momentum history and replay'
+          git commit -m 'analysis: refresh momentum research evidence'
           for attempt in 1 2 3 4 5; do
             if git fetch origin "$TARGET_BRANCH" && git rebase "origin/$TARGET_BRANCH" && git push origin HEAD:"$TARGET_BRANCH"; then
               exit 0
@@ -133,3 +151,8 @@ jobs:
           done
           echo 'Failed to push momentum research data after retries' >&2
           exit 1
+
+  deploy_pages:
+    if: github.event_name != 'pull_request'
+    needs: generate
+    uses: ./.github/workflows/deploy-pages.yml
