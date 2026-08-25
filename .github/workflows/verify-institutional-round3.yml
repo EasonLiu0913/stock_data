@@ -1,0 +1,89 @@
+name: "[07 驗證] Institutional Recovery Round 3"
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-institutional-round3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout verification inputs
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            .github/workflows/crawl-institutional.yml
+            .github/workflows/retry-institutional.yml
+            scripts/crawl_institutional_data.js
+            scripts/retry_institutional_failed.js
+            scripts/reconcile_institutional_data.js
+            scripts/write_institutional_actions_summary.js
+            scripts/lib/institutional_data_common.js
+            scripts/lib/twse_trading_day.js
+            config/twse_non_trading_days.json
+            data_twse/twse_industry.csv
+            data_fubon/fubon_20260824_institutional.json
+            data_fubon/fubon_20260824_institutional_status.json
+            public/foreign.html
+            tests/twse_trading_day.test.js
+            tests/institutional_reconcile.test.js
+            tests/institutional_universe.test.js
+            tests/institutional_pipeline_regression.test.js
+            tests/foreign_page_script_syntax.test.js
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Check institutional syntax
+        run: |
+          node --check scripts/crawl_institutional_data.js
+          node --check scripts/retry_institutional_failed.js
+          node --check scripts/reconcile_institutional_data.js
+          node --check scripts/lib/institutional_data_common.js
+
+      - name: Run institutional regression tests
+        run: |
+          node --test \
+            tests/twse_trading_day.test.js \
+            tests/institutional_reconcile.test.js \
+            tests/institutional_universe.test.js \
+            tests/institutional_pipeline_regression.test.js \
+            tests/foreign_page_script_syntax.test.js
+
+      - name: Verify real 20260824 universe convergence
+        shell: bash
+        run: |
+          node scripts/reconcile_institutional_data.js --date 20260824 | tee /tmp/reconcile.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { hasTargetDate, readEligibleStockUniverse, toRocDate } = require('./scripts/lib/institutional_data_common');
+          const universe = readEligibleStockUniverse('data_twse/twse_industry.csv');
+          const data = JSON.parse(fs.readFileSync('data_fubon/fubon_20260824_institutional.json', 'utf8'));
+          const status = JSON.parse(fs.readFileSync('data_fubon/fubon_20260824_institutional_status.json', 'utf8'));
+          const keys = Object.keys(data);
+          if (keys.some(code => !/^\d{4}$/.test(code))) throw new Error('reconcile retained a non-eligible institutional code');
+          if (keys.some(code => !universe.has(code))) throw new Error('reconcile retained a code outside current eligible universe');
+          const rocDate = toRocDate('20260824');
+          const valid = [...universe.keys()].filter(code => hasTargetDate(data[code], rocDate)).length;
+          if (status.universe_count !== universe.size) throw new Error(`status universe ${status.universe_count} != ${universe.size}`);
+          if (status.valid_count !== valid) throw new Error(`status valid ${status.valid_count} != ${valid}`);
+          if (status.schema_version !== 2) throw new Error(`unexpected status schema ${status.schema_version}`);
+          console.log(JSON.stringify({universe: universe.size, data_rows: keys.length, valid, status: status.status}, null, 2));
+          NODE
+
+      - name: Verify workflow and frontend contracts
+        shell: bash
+        run: |
+          ! grep -R "workflow_run" .github/workflows/crawl-institutional.yml .github/workflows/retry-institutional.yml
+          grep -q "readEligibleStockUniverse" scripts/crawl_institutional_data.js
+          grep -q "readEligibleStockUniverse" scripts/retry_institutional_failed.js
+          grep -q "filterInstitutionalDataToUniverse" scripts/reconcile_institutional_data.js
+          grep -q "eligibleEntries=Object.entries(data).filter" public/foreign.html
