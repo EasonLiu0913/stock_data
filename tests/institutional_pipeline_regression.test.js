@@ -57,9 +57,11 @@ test('institutional workflows use explicit reusable Pages deploy and Actions sum
   }
 });
 
-test('foreign page keeps the selected sort when date or institution changes', () => {
+test('foreign page keeps selected sort and filters historical rows to eligible stocks', () => {
   const source = read('public/foreign.html');
   assert.doesNotMatch(source, /pendingDefaultHeaderSortKey='day0'/);
   assert.match(source, /async function onDateChanged\(\)\{pendingDefaultHeaderSortKey=null/);
   assert.match(source, /async function onTypeChanged\(\).*pendingDefaultHeaderSortKey=null/);
+  assert.match(source, /function isEligibleStockCode\(code\)\{return\/\^\\d\{4\}\$\/\.test/);
+  assert.match(source, /const eligibleEntries=Object\.entries\(data\)\.filter\(\(\[code\]\)=>isEligibleStockCode\(code\)\)/);
 });
