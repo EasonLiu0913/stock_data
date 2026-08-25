@@ -52,9 +52,7 @@ function trimDataset(siteRoot, dataset, maxDates) {
   if (!Array.isArray(original)) throw new Error(`${dataset}/files.json must be an array`);
 
   const listed = original.map(normalizeListedFile);
-  const dated = listed
-    .map(file => ({ file, date: extractDate(file) }))
-    .filter(item => item.date);
+  const dated = listed.map(file => ({ file, date: extractDate(file) })).filter(item => item.date);
   const dates = [...new Set(dated.map(item => item.date))].sort();
   const keepDates = new Set(dates.slice(-maxDates));
   const kept = listed.filter(file => {
@@ -106,7 +104,7 @@ function trimDataset(siteRoot, dataset, maxDates) {
   };
 }
 
-function trimPredictionDates(siteRoot, maxDates = 3) {
+function trimPredictionDates(siteRoot, maxDates = 2) {
   const dataset = 'data_predictions';
   const datasetDir = path.join(siteRoot, dataset);
   const manifestFile = path.join(datasetDir, 'manifest.json');
@@ -133,9 +131,7 @@ function trimPredictionDates(siteRoot, maxDates = 3) {
     removedDirectories += 1;
   }
 
-  const publishedDates = [...keepDates]
-    .filter(date => fs.existsSync(path.join(datasetDir, date)))
-    .sort();
+  const publishedDates = [...keepDates].filter(date => fs.existsSync(path.join(datasetDir, date))).sort();
   manifest.available_dates = publishedDates;
   if (publishedDates.length) {
     manifest.latest_date = publishedDates.at(-1);
@@ -154,6 +150,19 @@ function trimPredictionDates(siteRoot, maxDates = 3) {
     first_published_date: publishedDates[0] || null,
     last_published_date: publishedDates.at(-1) || null,
   };
+}
+
+function directoryBytes(root) {
+  if (!fs.existsSync(root)) return 0;
+  const stats = fs.statSync(root);
+  if (stats.isFile()) return stats.size;
+  let total = 0;
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const full = path.join(root, entry.name);
+    if (entry.isDirectory()) total += directoryBytes(full);
+    else if (entry.isFile()) total += fs.statSync(full).size;
+  }
+  return total;
 }
 
 function trimNonPublishedWorkfiles(siteRoot) {
@@ -181,19 +190,6 @@ function trimNonPublishedWorkfiles(siteRoot) {
     removed_mebibytes: Number((removedBytes / 1024 / 1024).toFixed(1)),
     removed,
   };
-}
-
-function directoryBytes(root) {
-  if (!fs.existsSync(root)) return 0;
-  const stats = fs.statSync(root);
-  if (stats.isFile()) return stats.size;
-  let total = 0;
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    const full = path.join(root, entry.name);
-    if (entry.isDirectory()) total += directoryBytes(full);
-    else if (entry.isFile()) total += fs.statSync(full).size;
-  }
-  return total;
 }
 
 function runSelfTest() {
@@ -276,10 +272,10 @@ function main(argv = process.argv.slice(2)) {
     ['data_twse_institutional_investors', 10],
     ['data_twse_dealers', 10],
     ['data_twse_foreign_investors', 10],
-    ['data_normalized', 10],
+    ['data_normalized', 5],
   ];
   const results = policies.map(([dataset, maxDates]) => trimDataset(siteRoot, dataset, maxDates));
-  results.push(trimPredictionDates(siteRoot, 3));
+  results.push(trimPredictionDates(siteRoot, 2));
   results.push(trimNonPublishedWorkfiles(siteRoot));
   const bytes = directoryBytes(siteRoot);
   const summary = { site: siteRoot, bytes, mebibytes: Number((bytes / 1024 / 1024).toFixed(1)), results };
