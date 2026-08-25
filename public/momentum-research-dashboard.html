@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>動能飆股研究 Dashboard</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f4f6f8;--card:#fff;--text:#16202a;--muted:#667085;--line:#d9dee5;--accent:#2563eb;--good:#047857;--bad:#b42318;--warn:#b45309}
+    @media(prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#171d25;--text:#edf2f7;--muted:#aab4c0;--line:#2d3742;--accent:#7aa2ff;--good:#6ee7b7;--bad:#fca5a5;--warn:#fbbf24}}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.5}.wrap{max-width:1320px;margin:auto;padding:24px}.hero{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;margin-bottom:18px}.hero h1{font-size:28px;margin:0 0 6px}.hero p{margin:0;color:var(--muted)}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted);background:var(--card)}.notice{border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--card);padding:14px 16px;border-radius:10px;margin-bottom:18px}.notice strong{display:block;margin-bottom:4px}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}.stat .k{font-size:13px;color:var(--muted)}.stat .v{font-size:24px;font-weight:700;margin-top:4px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}.toolbar select,.toolbar button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 10px}.toolbar button.active{border-color:var(--accent);color:var(--accent);font-weight:700}.section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px}.section h2{font-size:18px;margin:0 0 12px}.muted{color:var(--muted)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1080px}th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}th{font-size:12px;color:var(--muted);position:sticky;top:0;background:var(--card)}tr:last-child td{border-bottom:0}.pos{color:var(--good);font-weight:650}.neg{color:var(--bad);font-weight:650}.status{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 7px}.status.insufficient{color:var(--warn)}.status.observe{color:var(--accent)}.status.research_ready{color:var(--good)}.date-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.date-card{border:1px solid var(--line);border-radius:10px;padding:12px}.date-card strong{font-size:16px}.date-card .row{display:flex;justify-content:space-between;gap:12px;margin-top:5px;color:var(--muted)}.empty{padding:28px;text-align:center;color:var(--muted)}.error{color:var(--bad);white-space:pre-wrap}
+    @media(max-width:800px){.wrap{padding:14px}.hero{display:block}.hero .pill{margin-top:10px}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{align-items:stretch}.toolbar select{width:100%}.table-wrap{display:none}.cards{display:grid;gap:10px}.group-card{border:1px solid var(--line);border-radius:10px;padding:12px}.group-head{display:flex;justify-content:space-between;gap:8px}.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.metric{border-top:1px solid var(--line);padding-top:7px}.metric .k{font-size:12px;color:var(--muted)}.metric .v{font-weight:650}}
+    @media(min-width:801px){.cards{display:none}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div><h1>動能飆股研究 Dashboard</h1><p>比較 Momentum v1 分數、加速度與共振條件在 T+1 / T+3 / T+5 的實際表現。</p></div>
+      <span class="pill" id="versionPill">載入中…</span>
+    </div>
+    <div class="notice" id="notice"><strong>研究用途，不自動升版</strong><span>此頁只累積證據；樣本不足時不把短期結果解讀成策略有效。</span></div>
+    <div class="summary" id="summaryCards"></div>
+    <div class="toolbar">
+      <label>分組 <select id="category"><option value="all">全部</option><option value="grade">A/B/C</option><option value="score">Score</option><option value="acceleration">Acceleration</option><option value="fact">單一共振</option><option value="combo">共振組合</option></select></label>
+      <span class="muted">觀察區間：</span>
+      <button data-h="1" class="active">T+1</button><button data-h="3">T+3</button><button data-h="5">T+5</button>
+      <span class="pill" id="maturity"></span>
+    </div>
+    <section class="section">
+      <h2>分組績效</h2>
+      <div class="table-wrap"><table><thead><tr><th>分組</th><th>類型</th><th>訊號樣本</th><th>成熟樣本</th><th>Coverage</th><th>平均報酬</th><th>中位數</th><th>上漲率</th><th>平均 MFE</th><th>平均 MAE</th><th>+4%</th><th>+7%</th><th>+10%</th><th>證據</th></tr></thead><tbody id="tbody"></tbody></table></div>
+      <div class="cards" id="cards"></div>
+    </section>
+    <section class="section"><h2>Signal Date 成熟度</h2><div class="date-grid" id="dateGrid"></div></section>
+    <section class="section"><h2>資料與方法提示</h2><div id="warnings"></div></section>
+  </main>
+  <script>
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    const basePath = isGitHubPages ? '/stock_data' : '..';
+    const DATA_ROOT = 'data_prediction_analysis/momentum-research/v1';
+    const DATA_URL = `${basePath}/${DATA_ROOT}/summary.json`;
+    let payload = null, horizon = '1';
+    const fmt = v => Number.isFinite(v) ? `${v.toFixed(2)}%` : '—';
+    const num = v => Number.isFinite(v) ? v.toLocaleString() : '—';
+    const signedClass = v => !Number.isFinite(v) ? '' : v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+    const statusText = s => ({insufficient:'樣本不足',observe:'持續觀察',research_ready:'可研究比較'})[s] || s || '—';
+    function renderSummary(){
+      const mature = payload.mature_horizon_dates?.[horizon]?.length || 0;
+      document.getElementById('summaryCards').innerHTML = [
+        ['Signal dates', payload.signal_date_count],
+        [`T+${horizon} 成熟日期`, mature],
+        ['Registry 版本數', payload.registry_fingerprints?.length || 0],
+        ['研究分組', payload.groups?.length || 0],
+      ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+      document.getElementById('versionPill').textContent = `Momentum v${payload.momentum_model_version} · Method v${payload.methodology_version}`;
+      document.getElementById('maturity').textContent = `T+${horizon}：${mature}/${payload.signal_date_count} 個日期成熟`;
+    }
+    function visibleGroups(){const c=document.getElementById('category').value;return (payload.groups||[]).filter(g=>c==='all'||g.category===c)}
+    function renderGroups(){
+      const groups=visibleGroups();
+      document.getElementById('tbody').innerHTML=groups.map(g=>{const m=g.horizons[horizon];return `<tr><td><strong>${g.label}</strong></td><td>${g.category}</td><td>${num(g.selected_count)}</td><td>${num(m.sample_count)}</td><td>${fmt(m.coverage_pct)}</td><td class="${signedClass(m.mean_return_pct)}">${fmt(m.mean_return_pct)}</td><td class="${signedClass(m.median_return_pct)}">${fmt(m.median_return_pct)}</td><td>${fmt(m.positive_rate_pct)}</td><td>${fmt(m.avg_mfe_pct)}</td><td>${fmt(m.avg_mae_pct)}</td><td>${fmt(m.hit_4_pct_rate)}</td><td>${fmt(m.hit_7_pct_rate)}</td><td>${fmt(m.hit_10_pct_rate)}</td><td><span class="status ${m.evidence_status}">${statusText(m.evidence_status)}</span></td></tr>`}).join('') || '<tr><td colspan="14" class="empty">沒有符合分組</td></tr>';
+      document.getElementById('cards').innerHTML=groups.map(g=>{const m=g.horizons[horizon];return `<article class="group-card"><div class="group-head"><strong>${g.label}</strong><span class="status ${m.evidence_status}">${statusText(m.evidence_status)}</span></div><div class="muted">${g.category} · 成熟 ${m.sample_count}/${g.selected_count}</div><div class="metric-grid"><div class="metric"><div class="k">平均報酬</div><div class="v ${signedClass(m.mean_return_pct)}">${fmt(m.mean_return_pct)}</div></div><div class="metric"><div class="k">上漲率</div><div class="v">${fmt(m.positive_rate_pct)}</div></div><div class="metric"><div class="k">平均 MFE</div><div class="v">${fmt(m.avg_mfe_pct)}</div></div><div class="metric"><div class="k">+4% 命中</div><div class="v">${fmt(m.hit_4_pct_rate)}</div></div></div></article>`}).join('') || '<div class="empty">沒有符合分組</div>';
+    }
+    function renderDates(){document.getElementById('dateGrid').innerHTML=(payload.date_summaries||[]).map(d=>`<div class="date-card"><strong>${d.signal_date}</strong><div class="row"><span>股票數</span><span>${d.stock_count}</span></div><div class="row"><span>成熟 horizon</span><span>T+${d.completed_horizon||0}</span></div><div class="row"><span>A / B / C</span><span>${d.grade_counts?.A||0} / ${d.grade_counts?.B||0} / ${d.grade_counts?.C||0}</span></div><div class="row"><span>Fingerprint</span><span>${d.source_registry_fingerprint||'—'}</span></div></div>`).join('')}
+    function renderWarnings(){const lines=[payload.promotion_policy?.message,...(payload.warnings||[])].filter(Boolean);document.getElementById('warnings').innerHTML=lines.map(x=>`<p class="muted">• ${x}</p>`).join('')||'<p class="muted">目前沒有額外警告。</p>'}
+    function render(){renderSummary();renderGroups();renderDates();renderWarnings()}
+    document.querySelectorAll('[data-h]').forEach(btn=>btn.addEventListener('click',()=>{horizon=btn.dataset.h;document.querySelectorAll('[data-h]').forEach(b=>b.classList.toggle('active',b===btn));renderSummary();renderGroups()}));
+    document.getElementById('category').addEventListener('change',renderGroups);
+    fetch(DATA_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`${r.status} ${r.statusText}\n${DATA_URL}`);return r.json()}).then(p=>{payload=p;render()}).catch(err=>{document.getElementById('notice').innerHTML=`<strong>無法載入研究資料</strong><span class="error">${err.message}</span>`;document.getElementById('summaryCards').innerHTML='';});
+  </script>
+</body>
+</html>
