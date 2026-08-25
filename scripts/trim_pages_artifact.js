@@ -157,8 +157,6 @@ function trimPredictionDates(siteRoot, maxDates = 3) {
 }
 
 function trimNonPublishedWorkfiles(siteRoot) {
-  // These are repository research/checkpoint assets, not browser runtime dependencies.
-  // Remove them only from the prepared Pages artifact; source files remain in git/main.
   const removals = [
     'data_prediction_analysis/eps-valuation/valuation-batches',
     'data_prediction_analysis/eps-valuation/formal-report-backfill-runs',
@@ -273,7 +271,7 @@ function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const siteRoot = path.resolve(String(args.get('site') || '_site'));
   const policies = [
-    ['data_fubon', 14],
+    ['data_fubon', 13],
     ['data_twse_mi_index', 10],
     ['data_twse_institutional_investors', 10],
     ['data_twse_dealers', 10],
