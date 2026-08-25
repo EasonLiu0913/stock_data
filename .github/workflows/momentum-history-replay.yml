@@ -1,6 +1,13 @@
 name: '[07 研究] 動能飆股歷史與覆盤'
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/momentum_history_replay.js'
+      - 'scripts/run_momentum_history_replay.js'
+      - 'tests/momentum_history_replay.test.js'
+      - '.github/workflows/momentum-history-replay.yml'
   schedule:
     # 台北時間週二至週六 03:30，承接前一交易日晚間至凌晨的預測/覆盤資料。
     - cron: '30 19 * * 1-5'
@@ -79,8 +86,8 @@ jobs:
         run: |
           set -euo pipefail
           args=(--replay-lookback "${INPUT_LOOKBACK:-10}")
-          if [ "$GITHUB_EVENT_NAME" = 'pull_request' ]; then
-            # PR 首次正式產生最近兩個有效 prediction dates，讓最新訊號立即有 previous score。
+          if [ "$GITHUB_EVENT_NAME" = 'pull_request' ] || [ "$GITHUB_EVENT_NAME" = 'push' ]; then
+            # PR/首次 merge bootstrap 最近兩個有效 prediction dates，讓最新訊號立即有 previous score。
             args+=(--latest-count 2)
           elif [ -n "${INPUT_DATE:-}" ]; then
             args+=(--date "$INPUT_DATE")
