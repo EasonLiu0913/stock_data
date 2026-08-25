@@ -9,13 +9,15 @@ const {
   buildMomentumHistory,
   persistMomentumHistory,
   previousHistory,
+  frozenMomentumFeatures,
   loadForwardPriceRows,
   buildMomentumReplay,
   refreshRecentReplays,
 } = require('../scripts/momentum_history_replay');
 const {
-  summaryHasCompletedMomentumSnapshot,
-  validSummaryDate,
+  snapshotHasCompletedMomentum,
+  liveSnapshotFile,
+  validSnapshotDate,
   listPredictionDates,
 } = require('../scripts/run_momentum_history_replay');
 
@@ -42,6 +44,18 @@ function stock(code = '2330') {
     strategy_tag_features: {
       momentum_model_version: 1,
       momentum_score: 77,
+      momentum_grade: 'B',
+      momentum_price_score: 21,
+      momentum_volume_score: 15,
+      momentum_trend_score: 16,
+      momentum_chip_score: 15,
+      momentum_breakout_score: 10,
+      momentum_price_volume_sync: true,
+      momentum_chip_sync: true,
+      momentum_breakout: true,
+      momentum_overheated: false,
+      momentum_distribution_risk: false,
+      momentum_inputs: { return_1d_pct: 5, return_3d_pct: 8, return_5d_pct: 12 },
       trend_bullish_alignment: true,
       trend_quality_20d: true,
       volume_breakout_confirmation: true,
@@ -51,7 +65,7 @@ function stock(code = '2330') {
       institutional_bullish: true,
       broker_bullish: true,
     },
-    atomic_tags: ['momentum_price_volume_sync_v1'],
+    atomic_tags: ['momentum_accelerating_v1', 'momentum_price_volume_sync_v1'],
   };
 }
 
@@ -59,11 +73,9 @@ function payload(date, code = '2330') {
   return {
     forecast_date: date,
     base_trade_date: date,
+    registry_id: 'fixture-registry',
+    registry_fingerprint: 'abc123',
     stocks: [stock(code)],
-    strategy_snapshot_metadata: {
-      registry_id: 'fixture',
-      registry_fingerprint: 'abc123',
-    },
   };
 }
 
@@ -76,20 +88,29 @@ function writeSma(root, date, close, high = close, low = close, code = '2330') {
   });
 }
 
-test('runner accepts only prediction summaries with a completed momentum strategy snapshot', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-summary-ready-'));
-  const predictionRoot = path.join(root, 'data_predictions');
+test('runner accepts only completed live snapshots with frozen momentum features', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-snapshot-ready-'));
   const incomplete = payload('20260824');
-  delete incomplete.strategy_snapshot_metadata;
+  delete incomplete.registry_fingerprint;
   delete incomplete.stocks[0].strategy_tag_features.momentum_model_version;
   delete incomplete.stocks[0].strategy_tag_features.momentum_score;
-  writeJson(path.join(predictionRoot, '20260824', 'summary.json'), incomplete);
-  writeJson(path.join(predictionRoot, '20260825', 'summary.json'), payload('20260825'));
+  writeJson(liveSnapshotFile('20260824', root), incomplete);
+  writeJson(liveSnapshotFile('20260825', root), payload('20260825'));
 
-  assert.equal(summaryHasCompletedMomentumSnapshot(incomplete), false);
-  assert.equal(validSummaryDate('20260824', root), false);
-  assert.equal(validSummaryDate('20260825', root), true);
+  assert.equal(snapshotHasCompletedMomentum(incomplete), false);
+  assert.equal(validSnapshotDate('20260824', root), false);
+  assert.equal(validSnapshotDate('20260825', root), true);
   assert.deepEqual(listPredictionDates(root), ['20260825']);
+});
+
+test('history preserves frozen snapshot score and components instead of recalculating them', () => {
+  const frozen = stock();
+  frozen.features.r1 = -99;
+  const features = frozenMomentumFeatures(frozen);
+  assert.equal(features.momentum_score, 77);
+  assert.equal(features.momentum_price_score, 21);
+  assert.equal(features.momentum_chip_score, 15);
+  assert.equal(features.momentum_grade, 'B');
 });
 
 test('history uses the previous stored trading signal date for acceleration', () => {
@@ -100,25 +121,24 @@ test('history uses the previous stored trading signal date for acceleration', ()
 
   const priorScore = first.history.stocks[0].momentum_score;
   const secondPayload = payload('20260824');
-  secondPayload.stocks[0].features.r1 = 7;
+  secondPayload.stocks[0].strategy_tag_features.momentum_score = 87;
+  secondPayload.stocks[0].strategy_tag_features.momentum_grade = 'A';
   const second = persistMomentumHistory(secondPayload, { workspaceRoot: root, generatedAt: '2026-08-24T10:00:00Z' });
   assert.equal(second.history.previous_signal_date, '20260821');
   assert.equal(second.history.stocks[0].momentum_previous_score, priorScore);
-  assert.equal(
-    second.history.stocks[0].momentum_acceleration,
-    second.history.stocks[0].momentum_score - priorScore,
-  );
+  assert.equal(second.history.stocks[0].momentum_acceleration, 10);
   assert.equal(previousHistory(root, '20260824').signal_date, '20260821');
 });
 
-test('history stores mutually useful component scores without future outcomes', () => {
+test('history stores useful component scores without future outcomes', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-history-'));
   const history = buildMomentumHistory(payload('20260824'), { workspaceRoot: root, generatedAt: '2026-08-24T10:00:00Z' });
   const row = history.stocks[0];
   assert.equal(history.signal_date, '20260824');
+  assert.equal(history.source_registry_fingerprint, 'abc123');
   assert.equal(history.momentum_model_version, 1);
-  assert.ok(row.momentum_score >= 0 && row.momentum_score <= 100);
-  assert.deepEqual(Object.keys(row.component_scores), ['price', 'volume', 'trend', 'chip', 'breakout']);
+  assert.equal(row.momentum_score, 77);
+  assert.deepEqual(row.component_scores, { price: 21, volume: 15, trend: 16, chip: 15, breakout: 10 });
   assert.equal(Object.hasOwn(row, 'outcomes'), false);
 });
 
