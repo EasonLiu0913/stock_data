@@ -11,6 +11,7 @@ const {
 } = require('./momentum_history_replay');
 
 const ROOT = path.resolve(__dirname, '..');
+const SNAPSHOT_MANIFEST = path.join('data_prediction_analysis', 'strategy-snapshots', 'manifest.json');
 
 function snapshotHasCompletedMomentum(payload) {
   if (!payload || !Array.isArray(payload.stocks) || !payload.stocks.length) return false;
@@ -22,28 +23,43 @@ function snapshotHasCompletedMomentum(payload) {
   });
 }
 
-function liveSnapshotDirectory(workspaceRoot = ROOT) {
-  return path.join(workspaceRoot, 'data_prediction_analysis', 'strategy-snapshots', 'live_snapshot');
+function snapshotManifest(workspaceRoot = ROOT) {
+  return readJson(path.join(workspaceRoot, SNAPSHOT_MANIFEST), { dates: {} }) || { dates: {} };
 }
 
-function liveSnapshotFile(date, workspaceRoot = ROOT) {
-  return path.join(liveSnapshotDirectory(workspaceRoot), `${date}.json`);
+function snapshotEntriesForDate(date, workspaceRoot = ROOT) {
+  const row = snapshotManifest(workspaceRoot)?.dates?.[date] || {};
+  const live = row.live_snapshot ? [row.live_snapshot] : [];
+  const historical = Array.isArray(row.historical_recalculations)
+    ? [...row.historical_recalculations].sort((a, b) => String(b.generated_at || '').localeCompare(String(a.generated_at || '')))
+    : [];
+  return [...live, ...historical].filter(entry => entry?.file);
+}
+
+function resolveCompletedSnapshot(date, workspaceRoot = ROOT) {
+  for (const entry of snapshotEntriesForDate(date, workspaceRoot)) {
+    const file = path.join(workspaceRoot, entry.file);
+    const payload = readJson(file, null);
+    if (snapshotHasCompletedMomentum(payload)) {
+      return {
+        entry,
+        file,
+        payload,
+      };
+    }
+  }
+  return null;
 }
 
 function validSnapshotDate(date, workspaceRoot = ROOT) {
-  const payload = readJson(liveSnapshotFile(date, workspaceRoot), null);
-  return snapshotHasCompletedMomentum(payload);
+  return Boolean(resolveCompletedSnapshot(date, workspaceRoot));
 }
 
 function listPredictionDates(workspaceRoot = ROOT) {
-  const directory = liveSnapshotDirectory(workspaceRoot);
-  let names = [];
-  try { names = fs.readdirSync(directory); } catch { return []; }
-  return names
-    .map(name => name.match(/^(20\d{6})\.json$/)?.[1] || '')
-    .filter(Boolean)
-    .filter(date => validSnapshotDate(date, workspaceRoot))
+  const dates = Object.keys(snapshotManifest(workspaceRoot)?.dates || {})
+    .filter(date => /^20\d{6}$/.test(date))
     .sort();
+  return dates.filter(date => validSnapshotDate(date, workspaceRoot));
 }
 
 function parseArgs(argv) {
@@ -83,12 +99,12 @@ function resolveDates(options, workspaceRoot = ROOT) {
 
 function run(options = {}, workspaceRoot = ROOT) {
   const dates = resolveDates(options, workspaceRoot);
-  if (!dates.length) throw new Error('No completed momentum live snapshot matched the requested date range');
+  if (!dates.length) throw new Error('No completed versioned momentum strategy snapshot matched the requested date range');
   const histories = [];
   for (const predictionDate of dates) {
-    const payload = readJson(liveSnapshotFile(predictionDate, workspaceRoot), null);
-    if (!snapshotHasCompletedMomentum(payload)) continue;
-    const result = persistMomentumHistory(payload, {
+    const resolved = resolveCompletedSnapshot(predictionDate, workspaceRoot);
+    if (!resolved) continue;
+    const result = persistMomentumHistory(resolved.payload, {
       workspaceRoot,
       dryRun: options.dryRun,
     });
@@ -99,6 +115,8 @@ function run(options = {}, workspaceRoot = ROOT) {
       stock_count: result.history.stock_count,
       grade_counts: result.history.grade_counts,
       source_registry_fingerprint: result.history.source_registry_fingerprint,
+      source_snapshot_file: path.relative(workspaceRoot, resolved.file).replaceAll(path.sep, '/'),
+      source_evaluation_mode: resolved.payload.evaluation_mode || resolved.entry.evaluation_mode || null,
       file: path.relative(workspaceRoot, result.file).replaceAll(path.sep, '/'),
     });
   }
@@ -110,7 +128,7 @@ function run(options = {}, workspaceRoot = ROOT) {
   }));
   return {
     schema_version: 1,
-    source: 'strategy-snapshots/live_snapshot',
+    source: 'data_prediction_analysis/strategy-snapshots/manifest.json',
     dry_run: Boolean(options.dryRun),
     processed_prediction_dates: dates,
     histories,
@@ -133,9 +151,11 @@ if (require.main === module) {
 
 module.exports = {
   ROOT,
+  SNAPSHOT_MANIFEST,
   snapshotHasCompletedMomentum,
-  liveSnapshotDirectory,
-  liveSnapshotFile,
+  snapshotManifest,
+  snapshotEntriesForDate,
+  resolveCompletedSnapshot,
   validSnapshotDate,
   listPredictionDates,
   parseArgs,
