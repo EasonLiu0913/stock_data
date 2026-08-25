@@ -164,7 +164,7 @@ test('ranking analysis reports overlap, entrants, exits and rank changes using p
   assert.equal(current.movers.find(item => item.stock_code === 'E').previous_rank, null);
 });
 
-test('industry distribution compares selected share with same-universe baseline and reports concentration', () => {
+test('industry distribution compares classified selected share with classified same-universe baseline', () => {
   const universe = [
     stock('A', 80, 'A', null, {}, '電子'),
     stock('B', 70, 'B', null, {}, '電子'),
@@ -174,7 +174,12 @@ test('industry distribution compares selected share with same-universe baseline 
   ];
   const result = industryDistribution(universe.filter(item => item.momentum_score >= 50), universe);
   assert.equal(result.selected_count, 3);
+  assert.equal(result.selected_classified_count, 3);
+  assert.equal(result.selected_classification_coverage_pct, 100);
   assert.equal(result.universe_count, 5);
+  assert.equal(result.universe_classified_count, 5);
+  assert.equal(result.classification_status, 'sufficient');
+  assert.equal(result.concentration_available, true);
   assert.equal(result.industry_count, 2);
   const electronics = result.industries.find(item => item.industry === '電子');
   assert.equal(electronics.selected_share_pct, 66.67);
@@ -182,6 +187,42 @@ test('industry distribution compares selected share with same-universe baseline 
   assert.equal(electronics.lift_ratio, 1.67);
   assert.equal(result.top3_share_pct, 100);
   assert.ok(result.hhi > 5000);
+});
+
+test('unclassified stocks reduce industry coverage and never become a fake industry concentration bucket', () => {
+  const universe = [
+    stock('A', 80, 'A', null, {}, ''),
+    stock('B', 70, 'B', null, {}, ''),
+    stock('C', 60, 'C', null, {}, '金融'),
+    stock('D', 40, null, null, {}, ''),
+    stock('E', 30, null, null, {}, '航運'),
+  ];
+  const result = industryDistribution(universe.filter(item => item.momentum_score >= 50), universe);
+  assert.equal(result.selected_count, 3);
+  assert.equal(result.selected_classified_count, 1);
+  assert.equal(result.selected_unclassified_count, 2);
+  assert.equal(result.selected_classification_coverage_pct, 33.33);
+  assert.equal(result.universe_classified_count, 2);
+  assert.equal(result.universe_classification_coverage_pct, 40);
+  assert.equal(result.classification_status, 'partial');
+  assert.equal(result.concentration_available, false);
+  assert.equal(result.industries.length, 1);
+  assert.equal(result.industries[0].industry, '金融');
+  assert.equal(result.industries.some(item => item.industry === '未分類'), false);
+});
+
+test('summary warns about industry data quality instead of concentration when classification coverage is insufficient', () => {
+  const histories = [history('20260821', [
+    stock('A', 70, 'B', null, {}, ''),
+    stock('B', 55, 'C', null, {}, ''),
+    stock('C', 40, null, null, {}, '金融'),
+  ])];
+  const summary = buildResearchSummary(histories, []);
+  const industry = summary.industry_analysis.overall.score_50_plus;
+  assert.equal(industry.classification_status, 'unavailable');
+  assert.equal(industry.concentration_available, false);
+  assert.ok(summary.warnings.some(message => message.includes('產業分類覆蓋率')));
+  assert.equal(summary.warnings.some(message => message.includes('明顯產業集中')), false);
 });
 
 test('summary exposes rank persistence and industry segments without changing Momentum model version', () => {
@@ -194,6 +235,7 @@ test('summary exposes rank persistence and industry segments without changing Mo
   assert.equal(summary.methodology_version, 2);
   assert.equal(summary.ranking_analysis.comparable_pair_count, 1);
   assert.equal(summary.industry_analysis.overall.score_50_plus.selected_count, 3);
+  assert.equal(summary.promotion_policy.minimum_industry_classification_coverage_pct, 80);
   assert.deepEqual(summary.promotion_policy.required_checks_before_promotion, [
     'sample_size', 'cross_date_stability', 'rank_persistence', 'industry_distribution', 'market_context',
   ]);
