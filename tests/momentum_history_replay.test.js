@@ -13,6 +13,11 @@ const {
   buildMomentumReplay,
   refreshRecentReplays,
 } = require('../scripts/momentum_history_replay');
+const {
+  summaryHasCompletedMomentumSnapshot,
+  validSummaryDate,
+  listPredictionDates,
+} = require('../scripts/run_momentum_history_replay');
 
 function writeJson(file, payload) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -35,6 +40,8 @@ function stock(code = '2330') {
       gap_sma20: 3,
     },
     strategy_tag_features: {
+      momentum_model_version: 1,
+      momentum_score: 77,
       trend_bullish_alignment: true,
       trend_quality_20d: true,
       volume_breakout_confirmation: true,
@@ -68,6 +75,22 @@ function writeSma(root, date, close, high = close, low = close, code = '2330') {
     },
   });
 }
+
+test('runner accepts only prediction summaries with a completed momentum strategy snapshot', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-summary-ready-'));
+  const predictionRoot = path.join(root, 'data_predictions');
+  const incomplete = payload('20260824');
+  delete incomplete.strategy_snapshot_metadata;
+  delete incomplete.stocks[0].strategy_tag_features.momentum_model_version;
+  delete incomplete.stocks[0].strategy_tag_features.momentum_score;
+  writeJson(path.join(predictionRoot, '20260824', 'summary.json'), incomplete);
+  writeJson(path.join(predictionRoot, '20260825', 'summary.json'), payload('20260825'));
+
+  assert.equal(summaryHasCompletedMomentumSnapshot(incomplete), false);
+  assert.equal(validSummaryDate('20260824', root), false);
+  assert.equal(validSummaryDate('20260825', root), true);
+  assert.deepEqual(listPredictionDates(root), ['20260825']);
+});
 
 test('history uses the previous stored trading signal date for acceleration', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-history-'));
