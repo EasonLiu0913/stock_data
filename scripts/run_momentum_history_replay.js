@@ -12,9 +12,9 @@ const {
 
 const ROOT = path.resolve(__dirname, '..');
 
-function summaryHasCompletedMomentumSnapshot(payload) {
+function snapshotHasCompletedMomentum(payload) {
   if (!payload || !Array.isArray(payload.stocks) || !payload.stocks.length) return false;
-  if (!payload.strategy_snapshot_metadata?.registry_fingerprint) return false;
+  if (!payload.registry_fingerprint || !payload.registry_id) return false;
   return payload.stocks.some(stock => {
     const features = stock?.strategy_tag_features || {};
     return Number(features.momentum_model_version) === 1
@@ -22,17 +22,28 @@ function summaryHasCompletedMomentumSnapshot(payload) {
   });
 }
 
-function validSummaryDate(date, workspaceRoot = ROOT) {
-  const file = path.join(workspaceRoot, 'data_predictions', date, 'summary.json');
-  const payload = readJson(file, null);
-  return summaryHasCompletedMomentumSnapshot(payload);
+function liveSnapshotDirectory(workspaceRoot = ROOT) {
+  return path.join(workspaceRoot, 'data_prediction_analysis', 'strategy-snapshots', 'live_snapshot');
+}
+
+function liveSnapshotFile(date, workspaceRoot = ROOT) {
+  return path.join(liveSnapshotDirectory(workspaceRoot), `${date}.json`);
+}
+
+function validSnapshotDate(date, workspaceRoot = ROOT) {
+  const payload = readJson(liveSnapshotFile(date, workspaceRoot), null);
+  return snapshotHasCompletedMomentum(payload);
 }
 
 function listPredictionDates(workspaceRoot = ROOT) {
-  const directory = path.join(workspaceRoot, 'data_predictions');
+  const directory = liveSnapshotDirectory(workspaceRoot);
   let names = [];
   try { names = fs.readdirSync(directory); } catch { return []; }
-  return names.filter(name => /^20\d{6}$/.test(name)).filter(date => validSummaryDate(date, workspaceRoot)).sort();
+  return names
+    .map(name => name.match(/^(20\d{6})\.json$/)?.[1] || '')
+    .filter(Boolean)
+    .filter(date => validSnapshotDate(date, workspaceRoot))
+    .sort();
 }
 
 function parseArgs(argv) {
@@ -72,12 +83,11 @@ function resolveDates(options, workspaceRoot = ROOT) {
 
 function run(options = {}, workspaceRoot = ROOT) {
   const dates = resolveDates(options, workspaceRoot);
-  if (!dates.length) throw new Error('No completed momentum prediction summary matched the requested date range');
+  if (!dates.length) throw new Error('No completed momentum live snapshot matched the requested date range');
   const histories = [];
   for (const predictionDate of dates) {
-    const summaryFile = path.join(workspaceRoot, 'data_predictions', predictionDate, 'summary.json');
-    const payload = readJson(summaryFile, null);
-    if (!summaryHasCompletedMomentumSnapshot(payload)) continue;
+    const payload = readJson(liveSnapshotFile(predictionDate, workspaceRoot), null);
+    if (!snapshotHasCompletedMomentum(payload)) continue;
     const result = persistMomentumHistory(payload, {
       workspaceRoot,
       dryRun: options.dryRun,
@@ -88,6 +98,7 @@ function run(options = {}, workspaceRoot = ROOT) {
       previous_signal_date: result.history.previous_signal_date,
       stock_count: result.history.stock_count,
       grade_counts: result.history.grade_counts,
+      source_registry_fingerprint: result.history.source_registry_fingerprint,
       file: path.relative(workspaceRoot, result.file).replaceAll(path.sep, '/'),
     });
   }
@@ -99,6 +110,7 @@ function run(options = {}, workspaceRoot = ROOT) {
   }));
   return {
     schema_version: 1,
+    source: 'strategy-snapshots/live_snapshot',
     dry_run: Boolean(options.dryRun),
     processed_prediction_dates: dates,
     histories,
@@ -121,8 +133,10 @@ if (require.main === module) {
 
 module.exports = {
   ROOT,
-  summaryHasCompletedMomentumSnapshot,
-  validSummaryDate,
+  snapshotHasCompletedMomentum,
+  liveSnapshotDirectory,
+  liveSnapshotFile,
+  validSnapshotDate,
   listPredictionDates,
   parseArgs,
   resolveDates,
