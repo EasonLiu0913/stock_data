@@ -6,6 +6,8 @@ const { hasTargetDate, toRocDate } = require('./lib/institutional_data_common');
 const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 const SENTINEL_STOCKS = ['1101', '2330', '2317', '2882'];
+const MIN_EXPECTED_UNIVERSE = 1000;
+const MAX_REFERENCE_DROP_RATIO = 0.10;
 
 function parseArgs(argv) {
   const result = new Map();
@@ -55,9 +57,6 @@ function readStockUniverse(csvPath) {
     const parts = parseCSVLine(line);
     const code = String(parts[0] || '').trim();
     const name = String(parts[1] || '').trim();
-    // Institutional stock health is defined on four-digit listed stock codes.
-    // This intentionally excludes non-stock instruments such as 01001T whose
-    // Fubon institutional columns remain "--" and should not block completeness.
     if (/^\d{4}$/.test(code)) stockInfo.set(code, name);
   }
   return stockInfo;
@@ -110,7 +109,13 @@ function findPreviousReference(dataDir, targetDateStr, eligibleStocks) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) continue;
     const rocDate = toRocDate(candidate.date);
     const validCount = eligibleStocks.filter((code) => hasTargetDate(data[code], rocDate)).length;
-    if (validCount > 0) return { date: candidate.date, valid_count: validCount };
+    if (validCount <= 0) continue;
+    const previousStatus = readJson(path.join(dataDir, `fubon_${candidate.date}_institutional_status.json`), null);
+    return {
+      date: candidate.date,
+      valid_count: validCount,
+      universe_count: Number(previousStatus?.universe_count) || null,
+    };
   }
   return null;
 }
@@ -149,16 +154,32 @@ function buildStatus({ targetDateStr, stockInfo, data, failedList, reference }) 
     in_universe: stockInfo.has(code),
     available: validSet.has(code),
   }]));
-  const sentinelsOk = SENTINEL_STOCKS.every((code) => !stockInfo.has(code) || validSet.has(code));
+  const sentinelsOk = SENTINEL_STOCKS.every((code) => stockInfo.has(code) && validSet.has(code));
   const referenceReached = Boolean(reference?.valid_count) && validCount >= reference.valid_count;
+  const universeMinimumOk = universeCount >= MIN_EXPECTED_UNIVERSE;
+  const universeDropRatio = reference?.universe_count
+    ? Number(((reference.universe_count - universeCount) / reference.universe_count).toFixed(4))
+    : null;
+  const universeReferenceOk = universeDropRatio === null || universeDropRatio <= MAX_REFERENCE_DROP_RATIO;
+  const validDropRatio = reference?.valid_count
+    ? Number(((reference.valid_count - validCount) / reference.valid_count).toFixed(4))
+    : null;
+  const referenceCoverageOk = validDropRatio === null || validDropRatio <= MAX_REFERENCE_DROP_RATIO;
+
+  const anomalyFlags = [];
+  if (!universeMinimumOk) anomalyFlags.push('UNIVERSE_TOO_SMALL');
+  if (!universeReferenceOk) anomalyFlags.push('UNIVERSE_DROP_GT_10_PERCENT');
+  if (!sentinelsOk) anomalyFlags.push('SENTINEL_MISSING');
+  if (!referenceCoverageOk) anomalyFlags.push('REFERENCE_VALID_DROP_GT_10_PERCENT');
 
   let status = 'partial';
   if (missingCount === 0 || (recoverableCount === 0 && completionRate >= 98 && referenceReached && sentinelsOk)) status = 'ready';
   else if (completionRate < 30 && recoverableRatio >= 0.8) status = 'provider_not_ready';
+  if (anomalyFlags.length > 0 && status === 'ready') status = 'abnormal';
 
   return {
     status: {
-      schema_version: 1,
+      schema_version: 2,
       date: targetDateStr,
       status,
       universe_count: universeCount,
@@ -167,10 +188,12 @@ function buildStatus({ targetDateStr, stockInfo, data, failedList, reference }) 
       completion_rate: completionRate,
       reason_counts: reasonCounts,
       recoverable_missing_count: recoverableCount,
+      anomaly_flags: anomalyFlags,
       sentinels,
       reference: reference ? {
         date: reference.date,
         valid_count: reference.valid_count,
+        universe_count: reference.universe_count,
         difference: validCount - reference.valid_count,
         coverage_percent: reference.valid_count
           ? Number((validCount / reference.valid_count * 100).toFixed(2))
@@ -179,6 +202,15 @@ function buildStatus({ targetDateStr, stockInfo, data, failedList, reference }) 
       quality_flags: {
         sentinels_ok: sentinelsOk,
         reference_reached: referenceReached,
+        universe_minimum_ok: universeMinimumOk,
+        universe_reference_ok: universeReferenceOk,
+        reference_coverage_ok: referenceCoverageOk,
+      },
+      diagnostics: {
+        min_expected_universe: MIN_EXPECTED_UNIVERSE,
+        max_reference_drop_ratio: MAX_REFERENCE_DROP_RATIO,
+        universe_drop_ratio: universeDropRatio,
+        valid_drop_ratio: validDropRatio,
       },
     },
     reconciledFailed,
@@ -228,7 +260,8 @@ function main(argv = process.argv.slice(2)) {
     missing_count: status.missing_count,
     completion_rate: status.completion_rate,
     reason_counts: status.reason_counts,
-    sentinels_ok: status.quality_flags.sentinels_ok,
+    anomaly_flags: status.anomaly_flags,
+    quality_flags: status.quality_flags,
     reference: status.reference,
     failed_list_changed: failedChanged,
     status_changed: statusChanged,
@@ -243,4 +276,10 @@ if (require.main === module) {
   }
 }
 
-module.exports = { buildStatus, hasTargetDate, inferReason, toRocDate };
+module.exports = {
+  buildStatus,
+  findPreviousReference,
+  inferReason,
+  MIN_EXPECTED_UNIVERSE,
+  MAX_REFERENCE_DROP_RATIO,
+};
