@@ -179,7 +179,7 @@ jobs:
 
           if [ "$ready" = true ]; then
             ai_time="$(node -e 'const p=require("./'"$pending"'"); process.stdout.write(String(p.generated_at||""))')"
-            base_commit="$(git log --format='%H %cI' -- "$facts" | awk -v t="$ai_time" '$2 <= t {print $1; exit}')"
+            base_commit="$(git log --format='%H %cI' -- "$facts" | awk -v t="$ai_time" '$2 <= t && !found {print $1; found=1}')"
             if [ -z "$base_commit" ]; then
               ready=false
               reason="facts_snapshot_not_found"
