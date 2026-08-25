@@ -2,7 +2,7 @@
 
 ## Problem
 
-Fubon institutional data can become available gradually. A scheduled crawl may therefore produce only a small subset of the stock universe, while later crawls or retry runs can fill the missing stocks. Partial data is valid evidence and should not be discarded, but the UI must not present it as a complete daily snapshot.
+Fubon institutional data can become available gradually. A scheduled crawl may therefore produce only a small subset of the eligible security universe, while later crawls or retry runs can fill the missing rows. Partial data is valid evidence and should not be discarded, but the UI must not present it as a complete daily snapshot.
 
 A second failure mode exists at the publication boundary: commits pushed by a GitHub Actions workflow with `GITHUB_TOKEN` must not be assumed to trigger a separate push-based Pages workflow. Data can therefore be complete on `main` while GitHub Pages still serves an older partial snapshot.
 
@@ -11,10 +11,10 @@ A second failure mode exists at the publication boundary: commits pushed by a Gi
 The institutional pipeline is intentionally incremental:
 
 ```text
-resolve eligible stock universe
-  -> crawl only target-date incomplete eligible stocks
+resolve eligible security universe
+  -> crawl only target-date incomplete eligible codes
   -> merge eligible successful rows into fubon_YYYYMMDD_institutional.json
-  -> reconcile completeness
+  -> reconcile completeness and sanitize the main file
   -> persist retry list + status metadata
   -> commit / push main
   -> explicitly call deploy-pages.yml
@@ -22,25 +22,27 @@ resolve eligible stock universe
 
 Retry uses the same reconciliation step before and after retrying so that a missing or stale failed-list cannot silently stop recovery.
 
-## One eligible-stock universe
+## One eligible-security universe
 
-The canonical institutional stock-universe logic lives in:
+The canonical institutional-universe logic lives in:
 
 ```text
 scripts/lib/institutional_data_common.js
 ```
 
-`readEligibleStockUniverse()` reads `data_twse/twse_industry.csv` and accepts only four-digit numeric listed-stock codes (`/^\d{4}$/`). This is shared by crawler, retry, and reconcile instead of reimplementing three different CSV filters.
+`readEligibleStockUniverse()` reads `data_twse/twse_industry.csv` and accepts the repository's established four-digit numeric security-code contract (`/^\d{4}$/`). This is shared by crawler, retry, and reconcile instead of reimplementing different CSV filters.
 
-Examples intentionally excluded from this institutional stock universe include:
+Important semantic detail: this rule is code-shape based, not category based. Therefore a four-digit ETF such as `0050` remains eligible, while codes such as these are excluded:
 
-- `0050` — ETF;
-- `00631L` — leveraged ETF;
-- `01001T` — special/non-stock instrument.
+- `00631L` — contains a letter;
+- `01001T` — longer special code containing a letter;
+- other codes that do not match exactly four numeric digits.
 
-This exclusion happens before browser requests are queued. It is not only a health-status filter. Existing institutional JSON is also sanitized to the same universe before crawler/retry rewrites it, so obsolete non-stock rows do not persist forever.
+This preserves the existing health denominator semantics instead of silently redefining the universe by instrument category.
 
-`public/foreign.html` applies the same four-digit guard while reading historical JSON. This keeps old snapshots visually consistent even if those files were produced before the canonical universe was introduced.
+The exclusion happens before browser requests are queued. It is not only a health-status filter. Existing institutional JSON is also sanitized to the same universe by reconcile, so obsolete ineligible rows do not persist simply because all eligible rows were already complete.
+
+`public/foreign.html` applies the same four-digit numeric guard while reading historical JSON. This keeps old snapshots visually consistent even if those files were produced before the canonical universe was introduced.
 
 ## Canonical health status
 
@@ -50,7 +52,7 @@ Each target date may publish:
 data_fubon/fubon_YYYYMMDD_institutional_status.json
 ```
 
-For every eligible stock, the status validates that the target ROC date exists in all four institutional fields:
+For every eligible code, the status validates that the target ROC date exists in all four institutional fields:
 
 - `ForeignInvestors`
 - `InvestmentTrust`
@@ -59,9 +61,9 @@ For every eligible stock, the status validates that the target ROC date exists i
 
 Current status schema is `schema_version: 2`. It records:
 
-- universe stock count;
-- valid stock count;
-- missing stock count;
+- universe count;
+- valid count;
+- missing count;
 - completion rate;
 - retry reason counts;
 - sentinel availability for `1101`, `2330`, `2317`, `2882`;
@@ -70,9 +72,9 @@ Current status schema is `schema_version: 2`. It records:
 
 Status values:
 
-- `provider_not_ready`: completion is below 30% and at least 80% of missing eligible stocks are recoverable provider/missing-date conditions;
+- `provider_not_ready`: completion is below 30% and at least 80% of missing eligible rows are recoverable provider/missing-date conditions;
 - `partial`: data is usable but has not reached the ready rule;
-- `ready`: no eligible stock is missing, or coverage is at least 98%, the previous reference count has been reached, all sentinels are present, and no recoverable eligible-stock gap remains;
+- `ready`: no eligible row is missing, or coverage is at least 98%, the previous reference count has been reached, all sentinels are present, and no recoverable eligible gap remains;
 - `abnormal`: the snapshot would otherwise be ready, but a universe/reference/sentinel anomaly requires attention.
 
 Current anomaly flags include:
@@ -86,7 +88,7 @@ These thresholds are publication/observability semantics, not a write gate. Part
 
 ## Retry-list reconciliation
 
-`reconcile_institutional_data.js` rebuilds the failed list from the eligible stock universe and target-date coverage. Structured crawler/retry reasons include:
+`reconcile_institutional_data.js` rebuilds the failed list from the eligible universe and target-date coverage. Structured crawler/retry reasons include:
 
 - `DATA_MISSING`;
 - `NOT_EXPECTED_DATE`;
@@ -95,9 +97,15 @@ These thresholds are publication/observability semantics, not a write gate. Part
 - `REQUEST_ERROR`;
 - `OTHER_ERROR` for unknown legacy errors.
 
-Any eligible stock absent from the target-date snapshot is added as `MISSING_TARGET_DATE`, which is recoverable and will be retried. When no eligible stock is missing, the failed list is removed. Non-stock instruments are not placed in the reconciled retry list, and retry also rejects stale ineligible failed items before launching Chromium.
+Any eligible code absent from the target-date snapshot is added as `MISSING_TARGET_DATE`, which is recoverable and will be retried. When no eligible code is missing, the failed list is removed. Ineligible instruments are not placed in the reconciled retry list, and retry also rejects stale ineligible failed items before launching Chromium.
 
 This guarantees that a zero-success crawl can still leave a retryable state instead of silently losing the target date.
+
+## Main-file convergence
+
+Reconcile is the canonical convergence boundary. After loading `fubon_YYYYMMDD_institutional.json`, it filters the file to the same eligible universe before calculating health. If the filtered file changes, reconcile rewrites it; if nothing eligible remains, it removes the empty main file and leaves the status/failed-list state to represent provider readiness.
+
+This matters because crawler may legitimately have nothing to fetch when every eligible row is already complete. Main-file cleanup must therefore not depend on a new successful crawl.
 
 ## Trading-day guard
 
@@ -119,15 +127,15 @@ Ready dates render the same denominator transparently, for example:
 資料狀態：已完成 1097 / 1097（100.0%）
 ```
 
-The exact denominator is data-driven from the current eligible four-digit stock universe; the numbers above are examples, not hard-coded thresholds.
+The exact denominator is data-driven from the current eligible four-digit numeric universe; the numbers above are examples, not hard-coded thresholds.
 
 A status-only date is still selectable even when the main institutional file has zero successful rows, allowing the page to show `更新中 0 / N` rather than hiding the date. Legacy dates without health metadata are labeled as lacking completeness metadata instead of being guessed complete.
 
-The page's table rows are also restricted to the same four-digit eligible stock-code shape, so historical files that contain ETFs or special instruments do not create a mismatch between the visible table and health denominator.
+The page's table rows are restricted to the same four-digit numeric code shape, so historical files containing ineligible special codes do not create a mismatch between the visible table and health denominator. Four-digit ETFs such as `0050` remain visible by design because they are part of the established universe contract.
 
 ## Actions observability
 
-Both crawler and retry write a GitHub Actions Summary containing current completeness, missing-reason counts, sentinels, reference comparison, and anomaly flags. Retry additionally reports how many eligible missing stocks existed before the retry and how many were recovered in that run.
+Both crawler and retry write a GitHub Actions Summary containing current completeness, missing-reason counts, sentinels, reference comparison, and anomaly flags. Retry additionally reports how many eligible missing rows existed before the retry and how many were recovered in that run.
 
 ## Publication boundary
 
