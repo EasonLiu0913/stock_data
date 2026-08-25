@@ -15,8 +15,9 @@ const {
   refreshRecentReplays,
 } = require('../scripts/momentum_history_replay');
 const {
+  SNAPSHOT_MANIFEST,
   snapshotHasCompletedMomentum,
-  liveSnapshotFile,
+  resolveCompletedSnapshot,
   validSnapshotDate,
   listPredictionDates,
 } = require('../scripts/run_momentum_history_replay');
@@ -88,19 +89,35 @@ function writeSma(root, date, close, high = close, low = close, code = '2330') {
   });
 }
 
-test('runner accepts only completed live snapshots with frozen momentum features', () => {
+test('runner prefers a valid live snapshot and falls back to latest valid historical recalculation', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'momentum-snapshot-ready-'));
-  const incomplete = payload('20260824');
-  delete incomplete.registry_fingerprint;
-  delete incomplete.stocks[0].strategy_tag_features.momentum_model_version;
-  delete incomplete.stocks[0].strategy_tag_features.momentum_score;
-  writeJson(liveSnapshotFile('20260824', root), incomplete);
-  writeJson(liveSnapshotFile('20260825', root), payload('20260825'));
+  const invalidLive = payload('20260824');
+  delete invalidLive.registry_fingerprint;
+  delete invalidLive.stocks[0].strategy_tag_features.momentum_score;
+  const historical = payload('20260824');
+  historical.evaluation_mode = 'historical_recalculation';
+  historical.registry_fingerprint = 'historical-good';
+  const liveFile = 'data_prediction_analysis/strategy-snapshots/live_snapshot/20260824.json';
+  const historyFile = 'data_prediction_analysis/strategy-snapshots/historical_recalculation/20260824/good.json';
+  writeJson(path.join(root, liveFile), invalidLive);
+  writeJson(path.join(root, historyFile), historical);
+  writeJson(path.join(root, SNAPSHOT_MANIFEST), {
+    dates: {
+      20260824: {
+        live_snapshot: { file: liveFile, generated_at: '2026-08-24T08:00:00Z' },
+        historical_recalculations: [
+          { file: historyFile, generated_at: '2026-08-24T10:00:00Z' },
+        ],
+      },
+    },
+  });
 
-  assert.equal(snapshotHasCompletedMomentum(incomplete), false);
-  assert.equal(validSnapshotDate('20260824', root), false);
-  assert.equal(validSnapshotDate('20260825', root), true);
-  assert.deepEqual(listPredictionDates(root), ['20260825']);
+  assert.equal(snapshotHasCompletedMomentum(invalidLive), false);
+  assert.equal(validSnapshotDate('20260824', root), true);
+  assert.deepEqual(listPredictionDates(root), ['20260824']);
+  const resolved = resolveCompletedSnapshot('20260824', root);
+  assert.equal(resolved.payload.registry_fingerprint, 'historical-good');
+  assert.equal(resolved.payload.evaluation_mode, 'historical_recalculation');
 });
 
 test('history preserves frozen snapshot score and components instead of recalculating them', () => {
