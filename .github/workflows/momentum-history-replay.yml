@@ -46,9 +46,9 @@ permissions:
   contents: write
 
 concurrency:
-  # PR 驗證與 main 正式資料流程分流，避免大型 repo checkout 互相阻塞。
+  # PR 驗證與 main 正式資料流程分流；main 為可重建冪等資料，僅保留最新 run。
   group: ${{ github.event_name == 'pull_request' && format('momentum-history-replay-pr-{0}', github.event.pull_request.number) || 'momentum-history-replay-main' }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 jobs:
   validate:
