@@ -69,6 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          # Validation intentionally checks the exact event SHA.
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
       - uses: actions/setup-node@v7
         with:
@@ -92,7 +93,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          # IMPORTANT: generated-data writers must start from the latest branch ref,
+          # not the PR event SHA. Earlier runs may already have committed refreshed
+          # deterministic JSON to the same PR branch while this run was queued.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || 'main' }}
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
@@ -149,11 +153,17 @@ jobs:
           fi
           git commit -m 'analysis: refresh momentum research evidence'
           for attempt in 1 2 3 4 5; do
-            if git fetch origin "$TARGET_BRANCH" && git rebase "origin/$TARGET_BRANCH" && git push origin HEAD:"$TARGET_BRANCH"; then
+            if git push origin HEAD:"$TARGET_BRANCH"; then
               exit 0
             fi
-            git rebase --abort || true
-            sleep $((attempt * 5))
+            echo "Push attempt $attempt rejected; checking whether target branch moved" >&2
+            git fetch origin "$TARGET_BRANCH"
+            if git merge-base --is-ancestor "origin/$TARGET_BRANCH" HEAD; then
+              sleep $((attempt * 5))
+              continue
+            fi
+            echo 'Target branch moved after generation. Refusing to rebase generated JSON; rerun from the latest branch instead.' >&2
+            exit 1
           done
           echo 'Failed to push momentum research data after retries' >&2
           exit 1
