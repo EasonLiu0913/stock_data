@@ -89,10 +89,70 @@ A／B／C 三層互斥；一檔股票只會落在其中一層。其他共振與�
 
 `loadRegistry()` 會把動能擴充 Registry 合併到既有 Registry；snapshot 仍使用同一套 `tag_registry`、`tag_classifications`、`atomic_tags` 結構，因此策略公式實驗室與覆盤不需要另一套資料格式。
 
+## 歷史與覆盤資料層
+
+Momentum v1 的每日研究資料分為兩層：
+
+```text
+data_prediction_analysis/momentum-history/v1/YYYYMMDD.json
+  -> 凍結 signal date 當時的分數、等級、五構面、共振事實與 acceleration
+
+data_prediction_analysis/momentum-replay/v1/YYYYMMDD.json
+  -> 僅在未來交易日真正發生後加入 T+1 / T+3 / T+5 outcome
+```
+
+History 的 canonical source 是 versioned Strategy Snapshot manifest；同日優先有效 live snapshot，否則使用最新且含 Momentum v1 的 historical recalculation。History 不重新計算已凍結的 Momentum Score，只額外串接前一期 signal score 產生 acceleration。
+
+Replay maturity 依市場後續交易日判斷，而不是要求所有股票都有價格。個股缺價只降低 `horizon_coverage`，不能把已發生的整個市場 T+1 誤判成尚未成熟。
+
+## Evidence aggregation v1
+
+下一層研究聚合固定寫入：
+
+```text
+data_prediction_analysis/momentum-research/v1/summary.json
+```
+
+方法版本：`methodology_version = 1`。
+
+目前比較的研究分組：
+
+- A / B / C；
+- Score `50–64 / 65–79 / 80–89 / 90+`；
+- Acceleration `<0 / 0–9 / 10–19 / 20+`；
+- 單一事實：量價共振、籌碼共振、強勢突破；
+- 組合：量價+籌碼、量價+突破、籌碼+突破、三者同時成立。
+
+每個 group 對 T+1 / T+3 / T+5 分別保存：
+
+- 選中樣本數與成熟樣本數；
+- coverage；
+- 平均與中位報酬；
+- 上漲率；
+- 平均 MFE / MAE；
+- MFE 觸及 +4% / +7% / +10% 的比率。
+
+尚未成熟的 horizon 一律保持空值，不以 0 補值。研究頁面為：
+
+```text
+public/momentum-research-dashboard.html
+```
+
+## 證據門檻與升版規則
+
+研究聚合只提供 evidence status，不自動改變 production：
+
+- `< 30` 個成熟樣本：`insufficient`；
+- `30–99`：`observe`；
+- `>= 100`：`research_ready`，代表可以進一步比較，不代表可以直接升版。
+
+任何 Momentum v2 門檻調整仍需另行檢查跨日期穩定性、產業分布、不同市場背景與樣本品質，並以新的 version 保存；不得用當前少量樣本直接修改 v1。
+
 ## 版本規則
 
 1. v1 門檻一旦開始觀測，不直接改值。
 2. 若回測後要調整權重或門檻，新增 `v2`，保留 v1 可重現性。
 3. 不用市場牛／熊做 eligibility gate；市場環境只可作畫面提示或後續人工判斷。
 4. 風險標籤是事實標籤，不自動從 A 級清單剔除股票。
-5. 未來覆盤以 T 日分數對 T+1／T+3／T+5 報酬驗證，禁止把事後結果回寫成 T 日因子。
+5. 覆盤以 T 日分數對 T+1／T+3／T+5 報酬驗證，禁止把事後結果回寫成 T 日因子。
+6. Research summary 只能累積證據，不得自動修改 Registry、固定策略或 prediction score。
