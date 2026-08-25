@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: retry-institutional
@@ -58,6 +60,11 @@ jobs:
             echo "target=${TARGET_DATE}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Reconcile retry list before retry
+        run: |
+          node --check scripts/reconcile_institutional_data.js
+          node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
       - name: Check if failed list exists
         id: check
         run: |
@@ -76,12 +83,13 @@ jobs:
         if: steps.check.outputs.exists == 'true'
         run: node scripts/retry_institutional_failed.js --date ${{ steps.date.outputs.target }}
 
+      - name: Reconcile completeness after retry
+        run: node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
       - name: Generate Fubon files.json only
-        if: steps.check.outputs.exists == 'true'
         run: node scripts/generate_file_lists.js --only data_fubon
 
       - name: Commit and push changes
-        if: steps.check.outputs.exists == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -118,3 +126,9 @@ jobs:
 
           echo "Failed to push retry-institutional data after 5 attempts."
           exit 1
+
+  deploy-pages:
+    name: 法人補全後發布 GitHub Pages
+    needs: retry-institutional
+    if: needs.retry-institutional.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml

@@ -15,6 +15,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: crawl-institutional
@@ -58,6 +60,15 @@ jobs:
             node scripts/crawl_institutional_data.js
           fi
 
+      - name: Reconcile Institutional completeness and retry list
+        run: |
+          node --check scripts/reconcile_institutional_data.js
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            node scripts/reconcile_institutional_data.js --date ${{ github.event.inputs.date }}
+          else
+            node scripts/reconcile_institutional_data.js
+          fi
+
       - name: Generate Fubon files.json only
         run: node scripts/generate_file_lists.js --only data_fubon
 
@@ -98,3 +109,9 @@ jobs:
 
           echo "Failed to push institutional data after 5 attempts."
           exit 1
+
+  deploy-pages:
+    name: 法人資料更新後發布 GitHub Pages
+    needs: crawl-institutional
+    if: needs.crawl-institutional.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
