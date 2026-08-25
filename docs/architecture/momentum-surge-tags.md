@@ -96,7 +96,6 @@ Momentum v1 的每日研究資料分為兩層：
 ```text
 data_prediction_analysis/momentum-history/v1/YYYYMMDD.json
   -> 凍結 signal date 當時的分數、等級、五構面、共振事實、產業與 acceleration
-
 data_prediction_analysis/momentum-replay/v1/YYYYMMDD.json
   -> 僅在未來交易日真正發生後加入 T+1 / T+3 / T+5 outcome
 ```
@@ -171,9 +170,9 @@ Methodology v2 對每個研究 group / horizon 另外以「signal date」為觀�
 
 這一層用來區分「分數高且持續」與「單日突然跳榜」。排名重疊率不直接成為 production eligibility。
 
-### 產業分布與 baseline
+### 產業分布、分類覆蓋率與 baseline
 
-History 已凍結 signal-date 當時的 `industry`，所以 Methodology v2 不需要另抓產業資料。
+History 會嘗試凍結 signal-date 當時的 `industry`，但 Methodology v2 不假設歷史資料一定都有產業欄位。產業研究先檢查分類覆蓋率，再判斷集中度。
 
 研究分段：
 
@@ -182,17 +181,23 @@ History 已凍結 signal-date 當時的 `industry`，所以 Methodology v2 不�
 - B；
 - C。
 
-每個產業保存：
+每個分段保存：
 
-- 候選數與候選占比；
-- 同一 signal-date universe 的產業股票數與 universe 占比；
-- `lift = 候選占比 / universe 占比`；
+- 候選總數、已分類數、未分類數、分類覆蓋率；
+- universe 總數、已分類數、未分類數、分類覆蓋率；
+- 已分類候選的各產業占比；
+- 已分類 universe 的各產業占比；
+- `lift = 已分類候選占比 / 已分類 universe 占比`；
 - Top 3 產業占比；
 - HHI 集中度。
 
-日期資料使用同日 listed-stock universe 作 baseline；overall 是所有 signal-date stock observations 的 aggregate。這不是拿固定產業大小做比較，也不把產業當作策略 gate。
+未分類股票**不會**被塞進「未分類」這個假產業來計算 Top3 / HHI。它們仍保留在 coverage 計數中，因此資料缺口是可見的。
 
-若 Score >= 50 的前三大產業占比 `>= 70%`，研究 summary 會顯示集中警告；這只是防止把集中行情錯誤泛化到全市場，不會排除股票。
+產業分類研究門檻：候選與 universe 的分類覆蓋率都必須 `>= 80%` 才標記 `concentration_available = true`。低於門檻時仍可顯示已分類樣本，但 summary 只發出「產業分類資料不足」警告，不下「產業高度集中」結論。
+
+日期資料使用同日 listed-stock universe 的**已分類股票**作 baseline；overall 是所有 signal-date classified stock observations 的 aggregate。這不是拿固定產業大小做比較，也不把產業當作策略 gate。
+
+只有在分類覆蓋率足夠時，若 Score >= 50 的前三大產業占比 `>= 70%`，研究 summary 才顯示集中警告；這只是防止把集中行情錯誤泛化到全市場，不會排除股票。
 
 ## Dashboard
 
@@ -202,12 +207,12 @@ History 已凍結 signal-date 當時的 `industry`，所以 Methodology v2 不�
 public/momentum-research-dashboard.html
 ```
 
-Methodology v2 增加：
+Methodology v2 顯示：
 
 1. 分組績效；
 2. 跨日期穩定性；
 3. Top 20 / Top 50 排名持續性與最新 Top 50 movers；
-4. 產業占比、universe baseline、lift、Top3 share、HHI；
+4. 產業分類 coverage、產業占比、universe baseline、lift、Top3 share、HHI；
 5. Signal Date 成熟度與研究警告。
 
 桌面使用完整表格；手機保留績效卡片，其他研究表可水平捲動，不隱藏證據欄位。
@@ -221,7 +226,8 @@ Methodology v2 增加：
 - `>= 100`：`research_ready`；
 - 成熟日期 `< 5`：跨日期穩定性 `insufficient`；
 - `5–19`：跨日期穩定性 `observe`；
-- `>= 20`：跨日期穩定性 `research_ready`。
+- `>= 20`：跨日期穩定性 `research_ready`；
+- 產業分類 coverage `< 80%`：不判定產業集中度。
 
 任何 Momentum v2 門檻調整至少仍需另行檢查：
 
