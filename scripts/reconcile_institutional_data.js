@@ -2,9 +2,10 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { hasTargetDate, toRocDate } = require('./lib/institutional_data_common');
+const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 const SENTINEL_STOCKS = ['1101', '2330', '2317', '2882'];
-const REQUIRED_FIELDS = ['ForeignInvestors', 'InvestmentTrust', 'Dealers', 'DailyTotal'];
 
 function parseArgs(argv) {
   const result = new Map();
@@ -29,11 +30,6 @@ function resolveTargetDate(explicitDate) {
   const taipei = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei', hour12: false }));
   if (taipei.getHours() < 14) taipei.setDate(taipei.getDate() - 1);
   return formatDate(taipei);
-}
-
-function toRocDate(dateStr) {
-  const year = Number(dateStr.slice(0, 4)) - 1911;
-  return `${year}/${dateStr.slice(4, 6)}/${dateStr.slice(6, 8)}`;
 }
 
 function parseCSVLine(line) {
@@ -71,15 +67,6 @@ function readJson(file, fallback) {
   if (!fs.existsSync(file)) return fallback;
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
   catch { return fallback; }
-}
-
-function hasTargetDate(row, rocDate) {
-  if (!row || typeof row !== 'object') return false;
-  return REQUIRED_FIELDS.every((field) => {
-    const values = row[field];
-    return values && typeof values === 'object' && !Array.isArray(values)
-      && Object.prototype.hasOwnProperty.call(values, rocDate);
-  });
 }
 
 function inferReason(item) {
@@ -202,6 +189,18 @@ function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const targetDateStr = resolveTargetDate(args.get('date'));
   if (!/^20\d{6}$/.test(targetDateStr)) throw new Error(`日期格式錯誤: ${targetDateStr}`);
+
+  const tradingDay = getTradingDayStatus(targetDateStr);
+  if (!tradingDay.isTradingDay) {
+    console.log(JSON.stringify({
+      date: targetDateStr,
+      status: 'skipped_non_trading_day',
+      reason: tradingDay.reason,
+      calendar_covered: tradingDay.calendarCovered,
+    }, null, 2));
+    return;
+  }
+  if (tradingDay.warning) console.warn(`⚠️ ${tradingDay.warning}`);
 
   const repoRoot = path.resolve(__dirname, '..');
   const dataDir = path.join(repoRoot, 'data_fubon');
