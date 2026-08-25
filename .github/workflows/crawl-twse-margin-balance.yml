@@ -17,10 +17,15 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   crawl-twse-margin-balance:
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.existing.outputs.target_date }}
+      pages_changed: ${{ steps.commit.outputs.pages_changed }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -84,13 +89,16 @@ jobs:
           node scripts/refresh_daily_gainers_flow_preserve_cause.js "$TARGET_DATE"
 
       - name: Commit and push changes
+        id: commit
         run: |
+          set -euo pipefail
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add -- data_twse_margin_balance/ data_daily_gain_over_5/analysis/ data_daily_gain_over_5/analysis-flow/
 
           if git diff --staged --quiet; then
             echo "No TWSE margin balance or flow-analysis changes"
+            echo "pages_changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -99,3 +107,12 @@ jobs:
 
           git pull --rebase origin main
           git push origin main
+          echo "pages_changed=true" >> "$GITHUB_OUTPUT"
+
+  deploy-pages:
+    name: 發布更新後分析到 GitHub Pages
+    needs: crawl-twse-margin-balance
+    if: needs.crawl-twse-margin-balance.result == 'success' && needs.crawl-twse-margin-balance.outputs.pages_changed == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.crawl-twse-margin-balance.outputs.target_date }}
