@@ -59,7 +59,10 @@ function readStockUniverse(csvPath) {
     const parts = parseCSVLine(line);
     const code = String(parts[0] || '').trim();
     const name = String(parts[1] || '').trim();
-    if (/^\d+/.test(code)) stockInfo.set(code, name);
+    // Institutional stock health is defined on four-digit listed stock codes.
+    // This intentionally excludes non-stock instruments such as 01001T whose
+    // Fubon institutional columns remain "--" and should not block completeness.
+    if (/^\d{4}$/.test(code)) stockInfo.set(code, name);
   }
   return stockInfo;
 }
@@ -105,7 +108,7 @@ function writeJsonIfChanged(file, value) {
   return true;
 }
 
-function findPreviousReference(dataDir, targetDateStr) {
+function findPreviousReference(dataDir, targetDateStr, eligibleStocks) {
   const candidates = fs.readdirSync(dataDir)
     .map((file) => {
       const match = file.match(/^fubon_(\d{8})_institutional\.json$/);
@@ -119,7 +122,7 @@ function findPreviousReference(dataDir, targetDateStr) {
     const data = readJson(path.join(dataDir, candidate.file), null);
     if (!data || typeof data !== 'object' || Array.isArray(data)) continue;
     const rocDate = toRocDate(candidate.date);
-    const validCount = Object.values(data).filter((row) => hasTargetDate(row, rocDate)).length;
+    const validCount = eligibleStocks.filter((code) => hasTargetDate(data[code], rocDate)).length;
     if (validCount > 0) return { date: candidate.date, valid_count: validCount };
   }
   return null;
@@ -163,7 +166,7 @@ function buildStatus({ targetDateStr, stockInfo, data, failedList, reference }) 
   const referenceReached = Boolean(reference?.valid_count) && validCount >= reference.valid_count;
 
   let status = 'partial';
-  if (missingCount === 0 || (completionRate >= 98 && referenceReached && sentinelsOk)) status = 'ready';
+  if (missingCount === 0 || (recoverableCount === 0 && completionRate >= 98 && referenceReached && sentinelsOk)) status = 'ready';
   else if (completionRate < 30 && recoverableRatio >= 0.8) status = 'provider_not_ready';
 
   return {
@@ -203,13 +206,14 @@ function main(argv = process.argv.slice(2)) {
   const repoRoot = path.resolve(__dirname, '..');
   const dataDir = path.join(repoRoot, 'data_fubon');
   const stockInfo = readStockUniverse(path.join(repoRoot, 'data_twse', 'twse_industry.csv'));
+  const stockNumbers = [...stockInfo.keys()].sort();
   const dataFile = path.join(dataDir, `fubon_${targetDateStr}_institutional.json`);
   const failedFile = path.join(dataDir, `fubon_${targetDateStr}_institutional_failedList.json`);
   const statusFile = path.join(dataDir, `fubon_${targetDateStr}_institutional_status.json`);
 
   const data = readJson(dataFile, {});
   const failedList = readJson(failedFile, []);
-  const reference = findPreviousReference(dataDir, targetDateStr);
+  const reference = findPreviousReference(dataDir, targetDateStr, stockNumbers);
   const { status, reconciledFailed } = buildStatus({ targetDateStr, stockInfo, data, failedList, reference });
 
   let failedChanged = false;

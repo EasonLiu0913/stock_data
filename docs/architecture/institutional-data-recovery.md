@@ -29,7 +29,9 @@ Each target date may publish:
 data_fubon/fubon_YYYYMMDD_institutional_status.json
 ```
 
-The status is derived from the canonical `data_twse/twse_industry.csv` universe and validates that each successful stock contains the target ROC date in all four institutional fields:
+The institutional health universe is the four-digit numeric listed-stock codes from `data_twse/twse_industry.csv`. Non-stock instruments such as `01001T` are intentionally excluded because Fubon may permanently return `--` for institutional columns and those instruments must not make stock completeness appear lower than it is.
+
+For every eligible stock, the status validates that the target ROC date exists in all four institutional fields:
 
 - `ForeignInvestors`
 - `InvestmentTrust`
@@ -49,22 +51,22 @@ The status records:
 
 Status values:
 
-- `provider_not_ready`: completion is below 30% and at least 80% of missing rows are recoverable provider/missing-date conditions;
+- `provider_not_ready`: completion is below 30% and at least 80% of missing eligible stocks are recoverable provider/missing-date conditions;
 - `partial`: data is usable but has not reached the ready rule;
-- `ready`: no rows are missing, or coverage is at least 98%, the previous reference count has been reached, and all sentinels are present.
+- `ready`: no eligible stock is missing, or coverage is at least 98%, the previous reference count has been reached, all sentinels are present, and no recoverable eligible-stock gap remains.
 
 These thresholds are publication/observability semantics, not a write gate. Partial data remains stored so later runs can add to it.
 
 ## Retry-list reconciliation
 
-`reconcile_institutional_data.js` rebuilds the failed list from the current universe and target-date coverage. Existing crawler errors are normalized to reasons such as:
+`reconcile_institutional_data.js` rebuilds the failed list from the eligible stock universe and target-date coverage. Existing crawler errors are normalized to reasons such as:
 
 - `DATA_MISSING`
 - `NOT_EXPECTED_DATE`
 - `EMPTY_DATA`
 - `OTHER_ERROR`
 
-Any universe stock absent from the target-date snapshot is added as `MISSING_TARGET_DATE`, which is recoverable and will be retried. When coverage becomes ready with no missing stocks, the failed list is removed.
+Any eligible stock absent from the target-date snapshot is added as `MISSING_TARGET_DATE`, which is recoverable and will be retried. When no eligible stock is missing, the failed list is removed. Non-stock instruments are not placed in the reconciled retry list.
 
 This guarantees that a zero-success crawl can still leave a retryable state instead of silently losing the target date.
 
