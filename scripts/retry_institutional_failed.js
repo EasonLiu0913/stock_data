@@ -1,7 +1,13 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { hasInstitutionalRows, hasTargetDate, toRocDate } = require('./lib/institutional_data_common');
+const {
+ filterInstitutionalDataToUniverse,
+ hasTargetDate,
+ isEligibleInstitutionalStockCode,
+ readEligibleStockUniverse,
+ toRocDate,
+} = require('./lib/institutional_data_common');
 const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 /**
@@ -42,15 +48,19 @@ const MAX_CONCURRENCY = 3;
  catch (e) { console.error(`❌ 無法讀取失敗清單: ${e.message}`); process.exit(1); }
  if (failedList.length === 0) { console.log('✅ 失敗清單為空，無需重爬！'); fs.unlinkSync(failedListPath); return; }
 
- const stockInfoMap = new Map();
- function parseCSVLine(line) { const result=[]; let current=''; let inQuotes=false; for (const char of line) { if (char==='"') inQuotes=!inQuotes; else if (char===','&&!inQuotes) { result.push(current.trim()); current=''; } else current+=char; } result.push(current.trim()); return result; }
- if (fs.existsSync(twseIndustryCsvPath)) {
-  const lines = fs.readFileSync(twseIndustryCsvPath, 'utf8').split('\n');
-  for (let i=1;i<lines.length;i++) { const line=lines[i].trim(); if (!line) continue; const parts=parseCSVLine(line); if (parts.length>=2) stockInfoMap.set(parts[0],parts[1]); }
- }
+ let stockInfoMap;
+ try { stockInfoMap = readEligibleStockUniverse(twseIndustryCsvPath); }
+ catch (error) { console.error(`❌ ${error.message}`); process.exit(1); }
+ const eligibleSet = new Set(stockInfoMap.keys());
+ const beforeUniverseFilterCount = failedList.length;
+ failedList = failedList.filter((item) => isEligibleInstitutionalStockCode(item?.stock) && eligibleSet.has(String(item.stock)));
+ const ineligibleCount = beforeUniverseFilterCount - failedList.length;
+ if (ineligibleCount > 0) console.log(`⏭️ 已略過 ${ineligibleCount} 個不屬於法人 eligible 股票母體的 failed item`);
+ if (failedList.length === 0) { fs.unlinkSync(failedListPath); console.log('✅ failed list 沒有 eligible 股票，無需重爬。'); return; }
+
  let institutionalData = {};
  if (fs.existsSync(institutionalDataPath)) {
-  try { institutionalData = JSON.parse(fs.readFileSync(institutionalDataPath,'utf8')); institutionalData = Object.fromEntries(Object.entries(institutionalData).filter(([,data])=>hasInstitutionalRows(data))); }
+  try { institutionalData = filterInstitutionalDataToUniverse(JSON.parse(fs.readFileSync(institutionalDataPath,'utf8')), stockInfoMap); }
   catch { console.log('⚠️ 無法讀取現有三大法人資料'); }
  }
 
