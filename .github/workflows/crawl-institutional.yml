@@ -2,9 +2,7 @@ name: "[01 台股資料] 富邦－個股近30日法人歷史"
 
 on:
   schedule:
-    # 每天 15:11 台北時間 (07:11 UTC)
     - cron: '11 7 * * *'
-    # 每天 17:23 台北時間 (09:23 UTC)
     - cron: '23 9 * * *'
   workflow_dispatch:
     inputs:
@@ -87,6 +85,10 @@ jobs:
         run: |
           node --check scripts/reconcile_institutional_data.js
           node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
+      - name: Write Institutional summary
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/write_institutional_actions_summary.js --date ${{ steps.date.outputs.target }}
 
       - name: Generate Fubon files.json only
         if: steps.trading-day.outputs.is_trading_day == 'true'
