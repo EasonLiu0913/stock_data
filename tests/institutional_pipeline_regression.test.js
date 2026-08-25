@@ -14,6 +14,19 @@ test('crawler only skips rows with complete target-date institutional data', () 
   assert.match(source, /getTradingDayStatus\(targetDateStr\)/);
 });
 
+test('crawler retry and reconcile share the same eligible stock universe', () => {
+  const crawler = read('scripts/crawl_institutional_data.js');
+  const retry = read('scripts/retry_institutional_failed.js');
+  const reconcile = read('scripts/reconcile_institutional_data.js');
+  assert.match(crawler, /readEligibleStockUniverse\(twseIndustryCsvPath\)/);
+  assert.match(crawler, /filterInstitutionalDataToUniverse/);
+  assert.match(retry, /readEligibleStockUniverse\(twseIndustryCsvPath\)/);
+  assert.match(retry, /isEligibleInstitutionalStockCode/);
+  assert.match(retry, /filterInstitutionalDataToUniverse/);
+  assert.match(reconcile, /readEligibleStockUniverse\(path\.join\(repoRoot, 'data_twse', 'twse_industry\.csv'\)\)/);
+  assert.doesNotMatch(reconcile, /function readStockUniverse/);
+});
+
 test('crawler and retry preserve structured failure reasons', () => {
   const crawler = read('scripts/crawl_institutional_data.js');
   const retry = read('scripts/retry_institutional_failed.js');
