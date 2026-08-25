@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "methodology_version": 2,
-  "generated_at": "2026-08-25T04:53:59.313Z",
+  "generated_at": "2026-08-25T05:03:31.888Z",
   "momentum_model_version": 1,
   "promotion_policy": {
     "status": "research_only",
@@ -10,6 +10,7 @@
     "minimum_research_samples": 100,
     "minimum_stability_observe_dates": 5,
     "minimum_stability_research_dates": 20,
+    "minimum_industry_classification_coverage_pct": 80,
     "required_checks_before_promotion": [
       "sample_size",
       "cross_date_stability",
@@ -38,7 +39,7 @@
     "T+1 目前只有 1 個成熟 signal dates，跨日期穩定性仍不足。",
     "T+3 尚無成熟 signal date，不產生該 horizon 的研究結論。",
     "T+5 尚無成熟 signal date，不產生該 horizon 的研究結論。",
-    "Score ≥ 50 候選的前三大產業占比為 100%，目前存在明顯產業集中，不能把整體結果直接泛化到全市場。"
+    "Score ≥ 50 候選的產業分類覆蓋率為 0%（Universe 0%），低於研究門檻 80%；暫不判定產業集中度。"
   ],
   "date_summaries": [
     {
@@ -3254,7 +3255,9 @@
     ]
   },
   "industry_analysis": {
-    "baseline": "same-signal-date listed-stock universe; overall aggregates stock-date observations",
+    "baseline": "same-signal-date classified listed-stock universe; overall aggregates classified stock-date observations",
+    "missing_industry_policy": "unclassified stocks remain in coverage counts but are excluded from share, lift, Top3, and HHI calculations",
+    "minimum_classification_coverage_pct": 80,
     "segments": [
       {
         "id": "score_50_plus",
@@ -3277,65 +3280,74 @@
       "score_50_plus": {
         "label": "Momentum Score ≥ 50",
         "selected_count": 47,
+        "selected_classified_count": 0,
+        "selected_unclassified_count": 47,
+        "selected_classification_coverage_pct": 0,
         "universe_count": 2104,
-        "industry_count": 1,
-        "top3_share_pct": 100,
-        "hhi": 10000,
-        "industries": [
-          {
-            "industry": "未分類",
-            "selected_count": 47,
-            "selected_share_pct": 100,
-            "universe_count": 2104,
-            "universe_share_pct": 100,
-            "lift_ratio": 1
-          }
-        ]
+        "universe_classified_count": 0,
+        "universe_unclassified_count": 2104,
+        "universe_classification_coverage_pct": 0,
+        "minimum_classification_coverage_pct": 80,
+        "classification_status": "unavailable",
+        "concentration_available": false,
+        "industry_count": 0,
+        "top3_share_pct": null,
+        "hhi": null,
+        "industries": []
       },
       "grade_a": {
         "label": "A｜動能飆股",
         "selected_count": 0,
+        "selected_classified_count": 0,
+        "selected_unclassified_count": 0,
+        "selected_classification_coverage_pct": null,
         "universe_count": 2104,
+        "universe_classified_count": 0,
+        "universe_unclassified_count": 2104,
+        "universe_classification_coverage_pct": 0,
+        "minimum_classification_coverage_pct": 80,
+        "classification_status": "no_candidates",
+        "concentration_available": false,
         "industry_count": 0,
-        "top3_share_pct": 0,
-        "hhi": 0,
+        "top3_share_pct": null,
+        "hhi": null,
         "industries": []
       },
       "grade_b": {
         "label": "B｜動能加速",
         "selected_count": 7,
+        "selected_classified_count": 0,
+        "selected_unclassified_count": 7,
+        "selected_classification_coverage_pct": 0,
         "universe_count": 2104,
-        "industry_count": 1,
-        "top3_share_pct": 100,
-        "hhi": 10000,
-        "industries": [
-          {
-            "industry": "未分類",
-            "selected_count": 7,
-            "selected_share_pct": 100,
-            "universe_count": 2104,
-            "universe_share_pct": 100,
-            "lift_ratio": 1
-          }
-        ]
+        "universe_classified_count": 0,
+        "universe_unclassified_count": 2104,
+        "universe_classification_coverage_pct": 0,
+        "minimum_classification_coverage_pct": 80,
+        "classification_status": "unavailable",
+        "concentration_available": false,
+        "industry_count": 0,
+        "top3_share_pct": null,
+        "hhi": null,
+        "industries": []
       },
       "grade_c": {
         "label": "C｜動能準備",
         "selected_count": 40,
+        "selected_classified_count": 0,
+        "selected_unclassified_count": 40,
+        "selected_classification_coverage_pct": 0,
         "universe_count": 2104,
-        "industry_count": 1,
-        "top3_share_pct": 100,
-        "hhi": 10000,
-        "industries": [
-          {
-            "industry": "未分類",
-            "selected_count": 40,
-            "selected_share_pct": 100,
-            "universe_count": 2104,
-            "universe_share_pct": 100,
-            "lift_ratio": 1
-          }
-        ]
+        "universe_classified_count": 0,
+        "universe_unclassified_count": 2104,
+        "universe_classification_coverage_pct": 0,
+        "minimum_classification_coverage_pct": 80,
+        "classification_status": "unavailable",
+        "concentration_available": false,
+        "industry_count": 0,
+        "top3_share_pct": null,
+        "hhi": null,
+        "industries": []
       }
     },
     "dates": [
@@ -3344,62 +3356,71 @@
         "segments": {
           "score_50_plus": {
             "selected_count": 32,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 32,
+            "selected_classification_coverage_pct": 0,
             "universe_count": 1052,
-            "industry_count": 1,
-            "top3_share_pct": 100,
-            "hhi": 10000,
-            "industries": [
-              {
-                "industry": "未分類",
-                "selected_count": 32,
-                "selected_share_pct": 100,
-                "universe_count": 1052,
-                "universe_share_pct": 100,
-                "lift_ratio": 1
-              }
-            ]
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "unavailable",
+            "concentration_available": false,
+            "industry_count": 0,
+            "top3_share_pct": null,
+            "hhi": null,
+            "industries": []
           },
           "grade_a": {
             "selected_count": 0,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 0,
+            "selected_classification_coverage_pct": null,
             "universe_count": 1052,
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "no_candidates",
+            "concentration_available": false,
             "industry_count": 0,
-            "top3_share_pct": 0,
-            "hhi": 0,
+            "top3_share_pct": null,
+            "hhi": null,
             "industries": []
           },
           "grade_b": {
             "selected_count": 7,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 7,
+            "selected_classification_coverage_pct": 0,
             "universe_count": 1052,
-            "industry_count": 1,
-            "top3_share_pct": 100,
-            "hhi": 10000,
-            "industries": [
-              {
-                "industry": "未分類",
-                "selected_count": 7,
-                "selected_share_pct": 100,
-                "universe_count": 1052,
-                "universe_share_pct": 100,
-                "lift_ratio": 1
-              }
-            ]
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "unavailable",
+            "concentration_available": false,
+            "industry_count": 0,
+            "top3_share_pct": null,
+            "hhi": null,
+            "industries": []
           },
           "grade_c": {
             "selected_count": 25,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 25,
+            "selected_classification_coverage_pct": 0,
             "universe_count": 1052,
-            "industry_count": 1,
-            "top3_share_pct": 100,
-            "hhi": 10000,
-            "industries": [
-              {
-                "industry": "未分類",
-                "selected_count": 25,
-                "selected_share_pct": 100,
-                "universe_count": 1052,
-                "universe_share_pct": 100,
-                "lift_ratio": 1
-              }
-            ]
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "unavailable",
+            "concentration_available": false,
+            "industry_count": 0,
+            "top3_share_pct": null,
+            "hhi": null,
+            "industries": []
           }
         }
       },
@@ -3408,53 +3429,71 @@
         "segments": {
           "score_50_plus": {
             "selected_count": 15,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 15,
+            "selected_classification_coverage_pct": 0,
             "universe_count": 1052,
-            "industry_count": 1,
-            "top3_share_pct": 100,
-            "hhi": 10000,
-            "industries": [
-              {
-                "industry": "未分類",
-                "selected_count": 15,
-                "selected_share_pct": 100,
-                "universe_count": 1052,
-                "universe_share_pct": 100,
-                "lift_ratio": 1
-              }
-            ]
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "unavailable",
+            "concentration_available": false,
+            "industry_count": 0,
+            "top3_share_pct": null,
+            "hhi": null,
+            "industries": []
           },
           "grade_a": {
             "selected_count": 0,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 0,
+            "selected_classification_coverage_pct": null,
             "universe_count": 1052,
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "no_candidates",
+            "concentration_available": false,
             "industry_count": 0,
-            "top3_share_pct": 0,
-            "hhi": 0,
+            "top3_share_pct": null,
+            "hhi": null,
             "industries": []
           },
           "grade_b": {
             "selected_count": 0,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 0,
+            "selected_classification_coverage_pct": null,
             "universe_count": 1052,
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "no_candidates",
+            "concentration_available": false,
             "industry_count": 0,
-            "top3_share_pct": 0,
-            "hhi": 0,
+            "top3_share_pct": null,
+            "hhi": null,
             "industries": []
           },
           "grade_c": {
             "selected_count": 15,
+            "selected_classified_count": 0,
+            "selected_unclassified_count": 15,
+            "selected_classification_coverage_pct": 0,
             "universe_count": 1052,
-            "industry_count": 1,
-            "top3_share_pct": 100,
-            "hhi": 10000,
-            "industries": [
-              {
-                "industry": "未分類",
-                "selected_count": 15,
-                "selected_share_pct": 100,
-                "universe_count": 1052,
-                "universe_share_pct": 100,
-                "lift_ratio": 1
-              }
-            ]
+            "universe_classified_count": 0,
+            "universe_unclassified_count": 1052,
+            "universe_classification_coverage_pct": 0,
+            "minimum_classification_coverage_pct": 80,
+            "classification_status": "unavailable",
+            "concentration_available": false,
+            "industry_count": 0,
+            "top3_share_pct": null,
+            "hhi": null,
+            "industries": []
           }
         }
       }
