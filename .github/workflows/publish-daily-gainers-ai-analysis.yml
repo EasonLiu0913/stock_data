@@ -26,6 +26,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: daily-gainers-ai-publish
@@ -35,6 +37,9 @@ jobs:
   validate-and-publish:
     name: 驗證 AI JSON 並升級為正式研究資料
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.date.outputs.target_date }}
+      publish_ready: ${{ steps.pending.outputs.ready }}
     steps:
       - name: Checkout main with facts history
         uses: actions/checkout@v7
@@ -279,3 +284,11 @@ jobs:
           done
           echo "Failed to publish validated AI analysis after 5 attempts" >&2
           exit 1
+
+  deploy-pages:
+    name: 發布 5% AI 研究到 GitHub Pages
+    needs: validate-and-publish
+    if: needs.validate-and-publish.result == 'success' && needs.validate-and-publish.outputs.publish_ready == 'true' && needs.validate-and-publish.outputs.target_date != ''
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.validate-and-publish.outputs.target_date }}
