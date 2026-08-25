@@ -1,6 +1,8 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const { hasInstitutionalRows, hasTargetDate, toRocDate } = require('./lib/institutional_data_common');
+const { getTradingDayStatus } = require('./lib/twse_trading_day');
 
 // --- 設定區 ---
 const MAX_CONCURRENCY = 5; // 最大並發數
@@ -54,20 +56,16 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  console.log(`\n🏦 三大法人買賣超資料爬取`);
  console.log(`📅 目標日期: ${targetDateStr}\n`);
 
- // 週末判斷：若目標日期為週六或週日，直接結束
- const targetYear = parseInt(targetDateStr.substring(0, 4));
- const targetMonth = parseInt(targetDateStr.substring(4, 6)) - 1;
- const targetDay = parseInt(targetDateStr.substring(6, 8));
- const targetDayOfWeek = new Date(targetYear, targetMonth, targetDay).getDay();
- if (targetDayOfWeek === 0 || targetDayOfWeek === 6) {
-  console.log('📅 目標日期為週末（非交易日），跳過爬取。');
+ const tradingDay = getTradingDayStatus(targetDateStr);
+ if (!tradingDay.isTradingDay) {
+  console.log(`📅 目標日期為非交易日（${tradingDay.reason}），跳過爬取。`);
   return;
  }
+ if (tradingDay.warning) console.warn(`⚠️ ${tradingDay.warning}`);
 
  // 檔案路徑
  const twseIndustryCsvPath = path.join(__dirname, '../data_twse/twse_industry.csv');
  const outputFilePath = path.join(__dirname, `../data_fubon/fubon_${targetDateStr}_institutional.json`);
-
 
  // 讀取股票清單
  const stockInfoMap = new Map();
@@ -125,6 +123,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  };
  const startDateParam = formatInputParam(argStart) || toParamDate(defaultStartDateObj);
  const endDateParam = formatInputParam(argEnd) || toParamDate(defaultEndDateObj);
+ const targetRocDate = toRocDate(targetDateStr);
 
  console.log(`📆 爬取區間: ${startDateParam} ~ ${endDateParam}\n`);
 
@@ -143,25 +142,14 @@ const MAX_CONCURRENCY = 5; // 最大並發數
   }
  }
 
- function hasInstitutionalRows(data) {
-  if (!data || typeof data !== 'object') return false;
-  return ['ForeignInvestors', 'InvestmentTrust', 'Dealers', 'DailyTotal']
-   .some(key => data[key] && typeof data[key] === 'object' && Object.keys(data[key]).length > 0);
- }
-
- // 篩選待處理股票 (跳過已有完整資料的)
- const stockNumbersToProcess = stockNumbers.filter(stock => {
-  if (!existingData[stock]) return true;
-  const data = existingData[stock];
-  // 檢查是否有 ForeignInvestors 資料
-  return !data.ForeignInvestors || Object.keys(data.ForeignInvestors).length === 0;
- });
+ // 篩選待處理股票：只有四個法人欄位都包含目標日期才允許跳過。
+ const stockNumbersToProcess = stockNumbers.filter(stock => !hasTargetDate(existingData[stock], targetRocDate));
 
  const skippedCount = stockNumbers.length - stockNumbersToProcess.length;
- if (skippedCount > 0) console.log(`⏭️  跳過 ${skippedCount} 個已有資料的股票\n`);
+ if (skippedCount > 0) console.log(`⏭️  跳過 ${skippedCount} 個目標日期資料完整的股票\n`);
 
  if (stockNumbersToProcess.length === 0) {
-  console.log('✅ 所有股票都已有資料，無需處理！');
+  console.log('✅ 所有股票的目標日期資料都完整，無需處理！');
   return;
  }
 
@@ -301,7 +289,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
  console.log('\n\n=== 處理完成 ===');
  console.log(`✅ 成功: ${successCount} 個`);
  console.log(`❌ 失敗: ${failCount} 個`);
- console.log(`⏭️  跳過: ${skippedCount} 個（已有資料）`);
+ console.log(`⏭️  跳過: ${skippedCount} 個（目標日期資料完整）`);
  console.log(`📊 總計: ${stockNumbers.length} 個股票\n`);
 
  // 儲存結果（僅在有成功資料時才寫檔，避免非交易日產生空檔案）
@@ -316,7 +304,7 @@ const MAX_CONCURRENCY = 5; // 最大並發數
    console.log(`📋 失敗清單已儲存到: ${failedListFile}`);
   }
  } else {
-  console.log('\n⚠️ 沒有任何股票成功取得資料，跳過寫檔（可能為非交易日）');
+  console.log('\n⚠️ 沒有任何股票成功取得資料，跳過寫檔（可能為資料尚未發布）');
   if (fs.existsSync(outputFilePath) && Object.keys(result).length === 0) {
    fs.unlinkSync(outputFilePath);
    console.log(`🗑️ 已刪除既有空資料檔: ${outputFilePath}`);
