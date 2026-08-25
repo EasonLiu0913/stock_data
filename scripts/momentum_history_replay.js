@@ -93,6 +93,34 @@ function momentumTagIds(stock) {
   return (stock.atomic_tags || []).filter(id => String(id).startsWith('momentum_'));
 }
 
+function frozenMomentumFeatures(stock) {
+  const stored = stock?.strategy_tag_features || {};
+  const storedScore = Number(stored.momentum_score);
+  const storedVersion = Number(stored.momentum_model_version);
+  if (storedVersion === MOMENTUM_MODEL_VERSION && Number.isFinite(storedScore)) {
+    const previousScore = Number(stored.previous_momentum_score);
+    return {
+      momentum_model_version: storedVersion,
+      momentum_score: storedScore,
+      momentum_grade: stored.momentum_grade ?? (storedScore >= 80 ? 'A' : storedScore >= 65 ? 'B' : storedScore >= 50 ? 'C' : null),
+      momentum_previous_score: Number.isFinite(previousScore) ? previousScore : null,
+      momentum_acceleration: Number.isFinite(previousScore) ? storedScore - previousScore : null,
+      momentum_price_score: Number(stored.momentum_price_score) || 0,
+      momentum_volume_score: Number(stored.momentum_volume_score) || 0,
+      momentum_trend_score: Number(stored.momentum_trend_score) || 0,
+      momentum_chip_score: Number(stored.momentum_chip_score) || 0,
+      momentum_breakout_score: Number(stored.momentum_breakout_score) || 0,
+      momentum_price_volume_sync: stored.momentum_price_volume_sync === true,
+      momentum_chip_sync: stored.momentum_chip_sync === true,
+      momentum_breakout: stored.momentum_breakout === true,
+      momentum_overheated: stored.momentum_overheated === true,
+      momentum_distribution_risk: stored.momentum_distribution_risk === true,
+      momentum_inputs: stored.momentum_inputs || {},
+    };
+  }
+  return calculateMomentumFeatures(stock);
+}
+
 function buildMomentumHistory(payload, options = {}) {
   const workspaceRoot = path.resolve(options.workspaceRoot || process.cwd());
   const signalDate = signalDateFromPayload(payload, options.signalDate);
@@ -100,7 +128,7 @@ function buildMomentumHistory(payload, options = {}) {
   const previous = options.previous || previousHistory(workspaceRoot, signalDate, MOMENTUM_MODEL_VERSION);
   const enrichedStocks = injectPreviousScores(payload.stocks || [], previous);
   const stocks = enrichedStocks.map(stock => {
-    const features = calculateMomentumFeatures(stock);
+    const features = frozenMomentumFeatures(stock);
     return {
       stock_code: String(stock.stock_code || ''),
       stock_name: stock.stock_name || '',
@@ -229,47 +257,47 @@ function horizonOutcome(rows, signalDate, horizon) {
 
 function buildMomentumReplay(history, priceContext, options = {}) {
   const horizons = options.horizons || DEFAULT_REPLAY_HORIZONS;
-  let completedHorizon = 0;
   const stocks = (history.stocks || []).map(stock => {
     const rows = priceContext.by_code.get(String(stock.stock_code)) || [];
-    const outcomes = {};
-    for (const horizon of horizons) {
-      const result = horizonOutcome(rows, history.signal_date, horizon);
-      outcomes[`t_plus_${horizon}`] = result;
-      if (result) completedHorizon = Math.max(completedHorizon, horizon);
-    }
-    const day1 = outcomes.t_plus_1;
-    const day5 = outcomes.t_plus_5;
+    const outcomes = Object.fromEntries(horizons.map(horizon => [
+      `t_plus_${horizon}`,
+      horizonOutcome(rows, history.signal_date, horizon),
+    ]));
+    const five = outcomes.t_plus_5;
+    const one = outcomes.t_plus_1;
     return {
       stock_code: stock.stock_code,
       stock_name: stock.stock_name,
       momentum_score: stock.momentum_score,
       momentum_grade: stock.momentum_grade,
       momentum_acceleration: stock.momentum_acceleration,
-      momentum_tags: stock.momentum_tags || [],
+      component_scores: stock.component_scores,
+      momentum_tags: stock.momentum_tags,
       outcomes,
-      reached_plus_4_pct_5d: day5?.max_gain_pct != null ? day5.max_gain_pct >= 4 : null,
-      reached_plus_7_pct_5d: day5?.max_gain_pct != null ? day5.max_gain_pct >= 7 : null,
-      reached_plus_10_pct_5d: day5?.max_gain_pct != null ? day5.max_gain_pct >= 10 : null,
-      next_day_weakening: day1?.return_pct != null ? day1.return_pct <= -2 : null,
+      reached_plus_4_pct_5d: five ? five.max_gain_pct >= 4 : null,
+      reached_plus_7_pct_5d: five ? five.max_gain_pct >= 7 : null,
+      reached_plus_10_pct_5d: five ? five.max_gain_pct >= 10 : null,
+      next_day_weakness: one ? one.return_pct < 0 : null,
     };
   });
-  const available = stocks.filter(stock => stock.outcomes.t_plus_1).length;
+  const completedHorizon = horizons.filter(horizon => stocks.length > 0
+    && stocks.every(stock => stock.outcomes[`t_plus_${horizon}`] !== null)).at(-1) || 0;
   return {
     schema_version: REPLAY_SCHEMA_VERSION,
     momentum_model_version: history.momentum_model_version,
     signal_date: history.signal_date,
     generated_at: options.generatedAt || new Date().toISOString(),
-    completed_horizon: completedHorizon,
+    source_history_file: `data_prediction_analysis/momentum-history/v${history.momentum_model_version}/${history.signal_date}.json`,
     stock_count: stocks.length,
-    available_t_plus_1_count: available,
-    source_price_files: priceContext.files.map(item => `data_fubon/${item.file}`),
+    completed_horizon: completedHorizon,
+    price_source_files: (priceContext.files || []).map(item => item.file),
     stocks,
   };
 }
 
-function persistMomentumReplay(workspaceRoot, history, options = {}) {
-  const priceContext = loadForwardPriceRows(workspaceRoot, history, options.maxForwardFiles || 12);
+function persistMomentumReplay(history, options = {}) {
+  const workspaceRoot = path.resolve(options.workspaceRoot || process.cwd());
+  const priceContext = options.priceContext || loadForwardPriceRows(workspaceRoot, history, options.maxForwardFiles || 12);
   const replay = buildMomentumReplay(history, priceContext, options);
   const file = replayFile(workspaceRoot, history.signal_date, history.momentum_model_version);
   if (!options.dryRun) {
@@ -282,14 +310,16 @@ function persistMomentumReplay(workspaceRoot, history, options = {}) {
 function refreshRecentReplays(workspaceRoot, options = {}) {
   const version = options.version || MOMENTUM_MODEL_VERSION;
   const dates = listHistoryDates(workspaceRoot, '', version).slice(-(options.lookbackDates || 10));
-  const results = [];
-  for (const date of dates) {
-    const history = readJson(historyFile(workspaceRoot, date, version), null);
-    if (!history?.stocks) continue;
-    const result = persistMomentumReplay(workspaceRoot, history, options);
-    results.push({ signal_date: date, completed_horizon: result.replay.completed_horizon, file: result.file });
-  }
-  return results;
+  return dates.map(signalDate => {
+    const history = readJson(historyFile(workspaceRoot, signalDate, version), null);
+    if (!history) return null;
+    const result = persistMomentumReplay(history, { ...options, workspaceRoot });
+    return {
+      signal_date: signalDate,
+      completed_horizon: result.replay.completed_horizon,
+      file: result.file,
+    };
+  }).filter(Boolean);
 }
 
 module.exports = {
@@ -307,7 +337,10 @@ module.exports = {
   previousHistory,
   signalDateFromPayload,
   injectPreviousScores,
+  momentumTagIds,
+  frozenMomentumFeatures,
   buildMomentumHistory,
+  updateManifest,
   persistMomentumHistory,
   listSmaPriceFiles,
   loadForwardPriceRows,
