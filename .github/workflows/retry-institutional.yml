@@ -2,7 +2,6 @@ name: "[06 回填修復] Retry Institutional Failed"
 
 on:
   schedule:
-    # 每天 21:13 台北時間 (13:13 UTC)
     - cron: '13 13 * * *'
   workflow_dispatch:
     inputs:
@@ -74,6 +73,7 @@ jobs:
         run: |
           node --check scripts/reconcile_institutional_data.js
           node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+          cp "data_fubon/fubon_${{ steps.date.outputs.target }}_institutional_status.json" /tmp/institutional_status_before_retry.json
 
       - name: Check if failed list exists
         if: steps.trading-day.outputs.is_trading_day == 'true'
@@ -97,6 +97,10 @@ jobs:
       - name: Reconcile completeness after retry
         if: steps.trading-day.outputs.is_trading_day == 'true'
         run: node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
+      - name: Write Institutional retry summary
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/write_institutional_actions_summary.js --date ${{ steps.date.outputs.target }} --before /tmp/institutional_status_before_retry.json
 
       - name: Generate Fubon files.json only
         if: steps.trading-day.outputs.is_trading_day == 'true'
