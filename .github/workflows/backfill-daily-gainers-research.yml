@@ -19,6 +19,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: backfill-daily-gainers-latest-contract
@@ -168,7 +170,7 @@ jobs:
           git commit -m "analysis: rebuild 5% research to latest contract ${START}-${END}"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
-              echo "Published rebuilt history. Pages deployment will be triggered by the data push path."
+              echo "Published rebuilt history; reusable Pages deploy runs next."
               exit 0
             fi
             git fetch origin main
@@ -176,3 +178,11 @@ jobs:
             sleep 5
           done
           exit 1
+
+  deploy:
+    name: 發布回填後 5% 研究到 GitHub Pages
+    needs: rebuild
+    if: needs.rebuild.result == 'success' && needs.rebuild.outputs.target_date != ''
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.rebuild.outputs.target_date }}
