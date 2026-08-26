@@ -14,12 +14,16 @@ function loadDailyGainersAiContract() {
   const contract = JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8'));
   assert(Number.isInteger(contract.contract_version), 'contract_version must be an integer');
   assert(contract.policy === 'latest-rules-only', 'policy must be latest-rules-only');
-  for (const key of ['facts', 'ai']) {
+  for (const key of ['facts', 'ai', 'published']) {
     assert(contract[key] && typeof contract[key] === 'object', `${key} contract is required`);
     assert(Number.isInteger(contract[key].schema_version), `${key}.schema_version must be an integer`);
     assert(typeof contract[key].methodology_version === 'string' && contract[key].methodology_version.length > 0, `${key}.methodology_version is required`);
   }
   assert(typeof contract.ai.model_role === 'string' && contract.ai.model_role.length > 0, 'ai.model_role is required');
+  assert(typeof contract.published.path_template === 'string' && contract.published.path_template.includes('YYYYMMDD'), 'published.path_template is required');
+  for (const key of ['cause_types', 'evidence_strength_values', 'confidence_values', 'required_ai_analysis_fields', 'required_published_analysis_fields', 'rules']) {
+    assert(Array.isArray(contract[key]) && contract[key].length > 0, `${key} must be a non-empty array`);
+  }
   assert(Array.isArray(contract.institutional_verification?.required_record_statuses), 'institutional_verification.required_record_statuses must be an array');
   assert(Array.isArray(contract.institutional_verification?.allowed_statuses), 'institutional_verification.allowed_statuses must be an array');
   assert(Array.isArray(contract.institutional_verification?.required_fields_when_verification_required), 'institutional_verification.required_fields_when_verification_required must be an array');
@@ -43,10 +47,17 @@ function isLatestAi(payload) {
     && payload.methodology_version === DAILY_GAINERS_AI_CONTRACT.ai.methodology_version;
 }
 
+function isLatestPublished(payload) {
+  return Boolean(payload)
+    && payload.schema_version === DAILY_GAINERS_AI_CONTRACT.published.schema_version
+    && payload.methodology_version === DAILY_GAINERS_AI_CONTRACT.published.methodology_version;
+}
+
 module.exports = {
   CONTRACT_PATH,
   DAILY_GAINERS_AI_CONTRACT,
   loadDailyGainersAiContract,
   isLatestFacts,
   isLatestAi,
+  isLatestPublished,
 };
