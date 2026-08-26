@@ -35,9 +35,11 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Resolve date and verify 6/7/10 inputs
         id: input
         shell: bash
@@ -55,16 +57,33 @@ jobs:
           [ -s "$list" ] || ready=false
           [ -s "$margin" ] || ready=false
           node - "$broker" <<'NODE' || ready=false
-const fs=require('node:fs');const f=process.argv[2];if(!fs.existsSync(f))process.exit(1);try{const p=JSON.parse(fs.readFileSync(f,'utf8'));process.exit(p&&typeof p==='object'&&Object.keys(p).length?0:1)}catch{process.exit(1)}
-NODE
+          const fs = require('node:fs');
+          const f = process.argv[2];
+          if (!fs.existsSync(f)) process.exit(1);
+          try {
+            const p = JSON.parse(fs.readFileSync(f, 'utf8'));
+            process.exit(p && typeof p === 'object' && Object.keys(p).length ? 0 : 1);
+          } catch {
+            process.exit(1);
+          }
+          NODE
           node - "$mi" <<'NODE' || ready=false
-const fs=require('node:fs');const f=process.argv[2];if(!fs.existsSync(f))process.exit(1);try{const p=JSON.parse(fs.readFileSync(f,'utf8'));process.exit(Array.isArray(p?.tables)&&p.tables.length?0:1)}catch{process.exit(1)}
-NODE
+          const fs = require('node:fs');
+          const f = process.argv[2];
+          if (!fs.existsSync(f)) process.exit(1);
+          try {
+            const p = JSON.parse(fs.readFileSync(f, 'utf8'));
+            process.exit(Array.isArray(p?.tables) && p.tables.length ? 0 : 1);
+          } catch {
+            process.exit(1);
+          }
+          NODE
           echo "date=$d" >> "$GITHUB_OUTPUT"
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
           echo "## 晚間 6/7/10 facts" >> "$GITHUB_STEP_SUMMARY"
           echo "- 日期：$d" >> "$GITHUB_STEP_SUMMARY"
           echo "- ready：$ready" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build current-contract facts
         if: steps.input.outputs.ready == 'true'
         shell: bash
@@ -76,8 +95,13 @@ NODE
           facts="data_daily_gain_over_5/analysis-facts/${d}.json"
           node scripts/daily_gainers_ai_contract_cli.js assert-facts "$facts"
           node - "$facts" <<'NODE'
-const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));if(p.stock_count&&p.stocks.every(x=>!x?.flow?.broker))throw new Error('broker facts missing for all stocks');if(p.stock_count&&p.stocks.every(x=>!x?.flow?.margin))throw new Error('margin facts missing for all stocks');console.log(JSON.stringify({stocks:p.stock_count,source_status:p.source_status}));
-NODE
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (p.stock_count && p.stocks.every((x) => !x?.flow?.broker)) throw new Error('broker facts missing for all stocks');
+          if (p.stock_count && p.stocks.every((x) => !x?.flow?.margin)) throw new Error('margin facts missing for all stocks');
+          console.log(JSON.stringify({ stocks: p.stock_count, source_status: p.source_status }));
+          NODE
+
       - name: Commit facts
         if: steps.input.outputs.ready == 'true'
         shell: bash
@@ -88,7 +112,10 @@ NODE
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$f"
-          if git diff --cached --quiet; then exit 0; fi
+          if git diff --cached --quiet; then
+            echo "Facts already current"
+            exit 0
+          fi
           git commit -m "analysis: prepare current 5% AI facts ${d}"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then exit 0; fi
