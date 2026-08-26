@@ -10,6 +10,13 @@ const BASE = path.join(ROOT, 'data_daily_gain_over_5');
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function rel(file) { return path.relative(ROOT, file).replaceAll('\\', '/'); }
 function assert(ok, msg) { if (!ok) throw new Error(msg); }
+function isCurrentAi(ai, date) {
+  return Boolean(ai)
+    && ai.schema_version === CONTRACT.ai.schema_version
+    && ai.methodology_version === CONTRACT.ai.methodology_version
+    && ai.model_role === CONTRACT.ai.model_role
+    && ai.target_date === date;
+}
 function fallbackAnalysis(fact) {
   return {
     code: String(fact.code),
@@ -32,13 +39,22 @@ function main() {
   assert(fs.existsSync(factsFile), `Missing facts: ${rel(factsFile)}`);
   const facts = readJson(factsFile);
   assert(facts.schema_version === CONTRACT.facts.schema_version && facts.methodology_version === CONTRACT.facts.methodology_version, 'facts are not current contract');
+
   let ai = null;
-  if (fs.existsSync(aiFile)) ai = readJson(aiFile);
-  if (!ai && !fallback) throw new Error(`Missing current AI synthesis: ${rel(aiFile)}`);
-  if (ai) {
-    assert(ai.schema_version === CONTRACT.ai.schema_version && ai.methodology_version === CONTRACT.ai.methodology_version && ai.model_role === CONTRACT.ai.model_role, 'AI synthesis is not current contract');
-    assert(ai.target_date === date, 'AI target_date mismatch');
+  let ignoredAiReason = null;
+  if (fs.existsSync(aiFile)) {
+    const candidate = readJson(aiFile);
+    if (isCurrentAi(candidate, date)) {
+      ai = candidate;
+    } else if (fallback) {
+      ignoredAiReason = 'outdated_or_mismatched_ai_synthesis';
+    } else {
+      throw new Error('AI synthesis is not current contract');
+    }
+  } else if (!fallback) {
+    throw new Error(`Missing current AI synthesis: ${rel(aiFile)}`);
   }
+
   const aiByCode = new Map((ai?.analyses || []).map((item) => [String(item.code), item]));
   const analyses = facts.stocks.map((fact) => {
     const semantic = aiByCode.get(String(fact.code)) || fallbackAnalysis(fact);
@@ -69,6 +85,8 @@ function main() {
     source_list_file: facts.source_list_file,
     source_facts_file: rel(factsFile),
     source_ai_file: ai ? rel(aiFile) : null,
+    ignored_ai_file: ignoredAiReason ? rel(aiFile) : null,
+    ignored_ai_reason: ignoredAiReason,
     generation_mode: ai ? 'ai_verified' : 'deterministic_fallback',
     stock_count: analyses.length,
     market_context: facts.market_context || null,
@@ -79,6 +97,12 @@ function main() {
   const out = path.join(BASE, 'analysis', `${date}.json`);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`);
-  console.log(JSON.stringify({ output: rel(out), stock_count: analyses.length, generation_mode: payload.generation_mode, methodology_version: payload.methodology_version }, null, 2));
+  console.log(JSON.stringify({
+    output: rel(out),
+    stock_count: analyses.length,
+    generation_mode: payload.generation_mode,
+    methodology_version: payload.methodology_version,
+    ignored_ai_reason: ignoredAiReason,
+  }, null, 2));
 }
 try { main(); } catch (error) { console.error(error.stack || error.message); process.exit(1); }
