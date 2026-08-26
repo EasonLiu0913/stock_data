@@ -11,6 +11,7 @@ on:
       - 'scripts/daily_gainers_ai_contract_cli.js'
       - 'scripts/build_daily_gainers_ai_facts.js'
       - 'scripts/validate_daily_gainers_ai_analysis.js'
+      - 'scripts/publish_daily_gainers_unified_analysis.js'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
   schedule:
     - cron: '0 15 * * 1-5'
@@ -35,7 +36,7 @@ concurrency:
 
 jobs:
   validate-and-publish:
-    name: 驗證 AI JSON 並升級為正式研究資料
+    name: 驗證 AI JSON 並發布 Unified 研究資料
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.date.outputs.target_date }}
@@ -58,6 +59,7 @@ jobs:
           set -euo pipefail
           node --check scripts/lib/daily_gainers_ai_contract.js
           node --check scripts/daily_gainers_ai_contract_cli.js
+          node --check scripts/publish_daily_gainers_unified_analysis.js
           node scripts/daily_gainers_ai_contract_cli.js print | jq .
 
       - name: Resolve target date
@@ -230,11 +232,10 @@ jobs:
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
           echo "reason=$reason" >> "$GITHUB_OUTPUT"
           if [ "$ready" != true ]; then
-            echo "## AI 籌碼解讀尚未可發布" >> "$GITHUB_STEP_SUMMARY"
+            echo "## AI 解讀尚未可發布" >> "$GITHUB_STEP_SUMMARY"
             echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
             echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
             echo "- 原因：$reason" >> "$GITHUB_STEP_SUMMARY"
-            echo "- facts 只更新 generated_at 不會阻擋發布；只有實際籌碼內容改變才要求重新做 AI synthesis。" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Validate pending AI schema against facts
@@ -247,7 +248,7 @@ jobs:
           node scripts/daily_gainers_ai_contract_cli.js assert-ai "research_pending/daily-gainers-ai/${date}.json"
           node scripts/validate_daily_gainers_ai_analysis.js "$date" "research_pending/daily-gainers-ai/${date}.json"
 
-      - name: Promote validated AI JSON to published data
+      - name: Promote AI and write unified formal analysis in one commit
         if: steps.pending.outputs.ready == 'true'
         shell: bash
         run: |
@@ -256,7 +257,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           date="${{ steps.date.outputs.target_date }}"
           pending="research_pending/daily-gainers-ai/${date}.json"
-          published="data_daily_gain_over_5/analysis-ai/${date}.json"
+          ai_published="data_daily_gain_over_5/analysis-ai/${date}.json"
+          unified="data_daily_gain_over_5/analysis/${date}.json"
 
           for attempt in 1 2 3 4 5; do
             git fetch origin main
@@ -265,24 +267,26 @@ jobs:
             node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
             node scripts/daily_gainers_ai_contract_cli.js assert-ai "$pending"
             node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
-            mkdir -p "$(dirname "$published")"
-            cp "$pending" "$published"
-            git add -- "$published"
+            mkdir -p "$(dirname "$ai_published")"
+            cp "$pending" "$ai_published"
+            node scripts/publish_daily_gainers_unified_analysis.js "$date"
+            node scripts/daily_gainers_ai_contract_cli.js assert-published "$unified"
+            git add -- "$ai_published" "$unified"
             if git diff --cached --quiet; then
-              echo "Published AI analysis is already current"
+              echo "AI and unified analysis are already current"
               exit 0
             fi
-            git commit -m "analysis: publish AI synthesis for 5% gainers ${date}"
+            git commit -m "analysis: publish unified AI research for 5% gainers ${date}"
             if git push origin HEAD:main; then
-              echo "## AI 籌碼解讀已通過 semantic-facts 與 schema 驗證並發布" >> "$GITHUB_STEP_SUMMARY"
+              echo "## 5% AI 研究已驗證並發布" >> "$GITHUB_STEP_SUMMARY"
               echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
-              echo "- 模式：${{ steps.date.outputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
-              echo "- 正式檔：$published" >> "$GITHUB_STEP_SUMMARY"
+              echo "- AI 檔：$ai_published" >> "$GITHUB_STEP_SUMMARY"
+              echo "- Unified 正式檔：$unified" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             sleep 5
           done
-          echo "Failed to publish validated AI analysis after 5 attempts" >&2
+          echo "Failed to publish validated AI/unified analysis after 5 attempts" >&2
           exit 1
 
   deploy-pages:
