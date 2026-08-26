@@ -3,22 +3,19 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DAILY_GAINERS_AI_CONTRACT } = require('./lib/daily_gainers_ai_contract');
 
 const ROOT = path.resolve(__dirname, '..');
+const CONTRACT = require(path.join(ROOT, 'scripts/lib/daily_gainers_ai_contract')).DAILY_GAINERS_AI_CONTRACT;
 const BASE = path.join(ROOT, 'data_daily_gain_over_5');
-const CONTRACT = DAILY_GAINERS_AI_CONTRACT;
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+function assert(condition, message) { if (!condition) throw new Error(message); }
+function isText(value) { return typeof value === 'string' && value.trim().length > 0; }
+function isIsoTimestamp(value) { return isText(value) && !Number.isNaN(Date.parse(value)); }
+function isHttpUrl(value) {
+  try { const u = new URL(String(value || '')); return u.protocol === 'http:' || u.protocol === 'https:'; } catch { return false; }
 }
-
-function isText(value) {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function isIsoTimestamp(value) {
-  return isText(value) && !Number.isNaN(Date.parse(value));
+function uniqueStrings(values) {
+  return Array.isArray(values) && values.every((v) => isText(v)) && new Set(values).size === values.length;
 }
 
 function main() {
@@ -36,88 +33,92 @@ function main() {
 
   assert(facts.target_date === date, 'facts target_date mismatch');
   assert(facts.schema_version === CONTRACT.facts.schema_version, `facts schema_version must be ${CONTRACT.facts.schema_version}`);
-  assert(facts.methodology_version === CONTRACT.facts.methodology_version, `unexpected facts methodology_version; expected ${CONTRACT.facts.methodology_version}`);
+  assert(facts.methodology_version === CONTRACT.facts.methodology_version, `facts methodology_version must be ${CONTRACT.facts.methodology_version}`);
   assert(Array.isArray(facts.stocks), 'facts stocks must be an array');
-  assert(Number.isInteger(facts.stock_count), 'facts stock_count must be an integer');
-  assert(facts.stock_count === facts.stocks.length, `facts stock_count ${facts.stock_count} != stocks length ${facts.stocks.length}`);
+  assert(Number.isInteger(facts.stock_count) && facts.stock_count === facts.stocks.length, 'facts stock_count mismatch');
 
   assert(ai.target_date === date, 'AI target_date mismatch');
   assert(ai.schema_version === CONTRACT.ai.schema_version, `AI schema_version must be ${CONTRACT.ai.schema_version}`);
-  assert(ai.methodology_version === CONTRACT.ai.methodology_version, `unexpected AI methodology_version; expected ${CONTRACT.ai.methodology_version}`);
-  assert(ai.model_role === CONTRACT.ai.model_role, `unexpected AI model_role; expected ${CONTRACT.ai.model_role}`);
+  assert(ai.methodology_version === CONTRACT.ai.methodology_version, `AI methodology_version must be ${CONTRACT.ai.methodology_version}`);
+  assert(ai.model_role === CONTRACT.ai.model_role, `AI model_role must be ${CONTRACT.ai.model_role}`);
   assert(ai.source_facts_file === `data_daily_gain_over_5/analysis-facts/${date}.json`, 'AI source_facts_file mismatch');
-  assert(Array.isArray(ai.analyses), 'AI analyses must be an array');
-  assert(ai.analyses.length === facts.stock_count, `AI analyses count ${ai.analyses.length} != facts ${facts.stock_count}`);
+  assert(Number.isInteger(ai.stock_count) && ai.stock_count === facts.stock_count, 'AI stock_count mismatch');
+  assert(Array.isArray(ai.analyses) && ai.analyses.length === facts.stock_count, 'AI analyses count mismatch');
 
   const factCodes = facts.stocks.map((item) => String(item.code));
   const aiCodes = ai.analyses.map((item) => String(item.code));
   assert(JSON.stringify(aiCodes) === JSON.stringify(factCodes), 'AI stock order/code list must exactly match facts');
 
-  const validBias = new Set(['bullish', 'neutral', 'cautious', 'bearish']);
-  const validConfidence = new Set(['high', 'medium', 'low']);
+  const validCauseTypes = new Set(CONTRACT.cause_types);
+  const validEvidenceStrength = new Set(CONTRACT.evidence_strength_values);
+  const validConfidence = new Set(CONTRACT.confidence_values);
+  const requiredFields = CONTRACT.required_ai_analysis_fields;
   const validVerification = new Set(CONTRACT.institutional_verification.allowed_statuses);
-  const requiredVerificationFields = CONTRACT.institutional_verification.required_fields_when_verification_required;
-  assert(Array.isArray(requiredVerificationFields) && requiredVerificationFields.length > 0, 'institutional verification required-fields contract is missing');
+  const tagPattern = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 
   for (let i = 0; i < ai.analyses.length; i += 1) {
     const item = ai.analyses[i];
     const fact = facts.stocks[i];
-    assert(isText(item.name), `missing name for ${item.code}`);
-    assert(isText(item.funding_structure), `missing funding_structure for ${item.code}`);
-    assert(isText(item.synthesis), `missing synthesis for ${item.code}`);
-    assert(Array.isArray(item.supporting_signals), `supporting_signals must be array for ${item.code}`);
-    assert(Array.isArray(item.conflicting_signals), `conflicting_signals must be array for ${item.code}`);
-    assert(Array.isArray(item.risks), `risks must be array for ${item.code}`);
-    assert(Array.isArray(item.follow_up), `follow_up must be array for ${item.code}`);
-    assert(validBias.has(item.continuation_bias), `invalid continuation_bias for ${item.code}`);
+    for (const field of requiredFields) assert(Object.prototype.hasOwnProperty.call(item, field), `missing ${field} for ${item.code || fact.code}`);
+    assert(String(item.code) === String(fact.code), `code mismatch at index ${i}`);
+    assert(validCauseTypes.has(item.cause_type), `invalid cause_type for ${item.code}`);
+    assert(uniqueStrings(item.cause_tags), `cause_tags must be unique non-empty strings for ${item.code}`);
+    assert(item.cause_tags.every((tag) => tagPattern.test(tag)), `cause_tags must be lowercase snake_case ASCII for ${item.code}`);
+    assert(validEvidenceStrength.has(item.evidence_strength), `invalid evidence_strength for ${item.code}`);
+    assert(isText(item.reason_summary), `reason_summary required for ${item.code}`);
+    assert(Array.isArray(item.evidence), `evidence must be an array for ${item.code}`);
+    assert(item.evidence.every((entry) => isText(entry)), `evidence entries must be text for ${item.code}`);
     assert(validConfidence.has(item.confidence), `invalid confidence for ${item.code}`);
-    assert(item.institutional_verification && typeof item.institutional_verification === 'object', `institutional_verification required for ${item.code}`);
+    assert(Array.isArray(item.follow_up), `follow_up must be an array for ${item.code}`);
+    assert(item.follow_up.every((entry) => isText(entry)), `follow_up entries must be text for ${item.code}`);
+    assert(Array.isArray(item.sources), `sources must be an array for ${item.code}`);
+    for (const source of item.sources) {
+      assert(source && typeof source === 'object', `source must be an object for ${item.code}`);
+      assert(isText(source.title), `source.title required for ${item.code}`);
+      assert(isHttpUrl(source.url), `source.url must be http(s) for ${item.code}`);
+      if (source.published_at != null && source.published_at !== '') assert(!Number.isNaN(Date.parse(source.published_at)), `invalid source.published_at for ${item.code}`);
+    }
+    if (['direct', 'corroborated'].includes(item.evidence_strength)) assert(item.sources.length > 0, `${item.evidence_strength} evidence requires public source URL for ${item.code}`);
+    if (['unknown', 'low_liquidity'].includes(item.cause_type)) assert(item.confidence === 'low', `${item.cause_type} must use low confidence for ${item.code}`);
 
-    const verification = item.institutional_verification;
-    assert(validVerification.has(verification.status), `invalid institutional verification status for ${item.code}`);
-    assert(Array.isArray(verification.sources), `institutional verification sources must be array for ${item.code}`);
-
-    const required = fact?.institutional?.verification_required === true;
-    if (required) {
-      for (const field of requiredVerificationFields) {
-        assert(Object.prototype.hasOwnProperty.call(verification, field), `institutional verification ${field} required for ${item.code}`);
-      }
-      assert(verification.status !== 'not_required', `institutional verification cannot be not_required for ${item.code}`);
-      assert(isText(verification.summary), `institutional verification summary required for ${item.code}`);
-      assert(isIsoTimestamp(verification.checked_at), `institutional verification checked_at must be an ISO timestamp for ${item.code}`);
+    if (item.institutional_verification != null) {
+      const verification = item.institutional_verification;
+      assert(verification && typeof verification === 'object', `institutional_verification must be object for ${item.code}`);
+      assert(validVerification.has(verification.status), `invalid institutional verification status for ${item.code}`);
       assert(Array.isArray(verification.sources), `institutional verification sources must be array for ${item.code}`);
-    } else {
-      assert(verification.status === 'not_required' || verification.status === 'verified', `unexpected institutional verification status for ${item.code}`);
+      const required = fact?.flow?.institutional_verification_required === true;
+      if (required) {
+        for (const field of CONTRACT.institutional_verification.required_fields_when_verification_required) {
+          assert(Object.prototype.hasOwnProperty.call(verification, field), `institutional verification ${field} required for ${item.code}`);
+        }
+        assert(verification.status !== 'not_required', `institutional verification cannot be not_required for ${item.code}`);
+        assert(isText(verification.summary), `institutional verification summary required for ${item.code}`);
+        assert(isIsoTimestamp(verification.checked_at), `institutional verification checked_at must be ISO timestamp for ${item.code}`);
+      }
     }
   }
 
-  assert(ai.market_summary && typeof ai.market_summary === 'object', 'market_summary is required');
-  assert(isText(ai.market_summary.summary), 'market_summary.summary is required');
-  assert(Array.isArray(ai.market_summary.common_flow_clues), 'market_summary.common_flow_clues must be array');
-  assert(Array.isArray(ai.priority_watchlist), 'priority_watchlist must be array');
-  for (const code of ai.priority_watchlist) assert(factCodes.includes(String(code)), `priority_watchlist contains unknown code ${code}`);
-
-  const pending = ai.analyses
-    .filter((item) => ['pending_publication', 'inconclusive'].includes(item.institutional_verification.status))
-    .map((item) => String(item.code));
+  if (ai.market_summary != null) {
+    assert(ai.market_summary && typeof ai.market_summary === 'object', 'market_summary must be object');
+    assert(isText(ai.market_summary.summary), 'market_summary.summary is required when market_summary exists');
+    if (ai.market_summary.common_flow_clues != null) assert(Array.isArray(ai.market_summary.common_flow_clues), 'market_summary.common_flow_clues must be array');
+  }
+  if (ai.priority_watchlist != null) {
+    assert(Array.isArray(ai.priority_watchlist), 'priority_watchlist must be array');
+    for (const code of ai.priority_watchlist) assert(factCodes.includes(String(code)), `priority_watchlist contains unknown code ${code}`);
+  }
 
   console.log(JSON.stringify({
     valid: true,
     contract_policy: CONTRACT.policy,
+    contract_version: CONTRACT.contract_version,
     facts_methodology: CONTRACT.facts.methodology_version,
     ai_methodology: CONTRACT.ai.methodology_version,
     date,
     stock_count: facts.stock_count,
-    ai_analysis_count: ai.analyses.length,
     stock_order_verified: true,
-    institutional_recheck_required: pending,
-    ai_file: path.relative(ROOT, aiFile),
+    ai_file: path.relative(ROOT, aiFile).replaceAll('\\', '/'),
   }, null, 2));
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error.stack || error.message);
-  process.exit(1);
-}
+try { main(); } catch (error) { console.error(error.stack || error.message); process.exit(1); }

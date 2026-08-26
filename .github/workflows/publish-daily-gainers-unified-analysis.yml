@@ -1,0 +1,100 @@
+name: "[07 研究] 發布 5% 漲幅 Unified Analysis"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data_daily_gain_over_5/analysis-ai/*.json'
+      - 'scripts/publish_daily_gainers_unified_analysis.js'
+      - 'config/daily-gainers-ai-contract.json'
+      - '.github/workflows/publish-daily-gainers-unified-analysis.yml'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '分析日期 YYYYMMDD；留空時取最新 analysis-ai 日期'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-gainers-unified-analysis
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.date.outputs.date }}
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          if [ -z "$date" ]; then
+            date="$(find data_daily_gain_over_5/analysis-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+      - name: Build latest-contract unified analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          ai="data_daily_gain_over_5/analysis-ai/${date}.json"
+          pending="research_pending/daily-gainers-ai/${date}.json"
+          [ -s "$ai" ] || { echo "Missing $ai" >&2; exit 1; }
+          mkdir -p "$(dirname "$pending")"
+          cp "$ai" "$pending"
+          node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
+          node scripts/daily_gainers_ai_contract_cli.js assert-ai "$pending"
+          node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
+          node scripts/publish_daily_gainers_unified_analysis.js "$date"
+          node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${date}.json"
+          git checkout -- "$pending" 2>/dev/null || rm -f "$pending"
+      - name: Commit unified analysis
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          file="data_daily_gain_over_5/analysis/${date}.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$file"
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "analysis: publish unified 5% research ${date}"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git fetch origin main
+            git rebase origin/main
+            sleep 5
+          done
+          exit 1
+  deploy:
+    needs: publish
+    if: needs.publish.result == 'success' && needs.publish.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.publish.outputs.target_date }}

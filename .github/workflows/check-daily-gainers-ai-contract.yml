@@ -2,17 +2,18 @@ name: "[07 研究] 5% 漲幅 AI Contract 一致性檢查"
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'config/daily-gainers-ai-contract.json'
       - 'scripts/build_daily_gainers_ai_facts.js'
       - 'scripts/validate_daily_gainers_ai_analysis.js'
+      - 'scripts/publish_daily_gainers_unified_analysis.js'
       - 'scripts/lib/daily_gainers_ai_contract.js'
       - 'scripts/daily_gainers_ai_contract_cli.js'
       - 'scripts/check_daily_gainers_ai_contract_consistency.js'
       - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
+      - '.github/workflows/publish-daily-gainers-unified-analysis.yml'
       - '.github/workflows/check-daily-gainers-ai-contract.yml'
   workflow_dispatch:
 
@@ -24,14 +25,11 @@ jobs:
     name: 驗證 central contract 與執行元件一致
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Check syntax and contract consistency
@@ -41,5 +39,6 @@ jobs:
           node --check scripts/daily_gainers_ai_contract_cli.js
           node --check scripts/build_daily_gainers_ai_facts.js
           node --check scripts/validate_daily_gainers_ai_analysis.js
+          node --check scripts/publish_daily_gainers_unified_analysis.js
           node --check scripts/check_daily_gainers_ai_contract_consistency.js
           node scripts/check_daily_gainers_ai_contract_consistency.js
