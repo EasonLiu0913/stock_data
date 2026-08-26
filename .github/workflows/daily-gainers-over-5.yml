@@ -31,11 +31,12 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 # SMA 正式流程由 crawl-sma.yml 透過 workflow_call 串接。
 # 不再監聽 data_fubon push，避免同一份 SMA commit 同時啟動 push + workflow_call 兩份 run。
-# Pages 發布只由 data_daily_gain_over_5/** commit 觸發 deploy-pages.yml 的 push 路徑，
-# 不在本 workflow 直接 workflow_call deploy-pages，避免同一次資料更新產生兩份部署互相取消。
+# GITHUB_TOKEN 產生的資料 commit 不會再次觸發 push workflow，因此 Pages 必須以 reusable workflow 直接接續。
 concurrency:
   group: daily-gainers-over-5
   cancel-in-progress: false
@@ -214,3 +215,11 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
             `## 5% 上漲原因 coverage\n- 日期：${list.target_date || ''}\n- 應分析：${expected.size}\n- 已分析：${actual.size}\n- 缺漏：${missing.length ? missing.join(', ') : '無'}\n`);
           NODE
+
+  deploy:
+    name: 發布每日漲幅清單到 GitHub Pages
+    needs: generate
+    if: needs.generate.result == 'success' && needs.generate.outputs.target_date != ''
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.generate.outputs.target_date }}
