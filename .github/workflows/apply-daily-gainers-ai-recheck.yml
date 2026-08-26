@@ -1,17 +1,23 @@
 name: "[07 研究] 套用 5% 法人隔日補查"
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'research_pending/daily-gainers-ai-rechecks/*.json'
+      - '.github/workflows/apply-daily-gainers-ai-recheck.yml'
   workflow_call:
     inputs:
       date:
         description: '補查日期 YYYYMMDD'
-        required: true
+        required: false
         type: string
   workflow_dispatch:
     inputs:
       date:
-        description: '補查日期 YYYYMMDD'
-        required: true
+        description: '補查日期 YYYYMMDD；留空時取最近補查 decision'
+        required: false
         type: string
 
 permissions:
@@ -38,10 +44,22 @@ jobs:
         id: date
         shell: bash
         env:
-          INPUT_DATE: ${{ inputs.date }}
+          INPUT_DATE: ${{ inputs.date || github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           date="${INPUT_DATE:-}"
+
+          if [ -z "$date" ] && [ "$EVENT_NAME" = "push" ]; then
+            changed_path="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai-rechecks/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
+            if [ -n "$changed_path" ]; then
+              date="$(basename "$changed_path" .json)"
+            fi
+          fi
+
+          if [ -z "$date" ]; then
+            date="$(find research_pending/daily-gainers-ai-rechecks -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+          fi
 
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
 
@@ -51,7 +69,6 @@ jobs:
           [ "$decision_date" = "$date" ] || { echo "Decision target_date mismatch: filename=$date payload=$decision_date" >&2; exit 1; }
 
           echo "date=$date" >> "$GITHUB_OUTPUT"
-          echo "Date source: explicit workflow input"
           echo "Resolved recheck date: $date"
 
       - name: Apply verified recheck decision
