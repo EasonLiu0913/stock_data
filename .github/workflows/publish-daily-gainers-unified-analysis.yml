@@ -5,9 +5,6 @@ on:
     branches: [main]
     paths:
       - 'data_daily_gain_over_5/analysis-ai/*.json'
-      - 'scripts/publish_daily_gainers_unified_analysis.js'
-      - 'config/daily-gainers-ai-contract.json'
-      - '.github/workflows/publish-daily-gainers-unified-analysis.yml'
   workflow_dispatch:
     inputs:
       date:
@@ -17,8 +14,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: daily-gainers-unified-analysis
@@ -35,22 +30,30 @@ jobs:
         with:
           ref: main
           fetch-depth: 2
+
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Resolve target date
         id: date
         shell: bash
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           date="${INPUT_DATE:-}"
+          if [ -z "$date" ] && [ "$EVENT_NAME" = "push" ]; then
+            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^data_daily_gain_over_5/analysis-ai/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
+            [ -n "$changed" ] && date="$(basename "$changed" .json)"
+          fi
           if [ -z "$date" ]; then
             date="$(find data_daily_gain_over_5/analysis-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
           fi
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
           echo "date=$date" >> "$GITHUB_OUTPUT"
+
       - name: Build latest-contract unified analysis
         shell: bash
         run: |
@@ -67,6 +70,7 @@ jobs:
           node scripts/publish_daily_gainers_unified_analysis.js "$date"
           node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${date}.json"
           git checkout -- "$pending" 2>/dev/null || rm -f "$pending"
+
       - name: Commit unified analysis
         id: commit
         shell: bash
@@ -85,6 +89,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
+              echo "Pages deployment is handled by the data push path."
               exit 0
             fi
             git fetch origin main
@@ -92,9 +97,3 @@ jobs:
             sleep 5
           done
           exit 1
-  deploy:
-    needs: publish
-    if: needs.publish.result == 'success' && needs.publish.outputs.changed == 'true'
-    uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.publish.outputs.target_date }}
