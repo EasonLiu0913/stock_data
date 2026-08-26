@@ -104,7 +104,7 @@ function trimDataset(siteRoot, dataset, maxDates) {
   };
 }
 
-function trimPredictionDates(siteRoot, maxDates = 2) {
+function trimPredictionDates(siteRoot, maxDates = 1) {
   const dataset = 'data_predictions';
   const datasetDir = path.join(siteRoot, dataset);
   const manifestFile = path.join(datasetDir, 'manifest.json');
@@ -226,11 +226,11 @@ function runSelfTest() {
     latest_date: '20260105',
     available_dates: ['20260102', '20260103', '20260104', '20260105'],
   }));
-  const predictionResult = trimPredictionDates(root, 2);
+  const predictionResult = trimPredictionDates(root, 1);
   const predictionManifest = readJson(path.join(predictions, 'manifest.json'));
-  if (predictionResult.published_dates !== 2) throw new Error('prediction self-test expected two dates');
-  if (fs.existsSync(path.join(predictions, '20260102'))) throw new Error('prediction self-test retained expired directory');
-  if (predictionManifest.available_dates.join(',') !== '20260104,20260105') throw new Error('prediction manifest was not trimmed');
+  if (predictionResult.published_dates !== 1) throw new Error('prediction self-test expected one date');
+  if (fs.existsSync(path.join(predictions, '20260104'))) throw new Error('prediction self-test retained expired directory');
+  if (predictionManifest.available_dates.join(',') !== '20260105') throw new Error('prediction manifest was not trimmed to latest only');
 
   const epsRoot = path.join(root, 'data_prediction_analysis', 'eps-valuation');
   const quarterlyResearchRoot = path.join(root, 'data_prediction_analysis', 'quarterly-financial-quality');
@@ -266,16 +266,18 @@ function main(argv = process.argv.slice(2)) {
   }
   const args = parseArgs(argv);
   const siteRoot = path.resolve(String(args.get('site') || '_site'));
+  // Pages is a presentation artifact, not the historical data store. Keep only
+  // the recent windows required for current dashboards; repository history stays intact.
   const policies = [
-    ['data_fubon', 13],
-    ['data_twse_mi_index', 10],
+    ['data_fubon', 10],
+    ['data_twse_mi_index', 8],
     ['data_twse_institutional_investors', 10],
     ['data_twse_dealers', 10],
     ['data_twse_foreign_investors', 10],
-    ['data_normalized', 5],
+    ['data_normalized', 4],
   ];
   const results = policies.map(([dataset, maxDates]) => trimDataset(siteRoot, dataset, maxDates));
-  results.push(trimPredictionDates(siteRoot, 2));
+  results.push(trimPredictionDates(siteRoot, 1));
   results.push(trimNonPublishedWorkfiles(siteRoot));
   const bytes = directoryBytes(siteRoot);
   const summary = { site: siteRoot, bytes, mebibytes: Number((bytes / 1024 / 1024).toFixed(1)), results };
