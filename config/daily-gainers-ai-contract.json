@@ -1,15 +1,68 @@
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "policy": "latest-rules-only",
   "facts": {
-    "schema_version": 2,
-    "methodology_version": "daily-gainers-ai-facts-v2"
+    "schema_version": 3,
+    "methodology_version": "daily-gainers-ai-facts-v3"
   },
   "ai": {
-    "schema_version": 2,
-    "methodology_version": "daily-gainers-ai-synthesis-v2",
-    "model_role": "chatgpt_synthesis_with_web_verification"
+    "schema_version": 3,
+    "methodology_version": "daily-gainers-ai-synthesis-v3",
+    "model_role": "chatgpt_cause_synthesis_with_web_verification"
   },
+  "published": {
+    "schema_version": 2,
+    "methodology_version": "daily-gainers-unified-analysis-v2",
+    "path_template": "data_daily_gain_over_5/analysis/YYYYMMDD.json"
+  },
+  "cause_types": [
+    "company_event",
+    "industry_theme",
+    "fundamental",
+    "institutional_flow",
+    "technical_momentum",
+    "market_risk_on",
+    "low_liquidity",
+    "mixed",
+    "unknown"
+  ],
+  "evidence_strength_values": [
+    "direct",
+    "corroborated",
+    "circumstantial",
+    "none"
+  ],
+  "confidence_values": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "required_ai_analysis_fields": [
+    "code",
+    "cause_type",
+    "cause_tags",
+    "evidence_strength",
+    "reason_summary",
+    "evidence",
+    "confidence",
+    "follow_up",
+    "sources"
+  ],
+  "required_published_analysis_fields": [
+    "code",
+    "name",
+    "change_pct",
+    "cause_type",
+    "cause_tags",
+    "evidence_strength",
+    "reason_summary",
+    "evidence",
+    "confidence",
+    "flow",
+    "technical",
+    "follow_up",
+    "sources"
+  ],
   "institutional_verification": {
     "required_record_statuses": [
       "zero_net",
@@ -28,5 +81,15 @@
       "checked_at",
       "sources"
     ]
-  }
+  },
+  "rules": [
+    "latest rules overwrite historical analysis; old schema versions are not preserved for runtime use",
+    "facts are deterministic and must not infer a catalyst from price movement alone",
+    "AI analyses must cover every stock in facts exactly once and in the same order",
+    "cause_tags must be unique lowercase snake_case ASCII identifiers",
+    "direct or corroborated evidence requires at least one public source URL",
+    "unknown and low_liquidity causes must use low confidence",
+    "published analysis merges deterministic flow and technical facts with AI semantic cause fields",
+    "when AI analysis is unavailable, deterministic fallback output must explicitly mark weak evidence and must not invent a public catalyst"
+  ]
 }
