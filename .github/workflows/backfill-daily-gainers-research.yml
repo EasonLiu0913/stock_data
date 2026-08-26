@@ -10,12 +10,15 @@ on:
       end_date:
         description: '結束日期 YYYYMMDD；只處理既有 5% 清單交易日'
         required: true
-        default: '20260825'
+        default: '20260826'
+  push:
+    branches:
+      - main
+    paths:
+      - 'research_pending/daily-gainers-backfill-request.json'
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: backfill-daily-gainers-latest-contract
@@ -42,6 +45,7 @@ jobs:
             /scripts/publish_daily_gainers_unified_analysis.js
             /data_daily_gain_over_5/*.json
             /research_pending/daily-gainers-ai/*.json
+            /research_pending/daily-gainers-backfill-request.json
             /.github/workflows/
 
       - uses: actions/setup-node@v7
@@ -52,13 +56,26 @@ jobs:
         id: range
         shell: bash
         env:
-          START_DATE: ${{ github.event.inputs.start_date }}
-          END_DATE: ${{ github.event.inputs.end_date }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_START_DATE: ${{ github.event.inputs.start_date }}
+          INPUT_END_DATE: ${{ github.event.inputs.end_date }}
         run: |
           set -euo pipefail
-          start="${START_DATE}"
-          end="${END_DATE}"
-          [[ "$start" =~ ^20[0-9]{6}$ && "$end" =~ ^20[0-9]{6}$ ]] || { echo "Invalid range" >&2; exit 1; }
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            request="research_pending/daily-gainers-backfill-request.json"
+            [ -s "$request" ] || { echo "Missing backfill request: $request" >&2; exit 1; }
+            start="$(jq -r '.start_date // empty' "$request")"
+            end="$(jq -r '.end_date // empty' "$request")"
+            requested_contract="$(jq -r '.contract_version // empty' "$request")"
+            current_contract="$(node -e "const p=require('./config/daily-gainers-ai-contract.json');process.stdout.write(String(p.contract_version))")"
+            [ -z "$requested_contract" ] || [ "$requested_contract" = "$current_contract" ] || { echo "Request contract_version=$requested_contract does not match current=$current_contract" >&2; exit 1; }
+          else
+            start="${INPUT_START_DATE:-20260501}"
+            end="${INPUT_END_DATE:-20260826}"
+          fi
+
+          [[ "$start" =~ ^20[0-9]{6}$ && "$end" =~ ^20[0-9]{6}$ ]] || { echo "Invalid range: $start..$end" >&2; exit 1; }
           [ "$start" -le "$end" ] || { echo "start_date > end_date" >&2; exit 1; }
 
           mapfile -t dates < <(find data_daily_gain_over_5 -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' | sed 's/\.json$//' | awk -v s="$start" -v e="$end" '$0 >= s && $0 <= e' | sort)
@@ -74,6 +91,7 @@ jobs:
             '/data_daily_gain_over_5/analysis-facts/'
             '/data_daily_gain_over_5/analysis/'
             '/research_pending/daily-gainers-ai/'
+            '/research_pending/daily-gainers-backfill-request.json'
             '/.github/workflows/'
           )
           for d in "${dates[@]}"; do
@@ -96,6 +114,12 @@ jobs:
           echo "end_date=${dates[-1]}" >> "$GITHUB_OUTPUT"
           echo "count=${#dates[@]}" >> "$GITHUB_OUTPUT"
 
+          echo "## 5% 最新規則歷史回填範圍" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 觸發方式：$EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 要求範圍：$start ～ $end" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 實際清單交易日：${dates[0]} ～ ${dates[-1]}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 交易日數：${#dates[@]}" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Rebuild facts and unified published files
         shell: bash
         env:
@@ -108,6 +132,7 @@ jobs:
           ai_days=0
           fallback_days=0
           for d in "${dates[@]}"; do
+            echo "=== Rebuild $d ==="
             node scripts/build_daily_gainers_ai_facts.js "$d"
             node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${d}.json"
             pending="research_pending/daily-gainers-ai/${d}.json"
@@ -120,7 +145,7 @@ jobs:
             fi
             node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${d}.json"
           done
-          echo "## 5% 最新規則歷史回填" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 5% 最新規則歷史回填結果" >> "$GITHUB_STEP_SUMMARY"
           echo "- 交易日：${#dates[@]}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 新版 AI v3 可用：$ai_days 日" >> "$GITHUB_STEP_SUMMARY"
           echo "- deterministic fallback：$fallback_days 日" >> "$GITHUB_STEP_SUMMARY"
@@ -142,16 +167,12 @@ jobs:
           fi
           git commit -m "analysis: rebuild 5% research to latest contract ${START}-${END}"
           for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then exit 0; fi
+            if git push origin HEAD:main; then
+              echo "Published rebuilt history. Pages deployment will be triggered by the data push path."
+              exit 0
+            fi
             git fetch origin main
             git rebase origin/main
             sleep 5
           done
           exit 1
-
-  deploy:
-    needs: rebuild
-    if: needs.rebuild.result == 'success'
-    uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.rebuild.outputs.target_date }}
