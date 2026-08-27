@@ -15,6 +15,52 @@
     "methodology_version": "daily-gainers-unified-analysis-v2",
     "path_template": "data_daily_gain_over_5/analysis/YYYYMMDD.json"
   },
+  "market_summary": {
+    "schema_version": 1,
+    "methodology_version": "daily-gainers-market-summary-v1",
+    "path_template": "data_daily_gain_over_5/market-summary/YYYYMMDD.json",
+    "manifest_path": "data_daily_gain_over_5/market-summary/manifest.json",
+    "theme_taxonomy_path": "config/daily-gainers-theme-taxonomy.json",
+    "allowed_statuses": ["preliminary", "final"],
+    "coverage_statuses": ["complete", "partial", "missing"],
+    "allowed_market_regimes": [
+      "broad_risk_on",
+      "theme_rotation",
+      "index_led_rally",
+      "defensive_rotation",
+      "speculative_breadth",
+      "risk_off_with_pockets",
+      "mixed",
+      "unknown"
+    ],
+    "required_fields": [
+      "schema_version",
+      "methodology_version",
+      "contract_version",
+      "target_date",
+      "generated_at",
+      "status",
+      "source_lineage",
+      "coverage",
+      "breadth",
+      "market_context",
+      "theme_summary",
+      "catalyst_coverage",
+      "funding_summary",
+      "risk_signals",
+      "headline",
+      "market_summary",
+      "next_day_watch"
+    ],
+    "rules": [
+      "all deterministic counts must be derived from exact-date repository data",
+      "missing historical dependencies must be reported as missing or partial and must never be replaced by adjacent-date data or numeric zero",
+      "theme aggregation uses explicit semantic tags normalized through the canonical taxonomy and must never infer a theme from price movement alone",
+      "AI or legacy narrative may interpret deterministic facts but must never override deterministic counts",
+      "final status requires latest unified analysis for the exact target date and complete per-stock analysis coverage",
+      "historical rebuilds always use the latest market summary methodology"
+    ]
+  },
   "cause_types": [
     "company_event",
     "industry_theme",
