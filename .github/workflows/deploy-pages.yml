@@ -16,6 +16,7 @@ on:
       - "scripts/prepare_eps_valuation_pages_payload.js"
       - "scripts/scan_pages_dependencies.js"
       - "scripts/trim_pages_artifact.js"
+      - "scripts/apply_pages_size_budget.js"
       - ".github/workflows/build-twse-market-chart.yml"
       - ".github/workflows/deploy-pages.yml"
   workflow_call:
@@ -87,10 +88,12 @@ jobs:
           bash -n scripts/prepare_pages_site.sh
           node --check scripts/scan_pages_dependencies.js
           node --check scripts/trim_pages_artifact.js
+          node --check scripts/apply_pages_size_budget.js
           node --check scripts/prepare_eps_valuation_pages_payload.js
           bash scripts/prepare_pages_site.sh --self-test
           node scripts/scan_pages_dependencies.js --self-test
           node scripts/trim_pages_artifact.js --self-test
+          node scripts/apply_pages_size_budget.js --self-test
           node scripts/prepare_eps_valuation_pages_payload.js --self-test
 
           node scripts/scan_pages_dependencies.js . \
@@ -196,7 +199,17 @@ jobs:
           test -d _site/data_prediction_analysis/eps-valuation/valuation-by-stock
           test -d _site/data_prediction_analysis/eps-valuation/coverage-by-stock
 
+          # Stage 1: normal presentation windows and known non-public workfiles.
           node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
+
+          # Stage 2: only when Stage 1 still exceeds 850 MiB. Tighten secondary
+          # history windows and discard research-only publication copies until the
+          # artifact approaches the 800 MiB operating target. Repository data is untouched.
+          node scripts/apply_pages_size_budget.js \
+            --site _site \
+            --target-mib 800 \
+            --trigger-mib 850 \
+            | tee /tmp/pages-size-budget-summary.json
 
           test -f _site/data_fubon/files.json
           test -f _site/data_twse_mi_index/files.json
@@ -212,23 +225,33 @@ jobs:
           }
           NODE
 
+          # Re-check core public payload after every slimming phase so capacity
+          # management cannot silently remove the minimum viable Pages contract.
+          test -f _site/config/strategy-tag-registry.json
+          test -f _site/data_prediction_analysis/strategy-snapshots/manifest.json
+          test -s _site/data_prediction_analysis/eps-valuation/valuation-summary.json
+          test -s _site/data_prediction_analysis/eps-valuation/coverage-summary.json
+
           dependency_count=$(grep -cve '^$' /tmp/pages-dependencies.txt || true)
           frontend_asset_count=$(find public -type f \
             \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' \) \
             | wc -l | tr -d ' ')
           artifact_size=$(du -sh _site | cut -f1)
           artifact_bytes=$(du -sb _site | cut -f1)
+          target_bytes=$((800 * 1024 * 1024))
           warning_bytes=$((850 * 1024 * 1024))
           maximum_bytes=$((950 * 1024 * 1024))
 
-          echo 'Largest published roots after trimming:'
+          echo 'Largest published roots after staged trimming:'
           du -sh _site/* 2>/dev/null | sort -hr | head -20 || true
 
           if [ "$artifact_bytes" -gt "$maximum_bytes" ]; then
-            echo "::error::Pages artifact is ${artifact_size}, above the repository safety cap of 950 MiB. GitHub Pages published sites are limited to 1 GiB; reduce published data before deploying."
+            echo "::error::Pages artifact is ${artifact_size} after both slimming stages, above the repository safety cap of 950 MiB. GitHub Pages published sites are limited to 1 GiB."
             exit 1
           elif [ "$artifact_bytes" -gt "$warning_bytes" ]; then
-            echo "::warning::Pages artifact is ${artifact_size}, above the 850 MiB warning threshold; reduce published data before it approaches the 1 GiB GitHub Pages limit."
+            echo "::warning::Pages artifact is ${artifact_size} after Stage 2 and remains above 850 MiB. Deployment is still under the hard cap but additional secondary datasets should be reviewed."
+          elif [ "$artifact_bytes" -gt "$target_bytes" ]; then
+            echo "::notice::Pages artifact is ${artifact_size}; below the Stage 2 trigger but above the preferred 800 MiB operating target."
           fi
 
           echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
@@ -237,12 +260,13 @@ jobs:
           echo "- Frontend assets scanned: $frontend_asset_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Artifact size after trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Pages size warning / hard cap: 850 MiB / 950 MiB" >> "$GITHUB_STEP_SUMMARY"
-          echo "- EPS valuation Pages payload: summary + per-stock lazy files" >> "$GITHUB_STEP_SUMMARY"
-          echo "- data_fubon: latest 15 trading dates only" >> "$GITHUB_STEP_SUMMARY"
-          echo "- data_twse_mi_index: latest 10 trading dates only" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Repository historical data remains untouched" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact size after staged trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pages operating target / Stage 2 trigger / hard cap: 800 / 850 / 950 MiB" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 1 windows: fubon 10, TWSE index 8, institutional/dealer/foreign 10, normalized 4, predictions 1" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 2 windows when needed: fubon 6, TWSE index 5, institutional/dealer/foreign 6, normalized 2, prediction-analysis dates 5" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 2 secondary research cuts when still above target: momentum history/replay/research and tag-strategy recalculation" >> "$GITHUB_STEP_SUMMARY"
+          echo "- EPS valuation core summaries and strategy snapshot manifest are protected and revalidated after trimming" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Repository historical data remains untouched; slimming affects only the _site publication artifact" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
