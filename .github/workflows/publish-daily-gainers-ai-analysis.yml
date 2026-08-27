@@ -12,6 +12,8 @@ on:
       - 'scripts/build_daily_gainers_ai_facts.js'
       - 'scripts/validate_daily_gainers_ai_analysis.js'
       - 'scripts/publish_daily_gainers_unified_analysis.js'
+      - 'scripts/build_daily_gainers_market_summary.js'
+      - 'scripts/validate_daily_gainers_market_summary.js'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
   schedule:
     - cron: '0 15 * * 1-5'
@@ -31,7 +33,6 @@ permissions:
   id-token: write
 
 concurrency:
-  # v2 intentionally moves new runs off the stale v1 lock that left run #40 queued with zero jobs.
   group: daily-gainers-ai-publish-v2
   cancel-in-progress: false
 
@@ -61,6 +62,8 @@ jobs:
           node --check scripts/lib/daily_gainers_ai_contract.js
           node --check scripts/daily_gainers_ai_contract_cli.js
           node --check scripts/publish_daily_gainers_unified_analysis.js
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
           node scripts/daily_gainers_ai_contract_cli.js print | jq .
 
       - name: Resolve target date
@@ -249,7 +252,7 @@ jobs:
           node scripts/daily_gainers_ai_contract_cli.js assert-ai "research_pending/daily-gainers-ai/${date}.json"
           node scripts/validate_daily_gainers_ai_analysis.js "$date" "research_pending/daily-gainers-ai/${date}.json"
 
-      - name: Promote AI and write unified formal analysis in one commit
+      - name: Promote AI, unified analysis, and market summary in one commit
         if: steps.pending.outputs.ready == 'true'
         shell: bash
         run: |
@@ -260,6 +263,8 @@ jobs:
           pending="research_pending/daily-gainers-ai/${date}.json"
           ai_published="data_daily_gain_over_5/analysis-ai/${date}.json"
           unified="data_daily_gain_over_5/analysis/${date}.json"
+          market_summary="data_daily_gain_over_5/market-summary/${date}.json"
+          market_manifest="data_daily_gain_over_5/market-summary/manifest.json"
 
           for attempt in 1 2 3 4 5; do
             git fetch origin main
@@ -272,22 +277,31 @@ jobs:
             cp "$pending" "$ai_published"
             node scripts/publish_daily_gainers_unified_analysis.js "$date"
             node scripts/daily_gainers_ai_contract_cli.js assert-published "$unified"
-            git add -- "$ai_published" "$unified"
+            node scripts/build_daily_gainers_market_summary.js --date "$date"
+            node scripts/validate_daily_gainers_market_summary.js --date "$date"
+            node - "$market_summary" <<'NODE'
+          const fs = require('node:fs');
+          const file = process.argv[2];
+          const summary = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (summary.status !== 'final') throw new Error(`Expected final market summary; got ${summary.status}`);
+          NODE
+            git add -- "$ai_published" "$unified" "$market_summary" "$market_manifest"
             if git diff --cached --quiet; then
-              echo "AI and unified analysis are already current"
+              echo "AI, unified analysis, and market summary are already current"
               exit 0
             fi
-            git commit -m "analysis: publish unified AI research for 5% gainers ${date}"
+            git commit -m "analysis: publish unified AI research and market summary for 5% gainers ${date}"
             if git push origin HEAD:main; then
-              echo "## 5% AI 研究已驗證並發布" >> "$GITHUB_STEP_SUMMARY"
+              echo "## 5% AI 研究與市場總結已驗證並發布" >> "$GITHUB_STEP_SUMMARY"
               echo "- 日期：$date" >> "$GITHUB_STEP_SUMMARY"
               echo "- AI 檔：$ai_published" >> "$GITHUB_STEP_SUMMARY"
               echo "- Unified 正式檔：$unified" >> "$GITHUB_STEP_SUMMARY"
+              echo "- Market Summary：$market_summary" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             sleep 5
           done
-          echo "Failed to publish validated AI/unified analysis after 5 attempts" >&2
+          echo "Failed to publish validated AI/unified/summary after 5 attempts" >&2
           exit 1
 
   deploy-pages:
