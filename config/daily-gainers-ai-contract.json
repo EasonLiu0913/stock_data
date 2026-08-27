@@ -1,6 +1,25 @@
 {
-  "contract_version": 2,
+  "contract_version": 3,
   "policy": "latest-rules-only",
+  "news": {
+    "schema_version": 1,
+    "methodology_version": "daily-gainers-news-theme-v1",
+    "model_role": "chatgpt_news_theme_research_with_web_verification",
+    "path_template": "data_daily_gain_over_5/analysis-news/YYYYMMDD.json",
+    "required_analysis_fields": [
+      "code",
+      "name",
+      "change_pct",
+      "cause_type",
+      "cause_tags",
+      "evidence_strength",
+      "reason_summary",
+      "evidence",
+      "confidence",
+      "follow_up",
+      "sources"
+    ]
+  },
   "facts": {
     "schema_version": 3,
     "methodology_version": "daily-gainers-ai-facts-v3"
@@ -16,12 +35,13 @@
     "path_template": "data_daily_gain_over_5/analysis/YYYYMMDD.json"
   },
   "market_summary": {
-    "schema_version": 1,
-    "methodology_version": "daily-gainers-market-summary-v1",
+    "schema_version": 2,
+    "methodology_version": "daily-gainers-market-summary-v2",
     "path_template": "data_daily_gain_over_5/market-summary/YYYYMMDD.json",
     "manifest_path": "data_daily_gain_over_5/market-summary/manifest.json",
     "theme_taxonomy_path": "config/daily-gainers-theme-taxonomy.json",
     "allowed_statuses": ["preliminary", "final"],
+    "allowed_summary_stages": ["news_theme", "full_synthesis"],
     "coverage_statuses": ["complete", "partial", "missing"],
     "allowed_market_regimes": [
       "broad_risk_on",
@@ -40,6 +60,7 @@
       "target_date",
       "generated_at",
       "status",
+      "summary_stage",
       "source_lineage",
       "coverage",
       "breadth",
@@ -53,10 +74,12 @@
       "next_day_watch"
     ],
     "rules": [
+      "stage 1 preliminary summary is built from exact-date raw list plus latest news-theme analysis and does not wait for funding facts",
+      "stage 2 final summary is built from latest exact-date unified analysis and supersedes stage 1 while retaining news/theme semantics",
       "all deterministic counts must be derived from exact-date repository data",
       "missing historical dependencies must be reported as missing or partial and must never be replaced by adjacent-date data or numeric zero",
       "theme aggregation uses explicit semantic tags normalized through the canonical taxonomy and must never infer a theme from price movement alone",
-      "AI or legacy narrative may interpret deterministic facts but must never override deterministic counts",
+      "AI narrative may interpret deterministic facts but must never override deterministic counts",
       "final status requires latest unified analysis for the exact target date and complete per-stock analysis coverage",
       "historical rebuilds always use the latest market summary methodology"
     ]
@@ -130,6 +153,7 @@
   },
   "rules": [
     "latest rules overwrite historical analysis; old schema versions are not preserved for runtime use",
+    "news-theme analysis is a first-stage semantic source and never contains synthetic funding values",
     "facts are deterministic and must not infer a catalyst from price movement alone",
     "AI analyses must cover every stock in facts exactly once and in the same order",
     "cause_tags must be unique lowercase snake_case ASCII identifiers",
