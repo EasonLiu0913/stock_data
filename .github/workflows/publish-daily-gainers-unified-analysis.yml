@@ -5,11 +5,6 @@ on:
     branches: [main]
     paths:
       - 'data_daily_gain_over_5/analysis-ai/*.json'
-  workflow_run:
-    workflows:
-      - "[07 研究] 5% 漲幅 AI 籌碼解讀驗證發布"
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       date:
@@ -28,7 +23,6 @@ concurrency:
 
 jobs:
   publish:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.date.outputs.date }}
@@ -72,7 +66,6 @@ jobs:
           [ -s "$ai" ] || { echo "Missing $ai" >&2; exit 1; }
           mkdir -p "$(dirname "$pending")"
           cp "$ai" "$pending"
-
           node --check scripts/build_daily_gainers_market_summary.js
           node --check scripts/validate_daily_gainers_market_summary.js
           node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
@@ -80,7 +73,6 @@ jobs:
           node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
           node scripts/publish_daily_gainers_unified_analysis.js "$date"
           node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${date}.json"
-
           node scripts/build_daily_gainers_market_summary.js --date "$date"
           node scripts/validate_daily_gainers_market_summary.js --date "$date"
           node - "$date" <<'NODE'
@@ -90,7 +82,6 @@ jobs:
           if (p.status !== 'final') throw new Error(`Expected final market summary after unified publish; got ${p.status}`);
           console.log(JSON.stringify({ date: d, status: p.status, breadth: p.breadth, coverage: p.coverage }, null, 2));
           NODE
-
           git checkout -- "$pending" 2>/dev/null || rm -f "$pending"
 
       - name: Commit unified analysis and market summary
