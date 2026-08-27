@@ -8,12 +8,15 @@ const runtimeFiles = [
   'scripts/build_daily_gainers_ai_facts.js',
   'scripts/validate_daily_gainers_ai_analysis.js',
   'scripts/publish_daily_gainers_unified_analysis.js',
+  'scripts/build_daily_gainers_market_summary.js',
+  'scripts/validate_daily_gainers_market_summary.js',
   'scripts/daily_gainers_ai_contract_cli.js',
   '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml',
   '.github/workflows/publish-daily-gainers-ai-analysis.yml',
   '.github/workflows/publish-daily-gainers-unified-analysis.yml',
+  '.github/workflows/backfill-daily-gainers-research.yml',
 ];
-const methodologyLiteral = /daily-gainers-(?:ai-(?:facts|synthesis)|unified-analysis)-v\d+/g;
+const methodologyLiteral = /daily-gainers-(?:ai-(?:facts|synthesis)|unified-analysis|market-summary)-v\d+/g;
 const violations = [];
 for (const relative of runtimeFiles) {
   const file = path.join(ROOT, relative);
@@ -26,9 +29,13 @@ const checks = [
   ['scripts/build_daily_gainers_ai_facts.js', 'daily_gainers_ai_contract'],
   ['scripts/validate_daily_gainers_ai_analysis.js', 'daily_gainers_ai_contract'],
   ['scripts/publish_daily_gainers_unified_analysis.js', 'daily_gainers_ai_contract'],
+  ['scripts/build_daily_gainers_market_summary.js', 'daily_gainers_ai_contract'],
+  ['scripts/validate_daily_gainers_market_summary.js', 'daily_gainers_ai_contract'],
   ['.github/workflows/publish-daily-gainers-ai-analysis.yml', 'daily_gainers_ai_contract_cli.js'],
   ['.github/workflows/analyze-daily-gainers-margin-flow-2200.yml', 'daily_gainers_ai_contract_cli.js'],
-  ['.github/workflows/publish-daily-gainers-unified-analysis.yml', 'publish_daily_gainers_unified_analysis.js'],
+  ['.github/workflows/publish-daily-gainers-unified-analysis.yml', 'build_daily_gainers_market_summary.js'],
+  ['.github/workflows/publish-daily-gainers-unified-analysis.yml', 'validate_daily_gainers_market_summary.js'],
+  ['.github/workflows/backfill-daily-gainers-research.yml', 'build_daily_gainers_market_summary.js'],
 ];
 for (const [relative, needle] of checks) {
   const text = fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -39,4 +46,4 @@ if (violations.length) {
   for (const violation of violations) console.error(`- ${violation}`);
   process.exit(1);
 }
-console.log(JSON.stringify({ valid: true, policy: CONTRACT.policy, contract_version: CONTRACT.contract_version, facts: CONTRACT.facts, ai: CONTRACT.ai, published: CONTRACT.published, checked_runtime_files: runtimeFiles }, null, 2));
+console.log(JSON.stringify({ valid: true, policy: CONTRACT.policy, contract_version: CONTRACT.contract_version, facts: CONTRACT.facts, ai: CONTRACT.ai, published: CONTRACT.published, market_summary: CONTRACT.market_summary, checked_runtime_files: runtimeFiles }, null, 2));
