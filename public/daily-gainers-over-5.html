@@ -124,12 +124,24 @@ function marketSummaryHtml(s){
   const themes=(t.theme_ranking||[]).slice(0,5);
   const watch=Array.isArray(s.next_day_watch)?s.next_day_watch:[];
   const badge=s.status==='final'?'完整總結':'初步總結';
-  const funding=f.coverage_status==='missing'?'尚無可判讀籌碼':`${num(f.available_stock_count)}/${num(b.stock_count)} 檔可判讀`;
-  const themeHtml=themes.length?`<ol class="theme-list">${themes.map(x=>`<li><b>${esc(x.label)}</b> ${num(x.stock_count)} 檔 · ${pct(x.share_pct)} · ${esc(x.strength)}</li>`).join('')}</ol>`:'<div class="muted">尚無足夠 canonical theme 標籤。</div>';
+  const semanticReady=s.status==='final'||(s.source_lineage?.semantic_source&&s.source_lineage.semantic_source!=='none'&&s.coverage?.analysis!=='missing');
+  const catalystReady=semanticReady&&Number(c.unavailable||0)===0;
+  const fundingReady=f.coverage_status&&f.coverage_status!=='missing';
+  const funding=fundingReady?`${num(f.available_stock_count)}/${num(b.stock_count)} 檔可判讀`:'籌碼 facts 尚未完成';
+  const themeHtml=semanticReady
+    ? (themes.length?`<ol class="theme-list">${themes.map(x=>`<li><b>${esc(x.label)}</b> ${num(x.stock_count)} 檔 · ${pct(x.share_pct)} · ${esc(x.strength)}</li>`).join('')}</ol>`:'<div class="muted">已完成新版語意分析，但目前沒有形成足夠集中的 canonical 主流題材。</div>')
+    : '<div class="muted"><b>新版題材結構化分析尚未完成。</b><br>目前可能已有逐檔新聞研究，但尚未轉換為最新 canonical theme schema；因此此處不以 0 檔表示。</div>';
+  const catalystHtml=catalystReady
+    ? `<div class="detail">直接 ${num(c.direct)} · 交叉佐證 ${num(c.corroborated)} · 間接 ${num(c.circumstantial)} · 無明確證據 ${num(c.none)}</div><div class="detail">公開催化覆蓋：<b>${pct(c.public_catalyst_coverage_pct)}</b></div>`
+    : '<div class="muted"><b>尚待最新版 Unified AI Analysis 完成後統計。</b><br>目前缺的是結構化 evidence_strength，不代表今天公開催化為 0。</div>';
+  const fundingHtml=fundingReady
+    ? `<div class="detail">${esc(funding)}</div><div class="detail">法人偏多 ${num(f.institutional_support_count)} · 偏空 ${num(f.institutional_opposition_count)}</div><div class="detail">融資增加 ${num(f.margin_increase_count)} · 減少 ${num(f.margin_decrease_count)}</div>`
+    : '<div class="muted"><b>籌碼 facts 尚未完成。</b><br>缺值不視為 0；待當日法人、融資、分點與 MI_INDEX 齊備後更新。</div>';
+  const narrative=semanticReady?(s.market_summary||''):'目前僅完成市場廣度等 deterministic 摘要；題材、催化與籌碼語意仍待最新版 Unified AI Analysis。';
   return `<div class="market-summary-head"><div><div class="pane-label">今日強勢股總覽</div><div class="market-summary-title">${esc(s.headline||'市場總結')}</div></div><span class="summary-badge ${esc(s.status)}">${badge}</span></div>
     <div class="summary-metrics"><div class="summary-metric"><b>≥5% 強勢股</b><strong>${num(b.stock_count)} 檔</strong></div><div class="summary-metric"><b>≥9.5% 類漲停</b><strong>${num(b.gain_9_5_plus_count)} 檔</strong></div><div class="summary-metric"><b>較前交易日</b><strong>${change}</strong></div><div class="summary-metric"><b>市場結構</b><strong>${esc(REGIME_LABELS[s.market_context?.regime]||s.market_context?.regime||'—')}</strong></div></div>
-    <div class="summary-grid"><div class="summary-block"><h3>主流題材</h3>${themeHtml}</div><div class="summary-block"><h3>催化可信度</h3><div class="detail">直接 ${num(c.direct)} · 交叉佐證 ${num(c.corroborated)} · 間接 ${num(c.circumstantial)} · 無明確證據 ${num(c.none)}</div><div class="detail">公開催化覆蓋：<b>${pct(c.public_catalyst_coverage_pct)}</b></div></div><div class="summary-block"><h3>籌碼結構</h3><div class="detail">${esc(funding)}</div><div class="detail">法人偏多 ${num(f.institutional_support_count)} · 偏空 ${num(f.institutional_opposition_count)}</div><div class="detail">融資增加 ${num(f.margin_increase_count)} · 減少 ${num(f.margin_decrease_count)}</div></div></div>
-    <div class="market-summary-text">${esc(s.market_summary||'')}</div>${watch.length?`<div class="summary-block" style="margin-top:12px"><h3>下一交易日觀察</h3><ul class="watch-list">${watch.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}<div class="coverage-note">資料覆蓋：analysis ${esc(s.coverage?.analysis||'—')}、facts ${esc(s.coverage?.facts||'—')}、funding ${esc(s.coverage?.funding||'—')}；缺值不會以 0 或鄰日資料替代。</div>`;
+    <div class="summary-grid"><div class="summary-block"><h3>主流題材</h3>${themeHtml}</div><div class="summary-block"><h3>催化可信度</h3>${catalystHtml}</div><div class="summary-block"><h3>籌碼結構</h3>${fundingHtml}</div></div>
+    <div class="market-summary-text">${esc(narrative)}</div>${watch.length?`<div class="summary-block" style="margin-top:12px"><h3>下一交易日觀察</h3><ul class="watch-list">${watch.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}<div class="coverage-note">資料覆蓋：analysis ${esc(s.coverage?.analysis||'—')}、facts ${esc(s.coverage?.facts||'—')}、funding ${esc(s.coverage?.funding||'—')}；缺值不會以 0 或鄰日資料替代。</div>`;
 }
 function card(row,a){
   const change=Number(row.change_pct),pctText=Number.isFinite(change)?`${change>=0?'+':''}${change.toFixed(2)}%`:'—';
