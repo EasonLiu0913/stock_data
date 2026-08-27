@@ -54,8 +54,6 @@ function stockCode(value) {
   return String(value ?? '').trim();
 }
 
-// Important: Number(null) === 0 in JavaScript. Repository null means unavailable,
-// not a verified zero, so reject null/undefined/blank before numeric conversion.
 function finiteNullable(value) {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
@@ -95,8 +93,6 @@ function buildThemeSummary(rows, analyses, taxonomy) {
   let themedStockCount = 0;
   for (const row of rows) {
     const code = stockCode(row.code);
-    // Primary theme is deterministic: the first canonical theme present in the
-    // explicit AI semantic tags. Price action alone never creates a theme.
     const primary = normalizedThemes(byCode.get(code), taxonomy.aliasToId)[0];
     if (!primary) continue;
     themedStockCount += 1;
@@ -116,11 +112,7 @@ function buildThemeSummary(rows, analyses, taxonomy) {
       near_limit_up_count: nearLimit,
       average_gain_pct: round(averageGain, 2),
       strength: count >= 5 ? 'very_strong' : count >= 3 ? 'strong' : count === 2 ? 'moderate' : 'isolated',
-      representative_stocks: members
-        .slice()
-        .sort((a, b) => (finiteNullable(b.change_pct) ?? -Infinity) - (finiteNullable(a.change_pct) ?? -Infinity))
-        .slice(0, 5)
-        .map((row) => stockCode(row.code)),
+      representative_stocks: members.slice().sort((a, b) => (finiteNullable(b.change_pct) ?? -Infinity) - (finiteNullable(a.change_pct) ?? -Infinity)).slice(0, 5).map((row) => stockCode(row.code)),
     };
   }).sort((a, b) => b.stock_count - a.stock_count || (b.average_gain_pct || 0) - (a.average_gain_pct || 0));
   const top1 = ranking[0]?.stock_count || 0;
@@ -147,12 +139,7 @@ function buildCatalystCoverage(analyses, total) {
   }
   counts.unavailable += Math.max(0, total - (analyses || []).length);
   const publicCatalystCount = counts.direct + counts.corroborated;
-  return {
-    ...counts,
-    public_catalyst_count: publicCatalystCount,
-    public_catalyst_coverage_pct: pct(publicCatalystCount, total),
-    cause_type_counts: causeTypes,
-  };
+  return { ...counts, public_catalyst_count: publicCatalystCount, public_catalyst_coverage_pct: pct(publicCatalystCount, total), cause_type_counts: causeTypes };
 }
 
 function buildFundingSummary(analyses, total) {
@@ -163,24 +150,19 @@ function buildFundingSummary(analyses, total) {
   let availableFlowStocks = 0;
   let institutionalAvailableStocks = 0;
   let marginAvailableStocks = 0;
-
   for (const item of analyses || []) {
     const flow = item.flow || {};
-    const nets = ['foreign', 'investment_trust', 'dealer']
-      .map((key) => finiteNullable(flow[key]?.net_lots))
-      .filter((value) => value !== null);
+    const nets = ['foreign', 'investment_trust', 'dealer'].map((key) => finiteNullable(flow[key]?.net_lots)).filter((value) => value !== null);
     const marginDelta = finiteNullable(flow.margin?.margin_delta);
     if (nets.length) institutionalAvailableStocks += 1;
     if (marginDelta !== null) marginAvailableStocks += 1;
     if (nets.length || marginDelta !== null) availableFlowStocks += 1;
-
     const institutionalNet = nets.reduce((sum, value) => sum + value, 0);
     if (nets.length && institutionalNet > 0) institutionalSupport += 1;
     if (nets.length && institutionalNet < 0) institutionalOpposition += 1;
     if (marginDelta !== null && marginDelta > 0) marginIncrease += 1;
     if (marginDelta !== null && marginDelta < 0) marginDecrease += 1;
   }
-
   return {
     coverage_status: availableFlowStocks === total && total > 0 ? 'complete' : availableFlowStocks > 0 ? 'partial' : 'missing',
     available_stock_count: availableFlowStocks,
@@ -210,9 +192,7 @@ function buildNarrative(raw, themeSummary, catalyst, funding) {
   const top = themeSummary.theme_ranking.slice(0, 3);
   const topText = top.length ? top.map((item) => `${item.label} ${item.stock_count} 檔`).join('、') : '題材結構仍待補足';
   const headline = top.length ? `${total} 檔強勢股，${top[0].label}為主要聚焦題材` : `${total} 檔強勢股，題材分類仍待補足`;
-  const fundingText = funding.coverage_status === 'missing'
-    ? '籌碼資料目前不足，未將缺值視為 0。'
-    : `已有 ${funding.available_stock_count}/${total} 檔可判讀籌碼，法人偏多 ${funding.institutional_support_count} 檔。`;
+  const fundingText = funding.coverage_status === 'missing' ? '籌碼資料目前不足，未將缺值視為 0。' : `已有 ${funding.available_stock_count}/${total} 檔可判讀籌碼，法人偏多 ${funding.institutional_support_count} 檔。`;
   const marketSummary = `本日共有 ${total} 檔股票漲幅達 5% 以上；${topText}。公開直接或交叉佐證催化覆蓋 ${catalyst.public_catalyst_coverage_pct}%。${fundingText}`;
   const nextDayWatch = [];
   if (top[0]) nextDayWatch.push(`觀察 ${top[0].label} 是否續量並維持族群擴散。`);
@@ -222,8 +202,8 @@ function buildNarrative(raw, themeSummary, catalyst, funding) {
   return { headline, marketSummary, nextDayWatch };
 }
 
-function sourceDescriptor(filePath) {
-  return { path: rel(filePath), available: Boolean(filePath && fs.existsSync(filePath)), sha256: sha256File(filePath) };
+function sourceDescriptor(filePath, extra = {}) {
+  return { path: rel(filePath), available: Boolean(filePath && fs.existsSync(filePath)), sha256: sha256File(filePath), ...extra };
 }
 
 function buildSummary(date, previousDateOverride = '') {
@@ -238,6 +218,11 @@ function buildSummary(date, previousDateOverride = '') {
 
   const analysis = readJson(analysisPath, true);
   const facts = readJson(factsPath, true);
+  const latestAnalysis = isLatestPublished(analysis) && String(analysis?.target_date) === date;
+  // Latest-rules-only: an old analysis file may exist for a historical date, but
+  // its schema must never feed current market-summary semantics.
+  const analyses = latestAnalysis && Array.isArray(analysis?.analyses) ? analysis.analyses : [];
+
   const previousDate = previousDateOverride || String(raw.previous_date || '');
   if (previousDate && !/^\d{8}$/.test(previousDate)) throw new Error(`Invalid previous_date: ${previousDate}`);
   if (previousDate && previousDate >= date) throw new Error(`previous_date must be before target_date: ${previousDate} >= ${date}`);
@@ -245,15 +230,13 @@ function buildSummary(date, previousDateOverride = '') {
   const previousRaw = previousPath ? readJson(previousPath, true) : null;
   if (previousRaw && String(previousRaw.target_date) !== previousDate) throw new Error(`Previous raw target_date mismatch: ${previousRaw.target_date} != ${previousDate}`);
 
-  const analyses = Array.isArray(analysis?.analyses) ? analysis.analyses : [];
   const analysisCodes = analyses.map((item) => stockCode(item.code));
   const rawCodes = rows.map((item) => stockCode(item.code));
-  const exactAnalysisCoverage = analysisCodes.length === rawCodes.length && analysisCodes.every((code, index) => code === rawCodes[index]);
-  const latestAnalysis = isLatestPublished(analysis) && String(analysis?.target_date) === date;
+  const exactAnalysisCoverage = latestAnalysis && analysisCodes.length === rawCodes.length && analysisCodes.every((code, index) => code === rawCodes[index]);
 
   const taxonomy = loadTaxonomy();
   const themeSummary = buildThemeSummary(rows, analyses, taxonomy);
-  themeSummary.market_structure = chooseRegime(raw, analysis, themeSummary);
+  themeSummary.market_structure = chooseRegime(raw, latestAnalysis ? analysis : null, themeSummary);
   const catalyst = buildCatalystCoverage(analyses, rows.length);
   const funding = buildFundingSummary(analyses, rows.length);
   const gains = rows.map((row) => finiteNullable(row.change_pct));
@@ -267,15 +250,15 @@ function buildSummary(date, previousDateOverride = '') {
     stock_count_change: previousRaw && Array.isArray(previousRaw.stocks) ? rows.length - previousRaw.stocks.length : null,
   };
   const narrative = buildNarrative(raw, themeSummary, catalyst, funding);
-  const status = latestAnalysis && exactAnalysisCoverage ? 'final' : 'preliminary';
-  const analysisCoverageStatus = exactAnalysisCoverage && latestAnalysis ? 'complete' : analyses.length ? 'partial' : 'missing';
+  const status = exactAnalysisCoverage ? 'final' : 'preliminary';
+  const analysisCoverageStatus = exactAnalysisCoverage ? 'complete' : 'missing';
   const factsCoverageStatus = facts ? 'complete' : 'missing';
   const previousCoverageStatus = previousRaw ? 'complete' : 'missing';
-
   const riskSignals = [];
   if (catalyst.none + catalyst.circumstantial > catalyst.public_catalyst_count) riskSignals.push('weak_catalyst_coverage');
   if (themeSummary.top_1_theme_share_pct >= 35) riskSignals.push('high_theme_concentration');
   if (funding.coverage_status !== 'complete') riskSignals.push('funding_coverage_incomplete');
+  if (analysis && !latestAnalysis) riskSignals.push('outdated_analysis_ignored');
 
   return {
     schema_version: DAILY_GAINERS_AI_CONTRACT.market_summary.schema_version,
@@ -289,9 +272,9 @@ function buildSummary(date, previousDateOverride = '') {
       raw: sourceDescriptor(rawPath),
       previous_raw: sourceDescriptor(previousPath),
       facts: sourceDescriptor(factsPath),
-      analysis: sourceDescriptor(analysisPath),
+      analysis: sourceDescriptor(analysisPath, { latest_contract: latestAnalysis }),
       theme_taxonomy: sourceDescriptor(TAXONOMY_PATH),
-      semantic_source: analysis ? 'published_unified_analysis' : 'none',
+      semantic_source: latestAnalysis ? 'published_unified_analysis' : 'none',
     },
     coverage: {
       overall: analysisCoverageStatus === 'complete' && factsCoverageStatus === 'complete' ? 'complete' : analysisCoverageStatus === 'missing' && factsCoverageStatus === 'missing' ? 'missing' : 'partial',
@@ -304,10 +287,7 @@ function buildSummary(date, previousDateOverride = '') {
       raw_stock_count: rows.length,
     },
     breadth,
-    market_context: {
-      regime: themeSummary.market_structure,
-      source: analysis?.market_context || null,
-    },
+    market_context: { regime: themeSummary.market_structure, source: latestAnalysis ? analysis.market_context || null : null },
     theme_summary: themeSummary,
     catalyst_coverage: catalyst,
     funding_summary: funding,
@@ -336,12 +316,7 @@ function updateManifest(summary) {
   const dates = new Set(Array.isArray(existing?.dates) ? existing.dates : []);
   dates.add(summary.target_date);
   const sorted = [...dates].filter((date) => /^\d{8}$/.test(date)).sort().reverse();
-  const substantive = {
-    schema_version: 1,
-    methodology_version: DAILY_GAINERS_AI_CONTRACT.market_summary.methodology_version,
-    latest_date: sorted[0] || null,
-    dates: sorted,
-  };
+  const substantive = { schema_version: 1, methodology_version: DAILY_GAINERS_AI_CONTRACT.market_summary.methodology_version, latest_date: sorted[0] || null, dates: sorted };
   if (existing && JSON.stringify(contentWithoutGeneratedAt(existing)) === JSON.stringify(substantive)) return false;
   fs.writeFileSync(manifestPath, `${JSON.stringify({ ...substantive, generated_at: new Date().toISOString() }, null, 2)}\n`);
   return true;
