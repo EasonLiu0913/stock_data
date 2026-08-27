@@ -14,6 +14,7 @@ on:
       - 'scripts/lib/daily_gainers_ai_contract.js'
       - 'scripts/daily_gainers_ai_contract_cli.js'
       - 'scripts/check_daily_gainers_ai_contract_consistency.js'
+      - '.github/workflows/daily-gainers-over-5.yml'
       - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
       - '.github/workflows/publish-daily-gainers-unified-analysis.yml'
@@ -36,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Check syntax and contract consistency
+      - name: Check syntax, contract consistency and real repository sample
         run: |
           set -euo pipefail
           node --check scripts/lib/daily_gainers_ai_contract.js
@@ -50,3 +51,15 @@ jobs:
           node scripts/build_daily_gainers_market_summary.js --self-test
           node scripts/validate_daily_gainers_market_summary.js --self-test
           node scripts/check_daily_gainers_ai_contract_consistency.js
+
+          latest="$(find data_daily_gain_over_5 -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' | sed 's/\.json$//' | sort | tail -1)"
+          [ -n "$latest" ] || { echo "No real daily-gainers sample found" >&2; exit 1; }
+          echo "Testing real repository date: $latest"
+          node scripts/build_daily_gainers_market_summary.js --date "$latest" --force
+          node scripts/validate_daily_gainers_market_summary.js --date "$latest"
+          node - "$latest" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const summary = JSON.parse(fs.readFileSync(`data_daily_gain_over_5/market-summary/${date}.json`, 'utf8'));
+          console.log(JSON.stringify({ date, status: summary.status, coverage: summary.coverage, breadth: summary.breadth, risk_signals: summary.risk_signals }, null, 2));
+          NODE
