@@ -56,7 +56,7 @@ jobs:
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
-      - name: Build latest-contract unified analysis
+      - name: Build latest-contract unified analysis and market summary
         shell: bash
         run: |
           set -euo pipefail
@@ -66,28 +66,44 @@ jobs:
           [ -s "$ai" ] || { echo "Missing $ai" >&2; exit 1; }
           mkdir -p "$(dirname "$pending")"
           cp "$ai" "$pending"
+
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
           node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/${date}.json"
           node scripts/daily_gainers_ai_contract_cli.js assert-ai "$pending"
           node scripts/validate_daily_gainers_ai_analysis.js "$date" "$pending"
           node scripts/publish_daily_gainers_unified_analysis.js "$date"
           node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${date}.json"
+
+          node scripts/build_daily_gainers_market_summary.js --date "$date"
+          node scripts/validate_daily_gainers_market_summary.js --date "$date"
+          node - "$date" <<'NODE'
+          const fs = require('node:fs');
+          const d = process.argv[2];
+          const p = JSON.parse(fs.readFileSync(`data_daily_gain_over_5/market-summary/${d}.json`, 'utf8'));
+          if (p.status !== 'final') throw new Error(`Expected final market summary after unified publish; got ${p.status}`);
+          console.log(JSON.stringify({ date: d, status: p.status, breadth: p.breadth, coverage: p.coverage }, null, 2));
+          NODE
+
           git checkout -- "$pending" 2>/dev/null || rm -f "$pending"
 
-      - name: Commit unified analysis
+      - name: Commit unified analysis and market summary
         id: commit
         shell: bash
         run: |
           set -euo pipefail
           date="${{ steps.date.outputs.date }}"
           file="data_daily_gain_over_5/analysis/${date}.json"
+          summary="data_daily_gain_over_5/market-summary/${date}.json"
+          manifest="data_daily_gain_over_5/market-summary/manifest.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "$file"
+          git add -- "$file" "$summary" "$manifest"
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "analysis: publish unified 5% research ${date}"
+          git commit -m "analysis: publish unified 5% research and market summary ${date}"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
