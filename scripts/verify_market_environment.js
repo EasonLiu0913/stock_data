@@ -15,6 +15,35 @@ function writeOutput(name, value) {
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${String(value)}\n`, 'utf8');
 }
 
+function compactDatesIn(value) {
+  return String(value || '').match(/20\d{6}/g) || [];
+}
+
+function assertPostCutoffSnapshotIsLeakageSafe(payload, forecastDate, baseDate) {
+  if (baseDate >= forecastDate) {
+    throw new Error(`Post-cutoff current-day snapshot requires a prior base trade date: base=${baseDate}, forecast=${forecastDate}`);
+  }
+
+  const sourceFiles = payload.source_files || {};
+  for (const [source, file] of Object.entries(sourceFiles)) {
+    if (!file) continue;
+    const futureDates = compactDatesIn(file).filter((date) => date > baseDate);
+    if (futureDates.length > 0) {
+      throw new Error(`Post-cutoff snapshot source exceeds base trade date: ${source}=${file}`);
+    }
+  }
+
+  const freshness = payload.data_freshness || {};
+  for (const [field, value] of [
+    ['actual_us_market_date', freshness.actual_us_market_date],
+    ['source_directory_date', freshness.source_directory_date],
+  ]) {
+    if (value && (!/^20\d{6}$/.test(String(value)) || String(value) > baseDate)) {
+      throw new Error(`Post-cutoff snapshot ${field} exceeds base trade date: ${value}`);
+    }
+  }
+}
+
 function main() {
   const args = parseArgs();
   const forecastDate = compactDate(args.get('forecast-date') || process.env.FORECAST_TARGET_DATE, 'forecast date');
@@ -39,8 +68,12 @@ function main() {
   if (forecastDate === today && !allowHistorical) {
     const cutoff = Date.parse(`${forecastDate.slice(0, 4)}-${forecastDate.slice(4, 6)}-${forecastDate.slice(6, 8)}T09:00:00+08:00`);
     const generatedAt = Date.parse(payload.generated_at || '');
-    if (!Number.isFinite(generatedAt) || generatedAt > cutoff) {
-      throw new Error('Current-day market environment snapshot was not created before the 09:00 Taipei cutoff');
+    if (!Number.isFinite(generatedAt)) {
+      throw new Error('Current-day market environment snapshot has an invalid generated_at timestamp');
+    }
+    if (generatedAt > cutoff) {
+      assertPostCutoffSnapshotIsLeakageSafe(payload, forecastDate, baseDate);
+      console.warn(`Current-day snapshot was generated after 09:00 Taipei (${payload.generated_at}); accepted because all dated sources are capped at base trade date ${baseDate}`);
     }
   }
   const { snapshot_hash: storedHash, ...withoutHash } = payload;
