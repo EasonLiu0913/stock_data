@@ -1,0 +1,94 @@
+name: "[07 研究] 發布 5% 漲幅新聞題材 Summary"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data_daily_gain_over_5/analysis-news/*.json'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '新聞題材分析日期 YYYYMMDD；留空取最新 analysis-news 日期'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-gainers-news-summary
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.date.outputs.date }}
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          if [ -z "$date" ] && [ "$EVENT_NAME" = "push" ]; then
+            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^data_daily_gain_over_5/analysis-news/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
+            [ -n "$changed" ] && date="$(basename "$changed" .json)"
+          fi
+          if [ -z "$date" ]; then
+            date="$(find data_daily_gain_over_5/analysis-news -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+      - name: Validate news analysis and build preliminary summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="${{ steps.date.outputs.date }}"
+          node --check scripts/validate_daily_gainers_news_analysis.js
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
+          node scripts/validate_daily_gainers_news_analysis.js "$d"
+          node scripts/build_daily_gainers_market_summary.js --date "$d"
+          node scripts/validate_daily_gainers_market_summary.js --date "$d"
+          node - "$d" <<'NODE'
+          const fs=require('node:fs');const d=process.argv[2];const p=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/market-summary/${d}.json`,'utf8'));
+          if(p.summary_stage!=='news_theme'||p.status!=='preliminary')throw new Error(`Expected preliminary news_theme summary; got ${p.status}/${p.summary_stage}`);
+          NODE
+      - name: Commit preliminary summary
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="${{ steps.date.outputs.date }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "data_daily_gain_over_5/market-summary/${d}.json" "data_daily_gain_over_5/market-summary/manifest.json"
+          if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git commit -m "analysis: publish preliminary 5% news summary ${d}"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            git fetch origin main && git rebase origin/main
+            sleep 5
+          done
+          exit 1
+
+  deploy:
+    needs: publish
+    if: needs.publish.result == 'success' && needs.publish.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.publish.outputs.target_date }}
