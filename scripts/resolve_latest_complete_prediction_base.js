@@ -15,10 +15,6 @@ const {
 
 const SMA_DIR = path.join(ROOT, 'data_fubon');
 
-function pad(value) {
-  return String(value).padStart(2, '0');
-}
-
 function taipeiParts(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',
@@ -101,29 +97,28 @@ function candidateSmaDates(maxCompactDate, holidays = loadHolidaySet()) {
 }
 
 function resolveLatestCompletePredictionBase(now = new Date(), holidays = loadHolidaySet()) {
-  const maxBaseIso = latestEligibleBaseDate(now, holidays);
-  const maxBaseCompact = compact(maxBaseIso);
-  const candidates = candidateSmaDates(maxBaseCompact, holidays);
-  const checked = [];
+  const expectedBaseIso = latestEligibleBaseDate(now, holidays);
+  const expectedBaseCompact = compact(expectedBaseIso);
+  const inspection = inspectCoreFiles(expectedBaseCompact);
 
-  for (const baseDate of candidates) {
-    const inspection = inspectCoreFiles(baseDate);
-    checked.push({ base_date: baseDate, missing: inspection.missing });
-    if (!inspection.complete) continue;
-    const baseIso = `${baseDate.slice(0, 4)}-${baseDate.slice(4, 6)}-${baseDate.slice(6, 8)}`;
-    const forecastIso = nextTradingDate(baseIso, holidays, false);
-    return {
-      mode: 'auto_latest_complete_base',
-      base_trade_date: baseDate,
-      forecast_target_date: compact(forecastIso),
-      latest_eligible_base_date: maxBaseCompact,
-      checked_candidates: checked.length,
-      skipped_incomplete_candidates: checked.slice(0, -1),
-    };
+  if (!inspection.complete) {
+    const details = inspection.missing.map((file) => `- ${file}`).join('\n');
+    throw new Error(
+      `最新應有預測基準日 ${expectedBaseCompact} 的必要資料尚未完整；為避免使用過期資料，禁止自動退回更早交易日。` +
+      `${details ? `\n缺少：\n${details}` : ''}`
+    );
   }
 
-  const details = checked.slice(0, 5).map((item) => `${item.base_date}: ${item.missing.join(', ') || 'unknown'}`).join('\n');
-  throw new Error(`找不到可用的完整預測基準日。最新可接受基準日=${maxBaseCompact}${details ? `\n${details}` : ''}`);
+  const forecastIso = nextTradingDate(expectedBaseIso, holidays, false);
+  return {
+    mode: 'auto_exact_latest_eligible_base',
+    base_trade_date: expectedBaseCompact,
+    forecast_target_date: compact(forecastIso),
+    latest_eligible_base_date: expectedBaseCompact,
+    checked_candidates: 1,
+    skipped_incomplete_candidates: [],
+    stale_fallback_allowed: false,
+  };
 }
 
 function main() {
