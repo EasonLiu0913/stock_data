@@ -17,6 +17,22 @@
     label { display: block; font-weight: 800; margin-bottom: 6px; }
     select { min-width: 190px; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
     .status { padding: 12px 16px; margin-bottom: 14px; color: #475569; }
+    .market-summary-card { padding: 18px; margin-bottom: 14px; }
+    .market-summary-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+    .market-summary-title { font-size: 1.14rem; font-weight: 950; line-height: 1.45; }
+    .summary-badge { flex: 0 0 auto; border-radius: 999px; padding: 5px 9px; font-size: .75rem; font-weight: 900; background: #f1f5f9; color: #475569; }
+    .summary-badge.final { background: #dcfce7; color: #166534; }
+    .summary-badge.preliminary { background: #fef3c7; color: #92400e; }
+    .summary-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-bottom: 14px; }
+    .summary-metric { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; padding: 10px; }
+    .summary-metric b { display: block; color: #64748b; font-size: .72rem; margin-bottom: 4px; }
+    .summary-metric strong { font-size: 1.08rem; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+    .summary-block { background: #f8fafc; border-radius: 10px; padding: 12px; min-width: 0; }
+    .summary-block h3 { margin: 0 0 8px; font-size: .9rem; }
+    .theme-list, .watch-list { margin: 0; padding-left: 18px; color: #475569; line-height: 1.65; font-size: .87rem; }
+    .market-summary-text { margin-top: 12px; color: #334155; line-height: 1.7; }
+    .coverage-note { margin-top: 10px; font-size: .78rem; color: #64748b; }
     .stock-list { display: grid; gap: 14px; }
     .stock-card { overflow: hidden; }
     .stock-card-grid { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(320px, 1.15fr) minmax(360px, 1.35fr); }
@@ -43,12 +59,18 @@
     @media (max-width: 1120px) {
       .stock-card-grid { grid-template-columns: minmax(240px, .8fr) minmax(0, 1.2fr); }
       .stock-pane-flow { grid-column: 1 / -1; border-left: 0 !important; border-top: 1px solid #e2e8f0; }
+      .summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     }
     @media (max-width: 760px) {
       .wrap { padding: 10px 8px 30px; }
       .toolbar { position: sticky; top: 0; z-index: 5; display: block; }
       .toolbar .summary { margin: 10px 0 0; }
       select { width: 100%; min-width: 0; min-height: 42px; }
+      .market-summary-head { display: block; }
+      .summary-badge { display: inline-block; margin-top: 8px; }
+      .summary-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .summary-grid { display: block; }
+      .summary-block + .summary-block { margin-top: 9px; }
       .stock-card-grid { display: block; }
       .stock-pane + .stock-pane { border-left: 0; border-top: 1px solid #e2e8f0; }
       .stock-pane-flow { border-top: 1px solid #e2e8f0 !important; }
@@ -56,6 +78,7 @@
     }
     @media (max-width: 476px) {
       .wrap { padding: 8px 7px 26px; }
+      .market-summary-card { padding: 14px 12px; }
       .stock-pane { padding: 14px 12px; }
       .flow-grid { gap: 5px; }
       .metric { padding: 7px; }
@@ -73,42 +96,61 @@
     <div><label for="dateSelect">交易日</label><select id="dateSelect"></select></div>
     <div id="summary" class="summary"></div>
   </section>
+  <section id="marketSummary" class="market-summary-card card"><div class="muted">載入整體市場總結…</div></section>
   <section id="status" class="status card">載入分析狀態…</section>
   <section class="stock-list" id="content"><div class="card empty">載入中…</div></section>
 </main>
 <script>
-const ROOT='../data_daily_gain_over_5', ANALYSIS=`${ROOT}/analysis`;
-const $=id=>document.getElementById(id), dateSelect=$('dateSelect'),content=$('content'),meta=$('meta'),summary=$('summary'),status=$('status');
+const ROOT='../data_daily_gain_over_5', ANALYSIS=`${ROOT}/analysis`, MARKET_SUMMARY=`${ROOT}/market-summary`;
+const $=id=>document.getElementById(id), dateSelect=$('dateSelect'),content=$('content'),meta=$('meta'),summary=$('summary'),status=$('status'),marketSummary=$('marketSummary');
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const num=v=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:2});
 const fmtDate=v=>v?.length===8?`${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}`:v||'—';
+const pct=v=>v==null||!Number.isFinite(Number(v))?'—':`${Number(v).toFixed(1)}%`;
 const TAG_LABELS={
-  cause_type:{fundamental:'基本面',direct:'直接事件',industry_theme:'產業／題材',flow:'籌碼／資金',technical:'技術面',market:'市場因素',mixed:'綜合因素',unknown:'未明確分類'},
-  evidence_strength:{direct:'直接證據',corroborated:'交叉佐證',circumstantial:'間接佐證',weak:'證據偏弱',none:'無明確證據'},
+  cause_type:{company_event:'公司事件',industry_theme:'產業／題材',fundamental:'基本面',institutional_flow:'法人／籌碼',technical_momentum:'技術動能',market_risk_on:'市場風險偏好',low_liquidity:'低流動性',mixed:'綜合因素',unknown:'未明確分類'},
+  evidence_strength:{direct:'直接證據',corroborated:'交叉佐證',circumstantial:'間接佐證',none:'無明確證據'},
   confidence:{high:'高信心',medium:'中等信心',low:'低信心'}
 };
+const REGIME_LABELS={broad_risk_on:'全面 Risk-on',theme_rotation:'題材輪動',index_led_rally:'指數帶動',defensive_rotation:'防禦輪動',speculative_breadth:'投機廣度擴張',risk_off_with_pockets:'Risk-off 中局部強勢',mixed:'混合盤勢',unknown:'尚未判定'};
 const tagLabel=(group,value)=>TAG_LABELS[group]?.[value]||value||'—';
 async function json(url,optional=false){const r=await fetch(url,{cache:'no-store'});if(optional&&r.status===404)return null;if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return r.json()}
 function actor(v){if(!v)return '—';if(v.record_status==='unavailable')return '資料未就緒';if(v.record_status==='no_record')return '官方無該股紀錄';if(v.net_lots==null)return v.record_status||'—';return `${Number(v.net_lots).toLocaleString('zh-TW')} 張`}
 function sources(list){if(!Array.isArray(list)||!list.length)return'';return `<div class="sources">${list.map((s,i)=>{try{const u=new URL(s.url);if(!['http:','https:'].includes(u.protocol))return'';return `<a href="${esc(u.href)}" target="_blank" rel="noopener">${esc(s.title||`來源 ${i+1}`)}</a>`}catch{return''}}).join('')}</div>`}
+function marketSummaryHtml(s){
+  if(!s)return '<div class="muted">本日尚未產生新版整體市場總結；逐檔資料仍可正常查看。歷史回填完成後會自動出現。</div>';
+  const b=s.breadth||{},t=s.theme_summary||{},c=s.catalyst_coverage||{},f=s.funding_summary||{};
+  const change=b.stock_count_change==null?'—':`${b.stock_count_change>=0?'+':''}${num(b.stock_count_change)} 檔`;
+  const themes=(t.theme_ranking||[]).slice(0,5);
+  const watch=Array.isArray(s.next_day_watch)?s.next_day_watch:[];
+  const badge=s.status==='final'?'完整總結':'初步總結';
+  const funding=f.coverage_status==='missing'?'尚無可判讀籌碼':`${num(f.available_stock_count)}/${num(b.stock_count)} 檔可判讀`;
+  const themeHtml=themes.length?`<ol class="theme-list">${themes.map(x=>`<li><b>${esc(x.label)}</b> ${num(x.stock_count)} 檔 · ${pct(x.share_pct)} · ${esc(x.strength)}</li>`).join('')}</ol>`:'<div class="muted">尚無足夠 canonical theme 標籤。</div>';
+  return `<div class="market-summary-head"><div><div class="pane-label">今日強勢股總覽</div><div class="market-summary-title">${esc(s.headline||'市場總結')}</div></div><span class="summary-badge ${esc(s.status)}">${badge}</span></div>
+    <div class="summary-metrics"><div class="summary-metric"><b>≥5% 強勢股</b><strong>${num(b.stock_count)} 檔</strong></div><div class="summary-metric"><b>≥9.5% 類漲停</b><strong>${num(b.gain_9_5_plus_count)} 檔</strong></div><div class="summary-metric"><b>較前交易日</b><strong>${change}</strong></div><div class="summary-metric"><b>市場結構</b><strong>${esc(REGIME_LABELS[s.market_context?.regime]||s.market_context?.regime||'—')}</strong></div></div>
+    <div class="summary-grid"><div class="summary-block"><h3>主流題材</h3>${themeHtml}</div><div class="summary-block"><h3>催化可信度</h3><div class="detail">直接 ${num(c.direct)} · 交叉佐證 ${num(c.corroborated)} · 間接 ${num(c.circumstantial)} · 無明確證據 ${num(c.none)}</div><div class="detail">公開催化覆蓋：<b>${pct(c.public_catalyst_coverage_pct)}</b></div></div><div class="summary-block"><h3>籌碼結構</h3><div class="detail">${esc(funding)}</div><div class="detail">法人偏多 ${num(f.institutional_support_count)} · 偏空 ${num(f.institutional_opposition_count)}</div><div class="detail">融資增加 ${num(f.margin_increase_count)} · 減少 ${num(f.margin_decrease_count)}</div></div></div>
+    <div class="market-summary-text">${esc(s.market_summary||'')}</div>${watch.length?`<div class="summary-block" style="margin-top:12px"><h3>下一交易日觀察</h3><ul class="watch-list">${watch.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}<div class="coverage-note">資料覆蓋：analysis ${esc(s.coverage?.analysis||'—')}、facts ${esc(s.coverage?.facts||'—')}、funding ${esc(s.coverage?.funding||'—')}；缺值不會以 0 或鄰日資料替代。</div>`;
+}
 function card(row,a){
-  const change=Number(row.change_pct),pct=Number.isFinite(change)?`${change>=0?'+':''}${change.toFixed(2)}%`:'—';
+  const change=Number(row.change_pct),pctText=Number.isFinite(change)?`${change>=0?'+':''}${change.toFixed(2)}%`:'—';
   const f=a?.flow||{},t=a?.technical||{},m=f.margin||{},b=f.broker||{};
   const evidence=Array.isArray(a?.evidence)?a.evidence.join('；'):'';
   const follow=Array.isArray(a?.follow_up)?a.follow_up.join('；'):'';
   const causeLabel=tagLabel('cause_type',a?.cause_type),evidenceLabel=tagLabel('evidence_strength',a?.evidence_strength),confidenceLabel=tagLabel('confidence',a?.confidence);
   return `<article class="stock-card card"><div class="stock-card-grid">
-    <section class="stock-pane stock-pane-market"><div class="pane-label">股票與行情</div><div class="stock-heading"><div><div class="stock-code">${esc(row.code)}</div><div class="stock-name">${esc(row.name)}</div></div><div><div class="gain">${pct}</div><div class="small">收盤 ${num(row.close)}</div></div></div><div class="metrics"><div class="metric"><b>前收</b>${num(row.previous_close)}</div><div class="metric"><b>開盤</b>${num(row.open)}</div><div class="metric"><b>最高</b>${num(row.high)}</div><div class="metric"><b>最低</b>${num(row.low)}</div></div><div class="detail">成交量：${num(row.volume)}</div></section>
+    <section class="stock-pane stock-pane-market"><div class="pane-label">股票與行情</div><div class="stock-heading"><div><div class="stock-code">${esc(row.code)}</div><div class="stock-name">${esc(row.name)}</div></div><div><div class="gain">${pctText}</div><div class="small">收盤 ${num(row.close)}</div></div></div><div class="metrics"><div class="metric"><b>前收</b>${num(row.previous_close)}</div><div class="metric"><b>開盤</b>${num(row.open)}</div><div class="metric"><b>最高</b>${num(row.high)}</div><div class="metric"><b>最低</b>${num(row.low)}</div></div><div class="detail">成交量：${num(row.volume)}</div></section>
     <section class="stock-pane stock-pane-reason"><div class="pane-label">上漲可能原因</div>${a?`<div class="reason">${esc(a.reason_summary)}</div><div><span class="pill">${esc(causeLabel)} / ${esc(evidenceLabel)} / ${esc(confidenceLabel)}</span></div>${evidence?`<div class="detail"><b>證據：</b>${esc(evidence)}</div>`:''}${follow?`<div class="detail"><b>後續：</b>${esc(follow)}</div>`:''}${sources(a.sources)}`:'<div class="muted">尚未產生最新版 unified analysis。</div>'}</section>
     <section class="stock-pane stock-pane-flow"><div class="pane-label">籌碼與技術 facts</div>${a?`<div class="flow-grid"><div class="metric"><b>外資</b>${esc(actor(f.foreign))}</div><div class="metric"><b>投信</b>${esc(actor(f.investment_trust))}</div><div class="metric"><b>自營商</b>${esc(actor(f.dealer))}</div></div><div class="detail"><b>融資：</b>${m.margin_delta==null?'—':num(m.margin_delta)}；<b>融券：</b>${m.short_delta==null?'—':num(m.short_delta)}</div><div class="detail"><b>分點集中：</b>Top3 買 ${num(b.top3_buy_share_pct)}% / Top3 賣 ${num(b.top3_sell_share_pct)}%</div><div class="detail"><b>技術：</b>SMA5 ${num(t.sma5)}、SMA20 ${num(t.sma20)}、SMA60 ${num(t.sma60)}；量比前日 ${num(t.volume_ratio_vs_previous)}x</div>`:'<div class="muted">尚無最新版 facts。</div>'}</section>
   </div></article>`;
 }
 async function load(date){
   content.innerHTML='<div class="card empty">載入中…</div>';
-  const [raw,analysis]=await Promise.all([json(`${ROOT}/${date}.json`),json(`${ANALYSIS}/${date}.json`,true)]);
+  marketSummary.innerHTML='<div class="muted">載入整體市場總結…</div>';
+  const [raw,analysis,market]=await Promise.all([json(`${ROOT}/${date}.json`),json(`${ANALYSIS}/${date}.json`,true),json(`${MARKET_SUMMARY}/${date}.json`,true)]);
   const rows=raw.stocks||[],map=new Map((analysis?.analyses||[]).map(x=>[String(x.code),x]));
   meta.textContent=`比較 ${fmtDate(raw.previous_date)} → ${fmtDate(raw.target_date)}；門檻 ≥ ${raw.threshold_pct}%`;
   summary.textContent=`符合 ${rows.length} 檔`;
+  marketSummary.innerHTML=marketSummaryHtml(market);
   status.innerHTML=analysis?`<b>正式分析：</b>${esc(analysis.methodology_version)}；模式 ${esc(analysis.generation_mode)}；${analysis.stock_count}/${rows.length} 檔。`:'<b>正式分析：</b>尚未回填至最新版 contract。';
   content.innerHTML=rows.length?rows.map(r=>card(r,map.get(String(r.code)))).join(''):'<div class="card empty">本日沒有符合股票。</div>';
 }
