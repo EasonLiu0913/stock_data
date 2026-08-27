@@ -41,10 +41,13 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /config/daily-gainers-ai-contract.json
+            /config/daily-gainers-theme-taxonomy.json
             /scripts/lib/daily_gainers_ai_contract.js
             /scripts/daily_gainers_ai_contract_cli.js
             /scripts/build_daily_gainers_ai_facts.js
             /scripts/publish_daily_gainers_unified_analysis.js
+            /scripts/build_daily_gainers_market_summary.js
+            /scripts/validate_daily_gainers_market_summary.js
             /data_daily_gain_over_5/*.json
             /research_pending/daily-gainers-ai/*.json
             /research_pending/daily-gainers-backfill-request.json
@@ -85,13 +88,17 @@ jobs:
 
           patterns=(
             '/config/daily-gainers-ai-contract.json'
+            '/config/daily-gainers-theme-taxonomy.json'
             '/scripts/lib/daily_gainers_ai_contract.js'
             '/scripts/daily_gainers_ai_contract_cli.js'
             '/scripts/build_daily_gainers_ai_facts.js'
             '/scripts/publish_daily_gainers_unified_analysis.js'
+            '/scripts/build_daily_gainers_market_summary.js'
+            '/scripts/validate_daily_gainers_market_summary.js'
             '/data_daily_gain_over_5/*.json'
             '/data_daily_gain_over_5/analysis-facts/'
             '/data_daily_gain_over_5/analysis/'
+            '/data_daily_gain_over_5/market-summary/'
             '/research_pending/daily-gainers-ai/'
             '/research_pending/daily-gainers-backfill-request.json'
             '/.github/workflows/'
@@ -99,6 +106,7 @@ jobs:
           for d in "${dates[@]}"; do
             prev="$(node -e "const p=require('./data_daily_gain_over_5/${d}.json'); process.stdout.write(String(p.previous_date||''))")"
             [[ "$prev" =~ ^20[0-9]{6}$ ]] || { echo "Invalid previous_date for $d: $prev" >&2; exit 1; }
+            patterns+=("/data_daily_gain_over_5/${prev}.json")
             patterns+=("/data_fubon/fubon_${d}_sma.json")
             patterns+=("/data_fubon/fubon_${prev}_sma.json")
             patterns+=("/data_twse_margin_balance/${d}_twse_margin_balance.csv")
@@ -122,7 +130,7 @@ jobs:
           echo "- 實際清單交易日：${dates[0]} ～ ${dates[-1]}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 交易日數：${#dates[@]}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Rebuild facts and unified published files
+      - name: Rebuild facts, unified files and market summaries
         shell: bash
         env:
           DATES: ${{ steps.range.outputs.dates }}
@@ -130,9 +138,15 @@ jobs:
           set -euo pipefail
           node --check scripts/build_daily_gainers_ai_facts.js
           node --check scripts/publish_daily_gainers_unified_analysis.js
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
+          node scripts/build_daily_gainers_market_summary.js --self-test
+          node scripts/validate_daily_gainers_market_summary.js --self-test
           IFS=',' read -ra dates <<< "$DATES"
           ai_days=0
           fallback_days=0
+          final_summary_days=0
+          preliminary_summary_days=0
           for d in "${dates[@]}"; do
             echo "=== Rebuild $d ==="
             node scripts/build_daily_gainers_ai_facts.js "$d"
@@ -146,12 +160,22 @@ jobs:
               fallback_days=$((fallback_days + 1))
             fi
             node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${d}.json"
+            node scripts/build_daily_gainers_market_summary.js --date "$d"
+            node scripts/validate_daily_gainers_market_summary.js --date "$d"
+            status="$(node -e "const p=require('./data_daily_gain_over_5/market-summary/${d}.json');process.stdout.write(p.status)")"
+            if [ "$status" = "final" ]; then
+              final_summary_days=$((final_summary_days + 1))
+            else
+              preliminary_summary_days=$((preliminary_summary_days + 1))
+            fi
           done
           echo "## 5% 最新規則歷史回填結果" >> "$GITHUB_STEP_SUMMARY"
           echo "- 交易日：${#dates[@]}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 新版 AI v3 可用：$ai_days 日" >> "$GITHUB_STEP_SUMMARY"
           echo "- deterministic fallback：$fallback_days 日" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 所有正式檔均寫入 data_daily_gain_over_5/analysis/YYYYMMDD.json，且符合目前 published contract。" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Market Summary final：$final_summary_days 日" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Market Summary preliminary：$preliminary_summary_days 日" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 正式逐檔分析與 market-summary 均使用目前 central contract；缺歷史依賴時維持 missing/partial，不以鄰日或 0 代替。" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit rebuilt current-contract history
         shell: bash
@@ -162,12 +186,12 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_daily_gain_over_5/analysis-facts/ data_daily_gain_over_5/analysis/
+          git add data_daily_gain_over_5/analysis-facts/ data_daily_gain_over_5/analysis/ data_daily_gain_over_5/market-summary/
           if git diff --cached --quiet; then
             echo "No changes"
             exit 0
           fi
-          git commit -m "analysis: rebuild 5% research to latest contract ${START}-${END}"
+          git commit -m "analysis: rebuild 5% research and summaries ${START}-${END}"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
               echo "Published rebuilt history; reusable Pages deploy runs next."
