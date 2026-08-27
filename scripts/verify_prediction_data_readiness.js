@@ -199,6 +199,7 @@ function main() {
     const details = blocking.map((source) => `${source.label}: ${source.status} (${source.reason || source.path})`).join('; ');
     throw new Error(`Prediction data readiness failed: ${details}`);
   }
+  return report;
 }
 
 if (require.main === module) {
@@ -210,4 +211,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { inspectSource, sourceDefinitions };
+module.exports = { inspectSource, sourceDefinitions, main };
