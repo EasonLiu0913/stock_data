@@ -57,8 +57,13 @@ jobs:
           filter: blob:none
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            /config/daily-gainers-ai-contract.json
+            /config/daily-gainers-theme-taxonomy.json
             /data_daily_gain_over_5/
+            /scripts/lib/daily_gainers_ai_contract.js
             /scripts/generate_daily_gainers_over_5.js
+            /scripts/build_daily_gainers_market_summary.js
+            /scripts/validate_daily_gainers_market_summary.js
             /.github/workflows/
 
       - name: Resolve dates and materialize required SMA files
@@ -92,9 +97,6 @@ jobs:
             dates_raw="${all_dates[${#all_dates[@]}-1]}"
           fi
 
-          # 防呆：平日下午的自動模式只能產生「台北今天」的清單。
-          # 如果最新 SMA 仍停在前一交易日，表示今日資料尚未就緒；此時明確提醒並跳過，
-          # 不可把舊日期的成功 run 誤認成今日清單已完成。手動指定日期／backfill 不受限制。
           taipei_today="$(TZ='Asia/Taipei' date '+%Y%m%d')"
           taipei_weekday="$(TZ='Asia/Taipei' date '+%u')"
           taipei_hhmm="$(TZ='Asia/Taipei' date '+%H%M')"
@@ -139,8 +141,13 @@ jobs:
           done
 
           patterns=(
+            '/config/daily-gainers-ai-contract.json'
+            '/config/daily-gainers-theme-taxonomy.json'
             '/data_daily_gain_over_5/'
+            '/scripts/lib/daily_gainers_ai_contract.js'
             '/scripts/generate_daily_gainers_over_5.js'
+            '/scripts/build_daily_gainers_market_summary.js'
+            '/scripts/validate_daily_gainers_market_summary.js'
             '/.github/workflows/'
           )
           for d in "${!needed[@]}"; do
@@ -158,13 +165,18 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate generator
+      - name: Validate generators
         if: steps.resolve.outputs.ready == 'true'
         run: |
+          set -euo pipefail
           node --check scripts/generate_daily_gainers_over_5.js
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
           node scripts/generate_daily_gainers_over_5.js --self-test
+          node scripts/build_daily_gainers_market_summary.js --self-test
+          node scripts/validate_daily_gainers_market_summary.js --self-test
 
-      - name: Generate daily list
+      - name: Generate daily list and preliminary market summary
         if: steps.resolve.outputs.ready == 'true'
         id: generate
         shell: bash
@@ -184,13 +196,19 @@ jobs:
             stock_count=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.stock_count))' "$result")
             total_count=$((total_count + stock_count))
             last_date="$target_date"
-            echo "- $target_date：$stock_count 檔" >> "$GITHUB_STEP_SUMMARY"
+
+            node scripts/build_daily_gainers_market_summary.js --date "$target_date"
+            node scripts/validate_daily_gainers_market_summary.js --date "$target_date"
+            summary_status="$(node -e "const p=require('./data_daily_gain_over_5/market-summary/${target_date}.json');process.stdout.write(String(p.status))")"
+
+            echo "- $target_date：$stock_count 檔；Market Summary：$summary_status" >> "$GITHUB_STEP_SUMMARY"
           done
           echo "target_date=$last_date" >> "$GITHUB_OUTPUT"
           echo "stock_count=$total_count" >> "$GITHUB_OUTPUT"
           echo "- 條件：收盤價相對前一個 SMA 交易日收盤價漲幅 ≥ 5%" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 新清單會同步建立 market-summary；若最新版 Unified Analysis 尚未完成則保持 preliminary，絕不混用舊 schema。" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Commit generated list
+      - name: Commit generated list and market summary
         if: steps.resolve.outputs.ready == 'true'
         shell: bash
         run: |
