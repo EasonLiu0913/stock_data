@@ -18,6 +18,15 @@ function uniqueStrings(values) {
   return Array.isArray(values) && values.every((v) => isText(v)) && new Set(values).size === values.length;
 }
 
+function validateVerificationSources(sources, code) {
+  assert(Array.isArray(sources), `institutional verification sources must be array for ${code}`);
+  for (const source of sources) {
+    assert(source && typeof source === 'object', `institutional verification source must be object for ${code}`);
+    assert(isText(source.title), `institutional verification source.title required for ${code}`);
+    assert(isHttpUrl(source.url), `institutional verification source.url must be http(s) for ${code}`);
+  }
+}
+
 function main() {
   const date = process.argv[2];
   const inputArg = process.argv[3] || `research_pending/daily-gainers-ai/${date}.json`;
@@ -85,8 +94,11 @@ function main() {
       const verification = item.institutional_verification;
       assert(verification && typeof verification === 'object', `institutional_verification must be object for ${item.code}`);
       assert(validVerification.has(verification.status), `invalid institutional verification status for ${item.code}`);
-      assert(Array.isArray(verification.sources), `institutional verification sources must be array for ${item.code}`);
       const required = fact?.flow?.institutional_verification_required === true;
+
+      // Central contract only requires sources/checked_at/summary when external
+      // institutional verification is actually required. A not_required record
+      // may omit sources entirely; if sources are present, still validate them.
       if (required) {
         for (const field of CONTRACT.institutional_verification.required_fields_when_verification_required) {
           assert(Object.prototype.hasOwnProperty.call(verification, field), `institutional verification ${field} required for ${item.code}`);
@@ -94,6 +106,9 @@ function main() {
         assert(verification.status !== 'not_required', `institutional verification cannot be not_required for ${item.code}`);
         assert(isText(verification.summary), `institutional verification summary required for ${item.code}`);
         assert(isIsoTimestamp(verification.checked_at), `institutional verification checked_at must be ISO timestamp for ${item.code}`);
+        validateVerificationSources(verification.sources, item.code);
+      } else if (verification.sources != null) {
+        validateVerificationSources(verification.sources, item.code);
       }
     }
   }
