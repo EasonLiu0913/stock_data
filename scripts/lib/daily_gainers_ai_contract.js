@@ -37,7 +37,7 @@ function loadDailyGainersAiContract() {
   const taxonomy = JSON.parse(fs.readFileSync(taxonomyPath, 'utf8'));
   assert(Array.isArray(taxonomy.themes) && taxonomy.themes.length > 0, 'theme taxonomy themes must be non-empty');
   const ids = new Set();
-  const aliases = new Set();
+  const aliasOwners = new Map();
   for (const theme of taxonomy.themes) {
     assert(typeof theme.id === 'string' && /^[a-z0-9_]+$/.test(theme.id), `invalid theme id ${theme.id}`);
     assert(!ids.has(theme.id), `duplicate theme id ${theme.id}`);
@@ -46,8 +46,9 @@ function loadDailyGainersAiContract() {
     assert(Array.isArray(theme.aliases), `theme ${theme.id} aliases must be an array`);
     for (const rawAlias of [theme.id, ...theme.aliases]) {
       const alias = String(rawAlias).toLowerCase();
-      assert(!aliases.has(alias), `duplicate theme alias ${alias}`);
-      aliases.add(alias);
+      const owner = aliasOwners.get(alias);
+      assert(!owner || owner === theme.id, `theme alias ${alias} is shared by ${owner} and ${theme.id}`);
+      aliasOwners.set(alias, theme.id);
     }
   }
   assert(typeof taxonomy.fallback_theme?.id === 'string', 'theme taxonomy fallback_theme.id is required');
