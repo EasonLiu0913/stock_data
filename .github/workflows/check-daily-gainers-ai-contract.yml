@@ -5,15 +5,19 @@ on:
     branches: [main]
     paths:
       - 'config/daily-gainers-ai-contract.json'
+      - 'config/daily-gainers-theme-taxonomy.json'
       - 'scripts/build_daily_gainers_ai_facts.js'
       - 'scripts/validate_daily_gainers_ai_analysis.js'
       - 'scripts/publish_daily_gainers_unified_analysis.js'
+      - 'scripts/build_daily_gainers_market_summary.js'
+      - 'scripts/validate_daily_gainers_market_summary.js'
       - 'scripts/lib/daily_gainers_ai_contract.js'
       - 'scripts/daily_gainers_ai_contract_cli.js'
       - 'scripts/check_daily_gainers_ai_contract_consistency.js'
       - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
       - '.github/workflows/publish-daily-gainers-unified-analysis.yml'
+      - '.github/workflows/backfill-daily-gainers-research.yml'
       - '.github/workflows/check-daily-gainers-ai-contract.yml'
   workflow_dispatch:
 
@@ -40,5 +44,9 @@ jobs:
           node --check scripts/build_daily_gainers_ai_facts.js
           node --check scripts/validate_daily_gainers_ai_analysis.js
           node --check scripts/publish_daily_gainers_unified_analysis.js
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
           node --check scripts/check_daily_gainers_ai_contract_consistency.js
+          node scripts/build_daily_gainers_market_summary.js --self-test
+          node scripts/validate_daily_gainers_market_summary.js --self-test
           node scripts/check_daily_gainers_ai_contract_consistency.js
