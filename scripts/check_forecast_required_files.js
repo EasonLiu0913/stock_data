@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { main: verifyPredictionDataReadiness } = require('./verify_prediction_data_readiness');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -69,29 +70,33 @@ function main() {
   const baseDate = normalizeCompactDate(process.env.FORECAST_BASE_DATE);
   const problems = inspectRequiredFiles(ROOT, baseDate);
 
-  if (problems.length === 0) {
-    console.log(`必要檔案檢查通過：基準交易日 ${baseDate}，共 ${requiredFiles(baseDate).length} 個台股／專案必要檔案。External Market 由 daily-stock-prediction.yml 的獨立 exact-date 驗證負責。`);
+  if (problems.length !== 0) {
+    const details = problems
+      .map((file) => `${file.label}: ${file.relativePath} (${file.reason})`)
+      .join('\n');
+    console.error(`必要檔案檢查失敗，缺少或無法使用 ${problems.length} 個檔案：`);
+    for (const file of problems) {
+      console.error(`- ${file.label}: ${file.relativePath} (${file.reason})`);
+    }
+    console.error(`::error title=預測必要檔案檢查失敗::${escapeWorkflowCommand(details)}`);
+    writeStepSummary(baseDate, problems);
+    process.exitCode = 1;
     return;
   }
 
-  const details = problems
-    .map((file) => `${file.label}: ${file.relativePath} (${file.reason})`)
-    .join('\n');
-  console.error(`必要檔案檢查失敗，缺少或無法使用 ${problems.length} 個檔案：`);
-  for (const file of problems) {
-    console.error(`- ${file.label}: ${file.relativePath} (${file.reason})`);
-  }
-  console.error(`::error title=預測必要檔案檢查失敗::${escapeWorkflowCommand(details)}`);
-  writeStepSummary(baseDate, problems);
-  process.exitCode = 1;
+  console.log(`必要檔案檢查通過：基準交易日 ${baseDate}，共 ${requiredFiles(baseDate).length} 個台股／專案必要檔案。External Market 由 daily-stock-prediction.yml 的獨立 exact-date 驗證負責。`);
+
+  // 第二層：必要檔案存在後，再驗證所有正式預測核心資料的日期契約。
+  // 這一步會產生 .prediction-data-readiness.json；任何 stale/future/missing source 都會阻止正式預測。
+  verifyPredictionDataReadiness();
 }
 
 if (require.main === module) {
   try {
     main();
   } catch (error) {
-    console.error(`必要檔案檢查無法執行：${error.message}`);
-    console.error(`::error title=預測必要檔案檢查無法執行::${escapeWorkflowCommand(error.message)}`);
+    console.error(`必要檔案／資料日期契約檢查無法通過：${error.message}`);
+    console.error(`::error title=預測資料日期契約檢查失敗::${escapeWorkflowCommand(error.message)}`);
     process.exitCode = 1;
   }
 }
