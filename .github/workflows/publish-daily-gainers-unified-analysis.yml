@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - 'data_daily_gain_over_5/analysis-ai/*.json'
+  workflow_run:
+    workflows:
+      - "[07 研究] 5% 漲幅 AI 籌碼解讀驗證發布"
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       date:
@@ -23,6 +28,7 @@ concurrency:
 
 jobs:
   publish:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       target_date: ${{ steps.date.outputs.date }}
