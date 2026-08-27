@@ -14,11 +14,14 @@ function loadDailyGainersAiContract() {
   const contract = JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8'));
   assert(Number.isInteger(contract.contract_version), 'contract_version must be an integer');
   assert(contract.policy === 'latest-rules-only', 'policy must be latest-rules-only');
-  for (const key of ['facts', 'ai', 'published', 'market_summary']) {
+  for (const key of ['news', 'facts', 'ai', 'published', 'market_summary']) {
     assert(contract[key] && typeof contract[key] === 'object', `${key} contract is required`);
     assert(Number.isInteger(contract[key].schema_version), `${key}.schema_version must be an integer`);
     assert(typeof contract[key].methodology_version === 'string' && contract[key].methodology_version.length > 0, `${key}.methodology_version is required`);
   }
+  assert(typeof contract.news.model_role === 'string' && contract.news.model_role.length > 0, 'news.model_role is required');
+  assert(typeof contract.news.path_template === 'string' && contract.news.path_template.includes('YYYYMMDD'), 'news.path_template is required');
+  assert(Array.isArray(contract.news.required_analysis_fields) && contract.news.required_analysis_fields.length > 0, 'news.required_analysis_fields must be a non-empty array');
   assert(typeof contract.ai.model_role === 'string' && contract.ai.model_role.length > 0, 'ai.model_role is required');
   assert(typeof contract.published.path_template === 'string' && contract.published.path_template.includes('YYYYMMDD'), 'published.path_template is required');
 
@@ -26,10 +29,10 @@ function loadDailyGainersAiContract() {
   assert(typeof summary.path_template === 'string' && summary.path_template.includes('YYYYMMDD'), 'market_summary.path_template is required');
   assert(typeof summary.manifest_path === 'string' && summary.manifest_path.length > 0, 'market_summary.manifest_path is required');
   assert(typeof summary.theme_taxonomy_path === 'string' && summary.theme_taxonomy_path.length > 0, 'market_summary.theme_taxonomy_path is required');
-  for (const key of ['allowed_statuses', 'coverage_statuses', 'allowed_market_regimes', 'required_fields', 'rules']) {
+  for (const key of ['allowed_statuses', 'allowed_summary_stages', 'coverage_statuses', 'allowed_market_regimes', 'required_fields', 'rules']) {
     assert(Array.isArray(summary[key]) && summary[key].length > 0, `market_summary.${key} must be a non-empty array`);
   }
-  for (const field of ['source_lineage', 'coverage', 'breadth', 'market_context', 'theme_summary', 'catalyst_coverage', 'funding_summary', 'risk_signals', 'headline', 'market_summary', 'next_day_watch']) {
+  for (const field of ['summary_stage', 'source_lineage', 'coverage', 'breadth', 'market_context', 'theme_summary', 'catalyst_coverage', 'funding_summary', 'risk_signals', 'headline', 'market_summary', 'next_day_watch']) {
     assert(summary.required_fields.includes(field), `market_summary.required_fields must include ${field}`);
   }
   const taxonomyPath = path.resolve(ROOT, summary.theme_taxonomy_path);
@@ -67,6 +70,13 @@ function loadDailyGainersAiContract() {
 
 const DAILY_GAINERS_AI_CONTRACT = loadDailyGainersAiContract();
 
+function isLatestNews(payload) {
+  return Boolean(payload)
+    && payload.schema_version === DAILY_GAINERS_AI_CONTRACT.news.schema_version
+    && payload.methodology_version === DAILY_GAINERS_AI_CONTRACT.news.methodology_version
+    && payload.model_role === DAILY_GAINERS_AI_CONTRACT.news.model_role;
+}
+
 function isLatestFacts(payload) {
   return Boolean(payload)
     && payload.schema_version === DAILY_GAINERS_AI_CONTRACT.facts.schema_version
@@ -96,6 +106,7 @@ module.exports = {
   CONTRACT_PATH,
   DAILY_GAINERS_AI_CONTRACT,
   loadDailyGainersAiContract,
+  isLatestNews,
   isLatestFacts,
   isLatestAi,
   isLatestPublished,
