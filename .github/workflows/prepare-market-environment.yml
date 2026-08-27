@@ -2,8 +2,10 @@ name: "[03 市場環境] Prepare Market Environment"
 
 on:
   schedule:
-    # 台北時間週二至週六 06:35
+    # 台北時間週二至週六 06:35、07:01、08:02，後兩次作為完整性檢查與補跑
     - cron: '35 22 * * 1-5'
+    - cron: '1 23 * * 1-5'
+    - cron: '2 0 * * 2-6'
   workflow_dispatch:
     inputs:
       forecast_date:
@@ -40,6 +42,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Resolve forecast and base dates
         id: dates
         shell: bash
@@ -58,20 +61,50 @@ jobs:
           echo "forecast_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
 
-      - name: Generate immutable shadow environment snapshot
+      - name: Validate existing snapshot before retry
+        id: existing
         shell: bash
         env:
           FORCE: ${{ inputs.force || 'false' }}
+        run: |
+          set -euo pipefail
+
+          if [ "$FORCE" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Manual force requested; existing snapshot will not be reused."
+            exit 0
+          fi
+
+          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
+          if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then
+            args+=(--allow-historical-reconstruction)
+          fi
+
+          if node scripts/verify_market_environment.js "${args[@]}"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Existing market environment snapshot passed the full integrity gate; retry is unnecessary."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Existing market environment snapshot is missing, incomplete, stale, or invalid; regeneration is required."
+          fi
+
+      - name: Generate immutable shadow environment snapshot
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        env:
           STRICT: ${{ toJSON(inputs.strict) }}
         run: |
           set -euo pipefail
-          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
-          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          # The integrity gate already failed (or manual force was requested), so force replacement
+          # to avoid generate_market_environment.js silently reusing an invalid existing file.
+          args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE" --force)
           if [ "$STRICT" != "false" ]; then args+=(--strict); fi
           node scripts/generate_market_environment.js "${args[@]}"
 
-      - name: Verify environment snapshot hash and dates
+      - name: Verify regenerated environment integrity
+        if: steps.existing.outputs.skip != 'true'
         run: |
+          set -euo pipefail
           args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
           if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then
             args+=(--allow-historical-reconstruction)
@@ -79,12 +112,15 @@ jobs:
           node scripts/verify_market_environment.js "${args[@]}"
 
       - name: Install market environment banner
+        if: steps.existing.outputs.skip != 'true'
         run: node scripts/install_market_environment_ui.js
 
       - name: Run market environment tests
+        if: steps.existing.outputs.skip != 'true'
         run: node --test tests/market_environment.test.js
 
       - name: Commit and push snapshot and UI
+        if: steps.existing.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -103,3 +139,19 @@ jobs:
             sleep 5
           done
           exit 1
+
+      - name: Report retry decision
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Prepare Market Environment"
+            echo ""
+            echo "- Forecast date: \`${FORECAST_TARGET_DATE}\`"
+            echo "- Base trade date: \`${FORECAST_BASE_DATE}\`"
+            if [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
+              echo "- Result: existing snapshot passed full integrity validation; generation skipped."
+            else
+              echo "- Result: existing snapshot was not reusable; regeneration path executed."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
