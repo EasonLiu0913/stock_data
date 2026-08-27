@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: '分析日期 YYYYMMDD；留空時 push/升版取最近 pending 日期、晚間用台北當日、上午用最近 pending 日期'
+        description: '分析日期 YYYYMMDD；留空時晚間用台北當日、上午用最近 pending 日期'
         required: false
         default: ''
 
@@ -83,14 +83,12 @@ jobs:
               target_date="$(basename "$changed_path" .json)"
               mode="pending_push"
             else
-              target_date="$(find research_pending/daily-gainers-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
-              mode="contract_or_workflow_upgrade"
-              if [ -z "$target_date" ]; then
-                echo "No pending AI synthesis exists for contract/workflow upgrade validation"
-                echo "target_date=" >> "$GITHUB_OUTPUT"
-                echo "mode=$mode" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
+              target_date=""
+              mode="code_or_workflow_push"
+              echo "No pending AI file changed in this push; skip data publication."
+              echo "target_date=" >> "$GITHUB_OUTPUT"
+              echo "mode=$mode" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
           else
             hour="$(TZ='Asia/Taipei' date '+%H')"
