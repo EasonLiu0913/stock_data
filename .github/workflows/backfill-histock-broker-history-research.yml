@@ -24,7 +24,7 @@ on:
         default: "2500"
         type: string
       commit_results:
-        description: "Commit research results to main"
+        description: "Commit verified research progress to main"
         required: true
         default: true
         type: boolean
@@ -72,6 +72,7 @@ jobs:
             --delay-ms "${{ inputs.delay_ms }}"
 
       - name: Validate generated research files
+        id: validate
         if: always()
         shell: bash
         run: |
@@ -90,25 +91,34 @@ jobs:
           const normalize = (value) => String(value).replaceAll('/', '-');
           const tradingSet = new Set(Object.values(trading).flat().map(normalize));
           const nonTradingSet = new Set(Object.values(nonTrading).flat().map(normalize));
+
           if (manifest.source !== 'histock' || manifest.research_only !== true) throw new Error('Invalid provenance');
           if (analysis.calendar?.selection !== 'trading_days_whitelist_with_non_trading_conflict_guard') throw new Error('Trading calendar guard missing');
           if (!Array.isArray(analysis.rolling) || analysis.rolling.length !== analysis.counts.parsed_trading_days) throw new Error('Rolling output mismatch');
+          if (!Array.isArray(manifest.daily_files) || manifest.daily_files.length !== analysis.counts.parsed_trading_days) throw new Error('Manifest daily-file count mismatch');
+
           for (const relative of manifest.daily_files) {
             const match = relative.match(/daily\/(20\d{6})\.json$/);
             if (!match) throw new Error(`Invalid daily file path: ${relative}`);
             const date = `${match[1].slice(0, 4)}-${match[1].slice(4, 6)}-${match[1].slice(6, 8)}`;
             if (!tradingSet.has(date)) throw new Error(`Daily output is not a trading day: ${date}`);
             if (nonTradingSet.has(date)) throw new Error(`Daily output conflicts with non-trading calendar: ${date}`);
+            const payload = JSON.parse(fs.readFileSync(`${root}/${relative}`, 'utf8'));
+            if (payload.source !== 'histock' || payload.research_only !== true) throw new Error(`Invalid daily provenance: ${date}`);
+            if (payload.date !== date || payload.stock !== stock) throw new Error(`Daily identity mismatch: ${date}`);
+            if (!Array.isArray(payload.records) || payload.records.length === 0) throw new Error(`Empty committed daily records: ${date}`);
           }
-          console.log(`Parsed ${analysis.counts.parsed_trading_days}/${analysis.counts.requested_trading_days} trading days; reused=${analysis.counts.reused_daily_files}; remote=${analysis.counts.remote_requests_attempted}; unresolved=${analysis.counts.unresolved_trading_days}.`);
-          if (analysis.complete !== true) throw new Error(`Backfill incomplete: unresolved=${analysis.counts.unresolved_trading_days}`);
-          if (analysis.counts.parsed_trading_days !== analysis.counts.requested_trading_days) throw new Error('Trading-day coverage mismatch');
+
+          console.log(`Verified ${analysis.counts.parsed_trading_days}/${analysis.counts.requested_trading_days} parsed trading days; reused=${analysis.counts.reused_daily_files}; remote=${analysis.counts.remote_requests_attempted}; unresolved=${analysis.counts.unresolved_trading_days}; complete=${analysis.complete}.`);
+          if (analysis.complete !== true) {
+            console.log('Coverage is incomplete, but all persisted daily files are structurally valid. Progress may be committed and the workflow will fail closed afterwards.');
+          }
           NODE
         env:
           STOCK: ${{ inputs.stock }}
 
-      - name: Commit complete research results
-        if: ${{ success() && inputs.commit_results }}
+      - name: Commit verified research progress
+        if: ${{ always() && steps.validate.outcome == 'success' && inputs.commit_results }}
         shell: bash
         run: |
           set -euo pipefail
@@ -120,7 +130,17 @@ jobs:
             echo "No research data changes to commit."
             exit 0
           fi
-          git commit -m "research: backfill HiStock broker history ${{ inputs.stock }} ${{ inputs.start_date }} to ${{ inputs.end_date }}"
+
+          COMPLETE=$(node -e "const a=require('./$ROOT/analysis.json'); process.stdout.write(String(a.complete === true))")
+          if [ "$COMPLETE" = "true" ]; then
+            MESSAGE="research: complete HiStock broker history ${{ inputs.stock }} ${{ inputs.start_date }} to ${{ inputs.end_date }}"
+          else
+            PARSED=$(node -e "const a=require('./$ROOT/analysis.json'); process.stdout.write(String(a.counts.parsed_trading_days))")
+            REQUESTED=$(node -e "const a=require('./$ROOT/analysis.json'); process.stdout.write(String(a.counts.requested_trading_days))")
+            MESSAGE="research: preserve partial HiStock broker history ${{ inputs.stock }} ${PARSED}/${REQUESTED} days"
+          fi
+
+          git commit -m "$MESSAGE"
           git pull --rebase origin main
           git push origin HEAD:main
 
@@ -138,15 +158,35 @@ jobs:
             echo "- Trading-day source: \`data_history_sma/trading_days.json\`"
             echo "- Non-trading guard: \`data_history_sma/non_trading_days.json\`"
             echo "- Request policy: reuse valid daily files; missing days use base delay + jitter; zero-record trading days retry then fail closed"
+            echo "- Persistence policy: verified partial progress is committed with \`complete=false\`; unresolved trading days still fail the workflow"
             echo "- Classification: research-only; not official TWSE BSR"
             echo "- Rolling windows: 5 / 10 / 20 parsed trading days"
             echo "- Output root: \`$ROOT\`"
           } >> "$GITHUB_STEP_SUMMARY"
           node scripts/render_histock_broker_history_summary.js "$ROOT/analysis.json" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Propagate backfill failure
-        if: ${{ always() && steps.backfill.outcome == 'failure' }}
+      - name: Enforce complete trading-day coverage
+        if: always()
         shell: bash
         run: |
-          echo "HiStock backfill reported incomplete trading-day coverage. See Summary diagnostics."
-          exit 1
+          set -euo pipefail
+          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
+          if [ "${{ steps.validate.outcome }}" != "success" ]; then
+            echo "Generated research files failed structural validation."
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs = require('fs');
+          const root = process.env.ROOT;
+          const analysis = JSON.parse(fs.readFileSync(`${root}/analysis.json`, 'utf8'));
+          if (analysis.complete !== true) {
+            const unresolved = (analysis.unresolved || analysis.failed || []).map((x) => x.date).join(', ');
+            throw new Error(`Incomplete HiStock backfill: ${analysis.counts.parsed_trading_days}/${analysis.counts.requested_trading_days}; unresolved=${analysis.counts.unresolved_trading_days}; dates=${unresolved || 'see analysis.json'}`);
+          }
+          if (analysis.counts.parsed_trading_days !== analysis.counts.requested_trading_days) {
+            throw new Error('Trading-day coverage mismatch');
+          }
+          console.log('HiStock trading-day coverage complete.');
+          NODE
+        env:
+          ROOT: data_research/institutional-flow/histock/${{ inputs.stock }}
