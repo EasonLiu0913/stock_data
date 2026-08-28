@@ -138,12 +138,11 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
       - name: Write schedule timing summary
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
 
