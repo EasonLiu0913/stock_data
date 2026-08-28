@@ -109,9 +109,8 @@ jobs:
       - name: Generate relevant files.json
         run: node scripts/generate_file_lists.js --only data_external_market,data_market_risk
 
-      - name: Run market environment tests
-        if: steps.validate.outputs.ready == 'true'
-        run: node --test tests/market_environment.test.js
+      - name: Run external market and market environment tests
+        run: node --test tests/external_market_snapshot_status.test.js tests/market_environment.test.js
 
       - name: Write crawl summary
         if: always()
