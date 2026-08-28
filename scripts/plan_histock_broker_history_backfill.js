@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
 
 const args = process.argv.slice(2);
 const getArg = (name, fallback = '') => {
@@ -51,13 +52,18 @@ function loadCalendar(file) {
   const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
   return { payload, dates: new Set(Object.values(payload).flat().map(normalize)) };
 }
-function isValidDaily(s, date) {
+function inspectDaily(s, date) {
   const file = path.join('data_research', 'institutional-flow', 'histock', s, 'daily', `${date.replaceAll('-', '')}.json`);
-  if (!fs.existsSync(file)) return false;
+  if (!fs.existsSync(file)) return { valid: false, reason: 'missing_file' };
   try {
-    const p = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return p.source === 'histock' && p.research_only === true && p.stock === s && p.date === date && Array.isArray(p.records) && p.records.length > 0;
-  } catch { return false; }
+    const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const check = validateDailyPayload(payload, { stock: s, date });
+    return check.valid
+      ? { valid: true }
+      : { valid: false, reason: 'quality_gate_failed', details: check };
+  } catch (error) {
+    return { valid: false, reason: 'invalid_json', details: { message: error.message } };
+  }
 }
 
 const stocks = resolveStocks();
@@ -71,11 +77,16 @@ const conflicts = tradingDays.filter((d) => nonTrading.dates.has(d));
 if (conflicts.length) throw new Error(`Trading/non-trading conflict: ${conflicts.join(',')}`);
 
 const tasks = [];
+const qualityRejected = [];
 let existingCount = 0;
 for (const s of stocks) {
   for (const date of tradingDays) {
-    if (isValidDaily(s, date)) existingCount += 1;
-    else tasks.push({ stock: s, date });
+    const check = inspectDaily(s, date);
+    if (check.valid) existingCount += 1;
+    else {
+      tasks.push({ stock: s, date });
+      if (check.reason === 'quality_gate_failed') qualityRejected.push({ stock: s, date, details: check.details });
+    }
   }
 }
 const theoretical = stocks.length * tradingDays.length;
@@ -89,13 +100,14 @@ for (let i = 0; i < scheduledTasks.length; i += batchSizeRequests) {
 }
 const affectedStocks = [...new Set(scheduledTasks.map((t) => t.stock))];
 const plan = {
-  schema_version: 2,
+  schema_version: 3,
   scope,
   stock_universe: stocks,
   range: { start, end },
   trading_day_source: tradingPath,
   non_trading_guard: nonTradingPath,
   all_market_source: scope === 'all' ? universePath : null,
+  data_quality: { version: QUALITY_VERSION, policy: 'existing daily is reusable only when every broker row passes hard quality gate' },
   batch_size_requests: batchSizeRequests,
   max_batches_per_run: maxBatchesPerRun,
   counts: {
@@ -103,11 +115,13 @@ const plan = {
     trading_days: tradingDays.length,
     theoretical_stock_date_tasks: theoretical,
     existing_valid_tasks: existingCount,
+    quality_rejected_existing_tasks: qualityRejected.length,
     missing_tasks_total: totalMissing,
     scheduled_tasks_this_run: scheduledTasks.length,
     deferred_tasks: totalMissing - scheduledTasks.length,
     planned_batches: batches.length,
   },
+  quality_rejected_existing_tasks: qualityRejected,
   affected_stocks_this_run: affectedStocks,
   batches,
   generated_at: new Date().toISOString(),
@@ -119,6 +133,6 @@ if (output) {
 const matrix = JSON.stringify({ include: batches });
 if (githubOutput) {
   fs.appendFileSync(githubOutput,
-    `matrix=${matrix}\nmissing_count=${totalMissing}\nscheduled_count=${scheduledTasks.length}\ndeferred_count=${totalMissing - scheduledTasks.length}\nrequested_count=${theoretical}\nexisting_count=${existingCount}\nbatch_count=${batches.length}\naffected_stocks=${affectedStocks.join(',')}\nstock_count=${stocks.length}\ntrading_day_count=${tradingDays.length}\n`);
+    `matrix=${matrix}\nmissing_count=${totalMissing}\nscheduled_count=${scheduledTasks.length}\ndeferred_count=${totalMissing - scheduledTasks.length}\nrequested_count=${theoretical}\nexisting_count=${existingCount}\nquality_rejected_count=${qualityRejected.length}\nbatch_count=${batches.length}\naffected_stocks=${affectedStocks.join(',')}\nstock_count=${stocks.length}\ntrading_day_count=${tradingDays.length}\n`);
 }
 console.log(JSON.stringify(plan, null, 2));
