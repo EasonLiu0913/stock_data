@@ -11,18 +11,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ensure-workflow-schedule-summary
   cancel-in-progress: true
 
 jobs:
-  prepare-normalization:
-    name: 準備輕量化 Summary normalization
+  audit:
+    name: 稽核 Workflow Summary
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest main
+      - name: Checkout workflow definitions only
         uses: actions/checkout@v7
         with:
           ref: main
@@ -31,53 +31,30 @@ jobs:
             .github/workflows
             scripts
 
-      - name: Sync latest main
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git reset --hard origin/main
-
-      - name: Validate summary tooling
+      - name: Validate shared summary tooling
         run: |
           set -euo pipefail
           node --check scripts/write_workflow_schedule_summary.js
           node scripts/write_workflow_schedule_summary.js --self-test
           node --check scripts/migrate_workflow_schedule_summary.js
 
-      - name: Normalize every workflow summary
-        run: node scripts/migrate_workflow_schedule_summary.js
-
-      - name: Stage normalized workflows as ordinary files
+      - name: Verify every workflow uses lightweight summary
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf tmp/normalized-workflows
-          mkdir -p tmp/normalized-workflows
-          cp .github/workflows/*.yml tmp/normalized-workflows/
-          count=$(find tmp/normalized-workflows -maxdepth 1 -type f -name '*.yml' | wc -l | tr -d ' ')
-          test "$count" = "122"
-          echo "STAGED_WORKFLOWS=$count"
-          git restore --worktree -- .github/workflows
-
-      - name: Push normalized staging files only
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --sparse -f tmp/normalized-workflows
-          git add --sparse -u tmp/workflow-summary-normalization.json 2>/dev/null || true
-          git commit -m "ci: stage normalized workflow summary files"
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              exit 0
-            fi
-            git rebase --abort 2>/dev/null || true
-            git fetch origin main
-            git rebase origin/main || true
-            sleep 2
-          done
+          node scripts/migrate_workflow_schedule_summary.js
+          if git diff --quiet -- .github/workflows; then
+            echo "All workflows use the lightweight schedule timing summary"
+            exit 0
+          fi
+          echo "Workflow schedule summary normalization is required:"
+          git diff --name-only -- .github/workflows
+          {
+            echo "## Workflow Schedule Summary Audit"
+            echo ""
+            echo "以下 workflow 缺少或未使用輕量化排程時間摘要："
+            git diff --name-only -- .github/workflows | sed 's/^/- `/' | sed 's/$/`/'
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
   schedule-timing-summary:
@@ -93,4 +70,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
