@@ -8,10 +8,10 @@ on:
         required: true
         default: "2449"
         type: string
-      date:
-        description: "Historical trading date (YYYY-MM-DD)"
+      dates:
+        description: "Historical trading dates, comma-separated YYYY-MM-DD"
         required: true
-        default: "2026-05-15"
+        default: "2026-05-15,2026-05-22,2026-06-12,2026-06-18"
         type: string
 
 permissions:
@@ -20,7 +20,7 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -30,23 +30,24 @@ jobs:
         run: |
           set -euo pipefail
           [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]] || { echo "Invalid stock code"; exit 1; }
-          [[ "${{ inputs.date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid date"; exit 1; }
+          [[ "${{ inputs.dates }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}(,20[0-9]{2}-[0-9]{2}-[0-9]{2})*$ ]] || { echo "Invalid dates"; exit 1; }
 
-      - name: Probe HiStock historical broker page
+      - name: Probe HiStock historical broker pages
         run: |
           set -euo pipefail
           node scripts/test_histock_broker_history.js \
             --stock "${{ inputs.stock }}" \
-            --date "${{ inputs.date }}"
+            --dates "${{ inputs.dates }}"
 
       - name: Summary
         if: always()
         shell: bash
         run: |
           {
-            echo "## HiStock broker-history probe"
+            echo "## HiStock broker-history multi-date probe"
             echo "- Stock: \`${{ inputs.stock }}\`"
-            echo "- Date: \`${{ inputs.date }}\`"
+            echo "- Dates: \`${{ inputs.dates }}\`"
             echo "- Source: third-party HiStock public page"
+            echo "- Output includes cross-date persistent sellers and buyers."
             echo "- This workflow is read-only and does not write or overwrite repository datasets."
           } >> "$GITHUB_STEP_SUMMARY"
