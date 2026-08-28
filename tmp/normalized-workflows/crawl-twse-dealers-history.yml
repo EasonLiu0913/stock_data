@@ -1,0 +1,197 @@
+name: "[06 回填修復] Crawl TWSE Dealers History"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Single target date (YYYYMMDD). If set, start/end are ignored.'
+        required: false
+        default: ''
+      start_date:
+        description: 'Start date (YYYYMMDD). Leave empty to use script default.'
+        required: false
+        default: ''
+      end_date:
+        description: 'End date (YYYYMMDD). Leave empty to use Taipei today.'
+        required: false
+        default: ''
+      force:
+        description: 'Overwrite existing files'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      min_delay:
+        description: 'Minimum random delay between dates in ms'
+        required: false
+        default: '3000'
+      max_delay:
+        description: 'Maximum random delay between dates in ms'
+        required: false
+        default: '5000'
+      rate_limit_cooldown:
+        description: 'Cooldown for 307/429/503 responses in ms'
+        required: false
+        default: '90000'
+      mismatch_cooldown:
+        description: 'Cooldown for response date mismatch in ms'
+        required: false
+        default: '90000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-dealers-history
+  cancel-in-progress: false
+
+jobs:
+  crawl-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate dealer crawler code
+        run: |
+          set -euo pipefail
+          node --check scripts/crawl_history_twse_dealers.js
+          node --check scripts/validate_twse_dealers.js
+
+      - name: Crawl TWSE dealers history with semantic retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='${{ github.event.inputs.date }}'
+
+          base_args=(
+            --min-delay "${{ github.event.inputs.min_delay }}"
+            --max-delay "${{ github.event.inputs.max_delay }}"
+            --max-retries 2
+            --rate-limit-cooldown "${{ github.event.inputs.rate_limit_cooldown }}"
+            --mismatch-cooldown "${{ github.event.inputs.mismatch_cooldown }}"
+          )
+
+          if [ -n "$target" ]; then
+            [[ "$target" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $target" >&2; exit 1; }
+            output="data_twse_dealers/${target}_twse_dealers.json"
+
+            for pass in 1 2 3; do
+              args=("${base_args[@]}" --date "$target")
+
+              # Existing files are trusted only after semantic validation. An
+              # invalid existing file must be overwritten even when force=false.
+              force_this_pass=false
+              if [ "${{ github.event.inputs.force }}" = "true" ] || [ "$pass" -gt 1 ]; then
+                force_this_pass=true
+              elif [ -e "$output" ] && ! node scripts/validate_twse_dealers.js "$output" "$target" >/tmp/dealer-existing-validation.json 2>&1; then
+                echo "Existing dealer snapshot is invalid; forcing refresh."
+                cat /tmp/dealer-existing-validation.json || true
+                force_this_pass=true
+              fi
+              [ "$force_this_pass" = true ] && args+=(--force)
+
+              set +e
+              node scripts/crawl_history_twse_dealers.js "${args[@]}"
+              crawl_status=$?
+              set -e
+
+              if [ "$crawl_status" -eq 0 ] && node scripts/validate_twse_dealers.js "$output" "$target"; then
+                echo "✅ $target dealer snapshot passed semantic validation on pass $pass/3."
+                break
+              fi
+
+              if [ "$pass" -eq 3 ]; then
+                echo "❌ $target dealer snapshot is still incomplete after 3 passes." >&2
+                [ -e "$output" ] && node scripts/validate_twse_dealers.js "$output" "$target" || true
+                exit 1
+              fi
+
+              cooldown=$((30 * pass))
+              echo "⏳ Dealer snapshot not ready; waiting ${cooldown}s before retry $((pass + 1))/3."
+              sleep "$cooldown"
+            done
+          else
+            args=("${base_args[@]}")
+            if [ -n "${{ github.event.inputs.start_date }}" ]; then
+              args+=(--start "${{ github.event.inputs.start_date }}")
+            fi
+            if [ -n "${{ github.event.inputs.end_date }}" ]; then
+              args+=(--end "${{ github.event.inputs.end_date }}")
+            fi
+            if [ "${{ github.event.inputs.force }}" = "true" ]; then
+              args+=(--force)
+            fi
+            node scripts/crawl_history_twse_dealers.js "${args[@]}"
+          fi
+
+      - name: Generate TWSE dealers files.json only
+        run: node scripts/generate_file_lists.js --only data_twse_dealers
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse_dealers/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE dealers changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No TWSE dealers changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE dealers history ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE dealers history after 5 attempts."
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

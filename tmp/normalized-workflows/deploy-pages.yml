@@ -1,0 +1,299 @@
+name: "[00 網站部署] Deploy GitHub Pages"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "public/**"
+      - "config/**"
+      - "data*/**"
+      - "normalized/**"
+      - "scripts/generate_public_index.js"
+      - "scripts/validate_public_pages.js"
+      - "scripts/validate_public_index_writers.js"
+      - "scripts/prepare_pages_site.sh"
+      - "scripts/prepare_eps_valuation_pages_payload.js"
+      - "scripts/scan_pages_dependencies.js"
+      - "scripts/trim_pages_artifact.js"
+      - "scripts/apply_pages_size_budget.js"
+      - ".github/workflows/build-twse-market-chart.yml"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_call:
+    inputs:
+      target_date:
+        description: "只驗證這個交易日 YYYYMMDD；留空使用最新預測日"
+        required: false
+        default: ""
+        type: string
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "只驗證這個交易日 YYYYMMDD；留空使用最新預測日"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Publication layer only: this workflow never commits repository data and always
+# rebuilds from the latest main. Newer publication requests may therefore cancel
+# stale Pages-only runs without losing committed data.
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy selective repository-root compatible site
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout only Pages source files
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /public/
+            /config/public-page-registry.json
+            /scripts/
+            /.github/workflows/
+
+      - name: Enforce canonical public page registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_public_index.js
+          node --check scripts/validate_public_pages.js
+          node --check scripts/validate_public_index_writers.js
+          node scripts/generate_public_index.js
+          node scripts/generate_public_index.js --check
+          node scripts/validate_public_pages.js
+          node scripts/validate_public_index_writers.js
+
+      - name: Audit every frontend data dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/prepare_pages_site.sh
+          node --check scripts/scan_pages_dependencies.js
+          node --check scripts/trim_pages_artifact.js
+          node --check scripts/apply_pages_size_budget.js
+          node --check scripts/prepare_eps_valuation_pages_payload.js
+          bash scripts/prepare_pages_site.sh --self-test
+          node scripts/scan_pages_dependencies.js --self-test
+          node scripts/trim_pages_artifact.js --self-test
+          node scripts/apply_pages_size_budget.js --self-test
+          node scripts/prepare_eps_valuation_pages_payload.js --self-test
+
+          node scripts/scan_pages_dependencies.js . \
+            | sort -u \
+            | tee /tmp/pages-dependencies.txt
+          node scripts/scan_pages_dependencies.js --json . \
+            > /tmp/pages-dependency-audit.json
+
+          for required_dependency in \
+            config \
+            data_prediction_analysis \
+            data_fubon \
+            data_twse_margin_balance \
+            data_twse_institutional_investors \
+            data_twse_mi_index \
+            data_twse_margin_maintenance
+          do
+            grep -qx "$required_dependency" /tmp/pages-dependencies.txt || {
+              echo "Frontend dependency was not discovered: $required_dependency" >&2
+              exit 1
+            }
+          done
+
+          {
+            echo '/public/'
+            echo '/config/public-page-registry.json'
+            echo '/scripts/'
+            echo '/.github/workflows/'
+            while IFS= read -r dependency; do
+              [ -n "$dependency" ] || continue
+              object_type=$(git cat-file -t "HEAD:$dependency" 2>/dev/null || true)
+              case "$object_type" in
+                tree) echo "/$dependency/" ;;
+                blob) echo "/$dependency" ;;
+                *)
+                  echo "Missing Git object for published dependency: $dependency" >&2
+                  exit 1
+                  ;;
+              esac
+            done < /tmp/pages-dependencies.txt
+          } | sort -u > /tmp/pages-sparse-checkout.txt
+
+          git sparse-checkout set --no-cone --stdin < /tmp/pages-sparse-checkout.txt
+
+      - name: Prepare and validate complete Pages artifact
+        shell: bash
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          set -euo pipefail
+          bash scripts/prepare_pages_site.sh . _site "${TARGET_DATE:-}"
+
+          while IFS= read -r dependency; do
+            [ -n "$dependency" ] || continue
+            [ -e "_site/$dependency" ] && continue
+
+            source_path="$dependency"
+            destination_path="_site/$dependency"
+            if [ -d "$source_path" ]; then
+              mkdir -p "$destination_path"
+              rsync -aL "$source_path/" "$destination_path/"
+            elif [ -f "$source_path" ]; then
+              mkdir -p "$(dirname "$destination_path")"
+              cp -L "$source_path" "$destination_path"
+            else
+              echo "Missing frontend dependency after sparse checkout: $dependency" >&2
+              exit 1
+            fi
+          done < /tmp/pages-dependencies.txt
+
+          while IFS= read -r dependency; do
+            [ -n "$dependency" ] || continue
+            test -e "_site/$dependency" || {
+              echo "Pages artifact is missing discovered dependency: $dependency" >&2
+              exit 1
+            }
+          done < /tmp/pages-dependencies.txt
+
+          test -f _site/config/strategy-tag-registry.json || {
+            echo 'Pages artifact is missing config/strategy-tag-registry.json.' >&2
+            exit 1
+          }
+          test -f _site/data_prediction_analysis/strategy-snapshots/manifest.json || {
+            echo 'Pages artifact is missing the strategy snapshot manifest.' >&2
+            exit 1
+          }
+          test -f _site/data_fubon/files.json || {
+            echo 'Pages artifact is missing data_fubon/files.json.' >&2
+            exit 1
+          }
+          test -f _site/data_twse_margin_balance/files.json || {
+            echo 'Pages artifact is missing data_twse_margin_balance/files.json.' >&2
+            exit 1
+          }
+          test -f _site/data_twse_margin_balance/20260803_twse_margin_balance.csv || {
+            echo 'Pages artifact is missing the requested 20260803 margin balance file.' >&2
+            exit 1
+          }
+
+          node scripts/prepare_eps_valuation_pages_payload.js --site _site | tee /tmp/eps-pages-payload-summary.json
+          test -s _site/data_prediction_analysis/eps-valuation/valuation-summary.json
+          test -s _site/data_prediction_analysis/eps-valuation/coverage-summary.json
+          test -d _site/data_prediction_analysis/eps-valuation/valuation-by-stock
+          test -d _site/data_prediction_analysis/eps-valuation/coverage-by-stock
+
+          # Stage 1: normal presentation windows and known non-public workfiles.
+          node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
+
+          # Stage 2: only when Stage 1 still exceeds 850 MiB. Tighten secondary
+          # history windows and discard research-only publication copies until the
+          # artifact approaches the 800 MiB operating target. Repository data is untouched.
+          node scripts/apply_pages_size_budget.js \
+            --site _site \
+            --target-mib 800 \
+            --trigger-mib 850 \
+            | tee /tmp/pages-size-budget-summary.json
+
+          test -f _site/data_fubon/files.json
+          test -f _site/data_twse_mi_index/files.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          for(const dataset of ['data_fubon','data_twse_mi_index']){
+            const root=`_site/${dataset}`;
+            const list=JSON.parse(fs.readFileSync(`${root}/files.json`,'utf8'));
+            for(const file of list){
+              if(file==='files.json') continue;
+              if(!fs.existsSync(`${root}/${file}`)) throw new Error(`${dataset}/files.json references missing ${file}`);
+            }
+          }
+          NODE
+
+          # Re-check core public payload after every slimming phase so capacity
+          # management cannot silently remove the minimum viable Pages contract.
+          test -f _site/config/strategy-tag-registry.json
+          test -f _site/data_prediction_analysis/strategy-snapshots/manifest.json
+          test -s _site/data_prediction_analysis/eps-valuation/valuation-summary.json
+          test -s _site/data_prediction_analysis/eps-valuation/coverage-summary.json
+
+          dependency_count=$(grep -cve '^$' /tmp/pages-dependencies.txt || true)
+          frontend_asset_count=$(find public -type f \
+            \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' \) \
+            | wc -l | tr -d ' ')
+          artifact_size=$(du -sh _site | cut -f1)
+          artifact_bytes=$(du -sb _site | cut -f1)
+          target_bytes=$((800 * 1024 * 1024))
+          warning_bytes=$((850 * 1024 * 1024))
+          maximum_bytes=$((950 * 1024 * 1024))
+
+          echo 'Largest published roots after staged trimming:'
+          du -sh _site/* 2>/dev/null | sort -hr | head -20 || true
+
+          if [ "$artifact_bytes" -gt "$maximum_bytes" ]; then
+            echo "::error::Pages artifact is ${artifact_size} after both slimming stages, above the repository safety cap of 950 MiB. GitHub Pages published sites are limited to 1 GiB."
+            exit 1
+          elif [ "$artifact_bytes" -gt "$warning_bytes" ]; then
+            echo "::warning::Pages artifact is ${artifact_size} after Stage 2 and remains above 850 MiB. Deployment is still under the hard cap but additional secondary datasets should be reviewed."
+          elif [ "$artifact_bytes" -gt "$target_bytes" ]; then
+            echo "::notice::Pages artifact is ${artifact_size}; below the Stage 2 trigger but above the preferred 800 MiB operating target."
+          fi
+
+          echo "## GitHub Pages dependency audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Public page registry: validated" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Public index writer ownership: validated" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frontend assets scanned: $frontend_asset_count" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Published root dependencies: $dependency_count" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact size after staged trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pages operating target / Stage 2 trigger / hard cap: 800 / 850 / 950 MiB" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 1 windows: fubon 10, TWSE index 8, institutional/dealer/foreign 10, normalized 4, predictions 1" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 2 windows when needed: fubon 6, TWSE index 5, institutional/dealer/foreign 6, normalized 2, prediction-analysis dates 5" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 2 secondary research cuts when still above target: momentum history/replay/research and tag-strategy recalculation" >> "$GITHUB_STEP_SUMMARY"
+          echo "- EPS valuation core summaries and strategy snapshot manifest are protected and revalidated after trimming" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Repository historical data remains untouched; slimming affects only the _site publication artifact" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          name: github-pages-${{ github.run_attempt }}
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

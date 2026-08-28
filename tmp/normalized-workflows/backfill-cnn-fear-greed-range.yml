@@ -1,0 +1,153 @@
+name: "[06 回填修復] CNN Fear & Greed－區間資料補齊"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '起始日期 YYYYMMDD（需在 CNN historical 範圍內）'
+        required: true
+        default: '20251103'
+        type: string
+      end_date:
+        description: '結束日期 YYYYMMDD；留空取 CNN historical 最後日期'
+        required: false
+        default: ''
+        type: string
+      batch_size:
+        description: '每批歷史資料日數'
+        required: true
+        default: '20'
+        type: string
+      force:
+        description: '覆寫既有日期；仍保留 reconstructed 標記'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-cnn-fear-greed-range
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
+      pending: ${{ steps.plan.outputs.pending }}
+      source_mode: ${{ steps.plan.outputs.source_mode }}
+      source_last_date: ${{ steps.plan.outputs.source_last_date }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test CNN history reconstruction and 418 fallback
+        run: node --test tests/reconstruct_cnn_fear_and_greed_history.test.js tests/refresh_dataset_indexes.test.js
+
+      - name: Plan from live CNN source or stored CNN fallback
+        id: plan
+        shell: bash
+        env:
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          args=(
+            --plan-only
+            --start "$START_DATE"
+            --batch-size "$BATCH_SIZE"
+            --fetch-retries 2
+            --retry-delay-ms 5000
+          )
+          if [ -n "$END_DATE" ]; then args+=(--end "$END_DATE"); fi
+          if [ "$FORCE" = true ]; then args+=(--force); fi
+
+          node scripts/reconstruct_cnn_fear_and_greed_history.js "${args[@]}" > /tmp/plan.json
+          cat /tmp/plan.json
+
+          matrix=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify(p.matrix))")
+          pending=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.pending_date_count))")
+          source_mode=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.source_access?.mode || 'unknown'))")
+          source_last_date=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.source_last_date || ''))")
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "pending=$pending" >> "$GITHUB_OUTPUT"
+          echo "source_mode=$source_mode" >> "$GITHUB_OUTPUT"
+          echo "source_last_date=$source_last_date" >> "$GITHUB_OUTPUT"
+          echo "has_work=$([ "$pending" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## CNN Fear & Greed 回填規劃"
+            echo
+            echo "- 資料來源模式：\`$source_mode\`"
+            echo "- historical 最後日期：\`$source_last_date\`"
+            echo "- 待補日期：\`$pending\`"
+            echo
+            echo "> CNN 官方端點若對 GitHub runner 回傳 418，會自動改用 repository 中 historical 點數最多的既有 CNN payload。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  backfill:
+    needs: plan
+    if: needs.plan.outputs.has_work == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    name: 區間批次重建
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Reconstruct and safely push each historical date
+        env:
+          BATCH_DATES: ${{ matrix.dates }}
+          INPUT_FORCE: ${{ inputs.force }}
+        run: bash scripts/run_cnn_fear_greed_range_batch.sh
+
+      - if: always()
+        run: echo "batch ${{ matrix.batch_index }}/${{ matrix.batch_count }}：${{ matrix.first_date }} ～ ${{ matrix.last_date }}" >> "$GITHUB_STEP_SUMMARY"
+
+  complete:
+    needs: [plan, backfill]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          echo "待補日期：${{ needs.plan.outputs.pending }}"
+          echo "來源模式：${{ needs.plan.outputs.source_mode }}"
+          echo "historical 最後日期：${{ needs.plan.outputs.source_last_date }}"
+          if [ "${{ needs.plan.result }}" != success ]; then exit 1; fi
+          if [ "${{ needs.plan.outputs.has_work }}" = true ] && [ "${{ needs.backfill.result }}" != success ]; then exit 1; fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

@@ -1,0 +1,205 @@
+name: "[07 維護更新] Update TWSE Industry Lists"
+
+on:
+  schedule:
+    # 10:52 Taipei Time (02:52 UTC)
+    - cron: '52 2 * * *'
+  workflow_dispatch:
+  # Temporary incident-recovery trigger. Remove after the 2026-08-20 repair run.
+  push:
+    paths:
+      - '.github/workflows/update-twse-industry.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: update-twse-industry
+  cancel-in-progress: false
+
+jobs:
+  update-twse-industry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Update TWSE industry lists
+        run: node scripts/extract_twse_industry.js
+
+      - name: Validate repaired consolidated list
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(( $(wc -l < data_twse/twse_industry.csv) - 1 ))
+          echo "Repaired consolidated list count: ${count}"
+          test "$count" -ge 1000
+          for code in 1101 2317 2330 2882; do
+            grep -q "^${code}," data_twse/twse_industry.csv || {
+              echo "Missing sentinel stock ${code}"
+              exit 1
+            }
+          done
+
+      - name: Audit workflows that consumed the truncated list
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cutoff='2026-08-20T03:36:24Z'
+          report='data_twse/twse_industry_incident_20260820.json'
+          tmp_items="$(mktemp)"
+          tmp_pending="$(mktemp)"
+          : > "$tmp_items"
+          : > "$tmp_pending"
+
+          gh run list --limit 200 \
+            --json databaseId,workflowName,createdAt,status,conclusion,event,url \
+            > /tmp/twse-incident-runs.json
+
+          jq -c --arg cutoff "$cutoff" --arg current "$GITHUB_RUN_ID" '
+            .[]
+            | select(.createdAt >= $cutoff)
+            | select((.databaseId | tostring) != $current)
+          ' /tmp/twse-incident-runs.json | while IFS= read -r run; do
+            id="$(jq -r '.databaseId' <<<"$run")"
+            workflow="$(jq -r '.workflowName' <<<"$run")"
+            status="$(jq -r '.status' <<<"$run")"
+
+            # The producer itself is not a downstream consumer.
+            if [[ "$workflow" == '[07 維護更新] Update TWSE Industry Lists' ]]; then
+              continue
+            fi
+
+            if [[ "$status" != 'completed' ]]; then
+              echo "$run" >> "$tmp_pending"
+              continue
+            fi
+
+            log_file="/tmp/run-${id}.log"
+            if ! gh run view "$id" --log > "$log_file" 2>/dev/null; then
+              continue
+            fi
+
+            if grep -qE 'data_twse/twse_industry\.csv|twse_industry\.csv|股票清單.*twse_industry' "$log_file"; then
+              stock_count="$(grep -oE '共[[:space:]]*[0-9,]+[[:space:]]*個股票代碼|共[[:space:]]*[0-9,]+[[:space:]]*檔' "$log_file" | tail -1 | grep -oE '[0-9,]+' | tr -d ',' || true)"
+              confirmed_137=false
+              if grep -qE '共[[:space:]]*137[[:space:]]*個股票代碼|共[[:space:]]*137[[:space:]]*檔' "$log_file"; then
+                confirmed_137=true
+              fi
+
+              jq -n \
+                --argjson meta "$run" \
+                --arg stock_count "$stock_count" \
+                --argjson confirmed_137 "$confirmed_137" \
+                '{run_id:$meta.databaseId, workflow:$meta.workflowName, created_at:$meta.createdAt, status:$meta.status, conclusion:$meta.conclusion, event:$meta.event, url:$meta.url, observed_stock_count:(if $stock_count == "" then null else ($stock_count|tonumber) end), confirmed_137:$confirmed_137}' \
+                >> "$tmp_items"
+            fi
+          done
+
+          if [[ -s "$tmp_items" ]]; then
+            jq -s '.' "$tmp_items" > /tmp/affected.json
+          else
+            echo '[]' > /tmp/affected.json
+          fi
+          if [[ -s "$tmp_pending" ]]; then
+            jq -s '.' "$tmp_pending" > /tmp/pending.json
+          else
+            echo '[]' > /tmp/pending.json
+          fi
+
+          jq -n \
+            --arg incident_started_at "$cutoff" \
+            --arg generated_at "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+            --slurpfile affected /tmp/affected.json \
+            --slurpfile pending /tmp/pending.json \
+            '{incident_started_at:$incident_started_at, generated_at:$generated_at, evidence:"GitHub Actions logs containing twse_industry.csv", consumers:$affected[0], confirmed_137_count:([$affected[0][] | select(.confirmed_137 == true)] | length), consumer_count:($affected[0] | length), incomplete_runs_after_cutoff:$pending[0]}' \
+            > "$report"
+
+          echo '### TWSE industry incident audit' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo "- Consumer runs with direct log evidence: $(jq '.consumer_count' "$report")" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Runs explicitly showing 137 stocks: $(jq '.confirmed_137_count' "$report")" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.consumers[] | "- \(.workflow) — run \(.run_id) — count=\(.observed_stock_count // "unknown") — confirmed137=\(.confirmed_137)"' "$report" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate TWSE files.json only
+        run: node scripts/generate_file_lists.js --only data_twse
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE industry changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No TWSE industry list changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE industry lists ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE industry list changes after 5 attempts."
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

@@ -1,0 +1,122 @@
+name: "[03 市場環境] Build TWSE Market Chart"
+
+on:
+  schedule:
+    # 平日 23:07 台北時間 (15:07 UTC)
+    - cron: '7 15 * * 1-5'
+    # 隔日 02:33 台北時間再次補抓；以早上 08:00 為日期切換點
+    - cron: '33 18 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD, e.g. 20260724)'
+        required: false
+        default: ''
+      start_date:
+        description: 'History Start Date (YYYYMMDD)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: build-twse-market-chart
+  cancel-in-progress: false
+
+jobs:
+  build-market-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Resolve target date
+        id: date
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          START_DATE_INPUT="${{ github.event.inputs.start_date }}"
+
+          if [ -n "$DATE_INPUT" ]; then
+            TARGET_DATE="$DATE_INPUT"
+          else
+            TARGET_DATE=$(TZ='Asia/Taipei' date --date='8 hours ago' '+%Y%m%d')
+          fi
+
+          if [ -n "$START_DATE_INPUT" ]; then
+            START_DATE="$START_DATE_INPUT"
+          else
+            START_DATE=$(node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'data_twse_market_chart/market_chart.json';
+          let start = '20251103';
+          try {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (/^20\d{6}$/.test(String(payload.startDate || ''))) start = payload.startDate;
+          } catch {}
+          process.stdout.write(start);
+          NODE
+            )
+          fi
+
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
+          echo "Target date: $TARGET_DATE"
+          echo "Start date: $START_DATE"
+
+      - name: Build chart data
+        run: |
+          node scripts/build_twse_market_chart.js \
+            --date "${{ steps.date.outputs.target_date }}" \
+            --start-date "${{ steps.date.outputs.start_date }}" \
+            --min-delay 500 \
+            --max-delay 1100 \
+            --max-retries 3
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_twse_market_chart/market_chart.json
+
+          if git diff --staged --quiet; then
+            echo "No TWSE market chart changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE market chart ${CURRENT_DATE}"
+          git pull --rebase origin main
+          git push origin main
+
+  refresh_mops_revenue_events:
+    name: Refresh MOPS revenue event study
+    needs: build-market-chart
+    uses: ./.github/workflows/refresh-mops-revenue-event-returns.yml
+
+  deploy_pages:
+    name: Deploy latest TWSE market chart and event study to Pages
+    needs: refresh_mops_revenue_events
+    uses: ./.github/workflows/deploy-pages.yml
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

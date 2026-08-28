@@ -1,0 +1,171 @@
+name: "[06 回填修復] Backfill Prediction Dashboard Fields"
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: '起始預測日 YYYYMMDD'
+        required: true
+        type: string
+        default: '20260727'
+      to_date:
+        description: '結束預測日 YYYYMMDD'
+        required: true
+        type: string
+        default: '20260731'
+      dry_run:
+        description: '只驗證，不寫入或提交'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-prediction-dashboard-fields
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test historical dashboard safeguards
+        run: |
+          node --check scripts/generate_prediction_dashboard_data.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node --check scripts/oversold_beta_rebound.js
+          node --check scripts/apply_formal_market_strategy_tags.js
+          node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/recalculate_prediction_strategy_history.js
+          node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/evaluate_formal_strategy_replay.js
+          node --check scripts/install_market_environment_ui.js
+          node --check public/prediction-dashboard-rebound-enhancement.js
+          node --check public/prediction-replay-formal-strategy-enhancement.js
+          node --test \
+            tests/prediction_dashboard_backfill.test.js \
+            tests/formal_market_strategy_tags.test.js \
+            tests/prediction_tag_strategy_engine.test.js \
+            tests/prediction_dashboard_group_sync.test.js \
+            tests/formal_strategy_replay.test.js \
+            tests/oversold_beta_rebound.test.js \
+            tests/oversold_electronics_strategy.test.js \
+            tests/oversold_strategy_replay.test.js
+
+      - name: Backfill derived dashboard fields
+        env:
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          args=(--from "$FROM_DATE" --to "$TO_DATE")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          node scripts/backfill_prediction_dashboard_fields.js "${args[@]}"
+
+      - name: Install dashboard readiness card
+        if: inputs.dry_run != true
+        run: node scripts/install_market_environment_ui.js
+
+      - name: Verify changed-file scope
+        if: inputs.dry_run != true
+        env:
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected=""
+          while IFS= read -r status_line; do
+            [ -n "$status_line" ] || continue
+            file="${status_line:3}"
+            allowed=false
+            file_date=""
+
+            if [ "$file" = "public/prediction-dashboard.html" ]; then
+              allowed=true
+            elif [[ "$file" =~ ^data_predictions/(20[0-9]{6})/(summary|industry-summary|group-summary|replay-summary|replay-dashboard|tag-strategy-snapshot)\.json$ ]]; then
+              allowed=true
+              file_date="${BASH_REMATCH[1]}"
+            elif [[ "$file" =~ ^data_market_environment/(20[0-9]{6})/(oversold_beta_rebound|actual_market_environment)\.json$ ]]; then
+              allowed=true
+              file_date="${BASH_REMATCH[1]}"
+            elif [[ "$file" =~ ^data_prediction_analysis/(formal-strategy|oversold-beta-rebound|tag-strategy)/(20[0-9]{6})\.json$ ]]; then
+              allowed=true
+              file_date="${BASH_REMATCH[2]}"
+            fi
+
+            if [ "$allowed" = "true" ] && [ -n "$file_date" ] \
+              && { [[ "$file_date" < "$FROM_DATE" ]] || [[ "$file_date" > "$TO_DATE" ]]; }; then
+              allowed=false
+            fi
+
+            if [ "$allowed" != "true" ]; then
+              unexpected+="$status_line"$'\n'
+            fi
+          done < <(git status --short)
+
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected files changed:"
+            printf '%s' "$unexpected"
+            exit 1
+          fi
+
+      - name: Commit backfilled dashboard fields
+        if: inputs.dry_run != true
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_predictions/*/summary.json \
+            data_predictions/*/industry-summary.json \
+            data_predictions/*/group-summary.json \
+            data_predictions/*/replay-summary.json \
+            data_predictions/*/replay-dashboard.json \
+            data_predictions/*/tag-strategy-snapshot.json \
+            data_market_environment/*/oversold_beta_rebound.json \
+            data_market_environment/*/actual_market_environment.json \
+            data_prediction_analysis/formal-strategy/*.json \
+            data_prediction_analysis/oversold-beta-rebound/*.json \
+            data_prediction_analysis/tag-strategy/*.json \
+            public/prediction-dashboard.html
+          if git diff --cached --quiet; then
+            echo "No dashboard field changes"
+            exit 0
+          fi
+          git commit -m "data: backfill readiness and versioned tag strategies"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed; retry ${attempt}/5"
+            sleep 5
+          done
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

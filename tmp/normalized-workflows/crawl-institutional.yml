@@ -1,0 +1,155 @@
+name: "[01 台股資料] 富邦－個股近30日法人歷史"
+
+on:
+  schedule:
+    - cron: '11 7 * * *'
+    - cron: '23 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260204)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: crawl-institutional
+  cancel-in-progress: false
+
+jobs:
+  crawl-institutional:
+    runs-on: ubuntu-latest
+    outputs:
+      is_trading_day: ${{ steps.trading-day.outputs.is_trading_day }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Determine target date
+        id: date
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            TARGET_DATE="${{ github.event.inputs.date }}"
+          else
+            HOUR=$(TZ='Asia/Taipei' date '+%H')
+            if [ "$HOUR" -lt 14 ]; then
+              TARGET_DATE=$(TZ='Asia/Taipei' date -d 'yesterday' '+%Y%m%d')
+            else
+              TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            fi
+          fi
+          echo "target=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
+          echo "📅 Target date: ${TARGET_DATE}"
+
+      - name: Check TWSE trading day
+        id: trading-day
+        run: node scripts/check_twse_trading_day.js --date ${{ steps.date.outputs.target }}
+
+      - name: Cache Playwright browsers
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: npx playwright install chromium
+
+      - name: Run Institutional crawler
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/crawl_institutional_data.js --date ${{ steps.date.outputs.target }}
+
+      - name: Reconcile Institutional completeness and retry list
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: |
+          node --check scripts/reconcile_institutional_data.js
+          node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
+      - name: Write Institutional summary
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/write_institutional_actions_summary.js --date ${{ steps.date.outputs.target }}
+
+      - name: Generate Fubon files.json only
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/generate_file_lists.js --only data_fubon
+
+      - name: Commit and push changes
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_fubon/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no institutional changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🏦 Update Institutional data - ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push institutional data after 5 attempts."
+          exit 1
+
+  deploy-pages:
+    name: 法人資料更新後發布 GitHub Pages
+    needs: crawl-institutional
+    if: needs.crawl-institutional.result == 'success' && needs.crawl-institutional.outputs.is_trading_day == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

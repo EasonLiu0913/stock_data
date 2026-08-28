@@ -1,0 +1,295 @@
+name: "[04 預測覆盤] 每日預測覆盤"
+
+on:
+  schedule:
+    # GitHub cron uses UTC; Taiwan time is UTC+8.
+    # Daily 14:03 Asia/Taipei = 06:03 UTC.
+    - cron: '3 6 * * *'
+    # Daily 14:42 Asia/Taipei = 06:42 UTC.
+    - cron: '42 6 * * *'
+  workflow_dispatch:
+    inputs:
+      replay_date:
+        description: '要覆盤的預測交易日 YYYYMMDD；留空自動使用最新 SMA 結果日'
+        required: false
+        default: ''
+        type: string
+      force_comparison:
+        description: '同日期已有覆盤比較時仍重新產生'
+        required: false
+        type: boolean
+        default: false
+      force_environment:
+        description: '重新產生實際市場環境、Shadow policy 與策略覆盤'
+        required: false
+        type: boolean
+        default: false
+      low_volume_threshold:
+        description: '低量門檻：實際成交量 ÷ 前 20 日平均成交量'
+        required: false
+        type: string
+        default: '0.75'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: prediction-analysis-writer
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: 檢查覆盤是否已存在
+    runs-on: ubuntu-latest
+    outputs:
+      date: ${{ steps.check.outputs.date }}
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main commit
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve replay date and check existing result
+        id: check
+        shell: bash
+        env:
+          DATE: ${{ inputs.replay_date }}
+          FORCE_RUN: ${{ inputs.force_comparison }}
+        run: |
+          set -euo pipefail
+          node --check scripts/resolve_prediction_replay_date.js
+
+          args=()
+          date_source="最新 SMA 結果日"
+          if [ -n "${DATE:-}" ]; then
+            args+=(--date "$DATE")
+            date_source="手動指定"
+          fi
+
+          date=$(node scripts/resolve_prediction_replay_date.js "${args[@]}")
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $date"; exit 1; }
+
+          comparison_file="data_prediction_comparisons/$date/comparison.json"
+          replay_file="data_predictions/$date/replay.json"
+          dashboard_file="data_predictions/$date/replay-dashboard.json"
+
+          should_run=true
+          if [ "$FORCE_RUN" != "true" ] \
+            && [ -s "$comparison_file" ] \
+            && [ -s "$replay_file" ] \
+            && [ -s "$dashboard_file" ]; then
+            should_run=false
+          fi
+
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+
+          echo "## 每日預測覆盤：執行前檢查" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤日期來源：$date_source" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- V1／V2 比較結果（comparison.json）：$([ -s "$comparison_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 核心覆盤結果（replay.json）：$([ -s "$replay_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤 Dashboard 資料（replay-dashboard.json）：$([ -s "$dashboard_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次需要執行覆盤：$should_run" >> "$GITHUB_STEP_SUMMARY"
+
+  replay_and_compare:
+    name: 產生 V1／V2 覆盤、環境驗證與比較
+    needs: preflight
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main commit
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve and verify comparison date
+        id: date
+        shell: bash
+        env:
+          DATE: ${{ needs.preflight.outputs.date }}
+          FORCE_RUN: ${{ inputs.force_comparison }}
+          FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
+        run: |
+          set -euo pipefail
+
+          node --check scripts/resolve_prediction_replay_date.js
+          node scripts/resolve_prediction_replay_date.js --self-test
+
+          args=(--date "$DATE")
+          date_source="preflight"
+
+          date=$(node scripts/resolve_prediction_replay_date.js "${args[@]}")
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid replay date: $date"; exit 1; }
+
+          comparison_run=true
+          if [ "$FORCE_RUN" != "true" ] \
+            && [ -s "data_prediction_comparisons/$date/comparison.json" ] \
+            && [ -s "data_predictions/$date/replay.json" ] \
+            && [ -s "data_predictions/$date/replay-dashboard.json" ]; then comparison_run=false; fi
+          factor_run=false
+          if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/industry-factor-ranges.json" ]; then factor_run=true; fi
+          volume_run=false
+          if [ "$comparison_run" = "true" ] || [ ! -s "data_prediction_analysis/$date/volume-filter-impact.json" ]; then volume_run=true; fi
+          environment_run=false
+          if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ ! -s "data_market_environment/$date/actual_market_environment.json" ]; then environment_run=true; fi
+          formal_strategy_run=false
+          if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ "$environment_run" = "true" ] || [ ! -s "data_prediction_analysis/formal-strategy/$date.json" ]; then formal_strategy_run=true; fi
+          tag_strategy_run=false
+          if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ "$environment_run" = "true" ] || [ ! -s "data_prediction_analysis/tag-strategy/$date.json" ]; then tag_strategy_run=true; fi
+          observation_tag_run=false
+          if [ "$FORCE_ENVIRONMENT" = "true" ] || [ "$comparison_run" = "true" ] || [ "$tag_strategy_run" = "true" ] || [ ! -s "data_prediction_analysis/observation-tag/$date.json" ]; then observation_tag_run=true; fi
+
+          echo "run=$comparison_run" >> "$GITHUB_OUTPUT"
+          echo "factor_run=$factor_run" >> "$GITHUB_OUTPUT"
+          echo "volume_run=$volume_run" >> "$GITHUB_OUTPUT"
+          echo "environment_run=$environment_run" >> "$GITHUB_OUTPUT"
+          echo "formal_strategy_run=$formal_strategy_run" >> "$GITHUB_OUTPUT"
+          echo "tag_strategy_run=$tag_strategy_run" >> "$GITHUB_OUTPUT"
+          echo "observation_tag_run=$observation_tag_run" >> "$GITHUB_OUTPUT"
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+          echo "## 每日預測覆盤：本次處理項目" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 覆盤日期來源：執行前檢查（Preflight）" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 本次覆盤日期：$date" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 產生／更新 V1／V2 比較結果：$comparison_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 產生／更新實際市場環境：$environment_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算既有正式策略覆盤：$formal_strategy_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算標籤組合策略覆盤：$tag_strategy_run" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 計算觀察型風險標籤覆盤：$observation_tag_run" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run market environment and strategy tests
+        run: |
+          node --check scripts/prediction_tag_strategy_engine.js
+          node --check scripts/evaluate_tag_strategy_replay.js
+          node --check scripts/evaluate_observation_tag_replay.js
+          node --check scripts/recalculate_prediction_strategy_history.js
+          node --check scripts/backfill_prediction_replay_5d_outcomes.js
+          node --test \
+            tests/market_environment.test.js \
+            tests/formal_strategy_replay.test.js \
+            tests/prediction_tag_strategy_engine.test.js \
+            tests/evaluate_tag_strategy_replay.test.js \
+            tests/evaluate_observation_tag_replay.test.js \
+            tests/backfill_prediction_replay_5d_outcomes.test.js
+
+      - name: Replay V1
+        if: steps.date.outputs.run == 'true'
+        run: node scripts/generate_prediction_replay.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Replay V2 with five evaluation angles
+        if: steps.date.outputs.run == 'true'
+        run: node scripts/generate_prediction_replay_v2.js --date "${{ steps.date.outputs.date }}" --cost-bps 30
+
+      - name: Backfill five-day intraday outcomes
+        id: five_day
+        shell: bash
+        run: |
+          set -euo pipefail
+          result_file=$(mktemp)
+          node scripts/backfill_prediction_replay_5d_outcomes.js --date "${{ steps.date.outputs.date }}" | tee "$result_file"
+          changed=$(node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(Boolean(p.changed)));' "$result_file")
+          status=$(node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(p.status||"unknown"));' "$result_file")
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = "pending_five_trading_days" ]; then
+            echo "- 五日盤中績效：尚未滿 5 個交易日，暫待後續交易日補齊（本次無新資料可寫入）" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- 五日盤中績效：$status（本次是否有新資料寫入：$changed）" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Analyze low-volume exclusion impact
+        if: steps.date.outputs.volume_run == 'true'
+        run: node scripts/analyze_replay_volume_filter.js --date "${{ steps.date.outputs.date }}" --low-volume-threshold "${{ inputs.low_volume_threshold }}"
+
+      - name: Generate V1 and V2 accuracy comparison
+        if: steps.date.outputs.run == 'true'
+        run: node scripts/compare_prediction_versions.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Generate industry r1 r3 and 7-day RS analysis
+        if: steps.date.outputs.factor_run == 'true'
+        run: node scripts/analyze_replay_factor_ranges.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Generate actual market environment and compare shadow policy
+        if: steps.date.outputs.environment_run == 'true'
+        run: node scripts/generate_actual_market_environment.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Evaluate existing formal strategy labels
+        if: steps.date.outputs.formal_strategy_run == 'true'
+        run: node scripts/evaluate_formal_strategy_replay.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Evaluate registered tag strategies
+        if: steps.date.outputs.tag_strategy_run == 'true' || steps.five_day.outputs.changed == 'true'
+        run: node scripts/evaluate_tag_strategy_replay.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Evaluate observation-only risk tags
+        if: steps.date.outputs.observation_tag_run == 'true' || steps.five_day.outputs.changed == 'true'
+        run: node scripts/evaluate_observation_tag_replay.js --date "${{ steps.date.outputs.date }}"
+
+      - name: Analyze relative leadership by market environment
+        if: steps.date.outputs.environment_run == 'true' || steps.date.outputs.run == 'true'
+        run: node scripts/analyze_relative_leadership_by_environment.js --date "${{ steps.date.outputs.date }}" --max-dates 30
+
+      - name: Commit replay comparison, environment, and analyses
+        if: steps.date.outputs.run == 'true' || steps.date.outputs.factor_run == 'true' || steps.date.outputs.volume_run == 'true' || steps.date.outputs.environment_run == 'true' || steps.date.outputs.formal_strategy_run == 'true' || steps.date.outputs.tag_strategy_run == 'true' || steps.date.outputs.observation_tag_run == 'true' || steps.five_day.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_predictions data_predictions_v2 data_prediction_comparisons data_prediction_analysis data_market_environment
+          if git diff --cached --quiet; then echo "No replay, environment, or analysis changes"; exit 0; fi
+          git commit -m "feat: update replay environment and analyses for ${{ steps.date.outputs.date }}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
+
+  deploy_pages:
+    name: 覆盤完成後發布 GitHub Pages
+    needs: [preflight, replay_and_compare]
+    if: needs.preflight.outputs.should_run == 'true' && needs.replay_and_compare.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

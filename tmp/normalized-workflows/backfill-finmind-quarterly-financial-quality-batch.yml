@@ -1,0 +1,307 @@
+name: '[07 研究] FinMind－季財報品質候選池分批回填'
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_score_threshold:
+        description: '高強度軌：月營收分數門檻'
+        required: true
+        type: number
+        default: 9
+      core_min_hits:
+        description: '高強度軌：至少命中月份數'
+        required: true
+        type: number
+        default: 2
+      persistent_score_threshold:
+        description: '持續強度軌：月營收分數門檻'
+        required: true
+        type: number
+        default: 8
+      persistent_min_hits:
+        description: '持續強度軌：至少命中月份數'
+        required: true
+        type: number
+        default: 3
+      start_batch:
+        description: '0-based 起始批次；可從 checkpoint 批次接續'
+        required: true
+        type: number
+        default: 22
+      end_batch:
+        description: '0-based 結束批次（含）；目前 551 檔 / 20 = batch 0~27'
+        required: true
+        type: number
+        default: 27
+      batch_size:
+        description: '每批股票數，建議 20'
+        required: true
+        type: number
+        default: 20
+      delay_ms:
+        description: '每檔股票之間基本延遲毫秒，建議 2000'
+        required: true
+        type: number
+        default: 2000
+      jitter_ms:
+        description: '額外隨機延遲毫秒，建議 750'
+        required: true
+        type: number
+        default: 750
+      batch_pause_seconds:
+        description: '每個 batch checkpoint 後休息秒數，建議 20'
+        required: true
+        type: number
+        default: 20
+      hourly_request_cap:
+        description: '本 workflow 每小時安全上限；v4 註冊會員官方目前 600/hr，建議只用 500'
+        required: true
+        type: number
+        default: 500
+      quota_reserve_requests:
+        description: '相對官方帳號上限額外保留的 request 數'
+        required: true
+        type: number
+        default: 20
+      quota_poll_seconds:
+        description: '額度不足時每幾秒向 user_info 重查一次'
+        required: true
+        type: number
+        default: 60
+      quota_max_wait_minutes:
+        description: '單次等待額度恢復的最長分鐘數'
+        required: true
+        type: number
+        default: 90
+      start_quarter:
+        description: '起始季度'
+        required: true
+        type: string
+        default: '2023Q1'
+      end_quarter:
+        description: '結束季度；尚未到保守公布日會標記 pending 而非失敗'
+        required: true
+        type: string
+        default: '2026Q2'
+      force:
+        description: '強制重抓已完成股票'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finmind-quarterly-financial-quality-continuous
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate batch backfill scripts
+        run: |
+          node --check scripts/check_finmind_api_quota.js
+          node --check scripts/backfill_finmind_quarterly_financial_quality.js
+          node --check scripts/backfill_finmind_quarterly_financial_quality_batch.js
+          node --check scripts/generate_financial_quality_score_timeline.js
+          node --test tests/mops_quarterly_financial_quality.test.js
+
+      - name: Validate registered FinMind token
+        env:
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+          HOURLY_REQUEST_CAP: ${{ inputs.hourly_request_cap }}
+          QUOTA_RESERVE_REQUESTS: ${{ inputs.quota_reserve_requests }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FINMIND_API_TOKEN:-}" ]; then
+            echo 'FINMIND_API_TOKEN is missing. Add the token from a registered and email-verified FinMind account to repository Actions secrets.' >&2
+            exit 1
+          fi
+          node scripts/check_finmind_api_quota.js \
+            --configured-cap "$HOURLY_REQUEST_CAP" \
+            --reserve-requests "$QUOTA_RESERVE_REQUESTS" \
+            --required-requests 0
+
+      - name: Backfill batches with checkpoint commits and quota guard
+        env:
+          CORE_SCORE_THRESHOLD: ${{ inputs.core_score_threshold }}
+          CORE_MIN_HITS: ${{ inputs.core_min_hits }}
+          PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
+          PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
+          START_BATCH: ${{ inputs.start_batch }}
+          END_BATCH: ${{ inputs.end_batch }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          DELAY_MS: ${{ inputs.delay_ms }}
+          JITTER_MS: ${{ inputs.jitter_ms }}
+          BATCH_PAUSE_SECONDS: ${{ inputs.batch_pause_seconds }}
+          HOURLY_REQUEST_CAP: ${{ inputs.hourly_request_cap }}
+          QUOTA_RESERVE_REQUESTS: ${{ inputs.quota_reserve_requests }}
+          QUOTA_POLL_SECONDS: ${{ inputs.quota_poll_seconds }}
+          QUOTA_MAX_WAIT_MINUTES: ${{ inputs.quota_max_wait_minutes }}
+          START_QUARTER: ${{ inputs.start_quarter }}
+          END_QUARTER: ${{ inputs.end_quarter }}
+          FORCE: ${{ inputs.force }}
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ "$START_BATCH" -gt "$END_BATCH" ]; then
+            echo "start_batch must be <= end_batch: $START_BATCH > $END_BATCH" >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          checkpoint_commit() {
+            local batch="$1"
+            git add data_finmind_quarterly_financial_quality data_prediction_analysis/quarterly-financial-quality/batch-status
+            if git diff --cached --quiet; then
+              echo "[checkpoint] batch $batch has no changes"
+              return 0
+            fi
+
+            git commit -m "data: backfill FinMind financial quality batch $batch"
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase origin main && git push origin HEAD:main; then
+                echo "[checkpoint] batch $batch committed and pushed"
+                return 0
+              fi
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt * 5))
+            done
+            echo "[checkpoint] unable to push batch $batch" >&2
+            return 1
+          }
+
+          for batch in $(seq "$START_BATCH" "$END_BATCH"); do
+            echo "========================================"
+            echo "[batch] quota check before $batch / $END_BATCH"
+            echo "========================================"
+
+            node scripts/check_finmind_api_quota.js \
+              --configured-cap "$HOURLY_REQUEST_CAP" \
+              --reserve-requests "$QUOTA_RESERVE_REQUESTS" \
+              --required-requests "$BATCH_SIZE" \
+              --poll-seconds "$QUOTA_POLL_SECONDS" \
+              --max-wait-minutes "$QUOTA_MAX_WAIT_MINUTES" \
+              --wait true
+
+            echo "========================================"
+            echo "[batch] start $batch / $END_BATCH"
+            echo "========================================"
+
+            set +e
+            node scripts/backfill_finmind_quarterly_financial_quality_batch.js \
+              --core-score-threshold "$CORE_SCORE_THRESHOLD" \
+              --core-min-hits "$CORE_MIN_HITS" \
+              --persistent-score-threshold "$PERSISTENT_SCORE_THRESHOLD" \
+              --persistent-min-hits "$PERSISTENT_MIN_HITS" \
+              --batch-index "$batch" \
+              --batch-size "$BATCH_SIZE" \
+              --delay-ms "$DELAY_MS" \
+              --jitter-ms "$JITTER_MS" \
+              --start-quarter "$START_QUARTER" \
+              --end-quarter "$END_QUARTER" \
+              --force "$FORCE"
+            batch_exit=$?
+            set -e
+
+            checkpoint_commit "$batch"
+
+            status_file="data_prediction_analysis/quarterly-financial-quality/batch-status/dual-track-batch$(printf '%03d' "$batch").json"
+            if [ ! -s "$status_file" ]; then
+              echo "Missing batch status after checkpoint: $status_file" >&2
+              exit 1
+            fi
+
+            read -r fatal_count quota_exhausted <<<"$(node - "$status_file" <<'NODE'
+          const fs = require('node:fs');
+          const file = process.argv[2];
+          const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const counts = data.counts || {};
+          const fatal = Number(counts.backfill_failed || 0) + Number(counts.timeline_failed || 0);
+          const quota = Boolean(data.quota_exhausted || Number(counts.quota_exhausted || 0));
+          process.stdout.write(`${fatal} ${quota ? 1 : 0}`);
+          NODE
+            )"
+
+            if [ "$quota_exhausted" -gt 0 ]; then
+              echo "[stop] FinMind quota exhausted during batch $batch despite preflight guard." >&2
+              echo "[stop] checkpoint is preserved; resume from batch $batch after quota recovers." >&2
+              exit 1
+            fi
+
+            if [ "$batch_exit" -ne 0 ] || [ "$fatal_count" -gt 0 ]; then
+              echo "[stop] batch $batch has true backfill/timeline failures (exit=$batch_exit, fatal=$fatal_count)." >&2
+              echo "[stop] progress through batch $batch is already checkpointed; inspect $status_file and resume from this batch after fixing." >&2
+              exit 1
+            fi
+
+            if [ "$batch" -lt "$END_BATCH" ]; then
+              echo "[batch pause] sleeping ${BATCH_PAUSE_SECONDS}s before batch $((batch + 1))"
+              sleep "$BATCH_PAUSE_SECONDS"
+            fi
+          done
+
+          echo "[complete] processed batches $START_BATCH through $END_BATCH"
+
+      - name: Summarize continuous backfill
+        if: always()
+        env:
+          CORE_SCORE_THRESHOLD: ${{ inputs.core_score_threshold }}
+          CORE_MIN_HITS: ${{ inputs.core_min_hits }}
+          PERSISTENT_SCORE_THRESHOLD: ${{ inputs.persistent_score_threshold }}
+          PERSISTENT_MIN_HITS: ${{ inputs.persistent_min_hits }}
+          START_BATCH: ${{ inputs.start_batch }}
+          END_BATCH: ${{ inputs.end_batch }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          DELAY_MS: ${{ inputs.delay_ms }}
+          JITTER_MS: ${{ inputs.jitter_ms }}
+          BATCH_PAUSE_SECONDS: ${{ inputs.batch_pause_seconds }}
+          HOURLY_REQUEST_CAP: ${{ inputs.hourly_request_cap }}
+          QUOTA_RESERVE_REQUESTS: ${{ inputs.quota_reserve_requests }}
+        run: |
+          echo "## FinMind 季財報品質候選池連續回填" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 高強度軌：score >= $CORE_SCORE_THRESHOLD，至少 $CORE_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 持續強度軌：score >= $PERSISTENT_SCORE_THRESHOLD，至少 $PERSISTENT_MIN_HITS 個月" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 批次範圍：$START_BATCH → $END_BATCH；每批 $BATCH_SIZE 檔" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 註冊會員 token：必填；每批前使用 FinMind user_info 驗證實際用量" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workflow 安全上限：${HOURLY_REQUEST_CAP}/hour；另保留 ${QUOTA_RESERVE_REQUESTS} requests" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 股票間節奏：至少 ${DELAY_MS}ms + 0~${JITTER_MS}ms jitter" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 批次間休息：${BATCH_PAUSE_SECONDS}s" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 429/5xx/timeout：2s → 5s → 10s 退避重試；402 quota exhaustion 立即 checkpoint + stop" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 每批完成即 checkpoint commit；真正 backfill/timeline failure 會在保留進度後停止" >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+
