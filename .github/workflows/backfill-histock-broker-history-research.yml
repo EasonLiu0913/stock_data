@@ -3,10 +3,21 @@ name: "[07 研究] HiStock Broker History Backfill"
 on:
   workflow_dispatch:
     inputs:
-      stock:
-        description: "Stock code"
+      scope:
+        description: "single | list | all"
         required: true
+        default: "single"
+        type: choice
+        options: [single, list, all]
+      stock:
+        description: "Stock code when scope=single"
+        required: false
         default: "2449"
+        type: string
+      stocks:
+        description: "Comma-separated stock codes when scope=list"
+        required: false
+        default: ""
         type: string
       start_date:
         description: "Start date (YYYY-MM-DD)"
@@ -18,10 +29,15 @@ on:
         required: true
         default: "2026-07-31"
         type: string
-      batch_size:
-        description: "Missing trading days per batch"
+      batch_size_requests:
+        description: "Maximum stock-date requests per batch"
         required: true
         default: "8"
+        type: string
+      max_batches_per_run:
+        description: "Maximum batches scheduled in one workflow run"
+        required: true
+        default: "20"
         type: string
       delay_ms:
         description: "Base delay between requests"
@@ -33,6 +49,11 @@ on:
         required: true
         default: "2500"
         type: string
+      batch_pause_seconds:
+        description: "Pause after each batch checkpoint"
+        required: true
+        default: "15"
+        type: string
       commit_results:
         description: "Checkpoint each batch and final aggregate"
         required: true
@@ -43,7 +64,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: histock-broker-history-research-${{ inputs.stock }}
+  group: histock-broker-history-research
   cancel-in-progress: false
 
 jobs:
@@ -52,53 +73,78 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       missing_count: ${{ steps.plan.outputs.missing_count }}
+      scheduled_count: ${{ steps.plan.outputs.scheduled_count }}
+      deferred_count: ${{ steps.plan.outputs.deferred_count }}
       requested_count: ${{ steps.plan.outputs.requested_count }}
       existing_count: ${{ steps.plan.outputs.existing_count }}
       batch_count: ${{ steps.plan.outputs.batch_count }}
+      affected_stocks: ${{ steps.plan.outputs.affected_stocks }}
+      stock_count: ${{ steps.plan.outputs.stock_count }}
+      trading_day_count: ${{ steps.plan.outputs.trading_day_count }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
       - name: Validate scripts and inputs
+        shell: bash
         run: |
           set -euo pipefail
-          [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]]
           [[ "${{ inputs.start_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
           [[ "${{ inputs.end_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
-          [[ "${{ inputs.batch_size }}" =~ ^[0-9]+$ ]]
+          [[ "${{ inputs.batch_size_requests }}" =~ ^[0-9]+$ ]]
+          [[ "${{ inputs.max_batches_per_run }}" =~ ^[0-9]+$ ]]
           [[ "${{ inputs.delay_ms }}" =~ ^[0-9]+$ ]]
           [[ "${{ inputs.jitter_ms }}" =~ ^[0-9]+$ ]]
-          test "${{ inputs.batch_size }}" -ge 1
-          test "${{ inputs.batch_size }}" -le 30
+          [[ "${{ inputs.batch_pause_seconds }}" =~ ^[0-9]+$ ]]
+          test "${{ inputs.batch_size_requests }}" -ge 1
+          test "${{ inputs.batch_size_requests }}" -le 30
+          test "${{ inputs.max_batches_per_run }}" -ge 1
+          test "${{ inputs.max_batches_per_run }}" -le 200
           test "${{ inputs.delay_ms }}" -ge 1000
           test -s data_history_sma/trading_days.json
           test -s data_history_sma/non_trading_days.json
+          test -s data_twse/twse_industry.csv
           node --check scripts/plan_histock_broker_history_backfill.js
           node --check scripts/backfill_histock_broker_history_research_v2.js
           node --check scripts/aggregate_histock_broker_history_research.js
-      - name: Plan trading-day batches
+      - name: Plan stock-date request batches
         id: plan
+        shell: bash
         run: |
           set -euo pipefail
-          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
           node scripts/plan_histock_broker_history_backfill.js \
-            --stock "${{ inputs.stock }}" --start "${{ inputs.start_date }}" --end "${{ inputs.end_date }}" \
-            --batch-size "${{ inputs.batch_size }}" --output "$ROOT/backfill-plan.json" --github-output "$GITHUB_OUTPUT"
+            --scope "${{ inputs.scope }}" \
+            --stock "${{ inputs.stock }}" \
+            --stocks "${{ inputs.stocks }}" \
+            --start "${{ inputs.start_date }}" \
+            --end "${{ inputs.end_date }}" \
+            --batch-size-requests "${{ inputs.batch_size_requests }}" \
+            --max-batches-per-run "${{ inputs.max_batches_per_run }}" \
+            --output "$RUNNER_TEMP/histock-backfill-plan.json" \
+            --github-output "$GITHUB_OUTPUT"
       - name: Plan summary
+        shell: bash
         run: |
           {
-            echo "## HiStock backfill plan"
-            echo "- Trading days: ${{ steps.plan.outputs.requested_count }}"
+            echo "## HiStock stock-date backfill plan"
+            echo "- Scope: \`${{ inputs.scope }}\`"
+            echo "- Stocks: ${{ steps.plan.outputs.stock_count }}"
+            echo "- Trading days: ${{ steps.plan.outputs.trading_day_count }}"
+            echo "- Theoretical stock-date tasks: ${{ steps.plan.outputs.requested_count }}"
             echo "- Already valid: ${{ steps.plan.outputs.existing_count }}"
-            echo "- Missing: ${{ steps.plan.outputs.missing_count }}"
-            echo "- Batch size: ${{ inputs.batch_size }}"
+            echo "- Missing total: ${{ steps.plan.outputs.missing_count }}"
+            echo "- Scheduled this run: ${{ steps.plan.outputs.scheduled_count }}"
+            echo "- Deferred to later runs: ${{ steps.plan.outputs.deferred_count }}"
+            echo "- Request cap per batch: ${{ inputs.batch_size_requests }}"
+            echo "- Max batches this run: ${{ inputs.max_batches_per_run }}"
+            echo "- Absolute request ceiling this run: $(( ${{ inputs.batch_size_requests }} * ${{ inputs.max_batches_per_run }} ))"
             echo "- Planned batches: ${{ steps.plan.outputs.batch_count }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   batch:
     needs: plan
-    if: ${{ needs.plan.outputs.missing_count != '0' }}
+    if: ${{ needs.plan.outputs.scheduled_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -112,74 +158,95 @@ jobs:
           fetch-depth: 0
       - name: Sync latest checkpoint
         run: |
+          set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-      - name: Fetch isolated batch
+      - name: Fetch stock-date tasks in this batch
         id: fetch
-        continue-on-error: true
+        shell: bash
         env:
-          BATCH_DATES: ${{ matrix.dates }}
+          TASKS: ${{ matrix.tasks }}
           BATCH_INDEX: ${{ matrix.batch }}
         run: |
           set -euo pipefail
-          TMP="$RUNNER_TEMP/histock-${{ inputs.stock }}-${BATCH_INDEX}"
-          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
-          mkdir -p "$TMP/daily" "$ROOT/daily" "$ROOT/batch-status"
-          cp -f "$ROOT"/daily/*.json "$TMP/daily/" 2>/dev/null || true
-          set +e
-          node scripts/backfill_histock_broker_history_research_v2.js \
-            --stock "${{ inputs.stock }}" --start "${{ matrix.start }}" --end "${{ matrix.end }}" \
-            --delay-ms "${{ inputs.delay_ms }}" --jitter-ms "${{ inputs.jitter_ms }}" \
-            --max-consecutive-failures 20 --out "$TMP"
-          FETCH_EXIT=$?
-          set -e
-          cp -f "$TMP"/daily/*.json "$ROOT/daily/" 2>/dev/null || true
-          STATUS="$ROOT/batch-status/batch-$(printf '%03d' "$BATCH_INDEX").json"
-          node - "$TMP/analysis.json" "$STATUS" "$BATCH_DATES" "$FETCH_EXIT" <<'NODE'
-          const fs = require('fs');
-          const [analysisFile,statusFile,csv,exitCode]=process.argv.slice(2);
-          const dates=csv.split(',').filter(Boolean);
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          echo "Batch $BATCH_INDEX contains ${#ITEMS[@]} request task(s); configured cap=${{ inputs.batch_size_requests }}"
+          test "${#ITEMS[@]}" -le "${{ inputs.batch_size_requests }}"
+          mkdir -p "$RUNNER_TEMP/histock-batch-status"
+
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"
+            DATE="${ITEM#*@}"
+            TMP="$RUNNER_TEMP/histock-${STOCK}-${DATE//-/}"
+            ROOT="data_research/institutional-flow/histock/$STOCK"
+            mkdir -p "$TMP/daily" "$ROOT/daily" "$ROOT/batch-status"
+
+            echo "[task] $STOCK / $DATE"
+            set +e
+            node scripts/backfill_histock_broker_history_research_v2.js \
+              --stock "$STOCK" --start "$DATE" --end "$DATE" \
+              --delay-ms "${{ inputs.delay_ms }}" --jitter-ms "${{ inputs.jitter_ms }}" \
+              --max-consecutive-failures 20 --out "$TMP"
+            FETCH_EXIT=$?
+            set -e
+
+            DAILY="$TMP/daily/${DATE//-/}.json"
+            if [ -s "$DAILY" ]; then
+              cp -f "$DAILY" "$ROOT/daily/"
+              echo "[task] saved $STOCK / $DATE"
+            else
+              echo "[task] unresolved $STOCK / $DATE"
+            fi
+
+            STATUS="$ROOT/batch-status/run-${GITHUB_RUN_ID}-batch-$(printf '%03d' "$BATCH_INDEX")-${DATE//-/}.json"
+            node - "$TMP/analysis.json" "$STATUS" "$STOCK" "$DATE" "$FETCH_EXIT" <<'NODE'
+          const fs=require('fs');
+          const [analysisFile,statusFile,stock,date,exitCode]=process.argv.slice(2);
           const a=fs.existsSync(analysisFile)?JSON.parse(fs.readFileSync(analysisFile,'utf8')):{};
-          const unresolved=new Map((a.unresolved||[]).map(x=>[x.date,x]));
-          const parsed=new Set((a.rolling||[]).map(x=>x.date));
-          const out={schema_version:1,batch:Number(process.env.BATCH_INDEX),dates,parsed_dates:dates.filter(d=>parsed.has(d)),unresolved:dates.filter(d=>!parsed.has(d)).map(d=>unresolved.get(d)||{date:d,reason:'missing_without_diagnostics',diagnostics:null}),fetch_exit_code:Number(exitCode),generated_at:new Date().toISOString()};
+          const parsed=(a.rolling||[]).some(x=>x.date===date);
+          const unresolved=(a.unresolved||[]).find(x=>x.date===date)||null;
+          const out={schema_version:2,run_id:process.env.GITHUB_RUN_ID,batch:Number(process.env.BATCH_INDEX),stock,date,parsed,unresolved,fetch_exit_code:Number(exitCode),generated_at:new Date().toISOString()};
           fs.writeFileSync(statusFile,JSON.stringify(out,null,2)+'\n');
-          console.log(JSON.stringify(out,null,2));
           NODE
-      - name: Validate and checkpoint batch
+          done
+      - name: Validate and checkpoint successful tasks
         if: always()
+        shell: bash
         env:
-          BATCH_DATES: ${{ matrix.dates }}
+          TASKS: ${{ matrix.tasks }}
           BATCH_INDEX: ${{ matrix.batch }}
-          STOCK: ${{ inputs.stock }}
         run: |
           set -euo pipefail
-          ROOT="data_research/institutional-flow/histock/$STOCK"
-          STATUS="$ROOT/batch-status/batch-$(printf '%03d' "$BATCH_INDEX").json"
-          test -s "$STATUS"
-          node - "$ROOT" "$BATCH_DATES" <<'NODE'
-          const fs=require('fs'),path=require('path');
-          const [root,csv]=process.argv.slice(2), stock=process.env.STOCK;
-          for(const date of csv.split(',').filter(Boolean)){
-            const file=path.join(root,'daily',date.replaceAll('-','')+'.json');
-            if(!fs.existsSync(file)) continue;
-            const p=JSON.parse(fs.readFileSync(file,'utf8'));
-            if(p.source!=='histock'||p.research_only!==true||p.stock!==stock||p.date!==date||!Array.isArray(p.records)||!p.records.length) throw new Error(`Invalid daily ${date}`);
-          }
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"
+            DATE="${ITEM#*@}"
+            FILE="data_research/institutional-flow/histock/$STOCK/daily/${DATE//-/}.json"
+            if [ ! -s "$FILE" ]; then continue; fi
+            STOCK_ENV="$STOCK" DATE_ENV="$DATE" FILE_ENV="$FILE" node - <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync(process.env.FILE_ENV,'utf8'));
+          if(p.source!=='histock'||p.research_only!==true||p.stock!==process.env.STOCK_ENV||p.date!==process.env.DATE_ENV||!Array.isArray(p.records)||!p.records.length) throw new Error(`Invalid checkpoint ${process.env.STOCK_ENV}/${process.env.DATE_ENV}`);
           NODE
+          done
+
           if [ "${{ inputs.commit_results }}" = "true" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "$ROOT/daily" "$STATUS"
+            git add data_research/institutional-flow/histock
             if ! git diff --cached --quiet; then
-              git commit -m "research: HiStock $STOCK batch $BATCH_INDEX checkpoint"
+              git commit -m "research: HiStock stock-date batch $BATCH_INDEX checkpoint"
               for attempt in 1 2 3 4 5; do
-                if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+                if git pull --rebase origin main && git push origin HEAD:main; then break; fi
                 git rebase --abort 2>/dev/null || true
                 sleep $((attempt*5))
+                if [ "$attempt" -eq 5 ]; then exit 1; fi
               done
-              exit 1
             fi
+          fi
+
+          if [ "${{ inputs.batch_pause_seconds }}" -gt 0 ]; then
+            sleep "${{ inputs.batch_pause_seconds }}"
           fi
 
   aggregate:
@@ -193,44 +260,71 @@ jobs:
           fetch-depth: 0
       - name: Sync all checkpoints
         run: |
+          set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-      - name: Aggregate daily checkpoints
+      - name: Aggregate affected stocks
         id: aggregate
         continue-on-error: true
-        run: |
-          node scripts/aggregate_histock_broker_history_research.js \
-            --stock "${{ inputs.stock }}" --start "${{ inputs.start_date }}" --end "${{ inputs.end_date }}"
-      - name: Commit aggregate state
-        if: ${{ inputs.commit_results }}
+        shell: bash
+        env:
+          AFFECTED_STOCKS: ${{ needs.plan.outputs.affected_stocks }}
         run: |
           set -euo pipefail
-          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
+          if [ -z "$AFFECTED_STOCKS" ]; then
+            echo "No affected stocks to aggregate."
+            exit 0
+          fi
+          IFS=',' read -ra STOCKS <<< "$AFFECTED_STOCKS"
+          HARD=0
+          for STOCK in "${STOCKS[@]}"; do
+            echo "[aggregate] $STOCK"
+            set +e
+            node scripts/aggregate_histock_broker_history_research.js \
+              --stock "$STOCK" --start "${{ inputs.start_date }}" --end "${{ inputs.end_date }}"
+            RC=$?
+            set -e
+            if [ "$RC" -ne 0 ]; then HARD=1; fi
+          done
+          echo "hard_failure=$HARD" >> "$GITHUB_OUTPUT"
+      - name: Commit aggregate states
+        if: ${{ inputs.commit_results }}
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$ROOT/analysis.json" "$ROOT/manifest.json"
+          git add data_research/institutional-flow/histock
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "research: aggregate HiStock broker history ${{ inputs.stock }}"
+          git commit -m "research: aggregate HiStock stock-date backfill"
           git pull --rebase origin main
           git push origin HEAD:main
       - name: Final summary
         if: always()
+        shell: bash
         run: |
-          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
           {
-            echo "## HiStock broker history plan & batch backfill"
-            echo "- Trading days: ${{ needs.plan.outputs.requested_count }}"
+            echo "## HiStock stock-date plan & batch backfill"
+            echo "- Scope: \`${{ inputs.scope }}\`"
+            echo "- Stocks in universe: ${{ needs.plan.outputs.stock_count }}"
+            echo "- Trading days: ${{ needs.plan.outputs.trading_day_count }}"
+            echo "- Theoretical tasks: ${{ needs.plan.outputs.requested_count }}"
             echo "- Existing before run: ${{ needs.plan.outputs.existing_count }}"
             echo "- Missing before run: ${{ needs.plan.outputs.missing_count }}"
-            echo "- Planned batches: ${{ needs.plan.outputs.batch_count }}"
-            echo "- Each batch commits successful daily files independently; unresolved dates do not discard successful checkpoints."
+            echo "- Scheduled this run: ${{ needs.plan.outputs.scheduled_count }}"
+            echo "- Deferred: ${{ needs.plan.outputs.deferred_count }}"
+            echo "- Batches: ${{ needs.plan.outputs.batch_count }}"
+            echo "- Batch request cap: ${{ inputs.batch_size_requests }}"
+            echo "- Max requests/run: $(( ${{ inputs.batch_size_requests }} * ${{ inputs.max_batches_per_run }} ))"
+            echo "- Successful stock-date files are checkpointed per batch; unresolved tasks remain missing for the next Plan."
           } >> "$GITHUB_STEP_SUMMARY"
-          node scripts/render_histock_broker_history_summary.js "$ROOT/analysis.json" >> "$GITHUB_STEP_SUMMARY" || true
-      - name: Fail only on hard unresolved dates
+          if [ "${{ inputs.scope }}" = "single" ] && [ -s "data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json" ]; then
+            node scripts/render_histock_broker_history_summary.js "data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json" >> "$GITHUB_STEP_SUMMARY" || true
+          fi
+      - name: Report aggregate hard failures
         if: always()
+        shell: bash
         run: |
-          node - "data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json" <<'NODE'
-          const fs=require('fs'); const a=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-          console.log(`coverage=${a.counts.parsed_trading_days}/${a.counts.requested_trading_days}; source_gaps=${a.counts.source_gaps}; hard_failures=${a.counts.hard_failures}`);
-          if(Number(a.counts.hard_failures||0)>0) process.exit(1);
-          NODE
+          if [ "${{ steps.aggregate.outputs.hard_failure }}" = "1" ]; then
+            echo "Some affected stocks still have hard unresolved dates. Successful stock-date checkpoints were preserved; rerun to retry only remaining missing tasks."
+          fi
