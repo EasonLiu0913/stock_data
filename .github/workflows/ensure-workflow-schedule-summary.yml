@@ -8,47 +8,52 @@ on:
       - '.github/workflows/**'
       - 'scripts/write_workflow_schedule_summary.js'
       - 'scripts/migrate_workflow_schedule_summary.js'
+      - 'scripts/create_github_commit_object.js'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ensure-workflow-schedule-summary
   cancel-in-progress: false
 
 jobs:
-  audit:
+  prepare-normalization:
+    name: 準備輕量化 Summary normalization
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout latest main
         uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
 
-      - name: Validate shared schedule summary helper
+      - name: Sync latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Validate summary tooling
         run: |
           set -euo pipefail
           node --check scripts/write_workflow_schedule_summary.js
           node scripts/write_workflow_schedule_summary.js --self-test
           node --check scripts/migrate_workflow_schedule_summary.js
+          node --check scripts/create_github_commit_object.js
 
-      - name: Audit every workflow for schedule summary
-        shell: bash
+      - name: Normalize every workflow summary
+        run: node scripts/migrate_workflow_schedule_summary.js
+
+      - name: Build normalization commit object without moving main
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const dir = '.github/workflows';
-          const marker = '# schedule-timing-summary:v1';
-          const files = fs.readdirSync(dir).filter((name) => /\.ya?ml$/i.test(name)).sort();
-          const missing = files.filter((name) => !fs.readFileSync(path.join(dir, name), 'utf8').includes(marker));
-          console.log(JSON.stringify({ workflow_count: files.length, covered: files.length - missing.length, missing }, null, 2));
-          if (missing.length) process.exit(1);
-          NODE
-          echo "All workflows contain the shared schedule timing summary"
+          node scripts/create_github_commit_object.js "perf: make workflow schedule summaries lightweight"
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
