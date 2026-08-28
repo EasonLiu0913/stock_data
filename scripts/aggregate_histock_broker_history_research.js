@@ -64,7 +64,8 @@ function loadLatestDiagnostics() {
   for (const name of files) {
     try {
       const p = JSON.parse(fs.readFileSync(path.join(statusDir, name), 'utf8'));
-      for (const item of p.unresolved || []) map.set(item.date, item);
+      const items = Array.isArray(p.unresolved) ? p.unresolved : (p.unresolved ? [p.unresolved] : []);
+      for (const item of items) if (item?.date) map.set(item.date, item);
     } catch {}
   }
   return map;
