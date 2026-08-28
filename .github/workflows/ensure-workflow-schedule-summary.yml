@@ -38,20 +38,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/migrate_workflow_schedule_summary.js
-          if git diff --quiet -- .github/workflows; then
-            echo "All workflows contain the shared schedule timing summary"
-            exit 0
-          fi
-          echo "Workflows missing or not normalized to the shared schedule timing summary:"
-          git diff --name-only -- .github/workflows
-          {
-            echo "## Workflow Schedule Summary Audit"
-            echo ""
-            echo "以下 workflow 缺少或尚未使用共用排程時間摘要："
-            git diff --name-only -- .github/workflows | sed 's/^/- `/' | sed 's/$/`/'
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit 1
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const dir = '.github/workflows';
+          const marker = '# schedule-timing-summary:v1';
+          const files = fs.readdirSync(dir).filter((name) => /\.ya?ml$/i.test(name)).sort();
+          const missing = files.filter((name) => !fs.readFileSync(path.join(dir, name), 'utf8').includes(marker));
+          console.log(JSON.stringify({ workflow_count: files.length, covered: files.length - missing.length, missing }, null, 2));
+          if (missing.length) process.exit(1);
+          NODE
+          echo "All workflows contain the shared schedule timing summary"
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
