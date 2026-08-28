@@ -6,6 +6,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const { DAILY_GAINERS_AI_CONTRACT: CONTRACT } = require(path.join(ROOT, 'scripts/lib/daily_gainers_ai_contract'));
 const BASE = path.join(ROOT, 'data_daily_gain_over_5');
+const REQUIRED_FINAL_SOURCES = ['margin', 'broker_details', 'mi_index', 'foreign', 'investment_trust', 'dealer'];
 
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function rel(file) { return path.relative(ROOT, file).replaceAll('\\', '/'); }
@@ -16,6 +17,10 @@ function isCurrentAi(ai, date) {
     && ai.methodology_version === CONTRACT.ai.methodology_version
     && ai.model_role === CONTRACT.ai.model_role
     && ai.target_date === date;
+}
+function missingFinalSources(facts) {
+  const status = facts?.source_status || {};
+  return REQUIRED_FINAL_SOURCES.filter((key) => status[key] !== 'available');
 }
 function fallbackAnalysis(fact) {
   return {
@@ -39,6 +44,11 @@ function main() {
   assert(fs.existsSync(factsFile), `Missing facts: ${rel(factsFile)}`);
   const facts = readJson(factsFile);
   assert(facts.schema_version === CONTRACT.facts.schema_version && facts.methodology_version === CONTRACT.facts.methodology_version, 'facts are not current contract');
+
+  if (!fallback) {
+    const missing = missingFinalSources(facts);
+    assert(missing.length === 0, `Final AI publish requires complete facts; missing sources: ${missing.join(', ')}`);
+  }
 
   let ai = null;
   let ignoredAiReason = null;
@@ -88,6 +98,10 @@ function main() {
     ignored_ai_file: ignoredAiReason ? rel(aiFile) : null,
     ignored_ai_reason: ignoredAiReason,
     generation_mode: ai ? 'ai_verified' : 'deterministic_fallback',
+    facts_source_completeness: facts.source_completeness || {
+      status: missingFinalSources(facts).length === 0 ? 'complete' : 'partial',
+      missing_sources: missingFinalSources(facts),
+    },
     stock_count: analyses.length,
     market_context: facts.market_context || null,
     market_summary: ai?.market_summary || null,
@@ -101,6 +115,7 @@ function main() {
     output: rel(out),
     stock_count: analyses.length,
     generation_mode: payload.generation_mode,
+    facts_source_completeness: payload.facts_source_completeness,
     methodology_version: payload.methodology_version,
     ignored_ai_reason: ignoredAiReason,
   }, null, 2));
