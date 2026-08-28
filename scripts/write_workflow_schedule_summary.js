@@ -101,11 +101,10 @@ function readEventSchedule() {
   }
 }
 
-function fetchRunCreatedAt() {
+function requestRunCreatedAt(token = '') {
   return new Promise((resolve, reject) => {
     const repo = process.env.GITHUB_REPOSITORY;
     const runId = process.env.GITHUB_RUN_ID;
-    const token = process.env.GITHUB_TOKEN || '';
     if (!repo || !runId) return reject(new Error('Missing GitHub run identity'));
     const request = https.request({
       hostname: 'api.github.com',
@@ -136,6 +135,19 @@ function fetchRunCreatedAt() {
   });
 }
 
+async function fetchRunCreatedAt() {
+  const token = process.env.GITHUB_TOKEN || '';
+  if (token) {
+    try {
+      return await requestRunCreatedAt(token);
+    } catch {
+      // Public repository fallback: some workflow-level permission blocks the token
+      // from Actions metadata even though the same run is anonymously readable.
+    }
+  }
+  return requestRunCreatedAt('');
+}
+
 function appendSummary(lines) {
   const text = `${lines.join('\n')}\n`;
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text, 'utf8');
@@ -146,6 +158,7 @@ function selfTest() {
   const created = new Date('2026-08-27T16:50:46Z');
   const occurrence = previousOccurrence('52 5 * * *', created);
   if (occurrence.toISOString() !== '2026-08-27T05:52:00.000Z') throw new Error('daily cron self-test failed');
+  if (formatTaipei(occurrence) !== '2026-08-27 13:52') throw new Error('Taipei formatting self-test failed');
   const weekly = previousOccurrence('22 0 * * 1-5', new Date('2026-08-28T11:30:00Z'));
   if (weekly.toISOString() !== '2026-08-28T00:22:00.000Z') throw new Error('weekday cron self-test failed');
   console.log('write_workflow_schedule_summary self-test passed');
