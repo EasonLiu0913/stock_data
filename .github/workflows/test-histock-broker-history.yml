@@ -1,0 +1,52 @@
+name: "[07 研究] Test HiStock Broker History"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stock:
+        description: "Stock code"
+        required: true
+        default: "2449"
+        type: string
+      date:
+        description: "Historical trading date (YYYY-MM-DD)"
+        required: true
+        default: "2026-05-15"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]] || { echo "Invalid stock code"; exit 1; }
+          [[ "${{ inputs.date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid date"; exit 1; }
+
+      - name: Probe HiStock historical broker page
+        run: |
+          set -euo pipefail
+          node scripts/test_histock_broker_history.js \
+            --stock "${{ inputs.stock }}" \
+            --date "${{ inputs.date }}"
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## HiStock broker-history probe"
+            echo "- Stock: \`${{ inputs.stock }}\`"
+            echo "- Date: \`${{ inputs.date }}\`"
+            echo "- Source: third-party HiStock public page"
+            echo "- This workflow is read-only and does not write or overwrite repository datasets."
+          } >> "$GITHUB_STEP_SUMMARY"
