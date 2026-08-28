@@ -77,6 +77,7 @@ jobs:
       deferred_count: ${{ steps.plan.outputs.deferred_count }}
       requested_count: ${{ steps.plan.outputs.requested_count }}
       existing_count: ${{ steps.plan.outputs.existing_count }}
+      quality_rejected_count: ${{ steps.plan.outputs.quality_rejected_count }}
       batch_count: ${{ steps.plan.outputs.batch_count }}
       affected_stocks: ${{ steps.plan.outputs.affected_stocks }}
       stock_count: ${{ steps.plan.outputs.stock_count }}
@@ -105,6 +106,8 @@ jobs:
           test -s data_history_sma/trading_days.json
           test -s data_history_sma/non_trading_days.json
           test -s data_twse/twse_industry.csv
+          node --check scripts/lib/histock_broker_quality.js
+          node --check scripts/checkpoint_histock_batch_quality.js
           node --check scripts/plan_histock_broker_history_backfill.js
           node --check scripts/backfill_histock_broker_history_research_v2.js
           node --check scripts/aggregate_histock_broker_history_research.js
@@ -132,7 +135,8 @@ jobs:
             echo "- Stocks: ${{ steps.plan.outputs.stock_count }}"
             echo "- Trading days: ${{ steps.plan.outputs.trading_day_count }}"
             echo "- Theoretical stock-date tasks: ${{ steps.plan.outputs.requested_count }}"
-            echo "- Already valid: ${{ steps.plan.outputs.existing_count }}"
+            echo "- Already valid after quality gate: ${{ steps.plan.outputs.existing_count }}"
+            echo "- Existing tasks rejected by quality gate: ${{ steps.plan.outputs.quality_rejected_count }}"
             echo "- Missing total: ${{ steps.plan.outputs.missing_count }}"
             echo "- Scheduled this run: ${{ steps.plan.outputs.scheduled_count }}"
             echo "- Deferred to later runs: ${{ steps.plan.outputs.deferred_count }}"
@@ -140,6 +144,7 @@ jobs:
             echo "- Max batches this run: ${{ inputs.max_batches_per_run }}"
             echo "- Absolute request ceiling this run: $(( ${{ inputs.batch_size_requests }} * ${{ inputs.max_batches_per_run }} ))"
             echo "- Planned batches: ${{ steps.plan.outputs.batch_count }}"
+            echo "- Data-quality gate: buy/sell >= 0, net = buy - sell, avg_price > 0; any bad row invalidates that daily file."
           } >> "$GITHUB_STEP_SUMMARY"
 
   batch:
@@ -172,7 +177,6 @@ jobs:
           IFS=',' read -ra ITEMS <<< "$TASKS"
           echo "Batch $BATCH_INDEX contains ${#ITEMS[@]} request task(s); configured cap=${{ inputs.batch_size_requests }}"
           test "${#ITEMS[@]}" -le "${{ inputs.batch_size_requests }}"
-          mkdir -p "$RUNNER_TEMP/histock-batch-status"
 
           for ITEM in "${ITEMS[@]}"; do
             STOCK="${ITEM%@*}"
@@ -193,7 +197,7 @@ jobs:
             DAILY="$TMP/daily/${DATE//-/}.json"
             if [ -s "$DAILY" ]; then
               cp -f "$DAILY" "$ROOT/daily/"
-              echo "[task] saved $STOCK / $DATE"
+              echo "[task] staged $STOCK / $DATE for quality validation"
             else
               echo "[task] unresolved $STOCK / $DATE"
             fi
@@ -209,7 +213,8 @@ jobs:
           fs.writeFileSync(statusFile,JSON.stringify(out,null,2)+'\n');
           NODE
           done
-      - name: Validate and checkpoint successful tasks
+      - name: Apply batch data-quality gate
+        id: quality
         if: always()
         shell: bash
         env:
@@ -217,19 +222,18 @@ jobs:
           BATCH_INDEX: ${{ matrix.batch }}
         run: |
           set -euo pipefail
-          IFS=',' read -ra ITEMS <<< "$TASKS"
-          for ITEM in "${ITEMS[@]}"; do
-            STOCK="${ITEM%@*}"
-            DATE="${ITEM#*@}"
-            FILE="data_research/institutional-flow/histock/$STOCK/daily/${DATE//-/}.json"
-            if [ ! -s "$FILE" ]; then continue; fi
-            STOCK_ENV="$STOCK" DATE_ENV="$DATE" FILE_ENV="$FILE" node - <<'NODE'
-          const fs=require('fs');
-          const p=JSON.parse(fs.readFileSync(process.env.FILE_ENV,'utf8'));
-          if(p.source!=='histock'||p.research_only!==true||p.stock!==process.env.STOCK_ENV||p.date!==process.env.DATE_ENV||!Array.isArray(p.records)||!p.records.length) throw new Error(`Invalid checkpoint ${process.env.STOCK_ENV}/${process.env.DATE_ENV}`);
-          NODE
-          done
-
+          node scripts/checkpoint_histock_batch_quality.js \
+            --tasks "$TASKS" \
+            --batch "$BATCH_INDEX" \
+            --run-id "$GITHUB_RUN_ID"
+      - name: Checkpoint valid tasks
+        if: always()
+        shell: bash
+        env:
+          BATCH_INDEX: ${{ matrix.batch }}
+        run: |
+          set -euo pipefail
+          echo "quality valid=${{ steps.quality.outputs.quality_valid }} rejected=${{ steps.quality.outputs.quality_rejected }} missing=${{ steps.quality.outputs.quality_missing }}"
           if [ "${{ inputs.commit_results }}" = "true" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -309,14 +313,15 @@ jobs:
             echo "- Stocks in universe: ${{ needs.plan.outputs.stock_count }}"
             echo "- Trading days: ${{ needs.plan.outputs.trading_day_count }}"
             echo "- Theoretical tasks: ${{ needs.plan.outputs.requested_count }}"
-            echo "- Existing before run: ${{ needs.plan.outputs.existing_count }}"
+            echo "- Existing valid before run: ${{ needs.plan.outputs.existing_count }}"
+            echo "- Existing quality-rejected before run: ${{ needs.plan.outputs.quality_rejected_count }}"
             echo "- Missing before run: ${{ needs.plan.outputs.missing_count }}"
             echo "- Scheduled this run: ${{ needs.plan.outputs.scheduled_count }}"
             echo "- Deferred: ${{ needs.plan.outputs.deferred_count }}"
             echo "- Batches: ${{ needs.plan.outputs.batch_count }}"
             echo "- Batch request cap: ${{ inputs.batch_size_requests }}"
             echo "- Max requests/run: $(( ${{ inputs.batch_size_requests }} * ${{ inputs.max_batches_per_run }} ))"
-            echo "- Successful stock-date files are checkpointed per batch; unresolved tasks remain missing for the next Plan."
+            echo "- Every committed daily file passed the shared hard data-quality gate."
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ inputs.scope }}" = "single" ] && [ -s "data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json" ]; then
             node scripts/render_histock_broker_history_summary.js "data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json" >> "$GITHUB_STEP_SUMMARY" || true
@@ -326,5 +331,5 @@ jobs:
         shell: bash
         run: |
           if [ "${{ steps.aggregate.outputs.hard_failure }}" = "1" ]; then
-            echo "Some affected stocks still have hard unresolved dates. Successful stock-date checkpoints were preserved; rerun to retry only remaining missing tasks."
+            echo "Some affected stocks still have hard unresolved or quality-rejected dates. Valid stock-date checkpoints were preserved; rerun to retry only remaining missing tasks."
           fi
