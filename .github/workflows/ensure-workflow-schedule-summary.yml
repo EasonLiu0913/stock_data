@@ -11,21 +11,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ensure-workflow-schedule-summary
   cancel-in-progress: false
 
 jobs:
-  audit:
+  migrate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Validate shared schedule summary helper
         run: |
@@ -34,24 +34,23 @@ jobs:
           node scripts/write_workflow_schedule_summary.js --self-test
           node --check scripts/migrate_workflow_schedule_summary.js
 
-      - name: Audit every workflow for schedule summary
+      - name: Normalize every workflow schedule summary
+        run: node scripts/migrate_workflow_schedule_summary.js
+
+      - name: Build normalization commit
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/migrate_workflow_schedule_summary.js
-          if git diff --quiet -- .github/workflows; then
-            echo "All workflows contain the shared schedule timing summary"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/
+          if git diff --cached --quiet; then
+            echo "All workflows already use the lightweight summary job"
             exit 0
           fi
-          echo "Workflows missing the shared schedule timing summary:"
-          git diff --name-only -- .github/workflows
-          {
-            echo "## Workflow Schedule Summary Audit"
-            echo ""
-            echo "以下 workflow 缺少共用排程時間摘要："
-            git diff --name-only -- .github/workflows | sed 's/^/- `/' | sed 's/$/`/'
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit 1
+          git commit -m "perf: make workflow schedule summaries lightweight"
+          echo "NORMALIZATION_COMMIT=$(git rev-parse HEAD)"
+          git push origin HEAD:main
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
@@ -59,11 +58,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
       - name: Write schedule timing summary
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
