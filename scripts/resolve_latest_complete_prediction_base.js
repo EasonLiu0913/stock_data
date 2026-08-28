@@ -67,8 +67,16 @@ function inspectCoreFiles(baseDate) {
   return { complete: missing.length === 0, files, missing };
 }
 
-function latestEligibleBaseDate(now = new Date(), holidays = loadHolidaySet()) {
+function latestEligibleBaseDate(now = new Date(), holidays = loadHolidaySet(), options = {}) {
   const parts = taipeiParts(now);
+
+  // Scheduled daily prediction runs are logically pre-open runs. GitHub Actions can
+  // start a scheduled job hours late, so never let runner queue delay move the base
+  // date from the previous completed trading day to the current trading day.
+  if (options.scheduledBeforeOpen === true) {
+    return previousTradingDate(parts.isoDate, holidays, false);
+  }
+
   const todayIsTrading = isTradingDate(parts.isoDate, holidays);
   const marketDataReadyMinutes = 15 * 60 + 30;
   const minutes = parts.hour * 60 + parts.minute;
@@ -96,8 +104,8 @@ function candidateSmaDates(maxCompactDate, holidays = loadHolidaySet()) {
   return [...dates].sort((a, b) => b.localeCompare(a));
 }
 
-function resolveLatestCompletePredictionBase(now = new Date(), holidays = loadHolidaySet()) {
-  const expectedBaseIso = latestEligibleBaseDate(now, holidays);
+function resolveLatestCompletePredictionBase(now = new Date(), holidays = loadHolidaySet(), options = {}) {
+  const expectedBaseIso = latestEligibleBaseDate(now, holidays, options);
   const expectedBaseCompact = compact(expectedBaseIso);
   const inspection = inspectCoreFiles(expectedBaseCompact);
 
@@ -111,18 +119,26 @@ function resolveLatestCompletePredictionBase(now = new Date(), holidays = loadHo
 
   const forecastIso = nextTradingDate(expectedBaseIso, holidays, false);
   return {
-    mode: 'auto_exact_latest_eligible_base',
+    mode: options.scheduledBeforeOpen === true
+      ? 'auto_scheduled_before_open_base'
+      : 'auto_exact_latest_eligible_base',
     base_trade_date: expectedBaseCompact,
     forecast_target_date: compact(forecastIso),
     latest_eligible_base_date: expectedBaseCompact,
     checked_candidates: 1,
     skipped_incomplete_candidates: [],
     stale_fallback_allowed: false,
+    schedule_delay_safe: options.scheduledBeforeOpen === true,
   };
 }
 
 function main() {
-  const result = resolveLatestCompletePredictionBase();
+  const scheduledBeforeOpen = process.argv.includes('--scheduled-before-open');
+  const result = resolveLatestCompletePredictionBase(
+    new Date(),
+    loadHolidaySet(),
+    { scheduledBeforeOpen },
+  );
   const json = process.argv.includes('--json');
   if (json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
