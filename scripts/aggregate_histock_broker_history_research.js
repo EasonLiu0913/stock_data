@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
 
 const args = process.argv.slice(2);
 const getArg = (name, fallback) => {
@@ -25,14 +26,20 @@ function loadCalendar(file) {
   const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
   return { payload, dates: new Set(Object.values(payload).flat().map(normalize)) };
 }
+const qualityRejected = [];
 function readDaily(date) {
   const file = path.join(dailyDir, `${ymd(date)}.json`);
   if (!fs.existsSync(file)) return null;
   try {
     const p = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (p.source !== 'histock' || p.research_only !== true || p.stock !== stock || p.date !== date || !Array.isArray(p.records) || p.records.length === 0) return null;
+    const check = validateDailyPayload(p, { stock, date });
+    if (!check.valid) {
+      qualityRejected.push({ date, file, reasons: check.reasons, record_quality: check.record_quality });
+      return null;
+    }
     return p;
-  } catch {
+  } catch (error) {
+    qualityRejected.push({ date, file, reasons: ['invalid_json'], error: error.message });
     return null;
   }
 }
@@ -42,7 +49,7 @@ function aggregateWindow(days, endIndex, window) {
   for (const day of slice) {
     for (const r of day.records) {
       const a = map.get(r.broker) || { broker: r.broker, total_net: 0, total_buy: 0, total_sell: 0, appearances: 0, sell_days: 0, buy_days: 0 };
-      a.total_net += Number(r.net || 0); a.total_buy += Number(r.buy || 0); a.total_sell += Number(r.sell || 0); a.appearances += 1;
+      a.total_net += Number(r.net); a.total_buy += Number(r.buy); a.total_sell += Number(r.sell); a.appearances += 1;
       if (r.net < 0) a.sell_days += 1; if (r.net > 0) a.buy_days += 1;
       map.set(r.broker, a);
     }
@@ -84,18 +91,36 @@ const days = requested.map(readDaily).filter(Boolean).sort((a, b) => a.date.loca
 const parsedSet = new Set(days.map((d) => d.date));
 const missing = requested.filter((d) => !parsedSet.has(d));
 const diagnosticMap = loadLatestDiagnostics();
-const unresolved = missing.map((date) => diagnosticMap.get(date) || { date, reason: 'missing_without_batch_diagnostics', diagnostics: null });
+const qualityRejectedMap = new Map(qualityRejected.map((x) => [x.date, x]));
+const unresolved = missing.map((date) => {
+  if (qualityRejectedMap.has(date)) return { date, reason: 'data_quality_rejected', diagnostics: qualityRejectedMap.get(date) };
+  return diagnosticMap.get(date) || { date, reason: 'missing_without_batch_diagnostics', diagnostics: null };
+});
 const sourceGaps = unresolved.filter(isSourceGap);
 const hardFailures = unresolved.filter((x) => !isSourceGap(x));
 const rolling = days.map((day, index) => ({ date: day.date, windows: [5, 10, 20].map((w) => aggregateWindow(days, index, w)) }));
 const analysis = {
-  schema_version: 3,
-  methodology: 'histock-top-broker-rolling-persistence-plan-batch-v1',
+  schema_version: 4,
+  methodology: 'histock-top-broker-rolling-persistence-plan-batch-quality-v1',
   source: 'histock', source_type: 'third_party_public_page', research_only: true,
   stock, requested_range: { start, end },
   calendar: { trading_days_file: tradingPath, non_trading_days_file: nonTradingPath, selection: 'trading_days_whitelist_with_non_trading_conflict_guard' },
+  data_quality: {
+    version: QUALITY_VERSION,
+    policy: 'all rows must satisfy buy>=0, sell>=0, net=buy-sell, avg_price>0',
+    rejected_daily_files: qualityRejected,
+  },
   generated_at: new Date().toISOString(),
-  counts: { requested_trading_days: requested.length, parsed_trading_days: days.length, source_gaps: sourceGaps.length, hard_failures: hardFailures.length, unresolved_trading_days: unresolved.length, skipped: 0, failed: hardFailures.length },
+  counts: {
+    requested_trading_days: requested.length,
+    parsed_trading_days: days.length,
+    quality_rejected_daily_files: qualityRejected.length,
+    source_gaps: sourceGaps.length,
+    hard_failures: hardFailures.length,
+    unresolved_trading_days: unresolved.length,
+    skipped: 0,
+    failed: hardFailures.length,
+  },
   coverage_ratio: requested.length ? days.length / requested.length : 0,
   complete: missing.length === 0,
   usable_research: hardFailures.length === 0,
@@ -104,14 +129,16 @@ const analysis = {
     'HiStock exposes ranked broker rows rather than the complete official TWSE BSR ledger.',
     'Absence of a broker from a parsed day means it was outside the exposed ranking, not necessarily zero trading.',
     'Documented source gaps remain missing observations and are never imputed as zero.',
+    'Daily files with any broker row failing the hard data-quality gate are excluded from analysis and scheduled for refetch.',
   ],
   rolling,
 };
 fs.mkdirSync(root, { recursive: true });
 fs.writeFileSync(path.join(root, 'analysis.json'), `${JSON.stringify(analysis, null, 2)}\n`);
-fs.writeFileSync(path.join(root, 'manifest.json'), `${JSON.stringify({ schema_version: 3, source: 'histock', research_only: true, stock, range: { start, end }, daily_files: days.map((d) => `daily/${ymd(d.date)}.json`), analysis_file: 'analysis.json', counts: analysis.counts, complete: analysis.complete, usable_research: analysis.usable_research }, null, 2)}\n`);
+fs.writeFileSync(path.join(root, 'manifest.json'), `${JSON.stringify({ schema_version: 4, source: 'histock', research_only: true, stock, range: { start, end }, data_quality: analysis.data_quality, daily_files: days.map((d) => `daily/${ymd(d.date)}.json`), analysis_file: 'analysis.json', counts: analysis.counts, complete: analysis.complete, usable_research: analysis.usable_research }, null, 2)}\n`);
 console.log(JSON.stringify(analysis.counts, null, 2));
-console.log(`coverage=${(analysis.coverage_ratio * 100).toFixed(1)}% complete=${analysis.complete} usable_research=${analysis.usable_research}`);
+console.log(`quality=${QUALITY_VERSION} coverage=${(analysis.coverage_ratio * 100).toFixed(1)}% complete=${analysis.complete} usable_research=${analysis.usable_research}`);
+if (qualityRejected.length) console.log(`quality rejected: ${qualityRejected.map((x) => x.date).join(', ')}`);
 if (sourceGaps.length) console.log(`source gaps: ${sourceGaps.map((x) => x.date).join(', ')}`);
 if (hardFailures.length) {
   console.error(`hard failures: ${hardFailures.map((x) => `${x.date}:${x.reason}`).join(', ')}`);
