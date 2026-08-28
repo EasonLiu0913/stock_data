@@ -131,12 +131,24 @@ function primaryExternalValidation(external, expectedDate = null) {
   const errors = Array.isArray(external?.errors) ? external.errors : [];
   const complete = primary.length === PRIMARY_IDS.length && uniqueDates.length === 1 && errors.length === 0;
   const exact = complete && (!expectedDate || actualDate === expectedDate) && collectionDate === actualDate;
+
+  const hasSnapshotStatus = Boolean(external?.snapshot_status);
+  const dataStatus = external?.snapshot_status?.data_status || (exact ? 'legacy_final' : 'legacy_provisional');
+  const isFinal = hasSnapshotStatus ? external.snapshot_status?.is_final === true : true;
+  const needsRefresh = hasSnapshotStatus ? external.snapshot_status?.needs_refresh !== false : false;
+  const finalExact = exact && isFinal && !needsRefresh;
+
   return {
     complete,
     exact,
+    final_exact: finalExact,
     expected_date: expectedDate,
     actual_date: actualDate,
     collection_date: collectionDate || null,
+    data_status: dataStatus,
+    is_final: isFinal,
+    needs_refresh: needsRefresh,
+    captured_at: external?.snapshot_status?.captured_at || external?.generated_at || null,
     primary_indicator_agreement: `${primary.length}/${PRIMARY_IDS.length}`,
     primary_market_dates: Object.fromEntries(PRIMARY_IDS.map((id) => [id, byId.get(id)?.market_date || null])),
     error_count: errors.length,
