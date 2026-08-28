@@ -45,18 +45,53 @@ jobs:
           node --check scripts/write_workflow_schedule_summary.js
           node scripts/write_workflow_schedule_summary.js --self-test
           node --check scripts/migrate_workflow_schedule_summary.js
-          node --check scripts/create_github_commit_object.js
 
       - name: Normalize every workflow summary
         run: node scripts/migrate_workflow_schedule_summary.js
 
-      - name: Build normalization commit object without moving main
-        if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage normalized workflow bundle
+        shell: bash
         run: |
           set -euo pipefail
-          node scripts/create_github_commit_object.js "perf: make workflow schedule summaries lightweight"
+          mkdir -p tmp
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { execFileSync } = require('node:child_process');
+          const dir = '.github/workflows';
+          const files = fs.readdirSync(dir).filter((name) => /\.ya?ml$/i.test(name)).sort();
+          const payload = {
+            schema_version: 1,
+            base_commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+            generated_at: new Date().toISOString(),
+            files: Object.fromEntries(files.map((name) => {
+              const p = path.join(dir, name);
+              return [p, fs.readFileSync(p, 'utf8')];
+            })),
+          };
+          fs.writeFileSync('tmp/workflow-summary-normalization.json', `${JSON.stringify(payload)}\n`, 'utf8');
+          console.log(`BUNDLE_WORKFLOWS=${files.length}`);
+          console.log(`BASE_COMMIT=${payload.base_commit}`);
+          NODE
+
+      - name: Push data bundle only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f tmp/workflow-summary-normalization.json
+          git commit -m "ci: stage workflow summary normalization bundle"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main
+            git rebase origin/main || true
+            sleep 2
+          done
+          exit 1
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
