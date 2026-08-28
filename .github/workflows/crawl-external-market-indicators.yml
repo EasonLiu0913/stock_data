@@ -102,11 +102,26 @@ jobs:
           echo "Needs refresh: ${{ steps.validate.outputs.needs_refresh }}"
           echo "A later scheduled run will crawl again and overwrite this provisional snapshot."
 
-      - name: Generate market risk snapshot
+      - name: Generate market risk snapshot if needed
+        id: risk
         if: steps.validate.outputs.ready == 'true'
-        run: node scripts/generate_market_risk_snapshot.js --date "${{ steps.validate.outputs.actual_date }}"
+        shell: bash
+        env:
+          MARKET_DATE: ${{ steps.validate.outputs.actual_date }}
+          CRAWL_SKIPPED: ${{ steps.crawl.outputs.skipped || 'false' }}
+        run: |
+          set -euo pipefail
+          risk_file="data_market_risk/${MARKET_DATE}/market_risk_snapshot.json"
+          if [ "$CRAWL_SKIPPED" = "true" ] && [ -s "$risk_file" ]; then
+            echo "Market risk snapshot already exists for final external data; skipping regeneration."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node scripts/generate_market_risk_snapshot.js --date "$MARKET_DATE"
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
 
-      - name: Generate relevant files.json
+      - name: Generate relevant files.json if needed
+        if: steps.crawl.outputs.skipped != 'true' || steps.risk.outputs.skipped != 'true'
         run: node scripts/generate_file_lists.js --only data_external_market,data_market_risk
 
       - name: Run external market and market environment tests
@@ -125,6 +140,8 @@ jobs:
             echo "- Final: \`${{ steps.validate.outputs.is_final || steps.crawl.outputs.is_final || 'false' }}\`"
             echo "- Needs refresh: \`${{ steps.validate.outputs.needs_refresh || steps.crawl.outputs.needs_refresh || 'unknown' }}\`"
             echo "- Captured at: \`${{ steps.validate.outputs.captured_at || 'n/a' }}\`"
+            echo "- External crawl skipped because final exists: \`${{ steps.crawl.outputs.skipped || 'false' }}\`"
+            echo "- Market risk regeneration skipped: \`${{ steps.risk.outputs.skipped || 'false' }}\`"
             echo "- Ready for downstream market environment: \`${{ steps.validate.outputs.ready || 'false' }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
