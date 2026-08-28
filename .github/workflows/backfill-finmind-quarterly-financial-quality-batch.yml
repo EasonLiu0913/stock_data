@@ -290,3 +290,19 @@ jobs:
           echo "- 批次間休息：${BATCH_PAUSE_SECONDS}s" >> "$GITHUB_STEP_SUMMARY"
           echo "- 429/5xx/timeout：2s → 5s → 10s 退避重試；402 quota exhaustion 立即 checkpoint + stop" >> "$GITHUB_STEP_SUMMARY"
           echo "- 每批完成即 checkpoint commit；真正 backfill/timeline failure 會在保留進度後停止" >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

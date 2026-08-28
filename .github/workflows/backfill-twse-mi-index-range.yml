@@ -163,3 +163,19 @@ jobs:
           node scripts/plan_twse_mi_index_range_backfill.js --start "$START_DATE" --end "$END_DATE" > /tmp/final.json
           cat /tmp/final.json
           node -e "const p=require('/tmp/final.json');if(p.pending_date_count){console.error('Remaining MI_INDEX dates:',p.pending.map(x=>x.date).join(','));process.exit(1)}"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

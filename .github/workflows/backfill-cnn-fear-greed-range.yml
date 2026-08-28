@@ -136,3 +136,19 @@ jobs:
           echo "historical 最後日期：${{ needs.plan.outputs.source_last_date }}"
           if [ "${{ needs.plan.result }}" != success ]; then exit 1; fi
           if [ "${{ needs.plan.outputs.has_work }}" = true ] && [ "${{ needs.backfill.result }}" != success ]; then exit 1; fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

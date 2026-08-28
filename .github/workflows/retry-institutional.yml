@@ -150,3 +150,19 @@ jobs:
     needs: retry-institutional
     if: needs.retry-institutional.result == 'success' && needs.retry-institutional.outputs.is_trading_day == 'true'
     uses: ./.github/workflows/deploy-pages.yml
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

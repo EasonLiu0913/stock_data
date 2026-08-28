@@ -100,3 +100,19 @@ jobs:
           echo '- Entry window：訊號後 20 個交易日；未觸發即不進場' >> "$GITHUB_STEP_SUMMARY"
           echo '- 持有：進場後 D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
           echo '- 比較：trigger rate、endpoint、MAE、MFE、大波段觸及率、相對直接進場改善' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

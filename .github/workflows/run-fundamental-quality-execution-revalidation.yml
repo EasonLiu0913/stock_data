@@ -107,3 +107,19 @@ jobs:
           echo '- 比較：訊號日收盤 benchmark、隔日開盤、隔日收盤' >> "$GITHUB_STEP_SUMMARY"
           echo '- Horizons：D1 / D3 / D5 / D10 / D20 / D40 / D60' >> "$GITHUB_STEP_SUMMARY"
           echo '- Production execution：next_close（隔日收盤）' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

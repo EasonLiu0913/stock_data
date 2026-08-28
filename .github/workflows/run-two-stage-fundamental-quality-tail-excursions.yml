@@ -103,3 +103,19 @@ jobs:
           echo '- 期末大漲率：+20% / +30% / +50%' >> "$GITHUB_STEP_SUMMARY"
           echo '- MFE 觸及率：持有期間曾達 +20% / +30% / +50%' >> "$GITHUB_STEP_SUMMARY"
           echo '- MAE/MFE 使用每日 low/high，相對訊號基準收盤價計算' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

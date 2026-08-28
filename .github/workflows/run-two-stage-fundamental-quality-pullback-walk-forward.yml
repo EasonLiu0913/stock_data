@@ -108,3 +108,19 @@ jobs:
           echo '- 固定 OOS：2026-01 起；訓練集保留一個月 embargo' >> "$GITHUB_STEP_SUMMARY"
           echo '- Walk-forward：季度 expanding-window，亦保留一個月 embargo' >> "$GITHUB_STEP_SUMMARY"
           echo '- 輸出會自動回寫 docs/two-stage-fundamental-quality-research-log.md' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

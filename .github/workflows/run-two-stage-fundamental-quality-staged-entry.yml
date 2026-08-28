@@ -105,3 +105,19 @@ jobs:
           echo '- 全部部位使用訊號日起相同 D20/D40/D60 日曆退出日' >> "$GITHUB_STEP_SUMMARY"
           echo '- 報酬以總資金計算，因此現金部位會真實稀釋報酬' >> "$GITHUB_STEP_SUMMARY"
           echo '- 同時比較 deployed weight、完整建倉率、endpoint、MFE、MAE' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

@@ -63,3 +63,19 @@ jobs:
           const summary = JSON.parse(fs.readFileSync(`data_daily_gain_over_5/market-summary/${date}.json`, 'utf8'));
           console.log(JSON.stringify({ date, status: summary.status, coverage: summary.coverage, breadth: summary.breadth, risk_signals: summary.risk_signals }, null, 2));
           NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

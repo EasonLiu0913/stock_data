@@ -107,3 +107,19 @@ jobs:
           echo '- 所有策略使用公平成熟樣本：預留最多 20 日等待 + D20/D40/D60 持有期間' >> "$GITHUB_STEP_SUMMARY"
           echo '- 指標：平均/中位 endpoint、勝率、MFE、MAE、參與率、等待天數、missed winners' >> "$GITHUB_STEP_SUMMARY"
           echo '- 不計 CAGR：訊號會重疊，尚未定義組合資金配置，避免產生虛假的年化結果' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

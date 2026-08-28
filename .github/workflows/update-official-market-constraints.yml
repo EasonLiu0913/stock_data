@@ -147,3 +147,19 @@ jobs:
           echo "- 預測交易日：${{ steps.target.outputs.date || 'N/A' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 定稿階段：${{ steps.target.outputs.phase || 'N/A' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 原始預測市場快照：保持不可變，不覆寫" >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

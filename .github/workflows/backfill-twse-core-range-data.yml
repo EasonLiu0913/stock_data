@@ -291,3 +291,19 @@ jobs:
             echo '- 每個日期皆在重置到最新 main 後提交，降低與其他 Action push 衝突。'
             echo '- 本 Action 不呼叫 Pages，避免每個回填 commit 造成網站重複部署。'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

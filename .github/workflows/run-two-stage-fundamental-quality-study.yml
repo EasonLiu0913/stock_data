@@ -111,3 +111,19 @@ jobs:
           echo '- 現有可測 horizon：D1 / D3 / D5 / D10 / D20' >> "$GITHUB_STEP_SUMMARY"
           echo '- 另產出 compact summary，便於直接比較 D10 / D20' >> "$GITHUB_STEP_SUMMARY"
           echo '- D40 / D60：待下一輪擴充 monthly return enrichment 後加入' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

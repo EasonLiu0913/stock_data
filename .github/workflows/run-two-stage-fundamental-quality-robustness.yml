@@ -144,3 +144,19 @@ jobs:
           echo '- 產業：以同產業成熟事件為 baseline；另做排除電子股測試' >> "$GITHUB_STEP_SUMMARY"
           echo '- 市場環境：TAIEX 前 20 交易日 strong / sideways / weak 描述性分類，不作策略 gate' >> "$GITHUB_STEP_SUMMARY"
           echo '- 額外壓力測試：同時排除 2026 與電子股' >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

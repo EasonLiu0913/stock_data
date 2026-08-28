@@ -333,3 +333,19 @@ jobs:
           if [ "${{ steps.aggregate.outputs.hard_failure }}" = "1" ]; then
             echo "Some affected stocks still have hard unresolved or quality-rejected dates. Valid stock-date checkpoints were preserved; rerun to retry only remaining missing tasks."
           fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+
