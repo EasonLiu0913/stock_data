@@ -62,35 +62,82 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Crawl TWSE dealers history
+      - name: Validate dealer crawler code
         run: |
-          ARGS=(
+          set -euo pipefail
+          node --check scripts/crawl_history_twse_dealers.js
+          node --check scripts/validate_twse_dealers.js
+
+      - name: Crawl TWSE dealers history with semantic retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='${{ github.event.inputs.date }}'
+
+          base_args=(
             --min-delay "${{ github.event.inputs.min_delay }}"
             --max-delay "${{ github.event.inputs.max_delay }}"
-            --max-retries 0
+            --max-retries 2
             --rate-limit-cooldown "${{ github.event.inputs.rate_limit_cooldown }}"
             --mismatch-cooldown "${{ github.event.inputs.mismatch_cooldown }}"
           )
 
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            ARGS+=(--date "${{ github.event.inputs.date }}")
+          if [ -n "$target" ]; then
+            [[ "$target" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $target" >&2; exit 1; }
+            output="data_twse_dealers/${target}_twse_dealers.json"
+
+            for pass in 1 2 3; do
+              args=("${base_args[@]}" --date "$target")
+
+              # Existing files are trusted only after semantic validation. An
+              # invalid existing file must be overwritten even when force=false.
+              force_this_pass=false
+              if [ "${{ github.event.inputs.force }}" = "true" ] || [ "$pass" -gt 1 ]; then
+                force_this_pass=true
+              elif [ -e "$output" ] && ! node scripts/validate_twse_dealers.js "$output" "$target" >/tmp/dealer-existing-validation.json 2>&1; then
+                echo "Existing dealer snapshot is invalid; forcing refresh."
+                cat /tmp/dealer-existing-validation.json || true
+                force_this_pass=true
+              fi
+              [ "$force_this_pass" = true ] && args+=(--force)
+
+              set +e
+              node scripts/crawl_history_twse_dealers.js "${args[@]}"
+              crawl_status=$?
+              set -e
+
+              if [ "$crawl_status" -eq 0 ] && node scripts/validate_twse_dealers.js "$output" "$target"; then
+                echo "✅ $target dealer snapshot passed semantic validation on pass $pass/3."
+                break
+              fi
+
+              if [ "$pass" -eq 3 ]; then
+                echo "❌ $target dealer snapshot is still incomplete after 3 passes." >&2
+                [ -e "$output" ] && node scripts/validate_twse_dealers.js "$output" "$target" || true
+                exit 1
+              fi
+
+              cooldown=$((30 * pass))
+              echo "⏳ Dealer snapshot not ready; waiting ${cooldown}s before retry $((pass + 1))/3."
+              sleep "$cooldown"
+            done
           else
+            args=("${base_args[@]}")
             if [ -n "${{ github.event.inputs.start_date }}" ]; then
-              ARGS+=(--start "${{ github.event.inputs.start_date }}")
+              args+=(--start "${{ github.event.inputs.start_date }}")
             fi
             if [ -n "${{ github.event.inputs.end_date }}" ]; then
-              ARGS+=(--end "${{ github.event.inputs.end_date }}")
+              args+=(--end "${{ github.event.inputs.end_date }}")
             fi
+            if [ "${{ github.event.inputs.force }}" = "true" ]; then
+              args+=(--force)
+            fi
+            node scripts/crawl_history_twse_dealers.js "${args[@]}"
           fi
-
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then
-            ARGS+=(--force)
-          fi
-
-          node scripts/crawl_history_twse_dealers.js "${ARGS[@]}"
 
       - name: Generate TWSE dealers files.json only
         run: node scripts/generate_file_lists.js --only data_twse_dealers
@@ -98,6 +145,7 @@ jobs:
       - name: Commit and push changes
         shell: bash
         run: |
+          set -euo pipefail
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data_twse_dealers/
