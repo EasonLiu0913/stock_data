@@ -19,9 +19,9 @@ on:
         default: "2026-07-31"
         type: string
       delay_ms:
-        description: "Base delay between HiStock requests (>=300 ms; random jitter is added)"
+        description: "Base delay between missing-day requests (>=1000 ms; random jitter is added)"
         required: true
-        default: "900"
+        default: "2500"
         type: string
       commit_results:
         description: "Commit research results to main"
@@ -54,22 +54,25 @@ jobs:
           [[ "${{ inputs.start_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid start date"; exit 1; }
           [[ "${{ inputs.end_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid end date"; exit 1; }
           [[ "${{ inputs.delay_ms }}" =~ ^[0-9]+$ ]] || { echo "Invalid delay"; exit 1; }
-          test "${{ inputs.delay_ms }}" -ge 300 || { echo "delay_ms must be >= 300"; exit 1; }
+          test "${{ inputs.delay_ms }}" -ge 1000 || { echo "delay_ms must be >= 1000"; exit 1; }
           [[ "${{ inputs.start_date }}" < "${{ inputs.end_date }}" || "${{ inputs.start_date }}" == "${{ inputs.end_date }}" ]] || { echo "start_date must be <= end_date"; exit 1; }
           test -s data_history_sma/trading_days.json
           test -s data_history_sma/non_trading_days.json
 
-      - name: Backfill HiStock broker research data
+      - name: Backfill missing HiStock broker research data
+        id: backfill
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/backfill_histock_broker_history_research.js \
+          node scripts/backfill_histock_broker_history_research_v2.js \
             --stock "${{ inputs.stock }}" \
             --start "${{ inputs.start_date }}" \
             --end "${{ inputs.end_date }}" \
             --delay-ms "${{ inputs.delay_ms }}"
 
       - name: Validate generated research files
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -89,7 +92,6 @@ jobs:
           const nonTradingSet = new Set(Object.values(nonTrading).flat().map(normalize));
           if (manifest.source !== 'histock' || manifest.research_only !== true) throw new Error('Invalid provenance');
           if (analysis.calendar?.selection !== 'trading_days_whitelist_with_non_trading_conflict_guard') throw new Error('Trading calendar guard missing');
-          if (analysis.counts.parsed_trading_days < 20) throw new Error(`Too few parsed trading days: ${analysis.counts.parsed_trading_days}`);
           if (!Array.isArray(analysis.rolling) || analysis.rolling.length !== analysis.counts.parsed_trading_days) throw new Error('Rolling output mismatch');
           for (const relative of manifest.daily_files) {
             const match = relative.match(/daily\/(20\d{6})\.json$/);
@@ -98,13 +100,15 @@ jobs:
             if (!tradingSet.has(date)) throw new Error(`Daily output is not a trading day: ${date}`);
             if (nonTradingSet.has(date)) throw new Error(`Daily output conflicts with non-trading calendar: ${date}`);
           }
-          console.log(`Validated ${analysis.counts.parsed_trading_days} parsed trading days from ${analysis.counts.requested_trading_days} calendar trading days.`);
+          console.log(`Parsed ${analysis.counts.parsed_trading_days}/${analysis.counts.requested_trading_days} trading days; reused=${analysis.counts.reused_daily_files}; remote=${analysis.counts.remote_requests_attempted}; unresolved=${analysis.counts.unresolved_trading_days}.`);
+          if (analysis.complete !== true) throw new Error(`Backfill incomplete: unresolved=${analysis.counts.unresolved_trading_days}`);
+          if (analysis.counts.parsed_trading_days !== analysis.counts.requested_trading_days) throw new Error('Trading-day coverage mismatch');
           NODE
         env:
           STOCK: ${{ inputs.stock }}
 
-      - name: Commit research results
-        if: ${{ inputs.commit_results }}
+      - name: Commit complete research results
+        if: ${{ success() && inputs.commit_results }}
         shell: bash
         run: |
           set -euo pipefail
@@ -133,11 +137,16 @@ jobs:
             echo "- Source: third-party HiStock public page"
             echo "- Trading-day source: \`data_history_sma/trading_days.json\`"
             echo "- Non-trading guard: \`data_history_sma/non_trading_days.json\`"
-            echo "- Request policy: base delay + random jitter; limited retry/backoff"
+            echo "- Request policy: reuse valid daily files; missing days use base delay + jitter; zero-record trading days retry then fail closed"
             echo "- Classification: research-only; not official TWSE BSR"
             echo "- Rolling windows: 5 / 10 / 20 parsed trading days"
             echo "- Output root: \`$ROOT\`"
           } >> "$GITHUB_STEP_SUMMARY"
+          node scripts/render_histock_broker_history_summary.js "$ROOT/analysis.json" >> "$GITHUB_STEP_SUMMARY"
 
-          node scripts/render_histock_broker_history_summary.js \
-            "$ROOT/analysis.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Propagate backfill failure
+        if: ${{ always() && steps.backfill.outcome == 'failure' }}
+        shell: bash
+        run: |
+          echo "HiStock backfill reported incomplete trading-day coverage. See Summary diagnostics."
+          exit 1
