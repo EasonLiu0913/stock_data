@@ -16,21 +16,34 @@ const JOB = `
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 1
       - name: Write schedule timing summary
+        shell: bash
         env:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
 `;
 
 function migrateFile(file) {
   const original = fs.readFileSync(file, 'utf8');
-  if (original.includes(MARKER)) return false;
   if (!/^jobs:\s*$/m.test(original)) return false;
-  const updated = `${original.replace(/\s+$/, '')}${JOB}\n`;
+
+  const jobStart = original.indexOf('\n  schedule-timing-summary:\n');
+  let base = original.replace(/\s+$/, '');
+  if (jobStart >= 0) {
+    if (!original.slice(jobStart).includes(MARKER)) {
+      throw new Error(`schedule-timing-summary exists without managed marker: ${file}`);
+    }
+    const afterManagedJob = original.slice(jobStart).replace(/^\n/, '');
+    if (!afterManagedJob.startsWith('  schedule-timing-summary:')) {
+      throw new Error(`Unexpected managed summary location: ${file}`);
+    }
+    base = original.slice(0, jobStart).replace(/\s+$/, '');
+  }
+
+  const updated = `${base}${JOB}\n`;
+  if (updated === original) return false;
   fs.writeFileSync(file, updated, 'utf8');
   return true;
 }
@@ -40,18 +53,18 @@ function main() {
     .filter((name) => /\.ya?ml$/i.test(name))
     .sort();
   const changed = [];
-  const skipped = [];
+  const unchanged = [];
   for (const name of files) {
     const file = path.join(WORKFLOW_DIR, name);
     if (migrateFile(file)) changed.push(name);
-    else skipped.push(name);
+    else unchanged.push(name);
   }
   console.log(JSON.stringify({
     workflow_count: files.length,
     changed_count: changed.length,
-    skipped_count: skipped.length,
+    unchanged_count: unchanged.length,
     changed,
-    skipped,
+    unchanged,
   }, null, 2));
 }
 
