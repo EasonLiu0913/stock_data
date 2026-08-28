@@ -133,7 +133,8 @@ function resolveLatestCompletePredictionBase(now = new Date(), holidays = loadHo
 }
 
 function main() {
-  const scheduledBeforeOpen = process.argv.includes('--scheduled-before-open');
+  const scheduledBeforeOpen = process.argv.includes('--scheduled-before-open')
+    || process.env.GITHUB_EVENT_NAME === 'schedule';
   const result = resolveLatestCompletePredictionBase(
     new Date(),
     loadHolidaySet(),
