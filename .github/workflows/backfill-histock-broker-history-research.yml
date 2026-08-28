@@ -19,7 +19,7 @@ on:
         default: "2026-07-31"
         type: string
       delay_ms:
-        description: "Delay between HiStock requests (>=300 ms)"
+        description: "Base delay between HiStock requests (>=300 ms; random jitter is added)"
         required: true
         default: "900"
         type: string
@@ -56,6 +56,8 @@ jobs:
           [[ "${{ inputs.delay_ms }}" =~ ^[0-9]+$ ]] || { echo "Invalid delay"; exit 1; }
           test "${{ inputs.delay_ms }}" -ge 300 || { echo "delay_ms must be >= 300"; exit 1; }
           [[ "${{ inputs.start_date }}" < "${{ inputs.end_date }}" || "${{ inputs.start_date }}" == "${{ inputs.end_date }}" ]] || { echo "start_date must be <= end_date"; exit 1; }
+          test -s data_history_sma/trading_days.json
+          test -s data_history_sma/non_trading_days.json
 
       - name: Backfill HiStock broker research data
         shell: bash
@@ -80,10 +82,23 @@ jobs:
           const root = `data_research/institutional-flow/histock/${stock}`;
           const manifest = JSON.parse(fs.readFileSync(`${root}/manifest.json`, 'utf8'));
           const analysis = JSON.parse(fs.readFileSync(`${root}/analysis.json`, 'utf8'));
+          const trading = JSON.parse(fs.readFileSync('data_history_sma/trading_days.json', 'utf8'));
+          const nonTrading = JSON.parse(fs.readFileSync('data_history_sma/non_trading_days.json', 'utf8'));
+          const normalize = (value) => String(value).replaceAll('/', '-');
+          const tradingSet = new Set(Object.values(trading).flat().map(normalize));
+          const nonTradingSet = new Set(Object.values(nonTrading).flat().map(normalize));
           if (manifest.source !== 'histock' || manifest.research_only !== true) throw new Error('Invalid provenance');
+          if (analysis.calendar?.selection !== 'trading_days_whitelist_with_non_trading_conflict_guard') throw new Error('Trading calendar guard missing');
           if (analysis.counts.parsed_trading_days < 20) throw new Error(`Too few parsed trading days: ${analysis.counts.parsed_trading_days}`);
           if (!Array.isArray(analysis.rolling) || analysis.rolling.length !== analysis.counts.parsed_trading_days) throw new Error('Rolling output mismatch');
-          console.log(`Validated ${analysis.counts.parsed_trading_days} parsed trading days.`);
+          for (const relative of manifest.daily_files) {
+            const match = relative.match(/daily\/(20\d{6})\.json$/);
+            if (!match) throw new Error(`Invalid daily file path: ${relative}`);
+            const date = `${match[1].slice(0, 4)}-${match[1].slice(4, 6)}-${match[1].slice(6, 8)}`;
+            if (!tradingSet.has(date)) throw new Error(`Daily output is not a trading day: ${date}`);
+            if (nonTradingSet.has(date)) throw new Error(`Daily output conflicts with non-trading calendar: ${date}`);
+          }
+          console.log(`Validated ${analysis.counts.parsed_trading_days} parsed trading days from ${analysis.counts.requested_trading_days} calendar trading days.`);
           NODE
         env:
           STOCK: ${{ inputs.stock }}
@@ -116,6 +131,9 @@ jobs:
             echo "- Stock: \`${{ inputs.stock }}\`"
             echo "- Range: \`${{ inputs.start_date }}\` → \`${{ inputs.end_date }}\`"
             echo "- Source: third-party HiStock public page"
+            echo "- Trading-day source: \`data_history_sma/trading_days.json\`"
+            echo "- Non-trading guard: \`data_history_sma/non_trading_days.json\`"
+            echo "- Request policy: base delay + random jitter; limited retry/backoff"
             echo "- Classification: research-only; not official TWSE BSR"
             echo "- Rolling windows: 5 / 10 / 20 parsed trading days"
             echo "- Output root: \`$ROOT\`"
