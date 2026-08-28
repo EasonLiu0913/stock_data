@@ -34,11 +34,23 @@ function main() {
     : path.join(ROOT, 'data_external_market', expectedDate, 'external_market_indicators.json');
   const payload = readJson(file, null);
   const validation = primaryExternalValidation(payload, expectedDate);
-  const ready = Boolean(payload && validation.exact);
+
+  // Legacy exact-date snapshots have no snapshot_status and remain valid for backward compatibility.
+  // New schema v3 snapshots are ready only when the crawler explicitly marks them final.
+  const hasSnapshotStatus = Boolean(payload?.snapshot_status);
+  const isFinal = hasSnapshotStatus ? payload.snapshot_status?.is_final === true : true;
+  const needsRefresh = hasSnapshotStatus ? payload.snapshot_status?.needs_refresh !== false : false;
+  const dataStatus = payload?.snapshot_status?.data_status || (validation.exact ? 'legacy_final' : 'legacy_provisional');
+  const ready = Boolean(payload && validation.exact && isFinal && !needsRefresh);
+
   output('ready', ready ? 'true' : 'false');
   output('actual_date', validation.actual_date || '');
   output('agreement', validation.primary_indicator_agreement);
   output('file', path.relative(ROOT, file).replaceAll(path.sep, '/'));
+  output('data_status', dataStatus);
+  output('is_final', isFinal ? 'true' : 'false');
+  output('needs_refresh', needsRefresh ? 'true' : 'false');
+  output('captured_at', payload?.snapshot_status?.captured_at || payload?.generated_at || '');
 
   let finalization = null;
   if (ready) {
@@ -53,6 +65,10 @@ function main() {
     ready,
     expected_date: expectedDate,
     file: path.relative(ROOT, file),
+    data_status: dataStatus,
+    is_final: isFinal,
+    needs_refresh: needsRefresh,
+    captured_at: payload?.snapshot_status?.captured_at || payload?.generated_at || null,
     ...validation,
     prediction_context_finalization: finalization,
   };
