@@ -8,7 +8,6 @@ on:
       - '.github/workflows/**'
       - 'scripts/write_workflow_schedule_summary.js'
       - 'scripts/migrate_workflow_schedule_summary.js'
-      - 'scripts/create_github_commit_object.js'
   workflow_dispatch:
 
 permissions:
@@ -49,40 +48,27 @@ jobs:
       - name: Normalize every workflow summary
         run: node scripts/migrate_workflow_schedule_summary.js
 
-      - name: Stage normalized workflow bundle
+      - name: Stage normalized workflows as ordinary files
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p tmp
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const { execFileSync } = require('node:child_process');
-          const dir = '.github/workflows';
-          const files = fs.readdirSync(dir).filter((name) => /\.ya?ml$/i.test(name)).sort();
-          const payload = {
-            schema_version: 1,
-            base_commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-            generated_at: new Date().toISOString(),
-            files: Object.fromEntries(files.map((name) => {
-              const p = path.join(dir, name);
-              return [p, fs.readFileSync(p, 'utf8')];
-            })),
-          };
-          fs.writeFileSync('tmp/workflow-summary-normalization.json', `${JSON.stringify(payload)}\n`, 'utf8');
-          console.log(`BUNDLE_WORKFLOWS=${files.length}`);
-          console.log(`BASE_COMMIT=${payload.base_commit}`);
-          NODE
-
-      - name: Push data bundle only
-        shell: bash
-        run: |
-          set -euo pipefail
+          rm -rf tmp/normalized-workflows
+          mkdir -p tmp/normalized-workflows
+          cp .github/workflows/*.yml tmp/normalized-workflows/
+          count=$(find tmp/normalized-workflows -maxdepth 1 -type f -name '*.yml' | wc -l | tr -d ' ')
+          test "$count" = "122"
+          echo "STAGED_WORKFLOWS=$count"
           git restore --worktree -- .github/workflows
+
+      - name: Push normalized staging files only
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --sparse -f tmp/workflow-summary-normalization.json
-          git commit -m "ci: stage workflow summary normalization bundle"
+          git add --sparse -f tmp/normalized-workflows
+          git add --sparse -u tmp/workflow-summary-normalization.json 2>/dev/null || true
+          git commit -m "ci: stage normalized workflow summary files"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then
               exit 0
