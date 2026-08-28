@@ -110,9 +110,6 @@ jobs:
           }
 
           console.log(`Verified ${analysis.counts.parsed_trading_days}/${analysis.counts.requested_trading_days} parsed trading days; reused=${analysis.counts.reused_daily_files}; remote=${analysis.counts.remote_requests_attempted}; unresolved=${analysis.counts.unresolved_trading_days}; complete=${analysis.complete}.`);
-          if (analysis.complete !== true) {
-            console.log('Coverage is incomplete, but all persisted daily files are structurally valid. Progress may be committed and the workflow will fail closed afterwards.');
-          }
           NODE
         env:
           STOCK: ${{ inputs.stock }}
@@ -157,15 +154,15 @@ jobs:
             echo "- Source: third-party HiStock public page"
             echo "- Trading-day source: \`data_history_sma/trading_days.json\`"
             echo "- Non-trading guard: \`data_history_sma/non_trading_days.json\`"
-            echo "- Request policy: reuse valid daily files; missing days use base delay + jitter; zero-record trading days retry then fail closed"
-            echo "- Persistence policy: verified partial progress is committed with \`complete=false\`; unresolved trading days still fail the workflow"
+            echo "- Request policy: reuse valid daily files; missing days use base delay + jitter; zero-record trading days retry then classify"
+            echo "- Persistence policy: verified parsed days are committed even when HiStock has documented source gaps"
             echo "- Classification: research-only; not official TWSE BSR"
             echo "- Rolling windows: 5 / 10 / 20 parsed trading days"
             echo "- Output root: \`$ROOT\`"
           } >> "$GITHUB_STEP_SUMMARY"
           node scripts/render_histock_broker_history_summary.js "$ROOT/analysis.json" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Enforce complete trading-day coverage
+      - name: Classify trading-day coverage
         if: always()
         shell: bash
         run: |
@@ -179,14 +176,38 @@ jobs:
           const fs = require('fs');
           const root = process.env.ROOT;
           const analysis = JSON.parse(fs.readFileSync(`${root}/analysis.json`, 'utf8'));
-          if (analysis.complete !== true) {
-            const unresolved = (analysis.unresolved || analysis.failed || []).map((x) => x.date).join(', ');
-            throw new Error(`Incomplete HiStock backfill: ${analysis.counts.parsed_trading_days}/${analysis.counts.requested_trading_days}; unresolved=${analysis.counts.unresolved_trading_days}; dates=${unresolved || 'see analysis.json'}`);
+          const unresolved = Array.isArray(analysis.unresolved) ? analysis.unresolved : [];
+
+          if (analysis.complete === true) {
+            if (analysis.counts.parsed_trading_days !== analysis.counts.requested_trading_days) throw new Error('Trading-day coverage mismatch');
+            console.log('HiStock trading-day coverage complete.');
+            process.exit(0);
           }
-          if (analysis.counts.parsed_trading_days !== analysis.counts.requested_trading_days) {
-            throw new Error('Trading-day coverage mismatch');
+
+          const isDocumentedSourceGap = (item) => {
+            const d = item?.diagnostics || {};
+            return item?.reason === 'no_broker_records_on_trading_day'
+              && d.http_status === 200
+              && d.date_visible === true
+              && d.broker_keywords_visible === true
+              && Number(d.table_rows) <= 1
+              && Number(d.response_bytes) > 0;
+          };
+
+          const sourceGaps = unresolved.filter(isDocumentedSourceGap);
+          const hardFailures = unresolved.filter((item) => !isDocumentedSourceGap(item));
+          const accounted = analysis.counts.parsed_trading_days + sourceGaps.length;
+          const requested = analysis.counts.requested_trading_days;
+          const coverage = requested ? analysis.counts.parsed_trading_days / requested : 0;
+
+          if (!analysis.aborted && hardFailures.length === 0 && accounted === requested) {
+            console.log(`Usable research coverage with documented HiStock source gaps: parsed=${analysis.counts.parsed_trading_days}/${requested} (${(coverage * 100).toFixed(1)}%), source_gaps=${sourceGaps.length}.`);
+            for (const gap of sourceGaps) console.log(`- source gap ${gap.date}: ${gap.reason}`);
+            process.exit(0);
           }
-          console.log('HiStock trading-day coverage complete.');
+
+          const hardDates = hardFailures.map((x) => x.date).join(', ');
+          throw new Error(`HiStock backfill has unresolved hard failures: parsed=${analysis.counts.parsed_trading_days}/${requested}; source_gaps=${sourceGaps.length}; hard_failures=${hardFailures.length}; dates=${hardDates || 'see analysis.json'}`);
           NODE
         env:
           ROOT: data_research/institutional-flow/histock/${{ inputs.stock }}
