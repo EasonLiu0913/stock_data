@@ -56,38 +56,53 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
-      - name: Validate SMA date detector
+      - name: Validate SMA date detector and schedule resolver
         run: |
           node --check scripts/detect_latest_sma_date.js
           node scripts/detect_latest_sma_date.js --self-test
+          node --check scripts/resolve_scheduled_sma_target_date.js
+          node scripts/resolve_scheduled_sma_target_date.js --self-test
 
       - name: Resolve target date and run SMA crawler
         id: crawl
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ inputs.date || '' }}
         run: |
           set -euo pipefail
-          input_date="${{ inputs.date }}"
           ready="true"
           available_sma_date=""
+          target_source="manual_current_date"
+          scheduled_at_utc=""
+          schedule_delay_minutes=""
 
-          if [ -n "$input_date" ]; then
-            target_date="$input_date"
+          if [ -n "$INPUT_DATE" ]; then
+            target_date="$INPUT_DATE"
+            target_source="manual_explicit_date"
             echo "📅 手動目標交易日：$target_date"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            schedule_json=$(node scripts/resolve_scheduled_sma_target_date.js --schedule "$SCHEDULE_EXPR" --json)
+            target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$schedule_json")
+            scheduled_at_utc=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.scheduled_at_utc);' "$schedule_json")
+            schedule_delay_minutes=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.delay_minutes));' "$schedule_json")
+            target_source="scheduled_intended_date"
+            echo "📅 排程原定目標交易日：$target_date"
+            echo "🕒 原定 UTC 排程時間：$scheduled_at_utc"
+            echo "⏱️ GitHub 排程延遲：約 ${schedule_delay_minutes} 分鐘"
           else
             target_date=$(TZ='Asia/Taipei' date '+%Y%m%d')
-            available_sma_date=$(node scripts/detect_latest_sma_date.js)
-            echo "📅 流程目標交易日：$target_date"
-            echo "📈 富邦最新可用 SMA 日期：$available_sma_date"
-
-            if [ "$available_sma_date" != "$target_date" ]; then
-              ready="false"
-            fi
+            echo "📅 手動執行、未指定日期；使用台北今天：$target_date"
           fi
 
           [[ "$target_date" =~ ^20[0-9]{6}$ ]] || {
             echo "Invalid SMA target date: $target_date"
             exit 1
           }
+
+          available_sma_date=$(node scripts/detect_latest_sma_date.js)
+          echo "📈 富邦最新可用 SMA 日期：$available_sma_date"
 
           if [ -n "$available_sma_date" ]; then
             [[ "$available_sma_date" =~ ^20[0-9]{6}$ ]] || {
@@ -96,17 +111,27 @@ jobs:
             }
           fi
 
+          if [ "$available_sma_date" != "$target_date" ]; then
+            ready="false"
+          fi
+
           echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
           echo "available_sma_date=$available_sma_date" >> "$GITHUB_OUTPUT"
 
+          echo "## SMA Crawl" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 日期來源：$target_source" >> "$GITHUB_STEP_SUMMARY"
           echo "- 流程目標交易日：$target_date" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$scheduled_at_utc" ]; then
+            echo "- 原定排程時間（UTC）：$scheduled_at_utc" >> "$GITHUB_STEP_SUMMARY"
+            echo "- GitHub 排程延遲：約 ${schedule_delay_minutes} 分鐘" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ -n "$available_sma_date" ]; then
             echo "- 富邦最新可用 SMA 日期：$available_sma_date" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           if [ "$ready" != "true" ]; then
-            echo "- SMA 狀態：尚未更新到目標交易日，本輪不爬取、不產生 5% 清單，等待下一個排程重試。" >> "$GITHUB_STEP_SUMMARY"
+            echo "- SMA 狀態：來源尚未更新到目標交易日，本輪不爬取、不產生 5% 清單，等待下一個排程重試。" >> "$GITHUB_STEP_SUMMARY"
             echo "⏭️ SMA 尚未更新到 $target_date；目前最新為 $available_sma_date。本輪安全結束。"
             exit 0
           fi
