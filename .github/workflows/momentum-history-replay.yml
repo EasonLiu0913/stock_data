@@ -89,7 +89,7 @@ jobs:
   generate:
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
         with:
@@ -138,34 +138,88 @@ jobs:
           node scripts/generate_public_index.js --check
           node scripts/validate_public_pages.js
           node scripts/validate_public_index_writers.js
-      - name: Commit momentum research data
+      - name: Commit momentum research data with safe rebuild on branch races
         env:
           TARGET_BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || 'main' }}
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_START: ${{ inputs.start }}
+          INPUT_END: ${{ inputs.end }}
+          INPUT_LOOKBACK: ${{ inputs.replay_lookback }}
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data_prediction_analysis/momentum-history data_prediction_analysis/momentum-replay data_prediction_analysis/momentum-research public/index.html
-          if git diff --cached --quiet; then
-            echo 'No momentum research or public index changes'
+
+          regenerate_from_current_branch() {
+            local args=(--replay-lookback "${INPUT_LOOKBACK:-10}")
+            if [ "$GITHUB_EVENT_NAME" = 'pull_request' ] || [ "$GITHUB_EVENT_NAME" = 'push' ]; then
+              args+=(--latest-count 2)
+            elif [ -n "${INPUT_DATE:-}" ]; then
+              args+=(--date "$INPUT_DATE")
+            elif [ -n "${INPUT_START:-}" ] || [ -n "${INPUT_END:-}" ]; then
+              [ -z "${INPUT_START:-}" ] || args+=(--start "$INPUT_START")
+              [ -z "${INPUT_END:-}" ] || args+=(--end "$INPUT_END")
+            else
+              args+=(--latest)
+            fi
+
+            echo "Regenerating momentum evidence from $(git rev-parse --short HEAD) on $TARGET_BRANCH"
+            node scripts/run_momentum_history_replay.js "${args[@]}" | tee /tmp/momentum-history-replay.json
+            node scripts/generate_momentum_research_summary.js | tee /tmp/momentum-research-summary.json
+            node scripts/generate_public_index.js
+            node scripts/generate_public_index.js --check
+            node scripts/validate_public_pages.js
+            node scripts/validate_public_index_writers.js
+          }
+
+          stage_and_commit() {
+            git add data_prediction_analysis/momentum-history data_prediction_analysis/momentum-replay data_prediction_analysis/momentum-research public/index.html
+            if git diff --cached --quiet; then
+              echo 'No momentum research or public index changes'
+              return 1
+            fi
+            git commit -m 'analysis: refresh momentum research evidence'
+            return 0
+          }
+
+          if ! stage_and_commit; then
             exit 0
           fi
-          git commit -m 'analysis: refresh momentum research evidence'
-          for attempt in 1 2 3 4 5; do
+
+          # Generated JSON must never be rebased onto a newer branch because that
+          # would make results produced from old inputs look current. If the branch
+          # advances, discard the local generated commit, reset to the latest branch,
+          # regenerate and revalidate from those exact inputs, then try again.
+          for attempt in 1 2 3 4; do
             if git push origin HEAD:"$TARGET_BRANCH"; then
+              echo "Momentum research push succeeded on attempt $attempt"
               exit 0
             fi
-            echo "Push attempt $attempt rejected; checking whether target branch moved" >&2
+
+            echo "Push attempt $attempt rejected; refreshing $TARGET_BRANCH and rebuilding generated evidence" >&2
             git fetch origin "$TARGET_BRANCH"
-            if git merge-base --is-ancestor "origin/$TARGET_BRANCH" HEAD; then
+            remote_sha="$(git rev-parse FETCH_HEAD)"
+            local_parent="$(git rev-parse HEAD^)"
+
+            # If remote still equals the generation base, this was likely a transient
+            # push failure rather than a branch race; keep the commit and retry.
+            if [ "$remote_sha" = "$local_parent" ]; then
               sleep $((attempt * 5))
               continue
             fi
-            echo 'Target branch moved after generation. Refusing to rebase generated JSON; rerun from the latest branch instead.' >&2
-            exit 1
+
+            echo "Target branch moved to ${remote_sha:0:9}; discarding stale generated commit and rebuilding from latest branch." >&2
+            git reset --hard "$remote_sha"
+            regenerate_from_current_branch
+            if ! stage_and_commit; then
+              echo 'Latest branch already contains equivalent momentum research evidence'
+              exit 0
+            fi
+            sleep $((attempt * 5))
           done
-          echo 'Failed to push momentum research data after retries' >&2
+
+          echo 'Failed to push freshly regenerated momentum research data after rebuild retries' >&2
           exit 1
 
   deploy_pages:
