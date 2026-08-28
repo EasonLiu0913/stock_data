@@ -1,0 +1,59 @@
+name: "[07 研究] Test FinMind Broker History"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment containing FINMIND_API_TOKEN"
+        required: true
+        type: environment
+      stock:
+        description: "Stock code"
+        required: true
+        default: "2449"
+        type: string
+      date:
+        description: "Historical trading date (YYYY-MM-DD)"
+        required: true
+        default: "2026-05-15"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]] || { echo "Invalid stock code"; exit 1; }
+          [[ "${{ inputs.date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid date"; exit 1; }
+
+      - name: Probe FinMind historical broker data
+        env:
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node scripts/test_finmind_broker_history.js \
+            --stock "${{ inputs.stock }}" \
+            --date "${{ inputs.date }}"
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## FinMind broker-history probe"
+            echo "- Stock: \`${{ inputs.stock }}\`"
+            echo "- Date: \`${{ inputs.date }}\`"
+            echo "- Environment: \`${{ inputs.environment }}\`"
+            echo "- This workflow only reads API data; it does not commit or overwrite repository datasets."
+          } >> "$GITHUB_STEP_SUMMARY"
