@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: ensure-workflow-schedule-summary
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   prepare-normalization:
@@ -28,6 +28,9 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+          sparse-checkout: |
+            .github/workflows
+            scripts
 
       - name: Sync latest main
         shell: bash
