@@ -7,7 +7,6 @@ if (!analysisPath) {
   console.error('Usage: node scripts/render_histock_broker_history_summary.js <analysis.json>');
   process.exit(1);
 }
-
 if (!fs.existsSync(analysisPath)) {
   console.log('> analysis.json was not generated, so rolling broker tables are unavailable.');
   process.exit(0);
@@ -17,10 +16,24 @@ const a = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
 const fmt = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const latest = Array.isArray(a.rolling) ? a.rolling.at(-1) : null;
 
+console.log(`- Requested trading days: ${a.counts?.requested_trading_days ?? 'N/A'}`);
 console.log(`- Parsed trading days: ${a.counts?.parsed_trading_days ?? 'N/A'}`);
-console.log(`- Skipped weekdays: ${a.counts?.skipped ?? 'N/A'}`);
-console.log(`- Failed dates: ${a.counts?.failed ?? 'N/A'}`);
+if (a.counts?.reused_daily_files !== undefined) console.log(`- Reused existing daily files: ${a.counts.reused_daily_files}`);
+if (a.counts?.remote_requests_attempted !== undefined) console.log(`- Missing trading days requested remotely: ${a.counts.remote_requests_attempted}`);
+console.log(`- Unresolved trading days: ${a.counts?.unresolved_trading_days ?? a.counts?.failed ?? 'N/A'}`);
+console.log(`- Complete coverage: ${a.complete === true ? 'yes' : 'no'}`);
 console.log(`- Latest parsed date: ${latest?.date || 'N/A'}`);
+
+if (Array.isArray(a.unresolved) && a.unresolved.length) {
+  console.log('\n## Unresolved trading-day diagnostics');
+  console.log('| Date | Reason | HTTP | Bytes | Date visible | Broker keywords | Table rows | Page title |');
+  console.log('|---|---|---:|---:|---|---|---:|---|');
+  for (const item of a.unresolved.slice(0, 12)) {
+    const d = item.diagnostics || {};
+    const title = String(d.page_title || '').replaceAll('|', '\\|');
+    console.log(`| ${item.date} | ${item.reason} | ${d.http_status ?? 'N/A'} | ${d.response_bytes ?? 'N/A'} | ${d.date_visible ?? 'N/A'} | ${d.broker_keywords_visible ?? 'N/A'} | ${d.table_rows ?? 'N/A'} | ${title || 'N/A'} |`);
+  }
+}
 
 if (!latest || !Array.isArray(latest.windows)) {
   console.log('\n> No rolling-window data available.');
