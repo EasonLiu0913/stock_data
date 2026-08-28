@@ -1,0 +1,138 @@
+name: "[01 台股資料] TWSE－單日三大法人合併明細"
+
+on:
+  schedule:
+    # 平日 16:11 台北時間 (08:11 UTC)
+    - cron: '11 8 * * 1-5'
+    # 平日 17:33 台北時間 (09:33 UTC)
+    - cron: '33 9 * * 1-5'
+    # 平日 18:17 台北時間 (10:17 UTC)
+    - cron: '17 10 * * 1-5'
+    # 平日 19:19 台北時間 (11:19 UTC)
+    - cron: '19 11 * * 1-5'
+    # 平日 20:23 台北時間 (12:23 UTC)
+    - cron: '23 12 * * 1-5'
+    # 平日 21:29 台北時間 (13:29 UTC)
+    - cron: '29 13 * * 1-5'
+    # 平日 22:31 台北時間 (14:31 UTC)
+    - cron: '31 14 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260625)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-institutional-investors
+  cancel-in-progress: false
+
+jobs:
+  crawl-twse-institutional-investors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check existing TWSE institutional investors file
+        id: existing
+        shell: bash
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            TARGET_DATE="$DATE_INPUT"
+          else
+            # Before 03:00 Taipei time, the market data still belongs to the previous day.
+            TARGET_DATE=$(TZ='Asia/Taipei' date --date='3 hours ago' '+%Y%m%d')
+          fi
+
+          OUTPUT_FILE="data_twse_institutional_investors/${TARGET_DATE}_twse_institutional_investors.json"
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "TWSE institutional investors file already exists: $OUTPUT_FILE"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.existing.outputs.exists != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        if: steps.existing.outputs.exists != 'true'
+        run: npm ci
+
+      - name: Run TWSE institutional investors crawler
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          node scripts/crawl_twse_institutional_investors.js \
+            --date "${{ steps.existing.outputs.target_date }}" \
+            --max-retries 0 \
+            --rate-limit-cooldown 180000
+
+      - name: Generate TWSE institutional files.json only
+        if: steps.existing.outputs.exists != 'true'
+        run: node scripts/generate_file_lists.js --only data_twse_institutional_investors
+
+      - name: Commit and push changes
+        if: steps.existing.outputs.exists != 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_twse_institutional_investors/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE institutional changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No TWSE institutional investors changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE institutional investors data ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE institutional investors data after 5 attempts."
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

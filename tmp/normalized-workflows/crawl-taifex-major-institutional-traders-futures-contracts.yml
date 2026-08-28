@@ -1,0 +1,206 @@
+name: "[01 台股資料] Crawl 外資期貨未平倉 TAIFEX Futures Contracts Institutional Traders"
+
+on:
+  schedule:
+    # 週一至週五 17:13 台北時間（09:13 UTC）
+    - cron: '13 9 * * 1-5'
+    # 週一至週五 18:03 台北時間（10:03 UTC）
+    - cron: '3 10 * * 1-5'
+    # 週一至週五 19:02 台北時間（11:02 UTC）
+    - cron: '2 11 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '單日查詢日期 YYYYMMDD；不可與日期區間同時輸入'
+        required: false
+        default: ''
+      start_date:
+        description: '區間開始日期 YYYYMMDD（含當日）'
+        required: false
+        default: ''
+      end_date:
+        description: '區間結束日期 YYYYMMDD（含當日）'
+        required: false
+        default: ''
+      delay_ms:
+        description: '區間每個交易日之間的延遲毫秒，允許 1000–60000'
+        required: false
+        default: '3000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-taifex-futures-contracts-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  crawl-taifex-futures-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve crawl inputs
+        id: crawl-inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "date=${{ github.event.inputs.date }}" >> "$GITHUB_OUTPUT"
+            echo "start_date=${{ github.event.inputs.start_date }}" >> "$GITHUB_OUTPUT"
+            echo "end_date=${{ github.event.inputs.end_date }}" >> "$GITHUB_OUTPUT"
+            echo "delay_ms=${{ github.event.inputs.delay_ms }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TARGET_DATE=$(node <<'NODE'
+          const fs = require('fs');
+
+          const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Taipei',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).formatToParts(new Date());
+          const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+          let date = new Date(`${values.year}-${values.month}-${values.day}T00:00:00Z`);
+
+          let nonTradingDays = {};
+          try {
+            nonTradingDays = JSON.parse(fs.readFileSync('data_history_sma/non_trading_days.json', 'utf8'));
+          } catch (error) {
+            console.error(`Unable to read non-trading days: ${error.message}`);
+            process.exit(1);
+          }
+
+          function dateText(value) {
+            return value.toISOString().slice(0, 10);
+          }
+
+          function isNonTradingDay(value) {
+            const day = value.getUTCDay();
+            if (day === 0 || day === 6) return true;
+            const text = dateText(value);
+            const year = text.slice(0, 4);
+            const configured = new Set((nonTradingDays[year] || []).map(item => item.replaceAll('/', '-')));
+            return configured.has(text);
+          }
+
+          while (isNonTradingDay(date)) {
+            date.setUTCDate(date.getUTCDate() - 1);
+          }
+
+          process.stdout.write(dateText(date).replaceAll('-', ''));
+          NODE
+          )
+
+          echo "Scheduled target date: $TARGET_DATE"
+          echo "date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "start_date=" >> "$GITHUB_OUTPUT"
+          echo "end_date=" >> "$GITHUB_OUTPUT"
+          echo "delay_ms=3000" >> "$GITHUB_OUTPUT"
+
+      - name: Crawl TAIFEX futures contracts institutional trader data
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DATE="${{ steps.crawl-inputs.outputs.date }}"
+          START_DATE="${{ steps.crawl-inputs.outputs.start_date }}"
+          END_DATE="${{ steps.crawl-inputs.outputs.end_date }}"
+          DELAY_MS="${{ steps.crawl-inputs.outputs.delay_ms }}"
+
+          if [ -n "$DATE" ] && { [ -n "$START_DATE" ] || [ -n "$END_DATE" ]; }; then
+            echo "Use either date or start_date/end_date, not both."
+            exit 1
+          fi
+
+          if { [ -n "$START_DATE" ] && [ -z "$END_DATE" ]; } || { [ -z "$START_DATE" ] && [ -n "$END_DATE" ]; }; then
+            echo "Range mode requires both start_date and end_date."
+            exit 1
+          fi
+
+          if [ -n "$START_DATE" ] && [ -n "$END_DATE" ]; then
+            node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js \
+              --start-date "$START_DATE" \
+              --end-date "$END_DATE" \
+              --delay-ms "${DELAY_MS:-3000}"
+          elif [ -n "$DATE" ]; then
+            node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js --date "$DATE"
+          else
+            node scripts/crawl_taifex_major_institutional_traders_futures_contracts.js
+          fi
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_taifex_major_institutional_traders_futures_contracts/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected unstaged files remain:"
+              git status --short
+              exit 1
+            fi
+            echo "No TAIFEX futures-contract changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TAIFEX futures-contract institutional data ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Worktree must be clean before pull --rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            echo "Push attempt ${attempt}/5"
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+
+          echo "Failed to push TAIFEX futures-contract changes after five attempts"
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

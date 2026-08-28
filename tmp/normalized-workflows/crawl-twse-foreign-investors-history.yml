@@ -1,0 +1,149 @@
+name: "[06 回填修復] Crawl TWSE Foreign Investors History"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Single target date (YYYYMMDD). If set, start/end are ignored.'
+        required: false
+        default: ''
+      start_date:
+        description: 'Start date (YYYYMMDD). Leave empty to use script default.'
+        required: false
+        default: ''
+      end_date:
+        description: 'End date (YYYYMMDD). Leave empty to use Taipei today.'
+        required: false
+        default: ''
+      force:
+        description: 'Overwrite existing files'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      min_delay:
+        description: 'Minimum random delay between dates in ms'
+        required: false
+        default: '3000'
+      max_delay:
+        description: 'Maximum random delay between dates in ms'
+        required: false
+        default: '5000'
+      rate_limit_cooldown:
+        description: 'Cooldown for 307/429/503 responses in ms'
+        required: false
+        default: '90000'
+      mismatch_cooldown:
+        description: 'Cooldown for response date mismatch in ms'
+        required: false
+        default: '90000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-foreign-investors-history
+  cancel-in-progress: false
+
+jobs:
+  crawl-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Crawl TWSE foreign investors history
+        run: |
+          ARGS=(
+            --min-delay "${{ github.event.inputs.min_delay }}"
+            --max-delay "${{ github.event.inputs.max_delay }}"
+            --max-retries 0
+            --rate-limit-cooldown "${{ github.event.inputs.rate_limit_cooldown }}"
+            --mismatch-cooldown "${{ github.event.inputs.mismatch_cooldown }}"
+          )
+
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS+=(--date "${{ github.event.inputs.date }}")
+          else
+            if [ -n "${{ github.event.inputs.start_date }}" ]; then
+              ARGS+=(--start "${{ github.event.inputs.start_date }}")
+            fi
+            if [ -n "${{ github.event.inputs.end_date }}" ]; then
+              ARGS+=(--end "${{ github.event.inputs.end_date }}")
+            fi
+          fi
+
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS+=(--force)
+          fi
+
+          node scripts/crawl_history_twse_foreign_investors.js "${ARGS[@]}"
+
+      - name: Generate TWSE foreign files.json only
+        run: node scripts/generate_file_lists.js --only data_twse_foreign_investors
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_twse_foreign_investors/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE foreign-investor changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No TWSE foreign investors changes"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE foreign investors history ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE foreign investors history after 5 attempts."
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

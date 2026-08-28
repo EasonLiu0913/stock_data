@@ -1,0 +1,96 @@
+name: "[00 網站部署] Public Page Registry CI"
+
+on:
+  pull_request:
+    paths:
+      - "public/*.html"
+      - "config/public-page-registry.json"
+      - "scripts/**"
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "public/*.html"
+      - "config/public-page-registry.json"
+      - "scripts/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Validation-only layer: it does not persist repository data, so a newer CI run
+# may supersede an older validation run.
+concurrency:
+  group: public-page-registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate homepage registry and workflow deployment safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout public page sources and writer candidates
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /public/
+            /config/public-page-registry.json
+            /scripts/
+            /.github/workflows/
+
+      - name: Validate canonical homepage source of truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/generate_public_index.js
+          node --check scripts/validate_public_pages.js
+          node --check scripts/validate_public_index_writers.js
+          node scripts/generate_public_index.js --check
+          node scripts/validate_public_pages.js
+          node scripts/validate_public_index_writers.js
+
+      - name: Audit all workflow concurrency layers
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/audit_workflow_deployment_races.js
+          node scripts/audit_workflow_deployment_races.js --self-test
+          node scripts/audit_workflow_deployment_races.js
+
+      - name: Summarize validation
+        shell: bash
+        run: |
+          {
+            echo "## Public Page Registry / Workflow Layering Safety"
+            echo
+            echo "- index.html 與 registry 同步：✅"
+            echo "- canonical / legacy / non-homepage HTML 分類：✅"
+            echo "- 未分類 public root HTML：0"
+            echo "- 非 canonical tools writer：0"
+            echo "- Pages canonical concurrency group：github-pages"
+            echo "- Pages publication cancel-in-progress：true"
+            echo "- repository/data writer cancel-in-progress=true：禁止"
+            echo "- validation-only workflow cancel-in-progress=true：允許"
+            echo "- deployment chain workflow_run：禁止"
+            echo "- Pages source：每次 checkout 最新 main"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

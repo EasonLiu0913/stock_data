@@ -1,0 +1,133 @@
+name: "[01 台股資料] Crawl TWSE Margin Balance"
+
+on:
+  schedule:
+    # 平日 20:17 台北時間 (12:17 UTC)
+    - cron: '17 12 * * 1-5'
+    # 平日 21:23 台北時間 (13:23 UTC)
+    - cron: '23 13 * * 1-5'
+    # 平日 22:29 台北時間 (14:29 UTC)
+    - cron: '29 14 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Expected data date (YYYYMMDD). Leave empty for latest.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  crawl-twse-margin-balance:
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.existing.outputs.target_date }}
+      pages_changed: ${{ steps.commit.outputs.pages_changed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check existing TWSE margin balance file
+        id: existing
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            TARGET_DATE="$DATE_INPUT"
+          else
+            # Before 03:00 Taipei time, the market data still belongs to the previous day.
+            TARGET_DATE=$(TZ='Asia/Taipei' date --date='3 hours ago' '+%Y%m%d')
+          fi
+
+          OUTPUT_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$OUTPUT_FILE" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "TWSE margin balance file already exists: $OUTPUT_FILE"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.existing.outputs.exists != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        if: steps.existing.outputs.exists != 'true'
+        run: npm ci
+
+      - name: Crawl TWSE margin balance data
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          node scripts/crawl_twse_margin_balance.js --date "${{ steps.existing.outputs.target_date }}"
+
+      - name: Refresh daily-gainers flow analysis when source list exists
+        if: always()
+        run: |
+          TARGET_DATE="${{ steps.existing.outputs.target_date }}"
+          LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
+          MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+
+          if [ ! -f "$LIST_FILE" ]; then
+            echo "Skip flow refresh: daily gainer list does not exist: $LIST_FILE"
+            exit 0
+          fi
+          if [ ! -s "$MARGIN_FILE" ]; then
+            echo "Skip flow refresh: margin file is not available yet: $MARGIN_FILE"
+            exit 0
+          fi
+
+          echo "Refreshing flow analysis with margin data for $TARGET_DATE while preserving researched cause analysis"
+          node scripts/refresh_daily_gainers_flow_preserve_cause.js "$TARGET_DATE"
+
+      - name: Commit and push changes
+        id: commit
+        run: |
+          set -euo pipefail
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -- data_twse_margin_balance/ data_daily_gain_over_5/analysis/ data_daily_gain_over_5/analysis-flow/
+
+          if git diff --staged --quiet; then
+            echo "No TWSE margin balance or flow-analysis changes"
+            echo "pages_changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE margin balance and flow analysis ${CURRENT_DATE}"
+
+          git pull --rebase origin main
+          git push origin main
+          echo "pages_changed=true" >> "$GITHUB_OUTPUT"
+
+  deploy-pages:
+    name: 發布更新後分析到 GitHub Pages
+    needs: crawl-twse-margin-balance
+    if: needs.crawl-twse-margin-balance.result == 'success' && needs.crawl-twse-margin-balance.outputs.pages_changed == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.crawl-twse-margin-balance.outputs.target_date }}
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

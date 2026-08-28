@@ -1,0 +1,113 @@
+name: "[01 台股資料] Crawl Stock Rankings"
+
+on:
+  schedule:
+    # 17:43 Taipei Time (09:43 UTC)
+    - cron: '43 9 * * *'
+    # 19:37 Taipei Time (11:37 UTC)
+    - cron: '37 11 * * *'
+    # 20:47 Taipei Time (12:47 UTC)
+    - cron: '47 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-rankings
+  cancel-in-progress: false
+
+jobs:
+  crawl-rankings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Run Main Force Ranking Crawler
+        run: node scripts/scraper_fubon.js
+
+      - name: Run Foreign Investor Ranking Crawler
+        run: node scripts/scraper_fubon_foreign.js
+
+      - name: Run Market Cap and Volume Ranking Crawler
+        run: node scripts/scraper_fubon_other.js
+
+      - name: Generate Fubon files.json only
+        run: node scripts/generate_file_lists.js --only data_fubon
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_fubon/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no ranking changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "📊 Update Stock Rankings - ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push ranking data after 5 attempts."
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

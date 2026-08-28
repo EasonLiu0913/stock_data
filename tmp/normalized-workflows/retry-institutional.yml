@@ -1,0 +1,167 @@
+name: "[06 回填修復] Retry Institutional Failed"
+
+on:
+  schedule:
+    - cron: '13 13 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260204)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: retry-institutional
+  cancel-in-progress: false
+
+jobs:
+  retry-institutional:
+    runs-on: ubuntu-latest
+    outputs:
+      is_trading_day: ${{ steps.trading-day.outputs.is_trading_day }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Determine target date
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "target=${{ github.event.inputs.date }}" >> "$GITHUB_OUTPUT"
+          else
+            TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            echo "target=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check TWSE trading day
+        id: trading-day
+        run: node scripts/check_twse_trading_day.js --date ${{ steps.date.outputs.target }}
+
+      - name: Cache Playwright browsers
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: npx playwright install chromium
+
+      - name: Reconcile retry list before retry
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: |
+          node --check scripts/reconcile_institutional_data.js
+          node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+          cp "data_fubon/fubon_${{ steps.date.outputs.target }}_institutional_status.json" /tmp/institutional_status_before_retry.json
+
+      - name: Check if failed list exists
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        id: check
+        run: |
+          FAILED_FILE="data_fubon/fubon_${{ steps.date.outputs.target }}_institutional_failedList.json"
+          if [ -f "$FAILED_FILE" ]; then
+            COUNT=$(jq length "$FAILED_FILE")
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+            echo "📋 Found $COUNT failed stocks to retry"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "✅ No failed list found, nothing to retry"
+          fi
+
+      - name: Run Institutional retry
+        if: steps.trading-day.outputs.is_trading_day == 'true' && steps.check.outputs.exists == 'true'
+        run: node scripts/retry_institutional_failed.js --date ${{ steps.date.outputs.target }}
+
+      - name: Reconcile completeness after retry
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
+      - name: Write Institutional retry summary
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/write_institutional_actions_summary.js --date ${{ steps.date.outputs.target }} --before /tmp/institutional_status_before_retry.json
+
+      - name: Generate Fubon files.json only
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        run: node scripts/generate_file_lists.js --only data_fubon
+
+      - name: Commit and push changes
+        if: steps.trading-day.outputs.is_trading_day == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_fubon/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no retry-institutional changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🔄 Retry Institutional failed stocks - ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push retry-institutional data after 5 attempts."
+          exit 1
+
+  deploy-pages:
+    name: 法人補全後發布 GitHub Pages
+    needs: retry-institutional
+    if: needs.retry-institutional.result == 'success' && needs.retry-institutional.outputs.is_trading_day == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

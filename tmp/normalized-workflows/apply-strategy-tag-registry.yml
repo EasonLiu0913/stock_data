@@ -1,0 +1,340 @@
+name: '[04 預測覆盤] 套用標籤與版本化策略'
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'scripts/strategy_tag_engine.js'
+      - 'scripts/strategy_tag_source_enrichment.js'
+      - 'scripts/historical_factor_research.js'
+      - 'scripts/historical_factor_research_round_2.js'
+      - 'scripts/historical_factor_research_round_3.js'
+      - 'scripts/apply_strategy_tag_registry.js'
+      - 'scripts/summarize_strategy_snapshot_manifest.js'
+      - 'scripts/sync_prediction_dashboard_groups.js'
+      - 'scripts/sync_fundamental_signal_metadata.js'
+      - 'scripts/sync_mops_monthly_signal_artifacts.js'
+      - 'scripts/repair_fundamental_live_snapshot_sources.js'
+      - '.github/workflows/apply-strategy-tag-registry.yml'
+  workflow_call:
+    inputs:
+      date:
+        description: '預測日期 YYYYMMDD；留空使用最新有效預測日期'
+        required: false
+        type: string
+      evaluation_mode:
+        description: 'live_snapshot 保存當時版本；historical_recalculation 用目前 registry 重算歷史'
+        required: false
+        default: live_snapshot
+        type: string
+      data_as_of:
+        description: '歷史重算的資料截點 YYYYMMDD；live_snapshot 可留空'
+        required: false
+        default: ''
+        type: string
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '預測日期 YYYYMMDD；留空使用最新有效預測日期'
+        required: false
+        type: string
+      evaluation_mode:
+        description: 'live_snapshot 保存當時版本；historical_recalculation 用目前 registry 重算歷史'
+        required: true
+        type: choice
+        default: live_snapshot
+        options:
+          - live_snapshot
+          - historical_recalculation
+      data_as_of:
+        description: '歷史重算的資料截點 YYYYMMDD；live_snapshot 可留空'
+        required: false
+        type: string
+  pull_request:
+    branches: [main]
+    paths:
+      - 'config/strategy-tag-registry.json'
+      - 'scripts/strategy_tag_engine.js'
+      - 'scripts/strategy_tag_source_enrichment.js'
+      - 'scripts/historical_factor_research.js'
+      - 'scripts/historical_factor_research_round_2.js'
+      - 'scripts/historical_factor_research_round_3.js'
+      - 'scripts/generate_round_2_factor_research.js'
+      - 'scripts/apply_strategy_tag_registry.js'
+      - 'scripts/summarize_strategy_snapshot_manifest.js'
+      - 'scripts/sync_prediction_dashboard_groups.js'
+      - 'scripts/sync_fundamental_signal_metadata.js'
+      - 'scripts/sync_mops_monthly_signal_artifacts.js'
+      - 'scripts/repair_fundamental_live_snapshot_sources.js'
+      - 'tests/strategy_tag_engine.test.js'
+      - 'tests/strategy_tag_source_enrichment.test.js'
+      - 'tests/historical_factor_research.test.js'
+      - 'tests/historical_factor_research_round_2.test.js'
+      - 'tests/round_6_observation_risk_tag.test.js'
+      - 'tests/apply_strategy_tag_registry.test.js'
+      - 'tests/summarize_strategy_snapshot_manifest.test.js'
+      - 'tests/prediction_dashboard_group_sync.test.js'
+      - '.github/workflows/apply-strategy-tag-registry.yml'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Standalone push/manual runs all write the same prediction data, so serialize them.
+# workflow_call is already protected by the caller's daily-stock-prediction lock;
+# give it a distinct group to avoid deadlocking with the caller.
+concurrency:
+  group: ${{ github.event_name == 'workflow_call' && format('strategy-tag-registry-called-{0}', github.run_id) || 'prediction-data-main' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Full validation for registry or code changes
+        if: github.event_name != 'workflow_call'
+        run: |
+          node --check scripts/strategy_tag_engine.js
+          node --check scripts/strategy_tag_source_enrichment.js
+          node --check scripts/historical_factor_research.js
+          node --check scripts/historical_factor_research_round_2.js
+          node --check scripts/historical_factor_research_round_3.js
+          node --check scripts/generate_round_2_factor_research.js
+          node --check scripts/apply_strategy_tag_registry.js
+          node --check scripts/summarize_strategy_snapshot_manifest.js
+          node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/sync_fundamental_signal_metadata.js
+          node --check scripts/sync_mops_monthly_signal_artifacts.js
+          node --check scripts/repair_fundamental_live_snapshot_sources.js
+          node --check scripts/fetch_official_market_constraints.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node --test \
+            tests/strategy_tag_engine.test.js \
+            tests/strategy_tag_source_enrichment.test.js \
+            tests/historical_factor_research.test.js \
+            tests/historical_factor_research_round_2.test.js \
+            tests/round_6_observation_risk_tag.test.js \
+            tests/apply_strategy_tag_registry.test.js \
+            tests/summarize_strategy_snapshot_manifest.test.js \
+            tests/prediction_dashboard_group_sync.test.js
+          node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
+      - name: Fast validation for direct daily prediction call
+        if: github.event_name == 'workflow_call'
+        run: |
+          node --check scripts/historical_factor_research_round_2.js
+          node --check scripts/historical_factor_research_round_3.js
+          node --check scripts/apply_strategy_tag_registry.js
+          node --check scripts/summarize_strategy_snapshot_manifest.js
+          node --check scripts/sync_prediction_dashboard_groups.js
+          node --check scripts/sync_fundamental_signal_metadata.js
+          node --check scripts/sync_mops_monthly_signal_artifacts.js
+          node --check scripts/repair_fundamental_live_snapshot_sources.js
+          node --check scripts/fetch_official_market_constraints.js
+          node --check scripts/backfill_prediction_dashboard_fields.js
+          node -e "require('./scripts/strategy_tag_engine').validateRegistry(require('./config/strategy-tag-registry.json'))"
+
+  apply:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve one target prediction date
+        id: target
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_DATE:-}" ]; then
+            target_date="${INPUT_DATE//[^0-9]/}"
+          else
+            target_date=$(node -e "process.stdout.write(require('./scripts/apply_strategy_tag_registry').latestPredictionDate('data_predictions'))")
+          fi
+          [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target date: $target_date"; exit 1; }
+          test -s "data_predictions/$target_date/summary.json"
+          echo "date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "TARGET_DATE=$target_date" >> "$GITHUB_ENV"
+          echo "Target prediction date: $target_date"
+      - name: Repair missing fundamental signal sources
+        id: fundamental_source_repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/repair_fundamental_live_snapshot_sources.js --date "$TARGET_DATE" | tee /tmp/fundamental-source-repair.json
+          repaired=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('/tmp/fundamental-source-repair.json','utf8'));process.stdout.write(String(p.repaired===true))")
+          months=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('/tmp/fundamental-source-repair.json','utf8'));process.stdout.write((p.generated_months||[]).join(','))")
+          echo "repaired=$repaired" >> "$GITHUB_OUTPUT"
+          echo "generated_months=$months" >> "$GITHUB_OUTPUT"
+          echo "- 財報訊號來源修復：$repaired" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 自動補齊月份：${months:-無}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Refresh official disposition and TX night snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--date "$TARGET_DATE" --allow-partial)
+          snapshot="data_market_constraints/$TARGET_DATE/snapshot.json"
+          if [ ! -s "$snapshot" ] || ! node -e "const s=require('./' + process.argv[1]);process.exit(s.complete===true?0:1)" "$snapshot"; then
+            args+=(--force)
+          fi
+          node scripts/fetch_official_market_constraints.js "${args[@]}"
+      - name: Rebuild rebound readiness with official constraints
+        run: node scripts/backfill_prediction_dashboard_fields.js --date "$TARGET_DATE"
+      - name: Report official constraint integration status
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - "$TARGET_DATE" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const read = file => {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          };
+          const snapshot = read(`data_market_constraints/${date}/snapshot.json`);
+          const rebound = read(`data_market_environment/${date}/oversold_beta_rebound.json`);
+          console.log(`Official constraint status: ${snapshot?.calculation_status || 'missing'}`);
+          console.log(`Night futures change: ${snapshot?.night_futures?.change_percent ?? 'N/A'}%`);
+          console.log(`Rebound readiness night input: ${rebound?.inputs?.night_futures_change_pct ?? 'N/A'}%`);
+          if (snapshot?.complete === true && rebound?.inputs?.night_futures_change_pct == null) {
+            throw new Error('Complete official snapshot was not integrated into rebound readiness');
+          }
+          NODE
+      - name: Apply fixed tag and strategy registry
+        env:
+          EVALUATION_MODE: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && inputs.evaluation_mode || 'historical_recalculation' }}
+          DATA_AS_OF: ${{ inputs.data_as_of }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--date "$TARGET_DATE" --evaluation-mode "$EVALUATION_MODE")
+          if [ -n "${DATA_AS_OF:-}" ]; then args+=(--data-as-of "$DATA_AS_OF"); fi
+          echo "event=${GITHUB_EVENT_NAME} evaluation_mode=${EVALUATION_MODE} date=${TARGET_DATE} data_as_of=${DATA_AS_OF:-base_trade_date}"
+          node scripts/apply_strategy_tag_registry.js "${args[@]}"
+      - name: Summarize only the target snapshot date
+        run: node scripts/summarize_strategy_snapshot_manifest.js --date "$TARGET_DATE"
+      - name: Synchronize dashboard strategy groups with versioned results
+        run: node scripts/sync_prediction_dashboard_groups.js --date "$TARGET_DATE"
+      - name: Persist fundamental signal and execution dates
+        run: node scripts/sync_fundamental_signal_metadata.js --date "$TARGET_DATE"
+      - name: Verify only the target snapshot date
+        env:
+          TARGET_DATE: ${{ steps.target.outputs.date }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const date = process.env.TARGET_DATE;
+          const manifestFile = 'data_prediction_analysis/strategy-snapshots/manifest.json';
+          if (!fs.existsSync(manifestFile)) throw new Error('Strategy snapshot manifest missing');
+          const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+          const row = manifest.dates?.[date];
+          if (!row) throw new Error(`Strategy snapshot date missing: ${date}`);
+          const entries = [
+            row.live_snapshot,
+            ...(row.live_snapshot_history || []),
+            ...(row.historical_recalculations || []),
+          ].filter(Boolean);
+          if (!entries.length) throw new Error(`No strategy snapshot generated for ${date}`);
+          for (const entry of entries) {
+            if (!fs.existsSync(entry.file)) throw new Error(`Snapshot file missing: ${entry.file}`);
+            const snapshot = JSON.parse(fs.readFileSync(entry.file, 'utf8'));
+            if (!snapshot.tag_classifications || !snapshot.strategy_classifications) throw new Error(`Invalid snapshot: ${entry.file}`);
+            for (const item of Object.values(snapshot.tag_classifications)) if (item.count === undefined) throw new Error('Tag count missing');
+            for (const item of Object.values(snapshot.strategy_classifications)) if (item.count === undefined) throw new Error('Strategy count missing');
+            if (!entry.classification_summary) throw new Error(`Manifest summary missing: ${entry.file}`);
+          }
+
+          const summaryFile = `data_predictions/${date}/summary.json`;
+          const groupFile = `data_predictions/${date}/group-summary.json`;
+          const summary = JSON.parse(fs.readFileSync(summaryFile, 'utf8'));
+          const groups = JSON.parse(fs.readFileSync(groupFile, 'utf8')).groups || [];
+          for (const [strategyId, classification] of Object.entries(summary.strategy_classifications_v2 || {})) {
+            const group = groups.find(item => item.strategy_id === strategyId);
+            if (!group) throw new Error(`Versioned strategy group missing: ${strategyId}`);
+            if (Number(group.count) !== Number(classification.count)) {
+              throw new Error(`Versioned strategy count mismatch: ${strategyId} ${group.count} != ${classification.count}`);
+            }
+            const expectedMembers = [...new Set((classification.members || []).map(String))].sort();
+            const actualMembers = [...new Set((group.members || []).map(String))].sort();
+            if (JSON.stringify(actualMembers) !== JSON.stringify(expectedMembers)) {
+              throw new Error(`Versioned strategy members mismatch: ${strategyId}`);
+            }
+          }
+
+          const directId = 'two_stage_fundamental_quality_direct_entry_v1';
+          for (const stock of summary.stocks || []) {
+            const matches = (stock.registered_strategy_matches || []).map(item => typeof item === 'string' ? item : item?.strategy_id);
+            const metadata = stock.fundamental_signal;
+            if (matches.includes(directId)) {
+              if (!metadata?.signal_date || !metadata?.execution_date) {
+                throw new Error(`Fundamental signal dates missing from summary stock ${stock.stock_code}`);
+              }
+              const stockFile = `data_predictions/${date}/${stock.stock_code}.json`;
+              if (!fs.existsSync(stockFile)) throw new Error(`Prediction stock file missing: ${stockFile}`);
+              const stockPayload = JSON.parse(fs.readFileSync(stockFile, 'utf8'));
+              if (JSON.stringify(stockPayload.fundamental_signal || null) !== JSON.stringify(metadata)) {
+                throw new Error(`Fundamental signal metadata mismatch: ${stock.stock_code}`);
+              }
+            }
+          }
+          console.log(`Verified ${entries.length} snapshot entry(s), synchronized dashboard groups, and fundamental signal dates for ${date}`);
+          NODE
+      - name: Commit official constraints, snapshot, and enriched prediction summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            data_market_constraints \
+            data_market_environment \
+            data_predictions \
+            data_prediction_analysis
+          if git diff --cached --quiet; then
+            echo 'No official constraint, tag, strategy snapshot, or dashboard group changes'
+            exit 0
+          fi
+          git commit -m "data: refresh official constraints and apply strategy snapshot ${TARGET_DATE}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+  deploy_pages:
+    name: Deploy enriched prediction data to Pages
+    needs: apply
+    if: github.event_name != 'pull_request' && needs.apply.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

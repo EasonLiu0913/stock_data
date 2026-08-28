@@ -1,0 +1,164 @@
+name: "[06 回填修復] 補齊每日 5% 上漲原因 coverage"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/repair-daily-gainers-cause-coverage.yml'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '指定交易日 YYYYMMDD；留空使用台北當日'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: repair-daily-gainers-cause-coverage
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    name: 保留既有研究並補齊缺漏股票
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.date.outputs.target_date }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          if [ -z "$date" ]; then
+            date="$(TZ='Asia/Taipei' date '+%Y%m%d')"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $date" >&2; exit 1; }
+          echo "target_date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate required inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.target_date }}"
+          [ -s "data_daily_gain_over_5/${date}.json" ] || { echo "Missing daily list" >&2; exit 1; }
+          [ -s "data_daily_gain_over_5/analysis/${date}.json" ] || { echo "Missing existing cause analysis" >&2; exit 1; }
+          node --check scripts/backfill_daily_gainers_research.js
+
+      - name: Generate fallback research and merge only missing codes
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.target_date }}"
+          cause="data_daily_gain_over_5/analysis/${date}.json"
+          original="$(mktemp)"
+          cp "$cause" "$original"
+
+          node scripts/backfill_daily_gainers_research.js "$date"
+
+          node - "$date" "$original" "$cause" <<'NODE'
+          const fs = require('node:fs');
+          const date = process.argv[2];
+          const originalPath = process.argv[3];
+          const fallbackPath = process.argv[4];
+          const list = JSON.parse(fs.readFileSync(`data_daily_gain_over_5/${date}.json`, 'utf8'));
+          const original = JSON.parse(fs.readFileSync(originalPath, 'utf8'));
+          const fallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+          const expected = Array.isArray(list.stocks) ? list.stocks.map(x => String(x.code || '')) : [];
+          const oldMap = new Map((original.analyses || []).map(x => [String(x.code || ''), x]));
+          const fallbackMap = new Map((fallback.analyses || []).map(x => [String(x.code || ''), x]));
+          const missingBefore = expected.filter(code => !oldMap.has(code));
+          const merged = expected.map(code => oldMap.get(code) || fallbackMap.get(code)).filter(Boolean);
+          const payload = {
+            ...original,
+            target_date: date,
+            generated_at: new Date().toISOString(),
+            stock_count: expected.length,
+            coverage_repair: {
+              repaired_at: new Date().toISOString(),
+              preserved_existing_count: oldMap.size,
+              filled_missing_count: missingBefore.length,
+              filled_codes: missingBefore
+            },
+            analyses: merged
+          };
+          const actual = new Set(merged.map(x => String(x.code || '')));
+          const missingAfter = expected.filter(code => !actual.has(code));
+          const extra = [...actual].filter(code => !expected.includes(code));
+          if (merged.length !== expected.length || missingAfter.length || extra.length) {
+            throw new Error(`coverage repair failed: ${JSON.stringify({expected:expected.length,actual:merged.length,missingAfter,extra})}`);
+          }
+          fs.writeFileSync(fallbackPath, JSON.stringify(payload, null, 2) + '\n');
+          console.log(JSON.stringify({date, expected: expected.length, preserved: oldMap.size, filled: missingBefore.length, filled_codes: missingBefore}, null, 2));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            `## 5% 上漲原因 coverage 修復\n- 日期：${date}\n- 應有：${expected.length}\n- 保留既有：${oldMap.size}\n- 補齊缺漏：${missingBefore.length}\n- 補齊代號：${missingBefore.join(', ') || '無'}\n- 修復後：${merged.length}/${expected.length}\n`);
+          NODE
+
+          # backfill generator may refresh compatibility flow; this repair intentionally commits cause only.
+          git checkout -- "data_daily_gain_over_5/analysis-flow/${date}.json" 2>/dev/null || true
+          rm -f "$original"
+
+      - name: Commit repaired cause analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.target_date }}"
+          file="data_daily_gain_over_5/analysis/${date}.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$file"
+          if git diff --cached --quiet; then
+            echo "Cause coverage already complete"
+            exit 0
+          fi
+          git commit -m "analysis: repair 5% cause coverage ${date}"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
+
+  deploy:
+    name: 發布修復後每日 5% 頁面
+    needs: repair
+    if: needs.repair.result == 'success'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.repair.outputs.target_date }}
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

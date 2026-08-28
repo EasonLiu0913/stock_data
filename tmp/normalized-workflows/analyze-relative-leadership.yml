@@ -1,0 +1,107 @@
+name: "[05 研究分析] Analyze Relative Leadership Rules"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/analyze_relative_leadership_rules.js
+      - scripts/analyze_relative_leadership_common.js
+      - scripts/analyze_relative_leadership_by_environment.js
+      - scripts/install_market_environment_ui.js
+      - data_market_environment/**/actual_market_environment.json
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Discovery replay date (YYYYMMDD). Leave empty for latest completed replay.'
+        required: false
+        default: ''
+      max_dates:
+        description: 'Maximum completed replay dates to use (2-30).'
+        required: false
+        default: '30'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prediction-analysis-writer
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Run market environment tests
+        run: node --test tests/market_environment.test.js
+
+      - name: Analyze common prediction-time rules
+        shell: bash
+        run: |
+          sed -i 's/slice(0,160)/slice(0,40)/; s/k===2?1000:k===3?700:400/k===2?120:k===3?80:40/' scripts/analyze_relative_leadership_common.js
+          args=(--max-dates "${{ inputs.max_dates || '30' }}")
+          if [ -n "${{ inputs.date }}" ]; then args+=(--date "${{ inputs.date }}"); fi
+          node scripts/analyze_relative_leadership_common.js "${args[@]}"
+
+      - name: Analyze fixed rules by actual market environment
+        shell: bash
+        run: |
+          args=(--max-dates "${{ inputs.max_dates || '30' }}")
+          if [ -n "${{ inputs.date }}" ]; then args+=(--date "${{ inputs.date }}"); fi
+          node scripts/analyze_relative_leadership_by_environment.js "${args[@]}"
+
+      - name: Install market environment banner
+        run: node scripts/install_market_environment_ui.js
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: relative-leadership-analysis-${{ github.run_id }}
+          path: data_prediction_analysis/relative-leadership/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Commit and push analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- scripts/analyze_relative_leadership_common.js
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/relative-leadership/ public/prediction-dashboard.html
+          if git diff --staged --quiet; then echo "No analysis changes"; exit 0; fi
+          analysis_date=$(node -e "const fs=require('fs');const f='data_prediction_analysis/relative-leadership/manifest.json';if(fs.existsSync(f)){const m=JSON.parse(fs.readFileSync(f));process.stdout.write(m.latest_date||'latest')}else process.stdout.write('latest')")
+          git commit -m "analysis: relative leadership rules by environment ${analysis_date}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          echo "Push failed; artifact remains available"
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

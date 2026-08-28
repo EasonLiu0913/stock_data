@@ -1,0 +1,117 @@
+name: '[07 研究] 季財報品質歷史回填'
+
+on:
+  workflow_dispatch:
+    inputs:
+      stock_id:
+        description: '先驗證單一股票，例如川湖 2059'
+        required: true
+        type: string
+        default: '2059'
+      start_quarter:
+        description: '起始季度，例如 2023Q1'
+        required: true
+        type: string
+        default: '2023Q1'
+      end_quarter:
+        description: '結束季度，例如 2026Q2'
+        required: true
+        type: string
+        default: '2026Q2'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill-quarterly-financial-quality
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync to latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate quarterly history backfill
+        run: |
+          node --check scripts/backfill_finmind_quarterly_financial_quality.js
+          node --check scripts/generate_financial_quality_score_timeline.js
+          node --test tests/mops_quarterly_financial_quality.test.js
+
+      - name: Backfill FinMind quarterly financial quality for one stock
+        env:
+          STOCK_ID: ${{ inputs.stock_id }}
+          START_QUARTER: ${{ inputs.start_quarter }}
+          END_QUARTER: ${{ inputs.end_quarter }}
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+        run: node scripts/backfill_finmind_quarterly_financial_quality.js --stock-id "$STOCK_ID" --start-quarter "$START_QUARTER" --end-quarter "$END_QUARTER"
+
+      - name: Build financial quality score timeline
+        env:
+          STOCK_ID: ${{ inputs.stock_id }}
+          START_QUARTER: ${{ inputs.start_quarter }}
+          END_QUARTER: ${{ inputs.end_quarter }}
+        run: node scripts/generate_financial_quality_score_timeline.js --stock-id "$STOCK_ID" --start-quarter "$START_QUARTER" --end-quarter "$END_QUARTER"
+
+      - name: Verify requested stock coverage
+        env:
+          STOCK_ID: ${{ inputs.stock_id }}
+          START_QUARTER: ${{ inputs.start_quarter }}
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const f=`data_finmind_quarterly_financial_quality/${process.env.STOCK_ID}/${process.env.START_QUARTER}.json`;
+          if(!fs.existsSync(f)) throw new Error(`missing quarterly history output: ${f}`);
+          const j=JSON.parse(fs.readFileSync(f));
+          if(String(j.stock_id)!==String(process.env.STOCK_ID)) throw new Error('stock id mismatch');
+          if(!j.standalone_quarter || !Number.isFinite(j.standalone_quarter.revenue)) throw new Error('standalone quarter is incomplete');
+          const timeline=`data_finmind_quarterly_financial_quality/${process.env.STOCK_ID}/financial-quality-score-timeline.json`;
+          if(!fs.existsSync(timeline)) throw new Error(`missing financial quality timeline: ${timeline}`);
+          NODE
+
+      - name: Commit backfilled quarterly history
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_finmind_quarterly_financial_quality
+          if git diff --cached --quiet; then
+            echo 'No quarterly history changes'
+            exit 0
+          fi
+          git commit -m "data: backfill ${{ inputs.stock_id }} quarterly financial quality ${{ inputs.start_quarter }}-${{ inputs.end_quarter }}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

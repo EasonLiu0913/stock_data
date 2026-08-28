@@ -1,0 +1,192 @@
+name: "[01 台股資料] Crawl TWSE MI Index"
+
+on:
+  schedule:
+    # 平日 14:37 台北時間 (06:37 UTC)
+    - cron: '37 6 * * 1-5'
+    # 平日 15:23 台北時間 (07:23 UTC)
+    - cron: '23 7 * * 1-5'
+    # 平日 16:29 台北時間 (08:29 UTC)
+    - cron: '29 8 * * 1-5'
+    # 平日 18:31 台北時間 (10:31 UTC)
+    - cron: '31 10 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target Date (YYYYMMDD format, e.g., 20260623)'
+        required: false
+        default: ''
+      type:
+        description: 'TWSE MI_INDEX type'
+        required: false
+        default: 'ALL'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-twse-mi-index
+  cancel-in-progress: false
+
+jobs:
+  crawl-twse-mi-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check existing TWSE MI_INDEX file
+        id: existing
+        shell: bash
+        run: |
+          DATE_INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$DATE_INPUT" ]; then
+            TARGET_DATE="$DATE_INPUT"
+          else
+            # Before 03:00 Taipei time, the market data still belongs to the previous day.
+            TARGET_DATE=$(TZ='Asia/Taipei' date --date='3 hours ago' '+%Y%m%d')
+          fi
+
+          OUTPUT_FILE="data_twse_mi_index/${TARGET_DATE}_twse_mi_index.json"
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$OUTPUT_FILE" ] && node - "$OUTPUT_FILE" <<'NODE'
+          const fs = require('fs');
+          const file = process.argv[2];
+          try {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const tables = Array.isArray(payload?.tables) ? payload.tables : [];
+            const rowCount = tables.reduce(
+              (sum, table) => sum + (Array.isArray(table?.data) ? table.data.length : 0),
+              0,
+            );
+            if (tables.length === 0 || rowCount === 0) process.exit(1);
+            console.log(`Valid TWSE MI_INDEX file: ${file} (${tables.length} tables, ${rowCount} rows)`);
+          } catch (error) {
+            console.error(`Invalid TWSE MI_INDEX file: ${file}: ${error.message}`);
+            process.exit(1);
+          }
+          NODE
+          then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "TWSE MI_INDEX file already exists and is valid: $OUTPUT_FILE"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            if [ -f "$OUTPUT_FILE" ]; then
+              echo "TWSE MI_INDEX file exists but is invalid; crawler will retry: $OUTPUT_FILE"
+            else
+              echo "TWSE MI_INDEX file is missing; crawler will fetch it: $OUTPUT_FILE"
+            fi
+          fi
+
+      - name: Setup Node.js
+        if: steps.existing.outputs.exists != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        if: steps.existing.outputs.exists != 'true'
+        run: npm ci
+
+      - name: Run TWSE MI_INDEX crawler
+        if: steps.existing.outputs.exists != 'true'
+        shell: bash
+        run: |
+          ARGS=(--date "${{ steps.existing.outputs.target_date }}" --max-retries 3)
+
+          if [ -n "${{ github.event.inputs.type }}" ]; then
+            ARGS+=(--type "${{ github.event.inputs.type }}")
+          fi
+
+          node scripts/crawl_twse_mi_index.js "${ARGS[@]}"
+
+      - name: Validate crawled TWSE MI_INDEX file
+        if: steps.existing.outputs.exists != 'true'
+        shell: bash
+        run: |
+          OUTPUT_FILE="${{ steps.existing.outputs.output_file }}"
+          node - "$OUTPUT_FILE" <<'NODE'
+          const fs = require('fs');
+          const file = process.argv[2];
+          if (!fs.existsSync(file)) {
+            console.error(`TWSE MI_INDEX crawler did not produce output: ${file}`);
+            process.exit(1);
+          }
+          try {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const tables = Array.isArray(payload?.tables) ? payload.tables : [];
+            const rowCount = tables.reduce(
+              (sum, table) => sum + (Array.isArray(table?.data) ? table.data.length : 0),
+              0,
+            );
+            if (tables.length === 0 || rowCount === 0) {
+              console.error(`TWSE MI_INDEX output is invalid: ${file} (${tables.length} tables, ${rowCount} rows)`);
+              process.exit(1);
+            }
+            console.log(`Validated TWSE MI_INDEX output: ${file} (${tables.length} tables, ${rowCount} rows)`);
+          } catch (error) {
+            console.error(`TWSE MI_INDEX output is not valid JSON: ${file}: ${error.message}`);
+            process.exit(1);
+          }
+          NODE
+
+      - name: Generate TWSE MI_INDEX files.json only
+        if: steps.existing.outputs.exists != 'true'
+        run: node scripts/generate_file_lists.js --only data_twse_mi_index
+
+      - name: Commit and push changes
+        if: steps.existing.outputs.exists != 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_twse_mi_index/
+
+          if git diff --staged --quiet; then
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Unexpected uncommitted changes remain even though there are no TWSE MI_INDEX changes:"
+              git status --short
+              exit 1
+            fi
+            echo "No TWSE MI_INDEX changes to commit"
+            exit 0
+          fi
+
+          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "chore: update TWSE MI_INDEX data ${CURRENT_DATE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Unexpected uncommitted changes remain before rebase:"
+            git status --short
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed, retry ${attempt}/5..."
+            sleep 5
+          done
+
+          echo "Failed to push TWSE MI_INDEX data after 5 attempts."
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+

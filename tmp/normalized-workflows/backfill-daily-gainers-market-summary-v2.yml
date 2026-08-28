@@ -1,0 +1,131 @@
+name: "[06 回填修復] Backfill 5% Two-Stage Market Summary"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '起始日期 YYYYMMDD'
+        required: true
+        default: '20260501'
+      end_date:
+        description: '結束日期 YYYYMMDD'
+        required: true
+        default: '20260827'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: backfill-daily-gainers-two-stage-market-summary
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.range.outputs.end_date }}
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /config/daily-gainers-ai-contract.json
+            /config/daily-gainers-theme-taxonomy.json
+            /scripts/lib/daily_gainers_ai_contract.js
+            /scripts/build_daily_gainers_market_summary.js
+            /scripts/validate_daily_gainers_market_summary.js
+            /scripts/validate_daily_gainers_news_analysis.js
+            /data_daily_gain_over_5/*.json
+            /data_daily_gain_over_5/analysis-news/
+            /data_daily_gain_over_5/analysis-facts/
+            /data_daily_gain_over_5/analysis/
+            /data_daily_gain_over_5/market-summary/
+            /.github/workflows/
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve dates
+        id: range
+        shell: bash
+        env:
+          START: ${{ github.event.inputs.start_date }}
+          END: ${{ github.event.inputs.end_date }}
+        run: |
+          set -euo pipefail
+          [[ "$START" =~ ^20[0-9]{6}$ && "$END" =~ ^20[0-9]{6}$ && "$START" -le "$END" ]] || exit 1
+          mapfile -t dates < <(find data_daily_gain_over_5 -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' | sed 's/\.json$//' | awk -v s="$START" -v e="$END" '$0>=s&&$0<=e' | sort)
+          [ "${#dates[@]}" -gt 0 ] || exit 1
+          echo "dates=$(IFS=,; echo "${dates[*]}")" >> "$GITHUB_OUTPUT"
+          echo "end_date=${dates[-1]}" >> "$GITHUB_OUTPUT"
+      - name: Rebuild summaries with latest two-stage rules
+        shell: bash
+        env:
+          DATES: ${{ steps.range.outputs.dates }}
+        run: |
+          set -euo pipefail
+          node --check scripts/build_daily_gainers_market_summary.js
+          node --check scripts/validate_daily_gainers_market_summary.js
+          IFS=',' read -ra dates <<< "$DATES"
+          preliminary=0
+          final=0
+          missing_news=0
+          for d in "${dates[@]}"; do
+            news="data_daily_gain_over_5/analysis-news/${d}.json"
+            if [ -s "$news" ]; then
+              node scripts/validate_daily_gainers_news_analysis.js "$d" "$news"
+            else
+              missing_news=$((missing_news+1))
+            fi
+            node scripts/build_daily_gainers_market_summary.js --date "$d" --force
+            node scripts/validate_daily_gainers_market_summary.js --date "$d"
+            stage="$(node -e "const p=require('./data_daily_gain_over_5/market-summary/${d}.json');process.stdout.write(p.summary_stage)")"
+            if [ "$stage" = "full_synthesis" ]; then final=$((final+1)); else preliminary=$((preliminary+1)); fi
+          done
+          echo "## Two-stage Summary 回填" >> "$GITHUB_STEP_SUMMARY"
+          echo "- preliminary/news_theme：$preliminary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- final/full_synthesis：$final" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 尚無 analysis-news：$missing_news" >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit rebuilt summaries
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_daily_gain_over_5/market-summary/
+          if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git commit -m "analysis: rebuild two-stage 5% market summaries"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            git fetch origin main && git rebase origin/main
+            sleep 5
+          done
+          exit 1
+
+  deploy:
+    needs: rebuild
+    if: needs.rebuild.result == 'success' && needs.rebuild.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      target_date: ${{ needs.rebuild.outputs.target_date }}
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+
