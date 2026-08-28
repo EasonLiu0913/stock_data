@@ -130,17 +130,18 @@ function primaryExternalValidation(external, expectedDate = null) {
   const collectionDate = String(external?.collection_date || actualDate || '');
   const errors = Array.isArray(external?.errors) ? external.errors : [];
   const complete = primary.length === PRIMARY_IDS.length && uniqueDates.length === 1 && errors.length === 0;
-  const exact = complete && (!expectedDate || actualDate === expectedDate) && collectionDate === actualDate;
+  const dateExact = complete && (!expectedDate || actualDate === expectedDate) && collectionDate === actualDate;
 
   const hasSnapshotStatus = Boolean(external?.snapshot_status);
-  const dataStatus = external?.snapshot_status?.data_status || (exact ? 'legacy_final' : 'legacy_provisional');
+  const dataStatus = external?.snapshot_status?.data_status || (dateExact ? 'legacy_final' : 'legacy_provisional');
   const isFinal = hasSnapshotStatus ? external.snapshot_status?.is_final === true : true;
   const needsRefresh = hasSnapshotStatus ? external.snapshot_status?.needs_refresh !== false : false;
-  const finalExact = exact && isFinal && !needsRefresh;
+  const finalExact = dateExact && isFinal && !needsRefresh;
 
   return {
     complete,
-    exact,
+    date_exact: dateExact,
+    exact: finalExact,
     final_exact: finalExact,
     expected_date: expectedDate,
     actual_date: actualDate,
