@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'data_daily_gain_over_5/analysis-news/*.json'
+      - 'scripts/migrate_daily_gainers_unified_to_news.js'
   workflow_dispatch:
     inputs:
       date:
@@ -48,11 +49,23 @@ jobs:
             changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^data_daily_gain_over_5/analysis-news/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
             [ -n "$changed" ] && date="$(basename "$changed" .json)"
           fi
+          if [ -z "$date" ] && [ -f scripts/migrate_daily_gainers_unified_to_news.js ]; then
+            date="$(find data_daily_gain_over_5/analysis -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort -r | while read -r d; do [ -s "data_daily_gain_over_5/analysis-news/${d}.json" ] || { echo "$d"; break; }; done)"
+          fi
           if [ -z "$date" ]; then
             date="$(find data_daily_gain_over_5/analysis-news -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
           fi
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
           echo "date=$date" >> "$GITHUB_OUTPUT"
+      - name: Migrate existing unified analysis into news stage when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="${{ steps.date.outputs.date }}"
+          news="data_daily_gain_over_5/analysis-news/${d}.json"
+          if [ ! -s "$news" ]; then
+            node scripts/migrate_daily_gainers_unified_to_news.js "$d"
+          fi
       - name: Validate news analysis and build preliminary summary
         shell: bash
         run: |
@@ -66,9 +79,13 @@ jobs:
           node scripts/validate_daily_gainers_market_summary.js --date "$d"
           node - "$d" <<'NODE'
           const fs=require('node:fs');const d=process.argv[2];const p=JSON.parse(fs.readFileSync(`data_daily_gain_over_5/market-summary/${d}.json`,'utf8'));
-          if(p.summary_stage!=='news_theme'||p.status!=='preliminary')throw new Error(`Expected preliminary news_theme summary; got ${p.status}/${p.summary_stage}`);
+          if(p.status==='final'&&p.summary_stage==='full_synthesis') {
+            console.log('Final summary already exists; news-stage data was migrated without downgrading final summary.');
+          } else if(p.summary_stage!=='news_theme'||p.status!=='preliminary') {
+            throw new Error(`Expected preliminary news_theme or existing final summary; got ${p.status}/${p.summary_stage}`);
+          }
           NODE
-      - name: Commit preliminary summary
+      - name: Commit news stage and summary
         id: commit
         shell: bash
         run: |
@@ -76,9 +93,9 @@ jobs:
           d="${{ steps.date.outputs.date }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "data_daily_gain_over_5/market-summary/${d}.json" "data_daily_gain_over_5/market-summary/manifest.json"
+          git add -- "data_daily_gain_over_5/analysis-news/${d}.json" "data_daily_gain_over_5/market-summary/${d}.json" "data_daily_gain_over_5/market-summary/manifest.json"
           if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
-          git commit -m "analysis: publish preliminary 5% news summary ${d}"
+          git commit -m "analysis: publish 5% news stage and summary ${d}"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             git fetch origin main && git rebase origin/main
