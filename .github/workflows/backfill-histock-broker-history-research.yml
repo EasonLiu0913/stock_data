@@ -1,0 +1,133 @@
+name: "[07 研究] HiStock Broker History Backfill"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stock:
+        description: "Stock code"
+        required: true
+        default: "2449"
+        type: string
+      start_date:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        default: "2026-04-01"
+        type: string
+      end_date:
+        description: "End date (YYYY-MM-DD)"
+        required: true
+        default: "2026-07-31"
+        type: string
+      delay_ms:
+        description: "Delay between HiStock requests (>=300 ms)"
+        required: true
+        default: "900"
+        type: string
+      commit_results:
+        description: "Commit research results to main"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: histock-broker-history-research-${{ inputs.stock }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]] || { echo "Invalid stock code"; exit 1; }
+          [[ "${{ inputs.start_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid start date"; exit 1; }
+          [[ "${{ inputs.end_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Invalid end date"; exit 1; }
+          [[ "${{ inputs.delay_ms }}" =~ ^[0-9]+$ ]] || { echo "Invalid delay"; exit 1; }
+          test "${{ inputs.delay_ms }}" -ge 300 || { echo "delay_ms must be >= 300"; exit 1; }
+          [[ "${{ inputs.start_date }}" < "${{ inputs.end_date }}" || "${{ inputs.start_date }}" == "${{ inputs.end_date }}" ]] || { echo "start_date must be <= end_date"; exit 1; }
+
+      - name: Backfill HiStock broker research data
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/backfill_histock_broker_history_research.js \
+            --stock "${{ inputs.stock }}" \
+            --start "${{ inputs.start_date }}" \
+            --end "${{ inputs.end_date }}" \
+            --delay-ms "${{ inputs.delay_ms }}"
+
+      - name: Validate generated research files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
+          test -s "$ROOT/manifest.json"
+          test -s "$ROOT/analysis.json"
+          node - <<'NODE'
+          const fs = require('fs');
+          const stock = process.env.STOCK;
+          const root = `data_research/institutional-flow/histock/${stock}`;
+          const manifest = JSON.parse(fs.readFileSync(`${root}/manifest.json`, 'utf8'));
+          const analysis = JSON.parse(fs.readFileSync(`${root}/analysis.json`, 'utf8'));
+          if (manifest.source !== 'histock' || manifest.research_only !== true) throw new Error('Invalid provenance');
+          if (analysis.counts.parsed_trading_days < 20) throw new Error(`Too few parsed trading days: ${analysis.counts.parsed_trading_days}`);
+          if (!Array.isArray(analysis.rolling) || analysis.rolling.length !== analysis.counts.parsed_trading_days) throw new Error('Rolling output mismatch');
+          console.log(`Validated ${analysis.counts.parsed_trading_days} parsed trading days.`);
+          NODE
+        env:
+          STOCK: ${{ inputs.stock }}
+
+      - name: Commit research results
+        if: ${{ inputs.commit_results }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$ROOT"
+          if git diff --cached --quiet; then
+            echo "No research data changes to commit."
+            exit 0
+          fi
+          git commit -m "research: backfill HiStock broker history ${{ inputs.stock }} ${{ inputs.start_date }} to ${{ inputs.end_date }}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
+          {
+            echo "## HiStock broker history research backfill"
+            echo "- Stock: \`${{ inputs.stock }}\`"
+            echo "- Range: \`${{ inputs.start_date }}\` → \`${{ inputs.end_date }}\`"
+            echo "- Source: third-party HiStock public page"
+            echo "- Classification: research-only; not official TWSE BSR"
+            echo "- Rolling windows: 5 / 10 / 20 parsed trading days"
+            echo "- Output root: \`$ROOT\`"
+            if [ -f "$ROOT/analysis.json" ]; then
+              node - <<'NODE'
+              const fs = require('fs');
+              const p = process.env.ANALYSIS;
+              const a = JSON.parse(fs.readFileSync(p, 'utf8'));
+              console.log(`- Parsed trading days: ${a.counts.parsed_trading_days}`);
+              console.log(`- Skipped weekdays: ${a.counts.skipped}`);
+              console.log(`- Failed dates: ${a.counts.failed}`);
+              NODE
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          ANALYSIS: data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json
