@@ -10,6 +10,7 @@ const OUTPUT_DIR = path.join(ROOT, 'data_external_market');
 const DEFAULT_TIMEOUT_MS = 30000;
 const NEW_YORK_TIME_ZONE = 'America/New_York';
 const US_MARKET_OPEN_MINUTES = 9 * 60 + 30;
+const US_MARKET_CLOSE_MINUTES = 16 * 60;
 const PRIMARY_MARKET_INDICATOR_IDS = new Set(['nasdaq', 'sp500', 'dow', 'sox', 'tsm_adr']);
 
 function parseArgs(argv) {
@@ -73,6 +74,7 @@ function zonedDateTimeParts(now, timeZone) {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    timeZoneName: 'short',
     hourCycle: 'h23'
   }).formatToParts(now);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
@@ -81,7 +83,8 @@ function zonedDateTimeParts(now, timeZone) {
     hour: Number(values.hour),
     minute: Number(values.minute),
     second: Number(values.second),
-    text: `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}`
+    zone: values.timeZoneName || null,
+    text: `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}${values.timeZoneName ? ` ${values.timeZoneName}` : ''}`
   };
 }
 
@@ -198,17 +201,11 @@ function resolveActualMarketDate(indicators, targetDate) {
   }
 
   const counts = new Map();
-  for (const item of primaryRows) {
-    counts.set(item.market_date, (counts.get(item.market_date) || 0) + 1);
-  }
-
-  const ranked = [...counts.entries()]
-    .sort((left, right) => right[1] - left[1] || right[0].localeCompare(left[0]));
+  for (const item of primaryRows) counts.set(item.market_date, (counts.get(item.market_date) || 0) + 1);
+  const ranked = [...counts.entries()].sort((left, right) => right[1] - left[1] || right[0].localeCompare(left[0]));
   const [marketDate, agreementCount] = ranked[0];
 
-  if (marketDate > targetDate) {
-    throw new Error(`Resolved market date ${marketDate} is later than query target ${targetDate}.`);
-  }
+  if (marketDate > targetDate) throw new Error(`Resolved market date ${marketDate} is later than query target ${targetDate}.`);
 
   return {
     marketDate,
@@ -216,6 +213,68 @@ function resolveActualMarketDate(indicators, targetDate) {
     primaryIndicatorCount: primaryRows.length,
     primaryMarketDates: Object.fromEntries(primaryRows.map((item) => [item.id, item.market_date]))
   };
+}
+
+function snapshotStatus(targetDate, marketDateResolution, errors, now = new Date()) {
+  const newYork = zonedDateTimeParts(now, NEW_YORK_TIME_ZONE);
+  const minutes = newYork.hour * 60 + newYork.minute;
+  let marketPhase = 'future';
+  let marketClosed = false;
+
+  if (targetDate < newYork.dateCompact) {
+    marketPhase = 'closed';
+    marketClosed = true;
+  } else if (targetDate === newYork.dateCompact) {
+    if (minutes < US_MARKET_OPEN_MINUTES) marketPhase = 'premarket';
+    else if (minutes < US_MARKET_CLOSE_MINUTES) marketPhase = 'intraday';
+    else {
+      marketPhase = 'closed';
+      marketClosed = true;
+    }
+  }
+
+  const exactPrimaryDate = marketDateResolution.marketDate === targetDate;
+  const fullAgreement = marketDateResolution.agreementCount === PRIMARY_MARKET_INDICATOR_IDS.size
+    && marketDateResolution.primaryIndicatorCount === PRIMARY_MARKET_INDICATOR_IDS.size;
+  const isFinal = marketClosed && exactPrimaryDate && fullAgreement && errors.length === 0;
+  const dataStatus = isFinal ? 'final' : marketPhase === 'intraday' ? 'intraday' : 'provisional';
+
+  let noteZhTw = '資料尚未符合最終收盤快照條件，後續排程應繼續重抓。';
+  if (dataStatus === 'intraday') noteZhTw = '此快照於美股盤中抓取，數值可能持續變動，後續排程應更新。';
+  if (isFinal) noteZhTw = '目標交易日已收盤，五項主要指標日期一致，可作為最終快照。';
+
+  return {
+    data_status: dataStatus,
+    market_phase: marketPhase,
+    is_market_closed: marketClosed,
+    is_final: isFinal,
+    needs_refresh: !isFinal,
+    target_market_date: targetDate,
+    actual_market_date: marketDateResolution.marketDate,
+    captured_at: now.toISOString(),
+    captured_at_new_york: newYork.text,
+    note_zh_tw: noteZhTw
+  };
+}
+
+function existingSnapshotIsFinal(file, targetDate) {
+  if (!fs.existsSync(file) || fs.statSync(file).size === 0) return false;
+  try {
+    const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (payload?.snapshot_status?.is_final === true
+      && payload?.snapshot_status?.needs_refresh === false
+      && payload?.collection_date === targetDate) return true;
+
+    // Backward compatibility: historical exact snapshots created before snapshot_status existed.
+    const primary = (payload?.indicators || []).filter((item) => PRIMARY_MARKET_INDICATOR_IDS.has(item.id));
+    return !payload?.snapshot_status
+      && payload?.collection_date === targetDate
+      && primary.length === PRIMARY_MARKET_INDICATOR_IDS.size
+      && primary.every((item) => item.market_date === targetDate)
+      && (payload?.errors || []).length === 0;
+  } catch {
+    return false;
+  }
 }
 
 function writeGitHubOutput(name, value) {
@@ -269,35 +328,44 @@ async function main() {
 
   const marketDateResolution = resolveActualMarketDate(indicators, targetDate);
   const collectionDate = marketDateResolution.marketDate;
-  const outputDir = path.join(OUTPUT_DIR, collectionDate);
+
+  // Always persist under the requested/target market date. A provisional file is intentionally
+  // overwritten by later scheduled crawls until snapshot_status.is_final becomes true.
+  const outputDir = path.join(OUTPUT_DIR, targetDate);
   const outputFile = path.join(outputDir, 'external_market_indicators.json');
   const relativeOutputFile = path.relative(ROOT, outputFile).replaceAll(path.sep, '/');
+  const status = snapshotStatus(targetDate, marketDateResolution, errors);
 
   writeGitHubOutput('market_date', collectionDate);
   writeGitHubOutput('output_file', relativeOutputFile);
+  writeGitHubOutput('data_status', status.data_status);
+  writeGitHubOutput('is_final', status.is_final ? 'true' : 'false');
+  writeGitHubOutput('needs_refresh', status.needs_refresh ? 'true' : 'false');
 
-  if (args.has('skip-existing') && fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0) {
+  if (args.has('skip-existing') && existingSnapshotIsFinal(outputFile, targetDate)) {
     writeGitHubOutput('skipped', 'true');
     console.log(JSON.stringify({
       requested_date: targetDate,
       market_date: collectionDate,
       skipped: true,
-      reason: 'target market-date file already exists',
+      reason: 'final exact-date snapshot already exists',
       output: relativeOutputFile
     }));
     return;
   }
 
   const payload = {
-    schemaVersion: 2,
-    generated_at: new Date().toISOString(),
+    schemaVersion: 3,
+    generated_at: status.captured_at,
     collection_date: collectionDate,
     requested_date: targetDate,
+    snapshot_status: status,
     date_resolution: {
       mode: explicitDate ? 'explicit_date' : 'automatic_new_york_session',
-      new_york_time_at_resolution: automaticResolution?.newYorkTime || null,
+      new_york_time_at_resolution: automaticResolution?.newYorkTime || status.captured_at_new_york,
       automatic_rule: automaticResolution?.rule || null,
       market_open_time: '09:30 America/New_York',
+      market_close_time: '16:00 America/New_York',
       primary_indicator_agreement: `${marketDateResolution.agreementCount}/${marketDateResolution.primaryIndicatorCount}`,
       primary_market_dates: marketDateResolution.primaryMarketDates
     },
@@ -317,6 +385,11 @@ async function main() {
   console.log(JSON.stringify({
     requested_date: targetDate,
     collection_date: collectionDate,
+    data_status: status.data_status,
+    is_final: status.is_final,
+    needs_refresh: status.needs_refresh,
+    captured_at: status.captured_at,
+    captured_at_new_york: status.captured_at_new_york,
     indicators: indicators.length,
     errors: errors.length,
     skipped: false,
