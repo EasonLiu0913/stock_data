@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: one-shot-daily-gainers-ai-20260827
@@ -60,3 +61,17 @@ jobs:
           done
           echo 'Failed to push pending AI after retries' >&2
           exit 1
+      - name: Dispatch formal validated publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/publish-daily-gainers-ai-analysis.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[date]=20260827'
+          echo 'Dispatched formal 20260827 AI publication workflow.'
