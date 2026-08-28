@@ -24,7 +24,7 @@ on:
         default: "8"
         type: string
       delay_ms:
-        description: "Base delay between HiStock requests; random jitter is added"
+        description: "Base delay between requests"
         required: true
         default: "2500"
         type: string
@@ -34,7 +34,7 @@ on:
         default: "2500"
         type: string
       commit_results:
-        description: "Commit each verified batch checkpoint and final aggregate"
+        description: "Checkpoint each batch and final aggregate"
         required: true
         default: true
         type: boolean
@@ -56,22 +56,19 @@ jobs:
       existing_count: ${{ steps.plan.outputs.existing_count }}
       batch_count: ${{ steps.plan.outputs.batch_count }}
     steps:
-      - name: Checkout latest main
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-
-      - name: Validate planner inputs
-        shell: bash
+      - name: Validate scripts and inputs
         run: |
           set -euo pipefail
-          [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]] || exit 1
-          [[ "${{ inputs.start_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || exit 1
-          [[ "${{ inputs.end_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]] || exit 1
-          [[ "${{ inputs.batch_size }}" =~ ^[0-9]+$ ]] || exit 1
-          [[ "${{ inputs.delay_ms }}" =~ ^[0-9]+$ ]] || exit 1
-          [[ "${{ inputs.jitter_ms }}" =~ ^[0-9]+$ ]] || exit 1
+          [[ "${{ inputs.stock }}" =~ ^[0-9A-Za-z]{4,6}$ ]]
+          [[ "${{ inputs.start_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
+          [[ "${{ inputs.end_date }}" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
+          [[ "${{ inputs.batch_size }}" =~ ^[0-9]+$ ]]
+          [[ "${{ inputs.delay_ms }}" =~ ^[0-9]+$ ]]
+          [[ "${{ inputs.jitter_ms }}" =~ ^[0-9]+$ ]]
           test "${{ inputs.batch_size }}" -ge 1
           test "${{ inputs.batch_size }}" -le 30
           test "${{ inputs.delay_ms }}" -ge 1000
@@ -80,28 +77,18 @@ jobs:
           node --check scripts/plan_histock_broker_history_backfill.js
           node --check scripts/backfill_histock_broker_history_research_v2.js
           node --check scripts/aggregate_histock_broker_history_research.js
-
       - name: Plan trading-day batches
         id: plan
-        shell: bash
         run: |
           set -euo pipefail
           ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
           node scripts/plan_histock_broker_history_backfill.js \
-            --stock "${{ inputs.stock }}" \
-            --start "${{ inputs.start_date }}" \
-            --end "${{ inputs.end_date }}" \
-            --batch-size "${{ inputs.batch_size }}" \
-            --output "$ROOT/backfill-plan.json" \
-            --github-output "$GITHUB_OUTPUT"
-
+            --stock "${{ inputs.stock }}" --start "${{ inputs.start_date }}" --end "${{ inputs.end_date }}" \
+            --batch-size "${{ inputs.batch_size }}" --output "$ROOT/backfill-plan.json" --github-output "$GITHUB_OUTPUT"
       - name: Plan summary
-        shell: bash
         run: |
           {
             echo "## HiStock backfill plan"
-            echo "- Stock: \`${{ inputs.stock }}\`"
-            echo "- Range: \`${{ inputs.start_date }}\` → \`${{ inputs.end_date }}\`"
             echo "- Trading days: ${{ steps.plan.outputs.requested_count }}"
             echo "- Already valid: ${{ steps.plan.outputs.existing_count }}"
             echo "- Missing: ${{ steps.plan.outputs.missing_count }}"
@@ -119,149 +106,103 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout latest main
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-
       - name: Sync latest checkpoint
-        shell: bash
         run: |
-          set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-
-      - name: Run batch with isolated temporary output
+      - name: Fetch isolated batch
         id: fetch
         continue-on-error: true
-        shell: bash
         env:
           BATCH_DATES: ${{ matrix.dates }}
+          BATCH_INDEX: ${{ matrix.batch }}
         run: |
           set -euo pipefail
-          TMP="$RUNNER_TEMP/histock-${{ inputs.stock }}-batch-${{ matrix.batch }}"
-          CANON="data_research/institutional-flow/histock/${{ inputs.stock }}"
-          mkdir -p "$TMP/daily" "$CANON/daily" "$CANON/batch-status"
-
-          # Seed temp with already-valid canonical files in this span so v2 only requests missing days.
-          cp -f "$CANON"/daily/*.json "$TMP/daily/" 2>/dev/null || true
-
+          TMP="$RUNNER_TEMP/histock-${{ inputs.stock }}-${BATCH_INDEX}"
+          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
+          mkdir -p "$TMP/daily" "$ROOT/daily" "$ROOT/batch-status"
+          cp -f "$ROOT"/daily/*.json "$TMP/daily/" 2>/dev/null || true
           set +e
           node scripts/backfill_histock_broker_history_research_v2.js \
-            --stock "${{ inputs.stock }}" \
-            --start "${{ matrix.start }}" \
-            --end "${{ matrix.end }}" \
-            --delay-ms "${{ inputs.delay_ms }}" \
-            --jitter-ms "${{ inputs.jitter_ms }}" \
-            --max-consecutive-failures 20 \
-            --out "$TMP"
+            --stock "${{ inputs.stock }}" --start "${{ matrix.start }}" --end "${{ matrix.end }}" \
+            --delay-ms "${{ inputs.delay_ms }}" --jitter-ms "${{ inputs.jitter_ms }}" \
+            --max-consecutive-failures 20 --out "$TMP"
           FETCH_EXIT=$?
           set -e
-
-          # Preserve every successful daily file even when some dates in this batch are unresolved.
-          cp -f "$TMP"/daily/*.json "$CANON/daily/" 2>/dev/null || true
-
-          STATUS="$CANON/batch-status/batch-$(printf '%03d' '${{ matrix.batch }}').json"
+          cp -f "$TMP"/daily/*.json "$ROOT/daily/" 2>/dev/null || true
+          STATUS="$ROOT/batch-status/batch-$(printf '%03d' "$BATCH_INDEX").json"
           node - "$TMP/analysis.json" "$STATUS" "$BATCH_DATES" "$FETCH_EXIT" <<'NODE'
           const fs = require('fs');
-          const [analysisFile, statusFile, csv, exitCode] = process.argv.slice(2);
-          const requested = csv.split(',').filter(Boolean);
-          const analysis = fs.existsSync(analysisFile) ? JSON.parse(fs.readFileSync(analysisFile, 'utf8')) : {};
-          const unresolvedMap = new Map((analysis.unresolved || []).map((x) => [x.date, x]));
-          const parsedSet = new Set((analysis.rolling || []).map((x) => x.date));
-          const status = {
-            schema_version: 1,
-            batch: Number(process.env.BATCH_INDEX),
-            dates: requested,
-            parsed_dates: requested.filter((d) => parsedSet.has(d)),
-            unresolved: requested.filter((d) => !parsedSet.has(d)).map((d) => unresolvedMap.get(d) || { date: d, reason: 'missing_without_diagnostics', diagnostics: null }),
-            fetch_exit_code: Number(exitCode),
-            generated_at: new Date().toISOString(),
-          };
-          fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`);
-          console.log(JSON.stringify(status, null, 2));
+          const [analysisFile,statusFile,csv,exitCode]=process.argv.slice(2);
+          const dates=csv.split(',').filter(Boolean);
+          const a=fs.existsSync(analysisFile)?JSON.parse(fs.readFileSync(analysisFile,'utf8')):{};
+          const unresolved=new Map((a.unresolved||[]).map(x=>[x.date,x]));
+          const parsed=new Set((a.rolling||[]).map(x=>x.date));
+          const out={schema_version:1,batch:Number(process.env.BATCH_INDEX),dates,parsed_dates:dates.filter(d=>parsed.has(d)),unresolved:dates.filter(d=>!parsed.has(d)).map(d=>unresolved.get(d)||{date:d,reason:'missing_without_diagnostics',diagnostics:null}),fetch_exit_code:Number(exitCode),generated_at:new Date().toISOString()};
+          fs.writeFileSync(statusFile,JSON.stringify(out,null,2)+'\n');
+          console.log(JSON.stringify(out,null,2));
           NODE
-        env:
-          BATCH_INDEX: ${{ matrix.batch }}
-
-      - name: Validate and checkpoint this batch
+      - name: Validate and checkpoint batch
         if: always()
-        shell: bash
         env:
           BATCH_DATES: ${{ matrix.dates }}
+          BATCH_INDEX: ${{ matrix.batch }}
+          STOCK: ${{ inputs.stock }}
         run: |
           set -euo pipefail
-          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
-          STATUS="$ROOT/batch-status/batch-$(printf '%03d' '${{ matrix.batch }}').json"
+          ROOT="data_research/institutional-flow/histock/$STOCK"
+          STATUS="$ROOT/batch-status/batch-$(printf '%03d' "$BATCH_INDEX").json"
           test -s "$STATUS"
-          node - "$ROOT" "$STATUS" "$BATCH_DATES" <<'NODE'
-          const fs = require('fs');
-          const path = require('path');
-          const [root, statusFile, csv] = process.argv.slice(2);
-          const stock = process.env.STOCK;
-          const status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
-          for (const date of csv.split(',').filter(Boolean)) {
-            const file = path.join(root, 'daily', `${date.replaceAll('-', '')}.json`);
-            if (!fs.existsSync(file)) continue;
-            const p = JSON.parse(fs.readFileSync(file, 'utf8'));
-            if (p.source !== 'histock' || p.research_only !== true || p.stock !== stock || p.date !== date || !Array.isArray(p.records) || p.records.length === 0) throw new Error(`Invalid daily checkpoint ${date}`);
+          node - "$ROOT" "$BATCH_DATES" <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const [root,csv]=process.argv.slice(2), stock=process.env.STOCK;
+          for(const date of csv.split(',').filter(Boolean)){
+            const file=path.join(root,'daily',date.replaceAll('-','')+'.json');
+            if(!fs.existsSync(file)) continue;
+            const p=JSON.parse(fs.readFileSync(file,'utf8'));
+            if(p.source!=='histock'||p.research_only!==true||p.stock!==stock||p.date!==date||!Array.isArray(p.records)||!p.records.length) throw new Error(`Invalid daily ${date}`);
           }
-          console.log(`batch ${status.batch}: parsed=${status.parsed_dates.length}/${status.dates.length}; unresolved=${status.unresolved.length}`);
           NODE
-
           if [ "${{ inputs.commit_results }}" = "true" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add "$ROOT/daily" "$STATUS"
             if ! git diff --cached --quiet; then
-              git commit -m "research: HiStock ${{ inputs.stock }} batch ${{ matrix.batch }} checkpoint"
+              git commit -m "research: HiStock $STOCK batch $BATCH_INDEX checkpoint"
               for attempt in 1 2 3 4 5; do
-                if git pull --rebase origin main && git push origin HEAD:main; then
-                  echo "checkpoint pushed"
-                  exit 0
-                fi
+                if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
                 git rebase --abort 2>/dev/null || true
-                sleep $((attempt * 5))
+                sleep $((attempt*5))
               done
               exit 1
             fi
           fi
-        env:
-          STOCK: ${{ inputs.stock }}
 
   aggregate:
     needs: [plan, batch]
     if: ${{ always() && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest main
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-
-      - name: Sync all batch checkpoints
-        shell: bash
+      - name: Sync all checkpoints
         run: |
-          set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-
-      - name: Rebuild aggregate analysis and manifest
+      - name: Aggregate daily checkpoints
         id: aggregate
         continue-on-error: true
-        shell: bash
         run: |
-          set -euo pipefail
           node scripts/aggregate_histock_broker_history_research.js \
-            --stock "${{ inputs.stock }}" \
-            --start "${{ inputs.start_date }}" \
-            --end "${{ inputs.end_date }}"
-
+            --stock "${{ inputs.stock }}" --start "${{ inputs.start_date }}" --end "${{ inputs.end_date }}"
       - name: Commit aggregate state
         if: ${{ inputs.commit_results }}
-        shell: bash
         run: |
           set -euo pipefail
           ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
@@ -272,32 +213,24 @@ jobs:
           git commit -m "research: aggregate HiStock broker history ${{ inputs.stock }}"
           git pull --rebase origin main
           git push origin HEAD:main
-
       - name: Final summary
         if: always()
-        shell: bash
         run: |
           ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
           {
             echo "## HiStock broker history plan & batch backfill"
-            echo "- Planned trading days: ${{ needs.plan.outputs.requested_count }}"
+            echo "- Trading days: ${{ needs.plan.outputs.requested_count }}"
             echo "- Existing before run: ${{ needs.plan.outputs.existing_count }}"
             echo "- Missing before run: ${{ needs.plan.outputs.missing_count }}"
             echo "- Planned batches: ${{ needs.plan.outputs.batch_count }}"
-            echo "- Batch policy: max-parallel 1; each batch checkpoints successful daily files independently"
-            echo "- A few unresolved dates do not discard successful dates from the same or previous batches"
+            echo "- Each batch commits successful daily files independently; unresolved dates do not discard successful checkpoints."
           } >> "$GITHUB_STEP_SUMMARY"
           node scripts/render_histock_broker_history_summary.js "$ROOT/analysis.json" >> "$GITHUB_STEP_SUMMARY" || true
-
-      - name: Enforce only hard failures
+      - name: Fail only on hard unresolved dates
         if: always()
-        shell: bash
         run: |
-          set -euo pipefail
-          ROOT="data_research/institutional-flow/histock/${{ inputs.stock }}"
-          node - "$ROOT/analysis.json" <<'NODE'
-          const fs = require('fs');
-          const a = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          node - "data_research/institutional-flow/histock/${{ inputs.stock }}/analysis.json" <<'NODE'
+          const fs=require('fs'); const a=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
           console.log(`coverage=${a.counts.parsed_trading_days}/${a.counts.requested_trading_days}; source_gaps=${a.counts.source_gaps}; hard_failures=${a.counts.hard_failures}`);
-          if (Number(a.counts.hard_failures || 0) > 0) process.exit(1);
+          if(Number(a.counts.hard_failures||0)>0) process.exit(1);
           NODE
