@@ -76,6 +76,7 @@ jobs:
           available_sma_date=""
           target_source="manual_current_date"
           scheduled_at_utc=""
+          scheduled_at_taipei=""
           schedule_delay_minutes=""
 
           if [ -n "$INPUT_DATE" ]; then
@@ -86,10 +87,11 @@ jobs:
             schedule_json=$(node scripts/resolve_scheduled_sma_target_date.js --schedule "$SCHEDULE_EXPR" --json)
             target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$schedule_json")
             scheduled_at_utc=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.scheduled_at_utc);' "$schedule_json")
+            scheduled_at_taipei=$(node -e 'const d=new Date(process.argv[1]);const p=new Intl.DateTimeFormat("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(d);const v=Object.fromEntries(p.map(x=>[x.type,x.value]));process.stdout.write(`${v.year}-${v.month}-${v.day} ${v.hour}:${v.minute}`);' "$scheduled_at_utc")
             schedule_delay_minutes=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.delay_minutes));' "$schedule_json")
             target_source="scheduled_intended_date"
             echo "📅 排程原定目標交易日：$target_date"
-            echo "🕒 原定 UTC 排程時間：$scheduled_at_utc"
+            echo "🕒 原定排程時間（台北時間）：$scheduled_at_taipei"
             echo "⏱️ GitHub 排程延遲：約 ${schedule_delay_minutes} 分鐘"
           else
             target_date=$(TZ='Asia/Taipei' date '+%Y%m%d')
@@ -122,8 +124,8 @@ jobs:
           echo "## SMA Crawl" >> "$GITHUB_STEP_SUMMARY"
           echo "- 日期來源：$target_source" >> "$GITHUB_STEP_SUMMARY"
           echo "- 流程目標交易日：$target_date" >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "$scheduled_at_utc" ]; then
-            echo "- 原定排程時間（UTC）：$scheduled_at_utc" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$scheduled_at_taipei" ]; then
+            echo "- 原定排程時間（台北時間）：$scheduled_at_taipei" >> "$GITHUB_STEP_SUMMARY"
             echo "- GitHub 排程延遲：約 ${schedule_delay_minutes} 分鐘" >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -n "$available_sma_date" ]; then
@@ -188,7 +190,7 @@ jobs:
     if: needs.crawl-sma.outputs.ready == 'true'
     uses: ./.github/workflows/daily-gainers-over-5.yml
     with:
-      date: ${{ needs.crawl-sma.outputs.target_date }}
+      date: ${{ needs.crawl.outputs.target_date }}
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
@@ -204,4 +206,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
-
