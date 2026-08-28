@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: '分析日期 YYYYMMDD；留空時使用台北當日'
+        description: '分析日期 YYYYMMDD；留空時使用最新已有 5% 清單日期'
         required: false
         default: ''
   push:
@@ -82,8 +82,15 @@ jobs:
           fi
 
           if [ -z "$d" ]; then
-            d="$(TZ='Asia/Taipei' date '+%Y%m%d')"
-            mode="scheduled_or_code_push"
+            d="$(find data_daily_gain_over_5 -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+            mode="latest_available_raw"
+          fi
+
+          if [ -z "$d" ]; then
+            echo "No daily 5% raw list is available yet; nothing to build."
+            echo "date=" >> "$GITHUB_OUTPUT"
+            echo "mode=no_raw" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           [[ "$d" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $d" >&2; exit 1; }
@@ -91,6 +98,7 @@ jobs:
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Verify base deterministic inputs
+        if: steps.input.outputs.date != ''
         id: readiness
         shell: bash
         run: |
