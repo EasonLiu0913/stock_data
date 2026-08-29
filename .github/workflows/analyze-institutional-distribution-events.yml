@@ -1,0 +1,104 @@
+name: "[07 研究] Institutional Distribution Event Diagnostics"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/analyze_institutional_distribution_events.js'
+      - '.github/workflows/analyze-institutional-distribution-events.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-distribution-event-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Validate diagnostic script
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_institutional_distribution_events.js
+          node --check scripts/build_institutional_distribution_score.js
+
+      - name: Build event diagnostics and ablation study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_distribution_events.js \
+            --stocks "2330,2317,2454,2382,2303,2449" \
+            --start "2026-04-01" \
+            --end "2026-08-21" \
+            --output data_research/institutional-flow/backtests/official-historical-event-diagnostics.json
+
+      - name: Validate research output
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const p=require('./data_research/institutional-flow/backtests/official-historical-event-diagnostics.json');
+          if(p.events.length!==10) throw new Error(`Expected 10 full-score events, got ${p.events.length}`);
+          if(!p.variants?.full || !p.variants?.broker_only || !p.variants?.tdcc_only) throw new Error('Missing core ablation variants');
+          if(p.component_presence_at_full_events.events!==10) throw new Error('Event attribution count mismatch');
+          if(!p.classifications || Object.values(p.classifications).reduce((a,b)=>a+b,0)!==10) throw new Error('Classification count mismatch');
+          NODE
+
+      - name: Commit diagnostic research
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/backtests/official-historical-event-diagnostics.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: update institutional distribution event diagnostics"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/official-historical-event-diagnostics.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p=require('./data_research/institutional-flow/backtests/official-historical-event-diagnostics.json');
+          console.log('## Institutional Distribution Event Diagnostics');
+          console.log(`- Events: ${p.events.length}`);
+          console.log(`- Classifications: ${JSON.stringify(p.classifications)}`);
+          console.log(`- Component presence: ${JSON.stringify(p.component_presence_at_full_events)}`);
+          for(const [name,v] of Object.entries(p.variants)){
+            console.log(`- ${name}: events ${v.events}; 5D edge ${v.edge_vs_baseline['5d'].mean_return_edge_pp}pp; 10D edge ${v.edge_vs_baseline['10d'].mean_return_edge_pp}pp; 20D edge ${v.edge_vs_baseline['20d'].mean_return_edge_pp}pp`);
+          }
+          console.log('- Scope: score v4 attribution covers Broker + TDCC only; foreign flow is not part of the current score.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
