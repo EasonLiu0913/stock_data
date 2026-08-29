@@ -10,8 +10,11 @@ const { execFileSync } = require('child_process');
 function run(input, out, capturedAt) {
   return execFileSync(process.execPath, ['scripts/crawl_tdcc_shareholding_snapshot.js', '--input-file', input, '--output-root', out, '--captured-at', capturedAt], { cwd: process.cwd(), encoding: 'utf8' });
 }
+function readWeekly(out, date) {
+  return JSON.parse(fs.readFileSync(path.join(out, 'weekly', `${date}.json`), 'utf8'));
+}
 
-test('TDCC ROC-date CSV is archived and normalized without lookahead backdating', () => {
+test('TDCC ROC-date CSV is archived as one consolidated weekly snapshot without lookahead backdating', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tdcc-snapshot-'));
   const input = path.join(dir, 'input.csv');
   const out = path.join(dir, 'out');
@@ -27,17 +30,21 @@ test('TDCC ROC-date CSV is archived and normalized without lookahead backdating'
   fs.writeFileSync(input, `${rows}\n`);
   const capturedAt = '2026-05-16T01:23:45.000Z';
   run(input, out, capturedAt);
-  const p = JSON.parse(fs.readFileSync(path.join(out, 'stocks', '2449', '20260515.json'), 'utf8'));
-  assert.equal(p.source, 'tdcc_official_openapi_1_5');
-  assert.equal(p.production_safe, true);
-  assert.equal(p.observed_date, '2026-05-15');
-  assert.equal(p.available_at, capturedAt);
-  assert.equal(p.derived.large_holder_pct, 56.9);
-  assert.equal(p.derived.small_holder_pct, 3);
-  assert.deepEqual(p.levels.map((x) => x.level), [1, 9, 15, 17]);
+  const weekly = readWeekly(out, '20260515');
+  assert.equal(weekly.schema_version, 2);
+  assert.equal(weekly.source, 'tdcc_official_openapi_1_5');
+  assert.equal(weekly.production_safe, true);
+  assert.equal(weekly.observed_date, '2026-05-15');
+  assert.equal(weekly.available_at, capturedAt);
+  assert.equal(weekly.stock_count, 2);
+  assert.equal(weekly.stocks['2449'].derived.large_holder_pct, 56.9);
+  assert.equal(weekly.stocks['2449'].derived.small_holder_pct, 3);
+  assert.deepEqual(weekly.stocks['2449'].levels.map((x) => x.level), [1, 9, 15, 17]);
+  assert.equal(fs.existsSync(path.join(out, 'stocks')), false);
   const manifest = JSON.parse(fs.readFileSync(path.join(out, 'latest.json'), 'utf8'));
   assert.equal(manifest.stocks, 2);
   assert.equal(manifest.available_at, capturedAt);
+  assert.equal(manifest.canonical_file, 'weekly/20260515.json');
 });
 
 test('same TDCC observation date is idempotent and preserves first available_at', () => {
@@ -56,8 +63,8 @@ test('same TDCC observation date is idempotent and preserves first available_at'
   assert.match(stdout, /already_archived/);
   const manifest = JSON.parse(fs.readFileSync(path.join(out, 'manifest-20260515.json'), 'utf8'));
   assert.equal(manifest.available_at, first);
-  const stock = JSON.parse(fs.readFileSync(path.join(out, 'stocks', '2449', '20260515.json'), 'utf8'));
-  assert.equal(stock.available_at, first);
+  const weekly = readWeekly(out, '20260515');
+  assert.equal(weekly.available_at, first);
 });
 
 test('official-style TDCC JSON field names tolerate BOM on the date key', () => {
@@ -72,9 +79,9 @@ test('official-style TDCC JSON field names tolerate BOM on the date key', () => 
   ]));
   const capturedAt = '2026-08-22T00:10:00.000Z';
   run(input, out, capturedAt);
-  const p = JSON.parse(fs.readFileSync(path.join(out, 'stocks', '2449', '20260821.json'), 'utf8'));
-  assert.equal(p.observed_date, '2026-08-21');
-  assert.equal(p.available_at, capturedAt);
-  assert.equal(p.derived.large_holder_pct, 60.13);
-  assert.equal(p.derived.small_holder_pct, 3);
+  const weekly = readWeekly(out, '20260821');
+  assert.equal(weekly.observed_date, '2026-08-21');
+  assert.equal(weekly.available_at, capturedAt);
+  assert.equal(weekly.stocks['2449'].derived.large_holder_pct, 60.13);
+  assert.equal(weekly.stocks['2449'].derived.small_holder_pct, 3);
 });
