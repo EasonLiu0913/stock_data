@@ -18,6 +18,16 @@ on:
         required: true
         default: "2026-08-21"
         type: string
+      batch_size_requests:
+        description: "Maximum HiStock stock-date requests per batch"
+        required: true
+        default: "8"
+        type: string
+      batch_pause_seconds:
+        description: "Pause after each remote-data batch"
+        required: true
+        default: "15"
+        type: string
   push:
     paths:
       - 'scripts/backtest_institutional_distribution_universe.js'
@@ -32,19 +42,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  backtest:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
     env:
       DEFAULT_STOCKS: "2330,2317,2454,2382,2303,2449"
       DEFAULT_START: "2026-04-01"
       DEFAULT_END: "2026-08-21"
+      DEFAULT_BATCH_SIZE: "8"
+      DEFAULT_BATCH_PAUSE: "15"
+    outputs:
+      stocks: ${{ steps.cfg.outputs.stocks }}
+      start: ${{ steps.cfg.outputs.start }}
+      end: ${{ steps.cfg.outputs.end }}
+      batch_size: ${{ steps.cfg.outputs.batch_size }}
+      batch_pause: ${{ steps.cfg.outputs.batch_pause }}
+      broker_matrix: ${{ steps.broker.outputs.matrix }}
+      broker_scheduled: ${{ steps.broker.outputs.scheduled_count }}
+      broker_missing: ${{ steps.broker.outputs.missing_count }}
+      broker_batches: ${{ steps.broker.outputs.batch_count }}
+      tdcc_matrix: ${{ steps.tdcc.outputs.matrix }}
+      tdcc_missing: ${{ steps.tdcc.outputs.missing_count }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Resolve validation universe
         id: cfg
@@ -55,25 +78,33 @@ jobs:
             STOCKS="${{ inputs.stocks }}"
             START="${{ inputs.start_date }}"
             END="${{ inputs.end_date }}"
+            BATCH_SIZE="${{ inputs.batch_size_requests }}"
+            BATCH_PAUSE="${{ inputs.batch_pause_seconds }}"
           else
             STOCKS="$DEFAULT_STOCKS"
             START="$DEFAULT_START"
             END="$DEFAULT_END"
+            BATCH_SIZE="$DEFAULT_BATCH_SIZE"
+            BATCH_PAUSE="$DEFAULT_BATCH_PAUSE"
           fi
           [[ "$STOCKS" =~ ^[0-9]{4}(,[0-9]{4})+$ ]]
           [[ "$START" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
           [[ "$END" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
+          [[ "$BATCH_SIZE" =~ ^[0-9]+$ ]] && test "$BATCH_SIZE" -ge 1 && test "$BATCH_SIZE" -le 20
+          [[ "$BATCH_PAUSE" =~ ^[0-9]+$ ]] && test "$BATCH_PAUSE" -ge 5 && test "$BATCH_PAUSE" -le 120
           echo "stocks=$STOCKS" >> "$GITHUB_OUTPUT"
           echo "start=$START" >> "$GITHUB_OUTPUT"
           echo "end=$END" >> "$GITHUB_OUTPUT"
-          echo "Validation universe: $STOCKS"
+          echo "batch_size=$BATCH_SIZE" >> "$GITHUB_OUTPUT"
+          echo "batch_pause=$BATCH_PAUSE" >> "$GITHUB_OUTPUT"
 
       - name: Validate code contracts
-        shell: bash
         run: |
           set -euo pipefail
           node --check scripts/backfill_tdcc_shareholding_history.js
+          node --check scripts/plan_histock_broker_history_backfill.js
           node --check scripts/backfill_histock_broker_history_research_v2.js
+          node --check scripts/checkpoint_histock_batch_quality.js
           node --check scripts/aggregate_histock_broker_history_research.js
           node --check scripts/build_institutional_distribution_score.js
           node --check scripts/backtest_institutional_distribution_universe.js
@@ -81,146 +112,243 @@ jobs:
           node --test tests/institutional_distribution_score.test.js
           node --test tests/institutional_distribution_universe_backtest.test.js
 
-      - name: Backfill official TDCC historical evidence
+      - name: Plan missing TDCC stocks
+        id: tdcc
         shell: bash
         env:
           STOCKS: ${{ steps.cfg.outputs.stocks }}
-          START: ${{ steps.cfg.outputs.start }}
-          END: ${{ steps.cfg.outputs.end }}
         run: |
-          set -euo pipefail
-          IFS=',' read -ra LIST <<< "$STOCKS"
-          for STOCK in "${LIST[@]}"; do
-            echo "[TDCC] $STOCK"
-            set +e
-            node scripts/backfill_tdcc_shareholding_history.js \
-              --stock "$STOCK" --start "$START" --end "$END" \
-              --delay-ms 1000 --jitter-ms 700
-            RC=$?
-            set -e
-            ROOT="data_tdcc_shareholding/history/$STOCK"
-            test -s "$ROOT/manifest.json"
-            node - "$ROOT" "$STOCK" <<'NODE'
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
           const fs=require('fs'),path=require('path');
-          const [root,stock]=process.argv.slice(2);
-          const files=fs.readdirSync(root).filter(x=>/^2026\d{4}\.json$/.test(x));
-          if(files.length<12) throw new Error(`${stock}: expected >=12 historical TDCC observations, got ${files.length}`);
-          for(const f of files){const p=JSON.parse(fs.readFileSync(path.join(root,f),'utf8'));if(p.stock!==stock||p.source!=='tdcc_official_historical_query'||p.production_no_lookahead_safe!==false)throw new Error(`${stock}: invalid ${f}`);}
-          console.log({stock,files:files.length});
+          const stocks=process.env.STOCKS.split(',');
+          const missing=[];
+          for(const stock of stocks){
+            const root=path.join('data_tdcc_shareholding','history',stock);
+            const n=fs.existsSync(root)?fs.readdirSync(root).filter(x=>/^2026\d{4}\.json$/.test(x)).length:0;
+            if(n<12) missing.push({stock});
+          }
+          console.log(`matrix=${JSON.stringify({include:missing})}`);
+          console.log(`missing_count=${missing.length}`);
           NODE
-            if [ "$RC" -ne 0 ]; then echo "[TDCC] $STOCK had unresolved dates, but usable checkpoint count passed validation."; fi
-          done
 
-      - name: Commit TDCC universe checkpoints
+      - name: Plan missing broker stock-date batches
+        id: broker
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_tdcc_shareholding/history
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "research: backfill TDCC validation universe"
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
-            git rebase --abort 2>/dev/null || true
-            sleep $((attempt*4))
-          done
-          exit 1
+          node scripts/plan_histock_broker_history_backfill.js \
+            --scope list \
+            --stocks "${{ steps.cfg.outputs.stocks }}" \
+            --start "${{ steps.cfg.outputs.start }}" \
+            --end "${{ steps.cfg.outputs.end }}" \
+            --batch-size-requests "${{ steps.cfg.outputs.batch_size }}" \
+            --max-batches-per-run 200 \
+            --output "$RUNNER_TEMP/institutional-broker-plan.json" \
+            --github-output "$GITHUB_OUTPUT"
 
-      - name: Backfill broker evidence with per-stock checkpoints
-        shell: bash
-        env:
-          STOCKS: ${{ steps.cfg.outputs.stocks }}
-          START: ${{ steps.cfg.outputs.start }}
-          END: ${{ steps.cfg.outputs.end }}
-        run: |
-          set -euo pipefail
-          IFS=',' read -ra LIST <<< "$STOCKS"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for STOCK in "${LIST[@]}"; do
-            echo "[broker] $STOCK"
-            ROOT="data_research/institutional-flow/histock/$STOCK"
-            set +e
-            node scripts/backfill_histock_broker_history_research_v2.js \
-              --stock "$STOCK" --start "$START" --end "$END" \
-              --delay-ms 1000 --jitter-ms 700 --max-retries 3 --max-consecutive-failures 20 \
-              --out "$ROOT"
-            FETCH_RC=$?
-            node scripts/aggregate_histock_broker_history_research.js --stock "$STOCK" --start "$START" --end "$END"
-            AGG_RC=$?
-            set -e
-            if [ "$AGG_RC" -ne 0 ]; then
-              echo "Broker aggregate remains incomplete for $STOCK (fetch_rc=$FETCH_RC aggregate_rc=$AGG_RC)"
-              exit 1
-            fi
-            git add "$ROOT"
-            if ! git diff --cached --quiet; then
-              git commit -m "research: checkpoint broker history for $STOCK"
-              PUSHED=0
-              for attempt in 1 2 3 4 5; do
-                if git pull --rebase origin main && git push origin HEAD:main; then PUSHED=1; break; fi
-                git rebase --abort 2>/dev/null || true
-                sleep $((attempt*4))
-              done
-              test "$PUSHED" -eq 1
-            fi
-          done
-
-      - name: Sync completed checkpoints
+      - name: Plan summary
         shell: bash
         run: |
-          set -euo pipefail
+          {
+            echo "## Institutional distribution data plan"
+            echo "- Universe: ${{ steps.cfg.outputs.stocks }}"
+            echo "- Range: ${{ steps.cfg.outputs.start }} → ${{ steps.cfg.outputs.end }}"
+            echo "- TDCC stocks still missing: ${{ steps.tdcc.outputs.missing_count }}"
+            echo "- Broker stock-date tasks still missing/invalid: ${{ steps.broker.outputs.missing_count }}"
+            echo "- Broker tasks scheduled this run: ${{ steps.broker.outputs.scheduled_count }}"
+            echo "- Broker planned batches: ${{ steps.broker.outputs.batch_count }}"
+            echo "- Batch size: ${{ steps.cfg.outputs.batch_size }} requests"
+            echo "- Batch pause: ${{ steps.cfg.outputs.batch_pause }} seconds"
+            echo "- max-parallel: 1; every batch is quality-gated and checkpointed before the next batch."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tdcc-batch:
+    needs: plan
+    if: ${{ needs.plan.outputs.tdcc_missing != '0' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.tdcc_matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Sync latest checkpoints
+        run: |
           git fetch origin main
           git reset --hard origin/main
+      - name: Fetch one TDCC stock batch
+        run: |
+          set -euo pipefail
+          node scripts/backfill_tdcc_shareholding_history.js \
+            --stock "${{ matrix.stock }}" \
+            --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}" \
+            --delay-ms 1800 --jitter-ms 1200
+      - name: Validate and checkpoint TDCC stock
+        run: |
+          set -euo pipefail
+          ROOT="data_tdcc_shareholding/history/${{ matrix.stock }}"
+          node - "$ROOT" "${{ matrix.stock }}" <<'NODE'
+          const fs=require('fs'),path=require('path');const [root,stock]=process.argv.slice(2);
+          const files=fs.readdirSync(root).filter(x=>/^2026\d{4}\.json$/.test(x));
+          if(files.length<12) throw new Error(`${stock}: only ${files.length} TDCC observations`);
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$ROOT"
+          if ! git diff --cached --quiet; then
+            git commit -m "research: checkpoint TDCC history for ${{ matrix.stock }}"
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase origin main && git push origin HEAD:main; then break; fi
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt*4))
+              test "$attempt" -lt 5
+            done
+          fi
+          sleep "${{ needs.plan.outputs.batch_pause }}"
 
-      - name: Build multi-stock association backtest
+  broker-batch:
+    needs: [plan, tdcc-batch]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.tdcc-batch.result == 'success' || needs.tdcc-batch.result == 'skipped') && needs.plan.outputs.broker_scheduled != '0' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.broker_matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Sync latest checkpoints
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - name: Fetch this broker batch
+        id: fetch
         shell: bash
         env:
-          STOCKS: ${{ steps.cfg.outputs.stocks }}
-          START: ${{ steps.cfg.outputs.start }}
-          END: ${{ steps.cfg.outputs.end }}
+          TASKS: ${{ matrix.tasks }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          test "${#ITEMS[@]}" -le "${{ needs.plan.outputs.batch_size }}"
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"; DATE="${ITEM#*@}"
+            ROOT="data_research/institutional-flow/histock/$STOCK"
+            TMP="$RUNNER_TEMP/${STOCK}-${DATE//-/}"
+            mkdir -p "$ROOT/daily" "$ROOT/batch-status" "$TMP/daily"
+            echo "[batch ${{ matrix.batch }}] $STOCK / $DATE"
+            set +e
+            node scripts/backfill_histock_broker_history_research_v2.js \
+              --stock "$STOCK" --start "$DATE" --end "$DATE" \
+              --delay-ms 1800 --jitter-ms 1200 --max-retries 2 --max-consecutive-failures 4 \
+              --out "$TMP"
+            RC=$?
+            set -e
+            DAILY="$TMP/daily/${DATE//-/}.json"
+            if [ -s "$DAILY" ]; then cp -f "$DAILY" "$ROOT/daily/"; fi
+            node - "$ROOT/batch-status/run-${GITHUB_RUN_ID}-batch-${{ matrix.batch }}-${STOCK}-${DATE//-/}.json" "$STOCK" "$DATE" "$RC" <<'NODE'
+          const fs=require('fs');const [file,stock,date,rc]=process.argv.slice(2);
+          fs.writeFileSync(file,JSON.stringify({schema_version:1,run_id:process.env.GITHUB_RUN_ID,batch:Number(process.env.BATCH_INDEX||0),stock,date,fetch_exit_code:Number(rc),generated_at:new Date().toISOString()},null,2)+'\n');
+          NODE
+          done
+
+      - name: Apply hard quality gate
+        id: quality
+        if: always()
+        env:
+          TASKS: ${{ matrix.tasks }}
+        run: |
+          set -euo pipefail
+          node scripts/checkpoint_histock_batch_quality.js \
+            --tasks "$TASKS" --batch "${{ matrix.batch }}" --run-id "$GITHUB_RUN_ID"
+
+      - name: Commit valid batch checkpoint
+        if: always()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/histock
+          if ! git diff --cached --quiet; then
+            git commit -m "research: broker batch ${{ matrix.batch }} checkpoint"
+            PUSHED=0
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase origin main && git push origin HEAD:main; then PUSHED=1; break; fi
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt*5))
+            done
+            test "$PUSHED" -eq 1
+          fi
+          sleep "${{ needs.plan.outputs.batch_pause }}"
+
+  aggregate:
+    needs: [plan, tdcc-batch, broker-batch]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.tdcc-batch.result == 'success' || needs.tdcc-batch.result == 'skipped') && (needs.broker-batch.result == 'success' || needs.broker-batch.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Sync all checkpoints
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - name: Re-plan and require zero unresolved broker tasks
+        run: |
+          set -euo pipefail
+          node scripts/plan_histock_broker_history_backfill.js \
+            --scope list --stocks "${{ needs.plan.outputs.stocks }}" \
+            --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}" \
+            --batch-size-requests "${{ needs.plan.outputs.batch_size }}" --max-batches-per-run 200 \
+            --output "$RUNNER_TEMP/final-plan.json"
+          node - <<'NODE'
+          const p=require(process.env.RUNNER_TEMP+'/final-plan.json');
+          if(p.counts.missing_tasks_total!==0) throw new Error(`Broker backfill incomplete: ${p.counts.missing_tasks_total} unresolved/invalid tasks remain`);
+          NODE
+      - name: Aggregate broker histories
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra LIST <<< "${{ needs.plan.outputs.stocks }}"
+          for STOCK in "${LIST[@]}"; do
+            node scripts/aggregate_histock_broker_history_research.js \
+              --stock "$STOCK" --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}"
+          done
+      - name: Build and validate multi-stock backtest
         run: |
           set -euo pipefail
           node scripts/backtest_institutional_distribution_universe.js \
-            --stocks "$STOCKS" --start "$START" --end "$END" \
+            --stocks "${{ needs.plan.outputs.stocks }}" \
+            --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}" \
             --output data_research/institutional-flow/backtests/official-historical-universe.json
-
-      - name: Validate completed universe
-        shell: bash
-        env:
-          STOCKS: ${{ steps.cfg.outputs.stocks }}
-        run: |
-          set -euo pipefail
           node - <<'NODE'
-          const fs=require('fs');
-          const p=JSON.parse(fs.readFileSync('data_research/institutional-flow/backtests/official-historical-universe.json','utf8'));
-          const expected=process.env.STOCKS.split(',').length;
-          if(p.stocks_completed!==expected) throw new Error(`Expected ${expected} completed stocks, got ${p.stocks_completed}: ${JSON.stringify(p.stocks_skipped)}`);
-          if(p.aggregate.events.observations<3) throw new Error(`Too few independent threshold/escalation events: ${p.aggregate.events.observations}`);
-          for(const h of ['5d','10d','20d']) if(p.aggregate.events.horizons[h].n<2) throw new Error(`Too few ${h} event outcomes`);
-          console.log({stocks_completed:p.stocks_completed,events:p.aggregate.events.observations,edge:p.aggregate.edge_vs_baseline});
+          const p=require('./data_research/institutional-flow/backtests/official-historical-universe.json');
+          if(p.stocks_completed!==p.universe.length) throw new Error(`Incomplete universe: ${JSON.stringify(p.stocks_skipped)}`);
+          if(p.aggregate.events.observations<3) throw new Error(`Too few independent events: ${p.aggregate.events.observations}`);
           NODE
-
-      - name: Commit backtest result
-        shell: bash
+      - name: Commit aggregates and backtest
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_research/institutional-flow/backtests/official-historical-universe.json
+          git add data_research/institutional-flow/histock data_research/institutional-flow/backtests/official-historical-universe.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "research: record multi-stock distribution backtest"
+          git commit -m "research: complete multi-stock distribution backtest"
           for attempt in 1 2 3 4 5; do
             if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort 2>/dev/null || true
-            sleep $((attempt*4))
+            sleep $((attempt*5))
           done
           exit 1
-
       - name: Summary
         if: always()
-        shell: bash
         run: |
           if [ -s data_research/institutional-flow/backtests/official-historical-universe.json ]; then
             node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
@@ -229,10 +357,7 @@ jobs:
           console.log(`- Universe: ${p.universe.join(', ')}`);
           console.log(`- Completed: ${p.stocks_completed}/${p.universe.length}`);
           console.log(`- Independent Orange/Red events: ${p.aggregate.events.observations}`);
-          for(const h of ['5d','10d','20d']){
-            const s=p.aggregate.events.horizons[h],b=p.aggregate.baseline.horizons[h],e=p.aggregate.edge_vs_baseline[h];
-            console.log(`- ${h}: signal mean ${s.mean_pct}% vs baseline ${b.mean_pct}% (edge ${e.mean_return_edge_pp}pp), negative rate ${s.negative_rate} vs ${b.negative_rate}`);
-          }
+          for(const h of ['5d','10d','20d']){const s=p.aggregate.events.horizons[h],b=p.aggregate.baseline.horizons[h],e=p.aggregate.edge_vs_baseline[h];console.log(`- ${h}: signal mean ${s.mean_pct}% vs baseline ${b.mean_pct}% (edge ${e.mean_return_edge_pp}pp), negative rate ${s.negative_rate} vs ${b.negative_rate}`);}
           console.log('- Safety: association-only research; historical TDCC publication timestamps are unknown, so this is not executable historical P&L.');
           NODE
           fi
