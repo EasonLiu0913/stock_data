@@ -213,5 +213,250 @@ async function waitForMainJobs() {
   const startedAt = Date.now();
   let lastPayload = null;
   while (Date.now() - startedAt <= MAX_JOB_WAIT_MS) {
-    lastPayload = await fetchRu²È="24è€Ÿ–Û’î[šNß–>[–’ÇšV\œ°É•…Í½¸è€Ÿ¢Ï–ÂG’â–/’âï¢š©½ˆƒ–’ÇšV_¾ò3’âSšr«²›–B#–ŞË~—jš^—šr¦£–"¢ÎšZg’òëšr7–f£š"[š‚ó–ò?¦2¿¢ª“–"¦†{œôì(€É•ÑÕÉ¸ì½¬èÑÉÕ”°½‘”è€½µÁ±•Ñ”œ°±…‰•°è€Ÿ–º3šVÓš"C–*|œ°É•…Í½¸è€Ÿš&šr'’âï¢š©½‰Ìƒ–vš"C–*¾ò3’âSšr«–×šâ³–"Ãš^—šr’â7²›¦£–"òëšò?š"[’úšêC¦2¿¢ª“œôì)ô()™Õ¹Ñ¥½¸ÍÕµµ…É¥é•)½‰½¹Ñ•áĞ¡Á…å±½…¤ì(€½¹ÍĞ©½‰Ì€ôÉÉ…ä¹¥ÍÉÉ…ä¡Á…å±½…ü¹©½‰Ì¤€üÁ…å±½…¹©½‰Ì€èmtì(€½¹ÍĞµ…¥¹)½‰Ì€ô©½‰Ì¹™¥±Ñ•È ¡©½ˆ¤€ôø€…¥ÍMÕµµ…Éå)½ˆ¡©½ˆ¤¤ì(€½¹ÍĞ…±±MÕ••‘•€ôµ…¥¹)½‰Ì¹±•¹Ñ €ø€À€˜˜µ…¥¹)½‰Ì¹•Ù•Éä ¡©½ˆ¤€ôø©½ˆ¹ÍÑ…ÑÕÌ€ôôô€½µÁ±•Ñ•œ€˜˜lÍÕ•ÍÌœ°€Í­¥ÁÁ•t¹¥¹±Õ‘•Ì¡©½ˆ¹½¹±ÕÍ¥½¸¤¤ì(€½¹ÍĞ™É…µ•¹ÑÌ€ômtì(€™½È€¡½¹ÍĞ©½ˆ½˜µ…¥¹)½‰Ì¤ì(€€€™É…µ•¹ÑÌ¹ÁÕÍ ¡©½ˆô‘í©½ˆ¹¹…µ•ôÍÑ…ÑÕÌô‘í©½ˆ¹ÍÑ…ÑÕÍô½¹±ÕÍ¥½¸ô‘í©½ˆ¹½¹±ÕÍ¥½¹õ€¤ì(€€€™½È€¡½¹ÍĞÍÑ•À½˜©½ˆ¹ÍÑ•ÁÌñğmt¤™É…µ•¹ÑÌ¹ÁÕÍ ¡ÍÑ•Àô‘íÍÑ•À¹¹…µ•ôÍÑ…ÑÕÌô‘íÍÑ•À¹ÍÑ…ÑÕÍô½¹±ÕÍ¥½¸ô‘íÍÑ•À¹½¹±ÕÍ¥½¹õ€¤ì(€ô(€É•ÑÕÉ¸ìµ…¥¹)½‰Ì°…±±MÕ••‘•°Ñ•áĞè™É…µ•¹ÑÌ¹©½¥¸ q¸œ¤ôì)ô()™Õ¹Ñ¥½¸•Ù•¹Ñ…Ñ•!¥¹ÑÌ¡•Ù•¹Ğ¤ì(€½¹ÍĞ¥¹ÁÕÑÌ€ô•Ù•¹Ğü¹¥¹ÁÕÑÌñğíôì(€½¹ÍĞÙ…±Õ•Ì€ôm¥¹ÁÕÑÌ¹‘…Ñ”°¥¹ÁÕÑÌ¹Ñ…É•Ñ}‘…Ñ”°¥¹ÁÕÑÌ¹•¹‘}‘…Ñ”°¥¹ÁÕÑÌ¹ÍÑ…ÉÑ}‘…Ñ•t¹™¥±Ñ•È¡	½½±•…¸¤ì(€É•ÑÕÉ¸Ù…±Õ•Ì¹µ…À¡¹½Éµ…±¥é•…Ñ•…¹‘¥‘…Ñ”¤¹™¥±Ñ•È¡	½½±•…¸¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸½±±•Ñ)½‰1½Ì¡©½‰Ì¤ì(€½¹ÍĞ™É…µ•¹ÑÌ€ômtì(€™½È€¡½¹ÍĞ©½ˆ½˜©½‰Ìñğmt¤ì(€€€ÑÉäì(€€€€€½¹ÍĞ±½œ€ô…İ…¥Ğ™•Ñ¡)½‰1½œ¡©½ˆ¹¥¤ì(€€€€€¥˜€¡±½œ¤™É…µ•¹ÑÌ¹ÁÕÍ ¡q¸ôôôôô€‘í©½ˆ¹¹…µ•ô€ôôôôõq¸‘í±½õ€¤ì(€€€ô…Ñ €¡•ÉÉ½È¤ì(€€€€€™É…µ•¹ÑÌ¹ÁÕÍ ¡q¸ôôôôô€‘í©½ˆ¹¹…µ•ô±½œÕ¹…Ù…¥±…‰±”€ôôôôõq¸‘í•ÉÉ½È¹µ•ÍÍ…”ñğ•ÉÉ½Éõ€¤ì(€€€ô(€ô(€É•ÑÕÉ¸™É…µ•¹ÑÌ¹©½¥¸ q¸œ¤ì)ô()™Õ¹Ñ¥½¸É•¹‘•É…Ñ…MÕµµ…Éä¡ì™¥±•¹…µ”°É•ÍÕ±Ğ°•áÁ•Ñ•‘…Ñ”°…ÑÕ…±…Ñ”°½Õ¹ÑÌ°©½‰Ìô¤ì(€½¹ÍĞ¥½¸€ôÉ•ÍÕ±Ğ¹½¬€ü€ŸÂ~~ˆœ€è€ŸÂ~RĞœì(€½¹ÍĞ±¥¹•Ì€ôl(€€€€ŒŒ€‘í¥½¹ôƒ¢ÎšZgšNß–>[–º3šVÓš€°(€€€€´]½É­™±½ß¾òiq€‘í™¥±•¹…µ”ñğ€Õ¹­¹½İ¸õq€°(€€€€´ƒ¦‚CšršNß–>[š^—šr¾òh‘í•áÁ•Ñ•‘…Ñ”€üq€‘í•áÁ•Ñ•‘…Ñ•õq€€è€ƒšr«–×šâ³–"Ãšb;Šëš^—šr}€õ€°(€€€€´ƒ–¾›¦jo¢ÎšZgš^—šr¾òh‘í…ÑÕ…±…Ñ”€üq€‘í…ÑÕ…±…Ñ•õq€€è€ƒšr«–×šâ³–"Ãšb;Šëš^—šr}€õ€°(€tì(€¥˜€¡½Õ¹ÑÌ¤ì(€€€±¥¹•Ì¹ÁÕÍ ¡€´ƒ¦‚Cšr¶šVã¾òh‘í½Õ¹ÑÌ¹Ñ½Ñ…±õ€¤ì(€€€±¥¹•Ì¹ÁÕÍ ¡€´ƒš"C–*¶šVã¾òh‘í½Õ¹ÑÌ¹ÍÕ•ÍÍõ€¤ì(€€€±¥¹•Ì¹ÁÕÍ ¡€´ƒòë–ÂG¶šVã¾òh‘í5…Ñ ¹µ…à À°½Õ¹ÑÌ¹Ñ½Ñ…°€´½Õ¹ÑÌ¹ÍÕ•ÍÌ¥õ€¤ì(€ô(€±¥¹•Ì¹ÁÕÍ ¡€´ƒšNß–>[ÖCšzs¾òh¨¨‘íÉ•ÍÕ±Ğ¹±…‰•±ô¨©€¤ì(€±¥¹•Ì¹ÁÕÍ ¡€´ƒ–:–nƒ¾òh‘íÉ•ÍÕ±Ğ¹É•…Í½¹õ€¤ì(€¥˜€ …É•ÍÕ±Ğ¹½¬¤±¥¹•Ì¹ÁÕÍ  œ´ƒ.š/¾òh¨«Ò#¢ÎšZgšr«–º3šVÓŠë¢ª7–&7¾ò3’â7¢š[
-ëš"C–*¨¨œ¤ì(€•±Í”±¥¹•Ì¹ÁÕÍ  œ´ƒ.š/¾òh¨«Úƒ#–ŞË¦k¦;šr³š²„İ½É­™±½Üƒj–º3šVÓšŸ–"“šZß¨¨œ¤ì(€¥˜€¡©½‰Ìü¹±•¹Ñ ¤ì(€€€½¹ÍĞ™…¥±•€ô©½‰Ì¹™¥±Ñ•È ¡©½ˆ¤€ôø€…lÍÕ•ÍÌœ°€Í­¥ÁÁ•t¹¥¹±Õ‘•Ì¡©½ˆ¹½¹±ÕÍ¥½¸¤¤ì(€€€¥˜€¡™…¥±•¹±•¹Ñ ¤±¥¹•Ì¹ÁÕÍ ¡€´ƒ–’ÇšV\©½‰Ï¾òh‘í™…¥±•¹µ…À ¡©½ˆ¤€ôøq€‘í©½ˆ¹¹…µ•õq€¤¹©½¥¸ Ÿœ¥õ€¤ì(€ô(€É•ÑÕÉ¸±¥¹•Ìì)ô()™Õ¹Ñ¥½¸Í•±™Q•ÍĞ ¤ì(€½¹ÍĞÉ•…Ñ•€ô¹•Ü…Ñ” œÈÀÈØ´Àà´ÈİPÄØèÔÀèĞÙhœ¤ì(€½¹ÍĞ½ÕÉÉ•¹”€ôÁÉ•Ù¥½ÕÍ=ÕÉÉ•¹” œÔÈ€Ô€¨€¨€¨œ°É•…Ñ•¤ì(€¥˜€¡½ÕÉÉ•¹”¹Ñ½%M=MÑÉ¥¹œ ¤€„ôô€œÈÀÈØ´Àà´ÈİPÀÔèÔÈèÀÀ¸ÀÀÁhœ¤Ñ¡É½Ü¹•ÜÉÉ½È ‘…¥±äÉ½¸Í•±˜µÑ•ÍĞ™…¥±•œ¤ì(€¥˜€ …™½Éµ…ÑQ…¥Á•¤¡½ÕÉÉ•¹”¤¹ÍÑ…ÉÑÍ]¥Ñ  œÈÀÈØ´Àà´ÈÜ€ÄÌèÔÈœ¤¤Ñ¡É½Ü¹•ÜÉÉ½È Q…¥Á•¤™½Éµ…ÑÑ¥¹œÍ•±˜µÑ•ÍĞ™…¥±•œ¤ì(€½¹ÍĞİ••­±ä€ôÁÉ•Ù¥½ÕÍ=ÕÉÉ•¹” œÈÈ€À€¨€¨€Ä´Ôœ°¹•Ü…Ñ” œÈÀÈØ´Àà´ÈáPÄÄèÌÀèÀÁhœ¤¤ì(€¥˜€¡İ••­±ä¹Ñ½%M=MÑÉ¥¹œ ¤€„ôô€œÈÀÈØ´Àà´ÈáPÀÀèÈÈèÀÀ¸ÀÀÁhœ¤Ñ¡É½Ü¹•ÜÉÉ½È İ••­‘…äÉ½¸Í•±˜µÑ•ÍĞ™…¥±•œ¤ì(€½¹ÍĞ‘…Ñ•Ì€ô•áÑÉ…Ñ…Ñ•Ì Ñ…É•Ñ}‘…Ñ”ôÈÀÈØÀàÈà½™™¥¥…±}±…Ñ•ÍÑ}‘…Ñ”ôÈÀÈØÀàÈÜœ¤ì(€¥˜€¡‘…Ñ•Ì¹•áÁ•Ñ•¹…Ğ ´Ä¤€„ôô€œÈÀÈØÀàÈàœñğ‘…Ñ•Ì¹…ÑÕ…°¹…Ğ ´Ä¤€„ôô€œÈÀÈØÀàÈÜœ¤Ñ¡É½Ü¹•ÜÉÉ½È ‘…Ñ”•áÑÉ…Ñ¥½¸Í•±˜µÑ•ÍĞ™…¥±•œ¤ì(€½¹ÍĞµ¥Íµ…Ñ €ô±…ÍÍ¥™å…Ñ…I•ÍÕ±Ğ¡ì…±±MÕ••‘•è™…±Í”°Ñ•áĞè€œœ°•áÁ•Ñ•‘…Ñ”è€œÈÀÈØÀàÈàœ°…ÑÕ…±…Ñ”è€œÈÀÈØÀàÈÜœ°½Õ¹ÑÌè¹Õ±°ô¤ì(€¥˜€¡µ¥Íµ…Ñ ¹½‘”€„ôô€‘…Ñ…}¹½Ñ}ÕÁ‘…Ñ•œ¤Ñ¡É½Ü¹•ÜÉÉ½È ‘…Ñ”µ¥Íµ…Ñ ±…ÍÍ¥™¥…Ñ¥½¸Í•±˜µÑ•ÍĞ™…¥±•œ¤ì(€½¹ÍĞÁ…ÉÑ¥…°€ô±…ÍÍ¥™å…Ñ…I•ÍÕ±Ğ¡ì…±±MÕ••‘•è™…±Í”°Ñ•áĞè€Ÿ–º3š"@€ÄÈÀÀ€¼ƒâ÷šVà€ÄÌÌÀœ°•áÁ•Ñ•‘…Ñ”è€œÈÀÈØÀàÈàœ°…ÑÕ…±…Ñ”è€œÈÀÈØÀàÈàœ°½Õ¹ÑÌèìÍÕ•ÍÌè€ÄÈÀÀ°Ñ½Ñ…°è€ÄÌÌÀôô¤ì(€¥˜€¡Á…ÉÑ¥…°¹½‘”€„ôô€Á…ÉÑ¥…±}‘…Ñ„œ¤Ñ¡É½Ü¹•ÜÉÉ½È Á…ÉÑ¥…°±…ÍÍ¥™¥…Ñ¥½¸Í•±˜µÑ•ÍĞ™…¥±•œ¤ì(€½¹ÍĞÍ•ÉÙ•È€ô±…ÍÍ¥™å…Ñ…I•ÍÕ±Ğ¡ì…±±MÕ••‘•è™…±Í”°Ñ•áĞè€!QQ@€ĞÈäQ½¼5…¹äI•ÅÕ•ÍÑÌœ°•áÁ•Ñ•‘…Ñ”è€œœ°…ÑÕ…±…Ñ”è€œœ°½Õ¹ÑÌè¹Õ±°ô¤ì(€¥˜€¡Í•ÉÙ•È¹½‘”€„ôô€Í•ÉÙ•É}Õ¹…Ù…¥±…‰±”œ¤Ñ¡É½Ü¹•ÜÉÉ½È Í•ÉÙ•È±…ÍÍ¥™¥…Ñ¥½¸Í•±˜µÑ•ÍĞ™…¥±•œ¤ì(€½¹Í½±”¹±½œ İÉ¥Ñ•}İ½É­™±½İ}Í¡•‘Õ±•}ÍÕµµ…ÉäÍ•±˜µÑ•ÍĞÁ…ÍÍ•œ¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸µ…¥¸ ¤ì(€¥˜€¡ÁÉ½•ÍÌ¹…ÉØ¹¥¹±Õ‘•Ì œ´µÍ•±˜µÑ•ÍĞœ¤¤É•ÑÕÉ¸Í•±™Q•ÍĞ ¤ì((€½¹ÍĞ•Ù•¹Ğ€ôÉ•…‘Ù•¹Ğ ¤ì(€½¹ÍĞÉÕ¸€ô…İ…¥Ğ™•Ñ¡IÕ¸ ¤¹…Ñ   ¤€ôø¹Õ±°¤ì(€½¹ÍĞÉ•…Ñ•‘Ğ€ôÉÕ¸ü¹É•…Ñ•‘}…Ğ€ü¹•Ü…Ñ”¡ÉÕ¸¹É•…Ñ•‘}…Ğ¤€è¹•Ü…Ñ” ¤ì((€¥˜€¡ÁÉ½•ÍÌ¹•¹Ø¹%Q!U	}Y9Q}95€„ôô€Í¡•‘Õ±”œ¤ì(€€€…ÁÁ•¹‘MÕµµ…Éä¡l(€€€€€€œŒŒƒš:K¢/šf¦ZLœ°(€€€€€€œ´ƒ–:–ºkš:K¢/šf¦ZO¾ò#–>Ã–2_šf¦ZO¾ò'¾òk¦v{š:K¢/¢ãfğœ°(€€€€€€´ƒ–¾›¦jo¦Z/–/šf¦ZO¾ò#–>Ã–2_šf¦ZO¾ò'¾òh‘í™½Éµ…ÑQ…¥Á•¤¡É•…Ñ•‘Ğ¥õ€°(€€€€€€œ´¥Ñ!Õˆƒš:K¢/–îÛ¦Ë¾òk’â7¦§R œ°(€€€t¤ì(€ô•±Í”ì(€€€½¹ÍĞÍ¡•‘Õ±”€ôMÑÉ¥¹œ¡•Ù•¹Ğ¹Í¡•‘Õ±”ñğ€œœ¤ì(€€€ÑÉäì(€€€€€¥˜€ …Í¡•‘Õ±”¤Ñ¡É½Ü¹•ÜÉÉ½È M¡•‘Õ±”•Ù•¹Ğ¥Ìµ¥ÍÍ¥¹œ¥Ñ¡Õˆ¹•Ù•¹Ğ¹Í¡•‘Õ±”œ¤ì(€€€€€½¹ÍĞ¥¹Ñ•¹‘•‘Ğ€ôÁÉ•Ù¥½ÕÍ=ÕÉÉ•¹”¡Í¡•‘Õ±”°É•…Ñ•‘Ğ¤ì(€€€€€½¹ÍĞ‘•±…å5¥¹ÕÑ•Ì€ô5…Ñ ¹µ…à À°5…Ñ ¹™±½½È ¡É•…Ñ•‘Ğ¹•ÑQ¥µ” ¤€´¥¹Ñ•¹‘•‘Ğ¹•ÑQ¥µ” ¤¤€¼5%9UQ}5L¤¤ì(€€€€€…ÁÁ•¹‘MÕµµ…Éä¡l(€€€€€€€€œŒŒƒš:K¢/šf¦ZLœ°(€€€€€€€€´ƒ–:–ºkš:K¢/šf¦ZO¾ò#–>Ã–2_šf¦ZO¾ò'¾òh‘í™½Éµ…ÑQ…¥Á•¤¡¥¹Ñ•¹‘•‘Ğ¥õ€°(€€€€€€€€´ƒ–¾§¦jo¦Z/–/šf¦ZO¾ò#–>Ã–2_šf¦ZO¾ò'¾òh‘í™½Éµ…ÑQ…¥Á•¤¡É•…Ñ•‘Ğ¥õ€°(€€€€€€€€´¥Ñ!Õˆƒš:K¢/–îÛ¦Ë¾òkÒ€‘í‘•±…å5¥¹ÕÑ•Íôƒ–"¦Ba€°(€€€€€t¤ì(€€€ô…Ñ €¡•ÉÉ½È¤ì(€€€€€…ÁÁ•¹‘MÕµµ…Éä¡l(€€€€€€€€œŒŒƒš:K¢/šf¦ZLœ°(€€€€€€€€œ´ƒ–:–ºkš:K¢/šf¦ZO¾ò#–>Ã–2_šf¦ZO¾ò'¾òk‡šÎW–"“–ºhœ°(€€€€€€€€´ƒ–¾›¦jo¦Z/–/šf¦ZO¾ò#–>Ã–2_šf¦ZO¾ò'¾òh‘í™½Éµ…ÑQ…¥Á•¤¡É•…Ñ•‘Ğ¥õ€°(€€€€€€€€´¥Ñ!Õˆƒš:K¢/–îÛ¦Ë¾òk‡šÎW¢¢#º_¾ò ‘íMÑÉ¥¹œ¡•ÉÉ½È¹µ•ÍÍ…”ñğ•ÉÉ½È¥÷¾ò%€°(€€€€€t¤ì(€€€ô(€ô((€½¹ÍĞ™¥±•¹…µ”€ôİ½É­™±½İ¥±•¹…µ” ¤ì(€¥˜€ …¥Í…Ñ…]½É­™±½Ü¡™¥±•¹…µ”¤¤É•ÑÕÉ¸ì((€½¹ÍĞ©½‰ÍA…å±½…€ô…İ…¥Ğİ…¥Ñ½É5…¥¹)½‰Ì ¤¹…Ñ  ¡•ÉÉ½È¤€ôø€¡ì€¸¸¸¡•ÉÉ½È¹±…ÍÑA…å±½…ñğì©½‰Ìèmtô¤°}•ÉÉ½Èè•ÉÉ½Èô¤¤ì(€½¹ÍĞ½¹Ñ•áĞ€ôÍÕµµ…É¥é•)½‰½¹Ñ•áĞ¡©½‰ÍA…å±½…¤ì(€½¹ÍĞ©½‰1½Ì€ô…İ…¥Ğ½±±•Ñ)½‰1½Ì¡½¹Ñ•áĞ¹µ…¥¹)½‰Ì¤ì(€½¹ÍĞ½µ‰¥¹•‘Q•áĞ€ô€‘í½¹Ñ•áĞ¹Ñ•áÑõq¸‘í©½‰1½Íõq¸‘í)M=8¹ÍÑÉ¥¹¥™ä¡•Ù•¹Ğ¥õ€ì(€½¹ÍĞ‘…Ñ•Ì€ô•áÑÉ…Ñ…Ñ•Ì¡½µ‰¥¹•‘Q•áĞ¤ì(€½¹ÍĞ•áÁ•Ñ•‘…Ñ”€ô‘…Ñ•Ì¹•áÁ•Ñ•¹…Ğ ´Ä¤ñğ•Ù•¹Ñ…Ñ•!¥¹ÑÌ¡•Ù•¹Ğ¤¹…Ğ ´Ä¤ñğ€œœì(€½¹ÍĞ…ÑÕ…±…Ñ”€ô‘…Ñ•Ì¹…ÑÕ…°¹…Ğ ´Ä¤ñğ€œœì(€½¹ÍĞ½Õ¹ÑÌ€ô•áÑÉ…Ñ½Õ¹ÑÌ¡½µ‰¥¹•‘Q•áĞ¤ì(€½¹ÍĞÉ•ÍÕ±Ğ€ô±…ÍÍ¥™å…Ñ…I•ÍÕ±Ğ¡ì…±±MÕ••‘•è½¹Ñ•áĞ¹…±±MÕ••‘•°Ñ•áĞè½µ‰¥¹•‘Q•áĞ°•áÁ•Ñ•‘…Ñ”°…ÑÕ…±…Ñ”°½Õ¹ÑÌô¤ì(€¥˜€¡©½‰ÍA…å±½…¹}•ÉÉ½È€˜˜€…½¹Ñ•áĞ¹µ…¥¹)½‰Ì¹±•¹Ñ ¤ì(€€€É•ÍÕ±Ğ¹½¬€ô™…±Í”ì(€€€É•ÍÕ±Ğ¹½‘”€ô€½Ñ¡•É}™…¥±ÕÉ”œì(€€€É•ÍÕ±Ğ¹±…‰•°€ô€Ÿ‡šÎWŠë¢ª7¢ÎšZg–º3šVÓšœœì(€€€É•ÍÕ±Ğ¹É•…Í½¸€ôƒ‡šÎW¢º–>[šr³š²„ÉÕ¸ƒj©½ˆƒ.š/¾òh‘í©½‰ÍA…å±½…¹}•ÉÉ½È¹µ•ÍÍ…”ñğ©½‰ÍA…å±½…¹}•ÉÉ½Éõ€ì(€ô(€…ÁÁ•¹‘MÕµµ…Éä¡lœœ°€¸¸¹É•¹‘•É…Ñ…MÕµµ…Éä¡ì™¥±•¹…µ”°É•ÍÕ±Ğ°•áÁ•Ñ•‘…Ñ”°…ÑÕ…±…Ñ”°½Õ¹ÑÌ°©½‰Ìè½¹Ñ•áĞ¹µ…¥¹)½‰Ìô¥t¤ì(€¥˜€ …É•ÍÕ±Ğ¹½¬¤ÁÉ½•ÍÌ¹•á¥Ñ½‘”€ô€Äì)ô()µ…¥¸ ¤¹…Ñ  ¡•ÉÉ½È¤€ôøì(€…ÁÁ•¹‘MÕµµ…Éä¡l(€€€€œŒŒƒÂ~RĞ]½É­™±½ÜMÕµµ…ÉäƒR‹R–’ÇšV\œ°(€€€€´ƒ–:–nƒ¾òh‘íMÑÉ¥¹œ¡•ÉÉ½È¹µ•ÍÍ…”ñğ•ÉÉ½È¥õ€°(€€€€œ´ƒ.š/¾òkÒ#¾òo‡šÎWŠë¢ª7¢ÎšZg–º3šVÓšŸœ°(€t¤ì(€ÁÉ½•ÍÌ¹•á¥Ñ½‘”€ô€Äì)ô¤ì()µ½‘Õ±”¹•áÁ½ÉÑÌ€ôì(€Á…ÉÍ•É½¸°(€É½¹5…Ñ¡•Ì°(€ÁÉ•Ù¥½ÕÍ=ÕÉÉ•¹”°(€™½Éµ…ÑQ…¥Á•¤°(€¥Í…Ñ…]½É­™±½Ü°(€•áÑÉ…Ñ…Ñ•Ì°(€•áÑÉ…Ñ½Õ¹ÑÌ°(€±…ÍÍ¥™å…Ñ…I•ÍÕ±Ğ°)ôì(
+    lastPayload = await fetchRunJobs();
+    const jobs = Array.isArray(lastPayload?.jobs) ? lastPayload.jobs : [];
+    const mainJobs = jobs.filter((job) => !isSummaryJob(job));
+    if (mainJobs.length > 0 && mainJobs.every((job) => job.status === 'completed')) return lastPayload;
+    await sleep(JOB_POLL_MS);
+  }
+  const error = new Error('Timed out waiting for the workflow main jobs to complete');
+  error.lastPayload = lastPayload;
+  throw error;
+}
+
+function appendSummary(lines) {
+  const text = `${lines.join('\n')}\n`;
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text, 'utf8');
+  else process.stdout.write(text);
+}
+
+function workflowFilename() {
+  const ref = String(process.env.GITHUB_WORKFLOW_REF || '');
+  const match = ref.match(/\.github\/workflows\/([^@]+)@/);
+  return match ? match[1] : '';
+}
+
+function isDataWorkflow(filename = workflowFilename()) {
+  return DATA_WORKFLOW_PATTERNS.some((pattern) => pattern.test(filename));
+}
+
+function normalizeDateCandidate(value) {
+  const text = String(value || '');
+  const compact = text.match(/\b(20\d{6})\b/);
+  if (compact) return compact[1];
+  const dashed = text.match(/\b(20\d{2})[-\/]([01]\d)[-\/]([0-3]\d)\b/);
+  return dashed ? `${dashed[1]}${dashed[2]}${dashed[3]}` : '';
+}
+
+function extractDates(text) {
+  const source = String(text || '');
+  const expectedPatterns = [
+    /(?:target[_ -]?date|requested[_ -]?date|expected[_ -]?(?:market[_ -]?)?date|é æœŸ(?:æ“·å–)?æ—¥æœŸ|ç›®æ¨™æ—¥æœŸ|æ“·å–æ—¥æœŸ)\s*[:=ï¼š]\s*[`"']?([^\s`"']+)/ig,
+    /--date\s+["']?([^\s"']+)/ig,
+  ];
+  const actualPatterns = [
+    /(?:actual[_ -]?(?:market[_ -]?)?date|official[_ -]?(?:latest[_ -]?)?date|source[_ -]?(?:collection[_ -]?)?date|å¯¦éš›(?:è³‡æ–™)?æ—¥æœŸ|å®˜æ–¹(?:ç›®å‰)?æœ€æ–°æ—¥æœŸ)\s*[:=ï¼š]\s*[`"']?([^\s`"']+)/ig,
+  ];
+  const collect = (patterns) => {
+    const out = [];
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(source))) {
+        const date = normalizeDateCandidate(match[1]);
+        if (date) out.push(date);
+      }
+    }
+    return out;
+  };
+  return { expected: collect(expectedPatterns), actual: collect(actualPatterns) };
+}
+
+function extractCounts(text) {
+  const source = String(text || '');
+  const candidates = [];
+  const patterns = [
+    /(?:æˆåŠŸ|å®Œæˆ|success(?:ful)?|completed?)\D{0,12}(\d{1,6})\D{0,20}(?:ç¸½æ•¸|ç¸½è¨ˆ|total)\D{0,12}(\d{1,6})/ig,
+    /(\d{1,6})\s*\/\s*(\d{1,6})/g,
+    /(?:missing|ç¼ºå°‘|å°šç¼º|æœªå®Œæˆ)\D{0,12}(\d{1,6})\D{0,20}(?:total|ç¸½æ•¸|ç¸½è¨ˆ)\D{0,12}(\d{1,6})/ig,
+  ];
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(source))) {
+      const a = Number(match[1]);
+      const b = Number(match[2]);
+      if (Number.isFinite(a) && Number.isFinite(b) && b > 0 && a <= b) candidates.push({ success: a, total: b });
+    }
+  }
+  return candidates.at(-1) || null;
+}
+
+function classifyDataResult({ allSucceeded, text, expectedDate, actualDate, counts }) {
+  const source = String(text || '');
+  const lower = source.toLowerCase();
+  const dateMismatch = Boolean(expectedDate && actualDate && expectedDate !== actualDate);
+  const noData = /æ²’æœ‰ç¬¦åˆæ¢ä»¶çš„è³‡æ–™|å°šæœªæ›´æ–°|not\s+(?:yet\s+)?available|no\s+data\s+available|data\s+not\s+ready/.test(lower);
+  const partial = /éƒ¨åˆ†è³‡æ–™|partial|æœªå®Œæˆ|ç¼ºå°‘|å°šç¼º|failed[_ -]?count\s*[:=]\s*[1-9]\d*|error[_ -]?count\s*[:=]\s*[1-9]\d*/i.test(source)
+    || Boolean(counts && counts.success < counts.total);
+  const server = /429|5\d\d|timeout|timed out|econnreset|econnrefused|socket hang up|network error|fetch failed|could not resolve|server.*(?:unavailable|æ²’æœ‰å›æ‡‰)|ä¼ºæœå™¨.*æ²’æœ‰å›æ‡‰/i.test(source);
+  const format = /parse error|invalid json|unexpected token|missing header|schema|æ¬„ä½.*(?:ç¼ºå°‘|ç•°å¸¸)|æ ¼å¼.*(?:ç•°å¸¸|éŒ¯èª¤)/i.test(source);
+
+  if (dateMismatch || noData) return { ok: false, code: 'data_not_updated', label: 'è³‡æ–™å°šæœªæ›´æ–°', reason: dateMismatch ? `é æœŸæ—¥æœŸ ${expectedDate}ï¼Œå¯¦éš›è³‡æ–™æ—¥æœŸ ${actualDate}ï¼Œæ—¥æœŸä¸ç¬¦ã€‚` : 'å®˜æ–¹è³‡æ–™å°šæœªæ›´æ–°æˆ–å°šæœªæä¾›ç›®æ¨™æ—¥æœŸè³‡æ–™ã€‚' };
+  if (partial) {
+    const detail = counts ? `${counts.total - counts.success} ç­†å°šæœªæ›´æ–° / ç¸½æ•¸ ${counts.total}` : 'åµæ¸¬åˆ°éƒ¨åˆ†è³‡æ–™ç¼ºæ¼æˆ–æœªå®Œæˆé …ç›®ã€‚';
+    return { ok: false, code: 'partial_data', label: 'éƒ¨åˆ†è³‡æ–™å°šæœªæ›´æ–°', reason: detail };
+  }
+  if (server) return { ok: false, code: 'server_unavailable', label: 'ä¼ºæœå™¨æ²’æœ‰å›æ‡‰', reason: 'åµæ¸¬åˆ° HTTP 429/5xxã€timeoutã€é€£ç·šé‡è¨­æˆ–å…¶ä»–ä¼ºæœå™¨/ç¶²è·¯éŒ¯èª¤ã€‚' };
+  if (format) return { ok: false, code: 'format_error', label: 'è³‡æ–™æ ¼å¼ç•°å¸¸', reason: 'ä¾†æºæœ‰å›æ‡‰ï¼Œä½†æ¬„ä½ã€JSON/CSV æˆ– schema é©—è­‰æœªé€šéã€‚' };
+  if (!allSucceeded) return { ok: false, code: 'other_failure', label: 'å…¶ä»–æ“·å–å¤±æ•—', reason: 'è‡³å°‘ä¸€å€‹ä¸»è¦ job å¤±æ•—ï¼Œä¸”æœªç¬¦åˆå·²çŸ¥çš„æ—¥æœŸã€éƒ¨åˆ†è³‡æ–™ã€ä¼ºæœå™¨æˆ–æ ¼å¼éŒ¯èª¤åˆ†é¡ã€‚' };
+  return { ok: true, code: 'complete', label: 'å®Œæ•´æˆåŠŸ', reason: 'æ‰€æœ‰ä¸»è¦ jobs å‡æˆåŠŸï¼Œä¸”æœªåµæ¸¬åˆ°æ—¥æœŸä¸ç¬¦ã€éƒ¨åˆ†ç¼ºæ¼æˆ–ä¾†æºéŒ¯èª¤ã€‚' };
+}
+
+function summarizeJobContext(payload) {
+  const jobs = Array.isArray(payload?.jobs) ? payload.jobs : [];
+  const mainJobs = jobs.filter((job) => !isSummaryJob(job));
+  const allSucceeded = mainJobs.length > 0 && mainJobs.every((job) => job.status === 'completed' && ['success', 'skipped'].includes(job.conclusion));
+  const fragments = [];
+  for (const job of mainJobs) {
+    fragments.push(`job=${job.name} status=${job.status} conclusion=${job.conclusion}`);
+    for (const step of job.steps || []) fragments.push(`step=${step.name} status=${step.status} conclusion=${step.conclusion}`);
+  }
+  return { mainJobs, allSucceeded, text: fragments.join('\n') };
+}
+
+function eventDateHints(event) {
+  const inputs = event?.inputs || {};
+  const values = [inputs.date, inputs.target_date, inputs.end_date, inputs.start_date].filter(Boolean);
+  return values.map(normalizeDateCandidate).filter(Boolean);
+}
+
+async function collectJobLogs(jobs) {
+  const fragments = [];
+  for (const job of jobs || []) {
+    try {
+      const log = await fetchJobLog(job.id);
+      if (log) fragments.push(`\n===== ${job.name} =====\n${log}`);
+    } catch (error) {
+      fragments.push(`\n===== ${job.name} log unavailable =====\n${error.message || error}`);
+    }
+  }
+  return fragments.join('\n');
+}
+
+function renderDataSummary({ filename, result, expectedDate, actualDate, counts, jobs }) {
+  const icon = result.ok ? 'ğŸŸ¢' : 'ğŸ”´';
+  const lines = [
+    `## ${icon} è³‡æ–™æ“·å–å®Œæ•´æ€§`,
+    `- Workflowï¼š\`${filename || 'unknown'}\``,
+    `- é æœŸæ“·å–æ—¥æœŸï¼š${expectedDate ? `\`${expectedDate}\`` : '`æœªåµæ¸¬åˆ°æ˜ç¢ºæ—¥æœŸ`'}`,
+    `- å¯¦éš›è³‡æ–™æ—¥æœŸï¼š${actualDate ? `\`${actualDate}\`` : '`æœªåµæ¸¬åˆ°æ˜ç¢ºæ—¥æœŸ`'}`,
+  ];
+  if (counts) {
+    lines.push(`- é æœŸç­†æ•¸ï¼š${counts.total}`);
+    lines.push(`- æˆåŠŸç­†æ•¸ï¼š${counts.success}`);
+    lines.push(`- ç¼ºå°‘ç­†æ•¸ï¼š${Math.max(0, counts.total - counts.success)}`);
+  }
+  lines.push(`- æ“·å–çµæœï¼š**${result.label}**`);
+  lines.push(`- åŸå› ï¼š${result.reason}`);
+  if (!result.ok) lines.push('- ç‹€æ…‹ï¼š**ç´…ç‡ˆã€‚è³‡æ–™æœªå®Œæ•´ç¢ºèªå‰ï¼Œä¸è¦–ç‚ºæˆåŠŸã€‚**');
+  else lines.push('- ç‹€æ…‹ï¼š**ç¶ ç‡ˆã€‚å·²é€šéæœ¬æ¬¡ workflow çš„å®Œæ•´æ€§åˆ¤æ–·ã€‚**');
+  if (jobs?.length) {
+    const failed = jobs.filter((job) => !['success', 'skipped'].includes(job.conclusion));
+    if (failed.length) lines.push(`- å¤±æ•— jobsï¼š${failed.map((job) => `\`${job.name}\``).join('ã€')}`);
+  }
+  return lines;
+}
+
+function selfTest() {
+  const created = new Date('2026-08-27T16:50:46Z');
+  const occurrence = previousOccurrence('52 5 * * *', created);
+  if (occurrence.toISOString() !== '2026-08-27T05:52:00.000Z') throw new Error('daily cron self-test failed');
+  if (!formatTaipei(occurrence).startsWith('2026-08-27 13:52')) throw new Error('Taipei formatting self-test failed');
+  const weekly = previousOccurrence('22 0 * * 1-5', new Date('2026-08-28T11:30:00Z'));
+  if (weekly.toISOString() !== '2026-08-28T00:22:00.000Z') throw new Error('weekday cron self-test failed');
+  const dates = extractDates('target_date=20260828 official_latest_date=20260827');
+  if (dates.expected.at(-1) !== '20260828' || dates.actual.at(-1) !== '20260827') throw new Error('date extraction self-test failed');
+  const mismatch = classifyDataResult({ allSucceeded: false, text: '', expectedDate: '20260828', actualDate: '20260827', counts: null });
+  if (mismatch.code !== 'data_not_updated') throw new Error('date mismatch classification self-test failed');
+  const partial = classifyDataResult({ allSucceeded: false, text: 'å®Œæˆ 1200 / ç¸½æ•¸ 1330', expectedDate: '20260828', actualDate: '20260828', counts: { success: 1200, total: 1330 } });
+  if (partial.code !== 'partial_data') throw new Error('partial classification self-test failed');
+  const server = classifyDataResult({ allSucceeded: false, text: 'HTTP 429 Too Many Requests', expectedDate: '', actualDate: '', counts: null });
+  if (server.code !== 'server_unavailable') throw new Error('server classification self-test failed');
+  console.log('write_workflow_schedule_summary self-test passed');
+}
+
+async function main() {
+  if (process.argv.includes('--self-test')) return selfTest();
+
+  const event = readEvent();
+  const run = await fetchRun().catch(() => null);
+  const createdAt = run?.created_at ? new Date(run.created_at) : new Date();
+
+  if (process.env.GITHUB_EVENT_NAME !== 'schedule') {
+    appendSummary([
+      '## æ’ç¨‹æ™‚é–“',
+      '- åŸå®šæ’ç¨‹æ™‚é–“ï¼ˆå°åŒ—æ™‚é–“ï¼‰ï¼šéæ’ç¨‹è§¸ç™¼',
+      `- å¯¦éš›é–‹å§‹æ™‚é–“ï¼ˆå°åŒ—æ™‚é–“ï¼‰ï¼š${formatTaipei(createdAt)}`,
+      '- GitHub æ’ç¨‹å»¶é²ï¼šä¸é©ç”¨',
+    ]);
+  } else {
+    const schedule = String(event.schedule || '');
+    try {
+      if (!schedule) throw new Error('Schedule event is missing github.event.schedule');
+      const intendedAt = previousOccurrence(schedule, createdAt);
+      const delayMinutes = Math.max(0, Math.floor((createdAt.getTime() - intendedAt.getTime()) / MINUTE_MS));
+      appendSummary([
+        '## æ’ç¨‹æ™‚é–“',
+        `- åŸå®šæ’ç¨‹æ™‚é–“ï¼ˆå°åŒ—æ™‚é–“ï¼‰ï¼š${formatTaipei(intendedAt)}`,
+        `- å¯¦éš›é–‹å§‹æ™‚é–“ï¼ˆå°åŒ—æ™‚é–“ï¼‰ï¼š${formatTaipei(createdAt)}`,
+        `- GitHub æ’ç¨‹å»¶é²ï¼šç´„ ${delayMinutes} åˆ†é˜`,
+      ]);
+    } catch (error) {
+      appendSummary([
+        '## æ’ç¨‹æ™‚é–“',
+        '- åŸå®šæ’ç¨‹æ™‚é–“ï¼ˆå°åŒ—æ™‚é–“ï¼‰ï¼šç„¡æ³•åˆ¤å®š',
+        `- å¯¦éš›é–‹å§‹æ™‚é–“ï¼ˆå°åŒ—æ™‚é–“ï¼‰ï¼š${formatTaipei(createdAt)}`,
+        `- GitHub æ’ç¨‹å»¶é²ï¼šç„¡æ³•è¨ˆç®—ï¼ˆ${String(error.message || error)}ï¼‰`,
+      ]);
+    }
+  }
+
+  const filename = workflowFilename();
+  if (!isDataWorkflow(filename)) return;
+
+  const jobsPayload = await waitForMainJobs().catch((error) => ({ ...(error.lastPayload || { jobs: [] }), _error: error }));
+  const context = summarizeJobContext(jobsPayload);
+  const jobLogs = await collectJobLogs(context.mainJobs);
+  const combinedText = `${context.text}\n${jobLogs}\n${JSON.stringify(event)}`;
+  const dates = extractDates(combinedText);
+  const expectedDate = dates.expected.at(-1) || eventDateHints(event).at(-1) || '';
+  const actualDate = dates.actual.at(-1) || '';
+  const counts = extractCounts(combinedText);
+  const result = classifyDataResult({ allSucceeded: context.allSucceeded, text: combinedText, expectedDate, actualDate, counts });
+  if (jobsPayload._error && !context.mainJobs.length) {
+    result.ok = false;
+    result.code = 'other_failure';
+    result.label = 'ç„¡æ³•ç¢ºèªè³‡æ–™å®Œæ•´æ€§';
+    result.reason = `ç„¡æ³•è®€å–æœ¬æ¬¡ run çš„ job ç‹€æ…‹ï¼š${jobsPayload._error.message || jobsPayload._error}`;
+  }
+  appendSummary(['', ...renderDataSummary({ filename, result, expectedDate, actualDate, counts, jobs: context.mainJobs })]);
+}
+
+main().catch((error) => {
+  appendSummary([
+    '## ğŸ”´ Workflow Summary ç”¢ç”Ÿå¤±æ•—',
+    `- åŸå› ï¼š${String(error.message || error)}`,
+    '- ç‹€æ…‹ï¼šç´…ç‡ˆï¼›ç„¡æ³•ç¢ºèªè³‡æ–™å®Œæ•´æ€§ã€‚',
+  ]);
+  process.exitCode = 0;
+});
+
+module.exports = {
+  parseCron,
+  cronMatches,
+  previousOccurrence,
+  formatTaipei,
+  isDataWorkflow,
+  extractDates,
+  extractCounts,
+  classifyDataResult,
+};
