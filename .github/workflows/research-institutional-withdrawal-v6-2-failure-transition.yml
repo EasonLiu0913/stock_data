@@ -1,0 +1,130 @@
+name: "[07 研究] Institutional Withdrawal v6.2 Failure Transition"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/v6-2-failure-transition-spec.md'
+      - 'scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js'
+      - '.github/workflows/research-institutional-withdrawal-v6-2-failure-transition.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v6-2-failure-transition
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/research-institutional-withdrawal-v6-2-failure-transition.yml
+            scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js
+            data_research/institutional-flow/v6-2-failure-transition-spec.md
+            data_research/institutional-flow/features/price-volume-v5.json
+            data_research/institutional-flow/features/foreign-flow-v5.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-1-event-diagnosis.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.md
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin main
+          git reset --hard origin/main
+
+      - name: Validate analyzer and frozen inputs
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js
+          node - <<'NODE'
+          const v61=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-1-event-diagnosis.json');
+          const v6=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json');
+          const p=require('./data_research/institutional-flow/features/price-volume-v5.json');
+          const f=require('./data_research/institutional-flow/features/foreign-flow-v5.json');
+          if(v61.methodology!=='institutional-withdrawal-v6-1-event-diagnosis-v1') throw new Error(`Unexpected v6.1 methodology ${v61.methodology}`);
+          if(v6.methodology!=='institutional-withdrawal-v6-persistent-transfer-distribution-absorption-v1') throw new Error(`Unexpected v6 methodology ${v6.methodology}`);
+          if(v61.fragile_event_count!==10) throw new Error(`Expected 10 frozen fragile events, got ${v61.fragile_event_count}`);
+          if(JSON.stringify(p.trading_dates)!==JSON.stringify(f.trading_dates)) throw new Error('Daily feature calendars differ');
+          if(p.trading_dates.length<90) throw new Error(`Daily feature calendar too short: ${p.trading_dates.length}`);
+          console.log(`Frozen inputs validated: fragile=${v61.fragile_event_count}; trading sessions=${p.trading_dates.length}.`);
+          NODE
+
+      - name: Run v6.2 failure transition study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js
+
+      - name: Validate v6.2 output contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json');
+          if(a.methodology!=='institutional-withdrawal-v6-2-fragile-failure-transition-v1') throw new Error(`Unexpected methodology ${a.methodology}`);
+          if(a.research_only!==true || a.production_safe!==false) throw new Error('Research safety flags missing');
+          if(a.events.length!==10) throw new Error(`Expected 10 fragile events, got ${a.events.length}`);
+          for(const e of a.events){
+            if(!['confirmed_failure_transition','no_failure_within_10_sessions','insufficient_followup'].includes(e.status)) throw new Error(`Bad status ${e.stock} ${e.fragile_anchor}: ${e.status}`);
+            if(e.failure_transition_date && e.failure_transition_date<=e.fragile_anchor) throw new Error(`Non-forward transition ${e.stock} ${e.fragile_anchor}`);
+            if(e.failure_transition_date && !(e.trigger?.price_breakdown || e.trigger?.failed_rebound)) throw new Error(`Transition without price failure ${e.stock} ${e.fragile_anchor}`);
+            if(e.failure_transition_date && !(e.trigger?.foreign_supply || e.trigger?.ownership_supply_state)) throw new Error(`Transition without supply confirmation ${e.stock} ${e.fragile_anchor}`);
+          }
+          console.log(`v6.2 contract valid: ${JSON.stringify(a.counts)}`);
+          NODE
+
+      - name: Commit v6.2 research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete institutional withdrawal v6.2 transition study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json');
+          console.log('## Institutional Withdrawal v6.2 — Fragile → Failure');
+          console.log(`- Confirmed transitions: ${a.counts.confirmed_failure_transition||0}`);
+          console.log(`- No failure within 10 sessions: ${a.counts.no_failure_within_10_sessions||0}`);
+          console.log(`- Insufficient follow-up: ${a.counts.insufficient_followup||0}`);
+          for(const [k,x] of Object.entries(a.by_v61_outcome)) console.log(`- ${k}: confirmed ${x.confirmed}/${x.events}; rate ${x.confirmation_rate}; mean sessions ${x.mean_sessions_to_transition}`);
+          for(const x of a.stock_2449.transitions) console.log(`- 2449 ${x.anchor} -> ${x.transition_date} (${x.sessions} sessions)`);
+          console.log('- Safety: development-sample research only; no production promotion.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
