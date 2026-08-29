@@ -15,7 +15,7 @@ const stock = getArg('stock', '2449');
 const start = getArg('start', '2026-04-01');
 const end = getArg('end', '2026-07-31');
 const fixture = getArg('tdcc-fixture', path.join('data_research', 'institutional-flow', 'tdcc-fixtures', `${stock}-2026Q2.json`));
-const tdccRoot = getArg('tdcc-root', path.join('data_tdcc_shareholding', 'stocks'));
+const tdccRoot = getArg('tdcc-root', path.join('data_tdcc_shareholding', 'weekly'));
 const tdccMode = getArg('tdcc-mode', hasArg('tdcc-fixture') ? 'fixture' : 'auto');
 const output = getArg('output', path.join('data_research', 'institutional-flow', 'scores', `${stock}.json`));
 const dailyDir = path.join('data_research', 'institutional-flow', 'histock', stock, 'daily');
@@ -92,28 +92,31 @@ function loadFixture() {
   };
 }
 function loadOfficial() {
-  const dir = path.join(tdccRoot, stock);
-  if (!fs.existsSync(dir)) return null;
-  const observations = fs.readdirSync(dir).filter((n) => /^\d{8}\.json$/.test(n)).sort().map((name) => readJson(path.join(dir, name))).filter((p) =>
-    p.source === 'tdcc_official_openapi_1_5' && p.production_safe === true && p.observed_date >= start && p.observed_date <= end && p.available_at && p.derived
-  ).map((p) => ({
-    observed_date: p.observed_date,
-    available_at: p.available_at,
-    large_holder_pct: Number(p.derived.large_holder_pct),
-    small_holder_pct: Number(p.derived.small_holder_pct),
-    source: p.source,
-  }));
+  if (!fs.existsSync(tdccRoot)) return null;
+  const observations = fs.readdirSync(tdccRoot)
+    .filter((name) => /^\d{8}\.json$/.test(name))
+    .sort()
+    .map((name) => readJson(path.join(tdccRoot, name)))
+    .filter((p) => p.schema_version >= 2 && p.source === 'tdcc_official_openapi_1_5' && p.production_safe === true && p.observed_date >= start && p.observed_date <= end && p.available_at && p.stocks?.[stock]?.derived)
+    .map((p) => ({
+      observed_date: p.observed_date,
+      available_at: p.available_at,
+      large_holder_pct: Number(p.stocks[stock].derived.large_holder_pct),
+      small_holder_pct: Number(p.stocks[stock].derived.small_holder_pct),
+      source: p.source,
+      canonical_layout: 'weekly_consolidated',
+    }));
   if (!observations.length) return null;
   return {
     kind: 'official', research_only: false, production_safe: true,
-    availability_policy: 'official canonical uses first successful archive capture timestamp', observations,
+    availability_policy: 'official consolidated weekly canonical uses first successful archive capture timestamp', observations,
   };
 }
 function loadTdcc() {
   if (tdccMode === 'fixture') return loadFixture();
   if (tdccMode === 'official') {
     const p = loadOfficial();
-    if (!p) throw new Error(`No official TDCC canonical data for ${stock} in ${start}..${end}`);
+    if (!p) throw new Error(`No official TDCC consolidated canonical data for ${stock} in ${start}..${end}`);
     return p;
   }
   if (tdccMode !== 'auto') throw new Error(`Unknown --tdcc-mode ${tdccMode}`);
@@ -152,12 +155,12 @@ for (let i = 0; i < observations.length; i += 1) {
   });
 }
 const payload = {
-  schema_version: 2,
-  methodology: 'institutional-distribution-score-v2',
+  schema_version: 3,
+  methodology: 'institutional-distribution-score-v3',
   stock,
   research_only: tdccPayload.research_only,
   production_safe: tdccPayload.production_safe,
-  tdcc_input: { mode: tdccPayload.kind, availability_policy: tdccPayload.availability_policy, observations: observations.length },
+  tdcc_input: { mode: tdccPayload.kind, layout: tdccPayload.kind === 'official' ? 'weekly_consolidated' : 'fixture', availability_policy: tdccPayload.availability_policy, observations: observations.length },
   no_lookahead_contract: {
     scoring_evidence_date: 'observed_date',
     action_gate: 'available_at',
