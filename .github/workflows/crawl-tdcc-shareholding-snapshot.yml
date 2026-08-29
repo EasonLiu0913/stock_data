@@ -1,0 +1,81 @@
+name: "[01 台股資料] TDCC Shareholding Snapshot"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 台北時間週五 21:10、週六 08:10；週五未更新時由週六補抓
+    - cron: '10 13 * * 5'
+    - cron: '10 0 * * 6'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tdcc-shareholding-snapshot
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate scripts
+        run: |
+          set -euo pipefail
+          node --check scripts/crawl_tdcc_shareholding_snapshot.js
+          node --test tests/tdcc_shareholding_snapshot.test.js
+
+      - name: Fetch official TDCC snapshot
+        run: |
+          set -euo pipefail
+          node scripts/crawl_tdcc_shareholding_snapshot.js
+
+      - name: Validate snapshot
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('data_tdcc_shareholding/latest.json', 'utf8'));
+          if (p.source !== 'tdcc_official_openapi_1_5') throw new Error('Unexpected TDCC source');
+          if (!p.observed_date || !p.available_at) throw new Error('Missing TDCC provenance dates');
+          if (p.stocks < 500 || p.rows < 5000) throw new Error(`TDCC snapshot unexpectedly small: ${JSON.stringify({stocks:p.stocks, rows:p.rows})}`);
+          if (new Date(p.available_at).getTime() < new Date(`${p.observed_date}T00:00:00+08:00`).getTime()) throw new Error('available_at must not predate observed_date');
+          console.log(p);
+          NODE
+
+      - name: Commit new snapshot only
+        run: |
+          set -euo pipefail
+          git add data_tdcc_shareholding
+          if git diff --cached --quiet; then
+            echo "TDCC snapshot already archived; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          OBSERVED_DATE="$(node -p "require('./data_tdcc_shareholding/latest.json').observed_date")"
+          git commit -m "data: archive TDCC shareholding ${OBSERVED_DATE}"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((attempt * 3))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          if [[ -f data_tdcc_shareholding/latest.json ]]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p = require('./data_tdcc_shareholding/latest.json');
+          console.log('## TDCC official shareholding snapshot');
+          console.log(`- Observation date: ${p.observed_date}`);
+          console.log(`- First archived availability: ${p.available_at}`);
+          console.log(`- Stocks: ${p.stocks}`);
+          console.log(`- Rows: ${p.rows}`);
+          console.log('- No-lookahead: available_at is never backdated to observation date.');
+          NODE
+          fi
