@@ -1,7 +1,7 @@
 'use strict';
 
-const QUALITY_VERSION = 'histock-broker-row-quality-v1';
-const NET_TOLERANCE = 0.01;
+const QUALITY_VERSION = 'histock-broker-row-quality-v2';
+const NET_TOLERANCE = 1;
 
 function finiteNumber(value) {
   return typeof value === 'number' && Number.isFinite(value);
