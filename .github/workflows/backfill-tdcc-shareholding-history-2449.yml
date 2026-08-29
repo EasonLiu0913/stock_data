@@ -1,0 +1,152 @@
+name: "[07 研究] TDCC 2449 Historical Bootstrap"
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        default: "2026-04-01"
+        type: string
+      end_date:
+        description: "End date (YYYY-MM-DD)"
+        required: true
+        default: "2026-08-21"
+        type: string
+      delay_ms:
+        description: "Base delay between official history requests"
+        required: true
+        default: "1800"
+        type: string
+      jitter_ms:
+        description: "Random jitter milliseconds"
+        required: true
+        default: "1200"
+        type: string
+  push:
+    paths:
+      - 'scripts/backfill_tdcc_shareholding_history.js'
+      - 'tests/tdcc_shareholding_history_backfill.test.js'
+      - '.github/workflows/backfill-tdcc-shareholding-history-2449.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tdcc-2449-historical-bootstrap
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate parser contract
+        run: |
+          set -euo pipefail
+          node --check scripts/backfill_tdcc_shareholding_history.js
+          node --test tests/tdcc_shareholding_history_backfill.test.js
+
+      - name: Fetch official TDCC history for 2449
+        id: fetch
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          START="${{ github.event_name == 'workflow_dispatch' && inputs.start_date || '2026-04-01' }}"
+          END="${{ github.event_name == 'workflow_dispatch' && inputs.end_date || '2026-08-21' }}"
+          DELAY="${{ github.event_name == 'workflow_dispatch' && inputs.delay_ms || '1800' }}"
+          JITTER="${{ github.event_name == 'workflow_dispatch' && inputs.jitter_ms || '1200' }}"
+          set +e
+          node scripts/backfill_tdcc_shareholding_history.js \
+            --stock 2449 --start "$START" --end "$END" \
+            --delay-ms "$DELAY" --jitter-ms "$JITTER"
+          RC=$?
+          set -e
+          echo "exit_code=$RC" >> "$GITHUB_OUTPUT"
+
+      - name: Validate historical outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s data_tdcc_shareholding/history/2449/manifest.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const root = 'data_tdcc_shareholding/history/2449';
+          const m = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+          if (m.requested_dates < 10) throw new Error(`Too few official historical dates: ${m.requested_dates}`);
+          if (m.parsed_dates + m.skipped_existing < 10) throw new Error(`Too few usable historical dates: ${JSON.stringify(m)}`);
+          const files = fs.readdirSync(root).filter(x => /^2026\d{4}\.json$/.test(x));
+          if (files.length < 10) throw new Error(`Expected at least 10 historical TDCC files, got ${files.length}`);
+          for (const file of files) {
+            const p = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+            if (p.stock !== '2449' || p.historical_backfill !== true || p.production_no_lookahead_safe !== false) throw new Error(`Invalid history provenance in ${file}`);
+            if (!Number.isFinite(p.derived?.large_holder_pct) || !Number.isFinite(p.derived?.small_holder_pct)) throw new Error(`Invalid derived TDCC values in ${file}`);
+          }
+          console.log({ requested_dates: m.requested_dates, parsed_dates: m.parsed_dates, skipped_existing: m.skipped_existing, failed_dates: m.failed_dates.length, files: files.length });
+          NODE
+
+      - name: Commit successful historical checkpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add data_tdcc_shareholding/history/2449
+          if git diff --cached --quiet; then
+            echo "No new TDCC historical files to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "research: backfill TDCC history for 2449"
+          for attempt in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 3))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -s data_tdcc_shareholding/history/2449/manifest.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const m = require('./data_tdcc_shareholding/history/2449/manifest.json');
+          console.log('## TDCC 2449 historical bootstrap');
+          console.log(`- Requested official dates: ${m.requested_dates}`);
+          console.log(`- Parsed this run: ${m.parsed_dates}`);
+          console.log(`- Existing checkpoints: ${m.skipped_existing}`);
+          console.log(`- Failed dates: ${m.failed_dates.length}`);
+          console.log('- Storage: data_tdcc_shareholding/history/2449/YYYYMMDD.json');
+          console.log('- Safety: historical backfill is official data but production_no_lookahead_safe=false because original publication timestamps are unknown.');
+          NODE
+          fi
+
+      - name: Report unresolved historical dates
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.fetch.outputs.exit_code }}" != "0" ]; then
+            echo "Some TDCC historical dates were unresolved; successful checkpoints were preserved."
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
