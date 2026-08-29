@@ -8,8 +8,10 @@ on:
       - 'tests/tdcc_shareholding_snapshot.test.js'
       - '.github/workflows/crawl-tdcc-shareholding-snapshot.yml'
   schedule:
-    # 台北時間週五 21:10、週六 08:10；週五未更新時由週六補抓
+    # 台北時間週五 20:10 / 21:10 / 22:10 多次探測；週六 08:10 補抓
+    - cron: '10 12 * * 5'
     - cron: '10 13 * * 5'
+    - cron: '10 14 * * 5'
     - cron: '10 0 * * 6'
 
 permissions:
@@ -57,7 +59,7 @@ jobs:
           set -euo pipefail
           git add data_tdcc_shareholding
           if git diff --cached --quiet; then
-            echo "TDCC snapshot already archived; nothing to commit."
+            echo "TDCC observed_date already archived; no new files to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -81,6 +83,8 @@ jobs:
           console.log(`- First archived availability: ${p.available_at}`);
           console.log(`- Stocks: ${p.stocks}`);
           console.log(`- Rows: ${p.rows}`);
+          console.log('- Probe policy: Friday 20:10 / 21:10 / 22:10, Saturday 08:10 Taipei time.');
+          console.log('- Duplicate policy: an already archived observed_date is skipped and its first available_at is preserved.');
           console.log('- No-lookahead: available_at is never backdated to observation date.');
           NODE
           fi
