@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
 
-// Activation marker: this coverage-only planner intentionally triggers the expansion workflow after registration.
 const args = process.argv.slice(2);
 const arg = (name, fallback = '') => {
   const i = args.indexOf(`--${name}`);
@@ -31,40 +30,99 @@ if (expansion.methodology !== 'institutional-withdrawal-validation-coverage-expa
 const rowMap = new Map((expansion.rows || []).map((r) => [r.stock, r]));
 const stocks = expansion.scheduled?.broker_stocks || [];
 
-function inspect(stock, date) {
-  const file = path.join('data_research', 'institutional-flow', 'histock', stock, 'daily', `${date.replaceAll('-', '')}.json`);
-  if (!fs.existsSync(file)) return { valid: false, reason: 'missing' };
+function dailyPath(stock, date) {
+  return path.join('data_research', 'institutional-flow', 'histock', stock, 'daily', `${date.replaceAll('-', '')}.json`);
+}
+function statusPath(stock, date) {
+  return path.join('data_research', 'institutional-flow', 'histock', stock, 'batch-status', `exact-source-date-${date.replaceAll('-', '')}.json`);
+}
+function inspectStatus(stock, date) {
+  const file = statusPath(stock, date);
+  if (!fs.existsSync(file)) return { outcome: null };
   try {
     const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const check = validateDailyPayload(payload, { stock, date });
-    return check.valid ? { valid: true } : { valid: false, reason: 'quality_rejected', details: check };
+    if (payload.stock !== stock || payload.date !== date) return { outcome: 'invalid_status', file };
+    return { outcome: payload.outcome || null, terminal_for_date: payload.terminal_for_date === true, file };
   } catch (error) {
-    return { valid: false, reason: 'invalid_json', details: { message: error.message } };
+    return { outcome: 'invalid_status', file, error: error.message };
   }
+}
+function inspect(stock, date) {
+  const file = dailyPath(stock, date);
+  if (fs.existsSync(file)) {
+    try {
+      const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const check = validateDailyPayload(payload, { stock, date });
+      if (check.valid) return { valid: true, reason: 'valid_daily' };
+      return { valid: false, reason: 'quality_rejected', details: check };
+    } catch (error) {
+      return { valid: false, reason: 'invalid_json', details: { message: error.message } };
+    }
+  }
+  const status = inspectStatus(stock, date);
+  if (status.outcome === 'source_empty') return { valid: false, reason: 'source_empty', terminal: true, status };
+  if (status.outcome === 'permanent_error') return { valid: false, reason: 'permanent_error', terminal: true, status };
+  if (status.outcome === 'transient_error') return { valid: false, reason: 'transient_error', terminal: false, status };
+  return { valid: false, reason: 'missing' };
 }
 
 const tasks = [];
 const perStock = [];
+let totalSourceEmpty = 0;
+let totalPermanentError = 0;
+let totalTransientRetry = 0;
 for (const stock of stocks) {
   const row = rowMap.get(stock);
   if (!row) throw new Error(`Scheduled broker stock missing from rows: ${stock}`);
   if (row.tdcc_observations < 3) throw new Error(`Broker scheduling before TDCC gate for ${stock}`);
   const dates = Array.isArray(row.common_source_dates) ? row.common_source_dates : [];
   const valid = [];
-  const missing = [];
+  const retryableCandidates = [];
+  const sourceEmpty = [];
+  const permanentError = [];
   const qualityRejected = [];
+  const transientRetry = [];
+
   for (const date of dates) {
     const check = inspect(stock, date);
-    if (check.valid) valid.push(date);
-    else {
-      missing.push(date);
-      if (check.reason !== 'missing') qualityRejected.push({ date, reason: check.reason });
+    if (check.valid) {
+      valid.push(date);
+      continue;
     }
+    if (check.reason === 'source_empty') {
+      sourceEmpty.push(date);
+      continue;
+    }
+    if (check.reason === 'permanent_error') {
+      permanentError.push(date);
+      continue;
+    }
+    retryableCandidates.push(date);
+    if (check.reason === 'transient_error') transientRetry.push(date);
+    if (check.reason !== 'missing' && check.reason !== 'transient_error') qualityRejected.push({ date, reason: check.reason });
   }
+
   const needed = Math.max(0, targetDays - valid.length);
-  const selected = missing.slice(0, needed);
+  const selected = retryableCandidates.slice(0, needed);
   selected.forEach((date) => tasks.push({ stock, date }));
-  perStock.push({ stock, common_source_dates: dates.length, existing_valid_days: valid.length, target_days: targetDays, needed_days: needed, scheduled_candidate_days: selected.length, quality_rejected_existing: qualityRejected });
+  totalSourceEmpty += sourceEmpty.length;
+  totalPermanentError += permanentError.length;
+  totalTransientRetry += transientRetry.length;
+
+  perStock.push({
+    stock,
+    common_source_dates: dates.length,
+    existing_valid_days: valid.length,
+    target_days: targetDays,
+    needed_days: needed,
+    source_empty_dates: sourceEmpty.length,
+    permanent_error_dates: permanentError.length,
+    transient_retry_dates: transientRetry.length,
+    retryable_candidate_dates: retryableCandidates.length,
+    scheduled_candidate_days: selected.length,
+    exhausted_before_target: needed > retryableCandidates.length,
+    quality_rejected_existing: qualityRejected,
+  });
 }
 
 const cap = batchSize * maxBatches;
@@ -76,18 +134,28 @@ for (let i = 0; i < scheduled.length; i += batchSize) {
 }
 
 const plan = {
-  schema_version: 1,
+  schema_version: 2,
   methodology: 'institutional-withdrawal-validation-broker-batch-plan-v1',
   generated_without_outcomes: true,
   source_expansion_plan: expansionFile,
   calendar_policy: 'each task date comes from that stock common Foreign+OHLCV source-derived dates; data_history_sma/trading_days.json is never read',
+  failure_memory_policy: 'source_empty and permanent_error exact-date statuses are terminal and excluded from future request queues; transient_error remains retryable in a later bounded batch',
   data_quality: { version: QUALITY_VERSION },
   target_days: targetDays,
   batch_size_requests: batchSize,
   max_batches_per_run: maxBatches,
   stocks,
   per_stock: perStock,
-  counts: { stocks: stocks.length, missing_needed_tasks: tasks.length, scheduled_tasks: scheduled.length, deferred_tasks: tasks.length - scheduled.length, planned_batches: batches.length },
+  counts: {
+    stocks: stocks.length,
+    terminal_source_empty_dates: totalSourceEmpty,
+    terminal_permanent_error_dates: totalPermanentError,
+    transient_retry_dates: totalTransientRetry,
+    missing_needed_tasks: tasks.length,
+    scheduled_tasks: scheduled.length,
+    deferred_tasks: tasks.length - scheduled.length,
+    planned_batches: batches.length,
+  },
   batches,
   generated_at: new Date().toISOString(),
 };
