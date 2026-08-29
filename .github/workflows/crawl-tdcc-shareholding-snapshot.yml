@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'scripts/crawl_tdcc_shareholding_snapshot.js'
+      - 'scripts/build_institutional_distribution_score.js'
       - 'tests/tdcc_shareholding_snapshot.test.js'
       - '.github/workflows/crawl-tdcc-shareholding-snapshot.yml'
   schedule:
@@ -34,6 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/crawl_tdcc_shareholding_snapshot.js
+          node --check scripts/build_institutional_distribution_score.js
           node --test tests/tdcc_shareholding_snapshot.test.js
 
       - name: Fetch official TDCC snapshot
@@ -48,16 +50,25 @@ jobs:
           const fs = require('fs');
           const p = JSON.parse(fs.readFileSync('data_tdcc_shareholding/latest.json', 'utf8'));
           if (p.source !== 'tdcc_official_openapi_1_5') throw new Error('Unexpected TDCC source');
-          if (!p.observed_date || !p.available_at) throw new Error('Missing TDCC provenance dates');
+          if (p.schema_version !== 2) throw new Error(`Unexpected TDCC manifest schema: ${p.schema_version}`);
+          if (!p.observed_date || !p.available_at || !p.canonical_file) throw new Error('Missing TDCC provenance/canonical fields');
           if (p.stocks < 500 || p.rows < 5000) throw new Error(`TDCC snapshot unexpectedly small: ${JSON.stringify({stocks:p.stocks, rows:p.rows})}`);
           if (new Date(p.available_at).getTime() < new Date(`${p.observed_date}T00:00:00+08:00`).getTime()) throw new Error('available_at must not predate observed_date');
-          console.log(p);
+          const weeklyPath = `data_tdcc_shareholding/${p.canonical_file}`;
+          if (!fs.existsSync(weeklyPath)) throw new Error(`Missing consolidated weekly canonical: ${weeklyPath}`);
+          const weekly = JSON.parse(fs.readFileSync(weeklyPath, 'utf8'));
+          if (weekly.schema_version !== 2 || weekly.observed_date !== p.observed_date || weekly.available_at !== p.available_at) throw new Error('Weekly canonical provenance mismatch');
+          if (weekly.stock_count !== p.stocks || weekly.row_count !== p.rows) throw new Error('Weekly canonical counts mismatch');
+          if (Object.keys(weekly.stocks || {}).length !== p.stocks) throw new Error('Weekly canonical stock map count mismatch');
+          const sample = weekly.stocks['2449'];
+          if (sample && (!Number.isFinite(sample.derived?.large_holder_pct) || !Number.isFinite(sample.derived?.small_holder_pct))) throw new Error('2449 derived TDCC percentages invalid');
+          console.log({ ...p, weeklyPath, sample2449: sample?.derived || null });
           NODE
 
       - name: Commit new snapshot only
         run: |
           set -euo pipefail
-          git add data_tdcc_shareholding
+          git add data_tdcc_shareholding/latest.json data_tdcc_shareholding/manifest-*.json data_tdcc_shareholding/raw data_tdcc_shareholding/weekly
           if git diff --cached --quiet; then
             echo "TDCC observed_date already archived; no new files to commit."
             exit 0
@@ -67,7 +78,10 @@ jobs:
           OBSERVED_DATE="$(node -p "require('./data_tdcc_shareholding/latest.json').observed_date")"
           git commit -m "data: archive TDCC shareholding ${OBSERVED_DATE}"
           for attempt in 1 2 3; do
-            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
             sleep $((attempt * 3))
           done
           exit 1
@@ -77,12 +91,15 @@ jobs:
         run: |
           if [[ -f data_tdcc_shareholding/latest.json ]]; then
             node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          const p = require('./data_tdcc_shareholding/latest.json');
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('data_tdcc_shareholding/latest.json', 'utf8'));
           console.log('## TDCC official shareholding snapshot');
           console.log(`- Observation date: ${p.observed_date}`);
           console.log(`- First archived availability: ${p.available_at}`);
           console.log(`- Stocks: ${p.stocks}`);
           console.log(`- Rows: ${p.rows}`);
+          console.log(`- Canonical: ${p.canonical_file || 'n/a'}`);
+          console.log('- Layout: one consolidated weekly JSON keyed by stock code.');
           console.log('- Probe policy: Friday 20:10 / 21:10 / 22:10, Saturday 08:10 Taipei time.');
           console.log('- Duplicate policy: an already archived observed_date is skipped and its first available_at is preserved.');
           console.log('- No-lookahead: available_at is never backdated to observation date.');
