@@ -28,7 +28,7 @@ permissions:
 
 concurrency:
   group: institutional-withdrawal-v5-broker-backfill
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   plan:
@@ -181,6 +181,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
+          rm -rf data_history_sma
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_research/institutional-flow/histock
