@@ -1,0 +1,119 @@
+name: "[07 研究] Institutional Withdrawal v6.5 Recovery Reclaim"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/v6-5-recovery-reclaim-spec.md'
+      - 'scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js'
+      - '.github/workflows/research-institutional-withdrawal-v6-5-recovery-reclaim.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v6-5-recovery-reclaim
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/research-institutional-withdrawal-v6-5-recovery-reclaim.yml
+            scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js
+            data_research/institutional-flow/v6-5-recovery-reclaim-spec.md
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json
+            data_research/institutional-flow/features/price-volume-v5.json
+            data_research/institutional-flow/features/foreign-flow-v5.json
+            data_research/institutional-flow/backtests/
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin main
+          git reset --hard origin/main
+
+      - name: Validate analyzer and frozen inputs
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js
+          node - <<'NODE'
+          const v64=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json');
+          if(v64.methodology!=='institutional-withdrawal-v6-4-durable-failure-confirmation-v1') throw new Error(`Unexpected v6.4 methodology ${v64.methodology}`);
+          const candidates=(v64.events||[]).filter(x=>x.persistence_status==='durable_failure_confirmed');
+          if(candidates.length!==5) throw new Error(`Expected 5 frozen durable candidates, got ${candidates.length}`);
+          NODE
+
+      - name: Run v6.5 recovery reclaim study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js
+
+      - name: Validate v6.5 output contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json');
+          if(a.methodology!=='institutional-withdrawal-v6-5-recovery-reclaim-diagnosis-v1') throw new Error(`Unexpected methodology ${a.methodology}`);
+          if(a.research_only!==true || a.production_safe!==false) throw new Error('Research safety contract missing');
+          if((a.events||[]).length!==5) throw new Error(`Expected 5 candidate diagnostics, got ${(a.events||[]).length}`);
+          for(const e of a.events){
+            if(!['confirmed_reclaim','no_reclaim_within_15_sessions','insufficient_recovery_followup'].includes(e.status)) throw new Error(`Unexpected status ${e.stock} ${e.status}`);
+            if(e.reclaim_confirmation && e.reclaim_confirmation.start_session<4) throw new Error(`Reclaim illegally overlaps persistence window ${e.stock}`);
+          }
+          NODE
+
+      - name: Commit v6.5 research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete institutional withdrawal v6.5 recovery study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json');
+          console.log('## Institutional Withdrawal v6.5 Recovery / Reclaim');
+          console.log(`- Candidates: ${a.events.length}`);
+          console.log(`- Confirmed reclaim: ${a.counts.confirmed_reclaim||0}`);
+          console.log(`- No reclaim within 15 sessions: ${a.counts.no_reclaim_within_15_sessions||0}`);
+          console.log(`- Insufficient follow-up: ${a.counts.insufficient_recovery_followup||0}`);
+          console.log('- Safety: development-sample research only; no production promotion.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
