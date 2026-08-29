@@ -36,6 +36,7 @@ on:
   push:
     paths:
       - 'scripts/backtest_institutional_distribution_universe.js'
+      - 'scripts/plan_tdcc_shareholding_history_coverage.js'
       - 'tests/institutional_distribution_universe_backtest.test.js'
       - '.github/workflows/backtest-institutional-distribution-universe.yml'
 
@@ -69,6 +70,8 @@ jobs:
       broker_batches: ${{ steps.broker.outputs.batch_count }}
       tdcc_matrix: ${{ steps.tdcc.outputs.matrix }}
       tdcc_missing: ${{ steps.tdcc.outputs.missing_count }}
+      tdcc_missing_dates: ${{ steps.tdcc.outputs.missing_dates_total }}
+      tdcc_expected_dates: ${{ steps.tdcc.outputs.expected_dates_count }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -113,6 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/backfill_tdcc_shareholding_history.js
+          node --check scripts/plan_tdcc_shareholding_history_coverage.js
           node --check scripts/plan_histock_broker_history_backfill.js
           node --check scripts/backfill_histock_broker_history_research_v2.js
           node --check scripts/checkpoint_histock_batch_quality.js
@@ -123,24 +127,17 @@ jobs:
           node --test tests/institutional_distribution_score.test.js
           node --test tests/institutional_distribution_universe_backtest.test.js
 
-      - name: Plan missing TDCC stocks
+      - name: Plan missing TDCC date coverage
         id: tdcc
         shell: bash
-        env:
-          STOCKS: ${{ steps.cfg.outputs.stocks }}
         run: |
-          node - <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs=require('fs'),path=require('path');
-          const stocks=process.env.STOCKS.split(',');
-          const missing=[];
-          for(const stock of stocks){
-            const root=path.join('data_tdcc_shareholding','history',stock);
-            const n=fs.existsSync(root)?fs.readdirSync(root).filter(x=>/^2026\d{4}\.json$/.test(x)).length:0;
-            if(n<12) missing.push({stock});
-          }
-          console.log(`matrix=${JSON.stringify({include:missing})}`);
-          console.log(`missing_count=${missing.length}`);
-          NODE
+          set -euo pipefail
+          node scripts/plan_tdcc_shareholding_history_coverage.js \
+            --stocks "${{ steps.cfg.outputs.stocks }}" \
+            --start "${{ steps.cfg.outputs.start }}" \
+            --end "${{ steps.cfg.outputs.end }}" \
+            --output "$RUNNER_TEMP/institutional-tdcc-plan.json" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Plan missing broker stock-date batches
         id: broker
@@ -164,7 +161,9 @@ jobs:
             echo "## Institutional distribution data plan"
             echo "- Universe: ${{ steps.cfg.outputs.stocks }}"
             echo "- Range: ${{ steps.cfg.outputs.start }} → ${{ steps.cfg.outputs.end }}"
-            echo "- TDCC stocks still missing: ${{ steps.tdcc.outputs.missing_count }}"
+            echo "- TDCC official dates expected: ${{ steps.tdcc.outputs.expected_dates_count }} per stock"
+            echo "- TDCC stocks with missing/invalid dates: ${{ steps.tdcc.outputs.missing_count }}"
+            echo "- TDCC missing/invalid stock-date observations: ${{ steps.tdcc.outputs.missing_dates_total }}"
             echo "- Broker stock-date tasks still missing/invalid: ${{ steps.broker.outputs.missing_count }}"
             echo "- Broker tasks scheduled this run: ${{ steps.broker.outputs.scheduled_count }}"
             echo "- Broker planned batches: ${{ steps.broker.outputs.batch_count }}"
@@ -191,6 +190,18 @@ jobs:
         run: |
           git fetch origin main
           git reset --hard origin/main
+      - name: Remove invalid TDCC dates before refetch
+        shell: bash
+        env:
+          UNRESOLVED_DATES: ${{ matrix.unresolved_dates }}
+        run: |
+          set -euo pipefail
+          ROOT="data_tdcc_shareholding/history/${{ matrix.stock }}"
+          IFS=',' read -ra DATES <<< "$UNRESOLVED_DATES"
+          for DATE in "${DATES[@]}"; do
+            [ -n "$DATE" ] || continue
+            rm -f "$ROOT/${DATE}.json"
+          done
       - name: Fetch one TDCC stock batch
         run: |
           set -euo pipefail
@@ -199,13 +210,31 @@ jobs:
             --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}" \
             --delay-ms 1800 --jitter-ms 1200
       - name: Validate and checkpoint TDCC stock
+        shell: bash
+        env:
+          EXPECTED_DATES: ${{ matrix.expected_dates }}
         run: |
           set -euo pipefail
           ROOT="data_tdcc_shareholding/history/${{ matrix.stock }}"
-          node - "$ROOT" "${{ matrix.stock }}" <<'NODE'
-          const fs=require('fs'),path=require('path');const [root,stock]=process.argv.slice(2);
-          const files=fs.readdirSync(root).filter(x=>/^2026\d{4}\.json$/.test(x));
-          if(files.length<12) throw new Error(`${stock}: only ${files.length} TDCC observations`);
+          node - "$ROOT" "${{ matrix.stock }}" "$EXPECTED_DATES" <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const [root,stock,expectedCsv]=process.argv.slice(2);
+          const expected=expectedCsv.split(',').filter(Boolean);
+          const iso=(d)=>`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+          const failures=[];
+          for(const date of expected){
+            const file=path.join(root,`${date}.json`);
+            if(!fs.existsSync(file)){failures.push(`${date}:missing`);continue;}
+            let p;try{p=JSON.parse(fs.readFileSync(file,'utf8'));}catch{failures.push(`${date}:invalid_json`);continue;}
+            if(p.source!=='tdcc_official_historical_query') failures.push(`${date}:source`);
+            else if(p.stock!==stock) failures.push(`${date}:stock`);
+            else if(p.observed_date!==iso(date)) failures.push(`${date}:observed_date`);
+            else if(p.historical_backfill!==true) failures.push(`${date}:historical_backfill`);
+            else if(!p.derived || !Number.isFinite(Number(p.derived.large_holder_pct)) || !Number.isFinite(Number(p.derived.small_holder_pct))) failures.push(`${date}:derived`);
+            else if(!Array.isArray(p.levels) || p.levels.length<15) failures.push(`${date}:levels`);
+          }
+          if(failures.length) throw new Error(`${stock}: TDCC coverage incomplete: ${failures.join(', ')}`);
+          console.log(`${stock}: TDCC coverage ${expected.length}/${expected.length}`);
           NODE
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -320,17 +349,23 @@ jobs:
         run: |
           git fetch origin main
           git reset --hard origin/main
-      - name: Re-plan and require zero unresolved broker tasks
+      - name: Re-plan and require zero unresolved TDCC and broker tasks
         run: |
           set -euo pipefail
+          node scripts/plan_tdcc_shareholding_history_coverage.js \
+            --stocks "${{ needs.plan.outputs.stocks }}" \
+            --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}" \
+            --output "$RUNNER_TEMP/final-tdcc-plan.json"
           node scripts/plan_histock_broker_history_backfill.js \
             --scope list --stocks "${{ needs.plan.outputs.stocks }}" \
             --start "${{ needs.plan.outputs.start }}" --end "${{ needs.plan.outputs.end }}" \
             --batch-size-requests "${{ needs.plan.outputs.batch_size }}" --max-batches-per-run 200 \
             --output "$RUNNER_TEMP/final-plan.json"
           node - <<'NODE'
-          const p=require(process.env.RUNNER_TEMP+'/final-plan.json');
-          if(p.counts.missing_tasks_total!==0) throw new Error(`Broker backfill incomplete: ${p.counts.missing_tasks_total} unresolved/invalid tasks remain`);
+          const tdcc=require(process.env.RUNNER_TEMP+'/final-tdcc-plan.json');
+          const broker=require(process.env.RUNNER_TEMP+'/final-plan.json');
+          if(tdcc.counts.missing_or_invalid_dates!==0) throw new Error(`TDCC backfill incomplete: ${tdcc.counts.missing_or_invalid_dates} unresolved/invalid stock-date observations remain`);
+          if(broker.counts.missing_tasks_total!==0) throw new Error(`Broker backfill incomplete: ${broker.counts.missing_tasks_total} unresolved/invalid tasks remain`);
           NODE
       - name: Aggregate broker histories
         run: |
