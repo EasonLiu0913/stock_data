@@ -1,0 +1,55 @@
+name: "[07 研究] Institutional Distribution Score Replay"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_institutional_distribution_score.js'
+      - 'tests/institutional_distribution_score.test.js'
+      - 'data_research/institutional-flow/tdcc-fixtures/**'
+      - 'data_research/institutional-flow/histock/2449/daily/**'
+      - '.github/workflows/test-institutional-distribution-score.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate script syntax
+        run: node --check scripts/build_institutional_distribution_score.js
+
+      - name: Run 2449 replay regression tests
+        run: node --test tests/institutional_distribution_score.test.js
+
+      - name: Build replay artifact
+        run: |
+          node scripts/build_institutional_distribution_score.js \
+            --stock 2449 \
+            --start 2026-04-01 \
+            --end 2026-07-31 \
+            --output /tmp/2449-institutional-distribution-score.json
+
+      - name: Summary
+        run: |
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('/tmp/2449-institutional-distribution-score.json', 'utf8'));
+          const dates = ['2026-04-17', '2026-04-24', '2026-05-08', '2026-05-15'];
+          const byDate = new Map(p.timeline.map(x => [x.observed_date, x]));
+          console.log('## Institutional Distribution Replay');
+          console.log('');
+          console.log('| Evidence date | Score | Raw level | Carried level | Action eligible after |');
+          console.log('|---|---:|---|---|---|');
+          for (const d of dates) {
+            const x = byDate.get(d);
+            if (x) console.log(`| ${d} | ${x.score} | ${x.raw_level} | ${x.level} | ${x.action_eligible_after} |`);
+          }
+          console.log('');
+          console.log('> Research-only validation. TDCC availability timestamps are conservative proxy timestamps and must be replaced before production use.');
+          NODE
