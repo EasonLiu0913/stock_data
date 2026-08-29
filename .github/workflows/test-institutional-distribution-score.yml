@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/build_institutional_distribution_score.js'
       - 'tests/institutional_distribution_score.test.js'
+      - 'data_tdcc_shareholding/history/2449/**'
       - 'data_research/institutional-flow/tdcc-fixtures/**'
       - 'data_research/institutional-flow/histock/2449/daily/**'
       - '.github/workflows/test-institutional-distribution-score.yml'
@@ -27,31 +28,53 @@ jobs:
       - name: Run 2449 replay regression tests
         run: node --test tests/institutional_distribution_score.test.js
 
-      - name: Build replay artifact
+      - name: Build official historical replay artifact
         run: |
           node scripts/build_institutional_distribution_score.js \
             --stock 2449 \
             --start 2026-04-01 \
             --end 2026-07-31 \
-            --output /tmp/2449-institutional-distribution-score.json
+            --tdcc-mode historical \
+            --output /tmp/2449-institutional-distribution-score-historical.json
+
+      - name: Build fixture comparison artifact
+        run: |
+          node scripts/build_institutional_distribution_score.js \
+            --stock 2449 \
+            --start 2026-04-01 \
+            --end 2026-07-31 \
+            --tdcc-mode fixture \
+            --output /tmp/2449-institutional-distribution-score-fixture.json
 
       - name: Summary
         run: |
           node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('fs');
-          const p = JSON.parse(fs.readFileSync('/tmp/2449-institutional-distribution-score.json', 'utf8'));
+          const historical = JSON.parse(fs.readFileSync('/tmp/2449-institutional-distribution-score-historical.json', 'utf8'));
+          const fixture = JSON.parse(fs.readFileSync('/tmp/2449-institutional-distribution-score-fixture.json', 'utf8'));
           const dates = ['2026-04-17', '2026-04-24', '2026-05-08', '2026-05-15'];
-          const byDate = new Map(p.timeline.map(x => [x.observed_date, x]));
+          const histByDate = new Map(historical.timeline.map(x => [x.observed_date, x]));
+          const fixtureByDate = new Map(fixture.timeline.map(x => [x.observed_date, x]));
+
           console.log('## Institutional Distribution Replay');
           console.log('');
-          console.log('| Evidence date | Score | Raw level | Carried level | Action eligible after |');
-          console.log('|---|---:|---|---|---|');
+          console.log('- Primary TDCC input: official historical query data.');
+          console.log(`- Primary mode: ${historical.tdcc_input.mode}`);
+          console.log(`- Primary production-safe: ${historical.production_safe}`);
+          console.log('- Historical action timing: unavailable by design; no original publication timestamp is inferred.');
+          console.log('- Fixture is retained only as a regression comparison.');
+          console.log('');
+          console.log('| Evidence date | Historical score | Historical raw | Historical carried | Fixture score | Fixture carried |');
+          console.log('|---|---:|---|---|---:|---|');
           for (const d of dates) {
-            const x = byDate.get(d);
-            if (x) console.log(`| ${d} | ${x.score} | ${x.raw_level} | ${x.level} | ${x.action_eligible_after} |`);
+            const h = histByDate.get(d);
+            const f = fixtureByDate.get(d);
+            if (h || f) {
+              console.log(`| ${d} | ${h?.score ?? '-'} | ${h?.raw_level ?? '-'} | ${h?.level ?? '-'} | ${f?.score ?? '-'} | ${f?.level ?? '-'} |`);
+            }
           }
           console.log('');
-          console.log('> Research-only validation. TDCC availability timestamps are conservative proxy timestamps and must be replaced before production use.');
+          console.log('> Research-only historical validation. Official TDCC historical values are used for evidence replay, but original publication timestamps are unknown, so no historical trade-action time is claimed.');
           NODE
 
   schedule-timing-summary:
