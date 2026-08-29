@@ -24,11 +24,13 @@ const FIELD = {
   ratio: ['占集保庫存數比例%', '佔集保庫存數比例%', 'Percentage of Centrally Deposited Securities'],
 };
 
+function clean(v) { return String(v ?? '').replace(/^\uFEFF/, '').trim(); }
 function firstField(row, names) {
-  for (const name of names) if (Object.prototype.hasOwnProperty.call(row, name)) return row[name];
+  for (const [key, value] of Object.entries(row || {})) {
+    if (names.includes(clean(key))) return value;
+  }
   return undefined;
 }
-function clean(v) { return String(v ?? '').replace(/^\uFEFF/, '').trim(); }
 function number(v) {
   const n = Number(clean(v).replaceAll(',', ''));
   return Number.isFinite(n) ? n : null;
