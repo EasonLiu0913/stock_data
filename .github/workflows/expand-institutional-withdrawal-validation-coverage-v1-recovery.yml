@@ -51,6 +51,12 @@ jobs:
             data_research/institutional-flow/histock/
             data_research/institutional-flow/validation/
             data_research/institutional-flow/validation-plan-v1.md
+      - name: Configure checkpoint identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Run coverage-only expansion
         shell: bash
         run: bash scripts/run_institutional_withdrawal_validation_coverage_expansion_v1.sh
