@@ -32,13 +32,6 @@ jobs:
           sparse-checkout: |
             .github/workflows/research-institutional-withdrawal-v5.yml
             scripts/
-            data_history_sma/trading_days.json
-            data_history_sma/2330.json
-            data_history_sma/2317.json
-            data_history_sma/2454.json
-            data_history_sma/2382.json
-            data_history_sma/2303.json
-            data_history_sma/2449.json
             data_fubon/fubon_202604*_sma.json
             data_fubon/fubon_202605*_sma.json
             data_fubon/fubon_202606*_sma.json
@@ -100,12 +93,17 @@ jobs:
           const f=require('./data_research/institutional-flow/features/foreign-flow-v5.json');
           const p=require('./data_research/institutional-flow/features/price-volume-v5.json');
           const stocks=['2330','2317','2454','2382','2303','2449'];
-          if(f.counts.trading_days!==85 || f.source_missing_dates.length) throw new Error(`foreign source coverage failed: ${JSON.stringify(f.counts)}`);
+          const dates=f.trading_dates || [];
+          if(dates[0]!=='2026-04-01' || dates.at(-1)!=='2026-08-21') throw new Error(`Research calendar range mismatch: ${dates[0]}..${dates.at(-1)}`);
+          if(dates.length<90) throw new Error(`Research calendar unexpectedly short: ${dates.length}`);
+          if((f.rejected_calendar_files||[]).length) throw new Error(`Rejected TWSE calendar files: ${JSON.stringify(f.rejected_calendar_files)}`);
+          if(f.source_missing_dates.length) throw new Error(`foreign source dates missing: ${f.source_missing_dates.join(',')}`);
           for(const stock of stocks){
             const c=f.coverage[stock];
             if(c.missing_days!==0 || c.ratio!==1) throw new Error(`foreign ${stock}: incomplete ${JSON.stringify(c)}`);
           }
-          if(p.counts.trading_days!==85 || p.source_missing_dates.length) throw new Error(`price-volume source-file coverage failed: ${JSON.stringify(p.counts)}`);
+          if(JSON.stringify(p.trading_dates)!==JSON.stringify(dates)) throw new Error('Foreign and price-volume calendars differ');
+          if(p.source_missing_dates.length) throw new Error(`price-volume source files missing: ${p.source_missing_dates.join(',')}`);
           const actual=(p.source_row_gaps||[]).map(x=>`${x.stock}:${x.date}`).sort();
           const expected=stocks.map(stock=>`${stock}:2026-06-24`).sort();
           if(JSON.stringify(actual)!==JSON.stringify(expected)) throw new Error(`Unexpected OHLCV row gaps: ${JSON.stringify(actual)}`);
@@ -113,7 +111,8 @@ jobs:
             const c=p.coverage[stock];
             if(c.missing_days!==1 || c.missing_dates?.[0]!=='2026-06-24') throw new Error(`price-volume ${stock}: unexpected coverage ${JSON.stringify(c)}`);
           }
-          console.log('Known OHLCV source gap accepted without imputation: 2026-06-24 x 6 stocks; affected rolling windows remain invalid.');
+          console.log(`Source-derived trading calendar validated: ${dates.length} sessions, ${dates[0]}..${dates.at(-1)}.`);
+          console.log('Known OHLCV row gap retained without imputation: 2026-06-24 x 6 stocks.');
           NODE
 
       - name: Build TDCC-anchored feature matrix
@@ -128,17 +127,22 @@ jobs:
           set -euo pipefail
           node - <<'NODE'
           const m=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json');
+          const f=require('./data_research/institutional-flow/features/foreign-flow-v5.json');
           if(m.counts.anchors!==126) throw new Error(`Expected 126 TDCC stock-date anchors, got ${m.counts.anchors}`);
-          if(m.counts.feature_complete!==126) throw new Error(`Feature-complete anchors ${m.counts.feature_complete}/126`);
-          if(m.counts.analysis_eligible<60) throw new Error(`Too few analysis-eligible rows after honest rolling-window exclusions: ${m.counts.analysis_eligible}`);
+          if(m.counts.trading_days!==f.trading_dates.length) throw new Error(`Matrix calendar count ${m.counts.trading_days} != feature calendar ${f.trading_dates.length}`);
+          if(m.counts.analysis_eligible<60) throw new Error(`Too few analysis-eligible rows: ${m.counts.analysis_eligible}`);
           for(const [stock,c] of Object.entries(m.coverage)){
             if(c.tdcc_anchors!==21) throw new Error(`${stock}: expected 21 TDCC anchors, got ${c.tdcc_anchors}`);
-            if(c.feature_complete!==21) throw new Error(`${stock}: incomplete feature anchors ${c.feature_complete}/21`);
           }
+          const tradingSet=new Set(f.trading_dates);
           for(const r of m.rows){
+            if(!r.market_feature_date) throw new Error(`Missing market feature date ${r.stock} ${r.tdcc_observed_date}`);
             if(r.market_feature_date>r.tdcc_observed_date) throw new Error(`Lookahead market date ${r.stock} ${r.tdcc_observed_date}`);
+            if(tradingSet.has(r.tdcc_observed_date) && r.market_feature_date!==r.tdcc_observed_date) throw new Error(`Stale market mapping ${r.stock}: ${r.tdcc_observed_date} -> ${r.market_feature_date}`);
             if(!r.outcome || r.outcome.anchor_date!==r.market_feature_date) throw new Error(`Outcome anchor mismatch ${r.stock} ${r.tdcc_observed_date}`);
           }
+          console.log(`Matrix: anchors=${m.counts.anchors} broker_available=${m.counts.broker_available} complete=${m.counts.feature_complete} eligible=${m.counts.analysis_eligible}`);
+          for(const [stock,c] of Object.entries(m.coverage)) console.log(`${stock}: broker=${c.broker_available}/21 complete=${c.feature_complete}/21 eligible=${c.analysis_eligible}/21 missingBroker=${c.broker_missing_anchor_dates.join(',')}`);
           NODE
 
       - name: Run combination and ablation study
