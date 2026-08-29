@@ -79,25 +79,56 @@ function extractRows(html) {
   }
   return rows;
 }
-function parseBrokerRecords(html) {
+function parseBrokerRows(html) {
   const records = [];
+  const incompleteRecords = [];
   const seen = new Set();
+  const seenIncomplete = new Set();
   for (const cells of extractRows(html)) {
     for (const offset of [0, 5]) {
       if (cells.length < offset + 5) continue;
       const broker = cells[offset];
-      const buy = num(cells[offset + 1]);
-      const sell = num(cells[offset + 2]);
-      const net = num(cells[offset + 3]);
-      const avgPrice = num(cells[offset + 4]);
-      if (!broker || /券商名稱/.test(broker) || buy === null || sell === null || net === null || avgPrice === null) continue;
+      if (!broker || /券商名稱/.test(broker)) continue;
+      const raw = {
+        buy: cells[offset + 1] ?? '',
+        sell: cells[offset + 2] ?? '',
+        net: cells[offset + 3] ?? '',
+        avg_price: cells[offset + 4] ?? '',
+      };
+      const buy = num(raw.buy);
+      const sell = num(raw.sell);
+      const net = num(raw.net);
+      const avgPrice = num(raw.avg_price);
+      const missingFields = [];
+      if (buy === null) missingFields.push('buy');
+      if (sell === null) missingFields.push('sell');
+      if (net === null) missingFields.push('net');
+      if (avgPrice === null) missingFields.push('avg_price');
+      if (missingFields.length) {
+        const hasSourceValue = Object.values(raw).some((value) => String(value).trim() !== '');
+        if (!hasSourceValue) continue;
+        const key = `${broker}|${raw.buy}|${raw.sell}|${raw.net}|${raw.avg_price}`;
+        if (seenIncomplete.has(key)) continue;
+        seenIncomplete.add(key);
+        incompleteRecords.push({
+          broker,
+          buy,
+          sell,
+          net,
+          avg_price: avgPrice,
+          missing_fields: missingFields,
+          reason: `${missingFields.join('_')}_missing_at_source`,
+          raw_source_values: raw,
+        });
+        continue;
+      }
       const key = `${broker}|${buy}|${sell}|${net}|${avgPrice}`;
       if (seen.has(key)) continue;
       seen.add(key);
       records.push({ broker, buy, sell, net, avg_price: avgPrice });
     }
   }
-  return records;
+  return { records, incompleteRecords };
 }
 
 function makeDiagnostics(html, response, date) {
@@ -139,14 +170,14 @@ async function fetchDateOnce(date) {
     error.diagnostics = diagnostics;
     throw error;
   }
-  const records = parseBrokerRecords(html);
-  if (records.length === 0) {
+  const parsed = parseBrokerRows(html);
+  if (parsed.records.length === 0) {
     const error = new Error('no_broker_records_on_trading_day');
     error.retryable = true;
-    error.diagnostics = diagnostics;
+    error.diagnostics = { ...diagnostics, incomplete_records: parsed.incompleteRecords.length };
     throw error;
   }
-  return { url, bytes: diagnostics.response_bytes, records };
+  return { url, bytes: diagnostics.response_bytes, records: parsed.records, incompleteRecords: parsed.incompleteRecords };
 }
 
 const retryableStatus = (status) => status === 408 || status === 425 || status === 429 || status >= 500;
@@ -233,7 +264,7 @@ async function main() {
     try {
       const fetched = await fetchDate(date);
       const payload = {
-        schema_version: 2,
+        schema_version: 3,
         source: 'histock',
         source_type: 'third_party_public_page',
         research_only: true,
@@ -243,12 +274,14 @@ async function main() {
         source_url: fetched.url,
         response_bytes: fetched.bytes,
         record_count: fetched.records.length,
+        incomplete_record_count: fetched.incompleteRecords.length,
         records: fetched.records,
+        incomplete_records: fetched.incompleteRecords,
       };
       fs.writeFileSync(path.join(dailyDir, `${ymd(date)}.json`), `${JSON.stringify(payload, null, 2)}\n`);
       days.push(payload);
       consecutiveFailures = 0;
-      console.log(`ok (${fetched.records.length})`);
+      console.log(`ok (${fetched.records.length}; incomplete=${fetched.incompleteRecords.length})`);
     } catch (error) {
       consecutiveFailures += 1;
       unresolved.push({ date, reason: error.message, diagnostics: error.diagnostics || null });
@@ -290,6 +323,7 @@ async function main() {
       max_consecutive_failures: maxConsecutiveFailures,
       zero_records_on_trading_day: 'retry_then_unresolved',
       existing_valid_daily_files: 'reuse_without_request',
+      incomplete_source_rows: 'preserve_for_provenance_exclude_from_rolling',
     },
     generated_at: new Date().toISOString(),
     counts: {
@@ -298,6 +332,7 @@ async function main() {
       remote_requests_attempted: remote,
       parsed_trading_days: days.length,
       unresolved_trading_days: unresolved.length,
+      incomplete_records: days.reduce((sum, day) => sum + (Array.isArray(day.incomplete_records) ? day.incomplete_records.length : 0), 0),
       failed: unresolved.length,
       skipped: 0,
     },
@@ -309,6 +344,7 @@ async function main() {
       'HiStock exposes ranked broker rows rather than the complete official TWSE BSR ledger.',
       'Absence of a broker from a parsed day means it was outside the exposed ranking, not necessarily zero trading.',
       'A whitelisted trading day with zero parsed broker rows is an unresolved fetch, never a valid skip.',
+      'Source rows with missing numeric fields are preserved in incomplete_records and excluded from rolling calculations.',
       'This dataset is research-only and must not be merged with official TWSE broker-trade raw data without provenance.',
     ],
     rolling,
