@@ -5,12 +5,153 @@
   "stock": "2449",
   "range": {
     "start": "2026-04-01",
-    "end": "2026-07-31"
+    "end": "2026-08-21"
   },
   "data_quality": {
     "version": "histock-broker-row-quality-v2",
-    "policy": "all rows must satisfy buy>=0, sell>=0, net=buy-sell, avg_price>0",
-    "rejected_daily_files": []
+    "policy": "complete rows require buy>=0, sell>=0, abs(net-(buy-sell))<=1, avg_price>0; source rows with missing fields are preserved in incomplete_records and excluded from rolling calculations",
+    "rejected_daily_files": [],
+    "incomplete_rows": {
+      "days": 3,
+      "records": 7,
+      "by_day": [
+        {
+          "date": "2026-04-10",
+          "records": [
+            {
+              "broker": "凱基",
+              "buy": null,
+              "sell": 542,
+              "net": -541,
+              "avg_price": 276.9,
+              "missing_fields": [
+                "buy"
+              ],
+              "reason": "buy_missing_at_source",
+              "raw_source_values": {
+                "buy": "N/A",
+                "sell": "542",
+                "net": "-541",
+                "avg_price": "276.9"
+              }
+            }
+          ]
+        },
+        {
+          "date": "2026-08-03",
+          "records": [
+            {
+              "broker": "港商麥格理",
+              "buy": 464,
+              "sell": null,
+              "net": 464,
+              "avg_price": 234.53,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "464",
+                "sell": "",
+                "net": "464",
+                "avg_price": "234.53"
+              }
+            },
+            {
+              "broker": "大和國泰",
+              "buy": 100,
+              "sell": null,
+              "net": 100,
+              "avg_price": 235.17,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "100",
+                "sell": "",
+                "net": "100",
+                "avg_price": "235.17"
+              }
+            },
+            {
+              "broker": "聯邦",
+              "buy": null,
+              "sell": 100,
+              "net": -99,
+              "avg_price": 237.57,
+              "missing_fields": [
+                "buy"
+              ],
+              "reason": "buy_missing_at_source",
+              "raw_source_values": {
+                "buy": "",
+                "sell": "100",
+                "net": "-99",
+                "avg_price": "237.57"
+              }
+            },
+            {
+              "broker": "永豐金-南投",
+              "buy": 83,
+              "sell": null,
+              "net": 83,
+              "avg_price": 236.96,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "83",
+                "sell": "",
+                "net": "83",
+                "avg_price": "236.96"
+              }
+            }
+          ]
+        },
+        {
+          "date": "2026-08-04",
+          "records": [
+            {
+              "broker": "犇亞證券",
+              "buy": 573,
+              "sell": null,
+              "net": 573,
+              "avg_price": 242.56,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "573",
+                "sell": "",
+                "net": "573",
+                "avg_price": "242.56"
+              }
+            },
+            {
+              "broker": "香港上海匯豐",
+              "buy": 122,
+              "sell": null,
+              "net": 122,
+              "avg_price": 245.5,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "122",
+                "sell": "",
+                "net": "122",
+                "avg_price": "245.5"
+              }
+            }
+          ]
+        }
+      ],
+      "calculation_policy": "provenance_only_excluded_from_rolling"
+    }
   },
   "daily_files": [
     "daily/20260401.json",
@@ -95,13 +236,17 @@
     "daily/20260728.json",
     "daily/20260729.json",
     "daily/20260730.json",
-    "daily/20260731.json"
+    "daily/20260731.json",
+    "daily/20260803.json",
+    "daily/20260804.json"
   ],
   "analysis_file": "analysis.json",
   "counts": {
-    "requested_trading_days": 83,
-    "parsed_trading_days": 83,
+    "requested_trading_days": 85,
+    "parsed_trading_days": 85,
     "quality_rejected_daily_files": 0,
+    "incomplete_record_days": 3,
+    "incomplete_records": 7,
     "source_gaps": 0,
     "hard_failures": 0,
     "unresolved_trading_days": 0,

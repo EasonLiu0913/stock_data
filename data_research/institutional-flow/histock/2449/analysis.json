@@ -7,7 +7,7 @@
   "stock": "2449",
   "requested_range": {
     "start": "2026-04-01",
-    "end": "2026-07-31"
+    "end": "2026-08-21"
   },
   "calendar": {
     "trading_days_file": "data_history_sma/trading_days.json",
@@ -16,14 +16,157 @@
   },
   "data_quality": {
     "version": "histock-broker-row-quality-v2",
-    "policy": "all rows must satisfy buy>=0, sell>=0, net=buy-sell, avg_price>0",
-    "rejected_daily_files": []
+    "policy": "complete rows require buy>=0, sell>=0, abs(net-(buy-sell))<=1, avg_price>0; source rows with missing fields are preserved in incomplete_records and excluded from rolling calculations",
+    "rejected_daily_files": [],
+    "incomplete_rows": {
+      "days": 3,
+      "records": 7,
+      "by_day": [
+        {
+          "date": "2026-04-10",
+          "records": [
+            {
+              "broker": "凱基",
+              "buy": null,
+              "sell": 542,
+              "net": -541,
+              "avg_price": 276.9,
+              "missing_fields": [
+                "buy"
+              ],
+              "reason": "buy_missing_at_source",
+              "raw_source_values": {
+                "buy": "N/A",
+                "sell": "542",
+                "net": "-541",
+                "avg_price": "276.9"
+              }
+            }
+          ]
+        },
+        {
+          "date": "2026-08-03",
+          "records": [
+            {
+              "broker": "港商麥格理",
+              "buy": 464,
+              "sell": null,
+              "net": 464,
+              "avg_price": 234.53,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "464",
+                "sell": "",
+                "net": "464",
+                "avg_price": "234.53"
+              }
+            },
+            {
+              "broker": "大和國泰",
+              "buy": 100,
+              "sell": null,
+              "net": 100,
+              "avg_price": 235.17,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "100",
+                "sell": "",
+                "net": "100",
+                "avg_price": "235.17"
+              }
+            },
+            {
+              "broker": "聯邦",
+              "buy": null,
+              "sell": 100,
+              "net": -99,
+              "avg_price": 237.57,
+              "missing_fields": [
+                "buy"
+              ],
+              "reason": "buy_missing_at_source",
+              "raw_source_values": {
+                "buy": "",
+                "sell": "100",
+                "net": "-99",
+                "avg_price": "237.57"
+              }
+            },
+            {
+              "broker": "永豐金-南投",
+              "buy": 83,
+              "sell": null,
+              "net": 83,
+              "avg_price": 236.96,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "83",
+                "sell": "",
+                "net": "83",
+                "avg_price": "236.96"
+              }
+            }
+          ]
+        },
+        {
+          "date": "2026-08-04",
+          "records": [
+            {
+              "broker": "犇亞證券",
+              "buy": 573,
+              "sell": null,
+              "net": 573,
+              "avg_price": 242.56,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "573",
+                "sell": "",
+                "net": "573",
+                "avg_price": "242.56"
+              }
+            },
+            {
+              "broker": "香港上海匯豐",
+              "buy": 122,
+              "sell": null,
+              "net": 122,
+              "avg_price": 245.5,
+              "missing_fields": [
+                "sell"
+              ],
+              "reason": "sell_missing_at_source",
+              "raw_source_values": {
+                "buy": "122",
+                "sell": "",
+                "net": "122",
+                "avg_price": "245.5"
+              }
+            }
+          ]
+        }
+      ],
+      "calculation_policy": "provenance_only_excluded_from_rolling"
+    }
   },
-  "generated_at": "2026-08-29T04:18:29.479Z",
+  "generated_at": "2026-08-29T11:30:28.623Z",
   "counts": {
-    "requested_trading_days": 83,
-    "parsed_trading_days": 83,
+    "requested_trading_days": 85,
+    "parsed_trading_days": 85,
     "quality_rejected_daily_files": 0,
+    "incomplete_record_days": 3,
+    "incomplete_records": 7,
     "source_gaps": 0,
     "hard_failures": 0,
     "unresolved_trading_days": 0,
@@ -40,7 +183,8 @@
     "HiStock exposes ranked broker rows rather than the complete official TWSE BSR ledger.",
     "Absence of a broker from a parsed day means it was outside the exposed ranking, not necessarily zero trading.",
     "Documented source gaps remain missing observations and are never imputed as zero.",
-    "Daily files with any broker row failing the hard data-quality gate are excluded from analysis and scheduled for refetch."
+    "Daily files with any complete broker row failing the hard data-quality gate are excluded from analysis and scheduled for refetch.",
+    "Source rows with missing numeric fields are preserved in incomplete_records for provenance but never enter rolling calculations."
   ],
   "rolling": [
     {
@@ -90860,6 +91004,2243 @@
               "buy_days": 3,
               "sell_ratio": 0,
               "buy_ratio": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-08-03",
+      "windows": [
+        {
+          "window": 5,
+          "available_trading_days": 5,
+          "from": "2026-07-28",
+          "to": "2026-08-03",
+          "persistent_sellers": [
+            {
+              "broker": "新加坡商瑞銀",
+              "total_net": -5704,
+              "total_buy": 2895,
+              "total_sell": 8604,
+              "appearances": 5,
+              "sell_days": 5,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "美商高盛",
+              "total_net": -5048,
+              "total_buy": 5922,
+              "total_sell": 10971,
+              "appearances": 4,
+              "sell_days": 3,
+              "buy_days": 1,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "台灣摩根士丹利",
+              "total_net": -2863,
+              "total_buy": 8508,
+              "total_sell": 11371,
+              "appearances": 5,
+              "sell_days": 3,
+              "buy_days": 2,
+              "sell_ratio": 0.6,
+              "buy_ratio": 0.4
+            },
+            {
+              "broker": "港商麥格理",
+              "total_net": -2422,
+              "total_buy": 2163,
+              "total_sell": 4585,
+              "appearances": 3,
+              "sell_days": 3,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "凱基-台北",
+              "total_net": -2342,
+              "total_buy": 7170,
+              "total_sell": 9511,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "美林",
+              "total_net": -1725,
+              "total_buy": 949,
+              "total_sell": 2674,
+              "appearances": 4,
+              "sell_days": 3,
+              "buy_days": 1,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "港商野村",
+              "total_net": -1688,
+              "total_buy": 907,
+              "total_sell": 2596,
+              "appearances": 4,
+              "sell_days": 4,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "群益金鼎",
+              "total_net": -810,
+              "total_buy": 843,
+              "total_sell": 1654,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "花旗環球",
+              "total_net": -751,
+              "total_buy": 686,
+              "total_sell": 1436,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "華南永昌",
+              "total_net": -506,
+              "total_buy": 468,
+              "total_sell": 976,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "第一金",
+              "total_net": -501,
+              "total_buy": 68,
+              "total_sell": 570,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "國票-敦北法人",
+              "total_net": -447,
+              "total_buy": 130,
+              "total_sell": 579,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "摩根大通",
+              "total_net": -344,
+              "total_buy": 5606,
+              "total_sell": 5952,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "富邦",
+              "total_net": -331,
+              "total_buy": 1799,
+              "total_sell": 2131,
+              "appearances": 5,
+              "sell_days": 3,
+              "buy_days": 2,
+              "sell_ratio": 0.6,
+              "buy_ratio": 0.4
+            },
+            {
+              "broker": "元大",
+              "total_net": -287,
+              "total_buy": 7280,
+              "total_sell": 7569,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            }
+          ],
+          "persistent_buyers": [
+            {
+              "broker": "永豐金",
+              "total_net": 1931,
+              "total_buy": 4673,
+              "total_sell": 2741,
+              "appearances": 5,
+              "sell_days": 1,
+              "buy_days": 4,
+              "sell_ratio": 0.2,
+              "buy_ratio": 0.8
+            },
+            {
+              "broker": "兆豐",
+              "total_net": 1833,
+              "total_buy": 1862,
+              "total_sell": 28,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "凱基",
+              "total_net": 734,
+              "total_buy": 1273,
+              "total_sell": 540,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "國泰-敦南",
+              "total_net": 602,
+              "total_buy": 2093,
+              "total_sell": 1490,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "土銀",
+              "total_net": 589,
+              "total_buy": 597,
+              "total_sell": 8,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "新光",
+              "total_net": 282,
+              "total_buy": 601,
+              "total_sell": 317,
+              "appearances": 3,
+              "sell_days": 0,
+              "buy_days": 3,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "統一",
+              "total_net": 275,
+              "total_buy": 428,
+              "total_sell": 151,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "國泰-板橋",
+              "total_net": 220,
+              "total_buy": 338,
+              "total_sell": 116,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "台新-台中",
+              "total_net": 193,
+              "total_buy": 295,
+              "total_sell": 100,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            }
+          ]
+        },
+        {
+          "window": 10,
+          "available_trading_days": 10,
+          "from": "2026-07-21",
+          "to": "2026-08-03",
+          "persistent_sellers": [
+            {
+              "broker": "台灣摩根士丹利",
+              "total_net": -9203,
+              "total_buy": 11322,
+              "total_sell": 20524,
+              "appearances": 10,
+              "sell_days": 7,
+              "buy_days": 3,
+              "sell_ratio": 0.7,
+              "buy_ratio": 0.3
+            },
+            {
+              "broker": "美商高盛",
+              "total_net": -8490,
+              "total_buy": 9431,
+              "total_sell": 17923,
+              "appearances": 9,
+              "sell_days": 7,
+              "buy_days": 2,
+              "sell_ratio": 0.7777777777777778,
+              "buy_ratio": 0.2222222222222222
+            },
+            {
+              "broker": "新加坡商瑞銀",
+              "total_net": -7565,
+              "total_buy": 7183,
+              "total_sell": 14755,
+              "appearances": 10,
+              "sell_days": 9,
+              "buy_days": 1,
+              "sell_ratio": 0.9,
+              "buy_ratio": 0.1
+            },
+            {
+              "broker": "港商麥格理",
+              "total_net": -3883,
+              "total_buy": 2405,
+              "total_sell": 6288,
+              "appearances": 7,
+              "sell_days": 6,
+              "buy_days": 1,
+              "sell_ratio": 0.8571428571428571,
+              "buy_ratio": 0.14285714285714285
+            },
+            {
+              "broker": "凱基-台北",
+              "total_net": -1617,
+              "total_buy": 13606,
+              "total_sell": 15223,
+              "appearances": 9,
+              "sell_days": 4,
+              "buy_days": 5,
+              "sell_ratio": 0.4444444444444444,
+              "buy_ratio": 0.5555555555555556
+            },
+            {
+              "broker": "港商野村",
+              "total_net": -1514,
+              "total_buy": 1766,
+              "total_sell": 3282,
+              "appearances": 8,
+              "sell_days": 5,
+              "buy_days": 3,
+              "sell_ratio": 0.625,
+              "buy_ratio": 0.375
+            },
+            {
+              "broker": "花旗環球",
+              "total_net": -938,
+              "total_buy": 1528,
+              "total_sell": 2465,
+              "appearances": 8,
+              "sell_days": 4,
+              "buy_days": 4,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "美林",
+              "total_net": -920,
+              "total_buy": 3394,
+              "total_sell": 4315,
+              "appearances": 8,
+              "sell_days": 4,
+              "buy_days": 4,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "第一金",
+              "total_net": -501,
+              "total_buy": 68,
+              "total_sell": 570,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "群益金鼎",
+              "total_net": -478,
+              "total_buy": 1298,
+              "total_sell": 1777,
+              "appearances": 5,
+              "sell_days": 2,
+              "buy_days": 3,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "國票-敦北法人",
+              "total_net": -447,
+              "total_buy": 130,
+              "total_sell": 579,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "華南永昌",
+              "total_net": -366,
+              "total_buy": 708,
+              "total_sell": 1077,
+              "appearances": 6,
+              "sell_days": 3,
+              "buy_days": 3,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "摩根大通",
+              "total_net": -252,
+              "total_buy": 9519,
+              "total_sell": 9772,
+              "appearances": 8,
+              "sell_days": 5,
+              "buy_days": 3,
+              "sell_ratio": 0.625,
+              "buy_ratio": 0.375
+            },
+            {
+              "broker": "富邦-板橋",
+              "total_net": -143,
+              "total_buy": 125,
+              "total_sell": 268,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "中國信託-永康",
+              "total_net": -71,
+              "total_buy": 183,
+              "total_sell": 255,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            }
+          ],
+          "persistent_buyers": [
+            {
+              "broker": "永豐金",
+              "total_net": 2382,
+              "total_buy": 6237,
+              "total_sell": 3852,
+              "appearances": 9,
+              "sell_days": 3,
+              "buy_days": 6,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "國泰",
+              "total_net": 2247,
+              "total_buy": 3228,
+              "total_sell": 981,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "兆豐",
+              "total_net": 2167,
+              "total_buy": 2215,
+              "total_sell": 47,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "統一",
+              "total_net": 1297,
+              "total_buy": 1867,
+              "total_sell": 567,
+              "appearances": 5,
+              "sell_days": 2,
+              "buy_days": 3,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "國泰-敦南",
+              "total_net": 941,
+              "total_buy": 4183,
+              "total_sell": 3240,
+              "appearances": 8,
+              "sell_days": 2,
+              "buy_days": 6,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "凱基",
+              "total_net": 818,
+              "total_buy": 1417,
+              "total_sell": 601,
+              "appearances": 6,
+              "sell_days": 2,
+              "buy_days": 4,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "富邦",
+              "total_net": 760,
+              "total_buy": 3089,
+              "total_sell": 2330,
+              "appearances": 8,
+              "sell_days": 4,
+              "buy_days": 4,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "土銀",
+              "total_net": 691,
+              "total_buy": 702,
+              "total_sell": 11,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "中國信託",
+              "total_net": 495,
+              "total_buy": 537,
+              "total_sell": 42,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "新光",
+              "total_net": 355,
+              "total_buy": 1011,
+              "total_sell": 654,
+              "appearances": 6,
+              "sell_days": 1,
+              "buy_days": 5,
+              "sell_ratio": 0.16666666666666666,
+              "buy_ratio": 0.8333333333333334
+            },
+            {
+              "broker": "國泰-板橋",
+              "total_net": 220,
+              "total_buy": 338,
+              "total_sell": 116,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "玉山",
+              "total_net": 203,
+              "total_buy": 294,
+              "total_sell": 89,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "台新-台中",
+              "total_net": 193,
+              "total_buy": 295,
+              "total_sell": 100,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "合庫-高雄",
+              "total_net": 178,
+              "total_buy": 280,
+              "total_sell": 102,
+              "appearances": 3,
+              "sell_days": 1,
+              "buy_days": 2,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "統一-南京",
+              "total_net": 159,
+              "total_buy": 174,
+              "total_sell": 15,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "永豐金-市政",
+              "total_net": 151,
+              "total_buy": 189,
+              "total_sell": 38,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "兆豐-桃園",
+              "total_net": 119,
+              "total_buy": 146,
+              "total_sell": 27,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "新光-新竹",
+              "total_net": 117,
+              "total_buy": 539,
+              "total_sell": 423,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "台新",
+              "total_net": 110,
+              "total_buy": 227,
+              "total_sell": 116,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "元大",
+              "total_net": 105,
+              "total_buy": 11412,
+              "total_sell": 11308,
+              "appearances": 8,
+              "sell_days": 3,
+              "buy_days": 5,
+              "sell_ratio": 0.375,
+              "buy_ratio": 0.625
+            }
+          ]
+        },
+        {
+          "window": 20,
+          "available_trading_days": 20,
+          "from": "2026-07-06",
+          "to": "2026-08-03",
+          "persistent_sellers": [
+            {
+              "broker": "台灣摩根士丹利",
+              "total_net": -26443,
+              "total_buy": 26449,
+              "total_sell": 52896,
+              "appearances": 20,
+              "sell_days": 15,
+              "buy_days": 5,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "美商高盛",
+              "total_net": -20671,
+              "total_buy": 23568,
+              "total_sell": 44245,
+              "appearances": 19,
+              "sell_days": 15,
+              "buy_days": 4,
+              "sell_ratio": 0.7894736842105263,
+              "buy_ratio": 0.21052631578947367
+            },
+            {
+              "broker": "新加坡商瑞銀",
+              "total_net": -14105,
+              "total_buy": 16229,
+              "total_sell": 30346,
+              "appearances": 20,
+              "sell_days": 16,
+              "buy_days": 4,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "美林",
+              "total_net": -5655,
+              "total_buy": 9046,
+              "total_sell": 14703,
+              "appearances": 17,
+              "sell_days": 11,
+              "buy_days": 6,
+              "sell_ratio": 0.6470588235294118,
+              "buy_ratio": 0.35294117647058826
+            },
+            {
+              "broker": "港商麥格理",
+              "total_net": -3648,
+              "total_buy": 2885,
+              "total_sell": 6533,
+              "appearances": 10,
+              "sell_days": 7,
+              "buy_days": 3,
+              "sell_ratio": 0.7,
+              "buy_ratio": 0.3
+            },
+            {
+              "broker": "永豐金-匯立",
+              "total_net": -3223,
+              "total_buy": 562,
+              "total_sell": 3785,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "元大",
+              "total_net": -2603,
+              "total_buy": 34550,
+              "total_sell": 37152,
+              "appearances": 16,
+              "sell_days": 7,
+              "buy_days": 9,
+              "sell_ratio": 0.4375,
+              "buy_ratio": 0.5625
+            },
+            {
+              "broker": "港商野村",
+              "total_net": -2474,
+              "total_buy": 3978,
+              "total_sell": 6456,
+              "appearances": 17,
+              "sell_days": 10,
+              "buy_days": 7,
+              "sell_ratio": 0.5882352941176471,
+              "buy_ratio": 0.4117647058823529
+            },
+            {
+              "broker": "宏遠",
+              "total_net": -2271,
+              "total_buy": 45,
+              "total_sell": 2318,
+              "appearances": 3,
+              "sell_days": 3,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "香港上海匯豐",
+              "total_net": -1426,
+              "total_buy": 153,
+              "total_sell": 1580,
+              "appearances": 6,
+              "sell_days": 5,
+              "buy_days": 1,
+              "sell_ratio": 0.8333333333333334,
+              "buy_ratio": 0.16666666666666666
+            },
+            {
+              "broker": "台新-台北",
+              "total_net": -1342,
+              "total_buy": 299,
+              "total_sell": 1645,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "國票-敦北法人",
+              "total_net": -947,
+              "total_buy": 390,
+              "total_sell": 1341,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "第一金",
+              "total_net": -473,
+              "total_buy": 340,
+              "total_sell": 815,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "華南永昌",
+              "total_net": -457,
+              "total_buy": 1914,
+              "total_sell": 2372,
+              "appearances": 13,
+              "sell_days": 5,
+              "buy_days": 8,
+              "sell_ratio": 0.38461538461538464,
+              "buy_ratio": 0.6153846153846154
+            },
+            {
+              "broker": "富邦-板橋",
+              "total_net": -388,
+              "total_buy": 289,
+              "total_sell": 678,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "富邦-仁愛",
+              "total_net": -333,
+              "total_buy": 175,
+              "total_sell": 509,
+              "appearances": 3,
+              "sell_days": 3,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "富邦-台北",
+              "total_net": -314,
+              "total_buy": 222,
+              "total_sell": 538,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "合庫-自強",
+              "total_net": -298,
+              "total_buy": 25,
+              "total_sell": 324,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "花旗環球",
+              "total_net": -182,
+              "total_buy": 4227,
+              "total_sell": 4409,
+              "appearances": 16,
+              "sell_days": 7,
+              "buy_days": 9,
+              "sell_ratio": 0.4375,
+              "buy_ratio": 0.5625
+            },
+            {
+              "broker": "法銀巴黎",
+              "total_net": -170,
+              "total_buy": 227,
+              "total_sell": 397,
+              "appearances": 4,
+              "sell_days": 3,
+              "buy_days": 1,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            }
+          ],
+          "persistent_buyers": [
+            {
+              "broker": "統一",
+              "total_net": 5537,
+              "total_buy": 8713,
+              "total_sell": 3171,
+              "appearances": 13,
+              "sell_days": 5,
+              "buy_days": 8,
+              "sell_ratio": 0.38461538461538464,
+              "buy_ratio": 0.6153846153846154
+            },
+            {
+              "broker": "國泰",
+              "total_net": 2986,
+              "total_buy": 4415,
+              "total_sell": 1430,
+              "appearances": 9,
+              "sell_days": 4,
+              "buy_days": 5,
+              "sell_ratio": 0.4444444444444444,
+              "buy_ratio": 0.5555555555555556
+            },
+            {
+              "broker": "摩根大通",
+              "total_net": 2506,
+              "total_buy": 21627,
+              "total_sell": 19122,
+              "appearances": 17,
+              "sell_days": 10,
+              "buy_days": 7,
+              "sell_ratio": 0.5882352941176471,
+              "buy_ratio": 0.4117647058823529
+            },
+            {
+              "broker": "國泰-敦南",
+              "total_net": 2331,
+              "total_buy": 12448,
+              "total_sell": 10111,
+              "appearances": 18,
+              "sell_days": 5,
+              "buy_days": 13,
+              "sell_ratio": 0.2777777777777778,
+              "buy_ratio": 0.7222222222222222
+            },
+            {
+              "broker": "兆豐",
+              "total_net": 2167,
+              "total_buy": 2215,
+              "total_sell": 47,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "永豐金",
+              "total_net": 1869,
+              "total_buy": 8557,
+              "total_sell": 6685,
+              "appearances": 15,
+              "sell_days": 6,
+              "buy_days": 9,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "富邦",
+              "total_net": 1508,
+              "total_buy": 8211,
+              "total_sell": 6702,
+              "appearances": 16,
+              "sell_days": 7,
+              "buy_days": 9,
+              "sell_ratio": 0.4375,
+              "buy_ratio": 0.5625
+            },
+            {
+              "broker": "凱基",
+              "total_net": 1135,
+              "total_buy": 2682,
+              "total_sell": 1551,
+              "appearances": 12,
+              "sell_days": 4,
+              "buy_days": 8,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "土銀",
+              "total_net": 905,
+              "total_buy": 918,
+              "total_sell": 13,
+              "appearances": 5,
+              "sell_days": 0,
+              "buy_days": 5,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "台新",
+              "total_net": 835,
+              "total_buy": 2091,
+              "total_sell": 1252,
+              "appearances": 8,
+              "sell_days": 1,
+              "buy_days": 7,
+              "sell_ratio": 0.125,
+              "buy_ratio": 0.875
+            },
+            {
+              "broker": "凱基-台北",
+              "total_net": 750,
+              "total_buy": 28046,
+              "total_sell": 27297,
+              "appearances": 17,
+              "sell_days": 7,
+              "buy_days": 10,
+              "sell_ratio": 0.4117647058823529,
+              "buy_ratio": 0.5882352941176471
+            },
+            {
+              "broker": "新光",
+              "total_net": 744,
+              "total_buy": 2623,
+              "total_sell": 1877,
+              "appearances": 12,
+              "sell_days": 3,
+              "buy_days": 9,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "國泰-板橋",
+              "total_net": 626,
+              "total_buy": 1286,
+              "total_sell": 658,
+              "appearances": 7,
+              "sell_days": 1,
+              "buy_days": 6,
+              "sell_ratio": 0.14285714285714285,
+              "buy_ratio": 0.8571428571428571
+            },
+            {
+              "broker": "台新-台中",
+              "total_net": 513,
+              "total_buy": 769,
+              "total_sell": 251,
+              "appearances": 5,
+              "sell_days": 0,
+              "buy_days": 5,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "富邦-陽明",
+              "total_net": 410,
+              "total_buy": 604,
+              "total_sell": 195,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "玉山",
+              "total_net": 346,
+              "total_buy": 524,
+              "total_sell": 177,
+              "appearances": 6,
+              "sell_days": 2,
+              "buy_days": 4,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "國泰-台中",
+              "total_net": 337,
+              "total_buy": 1147,
+              "total_sell": 806,
+              "appearances": 6,
+              "sell_days": 1,
+              "buy_days": 5,
+              "sell_ratio": 0.16666666666666666,
+              "buy_ratio": 0.8333333333333334
+            },
+            {
+              "broker": "永豐金-市政",
+              "total_net": 293,
+              "total_buy": 421,
+              "total_sell": 126,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "合庫-高雄",
+              "total_net": 281,
+              "total_buy": 393,
+              "total_sell": 111,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "台新-高雄",
+              "total_net": 233,
+              "total_buy": 374,
+              "total_sell": 139,
+              "appearances": 3,
+              "sell_days": 0,
+              "buy_days": 3,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-08-04",
+      "windows": [
+        {
+          "window": 5,
+          "available_trading_days": 5,
+          "from": "2026-07-29",
+          "to": "2026-08-04",
+          "persistent_sellers": [
+            {
+              "broker": "新加坡商瑞銀",
+              "total_net": -4740,
+              "total_buy": 3239,
+              "total_sell": 7984,
+              "appearances": 5,
+              "sell_days": 5,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "港商麥格理",
+              "total_net": -2591,
+              "total_buy": 2228,
+              "total_sell": 4819,
+              "appearances": 4,
+              "sell_days": 4,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "美商高盛",
+              "total_net": -2009,
+              "total_buy": 8836,
+              "total_sell": 10846,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "港商野村",
+              "total_net": -1829,
+              "total_buy": 888,
+              "total_sell": 2718,
+              "appearances": 4,
+              "sell_days": 4,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "美林",
+              "total_net": -1627,
+              "total_buy": 1140,
+              "total_sell": 2767,
+              "appearances": 4,
+              "sell_days": 3,
+              "buy_days": 1,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "凱基-台北",
+              "total_net": -1476,
+              "total_buy": 7798,
+              "total_sell": 9274,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "花旗環球",
+              "total_net": -1266,
+              "total_buy": 647,
+              "total_sell": 1912,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "群益金鼎",
+              "total_net": -810,
+              "total_buy": 843,
+              "total_sell": 1654,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "摩根大通",
+              "total_net": -748,
+              "total_buy": 6052,
+              "total_sell": 6802,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "華南永昌",
+              "total_net": -636,
+              "total_buy": 323,
+              "total_sell": 961,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "第一金",
+              "total_net": -501,
+              "total_buy": 68,
+              "total_sell": 570,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "富邦",
+              "total_net": -31,
+              "total_buy": 1846,
+              "total_sell": 1877,
+              "appearances": 5,
+              "sell_days": 2,
+              "buy_days": 3,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "元大",
+              "total_net": -13,
+              "total_buy": 10408,
+              "total_sell": 10423,
+              "appearances": 5,
+              "sell_days": 2,
+              "buy_days": 3,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            }
+          ],
+          "persistent_buyers": [
+            {
+              "broker": "國泰",
+              "total_net": 2373,
+              "total_buy": 3341,
+              "total_sell": 967,
+              "appearances": 3,
+              "sell_days": 1,
+              "buy_days": 2,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "永豐金",
+              "total_net": 1843,
+              "total_buy": 4405,
+              "total_sell": 2561,
+              "appearances": 5,
+              "sell_days": 1,
+              "buy_days": 4,
+              "sell_ratio": 0.2,
+              "buy_ratio": 0.8
+            },
+            {
+              "broker": "兆豐",
+              "total_net": 1833,
+              "total_buy": 1862,
+              "total_sell": 28,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "台灣摩根士丹利",
+              "total_net": 614,
+              "total_buy": 11463,
+              "total_sell": 10847,
+              "appearances": 5,
+              "sell_days": 2,
+              "buy_days": 3,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "凱基",
+              "total_net": 557,
+              "total_buy": 1162,
+              "total_sell": 607,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "統一",
+              "total_net": 510,
+              "total_buy": 833,
+              "total_sell": 321,
+              "appearances": 3,
+              "sell_days": 0,
+              "buy_days": 3,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "合庫-西台中",
+              "total_net": 193,
+              "total_buy": 213,
+              "total_sell": 20,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "新光",
+              "total_net": 155,
+              "total_buy": 389,
+              "total_sell": 233,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "國泰-敦南",
+              "total_net": 52,
+              "total_buy": 1999,
+              "total_sell": 1947,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            }
+          ]
+        },
+        {
+          "window": 10,
+          "available_trading_days": 10,
+          "from": "2026-07-22",
+          "to": "2026-08-04",
+          "persistent_sellers": [
+            {
+              "broker": "新加坡商瑞銀",
+              "total_net": -7721,
+              "total_buy": 7075,
+              "total_sell": 14804,
+              "appearances": 10,
+              "sell_days": 9,
+              "buy_days": 1,
+              "sell_ratio": 0.9,
+              "buy_ratio": 0.1
+            },
+            {
+              "broker": "美商高盛",
+              "total_net": -7412,
+              "total_buy": 12070,
+              "total_sell": 19483,
+              "appearances": 9,
+              "sell_days": 6,
+              "buy_days": 3,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "台灣摩根士丹利",
+              "total_net": -6529,
+              "total_buy": 14359,
+              "total_sell": 20886,
+              "appearances": 10,
+              "sell_days": 6,
+              "buy_days": 4,
+              "sell_ratio": 0.6,
+              "buy_ratio": 0.4
+            },
+            {
+              "broker": "港商麥格理",
+              "total_net": -4087,
+              "total_buy": 2286,
+              "total_sell": 6373,
+              "appearances": 7,
+              "sell_days": 7,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "凱基-台北",
+              "total_net": -2317,
+              "total_buy": 14373,
+              "total_sell": 16691,
+              "appearances": 9,
+              "sell_days": 5,
+              "buy_days": 4,
+              "sell_ratio": 0.5555555555555556,
+              "buy_ratio": 0.4444444444444444
+            },
+            {
+              "broker": "港商野村",
+              "total_net": -2189,
+              "total_buy": 1551,
+              "total_sell": 3742,
+              "appearances": 8,
+              "sell_days": 6,
+              "buy_days": 2,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "花旗環球",
+              "total_net": -1819,
+              "total_buy": 1285,
+              "total_sell": 3103,
+              "appearances": 8,
+              "sell_days": 5,
+              "buy_days": 3,
+              "sell_ratio": 0.625,
+              "buy_ratio": 0.375
+            },
+            {
+              "broker": "美林",
+              "total_net": -1215,
+              "total_buy": 3619,
+              "total_sell": 4835,
+              "appearances": 9,
+              "sell_days": 5,
+              "buy_days": 4,
+              "sell_ratio": 0.5555555555555556,
+              "buy_ratio": 0.4444444444444444
+            },
+            {
+              "broker": "摩根大通",
+              "total_net": -879,
+              "total_buy": 10455,
+              "total_sell": 11335,
+              "appearances": 9,
+              "sell_days": 6,
+              "buy_days": 3,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "群益金鼎",
+              "total_net": -716,
+              "total_buy": 960,
+              "total_sell": 1677,
+              "appearances": 4,
+              "sell_days": 2,
+              "buy_days": 2,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "第一金",
+              "total_net": -501,
+              "total_buy": 68,
+              "total_sell": 570,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "華南永昌",
+              "total_net": -334,
+              "total_buy": 679,
+              "total_sell": 1015,
+              "appearances": 5,
+              "sell_days": 2,
+              "buy_days": 3,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "國票-敦北法人",
+              "total_net": -240,
+              "total_buy": 510,
+              "total_sell": 751,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "富邦-板橋",
+              "total_net": -173,
+              "total_buy": 87,
+              "total_sell": 261,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "群益金鼎-大安",
+              "total_net": -82,
+              "total_buy": 15,
+              "total_sell": 99,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "中國信託-永康",
+              "total_net": -71,
+              "total_buy": 183,
+              "total_sell": 255,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            }
+          ],
+          "persistent_buyers": [
+            {
+              "broker": "國泰",
+              "total_net": 2452,
+              "total_buy": 3423,
+              "total_sell": 970,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "兆豐",
+              "total_net": 2136,
+              "total_buy": 2182,
+              "total_sell": 45,
+              "appearances": 3,
+              "sell_days": 0,
+              "buy_days": 3,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "永豐金",
+              "total_net": 2081,
+              "total_buy": 6106,
+              "total_sell": 4023,
+              "appearances": 9,
+              "sell_days": 3,
+              "buy_days": 6,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "統一",
+              "total_net": 1532,
+              "total_buy": 2272,
+              "total_sell": 737,
+              "appearances": 6,
+              "sell_days": 2,
+              "buy_days": 4,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "國泰-敦南",
+              "total_net": 806,
+              "total_buy": 4788,
+              "total_sell": 3980,
+              "appearances": 9,
+              "sell_days": 3,
+              "buy_days": 6,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "凱基",
+              "total_net": 768,
+              "total_buy": 1459,
+              "total_sell": 693,
+              "appearances": 6,
+              "sell_days": 2,
+              "buy_days": 4,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "土銀",
+              "total_net": 691,
+              "total_buy": 702,
+              "total_sell": 11,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "中國信託",
+              "total_net": 495,
+              "total_buy": 537,
+              "total_sell": 42,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "新光",
+              "total_net": 355,
+              "total_buy": 1011,
+              "total_sell": 654,
+              "appearances": 6,
+              "sell_days": 1,
+              "buy_days": 5,
+              "sell_ratio": 0.16666666666666666,
+              "buy_ratio": 0.8333333333333334
+            },
+            {
+              "broker": "富邦",
+              "total_net": 319,
+              "total_buy": 2682,
+              "total_sell": 2364,
+              "appearances": 8,
+              "sell_days": 4,
+              "buy_days": 4,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "元大",
+              "total_net": 226,
+              "total_buy": 13775,
+              "total_sell": 13550,
+              "appearances": 8,
+              "sell_days": 3,
+              "buy_days": 5,
+              "sell_ratio": 0.375,
+              "buy_ratio": 0.625
+            },
+            {
+              "broker": "玉山",
+              "total_net": 203,
+              "total_buy": 294,
+              "total_sell": 89,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "合庫-西台中",
+              "total_net": 193,
+              "total_buy": 213,
+              "total_sell": 20,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "合庫-高雄",
+              "total_net": 178,
+              "total_buy": 280,
+              "total_sell": 102,
+              "appearances": 3,
+              "sell_days": 1,
+              "buy_days": 2,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "國泰-板橋",
+              "total_net": 165,
+              "total_buy": 430,
+              "total_sell": 264,
+              "appearances": 3,
+              "sell_days": 1,
+              "buy_days": 2,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "新光-新竹",
+              "total_net": 161,
+              "total_buy": 434,
+              "total_sell": 273,
+              "appearances": 3,
+              "sell_days": 1,
+              "buy_days": 2,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "統一-南京",
+              "total_net": 159,
+              "total_buy": 174,
+              "total_sell": 15,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "永豐金-市政",
+              "total_net": 151,
+              "total_buy": 189,
+              "total_sell": 38,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "兆豐-桃園",
+              "total_net": 119,
+              "total_buy": 146,
+              "total_sell": 27,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "台新",
+              "total_net": 110,
+              "total_buy": 227,
+              "total_sell": 116,
+              "appearances": 2,
+              "sell_days": 0,
+              "buy_days": 2,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            }
+          ]
+        },
+        {
+          "window": 20,
+          "available_trading_days": 20,
+          "from": "2026-07-07",
+          "to": "2026-08-04",
+          "persistent_sellers": [
+            {
+              "broker": "台灣摩根士丹利",
+              "total_net": -31185,
+              "total_buy": 24467,
+              "total_sell": 55655,
+              "appearances": 20,
+              "sell_days": 15,
+              "buy_days": 5,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "美商高盛",
+              "total_net": -22633,
+              "total_buy": 23483,
+              "total_sell": 46123,
+              "appearances": 19,
+              "sell_days": 15,
+              "buy_days": 4,
+              "sell_ratio": 0.7894736842105263,
+              "buy_ratio": 0.21052631578947367
+            },
+            {
+              "broker": "新加坡商瑞銀",
+              "total_net": -16524,
+              "total_buy": 14264,
+              "total_sell": 30801,
+              "appearances": 20,
+              "sell_days": 17,
+              "buy_days": 3,
+              "sell_ratio": 0.85,
+              "buy_ratio": 0.15
+            },
+            {
+              "broker": "美林",
+              "total_net": -5950,
+              "total_buy": 9271,
+              "total_sell": 15223,
+              "appearances": 18,
+              "sell_days": 12,
+              "buy_days": 6,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "摩根大通",
+              "total_net": -4000,
+              "total_buy": 16451,
+              "total_sell": 20452,
+              "appearances": 17,
+              "sell_days": 11,
+              "buy_days": 6,
+              "sell_ratio": 0.6470588235294118,
+              "buy_ratio": 0.35294117647058826
+            },
+            {
+              "broker": "元大",
+              "total_net": -3857,
+              "total_buy": 31374,
+              "total_sell": 35231,
+              "appearances": 16,
+              "sell_days": 7,
+              "buy_days": 9,
+              "sell_ratio": 0.4375,
+              "buy_ratio": 0.5625
+            },
+            {
+              "broker": "港商麥格理",
+              "total_net": -3817,
+              "total_buy": 2950,
+              "total_sell": 6767,
+              "appearances": 11,
+              "sell_days": 8,
+              "buy_days": 3,
+              "sell_ratio": 0.7272727272727273,
+              "buy_ratio": 0.2727272727272727
+            },
+            {
+              "broker": "永豐金-匯立",
+              "total_net": -3223,
+              "total_buy": 562,
+              "total_sell": 3785,
+              "appearances": 3,
+              "sell_days": 2,
+              "buy_days": 1,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "港商野村",
+              "total_net": -2990,
+              "total_buy": 3989,
+              "total_sell": 6983,
+              "appearances": 18,
+              "sell_days": 11,
+              "buy_days": 7,
+              "sell_ratio": 0.6111111111111112,
+              "buy_ratio": 0.3888888888888889
+            },
+            {
+              "broker": "宏遠",
+              "total_net": -1584,
+              "total_buy": 31,
+              "total_sell": 1617,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "香港上海匯豐",
+              "total_net": -1426,
+              "total_buy": 153,
+              "total_sell": 1580,
+              "appearances": 6,
+              "sell_days": 5,
+              "buy_days": 1,
+              "sell_ratio": 0.8333333333333334,
+              "buy_ratio": 0.16666666666666666
+            },
+            {
+              "broker": "台新-台北",
+              "total_net": -1342,
+              "total_buy": 299,
+              "total_sell": 1645,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "花旗環球",
+              "total_net": -1103,
+              "total_buy": 3971,
+              "total_sell": 5074,
+              "appearances": 16,
+              "sell_days": 8,
+              "buy_days": 8,
+              "sell_ratio": 0.5,
+              "buy_ratio": 0.5
+            },
+            {
+              "broker": "國票-敦北法人",
+              "total_net": -740,
+              "total_buy": 770,
+              "total_sell": 1513,
+              "appearances": 6,
+              "sell_days": 4,
+              "buy_days": 2,
+              "sell_ratio": 0.6666666666666666,
+              "buy_ratio": 0.3333333333333333
+            },
+            {
+              "broker": "第一金",
+              "total_net": -700,
+              "total_buy": 91,
+              "total_sell": 794,
+              "appearances": 4,
+              "sell_days": 4,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            },
+            {
+              "broker": "華南永昌",
+              "total_net": -457,
+              "total_buy": 1914,
+              "total_sell": 2372,
+              "appearances": 13,
+              "sell_days": 5,
+              "buy_days": 8,
+              "sell_ratio": 0.38461538461538464,
+              "buy_ratio": 0.6153846153846154
+            },
+            {
+              "broker": "富邦-板橋",
+              "total_net": -388,
+              "total_buy": 289,
+              "total_sell": 678,
+              "appearances": 5,
+              "sell_days": 4,
+              "buy_days": 1,
+              "sell_ratio": 0.8,
+              "buy_ratio": 0.2
+            },
+            {
+              "broker": "群益金鼎",
+              "total_net": -343,
+              "total_buy": 1698,
+              "total_sell": 2042,
+              "appearances": 6,
+              "sell_days": 2,
+              "buy_days": 4,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "法銀巴黎",
+              "total_net": -170,
+              "total_buy": 227,
+              "total_sell": 397,
+              "appearances": 4,
+              "sell_days": 3,
+              "buy_days": 1,
+              "sell_ratio": 0.75,
+              "buy_ratio": 0.25
+            },
+            {
+              "broker": "富邦-仁愛",
+              "total_net": -163,
+              "total_buy": 126,
+              "total_sell": 290,
+              "appearances": 2,
+              "sell_days": 2,
+              "buy_days": 0,
+              "sell_ratio": 1,
+              "buy_ratio": 0
+            }
+          ],
+          "persistent_buyers": [
+            {
+              "broker": "統一",
+              "total_net": 5597,
+              "total_buy": 8652,
+              "total_sell": 3050,
+              "appearances": 13,
+              "sell_days": 5,
+              "buy_days": 8,
+              "sell_ratio": 0.38461538461538464,
+              "buy_ratio": 0.6153846153846154
+            },
+            {
+              "broker": "國泰",
+              "total_net": 3155,
+              "total_buy": 4614,
+              "total_sell": 1460,
+              "appearances": 10,
+              "sell_days": 4,
+              "buy_days": 6,
+              "sell_ratio": 0.4,
+              "buy_ratio": 0.6
+            },
+            {
+              "broker": "國泰-敦南",
+              "total_net": 2771,
+              "total_buy": 11958,
+              "total_sell": 9181,
+              "appearances": 18,
+              "sell_days": 5,
+              "buy_days": 13,
+              "sell_ratio": 0.2777777777777778,
+              "buy_ratio": 0.7222222222222222
+            },
+            {
+              "broker": "永豐金",
+              "total_net": 2392,
+              "total_buy": 8678,
+              "total_sell": 6283,
+              "appearances": 15,
+              "sell_days": 5,
+              "buy_days": 10,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "兆豐",
+              "total_net": 2167,
+              "total_buy": 2215,
+              "total_sell": 47,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "新光",
+              "total_net": 931,
+              "total_buy": 2314,
+              "total_sell": 1380,
+              "appearances": 11,
+              "sell_days": 2,
+              "buy_days": 9,
+              "sell_ratio": 0.18181818181818182,
+              "buy_ratio": 0.8181818181818182
+            },
+            {
+              "broker": "富邦",
+              "total_net": 930,
+              "total_buy": 7234,
+              "total_sell": 6302,
+              "appearances": 16,
+              "sell_days": 7,
+              "buy_days": 9,
+              "sell_ratio": 0.4375,
+              "buy_ratio": 0.5625
+            },
+            {
+              "broker": "土銀",
+              "total_net": 905,
+              "total_buy": 918,
+              "total_sell": 13,
+              "appearances": 5,
+              "sell_days": 0,
+              "buy_days": 5,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "台新",
+              "total_net": 835,
+              "total_buy": 2091,
+              "total_sell": 1252,
+              "appearances": 8,
+              "sell_days": 1,
+              "buy_days": 7,
+              "sell_ratio": 0.125,
+              "buy_ratio": 0.875
+            },
+            {
+              "broker": "凱基",
+              "total_net": 727,
+              "total_buy": 2308,
+              "total_sell": 1586,
+              "appearances": 12,
+              "sell_days": 5,
+              "buy_days": 7,
+              "sell_ratio": 0.4166666666666667,
+              "buy_ratio": 0.5833333333333334
+            },
+            {
+              "broker": "國泰-板橋",
+              "total_net": 713,
+              "total_buy": 1267,
+              "total_sell": 552,
+              "appearances": 7,
+              "sell_days": 1,
+              "buy_days": 6,
+              "sell_ratio": 0.14285714285714285,
+              "buy_ratio": 0.8571428571428571
+            },
+            {
+              "broker": "國泰-台中",
+              "total_net": 467,
+              "total_buy": 931,
+              "total_sell": 459,
+              "appearances": 5,
+              "sell_days": 0,
+              "buy_days": 5,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "富邦-陽明",
+              "total_net": 410,
+              "total_buy": 604,
+              "total_sell": 195,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "台新-台中",
+              "total_net": 409,
+              "total_buy": 836,
+              "total_sell": 423,
+              "appearances": 6,
+              "sell_days": 1,
+              "buy_days": 5,
+              "sell_ratio": 0.16666666666666666,
+              "buy_ratio": 0.8333333333333334
+            },
+            {
+              "broker": "玉山",
+              "total_net": 346,
+              "total_buy": 524,
+              "total_sell": 177,
+              "appearances": 6,
+              "sell_days": 2,
+              "buy_days": 4,
+              "sell_ratio": 0.3333333333333333,
+              "buy_ratio": 0.6666666666666666
+            },
+            {
+              "broker": "永豐金-市政",
+              "total_net": 293,
+              "total_buy": 421,
+              "total_sell": 126,
+              "appearances": 4,
+              "sell_days": 0,
+              "buy_days": 4,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "合庫-高雄",
+              "total_net": 281,
+              "total_buy": 393,
+              "total_sell": 111,
+              "appearances": 4,
+              "sell_days": 1,
+              "buy_days": 3,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
+            },
+            {
+              "broker": "合庫-西台中",
+              "total_net": 235,
+              "total_buy": 262,
+              "total_sell": 27,
+              "appearances": 3,
+              "sell_days": 0,
+              "buy_days": 3,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "台新-高雄",
+              "total_net": 233,
+              "total_buy": 374,
+              "total_sell": 139,
+              "appearances": 3,
+              "sell_days": 0,
+              "buy_days": 3,
+              "sell_ratio": 0,
+              "buy_ratio": 1
+            },
+            {
+              "broker": "元大-豐原站前",
+              "total_net": 228,
+              "total_buy": 898,
+              "total_sell": 669,
+              "appearances": 8,
+              "sell_days": 2,
+              "buy_days": 6,
+              "sell_ratio": 0.25,
+              "buy_ratio": 0.75
             }
           ]
         }
