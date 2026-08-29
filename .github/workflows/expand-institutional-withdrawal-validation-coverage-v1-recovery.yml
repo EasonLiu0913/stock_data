@@ -1,0 +1,76 @@
+name: "[07 研究] Expand Institutional Withdrawal Validation Coverage v1 Recovery"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/run_institutional_withdrawal_validation_coverage_expansion_v1.sh"
+      - ".github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-validation-coverage-expansion-v1-recovery
+  cancel-in-progress: false
+
+env:
+  RANGE_START: "2026-04-01"
+  RANGE_END: "2026-08-21"
+  MAX_TDCC_STOCKS: "6"
+  MAX_BROKER_STOCKS: "2"
+  BROKER_BATCH_SIZE: "5"
+  BROKER_MAX_BATCHES: "16"
+
+jobs:
+  expand-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout coverage-only repository slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_fubon/fubon_202604*_sma.json
+            data_fubon/fubon_202605*_sma.json
+            data_fubon/fubon_202606*_sma.json
+            data_fubon/fubon_202607*_sma.json
+            data_fubon/fubon_202608*_sma.json
+            data_tdcc_shareholding/history/
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/validation/
+            data_research/institutional-flow/validation-plan-v1.md
+      - name: Run coverage-only expansion
+        shell: bash
+        run: bash scripts/run_institutional_withdrawal_validation_coverage_expansion_v1.sh
+      - name: Coverage expansion summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Validation coverage expansion recovery runner" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frozen thresholds changed: **NO**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Validation outcomes opened/generated: **NO**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Calendar: source-derived Foreign + OHLCV only" >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
