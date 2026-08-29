@@ -67,6 +67,47 @@ test('same TDCC observation date is idempotent and preserves first available_at'
   assert.equal(weekly.available_at, first);
 });
 
+test('schema v1 archive is migrated to consolidated schema v2 while preserving first available_at', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tdcc-migrate-v1-'));
+  const input = path.join(dir, 'input.csv');
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(input, [
+    '資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%',
+    '1150515,2449,1,10,100,1.00',
+    '1150515,2449,9,20,200,2.00',
+    '1150515,2449,15,5,500,56.90',
+    '1150515,2449,17,35,800,100.00',
+  ].join('\n'));
+  const first = '2026-05-16T01:23:45.000Z';
+  const later = '2026-05-17T08:00:00.000Z';
+  const legacy = {
+    schema_version: 1,
+    source: 'tdcc_official_openapi_1_5',
+    observed_date: '2026-05-15',
+    captured_at: first,
+    available_at: first,
+    rows: 4,
+    stocks: 1,
+  };
+  fs.writeFileSync(path.join(out, 'manifest-20260515.json'), `${JSON.stringify(legacy, null, 2)}\n`);
+  fs.writeFileSync(path.join(out, 'latest.json'), `${JSON.stringify(legacy, null, 2)}\n`);
+
+  const stdout = run(input, out, later);
+  assert.match(stdout, /migrated/);
+  const manifest = JSON.parse(fs.readFileSync(path.join(out, 'manifest-20260515.json'), 'utf8'));
+  assert.equal(manifest.schema_version, 2);
+  assert.equal(manifest.available_at, first);
+  assert.equal(manifest.captured_at, later);
+  assert.equal(manifest.migrated_from_schema_version, 1);
+  assert.equal(manifest.canonical_file, 'weekly/20260515.json');
+  const weekly = readWeekly(out, '20260515');
+  assert.equal(weekly.schema_version, 2);
+  assert.equal(weekly.available_at, first);
+  assert.equal(weekly.captured_at, later);
+  assert.equal(weekly.stocks['2449'].derived.large_holder_pct, 56.9);
+});
+
 test('official-style TDCC JSON field names tolerate BOM on the date key', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tdcc-json-bom-'));
   const input = path.join(dir, 'input.json');
