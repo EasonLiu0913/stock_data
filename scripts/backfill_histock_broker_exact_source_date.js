@@ -26,6 +26,25 @@ if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 6) throw new
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const compact = date.replaceAll('-', '');
+const statusDir = path.join(outRoot, 'batch-status');
+const statusFile = path.join(statusDir, `exact-source-date-${compact}.json`);
+
+function writeStatus(outcome, details = {}) {
+  fs.mkdirSync(statusDir, { recursive: true });
+  const payload = {
+    schema_version: 1,
+    research: 'institutional-withdrawal-validation-coverage-v1',
+    stock,
+    date,
+    outcome,
+    terminal_for_date: outcome === 'success' || outcome === 'source_empty' || outcome === 'permanent_error',
+    run_id: process.env.GITHUB_RUN_ID || null,
+    updated_at: new Date().toISOString(),
+    ...details,
+  };
+  fs.writeFileSync(statusFile, `${JSON.stringify(payload, null, 2)}\n`);
+  return statusFile;
+}
 
 function decodeHtml(value) {
   return String(value)
@@ -115,19 +134,22 @@ async function fetchOnce() {
   if (!response.ok) {
     const error = new Error(`HTTP ${response.status}`);
     error.status = response.status;
+    error.classification = 'http_error';
     error.diagnostics = diagnostics;
     throw error;
   }
   if (!diagnostics.date_visible) {
     const error = new Error('requested date not visible');
     error.retryable = true;
+    error.classification = 'transient_error';
     error.diagnostics = diagnostics;
     throw error;
   }
   const parsed = parseBrokerRows(html);
   if (!parsed.records.length) {
     const error = new Error('no_broker_records_on_source_session');
-    error.retryable = true;
+    error.retryable = false;
+    error.classification = 'source_empty';
     error.diagnostics = { ...diagnostics, incomplete_records: parsed.incomplete.length };
     throw error;
   }
@@ -150,10 +172,16 @@ async function fetchOnce() {
   const check = validateDailyPayload(payload, { stock, date });
   if (!check.valid) {
     const error = new Error(`hard data-quality gate failed: ${JSON.stringify(check.reasons)}`);
+    error.retryable = false;
+    error.classification = 'permanent_error';
     error.diagnostics = { ...diagnostics, record_quality: check.record_quality };
     throw error;
   }
   return { payload, diagnostics };
+}
+
+function isNetworkError(error) {
+  return error?.name === 'TypeError' || Boolean(error?.cause?.code) || /fetch failed|socket|network|timeout/i.test(String(error?.message || ''));
 }
 
 (async () => {
@@ -165,18 +193,39 @@ async function fetchOnce() {
       fs.mkdirSync(dailyDir, { recursive: true });
       const file = path.join(dailyDir, `${compact}.json`);
       fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`);
-      console.log(JSON.stringify({ stock, date, file, quality_version: QUALITY_VERSION, diagnostics }, null, 2));
+      const savedStatus = writeStatus('success', { attempts: attempt + 1, file, quality_version: QUALITY_VERSION, diagnostics });
+      console.log(JSON.stringify({ stock, date, file, status_file: savedStatus, outcome: 'success', quality_version: QUALITY_VERSION, diagnostics }, null, 2));
       return;
     } catch (error) {
       lastError = error;
       const retryableStatus = error.status === 408 || error.status === 425 || error.status === 429 || error.status >= 500;
-      const canRetry = attempt < maxRetries && (error.retryable === true || error.status === undefined || retryableStatus);
+      const canRetry = attempt < maxRetries && (error.retryable === true || retryableStatus || isNetworkError(error));
       if (!canRetry) break;
       const wait = Math.min(30000, Math.max(4000, delayMs * (2 ** attempt))) + Math.floor(Math.random() * (jitterMs + 1));
       console.log(`retry ${attempt + 1}/${maxRetries} after ${wait}ms: ${error.message}`);
       await sleep(wait);
     }
   }
-  console.error(JSON.stringify({ stock, date, error: lastError?.message || 'unknown', diagnostics: lastError?.diagnostics || null }, null, 2));
-  process.exit(2);
-})().catch((error) => { console.error(error.stack || error.message); process.exit(1); });
+
+  const retryableStatus = lastError?.status === 408 || lastError?.status === 425 || lastError?.status === 429 || lastError?.status >= 500;
+  const outcome = lastError?.classification === 'source_empty'
+    ? 'source_empty'
+    : lastError?.classification === 'permanent_error'
+      ? 'permanent_error'
+      : (lastError?.retryable === true || retryableStatus || isNetworkError(lastError))
+        ? 'transient_error'
+        : 'permanent_error';
+  const savedStatus = writeStatus(outcome, {
+    error: lastError?.message || 'unknown',
+    http_status: lastError?.status || null,
+    diagnostics: lastError?.diagnostics || null,
+  });
+  console.error(JSON.stringify({ stock, date, outcome, status_file: savedStatus, error: lastError?.message || 'unknown', diagnostics: lastError?.diagnostics || null }, null, 2));
+  process.exit(outcome === 'source_empty' ? 3 : outcome === 'transient_error' ? 2 : 4);
+})().catch((error) => {
+  try {
+    writeStatus('transient_error', { error: error.message || String(error), diagnostics: null });
+  } catch (_) {}
+  console.error(error.stack || error.message);
+  process.exit(1);
+});
