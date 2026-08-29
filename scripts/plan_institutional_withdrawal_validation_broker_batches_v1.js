@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
 
+// Activation marker: this coverage-only planner intentionally triggers the expansion workflow after registration.
 const args = process.argv.slice(2);
 const arg = (name, fallback = '') => {
   const i = args.indexOf(`--${name}`);
