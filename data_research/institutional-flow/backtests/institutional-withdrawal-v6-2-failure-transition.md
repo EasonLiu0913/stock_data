@@ -18,7 +18,7 @@
 
 | Stock | Fragile anchor | v6.1 diagnosis | Status | Transition | Sessions | Trigger | Return at transition | Peak gain | DD from peak |
 |---|---|---|---|---|---:|---|---:|---:|---:|
-| 2317 | 2026-06-18 | persistent_withdrawal_consistent | confirmed_failure_transition | 2026-06-26 | 5 | breakdown+ownership+broker | -7.45% | 0% | -7.45% |
+| 2317 | 2026-06-18 | persistent_withdrawal_consistent | confirmed_failure_transition | 2026-06-26 | 5 | breakdown+foreign+ownership+broker | -7.45% | 0% | -7.45% |
 | 2454 | 2026-06-12 | persistent_withdrawal_consistent | no_failure_within_10_sessions | - | - | - | n/a% | n/a% | n/a% |
 | 2382 | 2026-06-18 | persistent_withdrawal_consistent | no_failure_within_10_sessions | - | - | - | n/a% | n/a% | n/a% |
 | 2303 | 2026-06-12 | absorbed_or_false_positive | no_failure_within_10_sessions | - | - | - | n/a% | n/a% | n/a% |
