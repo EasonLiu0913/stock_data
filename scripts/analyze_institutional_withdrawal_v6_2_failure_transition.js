@@ -49,8 +49,8 @@ function latestWeekly(stock, date) {
 }
 function pct(a,b){ return Number.isFinite(a) && Number.isFinite(b) && b !== 0 ? (a/b - 1)*100 : null; }
 function getClose(row){ return Number(row?.close ?? row?.price_volume?.close); }
-function getForeignNet5(r){ return Number(r?.net_5d ?? r?.total_net_5d ?? r?.foreign_net_5d); }
-function getForeignSellRatio5(r){ return Number(r?.sell_ratio_5d ?? r?.foreign_sell_ratio_5d); }
+function getForeignNet5(r){ return Number(r?.rolling_5d?.total_net); }
+function getForeignSellRatio5(r){ return Number(r?.rolling_5d?.total_sell_ratio); }
 
 const events = [];
 for (const src of v61.events) {
