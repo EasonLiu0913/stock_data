@@ -1,0 +1,252 @@
+name: "[07 研究] Institutional Distribution Multi-Stock Backtest"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stocks:
+        description: "Comma-separated fixed validation universe"
+        required: true
+        default: "2330,2317,2454,2382,2303,2449"
+        type: string
+      start_date:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        default: "2026-04-01"
+        type: string
+      end_date:
+        description: "End date (YYYY-MM-DD)"
+        required: true
+        default: "2026-08-21"
+        type: string
+  push:
+    paths:
+      - 'scripts/backtest_institutional_distribution_universe.js'
+      - 'tests/institutional_distribution_universe_backtest.test.js'
+      - '.github/workflows/backtest-institutional-distribution-universe.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-distribution-multistock-backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DEFAULT_STOCKS: "2330,2317,2454,2382,2303,2449"
+      DEFAULT_START: "2026-04-01"
+      DEFAULT_END: "2026-08-21"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve validation universe
+        id: cfg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            STOCKS="${{ inputs.stocks }}"
+            START="${{ inputs.start_date }}"
+            END="${{ inputs.end_date }}"
+          else
+            STOCKS="$DEFAULT_STOCKS"
+            START="$DEFAULT_START"
+            END="$DEFAULT_END"
+          fi
+          [[ "$STOCKS" =~ ^[0-9]{4}(,[0-9]{4})+$ ]]
+          [[ "$START" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
+          [[ "$END" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
+          echo "stocks=$STOCKS" >> "$GITHUB_OUTPUT"
+          echo "start=$START" >> "$GITHUB_OUTPUT"
+          echo "end=$END" >> "$GITHUB_OUTPUT"
+          echo "Validation universe: $STOCKS"
+
+      - name: Validate code contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/backfill_tdcc_shareholding_history.js
+          node --check scripts/backfill_histock_broker_history_research_v2.js
+          node --check scripts/aggregate_histock_broker_history_research.js
+          node --check scripts/build_institutional_distribution_score.js
+          node --check scripts/backtest_institutional_distribution_universe.js
+          node --test tests/tdcc_shareholding_history_backfill.test.js
+          node --test tests/institutional_distribution_score.test.js
+          node --test tests/institutional_distribution_universe_backtest.test.js
+
+      - name: Backfill official TDCC historical evidence
+        shell: bash
+        env:
+          STOCKS: ${{ steps.cfg.outputs.stocks }}
+          START: ${{ steps.cfg.outputs.start }}
+          END: ${{ steps.cfg.outputs.end }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra LIST <<< "$STOCKS"
+          for STOCK in "${LIST[@]}"; do
+            echo "[TDCC] $STOCK"
+            set +e
+            node scripts/backfill_tdcc_shareholding_history.js \
+              --stock "$STOCK" --start "$START" --end "$END" \
+              --delay-ms 1000 --jitter-ms 700
+            RC=$?
+            set -e
+            ROOT="data_tdcc_shareholding/history/$STOCK"
+            test -s "$ROOT/manifest.json"
+            node - "$ROOT" "$STOCK" <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const [root,stock]=process.argv.slice(2);
+          const files=fs.readdirSync(root).filter(x=>/^2026\d{4}\.json$/.test(x));
+          if(files.length<12) throw new Error(`${stock}: expected >=12 historical TDCC observations, got ${files.length}`);
+          for(const f of files){const p=JSON.parse(fs.readFileSync(path.join(root,f),'utf8'));if(p.stock!==stock||p.source!=='tdcc_official_historical_query'||p.production_no_lookahead_safe!==false)throw new Error(`${stock}: invalid ${f}`);}
+          console.log({stock,files:files.length});
+          NODE
+            if [ "$RC" -ne 0 ]; then echo "[TDCC] $STOCK had unresolved dates, but usable checkpoint count passed validation."; fi
+          done
+
+      - name: Commit TDCC universe checkpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_tdcc_shareholding/history
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: backfill TDCC validation universe"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*4))
+          done
+          exit 1
+
+      - name: Backfill broker evidence with per-stock checkpoints
+        shell: bash
+        env:
+          STOCKS: ${{ steps.cfg.outputs.stocks }}
+          START: ${{ steps.cfg.outputs.start }}
+          END: ${{ steps.cfg.outputs.end }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra LIST <<< "$STOCKS"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for STOCK in "${LIST[@]}"; do
+            echo "[broker] $STOCK"
+            ROOT="data_research/institutional-flow/histock/$STOCK"
+            set +e
+            node scripts/backfill_histock_broker_history_research_v2.js \
+              --stock "$STOCK" --start "$START" --end "$END" \
+              --delay-ms 1000 --jitter-ms 700 --max-retries 3 --max-consecutive-failures 20 \
+              --out "$ROOT"
+            FETCH_RC=$?
+            node scripts/aggregate_histock_broker_history_research.js --stock "$STOCK" --start "$START" --end "$END"
+            AGG_RC=$?
+            set -e
+            if [ "$AGG_RC" -ne 0 ]; then
+              echo "Broker aggregate remains incomplete for $STOCK (fetch_rc=$FETCH_RC aggregate_rc=$AGG_RC)"
+              exit 1
+            fi
+            git add "$ROOT"
+            if ! git diff --cached --quiet; then
+              git commit -m "research: checkpoint broker history for $STOCK"
+              PUSHED=0
+              for attempt in 1 2 3 4 5; do
+                if git pull --rebase origin main && git push origin HEAD:main; then PUSHED=1; break; fi
+                git rebase --abort 2>/dev/null || true
+                sleep $((attempt*4))
+              done
+              test "$PUSHED" -eq 1
+            fi
+          done
+
+      - name: Sync completed checkpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Build multi-stock association backtest
+        shell: bash
+        env:
+          STOCKS: ${{ steps.cfg.outputs.stocks }}
+          START: ${{ steps.cfg.outputs.start }}
+          END: ${{ steps.cfg.outputs.end }}
+        run: |
+          set -euo pipefail
+          node scripts/backtest_institutional_distribution_universe.js \
+            --stocks "$STOCKS" --start "$START" --end "$END" \
+            --output data_research/institutional-flow/backtests/official-historical-universe.json
+
+      - name: Validate completed universe
+        shell: bash
+        env:
+          STOCKS: ${{ steps.cfg.outputs.stocks }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('data_research/institutional-flow/backtests/official-historical-universe.json','utf8'));
+          const expected=process.env.STOCKS.split(',').length;
+          if(p.stocks_completed!==expected) throw new Error(`Expected ${expected} completed stocks, got ${p.stocks_completed}: ${JSON.stringify(p.stocks_skipped)}`);
+          if(p.aggregate.events.observations<3) throw new Error(`Too few independent threshold/escalation events: ${p.aggregate.events.observations}`);
+          for(const h of ['5d','10d','20d']) if(p.aggregate.events.horizons[h].n<2) throw new Error(`Too few ${h} event outcomes`);
+          console.log({stocks_completed:p.stocks_completed,events:p.aggregate.events.observations,edge:p.aggregate.edge_vs_baseline});
+          NODE
+
+      - name: Commit backtest result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/backtests/official-historical-universe.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: record multi-stock distribution backtest"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*4))
+          done
+          exit 1
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -s data_research/institutional-flow/backtests/official-historical-universe.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p=require('./data_research/institutional-flow/backtests/official-historical-universe.json');
+          console.log('## Institutional Distribution Multi-Stock Backtest');
+          console.log(`- Universe: ${p.universe.join(', ')}`);
+          console.log(`- Completed: ${p.stocks_completed}/${p.universe.length}`);
+          console.log(`- Independent Orange/Red events: ${p.aggregate.events.observations}`);
+          for(const h of ['5d','10d','20d']){
+            const s=p.aggregate.events.horizons[h],b=p.aggregate.baseline.horizons[h],e=p.aggregate.edge_vs_baseline[h];
+            console.log(`- ${h}: signal mean ${s.mean_pct}% vs baseline ${b.mean_pct}% (edge ${e.mean_return_edge_pp}pp), negative rate ${s.negative_rate} vs ${b.negative_rate}`);
+          }
+          console.log('- Safety: association-only research; historical TDCC publication timestamps are unknown, so this is not executable historical P&L.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
