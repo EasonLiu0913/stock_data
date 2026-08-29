@@ -66,14 +66,16 @@ function stripHtml(value) {
   return decodeHtml(value.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
 }
 function num(value) {
-  const n = Number(String(value ?? '').replaceAll(',', '').replace('+', '').trim());
+  const text = String(value ?? '').replaceAll(',', '').replace('+', '').trim();
+  if (!text || /^(?:N\/?A|NA|--|-)$/.test(text)) return null;
+  const n = Number(text);
   return Number.isFinite(n) ? n : null;
 }
 function extractRows(html) {
   const rows = [];
   for (const m of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
-    const cells = [...m[1].matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)].map((x) => stripHtml(x[1])).filter(Boolean);
-    if (cells.length) rows.push(cells);
+    const cells = [...m[1].matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)].map((x) => stripHtml(x[1]));
+    if (cells.some((cell) => cell !== '')) rows.push(cells);
   }
   return rows;
 }
@@ -88,7 +90,7 @@ function parseBrokerRecords(html) {
       const sell = num(cells[offset + 2]);
       const net = num(cells[offset + 3]);
       const avgPrice = num(cells[offset + 4]);
-      if (!broker || /券商名稱/.test(broker) || buy === null || sell === null || net === null) continue;
+      if (!broker || /券商名稱/.test(broker) || buy === null || sell === null || net === null || avgPrice === null) continue;
       const key = `${broker}|${buy}|${sell}|${net}|${avgPrice}`;
       if (seen.has(key)) continue;
       seen.add(key);
