@@ -1,0 +1,125 @@
+name: "[07 研究] Institutional Withdrawal v6.3 Delayed Failure"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/v6-3-delayed-failure-spec.md'
+      - 'scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js'
+      - '.github/workflows/research-institutional-withdrawal-v6-3-delayed-failure.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v6-3-delayed-failure
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/research-institutional-withdrawal-v6-3-delayed-failure.yml
+            scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js
+            data_research/institutional-flow/v6-3-delayed-failure-spec.md
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.md
+            data_research/institutional-flow/features/price-volume-v5.json
+            data_research/institutional-flow/features/foreign-flow-v5.json
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin main
+          git reset --hard origin/main
+
+      - name: Validate analyzer and frozen inputs
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js
+          node - <<'NODE'
+          const v62=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json');
+          const v6=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json');
+          const pv=require('./data_research/institutional-flow/features/price-volume-v5.json');
+          const f=require('./data_research/institutional-flow/features/foreign-flow-v5.json');
+          if(v62.methodology!=='institutional-withdrawal-v6-2-fragile-failure-transition-v1') throw new Error('Unexpected v6.2 input');
+          if(v6.methodology!=='institutional-withdrawal-v6-persistent-transfer-distribution-absorption-v1') throw new Error('Unexpected v6 input');
+          if(v62.events.length!==10) throw new Error(`Expected 10 fragile events, got ${v62.events.length}`);
+          if(JSON.stringify(pv.trading_dates)!==JSON.stringify(f.trading_dates)) throw new Error('Daily calendars differ');
+          NODE
+
+      - name: Run v6.3 delayed failure study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js
+
+      - name: Validate v6.3 output contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const x=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json');
+          if(x.methodology!=='institutional-withdrawal-v6-3-delayed-failure-transition-v1') throw new Error('Methodology mismatch');
+          if(x.research_only!==true || x.production_safe!==false) throw new Error('Research safety contract missing');
+          if(x.events.length!==10) throw new Error(`Expected 10 events, got ${x.events.length}`);
+          for(const e of x.events){
+            if(e.status==='confirmed_delayed_failure' && !(e.sessions_to_transition>=11 && e.sessions_to_transition<=20)) throw new Error(`Delayed session outside frozen window: ${e.stock} ${e.fragile_anchor}`);
+            if(e.status==='confirmed_delayed_failure' && !e.trigger) throw new Error(`Missing delayed trigger: ${e.stock} ${e.fragile_anchor}`);
+          }
+          NODE
+
+      - name: Commit v6.3 research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete institutional withdrawal v6.3 study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const x=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json');
+          console.log('## Institutional Withdrawal v6.3');
+          console.log(`- Immediate failures preserved: ${x.counts.immediate_failure_preserved||0}`);
+          console.log(`- Delayed failures: ${x.counts.confirmed_delayed_failure||0}`);
+          console.log(`- No failure within 20 sessions: ${x.counts.no_failure_within_20_sessions||0}`);
+          console.log(`- Insufficient follow-up: ${x.counts.insufficient_followup||0}`);
+          for(const [k,v] of Object.entries(x.by_v61_outcome)) console.log(`- ${k}: events ${v.events}; immediate ${v.immediate}; delayed ${v.delayed}; confirmed ${v.total_confirmed}; rate ${v.confirmation_rate}`);
+          console.log('- Safety: development-sample research only; no production promotion.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
