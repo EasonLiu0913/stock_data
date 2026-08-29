@@ -1,0 +1,112 @@
+name: "[07 研究] Institutional Withdrawal Validation Preflight"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/validate-institutional-withdrawal-regression-light.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: institutional-withdrawal-validation-preflight-v1
+  cancel-in-progress: false
+
+jobs:
+  frozen-regression-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch only frozen research inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p scripts \
+            data_research/institutional-flow/backtests \
+            data_research/institutional-flow/features \
+            data_research/institutional-flow/validation
+
+          raw="https://raw.githubusercontent.com/${REPO}/${SHA}"
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${raw}/scripts/classify_institutional_withdrawal_lifecycle_v1.js" \
+            -o scripts/classify_institutional_withdrawal_lifecycle_v1.js
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${raw}/scripts/test_institutional_withdrawal_lifecycle_v1.js" \
+            -o scripts/test_institutional_withdrawal_lifecycle_v1.js
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${raw}/data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json" \
+            -o data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${raw}/data_research/institutional-flow/features/price-volume-v5.json" \
+            -o data_research/institutional-flow/features/price-volume-v5.json
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${raw}/data_research/institutional-flow/features/foreign-flow-v5.json" \
+            -o data_research/institutional-flow/features/foreign-flow-v5.json
+
+      - name: Frozen lifecycle regression
+        run: node scripts/test_institutional_withdrawal_lifecycle_v1.js
+
+      - name: Current coverage preflight without outcomes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${REPO}/contents"
+          raw="https://raw.githubusercontent.com/${REPO}/${SHA}"
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api}/data_tdcc_shareholding/history?ref=${SHA}" -o /tmp/tdcc.json
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api}/data_research/institutional-flow/histock?ref=${SHA}" -o /tmp/histock.json
+          curl --fail --silent --show-error --retry 4 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "${raw}/data_twse_foreign_investors/files.json" -o /tmp/foreign-files.json
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const dev=new Set(['2330','2317','2454','2382','2303','2449']);
+          const dirs=p=>JSON.parse(fs.readFileSync(p,'utf8')).filter(x=>x.type==='dir').map(x=>x.name).filter(x=>/^\d{4,6}$/.test(x)).sort();
+          const tdcc=dirs('/tmp/tdcc.json');
+          const broker=dirs('/tmp/histock.json');
+          const foreign=JSON.parse(fs.readFileSync('/tmp/foreign-files.json','utf8'));
+          const post=foreign.map(x=>String(x).match(/^(\d{8})_twse_foreign_investors\.json$/)?.[1]).filter(Boolean).filter(d=>d>'20260821').sort();
+          const nonDevTdcc=tdcc.filter(s=>!dev.has(s));
+          const nonDevNormalizedBroker=broker.filter(s=>!dev.has(s));
+          const decision={
+            tdcc_stock_directories:tdcc,
+            normalized_broker_stock_directories:broker,
+            non_development_tdcc_stocks:nonDevTdcc,
+            non_development_normalized_broker_stocks:nonDevNormalizedBroker,
+            post_development_source_sessions:post,
+            stock_holdout_ready:false,
+            walk_forward_ready:post.length>=40,
+            reason:nonDevTdcc.length===0?'no_non_development_tdcc_history':(post.length<40?'insufficient_post_development_sessions':'requires_full_coverage_planner')
+          };
+          if(nonDevTdcc.length!==0) throw new Error(`Preflight assumption changed: non-development TDCC now exists (${nonDevTdcc.join(',')}); run full planner before selecting Batch 1.`);
+          if(post.length>=40) throw new Error('Preflight assumption changed: >=40 post-development source sessions now exist; run full planner before selecting Batch 1.');
+          console.log(JSON.stringify(decision,null,2));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`## Validation coverage preflight\n\n- Non-development TDCC stocks: **${nonDevTdcc.length}**\n- Non-development normalized Broker stocks: **${nonDevNormalizedBroker.length}**\n- Post-development source-derived sessions: **${post.length}** (${post[0]||'n/a'} → ${post.at(-1)||'n/a'})\n- Batch 1 stock holdout: **BLOCKED**\n- Batch 1 walk-forward: **BLOCKED**\n\nNo validation outcomes were opened or generated.\n`);
+          NODE
+
+      - name: No-lookahead static guard
+        run: |
+          set -euo pipefail
+          if grep -En "v6-1-event-diagnosis|v61_outcome|return_20d|max_drawdown|outcome\.label|data_history_sma/trading_days\.json" scripts/classify_institutional_withdrawal_lifecycle_v1.js; then
+            echo "Forbidden lookahead/calendar dependency detected"
+            exit 1
+          fi
