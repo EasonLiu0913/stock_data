@@ -1,0 +1,165 @@
+name: "[07 研究] Institutional Withdrawal v5"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/v5-research-spec.md'
+      - 'scripts/build_foreign_flow_research_features.js'
+      - 'scripts/build_price_volume_distribution_features.js'
+      - 'scripts/build_institutional_withdrawal_v5_matrix.js'
+      - 'scripts/analyze_institutional_withdrawal_v5.js'
+      - '.github/workflows/research-institutional-withdrawal-v5.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v5-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Validate research code
+        run: |
+          set -euo pipefail
+          node --check scripts/build_foreign_flow_research_features.js
+          node --check scripts/build_price_volume_distribution_features.js
+          node --check scripts/build_institutional_withdrawal_v5_matrix.js
+          node --check scripts/analyze_institutional_withdrawal_v5.js
+
+      - name: Build foreign-flow features
+        run: |
+          set -euo pipefail
+          node scripts/build_foreign_flow_research_features.js \
+            --stocks "2330,2317,2454,2382,2303,2449" \
+            --start "2026-04-01" --end "2026-08-21"
+
+      - name: Build price-volume features
+        run: |
+          set -euo pipefail
+          node scripts/build_price_volume_distribution_features.js \
+            --stocks "2330,2317,2454,2382,2303,2449" \
+            --start "2026-04-01" --end "2026-08-21"
+
+      - name: Quality gate source coverage
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const f=require('./data_research/institutional-flow/features/foreign-flow-v5.json');
+          const p=require('./data_research/institutional-flow/features/price-volume-v5.json');
+          for(const [label,x] of [['foreign',f],['price-volume',p]]){
+            if(x.counts.trading_days!==85) throw new Error(`${label}: expected 85 trading days, got ${x.counts.trading_days}`);
+            if(x.source_missing_dates.length) throw new Error(`${label}: missing source dates ${x.source_missing_dates.join(',')}`);
+            for(const [stock,c] of Object.entries(x.coverage)){
+              if(c.missing_days!==0 || c.ratio!==1) throw new Error(`${label} ${stock}: incomplete ${JSON.stringify(c)}`);
+            }
+          }
+          NODE
+
+      - name: Build TDCC-anchored feature matrix
+        run: |
+          set -euo pipefail
+          node scripts/build_institutional_withdrawal_v5_matrix.js \
+            --stocks "2330,2317,2454,2382,2303,2449" \
+            --start "2026-04-01" --end "2026-08-21"
+
+      - name: Quality gate feature matrix
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const m=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json');
+          if(m.counts.anchors!==126) throw new Error(`Expected 126 TDCC stock-date anchors, got ${m.counts.anchors}`);
+          if(m.counts.feature_complete!==126) throw new Error(`Feature-complete anchors ${m.counts.feature_complete}/126`);
+          if(m.counts.analysis_eligible<80) throw new Error(`Too few analysis-eligible rows: ${m.counts.analysis_eligible}`);
+          for(const [stock,c] of Object.entries(m.coverage)){
+            if(c.tdcc_anchors!==21) throw new Error(`${stock}: expected 21 TDCC anchors, got ${c.tdcc_anchors}`);
+            if(c.feature_complete!==21) throw new Error(`${stock}: incomplete feature anchors ${c.feature_complete}/21`);
+          }
+          for(const r of m.rows){
+            if(r.market_feature_date>r.tdcc_observed_date) throw new Error(`Lookahead market date ${r.stock} ${r.tdcc_observed_date}`);
+            if(!r.outcome || r.outcome.anchor_date!==r.market_feature_date) throw new Error(`Outcome anchor mismatch ${r.stock} ${r.tdcc_observed_date}`);
+          }
+          NODE
+
+      - name: Run combination and ablation study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v5.js
+
+      - name: Validate analysis contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v5-analysis.json');
+          const required=['v4_like_orange','broker_tdcc_pressure','pressure_plus_foreign','pressure_plus_tdcc_persistence','pressure_plus_price_volume','pressure_plus_two_independent','pressure_plus_all_three'];
+          for(const k of required) if(!a.variants[k]) throw new Error(`Missing variant ${k}`);
+          if(a.production_safe!==false || a.research_only!==true) throw new Error('Research safety contract missing');
+          if(!a.untouched_validation) throw new Error('Missing untouched-validation readiness audit');
+          NODE
+
+      - name: Commit v5 research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_research/institutional-flow/features/foreign-flow-v5.json \
+            data_research/institutional-flow/features/price-volume-v5.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v5-analysis.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v5-analysis.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete institutional withdrawal v5 study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/institutional-withdrawal-v5-analysis.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v5-analysis.json');
+          console.log('## Institutional Withdrawal v5');
+          console.log(`- Eligible rows: ${a.eligible_rows}`);
+          console.log(`- Pressure baseline rows: ${a.pressure_baseline.observations}`);
+          for(const [name,v] of Object.entries(a.variants)){
+            console.log(`- ${name}: obs ${v.observations}; 10D n ${v.stats.horizons['10d'].n}; mean ${v.stats.horizons['10d'].mean_pct}% ; edge vs pressure ${v.edge_vs_pressure['10d'].mean_return_edge_pp}pp`);
+          }
+          console.log(`- Untouched validation ready: ${a.untouched_validation.ready}`);
+          console.log('- Safety: development-sample research only; no production promotion from this run.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
