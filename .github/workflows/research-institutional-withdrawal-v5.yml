@@ -16,23 +16,58 @@ permissions:
 
 concurrency:
   group: institutional-withdrawal-v5-research
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   research:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
-      - name: Checkout
+      - name: Checkout research slice
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 0
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/research-institutional-withdrawal-v5.yml
+            scripts/
+            data_history_sma/trading_days.json
+            data_history_sma/2330.json
+            data_history_sma/2317.json
+            data_history_sma/2454.json
+            data_history_sma/2382.json
+            data_history_sma/2303.json
+            data_history_sma/2449.json
+            data_fubon/fubon_202604*_sma.json
+            data_fubon/fubon_202605*_sma.json
+            data_fubon/fubon_202606*_sma.json
+            data_fubon/fubon_202607*_sma.json
+            data_fubon/fubon_202608*_sma.json
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_tdcc_shareholding/history/2330/
+            data_tdcc_shareholding/history/2317/
+            data_tdcc_shareholding/history/2454/
+            data_tdcc_shareholding/history/2382/
+            data_tdcc_shareholding/history/2303/
+            data_tdcc_shareholding/history/2449/
+            data_research/institutional-flow/histock/2330/
+            data_research/institutional-flow/histock/2317/
+            data_research/institutional-flow/histock/2454/
+            data_research/institutional-flow/histock/2382/
+            data_research/institutional-flow/histock/2303/
+            data_research/institutional-flow/histock/2449/
+            data_research/institutional-flow/backtests/
+            data_research/institutional-flow/v5-research-spec.md
 
       - name: Sync latest main
         run: |
           set -euo pipefail
-          git fetch origin main
+          git fetch --depth=1 origin main
           git reset --hard origin/main
 
       - name: Validate research code
