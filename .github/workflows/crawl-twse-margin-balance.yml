@@ -65,12 +65,82 @@ jobs:
         run: npm ci
 
       - name: Crawl TWSE margin balance data
+        id: crawl
         if: steps.existing.outputs.exists != 'true'
+        continue-on-error: true
         run: |
           node scripts/crawl_twse_margin_balance.js --date "${{ steps.existing.outputs.target_date }}"
 
+      - name: Explain TWSE margin crawl failure
+        if: steps.crawl.outcome == 'failure'
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.existing.outputs.target_date }}
+        run: |
+          set -euo pipefail
+
+          DIAGNOSTIC=$(node <<'NODE'
+          const { fetchLatestCsv } = require('./scripts/crawl_twse_margin_balance');
+
+          (async () => {
+            const targetDate = process.env.TARGET_DATE || '';
+            let officialDate = '';
+            let probeError = '';
+
+            try {
+              const latest = await fetchLatestCsv();
+              officialDate = latest.date || '';
+            } catch (error) {
+              probeError = error.message || String(error);
+            }
+
+            const dateMismatch = Boolean(targetDate && officialDate && targetDate !== officialDate);
+            process.stdout.write(JSON.stringify({ targetDate, officialDate, dateMismatch, probeError }));
+          })().catch(error => {
+            process.stdout.write(JSON.stringify({
+              targetDate: process.env.TARGET_DATE || '',
+              officialDate: '',
+              dateMismatch: false,
+              probeError: error.message || String(error),
+            }));
+          });
+          NODE
+          )
+
+          OFFICIAL_DATE=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.officialDate || "")' "$DIAGNOSTIC")
+          DATE_MISMATCH=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(String(Boolean(x.dateMismatch)))' "$DIAGNOSTIC")
+          PROBE_ERROR=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.probeError || "")' "$DIAGNOSTIC")
+
+          {
+            echo '## 🔴 TWSE 融資融券資料擷取失敗'
+            echo
+            echo "<span style=\"color:#d1242f\"><strong>本次資料沒有擷取成功。</strong></span>"
+            echo
+            echo "- 預期擷取日期：\`${TARGET_DATE}\`"
+
+            if [ "$DATE_MISMATCH" = 'true' ]; then
+              echo "- 官方目前最新日期：\`${OFFICIAL_DATE}\`"
+              echo '- 🔴 失敗原因：**日期不符，當天資料尚未更新。**'
+              echo "- 判斷：workflow 要抓 \`${TARGET_DATE}\`，但 TWSE 官方目前只提供到 \`${OFFICIAL_DATE}\`，因此不接受舊日期資料，也不會寫成 \`${TARGET_DATE}\`。"
+            elif [ -n "$OFFICIAL_DATE" ]; then
+              echo "- 官方目前最新日期：\`${OFFICIAL_DATE}\`"
+              echo '- 🔴 失敗原因：**官方最新日期已符合目標日期，但指定日期查詢仍失敗。**'
+              echo '- 判斷：這不是日期尚未更新，請檢查 TWSE historical endpoint 或回傳格式。'
+            else
+              echo '- 官方目前最新日期：`無法判斷`'
+              echo '- 🔴 失敗原因：**資料擷取失敗，且無法取得官方最新資料日期。**'
+              [ -n "$PROBE_ERROR" ] && echo "- 日期探測錯誤：\`${PROBE_ERROR}\`"
+            fi
+
+            echo
+            echo '> 此步驟刻意維持失敗狀態，讓 GitHub Actions 顯示紅燈；後續排程會再重新嘗試。'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "TWSE margin crawl failed. target_date=${TARGET_DATE} official_latest_date=${OFFICIAL_DATE:-unknown} date_mismatch=${DATE_MISMATCH}"
+          exit 1
+
       - name: Refresh daily-gainers flow analysis when source list exists
-        if: always()
+        if: always() && steps.crawl.outcome != 'failure'
         run: |
           TARGET_DATE="${{ steps.existing.outputs.target_date }}"
           LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
@@ -90,6 +160,7 @@ jobs:
 
       - name: Commit and push changes
         id: commit
+        if: steps.crawl.outcome != 'failure'
         run: |
           set -euo pipefail
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -130,4 +201,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
