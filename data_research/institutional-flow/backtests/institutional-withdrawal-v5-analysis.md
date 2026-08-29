@@ -1,20 +1,20 @@
 # Institutional Withdrawal v5 Analysis
 
-- Eligible TDCC-anchored rows: **72** / 126
-- Broker+TDCC pressure rows: **13**
+- Eligible TDCC-anchored rows: **54** / 126
+- Broker+TDCC pressure rows: **9**
 - Untouched validation ready from currently archived TDCC history: **no**
 
 ## Combination results
 
 | Variant | Obs | 5D n / mean | 10D n / mean | 20D n / mean | 10D edge vs pressure |
 |---|---:|---:|---:|---:|---:|
-| v4_like_orange | 11 | 8 / 1.96% | 6 / 12.91% | 6 / 7.7% | 0pp |
-| broker_tdcc_pressure | 13 | 8 / 1.96% | 6 / 12.91% | 6 / 7.7% | 0pp |
-| pressure_plus_foreign | 10 | 5 / -1.18% | 3 / 12.61% | 3 / 9.65% | -0.3pp |
-| pressure_plus_tdcc_persistence | 8 | 4 / -3.04% | 2 / 6.57% | 2 / 1.1% | -6.34pp |
-| pressure_plus_price_volume | 4 | 2 / 3.06% | 2 / 16.63% | 2 / 7.21% | 3.72pp |
-| pressure_plus_two_independent | 9 | 5 / -1.18% | 3 / 12.61% | 3 / 9.65% | -0.3pp |
-| pressure_plus_all_three | 2 | 0 / n/a% | 0 / n/a% | 0 / n/a% | n/app |
+| v4_like_orange | 8 | 8 / 4.61% | 7 / 11.13% | 6 / 7.7% | 0pp |
+| broker_tdcc_pressure | 9 | 8 / 4.61% | 7 / 11.13% | 6 / 7.7% | 0pp |
+| pressure_plus_foreign | 5 | 5 / 3.07% | 4 / 9.56% | 3 / 9.65% | -1.57pp |
+| pressure_plus_tdcc_persistence | 4 | 3 / 5.04% | 3 / 4.53% | 2 / 1.1% | -6.6pp |
+| pressure_plus_price_volume | 3 | 3 / 3.47% | 3 / 11.23% | 2 / 7.21% | 0.1pp |
+| pressure_plus_two_independent | 4 | 4 / 5.35% | 4 / 9.56% | 3 / 9.65% | -1.57pp |
+| pressure_plus_all_three | 1 | 1 / 4.31% | 1 / 0.43% | 0 / n/a% | -10.7pp |
 
 ## Research interpretation
 
