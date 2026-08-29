@@ -95,8 +95,6 @@ for(const stock of candidateStocks){
   const postDevTdcc=tdcc.filter(d=>d>developmentEnd);
   const postDevDaily=commonDaily.filter(d=>d>developmentEnd);
   const stockHoldout=!development.has(stock);
-  // Minimum precondition for lifecycle research: >=3 TDCC observations, >=40 common daily sessions, and >=80% common daily coverage.
-  // Broker research-ready means per-stock normalized histock is already present. Raw-broker-ready means source files exist and may be normalized without outcome selection.
   const commonRatio=ratio(commonDaily.length,tradingDates.length);
   const eligibleBase=tdcc.length>=3 && commonDaily.length>=40 && commonRatio>=0.8;
   const stockHoldoutReady=stockHoldout && eligibleBase && rb.length>=40;
@@ -124,4 +122,4 @@ const payload={
   generated_at:new Date().toISOString(),
 };
 fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify(payload,null,2)+'\n');
-console.log(JSON.stringify({counts:payload.counts,calendar:payload.calendar,stock_holdout_ready,stock_holdout_needs_broker_normalization:stockHoldoutNeedsBroker,time_holdout_ready},null,2));
+console.log(JSON.stringify({counts:payload.counts,calendar:payload.calendar,stock_holdout_ready:stockHoldoutReady,stock_holdout_needs_broker_normalization:stockHoldoutNeedsBroker,time_holdout_ready:timeHoldoutReady},null,2));
