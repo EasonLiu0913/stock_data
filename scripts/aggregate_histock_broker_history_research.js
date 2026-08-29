@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
+const { validateDailyPayload, QUALITY_VERSION, NET_TOLERANCE } = require('./lib/histock_broker_quality');
 
 const args = process.argv.slice(2);
 const getArg = (name, fallback) => {
@@ -98,6 +98,10 @@ const unresolved = missing.map((date) => {
 });
 const sourceGaps = unresolved.filter(isSourceGap);
 const hardFailures = unresolved.filter((x) => !isSourceGap(x));
+const incompleteByDay = days
+  .map((day) => ({ date: day.date, records: Array.isArray(day.incomplete_records) ? day.incomplete_records : [] }))
+  .filter((day) => day.records.length > 0);
+const incompleteRecordCount = incompleteByDay.reduce((sum, day) => sum + day.records.length, 0);
 const rolling = days.map((day, index) => ({ date: day.date, windows: [5, 10, 20].map((w) => aggregateWindow(days, index, w)) }));
 const analysis = {
   schema_version: 4,
@@ -107,14 +111,22 @@ const analysis = {
   calendar: { trading_days_file: tradingPath, non_trading_days_file: nonTradingPath, selection: 'trading_days_whitelist_with_non_trading_conflict_guard' },
   data_quality: {
     version: QUALITY_VERSION,
-    policy: 'all rows must satisfy buy>=0, sell>=0, net=buy-sell, avg_price>0',
+    policy: `complete rows require buy>=0, sell>=0, abs(net-(buy-sell))<=${NET_TOLERANCE}, avg_price>0; source rows with missing fields are preserved in incomplete_records and excluded from rolling calculations`,
     rejected_daily_files: qualityRejected,
+    incomplete_rows: {
+      days: incompleteByDay.length,
+      records: incompleteRecordCount,
+      by_day: incompleteByDay,
+      calculation_policy: 'provenance_only_excluded_from_rolling',
+    },
   },
   generated_at: new Date().toISOString(),
   counts: {
     requested_trading_days: requested.length,
     parsed_trading_days: days.length,
     quality_rejected_daily_files: qualityRejected.length,
+    incomplete_record_days: incompleteByDay.length,
+    incomplete_records: incompleteRecordCount,
     source_gaps: sourceGaps.length,
     hard_failures: hardFailures.length,
     unresolved_trading_days: unresolved.length,
@@ -129,7 +141,8 @@ const analysis = {
     'HiStock exposes ranked broker rows rather than the complete official TWSE BSR ledger.',
     'Absence of a broker from a parsed day means it was outside the exposed ranking, not necessarily zero trading.',
     'Documented source gaps remain missing observations and are never imputed as zero.',
-    'Daily files with any broker row failing the hard data-quality gate are excluded from analysis and scheduled for refetch.',
+    'Daily files with any complete broker row failing the hard data-quality gate are excluded from analysis and scheduled for refetch.',
+    'Source rows with missing numeric fields are preserved in incomplete_records for provenance but never enter rolling calculations.',
   ],
   rolling,
 };
@@ -139,6 +152,7 @@ fs.writeFileSync(path.join(root, 'manifest.json'), `${JSON.stringify({ schema_ve
 console.log(JSON.stringify(analysis.counts, null, 2));
 console.log(`quality=${QUALITY_VERSION} coverage=${(analysis.coverage_ratio * 100).toFixed(1)}% complete=${analysis.complete} usable_research=${analysis.usable_research}`);
 if (qualityRejected.length) console.log(`quality rejected: ${qualityRejected.map((x) => x.date).join(', ')}`);
+if (incompleteByDay.length) console.log(`incomplete source rows: ${incompleteRecordCount} across ${incompleteByDay.length} trading day(s)`);
 if (sourceGaps.length) console.log(`source gaps: ${sourceGaps.map((x) => x.date).join(', ')}`);
 if (hardFailures.length) {
   console.error(`hard failures: ${hardFailures.map((x) => `${x.date}:${x.reason}`).join(', ')}`);
