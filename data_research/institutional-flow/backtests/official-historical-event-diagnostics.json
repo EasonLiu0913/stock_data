@@ -1,0 +1,758 @@
+{
+  "schema_version": 1,
+  "methodology": "institutional-distribution-event-diagnostics-v1",
+  "research_only": true,
+  "production_safe": false,
+  "universe": [
+    "2330",
+    "2317",
+    "2454",
+    "2382",
+    "2303",
+    "2449"
+  ],
+  "range": {
+    "start": "2026-04-01",
+    "end": "2026-08-21"
+  },
+  "scope_note": "Current score v4 contains Broker + TDCC only. Foreign flow is not included in this attribution and must not be implied.",
+  "classification_policy": {
+    "sustained_distribution": "At least two available forward horizons are negative and the longest available horizon is non-positive.",
+    "temporary_pressure": "5D is negative but the longest available horizon is positive.",
+    "false_positive": "5D is non-negative and the longest available horizon is positive.",
+    "late_weakness": "5D is non-negative but the longest available horizon is non-positive.",
+    "insufficient_followup": "No forward-return horizon is available."
+  },
+  "baseline": {
+    "observations": 108,
+    "horizons": {
+      "5d": {
+        "n": 102,
+        "mean_pct": 3.21,
+        "median_pct": 2.1,
+        "negative_rate": 0.412,
+        "decline_5pct_rate": 0.216
+      },
+      "10d": {
+        "n": 96,
+        "mean_pct": 6.06,
+        "median_pct": 4.59,
+        "negative_rate": 0.375,
+        "decline_5pct_rate": 0.208
+      },
+      "20d": {
+        "n": 84,
+        "mean_pct": 13.6,
+        "median_pct": 7.67,
+        "negative_rate": 0.321,
+        "decline_5pct_rate": 0.25
+      }
+    }
+  },
+  "component_presence_at_full_events": {
+    "events": 10,
+    "broker_contributed": 10,
+    "tdcc_contributed": 10,
+    "both_contributed": 10,
+    "broker_only_at_event": 0,
+    "tdcc_only_at_event": 0
+  },
+  "classifications": {
+    "temporary_pressure": 1,
+    "false_positive": 4,
+    "insufficient_followup": 1,
+    "mixed": 2,
+    "sustained_distribution": 2
+  },
+  "variants": {
+    "full": {
+      "score_field": "full_score",
+      "events": 10,
+      "stats": {
+        "observations": 10,
+        "horizons": {
+          "5d": {
+            "n": 9,
+            "mean_pct": 0.01,
+            "median_pct": -1.17,
+            "negative_rate": 0.556,
+            "decline_5pct_rate": 0.333
+          },
+          "10d": {
+            "n": 7,
+            "mean_pct": 10.08,
+            "median_pct": 9.68,
+            "negative_rate": 0.286,
+            "decline_5pct_rate": 0.143
+          },
+          "20d": {
+            "n": 6,
+            "mean_pct": 9.41,
+            "median_pct": 6.23,
+            "negative_rate": 0.167,
+            "decline_5pct_rate": 0.167
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": -3.2,
+          "negative_rate_edge": 0.144
+        },
+        "10d": {
+          "mean_return_edge_pp": 4.02,
+          "negative_rate_edge": -0.089
+        },
+        "20d": {
+          "mean_return_edge_pp": -4.19,
+          "negative_rate_edge": -0.154
+        }
+      }
+    },
+    "broker_only": {
+      "score_field": "without_tdcc_score",
+      "events": 0,
+      "stats": {
+        "observations": 0,
+        "horizons": {
+          "5d": {
+            "n": 0,
+            "mean_pct": null,
+            "median_pct": null,
+            "negative_rate": null,
+            "decline_5pct_rate": null
+          },
+          "10d": {
+            "n": 0,
+            "mean_pct": null,
+            "median_pct": null,
+            "negative_rate": null,
+            "decline_5pct_rate": null
+          },
+          "20d": {
+            "n": 0,
+            "mean_pct": null,
+            "median_pct": null,
+            "negative_rate": null,
+            "decline_5pct_rate": null
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": null,
+          "negative_rate_edge": null
+        },
+        "10d": {
+          "mean_return_edge_pp": null,
+          "negative_rate_edge": null
+        },
+        "20d": {
+          "mean_return_edge_pp": null,
+          "negative_rate_edge": null
+        }
+      }
+    },
+    "tdcc_only": {
+      "score_field": "without_broker_score",
+      "events": 1,
+      "stats": {
+        "observations": 1,
+        "horizons": {
+          "5d": {
+            "n": 1,
+            "mean_pct": -1.17,
+            "median_pct": -1.17,
+            "negative_rate": 1,
+            "decline_5pct_rate": 0
+          },
+          "10d": {
+            "n": 1,
+            "mean_pct": 9.68,
+            "median_pct": 9.68,
+            "negative_rate": 0,
+            "decline_5pct_rate": 0
+          },
+          "20d": {
+            "n": 1,
+            "mean_pct": -5.84,
+            "median_pct": -5.84,
+            "negative_rate": 1,
+            "decline_5pct_rate": 1
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": -4.38,
+          "negative_rate_edge": 0.588
+        },
+        "10d": {
+          "mean_return_edge_pp": 3.62,
+          "negative_rate_edge": -0.375
+        },
+        "20d": {
+          "mean_return_edge_pp": -19.44,
+          "negative_rate_edge": 0.679
+        }
+      }
+    },
+    "without_daily_breadth": {
+      "score_field": "without_daily_breadth_score",
+      "events": 5,
+      "stats": {
+        "observations": 5,
+        "horizons": {
+          "5d": {
+            "n": 5,
+            "mean_pct": 1.41,
+            "median_pct": 1.52,
+            "negative_rate": 0.4,
+            "decline_5pct_rate": 0.2
+          },
+          "10d": {
+            "n": 4,
+            "mean_pct": 15.41,
+            "median_pct": 15.29,
+            "negative_rate": 0,
+            "decline_5pct_rate": 0
+          },
+          "20d": {
+            "n": 4,
+            "mean_pct": 7.76,
+            "median_pct": 5.32,
+            "negative_rate": 0.25,
+            "decline_5pct_rate": 0.25
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": -1.8,
+          "negative_rate_edge": -0.012
+        },
+        "10d": {
+          "mean_return_edge_pp": 9.35,
+          "negative_rate_edge": -0.375
+        },
+        "20d": {
+          "mean_return_edge_pp": -5.84,
+          "negative_rate_edge": -0.071
+        }
+      }
+    },
+    "without_daily_net": {
+      "score_field": "without_daily_net_score",
+      "events": 6,
+      "stats": {
+        "observations": 6,
+        "horizons": {
+          "5d": {
+            "n": 6,
+            "mean_pct": -0.02,
+            "median_pct": 0.18,
+            "negative_rate": 0.5,
+            "decline_5pct_rate": 0.333
+          },
+          "10d": {
+            "n": 5,
+            "mean_pct": 9.9,
+            "median_pct": 9.68,
+            "negative_rate": 0.2,
+            "decline_5pct_rate": 0.2
+          },
+          "20d": {
+            "n": 4,
+            "mean_pct": 7.76,
+            "median_pct": 5.32,
+            "negative_rate": 0.25,
+            "decline_5pct_rate": 0.25
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": -3.23,
+          "negative_rate_edge": 0.088
+        },
+        "10d": {
+          "mean_return_edge_pp": 3.84,
+          "negative_rate_edge": -0.175
+        },
+        "20d": {
+          "mean_return_edge_pp": -5.84,
+          "negative_rate_edge": -0.071
+        }
+      }
+    },
+    "without_persistent_sellers": {
+      "score_field": "without_persistent_sellers_score",
+      "events": 5,
+      "stats": {
+        "observations": 5,
+        "horizons": {
+          "5d": {
+            "n": 5,
+            "mean_pct": 1.41,
+            "median_pct": 1.52,
+            "negative_rate": 0.4,
+            "decline_5pct_rate": 0.2
+          },
+          "10d": {
+            "n": 4,
+            "mean_pct": 15.41,
+            "median_pct": 15.29,
+            "negative_rate": 0,
+            "decline_5pct_rate": 0
+          },
+          "20d": {
+            "n": 4,
+            "mean_pct": 7.76,
+            "median_pct": 5.32,
+            "negative_rate": 0.25,
+            "decline_5pct_rate": 0.25
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": -1.8,
+          "negative_rate_edge": -0.012
+        },
+        "10d": {
+          "mean_return_edge_pp": 9.35,
+          "negative_rate_edge": -0.375
+        },
+        "20d": {
+          "mean_return_edge_pp": -5.84,
+          "negative_rate_edge": -0.071
+        }
+      }
+    },
+    "without_persistent_net": {
+      "score_field": "without_persistent_net_score",
+      "events": 5,
+      "stats": {
+        "observations": 5,
+        "horizons": {
+          "5d": {
+            "n": 5,
+            "mean_pct": 1.41,
+            "median_pct": 1.52,
+            "negative_rate": 0.4,
+            "decline_5pct_rate": 0.2
+          },
+          "10d": {
+            "n": 4,
+            "mean_pct": 15.41,
+            "median_pct": 15.29,
+            "negative_rate": 0,
+            "decline_5pct_rate": 0
+          },
+          "20d": {
+            "n": 4,
+            "mean_pct": 7.76,
+            "median_pct": 5.32,
+            "negative_rate": 0.25,
+            "decline_5pct_rate": 0.25
+          }
+        }
+      },
+      "edge_vs_baseline": {
+        "5d": {
+          "mean_return_edge_pp": -1.8,
+          "negative_rate_edge": -0.012
+        },
+        "10d": {
+          "mean_return_edge_pp": 9.35,
+          "negative_rate_edge": -0.375
+        },
+        "20d": {
+          "mean_return_edge_pp": -5.84,
+          "negative_rate_edge": -0.071
+        }
+      }
+    }
+  },
+  "events": [
+    {
+      "stock": "2317",
+      "observed_date": "2026-07-03",
+      "event_type": "orange_entry",
+      "full_score": 5,
+      "variant_level": "orange",
+      "broker_score": 4,
+      "tdcc_score": 1,
+      "broker_reasons": [
+        "daily_negative_breadth:15",
+        "daily_negative_net:-23918",
+        "persistent_5d_sellers:16",
+        "persistent_5d_net:-96429"
+      ],
+      "tdcc_reasons": [
+        "small_holder_1w:+0.77pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 15,
+        "daily_negative_net": -23918,
+        "persistent_5d_sellers": 16,
+        "persistent_5d_net": -96429
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -0.84,
+        "small_change_pp": 0.77
+      },
+      "return_5d_pct": -1.66,
+      "return_10d_pct": -2.49,
+      "return_20d_pct": 5.2,
+      "path_20d": {
+        "max_gain_pct": 7.07,
+        "max_drawdown_pct": -4.57,
+        "sessions": 20
+      },
+      "classification": "temporary_pressure"
+    },
+    {
+      "stock": "2382",
+      "observed_date": "2026-05-22",
+      "event_type": "orange_entry",
+      "full_score": 5,
+      "variant_level": "orange",
+      "broker_score": 4,
+      "tdcc_score": 1,
+      "broker_reasons": [
+        "daily_negative_breadth:13",
+        "daily_negative_net:-11758",
+        "persistent_5d_sellers:18",
+        "persistent_5d_net:-41725"
+      ],
+      "tdcc_reasons": [
+        "small_holder_1w:+1.04pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 13,
+        "daily_negative_net": -11758,
+        "persistent_5d_sellers": 18,
+        "persistent_5d_net": -41725
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -0.84,
+        "small_change_pp": 1.04
+      },
+      "return_5d_pct": 7.28,
+      "return_10d_pct": 23.58,
+      "return_20d_pct": 20.25,
+      "path_20d": {
+        "max_gain_pct": 31.96,
+        "max_drawdown_pct": -2.37,
+        "sessions": 20
+      },
+      "classification": "false_positive"
+    },
+    {
+      "stock": "2382",
+      "observed_date": "2026-07-31",
+      "event_type": "orange_entry",
+      "full_score": 5,
+      "variant_level": "orange",
+      "broker_score": 4,
+      "tdcc_score": 1,
+      "broker_reasons": [
+        "daily_negative_breadth:13",
+        "daily_negative_net:-10053",
+        "persistent_5d_sellers:15",
+        "persistent_5d_net:-36468"
+      ],
+      "tdcc_reasons": [
+        "small_holder_1w:+0.75pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 13,
+        "daily_negative_net": -10053,
+        "persistent_5d_sellers": 15,
+        "persistent_5d_net": -36468
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -0.98,
+        "small_change_pp": 0.75
+      },
+      "return_5d_pct": null,
+      "return_10d_pct": null,
+      "return_20d_pct": null,
+      "path_20d": {
+        "max_gain_pct": 3.09,
+        "max_drawdown_pct": 1.72,
+        "sessions": 2
+      },
+      "classification": "insufficient_followup"
+    },
+    {
+      "stock": "2303",
+      "observed_date": "2026-06-05",
+      "event_type": "orange_entry",
+      "full_score": 6,
+      "variant_level": "orange",
+      "broker_score": 4,
+      "tdcc_score": 2,
+      "broker_reasons": [
+        "daily_negative_breadth:14",
+        "daily_negative_net:-90169",
+        "persistent_5d_sellers:17",
+        "persistent_5d_net:-520932"
+      ],
+      "tdcc_reasons": [
+        "large_holder_1w:-1.63pp",
+        "small_holder_1w:+1.5pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 14,
+        "daily_negative_net": -90169,
+        "persistent_5d_sellers": 17,
+        "persistent_5d_net": -520932
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -1.63,
+        "small_change_pp": 1.5
+      },
+      "return_5d_pct": 1.52,
+      "return_10d_pct": 21.67,
+      "return_20d_pct": 26.24,
+      "path_20d": {
+        "max_gain_pct": 35.74,
+        "max_drawdown_pct": -9.89,
+        "sessions": 20
+      },
+      "classification": "false_positive"
+    },
+    {
+      "stock": "2303",
+      "observed_date": "2026-07-24",
+      "event_type": "orange_entry",
+      "full_score": 5,
+      "variant_level": "orange",
+      "broker_score": 4,
+      "tdcc_score": 1,
+      "broker_reasons": [
+        "daily_negative_breadth:15",
+        "daily_negative_net:-38274",
+        "persistent_5d_sellers:13",
+        "persistent_5d_net:-90616"
+      ],
+      "tdcc_reasons": [
+        "small_holder_1w:+0.86pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 15,
+        "daily_negative_net": -38274,
+        "persistent_5d_sellers": 13,
+        "persistent_5d_net": -90616
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -0.97,
+        "small_change_pp": 0.86
+      },
+      "return_5d_pct": -5.47,
+      "return_10d_pct": null,
+      "return_20d_pct": null,
+      "path_20d": {
+        "max_gain_pct": -1.56,
+        "max_drawdown_pct": -19.92,
+        "sessions": 7
+      },
+      "classification": "mixed"
+    },
+    {
+      "stock": "2449",
+      "observed_date": "2026-04-17",
+      "event_type": "orange_entry",
+      "full_score": 6,
+      "variant_level": "orange",
+      "broker_score": 4,
+      "tdcc_score": 2,
+      "broker_reasons": [
+        "daily_negative_breadth:15",
+        "daily_negative_net:-11804",
+        "persistent_5d_sellers:18",
+        "persistent_5d_net:-25189"
+      ],
+      "tdcc_reasons": [
+        "large_holder_1w:-1.25pp",
+        "small_holder_1w:+0.84pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 15,
+        "daily_negative_net": -11804,
+        "persistent_5d_sellers": 18,
+        "persistent_5d_net": -25189
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -1.25,
+        "small_change_pp": 0.84
+      },
+      "return_5d_pct": 4,
+      "return_10d_pct": 20.91,
+      "return_20d_pct": 7.27,
+      "path_20d": {
+        "max_gain_pct": 28.73,
+        "max_drawdown_pct": -1.45,
+        "sessions": 20
+      },
+      "classification": "false_positive"
+    },
+    {
+      "stock": "2449",
+      "observed_date": "2026-05-15",
+      "event_type": "red_escalation",
+      "full_score": 11,
+      "variant_level": "red",
+      "broker_score": 4,
+      "tdcc_score": 7,
+      "broker_reasons": [
+        "daily_negative_breadth:15",
+        "daily_negative_net:-6703",
+        "persistent_5d_sellers:13",
+        "persistent_5d_net:-70770"
+      ],
+      "tdcc_reasons": [
+        "large_holder_1w:-5.6pp",
+        "small_holder_1w:+5.78pp",
+        "ownership_transfer_confirmed",
+        "ownership_transfer_extreme"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 15,
+        "daily_negative_net": -6703,
+        "persistent_5d_sellers": 13,
+        "persistent_5d_net": -70770
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -5.6,
+        "small_change_pp": 5.78
+      },
+      "return_5d_pct": -1.17,
+      "return_10d_pct": 9.68,
+      "return_20d_pct": -5.84,
+      "path_20d": {
+        "max_gain_pct": 13.02,
+        "max_drawdown_pct": -9.18,
+        "sessions": 20
+      },
+      "classification": "sustained_distribution"
+    },
+    {
+      "stock": "2449",
+      "observed_date": "2026-06-12",
+      "event_type": "orange_entry",
+      "full_score": 7,
+      "variant_level": "orange",
+      "broker_score": 3,
+      "tdcc_score": 4,
+      "broker_reasons": [
+        "daily_negative_breadth:13",
+        "persistent_5d_sellers:12",
+        "persistent_5d_net:-33973"
+      ],
+      "tdcc_reasons": [
+        "large_holder_1w:-2.35pp",
+        "small_holder_1w:+3.01pp",
+        "ownership_transfer_confirmed"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 13,
+        "daily_negative_net": -3909,
+        "persistent_5d_sellers": 12,
+        "persistent_5d_net": -33973
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -2.35,
+        "small_change_pp": 3.01
+      },
+      "return_5d_pct": 20.21,
+      "return_10d_pct": 9.4,
+      "return_20d_pct": 3.37,
+      "path_20d": {
+        "max_gain_pct": 24.47,
+        "max_drawdown_pct": -1.42,
+        "sessions": 20
+      },
+      "classification": "false_positive"
+    },
+    {
+      "stock": "2449",
+      "observed_date": "2026-07-09",
+      "event_type": "orange_entry",
+      "full_score": 5,
+      "variant_level": "orange",
+      "broker_score": 3,
+      "tdcc_score": 2,
+      "broker_reasons": [
+        "daily_negative_breadth:15",
+        "persistent_5d_sellers:12",
+        "persistent_5d_net:-26505"
+      ],
+      "tdcc_reasons": [
+        "large_holder_1w:-1.43pp",
+        "small_holder_1w:+1.41pp"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 15,
+        "daily_negative_net": -5083,
+        "persistent_5d_sellers": 12,
+        "persistent_5d_net": -26505
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -1.43,
+        "small_change_pp": 1.41
+      },
+      "return_5d_pct": -7.13,
+      "return_10d_pct": -12.16,
+      "return_20d_pct": null,
+      "path_20d": {
+        "max_gain_pct": 3.08,
+        "max_drawdown_pct": -34.04,
+        "sessions": 17
+      },
+      "classification": "sustained_distribution"
+    },
+    {
+      "stock": "2449",
+      "observed_date": "2026-07-24",
+      "event_type": "red_escalation",
+      "full_score": 8,
+      "variant_level": "red",
+      "broker_score": 4,
+      "tdcc_score": 4,
+      "broker_reasons": [
+        "daily_negative_breadth:14",
+        "daily_negative_net:-6961",
+        "persistent_5d_sellers:10",
+        "persistent_5d_net:-12743"
+      ],
+      "tdcc_reasons": [
+        "large_holder_1w:-2.29pp",
+        "small_holder_1w:+2.21pp",
+        "ownership_transfer_confirmed"
+      ],
+      "broker_metrics": {
+        "daily_negative_breadth": 14,
+        "daily_negative_net": -6961,
+        "persistent_5d_sellers": 10,
+        "persistent_5d_net": -12743
+      },
+      "tdcc_metrics": {
+        "large_change_pp": -2.29,
+        "small_change_pp": 2.21
+      },
+      "return_5d_pct": -17.53,
+      "return_10d_pct": null,
+      "return_20d_pct": null,
+      "path_20d": {
+        "max_gain_pct": 1.85,
+        "max_drawdown_pct": -24.91,
+        "sessions": 7
+      },
+      "classification": "mixed"
+    }
+  ],
+  "generated_at": "2026-08-29T17:15:27.943Z"
+}
