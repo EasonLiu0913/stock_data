@@ -10,20 +10,60 @@ BROKER_MAX_BATCHES="${BROKER_MAX_BATCHES:-16}"
 PLAN="data_research/institutional-flow/validation/coverage-expansion-v1.json"
 COVERAGE="data_research/institutional-flow/validation/validation-coverage-v1.json"
 
+# Coverage checkpoints are append-only/recomputable research artifacts. Multiple old
+# runners may race on the same stock/date. Never rebase an add/add data commit.
+# On push rejection, adopt remote files that already exist and replay only paths
+# still absent from origin/main. This makes duplicate batches idempotent while
+# preserving unique status/checkpoint files.
 checkpoint() {
   local message="$1"; shift
-  git add "$@"
+  local paths=("$@")
+
+  git add -- "${paths[@]}"
   if git diff --cached --quiet; then return 0; fi
   git commit -m "$message"
+
+  local local_commit
+  local_commit="$(git rev-parse HEAD)"
+
   for attempt in 1 2 3 4 5; do
-    if git pull --rebase origin main && git push origin HEAD:main; then return 0; fi
+    if git push origin HEAD:main; then return 0; fi
+
+    echo "checkpoint push raced with origin/main; reconciling remote-wins (attempt=$attempt): $message"
     git rebase --abort 2>/dev/null || true
-    git reset --hard HEAD
     git fetch origin main
-    git rebase origin/main || true
+
+    mapfile -t changed_files < <(git diff-tree --no-commit-id --name-only -r "$local_commit" -- "${paths[@]}")
+    git reset --hard origin/main
+
+    local replayed=0
+    for file in "${changed_files[@]}"; do
+      [[ -n "$file" ]] || continue
+      if git cat-file -e "origin/main:$file" 2>/dev/null; then
+        echo "remote already has $file; keeping origin/main copy"
+        continue
+      fi
+      git checkout "$local_commit" -- "$file"
+      replayed=1
+    done
+
+    # Every file from this checkpoint already landed through another runner.
+    if [[ "$replayed" -eq 0 ]]; then
+      echo "checkpoint already satisfied by origin/main: $message"
+      return 0
+    fi
+
+    git add -- "${paths[@]}"
+    if git diff --cached --quiet; then
+      echo "checkpoint became empty after remote reconciliation: $message"
+      return 0
+    fi
+    git commit -m "$message"
+    local_commit="$(git rev-parse HEAD)"
     sleep $((attempt * 5))
   done
-  echo "checkpoint push failed: $message" >&2
+
+  echo "checkpoint push failed after remote-wins reconciliation: $message" >&2
   return 1
 }
 
@@ -86,7 +126,8 @@ NODE
 done
 
 # Refresh after TDCC, then only normalize enough Broker dates to hit the frozen 40-day gate.
-git pull --rebase origin main
+git fetch origin main
+git reset --hard origin/main
 node scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
   --start "$RANGE_START" --end "$RANGE_END" \
   --max-tdcc-stocks "$MAX_TDCC_STOCKS" \
@@ -128,7 +169,8 @@ NODE
 done
 
 # Coverage-only final state. Outcome artifacts are forbidden at this phase.
-git pull --rebase origin main
+git fetch origin main
+git reset --hard origin/main
 node scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
   --start "$RANGE_START" --end "$RANGE_END" \
   --max-tdcc-stocks "$MAX_TDCC_STOCKS" \
