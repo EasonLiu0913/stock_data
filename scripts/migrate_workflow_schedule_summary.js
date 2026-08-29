@@ -25,6 +25,10 @@ const JOB = `
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
 `;
 
+function normalizeTrailingWhitespace(text) {
+  return `${String(text).replace(/\s+$/, '')}\n`;
+}
+
 function migrateFile(file) {
   const original = fs.readFileSync(file, 'utf8');
   if (!/^jobs:\s*$/m.test(original)) return false;
@@ -43,12 +47,29 @@ function migrateFile(file) {
   }
 
   const updated = `${base}${JOB}\n`;
-  if (updated === original) return false;
+  // A one-vs-two newline difference at EOF is not a workflow normalization issue.
+  // Keep the audit focused on the managed job content and structure.
+  if (normalizeTrailingWhitespace(updated) === normalizeTrailingWhitespace(original)) return false;
   fs.writeFileSync(file, updated, 'utf8');
   return true;
 }
 
+function selfTest() {
+  const tempDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'workflow-summary-migrate-'));
+  const file = path.join(tempDir, 'sample.yml');
+  const base = 'name: sample\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n';
+  fs.writeFileSync(file, `${base.replace(/\s+$/, '')}${JOB}`, 'utf8');
+  if (migrateFile(file)) throw new Error('EOF newline-only difference must not trigger migration');
+
+  const broken = fs.readFileSync(file, 'utf8').replace('name: 排程時間摘要', 'name: wrong');
+  fs.writeFileSync(file, broken, 'utf8');
+  if (!migrateFile(file)) throw new Error('Managed job content drift must trigger migration');
+  if (!fs.readFileSync(file, 'utf8').includes('name: 排程時間摘要')) throw new Error('Managed job was not restored');
+  console.log('migrate_workflow_schedule_summary self-test passed');
+}
+
 function main() {
+  if (process.argv.includes('--self-test')) return selfTest();
   const files = fs.readdirSync(WORKFLOW_DIR)
     .filter((name) => /\.ya?ml$/i.test(name))
     .sort();
@@ -70,4 +91,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { migrateFile, MARKER };
+module.exports = { migrateFile, MARKER, normalizeTrailingWhitespace };
