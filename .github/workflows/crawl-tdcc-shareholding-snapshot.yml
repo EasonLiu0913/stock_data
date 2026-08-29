@@ -2,6 +2,11 @@ name: "[01 台股資料] TDCC Shareholding Snapshot"
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/crawl_tdcc_shareholding_snapshot.js'
+      - 'tests/tdcc_shareholding_snapshot.test.js'
+      - '.github/workflows/crawl-tdcc-shareholding-snapshot.yml'
   schedule:
     # 台北時間週五 21:10、週六 08:10；週五未更新時由週六補抓
     - cron: '10 13 * * 5'
