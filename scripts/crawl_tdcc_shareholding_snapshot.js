@@ -96,14 +96,16 @@ function summarizeStock(rows) {
   const byLevel = new Map(rows.map((r) => [r.level, r]));
   const ratioSum = (levels) => levels.reduce((sum, level) => sum + (byLevel.get(level)?.ratio_pct || 0), 0);
   return {
-    gte_1000_lots_pct: Number((byLevel.get(15)?.ratio_pct || 0).toFixed(2)),
-    le_100_lots_pct: Number(ratioSum([1,2,3,4,5,6,7,8,9]).toFixed(2)),
+    large_holder_definition: 'TDCC level 15: 1,000,001 shares or more (more than 1,000 lots)',
+    small_holder_definition: 'TDCC levels 1-9: up to 100,000 shares (up to 100 lots)',
+    large_holder_pct: Number((byLevel.get(15)?.ratio_pct || 0).toFixed(2)),
+    small_holder_pct: Number(ratioSum([1,2,3,4,5,6,7,8,9]).toFixed(2)),
     levels_present: [...byLevel.keys()].sort((a,b) => a-b),
   };
 }
 async function loadSource() {
   if (inputFile) return { text: fs.readFileSync(inputFile, 'utf8'), contentType: 'text/plain', sourceUrl: `file:${inputFile}` };
-  const response = await fetch(ENDPOINT, { headers: { 'user-agent': 'stock_data-tdcc-archiver/1.0', accept: 'application/json,text/csv,text/plain,*/*' } });
+  const response = await fetch(ENDPOINT, { headers: { 'user-agent': 'stock_data-tdcc-archiver/2.0', accept: 'application/json,text/csv,text/plain,*/*' } });
   if (!response.ok) throw new Error(`TDCC HTTP ${response.status}`);
   return { text: await response.text(), contentType: response.headers.get('content-type') || '', sourceUrl: ENDPOINT };
 }
@@ -128,55 +130,57 @@ async function loadSource() {
       return;
     }
   }
+
   const byStock = new Map();
   for (const row of rows) {
-    const list = byStock.get(row.stock) || []; list.push(row); byStock.set(row.stock, list);
+    const list = byStock.get(row.stock) || [];
+    list.push(row);
+    byStock.set(row.stock, list);
   }
-  const stockDir = path.join(outputRoot, 'stocks');
+
   const rawDir = path.join(outputRoot, 'raw');
-  fs.mkdirSync(stockDir, { recursive: true });
+  const weeklyDir = path.join(outputRoot, 'weekly');
   fs.mkdirSync(rawDir, { recursive: true });
+  fs.mkdirSync(weeklyDir, { recursive: true });
   const rawExt = source.contentType.includes('json') || source.text.trim().startsWith('[') || source.text.trim().startsWith('{') ? 'json' : 'csv';
   fs.writeFileSync(path.join(rawDir, `${compact}.${rawExt}`), source.text.endsWith('\n') ? source.text : `${source.text}\n`);
-  let stockCount = 0;
-  for (const [stock, stockRows] of byStock) {
-    const levels = stockRows.sort((a,b) => a.level - b.level);
-    const summary = summarizeStock(levels);
-    const dir = path.join(stockDir, stock); fs.mkdirSync(dir, { recursive: true });
-    const payload = {
-      schema_version: 1,
-      source: 'tdcc_official_openapi_1_5',
-      source_type: 'official_open_data',
-      research_only: false,
-      production_safe: true,
-      stock,
-      observed_date: observedDate,
-      captured_at: capturedAt,
-      available_at: capturedAt,
-      availability_policy: 'first_successful_archive_capture_timestamp_conservative_no_lookahead',
-      source_url: source.sourceUrl,
-      derived: {
-        large_holder_definition: 'TDCC level 15: 1,000,001 shares or more (more than 1,000 lots)',
-        small_holder_definition: 'TDCC levels 1-9: up to 100,000 shares (up to 100 lots)',
-        large_holder_pct: summary.gte_1000_lots_pct,
-        small_holder_pct: summary.le_100_lots_pct,
-      },
-      levels,
-    };
-    fs.writeFileSync(path.join(dir, `${compact}.json`), `${JSON.stringify(payload, null, 2)}\n`);
-    stockCount += 1;
+
+  const stocks = {};
+  for (const [stock, stockRows] of [...byStock.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const levels = stockRows.sort((a,b) => a.level - b.level).map(({ level, holders, shares, ratio_pct }) => ({ level, holders, shares, ratio_pct }));
+    stocks[stock] = { derived: summarizeStock(stockRows), levels };
   }
+
+  const canonical = {
+    schema_version: 2,
+    source: 'tdcc_official_openapi_1_5',
+    source_type: 'official_open_data',
+    research_only: false,
+    production_safe: true,
+    observed_date: observedDate,
+    captured_at: capturedAt,
+    available_at: capturedAt,
+    availability_policy: 'first_successful_archive_capture_timestamp_conservative_no_lookahead',
+    source_url: source.sourceUrl,
+    row_count: rows.length,
+    stock_count: Object.keys(stocks).length,
+    stocks,
+  };
+  const weeklyFile = path.join(weeklyDir, `${compact}.json`);
+  fs.writeFileSync(weeklyFile, `${JSON.stringify(canonical)}\n`);
+
   const manifest = {
-    schema_version: 1,
+    schema_version: 2,
     source: 'tdcc_official_openapi_1_5',
     source_url: source.sourceUrl,
     observed_date: observedDate,
     captured_at: capturedAt,
     available_at: capturedAt,
     rows: rows.length,
-    stocks: stockCount,
+    stocks: Object.keys(stocks).length,
     raw_file: `raw/${compact}.${rawExt}`,
-    canonical_root: 'stocks',
+    canonical_file: `weekly/${compact}.json`,
+    canonical_layout: 'one consolidated weekly file keyed by stock code',
     no_lookahead: 'available_at is the first successful archive capture timestamp; never backdate it to observed_date',
   };
   fs.writeFileSync(path.join(outputRoot, 'latest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
