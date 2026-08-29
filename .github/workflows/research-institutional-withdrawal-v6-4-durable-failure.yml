@@ -1,0 +1,119 @@
+name: "[07 研究] Institutional Withdrawal v6.4 Durable Failure"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/v6-4-durable-failure-spec.md'
+      - 'scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js'
+      - '.github/workflows/research-institutional-withdrawal-v6-4-durable-failure.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v6-4-durable-failure
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/research-institutional-withdrawal-v6-4-durable-failure.yml
+            scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js
+            data_research/institutional-flow/v6-4-durable-failure-spec.md
+            data_research/institutional-flow/backtests/
+            data_research/institutional-flow/features/
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin main
+          git reset --hard origin/main
+
+      - name: Validate analyzer and frozen inputs
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js
+          node - <<'NODE'
+          const v=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json');
+          if(v.methodology!=='institutional-withdrawal-v6-3-delayed-failure-transition-v1') throw new Error(`Unexpected v6.3 methodology ${v.methodology}`);
+          if(v.production_safe!==false || v.research_only!==true) throw new Error('v6.3 research safety contract missing');
+          NODE
+
+      - name: Run v6.4 durability study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js
+
+      - name: Validate v6.4 output contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json');
+          if(a.methodology!=='institutional-withdrawal-v6-4-durable-failure-confirmation-v1') throw new Error(`Unexpected methodology ${a.methodology}`);
+          if(a.production_safe!==false || a.research_only!==true) throw new Error('Research safety contract missing');
+          if(a.persistence_window_sessions!==3 || a.required_broken_votes!==2 || a.required_supply_votes!==1) throw new Error('Frozen v6.4 persistence contract mismatch');
+          const candidates=a.events||[];
+          if(!candidates.length) throw new Error('No v6.3 failure candidates found');
+          for(const e of candidates){
+            if(!['durable_failure_confirmed','candidate_failure_not_durable','insufficient_persistence_followup'].includes(e.persistence_status)) throw new Error(`Bad status ${e.stock} ${e.persistence_status}`);
+            if(e.persistence_status!=='insufficient_persistence_followup' && e.persistence_window.length!==3) throw new Error(`Persistence window mismatch ${e.stock} ${e.fragile_anchor}`);
+          }
+          console.log(`v6.4 candidates=${candidates.length} durable=${a.counts.durable_failure_confirmed||0} rejected=${a.counts.candidate_failure_not_durable||0}`);
+          NODE
+
+      - name: Commit v6.4 research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete institutional withdrawal v6.4 durability study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json');
+          console.log('## Institutional Withdrawal v6.4');
+          console.log(`- Candidates: ${a.events.length}`);
+          console.log(`- Durable: ${a.counts.durable_failure_confirmed||0}`);
+          console.log(`- Rejected non-durable: ${a.counts.candidate_failure_not_durable||0}`);
+          console.log(`- Insufficient: ${a.counts.insufficient_persistence_followup||0}`);
+          for(const e of a.events) console.log(`- ${e.stock} ${e.fragile_anchor}: ${e.persistence_status}; broken ${e.broken_votes}/3; supply ${e.supply_votes}/3`);
+          console.log('- Safety: development-sample research only.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
