@@ -1,0 +1,273 @@
+name: "[07 研究] Institutional Withdrawal v5 Broker Backfill"
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_size_requests:
+        description: "Maximum HiStock stock-date requests per batch"
+        required: true
+        default: "20"
+        type: string
+      batch_pause_min_seconds:
+        description: "Minimum cooldown after each batch"
+        required: true
+        default: "120"
+        type: string
+      batch_pause_max_seconds:
+        description: "Maximum cooldown after each batch"
+        required: true
+        default: "300"
+        type: string
+  push:
+    paths:
+      - 'scripts/plan_institutional_withdrawal_v5_broker_coverage.js'
+      - '.github/workflows/backfill-institutional-withdrawal-v5-broker.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v5-broker-backfill
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      missing: ${{ steps.plan.outputs.missing_count }}
+      scheduled: ${{ steps.plan.outputs.scheduled_count }}
+      batches: ${{ steps.plan.outputs.batch_count }}
+      trading_days: ${{ steps.plan.outputs.trading_day_count }}
+      batch_size: ${{ steps.cfg.outputs.batch_size }}
+      pause_min: ${{ steps.cfg.outputs.pause_min }}
+      pause_max: ${{ steps.cfg.outputs.pause_max }}
+    steps:
+      - name: Checkout planner slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_research/institutional-flow/histock/2330/daily/
+            data_research/institutional-flow/histock/2317/daily/
+            data_research/institutional-flow/histock/2454/daily/
+            data_research/institutional-flow/histock/2382/daily/
+            data_research/institutional-flow/histock/2303/daily/
+            data_research/institutional-flow/histock/2449/daily/
+      - name: Resolve batching policy
+        id: cfg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BATCH_SIZE="${{ inputs.batch_size_requests }}"
+            PAUSE_MIN="${{ inputs.batch_pause_min_seconds }}"
+            PAUSE_MAX="${{ inputs.batch_pause_max_seconds }}"
+          else
+            BATCH_SIZE=20
+            PAUSE_MIN=120
+            PAUSE_MAX=300
+          fi
+          [[ "$BATCH_SIZE" =~ ^[0-9]+$ ]] && test "$BATCH_SIZE" -ge 1 && test "$BATCH_SIZE" -le 20
+          [[ "$PAUSE_MIN" =~ ^[0-9]+$ ]] && test "$PAUSE_MIN" -ge 60 && test "$PAUSE_MIN" -le 900
+          [[ "$PAUSE_MAX" =~ ^[0-9]+$ ]] && test "$PAUSE_MAX" -ge "$PAUSE_MIN" && test "$PAUSE_MAX" -le 1800
+          echo "batch_size=$BATCH_SIZE" >> "$GITHUB_OUTPUT"
+          echo "pause_min=$PAUSE_MIN" >> "$GITHUB_OUTPUT"
+          echo "pause_max=$PAUSE_MAX" >> "$GITHUB_OUTPUT"
+      - name: Validate planner
+        run: |
+          set -euo pipefail
+          node --check scripts/plan_institutional_withdrawal_v5_broker_coverage.js
+          node --check scripts/backfill_histock_broker_history_research_v2.js
+          node --check scripts/checkpoint_histock_batch_quality.js
+      - name: Plan exact source-derived broker gaps
+        id: plan
+        run: |
+          set -euo pipefail
+          node scripts/plan_institutional_withdrawal_v5_broker_coverage.js \
+            --stocks "2330,2317,2454,2382,2303,2449" \
+            --start "2026-04-01" --end "2026-08-21" \
+            --batch-size-requests "${{ steps.cfg.outputs.batch_size }}" \
+            --max-batches-per-run 20 \
+            --output "$RUNNER_TEMP/v5-broker-plan.json" \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Plan summary
+        run: |
+          {
+            echo "## v5 Broker Coverage Plan"
+            echo "- Source-derived trading days: ${{ steps.plan.outputs.trading_day_count }}"
+            echo "- Existing valid tasks: ${{ steps.plan.outputs.existing_count }}"
+            echo "- Missing/invalid tasks: ${{ steps.plan.outputs.missing_count }}"
+            echo "- Scheduled: ${{ steps.plan.outputs.scheduled_count }}"
+            echo "- Batches: ${{ steps.plan.outputs.batch_count }}"
+            echo "- Batch size: ${{ steps.cfg.outputs.batch_size }}"
+            echo "- max-parallel: 1; cooldown ${{ steps.cfg.outputs.pause_min }}–${{ steps.cfg.outputs.pause_max }} seconds."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  broker-batch:
+    needs: plan
+    if: ${{ needs.plan.outputs.scheduled != '0' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/histock/
+      - name: Sync latest checkpoints
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+      - name: Fetch exact-date batch
+        shell: bash
+        env:
+          TASKS: ${{ matrix.tasks }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          test "${#ITEMS[@]}" -le "${{ needs.plan.outputs.batch_size }}"
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"; DATE="${ITEM#*@}"
+            ROOT="data_research/institutional-flow/histock/$STOCK"
+            TMP="$RUNNER_TEMP/${STOCK}-${DATE//-/}"
+            mkdir -p "$ROOT/daily" "$ROOT/batch-status" "$TMP/daily" data_history_sma
+            cat > data_history_sma/trading_days.json <<EOF
+          {"2026":["$DATE"]}
+          EOF
+            cat > data_history_sma/non_trading_days.json <<EOF
+          {"2026":[]}
+          EOF
+            echo "[v5 batch ${{ matrix.batch }}] $STOCK / $DATE"
+            set +e
+            node scripts/backfill_histock_broker_history_research_v2.js \
+              --stock "$STOCK" --start "$DATE" --end "$DATE" \
+              --delay-ms 1800 --jitter-ms 1200 --max-retries 2 --max-consecutive-failures 4 \
+              --out "$TMP"
+            RC=$?
+            set -e
+            DAILY="$TMP/daily/${DATE//-/}.json"
+            if [ -s "$DAILY" ]; then cp -f "$DAILY" "$ROOT/daily/"; fi
+            node - "$ROOT/batch-status/v5-run-${GITHUB_RUN_ID}-batch-${{ matrix.batch }}-${STOCK}-${DATE//-/}.json" "$STOCK" "$DATE" "$RC" <<'NODE'
+          const fs=require('fs');const [file,stock,date,rc]=process.argv.slice(2);
+          fs.writeFileSync(file,JSON.stringify({schema_version:1,research:'institutional-withdrawal-v5',run_id:process.env.GITHUB_RUN_ID,batch:Number(process.env.BATCH_INDEX||0),stock,date,fetch_exit_code:Number(rc),generated_at:new Date().toISOString()},null,2)+'\n');
+          NODE
+          done
+      - name: Apply hard quality gate
+        env:
+          TASKS: ${{ matrix.tasks }}
+        run: |
+          set -euo pipefail
+          node scripts/checkpoint_histock_batch_quality.js \
+            --tasks "$TASKS" --batch "${{ matrix.batch }}" --run-id "$GITHUB_RUN_ID"
+      - name: Commit valid checkpoint and cooldown
+        if: always()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/histock
+          if ! git diff --cached --quiet; then
+            git commit -m "research: v5 broker batch ${{ matrix.batch }} checkpoint"
+            PUSHED=0
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase origin main && git push origin HEAD:main; then PUSHED=1; break; fi
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt*5))
+            done
+            test "$PUSHED" -eq 1
+          fi
+          MIN=${{ needs.plan.outputs.pause_min }}
+          MAX=${{ needs.plan.outputs.pause_max }}
+          PAUSE=$((MIN + RANDOM % (MAX - MIN + 1)))
+          echo "🛑 v5 broker batch ${{ matrix.batch }} checkpointed; cooldown ${PAUSE}s."
+          sleep "$PAUSE"
+
+  verify:
+    needs: [plan, broker-batch]
+    if: ${{ always() && needs.plan.result == 'success' && (needs.broker-batch.result == 'success' || needs.broker-batch.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout verification slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/backtests/
+      - name: Sync all checkpoints
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+      - name: Final re-plan must be zero
+        run: |
+          set -euo pipefail
+          node scripts/plan_institutional_withdrawal_v5_broker_coverage.js \
+            --stocks "2330,2317,2454,2382,2303,2449" \
+            --start "2026-04-01" --end "2026-08-21" \
+            --batch-size-requests 20 --max-batches-per-run 20 \
+            --output "$RUNNER_TEMP/final-v5-broker-plan.json"
+          node - <<'NODE'
+          const fs=require('fs');const p=require(process.env.RUNNER_TEMP+'/final-v5-broker-plan.json');
+          if(p.counts.missing_tasks_total!==0) throw new Error(`v5 broker coverage incomplete: ${p.counts.missing_tasks_total} remain`);
+          if(p.counts.existing_valid_tasks!==p.counts.theoretical_tasks) throw new Error(`v5 broker coverage mismatch: ${p.counts.existing_valid_tasks}/${p.counts.theoretical_tasks}`);
+          const marker={schema_version:1,methodology:'institutional-withdrawal-v5-broker-coverage-v1',range:p.range,universe:p.universe,calendar:p.calendar,data_quality:p.data_quality,counts:p.counts,complete:true,verified_at:new Date().toISOString()};
+          fs.mkdirSync('data_research/institutional-flow/backtests',{recursive:true});
+          fs.writeFileSync('data_research/institutional-flow/backtests/institutional-withdrawal-v5-broker-coverage.json',JSON.stringify(marker,null,2)+'\n');
+          console.log(`v5 broker coverage complete: ${p.counts.existing_valid_tasks}/${p.counts.theoretical_tasks}`);
+          NODE
+      - name: Commit completion marker
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/backtests/institutional-withdrawal-v5-broker-coverage.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete v5 broker coverage"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
