@@ -84,10 +84,12 @@ function build() {
         high_volume_flat_day: highVolumeFlatDay,
       });
     }
+    const missingDates = series.filter((x) => !Number.isFinite(x.close)).map((x) => x.date);
     coverage[stock] = {
       expected_trading_days: tradingDays.length,
       present_days: present,
-      missing_days: tradingDays.length - present,
+      missing_days: missingDates.length,
+      missing_dates: missingDates,
       ratio: tradingDays.length ? round(present / tradingDays.length, 4) : null,
     };
   }
