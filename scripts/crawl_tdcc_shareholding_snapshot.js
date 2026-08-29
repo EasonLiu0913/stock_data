@@ -33,10 +33,14 @@ function number(v) {
   const n = Number(clean(v).replaceAll(',', ''));
   return Number.isFinite(n) ? n : null;
 }
-function isoDate(yyyymmdd) {
-  const s = clean(yyyymmdd).replaceAll('-', '').replaceAll('/', '');
-  if (!/^\d{8}$/.test(s)) return null;
-  return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+function isoDate(value) {
+  const s = clean(value).replaceAll('-', '').replaceAll('/', '');
+  if (/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+  if (/^\d{7}$/.test(s)) {
+    const year = Number(s.slice(0,3)) + 1911;
+    return `${year}-${s.slice(3,5)}-${s.slice(5,7)}`;
+  }
+  return null;
 }
 function parseCsv(text) {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((x) => x.trim());
@@ -104,12 +108,24 @@ async function loadSource() {
 
 (async () => {
   const source = await loadSource();
-  const rows = normalizeRows(parsePayload(source.text, source.contentType));
-  if (!rows.length) throw new Error('TDCC payload parsed zero valid rows');
+  const parsed = parsePayload(source.text, source.contentType);
+  const rows = normalizeRows(parsed);
+  if (!rows.length) {
+    const sample = parsed[0] && typeof parsed[0] === 'object' ? { keys: Object.keys(parsed[0]), row: parsed[0] } : null;
+    throw new Error(`TDCC payload parsed zero valid rows: ${JSON.stringify({ content_type: source.contentType, parsed_rows: parsed.length, sample })}`);
+  }
   const dates = [...new Set(rows.map((r) => r.observed_date))].sort();
   if (dates.length !== 1) throw new Error(`Expected exactly one TDCC observation date, got ${dates.join(',')}`);
   const observedDate = dates[0];
   const compact = observedDate.replaceAll('-', '');
+  const existingManifest = path.join(outputRoot, `manifest-${compact}.json`);
+  if (fs.existsSync(existingManifest)) {
+    const existing = JSON.parse(fs.readFileSync(existingManifest, 'utf8'));
+    if (existing.observed_date === observedDate && existing.available_at) {
+      console.log(JSON.stringify({ status: 'already_archived', observed_date: observedDate, available_at: existing.available_at }, null, 2));
+      return;
+    }
+  }
   const byStock = new Map();
   for (const row of rows) {
     const list = byStock.get(row.stock) || []; list.push(row); byStock.set(row.stock, list);
@@ -162,6 +178,6 @@ async function loadSource() {
     no_lookahead: 'available_at is the first successful archive capture timestamp; never backdate it to observed_date',
   };
   fs.writeFileSync(path.join(outputRoot, 'latest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  fs.writeFileSync(path.join(outputRoot, `manifest-${compact}.json`), `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.writeFileSync(existingManifest, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(JSON.stringify(manifest, null, 2));
 })().catch((error) => { console.error(error.stack || error.message); process.exit(1); });
