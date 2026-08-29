@@ -23,10 +23,15 @@ on:
         required: true
         default: "8"
         type: string
-      batch_pause_seconds:
-        description: "Pause after each remote-data batch"
+      batch_pause_min_seconds:
+        description: "Minimum random cooldown after each remote-data batch"
         required: true
-        default: "15"
+        default: "120"
+        type: string
+      batch_pause_max_seconds:
+        description: "Maximum random cooldown after each remote-data batch"
+        required: true
+        default: "300"
         type: string
   push:
     paths:
@@ -49,13 +54,15 @@ jobs:
       DEFAULT_START: "2026-04-01"
       DEFAULT_END: "2026-08-21"
       DEFAULT_BATCH_SIZE: "8"
-      DEFAULT_BATCH_PAUSE: "15"
+      DEFAULT_BATCH_PAUSE_MIN: "120"
+      DEFAULT_BATCH_PAUSE_MAX: "300"
     outputs:
       stocks: ${{ steps.cfg.outputs.stocks }}
       start: ${{ steps.cfg.outputs.start }}
       end: ${{ steps.cfg.outputs.end }}
       batch_size: ${{ steps.cfg.outputs.batch_size }}
-      batch_pause: ${{ steps.cfg.outputs.batch_pause }}
+      batch_pause_min: ${{ steps.cfg.outputs.batch_pause_min }}
+      batch_pause_max: ${{ steps.cfg.outputs.batch_pause_max }}
       broker_matrix: ${{ steps.broker.outputs.matrix }}
       broker_scheduled: ${{ steps.broker.outputs.scheduled_count }}
       broker_missing: ${{ steps.broker.outputs.missing_count }}
@@ -79,24 +86,28 @@ jobs:
             START="${{ inputs.start_date }}"
             END="${{ inputs.end_date }}"
             BATCH_SIZE="${{ inputs.batch_size_requests }}"
-            BATCH_PAUSE="${{ inputs.batch_pause_seconds }}"
+            BATCH_PAUSE_MIN="${{ inputs.batch_pause_min_seconds }}"
+            BATCH_PAUSE_MAX="${{ inputs.batch_pause_max_seconds }}"
           else
             STOCKS="$DEFAULT_STOCKS"
             START="$DEFAULT_START"
             END="$DEFAULT_END"
             BATCH_SIZE="$DEFAULT_BATCH_SIZE"
-            BATCH_PAUSE="$DEFAULT_BATCH_PAUSE"
+            BATCH_PAUSE_MIN="$DEFAULT_BATCH_PAUSE_MIN"
+            BATCH_PAUSE_MAX="$DEFAULT_BATCH_PAUSE_MAX"
           fi
           [[ "$STOCKS" =~ ^[0-9]{4}(,[0-9]{4})+$ ]]
           [[ "$START" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
           [[ "$END" =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]
           [[ "$BATCH_SIZE" =~ ^[0-9]+$ ]] && test "$BATCH_SIZE" -ge 1 && test "$BATCH_SIZE" -le 20
-          [[ "$BATCH_PAUSE" =~ ^[0-9]+$ ]] && test "$BATCH_PAUSE" -ge 5 && test "$BATCH_PAUSE" -le 120
+          [[ "$BATCH_PAUSE_MIN" =~ ^[0-9]+$ ]] && test "$BATCH_PAUSE_MIN" -ge 30 && test "$BATCH_PAUSE_MIN" -le 900
+          [[ "$BATCH_PAUSE_MAX" =~ ^[0-9]+$ ]] && test "$BATCH_PAUSE_MAX" -ge "$BATCH_PAUSE_MIN" && test "$BATCH_PAUSE_MAX" -le 1800
           echo "stocks=$STOCKS" >> "$GITHUB_OUTPUT"
           echo "start=$START" >> "$GITHUB_OUTPUT"
           echo "end=$END" >> "$GITHUB_OUTPUT"
           echo "batch_size=$BATCH_SIZE" >> "$GITHUB_OUTPUT"
-          echo "batch_pause=$BATCH_PAUSE" >> "$GITHUB_OUTPUT"
+          echo "batch_pause_min=$BATCH_PAUSE_MIN" >> "$GITHUB_OUTPUT"
+          echo "batch_pause_max=$BATCH_PAUSE_MAX" >> "$GITHUB_OUTPUT"
 
       - name: Validate code contracts
         run: |
@@ -158,7 +169,7 @@ jobs:
             echo "- Broker tasks scheduled this run: ${{ steps.broker.outputs.scheduled_count }}"
             echo "- Broker planned batches: ${{ steps.broker.outputs.batch_count }}"
             echo "- Batch size: ${{ steps.cfg.outputs.batch_size }} requests"
-            echo "- Batch pause: ${{ steps.cfg.outputs.batch_pause }} seconds"
+            echo "- Random batch cooldown: ${{ steps.cfg.outputs.batch_pause_min }}–${{ steps.cfg.outputs.batch_pause_max }} seconds"
             echo "- max-parallel: 1; every batch is quality-gated and checkpointed before the next batch."
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -170,7 +181,7 @@ jobs:
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan.outputs.tdcc_matrix) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
@@ -208,7 +219,11 @@ jobs:
               test "$attempt" -lt 5
             done
           fi
-          sleep "${{ needs.plan.outputs.batch_pause }}"
+          MIN=${{ needs.plan.outputs.batch_pause_min }}
+          MAX=${{ needs.plan.outputs.batch_pause_max }}
+          PAUSE=$((MIN + RANDOM % (MAX - MIN + 1)))
+          echo "🛑 TDCC batch completed; cooldown ${PAUSE}s before next batch."
+          sleep "$PAUSE"
 
   broker-batch:
     needs: [plan, tdcc-batch]
@@ -218,7 +233,7 @@ jobs:
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan.outputs.broker_matrix) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -285,7 +300,11 @@ jobs:
             done
             test "$PUSHED" -eq 1
           fi
-          sleep "${{ needs.plan.outputs.batch_pause }}"
+          MIN=${{ needs.plan.outputs.batch_pause_min }}
+          MAX=${{ needs.plan.outputs.batch_pause_max }}
+          PAUSE=$((MIN + RANDOM % (MAX - MIN + 1)))
+          echo "🛑 broker batch ${{ matrix.batch }} completed; cooldown ${PAUSE}s before next batch."
+          sleep "$PAUSE"
 
   aggregate:
     needs: [plan, tdcc-batch, broker-batch]
