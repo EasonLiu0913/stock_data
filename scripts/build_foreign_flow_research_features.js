@@ -11,19 +11,35 @@ const start = getArg('start', '2026-04-01');
 const end = getArg('end', '2026-08-21');
 const output = getArg('output', path.join('data_research', 'institutional-flow', 'features', 'foreign-flow-v5.json'));
 const root = getArg('root', 'data_twse_foreign_investors');
-const tradingPath = getArg('trading-days', path.join('data_history_sma', 'trading_days.json'));
 
 const normalizeDate = (v) => String(v).replaceAll('/', '-');
 const ymd = (v) => normalizeDate(v).replaceAll('-', '');
+const iso = (v) => `${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}`;
 const num = (v) => {
   const n = Number(String(v ?? '').replaceAll(',', '').trim());
   return Number.isFinite(n) ? n : null;
 };
 const round = (v, d = 4) => Number.isFinite(v) ? Number(v.toFixed(d)) : null;
 
-function loadTradingDays() {
-  const p = JSON.parse(fs.readFileSync(tradingPath, 'utf8'));
-  return Object.values(p).flat().map(normalizeDate).filter((d) => d >= start && d <= end).sort();
+function discoverTradingDays() {
+  const candidates = fs.readdirSync(root)
+    .filter((name) => /^\d{8}_twse_foreign_investors\.json$/.test(name))
+    .map((name) => ({ name, ymd: name.slice(0, 8), date: iso(name.slice(0, 8)) }))
+    .filter((x) => x.date >= start && x.date <= end)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const trading = [];
+  const rejected = [];
+  for (const x of candidates) {
+    const file = path.join(root, x.name);
+    try {
+      const p = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (p.stat === 'OK' && String(p.date) === x.ymd && Array.isArray(p.data)) trading.push(x.date);
+      else rejected.push({ date: x.date, reason: `stat_or_date_invalid:${p.stat}:${p.date}` });
+    } catch (error) {
+      rejected.push({ date: x.date, reason: `invalid_json:${error.message}` });
+    }
+  }
+  return { trading, rejected };
 }
 
 function parseFile(file, expectedDate) {
@@ -68,7 +84,8 @@ function rolling(series, index, window) {
 }
 
 function build() {
-  const tradingDays = loadTradingDays();
+  const discovery = discoverTradingDays();
+  const tradingDays = discovery.trading;
   const dayMaps = new Map();
   const sourceMissingDates = [];
   for (const date of tradingDays) {
@@ -83,9 +100,7 @@ function build() {
     const series = tradingDays.map((date) => {
       const r = dayMaps.get(date)?.get(stock) || null;
       return {
-        stock,
-        date,
-        source_present: Boolean(r),
+        stock, date, source_present: Boolean(r),
         ex_dealer_net: r?.ex_dealer.net ?? null,
         dealer_net: r?.dealer.net ?? null,
         total_net: r?.total.net ?? null,
@@ -101,43 +116,42 @@ function build() {
       const prev5 = i >= 9 ? rolling(series, i - 5, 5) : null;
       rows.push({
         ...r,
-        rolling_5d: w5,
-        rolling_10d: w10,
+        rolling_5d: w5, rolling_10d: w10,
         total_5d_acceleration: w5 && prev5 ? w5.total_net - prev5.total_net : null,
         foreign_confirm: Boolean(w5 && w10 && w5.total_net < 0 && w5.total_sell_ratio >= 0.6 && w10.total_net < 0),
       });
     }
+    const missingDates = series.filter((x) => !x.source_present).map((x) => x.date);
     coverage[stock] = {
       expected_trading_days: tradingDays.length,
       present_days: present,
-      missing_days: tradingDays.length - present,
+      missing_days: missingDates.length,
+      missing_dates: missingDates,
       ratio: tradingDays.length ? round(present / tradingDays.length, 4) : null,
     };
   }
 
   const payload = {
-    schema_version: 1,
-    methodology: 'institutional-withdrawal-v5-foreign-flow-features-v1',
+    schema_version: 2,
+    methodology: 'institutional-withdrawal-v5-foreign-flow-features-v2-source-derived-calendar',
     research_only: true,
-    range: { start, end },
-    universe: stocks,
+    range: { start, end }, universe: stocks,
     source: 'TWSE foreign and mainland investor daily net buy/sell summary',
+    calendar_policy: 'Research trading dates are discovered from in-range TWSE foreign-investor files whose payload stat is OK and payload date matches filename; stale data_history_sma/trading_days.json is not used.',
+    trading_dates: tradingDays,
+    rejected_calendar_files: discovery.rejected,
     field_mapping: {
-      ex_dealer: 'row indexes 3/4/5',
-      dealer: 'row indexes 6/7/8',
-      total: 'row indexes 9/10/11',
+      ex_dealer: 'row indexes 3/4/5', dealer: 'row indexes 6/7/8', total: 'row indexes 9/10/11',
       note: 'All three repeated buy/sell/net groups are preserved; combined total is the primary confirmation family.',
     },
-    no_lookahead: 'All rolling features use current and prior trading sessions only; missing source days invalidate the affected rolling window and are never imputed as zero.',
+    no_lookahead: 'All rolling features use current and prior source-derived trading sessions only; missing stock rows invalidate the affected rolling window and are never imputed as zero.',
     counts: { trading_days: tradingDays.length, source_missing_dates: sourceMissingDates.length, feature_rows: rows.length },
-    source_missing_dates: sourceMissingDates,
-    coverage,
-    rows,
+    source_missing_dates: sourceMissingDates, coverage, rows,
     generated_at: new Date().toISOString(),
   };
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(payload, null, 2)}\n`);
-  console.log(JSON.stringify({ counts: payload.counts, coverage }, null, 2));
+  console.log(JSON.stringify({ first: tradingDays[0], last: tradingDays.at(-1), counts: payload.counts, rejected_calendar_files: discovery.rejected, coverage }, null, 2));
   return payload;
 }
 
