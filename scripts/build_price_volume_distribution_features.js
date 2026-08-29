@@ -72,7 +72,7 @@ function build() {
       const highVolumeDownDay = Number.isFinite(volumeRatio) && Number.isFinite(return1d) && volumeRatio >= 1.5 && return1d <= -1;
       const highVolumeFlatDay = Number.isFinite(volumeRatio) && Number.isFinite(return1d) && volumeRatio >= 1.5 && Math.abs(return1d) <= 1;
       rows.push({
-        stock, date,
+        stock, date: curr.date,
         close: curr.close, open: curr.open, high: curr.high, low: curr.low, volume: curr.volume,
         return_1d_pct: return1d,
         return_5d_pct: return5d,
