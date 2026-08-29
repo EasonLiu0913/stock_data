@@ -20,7 +20,8 @@ permissions:
 
 concurrency:
   group: tdcc-shareholding-snapshot
-  cancel-in-progress: false
+  # Push 只用來驗證最新程式碼，舊 push run 可取消；正式排程/手動執行仍保持序列化。
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   archive:
