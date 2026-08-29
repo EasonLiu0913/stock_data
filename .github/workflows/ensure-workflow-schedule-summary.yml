@@ -8,6 +8,12 @@ on:
       - '.github/workflows/**'
       - 'scripts/write_workflow_schedule_summary.js'
       - 'scripts/migrate_workflow_schedule_summary.js'
+      - 'scripts/evaluate_workflow_data_completeness.js'
+      - 'scripts/write_workflow_data_summary.js'
+      - 'scripts/gate_workflow_data_completeness.js'
+      - 'scripts/collect_*_workflow_status.js'
+      - 'tests/evaluate_workflow_data_completeness.test.js'
+      - 'tests/collect_twse_margin_workflow_status.test.js'
   workflow_dispatch:
 
 permissions:
@@ -30,6 +36,8 @@ jobs:
           sparse-checkout: |
             .github/workflows
             scripts
+            tests/evaluate_workflow_data_completeness.test.js
+            tests/collect_twse_margin_workflow_status.test.js
 
       - name: Validate shared summary tooling
         run: |
@@ -37,6 +45,14 @@ jobs:
           node --check scripts/write_workflow_schedule_summary.js
           node scripts/write_workflow_schedule_summary.js --self-test
           node --check scripts/migrate_workflow_schedule_summary.js
+          node --check scripts/evaluate_workflow_data_completeness.js
+          node --check scripts/write_workflow_data_summary.js
+          node --check scripts/gate_workflow_data_completeness.js
+          node --check scripts/collect_twse_margin_workflow_status.js
+          node --check scripts/collect_fubon_broker_workflow_status.js
+          node --test \
+            tests/evaluate_workflow_data_completeness.test.js \
+            tests/collect_twse_margin_workflow_status.test.js
 
       - name: Verify every workflow uses lightweight summary
         shell: bash

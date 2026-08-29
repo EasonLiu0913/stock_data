@@ -34,7 +34,9 @@ jobs:
 
       - name: Check existing TWSE margin balance file
         id: existing
+        shell: bash
         run: |
+          set -euo pipefail
           DATE_INPUT="${{ github.event.inputs.date }}"
           if [ -n "$DATE_INPUT" ]; then
             TARGET_DATE="$DATE_INPUT"
@@ -47,9 +49,13 @@ jobs:
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "output_file=$OUTPUT_FILE" >> "$GITHUB_OUTPUT"
 
-          if [ -f "$OUTPUT_FILE" ]; then
+          if [ -f "$OUTPUT_FILE" ] && node -e '
+            const fs=require("node:fs");
+            const {validateCsv}=require("./scripts/crawl_twse_margin_balance");
+            validateCsv(fs.readFileSync(process.argv[1],"utf8"));
+          ' "$OUTPUT_FILE"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "TWSE margin balance file already exists: $OUTPUT_FILE"
+            echo "TWSE margin balance file already exists and is valid: $OUTPUT_FILE"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
@@ -68,79 +74,51 @@ jobs:
         id: crawl
         if: steps.existing.outputs.exists != 'true'
         continue-on-error: true
-        run: |
-          node scripts/crawl_twse_margin_balance.js --date "${{ steps.existing.outputs.target_date }}"
-
-      - name: Explain TWSE margin crawl failure
-        if: steps.crawl.outcome == 'failure'
         shell: bash
-        env:
-          TARGET_DATE: ${{ steps.existing.outputs.target_date }}
+        run: |
+          set -o pipefail
+          node scripts/crawl_twse_margin_balance.js --date "${{ steps.existing.outputs.target_date }}" 2>&1 | tee /tmp/twse-margin-crawl.log
+
+      - name: Collect TWSE margin data status
+        id: collect_status
+        if: always()
+        shell: bash
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/workflow-data-status"
+          crawl_outcome='${{ steps.existing.outputs.exists == 'true' && 'success' || steps.crawl.outcome }}'
+          node scripts/collect_twse_margin_workflow_status.js \
+            --expected-date "${{ steps.existing.outputs.target_date }}" \
+            --output-file "${{ steps.existing.outputs.output_file }}" \
+            --crawl-outcome "$crawl_outcome" \
+            --error-log /tmp/twse-margin-crawl.log \
+            --output "$RUNNER_TEMP/workflow-data-status/raw.json"
+          node scripts/evaluate_workflow_data_completeness.js \
+            --input "$RUNNER_TEMP/workflow-data-status/raw.json" \
+            --output "$RUNNER_TEMP/workflow-data-status/evaluated.json"
 
-          DIAGNOSTIC=$(node <<'NODE'
-          const { fetchLatestCsv } = require('./scripts/crawl_twse_margin_balance');
+      - name: Write TWSE margin data summary
+        if: always() && steps.collect_status.outcome == 'success'
+        run: node scripts/write_workflow_data_summary.js --input "$RUNNER_TEMP/workflow-data-status/evaluated.json"
 
-          (async () => {
-            const targetDate = process.env.TARGET_DATE || '';
-            let officialDate = '';
-            let probeError = '';
+      - name: Enforce TWSE margin completeness gate
+        id: completeness_gate
+        if: always() && steps.collect_status.outcome == 'success'
+        run: node scripts/gate_workflow_data_completeness.js --input "$RUNNER_TEMP/workflow-data-status/evaluated.json"
 
-            try {
-              const latest = await fetchLatestCsv();
-              officialDate = latest.date || '';
-            } catch (error) {
-              probeError = error.message || String(error);
-            }
-
-            const dateMismatch = Boolean(targetDate && officialDate && targetDate !== officialDate);
-            process.stdout.write(JSON.stringify({ targetDate, officialDate, dateMismatch, probeError }));
-          })().catch(error => {
-            process.stdout.write(JSON.stringify({
-              targetDate: process.env.TARGET_DATE || '',
-              officialDate: '',
-              dateMismatch: false,
-              probeError: error.message || String(error),
-            }));
-          });
-          NODE
-          )
-
-          OFFICIAL_DATE=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.officialDate || "")' "$DIAGNOSTIC")
-          DATE_MISMATCH=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(String(Boolean(x.dateMismatch)))' "$DIAGNOSTIC")
-          PROBE_ERROR=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.probeError || "")' "$DIAGNOSTIC")
-
+      - name: Fail safely if completeness status could not be built
+        if: always() && steps.collect_status.outcome != 'success'
+        shell: bash
+        run: |
           {
-            echo '## 🔴 TWSE 融資融券資料擷取失敗'
-            echo
-            echo "<span style=\"color:#d1242f\"><strong>本次資料沒有擷取成功。</strong></span>"
-            echo
-            echo "- 預期擷取日期：\`${TARGET_DATE}\`"
-
-            if [ "$DATE_MISMATCH" = 'true' ]; then
-              echo "- 官方目前最新日期：\`${OFFICIAL_DATE}\`"
-              echo '- 🔴 失敗原因：**日期不符，當天資料尚未更新。**'
-              echo "- 判斷：workflow 要抓 \`${TARGET_DATE}\`，但 TWSE 官方目前只提供到 \`${OFFICIAL_DATE}\`，因此不接受舊日期資料，也不會寫成 \`${TARGET_DATE}\`。"
-            elif [ -n "$OFFICIAL_DATE" ]; then
-              echo "- 官方目前最新日期：\`${OFFICIAL_DATE}\`"
-              echo '- 🔴 失敗原因：**官方最新日期已符合目標日期，但指定日期查詢仍失敗。**'
-              echo '- 判斷：這不是日期尚未更新，請檢查 TWSE historical endpoint 或回傳格式。'
-            else
-              echo '- 官方目前最新日期：`無法判斷`'
-              echo '- 🔴 失敗原因：**資料擷取失敗，且無法取得官方最新資料日期。**'
-              [ -n "$PROBE_ERROR" ] && echo "- 日期探測錯誤：\`${PROBE_ERROR}\`"
-            fi
-
-            echo
-            echo '> 此步驟刻意維持失敗狀態，讓 GitHub Actions 顯示紅燈；後續排程會再重新嘗試。'
+            echo '## 🔴 資料擷取完整性'
+            echo '- 擷取結果：**無法確認資料完整性**'
+            echo '- 原因：完整性狀態檔建立失敗。為避免誤判成功，本次維持紅燈。'
           } >> "$GITHUB_STEP_SUMMARY"
-
-          echo "TWSE margin crawl failed. target_date=${TARGET_DATE} official_latest_date=${OFFICIAL_DATE:-unknown} date_mismatch=${DATE_MISMATCH}"
           exit 1
 
       - name: Refresh daily-gainers flow analysis when source list exists
-        if: always() && steps.crawl.outcome != 'failure'
+        if: steps.completeness_gate.outcome == 'success'
         run: |
           TARGET_DATE="${{ steps.existing.outputs.target_date }}"
           LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
@@ -160,7 +138,7 @@ jobs:
 
       - name: Commit and push changes
         id: commit
-        if: steps.crawl.outcome != 'failure'
+        if: steps.completeness_gate.outcome == 'success'
         run: |
           set -euo pipefail
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -175,7 +153,6 @@ jobs:
 
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           git commit -m "chore: update TWSE margin balance and flow analysis ${CURRENT_DATE}"
-
           git pull --rebase origin main
           git push origin main
           echo "pages_changed=true" >> "$GITHUB_OUTPUT"
