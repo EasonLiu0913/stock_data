@@ -130,9 +130,10 @@ jobs:
           const f=require('./data_research/institutional-flow/features/foreign-flow-v5.json');
           if(m.counts.anchors!==126) throw new Error(`Expected 126 TDCC stock-date anchors, got ${m.counts.anchors}`);
           if(m.counts.trading_days!==f.trading_dates.length) throw new Error(`Matrix calendar count ${m.counts.trading_days} != feature calendar ${f.trading_dates.length}`);
-          if(m.counts.analysis_eligible<60) throw new Error(`Too few analysis-eligible rows: ${m.counts.analysis_eligible}`);
+          if(m.counts.broker_available!==126 || m.counts.feature_complete!==126) throw new Error(`Feature coverage incomplete: broker=${m.counts.broker_available}/126 complete=${m.counts.feature_complete}/126`);
           for(const [stock,c] of Object.entries(m.coverage)){
             if(c.tdcc_anchors!==21) throw new Error(`${stock}: expected 21 TDCC anchors, got ${c.tdcc_anchors}`);
+            if(c.broker_available!==21 || c.feature_complete!==21) throw new Error(`${stock}: incomplete feature coverage ${JSON.stringify(c)}`);
           }
           const tradingSet=new Set(f.trading_dates);
           for(const r of m.rows){
@@ -142,6 +143,7 @@ jobs:
             if(!r.outcome || r.outcome.anchor_date!==r.market_feature_date) throw new Error(`Outcome anchor mismatch ${r.stock} ${r.tdcc_observed_date}`);
           }
           console.log(`Matrix: anchors=${m.counts.anchors} broker_available=${m.counts.broker_available} complete=${m.counts.feature_complete} eligible=${m.counts.analysis_eligible}`);
+          console.log('analysis_eligible is a rolling-window maturity statistic, not a source-coverage quality gate.');
           for(const [stock,c] of Object.entries(m.coverage)) console.log(`${stock}: broker=${c.broker_available}/21 complete=${c.feature_complete}/21 eligible=${c.analysis_eligible}/21 missingBroker=${c.broker_missing_anchor_dates.join(',')}`);
           NODE
 
