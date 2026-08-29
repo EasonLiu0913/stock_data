@@ -1,0 +1,142 @@
+name: "[07 研究] Institutional Withdrawal v6 Distribution Absorption"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/v6-distribution-absorption-spec.md'
+      - 'scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js'
+      - 'data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json'
+      - '.github/workflows/research-institutional-withdrawal-v6-distribution-absorption.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-v6-distribution-absorption
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js
+            data_research/institutional-flow/v6-distribution-absorption-spec.md
+            data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.md
+
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin main
+          git reset --hard origin/main
+
+      - name: Validate v6 analyzer
+        run: |
+          set -euo pipefail
+          node --check scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js
+
+      - name: Validate frozen v5 matrix contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const m=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json');
+          const expected=['2330','2317','2454','2382','2303','2449'];
+          if(m.research_only!==true || m.production_safe!==false) throw new Error('v5 matrix research safety contract missing');
+          if(m.range?.start!=='2026-04-01' || m.range?.end!=='2026-08-21') throw new Error(`Unexpected v5 range ${JSON.stringify(m.range)}`);
+          if(JSON.stringify(m.universe)!==JSON.stringify(expected)) throw new Error(`Unexpected universe ${JSON.stringify(m.universe)}`);
+          if(m.counts?.anchors!==126) throw new Error(`Expected 126 anchors, got ${m.counts?.anchors}`);
+          if(m.counts?.feature_complete!==126) throw new Error(`Expected 126 feature-complete anchors, got ${m.counts?.feature_complete}`);
+          if(!Array.isArray(m.rows) || m.rows.length!==126) throw new Error(`Unexpected matrix rows ${m.rows?.length}`);
+          for(const r of m.rows){
+            if(!r.market_feature_date || r.market_feature_date>r.tdcc_observed_date) throw new Error(`Lookahead mapping ${r.stock} ${r.tdcc_observed_date} -> ${r.market_feature_date}`);
+            if(!r.outcome || r.outcome.anchor_date!==r.market_feature_date) throw new Error(`Outcome anchor mismatch ${r.stock} ${r.tdcc_observed_date}`);
+          }
+          console.log(`Frozen v5 matrix validated: ${m.rows.length} TDCC anchors, ${m.counts.analysis_eligible} analysis-eligible.`);
+          NODE
+
+      - name: Run persistent-transfer and absorption study
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js
+
+      - name: Validate v6 output contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json');
+          const required=[
+            'all_eligible','v5_pressure_baseline','persistent_tdcc_transfer','withdrawal_pressure',
+            'absorbed_distribution','fragile_distribution','strong_persistent_transfer_plus_broker',
+            'withdrawal_pressure_plus_foreign','pressure_without_persistence','persistent_transfer_without_broker_pressure'
+          ];
+          if(a.research_only!==true || a.production_safe!==false) throw new Error('v6 research safety contract missing');
+          if(a.eligible_rows<=0) throw new Error('v6 has no eligible rows');
+          for(const k of required) if(!a.results?.[k]) throw new Error(`Missing v6 group ${k}`);
+          for(const [name,g] of Object.entries(a.results)){
+            if(g.observations!==g.events.length) throw new Error(`${name}: event count mismatch`);
+            for(const e of g.events){
+              if(!e.classification?.structure) throw new Error(`${name}: missing structure classification`);
+              if(!e.outcome || e.outcome.anchor_date!==e.market_feature_date) throw new Error(`${name}: outcome anchor mismatch ${e.stock} ${e.tdcc_observed_date}`);
+            }
+          }
+          console.log(`v6 output validated: eligible=${a.eligible_rows}, structures=${JSON.stringify(a.structure_counts)}`);
+          NODE
+
+      - name: Commit v6 research outputs
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json \
+            data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "research: complete institutional withdrawal v6 study"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt*5))
+          done
+          exit 1
+
+      - name: Write research summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const a=require('./data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json');
+          console.log('## Institutional Withdrawal v6 — Persistent Transfer & Distribution/Absorption');
+          console.log(`- Eligible rows: ${a.eligible_rows}`);
+          console.log(`- Structures: ${JSON.stringify(a.structure_counts)}`);
+          for(const name of ['v5_pressure_baseline','persistent_tdcc_transfer','withdrawal_pressure','absorbed_distribution','fragile_distribution','strong_persistent_transfer_plus_broker','withdrawal_pressure_plus_foreign']){
+            const v=a.results[name];
+            const h10=v.stats.horizons['10d'];
+            console.log(`- ${name}: obs ${v.observations}; 10D n ${h10.n}; mean ${h10.mean_pct}% ; edge vs v5 pressure ${v.edge_vs_v5_pressure['10d'].mean_return_edge_pp}pp; mean max DD20 ${v.stats.path.mean_max_drawdown_20d_pct}%`);
+          }
+          console.log('- Safety: development-sample diagnostic only; no production promotion.');
+          NODE
+          fi
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
