@@ -59,3 +59,22 @@ test('same TDCC observation date is idempotent and preserves first available_at'
   const stock = JSON.parse(fs.readFileSync(path.join(out, 'stocks', '2449', '20260515.json'), 'utf8'));
   assert.equal(stock.available_at, first);
 });
+
+test('official-style TDCC JSON field names tolerate BOM on the date key', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tdcc-json-bom-'));
+  const input = path.join(dir, 'input.json');
+  const out = path.join(dir, 'out');
+  fs.writeFileSync(input, JSON.stringify([
+    { '\uFEFF資料日期': '20260821', '證券代號': '2449', '持股分級': '1', '人數': '10', '股數': '100', '占集保庫存數比例%': '1.00' },
+    { '\uFEFF資料日期': '20260821', '證券代號': '2449', '持股分級': '9', '人數': '20', '股數': '200', '占集保庫存數比例%': '2.00' },
+    { '\uFEFF資料日期': '20260821', '證券代號': '2449', '持股分級': '15', '人數': '5', '股數': '500', '占集保庫存數比例%': '60.13' },
+    { '\uFEFF資料日期': '20260821', '證券代號': '2449', '持股分級': '17', '人數': '35', '股數': '800', '占集保庫存數比例%': '100.00' },
+  ]));
+  const capturedAt = '2026-08-22T00:10:00.000Z';
+  run(input, out, capturedAt);
+  const p = JSON.parse(fs.readFileSync(path.join(out, 'stocks', '2449', '20260821.json'), 'utf8'));
+  assert.equal(p.observed_date, '2026-08-21');
+  assert.equal(p.available_at, capturedAt);
+  assert.equal(p.derived.large_holder_pct, 60.13);
+  assert.equal(p.derived.small_holder_pct, 3);
+});
