@@ -1,0 +1,112 @@
+name: "[07 研究] Verify Institutional Withdrawal Validation Closeout v1"
+
+on:
+  push:
+    paths:
+      - 'data_research/institutional-flow/validation/validation-closeout-request-v1.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: institutional-withdrawal-validation-closeout-v1
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout verification slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/verify-institutional-withdrawal-validation-closeout-v1.yml
+            scripts/
+            data_fubon/fubon_2026*_sma.json
+            data_twse_foreign_investors/2026*_twse_foreign_investors.json
+            data_tdcc_shareholding/history/1598/
+            data_tdcc_shareholding/history/1616/
+            data_tdcc_shareholding/history/1809/
+            data_tdcc_shareholding/history/6257/
+            data_tdcc_shareholding/history/7791/
+            data_research/institutional-flow/histock/1598/
+            data_research/institutional-flow/histock/1616/
+            data_research/institutional-flow/histock/1809/
+            data_research/institutional-flow/histock/6257/
+            data_research/institutional-flow/histock/7791/
+            data_research/institutional-flow/features/
+            data_research/institutional-flow/backtests/
+            data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-v1.json
+            data_research/institutional-flow/validation/validation-outcomes-v1.json
+            data_research/institutional-flow/validation/validation-metrics-v1.json
+            data_research/institutional-flow/validation/validation-closeout-request-v1.json
+
+      - name: Re-run Broker and outcome-contract regressions
+        run: |
+          set -euo pipefail
+          node scripts/test_histock_broker_status_policy_regressions.js
+          node scripts/test_institutional_withdrawal_validation_v1.js
+
+      - name: Re-run frozen development lifecycle regression
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js --matrix data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json --output /tmp/dev-v6.json --report /tmp/dev-v6.md
+          node scripts/analyze_institutional_withdrawal_v6_1_events.js --input /tmp/dev-v6.json --output /tmp/dev-v61.json --report /tmp/dev-v61.md
+          node scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js --v61 /tmp/dev-v61.json --v6 /tmp/dev-v6.json --price-volume data_research/institutional-flow/features/price-volume-v5.json --foreign data_research/institutional-flow/features/foreign-flow-v5.json --output /tmp/dev-v62.json --report /tmp/dev-v62.md
+          node scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js --v62 /tmp/dev-v62.json --v6 /tmp/dev-v6.json --price-volume data_research/institutional-flow/features/price-volume-v5.json --foreign data_research/institutional-flow/features/foreign-flow-v5.json --output /tmp/dev-v63.json --report /tmp/dev-v63.md
+          node scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js --v63 /tmp/dev-v63.json --v6 /tmp/dev-v6.json --price-volume data_research/institutional-flow/features/price-volume-v5.json --foreign data_research/institutional-flow/features/foreign-flow-v5.json --output /tmp/dev-v64.json --report /tmp/dev-v64.md
+          node scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js --v64 /tmp/dev-v64.json --v6 /tmp/dev-v6.json --price-volume data_research/institutional-flow/features/price-volume-v5.json --foreign data_research/institutional-flow/features/foreign-flow-v5.json --output /tmp/dev-v65.json --report /tmp/dev-v65.md
+          node - <<'NODE'
+          const a=require('/tmp/dev-v61.json'),b=require('/tmp/dev-v62.json'),c=require('/tmp/dev-v63.json'),d=require('/tmp/dev-v64.json'),e=require('/tmp/dev-v65.json');
+          if(a.fragile_event_count!==10)throw new Error('fragile count drift');
+          const expected=[['2317','2026-06-18','2026-06-26'],['2454','2026-06-12','2026-07-08'],['2382','2026-06-18','2026-07-17'],['2449','2026-05-22','2026-06-08'],['2449','2026-06-18','2026-07-14']];
+          const durable=d.events.filter(x=>x.persistence_status==='durable_failure_confirmed');
+          if(durable.length!==5||d.persistence_window_sessions!==3||d.required_broken_votes!==2||d.required_supply_votes!==1)throw new Error('durability drift');
+          for(const [s,a0,date] of expected){const x=durable.find(z=>z.stock===s&&z.fragile_anchor===a0);if(!x||x.candidate_failure_date!==date)throw new Error(`case drift ${s}/${a0}`);}
+          const r=e.events.find(x=>x.stock==='2449'&&x.fragile_anchor==='2026-05-22');
+          if(r?.status!=='confirmed_reclaim'||r.reclaim_confirmation?.reclaim_date!=='2026-06-22')throw new Error('reclaim drift');
+          const gap=c.events.flatMap(x=>x.daily_path||[]).filter(x=>x.date==='2026-06-24');
+          if(!gap.some(x=>x.missing_price===true))throw new Error('missing-session compression');
+          console.log('Frozen development regression closeout PASS');
+          NODE
+
+      - name: Independently rebuild frozen holdout classification through Prompt-A horizon
+        run: |
+          set -euo pipefail
+          node scripts/build_foreign_flow_research_features.js --stocks "1598,1616,1809,6257,7791" --start "2026-04-01" --end "2026-08-27" --output /tmp/foreign.json
+          node scripts/build_price_volume_distribution_features.js --stocks "1598,1616,1809,6257,7791" --start "2026-04-01" --end "2026-08-27" --output /tmp/pv.json
+          node scripts/build_institutional_withdrawal_validation_matrix_v1.js --foreign /tmp/foreign.json --price-volume /tmp/pv.json --output /tmp/matrix.json
+          node scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js --matrix /tmp/matrix.json --output /tmp/v6.json --report /tmp/v6.md
+          node scripts/build_institutional_withdrawal_validation_fragile_bridge_v1.js --v6 /tmp/v6.json --output /tmp/v61.json
+          node - <<'NODE'
+          const matrix=require('/tmp/matrix.json'),v6=require('/tmp/v6.json'),v61=require('/tmp/v61.json');
+          const expected=['1598','1616','1809','6257','7791'];
+          if(JSON.stringify(matrix.sample.stocks)!==JSON.stringify(expected))throw new Error('sample mutation');
+          if(matrix.trading_calendar.source.includes('data_history_sma'))throw new Error('forbidden calendar');
+          if(matrix.trading_calendar.data_through!=='2026-08-27')throw new Error('horizon drift');
+          const forbidden=new Set(['outcome','return_20d','return_30d','max_drawdown_20d','max_drawdown_30d','structural_repair']);
+          const walk=x=>{if(!x||typeof x!=='object')return;for(const [k,v] of Object.entries(x)){if(forbidden.has(k))throw new Error(`leakage field ${k}`);walk(v);}}; walk(matrix.rows);
+          if(v61.fragile_event_count!==0)throw new Error(`unexpected fragile events ${v61.fragile_event_count}`);
+          console.log(JSON.stringify({anchors:matrix.counts.anchors,eligible:matrix.counts.analysis_eligible,fragile:v61.fragile_event_count},null,2));
+          NODE
+
+      - name: Verify canonical artifact denominators and separation without rewriting them
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const o=require('./data_research/institutional-flow/validation/validation-outcomes-v1.json');
+          const m=require('./data_research/institutional-flow/validation/validation-metrics-v1.json');
+          const expected=['1598','1616','1809','6257','7791'];
+          if(JSON.stringify(o.sample.stocks)!==JSON.stringify(expected)||JSON.stringify(m.sample.stocks)!==JSON.stringify(expected))throw new Error('canonical sample drift');
+          if(o.lifecycle_methodology!=='institutional-withdrawal-lifecycle-v1'||o.frozen_development_methodology!=='v6.0-v6.5')throw new Error('methodology drift');
+          const counts={durable:o.events.length,reclaim:o.events.filter(e=>e.lifecycle_state==='failure_plus_reclaim').length,no_reclaim:o.events.filter(e=>e.lifecycle_state==='failure_plus_no_reclaim').length};
+          if(counts.durable!==o.counts.resolved_lifecycle_events||counts.reclaim!==o.counts.failure_plus_reclaim||counts.no_reclaim!==o.counts.failure_plus_no_reclaim)throw new Error('event/count denominator mismatch');
+          for(const g of ['failure_plus_reclaim','failure_plus_no_reclaim']){if(m.groups[g].event_n!==counts[g==='failure_plus_reclaim'?'reclaim':'no_reclaim'])throw new Error(`group denominator drift ${g}`);}
+          if(!m.separation.stock_holdout_only||m.separation.development_included||m.separation.time_holdout_included)throw new Error('sample separation drift');
+          if(m.promotion_count_gate.met)throw new Error('promotion gate unexpectedly met');
+          console.log(JSON.stringify({counts,promotion_count_gate:m.promotion_count_gate},null,2));
+          NODE
