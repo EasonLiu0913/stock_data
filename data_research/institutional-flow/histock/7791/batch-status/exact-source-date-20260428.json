@@ -1,21 +1,141 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "research": "institutional-withdrawal-validation-coverage-v1",
   "stock": "7791",
   "date": "2026-04-28",
-  "outcome": "source_empty",
+  "outcome": "source_rows_incomplete",
   "terminal_for_date": true,
-  "run_id": "33274647334",
-  "updated_at": "2026-08-29T21:12:01.411Z",
-  "error": "no_broker_records_on_source_session",
-  "http_status": null,
+  "retryable": false,
+  "negative_evidence": false,
+  "coverage_usable": false,
+  "planner_action": "skip_exact_date_and_continue_alternate_dates",
+  "status_policy_version": "histock-broker-source-status-policy-v2",
+  "updated_at": "2026-08-30T07:03:11.131Z",
+  "provenance": {
+    "legacy_status_archived_to": "data_research/institutional-flow/histock/7791/batch-status/archive/exact-source-date-20260428-legacy-source-empty-before-incomplete-evidence-v1.json",
+    "investigation_file": "data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-v1.json",
+    "investigation_methodology": "institutional-withdrawal-validation-histock-legacy-incomplete-investigation-v1",
+    "investigation_generated_without_outcomes": true
+  },
+  "source_rows_incomplete_evidence": {
+    "confirmed": true,
+    "rule": "fresh_runner_http_200_context_visible_16_rows_30_blocks_zero_complete_records_v1",
+    "interpretation": "source Broker rows exist, but every row has one or more blank source-side fields under frozen strict completeness semantics; this is unusable coverage, not evidence of no Broker data"
+  },
   "diagnostics": {
     "http_status": 200,
     "final_url": "https://histock.tw/stock/branch.aspx?from=20260428&no=7791&to=20260428",
-    "response_bytes": 93616,
+    "response_bytes": 93345,
     "date_visible": true,
     "broker_keywords_visible": true,
     "table_rows": 16,
-    "incomplete_records": 30
+    "broker_blocks": 30,
+    "complete_records": 0,
+    "incomplete_records": 30,
+    "missing_field_patterns": {
+      "buy": 13,
+      "sell": 15,
+      "buy+net": 1,
+      "buy+sell+net": 1
+    },
+    "complete_samples": [],
+    "incomplete_samples": [
+      {
+        "broker": "台新-西松",
+        "buy": null,
+        "sell": 20,
+        "net": -20,
+        "avg_price": 64.71,
+        "missing_fields": [
+          "buy"
+        ],
+        "raw_source_values": {
+          "buy": "",
+          "sell": "20",
+          "net": "-20",
+          "avg_price": "64.71"
+        }
+      },
+      {
+        "broker": "元大-士林",
+        "buy": 11,
+        "sell": null,
+        "net": 11,
+        "avg_price": 64.75,
+        "missing_fields": [
+          "sell"
+        ],
+        "raw_source_values": {
+          "buy": "11",
+          "sell": "",
+          "net": "11",
+          "avg_price": "64.75"
+        }
+      },
+      {
+        "broker": "元大-大雅",
+        "buy": null,
+        "sell": 15,
+        "net": -15,
+        "avg_price": 64.58,
+        "missing_fields": [
+          "buy"
+        ],
+        "raw_source_values": {
+          "buy": "",
+          "sell": "15",
+          "net": "-15",
+          "avg_price": "64.58"
+        }
+      },
+      {
+        "broker": "永豐金-桃園",
+        "buy": 7,
+        "sell": null,
+        "net": 7,
+        "avg_price": 64.61,
+        "missing_fields": [
+          "sell"
+        ],
+        "raw_source_values": {
+          "buy": "7",
+          "sell": "",
+          "net": "7",
+          "avg_price": "64.61"
+        }
+      },
+      {
+        "broker": "富邦-南港",
+        "buy": null,
+        "sell": 11,
+        "net": -11,
+        "avg_price": 64.7,
+        "missing_fields": [
+          "buy"
+        ],
+        "raw_source_values": {
+          "buy": "",
+          "sell": "11",
+          "net": "-11",
+          "avg_price": "64.7"
+        }
+      },
+      {
+        "broker": "元大-斗信",
+        "buy": 5,
+        "sell": null,
+        "net": 5,
+        "avg_price": 64.5,
+        "missing_fields": [
+          "sell"
+        ],
+        "raw_source_values": {
+          "buy": "5",
+          "sell": "",
+          "net": "5",
+          "avg_price": "64.5"
+        }
+      }
+    ]
   }
 }

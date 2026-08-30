@@ -1,21 +1,140 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "research": "institutional-withdrawal-validation-coverage-v1",
   "stock": "7791",
   "date": "2026-05-22",
-  "outcome": "source_empty",
+  "outcome": "source_rows_incomplete",
   "terminal_for_date": true,
-  "run_id": "33274647334",
-  "updated_at": "2026-08-29T21:17:28.042Z",
-  "error": "no_broker_records_on_source_session",
-  "http_status": null,
+  "retryable": false,
+  "negative_evidence": false,
+  "coverage_usable": false,
+  "planner_action": "skip_exact_date_and_continue_alternate_dates",
+  "status_policy_version": "histock-broker-source-status-policy-v2",
+  "updated_at": "2026-08-30T07:03:11.131Z",
+  "provenance": {
+    "legacy_status_archived_to": "data_research/institutional-flow/histock/7791/batch-status/archive/exact-source-date-20260522-legacy-source-empty-before-incomplete-evidence-v1.json",
+    "investigation_file": "data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-v1.json",
+    "investigation_methodology": "institutional-withdrawal-validation-histock-legacy-incomplete-investigation-v1",
+    "investigation_generated_without_outcomes": true
+  },
+  "source_rows_incomplete_evidence": {
+    "confirmed": true,
+    "rule": "fresh_runner_http_200_context_visible_16_rows_30_blocks_zero_complete_records_v1",
+    "interpretation": "source Broker rows exist, but every row has one or more blank source-side fields under frozen strict completeness semantics; this is unusable coverage, not evidence of no Broker data"
+  },
   "diagnostics": {
     "http_status": 200,
     "final_url": "https://histock.tw/stock/branch.aspx?from=20260522&no=7791&to=20260522",
-    "response_bytes": 92869,
+    "response_bytes": 92598,
     "date_visible": true,
     "broker_keywords_visible": true,
     "table_rows": 16,
-    "incomplete_records": 30
+    "broker_blocks": 30,
+    "complete_records": 0,
+    "incomplete_records": 30,
+    "missing_field_patterns": {
+      "buy": 9,
+      "sell": 15,
+      "buy+sell+net": 6
+    },
+    "complete_samples": [],
+    "incomplete_samples": [
+      {
+        "broker": "大昌",
+        "buy": null,
+        "sell": 5,
+        "net": -5,
+        "avg_price": 63.2,
+        "missing_fields": [
+          "buy"
+        ],
+        "raw_source_values": {
+          "buy": "",
+          "sell": "5",
+          "net": "-5",
+          "avg_price": "63.2"
+        }
+      },
+      {
+        "broker": "德信",
+        "buy": 3,
+        "sell": null,
+        "net": 3,
+        "avg_price": 62.93,
+        "missing_fields": [
+          "sell"
+        ],
+        "raw_source_values": {
+          "buy": "3",
+          "sell": "",
+          "net": "3",
+          "avg_price": "62.93"
+        }
+      },
+      {
+        "broker": "元大-南投",
+        "buy": null,
+        "sell": 5,
+        "net": -4,
+        "avg_price": 63.01,
+        "missing_fields": [
+          "buy"
+        ],
+        "raw_source_values": {
+          "buy": "",
+          "sell": "5",
+          "net": "-4",
+          "avg_price": "63.01"
+        }
+      },
+      {
+        "broker": "凱基-台北",
+        "buy": 2,
+        "sell": null,
+        "net": 2,
+        "avg_price": 63.15,
+        "missing_fields": [
+          "sell"
+        ],
+        "raw_source_values": {
+          "buy": "2",
+          "sell": "",
+          "net": "2",
+          "avg_price": "63.15"
+        }
+      },
+      {
+        "broker": "國票-敦北法人",
+        "buy": null,
+        "sell": 3,
+        "net": -3,
+        "avg_price": 63.2,
+        "missing_fields": [
+          "buy"
+        ],
+        "raw_source_values": {
+          "buy": "",
+          "sell": "3",
+          "net": "-3",
+          "avg_price": "63.2"
+        }
+      },
+      {
+        "broker": "富邦-仁愛",
+        "buy": 2,
+        "sell": null,
+        "net": 2,
+        "avg_price": 63.05,
+        "missing_fields": [
+          "sell"
+        ],
+        "raw_source_values": {
+          "buy": "2",
+          "sell": "",
+          "net": "2",
+          "avg_price": "63.05"
+        }
+      }
+    ]
   }
 }
