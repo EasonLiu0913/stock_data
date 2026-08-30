@@ -4,10 +4,13 @@
   "request": "investigate_legacy_source_empty_unverified_but_not_degraded_signature",
   "expected_task_count": 5,
   "batch_size": 5,
+  "attempt": 2,
+  "retry_reason": "first physical batch completed all five requests but checkpoint failed because the bounded checkpoint helper lacked executable mode; helper mode is now 100755",
   "generated_without_outcomes": true,
   "guardrails": [
     "Use one fresh GitHub-hosted runner for at most five exact-source-date requests.",
     "Preserve source blanks as null; do not impute zeros or alter frozen Broker feature semantics.",
-    "Do not read or generate lifecycle outcomes, future returns, drawdowns, validation outcomes, or validation metrics."
+    "Do not read or generate lifecycle outcomes, future returns, drawdowns, validation outcomes, or validation metrics.",
+    "The batch is complete only after durable checkpoint succeeds before runner exit."
   ]
 }
