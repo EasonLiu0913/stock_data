@@ -1,0 +1,236 @@
+name: "[07 研究] Repair HiStock Broker ambiguous source_empty v1"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair-histock-broker-source-empty-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-validation-histock-source-empty-repair-v1
+  cancel-in-progress: false
+
+env:
+  BROKER_BATCH_SIZE: "5"
+  BROKER_MAX_BATCHES: "16"
+
+jobs:
+  plan:
+    name: Audit and plan unsafe source_empty repairs
+    runs-on: ubuntu-latest
+    outputs:
+      broker_matrix: ${{ steps.plan.outputs.broker_matrix }}
+      unsafe_count: ${{ steps.plan.outputs.unsafe_count }}
+      scheduled_count: ${{ steps.plan.outputs.scheduled_count }}
+      deferred_count: ${{ steps.plan.outputs.deferred_count }}
+    steps:
+      - name: Checkout outcome-blind Broker evidence slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/validation/
+
+      - name: Validate repair-only contract and known-positive regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/histock_broker_status_policy.js
+          node --check scripts/audit_histock_broker_source_empty_checkpoints.js
+          node --check scripts/backfill_histock_broker_exact_source_date.js
+          node scripts/backfill_histock_broker_exact_source_date.js --self-test
+          if grep -En "v6-1-event-diagnosis|v61_outcome|return_20d|max_drawdown|future_return|validation-outcomes|validation-metrics" \
+            scripts/lib/histock_broker_status_policy.js \
+            scripts/audit_histock_broker_source_empty_checkpoints.js \
+            scripts/backfill_histock_broker_exact_source_date.js; then
+            echo "Forbidden validation-outcome dependency detected"
+            exit 1
+          fi
+
+      - name: Freeze unsafe-only repair matrix
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="data_research/institutional-flow/validation/histock-source-empty-audit-v1.json"
+          node scripts/audit_histock_broker_source_empty_checkpoints.js --output "$REPORT" > "$RUNNER_TEMP/audit.log"
+          cat "$RUNNER_TEMP/audit.log"
+
+          node - "$REPORT" "$BROKER_BATCH_SIZE" "$BROKER_MAX_BATCHES" "$GITHUB_OUTPUT" <<'NODE'
+          const fs=require('fs');
+          const [reportFile,batchSizeRaw,maxBatchesRaw,outFile]=process.argv.slice(2);
+          const report=JSON.parse(fs.readFileSync(reportFile,'utf8'));
+          if(report.generated_without_outcomes!==true) throw new Error('Audit is not outcome-blind');
+          const batchSize=Number(batchSizeRaw), maxBatches=Number(maxBatchesRaw);
+          const unsafe=Array.isArray(report.unsafe_requeue)?report.unsafe_requeue:[];
+          const cap=batchSize*maxBatches;
+          const scheduled=unsafe.slice(0,cap);
+          const batches=[];
+          for(let i=0;i<scheduled.length;i+=batchSize){
+            const slice=scheduled.slice(i,i+batchSize);
+            batches.push({batch:batches.length,task_count:slice.length,tasks:slice.map(x=>`${x.stock}@${x.date}`).join(','),skip:false});
+          }
+          const include=batches.length?batches:[{batch:0,task_count:0,tasks:'',skip:true}];
+          fs.appendFileSync(outFile,`broker_matrix=${JSON.stringify({include})}\n`);
+          fs.appendFileSync(outFile,`unsafe_count=${unsafe.length}\n`);
+          fs.appendFileSync(outFile,`scheduled_count=${scheduled.length}\n`);
+          fs.appendFileSync(outFile,`deferred_count=${Math.max(0,unsafe.length-scheduled.length)}\n`);
+          console.log(JSON.stringify({unsafe:unsafe.length,scheduled:scheduled.length,deferred:Math.max(0,unsafe.length-scheduled.length),batches},null,2));
+          NODE
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$REPORT"
+          if ! git diff --cached --quiet; then
+            git commit -m "research: freeze HiStock source-empty repair audit"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+          node - "$REPORT" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p=require(process.argv[2]);
+          console.log('## HiStock ambiguous source_empty repair audit');
+          console.log(`- Unsafe ambiguous checkpoints: ${p.counts.unsafe_ambiguous_source_empty}`);
+          console.log(`- Confirmed terminal source_empty: ${p.counts.confirmed_terminal_source_empty}`);
+          console.log(`- Legacy retained-terminal source_empty: ${p.counts.legacy_terminal_source_empty_unverified}`);
+          console.log('- Repair scope: **unsafe_requeue only**; no TDCC work and no ordinary Broker coverage expansion.');
+          console.log('- Validation outcomes opened/generated: **NO**.');
+          NODE
+
+  broker-batch:
+    name: Unsafe Broker fresh runner ${{ matrix.batch }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.broker_matrix) }}
+    steps:
+      - name: Checkout fresh repair runner slice
+        if: matrix.skip != true
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/histock/
+
+      - name: Fresh-runner cooldown
+        if: matrix.skip != true && matrix.batch > 0
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAUSE=$((45 + RANDOM % 46))
+          echo "Broker repair physical-batch cooldown ${PAUSE}s"
+          sleep "$PAUSE"
+
+      - name: Re-fetch only audited unsafe dates
+        if: matrix.skip != true
+        shell: bash
+        env:
+          TASKS: ${{ matrix.tasks }}
+          BATCH: ${{ matrix.batch }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          test "${#ITEMS[@]}" -le "$BROKER_BATCH_SIZE"
+          echo "=== HiStock source_empty repair batch $BATCH: $TASKS ==="
+
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"
+            DATE="${ITEM#*@}"
+            COMPACT="${DATE//-/}"
+            STATUS_ROOT="data_research/institutional-flow/histock/$STOCK/batch-status"
+            CURRENT_STATUS="$STATUS_ROOT/exact-source-date-$COMPACT.json"
+            ARCHIVE_ROOT="$STATUS_ROOT/archive"
+            mkdir -p "$ARCHIVE_ROOT"
+            if test -s "$CURRENT_STATUS"; then
+              ARCHIVE_FILE="$ARCHIVE_ROOT/exact-source-date-$COMPACT-pre-repair-${GITHUB_RUN_ID}.json"
+              test ! -e "$ARCHIVE_FILE"
+              cp "$CURRENT_STATUS" "$ARCHIVE_FILE"
+            fi
+
+            set +e
+            node scripts/backfill_histock_broker_exact_source_date.js \
+              --stock "$STOCK" \
+              --date "$DATE" \
+              --delay-ms 1800 \
+              --jitter-ms 1200 \
+              --max-retries 2
+            RC=$?
+            set -e
+
+            RUN_STATUS="$STATUS_ROOT/validation-run-${GITHUB_RUN_ID}-source-empty-repair-${BATCH}-${COMPACT}.json"
+            node - "$RUN_STATUS" "$STOCK" "$DATE" "$RC" <<'NODE'
+          const fs=require('fs');const [file,stock,date,rc]=process.argv.slice(2);
+          fs.writeFileSync(file,JSON.stringify({schema_version:1,research:'institutional-withdrawal-validation-coverage-v1',execution_model:'fresh_runner_physical_batch',repair_scope:'audited_ambiguous_source_empty_only',stock,date,fetch_exit_code:Number(rc),run_id:process.env.GITHUB_RUN_ID,generated_at:new Date().toISOString()},null,2)+'\n');
+          NODE
+            sleep $((2 + RANDOM % 3))
+          done
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/histock
+          if ! git diff --cached --quiet; then
+            git commit -m "research: repair HiStock source-empty batch $BATCH"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: No unsafe Broker checkpoints in this wave
+        if: matrix.skip == true
+        run: echo "No ambiguous source_empty checkpoints require repair."
+
+  finalize:
+    name: Refresh source_empty audit after repair
+    needs: [plan, broker-batch]
+    if: always() && needs.plan.result == 'success' && (needs.broker-batch.result == 'success' || needs.broker-batch.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout final audit slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/validation/
+
+      - name: Refresh outcome-blind audit evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="data_research/institutional-flow/validation/histock-source-empty-audit-v1.json"
+          node scripts/audit_histock_broker_source_empty_checkpoints.js --output "$REPORT"
+          test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
+          test ! -e data_research/institutional-flow/validation/validation-metrics-v1.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$REPORT"
+          if ! git diff --cached --quiet; then
+            git commit -m "research: refresh HiStock source-empty repair audit"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+          node - "$REPORT" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p=require(process.argv[2]);
+          console.log('## HiStock source_empty repair checkpoint');
+          console.log(`- Unsafe ambiguous checkpoints remaining: ${p.counts.unsafe_ambiguous_source_empty}`);
+          console.log(`- Superseded by valid daily payload: ${p.counts.source_empty_superseded_by_valid_daily}`);
+          console.log('- Validation outcomes opened/generated: **NO**.');
+          NODE
