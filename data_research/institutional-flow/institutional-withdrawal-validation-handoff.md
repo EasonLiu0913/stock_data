@@ -1,5 +1,7 @@
 # Institutional Withdrawal Research — Validation Phase Handoff
 
+Canonical handoff: `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`
+
 ## Purpose
 
 This document is the authoritative handoff for continuing the Institutional Withdrawal research in `EasonLiu0913/stock_data`.
@@ -16,9 +18,9 @@ The next phase is **Validation Phase**, not another in-sample threshold-tuning v
 
 ## Critical instruction for the next agent
 
-Do **not** restart the research from code search or invent a new rule set.
+First read repository root `AGENTS.md`, then read this canonical handoff.
 
-The repository code-search index may be unavailable. If so, do not spend time trying to rediscover the project by keywords. Start from the exact files listed in this handoff and inspect directories/files directly.
+This handoff is a fast path into the current state, not a restriction on investigation. A new agent may independently search the repository, re-check assumptions, or challenge prior conclusions when useful.
 
 Treat v6.0 through v6.5 as **frozen development research**.
 
@@ -413,7 +415,7 @@ Do not retrospectively lengthen or tighten v6.4 on the same development sample.
 
 # 10. v6.5 — Recovery / Reclaim Diagnosis
 
-This is the latest and most important frozen result.
+This is the latest and most important frozen development result.
 
 Frozen methodology:
 
@@ -592,336 +594,278 @@ Use a research-only name such as:
 
 ---
 
-# 14. The next phase is Validation Phase
+# 14. Validation implementation status
 
-Do not build v6.6 to tune the development examples.
+The original handoff sequence has progressed beyond v6.5.
 
-The next work should be:
+Completed validation foundation:
 
-## Step A — Build a frozen unified classifier
+- frozen unified lifecycle classifier implemented;
+- regression tests added for frozen development cases;
+- deterministic coverage planner implemented;
+- validation plan preregistered;
+- development stocks excluded from stock holdout;
+- research calendar derived from valid TWSE foreign-investor daily files;
+- historical TDCC kept association-only;
+- outcome/metrics files remain forbidden until coverage/sample freeze.
 
-Recommended classifier name:
+Important implementation files now include:
 
-`institutional-withdrawal-lifecycle-v1`
+- `scripts/classify_institutional_withdrawal_lifecycle_v1.js`
+- `scripts/test_institutional_withdrawal_lifecycle_v1.js`
+- `scripts/plan_institutional_withdrawal_validation_coverage.js`
+- `scripts/plan_institutional_withdrawal_validation_expansion_v1.js`
+- `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js`
+- `scripts/backfill_histock_broker_exact_source_date.js`
+- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1.yml`
+- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml`
+- `data_research/institutional-flow/validation-plan-v1.md`
 
-It should integrate the frozen v6.0–v6.5 lifecycle without using any future outcome label.
+Frozen development regression anchors include:
 
-It may read contemporaneously available/frozen research features only:
+- `2317` immediate failure;
+- `2454` delayed rebound failure;
+- `2382` delayed breakdown;
+- `2449 / 2026-05-22` failure then confirmed reclaim;
+- `2449 / 2026-06-18` failure then no reclaim.
 
-- TDCC
-- Broker
-- Foreign
-- OHLCV
+---
 
-It must not read:
+# 15. Physical-batch coverage lesson and current architecture
 
-- v6.1 outcome labels
-- future 5D / 10D / 20D / 30D returns
-- future max drawdown
-- any later diagnostic label
+Repository root `AGENTS.md` now defines the mandatory meaning of **plan + batch** for large external-source fetches:
 
-Recommended output fields:
+`plan → bounded queue → fresh-runner physical batches → jitter → cooldown → checkpoint → re-plan/resume`
+
+A small `batch_size` inside one long-running job is not considered a physical batch.
+
+## HiStock incident
+
+Old long-running Broker coverage jobs initially fetched normally but later received degraded pages.
+
+Known-positive regression case:
+
+`1598 / 2026-05-07`
+
+Old degraded response:
+
+- HTTP 200
+- response approximately 69 KB
+- requested date visible
+- `table_rows = 1`
+- incorrectly persisted as `source_empty`
+
+Fresh-runner diagnostics repeatedly returned a complete page:
+
+- response approximately 90 KB
+- `table_rows = 16`
+- expected broker rows present
+
+The recovery workflow was then converted to true physical batches.
+
+Validated production-style recovery run:
+
+- workflow run `33276819812`
+- 6 TDCC stocks processed as separate fresh-runner jobs
+- Broker work split into 9 separate fresh-runner jobs
+- `strategy.max-parallel: 1`
+- Broker physical batch size <= 5 exact-date requests
+- request jitter retained
+- randomized physical-batch cooldown retained
+- final coverage refresh succeeded
+
+Representative Broker checks:
+
+- Batch 0 / 7791: 5/5 success, ~94 KB, `table_rows = 16`
+- Batch 4 / 1598: 5/5 success, ~90.8–90.9 KB, `table_rows = 16`
+- Batch 8 / 1598: 3/3 success, ~90.3–90.8 KB, `table_rows = 16`
+
+No late-run 69 KB / header-only degradation appeared in those checked beginning/middle/end batches.
+
+Therefore the fresh-runner physical-batch architecture is the current safe default for Broker coverage expansion.
+
+Relevant architecture commit:
+
+`309aae817286abee974e5bd4428ca518879b2e82`
+
+Repository-level plan+batch rule commit:
+
+`635eadd14ec469707227110d8b4a549013021c5a`
+
+---
+
+# 16. Current coverage state
+
+After physical-batch run `33276819812`:
+
+Coverage range:
+
+`2026-04-01` through `2026-08-21`
+
+Source-derived trading sessions:
+
+`98`
+
+Final expansion counts from the run:
+
+- non-development universe: `1132`
+- coverage eligible before TDCC/Broker: `1062`
+- TDCC queue remaining: `1036`
+- Broker queue remaining: `23`
+- expansion-ready stocks: `3`
+
+Current `stock_holdout_ready`:
+
+- `1598`
+- `1809`
+- `7791`
+
+Current `stock_holdout_needs_broker_normalization`:
+
+`0`
+
+Current `time_holdout_ready`:
+
+`0`
+
+Important: these are **coverage milestones only**. Do not inspect or generate validation outcomes yet.
+
+The following files must still not exist during the coverage-expansion phase:
+
+- `data_research/institutional-flow/validation/validation-outcomes-v1.json`
+- `data_research/institutional-flow/validation/validation-metrics-v1.json`
+
+---
+
+# 17. Known unsafe historical Broker statuses
+
+The old Broker fetcher/workflow produced some historical `source_empty` statuses during long-running runner degradation.
+
+At least one is proven unsafe:
+
+`1598 / 2026-05-07`
+
+The source actually contained broker rows, so the old `source_empty` was a false negative caused by an incomplete/degraded response.
+
+The current fetcher has improved status taxonomy, but historical ambiguous `source_empty` checkpoints from old long-running runs can still poison the Broker planner if treated as terminal negatives.
+
+Do **not** delete those records blindly. Preserve them as audit evidence until they are classified and superseded.
+
+A successful later exact-date fetch should override an earlier ambiguous negative for the same stock/date.
+
+---
+
+# 18. Current phase
+
+**Coverage integrity repair before the next coverage wave.**
+
+The immediate objective is not to inspect lifecycle outcomes.
+
+The next round should first clean up historical Broker false-negative risk so future coverage planning is based on trustworthy source-status evidence.
+
+---
+
+# 19. Next round
+
+Execute this order:
+
+1. Audit historical Broker `source_empty` statuses under:
+   `data_research/institutional-flow/histock/*/batch-status/exact-source-date-*.json`.
+2. Identify statuses created under the old long-running execution model that are ambiguous/degraded rather than trustworthy terminal negatives.
+3. Use diagnostics where available, especially:
+   - HTTP status;
+   - response bytes;
+   - requested date visibility;
+   - broker keyword visibility;
+   - `table_rows`;
+   - any known soft-block structural evidence.
+4. Treat cases such as HTTP 200 + materially shrunken response + header-only `table_rows = 1` as suspected extraction/soft-block failures, not confirmed source-empty.
+5. Update the status/planner contract so historical ambiguous negatives do not permanently exclude those source dates from the queue.
+6. Add a regression fixture for known-positive `1598 / 2026-05-07`, including verification that real broker rows are parsed. Known anchors include:
+   - `凱基-汐止`: net `-74`, avg `20.49`;
+   - `兆豐-大同`: net `+206`, avg `20.76`.
+7. Requeue only the unsafe/ambiguous historical negative dates.
+8. Re-fetch them through the current **fresh-runner physical-batch** architecture, with bounded queue, `max-parallel: 1`, jitter, cooldown, checkpoint, and resume semantics.
+9. Re-run the coverage planner after repaired checkpoints are committed.
+10. Confirm the forbidden validation outcome/metrics files were still not generated.
+11. Before beginning the following major round, update and commit this canonical handoff again.
+
+Do not tune frozen lifecycle thresholds during this work.
+
+Do not inspect future-return/outcome files as part of this repair.
+
+---
+
+# 20. Entry points for the next agent
+
+Read repository root instructions first:
+
+- `AGENTS.md`
+
+Then this handoff:
+
+- `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`
+
+Primary implementation entry points:
+
+- `scripts/backfill_histock_broker_exact_source_date.js`
+- `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js`
+- `scripts/plan_institutional_withdrawal_validation_expansion_v1.js`
+- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml`
+- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1.yml`
+- `data_research/institutional-flow/histock/*/batch-status/`
+- `data_research/institutional-flow/validation/coverage-expansion-v1.json`
+- `data_research/institutional-flow/validation/validation-coverage-v1.json`
+
+Useful evidence:
+
+- physical-batch recovery run `33276819812`
+- known-positive Broker case `1598 / 2026-05-07`
+
+The agent may search the broader repository or independently re-verify any assumption when useful.
+
+---
+
+# 21. Safety / stop conditions
+
+Until the coverage/sample freeze is explicitly complete:
+
+- do not generate or inspect validation outcome analysis;
+- do not create `validation-outcomes-v1.json`;
+- do not create `validation-metrics-v1.json`;
+- do not tune v6.0–v6.5 thresholds;
+- do not hand-pick holdout stocks based on lifecycle success/failure;
+- do not convert historical TDCC association into a point-in-time availability claim;
+- do not revert Broker fetching to a single long-running runner loop;
+- preserve checkpoint/resume and `cancel-in-progress: false` for write-layer workflows.
+
+---
+
+# 22. Copy-paste prompt for the next round
 
 ```text
-stock
-date
-ownership_state
-distribution_state
-failure_state
-durability_state
-recovery_state
-lifecycle_state
-evidence
-methodology_versions
+Continue the Institutional Withdrawal Validation work in repository `EasonLiu0913/stock_data`.
+
+Before doing any work:
+1. Read the repository-level instructions in `AGENTS.md`.
+2. Read the canonical handoff:
+   `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`
+3. Verify that current `main` still matches the commits, workflows, files, and assumptions referenced by that handoff.
+4. Continue from the handoff's `Next round` section.
+
+You may independently search the repository, re-check implementation details, or challenge previous conclusions when useful. The handoff is a ready-to-continue state, not a restriction on fresh investigation.
+
+Preserve all frozen v6.0–v6.5 methodology, validation leakage guardrails, TDCC historical caveats, outcome-blind coverage rules, and the repository's mandatory plan + fresh-runner physical-batch architecture.
+
+Next focus:
+Audit historical HiStock Broker `source_empty` checkpoints created under the old long-running runner model, identify ambiguous degraded responses such as HTTP 200 + shrunken HTML + `table_rows = 1`, prevent those false negatives from remaining terminal in the planner, add the `1598 / 2026-05-07` known-positive regression, and requeue/re-fetch only unsafe dates through fresh-runner physical batches.
+
+Do not inspect or generate validation outcomes/metrics yet. Do not tune lifecycle thresholds.
+
+Before starting another major round or phase:
+- update this canonical handoff with what was completed;
+- record important evidence, commits, workflow runs, failures, and changed understanding;
+- update Current phase, Current repository state, Entry points, and Next round;
+- update the copy-paste prompt for the following round;
+- commit the handoff to the repository.
 ```
-
-Suggested research-only lifecycle states:
-
-```text
-no_signal
-ownership_transfer
-distribution_pressure
-fragile_distribution
-candidate_failure
-durable_failure
-confirmed_reclaim
-durable_withdrawal_candidate
-```
-
----
-
-## Step B — Regression-test the unified classifier
-
-Use the six development stocks only as regression fixtures.
-
-The unified classifier should reproduce frozen outputs, including at minimum:
-
-- 10 fragile events
-- 2317 immediate failure
-- 2454 delayed rebound failure
-- 2382 delayed breakdown
-- 2449 May candidate failure
-- 2449 May confirmed reclaim
-- 2449 June candidate failure / no reclaim
-
-If reproduction fails:
-
-Fix the unified implementation.
-
-Do **not** change frozen v6.0–v6.5 rules to make the test pass.
-
----
-
-## Step C — Build a validation universe / coverage planner
-
-Recommended script:
-
-`scripts/plan_institutional_withdrawal_validation_universe.js`
-
-Purpose:
-
-Scan the repository and identify stocks/date ranges with overlapping coverage for all required evidence families:
-
-- TDCC
-- Broker
-- Foreign
-- OHLCV
-
-Do not begin by hand-picking validation winners.
-
-First produce an objective coverage inventory.
-
-Recommended per-stock output:
-
-```json
-{
-  "stock": "XXXX",
-  "tdcc_start": "YYYY-MM-DD",
-  "tdcc_end": "YYYY-MM-DD",
-  "broker_sessions": 0,
-  "foreign_sessions": 0,
-  "ohlcv_sessions": 0,
-  "common_start": "YYYY-MM-DD",
-  "common_end": "YYYY-MM-DD",
-  "eligible": true
-}
-```
-
-Use source-derived trading-calendar semantics.
-
----
-
-## Step D — Pre-register validation plan before viewing outcomes
-
-Recommended file:
-
-`data_research/institutional-flow/validation-plan-v1.md`
-
-It must be written before validation outcome analysis.
-
-Define in advance:
-
-### Universe eligibility
-
-Examples of items that must be fixed before results:
-
-- minimum TDCC anchors
-- minimum common trading sessions
-- minimum Broker coverage ratio
-- required Foreign coverage
-- permitted OHLCV-gap policy
-- minimum number of stocks
-- industry/universe constraints if any
-
-### Validation split
-
-Prefer both:
-
-1. **Stock holdout** — stocks not used in v6 development
-2. **Time holdout / forward validation** — dates after `2026-08-21`
-
-Forward validation is the cleanest future test when enough outcomes become available.
-
----
-
-## Step E — Pre-register validation metrics
-
-Do not choose metrics after seeing results.
-
-At minimum measure:
-
-### Failure metrics
-
-- candidate failure count
-- durable failure count
-- failure precision
-- failure false-positive rate
-- time-to-failure
-
-### Reclaim metrics
-
-- reclaim count
-- reclaim rate
-- false-reclaim rate
-- time-to-reclaim
-
-### Outcome metrics
-
-For lifecycle groups such as:
-
-- fragile only
-- candidate failure
-- durable failure
-- failure + reclaim
-- failure + no reclaim
-
-Compare:
-
-- 5D return
-- 10D return
-- 20D return
-- 30D return
-- maximum drawdown
-- recovery magnitude
-- negative-return rate
-
-The central validation hypothesis is:
-
-> `failure + no reclaim` should show materially weaker 20D / 30D outcomes and deeper drawdowns than `failure + reclaim`.
-
-A second key hypothesis is:
-
-> confirmed reclaim should reduce false-failure classification without simply filtering on future return.
-
----
-
-## Step F — Pre-register production-promotion gate
-
-Before viewing validation outcomes, define conditions that would be required before any daily production monitoring is considered.
-
-At minimum consider:
-
-- enough independent events
-- enough distinct stocks
-- no concentration in one stock such as 2449
-- no concentration in one industry
-- acceptable precision
-- acceptable false-positive rate
-- reclaim filter improves specificity
-- 20D / 30D outcome direction is stable
-- stock-holdout and time-holdout results are directionally consistent
-- no future-information leakage
-
-Until promotion conditions are satisfied:
-
-`production_safe = false`
-
----
-
-# 15. Recommended first files for a new agent to read
-
-Do not start with broad code search.
-
-Read these files directly in this order:
-
-1. `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`
-2. `data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-conclusion.md`
-3. `data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json`
-4. `data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-conclusion.md`
-5. `data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-conclusion.md`
-6. `data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-conclusion.md`
-7. `data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json`
-8. `data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json`
-9. `data_research/institutional-flow/features/foreign-flow-v5.json`
-10. `data_research/institutional-flow/features/price-volume-v5.json`
-
-Then inspect `scripts/` and `.github/workflows/` directly.
-
-Relevant known scripts include:
-
-- `scripts/build_foreign_flow_research_features.js`
-- `scripts/build_price_volume_distribution_features.js`
-- `scripts/build_institutional_withdrawal_v5_matrix.js`
-- `scripts/analyze_institutional_withdrawal_v5.js`
-- v6.x analyzers already present under `scripts/`
-
----
-
-# 16. Workflow rules
-
-Research workflows are under:
-
-`.github/workflows/`
-
-Known examples:
-
-- `research-institutional-withdrawal-v5.yml`
-- `backfill-institutional-withdrawal-v5-broker.yml`
-- `research-institutional-withdrawal-v6-5-recovery-reclaim.yml`
-
-Recommended validation workflow name:
-
-`research-institutional-withdrawal-validation-v1.yml`
-
-Important repository safety rule:
-
-For workflows that commit/checkpoint data, use:
-
-```yaml
-cancel-in-progress: false
-```
-
-A previous v5 workflow used `cancel-in-progress: true` and triggered repository safety CI because a newer run could cancel a writer before checkpoint completion.
-
----
-
-# 17. Validation leakage guardrails
-
-The unified classifier must obey these constraints:
-
-1. No future return may construct lifecycle state.
-2. No v6.1 diagnostic outcome label may construct lifecycle state.
-3. No max future drawdown may construct lifecycle state.
-4. TDCC historical timing limitations must remain explicitly documented.
-5. Missing OHLCV sessions must remain gap-preserving.
-6. Validation eligibility must be decided before examining validation outcomes.
-7. Promotion gates must be written before examining validation outcomes.
-8. Development sample may only be used for regression, not validation claims.
-
----
-
-# 18. Key validation questions
-
-The next research phase should answer these questions rather than further tuning the development set:
-
-1. On stocks never used to design v6, does the lifecycle still occur in the same sequence?
-2. Does `failure + no reclaim` produce materially worse 20D / 30D outcomes than `failure + reclaim`?
-3. Does the reclaim layer consistently remove false failures?
-4. Is the current development separation (`0/4` reclaim among withdrawal-consistent vs `1/1` reclaim among known absorbed false failure) reproduced out of sample?
-5. Does the behavior generalize beyond 2449 and beyond the electronics sector?
-6. How many events are required before any production-monitoring claim is statistically or operationally credible?
-
----
-
-# 19. Current stopping point
-
-Latest completed research layer:
-
-**v6.5 Recovery / Reclaim Diagnosis**
-
-Latest conclusion commit before this handoff:
-
-`f596bf301a865fe401b25416cb65c74811a41027`
-
-Current promising development observation:
-
-- withdrawal-consistent durable failures: `0/4` reclaimed
-- known absorbed false failure: `1/1` reclaimed
-
-This must remain described as **descriptive development evidence**, not validated performance.
-
-The next sequence is:
-
-`Freeze → Unified Lifecycle Classifier → Regression Test → Coverage Planner → Pre-registered Validation Plan → Untouched / Walk-forward Validation → Promotion Decision`
-
-Do not skip directly from v6.5 development results to production monitoring.
