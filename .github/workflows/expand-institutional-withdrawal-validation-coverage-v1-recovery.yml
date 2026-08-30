@@ -9,7 +9,6 @@ on:
       - "scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js"
       - "scripts/backfill_tdcc_shareholding_history.js"
       - "scripts/backfill_histock_broker_exact_source_date.js"
-      - ".github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml"
   workflow_dispatch:
 
 permissions:
@@ -61,6 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          bash -n scripts/checkpoint_bounded_research_paths.sh
           node --check scripts/plan_institutional_withdrawal_validation_expansion_v1.js
           node --check scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js
           node --check scripts/backfill_tdcc_shareholding_history.js
@@ -100,11 +100,9 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$PLAN"
-          if ! git diff --cached --quiet; then
-            git commit -m "research: freeze physical validation expansion plan"
-            git push origin HEAD:main
-          fi
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: freeze physical validation expansion plan" \
+            "$PLAN"
 
           node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const p=require('./data_research/institutional-flow/validation/coverage-expansion-v1.json');
@@ -177,11 +175,9 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$ROOT"
-          if ! git diff --cached --quiet; then
-            git commit -m "research: physical TDCC batch $BATCH $STOCK"
-            git push origin HEAD:main
-          fi
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: physical TDCC batch $BATCH $STOCK" \
+            "$ROOT"
 
       - name: No TDCC work in this wave
         if: matrix.skip == true
@@ -249,11 +245,9 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$PLAN"
-          if ! git diff --cached --quiet; then
-            git commit -m "research: freeze post-TDCC physical Broker plan"
-            git push origin HEAD:main
-          fi
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: freeze post-TDCC physical Broker plan" \
+            "$PLAN"
 
           node - "$BROKER_PLAN" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const p=require(process.argv[2]);
@@ -333,11 +327,9 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_research/institutional-flow/histock
-          if ! git diff --cached --quiet; then
-            git commit -m "research: physical Broker batch $BATCH checkpoint"
-            git push origin HEAD:main
-          fi
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: physical Broker batch $BATCH checkpoint" \
+            data_research/institutional-flow/histock
 
       - name: No Broker work in this wave
         if: matrix.skip == true
@@ -391,12 +383,10 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_research/institutional-flow/validation/coverage-expansion-v1.json \
-                  data_research/institutional-flow/validation/validation-coverage-v1.json
-          if ! git diff --cached --quiet; then
-            git commit -m "research: refresh physical-batch validation coverage state"
-            git push origin HEAD:main
-          fi
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: refresh physical-batch validation coverage state" \
+            data_research/institutional-flow/validation/coverage-expansion-v1.json \
+            data_research/institutional-flow/validation/validation-coverage-v1.json
 
           node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const x=require('./data_research/institutional-flow/validation/coverage-expansion-v1.json');
