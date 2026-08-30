@@ -29,6 +29,53 @@ At every meaningful phase boundary, update and commit this file again.
 
 ---
 
+# Handoff execution loop
+
+This project uses a paired implementation + closeout handoff. Both prompts are prepared before the next round starts so the verification standard is not invented after seeing the result.
+
+```text
+Handoff N
+│
+├─ Prompt A
+│   下一輪 Implementation Prompt
+│
+└─ Prompt B
+    下一輪 Closeout / Verification Prompt
+        ↓
+Agent A 執行 Prompt A
+        ↓
+工作完成 / workflow 結束
+        ↓
+把 Prompt B 貼給 Agent A
+        ↓
+Agent A 做 phase-closeout review
+        ↓
+有問題？
+├─ 有
+│   ↓
+│   修正 / bounded rerun
+│   ↓
+│   再執行 Prompt B 的驗收
+│
+└─ 沒有
+    ↓
+更新 canonical handoff
+    ↓
+commit
+    ↓
+確認 main 沒超前
+    ↓
+產生：
+    Prompt A(N+1)
+    Prompt B(N+1)
+    ↓
+停止
+```
+
+Special research boundary: if the preregistered coverage/sample-freeze gate is reached, Prompt B must verify and commit the frozen sample state, update this handoff, prepare the next-phase Prompt A/Prompt B, and stop. Do **not** open untouched validation outcomes in the same round that first declares the sample frozen.
+
+---
+
 # 1. Frozen methodology / leakage guardrails
 
 Treat v6.0 through v6.5 as frozen development research.
@@ -388,7 +435,9 @@ Always re-plan from durable current state before dispatching; do not dispatch ba
 
 ---
 
-# 9. Ready-to-copy prompt for the next agent
+# 9. Paired prompts for the next round
+
+## Prompt A — Next-round implementation prompt
 
 Continue the Institutional Withdrawal Validation work in repository `EasonLiu0913/stock_data`.
 
@@ -429,3 +478,67 @@ Current focus is outcome-blind coverage expansion and sample-readiness assessmen
 Do not begin untouched outcome scoring until the preregistered coverage/sample-freeze gate is explicitly met and documented.
 
 At the next meaningful phase boundary, update and commit `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` again so the next agent receives a durable continuation point.
+
+## Prompt B — Next-round closeout / verification prompt
+
+Use this only after Prompt A's bounded work or workflow has finished. Do not start another collection wave before this closeout passes.
+
+```text
+The current outcome-blind Institutional Withdrawal Validation round has finished its planned work.
+
+Do not start another research/collection round yet.
+
+First perform the required phase-closeout review according to `AGENTS.md` and the canonical handoff.
+
+Before reviewing results:
+1. Re-read `AGENTS.md`.
+2. Re-read `docs/project-philosophy.md`.
+3. Re-read `docs/roadmap/current-phase.md`.
+4. Re-read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
+5. Verify current `main` and identify every commit/run produced by this round.
+
+Verify the round end-to-end:
+- planning and sample construction remained outcome-blind;
+- no use of `data_history_sma/trading_days.json` was introduced;
+- no frozen v6.0–v6.5 methodology, threshold, weight, lifecycle, gate, or feature semantic was retuned;
+- if a Recovery wave ran, it was exactly one bounded wave from a freshly derived planner queue;
+- TDCC used one stock per fresh runner;
+- Broker used true fresh-runner physical jobs with at most 5 exact-date requests per runner;
+- `max-parallel: 1`, randomized request jitter, batch cooldowns, fresh checkout, and checkpoint-before-exit behavior were preserved;
+- all coverage/checkpoint writers used bounded race-safe helper semantics and no `git pull --rebase` was reintroduced;
+- no durable checkpoint/data was silently lost to concurrent `main` updates;
+- early/middle/late HiStock evidence shows no regression to degraded HTTP-200/header-only/table_rows=1 false negatives;
+- `source_rows_incomplete` remains non-negative and coverage-unusable, with no blank-cell zero imputation;
+- the protected five `7791` dates and `1598 / 2026-05-07` regression still satisfy their documented contracts;
+- the current `6754` incomplete-source behavior has not been "fixed" by relaxing frozen completeness semantics.
+
+Re-run or inspect the outcome-blind HiStock source-status audit, coverage expansion planner, Broker batch planner, and validation coverage planner. Derive current queues and ready stocks from durable state rather than old hard-coded counts.
+
+Explicitly verify that these files still do not exist:
+- `data_research/institutional-flow/validation/validation-outcomes-v1.json`
+- `data_research/institutional-flow/validation/validation-metrics-v1.json`
+
+Then assess the preregistered coverage/sample-freeze gate.
+
+If the gate is NOT reached:
+- decide from preregistered coverage requirements whether another bounded Recovery wave is warranted; a non-empty queue alone is not sufficient reason;
+- record the next evidence-driven objective without starting it yet.
+
+If the gate IS reached:
+- do not inspect or generate untouched validation outcomes in this round;
+- freeze and document the sample/coverage state;
+- update and commit the canonical handoff declaring the phase boundary;
+- define the next explicit outcome-validation phase and its paired prompts;
+- stop.
+
+If any important failure, lost checkpoint, invariant regression, source-quality ambiguity, or leakage violation is found, do not close the phase. Fix/investigate or bounded-rerun only what is necessary, then repeat this closeout verification.
+
+Only after closeout is clean:
+1. update `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` with completed work, evidence, commits/runs, changed understanding, durable counts/state, entry points, and Next round;
+2. update both Prompt A and the phase-specific Prompt B for the following round;
+3. commit the handoff to `main`;
+4. verify no later workflow/data commit has made the handoff stale;
+5. respond with the closeout summary, canonical handoff path, final handoff commit SHA, next-round objective, Prompt A(N+1), and Prompt B(N+1).
+
+Do not begin the following round unless I explicitly ask you to continue.
+```

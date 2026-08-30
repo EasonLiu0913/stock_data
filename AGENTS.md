@@ -101,7 +101,8 @@ Canonical handoff: <repo path>
 ## Entry points
 ## Next round
 ## Safety / stop conditions
-## Copy-paste prompt for the next round
+## Prompt A — Next-round implementation prompt
+## Prompt B — Next-round closeout / verification prompt
 ```
 
 `Entry points` should name the scripts, workflows, directories, functions, or documents most likely to matter next. This is meant to save rediscovery time, not to forbid broader repository search.
@@ -110,9 +111,68 @@ Canonical handoff: <repo path>
 
 `Next round` should be executable and ordered. Avoid vague entries such as "continue investigating" when the next concrete checks are already known.
 
+### Paired implementation + closeout prompts
+
+Every active handoff checkpoint must preserve **two** ready-to-copy prompts for the following round.
+
+- **Prompt A — Next-round implementation prompt** defines startup, planned work, frozen constraints, safety rules, and the meaningful phase boundary.
+- **Prompt B — Next-round closeout / verification prompt** must be written **before Prompt A is executed** and defines how that round will be independently verified before it can close.
+
+Prompt B must be phase-specific, not a generic "check the result" instruction. As applicable, predefine the commits, workflow runs/jobs, physical-batch boundaries, request caps, jitter/cooldowns, durable checkpoints, race-safe push behavior, response-quality diagnostics, regression tests, coverage/audit counts, forbidden artifacts, deployment state, or other invariants that must be checked.
+
+The intended lifecycle is:
+
+```text
+Handoff N
+│
+├─ Prompt A
+│   Next-round Implementation Prompt
+│
+└─ Prompt B
+    Next-round Closeout / Verification Prompt
+        ↓
+Agent executes Prompt A
+        ↓
+work / workflow completes
+        ↓
+user sends Prompt B to the agent
+        ↓
+agent performs phase-closeout review
+        ↓
+problems found?
+├─ yes
+│   ↓
+│   fix / bounded rerun
+│   ↓
+│   repeat Prompt B verification
+│
+└─ no
+    ↓
+update canonical handoff
+    ↓
+commit handoff
+    ↓
+verify current main has not made the handoff stale
+    ↓
+produce:
+    Prompt A(N+1)
+    Prompt B(N+1)
+    ↓
+stop
+```
+
+The closeout gate is mandatory:
+
+- If Prompt B finds an important failure, lost checkpoint, stale assumption, safety violation, incomplete workflow, or missing evidence, do **not** proceed as if the phase were clean. Fix or bounded-rerun only what is needed, then repeat closeout verification.
+- If a preregistered research gate such as a coverage/sample-freeze gate is reached, record and commit that gate at the phase boundary and **stop before opening the next evidence class in the same round**. Reaching sample freeze does not authorize that same round to inspect untouched outcomes.
+- The final closeout response must provide both Prompt A and Prompt B for the next round, and the canonical handoff must preserve both as durable repository state.
+- Do not begin Prompt A(N+1) merely because it was generated unless the repository owner explicitly asks to continue.
+
+This paired-prompt rule preregisters verification criteria before work starts and prevents a successful-looking implementation summary from substituting for a real phase-closeout review.
+
 ### Copy-paste next-round prompt
 
-Every active handoff must end with a short prompt that the user can copy directly into a new conversation or send to the same agent to continue the work.
+Every active handoff must end with the paired Prompt A / Prompt B package defined above. Prompt A continues implementation; Prompt B performs closeout/verification after that work finishes.
 
 The prompt must be self-guiding. Do not assume a new agent already knows this repository's handoff rules or other repository-level instructions. The prompt must explicitly instruct the receiving agent to read the repository-root `AGENTS.md` first, then read the canonical handoff, then verify the current `main` state before continuing.
 
@@ -137,7 +197,8 @@ Before starting another major round or phase:
 - update the canonical handoff with what was completed;
 - record important evidence, commits, workflow runs, failures, and changed understanding;
 - update `Current phase`, `Current repository state`, `Entry points`, and `Next round`;
-- update this copy-paste prompt for the following round;
+- update Prompt A for the following round;
+- update the phase-specific Prompt B closeout criteria for the following round;
 - commit the handoff to the repository.
 
 Do not rely on private conversation history as the only record of project state. Keep the repository handoff ready for either the same agent or a new agent to continue from the next phase.
