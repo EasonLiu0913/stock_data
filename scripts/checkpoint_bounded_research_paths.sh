@@ -6,7 +6,8 @@ set -euo pipefail
 #   scripts/checkpoint_bounded_research_paths.sh "commit message" path [path ...]
 #
 # Contract:
-# 1. stage only the explicitly supplied bounded paths;
+# 1. stage only the explicitly supplied bounded paths, including generated
+#    paths outside an active sparse-checkout definition;
 # 2. commit locally and try a direct push first;
 # 3. if origin/main moved, fetch + hard-reset to origin/main;
 # 4. replay only files changed by the bounded local checkpoint;
@@ -34,7 +35,10 @@ is_remote_wins_immutable() {
 }
 
 stage_and_commit() {
-  git add -- "${paths[@]}"
+  # Bounded research workflows intentionally use sparse checkout. Generated
+  # canonical artifacts may not exist at checkout time, so allow only these
+  # explicitly supplied paths to be staged outside the sparse definition.
+  git add --sparse -- "${paths[@]}"
   if git diff --cached --quiet; then
     return 1
   fi
