@@ -1,0 +1,167 @@
+name: "[07 研究] Investigate HiStock legacy incomplete source_empty v1"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-request-v1.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-validation-coverage-expansion-v1
+  cancel-in-progress: false
+
+env:
+  BROKER_BATCH_SIZE: "5"
+
+jobs:
+  plan:
+    name: Freeze five legacy incomplete-row dates
+    runs-on: ubuntu-latest
+    outputs:
+      tasks: ${{ steps.plan.outputs.tasks }}
+      task_count: ${{ steps.plan.outputs.task_count }}
+    steps:
+      - name: Checkout audit slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/validation/histock-source-empty-audit-v1.json
+            data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-request-v1.json
+
+      - name: Validate probe contract and freeze bounded queue
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/probe_histock_broker_incomplete_rows.js
+          node scripts/probe_histock_broker_incomplete_rows.js --self-test
+          bash -n scripts/checkpoint_bounded_research_paths.sh
+          test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
+          test ! -e data_research/institutional-flow/validation/validation-metrics-v1.json
+
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('data_research/institutional-flow/validation/histock-source-empty-audit-v1.json','utf8'));
+          const rows=(p.retained_terminal||[]).filter(x=>x.assessment?.classification==='legacy_source_empty_unverified_but_not_degraded_signature');
+          if(rows.length!==5) throw new Error(`Expected exactly 5 legacy incomplete-row candidates, got ${rows.length}`);
+          const tasks=rows.map(x=>`${x.stock}@${x.date}`).join(',');
+          console.log(`tasks=${tasks}`);
+          console.log(`task_count=${rows.length}`);
+          NODE
+
+  probe:
+    name: Fresh runner / five exact-source dates
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout fresh physical batch slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/validation/histock-legacy-incomplete-probe-v1/
+
+      - name: Probe bounded exact dates and checkpoint evidence
+        shell: bash
+        env:
+          TASKS: ${{ needs.plan.outputs.tasks }}
+          TASK_COUNT: ${{ needs.plan.outputs.task_count }}
+        run: |
+          set -euo pipefail
+          test "$TASK_COUNT" -le "$BROKER_BATCH_SIZE"
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          test "${#ITEMS[@]}" -eq "$TASK_COUNT"
+          ROOT="data_research/institutional-flow/validation/histock-legacy-incomplete-probe-v1"
+          mkdir -p "$ROOT"
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"
+            DATE="${ITEM#*@}"
+            OUT="$ROOT/${STOCK}-${DATE//-/}.json"
+            node scripts/probe_histock_broker_incomplete_rows.js \
+              --stock "$STOCK" \
+              --date "$DATE" \
+              --output "$OUT" \
+              --delay-ms 1800 \
+              --jitter-ms 1200
+            sleep $((2 + RANDOM % 3))
+          done
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: checkpoint legacy HiStock incomplete-row probe" \
+            "$ROOT"
+
+  finalize:
+    name: Aggregate outcome-blind legacy evidence
+    needs: probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout probe evidence
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/validation/histock-legacy-incomplete-probe-v1/
+            data_research/institutional-flow/validation/
+
+      - name: Aggregate and checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="data_research/institutional-flow/validation/histock-legacy-incomplete-probe-v1"
+          REPORT="data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-v1.json"
+          node - "$ROOT" "$REPORT" <<'NODE'
+          const fs=require('fs'),path=require('path');
+          const [root,out]=process.argv.slice(2);
+          const files=fs.readdirSync(root).filter(x=>/^\d{4}-\d{8}\.json$/.test(x)).sort();
+          if(files.length!==5) throw new Error(`Expected 5 probe artifacts, got ${files.length}`);
+          const rows=files.map(name=>JSON.parse(fs.readFileSync(path.join(root,name),'utf8')));
+          const payload={
+            schema_version:1,
+            methodology:'institutional-withdrawal-validation-histock-legacy-incomplete-investigation-v1',
+            generated_without_outcomes:true,
+            counts:{dates:rows.length,complete_records:rows.reduce((n,x)=>n+(x.diagnostics?.complete_records||0),0),incomplete_records:rows.reduce((n,x)=>n+(x.diagnostics?.incomplete_records||0),0)},
+            rows:rows.map(x=>({stock:x.stock,date:x.date,diagnostics:x.diagnostics})),
+            conclusion_scope:'source/parser evidence quality only; no lifecycle outcomes inspected',
+            generated_at:new Date().toISOString()
+          };
+          fs.writeFileSync(out,JSON.stringify(payload,null,2)+'\n');
+          console.log(JSON.stringify(payload,null,2));
+          NODE
+          test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
+          test ! -e data_research/institutional-flow/validation/validation-metrics-v1.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: summarize legacy HiStock incomplete-row evidence" \
+            "$REPORT"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
