@@ -29,11 +29,7 @@ jobs:
           node - <<'NODE' >> "$GITHUB_OUTPUT"
           const include=[];
           for(let batch=0; batch<6; batch++){
-            include.push({
-              batch,
-              stock:'1598',
-              tasks:'2026-05-07,2026-05-07,2026-05-07,2026-05-07,2026-05-07'
-            });
+            include.push({batch,stock:'1598',tasks:'2026-05-07,2026-05-07,2026-05-07,2026-05-07,2026-05-07'});
           }
           console.log(`matrix=${JSON.stringify({include})}`);
           NODE
@@ -55,7 +51,6 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             scripts/probe_histock_broker_fresh_runner.js
-
       - name: Fresh-runner batch cooldown
         if: matrix.batch != 0
         shell: bash
@@ -64,7 +59,6 @@ jobs:
           PAUSE=$((30 + RANDOM % 31))
           echo "Fresh runner batch cooldown ${PAUSE}s"
           sleep "$PAUSE"
-
       - name: Probe same known-positive HiStock date five times
         shell: bash
         run: |
@@ -76,7 +70,6 @@ jobs:
             --delay-min-ms 2500 \
             --delay-max-ms 5500 \
             --output "$RUNNER_TEMP/histock-probe/batch-${{ matrix.batch }}.json"
-
       - name: Upload diagnostic batch artifact
         uses: actions/upload-artifact@v4
         with:
@@ -84,7 +77,6 @@ jobs:
           path: ${{ runner.temp }}/histock-probe/batch-${{ matrix.batch }}.json
           if-no-files-found: error
           retention-days: 7
-
       - name: Write batch summary
         shell: bash
         run: |
@@ -98,9 +90,6 @@ jobs:
           console.log(`- table_rows > 1: ${p.counts.table_rows_gt_1}`);
           console.log(`- brokertrace present: ${p.counts.brokertrace_present}`);
           console.log(`- network errors: ${p.counts.network_errors}`);
-          for(const [i,r] of p.results.entries()){
-            console.log(`- #${i+1}: status=${r.http_status ?? 'NA'}, bytes=${r.response_bytes ?? 'NA'}, rows=${r.table_rows ?? 'NA'}, brokertrace=${r.brokertrace_link_count ?? 'NA'}, knownTokens=${JSON.stringify(r.known_1598_tokens)}`);
-          }
           NODE
 
   compare:
@@ -115,29 +104,14 @@ jobs:
           pattern: histock-fresh-runner-batch-*
           path: probe-results
           merge-multiple: true
-
       - name: Compare batch progression
         shell: bash
         run: |
           set -euo pipefail
           node - <<'NODE' | tee comparison.json >> "$GITHUB_STEP_SUMMARY"
-          const fs=require('fs');
-          const path=require('path');
+          const fs=require('fs'),path=require('path');
           const files=fs.readdirSync('probe-results').filter(x=>/^batch-\d+\.json$/.test(x)).sort((a,b)=>Number(a.match(/\d+/)[0])-Number(b.match(/\d+/)[0]));
-          const rows=files.map(file=>{
-            const p=JSON.parse(fs.readFileSync(path.join('probe-results',file),'utf8'));
-            return {
-              batch:Number(file.match(/\d+/)[0]),
-              requests:p.counts.requests,
-              http_200:p.counts.http_200,
-              table_rows_gt_1:p.counts.table_rows_gt_1,
-              brokertrace_present:p.counts.brokertrace_present,
-              network_errors:p.counts.network_errors,
-              response_bytes:p.results.map(r=>r.response_bytes??null),
-              table_rows:p.results.map(r=>r.table_rows??null),
-              known_tokens:p.results.map(r=>r.known_1598_tokens??null),
-            };
-          });
+          const rows=files.map(file=>{const p=JSON.parse(fs.readFileSync(path.join('probe-results',file),'utf8'));return {batch:Number(file.match(/\d+/)[0]),requests:p.counts.requests,http_200:p.counts.http_200,table_rows_gt_1:p.counts.table_rows_gt_1,brokertrace_present:p.counts.brokertrace_present,network_errors:p.counts.network_errors};});
           console.log('## HiStock fresh-runner comparison');
           console.log('');
           console.log('| Batch | Requests | HTTP 200 | Rows > 1 | Brokertrace | Network errors |');
@@ -145,15 +119,24 @@ jobs:
           for(const r of rows) console.log(`| ${r.batch} | ${r.requests} | ${r.http_200} | ${r.table_rows_gt_1} | ${r.brokertrace_present} | ${r.network_errors} |`);
           console.log('');
           console.log('Diagnostic only: no production Broker daily/status files were written.');
-          console.log('');
-          console.log('```json');
-          console.log(JSON.stringify({methodology:'histock-broker-fresh-runner-probe-v1',known_positive:'1598@2026-05-07',rows},null,2));
-          console.log('```');
           NODE
-
       - name: Upload comparison artifact
         uses: actions/upload-artifact@v4
         with:
           name: histock-fresh-runner-comparison
           path: comparison.json
           retention-days: 7
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
