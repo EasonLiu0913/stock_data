@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const POLICY_VERSION = 'histock-broker-source-status-policy-v1';
+const POLICY_VERSION = 'histock-broker-source-status-policy-v2';
 const SHRUNKEN_RATIO = 0.85;
 const MIN_SHRINK_BYTES = 8000;
 
@@ -32,6 +32,16 @@ function findExplicitSourceEmptySignal(text) {
   return match ? match[0] : null;
 }
 
+function hasDeterministicIncompleteSourceRows(diagnostics = {}) {
+  const tableRows = Number(diagnostics.table_rows);
+  const incomplete = Number(diagnostics.incomplete_records);
+  return Number(diagnostics.http_status) === 200
+    && diagnostics.date_visible === true
+    && diagnostics.broker_keywords_visible === true
+    && Number.isFinite(tableRows) && tableRows > 1
+    && Number.isFinite(incomplete) && incomplete > 0;
+}
+
 function classifyNoRecordResponse({ text, diagnostics }) {
   const signal = findExplicitSourceEmptySignal(text);
   if (signal) {
@@ -39,6 +49,7 @@ function classifyNoRecordResponse({ text, diagnostics }) {
       outcome: 'source_empty',
       retryable: false,
       terminal_for_date: true,
+      negative_evidence: true,
       source_empty_evidence: {
         confirmed: true,
         rule: 'explicit_source_text_v1',
@@ -46,10 +57,27 @@ function classifyNoRecordResponse({ text, diagnostics }) {
       },
     };
   }
+
+  if (hasDeterministicIncompleteSourceRows(diagnostics)) {
+    return {
+      outcome: 'source_rows_incomplete',
+      retryable: false,
+      terminal_for_date: true,
+      negative_evidence: false,
+      evidence_quality: 'source_rows_present_but_strict_parser_has_zero_complete_records',
+      source_rows_incomplete_evidence: {
+        confirmed: true,
+        rule: 'http_200_context_visible_multirow_all_records_incomplete_v1',
+        diagnostics: diagnostics || null,
+      },
+    };
+  }
+
   return {
     outcome: 'suspected_degraded_response',
     retryable: true,
     terminal_for_date: false,
+    negative_evidence: false,
     source_empty_evidence: {
       confirmed: false,
       rule: 'no_records_without_explicit_empty_signal_v1',
@@ -60,17 +88,27 @@ function classifyNoRecordResponse({ text, diagnostics }) {
 
 function assessPersistedStatus(payload, { referenceResponseBytes = null } = {}) {
   const outcome = payload?.outcome || null;
-  if (outcome === 'success') return { terminal: true, retryable: false, classification: 'success' };
-  if (outcome === 'permanent_error') return { terminal: true, retryable: false, classification: 'permanent_error' };
-  if (outcome === 'transient_error' || outcome === 'suspected_degraded_response') {
-    return { terminal: false, retryable: true, classification: outcome };
+  if (outcome === 'success') return { terminal: true, retryable: false, negative_evidence: false, classification: 'success' };
+  if (outcome === 'permanent_error') return { terminal: true, retryable: false, negative_evidence: false, classification: 'permanent_error' };
+  if (outcome === 'source_rows_incomplete') {
+    return {
+      terminal: true,
+      retryable: false,
+      negative_evidence: false,
+      classification: 'confirmed_source_rows_incomplete',
+      reason: payload?.source_rows_incomplete_evidence?.rule || 'source_rows_present_but_strict_parser_has_zero_complete_records',
+    };
   }
-  if (outcome !== 'source_empty') return { terminal: false, retryable: true, classification: 'unknown_or_missing' };
+  if (outcome === 'transient_error' || outcome === 'suspected_degraded_response') {
+    return { terminal: false, retryable: true, negative_evidence: false, classification: outcome };
+  }
+  if (outcome !== 'source_empty') return { terminal: false, retryable: true, negative_evidence: false, classification: 'unknown_or_missing' };
 
   if (payload?.source_empty_evidence?.confirmed === true) {
     return {
       terminal: true,
       retryable: false,
+      negative_evidence: true,
       classification: 'confirmed_source_empty',
       reason: payload.source_empty_evidence.rule || 'explicit_source_empty_evidence',
     };
@@ -92,6 +130,7 @@ function assessPersistedStatus(payload, { referenceResponseBytes = null } = {}) 
     return {
       terminal: false,
       retryable: true,
+      negative_evidence: false,
       classification: 'ambiguous_degraded_source_empty',
       reason: 'http_200_header_only_materially_shrunken_vs_valid_peer_pages',
       diagnostics: {
@@ -108,8 +147,9 @@ function assessPersistedStatus(payload, { referenceResponseBytes = null } = {}) 
   return {
     terminal: true,
     retryable: false,
+    negative_evidence: false,
     classification: 'legacy_source_empty_unverified_but_not_degraded_signature',
-    reason: 'legacy_checkpoint_retained_terminal_until_specific_degradation_evidence_exists',
+    reason: 'legacy_checkpoint_retained_as_unverified_evidence_quality_state_until_specific_source evidence exists',
   };
 }
 
@@ -120,6 +160,7 @@ module.exports = {
   median,
   deriveReferenceResponseBytes,
   findExplicitSourceEmptySignal,
+  hasDeterministicIncompleteSourceRows,
   classifyNoRecordResponse,
   assessPersistedStatus,
 };
