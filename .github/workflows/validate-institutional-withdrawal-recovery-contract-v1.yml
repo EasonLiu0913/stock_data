@@ -1,0 +1,132 @@
+name: "[07 研究] Validate Institutional Withdrawal Recovery Contract v1"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data_research/institutional-flow/validation/coverage-recovery-preflight-request-v1.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-validation-coverage-expansion-v1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Outcome-blind Recovery preflight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout coverage planning slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_fubon/fubon_202604*_sma.json
+            data_fubon/fubon_202605*_sma.json
+            data_fubon/fubon_202606*_sma.json
+            data_fubon/fubon_202607*_sma.json
+            data_fubon/fubon_202608*_sma.json
+            data_tdcc_shareholding/history/
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/validation/
+            data_research/institutional-flow/validation-plan-v1.md
+
+      - name: Validate status and planner regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/checkpoint_bounded_research_paths.sh
+          node --check scripts/lib/histock_broker_status_policy.js
+          node --check scripts/backfill_histock_broker_exact_source_date.js
+          node --check scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js
+          node --check scripts/plan_institutional_withdrawal_validation_expansion_v1.js
+          node --check scripts/plan_institutional_withdrawal_validation_coverage.js
+          node scripts/backfill_histock_broker_exact_source_date.js --self-test
+          node scripts/test_histock_broker_status_policy_regressions.js
+
+      - name: Refresh outcome-blind audit and planners
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUDIT="data_research/institutional-flow/validation/histock-source-empty-audit-v1.json"
+          EXPANSION="data_research/institutional-flow/validation/coverage-expansion-v1.json"
+          COVERAGE="data_research/institutional-flow/validation/validation-coverage-v1.json"
+          BROKER_PLAN="$RUNNER_TEMP/broker-plan.json"
+
+          node scripts/audit_histock_broker_source_empty_checkpoints.js --output "$AUDIT"
+          node scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
+            --start 2026-04-01 --end 2026-08-21 \
+            --max-tdcc-stocks 6 --max-broker-stocks 2 \
+            --output "$EXPANSION"
+          node scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js \
+            --expansion "$EXPANSION" \
+            --target-days 40 \
+            --batch-size-requests 5 \
+            --max-batches-per-run 16 \
+            --output "$BROKER_PLAN"
+          node scripts/plan_institutional_withdrawal_validation_coverage.js \
+            --start 2026-04-01 --end 2026-08-21 \
+            --output "$COVERAGE"
+
+          node - "$AUDIT" "$BROKER_PLAN" <<'NODE'
+          const fs=require('fs');
+          const [auditFile,planFile]=process.argv.slice(2);
+          const a=JSON.parse(fs.readFileSync(auditFile,'utf8'));
+          const p=JSON.parse(fs.readFileSync(planFile,'utf8'));
+          if(a.counts.unsafe_ambiguous_source_empty!==0) throw new Error('unsafe source_empty remains');
+          if(a.counts.legacy_terminal_source_empty_unverified!==0) throw new Error('legacy unverified source_empty remains');
+          if(a.counts.confirmed_source_rows_incomplete!==5) throw new Error(`expected 5 source_rows_incomplete, got ${a.counts.confirmed_source_rows_incomplete}`);
+          const forbidden=new Set([
+            '7791@2026-04-07','7791@2026-04-28','7791@2026-04-30','7791@2026-05-13','7791@2026-05-22'
+          ]);
+          const scheduled=(p.batches||[]).flatMap(b=>String(b.tasks||'').split(',').filter(Boolean));
+          const leaked=scheduled.filter(x=>forbidden.has(x));
+          if(leaked.length) throw new Error(`source_rows_incomplete dates leaked into Broker queue: ${leaked.join(',')}`);
+          if(p.batch_size_requests!==5) throw new Error('Broker batch_size must remain 5');
+          if((p.batches||[]).some(b=>Number(b.task_count)>5)) throw new Error('Broker physical batch exceeds 5 requests');
+          console.log(JSON.stringify({audit:a.counts,broker_plan_counts:p.counts,broker_stocks:p.stocks},null,2));
+          NODE
+
+          test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
+          test ! -e data_research/institutional-flow/validation/validation-metrics-v1.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: refresh outcome-blind validation coverage preflight" \
+            "$AUDIT" "$EXPANSION" "$COVERAGE"
+
+          node - "$BROKER_PLAN" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p=require(process.argv[2]);
+          console.log('## Outcome-blind Recovery preflight');
+          console.log(`- Broker scheduled requests: ${p.counts.scheduled_tasks}`);
+          console.log(`- Broker physical batches: ${p.counts.planned_batches}`);
+          console.log(`- terminal source_rows_incomplete dates: ${p.counts.terminal_source_rows_incomplete_dates}`);
+          console.log('- Legacy incomplete dates leaked into queue: **NO**');
+          console.log('- Validation outcomes opened/generated: **NO**');
+          NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
