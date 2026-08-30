@@ -55,12 +55,16 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
-  schedule-summary:
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
     name: 排程時間摘要
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo '## Institutional Withdrawal v6.1 Event Diagnosis' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Trigger: push / workflow_dispatch' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Purpose: event-level diagnosis of frozen v6 fragile-distribution events and 2449 timeline.' >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
