@@ -10,7 +10,7 @@ Phase-closeout checkpoint: 2026-08-30
 
 The frozen Batch 1 result is evidence and must not be altered, expanded, or reused for post-hoc tuning. No production-promotion gate is met. No v6.0-v6.5 threshold, weight, lifecycle definition, validation gate, feature semantic, development-stock exclusion, or Broker completeness rule may be retuned from this result.
 
-The next authorized evidence objective, if the repository owner explicitly continues, is a **new outcome-blind Batch 2 preregistration + coverage/sample-construction round**. It must finish and freeze Batch 2 before any Batch 2 future outcome is generated or inspected.
+**Further untouched stock-holdout expansion is not yet authorized.** Because Batch 1 outcomes are now known, any Batch 2+ expansion rule must first be prospectively preregistered before new candidate identities are selected, coverage results are used to form a new sample, or any new holdout outcome is generated. The next authorized phase is protocol design/preregistration only.
 
 ---
 
@@ -108,6 +108,8 @@ Prompt A Actions runs:
 - `33316749621` — validation Run #2 after bounded sparse-checkout checkpoint fix. **Success.** It fresh-replayed frozen development regressions, rebuilt the five-stock outcome-free matrix, ran the untouched lifecycle, computed preregistered metrics, validated canonical contracts, and actually committed the two canonical artifacts as `9f2a5339346e2e2260b2d7802da9a68f3dfebb90`.
 
 The checkpoint fix changed only bounded Git staging mechanics (`git add --sparse` for explicitly supplied paths); it did not change classifier methodology, sample membership, Broker semantics, or outcome definitions.
+
+This incident is now generalized in `AGENTS.md`: a green writer workflow is not durable completion unless required remote `main` artifacts and their contract identity are verified.
 
 ---
 
@@ -340,6 +342,8 @@ Historical development workflow assertions:
 
 ### Coverage / Broker entry points for a future outcome-blind batch
 
+These paths are known, but they are **not authorized to select a Batch 2 sample until a prospective expansion protocol has first been preregistered and closed**:
+
 - `scripts/audit_histock_broker_source_empty_checkpoints.js`;
 - `scripts/plan_institutional_withdrawal_validation_expansion_v1.js`;
 - `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js`;
@@ -348,7 +352,7 @@ Historical development workflow assertions:
 - `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml`;
 - `.github/workflows/validate-institutional-withdrawal-recovery-contract-v1.yml`.
 
-If later coverage collection is justified, preserve the existing physical-batch architecture:
+If later coverage collection becomes prospectively authorized, preserve the existing physical-batch architecture:
 
 `plan → freeze bounded queue → explicit batch_size → fresh runner → jitter → cooldown → checkpoint → runner exits → next batch → re-plan`
 
@@ -360,147 +364,177 @@ with `cancel-in-progress:false`, matrix `fail-fast:false`, `max-parallel:1`, one
 
 **Do not start automatically. Begin only when the repository owner explicitly sends Prompt A below or otherwise explicitly asks to continue.**
 
-Batch 1 is closed and cannot be expanded. The next scientifically valid step is to preregister and construct **Batch 2 outcome-blindly** from stocks that are neither development stocks nor Batch 1 stocks.
+Batch 1 is closed and cannot be expanded. Because its outcome result is now known, a Batch 2 sample must **not** be constructed simply because Batch 1 was underpowered or produced zero fragile events.
 
-The next round must not generate or inspect Batch 2 future returns, drawdowns, lifecycle outcomes, or validation metrics. It should first establish a Batch 2 preregistration addendum/version, then mechanically evaluate coverage, perform only necessary bounded coverage/normalization work, and stop for Prompt B to independently freeze the new sample.
+The next scientifically valid step is a **prospective Batch 2+ expansion-protocol preregistration round only**. Before any new candidate identities are selected or any new coverage snapshot is used to freeze a sample, that protocol must predefine the sequential sampling design independently of new holdout outcomes.
+
+The protocol must prospectively specify at least:
+
+- the eligible candidate universe and permanent exclusions;
+- deterministic candidate ordering / selection mechanism;
+- whether sample construction is one-shot or sequential;
+- batch-size rule, if batches are used;
+- maximum number of future batches or another finite stopping bound;
+- event-count accumulation policy across batches;
+- whether and under what rule Batch 1 and later untouched batches may be pooled for descriptive/validation statistics;
+- the exact stopping rule for further untouched expansion;
+- how a zero-event or underpowered batch is recorded without triggering ad-hoc stock selection;
+- the separation between sample-construction evidence and outcome evidence;
+- the rule that no already-observed Batch 1 result may be used to rank or cherry-pick specific future stocks.
+
+**This next round must not run the coverage planner to form Batch 2, must not perform Batch 2 collection/normalization, must not freeze Batch 2 identities, and must not generate or inspect Batch 2 outcomes.** Its only research deliverable is the prospective expansion protocol plus any outcome-blind implementation audit needed to prove the protocol can later be executed mechanically.
 
 ---
 
-## Prompt A — Batch 2 outcome-blind preregistration and coverage construction
+## Prompt A — Prospective Batch 2+ expansion-protocol preregistration
 
 ```text
 Continue the Institutional Withdrawal Validation work in repository `EasonLiu0913/stock_data`.
 
-This is an outcome-blind sample-construction phase for a NEW stock holdout Batch 2. Do not reopen or modify frozen Batch 1, and do not inspect Batch 2 future outcome evidence in this round.
+This round is protocol-design/preregistration only. Batch 1 outcomes are already known, so further untouched sample expansion is NOT automatically authorized merely because Batch 1 was underpowered or produced zero fragile events.
 
-Before any candidate selection or collection:
+Before doing any work:
 
 1. Read `AGENTS.md`.
 2. Read `docs/project-philosophy.md`.
 3. Read `docs/roadmap/current-phase.md`.
 4. Read `data_research/institutional-flow/validation-plan-v1.md`.
 5. Read the latest canonical handoff at `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
-6. Verify current `main` and the Batch 1 closeout evidence recorded there.
+6. Verify current `main` and the complete Batch 1 closeout evidence recorded there.
 7. Preserve frozen methodology `institutional-withdrawal-lifecycle-v1` / v6.0-v6.5 unchanged.
 
-Permanent exclusions from Batch 2 stock selection:
+Permanent known exclusions from any future untouched stock batch are at least:
 
 - development stocks: `2330,2317,2454,2382,2303,2449`;
 - frozen Batch 1 stocks: `1598,1616,1809,6257,7791`.
 
-Do not read, generate, rank on, or use future returns, future drawdowns, lifecycle outcomes, structural-repair outcomes, `validation-outcomes-v1.json`, `validation-metrics-v1.json`, or any equivalent outcome field to choose Batch 2 stocks.
+Do NOT use the Batch 1 result (zero fragile events / zero durable failures) to rank, cherry-pick, prioritize, or manually choose specific future stocks.
 
-Before executing Batch 2 candidate selection, create a preregistered Batch 2 validation-plan addendum/version under `data_research/institutional-flow/` that explicitly freezes, before outcomes:
+Create a new prospective Batch 2+ expansion protocol under `data_research/institutional-flow/` before any new candidate sample is selected. Give it a stable canonical repo-relative path and methodology/version identity. The protocol must freeze, prospectively and without new holdout outcomes:
 
-- Batch 2 purpose and independence from Batch 1;
-- the permanent development + Batch 1 stock exclusions above;
-- anchor range `2026-04-01` through `2026-08-21` for cross-stock comparability;
-- source-derived calendar rule using valid TWSE foreign-investor daily files only;
-- the same TDCC / Foreign / OHLCV / strict normalized Broker coverage gates unless a purely implementation-level clarification is required;
-- the mechanical rule that ALL non-excluded stocks returned ready by the Batch 2 coverage planner at the closeout evidence snapshot are frozen, with no hand-picking;
-- that Batch 2 cannot be expanded, reduced, or substituted after its outcomes are opened;
-- that Batch 2 outcome generation is forbidden in this Prompt A and remains forbidden until the following Prompt B freezes the exact sample.
+- the future eligible candidate universe definition;
+- permanent development + prior-holdout exclusions;
+- deterministic ordering / selection mechanism;
+- anchor-range/date policy and source-derived calendar policy;
+- coverage-quality requirements, including strict Broker semantics;
+- whether future validation is one-shot or sequential;
+- if sequential, the deterministic batch-size rule;
+- the maximum number of future batches or another finite precommitted stopping bound;
+- event-count accumulation policy across batches;
+- whether Batch 1 and later untouched batches may be pooled, and if so exactly for which preregistered metrics and under what fixed rule;
+- a stopping rule that does not depend on whether an individual stock/batch looks favorable;
+- treatment of zero-event and underpowered batches as retained evidence rather than a reason for ad-hoc expansion;
+- the exact phase boundary between outcome-blind sample construction and outcome generation;
+- the rule that future sample identities are frozen before their future outcomes are generated or inspected.
 
-Use the known coverage entry points directly; do not rediscover them:
+Audit the known existing coverage/planner entry points only enough to determine whether the prospective protocol can later be implemented mechanically:
 
 - `scripts/plan_institutional_withdrawal_validation_coverage.js`;
 - `scripts/plan_institutional_withdrawal_validation_expansion_v1.js`;
 - `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js`;
 - `scripts/audit_histock_broker_source_empty_checkpoints.js`;
-- `scripts/test_histock_broker_status_policy_regressions.js`;
-- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml` if physical collection is actually required.
+- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml`.
 
-If the current planner cannot express development + Batch 1 exclusions or a Batch 2 identity without reselecting Batch 1, implement only a bounded outcome-blind planner/wrapper change. Do not change classifier thresholds or coverage quality gates to manufacture more candidates.
+Do not execute those planners in a way that selects/finalizes Batch 2 identities in this round. Do not perform new TDCC/HiStock collection or normalization. If an implementation gap is found, document the exact future bounded change needed; do not use candidate-specific results to design around the known Batch 1 outcome.
 
-Preserve strict Broker semantics:
+Preserve strict Broker semantics and existing regressions:
 
-- `source_rows_incomplete` is not negative evidence and is not coverage-usable;
+- `source_rows_incomplete` is non-negative and coverage-unusable;
 - never zero-impute incomplete Broker rows;
 - preserve `1598 / 2026-05-07` and the five protected `7791` source-status regressions;
 - degraded HTTP 200 / shrunken HTML / `table_rows=1` remains ambiguous/retryable rather than terminal negative evidence.
 
-Do not use `data_history_sma/trading_days.json`.
+Do not use `data_history_sma/trading_days.json` as the research calendar.
 
-If coverage/backfill is necessary, use only the repository's mandatory physical-batch architecture:
+Forbidden in this Prompt A:
 
-`plan → freeze bounded queue → explicit batch_size → fresh runner → jitter → cooldown → checkpoint → runner exits → next batch → re-plan`
+- selecting or freezing Batch 2 stock identities;
+- running new coverage collection/normalization for Batch 2;
+- generating or inspecting Batch 2 future returns, drawdowns, lifecycle outcomes, structural-repair outcomes, or validation metrics;
+- modifying Batch 1 artifacts;
+- tuning v6.0-v6.5;
+- production promotion.
 
-Do not collect merely because a global queue is non-empty. Collect only the bounded outcome-blind evidence required by the preregistered Batch 2 construction rule.
+Intermediate analysis or audit findings are not Prompt A completion. Continue until the prospective expansion protocol itself is durably committed and its exact path/methodology identity is verified on remote `main`.
 
-At the end of this Prompt A:
+Prompt A completion contract:
 
-- produce only Batch 2 preregistration / coverage / planner / source-status evidence;
-- do NOT create or modify Batch 2 outcome or metrics artifacts;
-- do NOT run the frozen lifecycle to inspect future validation outcomes for candidate selection;
-- do NOT tune v6.0-v6.5;
-- do NOT promote production strategy;
-- stop and wait for the paired Prompt B below.
+- prospective expansion protocol exists on remote `main` at an exact documented path;
+- protocol has stable methodology/version identity;
+- all required sampling/batch/stopping/pooling rules above are explicit rather than left to future discretion;
+- no Batch 2 identities or outcomes were opened;
+- current `main` is re-fetched and the protocol blob is verified;
+- final response explicitly says `Prompt A complete — ready for Prompt B` and lists the commit/path/identity.
 
-Do not update the canonical handoff yet; Prompt B must independently verify and freeze Batch 2.
+After this one bounded protocol-preregistration round finishes, stop and wait for Prompt B. Do not begin Batch 2 sample construction in the same round.
 ```
 
 ---
 
-## Prompt B — Batch 2 outcome-blind sample-freeze closeout / verification
+## Prompt B — Prospective expansion-protocol closeout / verification
 
 ```text
-The Batch 2 outcome-blind preregistration and coverage-construction round has finished.
+The prospective Batch 2+ expansion-protocol preregistration round has finished.
 
-Do not start Batch 2 outcome validation, tuning, or production promotion yet.
+Do not start Batch 2 coverage/sample construction, collection, outcome validation, tuning, or production promotion yet.
 
-Perform the mandatory phase-closeout review according to the latest `AGENTS.md`, Batch 1 handoff, `validation-plan-v1.md`, and the new Batch 2 preregistration addendum/version created before candidate outcomes were opened.
+Perform the mandatory phase-closeout review according to the latest `AGENTS.md`, `validation-plan-v1.md`, and canonical handoff.
 
-Before inspecting any candidate future outcome:
+Before reviewing any future candidate stock outcome:
 
 1. Re-read `AGENTS.md`.
 2. Re-read `docs/project-philosophy.md`.
 3. Re-read `docs/roadmap/current-phase.md`.
 4. Re-read `data_research/institutional-flow/validation-plan-v1.md`.
-5. Re-read the Batch 2 preregistration addendum/version.
-6. Re-read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
-7. Verify current `main` and identify every Prompt A implementation/data/workflow commit and Actions run.
+5. Re-read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
+6. Read the exact prospective expansion protocol created by Prompt A.
+7. Verify current `main` and identify every Prompt A commit/workflow run.
 
-Independently verify outcome blindness and sample-construction integrity:
+First verify phase separation:
 
 - Batch 1 remains immutable as exactly `1598,1616,1809,6257,7791`;
-- development stocks `2330,2317,2454,2382,2303,2449` are excluded from Batch 2;
-- Batch 1 stocks are excluded from Batch 2;
-- the Batch 2 preregistration existed before candidate selection/collection results were finalized and before any Batch 2 future outcome was generated;
-- no candidate was ranked, added, removed, substituted, or selectively normalized using future returns, drawdowns, lifecycle outcomes, structural-repair outcomes, or existing validation outcome/metrics files;
-- no v6.0-v6.5 classifier threshold/weight/lifecycle rule was changed;
-- the research calendar is source-derived from valid TWSE foreign-investor files and never `data_history_sma/trading_days.json`;
-- TDCC historical caveats remain explicit;
-- strict Broker completeness semantics remain unchanged;
-- `source_rows_incomplete` remains non-negative and coverage-unusable with no zero imputation;
-- protected `1598 / 2026-05-07` and five protected `7791` regressions still pass;
-- any physical collection followed plan/batch_size/fresh-runner/jitter/cooldown/checkpoint/re-plan architecture.
+- development methodology v6.0-v6.5 remains unchanged;
+- no Batch 2 stock identities were selected/frozen/finalized;
+- no new Batch 2 TDCC/HiStock collection or normalization was performed;
+- no Batch 2 future return, drawdown, lifecycle outcome, structural-repair outcome, or validation metric was generated or inspected;
+- no existing Batch 1 outcome/metrics file was used to rank or choose specific future stocks;
+- no production strategy was tuned or promoted.
 
-Re-run the outcome-blind coverage planner independently from the final evidence snapshot. Verify that the exact Batch 2 candidate set is the mechanical ALL-ready result after applying only the preregistered permanent exclusions and coverage gates.
+Then independently review the prospective expansion protocol. It must precommit, before future candidate selection:
 
-If the ready set is non-empty:
+- eligible candidate-universe definition;
+- permanent development/prior-holdout exclusions;
+- deterministic ordering / selection rule;
+- calendar/date policy;
+- strict coverage gates and Broker semantics;
+- one-shot vs sequential design;
+- if sequential, deterministic batch size;
+- finite maximum-batch or equivalent stopping bound;
+- event-count accumulation rule;
+- explicit pooling/separation rule for Batch 1 versus later untouched batches;
+- stopping rule independent of whether an individual batch looks favorable;
+- treatment of zero-event/underpowered batches;
+- exact sample-freeze boundary before outcome generation.
 
-- freeze every returned ready stock as Batch 2;
-- do not hand-pick a smaller or larger set;
-- record the exact stock identities, evidence commit/blob identities, range, calendar sessions, coverage counts, normalization state, and remaining queues;
-- explicitly state that remaining queues are not permission to expand Batch 2 after outcomes open.
+Challenge the protocol specifically for post-outcome adaptivity. A rule is not acceptable if it effectively means "keep adding stocks until results look useful", "pick stocks likely to trigger the classifier", "expand because Batch 1 had zero events" without a precommitted bounded rule, or any equivalent discretionary outcome-responsive sampling.
 
-If no Batch 2 stock is ready:
+Verify the protocol can be implemented mechanically with known entry points, or records exact bounded implementation gaps before future sample construction. Do not execute the future sample-selection planner merely to see which stocks would be chosen.
 
-- record Batch 2 as coverage-blocked;
-- do not relax gates, change thresholds, or select stocks by observed price behavior;
-- define the next outcome-blind coverage objective only if justified by the preregistration.
+If any required prospective rule is missing, discretionary, outcome-responsive, or internally inconsistent:
 
-Verify that no Batch 2 validation-outcome/metrics artifact was created or modified in this sample-construction phase.
+- DO NOT close the phase;
+- fix only the protocol while candidate identities/outcomes remain unopened;
+- repeat Prompt B verification.
 
-Only after this closeout passes:
+Only after this protocol closeout passes:
 
-1. update `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` with exact commits/runs, Batch 2 preregistration identity, frozen sample or blocked state, coverage evidence, caveats, exact entry points, and next evidence-driven objective;
-2. prepare the next paired Prompt A and Prompt B before any Batch 2 outcome implementation begins;
+1. update `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` with exact protocol path, methodology identity, commit/run evidence, restrictions, and mechanically authorized next sample-construction objective;
+2. prepare Prompt A(N+1) for outcome-blind sample construction under that frozen protocol and a phase-specific Prompt B(N+1) for its sample-freeze closeout;
 3. commit the handoff to `main`;
 4. re-fetch current `main` and verify no later workflow/data commit made the handoff stale;
-5. respond with the closeout summary, final handoff commit SHA, frozen Batch 2 identity or blocked state, and both following prompts.
+5. respond with the closeout summary, final handoff commit SHA, protocol identity, and both following prompts.
 
-Do not run Batch 2 outcomes in this closeout round. Do not tune or production-promote.
+Do not construct Batch 2 or open its outcomes in this closeout round.
 ```
 
 ---
@@ -513,4 +547,4 @@ Do not run Batch 2 outcomes in this closeout round. Do not tune or production-pr
 - Batch 1 is permanently frozen and returned zero fragile events; this is an underpowered validation result, not a reason to modify Batch 1.
 - Promotion still requires the preregistered minimum event counts and directional evidence; zero events provide neither.
 - v6.1 contains development future-outcome diagnosis and remains regression-only for holdout work.
-- Any Batch 2 must be preregistered and frozen outcome-blindly before its future outcome is opened.
+- Any future Batch 2+ expansion requires a prospectively frozen sampling/batching/stopping protocol before candidate identities are selected or outcomes are opened.
