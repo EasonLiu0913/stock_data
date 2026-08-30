@@ -219,5 +219,5 @@ Only after closeout is clean:
 Do not begin the following round unless I explicitly ask you to continue.
 ```
 """
-h = h.rstrip() + prompt_b + "\n"
-handoff.write_text(h)
+h = h.rstrip() + prompt_b
+handoff.write_text(h.rstrip() + "\n")
