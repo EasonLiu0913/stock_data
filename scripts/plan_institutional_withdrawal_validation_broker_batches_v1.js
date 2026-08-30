@@ -67,6 +67,7 @@ function inspect(stock, date, referenceResponseBytes) {
   const status = inspectStatus(stock, date, referenceResponseBytes);
   if (status.outcome === 'source_empty' && status.assessment.retryable) return { valid: false, reason: 'ambiguous_degraded_source_empty', terminal: false, status };
   if (status.outcome === 'source_empty') return { valid: false, reason: 'source_empty', terminal: true, status };
+  if (status.outcome === 'source_rows_incomplete') return { valid: false, reason: 'source_rows_incomplete', terminal: true, status };
   if (status.outcome === 'permanent_error') return { valid: false, reason: 'permanent_error', terminal: true, status };
   if (status.outcome === 'transient_error' || status.outcome === 'suspected_degraded_response') return { valid: false, reason: status.outcome, terminal: false, status };
   return { valid: false, reason: 'missing', status };
@@ -111,6 +112,7 @@ for (const row of rows) {
 const regularTasks = [];
 const perStock = [];
 let totalSourceEmpty = 0;
+let totalSourceRowsIncomplete = 0;
 let totalPermanentError = 0;
 let totalTransientRetry = 0;
 for (const stock of scheduledExpansionStocks) {
@@ -121,6 +123,7 @@ for (const stock of scheduledExpansionStocks) {
   const valid = [];
   const retryableCandidates = [];
   const sourceEmpty = [];
+  const sourceRowsIncomplete = [];
   const ambiguousSourceEmpty = [];
   const permanentError = [];
   const qualityRejected = [];
@@ -137,6 +140,10 @@ for (const stock of scheduledExpansionStocks) {
       sourceEmpty.push(date);
       continue;
     }
+    if (check.reason === 'source_rows_incomplete') {
+      sourceRowsIncomplete.push(date);
+      continue;
+    }
     if (check.reason === 'permanent_error') {
       permanentError.push(date);
       continue;
@@ -151,6 +158,7 @@ for (const stock of scheduledExpansionStocks) {
   const selected = retryableCandidates.slice(0, needed);
   selected.forEach((date) => regularTasks.push({ stock, date, reason: 'coverage_needed' }));
   totalSourceEmpty += sourceEmpty.length;
+  totalSourceRowsIncomplete += sourceRowsIncomplete.length;
   totalPermanentError += permanentError.length;
   totalTransientRetry += transientRetry.length;
 
@@ -161,6 +169,7 @@ for (const stock of scheduledExpansionStocks) {
     target_days: targetDays,
     needed_days: needed,
     source_empty_dates: sourceEmpty.length,
+    source_rows_incomplete_dates: sourceRowsIncomplete.length,
     ambiguous_source_empty_dates: ambiguousSourceEmpty.length,
     permanent_error_dates: permanentError.length,
     transient_retry_dates: transientRetry.length,
@@ -192,12 +201,12 @@ for (let i = 0; i < scheduled.length; i += batchSize) {
 const scheduledUnsafe = scheduled.filter((x) => x.reason !== 'coverage_needed').length;
 const planStocks = [...new Set(tasks.map((x) => x.stock))];
 const plan = {
-  schema_version: 3,
+  schema_version: 4,
   methodology: 'institutional-withdrawal-validation-broker-batch-plan-v1',
   generated_without_outcomes: true,
   source_expansion_plan: expansionFile,
   calendar_policy: 'each task date comes from that stock common Foreign+OHLCV source-derived dates; data_history_sma/trading_days.json is never read',
-  failure_memory_policy: 'confirmed source_empty and permanent_error remain terminal; HTTP-200/header-only/materially-shrunken legacy source_empty checkpoints are unsafe and requeued; transient and suspected degraded responses remain retryable',
+  failure_memory_policy: 'confirmed source_empty and permanent_error remain terminal; source_rows_incomplete is terminal only for that exact acquisition date and is unusable non-negative evidence, so the planner skips that date and continues alternate source dates; HTTP-200/header-only/materially-shrunken legacy source_empty checkpoints are unsafe and requeued; transient and suspected degraded responses remain retryable',
   status_policy_version: POLICY_VERSION,
   data_quality: { version: QUALITY_VERSION },
   target_days: targetDays,
@@ -217,6 +226,7 @@ const plan = {
     scheduled_unsafe_repairs: scheduledUnsafe,
     deferred_unsafe_repairs: Math.max(0, unsafeRepairTasks.length - scheduledUnsafe),
     terminal_source_empty_dates: totalSourceEmpty,
+    terminal_source_rows_incomplete_dates: totalSourceRowsIncomplete,
     terminal_permanent_error_dates: totalPermanentError,
     transient_retry_dates: totalTransientRetry,
     missing_needed_tasks: tasks.length,
