@@ -2,81 +2,27 @@
 
 Canonical handoff: `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`
 
-Paired-prompt checkpoint: 2026-08-30
+Phase-closeout checkpoint: 2026-08-30
 
-## Purpose
+## Current phase
 
-This is the authoritative continuation point for Institutional Withdrawal Validation in `EasonLiu0913/stock_data`.
+**Untouched stock-holdout sample frozen; outcome-validation phase is authorized only as a separate next round.**
 
-Current phase: **outcome-blind validation coverage expansion + evidence reliability hardening**.
-
-The milestone remains coverage/sample readiness. **Do not begin untouched validation outcome scoring yet.**
-
-This handoff has been revalidated against the current repository-level mandatory **Paired implementation + closeout prompts** rule. Every next round must carry both Prompt A and a phase-specific Prompt B before implementation begins.
+The outcome-blind coverage/sample-construction phase is closed. This closeout did **not** open or generate validation future returns, drawdowns, lifecycle outcomes, or validation metrics.
 
 ---
 
-# 0. Mandatory startup sequence
+## Objective
 
-Before any implementation, workflow dispatch, or data collection:
+Validate frozen methodology `institutional-withdrawal-lifecycle-v1` on the preregistered untouched stock holdout without retuning v6.0–v6.5 and without mixing development observations into untouched statistics.
 
-1. Read repository root `AGENTS.md`.
-2. Read `docs/project-philosophy.md`.
-3. Read `docs/roadmap/current-phase.md`.
-4. Read this canonical handoff.
-5. Verify current `main` still matches the commits, workflows, files, evidence counts, and assumptions below.
-6. Continue from **Next round** only after that verification.
+Canonical preregistration:
 
-At every meaningful phase boundary, update and commit this file again.
+`data_research/institutional-flow/validation-plan-v1.md`
 
 ---
 
-# Handoff execution loop
-
-The required lifecycle is:
-
-```text
-Handoff N
-│
-├─ Prompt A
-│   Next-round Implementation Prompt
-│
-└─ Prompt B
-    Next-round Closeout / Verification Prompt
-        ↓
-Agent executes Prompt A
-        ↓
-work / workflow completes
-        ↓
-user sends Prompt B
-        ↓
-agent performs phase-closeout review
-        ↓
-problems found?
-├─ yes
-│   ↓
-│   fix / bounded rerun
-│   ↓
-│   repeat Prompt B verification
-│
-└─ no
-    ↓
-update canonical handoff
-    ↓
-commit handoff
-    ↓
-verify current main has not made handoff stale
-    ↓
-produce Prompt A(N+1) + Prompt B(N+1)
-    ↓
-stop
-```
-
-Prompt B must be prepared before Prompt A runs and must be specific to the planned work. If the preregistered coverage/sample-freeze gate is reached, Prompt B must verify and commit the frozen sample state and stop before untouched outcomes are opened.
-
----
-
-# 1. Frozen methodology / leakage guardrails
+## Frozen methodology / leakage guardrails
 
 Treat v6.0 through v6.5 as frozen development research.
 
@@ -88,428 +34,373 @@ Development period:
 
 `2026-04-01` through `2026-08-21`.
 
-Do not retune thresholds, weights, lifecycle definitions, validation gates, or feature semantics from validation examples.
+Do not retune thresholds, weights, lifecycle definitions, validation gates, feature semantics, or development-stock exclusions from validation evidence.
 
-Mandatory guardrails:
+Research calendar remains source-derived from valid TWSE foreign-investor daily files. Never use `data_history_sma/trading_days.json` as the research calendar.
 
-- coverage/sample construction remains outcome-blind;
-- use valid TWSE foreign-investor source files for the research calendar, never `data_history_sma/trading_days.json`;
-- historical TDCC remains association-only because exact historical publication-time availability is not fully known;
-- do not inspect/generate future returns, validation outcomes, drawdowns, or validation metrics before sample/coverage freeze;
-- these files MUST NOT exist in the current phase:
-  - `data_research/institutional-flow/validation/validation-outcomes-v1.json`
-  - `data_research/institutional-flow/validation/validation-metrics-v1.json`
+Historical TDCC remains association-only because exact historical publication-time availability is incomplete; retain `production_no_lookahead_safe=false` semantics for historical TDCC evidence.
 
-Canonical preregistration:
+The known `2026-06-24` development OHLCV gap remains a real gap. Do not compress sessions or impute missing OHLCV.
 
-`data_research/institutional-flow/validation-plan-v1.md`
-
-Both forbidden files were explicitly verified absent at the prior closeout.
+Stock-holdout and any later time-holdout results must remain separate.
 
 ---
 
-# 2. Completed Recovery wave and closeout evidence
+## Outcome-blind sample-freeze boundary — PASSED
 
-Completed physical Recovery run:
+Prompt B closeout independently verified the preregistered coverage gate before opening outcomes.
 
-`33298604998`
+Frozen stock-holdout Batch 1:
 
-Result: **success**.
+`1598,1616,1809,6257,7791`
 
-The run produced the expected linear set of **25 Recovery checkpoint commits**:
+Freeze basis:
 
-- 1 frozen expansion-plan checkpoint;
-- 6 TDCC physical-batch checkpoints;
-- 1 post-TDCC Broker-plan checkpoint;
-- 16 Broker physical-batch checkpoints (`0..15`);
-- 1 final coverage refresh checkpoint.
+- range: `2026-04-01` through `2026-08-21`;
+- source-derived calendar sessions: `98`;
+- all five stocks were returned by `stock_holdout_ready`;
+- `stock_holdout_needs_broker_normalization`: `[]`;
+- `time_holdout_ready`: `[]`;
+- preregistration Section 9 requires freezing **all** returned `stock_holdout_ready` stocks when that set is non-empty;
+- remaining TDCC/Broker queues are not a reason to expand Batch 1 after the gate has been reached.
 
-Final Recovery commit:
-
-`138bf957e0d52c88bb27149767a7d8898fcf5872` — `research: refresh physical-batch validation coverage state`
-
-Verified Recovery architecture:
-
-- TDCC stocks `8163,8213,6526,1340,1710,1590` all completed on separate fresh runners;
-- TDCC used exactly one stock per fresh runner;
-- Broker used 16 separate fresh-runner jobs;
-- every Broker physical batch had at most 5 exact-source-date requests;
-- `strategy.fail-fast: false` and `max-parallel: 1` were preserved;
-- fresh checkout, request jitter, inter-request sleeps, and physical-batch cooldowns were preserved;
-- every physical batch checkpointed durable evidence before runner exit;
-- `scripts/checkpoint_bounded_research_paths.sh` was used for bounded checkpoint writes;
-- no `git pull --rebase` path was present;
-- no durable checkpoint was found missing after concurrent `main` updates.
-
-Early, middle, and late Broker jobs were inspected. No sampled response showed the historical degraded signature `HTTP 200 + materially shrunken body + table_rows=1`; normal materialized pages were roughly 88–96 KB with `table_rows=16`.
-
-Dedicated no-collection closeout preflight:
-
-`33301186925`
-
-Result: **success**.
-
-Durable closeout refresh commit:
+Durable outcome-blind evidence commit:
 
 `f92b362ac57e1e6248d1ecd35b9c729690266b29` — `research: refresh outcome-blind validation coverage preflight`
 
-Final outcome-blind counts at that closeout:
+Durable evidence blobs at the freeze boundary:
 
-- exact statuses: `241`
-- `unsafe_ambiguous_source_empty`: `0`
-- confirmed terminal source_empty: `0`
-- `confirmed_source_rows_incomplete`: `23`
-- `legacy_terminal_source_empty_unverified`: `0`
-- TDCC queue remaining: `1018`
-- Broker queue remaining: `39`
-- `stock_holdout_ready`: `1598,1616,1809,6257,7791`
-- newly ready from Recovery: `6257`
-- `stock_holdout_needs_broker_normalization`: `[]`
-- `time_holdout_ready`: `[]`
+- `histock-source-empty-audit-v1.json`: `bfc57294e5a8e027a6786482fd0c4fa8f7fbedb0`;
+- `coverage-expansion-v1.json`: `e99ff566dd9ef9afed7248529b8d19c5760dbf6f`;
+- `validation-coverage-v1.json`: `a19d0a5c3a2c3acb7b46079a2fbf926e06ef76d5`.
 
-These are durable checkpoint values, not hard-coded next-round assumptions. Re-run planners before any new collection.
+The coverage gate is a sample-construction decision, not a performance conclusion.
 
 ---
 
-# 3. HiStock source-status semantics
+## Prompt A round closeout evidence
+
+Prompt A was inspection-only after the paired-prompt checkpoint `829524c524bed438bf7fb204fa573e5df94405e2`.
+
+It created:
+
+- no research/data/workflow commit;
+- no Recovery marker update;
+- no TDCC or HiStock collection run;
+- no validation outcome/metrics artifact;
+- no outcome-validation workflow run.
+
+The latest repository commit throughout Prompt A remained:
+
+`829524c524bed438bf7fb204fa573e5df94405e2` — `docs: checkpoint institutional withdrawal validation handoff`.
+
+A normal Pages deployment run `33303150965` was triggered by that pre-existing handoff commit; it is not a Prompt A research/collection run.
+
+Because Prompt A did not run Recovery, the Recovery-wave physical-batch verification clauses were not applicable to this implementation round.
+
+---
+
+## Outcome-blind source-status closeout state
+
+The latest no-collection preflight was:
+
+`33301186925` — **success**
+
+It reran/validated:
+
+- HiStock status-policy regressions;
+- HiStock source-status audit;
+- coverage expansion planner;
+- Broker batch planner;
+- validation coverage planner;
+- forbidden outcome/metrics artifact checks.
+
+Durable counts at the freeze boundary:
+
+- exact statuses: `241`;
+- `source_empty_statuses`: `0`;
+- `source_rows_incomplete_statuses`: `23`;
+- `unsafe_ambiguous_source_empty`: `0`;
+- confirmed terminal source_empty: `0`;
+- `confirmed_source_rows_incomplete`: `23`;
+- `legacy_terminal_source_empty_unverified`: `0`;
+- TDCC queue remaining: `1018`;
+- Broker queue remaining: `39`;
+- `stock_holdout_ready`: `1598,1616,1809,6257,7791`;
+- `stock_holdout_needs_broker_normalization`: `[]`;
+- `time_holdout_ready`: `[]`.
+
+The Broker planner orientation state at freeze was `6754,5306`, 58 exact-date requests across 12 physical batches, but this queue is **not** part of frozen Batch 1 and must not be collected merely because it is non-empty.
+
+---
+
+## HiStock source-status invariants
 
 Status policy version:
 
 `histock-broker-source-status-policy-v2`
 
-## Protected known-positive regression
+### Known-positive regression
 
-`1598 / 2026-05-07`
+`1598 / 2026-05-07` remains protected and must continue to parse:
 
-The old degraded runner returned about 69.9 KB / `table_rows=1` and falsely treated the page as `source_empty`.
+- `凱基-汐止`: net `-74`, avg `20.49`;
+- `兆豐-大同`: net `+206`, avg `20.76`.
 
-The protected successful regression remains expected to preserve:
+The old degraded approximately 69.9 KB / `table_rows=1` page is a regression fixture for `suspected_degraded_response`, not terminal source-empty evidence.
 
-- `凱基-汐止`: net `-74`, avg `20.49`
-- `兆豐-大同`: net `+206`, avg `20.76`
+### Protected 7791 incomplete-source dates
 
-## Protected 7791 source_rows_incomplete dates
+These five dates remain exact-date `source_rows_incomplete`:
 
-These five exact dates must remain `source_rows_incomplete`:
-
-- `7791@2026-04-07`
-- `7791@2026-04-28`
-- `7791@2026-04-30`
-- `7791@2026-05-13`
-- `7791@2026-05-22`
+- `7791@2026-04-07`;
+- `7791@2026-04-28`;
+- `7791@2026-04-30`;
+- `7791@2026-05-13`;
+- `7791@2026-05-22`.
 
 For all five:
 
-- `negative_evidence: false`
-- `coverage_usable: false`
-- terminal only for that exact acquisition date under frozen strict completeness semantics
-- planner skips that unusable exact date and continues alternate dates
-- source blanks remain `null` / raw empty values; no zero imputation.
+- `negative_evidence: false`;
+- `coverage_usable: false`;
+- source blanks remain `null` / raw empty values;
+- no zero imputation;
+- no relaxed completeness semantics.
 
-Former legacy `source_empty` checkpoints remain archived for provenance.
+### 6754 incomplete-source evidence
 
-## 6754 evidence-quality state
+There are 18 confirmed `source_rows_incomplete` dates for `6754` at the freeze boundary.
 
-Recovery produced **18 additional confirmed `source_rows_incomplete` dates for `6754`**.
+These were materialized source pages, not degraded pages: HTTP 200, requested date/Broker context visible, `table_rows=16`, stock/page-appropriate response sizes around 88–92 KB, and explicit incomplete-record diagnostics.
 
-They were not degraded pages. They had HTTP 200, visible date/Broker context, `table_rows=16`, normal stock-specific response sizes around 88–92 KB, but source-side blank/incomplete buy/sell/net fields under frozen strict completeness semantics.
-
-At prior closeout the Broker planner reported for `6754`:
-
-- existing valid days: `22`
-- `source_rows_incomplete` dates: `18`
-- target: `40`
-- still-needed valid days: `18`
-- remaining retryable candidate dates: `57`
-- not exhausted before target.
-
-Do not relax completeness semantics or impute blank Broker cells to make `6754` pass. Let the planner choose alternate exact dates.
-
-Interpretation remains:
-
-- `source_empty` = trustworthy explicit source-side no-data evidence;
-- `suspected_degraded_response` = suspicious non-materialized/header-only response; retryable;
-- `source_rows_incomplete` = source rows materialized but no coverage-usable complete Broker record under frozen semantics; exact date terminal, non-negative, planner continues alternate dates.
+They remain non-negative and coverage-unusable. Do not make them successful by zero-imputing blanks or relaxing strict Broker row completeness.
 
 ---
 
-# 4. Checkpoint race architecture
+## Recovery architecture retained for future coverage work
 
-Shared helper:
-
-`scripts/checkpoint_bounded_research_paths.sh`
-
-Required behavior:
-
-1. stage only explicitly bounded paths;
-2. commit the bounded local checkpoint;
-3. direct push first;
-4. if `origin/main` moved, fetch latest main;
-5. record bounded changed paths and hard reset to `origin/main`;
-6. replay only the required local delta;
-7. immutable exact-path artifact already present remotely = remote wins;
-8. retry bounded push;
-9. never use blind `git pull --rebase`.
-
-The active Recovery workflow uses this helper for plan, TDCC batches, post-TDCC Broker plan, Broker batches, and final coverage refresh.
-
----
-
-# 5. Supported workflow entry points
-
-## General physical Recovery coverage workflow
+If a later, separately justified coverage wave is ever needed, the supported workflow remains:
 
 `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml`
 
-Push-trigger marker:
+Marker:
 
 `data_research/institutional-flow/validation/coverage-expansion-recovery-request-v1.json`
 
-Requirements:
+Mandatory architecture remains:
 
-- `cancel-in-progress: false`
-- TDCC one stock / fresh runner
-- Broker <=5 requests / fresh runner
-- `max-parallel: 1`
-- randomized jitter/cooldown
-- durable bounded checkpoint before runner exit
-- re-plan after TDCC before Broker
-- final outcome-blind coverage refresh.
+`plan → freeze bounded queue → explicit batch_size → fresh runner → jitter → cooldown → checkpoint → runner exits → next batch → re-plan`
 
-Do not trigger Recovery merely by editing collector/planner scripts.
+with:
 
-## Outcome-blind Recovery contract / closeout preflight
+- `cancel-in-progress: false`;
+- matrix `strategy.fail-fast: false`;
+- `max-parallel: 1`;
+- TDCC one stock per fresh runner;
+- HiStock Broker <=5 exact-source-date requests per fresh runner;
+- latest-main checkout for every physical batch;
+- randomized request jitter and physical-batch cooldowns;
+- durable checkpoint before runner exit;
+- `scripts/checkpoint_bounded_research_paths.sh` bounded remote-wins semantics;
+- no blind `git pull --rebase`.
 
-`.github/workflows/validate-institutional-withdrawal-recovery-contract-v1.yml`
-
-Marker:
-
-`data_research/institutional-flow/validation/coverage-recovery-preflight-request-v1.json`
-
-This performs no TDCC/HiStock collection. It may refresh durable audit/planner JSON.
-
-## HiStock source-empty repair
-
-`.github/workflows/repair-histock-broker-source-empty-v1.yml`
-
-Repair-only. Do not dispatch unless audit finds new retryable ambiguous degraded evidence.
-
-## HiStock diagnostic
-
-`.github/workflows/probe-histock-broker-fresh-runner-batches.yml`
-
-Manual-only. Do not repeat the prior 30-request diagnostic without new evidence requiring it.
-
-## Retired legacy coverage workflow
-
-`.github/workflows/expand-institutional-withdrawal-validation-coverage-v1.yml`
-
-Informational/manual-only. Never restore it as a long-running crawler.
+Completed Recovery evidence remains run `33298604998`, final commit `138bf957e0d52c88bb27149767a7d8898fcf5872`, with 25 expected checkpoint commits and no lost physical-batch checkpoint.
 
 ---
 
-# 6. Known caveats
+## Forbidden artifacts at this phase boundary
 
-- Historical TDCC remains association-only, not exact-time no-lookahead evidence.
-- HiStock response-byte baselines are stock/page dependent; do not classify degradation from absolute bytes alone.
-- `source_rows_incomplete` is unusable exact-date Broker coverage, not proof of no Broker activity.
-- `6754` has substantial incomplete-source density but still had alternate candidates at prior closeout.
-- The ready set is an outcome-blind coverage checkpoint, not a performance result.
-- No untouched validation outcome scoring is authorized yet.
+Prompt B explicitly verified that these files did **not** exist when sample freeze was declared:
 
----
+- `data_research/institutional-flow/validation/validation-outcomes-v1.json`;
+- `data_research/institutional-flow/validation/validation-metrics-v1.json`.
 
-# 7. Next round
+Their absence at sample-freeze closeout proves the outcome evidence class was not opened in the same round that declared the frozen sample.
 
-**Do not start this round automatically. Begin only after the repository owner explicitly sends Prompt A or otherwise asks to continue.**
-
-Objective: **continue outcome-blind coverage expansion and assess coverage/sample-freeze readiness without opening outcomes**.
-
-Ordered execution:
-
-1. Re-read current repository rules and this handoff; verify latest `main` and forbidden-file absence.
-2. Re-run/inspect the outcome-blind source-status audit, expansion planner, Broker batch planner, and validation coverage planner. Do not hard-code prior ready/queue sets.
-3. Confirm there is no retryable ambiguous `source_empty` evidence.
-4. Preserve all current `source_rows_incomplete` semantics, especially protected `7791` and `6754`; do not zero-impute blanks or relax frozen completeness rules.
-5. Assess preregistered coverage/sample readiness before deciding whether collection is warranted.
-6. If another substantial collection wave is warranted, run **only one bounded Recovery wave** through the supported marker-gated physical workflow.
-7. After that wave, rerun the outcome-blind audit and planners.
-8. Assess the preregistered coverage/sample-freeze gate only. Do not inspect untouched outcomes.
-9. If sample freeze is reached, document and commit the frozen sample boundary and stop before opening the outcome evidence class.
-10. At the meaningful boundary, apply Prompt B below. Only after Prompt B passes may this handoff be updated for the following round.
-
-Prior planner snapshot for orientation only, not a hard-coded queue:
-
-- TDCC surfaced: `6235,1907,1457,2207,0050,2645`
-- Broker surfaced: `6754,5306`
-- prior Broker plan: 58 exact-date requests across 12 physical batches at <=5 requests/batch.
-
-Always re-plan from current durable state.
+In the **next explicit outcome-validation round**, these paths may be created only by code implementing the preregistered outcome contract after re-verifying this frozen boundary. They must never be used to alter the frozen sample or classifier rules.
 
 ---
 
-# 8. Prompt A — Next-round implementation prompt
+## Entry points
+
+Read first:
+
+- `AGENTS.md`;
+- `docs/project-philosophy.md`;
+- `docs/roadmap/current-phase.md`;
+- `data_research/institutional-flow/validation-plan-v1.md`;
+- this handoff.
+
+Coverage/audit regression entry points:
+
+- `scripts/audit_histock_broker_source_empty_checkpoints.js`;
+- `scripts/plan_institutional_withdrawal_validation_expansion_v1.js`;
+- `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js`;
+- `scripts/plan_institutional_withdrawal_validation_coverage.js`;
+- `scripts/test_histock_broker_status_policy_regressions.js`;
+- `.github/workflows/validate-institutional-withdrawal-recovery-contract-v1.yml`.
+
+Before implementing outcome validation, independently locate and inspect the frozen lifecycle/classifier implementation and existing development regression tests. Reuse the canonical frozen implementation; do not re-derive thresholds from holdout stocks.
+
+---
+
+## Known caveats
+
+- Historical TDCC remains association-only, not exact historical publication-time no-lookahead evidence.
+- HiStock response-byte baselines are stock/page dependent; absolute bytes alone do not classify degradation.
+- `source_rows_incomplete` means unusable exact-date Broker coverage, not no Broker activity.
+- The five frozen holdout stock identities are now preregistered and must not be changed after outcomes are opened.
+- The frozen Batch 1 sample may ultimately contain few or no resolved durable-failure events; that is a valid validation result and must not trigger post-hoc stock addition.
+- Promotion requires the preregistered minimum evidence in `validation-plan-v1.md`; failure to reach those event counts or directional gates is not permission to retune v6.0–v6.5 on the same holdout.
+
+---
+
+## Next round
+
+**Do not start automatically. Begin only when the repository owner explicitly sends Prompt A below or otherwise explicitly asks to continue.**
+
+Next objective: **run the first separate untouched outcome-validation implementation round on frozen stock-holdout Batch 1 (`1598,1616,1809,6257,7791`) using the frozen lifecycle and preregistered outcome clock/metrics.**
+
+Ordered boundary:
+
+1. Re-read rules, preregistration, and this frozen-sample handoff.
+2. Verify current `main` has not changed the frozen sample evidence or methodology.
+3. Reconfirm the five-stock sample exactly; do not rerun coverage to add/remove stocks based on outcomes.
+4. Locate/reuse the frozen classifier and development regression tests; prove frozen development regressions still pass before opening holdout outcomes.
+5. Implement or execute the minimum validation pipeline required by `validation-plan-v1.md` for Batch 1.
+6. Keep lifecycle classification inputs outcome-free; calculate outcomes only after lifecycle resolution.
+7. Generate stock-holdout validation outputs separately from any development or time-holdout evidence.
+8. Do not tune thresholds, add stocks, drop adverse events, compress missing sessions, or reinterpret incomplete Broker rows after results are visible.
+9. Stop after one bounded outcome-validation implementation round and apply Prompt B. Do not promote a production strategy in the same round.
+
+---
+
+## Prompt A — Next-round implementation prompt
 
 ```text
 Continue the Institutional Withdrawal Validation work in repository `EasonLiu0913/stock_data`.
 
-Before doing any implementation, workflow dispatch, or data collection:
+This is a NEW evidence phase: the outcome-blind stock-holdout sample was already frozen in the prior Prompt B closeout. Do not reopen sample construction based on observed outcomes.
+
+Before implementation or outcome inspection:
 
 1. Read repository-level instructions in `AGENTS.md`.
 2. Read `docs/project-philosophy.md`.
 3. Read `docs/roadmap/current-phase.md`.
-4. Read the canonical handoff at `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
-5. Verify current `main` still matches the handoff's workflows, durable evidence, audit counts, coverage counts, commits, and assumptions.
-6. Verify these forbidden files still do not exist:
-   - `data_research/institutional-flow/validation/validation-outcomes-v1.json`
-   - `data_research/institutional-flow/validation/validation-metrics-v1.json`
-7. Continue strictly from the handoff's `Next round` section.
+4. Read `data_research/institutional-flow/validation-plan-v1.md`.
+5. Read the canonical handoff at `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
+6. Verify current `main` still matches the frozen sample boundary, evidence commit/blobs, methodology, and assumptions recorded there.
+7. Verify the frozen stock-holdout Batch 1 is exactly:
+   `1598,1616,1809,6257,7791`.
+8. Before opening holdout outcomes, verify frozen development-regression behavior and ensure no v6.0–v6.5 rule has changed since sample freeze.
 
-Preserve all frozen v6.0–v6.5 methodology, thresholds, weights, lifecycle definitions, validation gates, feature semantics, development-stock exclusions, TDCC historical caveats, source-derived calendar rules, and outcome-blind coverage/sample-construction guardrails.
+Preserve all frozen v6.0–v6.5 thresholds, weights, lifecycle definitions, validation gates, feature semantics, development-stock exclusions, source-derived calendar rules, TDCC historical caveats, missing-session rules, and strict Broker completeness semantics.
 
-Do not inspect or generate validation outcomes, future returns, drawdowns, lifecycle performance, or validation metrics while coverage/sample freeze is incomplete. Do not use `data_history_sma/trading_days.json` as the research calendar.
+Do not use `data_history_sma/trading_days.json` as the research calendar.
 
-First re-run or inspect the current outcome-blind HiStock source-status audit, coverage expansion planner, Broker batch planner, and validation coverage planner. Derive current queues and ready stocks from durable evidence instead of reusing prior hard-coded values.
+Do not add/remove holdout stocks after outcomes are visible. Do not extend Batch 1 because TDCC/Broker queues remain non-empty. Do not use development stocks in untouched stock-holdout statistics.
 
-Confirm the audit remains free of retryable ambiguous source-empty evidence. Preserve all `source_rows_incomplete` states as non-negative and coverage-unusable exact-date evidence. In particular:
+Implement or execute only the minimum preregistered untouched outcome-validation pipeline required by `validation-plan-v1.md`:
 
-- protect the five documented `7791` dates;
-- preserve `1598 / 2026-05-07` as the known-positive regression;
-- preserve `6754` incomplete-source dates without zero-imputation or relaxed completeness semantics; let the planner choose alternate dates.
+- run the frozen lifecycle classifier on each frozen holdout stock using contemporaneous/current-or-prior evidence only;
+- classifier inputs must not include future returns, future drawdowns, structural-repair outcomes, or any validation outcome field;
+- preserve the lifecycle resolution definitions for `failure_plus_reclaim` and `failure_plus_no_reclaim`;
+- start the outcome clock on the next source-derived trading session after resolution;
+- compute preregistered 20-session and 30-session returns, maximum drawdowns, negative-return indicators, and 30-session structural-repair outcome;
+- preserve missing OHLCV sessions as gaps; never compress or impute them;
+- mark incomplete follow-up as `unresolved_for_metric` only for the affected metric;
+- report `failure_plus_reclaim` and `failure_plus_no_reclaim` separately;
+- bootstrap 95% between-group confidence intervals only when both groups have enough observations for meaningful resampling;
+- keep Batch 1 stock-holdout results separate from development and any future time-holdout results.
 
-Assess preregistered coverage/sample readiness before deciding whether another collection wave is warranted. A non-empty queue by itself is not sufficient reason to collect.
+If output files are created, use the preregistered canonical paths where appropriate:
+- `data_research/institutional-flow/validation/validation-outcomes-v1.json`
+- `data_research/institutional-flow/validation/validation-metrics-v1.json`
 
-If substantial collection is warranted, execute only one bounded Recovery wave through `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml` using its marker-gated entry point.
+Record enough methodology/sample identity in outputs to prove they were generated from the frozen five-stock Batch 1 and frozen methodology. Do not let generated outcome files feed back into classifier logic or stock selection.
 
-For that wave preserve:
+Run frozen development regressions and outcome-pipeline tests before accepting the result. If implementation disagrees with frozen development cases, fix implementation; do not change frozen rules.
 
-`plan → freeze bounded queue → explicit batch_size → fresh GitHub job/runner → randomized request jitter → cooldown → checkpoint → runner exits → next batch → re-plan`
+Do not promote or modify any production strategy in this round. Do not retune after seeing holdout results.
 
-Requirements:
-
-- `cancel-in-progress: false`
-- independent matrix `strategy.fail-fast: false`
-- `max-parallel: 1`
-- TDCC one stock per fresh runner
-- HiStock Broker at most 5 exact-source-date requests per fresh runner
-- fresh checkout of latest `main` per physical batch
-- request jitter + physical-batch cooldowns
-- durable checkpoint before runner exit
-- bounded race-safe checkpoint helper semantics
-- never use blind `git pull --rebase origin main`.
-
-After the bounded wave finishes, do not immediately start another wave. Stop the implementation round and wait for Prompt B closeout/verification.
-
-If no collection wave is warranted because the preregistered sample/coverage gate is already reached, do not inspect outcomes. Stop and let Prompt B independently verify and document the sample-freeze boundary.
-
-Do not update the next handoff package until Prompt B has independently reviewed this round.
+After this one bounded implementation round finishes, stop and wait for Prompt B closeout/verification. Do not update the next handoff package before Prompt B independently reviews this outcome-validation round.
 ```
 
 ---
 
-# 9. Prompt B — Next-round closeout / verification prompt
-
-Use this only after Prompt A's planned work or bounded workflow has finished. Do not start another collection wave before this closeout passes.
+## Prompt B — Next-round closeout / verification prompt
 
 ```text
-The current outcome-blind Institutional Withdrawal Validation implementation round has finished its planned work.
+The first untouched Institutional Withdrawal stock-holdout outcome-validation implementation round has finished.
 
-Do not start another research or collection wave yet.
+Do not start another validation, tuning, coverage, or production-promotion round yet.
 
-Perform the mandatory phase-closeout review according to the latest `AGENTS.md` and canonical handoff.
+Perform the mandatory phase-closeout review according to the latest `AGENTS.md`, preregistration, and canonical handoff.
 
-Before reviewing results:
+Before reviewing result values:
 
 1. Re-read `AGENTS.md`.
 2. Re-read `docs/project-philosophy.md`.
 3. Re-read `docs/roadmap/current-phase.md`.
-4. Re-read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
-5. Verify current `main` and identify every implementation/data/workflow commit and relevant Actions run created by Prompt A.
+4. Re-read `data_research/institutional-flow/validation-plan-v1.md`.
+5. Re-read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
+6. Verify current `main` and identify every implementation/data/workflow commit and Actions run created by Prompt A.
+7. Verify the frozen Batch 1 stock identities are still exactly `1598,1616,1809,6257,7791` and were not modified after outcomes were opened.
 
-First verify leakage/frozen-method invariants:
+First verify anti-leakage and frozen-method invariants independently of whether the results look favorable:
 
-- planning and sample construction remained outcome-blind;
-- `data_history_sma/trading_days.json` was not introduced as the research calendar;
-- no v6.0–v6.5 threshold, weight, lifecycle definition, validation gate, or feature semantic was retuned from validation evidence;
-- no validation future-return, drawdown, lifecycle-outcome, or metric evidence was inspected or generated.
+- no v6.0–v6.5 threshold, weight, lifecycle definition, validation gate, feature semantic, development-stock exclusion, or Broker completeness rule changed after sample freeze;
+- the research calendar remained source-derived from valid TWSE foreign-investor files and never used `data_history_sma/trading_days.json`;
+- the lifecycle classifier consumed no future return, drawdown, structural-repair outcome, or validation metric field;
+- development stocks did not enter untouched stock-holdout statistics;
+- no holdout stock was added, removed, substituted, or selectively excluded because of its observed outcome;
+- historical TDCC caveats remained explicit;
+- missing OHLCV sessions were not compressed or imputed;
+- `source_rows_incomplete` Broker evidence was not zero-imputed or relaxed into success.
 
-Explicitly verify these files still DO NOT exist:
+Re-run the frozen development regression suite and verify the documented cases remain unchanged. Recheck the protected `1598 / 2026-05-07` HiStock regression and five protected `7791` incomplete-source dates so outcome work did not regress source semantics.
 
-- `data_research/institutional-flow/validation/validation-outcomes-v1.json`
-- `data_research/institutional-flow/validation/validation-metrics-v1.json`
+Then inspect the generated validation artifacts and implementation contract:
 
-Re-run or inspect the current outcome-blind:
+- sample identity/version is explicit and equals the frozen five-stock Batch 1;
+- methodology/version identity is explicit and matches frozen `institutional-withdrawal-lifecycle-v1` / v6.0–v6.5;
+- every lifecycle event is traceable to contemporaneous evidence and a source-derived session index;
+- resolution date follows the preregistered reclaim/no-reclaim definitions;
+- each outcome window starts on the next source-derived session after resolution;
+- 20D/30D returns and maximum drawdowns use exactly the preregistered session windows;
+- incomplete follow-up becomes `unresolved_for_metric` only for the affected denominator;
+- no missing session is skipped merely to complete a horizon;
+- structural repair is descriptive outcome evidence only and is never fed back into classification;
+- group metrics are computed separately for `failure_plus_reclaim` and `failure_plus_no_reclaim`;
+- bootstrap confidence intervals are emitted only when meaningful under the preregistered rule;
+- stock-holdout results remain separate from development/time-holdout results.
 
-- HiStock source-status audit;
-- coverage expansion planner;
-- Broker batch planner;
-- validation coverage planner.
+Independently recompute or spot-check representative lifecycle/outcome rows and aggregate denominators from source data. Inspect at least one early, middle, and late resolved event if enough events exist; if fewer exist, inspect all resolved events.
 
-Derive the current ready set, Broker queue, TDCC queue, normalization state, and source-status counts from current durable repository evidence. Do not reuse old hard-coded counts.
+Assess the preregistered validation result without tuning:
 
-Verify HiStock source-status invariants:
+- report resolved durable-failure event N;
+- report reclaim vs no-reclaim N;
+- report the preregistered 20D/30D return, drawdown, negative-return, structural-repair comparisons;
+- state whether the minimum production-promotion event-count gate is met;
+- state whether each preregistered directional criterion passes, fails, or is underpowered/unresolved;
+- if the gate fails or is underpowered, record that result as evidence and do not tune v6.0–v6.5 on this holdout.
 
-- `unsafe_ambiguous_source_empty` remains zero unless new evidence explicitly explains otherwise;
-- all confirmed `source_rows_incomplete` states remain `negative_evidence:false` and `coverage_usable:false`;
-- the five protected `7791` dates retain their documented exact-date status and no blank-cell zero imputation;
-- `1598 / 2026-05-07` still passes the known-positive regression and is not reclassified as source-empty;
-- `6754` incomplete-source dates have not been made successful by relaxing frozen completeness semantics;
-- any newly observed incomplete-source dates are distinguished from degraded responses using HTTP status, response bytes relative to stock/page context, requested date/context visibility, table materialization, row counts, and incomplete-record diagnostics.
-
-If Prompt A ran a Recovery wave, verify the entire wave end-to-end:
-
-- it was exactly one bounded wave based on a freshly derived planner queue;
-- all planned TDCC jobs completed on separate fresh runners;
-- TDCC used exactly one stock per fresh runner;
-- Broker jobs, if any, were true separate fresh-runner physical jobs;
-- every Broker physical batch contained no more than 5 exact-source-date requests;
-- `strategy.fail-fast: false`, `max-parallel: 1`, fresh checkout, request jitter, inter-request pacing, and randomized batch cooldowns were preserved;
-- every physical batch checkpointed durable evidence before runner exit;
-- every expected batch has a durable checkpoint/commit or a clearly documented no-op reason;
-- `scripts/checkpoint_bounded_research_paths.sh` or equivalent bounded remote-wins semantics were used for checkpoint writers;
-- no `git pull --rebase` path was reintroduced;
-- compare the final commit chain with expected physical batches and verify no checkpoint/data silently disappeared because another writer advanced `main`.
-
-Inspect early, middle, and late HiStock Broker batches if Broker collection occurred. Specifically look for:
-
-- HTTP 200 with materially shrunken response relative to the relevant stock/page baseline;
-- `table_rows = 1`;
-- header-only or non-materialized Broker tables;
-- unexpected `source_empty`;
-- unexpected `extraction_incomplete` / suspected degraded responses;
-- regression of `source_rows_incomplete` handling;
-- blank cells being converted to zero.
-
-If any important failure, missing checkpoint, unexplained source degradation, planner/audit invariant regression, or leakage violation is found:
+If any leakage, sample mutation, frozen-rule change, incorrect outcome clock, denominator bug, session compression, missing-event exclusion, or traceability failure is found:
 
 - DO NOT close the phase;
-- DO NOT produce the following round's Prompt A/Prompt B yet;
-- investigate/fix only the bounded problem;
-- rerun only bounded work necessary;
-- then repeat this entire Prompt B verification.
+- DO NOT produce the following round's paired prompts yet;
+- fix only the bounded implementation defect without changing frozen methodology/sample membership;
+- regenerate only affected validation artifacts;
+- repeat this entire Prompt B verification.
 
-After technical verification, assess the preregistered coverage/sample-freeze gate.
+Only after closeout passes:
 
-If the gate is NOT reached:
+1. update `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` with exact commits/runs, sample identity, methodology identity, event counts, validation findings, failures/uncertainty, entry points, and next evidence-driven objective;
+2. prepare Prompt A(N+1) and phase-specific Prompt B(N+1) before another implementation begins;
+3. commit the handoff to `main`;
+4. re-fetch current `main` and verify no later workflow/data commit made the handoff stale;
+5. respond with the closeout summary, final handoff commit SHA, validation conclusion, and both next prompts.
 
-- document the durable current coverage state and why another round is or is not warranted;
-- define the next evidence-driven objective without executing it.
-
-If the gate IS reached:
-
-- do not inspect or generate untouched validation outcomes in this same round;
-- freeze and document the sample/coverage state and the exact gate evidence;
-- update the canonical handoff to declare the phase boundary;
-- prepare the next-phase paired Prompt A and Prompt B for the explicitly separate outcome-validation phase;
-- stop.
-
-Only after all closeout checks pass:
-
-1. update `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` with completed work, evidence, commits/runs, changed understanding, durable audit/coverage state, entry points, caveats, and exact Next round;
-2. prepare both Prompt A(N+1) and a phase-specific Prompt B(N+1) BEFORE the following implementation begins;
-3. commit the canonical handoff to `main` using a clear checkpoint commit;
-4. re-fetch current `main` after the handoff commit and verify no later workflow/data commit has made the handoff stale;
-5. respond with the phase-closeout summary, canonical handoff path, final handoff commit SHA, next-round objective, Prompt A(N+1), and Prompt B(N+1).
-
-Do not begin the following Prompt A unless the repository owner explicitly asks you to continue.
+Do not begin tuning or production promotion unless the repository owner explicitly asks to continue and the preregistered promotion gate supports it.
 ```
