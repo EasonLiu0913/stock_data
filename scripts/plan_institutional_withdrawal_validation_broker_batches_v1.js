@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
+const { POLICY_VERSION, deriveReferenceResponseBytes, assessPersistedStatus } = require('./lib/histock_broker_status_policy');
 
 const args = process.argv.slice(2);
 const arg = (name, fallback = '') => {
@@ -27,27 +28,31 @@ const expansion = JSON.parse(fs.readFileSync(expansionFile, 'utf8'));
 if (expansion.methodology !== 'institutional-withdrawal-validation-coverage-expansion-v1' || expansion.generated_without_outcomes !== true) {
   throw new Error('Invalid expansion plan contract');
 }
-const rowMap = new Map((expansion.rows || []).map((r) => [r.stock, r]));
-const stocks = expansion.scheduled?.broker_stocks || [];
+const rows = expansion.rows || [];
+const rowMap = new Map(rows.map((r) => [r.stock, r]));
+const scheduledExpansionStocks = expansion.scheduled?.broker_stocks || [];
 
+function stockRoot(stock) {
+  return path.join('data_research', 'institutional-flow', 'histock', stock);
+}
 function dailyPath(stock, date) {
-  return path.join('data_research', 'institutional-flow', 'histock', stock, 'daily', `${date.replaceAll('-', '')}.json`);
+  return path.join(stockRoot(stock), 'daily', `${date.replaceAll('-', '')}.json`);
 }
 function statusPath(stock, date) {
-  return path.join('data_research', 'institutional-flow', 'histock', stock, 'batch-status', `exact-source-date-${date.replaceAll('-', '')}.json`);
+  return path.join(stockRoot(stock), 'batch-status', `exact-source-date-${date.replaceAll('-', '')}.json`);
 }
-function inspectStatus(stock, date) {
+function inspectStatus(stock, date, referenceResponseBytes) {
   const file = statusPath(stock, date);
-  if (!fs.existsSync(file)) return { outcome: null };
+  if (!fs.existsSync(file)) return { outcome: null, assessment: { terminal: false, retryable: true, classification: 'missing' } };
   try {
     const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (payload.stock !== stock || payload.date !== date) return { outcome: 'invalid_status', file };
-    return { outcome: payload.outcome || null, terminal_for_date: payload.terminal_for_date === true, file };
+    if (payload.stock !== stock || payload.date !== date) return { outcome: 'invalid_status', file, assessment: { terminal: false, retryable: true, classification: 'invalid_status' } };
+    return { outcome: payload.outcome || null, terminal_for_date: payload.terminal_for_date === true, file, payload, assessment: assessPersistedStatus(payload, { referenceResponseBytes }) };
   } catch (error) {
-    return { outcome: 'invalid_status', file, error: error.message };
+    return { outcome: 'invalid_status', file, error: error.message, assessment: { terminal: false, retryable: true, classification: 'invalid_status' } };
   }
 }
-function inspect(stock, date) {
+function inspect(stock, date, referenceResponseBytes) {
   const file = dailyPath(stock, date);
   if (fs.existsSync(file)) {
     try {
@@ -59,19 +64,56 @@ function inspect(stock, date) {
       return { valid: false, reason: 'invalid_json', details: { message: error.message } };
     }
   }
-  const status = inspectStatus(stock, date);
+  const status = inspectStatus(stock, date, referenceResponseBytes);
+  if (status.outcome === 'source_empty' && status.assessment.retryable) return { valid: false, reason: 'ambiguous_degraded_source_empty', terminal: false, status };
   if (status.outcome === 'source_empty') return { valid: false, reason: 'source_empty', terminal: true, status };
   if (status.outcome === 'permanent_error') return { valid: false, reason: 'permanent_error', terminal: true, status };
-  if (status.outcome === 'transient_error') return { valid: false, reason: 'transient_error', terminal: false, status };
-  return { valid: false, reason: 'missing' };
+  if (status.outcome === 'transient_error' || status.outcome === 'suspected_degraded_response') return { valid: false, reason: status.outcome, terminal: false, status };
+  return { valid: false, reason: 'missing', status };
 }
 
-const tasks = [];
+const referenceByStock = new Map();
+for (const row of rows) referenceByStock.set(row.stock, deriveReferenceResponseBytes(stockRoot(row.stock)));
+
+const unsafeRepairTasks = [];
+const unsafeAudit = [];
+let retainedTerminalSourceEmpty = 0;
+for (const row of rows) {
+  if (!row.coverage_eligible_before_tdcc_broker || row.tdcc_observations < 3) continue;
+  const referenceResponseBytes = referenceByStock.get(row.stock);
+  for (const date of Array.isArray(row.common_source_dates) ? row.common_source_dates : []) {
+    if (fs.existsSync(dailyPath(row.stock, date))) {
+      try {
+        const payload = JSON.parse(fs.readFileSync(dailyPath(row.stock, date), 'utf8'));
+        if (validateDailyPayload(payload, { stock: row.stock, date }).valid) continue;
+      } catch (_) {}
+    }
+    const status = inspectStatus(row.stock, date, referenceResponseBytes);
+    if (status.outcome !== 'source_empty') continue;
+    if (status.assessment.retryable) {
+      const task = { stock: row.stock, date, reason: status.assessment.classification };
+      unsafeRepairTasks.push(task);
+      unsafeAudit.push({
+        stock: row.stock,
+        date,
+        run_id: status.payload?.run_id || null,
+        updated_at: status.payload?.updated_at || null,
+        diagnostics: status.payload?.diagnostics || null,
+        reference_response_bytes: referenceResponseBytes,
+        assessment: status.assessment,
+      });
+    } else {
+      retainedTerminalSourceEmpty += 1;
+    }
+  }
+}
+
+const regularTasks = [];
 const perStock = [];
 let totalSourceEmpty = 0;
 let totalPermanentError = 0;
 let totalTransientRetry = 0;
-for (const stock of stocks) {
+for (const stock of scheduledExpansionStocks) {
   const row = rowMap.get(stock);
   if (!row) throw new Error(`Scheduled broker stock missing from rows: ${stock}`);
   if (row.tdcc_observations < 3) throw new Error(`Broker scheduling before TDCC gate for ${stock}`);
@@ -79,12 +121,14 @@ for (const stock of stocks) {
   const valid = [];
   const retryableCandidates = [];
   const sourceEmpty = [];
+  const ambiguousSourceEmpty = [];
   const permanentError = [];
   const qualityRejected = [];
   const transientRetry = [];
+  const referenceResponseBytes = referenceByStock.get(stock);
 
   for (const date of dates) {
-    const check = inspect(stock, date);
+    const check = inspect(stock, date, referenceResponseBytes);
     if (check.valid) {
       valid.push(date);
       continue;
@@ -98,13 +142,14 @@ for (const stock of stocks) {
       continue;
     }
     retryableCandidates.push(date);
-    if (check.reason === 'transient_error') transientRetry.push(date);
-    if (check.reason !== 'missing' && check.reason !== 'transient_error') qualityRejected.push({ date, reason: check.reason });
+    if (check.reason === 'ambiguous_degraded_source_empty') ambiguousSourceEmpty.push(date);
+    if (check.reason === 'transient_error' || check.reason === 'suspected_degraded_response') transientRetry.push(date);
+    if (!['missing', 'transient_error', 'suspected_degraded_response', 'ambiguous_degraded_source_empty'].includes(check.reason)) qualityRejected.push({ date, reason: check.reason });
   }
 
   const needed = Math.max(0, targetDays - valid.length);
   const selected = retryableCandidates.slice(0, needed);
-  selected.forEach((date) => tasks.push({ stock, date }));
+  selected.forEach((date) => regularTasks.push({ stock, date, reason: 'coverage_needed' }));
   totalSourceEmpty += sourceEmpty.length;
   totalPermanentError += permanentError.length;
   totalTransientRetry += transientRetry.length;
@@ -116,13 +161,24 @@ for (const stock of stocks) {
     target_days: targetDays,
     needed_days: needed,
     source_empty_dates: sourceEmpty.length,
+    ambiguous_source_empty_dates: ambiguousSourceEmpty.length,
     permanent_error_dates: permanentError.length,
     transient_retry_dates: transientRetry.length,
     retryable_candidate_dates: retryableCandidates.length,
     scheduled_candidate_days: selected.length,
     exhausted_before_target: needed > retryableCandidates.length,
+    reference_response_bytes: referenceResponseBytes,
     quality_rejected_existing: qualityRejected,
   });
+}
+
+const seen = new Set();
+const tasks = [];
+for (const task of [...unsafeRepairTasks, ...regularTasks]) {
+  const key = `${task.stock}@${task.date}`;
+  if (seen.has(key)) continue;
+  seen.add(key);
+  tasks.push(task);
 }
 
 const cap = batchSize * maxBatches;
@@ -130,24 +186,36 @@ const scheduled = tasks.slice(0, cap);
 const batches = [];
 for (let i = 0; i < scheduled.length; i += batchSize) {
   const slice = scheduled.slice(i, i + batchSize);
-  batches.push({ batch: batches.length, task_count: slice.length, tasks: slice.map((x) => `${x.stock}@${x.date}`).join(',') });
+  batches.push({ batch: batches.length, task_count: slice.length, tasks: slice.map((x) => `${x.stock}@${x.date}`).join(','), repair_tasks: slice.filter((x) => x.reason !== 'coverage_needed').length });
 }
 
+const scheduledUnsafe = scheduled.filter((x) => x.reason !== 'coverage_needed').length;
+const planStocks = [...new Set(tasks.map((x) => x.stock))];
 const plan = {
-  schema_version: 2,
+  schema_version: 3,
   methodology: 'institutional-withdrawal-validation-broker-batch-plan-v1',
   generated_without_outcomes: true,
   source_expansion_plan: expansionFile,
   calendar_policy: 'each task date comes from that stock common Foreign+OHLCV source-derived dates; data_history_sma/trading_days.json is never read',
-  failure_memory_policy: 'source_empty and permanent_error exact-date statuses are terminal and excluded from future request queues; transient_error remains retryable in a later bounded batch',
+  failure_memory_policy: 'confirmed source_empty and permanent_error remain terminal; HTTP-200/header-only/materially-shrunken legacy source_empty checkpoints are unsafe and requeued; transient and suspected degraded responses remain retryable',
+  status_policy_version: POLICY_VERSION,
   data_quality: { version: QUALITY_VERSION },
   target_days: targetDays,
   batch_size_requests: batchSize,
   max_batches_per_run: maxBatches,
-  stocks,
+  stocks: planStocks,
+  expansion_scheduled_stocks: scheduledExpansionStocks,
+  source_empty_audit: {
+    unsafe_ambiguous_dates: unsafeAudit.length,
+    retained_terminal_source_empty_dates: retainedTerminalSourceEmpty,
+    unsafe_requeue: unsafeAudit,
+  },
   per_stock: perStock,
   counts: {
-    stocks: stocks.length,
+    stocks: planStocks.length,
+    unsafe_source_empty_repairs: unsafeRepairTasks.length,
+    scheduled_unsafe_repairs: scheduledUnsafe,
+    deferred_unsafe_repairs: Math.max(0, unsafeRepairTasks.length - scheduledUnsafe),
     terminal_source_empty_dates: totalSourceEmpty,
     terminal_permanent_error_dates: totalPermanentError,
     transient_retry_dates: totalTransientRetry,
@@ -169,6 +237,6 @@ if (githubOutput) {
   fs.appendFileSync(githubOutput, `scheduled_count=${scheduled.length}\n`);
   fs.appendFileSync(githubOutput, `deferred_count=${tasks.length - scheduled.length}\n`);
   fs.appendFileSync(githubOutput, `batch_count=${batches.length}\n`);
-  fs.appendFileSync(githubOutput, `stocks=${stocks.join(',')}\n`);
+  fs.appendFileSync(githubOutput, `stocks=${planStocks.join(',')}\n`);
 }
 console.log(JSON.stringify(plan, null, 2));

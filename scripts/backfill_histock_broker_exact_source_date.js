@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { validateDailyPayload, QUALITY_VERSION } = require('./lib/histock_broker_quality');
+const { POLICY_VERSION, classifyNoRecordResponse } = require('./lib/histock_broker_status_policy');
 
 const args = process.argv.slice(2);
 const arg = (name, fallback = '') => {
@@ -11,40 +12,7 @@ const arg = (name, fallback = '') => {
   return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : fallback;
 };
 
-const stock = arg('stock');
-const date = arg('date');
-const outRoot = arg('out', path.join('data_research', 'institutional-flow', 'histock', stock));
-const delayMs = Number(arg('delay-ms', '1800'));
-const jitterMs = Number(arg('jitter-ms', '1200'));
-const maxRetries = Number(arg('max-retries', '2'));
-
-if (!/^\d{4}$/.test(stock)) throw new Error(`Invalid stock: ${stock}`);
-if (!/^20\d{2}-\d{2}-\d{2}$/.test(date)) throw new Error(`Invalid date: ${date}`);
-if (!Number.isFinite(delayMs) || delayMs < 1000) throw new Error('delay-ms must be >=1000');
-if (!Number.isFinite(jitterMs) || jitterMs < 0 || jitterMs > 10000) throw new Error('jitter-ms must be 0..10000');
-if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 6) throw new Error('max-retries must be 0..6');
-
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const compact = date.replaceAll('-', '');
-const statusDir = path.join(outRoot, 'batch-status');
-const statusFile = path.join(statusDir, `exact-source-date-${compact}.json`);
-
-function writeStatus(outcome, details = {}) {
-  fs.mkdirSync(statusDir, { recursive: true });
-  const payload = {
-    schema_version: 1,
-    research: 'institutional-withdrawal-validation-coverage-v1',
-    stock,
-    date,
-    outcome,
-    terminal_for_date: outcome === 'success' || outcome === 'source_empty' || outcome === 'permanent_error',
-    run_id: process.env.GITHUB_RUN_ID || null,
-    updated_at: new Date().toISOString(),
-    ...details,
-  };
-  fs.writeFileSync(statusFile, `${JSON.stringify(payload, null, 2)}\n`);
-  return statusFile;
-}
 
 function decodeHtml(value) {
   return String(value)
@@ -111,80 +79,141 @@ function parseBrokerRows(html) {
   return { records, incomplete };
 }
 
-async function fetchOnce() {
-  const url = `https://histock.tw/stock/branch.aspx?from=${compact}&no=${encodeURIComponent(stock)}&to=${compact}`;
-  const response = await fetch(url, {
-    redirect: 'follow',
-    headers: {
-      'user-agent': 'Mozilla/5.0 (compatible; stock_data validation-coverage/1.0)',
-      accept: 'text/html,application/xhtml+xml',
-      'accept-language': 'zh-TW,zh;q=0.9,en;q=0.7',
-    },
-  });
-  const html = await response.text();
-  const text = stripHtml(html);
-  const diagnostics = {
-    http_status: response.status,
-    final_url: response.url,
-    response_bytes: Buffer.byteLength(html),
-    date_visible: [compact, date, date.replaceAll('-', '/')].some((token) => html.includes(token) || text.includes(token)),
-    broker_keywords_visible: /券商|買進|賣出|買超|賣超/.test(text),
-    table_rows: extractRows(html).length,
-  };
-  if (!response.ok) {
-    const error = new Error(`HTTP ${response.status}`);
-    error.status = response.status;
-    error.classification = 'http_error';
-    error.diagnostics = diagnostics;
-    throw error;
-  }
-  if (!diagnostics.date_visible) {
-    const error = new Error('requested date not visible');
-    error.retryable = true;
-    error.classification = 'transient_error';
-    error.diagnostics = diagnostics;
-    throw error;
-  }
+function runKnownPositiveRegression() {
+  const fixture = path.join(__dirname, 'fixtures', 'histock', '1598-20260507-known-positive.html');
+  const html = fs.readFileSync(fixture, 'utf8');
   const parsed = parseBrokerRows(html);
-  if (!parsed.records.length) {
-    const error = new Error('no_broker_records_on_source_session');
-    error.retryable = false;
-    error.classification = 'source_empty';
-    error.diagnostics = { ...diagnostics, incomplete_records: parsed.incomplete.length };
-    throw error;
+  const kh = parsed.records.find((r) => r.broker === '凱基-汐止');
+  const mega = parsed.records.find((r) => r.broker === '兆豐-大同');
+  if (!kh || kh.net !== -74 || kh.avg_price !== 20.49) throw new Error(`1598 regression failed for 凱基-汐止: ${JSON.stringify(kh)}`);
+  if (!mega || mega.net !== 206 || mega.avg_price !== 20.76) throw new Error(`1598 regression failed for 兆豐-大同: ${JSON.stringify(mega)}`);
+  const degraded = classifyNoRecordResponse({
+    text: '2026/05/07 券商買進賣出明細',
+    diagnostics: { http_status: 200, response_bytes: 69876, date_visible: true, broker_keywords_visible: true, table_rows: 1 },
+  });
+  if (degraded.outcome !== 'suspected_degraded_response' || degraded.terminal_for_date !== false) {
+    throw new Error(`1598 degraded-page regression failed: ${JSON.stringify(degraded)}`);
   }
-  const payload = {
-    schema_version: 4,
-    source: 'histock',
-    source_type: 'third_party_public_page',
-    research_only: true,
-    stock,
-    date,
-    calendar_provenance: 'exact date supplied by source-derived TWSE foreign/OHLCV coverage planner; no data_history_sma calendar read',
-    fetched_at: new Date().toISOString(),
-    source_url: url,
-    response_bytes: diagnostics.response_bytes,
-    record_count: parsed.records.length,
-    incomplete_record_count: parsed.incomplete.length,
-    records: parsed.records,
-    incomplete_records: parsed.incomplete,
-  };
-  const check = validateDailyPayload(payload, { stock, date });
-  if (!check.valid) {
-    const error = new Error(`hard data-quality gate failed: ${JSON.stringify(check.reasons)}`);
-    error.retryable = false;
-    error.classification = 'permanent_error';
-    error.diagnostics = { ...diagnostics, record_quality: check.record_quality };
-    throw error;
-  }
-  return { payload, diagnostics };
+  return { fixture, parsed_records: parsed.records.length, anchors: [kh, mega], degraded_classification: degraded.outcome };
 }
 
 function isNetworkError(error) {
   return error?.name === 'TypeError' || Boolean(error?.cause?.code) || /fetch failed|socket|network|timeout/i.test(String(error?.message || ''));
 }
 
-(async () => {
+async function main() {
+  const regression = runKnownPositiveRegression();
+  if (args.includes('--self-test')) {
+    console.log(JSON.stringify({ ok: true, policy_version: POLICY_VERSION, regression }, null, 2));
+    return;
+  }
+
+  const stock = arg('stock');
+  const date = arg('date');
+  const outRoot = arg('out', path.join('data_research', 'institutional-flow', 'histock', stock));
+  const delayMs = Number(arg('delay-ms', '1800'));
+  const jitterMs = Number(arg('jitter-ms', '1200'));
+  const maxRetries = Number(arg('max-retries', '2'));
+
+  if (!/^\d{4}$/.test(stock)) throw new Error(`Invalid stock: ${stock}`);
+  if (!/^20\d{2}-\d{2}-\d{2}$/.test(date)) throw new Error(`Invalid date: ${date}`);
+  if (!Number.isFinite(delayMs) || delayMs < 1000) throw new Error('delay-ms must be >=1000');
+  if (!Number.isFinite(jitterMs) || jitterMs < 0 || jitterMs > 10000) throw new Error('jitter-ms must be 0..10000');
+  if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 6) throw new Error('max-retries must be 0..6');
+
+  const compact = date.replaceAll('-', '');
+  const statusDir = path.join(outRoot, 'batch-status');
+  const statusFile = path.join(statusDir, `exact-source-date-${compact}.json`);
+
+  function writeStatus(outcome, details = {}) {
+    fs.mkdirSync(statusDir, { recursive: true });
+    const payload = {
+      schema_version: 2,
+      research: 'institutional-withdrawal-validation-coverage-v1',
+      stock,
+      date,
+      outcome,
+      terminal_for_date: outcome === 'success' || outcome === 'source_empty' || outcome === 'permanent_error',
+      status_policy_version: POLICY_VERSION,
+      run_id: process.env.GITHUB_RUN_ID || null,
+      updated_at: new Date().toISOString(),
+      ...details,
+    };
+    fs.writeFileSync(statusFile, `${JSON.stringify(payload, null, 2)}\n`);
+    return statusFile;
+  }
+
+  async function fetchOnce() {
+    const url = `https://histock.tw/stock/branch.aspx?from=${compact}&no=${encodeURIComponent(stock)}&to=${compact}`;
+    const response = await fetch(url, {
+      redirect: 'follow',
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; stock_data validation-coverage/1.0)',
+        accept: 'text/html,application/xhtml+xml',
+        'accept-language': 'zh-TW,zh;q=0.9,en;q=0.7',
+      },
+    });
+    const html = await response.text();
+    const text = stripHtml(html);
+    const diagnostics = {
+      http_status: response.status,
+      final_url: response.url,
+      response_bytes: Buffer.byteLength(html),
+      date_visible: [compact, date, date.replaceAll('-', '/')].some((token) => html.includes(token) || text.includes(token)),
+      broker_keywords_visible: /券商|買進|賣出|買超|賣超/.test(text),
+      table_rows: extractRows(html).length,
+    };
+    if (!response.ok) {
+      const error = new Error(`HTTP ${response.status}`);
+      error.status = response.status;
+      error.classification = 'http_error';
+      error.diagnostics = diagnostics;
+      throw error;
+    }
+    if (!diagnostics.date_visible) {
+      const error = new Error('requested date not visible');
+      error.retryable = true;
+      error.classification = 'transient_error';
+      error.diagnostics = diagnostics;
+      throw error;
+    }
+    const parsed = parseBrokerRows(html);
+    if (!parsed.records.length) {
+      const classification = classifyNoRecordResponse({ text, diagnostics });
+      const error = new Error(classification.outcome === 'source_empty' ? 'explicit_source_empty_signal' : 'no_broker_records_without_trustworthy_empty_signal');
+      error.retryable = classification.retryable;
+      error.classification = classification.outcome;
+      error.sourceEmptyEvidence = classification.source_empty_evidence;
+      error.diagnostics = { ...diagnostics, incomplete_records: parsed.incomplete.length };
+      throw error;
+    }
+    const payload = {
+      schema_version: 4,
+      source: 'histock',
+      source_type: 'third_party_public_page',
+      research_only: true,
+      stock,
+      date,
+      calendar_provenance: 'exact date supplied by source-derived TWSE foreign/OHLCV coverage planner; no data_history_sma calendar read',
+      fetched_at: new Date().toISOString(),
+      source_url: url,
+      response_bytes: diagnostics.response_bytes,
+      record_count: parsed.records.length,
+      incomplete_record_count: parsed.incomplete.length,
+      records: parsed.records,
+      incomplete_records: parsed.incomplete,
+    };
+    const check = validateDailyPayload(payload, { stock, date });
+    if (!check.valid) {
+      const error = new Error(`hard data-quality gate failed: ${JSON.stringify(check.reasons)}`);
+      error.retryable = false;
+      error.classification = 'permanent_error';
+      error.diagnostics = { ...diagnostics, record_quality: check.record_quality };
+      throw error;
+    }
+    return { payload, diagnostics };
+  }
+
   let lastError = null;
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     try {
@@ -210,22 +239,24 @@ function isNetworkError(error) {
   const retryableStatus = lastError?.status === 408 || lastError?.status === 425 || lastError?.status === 429 || lastError?.status >= 500;
   const outcome = lastError?.classification === 'source_empty'
     ? 'source_empty'
-    : lastError?.classification === 'permanent_error'
-      ? 'permanent_error'
-      : (lastError?.retryable === true || retryableStatus || isNetworkError(lastError))
-        ? 'transient_error'
-        : 'permanent_error';
+    : lastError?.classification === 'suspected_degraded_response'
+      ? 'suspected_degraded_response'
+      : lastError?.classification === 'permanent_error'
+        ? 'permanent_error'
+        : (lastError?.retryable === true || retryableStatus || isNetworkError(lastError))
+          ? 'transient_error'
+          : 'permanent_error';
   const savedStatus = writeStatus(outcome, {
     error: lastError?.message || 'unknown',
     http_status: lastError?.status || null,
     diagnostics: lastError?.diagnostics || null,
+    source_empty_evidence: lastError?.sourceEmptyEvidence || null,
   });
   console.error(JSON.stringify({ stock, date, outcome, status_file: savedStatus, error: lastError?.message || 'unknown', diagnostics: lastError?.diagnostics || null }, null, 2));
-  process.exit(outcome === 'source_empty' ? 3 : outcome === 'transient_error' ? 2 : 4);
-})().catch((error) => {
-  try {
-    writeStatus('transient_error', { error: error.message || String(error), diagnostics: null });
-  } catch (_) {}
+  process.exit(outcome === 'source_empty' ? 3 : (outcome === 'transient_error' || outcome === 'suspected_degraded_response') ? 2 : 4);
+}
+
+main().catch((error) => {
   console.error(error.stack || error.message);
   process.exit(1);
 });
