@@ -1,0 +1,241 @@
+name: "[07 研究] Institutional Withdrawal Untouched Validation v1"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'data_research/institutional-flow/validation/validation-run-request-v1.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-untouched-validation-v1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout bounded research slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/workflows/research-institutional-withdrawal-validation-v1.yml
+            scripts/
+            data_fubon/fubon_2026*_sma.json
+            data_twse_foreign_investors/2026*_twse_foreign_investors.json
+            data_tdcc_shareholding/history/1598/
+            data_tdcc_shareholding/history/1616/
+            data_tdcc_shareholding/history/1809/
+            data_tdcc_shareholding/history/6257/
+            data_tdcc_shareholding/history/7791/
+            data_tdcc_shareholding/history/2330/
+            data_tdcc_shareholding/history/2317/
+            data_tdcc_shareholding/history/2454/
+            data_tdcc_shareholding/history/2382/
+            data_tdcc_shareholding/history/2303/
+            data_tdcc_shareholding/history/2449/
+            data_research/institutional-flow/histock/1598/
+            data_research/institutional-flow/histock/1616/
+            data_research/institutional-flow/histock/1809/
+            data_research/institutional-flow/histock/6257/
+            data_research/institutional-flow/histock/7791/
+            data_research/institutional-flow/histock/2330/
+            data_research/institutional-flow/histock/2317/
+            data_research/institutional-flow/histock/2454/
+            data_research/institutional-flow/histock/2382/
+            data_research/institutional-flow/histock/2303/
+            data_research/institutional-flow/histock/2449/
+            data_research/institutional-flow/features/
+            data_research/institutional-flow/backtests/
+            data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-v1.json
+            data_research/institutional-flow/validation/validation-run-request-v1.json
+            data_research/institutional-flow/validation-plan-v1.md
+
+      - name: Sync latest main and record source SHA
+        id: source
+        run: |
+          set -euo pipefail
+          git fetch --depth=2 origin main
+          git reset --hard origin/main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate implementation syntax and Broker source semantics
+        run: |
+          set -euo pipefail
+          node --check scripts/build_institutional_withdrawal_validation_matrix_v1.js
+          node --check scripts/build_institutional_withdrawal_validation_fragile_bridge_v1.js
+          node --check scripts/compute_institutional_withdrawal_validation_outcomes_v1.js
+          node --check scripts/test_institutional_withdrawal_validation_v1.js
+          node scripts/test_institutional_withdrawal_validation_v1.js
+          node scripts/test_histock_broker_status_policy_regressions.js
+
+      - name: Replay frozen development lifecycle without writes
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js \
+            --matrix data_research/institutional-flow/backtests/institutional-withdrawal-v5-feature-matrix.json \
+            --output /tmp/dev-v6.json --report /tmp/dev-v6.md
+          node scripts/analyze_institutional_withdrawal_v6_1_events.js \
+            --input /tmp/dev-v6.json --output /tmp/dev-v61.json --report /tmp/dev-v61.md
+          node scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js \
+            --v61 /tmp/dev-v61.json --v6 /tmp/dev-v6.json \
+            --price-volume data_research/institutional-flow/features/price-volume-v5.json \
+            --foreign data_research/institutional-flow/features/foreign-flow-v5.json \
+            --output /tmp/dev-v62.json --report /tmp/dev-v62.md
+          node scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js \
+            --v62 /tmp/dev-v62.json --v6 /tmp/dev-v6.json \
+            --price-volume data_research/institutional-flow/features/price-volume-v5.json \
+            --foreign data_research/institutional-flow/features/foreign-flow-v5.json \
+            --output /tmp/dev-v63.json --report /tmp/dev-v63.md
+          node scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js \
+            --v63 /tmp/dev-v63.json --v6 /tmp/dev-v6.json \
+            --price-volume data_research/institutional-flow/features/price-volume-v5.json \
+            --foreign data_research/institutional-flow/features/foreign-flow-v5.json \
+            --output /tmp/dev-v64.json --report /tmp/dev-v64.md
+          node scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js \
+            --v64 /tmp/dev-v64.json --v6 /tmp/dev-v6.json \
+            --price-volume data_research/institutional-flow/features/price-volume-v5.json \
+            --foreign data_research/institutional-flow/features/foreign-flow-v5.json \
+            --output /tmp/dev-v65.json --report /tmp/dev-v65.md
+
+      - name: Assert frozen development regression cases
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const v61=require('/tmp/dev-v61.json'),v62=require('/tmp/dev-v62.json'),v63=require('/tmp/dev-v63.json'),v64=require('/tmp/dev-v64.json'),v65=require('/tmp/dev-v65.json');
+          if(v61.fragile_event_count!==10) throw new Error(`fragile_event_count=${v61.fragile_event_count}`);
+          if(v62.events.length!==10||v63.events.length!==10) throw new Error('v6.2/v6.3 event count drift');
+          if(v64.persistence_window_sessions!==3||v64.required_broken_votes!==2||v64.required_supply_votes!==1) throw new Error('v6.4 persistence contract drift');
+          const durable=v64.events.filter(e=>e.persistence_status==='durable_failure_confirmed');
+          if(durable.length!==5) throw new Error(`durable candidates=${durable.length}`);
+          const find=(stock,anchor)=>durable.find(e=>e.stock===stock&&e.fragile_anchor===anchor);
+          const expected=[['2317','2026-06-18','2026-06-26'],['2454','2026-06-12','2026-07-08'],['2382','2026-06-18','2026-07-17'],['2449','2026-05-22','2026-06-08'],['2449','2026-06-18','2026-07-14']];
+          for(const [s,a,c] of expected){const e=find(s,a);if(!e||e.candidate_failure_date!==c)throw new Error(`Frozen durable case drift ${s} ${a}`);}
+          const r=v65.events.find(e=>e.stock==='2449'&&e.fragile_anchor==='2026-05-22');
+          if(r?.status!=='confirmed_reclaim'||r.reclaim_confirmation?.reclaim_date!=='2026-06-22') throw new Error('2449 reclaim regression drift');
+          if((r.reclaim_confirmation?.start_session||0)<4) throw new Error('reclaim starts before session 4');
+          const gap=v63.events.flatMap(e=>e.daily_path||[]).filter(x=>x.date==='2026-06-24');
+          if(!gap.some(x=>x.missing_price===true)) throw new Error('2026-06-24 OHLCV gap was compressed or imputed');
+          console.log('Frozen v6.0-v6.5 development replay passed.');
+          NODE
+
+      - name: Determine source-derived daily data horizon
+        id: horizon
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs=require('fs'),path=require('path');
+          const root='data_twse_foreign_investors';
+          const valid=[];
+          for(const name of fs.readdirSync(root).filter(n=>/^2026\d{4}_twse_foreign_investors\.json$/.test(n)).sort()){
+            try{const p=JSON.parse(fs.readFileSync(path.join(root,name),'utf8'));const raw=name.slice(0,8);if(p.stat==='OK'&&String(p.date)===raw&&Array.isArray(p.data))valid.push(`${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`);}catch{}
+          }
+          const latest=valid.at(-1);if(!latest||latest<'2026-08-21')throw new Error(`Invalid daily horizon ${latest}`);
+          console.log(`latest=${latest}`);
+          NODE
+
+      - name: Build frozen-holdout contemporaneous features
+        env:
+          LATEST: ${{ steps.horizon.outputs.latest }}
+        run: |
+          set -euo pipefail
+          node scripts/build_foreign_flow_research_features.js \
+            --stocks "1598,1616,1809,6257,7791" --start "2026-04-01" --end "$LATEST" \
+            --output /tmp/holdout-foreign.json
+          node scripts/build_price_volume_distribution_features.js \
+            --stocks "1598,1616,1809,6257,7791" --start "2026-04-01" --end "$LATEST" \
+            --output /tmp/holdout-price-volume.json
+          node scripts/build_institutional_withdrawal_validation_matrix_v1.js \
+            --foreign /tmp/holdout-foreign.json --price-volume /tmp/holdout-price-volume.json \
+            --output /tmp/holdout-matrix.json
+          node - <<'NODE'
+          const m=require('/tmp/holdout-matrix.json');
+          const expected=['1598','1616','1809','6257','7791'];
+          if(JSON.stringify(m.sample.stocks)!==JSON.stringify(expected))throw new Error('Frozen sample mutation');
+          const forbidden=new Set(['outcome','return_20d','return_30d','max_drawdown_20d','max_drawdown_30d','structural_repair']);
+          function walk(x,p='root'){if(!x||typeof x!=='object')return;for(const [k,v] of Object.entries(x)){if(forbidden.has(k))throw new Error(`Forbidden classifier-input field ${p}.${k}`);walk(v,`${p}.${k}`);}}
+          walk(m.rows);
+          console.log(`Outcome-free matrix validated: anchors=${m.counts.anchors}, eligible=${m.counts.analysis_eligible}`);
+          NODE
+
+      - name: Run frozen lifecycle on untouched holdout
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js \
+            --matrix /tmp/holdout-matrix.json --output /tmp/holdout-v6.json --report /tmp/holdout-v6.md
+          node scripts/build_institutional_withdrawal_validation_fragile_bridge_v1.js \
+            --v6 /tmp/holdout-v6.json --output /tmp/holdout-v61.json
+          node scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js \
+            --v61 /tmp/holdout-v61.json --v6 /tmp/holdout-v6.json \
+            --price-volume /tmp/holdout-price-volume.json --foreign /tmp/holdout-foreign.json \
+            --output /tmp/holdout-v62.json --report /tmp/holdout-v62.md
+          node scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js \
+            --v62 /tmp/holdout-v62.json --v6 /tmp/holdout-v6.json \
+            --price-volume /tmp/holdout-price-volume.json --foreign /tmp/holdout-foreign.json \
+            --output /tmp/holdout-v63.json --report /tmp/holdout-v63.md
+          node scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js \
+            --v63 /tmp/holdout-v63.json --v6 /tmp/holdout-v6.json \
+            --price-volume /tmp/holdout-price-volume.json --foreign /tmp/holdout-foreign.json \
+            --output /tmp/holdout-v64.json --report /tmp/holdout-v64.md
+          node scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js \
+            --v64 /tmp/holdout-v64.json --v6 /tmp/holdout-v6.json \
+            --price-volume /tmp/holdout-price-volume.json --foreign /tmp/holdout-foreign.json \
+            --output /tmp/holdout-v65.json --report /tmp/holdout-v65.md
+
+      - name: Compute preregistered untouched outcomes and metrics
+        env:
+          SOURCE_MAIN_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/compute_institutional_withdrawal_validation_outcomes_v1.js \
+            --v64 /tmp/holdout-v64.json --v65 /tmp/holdout-v65.json --v6 /tmp/holdout-v6.json \
+            --price-volume /tmp/holdout-price-volume.json --foreign /tmp/holdout-foreign.json \
+            --source-main-sha "$SOURCE_MAIN_SHA"
+
+      - name: Validate canonical artifact contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const o=require('./data_research/institutional-flow/validation/validation-outcomes-v1.json');
+          const m=require('./data_research/institutional-flow/validation/validation-metrics-v1.json');
+          const expected=['1598','1616','1809','6257','7791'],dev=new Set(['2330','2317','2454','2382','2303','2449']);
+          if(o.lifecycle_methodology!=='institutional-withdrawal-lifecycle-v1'||m.lifecycle_methodology!=='institutional-withdrawal-lifecycle-v1')throw new Error('Lifecycle identity drift');
+          if(JSON.stringify(o.sample.stocks)!==JSON.stringify(expected)||JSON.stringify(m.sample.stocks)!==JSON.stringify(expected))throw new Error('Sample identity drift');
+          for(const e of o.events){if(!expected.includes(e.stock)||dev.has(e.stock))throw new Error(`Invalid stock in untouched artifact ${e.stock}`);if(e.resolution_date&&e.metrics.return_20d?.status==='resolved'&&e.metrics.return_20d.session_dates?.[0]<=e.resolution_date)throw new Error('Outcome clock did not start after resolution');}
+          if(m.separation.development_included||m.separation.time_holdout_included||!m.separation.stock_holdout_only)throw new Error('Holdout separation drift');
+          console.log(JSON.stringify({counts:o.counts,promotion_count_gate:m.promotion_count_gate},null,2));
+          NODE
+
+      - name: Commit only canonical validation artifacts
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: record untouched institutional withdrawal validation v1" \
+            data_research/institutional-flow/validation/validation-outcomes-v1.json \
+            data_research/institutional-flow/validation/validation-metrics-v1.json
+
+      - name: Write validation summary
+        if: always()
+        run: |
+          if [ -s data_research/institutional-flow/validation/validation-metrics-v1.json ]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const o=require('./data_research/institutional-flow/validation/validation-outcomes-v1.json');
+          const m=require('./data_research/institutional-flow/validation/validation-metrics-v1.json');
+          console.log('## Untouched Institutional Withdrawal Validation v1');
+          console.log(`- Frozen stock holdout: ${o.sample.stocks.join(',')}`);
+          console.log(`- Source-derived data through: ${o.calendar.data_through}`);
+          console.log(`- Durable failures: ${o.counts.durable_failure_events}`);
+          console.log(`- Resolved lifecycle events: ${o.counts.resolved_lifecycle_events}`);
+          console.log(`- Reclaim / no-reclaim: ${o.counts.failure_plus_reclaim} / ${o.counts.failure_plus_no_reclaim}`);
+          console.log(`- Promotion count gate met: ${m.promotion_count_gate.met}`);
+          console.log('- No tuning or production promotion was performed.');
+          NODE
+          fi
