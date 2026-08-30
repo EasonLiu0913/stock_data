@@ -10,9 +10,7 @@ on:
 permissions:
   contents: write
 
-# Serialize this repair with the validation coverage writers. The repair updates
-# mutable exact-source-date status files, so it must not overlap the coverage
-# expansion workflows that can touch the same Broker evidence tree.
+# Serialize against every validation-coverage writer that can touch Broker evidence.
 concurrency:
   group: institutional-withdrawal-validation-coverage-expansion-v1
   cancel-in-progress: false
@@ -27,9 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       broker_matrix: ${{ steps.plan.outputs.broker_matrix }}
-      unsafe_count: ${{ steps.plan.outputs.unsafe_count }}
-      scheduled_count: ${{ steps.plan.outputs.scheduled_count }}
-      deferred_count: ${{ steps.plan.outputs.deferred_count }}
     steps:
       - name: Checkout outcome-blind Broker evidence slice
         uses: actions/checkout@v4
@@ -74,8 +69,7 @@ jobs:
           if(report.generated_without_outcomes!==true) throw new Error('Audit is not outcome-blind');
           const batchSize=Number(batchSizeRaw), maxBatches=Number(maxBatchesRaw);
           const unsafe=Array.isArray(report.unsafe_requeue)?report.unsafe_requeue:[];
-          const cap=batchSize*maxBatches;
-          const scheduled=unsafe.slice(0,cap);
+          const scheduled=unsafe.slice(0,batchSize*maxBatches);
           const batches=[];
           for(let i=0;i<scheduled.length;i+=batchSize){
             const slice=scheduled.slice(i,i+batchSize);
@@ -83,17 +77,12 @@ jobs:
           }
           const include=batches.length?batches:[{batch:0,task_count:0,tasks:'',skip:true}];
           fs.appendFileSync(outFile,`broker_matrix=${JSON.stringify({include})}\n`);
-          fs.appendFileSync(outFile,`unsafe_count=${unsafe.length}\n`);
-          fs.appendFileSync(outFile,`scheduled_count=${scheduled.length}\n`);
-          fs.appendFileSync(outFile,`deferred_count=${Math.max(0,unsafe.length-scheduled.length)}\n`);
           console.log(JSON.stringify({unsafe:unsafe.length,scheduled:scheduled.length,deferred:Math.max(0,unsafe.length-scheduled.length),batches},null,2));
           NODE
 
-          # The pre-network audit freezes the matrix for this run, but it is not
-          # committed here. Persist the post-repair audit only after all physical
-          # batches complete, so the durable report describes committed state.
           node - "$REPORT" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          const p=require(process.argv[2]);
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
           console.log('## HiStock ambiguous source_empty repair audit');
           console.log(`- Unsafe ambiguous checkpoints: ${p.counts.unsafe_ambiguous_source_empty}`);
           console.log(`- Confirmed terminal source_empty: ${p.counts.confirmed_terminal_source_empty}`);
@@ -147,52 +136,37 @@ jobs:
             git add -- "${paths[@]}"
             if git diff --cached --quiet; then return 0; fi
             git commit -m "$message"
-            local local_commit
-            local_commit="$(git rev-parse HEAD)"
-
+            local local_commit="$(git rev-parse HEAD)"
             for attempt in 1 2 3 4 5; do
               if git push origin HEAD:main; then return 0; fi
               echo "repair checkpoint push raced with origin/main; replaying bounded repair delta (attempt=$attempt)"
-              git rebase --abort 2>/dev/null || true
               git fetch origin main
               mapfile -t changed_files < <(git diff-tree --no-commit-id --name-only -r "$local_commit" -- "${paths[@]}")
               git reset --hard origin/main
-
               local replayed=0
               for file in "${changed_files[@]}"; do
                 [[ -n "$file" ]] || continue
-                # Immutable daily/archive/run-status artifacts are remote-wins if
-                # another serialized writer already landed the exact same path.
                 if [[ "$file" == */daily/* || "$file" == */batch-status/archive/* || "$file" == */batch-status/validation-run-* ]]; then
                   if git cat-file -e "origin/main:$file" 2>/dev/null; then
                     echo "remote already has immutable repair artifact $file; keeping origin/main copy"
                     continue
                   fi
                 fi
-                # exact-source-date status is intentionally mutable: this repair
-                # must be able to replace an audited legacy false source_empty.
                 git checkout "$local_commit" -- "$file"
                 replayed=1
               done
-
-              if [[ "$replayed" -eq 0 ]]; then
-                echo "repair checkpoint already satisfied by origin/main: $message"
-                return 0
-              fi
+              if [[ "$replayed" -eq 0 ]]; then return 0; fi
               git add -- "${paths[@]}"
               if git diff --cached --quiet; then return 0; fi
               git commit -m "$message"
               local_commit="$(git rev-parse HEAD)"
               sleep $((attempt * 5))
             done
-            echo "repair checkpoint push failed after bounded replay: $message" >&2
             return 1
           }
 
           IFS=',' read -ra ITEMS <<< "$TASKS"
           test "${#ITEMS[@]}" -le "$BROKER_BATCH_SIZE"
-          echo "=== HiStock source_empty repair batch $BATCH: $TASKS ==="
-
           for ITEM in "${ITEMS[@]}"; do
             STOCK="${ITEM%@*}"
             DATE="${ITEM#*@}"
@@ -209,11 +183,8 @@ jobs:
 
             set +e
             node scripts/backfill_histock_broker_exact_source_date.js \
-              --stock "$STOCK" \
-              --date "$DATE" \
-              --delay-ms 1800 \
-              --jitter-ms 1200 \
-              --max-retries 2
+              --stock "$STOCK" --date "$DATE" \
+              --delay-ms 1800 --jitter-ms 1200 --max-retries 2
             RC=$?
             set -e
 
@@ -254,33 +225,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          checkpoint_report() {
-            local message="$1"; shift
-            local paths=("$@")
-            git add -- "${paths[@]}"
-            if git diff --cached --quiet; then return 0; fi
-            git commit -m "$message"
-            local local_commit
-            local_commit="$(git rev-parse HEAD)"
-            for attempt in 1 2 3 4 5; do
-              if git push origin HEAD:main; then return 0; fi
-              git fetch origin main
-              mapfile -t changed_files < <(git diff-tree --no-commit-id --name-only -r "$local_commit" -- "${paths[@]}")
-              git reset --hard origin/main
-              for file in "${changed_files[@]}"; do
-                [[ -n "$file" ]] || continue
-                git checkout "$local_commit" -- "$file"
-              done
-              git add -- "${paths[@]}"
-              if git diff --cached --quiet; then return 0; fi
-              git commit -m "$message"
-              local_commit="$(git rev-parse HEAD)"
-              sleep $((attempt * 5))
-            done
-            return 1
-          }
-
           REPORT="data_research/institutional-flow/validation/histock-source-empty-audit-v1.json"
           node scripts/audit_histock_broker_source_empty_checkpoints.js --output "$REPORT"
           test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
@@ -288,12 +232,43 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          checkpoint_report "research: refresh HiStock source-empty repair audit" "$REPORT"
+          git add "$REPORT"
+          if ! git diff --cached --quiet; then
+            git commit -m "research: refresh HiStock source-empty repair audit"
+            LOCAL_COMMIT="$(git rev-parse HEAD)"
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:main; then break; fi
+              git fetch origin main
+              git reset --hard origin/main
+              git checkout "$LOCAL_COMMIT" -- "$REPORT"
+              git add "$REPORT"
+              if git diff --cached --quiet; then break; fi
+              git commit -m "research: refresh HiStock source-empty repair audit"
+              LOCAL_COMMIT="$(git rev-parse HEAD)"
+              sleep $((attempt * 5))
+            done
+          fi
 
           node - "$REPORT" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          const p=require(process.argv[2]);
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
           console.log('## HiStock source_empty repair checkpoint');
           console.log(`- Unsafe ambiguous checkpoints remaining: ${p.counts.unsafe_ambiguous_source_empty}`);
           console.log(`- Superseded by valid daily payload: ${p.counts.source_empty_superseded_by_valid_daily}`);
+          console.log(`- Legacy retained-terminal source_empty: ${p.counts.legacy_terminal_source_empty_unverified}`);
           console.log('- Validation outcomes opened/generated: **NO**.');
           NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
