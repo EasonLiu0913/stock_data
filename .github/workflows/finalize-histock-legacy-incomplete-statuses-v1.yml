@@ -1,0 +1,88 @@
+name: "[07 研究] Finalize HiStock legacy incomplete statuses v1"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/finalize-histock-legacy-incomplete-statuses-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-withdrawal-validation-coverage-expansion-v1
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    name: Preserve provenance and finalize evidence-quality statuses
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bounded research slice
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/histock/1598/
+            data_research/institutional-flow/histock/7791/
+            data_research/institutional-flow/validation/histock-legacy-incomplete-investigation-v1.json
+            data_research/institutional-flow/validation/histock-source-empty-audit-v1.json
+
+      - name: Run regressions, finalize statuses, refresh audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/lib/histock_broker_status_policy.js
+          node --check scripts/finalize_histock_legacy_incomplete_statuses.js
+          node --check scripts/audit_histock_broker_source_empty_checkpoints.js
+          node scripts/test_histock_broker_status_policy_regressions.js
+          node scripts/finalize_histock_legacy_incomplete_statuses.js
+          node scripts/audit_histock_broker_source_empty_checkpoints.js \
+            --output data_research/institutional-flow/validation/histock-source-empty-audit-v1.json
+
+          node - <<'NODE'
+          const a=require('./data_research/institutional-flow/validation/histock-source-empty-audit-v1.json');
+          if(a.counts.unsafe_ambiguous_source_empty!==0) throw new Error('unsafe ambiguous source_empty remains');
+          if(a.counts.legacy_terminal_source_empty_unverified!==0) throw new Error('legacy unverified source_empty remains');
+          if(a.counts.confirmed_source_rows_incomplete!==5) throw new Error(`expected 5 source_rows_incomplete, got ${a.counts.confirmed_source_rows_incomplete}`);
+          if(a.unusable_non_negative_source_rows.some(x=>x.negative_evidence!==false)) throw new Error('incomplete rows were incorrectly marked negative evidence');
+          NODE
+
+          test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
+          test ! -e data_research/institutional-flow/validation/validation-metrics-v1.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/checkpoint_bounded_research_paths.sh \
+            "research: finalize HiStock incomplete-source evidence states" \
+            data_research/institutional-flow/histock/7791/batch-status \
+            data_research/institutional-flow/validation/histock-source-empty-audit-v1.json
+
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const a=require('./data_research/institutional-flow/validation/histock-source-empty-audit-v1.json');
+          console.log('## HiStock legacy source-empty closeout');
+          console.log(`- unsafe ambiguous source_empty: ${a.counts.unsafe_ambiguous_source_empty}`);
+          console.log(`- legacy unverified source_empty: ${a.counts.legacy_terminal_source_empty_unverified}`);
+          console.log(`- confirmed source_rows_incomplete: ${a.counts.confirmed_source_rows_incomplete}`);
+          console.log('- Incomplete source rows are terminal for that exact acquisition date, but are **not negative evidence**.');
+          console.log('- 1598@2026-05-07 known-positive regression: protected.');
+          console.log('- Validation outcomes opened/generated: **NO**.');
+          NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
