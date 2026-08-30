@@ -43,6 +43,108 @@ The documentation is a living project handoff. Do not rely only on prior chat hi
 
 When a major architecture decision, research conclusion, rejected approach, or active development phase changes, update the corresponding document in the same development cycle.
 
+## Phase handoff checkpoints
+
+Every multi-step task, investigation, research thread, backfill, workflow migration, or other effort that is expected to continue across rounds should remain ready for another agent to take over the next round without requiring the user to reconstruct the history manually.
+
+A handoff is a fast path into the current state, not a restriction on how an agent may investigate. A new agent may still search the repository from scratch, independently verify assumptions, or challenge prior conclusions when useful. The requirement is that the repository itself preserves enough current state that continuing from the prior round is possible immediately.
+
+### When to checkpoint
+
+Before beginning the next meaningful round or phase, update and commit the canonical handoff whenever the previous round materially changed any of these:
+
+- current understanding of the problem;
+- root-cause evidence;
+- architecture or implementation decisions;
+- frozen constraints or research rules;
+- completed code/workflow/data changes;
+- known failure modes or rejected approaches;
+- current repository entry points;
+- next-round objective or execution order.
+
+Do not update the handoff for every mechanical request, every individual batch, or every trivial commit. Checkpoint at meaningful phase boundaries: investigation → fix, fix → validation, validation → next coverage wave, research → implementation, implementation → rollout, and similar transitions.
+
+### Canonical handoff location
+
+Prefer an existing project-specific handoff when one already exists. Long-running research or domain projects should keep their handoff close to the project, for example:
+
+```text
+data_research/<project>/<project>-handoff.md
+```
+
+Existing project-specific handoffs remain canonical and should not be duplicated elsewhere.
+
+If no project-specific handoff exists, create one under:
+
+```text
+docs/handoffs/<task-or-project-name>.md
+```
+
+The handoff must state its own canonical repository path near the top so the user and future agents can reference it unambiguously.
+
+### Required handoff contents
+
+A canonical handoff should contain, as applicable:
+
+```text
+# Task / project name
+
+Canonical handoff: <repo path>
+
+## Current phase
+## Objective
+## Frozen decisions / constraints
+## Completed
+## Evidence / validation
+## Current repository state
+## Known problems / rejected approaches
+## Entry points
+## Next round
+## Safety / stop conditions
+## Copy-paste prompt for the next round
+```
+
+`Entry points` should name the scripts, workflows, directories, functions, or documents most likely to matter next. This is meant to save rediscovery time, not to forbid broader repository search.
+
+`Evidence / validation` should include useful commit SHAs, workflow run IDs, test results, representative diagnostics, or other concrete evidence when available.
+
+`Next round` should be executable and ordered. Avoid vague entries such as "continue investigating" when the next concrete checks are already known.
+
+### Copy-paste next-round prompt
+
+Every active handoff must end with a short prompt that the user can copy directly into a new conversation or send to the same agent to continue the work.
+
+Use a structure like:
+
+```text
+Continue the <task/project> from the repository handoff:
+<canonical handoff path>
+
+Read that handoff first, verify the current main branch still matches the referenced state, then continue from its "Next round" section. You may independently search or re-verify the repository when useful. Preserve all frozen decisions, safety constraints, and stop conditions unless new evidence requires revisiting them. Before starting another major round, update and commit the handoff again.
+```
+
+If the next round has a specific action, include it explicitly, for example:
+
+```text
+Next focus: audit historical HiStock source_empty checkpoints created by old long-running runners, classify ambiguous degraded responses, and requeue only unsafe negatives through the fresh-runner physical-batch workflow.
+```
+
+The prompt should be usable without relying on private chat history.
+
+### Handoff commit expectations
+
+The handoff must be committed to the repository before the next major round begins when a checkpoint is required.
+
+Preferred commit-message shape:
+
+```text
+docs: checkpoint <task> handoff
+```
+
+It is also acceptable to include the handoff update in the final implementation or validation commit of the round when that keeps the repository state atomic.
+
+A conversation summary alone is not a durable project handoff. Important continuing state should live in the repository so another conversation or agent can inspect it directly.
+
 ### Research-first architecture rules
 
 - New data or a promising backtest must not directly become a production strategy.
