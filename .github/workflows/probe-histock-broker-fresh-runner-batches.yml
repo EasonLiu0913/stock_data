@@ -2,14 +2,13 @@ name: "[07 研究] Probe HiStock Fresh Runner Batches"
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/probe_histock_broker_fresh_runner.js"
-      - ".github/workflows/probe-histock-broker-fresh-runner-batches.yml"
 
 permissions:
   contents: read
+
+# Diagnostic only. The fresh-runner behavior has already been established and
+# production collection now uses physical-batch workflows. Keep this manual-only
+# so maintenance/script edits cannot accidentally issue 30 repeated HiStock requests.
 
 concurrency:
   group: histock-broker-fresh-runner-probe-v1
