@@ -86,16 +86,19 @@ jobs:
           const p=JSON.parse(fs.readFileSync(planFile,'utf8'));
           if(a.counts.unsafe_ambiguous_source_empty!==0) throw new Error('unsafe source_empty remains');
           if(a.counts.legacy_terminal_source_empty_unverified!==0) throw new Error('legacy unverified source_empty remains');
-          if(a.counts.confirmed_source_rows_incomplete!==5) throw new Error(`expected 5 source_rows_incomplete, got ${a.counts.confirmed_source_rows_incomplete}`);
-          const forbidden=new Set([
+          if(a.counts.confirmed_source_rows_incomplete<5) throw new Error(`expected at least the 5 protected source_rows_incomplete dates, got ${a.counts.confirmed_source_rows_incomplete}`);
+          const protected7791=new Set([
             '7791@2026-04-07','7791@2026-04-28','7791@2026-04-30','7791@2026-05-13','7791@2026-05-22'
           ]);
+          const retained=(a.unusable_non_negative_source_rows||[]).filter(x=>protected7791.has(`${x.stock}@${x.date}`));
+          if(retained.length!==5) throw new Error(`protected 7791 source_rows_incomplete dates missing from audit: ${retained.length}/5`);
+          if(retained.some(x=>x.negative_evidence!==false||x.coverage_usable!==false)) throw new Error('protected 7791 incomplete dates lost non-negative/unusable semantics');
           const scheduled=(p.batches||[]).flatMap(b=>String(b.tasks||'').split(',').filter(Boolean));
-          const leaked=scheduled.filter(x=>forbidden.has(x));
-          if(leaked.length) throw new Error(`source_rows_incomplete dates leaked into Broker queue: ${leaked.join(',')}`);
+          const leaked=scheduled.filter(x=>protected7791.has(x));
+          if(leaked.length) throw new Error(`protected source_rows_incomplete dates leaked into Broker queue: ${leaked.join(',')}`);
           if(p.batch_size_requests!==5) throw new Error('Broker batch_size must remain 5');
           if((p.batches||[]).some(b=>Number(b.task_count)>5)) throw new Error('Broker physical batch exceeds 5 requests');
-          console.log(JSON.stringify({audit:a.counts,broker_plan_counts:p.counts,broker_stocks:p.stocks},null,2));
+          console.log(JSON.stringify({audit:a.counts,broker_plan_counts:p.counts,broker_stocks:p.stocks,protected_7791:retained.length},null,2));
           NODE
 
           test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
@@ -112,8 +115,8 @@ jobs:
           console.log('## Outcome-blind Recovery preflight');
           console.log(`- Broker scheduled requests: ${p.counts.scheduled_tasks}`);
           console.log(`- Broker physical batches: ${p.counts.planned_batches}`);
-          console.log(`- terminal source_rows_incomplete dates: ${p.counts.terminal_source_rows_incomplete_dates}`);
-          console.log('- Legacy incomplete dates leaked into queue: **NO**');
+          console.log(`- terminal source_rows_incomplete dates in current Broker stocks: ${p.counts.terminal_source_rows_incomplete_dates}`);
+          console.log('- Protected 7791 incomplete dates leaked into queue: **NO**');
           console.log('- Validation outcomes opened/generated: **NO**');
           NODE
 
