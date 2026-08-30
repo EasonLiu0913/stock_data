@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "methodology": "institutional-withdrawal-validation-outcomes-v1",
+  "lifecycle_methodology": "institutional-withdrawal-lifecycle-v1",
+  "frozen_development_methodology": "v6.0-v6.5",
+  "research_only": true,
+  "production_safe": false,
+  "source_main_sha": "c088282d00d02c185110ebe1d9e32c634ea0096a",
+  "sample": {
+    "kind": "untouched_stock_holdout",
+    "batch": "batch-1",
+    "stocks": [
+      "1598",
+      "1616",
+      "1809",
+      "6257",
+      "7791"
+    ],
+    "anchor_range": {
+      "start": "2026-04-01",
+      "end": "2026-08-21"
+    }
+  },
+  "calendar": {
+    "policy": "source-derived from valid TWSE foreign-investor daily files; never data_history_sma/trading_days.json",
+    "first": "2026-04-01",
+    "anchor_end": "2026-08-21",
+    "data_through": "2026-08-27",
+    "sessions": 102
+  },
+  "outcome_clock": "Resolution session is the baseline boundary; outcome observations are the next exact source-derived sessions. Missing OHLCV inside a required horizon invalidates that metric and is never skipped or imputed.",
+  "return_definition": "close at exact +N source-derived session divided by resolution-date close minus 1",
+  "max_drawdown_definition": "maximum peak-to-trough drawdown across resolution close plus the exact next N source-derived session closes",
+  "structural_repair_definition": "Outcome-only post-resolution recurrence of the frozen v6.5 repair contract: >=2/3 closes reclaim the original fragile-anchor close and >=2 supply-relief families occur in the same 3-session window within the next 30 source-derived sessions. This field never feeds classification.",
+  "historical_tdcc_caveat": "Historical TDCC remains association-only because exact original publication timestamps are incomplete; production_no_lookahead_safe=false.",
+  "production_no_lookahead_safe": false,
+  "counts": {
+    "durable_failure_events": 0,
+    "resolved_lifecycle_events": 0,
+    "failure_plus_reclaim": 0,
+    "failure_plus_no_reclaim": 0,
+    "unresolved_recovery_followup": 0
+  },
+  "events": [],
+  "guardrails": [
+    "Frozen Batch 1 membership is exact and immutable.",
+    "Development stocks are forbidden from these statistics.",
+    "Classification artifacts are generated before this outcome file and do not read this file.",
+    "Missing OHLCV sessions remain calendar gaps; no horizon is compressed or imputed."
+  ],
+  "generated_at": "2026-08-30T14:24:26.931Z"
+}
