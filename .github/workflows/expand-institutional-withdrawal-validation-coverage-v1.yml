@@ -1,266 +1,39 @@
-name: "[07 研究] Expand Institutional Withdrawal Validation Coverage v1"
+name: "[07 研究] Expand Institutional Withdrawal Validation Coverage v1 [RETIRED]"
 
 on:
-  # Legacy logical-batch workflow. Keep manual-only so planner/fetcher code changes
-  # cannot automatically start a long-running single-runner expansion.
-  # Active network collection must use plan + fresh-runner physical-batch workflows.
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
-concurrency:
-  group: institutional-withdrawal-validation-coverage-expansion-v1
-  cancel-in-progress: false
-
-env:
-  RANGE_START: "2026-04-01"
-  RANGE_END: "2026-08-21"
-  MAX_TDCC_STOCKS: "6"
-  MAX_BROKER_STOCKS: "2"
-  BROKER_BATCH_SIZE: "5"
-  BROKER_MAX_BATCHES: "16"
+# This file intentionally remains as a guard for old bookmarks/manual dispatches.
+# The previous implementation ran TDCC and Broker logical batches inside one
+# long-lived runner and used checkpoint patterns that are no longer allowed.
+# Active collection lives in the Recovery physical-batch workflow:
+#   plan -> frozen queue -> one TDCC stock/fresh runner -> Broker <=5 requests/fresh runner
+#   -> jitter/cooldown -> checkpoint -> re-plan
+# Never restore network collection here.
 
 jobs:
-  expand-coverage:
+  retired:
+    name: Legacy runner retired
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     steps:
-      - name: Checkout coverage-only repository slice
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 1
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            scripts/
-            data_twse_foreign_investors/202604*_twse_foreign_investors.json
-            data_twse_foreign_investors/202605*_twse_foreign_investors.json
-            data_twse_foreign_investors/202606*_twse_foreign_investors.json
-            data_twse_foreign_investors/202607*_twse_foreign_investors.json
-            data_twse_foreign_investors/202608*_twse_foreign_investors.json
-            data_fubon/fubon_202604*_sma.json
-            data_fubon/fubon_202605*_sma.json
-            data_fubon/fubon_202606*_sma.json
-            data_fubon/fubon_202607*_sma.json
-            data_fubon/fubon_202608*_sma.json
-            data_tdcc_shareholding/history/
-            data_research/institutional-flow/histock/
-            data_research/institutional-flow/validation/
-            data_research/institutional-flow/validation-plan-v1.md
-
-      - name: Validate coverage-only implementation contract
+      - name: Explain the supported execution path
         shell: bash
         run: |
-          set -euo pipefail
-          node --check scripts/plan_institutional_withdrawal_validation_expansion_v1.js
-          node --check scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js
-          node --check scripts/backfill_histock_broker_exact_source_date.js
-          node --check scripts/backfill_tdcc_shareholding_history.js
-          node --check scripts/plan_institutional_withdrawal_validation_coverage.js
-          if grep -En "v6-1-event-diagnosis|v61_outcome|return_20d|max_drawdown|future_return|validation-outcomes|validation-metrics" \
-            scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
-            scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js \
-            scripts/backfill_histock_broker_exact_source_date.js; then
-            echo "Forbidden validation-outcome dependency detected"
-            exit 1
-          fi
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ## Legacy institutional-withdrawal coverage runner is retired
 
-      - name: Configure checkpoint commits
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          This workflow no longer performs network collection.
 
-      - name: Freeze coverage-driven expansion order before network requests
-        shell: bash
-        run: |
-          set -euo pipefail
-          PLAN="data_research/institutional-flow/validation/coverage-expansion-v1.json"
-          node scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
-            --start "$RANGE_START" \
-            --end "$RANGE_END" \
-            --max-tdcc-stocks "$MAX_TDCC_STOCKS" \
-            --max-broker-stocks "$MAX_BROKER_STOCKS" \
-            --output "$PLAN"
-          git add "$PLAN"
-          if ! git diff --cached --quiet; then
-            git commit -m "research: checkpoint untouched validation expansion order"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          const p=require('./data_research/institutional-flow/validation/coverage-expansion-v1.json');
-          console.log('## Untouched coverage expansion — frozen request order');
-          console.log(`- Source-derived sessions: ${p.calendar.sessions} (${p.calendar.first} → ${p.calendar.last})`);
-          console.log(`- Pre-TDCC/Broker coverage-eligible stocks: ${p.counts.coverage_eligible_before_tdcc_broker}`);
-          console.log(`- TDCC queue: ${p.counts.tdcc_queue}; scheduled: ${(p.scheduled.tdcc_stocks||[]).join(', ')||'none'}`);
-          console.log(`- Broker queue already TDCC-ready: ${p.counts.broker_queue}`);
-          console.log('- Ordering is deterministic request scheduling only; it is not a validation sample filter.');
-          console.log('- Validation outcomes opened/generated: **NO**.');
-          NODE
+          Use **[07 研究] Expand Institutional Withdrawal Validation Coverage v1 Recovery** for coverage expansion. It uses the repository-mandated physical-batch architecture: planner-frozen work, fresh GitHub runner boundaries, bounded requests, jitter/cooldowns, checkpoints, and re-planning.
 
-      - name: Backfill Historical TDCC in bounded stock batches
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t STOCKS < <(node -e "const p=require('./data_research/institutional-flow/validation/coverage-expansion-v1.json'); for(const s of p.scheduled.tdcc_stocks||[]) console.log(s)")
-          BATCH=0
-          for STOCK in "${STOCKS[@]}"; do
-            echo "=== TDCC batch $BATCH / $STOCK ==="
-            set +e
-            node scripts/backfill_tdcc_shareholding_history.js \
-              --stock "$STOCK" \
-              --start "$RANGE_START" \
-              --end "$RANGE_END" \
-              --delay-ms 2200 \
-              --jitter-ms 1800
-            RC=$?
-            set -e
-            ROOT="data_tdcc_shareholding/history/$STOCK"
-            if [ -s "$ROOT/manifest.json" ]; then
-              node - "$ROOT" "$STOCK" <<'NODE'
-          const fs=require('fs'),path=require('path');
-          const [root,stock]=process.argv.slice(2);let valid=0;
-          for(const name of fs.readdirSync(root).filter(x=>/^\d{8}\.json$/.test(x))){
-            const p=JSON.parse(fs.readFileSync(path.join(root,name),'utf8'));
-            if(p.stock!==stock||p.source!=='tdcc_official_historical_query'||p.historical_backfill!==true||p.production_no_lookahead_safe!==false) throw new Error(`Invalid TDCC provenance: ${name}`);
-            if(Number.isFinite(p.derived?.large_holder_pct)&&Number.isFinite(p.derived?.small_holder_pct)) valid++;
-          }
-          if(valid<1) throw new Error(`No valid TDCC observations for ${stock}`);
-          console.log(JSON.stringify({stock,valid_observations:valid},null,2));
-          NODE
-              git add "$ROOT"
-              if ! git diff --cached --quiet; then
-                git commit -m "research: untouched TDCC batch $BATCH $STOCK"
-                git pull --rebase origin main
-                git push origin HEAD:main
-              fi
-            else
-              echo "TDCC $STOCK produced no checkpointable manifest (exit=$RC)"
-            fi
-            BATCH=$((BATCH+1))
-            PAUSE=$((30 + RANDOM % 31))
-            echo "TDCC cooldown ${PAUSE}s"
-            sleep "$PAUSE"
-          done
-
-      - name: Re-plan after TDCC and freeze bounded Broker exact-date batches
-        shell: bash
-        run: |
-          set -euo pipefail
-          git pull --rebase origin main
-          PLAN="data_research/institutional-flow/validation/coverage-expansion-v1.json"
-          node scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
-            --start "$RANGE_START" \
-            --end "$RANGE_END" \
-            --max-tdcc-stocks "$MAX_TDCC_STOCKS" \
-            --max-broker-stocks "$MAX_BROKER_STOCKS" \
-            --output "$PLAN"
-          node scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js \
-            --expansion "$PLAN" \
-            --target-days 40 \
-            --batch-size-requests "$BROKER_BATCH_SIZE" \
-            --max-batches-per-run "$BROKER_MAX_BATCHES" \
-            --output "$RUNNER_TEMP/broker-plan.json"
-          git add "$PLAN"
-          if ! git diff --cached --quiet; then
-            git commit -m "research: freeze post-TDCC Broker normalization plan"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-          node - "$RUNNER_TEMP/broker-plan.json" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          const p=require(process.argv[2]);
-          console.log('## Exact-date Broker normalization plan');
-          console.log(`- Stocks: ${p.stocks.join(', ')||'none'}`);
-          console.log(`- Needed tasks: ${p.counts.missing_needed_tasks}`);
-          console.log(`- Scheduled this run: ${p.counts.scheduled_tasks}`);
-          console.log(`- Batches: ${p.counts.planned_batches}; max requests/batch: ${p.batch_size_requests}`);
-          console.log('- Every requested date is from that stock Foreign+OHLCV common source-derived dates.');
-          console.log('- Validation outcomes opened/generated: **NO**.');
-          NODE
-
-      - name: Normalize Broker exact dates in bounded request batches
-        shell: bash
-        run: |
-          set -euo pipefail
-          PLAN="$RUNNER_TEMP/broker-plan.json"
-          BATCH_COUNT=$(node -e "const p=require(process.argv[1]);console.log(p.batches.length)" "$PLAN")
-          for ((BATCH=0; BATCH<BATCH_COUNT; BATCH++)); do
-            TASKS=$(node -e "const p=require(process.argv[1]);console.log(p.batches[Number(process.argv[2])].tasks)" "$PLAN" "$BATCH")
-            echo "=== Broker batch $BATCH: $TASKS ==="
-            IFS=',' read -ra ITEMS <<< "$TASKS"
-            test "${#ITEMS[@]}" -le "$BROKER_BATCH_SIZE"
-            for ITEM in "${ITEMS[@]}"; do
-              STOCK="${ITEM%@*}"
-              DATE="${ITEM#*@}"
-              set +e
-              node scripts/backfill_histock_broker_exact_source_date.js \
-                --stock "$STOCK" \
-                --date "$DATE" \
-                --delay-ms 1800 \
-                --jitter-ms 1200 \
-                --max-retries 2
-              RC=$?
-              set -e
-              STATUS_ROOT="data_research/institutional-flow/histock/$STOCK/batch-status"
-              mkdir -p "$STATUS_ROOT"
-              STATUS_FILE="$STATUS_ROOT/validation-run-${GITHUB_RUN_ID}-batch-${BATCH}-${DATE//-/}.json"
-              node - "$STATUS_FILE" "$STOCK" "$DATE" "$RC" <<'NODE'
-          const fs=require('fs');const [file,stock,date,rc]=process.argv.slice(2);
-          fs.writeFileSync(file,JSON.stringify({schema_version:1,research:'institutional-withdrawal-validation-coverage-v1',stock,date,fetch_exit_code:Number(rc),run_id:process.env.GITHUB_RUN_ID,generated_at:new Date().toISOString()},null,2)+'\n');
-          NODE
-              sleep $((2 + RANDOM % 3))
-            done
-            git add data_research/institutional-flow/histock
-            if ! git diff --cached --quiet; then
-              git commit -m "research: untouched Broker batch $BATCH checkpoint"
-              git pull --rebase origin main
-              git push origin HEAD:main
-            fi
-            PAUSE=$((45 + RANDOM % 46))
-            echo "Broker cooldown ${PAUSE}s"
-            sleep "$PAUSE"
-          done
-
-      - name: Refresh frozen validation coverage without opening outcomes
-        shell: bash
-        run: |
-          set -euo pipefail
-          git pull --rebase origin main
-          node scripts/plan_institutional_withdrawal_validation_expansion_v1.js \
-            --start "$RANGE_START" \
-            --end "$RANGE_END" \
-            --max-tdcc-stocks "$MAX_TDCC_STOCKS" \
-            --max-broker-stocks "$MAX_BROKER_STOCKS" \
-            --output data_research/institutional-flow/validation/coverage-expansion-v1.json
-          node scripts/plan_institutional_withdrawal_validation_coverage.js \
-            --start "$RANGE_START" \
-            --end "$RANGE_END" \
-            --output data_research/institutional-flow/validation/validation-coverage-v1.json
-          test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json
-          test ! -e data_research/institutional-flow/validation/validation-metrics-v1.json
-          git add data_research/institutional-flow/validation/coverage-expansion-v1.json \
-                  data_research/institutional-flow/validation/validation-coverage-v1.json
-          if ! git diff --cached --quiet; then
-            git commit -m "research: refresh untouched validation coverage state"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          const x=require('./data_research/institutional-flow/validation/coverage-expansion-v1.json');
-          const v=require('./data_research/institutional-flow/validation/validation-coverage-v1.json');
-          console.log('## Untouched coverage expansion checkpoint');
-          console.log(`- TDCC queue remaining: ${x.counts.tdcc_queue}`);
-          console.log(`- Broker queue remaining: ${x.counts.broker_queue}`);
-          console.log(`- Expansion-ready stocks: ${x.ready_stocks.join(', ')||'none'}`);
-          console.log(`- Frozen coverage planner stock_holdout_ready: ${v.stock_holdout_ready.join(', ')||'none'}`);
-          console.log(`- Frozen coverage planner needs Broker normalization: ${v.stock_holdout_needs_broker_normalization.join(', ')||'none'}`);
-          console.log('- Validation outcomes opened/generated: **NO**.');
-          NODE
+          Do not restore the previous single-runner TDCC/Broker loops or `git pull --rebase` checkpoint pattern here.
+          EOF
 
   schedule-timing-summary:
+    # schedule-timing-summary:v1
     name: 排程時間摘要
     if: always()
     runs-on: ubuntu-latest
