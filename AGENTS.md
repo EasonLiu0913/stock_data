@@ -114,22 +114,42 @@ Canonical handoff: <repo path>
 
 Every active handoff must end with a short prompt that the user can copy directly into a new conversation or send to the same agent to continue the work.
 
+The prompt must be self-guiding. Do not assume a new agent already knows this repository's handoff rules or other repository-level instructions. The prompt must explicitly instruct the receiving agent to read the repository-root `AGENTS.md` first, then read the canonical handoff, then verify the current `main` state before continuing.
+
 Use a structure like:
 
 ```text
-Continue the <task/project> from the repository handoff:
-<canonical handoff path>
+Continue the <task/project> in repository `EasonLiu0913/stock_data`.
 
-Read that handoff first, verify the current main branch still matches the referenced state, then continue from its "Next round" section. You may independently search or re-verify the repository when useful. Preserve all frozen decisions, safety constraints, and stop conditions unless new evidence requires revisiting them. Before starting another major round, update and commit the handoff again.
+Before doing any work:
+1. Read the repository-level instructions in `AGENTS.md`.
+2. Read the canonical handoff for this task: <canonical handoff path>.
+3. Verify that the current `main` branch still matches the commits, workflows, files, and assumptions referenced by the handoff.
+4. Continue from the handoff's `Next round` section.
+
+You may independently search the repository, re-check implementation details, or challenge previous conclusions when useful. The handoff is intended to provide a ready-to-continue state, not to prevent fresh investigation.
+
+Preserve all frozen decisions, research constraints, safety rules, physical-batch requirements, and stop conditions unless new evidence clearly requires revisiting them.
+
+Next focus: <explicit next-round objective>
+
+Before starting another major round or phase:
+- update the canonical handoff with what was completed;
+- record important evidence, commits, workflow runs, failures, and changed understanding;
+- update `Current phase`, `Current repository state`, `Entry points`, and `Next round`;
+- update this copy-paste prompt for the following round;
+- commit the handoff to the repository.
+
+Do not rely on private conversation history as the only record of project state. Keep the repository handoff ready for either the same agent or a new agent to continue from the next phase.
 ```
 
-If the next round has a specific action, include it explicitly, for example:
+If the next round has a specific action, include it explicitly rather than leaving only the placeholder. For example:
 
 ```text
 Next focus: audit historical HiStock source_empty checkpoints created by old long-running runners, classify ambiguous degraded responses, and requeue only unsafe negatives through the fresh-runner physical-batch workflow.
 ```
 
-The prompt should be usable without relying on private chat history.
+The prompt should be usable without relying on private chat history, and it must carry forward the requirement to create the next handoff checkpoint before another major phase begins.
 
 ### Handoff commit expectations
 
