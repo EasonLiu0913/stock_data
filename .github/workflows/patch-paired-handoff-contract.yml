@@ -1,0 +1,274 @@
+name: "[07 維護更新] Patch Paired Handoff Contract"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/patch-paired-handoff-contract.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: patch-paired-handoff-contract
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Patch AGENTS and canonical handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          agents = Path('AGENTS.md')
+          text = agents.read_text()
+
+          old_required = """## Safety / stop conditions\n## Copy-paste prompt for the next round\n"""
+          new_required = """## Safety / stop conditions\n## Prompt A — Next-round implementation prompt\n## Prompt B — Next-round closeout / verification prompt\n"""
+          if old_required not in text:
+              raise SystemExit('AGENTS required-handoff prompt marker not found')
+          text = text.replace(old_required, new_required, 1)
+
+          marker = "### Copy-paste next-round prompt\n"
+          if marker not in text:
+              raise SystemExit('AGENTS copy-paste heading not found')
+          paired = r'''### Paired implementation + closeout prompts
+
+Every active handoff checkpoint must preserve **two** ready-to-copy prompts for the following round, not only an implementation prompt.
+
+- **Prompt A — Next-round implementation prompt**: tells the receiving agent how to start, what to implement or investigate, which frozen constraints and safety rules apply, and where the meaningful phase boundary is.
+- **Prompt B — Next-round closeout / verification prompt**: is written **before Prompt A is executed** and defines how the completed round must be independently checked before it may be considered closed.
+
+Prompt B must be specific to the planned work rather than a generic "check the result" instruction. As applicable, it should predefine the evidence to inspect: commits, workflow runs/jobs, physical-batch boundaries, batch/request caps, jitter/cooldowns, durable checkpoints, race-safe push behavior, response-quality diagnostics, regression tests, coverage/audit counts, forbidden artifacts, deployment state, or other phase-specific invariants.
+
+The intended lifecycle is:
+
+```text
+Handoff N
+│
+├─ Prompt A
+│   Next-round Implementation Prompt
+│
+└─ Prompt B
+    Next-round Closeout / Verification Prompt
+        ↓
+Agent executes Prompt A
+        ↓
+work / workflow completes
+        ↓
+user sends Prompt B to the agent
+        ↓
+agent performs phase-closeout review
+        ↓
+problems found?
+├─ yes
+│   ↓
+│   fix / bounded rerun
+│   ↓
+│   repeat Prompt B verification
+│
+└─ no
+    ↓
+update canonical handoff
+    ↓
+commit handoff
+    ↓
+verify current main has not made the handoff stale
+    ↓
+produce:
+    Prompt A(N+1)
+    Prompt B(N+1)
+    ↓
+stop
+```
+
+The closeout gate is mandatory:
+
+- If Prompt B finds an important failure, lost checkpoint, stale assumption, safety violation, incomplete workflow, or missing evidence, do **not** produce or start the following round as if the phase were clean. Fix or bounded-rerun only what is needed, then repeat the closeout verification.
+- If a preregistered research gate such as a coverage/sample-freeze gate is reached, record and commit that gate at the phase boundary and **stop before opening the next evidence class in the same round**. For example, reaching a sample-freeze gate does not authorize the same round to immediately inspect untouched outcomes. The next explicitly declared phase must do that work.
+- The final closeout response must provide both Prompt A and Prompt B for the next round, and the canonical handoff must preserve both prompts as durable repository state.
+- Do not begin Prompt A(N+1) in the same conversation merely because the prompts were generated, unless the repository owner explicitly asks to continue.
+
+This paired-prompt rule makes the verification criteria preregistered before the work starts and prevents a successful-looking implementation summary from substituting for a real phase-closeout review.
+
+'''
+          text = text.replace(marker, paired + marker, 1)
+
+          text = text.replace(
+              "Every active handoff must end with a short prompt that the user can copy directly into a new conversation or send to the same agent to continue the work.",
+              "Every active handoff must end with the paired Prompt A / Prompt B package defined above. Prompt A is the implementation continuation prompt; Prompt B is the closeout/verification prompt to use after that work finishes.",
+              1,
+          )
+          text = text.replace(
+              "- update this copy-paste prompt for the following round;\n- commit the handoff to the repository.",
+              "- update Prompt A for the following round;\n- update the phase-specific Prompt B closeout criteria for the following round;\n- commit the handoff to the repository.",
+              1,
+          )
+          agents.write_text(text)
+
+          handoff = Path('data_research/institutional-flow/institutional-withdrawal-validation-handoff.md')
+          h = handoff.read_text()
+
+          flow_anchor = "# 1. Frozen methodology / leakage guardrails\n"
+          if flow_anchor not in h:
+              raise SystemExit('handoff flow anchor not found')
+          flow = r'''# Handoff execution loop
+
+This project uses a paired implementation + closeout handoff. Both prompts are prepared before the next round starts so the verification standard is not invented after seeing the result.
+
+```text
+Handoff N
+│
+├─ Prompt A
+│   下一輪 Implementation Prompt
+│
+└─ Prompt B
+    下一輪 Closeout / Verification Prompt
+        ↓
+Agent A 執行 Prompt A
+        ↓
+工作完成 / workflow 結束
+        ↓
+把 Prompt B 貼給 Agent A
+        ↓
+Agent A 做 phase-closeout review
+        ↓
+有問題？
+├─ 有
+│   ↓
+│   修正 / bounded rerun
+│   ↓
+│   再執行 Prompt B 的驗收
+│
+└─ 沒有
+    ↓
+更新 canonical handoff
+    ↓
+commit
+    ↓
+確認 main 沒超前
+    ↓
+產生：
+    Prompt A(N+1)
+    Prompt B(N+1)
+    ↓
+停止
+```
+
+Special research boundary: if the preregistered coverage/sample-freeze gate is reached, Prompt B must verify and commit the frozen sample state, update this handoff, prepare the next-phase Prompt A/Prompt B, and stop. Do **not** open untouched validation outcomes in the same round that first declares the sample frozen.
+
+---
+
+'''
+          h = h.replace(flow_anchor, flow + flow_anchor, 1)
+
+          prompt_heading = "# 9. Ready-to-paste fresh conversation prompt\n"
+          if prompt_heading not in h:
+              raise SystemExit('handoff prompt heading not found')
+          h = h.replace(
+              prompt_heading,
+              "# 9. Paired prompts for the next round\n\n## Prompt A — Next-round implementation prompt\n",
+              1,
+          )
+
+          prompt_b = r'''
+
+## Prompt B — Next-round closeout / verification prompt
+
+Use this only after Prompt A's bounded work or workflow has finished. Do not start another collection wave before this closeout passes.
+
+```text
+The current outcome-blind Institutional Withdrawal Validation round has finished its planned work.
+
+Do not start another research/collection round yet.
+
+First perform the required phase-closeout review according to `AGENTS.md` and the canonical handoff.
+
+Before reviewing results:
+1. Re-read `AGENTS.md`.
+2. Re-read `docs/project-philosophy.md`.
+3. Re-read `docs/roadmap/current-phase.md`.
+4. Re-read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md`.
+5. Verify current `main` and identify every commit/run produced by this round.
+
+Verify the round end-to-end:
+- planning and sample construction remained outcome-blind;
+- no use of `data_history_sma/trading_days.json` was introduced;
+- no frozen v6.0–v6.5 methodology, threshold, weight, lifecycle, gate, or feature semantic was retuned;
+- if a Recovery wave ran, it was exactly one bounded wave from a freshly derived planner queue;
+- TDCC used one stock per fresh runner;
+- Broker used true fresh-runner physical jobs with at most 5 exact-date requests per runner;
+- `max-parallel: 1`, randomized request jitter, batch cooldowns, fresh checkout, and checkpoint-before-exit behavior were preserved;
+- all coverage/checkpoint writers used the bounded race-safe helper semantics and no `git pull --rebase` was reintroduced;
+- no durable checkpoint/data was silently lost to concurrent `main` updates;
+- early/middle/late HiStock evidence shows no regression to degraded HTTP-200/header-only/table_rows=1 false negatives;
+- `source_rows_incomplete` remains non-negative and coverage-unusable, with no blank-cell zero imputation;
+- the protected five `7791` dates and `1598 / 2026-05-07` regression still satisfy their documented contracts;
+- the current `6754` incomplete-source behavior has not been "fixed" by relaxing frozen completeness semantics.
+
+Re-run or inspect the outcome-blind HiStock source-status audit, coverage expansion planner, Broker batch planner, and validation coverage planner. Derive current queues and ready stocks from durable state rather than old hard-coded counts.
+
+Explicitly verify that these files still do not exist:
+- `data_research/institutional-flow/validation/validation-outcomes-v1.json`
+- `data_research/institutional-flow/validation/validation-metrics-v1.json`
+
+Then assess the preregistered coverage/sample-freeze gate.
+
+If the gate is NOT reached:
+- decide from preregistered coverage requirements whether another bounded Recovery wave is warranted; a non-empty queue alone is not sufficient reason;
+- record the next evidence-driven objective without starting it yet.
+
+If the gate IS reached:
+- do not inspect or generate untouched validation outcomes in this round;
+- freeze and document the sample/coverage state;
+- update and commit the canonical handoff declaring the phase boundary;
+- define the next explicit outcome-validation phase and its paired prompts;
+- stop.
+
+If any important failure, lost checkpoint, invariant regression, source-quality ambiguity, or leakage violation is found, do not close the phase. Fix/investigate or bounded-rerun only what is necessary, then repeat this closeout verification.
+
+Only after the closeout is clean:
+1. update `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` with completed work, evidence, commits/runs, changed understanding, durable counts/state, entry points, and Next round;
+2. update both Prompt A and the phase-specific Prompt B for the following round;
+3. commit the handoff to `main`;
+4. verify no later workflow/data commit has made the handoff stale;
+5. respond with the closeout summary, canonical handoff path, final handoff commit SHA, next-round objective, Prompt A(N+1), and Prompt B(N+1).
+
+Do not begin the following round unless I explicitly ask you to continue.
+```
+'''
+          h = h.rstrip() + prompt_b + "\n"
+          handoff.write_text(h)
+          PY
+
+      - name: Commit documentation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AGENTS.md data_research/institutional-flow/institutional-withdrawal-validation-handoff.md
+          git diff --cached --check
+          git commit -m "docs: require paired implementation and closeout prompts"
+          git push origin HEAD:main
+
+  schedule-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        run: |
+          echo '## Patch Paired Handoff Contract' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Trigger: one-time documentation maintenance push.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Purpose: add paired Prompt A / Prompt B handoff rules and project flow.' >> "$GITHUB_STEP_SUMMARY"
