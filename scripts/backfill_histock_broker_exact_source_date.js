@@ -78,6 +78,14 @@ function parseBrokerRows(html) {
   }
   return { records, incomplete };
 }
+function summarizeMissingFieldPatterns(incomplete) {
+  const patterns = {};
+  for (const row of incomplete) {
+    const key = Array.isArray(row.missing_fields) && row.missing_fields.length ? row.missing_fields.join('+') : 'unknown';
+    patterns[key] = (patterns[key] || 0) + 1;
+  }
+  return patterns;
+}
 
 function runKnownPositiveRegression() {
   const fixture = path.join(__dirname, 'fixtures', 'histock', '1598-20260507-known-positive.html');
@@ -94,7 +102,14 @@ function runKnownPositiveRegression() {
   if (degraded.outcome !== 'suspected_degraded_response' || degraded.terminal_for_date !== false) {
     throw new Error(`1598 degraded-page regression failed: ${JSON.stringify(degraded)}`);
   }
-  return { fixture, parsed_records: parsed.records.length, anchors: [kh, mega], degraded_classification: degraded.outcome };
+  const incompleteRows = classifyNoRecordResponse({
+    text: '2026/04/07 券商買進賣出明細',
+    diagnostics: { http_status: 200, response_bytes: 93719, date_visible: true, broker_keywords_visible: true, table_rows: 16, incomplete_records: 30 },
+  });
+  if (incompleteRows.outcome !== 'source_rows_incomplete' || incompleteRows.terminal_for_date !== true || incompleteRows.negative_evidence !== false) {
+    throw new Error(`source_rows_incomplete regression failed: ${JSON.stringify(incompleteRows)}`);
+  }
+  return { fixture, parsed_records: parsed.records.length, anchors: [kh, mega], degraded_classification: degraded.outcome, incomplete_rows_classification: incompleteRows.outcome };
 }
 
 function isNetworkError(error) {
@@ -133,7 +148,7 @@ async function main() {
       stock,
       date,
       outcome,
-      terminal_for_date: outcome === 'success' || outcome === 'source_empty' || outcome === 'permanent_error',
+      terminal_for_date: ['success', 'source_empty', 'source_rows_incomplete', 'permanent_error'].includes(outcome),
       status_policy_version: POLICY_VERSION,
       run_id: process.env.GITHUB_RUN_ID || null,
       updated_at: new Date().toISOString(),
@@ -179,12 +194,25 @@ async function main() {
     }
     const parsed = parseBrokerRows(html);
     if (!parsed.records.length) {
-      const classification = classifyNoRecordResponse({ text, diagnostics });
-      const error = new Error(classification.outcome === 'source_empty' ? 'explicit_source_empty_signal' : 'no_broker_records_without_trustworthy_empty_signal');
+      const noRecordDiagnostics = {
+        ...diagnostics,
+        incomplete_records: parsed.incomplete.length,
+        missing_field_patterns: summarizeMissingFieldPatterns(parsed.incomplete),
+      };
+      const classification = classifyNoRecordResponse({ text, diagnostics: noRecordDiagnostics });
+      const errorMessage = classification.outcome === 'source_empty'
+        ? 'explicit_source_empty_signal'
+        : classification.outcome === 'source_rows_incomplete'
+          ? 'source_rows_present_but_zero_complete_records'
+          : 'no_broker_records_without_trustworthy_empty_signal';
+      const error = new Error(errorMessage);
       error.retryable = classification.retryable;
       error.classification = classification.outcome;
       error.sourceEmptyEvidence = classification.source_empty_evidence;
-      error.diagnostics = { ...diagnostics, incomplete_records: parsed.incomplete.length };
+      error.sourceRowsIncompleteEvidence = classification.source_rows_incomplete_evidence;
+      error.negativeEvidence = classification.negative_evidence === true;
+      error.evidenceQuality = classification.evidence_quality || null;
+      error.diagnostics = noRecordDiagnostics;
       throw error;
     }
     const payload = {
@@ -239,21 +267,29 @@ async function main() {
   const retryableStatus = lastError?.status === 408 || lastError?.status === 425 || lastError?.status === 429 || lastError?.status >= 500;
   const outcome = lastError?.classification === 'source_empty'
     ? 'source_empty'
-    : lastError?.classification === 'suspected_degraded_response'
-      ? 'suspected_degraded_response'
-      : lastError?.classification === 'permanent_error'
-        ? 'permanent_error'
-        : (lastError?.retryable === true || retryableStatus || isNetworkError(lastError))
-          ? 'transient_error'
-          : 'permanent_error';
+    : lastError?.classification === 'source_rows_incomplete'
+      ? 'source_rows_incomplete'
+      : lastError?.classification === 'suspected_degraded_response'
+        ? 'suspected_degraded_response'
+        : lastError?.classification === 'permanent_error'
+          ? 'permanent_error'
+          : (lastError?.retryable === true || retryableStatus || isNetworkError(lastError))
+            ? 'transient_error'
+            : 'permanent_error';
   const savedStatus = writeStatus(outcome, {
     error: lastError?.message || 'unknown',
     http_status: lastError?.status || null,
+    retryable: outcome === 'source_rows_incomplete' ? false : undefined,
+    negative_evidence: outcome === 'source_rows_incomplete' ? false : lastError?.negativeEvidence,
+    coverage_usable: outcome === 'source_rows_incomplete' ? false : undefined,
+    planner_action: outcome === 'source_rows_incomplete' ? 'skip_exact_date_and_continue_alternate_dates' : undefined,
     diagnostics: lastError?.diagnostics || null,
     source_empty_evidence: lastError?.sourceEmptyEvidence || null,
+    source_rows_incomplete_evidence: lastError?.sourceRowsIncompleteEvidence || null,
+    evidence_quality: lastError?.evidenceQuality || null,
   });
   console.error(JSON.stringify({ stock, date, outcome, status_file: savedStatus, error: lastError?.message || 'unknown', diagnostics: lastError?.diagnostics || null }, null, 2));
-  process.exit(outcome === 'source_empty' ? 3 : (outcome === 'transient_error' || outcome === 'suspected_degraded_response') ? 2 : 4);
+  process.exit(outcome === 'source_empty' ? 3 : outcome === 'source_rows_incomplete' ? 5 : (outcome === 'transient_error' || outcome === 'suspected_degraded_response') ? 2 : 4);
 }
 
 main().catch((error) => {
