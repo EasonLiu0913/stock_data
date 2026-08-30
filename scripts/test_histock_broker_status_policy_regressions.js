@@ -52,17 +52,22 @@ assert.strictEqual(legacyDegraded.negative_evidence, false);
 
 const repo = path.resolve(__dirname, '..');
 const positivePath = path.join(repo, 'data_research', 'institutional-flow', 'histock', '1598', 'daily', '20260507.json');
+const positiveStatusPath = path.join(repo, 'data_research', 'institutional-flow', 'histock', '1598', 'batch-status', 'exact-source-date-20260507.json');
 const positive = JSON.parse(fs.readFileSync(positivePath, 'utf8'));
+const positiveStatus = JSON.parse(fs.readFileSync(positiveStatusPath, 'utf8'));
 assert.strictEqual(positive.stock, '1598');
 assert.strictEqual(positive.date, '2026-05-07');
 assert.ok(Number(positive.response_bytes) >= 90000);
 assert.ok(Number(positive.record_count) > 0);
-const kgi = positive.records.find((r) => r.broker === '凱基-汐止');
-const mega = positive.records.find((r) => r.broker === '兆豐-大同');
-assert.ok(kgi, '1598@2026-05-07 must retain 凱基-汐止');
+assert.strictEqual(Number(positiveStatus.diagnostics?.table_rows), 16);
+const kgi = positive.incomplete_records.find((r) => r.broker === '凱基-汐止');
+const mega = positive.incomplete_records.find((r) => r.broker === '兆豐-大同');
+assert.ok(kgi, '1598@2026-05-07 source rows must retain 凱基-汐止');
+assert.strictEqual(kgi.buy, null);
 assert.strictEqual(kgi.net, -74);
 assert.strictEqual(Number(kgi.avg_price), 20.49);
-assert.ok(mega, '1598@2026-05-07 must retain 兆豐-大同');
+assert.ok(mega, '1598@2026-05-07 source rows must retain 兆豐-大同');
+assert.strictEqual(mega.sell, null);
 assert.strictEqual(mega.net, 206);
 assert.strictEqual(Number(mega.avg_price), 20.76);
 
