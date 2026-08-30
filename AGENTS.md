@@ -183,6 +183,51 @@ The closeout gate is mandatory:
 
 This paired-prompt rule preregisters verification criteria before work starts and prevents a successful-looking implementation summary from substituting for a real phase-closeout review.
 
+### Intermediate gates are not Prompt A completion points
+
+A Prompt A may contain preflight, regression, sample-freeze, permission, readiness, syntax, or other intermediate gates. Passing one of those gates is progress inside Prompt A unless the prompt explicitly defines that gate as the round boundary.
+
+- Do not stop a Prompt A merely because an intermediate gate passed when later ordered Prompt A work remains.
+- A progress report after an intermediate gate must say clearly that it is **intermediate status**, that Prompt A is **not complete**, and whether execution is continuing.
+- Do not use wording such as “done”, “finished”, “complete”, “ready for Prompt B”, or equivalent until the Prompt A completion contract is actually satisfied.
+- If an intermediate gate fails, stop only as required by that gate's safety rule; do not silently skip the remaining work or reinterpret the failed gate as completion.
+- Paired Prompt B must not be invoked merely because Prompt A reported an intermediate PASS.
+
+When Prompt A has multiple ordered stages, the expected behavior is:
+
+```text
+intermediate gate PASS
+→ continue remaining Prompt A stages
+→ satisfy implementation / workflow / artifact contract
+→ verify current durable repository state
+→ explicitly report "Prompt A complete — ready for Prompt B"
+→ stop
+```
+
+A handoff should state the Prompt A completion contract explicitly when the round has non-trivial intermediate gates.
+
+### Writer workflow green is not durable completion
+
+For any workflow or implementation round expected to create, update, checkpoint, or push repository state, a green GitHub Actions conclusion is **not sufficient evidence of completion**.
+
+The round is durably complete only when every required output named by the prompt/workflow contract has been verified on the remote repository state that future agents will read.
+
+As applicable, verify all of the following after the write step:
+
+1. the expected artifact/file was generated;
+2. the expected artifact/file was staged or otherwise included in the bounded write set;
+3. a commit containing the expected change exists;
+4. the push/checkpoint actually succeeded;
+5. after fetching current `origin/main`, every expected repo-relative path exists on remote `main`;
+6. the remote blob/content has the required methodology, sample/version identity, date/range, schema, or other contract markers;
+7. the expected commit/run/artifact identity is recorded in the handoff or closeout evidence.
+
+If a writer logs success or exits `0` while expected durable outputs are absent from remote `main`, treat that as a **green-but-incomplete plumbing failure**, not as successful completion. Fix the bounded write/checkpoint defect and rerun the affected writer before Prompt B can pass.
+
+Where a workflow has known canonical output paths, prefer an explicit final remote verification step. Missing required remote artifacts must fail the workflow rather than leave a misleading green run.
+
+This rule applies especially to sparse checkout, bounded checkpoint helpers, generated files outside the checkout cone, push races, and any workflow whose analysis can succeed while persistence silently does nothing.
+
 ### Copy-paste next-round prompt
 
 Every active handoff must end with the paired Prompt A / Prompt B package defined above. Prompt A continues implementation; Prompt B performs closeout/verification after that work finishes.
