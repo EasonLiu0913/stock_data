@@ -54,6 +54,184 @@ When a major architecture decision, research conclusion, rejected approach, or a
 
 See `docs/README.md` and `docs/decisions/` for rationale and details.
 
+## Safe large-fetch architecture: plan + fresh-runner physical batches
+
+These rules are mandatory for any large crawl, backfill, historical repair, multi-stock fetch, coverage expansion, or other workflow that can issue many requests to the same external server.
+
+Whenever the repository owner asks for **plan + batch**, interpret that phrase as this architecture by default. A `for` loop with a small `batch_size` inside one long-running GitHub Actions job is **not** sufficient.
+
+### Required execution model
+
+Use this sequence unless the source has already been proven safe under a stricter documented alternative:
+
+```text
+plan
+→ deterministic bounded queue
+→ split queue into physical batches
+→ fresh GitHub runner for batch 0
+→ checkpoint / push progress
+→ runner exits
+→ cooldown
+→ fresh GitHub runner for batch 1
+→ checkpoint / push progress
+→ runner exits
+→ ...
+→ re-plan from committed state
+→ continue remaining batches
+```
+
+A physical batch means a separate GitHub Actions job / runner lifecycle. The purpose is to reset the runner process, HTTP connection pool, cookies/session state, DNS/network path, and other long-lived request behavior between batches.
+
+Do **not** treat either of these as equivalent to a physical batch:
+
+```text
+one job → loop batch 0 → sleep → loop batch 1 → sleep → loop batch 2
+one runner → many requests with only per-request jitter
+```
+
+Those patterns may still accumulate server-side throttling or soft-block state even if the code calls them "batches".
+
+### Planner requirements
+
+Before fetching, create a deterministic plan from source-derived or otherwise preregistered inputs. The planner must:
+
+- define the bounded universe / date range / stock set before requests begin;
+- calculate the missing work from committed repository state;
+- never cherry-pick successful cases based on outcomes;
+- produce an explicit queue or matrix that can be inspected before execution;
+- cap work per workflow run;
+- define `batch_size` explicitly;
+- preserve deterministic ordering unless randomized ordering is explicitly required for network safety;
+- make re-planning idempotent so completed checkpoints disappear from the next queue;
+- support resume after cancellation, runner failure, or partial completion.
+
+For research workflows, planning must remain outcome-blind when the research contract requires it.
+
+### Physical batch defaults
+
+Unless the source-specific workflow documents a safer tested value:
+
+- Use `strategy.max-parallel: 1` for matrix jobs that hit the same external source.
+- Keep each physical batch small. For HTTP page scraping, start around 1–5 requests per runner rather than dozens or hundreds.
+- Use randomized per-request jitter inside a batch.
+- Use a randomized cooldown between physical batches.
+- End the runner after the batch instead of keeping one runner alive for the whole queue.
+- Re-checkout the latest committed `main` at the start of each new physical batch.
+- Commit/push a checkpoint after each batch when the workflow writes repository data.
+- Keep write-layer concurrency non-canceling: `cancel-in-progress: false`.
+
+Example shape:
+
+```yaml
+jobs:
+  plan:
+    # produce matrix JSON from committed state
+
+  fetch:
+    needs: plan
+    strategy:
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - checkout latest main
+      - randomized physical-batch cooldown
+      - fetch only this bounded batch
+      - validate response quality
+      - checkpoint and push
+```
+
+If one physical batch contains several requests, still add a small randomized delay between requests. The batch boundary does not replace request-level pacing; both are required.
+
+### Fresh-runner requirement
+
+For a source that has shown throttling, incomplete responses, connection degradation, or anti-bot behavior, every physical batch must use a fresh runner by default.
+
+Do not "optimize" the workflow back into one long-running job merely to reduce Actions startup overhead. Server reliability and data correctness take priority over a few extra runner startups.
+
+If a later optimization proposes reusing one runner across many batches, it must first demonstrate with diagnostics that response quality does not deteriorate over time and document that evidence.
+
+### Response-quality guardrails and soft-block detection
+
+HTTP `200` is not sufficient evidence that a request succeeded correctly.
+
+Large-fetch code must record enough diagnostics to detect a soft block or degraded response, for example:
+
+- HTTP status;
+- final URL / redirects;
+- response byte size;
+- requested date / stock visibility;
+- expected source keywords;
+- table row count / record count;
+- known structural markers or sentinel records when available;
+- parser completeness / incomplete-record count.
+
+If the source normally returns a materially larger document or populated table and a later request suddenly returns a much smaller response or header-only table, classify that as a suspected extraction / throttling failure first. Do not immediately persist it as genuine source-empty data.
+
+In particular, a result such as:
+
+```text
+HTTP 200
+requested date visible
+response materially smaller than normal
+table_rows = 1 (header only)
+```
+
+must not automatically become terminal `source_empty` when the source may be soft-blocking or returning a degraded page.
+
+Terminal negative evidence should require an explicit, trustworthy source-side empty signal or another validated rule. Ambiguous degraded responses must remain retryable/reviewable and should be retried later in a fresh-runner physical batch.
+
+### Failure memory and checkpoint rules
+
+Every batch must distinguish at least:
+
+- success;
+- confirmed source-empty / terminal negative;
+- transient network or server error;
+- suspected extraction / soft-block failure;
+- permanent quality failure when genuinely non-retryable.
+
+Persist enough status to avoid blindly repeating confirmed terminal negatives, but do not let a suspected soft block permanently poison the queue.
+
+A successful later fetch must override an earlier ambiguous failure for the same source key/date.
+
+Checkpoint behavior must be concurrency-safe:
+
+- completed files already on remote `main` win;
+- after a push race, fetch the latest `main`, reset/replay safely according to the repository's checkpoint helper, and replay only files still absent;
+- do not use an add/add-prone blind `git pull --rebase` pattern for append-only checkpoint files;
+- a cancelled workflow must be able to resume from committed checkpoints without restarting the entire range.
+
+### Re-plan between waves
+
+After a bounded wave of TDCC, Broker, market, or other source fetches finishes, re-run the planner against the newly committed state before scheduling more work.
+
+Do not precompute one enormous static request list and execute it for hours. Prefer:
+
+```text
+plan wave
+→ physical batches
+→ checkpoint
+→ re-plan
+→ next wave
+```
+
+This reduces duplicate requests and lets newly satisfied coverage gates remove unnecessary work.
+
+### Evidence from the HiStock validation incident
+
+This rule is based on observed repository behavior, not theory.
+
+During institutional-withdrawal validation coverage, a long-running Broker job initially fetched HiStock normally but later returned degraded pages. One known-positive `1598 / 2026-05-07` request returned approximately 69 KB with only `table_rows = 1` and was incorrectly classified as `source_empty`, even though the browser showed a populated broker table.
+
+A diagnostic using fresh-runner physical batches fetched the same known-positive page repeatedly with approximately 90 KB responses, `table_rows = 16`, and the expected broker rows. The production recovery workflow was then changed to true physical batches. Broker batches at the beginning, middle, and end of the run continued returning populated ~90 KB pages with 16 rows, including the final batch, instead of degrading late in the run.
+
+Therefore the repository-level default is:
+
+> **Large external-source fetches use plan + bounded queue + fresh-runner physical batches + jitter + cooldown + checkpoint + re-plan/resume.**
+
+This is the required meaning of **plan + batch** for future work unless the repository owner explicitly asks for a different execution model or a source-specific documented test proves another model equally safe.
+
 ## GitHub Actions workflow architecture
 
 These rules apply to every change under `.github/workflows/**`.
