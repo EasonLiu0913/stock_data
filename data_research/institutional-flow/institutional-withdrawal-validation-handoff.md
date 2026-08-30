@@ -221,6 +221,78 @@ In the **next explicit outcome-validation round**, these paths may be created on
 
 ---
 
+## Frozen lifecycle executable contract and regression anchors
+
+These exact paths are known and must be handed directly to the next agent. Do **not** spend a new round rediscovering them through broad code search.
+
+### Frozen executable chain
+
+- `scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js`
+  - canonical v6 structure classifier;
+  - the `classify(row)` function contains the frozen persistent-transfer, Broker-pressure, absorption/fragility, and structure rules;
+  - classification is constructed from contemporaneous feature fields; the same script also summarizes development outcomes, so validation code must reuse/extract the classifier logic without allowing its outcome-summary code to feed classification.
+- `scripts/analyze_institutional_withdrawal_v6_1_events.js`
+  - development-only event diagnosis/attachment layer;
+  - it identifies frozen `fragile_distribution` events from v6 and attaches development outcome labels;
+  - **do not use its future-outcome labels as validation classifier inputs**. It is a regression/development diagnostic anchor, not a permissible holdout feature source.
+- `scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js`
+  - frozen immediate failure-transition logic and 10-session transition rules.
+- `scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js`
+  - frozen delayed-failure logic for sessions 11–20 and immediate-transition preservation.
+- `scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js`
+  - frozen 3-session durability/persistence confirmation after a candidate failure.
+- `scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js`
+  - frozen sessions 4–15 reclaim/repair logic after durable failure; confirmed reclaim requires the preregistered price-repair + supply-relief contract.
+
+### Frozen preregistered specs
+
+- `data_research/institutional-flow/v6-distribution-absorption-spec.md`
+- `data_research/institutional-flow/v6-2-failure-transition-spec.md`
+- `data_research/institutional-flow/v6-3-delayed-failure-spec.md`
+- `data_research/institutional-flow/v6-4-durable-failure-spec.md`
+- `data_research/institutional-flow/v6-5-recovery-reclaim-spec.md`
+
+v6.1 is a development event-diagnosis layer rather than a new classifier-threshold preregistration; its executable and durable output are listed above/below for regression only.
+
+### Durable development regression anchors
+
+There is no separate standalone `fixtures/` directory for the v6 lifecycle. The durable versioned development outputs themselves are the regression anchors, together with the workflow inline contract assertions:
+
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json`
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-1-event-diagnosis.json`
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json`
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json`
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json`
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json`
+
+Important frozen contracts already encoded in the workflow assertions include:
+
+- v6.1: exactly `10` frozen fragile events plus the `2449` timeline contract;
+- v6.2: exactly `10` fragile events, valid methodology identity, forward transition date, price-failure trigger, and supply-confirmation trigger;
+- v6.4: frozen 3-session persistence contract with `required_broken_votes=2` and `required_supply_votes=1`;
+- v6.5: exactly `5` frozen durable candidates; reclaim cannot start before session 4 and only accepted statuses are the frozen reclaim statuses.
+
+### Existing development regression/contract workflows
+
+- `.github/workflows/research-institutional-withdrawal-v6-1-event-diagnosis.yml`
+- `.github/workflows/research-institutional-withdrawal-v6-2-failure-transition.yml`
+- `.github/workflows/research-institutional-withdrawal-v6-3-delayed-failure.yml`
+- `.github/workflows/research-institutional-withdrawal-v6-4-durable-failure.yml`
+- `.github/workflows/research-institutional-withdrawal-v6-5-recovery-reclaim.yml`
+
+These workflows are historical development runners and some still contain legacy push/checkpoint patterns. For the pre-outcome regression gate, use their inline **validation assertions as the expected contract**; do not blindly dispatch old write-producing workflows merely to prove regression. Prefer bounded local/temp-output replay or a new non-writing regression harness that invokes the exact frozen analyzers and compares contract fields while keeping holdout outcomes unopened.
+
+Evidence locating these canonical files includes:
+
+- `943ceb682a461c8e68b28ca5f9611a2f20023841` — added v6 distribution/absorption analyzer;
+- `190e936b661d1342db02c5146555c0a04994f630` — added v6.1 event diagnosis analyzer;
+- `9ba205ab6904ea0bb8be87d1296c47aee6e3e989` — added v6.2 failure transition analyzer;
+- `8c990a735e210c08a8c34845ad262bb642df3beb` — added v6.3 delayed failure analyzer;
+- `f11382447f150c29c6f5cda2c419544c18974b64` — added v6.4 durability analyzer;
+- `61f1fee575f1fdb317543bd3712f527ec781a34d` — added v6.5 recovery/reclaim analyzer.
+
+---
+
 ## Entry points
 
 Read first:
@@ -231,6 +303,8 @@ Read first:
 - `data_research/institutional-flow/validation-plan-v1.md`;
 - this handoff.
 
+Frozen lifecycle implementation and regression entry points are the exact paths in **Frozen lifecycle executable contract and regression anchors** above. Start there; broad code-search rediscovery is unnecessary unless independently verifying those paths.
+
 Coverage/audit regression entry points:
 
 - `scripts/audit_histock_broker_source_empty_checkpoints.js`;
@@ -239,8 +313,6 @@ Coverage/audit regression entry points:
 - `scripts/plan_institutional_withdrawal_validation_coverage.js`;
 - `scripts/test_histock_broker_status_policy_regressions.js`;
 - `.github/workflows/validate-institutional-withdrawal-recovery-contract-v1.yml`.
-
-Before implementing outcome validation, independently locate and inspect the frozen lifecycle/classifier implementation and existing development regression tests. Reuse the canonical frozen implementation; do not re-derive thresholds from holdout stocks.
 
 ---
 
@@ -252,6 +324,7 @@ Before implementing outcome validation, independently locate and inspect the fro
 - The five frozen holdout stock identities are now preregistered and must not be changed after outcomes are opened.
 - The frozen Batch 1 sample may ultimately contain few or no resolved durable-failure events; that is a valid validation result and must not trigger post-hoc stock addition.
 - Promotion requires the preregistered minimum evidence in `validation-plan-v1.md`; failure to reach those event counts or directional gates is not permission to retune v6.0–v6.5 on the same holdout.
+- v6.1 contains development future-outcome diagnosis. It is a regression anchor only; do not import its outcome labels into holdout classification.
 
 ---
 
@@ -266,7 +339,7 @@ Ordered boundary:
 1. Re-read rules, preregistration, and this frozen-sample handoff.
 2. Verify current `main` has not changed the frozen sample evidence or methodology.
 3. Reconfirm the five-stock sample exactly; do not rerun coverage to add/remove stocks based on outcomes.
-4. Locate/reuse the frozen classifier and development regression tests; prove frozen development regressions still pass before opening holdout outcomes.
+4. Use the exact frozen analyzers, specs, durable development anchors, and workflow contract assertions listed above; do not spend time locating them again. Prove frozen development regressions still pass before opening holdout outcomes.
 5. Implement or execute the minimum validation pipeline required by `validation-plan-v1.md` for Batch 1.
 6. Keep lifecycle classification inputs outcome-free; calculate outcomes only after lifecycle resolution.
 7. Generate stock-holdout validation outputs separately from any development or time-holdout evidence.
@@ -293,6 +366,42 @@ Before implementation or outcome inspection:
 7. Verify the frozen stock-holdout Batch 1 is exactly:
    `1598,1616,1809,6257,7791`.
 8. Before opening holdout outcomes, verify frozen development-regression behavior and ensure no v6.0–v6.5 rule has changed since sample freeze.
+
+Do not search broadly for the frozen lifecycle entry points; their exact locations are already known. Start with these executable files:
+
+- `scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js` — canonical v6 `classify(row)` structure classifier;
+- `scripts/analyze_institutional_withdrawal_v6_1_events.js` — development-only diagnosis/expected-event anchor; its future-outcome labels are NOT validation classifier inputs;
+- `scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js` — frozen immediate failure transition;
+- `scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js` — frozen delayed failure;
+- `scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js` — frozen durability confirmation;
+- `scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js` — frozen recovery/reclaim confirmation.
+
+Read the exact preregistered specs:
+
+- `data_research/institutional-flow/v6-distribution-absorption-spec.md`;
+- `data_research/institutional-flow/v6-2-failure-transition-spec.md`;
+- `data_research/institutional-flow/v6-3-delayed-failure-spec.md`;
+- `data_research/institutional-flow/v6-4-durable-failure-spec.md`;
+- `data_research/institutional-flow/v6-5-recovery-reclaim-spec.md`.
+
+Use these durable development outputs as regression anchors:
+
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-distribution-absorption.json`;
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-1-event-diagnosis.json`;
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-2-failure-transition.json`;
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-3-delayed-failure.json`;
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-4-durable-failure.json`;
+- `data_research/institutional-flow/backtests/institutional-withdrawal-v6-5-recovery-reclaim.json`.
+
+The existing workflow files contain the development output-contract assertions. In particular inspect:
+
+- `.github/workflows/research-institutional-withdrawal-v6-1-event-diagnosis.yml`;
+- `.github/workflows/research-institutional-withdrawal-v6-2-failure-transition.yml`;
+- `.github/workflows/research-institutional-withdrawal-v6-3-delayed-failure.yml`;
+- `.github/workflows/research-institutional-withdrawal-v6-4-durable-failure.yml`;
+- `.github/workflows/research-institutional-withdrawal-v6-5-recovery-reclaim.yml`.
+
+Do not blindly dispatch those historical write-producing workflows for the gate. Reproduce the frozen development contracts in a bounded non-writing/temp-output replay or a dedicated non-writing regression harness. Required anchors include v6.1 fragile_event_count=10, v6.2 events=10 with valid trigger invariants, v6.4 3-session persistence with required_broken_votes=2 and required_supply_votes=1, and v6.5 durable candidates=5 with reclaim starting no earlier than session 4. If current main cannot reproduce the frozen development contracts, STOP before reading holdout future outcomes and fix only the regression/executable-contract gap without retuning methodology.
 
 Preserve all frozen v6.0–v6.5 thresholds, weights, lifecycle definitions, validation gates, feature semantics, development-stock exclusions, source-derived calendar rules, TDCC historical caveats, missing-session rules, and strict Broker completeness semantics.
 
@@ -358,7 +467,17 @@ First verify anti-leakage and frozen-method invariants independently of whether 
 - missing OHLCV sessions were not compressed or imputed;
 - `source_rows_incomplete` Broker evidence was not zero-imputed or relaxed into success.
 
-Re-run the frozen development regression suite and verify the documented cases remain unchanged. Recheck the protected `1598 / 2026-05-07` HiStock regression and five protected `7791` incomplete-source dates so outcome work did not regress source semantics.
+Re-run/independently verify the frozen development regression contract using the exact paths already recorded in the handoff, not broad rediscovery. At minimum compare the current executable chain:
+
+- `scripts/analyze_institutional_withdrawal_v6_distribution_absorption.js`;
+- `scripts/analyze_institutional_withdrawal_v6_2_failure_transition.js`;
+- `scripts/analyze_institutional_withdrawal_v6_3_delayed_failure.js`;
+- `scripts/analyze_institutional_withdrawal_v6_4_durable_failure.js`;
+- `scripts/analyze_institutional_withdrawal_v6_5_recovery_reclaim.js`
+
+against the durable development anchors under `data_research/institutional-flow/backtests/institutional-withdrawal-v6*.json` and the explicit output-contract assertions in `.github/workflows/research-institutional-withdrawal-v6-*.yml`. Treat `scripts/analyze_institutional_withdrawal_v6_1_events.js` and `institutional-withdrawal-v6-1-event-diagnosis.json` as development diagnosis/regression anchors only; verify their future-outcome labels did not leak into holdout classification.
+
+Recheck the protected `1598 / 2026-05-07` HiStock regression and five protected `7791` incomplete-source dates so outcome work did not regress source semantics.
 
 Then inspect the generated validation artifacts and implementation contract:
 
