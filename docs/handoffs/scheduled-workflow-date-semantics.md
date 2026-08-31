@@ -4,119 +4,198 @@ Canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`
 
 ## Current phase
 
-Research / repo-wide audit is complete and frozen at `main` commit `026d34c66fe23adfdfbf0bab322242c2b3480469`. The next phase is bounded migration design and implementation for the first high-risk scheduled workflows whose target business date is still derived from actual runner start time.
+First-wave implementation and mandatory closeout verification are complete.
+
+Repo-wide scheduled-workflow audit was frozen at:
+
+- audit base: `026d34c66fe23adfdfbf0bab322242c2b3480469`
+- audited scheduled workflows: 37
+
+First-wave implementation is durably present on remote `main` through:
+
+- implementation/test head before this handoff update: `53a32a03f5fd340c09876dc94ea22360f17359f4`
+- successful regression run: `33353663345`
+
+Next phase: bounded second-wave migration for remaining workflows whose scheduled semantics still contain runner-clock or mixed-clock dependencies.
 
 ## Objective
 
-Make scheduled collection dates delay-safe without forcing one universal business-date rule onto heterogeneous data sources.
+Make scheduled collection/business dates delay-safe while preserving each workflow's actual domain policy.
 
-The target architecture has two layers:
+Architecture remains deliberately small:
 
-1. **Scheduled occurrence resolution** — derive the logical occurrence date/time from the cron expression that triggered the run, not the delayed runner start time.
-2. **Collection-date policy** — map that logical occurrence to the workflow's business date semantics (`same_trade_date`, `next_trade_date`, source-derived date, latest-complete repository date, etc.).
+1. **Scheduled occurrence resolution** — resolve the intended triggering cron occurrence, not actual runner start time.
+2. **Collection-date policy** — explicitly map that logical occurrence to the workflow's business-date semantics.
 
-Do not use the audit taxonomy D1-D7 as production policy names. D1-D7 describe current mechanisms only.
+Do not use audit taxonomy D1-D7 as production policy identifiers.
 
 ## Frozen decisions / constraints
 
-- Audit inventory is frozen against `main` commit `026d34c66fe23adfdfbf0bab322242c2b3480469` unless current `main` materially changes a relevant workflow.
-- The repo-wide audit found 37 workflows with `on.schedule` at the frozen commit.
-- Do not apply one global rule such as `TARGET_DATE = scheduled Taipei date` to every workflow.
-- Do not derive scheduled business dates from actual runner start time when the workflow's intended semantics are tied to the original scheduled occurrence.
-- Manual `workflow_dispatch` explicit dates remain authoritative and must continue to work.
-- Source/API-derived workflows (for example TDCC or source timestamp datasets) must remain source-derived where that is the canonical business date.
-- Repository/latest-complete-data workflows (prediction/replay) must remain repository-driven and must not be converted to runner-clock semantics.
-- Never silently fall back to an older trading day unless the workflow's explicit collection-date policy allows that behavior.
-- Preserve current crawler behavior and output paths; the first migration is about date resolution, not crawler rewrites.
-- Follow `AGENTS.md`: evidence before abstraction, exact known entry-point paths in handoffs/prompts, paired Prompt A + Prompt B preregistration, and durable remote verification before phase closeout.
+- Manual explicit dates remain authoritative.
+- Source/API-derived dates remain source-derived when they are the canonical business date.
+- Repository/latest-complete-data workflows remain repository-driven.
+- Do not silently fall back to an older trading date unless an explicit policy permits it.
+- Prediction/replay stale-data safety gates must not be weakened.
+- Preserve existing crawler outputs, persistence, and large-fetch plan/fresh-runner physical-batch architecture.
+- Shared infrastructure must remain small and evidence-driven; do not build a scheduler/DAG/plugin framework.
+- Known exact entry-point paths must be carried forward in handoffs/prompts.
 
-## Completed
+## Completed — repo-wide audit
 
-Repo-wide scheduled-workflow audit completed. Key current-mechanism findings:
+The audit established that scheduled workflows do not share one universal date rule. Relevant mechanisms include same trade date, next trade date, repository/latest complete date, source market session, source timestamps/report periods, and date-independent maintenance.
 
-### High-risk first migration group
-
-- `.github/workflows/crawl-twse-mi-index.yml` — D2, actual runner Taipei time minus 3h; desired `same_trade_date`.
-- `.github/workflows/crawl-twse-institutional-investors.yml` — D2, actual runner Taipei time minus 3h; desired `same_trade_date`.
-- `.github/workflows/crawl-twse-margin-balance.yml` — D2, actual runner Taipei time minus 3h; desired `same_trade_date`.
-- `.github/workflows/crawl-fubon-broker-details.yml` — D2, actual runner Taipei time minus 8h; desired explicit scheduled business-date policy.
-- `.github/workflows/crawl-fubon-brokers-trade.yml` — D2, actual runner Taipei time minus 8h; desired explicit scheduled business-date policy.
-- `.github/workflows/crawl-institutional.yml` — D2, runner-clock 14:00 cutoff; desired post-close same logical collection date.
-- `.github/workflows/retry-institutional.yml` — D1, actual runner Taipei date; desired preserve the intended logical collection date.
-- `.github/workflows/retry-sma.yml` — D1, actual runner Taipei date; desired preserve the intended logical collection date.
-- `.github/workflows/crawl-twse-institutional-summaries.yml` — D1, actual runner Taipei date; desired `same_trade_date`.
-- `.github/workflows/crawl-twse-twt49u.yml` — D4, actual runner Taipei date + trading calendar; desired `next_trade_date` from the logical scheduled date.
-
-### Positive references / do not regress
+Positive references that must remain unchanged unless separately justified:
 
 - `.github/workflows/crawl-sma.yml`
 - `scripts/resolve_scheduled_sma_target_date.js`
-
-`crawl-sma.yml` already resolves scheduled runs from `${{ github.event.schedule }}` instead of runner start time and performs a separate source-readiness gate. This is the primary in-repo reference for delay-safe scheduled occurrence behavior.
-
 - `.github/workflows/daily-stock-prediction.yml`
 - `scripts/resolve_latest_complete_prediction_base.js`
-
-Prediction target selection is latest-complete-repository-data driven and intentionally refuses stale fallback when the latest eligible base date is incomplete.
-
 - `.github/workflows/daily-prediction-replay.yml`
 - `scripts/resolve_prediction_replay_date.js`
-
-Replay selects the newest SMA result date and requires matching V1/V2 manifests plus usable result-day prices; it does not silently fall back to an older result date.
-
 - `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
 - `scripts/crawl_tdcc_shareholding_snapshot.js`
 
-TDCC uses source `observed_date` and separately preserves first `available_at`.
+## Completed — first-wave implementation
 
-## Evidence / validation
+Shared implementation:
 
-Frozen audit base:
+- `scripts/resolve_scheduled_collection_date.js`
+  - `resolveScheduledOccurrence`
+  - `resolveScheduledCollectionDate`
+  - `resolveForEvent`
+  - `applyCollectionPolicy`
+  - supported first-wave policies:
+    - `same_calendar_date`
+    - `same_trade_date`
+    - `next_trade_date`
 
-- `main`: `026d34c66fe23adfdfbf0bab322242c2b3480469`
-- commit message: `data: refresh official constraints and apply strategy snapshot 20260831`
+Canonical trading-calendar helpers are reused from:
 
-Representative audit evidence:
+- `scripts/resolve_forecast_dates.js`
+  - `loadHolidaySet`
+  - `isTradingDate`
+  - `nextTradingDate`
 
-- `crawl-twse-mi-index.yml`, `crawl-twse-institutional-investors.yml`, `crawl-twse-margin-balance.yml`: runner Taipei clock with `-3h` magic offset.
-- `crawl-fubon-broker-details.yml`, `crawl-fubon-brokers-trade.yml`: runner Taipei clock with `-8h` magic offset.
-- `crawl-institutional.yml`: runner-clock 14:00 cutoff.
-- `retry-institutional.yml`, `retry-sma.yml`: actual runner Taipei date.
-- `crawl-twse-twt49u.yml`: actual runner Taipei date followed by trading-calendar next-date resolution.
-- `crawl-sma.yml`: schedule-expression-based intended-date resolver.
+Regression tests:
 
-Recent production symptom relevant to this migration: prediction base resolution correctly failed rather than using stale data when expected `20260828` inputs were absent, including:
+- `tests/resolve_scheduled_collection_date.test.js`
 
-- `data_twse_institutional_investors/20260828_twse_institutional_investors.json`
-- `data_twse_mi_index/20260828_twse_mi_index.json`
+Regression CI:
 
-The migration must reduce the chance that delayed scheduled collectors produce the wrong logical date while preserving the prediction safety gate.
+- `.github/workflows/test-scheduled-collection-date.yml`
 
-## Current repository state
+The regression CI intentionally materializes exact current-main inputs with raw GitHub fetches instead of depending on `actions/checkout` / `actions/setup-node`, because the first two runs were blocked/cancelled in the action-download/checkout layer before tests started. This change is test-harness only and does not change production workflow semantics.
 
-At checkpoint creation, current `main` is `026d34c66fe23adfdfbf0bab322242c2b3480469`.
+### Migrated first-wave workflows
 
-No production workflow or date resolver has been modified by this audit phase. The only intended repository change at this checkpoint is this handoff.
+- `.github/workflows/crawl-twse-mi-index.yml`
+- `.github/workflows/crawl-twse-institutional-investors.yml`
+- `.github/workflows/crawl-twse-margin-balance.yml`
+- `.github/workflows/crawl-fubon-broker-details.yml`
+- `.github/workflows/crawl-fubon-brokers-trade.yml`
+- `.github/workflows/crawl-institutional.yml`
+- `.github/workflows/retry-institutional.yml`
+- `.github/workflows/retry-sma.yml`
+- `.github/workflows/crawl-twse-institutional-summaries.yml`
+- `.github/workflows/crawl-twse-twt49u.yml`
+
+Scheduled branches in the first nine workflows use `same_trade_date`. `crawl-twse-twt49u.yml` uses `next_trade_date` from the logical scheduled date and skips when the logical scheduled date itself is not a trading day.
+
+Legacy runner-clock logic is retained only for manual-no-date behavior where preserving existing observable manual behavior was intentional.
+
+`crawl-fubon-broker-details.yml` range planning / physical batching / checkpoint persistence was not modified; only its single scheduled-date resolution path changed.
+
+## First-wave closeout evidence — PASS
+
+### Bounded scope
+
+Compare from audit base `026d34c66...` to implementation/test head `53a32a03...` shows only:
+
+- the ten intended first-wave workflows;
+- `scripts/resolve_scheduled_collection_date.js`;
+- `tests/resolve_scheduled_collection_date.test.js`;
+- `.github/workflows/test-scheduled-collection-date.yml`;
+- this canonical handoff.
+
+No second-wave workflow was opportunistically migrated.
+
+### No scheduled runner-clock target selection
+
+Independent closeout inspection confirmed each first-wave scheduled branch consumes:
+
+- `${{ github.event_name }}`
+- `${{ github.event.schedule }}`
+- shared `scripts/resolve_scheduled_collection_date.js`
+
+The legacy `-3h`, `-8h`, current Taipei date, and 14:00 cutoff logic exists only in manual-no-date fallback branches where preserved intentionally.
+
+### Occurrence + policy separation
+
+`resolveScheduledOccurrence(schedule, now)` resolves the cron occurrence independently from business policy.
+
+`applyCollectionPolicy(logicalDateCompact, policy, holidays)` applies an explicit policy. Policy is not inferred from workflow filename/name.
+
+Trading calendar behavior reuses `scripts/resolve_forecast_dates.js` helpers.
+
+### Deterministic regression coverage
+
+`tests/resolve_scheduled_collection_date.test.js` covers:
+
+- same cron occurrence under later runner start;
+- delay crossing Taipei midnight;
+- delay crossing the legacy 08:00 boundary;
+- delay past the next legacy 14:00 cutoff;
+- Friday occurrence resolved from Saturday runner start;
+- multiple cron expressions;
+- explicit manual date override;
+- no silent holiday fallback for `same_trade_date`;
+- TWT49U Friday -> next trading date across weekend + configured holiday;
+- retry workflows preserving logical scheduled date after midnight delay.
+
+### CI evidence
+
+Successful run:
+
+- workflow: `[07 維護更新] Scheduled Collection Date Regression`
+- run id: `33353663345`
+- conclusion: `success`
+
+Successful regression job steps:
+
+1. `Materialize exact regression inputs from current main` — success
+2. `Validate resolver syntax and delay semantics` — success
+3. `Verify first-wave workflows use the shared scheduled resolver` — success
+
+### Prediction/replay safety non-regression
+
+` scripts/resolve_latest_complete_prediction_base.js ` still throws when the latest eligible base is incomplete and reports:
+
+- `stale_fallback_allowed: false`
+- `checked_candidates: 1`
+- no older-date automatic fallback
+
+` scripts/resolve_prediction_replay_date.js ` still selects the newest SMA result date and validates matching V1/V2 manifests plus usable prices. If the newest SMA date is incomplete, it fails instead of walking backward.
+
+### Durable remote state
+
+Before this handoff checkpoint, remote `main` was verified at:
+
+- `53a32a03f5fd340c09876dc94ea22360f17359f4`
+
+All resolver/test/CI/workflow files existed on remote `main` at that head.
 
 ## Known problems / rejected approaches
 
 Rejected:
 
-- One universal `scheduled Taipei date` rule for all workflows.
-- Reusing D1-D7 as runtime production policy identifiers.
-- Treating trading-calendar awareness as automatically delay-safe when its anchor is still actual runner time.
-- Treating a green workflow run as sufficient if expected durable files are absent from remote `main`.
-- Silently selecting older data to make prediction/replay succeed.
+- one universal scheduled Taipei date policy;
+- using D1-D7 as runtime policies;
+- treating trading-calendar awareness as delay-safe when anchored to runner time;
+- weakening prediction/replay safety to make workflows green;
+- silently rolling `same_trade_date` backward;
+- expanding this work into a generic scheduler framework.
 
-Known risks to test explicitly:
-
-- delayed schedule crossing midnight;
-- delayed schedule crossing a magic cutoff such as 08:00 or 14:00;
-- Friday/weekend/holiday scheduling;
-- next-trading-date policy for TWT49U;
-- manual explicit-date runs;
-- retries running hours later than the original collection attempt;
-- schedule expressions with multiple cron entries in one workflow.
+Known remaining mixed-clock risks are intentionally second-wave or later work.
 
 ## Entry points
 
@@ -127,187 +206,195 @@ Known risks to test explicitly:
 - `docs/roadmap/current-phase.md`
 - `docs/handoffs/scheduled-workflow-date-semantics.md`
 
-### Existing positive reference
+### Shared resolver / tests
 
-- `.github/workflows/crawl-sma.yml`
-- `scripts/resolve_scheduled_sma_target_date.js`
+- `scripts/resolve_scheduled_collection_date.js`
+  - `resolveScheduledOccurrence`
+  - `resolveScheduledCollectionDate`
+  - `resolveForEvent`
+  - `applyCollectionPolicy`
+- `tests/resolve_scheduled_collection_date.test.js`
+- `.github/workflows/test-scheduled-collection-date.yml`
 
-### Existing trading-calendar helpers
+### Trading / forecast-date helpers
 
 - `scripts/resolve_forecast_dates.js`
+  - `resolveForecastDates`
+  - `resolveExplicitForecastDate`
   - `loadHolidaySet`
   - `isTradingDate`
   - `nextTradingDate`
   - `previousTradingDate`
 
-### First migration workflows
+### Prediction/replay safety gates
 
-- `.github/workflows/crawl-twse-mi-index.yml`
-- `.github/workflows/crawl-twse-institutional-investors.yml`
-- `.github/workflows/crawl-twse-margin-balance.yml`
-- `.github/workflows/crawl-fubon-broker-details.yml`
-- `.github/workflows/crawl-fubon-brokers-trade.yml`
-- `.github/workflows/crawl-institutional.yml`
-- `.github/workflows/retry-institutional.yml`
-- `.github/workflows/retry-sma.yml`
-- `.github/workflows/crawl-twse-institutional-summaries.yml`
-- `.github/workflows/crawl-twse-twt49u.yml`
-
-### Relevant downstream safety gates
-
-- `.github/workflows/daily-stock-prediction.yml`
 - `scripts/resolve_latest_complete_prediction_base.js`
-- `.github/workflows/daily-prediction-replay.yml`
 - `scripts/resolve_prediction_replay_date.js`
 
-## Next round
+## Next round — second-wave runner/mixed-clock migration
 
-Implement only the first bounded date-semantics migration group.
+Use a bounded five-workflow scope. Do not migrate all remaining scheduled workflows in one round.
 
-1. Re-read current `main` and verify the ten workflow files above still match the audit assumptions.
-2. Inspect `scripts/resolve_scheduled_sma_target_date.js` and `scripts/resolve_forecast_dates.js` before designing shared code.
-3. Introduce the smallest reusable scheduled-occurrence/date-policy resolver justified by these repeated real cases. Do not build a generic scheduler framework.
-4. The shared interface must distinguish:
-   - event type (`schedule` vs manual/other);
-   - exact triggering cron expression `${{ github.event.schedule }}`;
-   - explicit manual date override;
-   - declared timezone (`Asia/Taipei` for the first group);
-   - collection-date policy (`same_calendar_date` / `same_trade_date` / `next_trade_date` or a similarly small explicit vocabulary actually needed by this group).
-5. Preserve/manual explicit-date behavior.
-6. Migrate the ten first-group workflows away from direct runner-time target-date calculation.
-7. Add deterministic regression fixtures/tests covering schedule delay, midnight crossing, cutoff crossing, weekend/holiday behavior, multiple cron expressions, manual explicit date, and TWT49U next-trading-date behavior.
-8. Do not modify source-derived, repository-driven, prediction, replay, market-news, external-market, TDCC, VIX, EIA, or other second-wave workflows in this round.
-9. Run syntax/tests and inspect the resulting workflow expressions/CLI arguments.
-10. Verify durable remote `main` contains the expected implementation and test files before declaring Prompt A complete.
+1. `.github/workflows/build-twse-market-chart.yml`
+   - current scheduled behavior: runner Taipei time `-8 hours`
+   - desired scheduled behavior: logical scheduled trade date using the shared resolver; preserve manual-no-date 08:00 behavior if needed for backward compatibility.
+   - preserve `start_date` repository-driven behavior.
 
-### Prompt A completion contract
+2. `.github/workflows/calculate-twse-margin-maintenance.yml`
+   - current scheduled behavior: runner Taipei time `-8 hours`
+   - desired scheduled behavior: logical scheduled trade date; dependency readiness still decides whether calculation runs.
+   - preserve manual explicit date and existing required-file gates.
+
+3. `.github/workflows/crawl-market-news.yml`
+   - current workflow calls `scripts/crawl_market_news.js` / `scripts/generate_market_risk_snapshot.js` without a date on scheduled runs; both therefore can inherit runner-current-date semantics.
+   - desired scheduled behavior: derive a delay-safe logical collection date from `${{ github.event.schedule }}` and pass that explicit date consistently to both stages.
+   - use `same_calendar_date`, not `same_trade_date`, because this workflow runs daily including weekends and represents collection-date snapshots rather than TWSE trade-date artifacts.
+
+4. `.github/workflows/publish-daily-gainers-ai-analysis.yml`
+   - current scheduled behavior uses runner Taipei hour: morning -> latest pending; afternoon -> runner Taipei today.
+   - desired behavior: determine morning-vs-evening recheck mode from the **logical scheduled occurrence**, not actual runner start time.
+   - morning schedules should retain latest-pending behavior.
+   - evening schedules should use the logical scheduled Taipei date.
+   - push-derived and manual explicit-date behavior must remain unchanged.
+
+5. `.github/workflows/prepare-market-environment.yml`
+   - current scheduled behavior calls `scripts/resolve_forecast_dates.js` with actual runner `new Date()`.
+   - `scripts/resolve_forecast_dates.js` already supports deterministic `--now`.
+   - desired behavior: scheduled runs resolve the intended cron occurrence first, then feed that intended timestamp into `resolve_forecast_dates.js --now ...`, preserving the existing 15:30/trading-calendar forecast-date semantics while making the anchor delay-safe.
+   - manual explicit `forecast_date` remains authoritative.
+   - do not alter market-environment freshness/integrity gates.
+
+Explicitly out of this second wave:
+
+- source-derived TDCC / CNN Fear & Greed / TAIFEX source-payload workflows;
+- external-market source-session resolver;
+- EIA refined-product observation-date workflow;
+- prediction / replay;
+- Fubon rankings hybrid source-year cleanup;
+- TAIFEX futures-contract runner-anchor cleanup;
+- any third-wave workflow not listed above.
+
+### Second-wave completion contract
 
 Prompt A is complete only when:
 
-- the shared resolver and its regression tests exist on remote `main`;
-- all ten first-group workflows no longer derive automatic scheduled target dates from actual runner clock;
-- explicit manual-date behavior is preserved;
-- TWT49U still resolves the next trading date from the logical scheduled date;
-- tests prove delayed execution does not change the intended target date for the migrated schedule expressions;
-- no second-wave workflow was migrated accidentally;
-- remote `main` has the expected commits/files;
-- the agent explicitly reports `Prompt A complete — ready for Prompt B` and stops.
+- all five named workflows are durably migrated on remote `main`;
+- existing shared resolver is reused/extended only as minimally necessary;
+- `build-twse-market-chart` and margin-maintenance scheduled targets no longer use runner `-8h`;
+- market-news scheduled runs pass one explicit logical collection date to both news and risk-snapshot stages;
+- daily-gainers AI morning/evening mode is based on logical occurrence, with push/manual behavior unchanged;
+- market-environment scheduled runs feed the intended occurrence timestamp into `resolve_forecast_dates.js --now` (or an equivalently deterministic existing interface), while all integrity/freshness gates remain intact;
+- deterministic tests cover delayed runs crossing midnight and the relevant morning/evening / 15:30 boundaries;
+- prediction/replay safety scripts remain unchanged in behavior;
+- no explicitly out-of-scope third-wave workflow is migrated;
+- regression CI is green and remote files are verified;
+- agent explicitly reports `Prompt A complete — ready for Prompt B` and stops.
 
 ## Safety / stop conditions
 
-- If current `main` materially changed any of the ten workflow date semantics after the frozen audit commit, update this handoff before implementation rather than blindly applying the old classification.
-- If a workflow's intended business-date semantics cannot be established from current code/comments/tests, preserve current observable behavior and document the ambiguity; do not invent a new policy silently.
-- If the shared resolver would require speculative generic scheduler/DAG/plugin architecture, stop and keep the solution narrower.
-- Do not change prediction/replay stale-data safety gates.
-- Do not silently fall back to older trading dates.
+- If current `main` changes one of these five workflows materially before implementation, update this handoff first.
+- If a workflow's domain policy cannot be established from current code/tests/comments, preserve current observable semantics and record the ambiguity instead of inventing a policy.
+- Do not convert market-news into a trading-day dataset.
+- Do not replace market-environment freshness/readiness logic; only change the automatic scheduled clock anchor.
+- Do not modify prediction/replay stale fallback behavior.
+- Do not migrate third-wave workflows in the same round.
 
 ## Prompt A — Next-round implementation prompt
 
 Continue the Scheduled Workflow Date Semantics Migration in repository `EasonLiu0913/stock_data`.
 
 Before doing any work:
-1. Read the repository-level instructions in `AGENTS.md`.
+1. Read `AGENTS.md`.
 2. Read `docs/project-philosophy.md` and `docs/roadmap/current-phase.md`.
 3. Read the canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`.
-4. Verify that current `main` still matches the audit assumptions and first-migration entry points recorded in the handoff.
-5. Read the positive reference `.github/workflows/crawl-sma.yml` and `scripts/resolve_scheduled_sma_target_date.js`, plus trading-calendar helpers in `scripts/resolve_forecast_dates.js`.
+4. Verify current remote `main` still matches the first-wave closeout evidence and the five second-wave entry points.
+5. Read:
+   - `scripts/resolve_scheduled_collection_date.js`
+   - `tests/resolve_scheduled_collection_date.test.js`
+   - `.github/workflows/test-scheduled-collection-date.yml`
+   - `scripts/resolve_forecast_dates.js`
 
-Implement only the first bounded high-risk migration group:
+Implement only these five second-wave workflows:
 
-- `.github/workflows/crawl-twse-mi-index.yml`
-- `.github/workflows/crawl-twse-institutional-investors.yml`
-- `.github/workflows/crawl-twse-margin-balance.yml`
-- `.github/workflows/crawl-fubon-broker-details.yml`
-- `.github/workflows/crawl-fubon-brokers-trade.yml`
-- `.github/workflows/crawl-institutional.yml`
-- `.github/workflows/retry-institutional.yml`
-- `.github/workflows/retry-sma.yml`
-- `.github/workflows/crawl-twse-institutional-summaries.yml`
-- `.github/workflows/crawl-twse-twt49u.yml`
+- `.github/workflows/build-twse-market-chart.yml`
+- `.github/workflows/calculate-twse-margin-maintenance.yml`
+- `.github/workflows/crawl-market-news.yml`
+- `.github/workflows/publish-daily-gainers-ai-analysis.yml`
+- `.github/workflows/prepare-market-environment.yml`
 
-Goal: scheduled runs must resolve their logical collection date from the triggering schedule occurrence rather than actual runner start time, then apply an explicit business-date policy. Manual explicit dates must remain authoritative.
+Requirements:
 
-Use the smallest shared resolver justified by these ten proven cases. It must accept the triggering cron expression and expose an explicit small collection-date policy vocabulary sufficient for this group. Reuse `scripts/resolve_forecast_dates.js` trading-calendar helpers where appropriate instead of duplicating calendar logic.
+- `build-twse-market-chart.yml`: scheduled automatic date must use logical scheduled occurrence, not runner `-8h`; preserve explicit/manual and repository-driven `start_date` behavior.
+- `calculate-twse-margin-maintenance.yml`: scheduled automatic date must use logical scheduled occurrence, not runner `-8h`; preserve readiness/missing-file gates.
+- `crawl-market-news.yml`: resolve `same_calendar_date` from logical scheduled occurrence and pass the exact same explicit date to `scripts/crawl_market_news.js` and `scripts/generate_market_risk_snapshot.js`; preserve manual explicit date.
+- `publish-daily-gainers-ai-analysis.yml`: classify morning recheck vs evening same-day mode from logical scheduled occurrence, not runner current hour/date. Morning schedules retain latest-pending selection; evening schedules use logical scheduled Taipei date. Preserve push-derived and manual modes.
+- `prepare-market-environment.yml`: use the logical scheduled occurrence timestamp as the `now` anchor for `scripts/resolve_forecast_dates.js` (which already accepts `--now`). Preserve explicit `forecast_date`, trading-calendar semantics, 15:30 logic, freshness checks, strict mode, verification, and snapshot behavior.
 
-Add deterministic regression tests/fixtures for:
+Extend the shared resolver only if a real second-wave need requires it; do not build a generic scheduling framework.
 
-- delayed execution within the same day;
-- delay crossing Taipei midnight;
-- delay crossing old 08:00 / 14:00 magic cutoffs;
-- weekday/weekend/holiday handling;
-- multiple cron expressions per workflow;
-- manual explicit date override;
-- TWT49U `next_trade_date` from logical scheduled date;
-- retries preserving the intended logical collection date rather than recalculating from the later runner time.
+Add/extend deterministic tests for:
 
-Do not migrate second-wave workflows in this round. Do not weaken `scripts/resolve_latest_complete_prediction_base.js` or `scripts/resolve_prediction_replay_date.js` stale/incomplete-data safety behavior.
+- delayed 23:07 / 02:33 market-chart occurrences crossing the old 08:00 boundary;
+- margin-maintenance delayed past midnight;
+- market-news schedules crossing Taipei midnight while retaining collection date;
+- daily-gainers AI morning/evening mode when runner starts many hours late;
+- market-environment 06:35/07:01/08:02 logical occurrence passed to forecast resolver, including a delay crossing the 15:30 boundary;
+- manual explicit-date behavior for affected workflows.
 
-Before declaring completion, verify the required implementation/test files and all ten migrated workflows exist on current remote `main`. A green CI result without durable remote files is not completion.
+Do not migrate any workflow outside the five named files. Do not change prediction/replay stale-data safety behavior.
 
-Prompt A is complete only when the canonical handoff's `Prompt A completion contract` is fully satisfied. Then explicitly report: `Prompt A complete — ready for Prompt B` and stop.
+Before declaring completion, require a green regression CI and verify the exact implementation/test/workflow files on current remote `main`. Then explicitly report `Prompt A complete — ready for Prompt B` and stop.
 
 ## Prompt B — Next-round closeout / verification prompt
 
-Perform the mandatory closeout review for the first Scheduled Workflow Date Semantics migration in repository `EasonLiu0913/stock_data`.
+Perform the mandatory closeout review for the second-wave Scheduled Workflow Date Semantics migration in repository `EasonLiu0913/stock_data`.
 
 Before verifying:
 1. Read `AGENTS.md`.
 2. Read `docs/handoffs/scheduled-workflow-date-semantics.md`.
-3. Fetch current remote `main`; do not verify only a local worktree or workflow summary.
+3. Fetch current remote `main`; do not verify only local state or workflow summaries.
 
-Verify the implementation independently against these preregistered criteria:
+Independently verify:
 
 1. **Bounded scope**
-   - Confirm exactly the intended first-wave date-semantics implementation/test files and the ten named workflows were changed for migration purposes.
-   - Confirm second-wave workflows were not opportunistically migrated.
+   - Only the five preregistered second-wave workflows plus necessary shared resolver/tests/regression harness and handoff changes were made for this migration.
+   - No third-wave/source-derived/prediction/replay workflow was opportunistically migrated.
 
-2. **No runner-clock automatic target dates in first wave**
-   Inspect each of:
-   - `.github/workflows/crawl-twse-mi-index.yml`
-   - `.github/workflows/crawl-twse-institutional-investors.yml`
-   - `.github/workflows/crawl-twse-margin-balance.yml`
-   - `.github/workflows/crawl-fubon-broker-details.yml`
-   - `.github/workflows/crawl-fubon-brokers-trade.yml`
-   - `.github/workflows/crawl-institutional.yml`
-   - `.github/workflows/retry-institutional.yml`
-   - `.github/workflows/retry-sma.yml`
-   - `.github/workflows/crawl-twse-institutional-summaries.yml`
-   - `.github/workflows/crawl-twse-twt49u.yml`
+2. **Market-chart + margin-maintenance**
+   - Scheduled branches no longer derive target dates from runner `date --date='8 hours ago'`.
+   - Manual explicit/manual-no-date compatibility behavior and dependency gates remain intact.
 
-   Confirm automatic scheduled target selection no longer depends on actual runner `date`, `new Date()`, or magic `-3h` / `-8h` / 14:00 cutoff logic.
+3. **Market news**
+   - Scheduled date is `same_calendar_date` from the triggering occurrence.
+   - One resolved date is explicitly passed to both `scripts/crawl_market_news.js` and `scripts/generate_market_risk_snapshot.js`.
+   - Weekend schedules remain valid calendar-date collections.
 
-3. **Occurrence + policy separation**
-   - Confirm the shared implementation resolves the triggering schedule occurrence from the cron expression/event context.
-   - Confirm collection-date policy is explicit and small, not inferred from workflow filenames.
-   - Confirm trading-calendar behavior reuses canonical helpers where practical.
+4. **Daily-gainers AI publish**
+   - Schedule mode is derived from logical occurrence, not actual runner hour.
+   - Morning schedules still select latest pending analysis.
+   - Evening schedules use logical scheduled Taipei date.
+   - Push-derived date and manual explicit-date paths remain unchanged.
 
-4. **Delay regression tests**
-   Require deterministic tests proving at minimum:
-   - same cron occurrence gives the same target despite later runner-start timestamps;
-   - crossing Taipei midnight does not move a scheduled run to the next logical date;
-   - crossing the old 08:00 / 14:00 boundaries does not change the scheduled target;
-   - weekend/holiday behavior is deterministic;
-   - TWT49U next-trading-date behavior is calculated from logical scheduled date;
-   - explicit manual-date override remains unchanged;
-   - retry workflows preserve the intended logical date.
+5. **Market environment**
+   - Scheduled run uses intended occurrence timestamp as the deterministic `now` input to `scripts/resolve_forecast_dates.js`.
+   - Existing trading-day / 15:30 semantics and `FORECAST_BASE_DATE` / `FORECAST_TARGET_DATE` behavior remain intact.
+   - Existing market-environment freshness/integrity/strict verification gates were not weakened.
 
-5. **Prediction/replay safety non-regression**
-   - Confirm `scripts/resolve_latest_complete_prediction_base.js` still refuses stale fallback when the latest eligible prediction base is incomplete.
-   - Confirm `scripts/resolve_prediction_replay_date.js` still validates the newest SMA result date rather than silently falling back.
+6. **Regression evidence**
+   - Deterministic tests cover delayed execution, midnight/08:00 boundaries, AI morning/evening mode, and market-environment delay crossing 15:30.
+   - Required regression CI completed successfully; record run ID and job-step conclusions.
 
-6. **Durable remote state**
-   - Confirm all expected implementation/test/workflow files are present on current remote `main`.
-   - Record implementation commit SHA(s) and relevant test/CI evidence.
-   - Treat green-but-missing remote artifacts as failure.
+7. **Prediction/replay non-regression**
+   - `scripts/resolve_latest_complete_prediction_base.js` still rejects incomplete latest base without stale fallback.
+   - `scripts/resolve_prediction_replay_date.js` still validates the newest SMA result date without fallback.
 
-7. **Handoff checkpoint**
-   If verification passes, update `docs/handoffs/scheduled-workflow-date-semantics.md` with:
-   - completed implementation;
-   - exact new resolver/test paths and important symbols/commands;
-   - commit/test evidence;
-   - any changed understanding;
-   - next second-wave migration scope;
-   - Prompt A and phase-specific Prompt B for the following round.
-   Commit the handoff and verify current `main` has not made it stale.
+8. **Durable remote state**
+   - Verify expected files/blobs exist on current remote `main`.
+   - Record implementation/test commit SHA(s).
+   - Green-but-missing remote state is failure.
 
-If any criterion fails, fix only the bounded defect, rerun the affected tests, and repeat this closeout review. Do not advance to second-wave migration until Prompt B passes cleanly.
+9. **Handoff checkpoint**
+   - If all checks pass, update this canonical handoff with second-wave completion/evidence, exact entry points, next bounded scope, and preregistered next Prompt A + Prompt B.
+   - Commit the handoff, re-fetch current `main`, and confirm it is not stale.
+
+If any criterion fails, fix only the bounded defect, rerun the affected regression, and repeat Prompt B. Do not advance to the third wave until Prompt B passes cleanly.
