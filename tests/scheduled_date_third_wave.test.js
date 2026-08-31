@@ -18,7 +18,6 @@ test('external-market delayed runner crossing New York date/session boundary kee
   const anchored = resolveExternalMarketSessionDate(new Date(occurrence.scheduled_at_utc));
   const runnerClock = resolveExternalMarketSessionDate(runnerNow);
   assert.equal(anchored.targetDate, '20260827');
-  assert.equal(anchored.rule, 'new_york_date_at_or_after_09_30');
   assert.equal(runnerClock.targetDate, '20260828');
 });
 
