@@ -42,15 +42,20 @@ jobs:
         run: npm ci
 
       - name: Run TWT49U safety tests
-        run: node --test tests/crawl_twse_twt49u.test.js tests/crawl_twse_twt49u_safe.test.js
+        run: |
+          node --test tests/crawl_twse_twt49u.test.js tests/crawl_twse_twt49u_safe.test.js
+          node --test tests/resolve_scheduled_collection_date.test.js
 
       - name: Resolve requested date
         id: date
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
           INPUT_DATE: ${{ inputs.date || '' }}
           FORCE_RUN: ${{ inputs.force || false }}
         run: |
+          set -euo pipefail
           echo "force=$FORCE_RUN" >> "$GITHUB_OUTPUT"
 
           if [ -n "$INPUT_DATE" ]; then
@@ -64,6 +69,29 @@ jobs:
             exit 0
           fi
 
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$SCHEDULE_EXPR" \
+              --policy next_trade_date \
+              --json)
+            logical_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.logical_date);' "$resolved")
+            target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$resolved")
+            is_trading_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.is_trading_date));' "$resolved")
+            if [ "$is_trading_date" != "true" ]; then
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "date=" >> "$GITHUB_OUTPUT"
+              echo "Skip: logical scheduled date $logical_date is a weekend or configured non-trading day."
+              exit 0
+            fi
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "date=$target_date" >> "$GITHUB_OUTPUT"
+            echo "Delay-safe scheduled date: $resolved"
+            echo "Trading day $logical_date: crawl next trading date $target_date (force=$FORCE_RUN)."
+            exit 0
+          fi
+
+          # Preserve legacy manual no-date behavior.
           taipei_today=$(TZ=Asia/Taipei date +%F)
           if ! node -e '
             const { isTradingDate, loadHolidaySet } = require("./scripts/resolve_forecast_dates");
