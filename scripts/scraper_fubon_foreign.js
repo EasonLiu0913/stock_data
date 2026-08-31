@@ -1,6 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const { resolveFubonRankingDate, requiredAnchorFromEnv } = require('./resolve_fubon_ranking_date');
 
 const NAVIGATION_TIMEOUT_MS = 45000;
 const MAX_ATTEMPTS = 3;
@@ -28,70 +29,26 @@ const targets = [
 ];
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-function randomDelay(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-async function waitWithLog(label, min, max) {
-    const delay = randomDelay(min, max);
-    console.log(`⏳ ${label}: waiting ${delay}ms`);
-    await wait(delay);
-}
-
-function csvEscape(value) {
-    const text = String(value ?? '');
-    if (/[",\n\r]/.test(text)) {
-        return `"${text.replace(/"/g, '""')}"`;
-    }
-    return text;
-}
-
-function getHeaders(targetName) {
-    return ['Rank', 'Stock', 'Price', 'Change', 'ChangePercent', targetName.includes('賣超') ? 'NetSell' : 'NetBuy'];
-}
-
-function getDateString(pageDate) {
-    if (pageDate) {
-        const currentYear = new Date().getFullYear();
-        const [month, day] = pageDate.split('/');
-        return `${currentYear}${month.padStart(2, '0')}${day.padStart(2, '0')}`;
-    }
-
-    return new Date().toISOString().slice(0, 10).replace(/-/g, '');
-}
+function randomDelay(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+async function waitWithLog(label, min, max) { const delay = randomDelay(min, max); console.log(`⏳ ${label}: waiting ${delay}ms`); await wait(delay); }
+function csvEscape(value) { const text = String(value ?? ''); return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; }
+function getHeaders(targetName) { return ['Rank', 'Stock', 'Price', 'Change', 'ChangePercent', targetName.includes('賣超') ? 'NetSell' : 'NetBuy']; }
 
 async function extractTarget(browser, target) {
     let lastError = null;
-
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         const page = await browser.newPage();
         try {
             console.log(`Navigating to ${target.url} (attempt ${attempt}/${MAX_ATTEMPTS})...`);
-            await page.goto(target.url, {
-                waitUntil: 'domcontentloaded',
-                timeout: NAVIGATION_TIMEOUT_MS,
-            });
-
+            await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS });
             const data = await page.evaluate(() => {
                 const normalizeText = text => text.replace(/\s+/g, ' ').trim();
-                const tables = Array.from(document.querySelectorAll('table'));
-                const targetTable = tables.find(table => {
-                    const text = table.innerText;
-                    return text.includes('名次') && text.includes('股票名稱');
-                });
-
+                const targetTable = Array.from(document.querySelectorAll('table')).find(table => table.innerText.includes('名次') && table.innerText.includes('股票名稱'));
                 if (!targetTable) return [];
-
                 return Array.from(targetTable.querySelectorAll('tr'))
-                    .filter(row => {
-                        const cells = row.querySelectorAll('td');
-                        if (cells.length < 5) return false;
-                        return /^\d+$/.test(normalizeText(cells[0].innerText));
-                    })
+                    .filter(row => { const cells = row.querySelectorAll('td'); return cells.length >= 5 && /^\d+$/.test(normalizeText(cells[0].innerText)); })
                     .map(row => Array.from(row.querySelectorAll('td')).map(cell => normalizeText(cell.innerText)));
             });
-
             const pageDate = await page.evaluate(() => {
                 const bodyText = document.body.innerText;
                 const labeledDate = bodyText.match(/日期：(\d{2}\/\d{2})/);
@@ -99,26 +56,15 @@ async function extractTarget(browser, target) {
                 const anyDate = bodyText.match(/(\d{2}\/\d{2})/);
                 return anyDate ? anyDate[1] : null;
             });
-
-            if (data.length === 0) {
-                throw new Error(`No data extracted for ${target.name}`);
-            }
-
+            if (data.length === 0) throw new Error(`No data extracted for ${target.name}`);
             console.log(`Extracted ${data.length} rows for ${target.name}. Date: ${pageDate}`);
             return { data, pageDate };
         } catch (error) {
             lastError = error;
             console.warn(`⚠️ ${target.name} attempt ${attempt}/${MAX_ATTEMPTS} failed: ${error.message}`);
-        } finally {
-            await page.close().catch(() => {});
-        }
-
-        if (attempt < MAX_ATTEMPTS) {
-            const base = RETRY_BASE_DELAY_MS * (2 ** (attempt - 1));
-            await waitWithLog(`Retry backoff for ${target.name}`, base, base * 2);
-        }
+        } finally { await page.close().catch(() => {}); }
+        if (attempt < MAX_ATTEMPTS) { const base = RETRY_BASE_DELAY_MS * (2 ** (attempt - 1)); await waitWithLog(`Retry backoff for ${target.name}`, base, base * 2); }
     }
-
     throw lastError;
 }
 
@@ -126,43 +72,28 @@ async function extractTarget(browser, target) {
     const browser = await chromium.launch({ headless: true });
     const failedTargets = [];
     const dirPath = path.join(__dirname, '../data_fubon');
+    const dateAnchor = requiredAnchorFromEnv();
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
-
     try {
         for (let index = 0; index < targets.length; index++) {
             const target = targets[index];
             try {
                 const { data, pageDate } = await extractTarget(browser, target);
-                const csvContent = [
-                    getHeaders(target.name).map(csvEscape).join(','),
-                    ...data.map(row => row.map(csvEscape).join(',')),
-                ].join('\n') + '\n';
-
-                const dateStr = getDateString(pageDate);
+                const csvContent = [getHeaders(target.name).map(csvEscape).join(','), ...data.map(row => row.map(csvEscape).join(','))].join('\n') + '\n';
+                const dateStr = resolveFubonRankingDate(pageDate, dateAnchor);
                 const filename = `fubon_${dateStr}_${target.name}.csv`;
-                const filePath = path.join(dirPath, filename);
-                fs.writeFileSync(filePath, csvContent, 'utf8');
+                fs.writeFileSync(path.join(dirPath, filename), csvContent, 'utf8');
                 console.log(`✅ Successfully saved data to ${filename}`);
             } catch (error) {
                 failedTargets.push({ name: target.name, url: target.url, error: error.message });
                 console.error(`❌ Giving up on ${target.name} after ${MAX_ATTEMPTS} attempts: ${error.message}`);
             }
-
-            if (index < targets.length - 1) {
-                await waitWithLog('Normal pacing before next ranking page', NORMAL_DELAY_MIN_MS, NORMAL_DELAY_MAX_MS);
-            }
+            if (index < targets.length - 1) await waitWithLog('Normal pacing before next ranking page', NORMAL_DELAY_MIN_MS, NORMAL_DELAY_MAX_MS);
         }
-
         if (failedTargets.length > 0) {
             console.error(`\n❌ ${failedTargets.length} foreign ranking target(s) still failed:`);
-            for (const failure of failedTargets) {
-                console.error(`- ${failure.name}: ${failure.error}`);
-            }
+            for (const failure of failedTargets) console.error(`- ${failure.name}: ${failure.error}`);
             process.exitCode = 1;
-        } else {
-            console.log(`\n✅ All ${targets.length} foreign ranking targets completed successfully.`);
-        }
-    } finally {
-        await browser.close();
-    }
+        } else console.log(`\n✅ All ${targets.length} foreign ranking targets completed successfully.`);
+    } finally { await browser.close(); }
 })();
