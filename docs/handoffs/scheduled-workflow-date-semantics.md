@@ -4,63 +4,66 @@ Canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`
 
 ## Current phase
 
-The repo-wide audit plus first-wave, second-wave, and third-wave migrations are complete.
+### Completed round — fifth-wave TAIFEX futures/options expected-date migration
 
-### Completed round — fourth-wave source-derived semantics audit
+Round identity: `fifth-wave-taifex-futures-options-expected-date-migration`
 
-Round identity: `fourth-wave-source-derived-semantics-audit`
+Prompt A starting baseline: `2642a232b8cdee947e9120920a9dab3c4c61ae1b`
 
-Prompt A audit baseline: `e355f828935c5d45cee5d099dca0ab9aa6e51c63`
+Prompt A implementation commit: `bf50cf55330fb3d7d6325643a972b9b96ea58471`
 
-Prompt A durable audit findings commit: `303bd5b4342a6825f16dd22992378a4850707b25`
+Prompt A final implementation/test head: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
 
 Prompt B closeout: PASS
 
-The fourth wave was audit/classification only. No production workflow, crawler, regression implementation, prediction/replay script, or unrelated workflow was changed. The only Prompt A repository change from baseline to audit findings commit was this canonical handoff.
+Exact-head regression:
 
-Verified classifications:
+- workflow: `.github/workflows/test-scheduled-collection-date.yml`
+- run ID: `33369408473`
+- regression job ID: `99416854795`
+- `head_sha`: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
+- materialized/tested SHA: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
+- conclusion: `success`
+- deterministic tests: 34 pass, 0 fail
 
-- TDCC shareholding snapshot: `no_migration`
-- CNN Fear & Greed: `no_migration`
-- TAIFEX futures/options source payload: `needs_migration_next_round`
+### Active / next round — sixth-wave residual scheduled-date audit
 
-### Active / next round — fifth-wave TAIFEX futures/options expected-date migration
-
-Active round identity: `fifth-wave-taifex-futures-options-expected-date-migration`
+Active round identity: `sixth-wave-residual-scheduled-date-audit`
 
 Status: preregistered; Prompt A not started by this closeout.
 
-The fifth wave is the narrowly bounded scheduled expected-date migration for TAIFEX futures/options. Its Prompt A and Prompt B are preregistered below and are now the active paired prompts.
+This next round is audit/classification only. It must determine whether any scheduled workflow with business/source-date semantics remains outside the already migrated or explicitly no-migration set. It must not perform production migration in the same round.
 
 ## Objective
 
-Make scheduled collection/business dates delay-safe while preserving each workflow's real domain policy.
+Make scheduled collection/business dates delay-safe while preserving each workflow's true domain policy and source-of-truth date semantics.
 
-Architecture remains deliberately small:
+Architecture remains intentionally small:
 
-1. **Scheduled occurrence resolution** — reconstruct the intended triggering cron occurrence when schedule logically owns an expected business date.
-2. **Domain date policy** — map the occurrence to the workflow's business/source-date expectation.
-3. **Source-derived date preservation** — when the upstream payload is authoritative for the observation/business date, keep that date source-derived and use any scheduled date only as an expected-date validation when justified.
+1. reconstruct the intended scheduled occurrence only when the schedule logically owns an expected business date;
+2. map the occurrence through the domain-specific business-date policy;
+3. preserve source/API-derived observation dates as canonical when the upstream payload owns the business date;
+4. preserve repository/latest-complete-data ownership where repository state, not runner time, is authoritative.
 
-Do not use the audit taxonomy D1-D7 as production policy identifiers.
+Do not use the historical D1-D7 audit taxonomy as production policy identifiers.
 
 ## Frozen decisions / constraints
 
 - Manual explicit dates remain authoritative.
-- Source/API-derived dates remain source-derived when they are the canonical business date.
+- Source/API-derived dates remain source-derived when they are canonical business dates.
 - Repository/latest-complete-data workflows remain repository-driven.
 - Do not silently fall back to an older trading date unless that fallback is an explicit preserved domain policy.
 - Prediction/replay stale-data safety gates must not be weakened.
-- Preserve existing crawler outputs, validation gates, persistence, and large-fetch plan/fresh-runner physical-batch architecture.
+- Preserve crawler outputs, validation gates, persistence, and plan + fresh-runner physical-batch architecture.
 - Shared infrastructure must remain small and evidence-driven; do not build a scheduler/DAG/plugin framework.
-- Known exact entry-point paths must be carried forward in handoffs/prompts.
-- A green workflow is not completion unless the tested implementation is the exact intended implementation head and required durable files are present on remote `main`.
-- `scripts/resolve_scheduled_collection_date.js` is a verified cron subset, not a general cron engine. Supported shapes remain `*`, integers, comma-separated integers, and simple integer ranges in standard five-field expressions.
-- `github.event.schedule` is not an immutable occurrence timestamp. If a later identical cron occurrence has already passed, reconstruction is ambiguous; do not claim exactness without an independent durable occurrence identifier.
-- TDCC source `observed_date` must not be replaced by scheduled date.
-- TDCC `available_at` remains conservative first successful archive capture time and must not be backdated.
-- CNN source `fear_and_greed.timestamp` / `dataDate` remains source-derived.
-- TAIFEX futures/options artifact naming remains payload-date derived through `getPayloadDate(csvText)`; the fifth wave may add an occurrence-derived expected-date gate, but must not replace payload date as the canonical artifact date.
+- Known exact repo-relative entry points must be carried forward in prompts and handoffs.
+- A green workflow is not completion unless the tested implementation is the intended implementation head and durable remote state is verified.
+- `scripts/resolve_scheduled_collection_date.js` remains a verified cron subset, not a general cron engine. Supported shapes are wildcard, integer, comma-separated integers, and simple integer ranges in five-field expressions.
+- `github.event.schedule` is not an immutable occurrence timestamp. If a later identical cron occurrence has already passed, reconstruction is ambiguous without an independent durable occurrence identifier.
+- TDCC source `observed_date` must remain source-derived; `available_at` remains conservative first successful archive capture time and must not be backdated.
+- CNN source `fear_and_greed.timestamp` / `dataDate` must remain source-derived.
+- TAIFEX futures/options artifact naming remains payload-date derived through `getPayloadDate(csvText)`; scheduled date is expected-date validation only.
+- Do not migrate prediction/replay in this project without separate preregistration.
 
 ## Completed
 
@@ -72,7 +75,7 @@ Regression run: `33353663345`
 
 Handoff checkpoint: `5704095d91b7456af97f70d3a96fd88ca4e7ab56`
 
-Shared implementation:
+Shared entry points:
 
 - `scripts/resolve_scheduled_collection_date.js`
 - `scripts/resolve_forecast_dates.js`
@@ -95,9 +98,9 @@ Exact-head regression run: `33365436045`
 
 Regression job: `99404991901`
 
-Conclusion: `success`; deterministic tests: 27 pass, 0 fail.
+Conclusion: success.
 
-Third-wave production scope:
+Third-wave production scope included:
 
 - `.github/workflows/crawl-external-market-indicators.yml`
 - `.github/workflows/crawl-refined-product-tightness.yml`
@@ -112,130 +115,150 @@ Third-wave production scope:
 - `tests/scheduled_date_third_wave.test.js`
 - `.github/workflows/test-scheduled-collection-date.yml`
 
-Protected prediction/replay blobs at third-wave implementation head:
-
-- `scripts/resolve_latest_complete_prediction_base.js`: `61800be23d488bdf67874e87db492e8dc947b110`
-- `scripts/resolve_prediction_replay_date.js`: `9dd7c74bbe73c4088138b7b1262a8fed71608ff7`
-
-Third-wave handoff checkpoint before fourth-wave audit: `e355f828935c5d45cee5d099dca0ab9aa6e51c63`.
-
 ### Fourth wave — source-derived semantics audit
 
 Audit baseline: `e355f828935c5d45cee5d099dca0ab9aa6e51c63`
 
 Audit findings commit: `303bd5b4342a6825f16dd22992378a4850707b25`
 
+Closeout checkpoint: `2642a232b8cdee947e9120920a9dab3c4c61ae1b`
+
 Prompt B closeout: PASS
 
-No GitHub Actions run was required by the preregistered fourth-wave Prompt B because this was a documentation/audit-only round; closeout independently verified durable code/blob identities and the audit-only changed-file boundary instead of treating an unrelated green run as evidence.
+Classifications:
 
-## Evidence / validation — fourth-wave Prompt B closeout
+- TDCC shareholding snapshot: `no_migration`
+- CNN Fear & Greed: `no_migration`
+- TAIFEX futures/options source payload: `needs_migration_next_round`
 
-Correct Prompt B identity was recovered from durable repository history at pre-Prompt-A checkpoint `e355f828935c5d45cee5d099dca0ab9aa6e51c63`.
+### Fifth wave — TAIFEX futures/options expected-date migration
 
-That preregistered Prompt B was the mandatory closeout for the fourth-wave source-derived audit and contained seven criteria: bounded scope; TDCC classification; CNN classification; TAIFEX futures/options classification; shared resolver limits; durable evidence; next-round preregistration.
+Prompt A baseline: `2642a232b8cdee947e9120920a9dab3c4c61ae1b`
+
+Implementation commit: `bf50cf55330fb3d7d6325643a972b9b96ea58471`
+
+Bounded regression-fix commit / final implementation-test head: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
+
+Exact changed-file set from fifth-wave baseline to final head:
+
+- `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
+- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
+- `tests/scheduled_date_fourth_wave.test.js`
+- `.github/workflows/test-scheduled-collection-date.yml`
+
+The crawler change is the preregistered strictly necessary test seam: existing payload-date extraction and expected-date mismatch behavior were factored into `resolvePayloadArtifact(csvText, expectedDateValue)` and exported for deterministic tests. Production behavior remains latest-only and payload-date canonical.
+
+## Evidence / validation — fifth-wave Prompt B closeout
+
+Correct Prompt B identity was recovered from durable pre-Prompt-A handoff checkpoint `2642a232b8cdee947e9120920a9dab3c4c61ae1b`.
 
 ### 1. Bounded scope — PASS
 
-Compare `e355f828935c5d45cee5d099dca0ab9aa6e51c63...303bd5b4342a6825f16dd22992378a4850707b25` contains exactly one changed file:
+Production scope was limited to the TAIFEX futures/options workflow plus the preregistered strictly necessary crawler test seam. Test/regression scope was limited to the new deterministic suite and the scheduled-date regression workflow.
 
-- `docs/handoffs/scheduled-workflow-date-semantics.md`
-
-Therefore:
-
-- no production date-semantics migration was made in fourth wave;
-- no TDCC/CNN/TAIFEX production workflow or crawler was modified;
-- no prediction/replay or unrelated workflow was changed.
-
-### 2. TDCC source-date classification — PASS
-
-Current verified blobs:
+TDCC production workflow blob remains:
 
 - `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`: `c6a5d2f6a8bd9720d75e2f6fd0c0d102d0d5b417`
-- `scripts/crawl_tdcc_shareholding_snapshot.js`: `3bc0ef36fb1e4fe7d096e9c34948f615cad921e9`
-- `tests/tdcc_shareholding_snapshot.test.js`: `bfac615b903efed9d23c4500905ae0d596debe82`
 
-Verified contract:
-
-- `normalizeRows()` reads the source row date through `FIELD.date` and writes `observed_date`;
-- all valid rows must resolve to exactly one source observation date;
-- canonical weekly path and manifest identity are derived from that source date;
-- `capturedAt` defaults to actual `new Date().toISOString()` and records real capture time;
-- `available_at` is initialized from first successful capture and preserved on later duplicate/migration runs;
-- the probe schedule is therefore distinct from source `observed_date`, `captured_at`, and conservative `available_at`.
-
-Decision: `no_migration`.
-
-### 3. CNN Fear & Greed classification — PASS
-
-Current verified blobs:
+CNN production workflow blob remains:
 
 - `.github/workflows/crawl-cnn-fear-and-greed.yml`: `7c7b9d3f9575365b7c79dd6391418586b9a45ee4`
-- `scripts/crawl_cnn_fear_and_greed.js`: `6c31cd4fad03ceaf664d1b3d01a227a25850bc95`
 
-Verified contract:
-
-- `validatePayload()` requires `fear_and_greed.timestamp`;
-- `dataDate` is extracted directly from the source timestamp's `YYYY-MM-DD` portion;
-- output path, GitHub outputs, and manifest date are source-derived;
-- runner wall clock does not name or validate the official CNN artifact;
-- delayed execution may observe a later source snapshot but must not replace source date with scheduled occurrence.
-
-Decision: `no_migration`.
-
-### 4. TAIFEX futures/options classification — PASS
-
-Current verified blobs:
-
-- `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`: `2c3e1b6af03c7c7ed627a00c62e3858767811034`
-- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`: `9a6e1235c145cd2472a6df141f2b04a8fee09ff9`
-
-Verified contract:
-
-- `getPayloadDate(csvText)` parses the first source data row and remains the canonical source/artifact date;
-- output filename remains `${payloadDate}_taifex_major_institutional_traders_futures_options.csv`;
-- manual `--date` remains an expected-date check against a latest-only endpoint, not a historical query parameter;
-- current scheduled runs do not pass `--date`, creating a real occurrence-to-latest-source validation gap if an old occurrence starts after the source has advanced to the next trading date;
-- this finding does not copy the futures-contract crawler wholesale and does not replace source payload date with scheduled date.
-
-Decision: `needs_migration_next_round`.
-
-### 5. Shared resolver / occurrence limits — PASS
-
-Current `scripts/resolve_scheduled_collection_date.js` blob: `7f081771527ecf3b395d8f864aad93ac94c26325`.
-
-Verified limitations remain documented:
-
-- supported cron subset is wildcard, integer, comma-separated integers, and simple integer ranges in a five-field expression;
-- no unsupported cron grammar was introduced by the audit;
-- future occurrence-based TAIFEX validation must preserve the limitation that `github.event.schedule` is not an immutable occurrence timestamp and cannot prove the original occurrence after a later identical occurrence has already passed.
-
-### 6. Durable evidence — PASS
-
-Fourth-wave audit findings and all three classifications are present on remote `main` in commit `303bd5b4342a6825f16dd22992378a4850707b25`.
-
-Current protected prediction/replay blobs remain unchanged:
+Protected prediction/replay blobs remain:
 
 - `scripts/resolve_latest_complete_prediction_base.js`: `61800be23d488bdf67874e87db492e8dc947b110`
 - `scripts/resolve_prediction_replay_date.js`: `9dd7c74bbe73c4088138b7b1262a8fed71608ff7`
 
-### 7. Next-round preregistration — PASS
+### 2. Scheduled occurrence semantics — PASS
 
-Every fourth-wave source has an explicit classification. The only migration candidate is TAIFEX futures/options, and the fifth-wave implementation is preregistered to exact paths and deterministic regression cases below.
+Current workflow blob:
 
-Paired fifth-wave Prompt A + Prompt B were already preregistered in the fourth-wave audit findings commit before fourth-wave closeout and remain preserved below.
+- `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`: `91b0724db5fb28c768dd2bb563e1232aef84d636`
+
+Verified contract:
+
+- scheduled branch is gated by `github.event_name == 'schedule'`;
+- `${{ github.event.schedule }}` is passed to `scripts/resolve_scheduled_collection_date.js`;
+- resolver uses `--policy same_calendar_date --time-zone Asia/Taipei`;
+- occurrence target date is passed to `scripts/resolve_taifex_scheduled_date.js --base-date ...`;
+- previous-or-same TAIFEX trading date is exported as `TAIFEX_EXPECTED_DATE`;
+- scheduled crawler invocation uses `--date "$TAIFEX_EXPECTED_DATE"`.
+
+A delayed runner therefore does not substitute actual runner current date within the verified resolver's bounded occurrence-reconstruction limits.
+
+### 3. Source-date preservation — PASS
+
+Current crawler blob:
+
+- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`: `560c42e82338629e2af5a3203a37b9a64571c945`
+
+Verified contract:
+
+- `getPayloadDate(csvText)` still parses the payload source date;
+- `resolvePayloadArtifact()` compares optional expected date against the payload date;
+- mismatch throws instead of renaming/backdating/silently accepting;
+- output filename remains `${payloadDate}_taifex_major_institutional_traders_futures_options.csv`.
+
+### 4. Manual behavior — PASS
+
+- manual explicit `workflow_dispatch.inputs.date` still invokes the crawler with `--date` as expected-date validation;
+- manual no-date still invokes the crawler without `--date`, preserving latest-source behavior;
+- the crawler error text explicitly states the open-data URL only returns the latest available file, so no historical-query capability is claimed.
+
+### 5. Regression coverage — PASS
+
+Current deterministic test blob:
+
+- `tests/scheduled_date_fourth_wave.test.js`: `fef19e2e46777fabd27700ae2b25a3a328d63401`
+
+Coverage includes:
+
+- delayed 17:21 Taipei occurrence;
+- delay crossing into next trading day / newer source payload;
+- weekend rollback;
+- configured non-trading weekday rollback;
+- unchanged manual explicit expected-date behavior;
+- payload-date filename preservation;
+- mismatch failure.
+
+Exact-head regression also ran the existing scheduled-date suites. Result: 34 pass, 0 fail.
+
+### 6. Exact-head CI identity — PASS
+
+Regression workflow current blob:
+
+- `.github/workflows/test-scheduled-collection-date.yml`: `9a8d146ee58444aaecffb7f07491860fdf0a46d8`
+
+Exact-head run evidence:
+
+- run ID `33369408473`
+- regression job ID `99416854795`
+- run `head_sha`: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
+- materialization `TESTED_SHA`: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
+- `MATERIALIZED_SHA`: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`
+- regression job conclusion: `success`
+
+The regression materializes files from the exact tested SHA, not moving `/main`.
+
+### 7. Durable remote verification — PASS
+
+Fresh remote `main` before handoff closeout commit was `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`, and both fifth-wave commits are reachable from it.
+
+Required workflow, crawler, deterministic test, and exact-head regression workflow are present on remote `main` with the blob identities recorded above.
+
+No concurrent commit appeared between Prompt A completion and Prompt B verification that changed fifth-wave entry points, tested SHA, protected blobs, or baseline assumptions.
+
+Known limitation retained: `github.event.schedule` cannot uniquely recover an original occurrence once a later identical cron occurrence has also passed without an independent durable occurrence identifier. Fifth-wave tests prove only the bounded delay cases preregistered for this round.
 
 ## Current repository state
 
-Fourth-wave Prompt A baseline: `e355f828935c5d45cee5d099dca0ab9aa6e51c63`.
+Fifth-wave Prompt B closeout: PASS.
 
-Fourth-wave Prompt A audit findings commit: `303bd5b4342a6825f16dd22992378a4850707b25`.
+Fifth-wave final implementation/test head: `5f3b3b3060319c2758166894e2f0ca8bdf41f2d6`.
 
-Fourth-wave Prompt B closeout: PASS.
+The next active round is audit-only: `sixth-wave-residual-scheduled-date-audit`.
 
-Fourth-wave closeout handoff checkpoint: this section is committed by the closeout commit immediately following `303bd5b4342a6825f16dd22992378a4850707b25`; after commit, current remote `main` must be re-fetched and this handoff must remain consistent with all active fifth-wave entry points.
-
-No production semantics were changed by either fourth-wave Prompt A or Prompt B.
+No sixth-wave production work has started.
 
 ## Entry points
 
@@ -250,11 +273,19 @@ No production semantics were changed by either fourth-wave Prompt A or Prompt B.
 
 - `scripts/resolve_scheduled_collection_date.js`
 - `scripts/resolve_forecast_dates.js`
+- `scripts/resolve_taifex_scheduled_date.js`
 - `tests/resolve_scheduled_collection_date.test.js`
 - `tests/scheduled_date_third_wave.test.js`
+- `tests/scheduled_date_fourth_wave.test.js`
 - `.github/workflows/test-scheduled-collection-date.yml`
+- `data_history_sma/non_trading_days.json`
 
-### Fourth-wave completed audit entry points
+### Fifth-wave completed implementation
+
+- `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
+- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
+
+### Source-derived no-migration controls
 
 TDCC:
 
@@ -267,194 +298,145 @@ CNN:
 - `.github/workflows/crawl-cnn-fear-and-greed.yml`
 - `scripts/crawl_cnn_fear_and_greed.js`
 
-TAIFEX futures/options audited source:
-
-- `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
-- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
-
-### Active fifth-wave exact implementation/test entry points
-
-- `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
-- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
-- `scripts/resolve_scheduled_collection_date.js`
-- `scripts/resolve_taifex_scheduled_date.js`
-- `data_history_sma/non_trading_days.json`
-- `tests/scheduled_date_fourth_wave.test.js` (new in fifth wave)
-- `.github/workflows/test-scheduled-collection-date.yml`
-- `tests/resolve_scheduled_collection_date.test.js`
-- `tests/scheduled_date_third_wave.test.js`
-
 ### Prediction/replay safety gates — do not weaken
 
 - `scripts/resolve_latest_complete_prediction_base.js`
 - `scripts/resolve_prediction_replay_date.js`
 
-## Known problems / rejected approaches / remaining risks
+### Sixth-wave audit boundary
 
-- Do not automatically migrate a scheduled workflow merely because it has multiple cron probes.
-- TDCC `observed_date` is source-derived; `available_at` is conservative first-successful-capture time and must not be backdated.
-- CNN `dataDate` is source timestamp-derived and must not become an occurrence-derived artifact date.
-- TAIFEX futures/options should not copy the futures-contract crawler wholesale. Reuse only the proven occurrence resolution plus previous-or-same-trading-date expectation; keep the latest-only source payload authoritative for artifact date.
-- `--date` on the TAIFEX futures/options crawler is expected-date validation only; do not make it claim historical-query capability.
-- The shared resolver cannot recover an original occurrence once a later identical cron occurrence has also passed without an independent durable occurrence identifier. Fifth-wave tests may prove bounded delay behavior, but must not erase this information-theoretic limitation.
-- Do not migrate prediction/replay as part of this project without separate preregistration.
-- Do not expand fifth wave to TDCC, CNN, or unrelated workflows.
+- `.github/workflows/` — inspect only workflow YAML files containing a `schedule` trigger and date/business-date logic not already classified by this handoff.
+- `docs/handoffs/scheduled-workflow-date-semantics.md` — the only file that may be changed in the sixth-wave audit round unless freshness repair is strictly necessary.
 
-## Next round
+## Remaining scope / conservative classification
 
-Active / next round: `fifth-wave-taifex-futures-options-expected-date-migration`.
+All previously identified implementation candidates have now either been migrated or explicitly classified as no-migration.
 
-Implement only the preregistered scheduled expected-date gate for TAIFEX futures/options.
+No additional production migration candidate is promoted by this closeout.
 
-Meaningful phase boundary:
+Residual risk remains that a scheduled workflow outside the already examined set may contain runner-clock or ambiguous date semantics. Therefore the next round is a repo-wide residual **audit-only** inventory over `.github/workflows/`, not another implementation wave.
 
-- scheduled occurrence is converted to the previous-or-same TAIFEX trading date;
-- that date is passed as crawler `--date` expected-date validation;
-- source `getPayloadDate(csvText)` remains canonical artifact date;
-- deterministic regression proves delayed-runner, weekend, holiday, manual-date, and source-date-preservation behavior;
-- exact-head GitHub regression succeeds;
-- remote durable implementation/test files are verified before Prompt A can be declared complete.
+The sixth wave must classify residual scheduled workflows into one of:
+
+- `already_migrated_or_covered`
+- `no_migration_source_or_repository_owned`
+- `needs_separate_preregistered_migration`
+- `date_irrelevant`
+
+Any `needs_separate_preregistered_migration` finding must be recorded with exact repo-relative workflow/script/test entry points and deferred to a later paired Prompt A + Prompt B. Do not implement it in the sixth-wave audit round.
 
 ## Safety / stop conditions
 
-- If current `main` materially changes any active fifth-wave entry point before implementation, refresh this handoff before coding.
-- Do not replace source-derived payload date with scheduled date.
-- Do not change TDCC or CNN production code in the fifth wave.
-- Do not change manual explicit TAIFEX expected-date behavior.
-- Do not make `--date` claim historical-query capability; the endpoint is latest-only.
-- Do not weaken source mismatch failure.
-- Do not treat `resolve_scheduled_collection_date.js` as a general cron engine.
-- Do not claim exact intended occurrence after a later identical cron occurrence has passed without an independent durable occurrence identifier.
-- Do not modify prediction/replay stale fallback behavior.
-- Do not expand beyond the preregistered TAIFEX futures/options workflow/test scope.
+- If current `main` materially changes an audited entry point before sixth-wave work begins, refresh the handoff before classification.
+- Sixth wave is audit-only; do not edit production workflows/scripts/tests unless a freshness/correctness defect in the audit itself makes that strictly necessary.
+- Do not infer migration need merely from presence of `schedule:` or multiple cron probes.
+- Preserve all source-derived and repository-owned dates.
+- Do not change prediction/replay.
+- Do not broaden `scripts/resolve_scheduled_collection_date.js` cron grammar.
+- If a residual workflow's exact domain semantics cannot be established from durable code/source evidence, classify it as unresolved and stop short of implementation.
 
-## Preregistered Prompt A — fifth-wave implementation prompt
+## Preregistered Prompt A — sixth-wave residual scheduled-date audit
 
 Continue the Scheduled Workflow Date Semantics Migration in repository `EasonLiu0913/stock_data`.
 
-Active round: `fifth-wave-taifex-futures-options-expected-date-migration`.
+Active round: `sixth-wave-residual-scheduled-date-audit`.
 
-This round is a bounded **TAIFEX futures/options scheduled expected-date migration**.
+This round is a bounded **audit/classification-only** round. Do not implement another production migration in the same round.
 
 Before doing any work:
 1. Read `AGENTS.md`.
 2. Read `docs/project-philosophy.md` and `docs/roadmap/current-phase.md`.
 3. Read the canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`.
-4. Fetch current remote `main`; do not rely on local/conversation state.
-5. Verify the fourth-wave Prompt B closeout checkpoint and these exact entry points have not materially changed. If they have, refresh the handoff before continuing.
-6. Read:
-   - `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
-   - `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
-   - `scripts/resolve_scheduled_collection_date.js`
-   - `scripts/resolve_taifex_scheduled_date.js`
-   - `data_history_sma/non_trading_days.json`
-   - `.github/workflows/test-scheduled-collection-date.yml`
-   - `tests/resolve_scheduled_collection_date.test.js`
-   - `tests/scheduled_date_third_wave.test.js`
+4. Fetch current remote `main`; do not rely on local or conversation state.
+5. Verify the fifth-wave closeout checkpoint and current blobs/entry points have not materially changed.
+6. Inspect `.github/workflows/` and enumerate workflow YAML files that contain a `schedule` trigger.
+7. Exclude only workflows already explicitly classified or migrated in this handoff after confirming their current paths still exist.
 
-Implement only:
+Audit only:
 
-1. In `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`, split scheduled and non-scheduled date handling without changing manual explicit behavior.
-2. For `schedule`, resolve the intended occurrence from `${{ github.event.schedule }}` using `scripts/resolve_scheduled_collection_date.js` with `Asia/Taipei` calendar semantics.
-3. Feed that occurrence date to `scripts/resolve_taifex_scheduled_date.js --base-date ...` so weekends and `data_history_sma/non_trading_days.json` roll back to previous-or-same trading date.
-4. Invoke `scripts/crawl_taifex_major_institutional_traders_futures_options.js --date "$EXPECTED_DATE"` for scheduled runs.
-5. Preserve the crawler's existing latest-only behavior: `getPayloadDate(csvText)` remains the canonical source/artifact date, and mismatch against `--date` must fail rather than rename the payload.
-6. Keep `workflow_dispatch.inputs.date` semantics unchanged. Manual no-date remains latest-source behavior.
-7. Add `tests/scheduled_date_fourth_wave.test.js` with deterministic coverage for:
-   - delayed 17:21 Taipei occurrence;
-   - delay crossing into the next trading day/source payload date;
-   - weekend rollback;
-   - configured non-trading weekday rollback;
-   - unchanged manual explicit expected-date behavior;
-   - source payload date remains output filename date;
-   - mismatch fails.
-8. Wire the new test and TAIFEX futures/options workflow/script paths into `.github/workflows/test-scheduled-collection-date.yml` exact-head materialization and regression checks.
+1. Build a deterministic residual inventory of scheduled workflows not yet explicitly classified by this handoff.
+2. For each residual workflow, inspect its exact repo-relative workflow path plus every exact script/config/test path that materially determines its date/business-date behavior.
+3. Classify each as exactly one of:
+   - `already_migrated_or_covered`
+   - `no_migration_source_or_repository_owned`
+   - `needs_separate_preregistered_migration`
+   - `date_irrelevant`
+4. Record the evidence for each classification in `docs/handoffs/scheduled-workflow-date-semantics.md`.
+5. For every `needs_separate_preregistered_migration`, list exact known workflow/script/test/config entry points and the preserved domain policy, but do not implement it.
+6. Preserve TDCC, CNN, TAIFEX, prediction/replay, and all prior migrated contracts unchanged.
+7. If no residual workflow requires migration, record that the migration project has no currently identified production candidate and preregister a final verification/retirement round rather than inventing new implementation work.
 
-Frozen constraints:
+Bounded write scope:
 
-- Do not edit TDCC or CNN production files.
-- Do not replace source payload date with scheduled date.
-- Do not change `getPayloadDate(csvText)` semantics except for a strictly necessary test seam that preserves production behavior.
-- Do not make `--date` into a historical-query promise.
-- Do not weaken mismatch failure.
-- Do not modify prediction/replay.
-- Do not expand to any workflow outside this preregistered TAIFEX futures/options scope.
+- expected repository change: `docs/handoffs/scheduled-workflow-date-semantics.md` only;
+- production workflow/script/test changes are forbidden unless a directly relevant freshness/correctness defect makes a bounded repair necessary and is documented.
 
-Required implementation evidence:
+Stop conditions:
 
-- exact starting `main` SHA;
-- exact changed-file list proving bounded scope;
-- local/deterministic Node syntax/tests for all touched JS/test files;
-- exact-head GitHub Actions regression from `.github/workflows/test-scheduled-collection-date.yml` whose `head_sha`, tested SHA, and intended implementation/test head all match;
-- remote blob verification for the workflow, new test, regression workflow, and any touched script;
-- verification that TDCC/CNN production blobs and protected prediction/replay blobs did not change.
+- If exact date ownership cannot be established for a residual workflow, mark it unresolved; do not guess or implement.
+- If current `main` changes materially during the audit, refresh affected evidence before completion.
+- Do not turn audit findings into same-round production changes.
 
 Prompt A completion contract:
 
-- scheduled TAIFEX futures/options runs validate the occurrence-owned expected trading date while preserving source payload artifact date;
-- all preregistered regression cases pass;
-- exact-head regression is green;
-- bounded production/test scope is proven;
-- required files/contract markers are present on current remote `main` after a fresh fetch;
-- implementation state is durable on remote `main`;
+- every residual scheduled workflow has an explicit classification or an explicit unresolved status with exact paths;
+- any future migration candidate has exact entry points and preserved policy recorded;
+- bounded changed-file set is proven;
+- current remote `main` is re-fetched and the audit handoff is durable;
+- paired next-round Prompt A + Prompt B are preregistered in the handoff before reporting completion;
 - then report exactly `Prompt A complete — ready for Prompt B` and stop.
 
-## Preregistered Prompt B — fifth-wave closeout / verification prompt
+## Preregistered Prompt B — sixth-wave residual scheduled-date audit closeout
 
-Perform closeout verification for active round `fifth-wave-taifex-futures-options-expected-date-migration` in repository `EasonLiu0913/stock_data`.
+Perform closeout verification for active round `sixth-wave-residual-scheduled-date-audit` in repository `EasonLiu0913/stock_data`.
 
 Before verification:
 1. Read `AGENTS.md`.
 2. Read `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, and `docs/handoffs/scheduled-workflow-date-semantics.md` from current remote `main`.
-3. Fetch current remote `main` and identify the claimed fifth-wave implementation/test head and exact-head regression run.
+3. Fetch current remote `main` and recover the sixth-wave Prompt A baseline and audit findings commit from durable repository history.
+4. Use this preregistered Prompt B from the pre-Prompt-A handoff checkpoint as the only closeout version.
 
 Verify independently:
 
 1. **Bounded scope**
-   - Production changes are limited to `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml` unless this handoff preregistered a strictly necessary crawler test seam.
-   - Test/regression changes are limited to `tests/scheduled_date_fourth_wave.test.js` and `.github/workflows/test-scheduled-collection-date.yml` plus any explicitly preregistered strictly necessary helper change.
-   - TDCC and CNN production blobs are unchanged.
-   - Prediction/replay protected blobs are unchanged.
+   - The audit changed `docs/handoffs/scheduled-workflow-date-semantics.md` only, unless a strictly necessary freshness repair is explicitly documented and bounded.
+   - No production scheduled-date migration was performed in the audit round.
+   - Prediction/replay protected blobs remain unchanged.
 
-2. **Scheduled occurrence semantics**
-   - Scheduled branch derives the intended occurrence from `${{ github.event.schedule }}` via `scripts/resolve_scheduled_collection_date.js` in `Asia/Taipei`.
-   - The occurrence calendar date is converted through `scripts/resolve_taifex_scheduled_date.js` to previous-or-same trading date using `data_history_sma/non_trading_days.json`.
-   - A delayed runner does not substitute actual runner current date.
+2. **Residual inventory completeness**
+   - Re-enumerate `.github/workflows/` workflow YAML files containing a `schedule` trigger from current remote `main`.
+   - Verify every residual workflow not already classified/migrated by the handoff appears in the sixth-wave audit table or is explicitly accounted for as already covered.
+   - No workflow may be omitted merely because its date logic is indirect.
 
-3. **Source-date preservation**
-   - `getPayloadDate(csvText)` remains the canonical source date.
-   - Output filename is still based on payload date.
-   - Scheduled expected date is validation only.
-   - Mismatch fails; it must not rename, backdate, or silently accept a newer payload for an older occurrence.
+3. **Classification quality**
+   - Every residual item is exactly one of `already_migrated_or_covered`, `no_migration_source_or_repository_owned`, `needs_separate_preregistered_migration`, `date_irrelevant`, or explicitly unresolved.
+   - Each classification cites exact repo-relative workflow/script/config/test entry points that establish date ownership.
+   - No migration need is inferred solely from cron presence or multiple probes.
 
-4. **Manual behavior**
-   - Manual explicit input remains authoritative expected-date validation.
-   - Manual no-date remains latest-source behavior.
-   - The workflow does not claim the latest-only endpoint supports historical date queries.
+4. **Protected invariants**
+   - TDCC `observed_date` / conservative `available_at` semantics remain unchanged.
+   - CNN source timestamp / `dataDate` semantics remain unchanged.
+   - TAIFEX futures/options payload-date artifact identity and mismatch failure remain unchanged.
+   - `scripts/resolve_scheduled_collection_date.js` cron grammar was not broadened.
+   - Prediction/replay safety gates remain unchanged.
 
-5. **Regression coverage**
-   - Deterministic tests cover delayed 17:21 occurrence, next-trading-day crossing, weekend rollback, configured holiday rollback, manual explicit date, payload-date filename preservation, and mismatch failure.
-   - Existing scheduled-date regression suites still pass.
+5. **Future-candidate preregistration**
+   - Every `needs_separate_preregistered_migration` candidate has exact known workflow/script/test/config entry points, frozen domain policy, stop conditions, a bounded Prompt A, and a phase-specific Prompt B preregistered before any implementation.
+   - If there is no candidate, the next paired prompts must be a final verification/retirement round rather than speculative implementation.
 
-6. **Exact-head CI identity**
-   - Regression run `head_sha` equals the claimed implementation/test head.
-   - Materialization uses that exact SHA, not moving `/main`.
-   - The regression job conclusion is `success`.
+6. **Durable evidence**
+   - Re-fetch current remote `main` after any audit write.
+   - Verify the audit findings and paired next-round prompts are present in the canonical handoff on remote `main`.
+   - Verify the audit commit is reachable from current `main`.
+   - Treat a local summary or green unrelated workflow as insufficient evidence.
 
-7. **Durable remote verification**
-   - Re-fetch current `main` after CI/write activity.
-   - Verify the expected workflow/test/regression files and required contract markers exist on remote `main`.
-   - Verify the implementation commit is actually reachable from current `main`.
-   - Treat green-but-missing remote output as failure.
-
-If any important criterion fails, fix or bounded-rerun only what is necessary and repeat Prompt B verification from criterion 1. Do not proceed to a later migration wave until Prompt B passes.
+If any criterion fails, fix only the bounded audit/freshness defect and repeat this Prompt B from criterion 1.
 
 If closeout passes:
 
-- update this canonical handoff with fifth-wave implementation head, exact-head regression run/job, changed-file list, preserved blob identities, and durable remote verification;
-- classify remaining scheduled-date audit scope conservatively;
-- preregister the next paired Prompt A + Prompt B before any further migration;
-- mark fifth-wave `Prompt B closeout: PASS` and promote the next preregistered round only then;
+- update the canonical handoff with sixth-wave closeout evidence;
+- mark `Prompt B closeout: PASS`;
+- promote only the already-preregistered next round;
 - commit the handoff;
 - re-fetch current remote `main` and verify the handoff is durable and not stale;
 - then stop. Do not start the next Prompt A automatically.
