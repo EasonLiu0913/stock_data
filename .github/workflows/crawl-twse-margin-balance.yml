@@ -20,6 +20,10 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: crawl-twse-margin-balance
+  cancel-in-progress: false
+
 jobs:
   crawl-twse-margin-balance:
     runs-on: ubuntu-latest
@@ -31,6 +35,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js for date resolution
         uses: actions/setup-node@v7
@@ -133,45 +138,92 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
-      - name: Refresh daily-gainers flow analysis when source list exists
+      - name: Snapshot validated TWSE margin artifact outside worktree
+        id: snapshot
         if: steps.completeness_gate.outcome == 'success'
+        shell: bash
         run: |
+          set -euo pipefail
           TARGET_DATE="${{ steps.existing.outputs.target_date }}"
-          LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
-          MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+          MARGIN_FILE="${{ steps.existing.outputs.output_file }}"
+          SNAPSHOT_DIR="$RUNNER_TEMP/twse-margin-publish"
+          SNAPSHOT_FILE="$SNAPSHOT_DIR/${TARGET_DATE}_twse_margin_balance.csv"
+          mkdir -p "$SNAPSHOT_DIR"
+          cp "$MARGIN_FILE" "$SNAPSHOT_FILE"
+          node -e '
+            const fs=require("node:fs");
+            const {validateCsv}=require("./scripts/crawl_twse_margin_balance");
+            validateCsv(fs.readFileSync(process.argv[1],"utf8"));
+          ' "$SNAPSHOT_FILE"
+          echo "snapshot_file=$SNAPSHOT_FILE" >> "$GITHUB_OUTPUT"
+          echo "Preserved validated raw margin artifact outside the repository worktree: $SNAPSHOT_FILE"
 
-          if [ ! -f "$LIST_FILE" ]; then
-            echo "Skip flow refresh: daily gainer list does not exist: $LIST_FILE"
-            exit 0
-          fi
-          if [ ! -s "$MARGIN_FILE" ]; then
-            echo "Skip flow refresh: margin file is not available yet: $MARGIN_FILE"
-            exit 0
-          fi
-
-          echo "Refreshing flow analysis with margin data for $TARGET_DATE while preserving researched cause analysis"
-          node scripts/refresh_daily_gainers_flow_preserve_cause.js "$TARGET_DATE"
-
-      - name: Commit and push changes
+      - name: Commit and race-safe push changes
         id: commit
         if: steps.completeness_gate.outcome == 'success'
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.existing.outputs.target_date }}
+          MARGIN_SNAPSHOT: ${{ steps.snapshot.outputs.snapshot_file }}
         run: |
           set -euo pipefail
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add -- data_twse_margin_balance/ data_daily_gain_over_5/analysis/ data_daily_gain_over_5/analysis-flow/
 
-          if git diff --staged --quiet; then
-            echo "No TWSE margin balance or flow-analysis changes"
-            echo "pages_changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          export MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+          export LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
+          export ANALYSIS_FILE="data_daily_gain_over_5/analysis/${TARGET_DATE}.json"
+          export FLOW_FILE="data_daily_gain_over_5/analysis-flow/${TARGET_DATE}.json"
+
+          PREPARE_SCRIPT="$RUNNER_TEMP/twse-margin-publish/prepare.sh"
+          VALIDATE_SCRIPT="$RUNNER_TEMP/twse-margin-publish/validate.sh"
+
+          cat > "$PREPARE_SCRIPT" <<'PREPARE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          mkdir -p "$(dirname "$MARGIN_FILE")"
+          cp "$MARGIN_SNAPSHOT" "$MARGIN_FILE"
+
+          if [ -f "$LIST_FILE" ]; then
+            echo "Refreshing flow analysis from latest main + validated margin snapshot for $TARGET_DATE"
+            node scripts/refresh_daily_gainers_flow_preserve_cause.js "$TARGET_DATE"
+          else
+            echo "Skip flow refresh: daily gainer list does not exist on latest main: $LIST_FILE"
           fi
+          PREPARE
 
+          cat > "$VALIDATE_SCRIPT" <<'VALIDATE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { validateCsv } = require('./scripts/crawl_twse_margin_balance');
+          validateCsv(fs.readFileSync(process.env.MARGIN_FILE, 'utf8'));
+
+          if (fs.existsSync(process.env.LIST_FILE)) {
+            if (!fs.existsSync(process.env.FLOW_FILE)) {
+              throw new Error(`Expected refreshed flow artifact: ${process.env.FLOW_FILE}`);
+            }
+            JSON.parse(fs.readFileSync(process.env.FLOW_FILE, 'utf8'));
+            if (fs.existsSync(process.env.ANALYSIS_FILE)) {
+              JSON.parse(fs.readFileSync(process.env.ANALYSIS_FILE, 'utf8'));
+            }
+          }
+          NODE
+          VALIDATE
+
+          chmod +x "$PREPARE_SCRIPT" "$VALIDATE_SCRIPT"
           CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update TWSE margin balance and flow analysis ${CURRENT_DATE}"
-          git pull --rebase origin main
-          git push origin main
-          echo "pages_changed=true" >> "$GITHUB_OUTPUT"
+
+          scripts/race_safe_main_publish.sh \
+            --prepare-script "$PREPARE_SCRIPT" \
+            --validate-script "$VALIDATE_SCRIPT" \
+            --commit-message "chore: update TWSE margin balance and flow analysis ${CURRENT_DATE}" \
+            --add-path "$MARGIN_FILE" \
+            --add-path "$ANALYSIS_FILE" \
+            --add-path "$FLOW_FILE" \
+            --max-attempts 5 \
+            --output-key pages_changed
 
   deploy-pages:
     name: 發布更新後分析到 GitHub Pages

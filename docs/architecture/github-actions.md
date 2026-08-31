@@ -111,6 +111,59 @@ node scripts/audit_workflow_deployment_races.js
 
 It scans every workflow under `.github/workflows/**`, not only the workflows currently known to call Pages.
 
+## Race-safe repository publishing
+
+A write-layer workflow must not assume that one successful `pull --rebase` makes the following `push` safe. Another workflow, user, or agent may advance `main` between those operations.
+
+For outputs that are derived from repository state, a conflict-free rebase is also insufficient: the generated artifact may remain semantically stale even when Git can replay the commit cleanly.
+
+The shared helper is:
+
+```text
+scripts/race_safe_main_publish.sh
+```
+
+The focused regression harness is:
+
+```text
+tests/race_safe_main_publish.test.js
+.github/workflows/test-race-safe-main-publish.yml
+```
+
+Required policy for adopters:
+
+```text
+validated source/input snapshot outside worktree (when collection is expensive)
+  -> helper fetches current origin/main
+  -> hard reset to current origin/main
+  -> caller prepare/regenerate script restores validated source and rebuilds derived output
+  -> caller validation script validates publish artifacts
+  -> helper stages only explicit repo-relative file paths
+  -> no-op if current main already has equivalent output
+  -> commit and push
+  -> push rejected / remote advanced
+       -> discard generated commit
+       -> bounded jitter
+       -> repeat from latest origin/main
+```
+
+Important invariants:
+
+- Do not re-crawl an expensive external source merely because Git push raced; preserve a validated raw artifact outside the worktree and restore it in each retry.
+- Derived artifacts that depend on repository state must be regenerated after every reset to latest `main`.
+- `--add-path` entries must be explicit owned files; the helper fails closed if prepare/validation leaves unrelated tracked or untracked changes.
+- Retry is bounded. Exhaustion must fail the workflow instead of reporting success.
+- Same-artifact writers may additionally share a `concurrency` group, always with `cancel-in-progress: false`. Concurrency is a first defense; regenerate-after-race remains the second defense against unrelated writers.
+- Pages deployment remains downstream of a successful repository publish.
+
+The first production adopter is:
+
+```text
+.github/workflows/crawl-twse-margin-balance.yml
+```
+
+It snapshots the validated target-date margin CSV under `$RUNNER_TEMP`, then uses the helper to restore that same CSV and regenerate target-date Daily Gainers flow from latest `main` before each publish attempt.
+
 ## Before editing a workflow
 
 Search the repository for:

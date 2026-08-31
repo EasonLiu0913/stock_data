@@ -1,0 +1,33 @@
+name: "[07 維護更新] Race-safe Main Publish Regression"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/race_safe_main_publish.sh'
+      - 'tests/race_safe_main_publish.test.js'
+      - '.github/workflows/crawl-twse-margin-balance.yml'
+      - '.github/workflows/test-race-safe-main-publish.yml'
+      - 'docs/architecture/github-actions.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate helper shell syntax
+        run: bash -n scripts/race_safe_main_publish.sh
+
+      - name: Run race-safe publish regression
+        run: node --test tests/race_safe_main_publish.test.js
