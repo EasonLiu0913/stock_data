@@ -25,6 +25,30 @@ const JOB = `
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
 `;
 
+const EXACT_TESTED_SHA_JOB = `
+
+  schedule-timing-summary:
+    ${MARKER}
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          TESTED_SHA: \${{ github.sha }}
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/EasonLiu0913/stock_data/\${TESTED_SHA}/scripts/write_workflow_schedule_summary.js" | node
+`;
+
+function managedJobForFile(file) {
+  return path.basename(file) === 'test-scheduled-collection-date.yml'
+    ? EXACT_TESTED_SHA_JOB
+    : JOB;
+}
+
 function normalizeTrailingWhitespace(text) {
   return `${String(text).replace(/\s+$/, '')}\n`;
 }
@@ -33,6 +57,7 @@ function migrateFile(file) {
   const original = fs.readFileSync(file, 'utf8');
   if (!/^jobs:\s*$/m.test(original)) return false;
 
+  const managedJob = managedJobForFile(file);
   const jobStart = original.indexOf('\n  schedule-timing-summary:\n');
   let base = original.replace(/\s+$/, '');
   if (jobStart >= 0) {
@@ -46,7 +71,7 @@ function migrateFile(file) {
     base = original.slice(0, jobStart).replace(/\s+$/, '');
   }
 
-  const updated = `${base}${JOB}\n`;
+  const updated = `${base}${managedJob}\n`;
   // A one-vs-two newline difference at EOF is not a workflow normalization issue.
   // Keep the audit focused on the managed job content and structure.
   if (normalizeTrailingWhitespace(updated) === normalizeTrailingWhitespace(original)) return false;
@@ -65,6 +90,14 @@ function selfTest() {
   fs.writeFileSync(file, broken, 'utf8');
   if (!migrateFile(file)) throw new Error('Managed job content drift must trigger migration');
   if (!fs.readFileSync(file, 'utf8').includes('name: 排程時間摘要')) throw new Error('Managed job was not restored');
+
+  const exactShaFile = path.join(tempDir, 'test-scheduled-collection-date.yml');
+  fs.writeFileSync(exactShaFile, `${base.replace(/\s+$/, '')}${EXACT_TESTED_SHA_JOB}`, 'utf8');
+  if (migrateFile(exactShaFile)) throw new Error('Exact-tested-SHA regression summary must remain canonical');
+  if (!fs.readFileSync(exactShaFile, 'utf8').includes('${TESTED_SHA}/scripts/write_workflow_schedule_summary.js')) {
+    throw new Error('Exact-tested-SHA summary contract was not preserved');
+  }
+
   console.log('migrate_workflow_schedule_summary self-test passed');
 }
 
@@ -91,4 +124,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { migrateFile, MARKER, normalizeTrailingWhitespace };
+module.exports = { migrateFile, MARKER, normalizeTrailingWhitespace, managedJobForFile };
