@@ -4,25 +4,11 @@ Canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`
 
 ## Current phase
 
-The repo-wide audit plus first-wave and second-wave migrations are complete. Third-wave production work has **not** started yet.
+The repo-wide audit plus first-wave, second-wave, and third-wave migrations are complete.
 
-This checkpoint hardens the handoff/verification contract before third-wave implementation.
+Third-wave closeout passed independently on current remote `main`.
 
-Audit / durable evidence:
-
-- audit base: `026d34c66fe23adfdfbf0bab322242c2b3480469`
-- audited scheduled workflows: 37
-- first-wave implementation/test head: `53a32a03f5fd340c09876dc94ea22360f17359f4`
-- first-wave regression run: `33353663345`
-- first-wave handoff checkpoint: `5704095d91b7456af97f70d3a96fd88ca4e7ab56`
-- second-wave implementation/test head: `27ce0b0e1eb8eb9beabe2a8a087571bc4cd47bb1`
-- second-wave regression run: `33354868624`
-- second-wave closeout checkpoint before handoff hardening: `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`
-- concurrent unrelated data-only commit observed during hardening: `31b54724aef1e6857484165dc05fcd5a843f8147`
-
-Independent compare confirmed `31b54724aef1e6857484165dc05fcd5a843f8147` changed only prediction data/snapshot artifacts and did **not** change any third-wave workflow/script/test entry point.
-
-Next phase: bounded third-wave cleanup for four known mixed-clock/source-anchor workflows.
+Next phase is deliberately **audit/classification only** for three remaining source-derived scheduled workflows. Do not migrate them merely because they are scheduled; first determine whether runner wall-clock time affects any canonical business/source date or only probe/capture timing.
 
 ## Objective
 
@@ -30,8 +16,9 @@ Make scheduled collection/business dates delay-safe while preserving each workfl
 
 Architecture remains deliberately small:
 
-1. **Scheduled occurrence resolution** — reconstruct the intended triggering cron occurrence from the triggering expression instead of using actual runner wall-clock time.
+1. **Scheduled occurrence resolution** — reconstruct the intended triggering cron occurrence from the triggering expression instead of using actual runner wall-clock time where the schedule logically owns the date.
 2. **Domain date policy** — explicitly map that occurrence to the workflow's business/source-date semantics.
+3. **Source-derived date preservation** — when the upstream payload is authoritative for the observation/business date, keep that date source-derived and do not replace it with scheduled occurrence.
 
 Do not use the audit taxonomy D1-D7 as production policy identifiers.
 
@@ -44,61 +31,24 @@ Do not use the audit taxonomy D1-D7 as production policy identifiers.
 - Prediction/replay stale-data safety gates must not be weakened.
 - Preserve existing crawler outputs, validation gates, persistence, and large-fetch plan/fresh-runner physical-batch architecture.
 - Shared infrastructure must remain small and evidence-driven; do not build a scheduler/DAG/plugin framework.
-- Known exact entry-point paths must be carried forward in handoffs/prompts. Do not make the next agent rediscover a known path, function, fixture, or test entry point.
+- Known exact entry-point paths must be carried forward in handoffs/prompts.
 - A green workflow is not completion unless the tested implementation is the exact intended implementation head and the required durable files are present on remote `main`.
-
-### Exact-head regression rule — mandatory from third wave onward
-
-The existing regression harness currently materializes files from:
-
-`https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/...`
-
-That is a race-prone evidence pattern because `main` can advance after a workflow run is created. Run `33354868624` is accepted as second-wave evidence because the implementation head and closeout history were independently reconciled, but the pattern must not continue.
-
-Before third-wave Prompt A may declare completion, update:
-
-- `.github/workflows/test-scheduled-collection-date.yml`
-
-so every materialized regression input is fetched from the workflow run's exact commit SHA, e.g. the equivalent of:
-
-```bash
-ref="${GITHUB_SHA}"
-base="https://raw.githubusercontent.com/EasonLiu0913/stock_data/${ref}"
-```
-
-The regression job must print the tested SHA. Prompt B must verify:
-
-- regression run `head_sha` == the claimed implementation/test head;
-- the regression harness fetched/materialized that same SHA, not moving `main`;
-- remote durable state contains the expected files after the run.
-
-Green CI attached to SHA A while actually materializing SHA B is a closeout failure.
-
-### Scheduled-occurrence resolver support contract
-
-`scripts/resolve_scheduled_collection_date.js` is a **verified cron subset**, not a general cron engine.
-
-Current supported grammar is intentionally limited to the shapes already regression-tested in this repository:
-
-- `*`
-- integer values
-- comma-separated integer values
-- simple integer ranges
-- standard five-field expressions using only those forms
-
-Do not assume support for step syntax such as `*/5`, aliases, macros, or other cron grammar unless support is deliberately added with deterministic regression fixtures first.
-
-The current resolver also must not silently claim full POSIX/GitHub semantics for a new expression that constrains both day-of-month and day-of-week. If a future workflow introduces an unverified DOM+DOW combination, stop, define the intended semantics, and add tests before using the shared resolver.
-
-### Scheduled-occurrence reconstruction limitation
-
-`github.event.schedule` gives the cron expression, not an immutable intended timestamp. The current resolver reconstructs the most recent matching occurrence before runner `now`.
-
-Therefore exact reconstruction assumes the job begins **before a later identical cron occurrence becomes eligible**. If execution is delayed so long that a later occurrence of the same expression has already passed, the original occurrence is information-theoretically ambiguous from `github.event.schedule` alone.
-
-Do not describe such a reconstruction as exact. For any workflow where that ambiguity can realistically affect correctness, fail/flag the ambiguity or introduce an explicit durable occurrence identifier; do not guess.
+- `scripts/resolve_scheduled_collection_date.js` is a verified cron subset, not a general cron engine. Supported shapes remain `*`, integers, comma-separated integers, and simple integer ranges in standard five-field expressions.
+- `github.event.schedule` is not an immutable occurrence timestamp. If a later identical cron occurrence has already passed, reconstruction is ambiguous; do not claim exactness without an independent durable occurrence identifier.
 
 ## Completed — first wave
+
+Implementation/test head:
+
+`53a32a03f5fd340c09876dc94ea22360f17359f4`
+
+Regression run:
+
+`33353663345`
+
+Handoff checkpoint:
+
+`5704095d91b7456af97f70d3a96fd88ca4e7ab56`
 
 Shared implementation:
 
@@ -108,10 +58,6 @@ Shared implementation:
   - `resolveForEvent`
   - `applyCollectionPolicy`
 - `scripts/resolve_forecast_dates.js`
-  - `loadHolidaySet`
-  - `isTradingDate`
-  - `nextTradingDate`
-  - `previousTradingDate`
 - `tests/resolve_scheduled_collection_date.test.js`
 - `.github/workflows/test-scheduled-collection-date.yml`
 
@@ -128,11 +74,21 @@ Migrated workflows:
 - `.github/workflows/crawl-twse-institutional-summaries.yml`
 - `.github/workflows/crawl-twse-twt49u.yml`
 
-First-wave regression run `33353663345` passed.
-
 ## Completed — second wave
 
-Second-wave scope was exactly:
+Implementation/test head:
+
+`27ce0b0e1eb8eb9beabe2a8a087571bc4cd47bb1`
+
+Regression run:
+
+`33354868624`
+
+Closeout checkpoint before third-wave handoff hardening:
+
+`89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`
+
+Second-wave scope:
 
 - `.github/workflows/build-twse-market-chart.yml`
 - `.github/workflows/calculate-twse-margin-maintenance.yml`
@@ -140,42 +96,159 @@ Second-wave scope was exactly:
 - `.github/workflows/publish-daily-gainers-ai-analysis.yml`
 - `.github/workflows/prepare-market-environment.yml`
 
-Necessary shared/test changes:
+Key preserved semantics:
 
-- `scripts/resolve_scheduled_collection_date.js`
-- `tests/resolve_scheduled_collection_date.test.js`
+- Market chart: scheduled occurrences use the existing 08:00 business-day boundary without runner `-8h` dependence.
+- Margin maintenance: scheduled runs use logical `same_trade_date`; legacy manual-no-date behavior remains separate.
+- Market news: crawler and risk snapshot share one explicit logical collection date.
+- Daily Gainers publish: mode comes from logical scheduled occurrence, not runner hour.
+- Market Environment: logical `scheduled_at_utc` anchors existing forecast-date logic.
+
+## Completed — third wave
+
+### Implementation / closeout identity
+
+Third-wave implementation/test head:
+
+`63c2c4a2867944cb6522c0f14715a1c23dd19109`
+
+Exact-head regression run:
+
+`33365436045`
+
+Regression job:
+
+`99404991901`
+
+Regression conclusion:
+
+`success`
+
+Exact-head evidence from the run:
+
+- run `head_sha`: `63c2c4a2867944cb6522c0f14715a1c23dd19109`
+- claimed implementation/test head: `63c2c4a2867944cb6522c0f14715a1c23dd19109`
+- workflow `TESTED_SHA`: `63c2c4a2867944cb6522c0f14715a1c23dd19109`
+- materialization base: `https://raw.githubusercontent.com/EasonLiu0913/stock_data/${TESTED_SHA}`
+- printed tested commit: `63c2c4a2867944cb6522c0f14715a1c23dd19109`
+- deterministic test result: 27 tests, 27 pass, 0 fail
+
+The regression harness now materializes regression inputs from the run's exact `${github.sha}` / `${GITHUB_SHA}` equivalent, not moving `/main`.
+
+### Third-wave bounded scope verification
+
+Compare from pre-third-wave durable main `411a3ad933850b5a410eccbe1d0029bd53307143` to implementation/test head `63c2c4a2867944cb6522c0f14715a1c23dd19109` contained only:
+
+- `.github/workflows/crawl-external-market-indicators.yml`
+- `.github/workflows/crawl-refined-product-tightness.yml`
+- `.github/workflows/crawl-rankings.yml`
+- `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
 - `.github/workflows/test-scheduled-collection-date.yml`
+- `scripts/resolve_external_market_session_date.js`
+- `scripts/resolve_fubon_ranking_date.js`
+- `scripts/resolve_taifex_scheduled_date.js`
+- `scripts/scraper_fubon.js`
+- `scripts/scraper_fubon_foreign.js`
+- `scripts/scraper_fubon_other.js`
+- `tests/scheduled_date_third_wave.test.js`
 
-### Second-wave implementation details
+No TDCC, CNN Fear & Greed, TAIFEX futures/options source-payload workflow, prediction/replay workflow, or other production workflow was migrated in third wave.
 
-- Market chart: scheduled occurrences use `--day-boundary-hour 8`, preserving the old 08:00 business-day boundary without runner `-8h` dependence.
-- Margin maintenance: scheduled runs use logical `same_trade_date`; legacy `-8h` remains only for manual-no-date compatibility.
-- Market news: one logical `same_calendar_date` is passed explicitly to both `scripts/crawl_market_news.js` and `scripts/generate_market_risk_snapshot.js`.
-- Daily Gainers AI publish: morning/evening mode is derived from logical scheduled occurrence, not runner hour.
-- Market Environment: logical `scheduled_at_utc` is passed to `scripts/resolve_forecast_dates.js --now`, preserving its existing trading-calendar/15:30 rules.
+### External market — PASS
 
-Second-wave regression run:
+Entry points:
 
-- run: `33354868624`
-- head: `27ce0b0e1eb8eb9beabe2a8a087571bc4cd47bb1`
-- conclusion: success
-- regression job: `99374971500`
+- `.github/workflows/crawl-external-market-indicators.yml`
+- `scripts/crawl_external_market_indicators.js`
+- `scripts/resolve_external_market_session_date.js`
 
-Second-wave implementation compare from `5704095d91b7456af97f70d3a96fd88ca4e7ab56` to `27ce0b0e1eb8eb9beabe2a8a087571bc4cd47bb1` contained exactly these eight files:
+Preserved contract:
 
-1. `.github/workflows/build-twse-market-chart.yml`
-2. `.github/workflows/calculate-twse-margin-maintenance.yml`
-3. `.github/workflows/crawl-market-news.yml`
-4. `.github/workflows/prepare-market-environment.yml`
-5. `.github/workflows/publish-daily-gainers-ai-analysis.yml`
-6. `.github/workflows/test-scheduled-collection-date.yml`
-7. `scripts/resolve_scheduled_collection_date.js`
-8. `tests/resolve_scheduled_collection_date.test.js`
+- scheduled workflow first resolves intended occurrence with `scripts/resolve_scheduled_collection_date.js`;
+- occurrence timestamp is passed as `--now` to `scripts/resolve_external_market_session_date.js`;
+- that helper delegates to the existing `scripts/crawl_external_market_indicators.js --resolve-date` logic under an isolated anchored clock, so the canonical New York 09:30 session rule remains one source of truth;
+- source market date, provisional/final status, validation, skip-existing behavior, and manual explicit date remain owned by the existing crawler/validator path;
+- regression proves a delayed runner crossing a New York date/session boundary does not move the requested session.
 
-Prediction/replay safety blobs remained unchanged:
+### EIA refined-product tightness — PASS
+
+Entry points:
+
+- `.github/workflows/crawl-refined-product-tightness.yml`
+- `scripts/crawl_refined_product_tightness.js`
+- `tests/refined_product_tightness.test.js`
+
+Preserved contract:
+
+- only scheduled query upper bound is occurrence-derived;
+- upper bound is the intended occurrence's UTC calendar date;
+- manual explicit date remains authoritative;
+- manual no-date still uses existing crawler default behavior;
+- source/API aligned `observation_date` remains the canonical artifact date;
+- force/reuse behavior, methodology, and factor calculations were not changed.
+
+### Fubon rankings — PASS
+
+Entry points:
+
+- `.github/workflows/crawl-rankings.yml`
+- `scripts/resolve_fubon_ranking_date.js`
+- `scripts/scraper_fubon.js`
+- `scripts/scraper_fubon_foreign.js`
+- `scripts/scraper_fubon_other.js`
+
+Preserved contract:
+
+- source page `MM/DD` remains authoritative for month/day;
+- `FUBON_DATE_ANCHOR` is only the deterministic year-inference anchor;
+- all three scripts use `resolveFubonRankingDate`;
+- no scheduled artifact naming uses runner `new Date().getFullYear()` or runner current-date fallback;
+- missing/malformed/invalid source page date throws before official dated CSV write;
+- failures surface as non-success rather than inventing a source date;
+- Dec/Jan rollover and missing/malformed date failure are deterministic regression cases;
+- foreign-ranking retry/backoff/pacing and output naming shape remain intact; workflow commit scope remains `data_fubon/`.
+
+### TAIFEX futures contracts — PASS
+
+Entry points:
+
+- `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
+- `scripts/resolve_taifex_scheduled_date.js`
+- `scripts/crawl_taifex_major_institutional_traders_futures_contracts.js`
+- `data_history_sma/non_trading_days.json`
+
+Preserved contract:
+
+- scheduled base date comes from intended occurrence interpreted in `Asia/Taipei`;
+- existing backward rollback across weekends/configured non-trading days is preserved by `scripts/resolve_taifex_scheduled_date.js`;
+- explicit rolled-back date is passed to the existing crawler;
+- manual single-date and range branches remain unchanged;
+- no batching architecture change was introduced in this date-semantics wave.
+
+### Shared resolver contract — PASS
+
+No new cron grammar was introduced. Third-wave expressions use only already-supported integer / wildcard / weekday forms. The implementation does not add claims that ambiguous reconstruction after a later identical occurrence is exact.
+
+### Prediction/replay non-regression — PASS
+
+Protected blobs on third-wave implementation/test head:
 
 - `scripts/resolve_latest_complete_prediction_base.js`: `61800be23d488bdf67874e87db492e8dc947b110`
 - `scripts/resolve_prediction_replay_date.js`: `9dd7c74bbe73c4088138b7b1262a8fed71608ff7`
+
+These match the protected pre-third-wave identities.
+
+## Current repository state
+
+Third-wave implementation/test head at closeout start:
+
+`63c2c4a2867944cb6522c0f14715a1c23dd19109`
+
+Third-wave exact-head regression:
+
+`33365436045`
+
+The handoff checkpoint commit created by this closeout is the next durable state. After committing it, re-fetch `main` and verify no concurrent production change has made this handoff stale before starting another round.
 
 ## Entry points
 
@@ -189,299 +262,205 @@ Prediction/replay safety blobs remained unchanged:
 ### Shared scheduled-date infrastructure
 
 - `scripts/resolve_scheduled_collection_date.js`
-  - `resolveScheduledOccurrence`
-  - `resolveScheduledCollectionDate`
-  - `resolveForEvent`
-  - `applyCollectionPolicy`
-  - `logicalDateForOccurrence`
 - `scripts/resolve_forecast_dates.js`
 - `tests/resolve_scheduled_collection_date.test.js`
+- `tests/scheduled_date_third_wave.test.js`
 - `.github/workflows/test-scheduled-collection-date.yml`
+
+### Third-wave helpers retained as current production entry points
+
+- `scripts/resolve_external_market_session_date.js`
+- `scripts/resolve_fubon_ranking_date.js`
+- `scripts/resolve_taifex_scheduled_date.js`
 
 ### Prediction/replay safety gates — do not weaken
 
 - `scripts/resolve_latest_complete_prediction_base.js`
 - `scripts/resolve_prediction_replay_date.js`
 
-### Third-wave exact entry points
+### Next-round exact audit entry points
 
-External market session:
-
-- `.github/workflows/crawl-external-market-indicators.yml`
-- `scripts/crawl_external_market_indicators.js`
-  - `resolveAutomaticTargetDate(now)`
-  - existing rule: New York date at/after 09:30; before 09:30 use previous weekday
-
-EIA refined-product query upper bound:
-
-- `.github/workflows/crawl-refined-product-tightness.yml`
-- `scripts/crawl_refined_product_tightness.js`
-  - current default query upper bound: `todayCompact()` from runner UTC date
-  - canonical output business date: source/API `observation_date`
-- `tests/refined_product_tightness.test.js`
-
-Fubon rankings source date/year:
-
-- `.github/workflows/crawl-rankings.yml`
-- `scripts/scraper_fubon.js`
-- `scripts/scraper_fubon_foreign.js`
-  - current helper: `getDateString(pageDate)`
-- `scripts/scraper_fubon_other.js`
-
-Current defect in all three ranking scripts:
-
-- valid source `MM/DD` is combined with `new Date().getFullYear()`;
-- missing source date falls back to runner current date.
-
-TAIFEX futures-contract scheduled anchor:
-
-- `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
-- `scripts/crawl_taifex_major_institutional_traders_futures_contracts.js`
-- `data_history_sma/non_trading_days.json`
-
-The scheduled workflow currently anchors to runner Taipei date and rolls backward across weekends/configured non-trading days. That rollback is an existing domain policy and must be preserved deliberately.
-
-## Next round — third-wave bounded mixed/source-clock cleanup
-
-Implement only these four workflows and their directly required scripts/tests/regression harness:
-
-1. `.github/workflows/crawl-external-market-indicators.yml`
-2. `.github/workflows/crawl-refined-product-tightness.yml`
-3. `.github/workflows/crawl-rankings.yml`
-4. `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
-
-The relevant third-wave entry-point baseline remains:
-
-`89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`
-
-A concurrent commit `31b54724aef1e6857484165dc05fcd5a843f8147` was independently verified as data-only and did not touch any third-wave entry point. Handoff-hardening commits after it also must not modify third-wave production entry points.
-
-Before production edits, compare the third-wave entry points against the `89a2ade...` baseline. Unrelated data/snapshot commits are allowed; any material change to a third-wave workflow/script/test entry point requires refreshing this handoff before implementation.
-
-### Third-wave policy requirements
-
-#### 1. External market indicators
-
-Preserve `scripts/crawl_external_market_indicators.js` New York session policy exactly:
-
-- at/after 09:30 America/New_York -> New York session date, weekend-rolled as currently implemented;
-- before 09:30 -> previous weekday;
-- actual source market date/finality validation remains authoritative.
-
-Scheduled runs must resolve the intended cron occurrence first and feed that timestamp into the existing New York-session resolver through a minimal deterministic interface such as `--now`. A delayed runner must not move the requested U.S. market session.
-
-Manual explicit `date` and provisional/final overwrite behavior remain unchanged.
-
-#### 2. EIA refined-product tightness
-
-Do **not** convert `observation_date` into a scheduled calendar date. The canonical artifact date remains the latest aligned EIA observation returned by the API.
-
-Only the scheduled **query upper bound** becomes delay-safe: derive the upper-bound date from the intended scheduled occurrence in UTC, matching current `todayCompact()` UTC-date semantics at on-time execution, and pass it explicitly with `--date`.
-
-Manual explicit date, source-derived `observation_date`, force/reuse behavior, methodology, and factor calculations remain unchanged.
-
-#### 3. Fubon rankings — decision is frozen, no fallback design work remains
-
-The source page `MM/DD` is authoritative for month/day. The scheduled logical occurrence is only an **anchor for deterministic year inference** around year boundaries.
-
-All three scripts must use one consistent date-resolution rule:
-
-- `scripts/scraper_fubon.js`
-- `scripts/scraper_fubon_foreign.js`
-- `scripts/scraper_fubon_other.js`
-
-Required behavior:
-
-1. If a valid source page `MM/DD` exists:
-   - preserve that source month/day;
-   - infer the year deterministically from the logical scheduled-occurrence anchor;
-   - handle Dec/Jan rollover explicitly and test it.
-2. If source page date is absent, malformed, or cannot be resolved without guessing:
-   - **fail that ranking target**;
-   - **do not write an official dated CSV for that target**;
-   - surface the failure so the crawler/workflow cannot report complete success;
-   - **never** fall back to runner date;
-   - **never** fall back to scheduled date;
-   - **never** invent a source date.
-3. Existing valid source `MM/DD` must never be overwritten by the scheduled date.
-
-There is no longer an open decision about a deterministic missing-date fallback. Missing trustworthy source date means no official artifact for that target.
-
-Preserve existing crawl targets, pacing/retry behavior, output naming shape, and commit scope.
-
-#### 4. TAIFEX futures contracts
-
-Scheduled runs must derive their base date from the intended cron occurrence, not runner Taipei `new Date()`.
-
-Preserve the existing explicit policy:
-
-- start from the logical scheduled Taipei calendar date;
-- if it is weekend/configured non-trading day, roll backward until the most recent trading date;
-- pass that explicit date to `scripts/crawl_taifex_major_institutional_traders_futures_contracts.js`.
-
-Manual single-date and manual range behavior remain unchanged. Do not change the range crawler into a new batching architecture in this date-semantics round.
-
-### Explicitly out of third wave
-
-Do not migrate or reinterpret:
+TDCC shareholding snapshot:
 
 - `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
+- `scripts/crawl_tdcc_shareholding_snapshot.js`
+- `tests/tdcc_shareholding_snapshot.test.js`
+- durable date fields to classify: source row `observed_date`, archive `captured_at`, conservative `available_at`
+
+CNN Fear & Greed:
+
 - `.github/workflows/crawl-cnn-fear-and-greed.yml`
+- `scripts/crawl_cnn_fear_and_greed.js`
+- source date currently comes from `fear_and_greed.timestamp` -> `dataDate`
+
+TAIFEX futures/options source payload:
+
 - `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
-- prediction/replay workflows or safety resolvers;
-- any workflow not named in the four-workflow third-wave scope.
+- `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
+- `getPayloadDate(csvText)` reads canonical payload date from the first source data row
+- manual `--date` is only an expected-date validation against the latest-only open-data payload
 
-### Third-wave completion contract
+## Known problems / rejected approaches
 
-Prompt A is complete only when:
+- Do not automatically migrate a scheduled workflow merely because it has multiple cron probes. Probe time and artifact/business date are different concepts.
+- TDCC `observed_date` is source-derived; `available_at` is a conservative first-successful-capture timestamp and must not be backdated to the scheduled occurrence without a separately justified methodology change.
+- CNN `dataDate` is source timestamp-derived. A scheduled occurrence must not overwrite it unless audit finds a separate runner-derived business-date bug.
+- TAIFEX futures/options currently names the artifact from the payload date. The next round must determine whether schedule delay only affects which latest payload is observed or whether an explicit expected-date anchor is necessary for correctness. Do not assume it should copy the futures-contract policy; the API behavior is different.
+- Do not migrate prediction/replay as part of this project without separate preregistration.
 
-- `.github/workflows/test-scheduled-collection-date.yml` has been hardened to materialize regression inputs from the run's exact `GITHUB_SHA`, not moving `main`;
-- regression output records the tested SHA;
-- all four named workflows are durably migrated on current remote `main`;
-- external-market New York-session selection is anchored to intended occurrence without changing finality/source-date validation;
-- EIA scheduled query upper bound is occurrence-derived while `observation_date` remains API-derived;
-- all three Fubon ranking scripts use one deterministic source-MM/DD + occurrence-anchor year rule;
-- Fubon missing/malformed source page date fails that target and writes no official dated artifact;
-- no scheduled Fubon output date depends on runner current year/date;
-- TAIFEX futures-contract scheduled base date is occurrence-derived while its existing backward-to-trading-date policy remains intact;
-- deterministic tests cover delayed runs crossing UTC/Taipei/New York boundaries, Fubon Dec/Jan year rollover, and Fubon missing-page-date failure;
-- any new cron expression/grammar used with the shared resolver is within the verified subset or is accompanied by new parser/semantic regression tests;
-- regression CI is green and its `head_sha` equals the claimed implementation/test head;
-- prediction/replay safety blobs remain unchanged;
-- no out-of-scope workflow is migrated;
-- exact implementation/test files are verified on current remote `main`;
-- agent reports exactly `Prompt A complete — ready for Prompt B` and stops.
+## Next round — fourth-wave source-derived semantics audit only
+
+Audit exactly these three workflows and their named scripts/tests:
+
+1. `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
+2. `.github/workflows/crawl-cnn-fear-and-greed.yml`
+3. `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
+
+This is an **audit/classification round, not a production migration round**.
+
+For each workflow, document separately:
+
+- trigger/probe occurrence semantics;
+- canonical source/business date;
+- capture/availability timestamp semantics;
+- manual-date behavior;
+- whether actual runner wall clock participates in artifact naming, business-date validation, or only capture metadata;
+- delayed-runner behavior across UTC/Taipei/source-market boundaries;
+- whether any defect is actually present;
+- if a defect exists, the exact smallest next implementation scope and regression cases required.
+
+Expected default hypotheses to test, not assume:
+
+- TDCC: likely source-derived `observed_date` with capture-time `available_at`; schedule may need no date migration.
+- CNN Fear & Greed: likely source timestamp-derived `dataDate`; schedule may need no date migration.
+- TAIFEX futures/options: payload date is source-derived, but delayed latest-only fetch may need explicit expected-date semantics or may intentionally remain latest-source driven; audit before deciding.
+
+Stop after the audit checkpoint. Do not edit the three production workflows/scripts in Prompt A unless a prerequisite test/inspection helper that does not change production semantics is strictly necessary. Any actual migration must be preregistered in the following handoff first.
 
 ## Safety / stop conditions
 
-- If current `main` materially changes any third-wave entry point before implementation, update this handoff before changing code.
+- If current `main` materially changes any next-round entry point before audit, refresh this handoff before drawing conclusions.
 - Do not replace source-derived dates with scheduled dates.
-- Do not weaken external-market finality validation or EIA observation-date semantics.
-- Do not guess a Fubon ranking year from runner time.
-- Do not create any Fubon dated artifact when its source page date is unavailable or untrustworthy.
+- Do not backdate TDCC `available_at` to observation or schedule time.
+- Do not convert CNN source timestamp into scheduled artifact date.
+- Do not assume TAIFEX futures/options behaves like the TAIFEX futures-contract crawler; the source APIs differ.
 - Do not treat `resolve_scheduled_collection_date.js` as a general cron engine.
-- Do not claim exact intended occurrence after a later identical cron occurrence has passed unless an independent durable occurrence identifier exists.
-- Do not change TAIFEX futures/options source-payload workflow in this wave.
+- Do not claim exact intended occurrence after a later identical cron occurrence has passed without an independent durable occurrence identifier.
 - Do not modify prediction/replay stale fallback behavior.
-- Do not expand beyond the four preregistered workflows.
+- Do not expand beyond the three preregistered audit workflows.
 
 ## Prompt A — Next-round implementation prompt
 
 Continue the Scheduled Workflow Date Semantics Migration in repository `EasonLiu0913/stock_data`.
 
+This round is a bounded **source-derived date semantics audit**, not a production migration.
+
 Before doing any work:
 1. Read `AGENTS.md`.
 2. Read `docs/project-philosophy.md` and `docs/roadmap/current-phase.md`.
 3. Read the canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`.
-4. Fetch current remote `main`. Compare the third-wave entry points against baseline `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`. The already-verified concurrent commit `31b54724aef1e6857484165dc05fcd5a843f8147` is data-only and may be ignored for this entry-point check. If any third-wave entry point changed materially, update the handoff before implementation.
-5. Read exactly:
+4. Fetch current remote `main`; do not rely on local/conversation state.
+5. Verify the handoff checkpoint and the following exact entry points have not materially changed since the checkpoint. If they have, refresh the handoff before continuing.
+6. Read exactly:
+   - `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
+   - `scripts/crawl_tdcc_shareholding_snapshot.js`
+   - `tests/tdcc_shareholding_snapshot.test.js`
+   - `.github/workflows/crawl-cnn-fear-and-greed.yml`
+   - `scripts/crawl_cnn_fear_and_greed.js`
+   - `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml`
+   - `scripts/crawl_taifex_major_institutional_traders_futures_options.js`
    - `scripts/resolve_scheduled_collection_date.js`
-   - `tests/resolve_scheduled_collection_date.test.js`
    - `.github/workflows/test-scheduled-collection-date.yml`
-   - `.github/workflows/crawl-external-market-indicators.yml`
-   - `scripts/crawl_external_market_indicators.js`
-   - `.github/workflows/crawl-refined-product-tightness.yml`
-   - `scripts/crawl_refined_product_tightness.js`
-   - `tests/refined_product_tightness.test.js`
-   - `.github/workflows/crawl-rankings.yml`
-   - `scripts/scraper_fubon.js`
-   - `scripts/scraper_fubon_foreign.js`
-   - `scripts/scraper_fubon_other.js`
-   - `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
-   - `scripts/crawl_taifex_major_institutional_traders_futures_contracts.js`
-   - `data_history_sma/non_trading_days.json`
 
-Implement only the four preregistered third-wave workflows and directly required scripts/tests/regression-harness changes:
+Audit only these three workflows:
 
-- `.github/workflows/crawl-external-market-indicators.yml`
-- `.github/workflows/crawl-refined-product-tightness.yml`
-- `.github/workflows/crawl-rankings.yml`
-- `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
+1. TDCC shareholding snapshot
+2. CNN Fear & Greed
+3. TAIFEX futures/options source payload
 
-First, harden `.github/workflows/test-scheduled-collection-date.yml` so it materializes every regression input from `${GITHUB_SHA}` rather than moving `main`, and prints the exact tested SHA.
+For each one, produce repository-durable findings covering:
 
-Then follow the exact third-wave policies in this handoff:
+- schedule/probe occurrence role;
+- authoritative source/business date and exact field/function/path;
+- capture/availability timestamp role;
+- manual date behavior;
+- any use of runner `new Date()` / timezone-derived date that can affect official artifact naming or validation;
+- delayed-runner boundary cases;
+- whether a real date-semantics defect exists;
+- whether no migration is the correct conclusion.
 
-- External market: intended occurrence anchors the existing New York 09:30 session resolver; preserve source market date/finality and manual explicit date.
-- EIA: only the scheduled query upper bound becomes occurrence-derived UTC date; `observation_date` stays API-derived.
-- Fubon rankings: page `MM/DD` remains authoritative; logical occurrence only anchors deterministic year inference. If page date is missing/malformed/unresolvable, fail that target and write no official dated artifact. No runner-date or scheduled-date fallback is allowed.
-- TAIFEX futures contracts: logical scheduled Taipei date becomes the anchor; preserve existing weekend/configured-holiday rollback and manual date/range behavior.
+Frozen constraints:
 
-Use the existing scheduled-occurrence resolver only within its verified cron subset. Do not add untested cron grammar or treat it as a general cron engine. Remember that reconstruction from `github.event.schedule` is ambiguous after a later identical occurrence has passed; do not claim exactness in that case.
+- TDCC source `observed_date` must not be replaced by scheduled date.
+- TDCC `available_at` remains conservative first successful archive capture time; do not backdate it.
+- CNN source `fear_and_greed.timestamp` / `dataDate` remains source-derived unless the audit proves a distinct bug.
+- TAIFEX futures/options artifact date currently comes from `getPayloadDate(csvText)` and must not be replaced speculatively.
+- Manual explicit behavior must remain intact.
+- Do not modify prediction/replay.
+- Do not expand to any workflow outside the three named audit targets.
+- Do not implement a production migration in this round. If a defect is found, preregister the smallest implementation + tests in the next handoff instead.
 
-Add deterministic tests for relevant late-runner New York/UTC/Taipei boundaries, Fubon Dec/Jan year rollover, Fubon missing-page-date failure, and the exact TAIFEX rollback policy. Extend `.github/workflows/test-scheduled-collection-date.yml` to materialize and verify the exact third-wave inputs/contracts at `${GITHUB_SHA}`.
+Required audit evidence:
 
-Do not migrate any workflow outside the four named files. Do not change prediction/replay stale-data safety behavior.
+- exact current `main` SHA;
+- exact blob SHAs for the three workflows and their crawler/test entry points;
+- concise delayed-runner boundary analysis for each source;
+- explicit decision for each: `no_migration`, `needs_migration_next_round`, or `needs_more_source_evidence`;
+- exact proposed implementation/test paths for any `needs_migration_next_round` result.
 
-Before declaring completion:
+Prompt A completion contract:
 
-1. require green regression CI;
-2. verify the regression run `head_sha` equals the claimed implementation/test head;
-3. verify exact implementation/test/workflow files on remote `main`;
-4. verify prediction/replay protected blobs are unchanged.
-
-Then report exactly:
-
-`Prompt A complete — ready for Prompt B`
-
-and stop.
+- all three sources are independently classified;
+- no production semantics were changed;
+- findings are written into this canonical handoff (or a directly linked repository document if the handoff would become unwieldy);
+- next migration scope, if any, is preregistered with paired Prompt A + Prompt B;
+- current remote `main` is re-fetched and the audit checkpoint is verified durable;
+- then report exactly `Prompt A complete — ready for Prompt B` and stop.
 
 ## Prompt B — Next-round closeout / verification prompt
 
-Perform the mandatory closeout review for the third-wave Scheduled Workflow Date Semantics migration in repository `EasonLiu0913/stock_data`.
+Perform the mandatory closeout review for the fourth-wave source-derived Scheduled Workflow Date Semantics audit in repository `EasonLiu0913/stock_data`.
 
 Before verifying:
 1. Read `AGENTS.md`.
 2. Read `docs/handoffs/scheduled-workflow-date-semantics.md`.
-3. Fetch current remote `main`; do not verify only local state or workflow summaries.
+3. Fetch current remote `main`; do not verify only local state or the Prompt A summary.
 
-Independently enforce every third-wave closeout criterion preregistered in the canonical handoff.
+Independently enforce every preregistered audit criterion.
 
 1. **Bounded scope**
-   - Only the four preregistered third-wave workflows plus directly necessary scripts/tests/regression harness and later handoff changes were made.
-   - No TDCC, CNN Fear & Greed, TAIFEX futures/options source-payload, prediction/replay, or other workflow was opportunistically migrated.
+   - Audit is limited to TDCC, CNN Fear & Greed, and TAIFEX futures/options source payload plus directly necessary documentation/test-only inspection helpers.
+   - No production date-semantics migration was made in this audit round.
+   - No prediction/replay or unrelated workflow was changed.
 
-2. **Exact-head regression evidence**
-   - `.github/workflows/test-scheduled-collection-date.yml` materializes inputs from the run's exact `${GITHUB_SHA}`, not `/main`.
-   - Record the regression run ID, `head_sha`, claimed implementation/test head, and tested/materialized SHA.
-   - These SHAs must match. Any mismatch is failure even if the job is green.
+2. **TDCC source-date classification**
+   - Verify `scripts/crawl_tdcc_shareholding_snapshot.js` derives canonical `observed_date` from source rows.
+   - Verify `available_at` remains first successful archive capture time and was not backdated to scheduled occurrence.
+   - Verify the audit explicitly distinguishes probe schedule, source observation date, `captured_at`, and `available_at`.
 
-3. **External market session**
-   - Scheduled target selection uses intended occurrence as the `now` anchor for the existing New York session resolver.
-   - The 09:30 America/New_York rule is unchanged.
-   - Source market date, provisional/final status, validation, and manual explicit date remain unchanged.
-   - Delayed execution across New York date/session boundaries does not move the requested session.
+3. **CNN source-date classification**
+   - Verify `scripts/crawl_cnn_fear_and_greed.js` derives `dataDate` from `fear_and_greed.timestamp`.
+   - Verify no audit conclusion substitutes scheduled date for that source timestamp.
+   - Verify delayed-runner analysis distinguishes source data freshness from runner execution time.
 
-4. **EIA refined-product tightness**
-   - Scheduled query upper bound derives from intended occurrence's UTC calendar date, matching prior on-time behavior.
-   - `observation_date` remains aligned EIA source observation, not scheduled date.
-   - Manual date, force/reuse, methodology, and factor calculations remain intact.
+4. **TAIFEX futures/options classification**
+   - Verify `getPayloadDate(csvText)` remains the source of artifact date.
+   - Verify manual `--date` remains an expected-date check against the latest-only source payload.
+   - Verify the audit explicitly decides whether delayed execution creates a correctness defect, and does not copy the futures-contract rollback policy without evidence.
 
-5. **Fubon rankings**
-   - All three scripts share one deterministic source `MM/DD` + logical-occurrence-anchor year rule.
-   - Valid page `MM/DD` is never replaced by scheduled date.
-   - No scheduled artifact naming depends on runner `new Date().getFullYear()` or runner current-date fallback.
-   - Missing/malformed/unresolvable page date fails that target and writes no official dated artifact; there is no alternate fallback.
-   - Dec/Jan year rollover and missing-page-date failure are deterministic and tested.
-   - Crawl targets, pacing/retries, output naming shape, and commit scope remain intact.
+5. **Shared resolver / occurrence limits**
+   - Verify no unsupported cron grammar or false exactness claim was introduced.
+   - If the audit recommends a future occurrence-based check, its ambiguity and supported cron subset are documented.
 
-6. **TAIFEX futures contracts**
-   - Scheduled base date derives from logical occurrence, not runner Taipei date.
-   - Existing backward rollback across weekends/configured non-trading days is preserved exactly.
-   - Manual single-date and range behavior remain unchanged.
+6. **Durable evidence**
+   - Record current `main` and exact blob identities used by the audit.
+   - Verify the audit findings and classifications exist on remote `main`, not only in chat.
 
-7. **Shared resolver contract**
-   - No new untested cron grammar was introduced.
-   - Any new cron semantics beyond the verified subset have explicit parser/semantic tests.
-   - The implementation does not falsely claim exact occurrence reconstruction in a case where a later identical occurrence has already passed without an independent durable occurrence identifier.
+7. **Next-round preregistration**
+   - Every source has one explicit decision: `no_migration`, `needs_migration_next_round`, or `needs_more_source_evidence`.
+   - Any future migration is bounded to exact paths and deterministic regression cases before implementation begins.
+   - Paired Prompt A + Prompt B for the following round are present in the canonical handoff.
 
-8. **Prediction/replay non-regression**
-   - Verify `scripts/resolve_latest_complete_prediction_base.js` and `scripts/resolve_prediction_replay_date.js` retain the protected behavior/blob identity unless a separately preregistered reason exists.
+If any criterion fails, fix only the bounded audit/documentation defect and repeat Prompt B.
 
-9. **Durable remote state**
-   - Verify every required implementation/test/workflow file and contract marker on current remote `main`.
-   - Green-but-missing remote state is failure.
-
-If any criterion fails, fix only the bounded defect, rerun the affected regression, and repeat Prompt B.
-
-If everything passes, update and commit `docs/handoffs/scheduled-workflow-date-semantics.md` with third-wave completion evidence, exact next bounded scope, and the following Prompt A + Prompt B. Re-fetch `main` after the handoff commit and confirm the handoff is not stale, then stop.
+If all criteria pass, update and commit `docs/handoffs/scheduled-workflow-date-semantics.md` with the verified classifications and the exact next bounded scope. Re-fetch `main` after the handoff commit and confirm the handoff is not stale, then stop. Do not begin the next Prompt A automatically.
