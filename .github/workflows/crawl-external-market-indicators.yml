@@ -50,16 +50,35 @@ jobs:
         env:
           INPUT_DATE: ${{ github.event.inputs.date || '' }}
           FORCE_OVERWRITE: ${{ github.event.inputs.force_overwrite || 'false' }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
         run: |
           set -euo pipefail
           if [ -n "$INPUT_DATE" ]; then
             target=$(node scripts/crawl_external_market_indicators.js --resolve-date --date "$INPUT_DATE")
+            resolution_source=manual_explicit_date
+            scheduled_at=
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --time-zone UTC \
+              --json)
+            scheduled_at=$(printf '%s' "$resolved" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).scheduled_at_utc));")
+            target=$(node scripts/resolve_external_market_session_date.js --now "$scheduled_at")
+            resolution_source=scheduled_occurrence
           else
             target=$(node scripts/crawl_external_market_indicators.js --resolve-date)
+            resolution_source=manual_current_time
+            scheduled_at=
           fi
           echo "target_date=$target" >> "$GITHUB_OUTPUT"
           echo "force=$FORCE_OVERWRITE" >> "$GITHUB_OUTPUT"
+          echo "resolution_source=$resolution_source" >> "$GITHUB_OUTPUT"
+          echo "scheduled_at_utc=$scheduled_at" >> "$GITHUB_OUTPUT"
           echo "Target U.S. market date: $target"
+          if [ -n "$scheduled_at" ]; then echo "Scheduled occurrence UTC: $scheduled_at"; fi
           echo "Current New York time: $(TZ='America/New_York' date '+%Y-%m-%d %H:%M:%S %Z')"
           echo "The crawler will run regardless of market phase; provisional/intraday data is persisted and refreshed later."
 
@@ -135,6 +154,8 @@ jobs:
             echo "## External Market Crawl"
             echo ""
             echo "- Target market date: \`${{ steps.target.outputs.target_date }}\`"
+            echo "- Resolution source: \`${{ steps.target.outputs.resolution_source }}\`"
+            echo "- Scheduled occurrence UTC: \`${{ steps.target.outputs.scheduled_at_utc || 'n/a' }}\`"
             echo "- Actual market date: \`${{ steps.validate.outputs.actual_date || 'n/a' }}\`"
             echo "- Data status: \`${{ steps.validate.outputs.data_status || steps.crawl.outputs.data_status || 'unknown' }}\`"
             echo "- Final: \`${{ steps.validate.outputs.is_final || steps.crawl.outputs.is_final || 'false' }}\`"
@@ -181,4 +202,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
