@@ -18,7 +18,19 @@
       "confidence",
       "follow_up",
       "sources"
-    ]
+    ],
+    "writer_precommit_validation": {
+      "required": true,
+      "validator_path": "scripts/validate_daily_gainers_news_analysis.js",
+      "command_template": "node scripts/validate_daily_gainers_news_analysis.js YYYYMMDD",
+      "rules": [
+        "after writing data_daily_gain_over_5/analysis-news/YYYYMMDD.json, the AI writer must run the exact-date validator before commit or push",
+        "the validator must exit successfully before the analysis-news artifact may be committed or pushed",
+        "if validation fails, fix the writer output and rerun validation; do not commit an invalid artifact",
+        "downstream workflow canonicalization is a recovery guardrail and must not be used as a substitute for writer-side validation",
+        "the validated target_date, stock_count, stock order, field shapes, evidence/source requirements, and exact raw-list date must match the canonical contract"
+      ]
+    }
   },
   "facts": {
     "schema_version": 3,
@@ -154,6 +166,7 @@
   "rules": [
     "latest rules overwrite historical analysis; old schema versions are not preserved for runtime use",
     "news-theme analysis is a first-stage semantic source and never contains synthetic funding values",
+    "news-theme AI writers must pass scripts/validate_daily_gainers_news_analysis.js for the exact target date before committing or pushing analysis-news output",
     "facts are deterministic and must not infer a catalyst from price movement alone",
     "AI analyses must cover every stock in facts exactly once and in the same order",
     "cause_tags must be unique lowercase snake_case ASCII identifiers",
