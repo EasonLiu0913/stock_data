@@ -39,13 +39,27 @@ jobs:
 
       - name: Determine target date
         id: date
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ github.event.inputs.date || '' }}
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            echo "target=${{ github.event.inputs.date }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            TARGET_DATE="$INPUT_DATE"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$SCHEDULE_EXPR" \
+              --policy same_trade_date \
+              --json)
+            TARGET_DATE=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$resolved")
+            echo "Delay-safe retry date: $resolved"
           else
             TARGET_DATE=$(TZ='Asia/Taipei' date '+%Y%m%d')
-            echo "target=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
           fi
+          echo "target=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
 
       - name: Check TWSE trading day
         id: trading-day
