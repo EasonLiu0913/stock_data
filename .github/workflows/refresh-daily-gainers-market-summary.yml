@@ -85,19 +85,29 @@ jobs:
           date="${{ steps.date.outputs.date }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "data_daily_gain_over_5/market-summary/${date}.json" "data_daily_gain_over_5/market-summary/manifest.json"
-          if git diff --cached --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git commit -m "analysis: refresh 5% market summary ${date}"
+
           for attempt in 1 2 3 4 5; do
+            echo "Push attempt ${attempt}: rebuild from current origin/main"
+            git fetch origin main
+            git reset --hard origin/main
+
+            node scripts/build_daily_gainers_market_summary.js --date "$date"
+            node scripts/validate_daily_gainers_market_summary.js --date "$date"
+
+            git add -- "data_daily_gain_over_5/market-summary/${date}.json" "data_daily_gain_over_5/market-summary/manifest.json"
+            if git diff --cached --quiet; then
+              echo "Remote main already contains an equivalent or newer summary for ${date}."
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            git commit -m "analysis: refresh 5% market summary ${date}"
             if git push origin HEAD:main; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            git fetch origin main
-            git rebase origin/main
+
+            echo "Remote main advanced during push; discard generated commit and regenerate from latest main."
             sleep 5
           done
           exit 1
@@ -123,4 +133,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
