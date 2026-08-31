@@ -35,7 +35,7 @@ Prompt B identity source: durable pre-Prompt-A handoff at `a18279c017d14902bbc0d
 
 Prompt B closeout: **PASS**.
 
-Prompt B closeout checkpoint: `TO_BE_RECORDED_AFTER_WRITE`.
+Prompt B closeout checkpoint: `9345f1173e4be8261bf0112b7337fe64e796b7f2`.
 
 #### Seventh-wave closeout evidence
 
@@ -100,7 +100,7 @@ Round identity: `eighth-wave-final-scheduled-date-verification-and-retirement-au
 
 Status: **promoted only after seventh-wave Prompt B PASS; Prompt A has not started.**
 
-Promotion baseline: the seventh-wave Prompt B closeout handoff checkpoint recorded above. The next agent must still freshly fetch current remote `main` before execution and treat any later concurrent change under the freshness rules below.
+Promotion baseline: seventh-wave Prompt B closeout checkpoint `9345f1173e4be8261bf0112b7337fe64e796b7f2`. The next agent must still freshly fetch current remote `main` before execution and treat any later concurrent change under the freshness rules below.
 
 This round is a final verification/retirement audit, not a new production migration wave.
 
