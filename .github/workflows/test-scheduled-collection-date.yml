@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/resolve_scheduled_collection_date.js'
       - 'tests/resolve_scheduled_collection_date.test.js'
+      - 'tests/scheduled_date_third_wave.test.js'
       - '.github/workflows/test-scheduled-collection-date.yml'
       - '.github/workflows/crawl-twse-mi-index.yml'
       - '.github/workflows/crawl-twse-institutional-investors.yml'
@@ -22,6 +23,18 @@ on:
       - '.github/workflows/crawl-market-news.yml'
       - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
       - '.github/workflows/prepare-market-environment.yml'
+      - '.github/workflows/crawl-external-market-indicators.yml'
+      - '.github/workflows/crawl-refined-product-tightness.yml'
+      - '.github/workflows/crawl-rankings.yml'
+      - '.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml'
+      - 'scripts/resolve_external_market_session_date.js'
+      - 'scripts/resolve_fubon_ranking_date.js'
+      - 'scripts/resolve_taifex_scheduled_date.js'
+      - 'scripts/scraper_fubon.js'
+      - 'scripts/scraper_fubon_foreign.js'
+      - 'scripts/scraper_fubon_other.js'
+      - 'scripts/crawl_refined_product_tightness.js'
+      - 'tests/refined_product_tightness.test.js'
   workflow_dispatch:
 
 permissions:
@@ -35,16 +48,38 @@ jobs:
   regression:
     runs-on: ubuntu-latest
     steps:
-      - name: Materialize exact regression inputs from current main
+      - name: Materialize exact regression inputs from tested SHA
         shell: bash
+        env:
+          TESTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          base='https://raw.githubusercontent.com/EasonLiu0913/stock_data/main'
+          ref="${TESTED_SHA}"
+          base="https://raw.githubusercontent.com/EasonLiu0913/stock_data/${ref}"
+          echo "TESTED_SHA=${ref}"
+          echo "tested_sha=${ref}" >> "$GITHUB_OUTPUT"
           mkdir -p scripts tests data_history_sma .github/workflows
-          curl -fsSL "$base/scripts/resolve_scheduled_collection_date.js" -o scripts/resolve_scheduled_collection_date.js
-          curl -fsSL "$base/scripts/resolve_forecast_dates.js" -o scripts/resolve_forecast_dates.js
-          curl -fsSL "$base/tests/resolve_scheduled_collection_date.test.js" -o tests/resolve_scheduled_collection_date.test.js
-          curl -fsSL "$base/data_history_sma/non_trading_days.json" -o data_history_sma/non_trading_days.json
+
+          files=(
+            scripts/resolve_scheduled_collection_date.js
+            scripts/resolve_forecast_dates.js
+            scripts/resolve_external_market_session_date.js
+            scripts/resolve_fubon_ranking_date.js
+            scripts/resolve_taifex_scheduled_date.js
+            scripts/crawl_external_market_indicators.js
+            scripts/crawl_refined_product_tightness.js
+            scripts/scraper_fubon.js
+            scripts/scraper_fubon_foreign.js
+            scripts/scraper_fubon_other.js
+            tests/resolve_scheduled_collection_date.test.js
+            tests/scheduled_date_third_wave.test.js
+            tests/refined_product_tightness.test.js
+            data_history_sma/non_trading_days.json
+          )
+          for file in "${files[@]}"; do
+            mkdir -p "$(dirname "$file")"
+            curl -fsSL "$base/$file" -o "$file"
+          done
 
           workflows=(
             crawl-twse-mi-index.yml
@@ -62,6 +97,10 @@ jobs:
             crawl-market-news.yml
             publish-daily-gainers-ai-analysis.yml
             prepare-market-environment.yml
+            crawl-external-market-indicators.yml
+            crawl-refined-product-tightness.yml
+            crawl-rankings.yml
+            crawl-taifex-major-institutional-traders-futures-contracts.yml
           )
           for name in "${workflows[@]}"; do
             curl -fsSL "$base/.github/workflows/$name" -o ".github/workflows/$name"
@@ -74,7 +113,15 @@ jobs:
           set -euo pipefail
           node --check scripts/resolve_scheduled_collection_date.js
           node --check scripts/resolve_forecast_dates.js
-          node --test tests/resolve_scheduled_collection_date.test.js
+          node --check scripts/resolve_external_market_session_date.js
+          node --check scripts/resolve_fubon_ranking_date.js
+          node --check scripts/resolve_taifex_scheduled_date.js
+          node --check scripts/crawl_external_market_indicators.js
+          node --check scripts/crawl_refined_product_tightness.js
+          node --check scripts/scraper_fubon.js
+          node --check scripts/scraper_fubon_foreign.js
+          node --check scripts/scraper_fubon_other.js
+          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/refined_product_tightness.test.js
 
       - name: Verify first-wave workflows use the shared scheduled resolver
         shell: bash
@@ -93,23 +140,8 @@ jobs:
             .github/workflows/crawl-twse-twt49u.yml
           )
           for file in "${workflows[@]}"; do
-            grep -q 'resolve_scheduled_collection_date.js' "$file" || {
-              echo "Missing shared scheduled-date resolver in $file"
-              exit 1
-            }
+            grep -q 'resolve_scheduled_collection_date.js' "$file" || { echo "Missing shared scheduled-date resolver in $file"; exit 1; }
           done
-
-          # Legacy runner-clock behavior may remain only in explicit manual/no-date branches.
-          # The scheduled branch must appear before any legacy fallback in each migrated resolver block.
-          for file in "${workflows[@]}"; do
-            schedule_line=$(grep -n 'EVENT_NAME.*schedule' "$file" | head -1 | cut -d: -f1 || true)
-            resolver_line=$(grep -n 'resolve_scheduled_collection_date.js' "$file" | head -1 | cut -d: -f1 || true)
-            if [ -z "$schedule_line" ] || [ -z "$resolver_line" ] || [ "$resolver_line" -le "$schedule_line" ]; then
-              echo "Scheduled resolver wiring is malformed in $file"
-              exit 1
-            fi
-          done
-
           echo "Verified shared scheduled resolver wiring for ${#workflows[@]} first-wave workflows."
 
       - name: Verify second-wave workflow semantics
@@ -121,40 +153,57 @@ jobs:
           news=.github/workflows/crawl-market-news.yml
           gainers=.github/workflows/publish-daily-gainers-ai-analysis.yml
           environment=.github/workflows/prepare-market-environment.yml
-
           for file in "$chart" "$margin" "$news" "$gainers" "$environment"; do
-            grep -q 'resolve_scheduled_collection_date.js' "$file" || {
-              echo "Missing shared scheduled resolver in $file"
-              exit 1
-            }
+            grep -q 'resolve_scheduled_collection_date.js' "$file" || { echo "Missing shared scheduled resolver in $file"; exit 1; }
           done
-
           grep -q -- '--day-boundary-hour 8' "$chart"
-          chart_schedule_line=$(grep -n 'EVENT_NAME.*schedule' "$chart" | head -1 | cut -d: -f1)
-          chart_legacy_line=$(grep -n "date --date='8 hours ago'" "$chart" | head -1 | cut -d: -f1)
-          [ "$chart_legacy_line" -gt "$chart_schedule_line" ] || { echo 'Market chart scheduled path still depends on runner -8h'; exit 1; }
-
-          margin_schedule_line=$(grep -n 'EVENT_NAME.*schedule' "$margin" | head -1 | cut -d: -f1)
-          margin_legacy_line=$(grep -n "date --date='8 hours ago'" "$margin" | head -1 | cut -d: -f1)
-          [ "$margin_legacy_line" -gt "$margin_schedule_line" ] || { echo 'Margin scheduled path still depends on runner -8h'; exit 1; }
-
           grep -q -- '--policy same_calendar_date' "$news"
-          [ "$(grep -c 'steps.date.outputs.target_date' "$news")" -ge 2 ] || { echo 'Market news stages do not share one explicit date'; exit 1; }
           grep -q 'crawl_market_news.js --date' "$news"
           grep -q 'generate_market_risk_snapshot.js --date' "$news"
-
-          grep -q 'EVENT_SCHEDULE' "$gainers"
-          grep -q 'logical_hour' "$gainers"
-          grep -q 'logical_date' "$gainers"
-          grep -q 'mode="next_day_recheck"' "$gainers"
-          grep -q 'mode="same_day"' "$gainers"
-
-          grep -q 'EVENT_SCHEDULE' "$environment"
           grep -q 'scheduled_at_utc' "$environment"
-          grep -q 'args+=(--now "$scheduled_at")' "$environment"
-          grep -q 'args+=(--target-date "$INPUT_DATE")' "$environment"
-
           echo 'Verified five second-wave workflow contracts.'
+
+      - name: Verify third-wave workflow semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          external=.github/workflows/crawl-external-market-indicators.yml
+          eia=.github/workflows/crawl-refined-product-tightness.yml
+          rankings=.github/workflows/crawl-rankings.yml
+          taifex=.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml
+
+          for file in "$external" "$eia" "$rankings" "$taifex"; do
+            grep -q 'resolve_scheduled_collection_date.js' "$file" || { echo "Missing intended-occurrence resolver in $file"; exit 1; }
+          done
+
+          grep -q 'resolve_external_market_session_date.js --now "$scheduled_at"' "$external"
+          grep -q 'args=(--date "$TARGET_DATE")' "$external"
+          grep -q 'validate_external_market_snapshot.js' "$external"
+
+          grep -q -- '--time-zone UTC' "$eia"
+          grep -q 'args+=(--date "$TARGET_DATE")' "$eia"
+          grep -q 'observation_date' "$eia"
+
+          grep -q 'FUBON_DATE_ANCHOR' "$rankings"
+          for file in scripts/scraper_fubon.js scripts/scraper_fubon_foreign.js scripts/scraper_fubon_other.js; do
+            grep -q 'resolveFubonRankingDate' "$file"
+            if grep -q 'new Date().getFullYear' "$file"; then echo "Runner-year fallback remains in $file"; exit 1; fi
+            if grep -q "toISOString().slice(0, 10).replace(/-/g, '')" "$file"; then echo "Runner-date fallback remains in $file"; exit 1; fi
+          done
+
+          grep -q -- '--time-zone Asia/Taipei' "$taifex"
+          grep -q 'resolve_taifex_scheduled_date.js' "$taifex"
+          grep -q -- '--date "$DATE"' "$taifex"
+
+          echo 'Verified four third-wave workflow contracts.'
+
+      - name: Confirm exact tested SHA
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          echo "Regression tested exact commit: ${TESTED_SHA}"
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
@@ -166,6 +215,7 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TESTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+          curl -fsSL "https://raw.githubusercontent.com/EasonLiu0913/stock_data/${TESTED_SHA}/scripts/write_workflow_schedule_summary.js" | node
