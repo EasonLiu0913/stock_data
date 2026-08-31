@@ -17,7 +17,10 @@ Audit / durable evidence:
 - first-wave handoff checkpoint: `5704095d91b7456af97f70d3a96fd88ca4e7ab56`
 - second-wave implementation/test head: `27ce0b0e1eb8eb9beabe2a8a087571bc4cd47bb1`
 - second-wave regression run: `33354868624`
-- second-wave closeout checkpoint before this hardening: `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`
+- second-wave closeout checkpoint before handoff hardening: `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`
+- concurrent unrelated data-only commit observed during hardening: `31b54724aef1e6857484165dc05fcd5a843f8147`
+
+Independent compare confirmed `31b54724aef1e6857484165dc05fcd5a843f8147` changed only prediction data/snapshot artifacts and did **not** change any third-wave workflow/script/test entry point.
 
 Next phase: bounded third-wave cleanup for four known mixed-clock/source-anchor workflows.
 
@@ -247,11 +250,13 @@ Implement only these four workflows and their directly required scripts/tests/re
 3. `.github/workflows/crawl-rankings.yml`
 4. `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
 
-The third-wave implementation base is the second-wave closeout checkpoint immediately before this handoff-hardening-only commit:
+The relevant third-wave entry-point baseline remains:
 
 `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`
 
-Before production edits, verify changes after that SHA are handoff/verification hardening only. If any third-wave entry point changed materially, stop and refresh this handoff first.
+A concurrent commit `31b54724aef1e6857484165dc05fcd5a843f8147` was independently verified as data-only and did not touch any third-wave entry point. Handoff-hardening commits after it also must not modify third-wave production entry points.
+
+Before production edits, compare the third-wave entry points against the `89a2ade...` baseline. Unrelated data/snapshot commits are allowed; any material change to a third-wave workflow/script/test entry point requires refreshing this handoff before implementation.
 
 ### Third-wave policy requirements
 
@@ -368,7 +373,7 @@ Before doing any work:
 1. Read `AGENTS.md`.
 2. Read `docs/project-philosophy.md` and `docs/roadmap/current-phase.md`.
 3. Read the canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`.
-4. Fetch current remote `main` and verify that changes since `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878` are handoff/verification hardening only. If any third-wave entry point changed materially, update the handoff before implementation.
+4. Fetch current remote `main`. Compare the third-wave entry points against baseline `89a2ade5cbe15e9e0858cb607cc699fc7fbf9878`. The already-verified concurrent commit `31b54724aef1e6857484165dc05fcd5a843f8147` is data-only and may be ignored for this entry-point check. If any third-wave entry point changed materially, update the handoff before implementation.
 5. Read exactly:
    - `scripts/resolve_scheduled_collection_date.js`
    - `tests/resolve_scheduled_collection_date.test.js`
