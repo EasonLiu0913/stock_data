@@ -32,15 +32,25 @@ jobs:
       - name: Check required files and existing result
         id: check
         shell: bash
+        env:
+          DATE_INPUT: ${{ github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
-          DATE_INPUT="${{ github.event.inputs.date }}"
-          if [ -n "$DATE_INPUT" ]; then
+          set -euo pipefail
+          if [ -n "${DATE_INPUT:-}" ]; then
             TARGET_DATE="$DATE_INPUT"
             DATE_SOURCE="manual input"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            TARGET_DATE="$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_trade_date)"
+            DATE_SOURCE="logical scheduled trade date"
           else
-            # Use an 08:00 Taipei cutoff: before 08:00 calculate the previous calendar day.
+            # Preserve legacy manual-no-date 08:00 Taipei behavior.
             TARGET_DATE=$(TZ='Asia/Taipei' date --date='8 hours ago' '+%Y%m%d')
-            DATE_SOURCE="automatic Taipei 08:00 cutoff"
+            DATE_SOURCE="manual Taipei 08:00 cutoff"
           fi
 
           if [[ ! "$TARGET_DATE" =~ ^[0-9]{8}$ ]]; then
@@ -120,4 +130,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
