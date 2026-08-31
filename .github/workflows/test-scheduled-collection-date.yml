@@ -12,6 +12,12 @@ on:
       - 'tests/extract_warrant_data.test.js'
       - '.github/workflows/warrant-scraper.yml'
       - '.github/workflows/test-scheduled-collection-date.yml'
+      - '.github/workflows/crawl-mops-monthly-revenue.yml'
+      - 'scripts/crawl_mops_monthly_revenue.js'
+      - 'tests/mops_monthly_revenue.test.js'
+      - '.github/workflows/crawl-vix-index.yml'
+      - 'scripts/crawl_vix_index.js'
+      - 'tests/crawl_vix_index.test.js'
       - '.github/workflows/crawl-twse-mi-index.yml'
       - '.github/workflows/crawl-twse-institutional-investors.yml'
       - '.github/workflows/crawl-twse-margin-balance.yml'
@@ -65,7 +71,7 @@ jobs:
           base="https://raw.githubusercontent.com/EasonLiu0913/stock_data/${ref}"
           echo "TESTED_SHA=${ref}"
           echo "tested_sha=${ref}" >> "$GITHUB_OUTPUT"
-          mkdir -p scripts tests data_history_sma .github/workflows
+          mkdir -p scripts/lib tests data_history_sma .github/workflows
 
           files=(
             scripts/resolve_scheduled_collection_date.js
@@ -76,6 +82,9 @@ jobs:
             scripts/crawl_taifex_major_institutional_traders_futures_options.js
             scripts/crawl_external_market_indicators.js
             scripts/crawl_refined_product_tightness.js
+            scripts/crawl_mops_monthly_revenue.js
+            scripts/crawl_vix_index.js
+            scripts/lib/range_backfill.js
             scripts/extract_warrant_data.js
             scripts/scraper_fubon.js
             scripts/scraper_fubon_foreign.js
@@ -85,6 +94,8 @@ jobs:
             tests/scheduled_date_fourth_wave.test.js
             tests/extract_warrant_data.test.js
             tests/refined_product_tightness.test.js
+            tests/mops_monthly_revenue.test.js
+            tests/crawl_vix_index.test.js
             data_history_sma/non_trading_days.json
           )
           for file in "${files[@]}"; do
@@ -113,6 +124,8 @@ jobs:
             crawl-rankings.yml
             crawl-taifex-major-institutional-traders-futures-contracts.yml
             crawl-taifex-major-institutional-traders-futures-options.yml
+            crawl-mops-monthly-revenue.yml
+            crawl-vix-index.yml
             warrant-scraper.yml
           )
           for name in "${workflows[@]}"; do
@@ -132,13 +145,17 @@ jobs:
           node --check scripts/crawl_taifex_major_institutional_traders_futures_options.js
           node --check scripts/crawl_external_market_indicators.js
           node --check scripts/crawl_refined_product_tightness.js
+          node --check scripts/crawl_mops_monthly_revenue.js
+          node --check scripts/crawl_vix_index.js
           node --check scripts/extract_warrant_data.js
           node --check scripts/scraper_fubon.js
           node --check scripts/scraper_fubon_foreign.js
           node --check scripts/scraper_fubon_other.js
           node --check tests/scheduled_date_fourth_wave.test.js
           node --check tests/extract_warrant_data.test.js
-          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/scheduled_date_fourth_wave.test.js tests/extract_warrant_data.test.js tests/refined_product_tightness.test.js
+          node --check tests/mops_monthly_revenue.test.js
+          node --check tests/crawl_vix_index.test.js
+          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/scheduled_date_fourth_wave.test.js tests/extract_warrant_data.test.js tests/refined_product_tightness.test.js tests/mops_monthly_revenue.test.js tests/crawl_vix_index.test.js
 
       - name: Verify first-wave workflows use the shared scheduled resolver
         shell: bash
@@ -234,6 +251,28 @@ jobs:
           grep -q 'outputFile: `${payloadDate}_${OUTPUT_SUFFIX}.csv`' "$crawler"
 
           echo 'Verified fifth-wave TAIFEX futures/options expected-date contract.'
+
+      - name: Verify seventh-wave MOPS and VIX scheduled target semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mops=.github/workflows/crawl-mops-monthly-revenue.yml
+          vix=.github/workflows/crawl-vix-index.yml
+
+          for file in "$mops" "$vix"; do
+            grep -q 'resolve_scheduled_collection_date.js' "$file" || { echo "Missing scheduled occurrence resolver in $file"; exit 1; }
+            grep -q 'scheduled_at_utc' "$file" || { echo "Missing intended occurrence handoff in $file"; exit 1; }
+            grep -q 'github.event.schedule' "$file" || { echo "Missing schedule identity in $file"; exit 1; }
+          done
+
+          grep -q 'autoRevenueMonth(new Date(process.argv\[1\]))' "$mops"
+          grep -q 'autoRevenueMonth())' "$mops"
+          grep -q 'INPUT_MONTH' "$mops"
+          grep -q 'resolveAutomaticTargetDate(new Date(process.argv\[1\]))' "$vix"
+          grep -q 'crawl_vix_index.js --resolve-date)' "$vix"
+          grep -q 'INPUT_DATE' "$vix"
+          grep -q 'Automatic date has no exact VIX session; skip without failure.' "$vix"
+          echo 'Verified seventh-wave MOPS/VIX intended-occurrence wiring and preserved manual paths.'
 
       - name: Verify warrant source-date fail-closed contract
         shell: bash
