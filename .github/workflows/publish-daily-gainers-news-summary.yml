@@ -86,6 +86,13 @@ jobs:
           if [ ! -s "$news" ]; then
             node scripts/migrate_daily_gainers_unified_to_news.js "$d"
           fi
+      - name: Canonicalize news analysis shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="${{ steps.date.outputs.date }}"
+          node --check scripts/canonicalize_daily_gainers_news_analysis.js
+          node scripts/canonicalize_daily_gainers_news_analysis.js "$d"
       - name: Validate news analysis and build preliminary summary
         shell: bash
         run: |
