@@ -38,10 +38,22 @@ jobs:
         shell: bash
         env:
           INPUT_DATE: ${{ inputs.date || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
         run: |
           set -euo pipefail
           if [ -n "$INPUT_DATE" ]; then
             target=$(node scripts/crawl_vix_index.js --resolve-date --date "$INPUT_DATE")
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            occurrence_json=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name schedule \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --time-zone UTC \
+              --json)
+            scheduled_at=$(node -e "const fs=require('node:fs'); const payload=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(payload.scheduled_at_utc)" <<< "$occurrence_json")
+            target=$(node -e "process.stdout.write(require('./scripts/crawl_vix_index').resolveAutomaticTargetDate(new Date(process.argv[1])))" "$scheduled_at")
+            echo "Scheduled occurrence: $scheduled_at"
           else
             target=$(node scripts/crawl_vix_index.js --resolve-date)
           fi
@@ -105,4 +117,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
