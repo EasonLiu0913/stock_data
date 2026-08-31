@@ -72,6 +72,7 @@ jobs:
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           if [ -n "${INPUT_DATE:-}" ]; then
@@ -90,6 +91,38 @@ jobs:
               echo "mode=$mode" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            occurrence_json="$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --json)"
+            logical_date="$(printf '%s' "$occurrence_json" | jq -r '.target_date')"
+            scheduled_at="$(printf '%s' "$occurrence_json" | jq -r '.scheduled_at_utc')"
+            logical_hour="$(node - "$scheduled_at" <<'NODE'
+          const date = new Date(process.argv[2]);
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Taipei',
+            hour: '2-digit',
+            hourCycle: 'h23',
+          }).formatToParts(date);
+          process.stdout.write(parts.find((part) => part.type === 'hour').value);
+          NODE
+            )"
+            if [ "$logical_hour" -lt 12 ]; then
+              target_date="$(find research_pending/daily-gainers-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+              mode="next_day_recheck"
+              if [ -z "$target_date" ]; then
+                echo "No pending AI synthesis exists for morning recheck"
+                echo "target_date=" >> "$GITHUB_OUTPUT"
+                echo "mode=$mode" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            else
+              target_date="$logical_date"
+              mode="same_day"
+            fi
+            echo "Logical scheduled occurrence: $scheduled_at (Taipei hour $logical_hour, date $logical_date)"
           else
             hour="$(TZ='Asia/Taipei' date '+%H')"
             if [ "$hour" -lt 12 ]; then
@@ -323,4 +356,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
