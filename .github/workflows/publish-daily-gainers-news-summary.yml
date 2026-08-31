@@ -17,8 +17,10 @@ permissions:
   pages: write
   id-token: write
 
+# Serialize with every other workflow that can write the same market-summary artifact.
+# The retry/regenerate loop below remains as a second defense against unrelated main writers.
 concurrency:
-  group: daily-gainers-news-summary
+  group: daily-gainers-market-summary-writer
   cancel-in-progress: false
 
 jobs:
