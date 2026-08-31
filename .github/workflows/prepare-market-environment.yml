@@ -48,10 +48,23 @@ jobs:
         shell: bash
         env:
           INPUT_DATE: ${{ inputs.forecast_date || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           args=(--github-env)
-          if [ -n "$INPUT_DATE" ]; then args+=(--target-date "$INPUT_DATE"); fi
+          if [ -n "$INPUT_DATE" ]; then
+            args+=(--target-date "$INPUT_DATE")
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            occurrence_json="$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --json)"
+            scheduled_at="$(printf '%s' "$occurrence_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).scheduled_at_utc))')"
+            args+=(--now "$scheduled_at")
+            echo "Scheduled forecast resolver anchor: $scheduled_at"
+          fi
           node scripts/resolve_forecast_dates.js "${args[@]}" > /tmp/environment-dates.env
           cat /tmp/environment-dates.env
           cat /tmp/environment-dates.env >> "$GITHUB_ENV"
@@ -169,4 +182,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
