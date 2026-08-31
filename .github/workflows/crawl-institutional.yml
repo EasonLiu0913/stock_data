@@ -41,10 +41,24 @@ jobs:
       - name: Determine target date
         id: date
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ github.event.inputs.date || '' }}
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            TARGET_DATE="${{ github.event.inputs.date }}"
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            TARGET_DATE="$INPUT_DATE"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$SCHEDULE_EXPR" \
+              --policy same_trade_date \
+              --json)
+            TARGET_DATE=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$resolved")
+            echo "Delay-safe scheduled date: $resolved"
           else
+            # Preserve the legacy manual no-date cutoff behavior only for manual runs.
             HOUR=$(TZ='Asia/Taipei' date '+%H')
             if [ "$HOUR" -lt 14 ]; then
               TARGET_DATE=$(TZ='Asia/Taipei' date -d 'yesterday' '+%Y%m%d')
