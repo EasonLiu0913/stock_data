@@ -218,7 +218,8 @@ jobs:
           grep -q -- '--time-zone Asia/Taipei' "$workflow"
           grep -q 'resolve_taifex_scheduled_date.js --base-date "$base_date"' "$workflow"
           grep -q -- '--date "$TAIFEX_EXPECTED_DATE"' "$workflow"
-          grep -q -- '--date "${{ github.event.inputs.date }}"' "$workflow"
+          grep -q 'github.event.inputs.date' "$workflow"
+          grep -q 'elif \[ -n ' "$workflow"
           grep -q 'getPayloadDate(csvText)' "$crawler"
           grep -q 'resolvePayloadArtifact(csvText, expectedDate)' "$crawler"
           grep -q 'This open-data URL only returns the latest available file' "$crawler"
@@ -246,7 +247,6 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TESTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          curl -fsSL "https://raw.githubusercontent.com/EasonLiu0913/stock_data/${TESTED_SHA}/scripts/write_workflow_schedule_summary.js" | node
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
