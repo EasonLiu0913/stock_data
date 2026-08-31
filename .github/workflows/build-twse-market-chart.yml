@@ -56,8 +56,9 @@ jobs:
             TARGET_DATE="$(node scripts/resolve_scheduled_collection_date.js \
               --event-name "$EVENT_NAME" \
               --schedule "$EVENT_SCHEDULE" \
-              --policy same_trade_date)"
-            DATE_SOURCE="logical scheduled trade date"
+              --policy same_trade_date \
+              --day-boundary-hour 8)"
+            DATE_SOURCE="logical scheduled trade date with 08:00 boundary"
           else
             # Preserve legacy manual-no-date 08:00 Taipei behavior.
             TARGET_DATE=$(TZ='Asia/Taipei' date --date='8 hours ago' '+%Y%m%d')
