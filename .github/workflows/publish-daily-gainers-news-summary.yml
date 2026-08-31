@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'data_daily_gain_over_5/analysis-news/*.json'
-      - 'scripts/migrate_daily_gainers_unified_to_news.js'
   workflow_dispatch:
     inputs:
       date:
@@ -36,26 +35,47 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Resolve target date
+      - name: Resolve target date from triggering artifact
         id: date
         shell: bash
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_AFTER: ${{ github.sha }}
         run: |
           set -euo pipefail
-          date="${INPUT_DATE:-}"
-          if [ -z "$date" ] && [ "$EVENT_NAME" = "push" ]; then
-            changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^data_daily_gain_over_5/analysis-news/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
-            [ -n "$changed" ] && date="$(basename "$changed" .json)"
+          node --check scripts/resolve_daily_gainers_news_summary_date.js
+
+          latest_news_date="$(find data_daily_gain_over_5/analysis-news -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+          args=(
+            --event "$EVENT_NAME"
+            --input-date "${INPUT_DATE:-}"
+            --latest-news-date "${latest_news_date:-}"
+          )
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            [[ "$EVENT_AFTER" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid push after SHA: $EVENT_AFTER" >&2; exit 1; }
+            git fetch --no-tags --depth=1 origin "$EVENT_AFTER"
+
+            if [[ "$EVENT_BEFORE" =~ ^0{40}$ ]]; then
+              mapfile -t changed_files < <(git diff-tree --no-commit-id --name-only -r "$EVENT_AFTER")
+            else
+              [[ "$EVENT_BEFORE" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid push before SHA: $EVENT_BEFORE" >&2; exit 1; }
+              git fetch --no-tags --depth=1 origin "$EVENT_BEFORE"
+              mapfile -t changed_files < <(git diff --name-only "$EVENT_BEFORE" "$EVENT_AFTER")
+            fi
+
+            printf 'Push changed files:\n'
+            printf '  %s\n' "${changed_files[@]}"
+            for file in "${changed_files[@]}"; do
+              args+=(--changed-file "$file")
+            done
           fi
-          if [ -z "$date" ] && [ -f scripts/migrate_daily_gainers_unified_to_news.js ]; then
-            date="$(find data_daily_gain_over_5/analysis -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort -r | while read -r d; do [ -s "data_daily_gain_over_5/analysis-news/${d}.json" ] || { echo "$d"; break; }; done)"
-          fi
-          if [ -z "$date" ]; then
-            date="$(find data_daily_gain_over_5/analysis-news -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
-          fi
+
+          date="$(node scripts/resolve_daily_gainers_news_summary_date.js "${args[@]}")"
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          echo "Resolved target date: $date"
           echo "date=$date" >> "$GITHUB_OUTPUT"
       - name: Migrate existing unified analysis into news stage when needed
         shell: bash
@@ -123,4 +143,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
