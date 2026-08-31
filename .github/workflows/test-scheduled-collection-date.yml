@@ -1,0 +1,95 @@
+name: "[07 維護更新] Scheduled Collection Date Regression"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/resolve_scheduled_collection_date.js'
+      - 'tests/resolve_scheduled_collection_date.test.js'
+      - '.github/workflows/test-scheduled-collection-date.yml'
+      - '.github/workflows/crawl-twse-mi-index.yml'
+      - '.github/workflows/crawl-twse-institutional-investors.yml'
+      - '.github/workflows/crawl-twse-margin-balance.yml'
+      - '.github/workflows/crawl-fubon-broker-details.yml'
+      - '.github/workflows/crawl-fubon-brokers-trade.yml'
+      - '.github/workflows/crawl-institutional.yml'
+      - '.github/workflows/retry-institutional.yml'
+      - '.github/workflows/retry-sma.yml'
+      - '.github/workflows/crawl-twse-institutional-summaries.yml'
+      - '.github/workflows/crawl-twse-twt49u.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-collection-date-regression
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate resolver syntax and delay semantics
+        run: |
+          set -euo pipefail
+          node --check scripts/resolve_scheduled_collection_date.js
+          node --test tests/resolve_scheduled_collection_date.test.js
+
+      - name: Verify first-wave workflows use the shared scheduled resolver
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflows=(
+            .github/workflows/crawl-twse-mi-index.yml
+            .github/workflows/crawl-twse-institutional-investors.yml
+            .github/workflows/crawl-twse-margin-balance.yml
+            .github/workflows/crawl-fubon-broker-details.yml
+            .github/workflows/crawl-fubon-brokers-trade.yml
+            .github/workflows/crawl-institutional.yml
+            .github/workflows/retry-institutional.yml
+            .github/workflows/retry-sma.yml
+            .github/workflows/crawl-twse-institutional-summaries.yml
+            .github/workflows/crawl-twse-twt49u.yml
+          )
+          for file in "${workflows[@]}"; do
+            grep -q 'resolve_scheduled_collection_date.js' "$file" || {
+              echo "Missing shared scheduled-date resolver in $file"
+              exit 1
+            }
+          done
+
+          for file in \
+            .github/workflows/crawl-twse-mi-index.yml \
+            .github/workflows/crawl-twse-institutional-investors.yml \
+            .github/workflows/crawl-twse-margin-balance.yml; do
+            if grep -B3 -A8 'EVENT_NAME.*schedule' "$file" | grep -Eq "date --date='3 hours ago'"; then
+              echo "Scheduled branch still contains -3h runner-clock logic: $file"
+              exit 1
+            fi
+          done
+
+          echo "Verified shared scheduled resolver wiring for ${#workflows[@]} workflows."
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
