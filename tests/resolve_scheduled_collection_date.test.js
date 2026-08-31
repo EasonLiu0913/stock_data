@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   applyCollectionPolicy,
+  parseArgs,
   resolveForEvent,
   resolveScheduledCollectionDate,
   resolveScheduledOccurrence,
@@ -11,6 +12,17 @@ const {
 const { resolveForecastDates } = require('../scripts/resolve_forecast_dates');
 
 const holidays = new Set(['2026/09/28']);
+
+test('CLI parser preserves an explicitly empty argument value', () => {
+  const args = parseArgs([
+    '--event-name', 'schedule',
+    '--schedule', '17 12 * * *',
+    '--input-date', '',
+    '--policy', 'same_calendar_date',
+  ]);
+  assert.equal(args.get('input-date'), '');
+  assert.equal(args.get('policy'), 'same_calendar_date');
+});
 
 test('scheduled occurrence is stable despite same-day runner delay', () => {
   const early = resolveScheduledCollectionDate({
