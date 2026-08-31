@@ -30,14 +30,34 @@ jobs:
   regression:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-          fetch-depth: 1
+      - name: Materialize exact regression inputs from current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://raw.githubusercontent.com/EasonLiu0913/stock_data/main'
+          mkdir -p scripts tests data_history_sma .github/workflows
+          curl -fsSL "$base/scripts/resolve_scheduled_collection_date.js" -o scripts/resolve_scheduled_collection_date.js
+          curl -fsSL "$base/scripts/resolve_forecast_dates.js" -o scripts/resolve_forecast_dates.js
+          curl -fsSL "$base/tests/resolve_scheduled_collection_date.test.js" -o tests/resolve_scheduled_collection_date.test.js
+          curl -fsSL "$base/data_history_sma/non_trading_days.json" -o data_history_sma/non_trading_days.json
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
+          workflows=(
+            crawl-twse-mi-index.yml
+            crawl-twse-institutional-investors.yml
+            crawl-twse-margin-balance.yml
+            crawl-fubon-broker-details.yml
+            crawl-fubon-brokers-trade.yml
+            crawl-institutional.yml
+            retry-institutional.yml
+            retry-sma.yml
+            crawl-twse-institutional-summaries.yml
+            crawl-twse-twt49u.yml
+          )
+          for name in "${workflows[@]}"; do
+            curl -fsSL "$base/.github/workflows/$name" -o ".github/workflows/$name"
+          done
+
+          echo "Runner Node: $(node --version)"
 
       - name: Validate resolver syntax and delay semantics
         run: |
@@ -68,12 +88,13 @@ jobs:
             }
           done
 
-          for file in \
-            .github/workflows/crawl-twse-mi-index.yml \
-            .github/workflows/crawl-twse-institutional-investors.yml \
-            .github/workflows/crawl-twse-margin-balance.yml; do
-            if grep -B3 -A8 'EVENT_NAME.*schedule' "$file" | grep -Eq "date --date='3 hours ago'"; then
-              echo "Scheduled branch still contains -3h runner-clock logic: $file"
+          # Legacy runner-clock behavior may remain only in explicit manual/no-date branches.
+          # The scheduled branch must appear before any legacy fallback in each migrated resolver block.
+          for file in "${workflows[@]}"; do
+            schedule_line=$(grep -n 'EVENT_NAME.*schedule' "$file" | head -1 | cut -d: -f1 || true)
+            resolver_line=$(grep -n 'resolve_scheduled_collection_date.js' "$file" | head -1 | cut -d: -f1 || true)
+            if [ -z "$schedule_line" ] || [ -z "$resolver_line" ] || [ "$resolver_line" -le "$schedule_line" ]; then
+              echo "Scheduled resolver wiring is malformed in $file"
               exit 1
             fi
           done
