@@ -4,6 +4,7 @@
 const { isTradingDate, loadHolidaySet, nextTradingDate } = require('./resolve_forecast_dates');
 
 const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
 const MAX_LOOKBACK_MINUTES = 60 * 24 * 32;
 const DATE_PATTERN = /^20\d{6}$/;
 
@@ -99,6 +100,22 @@ function zonedDateParts(date, timeZone = 'Asia/Taipei') {
   };
 }
 
+function normalizeDayBoundaryHour(value = 0) {
+  const numeric = Number(value);
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 23) {
+    throw new Error(`Invalid day-boundary hour: ${value}`);
+  }
+  return numeric;
+}
+
+function logicalDateForOccurrence(scheduledAt, timeZone = 'Asia/Taipei', dayBoundaryHour = 0) {
+  const boundaryHour = normalizeDayBoundaryHour(dayBoundaryHour);
+  const shifted = boundaryHour === 0
+    ? scheduledAt
+    : new Date(scheduledAt.getTime() - boundaryHour * HOUR_MS);
+  return zonedDateParts(shifted, timeZone);
+}
+
 function normalizeCompactDate(value) {
   const compact = String(value || '').replace(/[^\d]/g, '');
   if (!DATE_PATTERN.test(compact)) throw new Error(`Invalid date: ${value}`);
@@ -130,20 +147,22 @@ function applyCollectionPolicy(logicalDateCompact, policy, holidays = loadHolida
   throw new Error(`Unsupported collection-date policy: ${policy}`);
 }
 
-function resolveScheduledCollectionDate({ schedule, policy, timeZone = 'Asia/Taipei', now = new Date(), holidays = loadHolidaySet() }) {
+function resolveScheduledCollectionDate({ schedule, policy, timeZone = 'Asia/Taipei', dayBoundaryHour = 0, now = new Date(), holidays = loadHolidaySet() }) {
   const occurrence = resolveScheduledOccurrence(schedule, now);
   const scheduledAt = new Date(occurrence.scheduled_at_utc);
-  const logical = zonedDateParts(scheduledAt, timeZone);
+  const boundaryHour = normalizeDayBoundaryHour(dayBoundaryHour);
+  const logical = logicalDateForOccurrence(scheduledAt, timeZone, boundaryHour);
   return {
     ...applyCollectionPolicy(logical.compact, policy, holidays),
     policy,
     time_zone: timeZone,
+    day_boundary_hour: boundaryHour,
     scheduled_at_utc: occurrence.scheduled_at_utc,
     delay_minutes: occurrence.delay_minutes,
   };
 }
 
-function resolveForEvent({ eventName, schedule, inputDate, policy, timeZone = 'Asia/Taipei', now = new Date(), holidays = loadHolidaySet() }) {
+function resolveForEvent({ eventName, schedule, inputDate, policy, timeZone = 'Asia/Taipei', dayBoundaryHour = 0, now = new Date(), holidays = loadHolidaySet() }) {
   if (String(inputDate || '').trim()) {
     const target = normalizeCompactDate(inputDate);
     return {
@@ -151,6 +170,7 @@ function resolveForEvent({ eventName, schedule, inputDate, policy, timeZone = 'A
       logical_date: target,
       policy,
       time_zone: timeZone,
+      day_boundary_hour: 0,
       source: 'manual_explicit_date',
       scheduled_at_utc: null,
       delay_minutes: null,
@@ -159,7 +179,7 @@ function resolveForEvent({ eventName, schedule, inputDate, policy, timeZone = 'A
   }
   if (eventName === 'schedule') {
     return {
-      ...resolveScheduledCollectionDate({ schedule, policy, timeZone, now, holidays }),
+      ...resolveScheduledCollectionDate({ schedule, policy, timeZone, dayBoundaryHour, now, holidays }),
       source: 'scheduled_occurrence',
     };
   }
@@ -168,6 +188,7 @@ function resolveForEvent({ eventName, schedule, inputDate, policy, timeZone = 'A
     ...applyCollectionPolicy(current, policy, holidays),
     policy,
     time_zone: timeZone,
+    day_boundary_hour: 0,
     source: 'manual_current_date',
     scheduled_at_utc: null,
     delay_minutes: null,
@@ -181,10 +202,11 @@ function main() {
   const inputDate = args.get('input-date') || '';
   const policy = args.get('policy') || 'same_calendar_date';
   const timeZone = args.get('time-zone') || 'Asia/Taipei';
+  const dayBoundaryHour = args.get('day-boundary-hour') || 0;
   const nowArg = args.get('now');
   const now = nowArg ? new Date(nowArg) : new Date();
   if (Number.isNaN(now.getTime())) throw new Error(`Invalid --now value: ${nowArg}`);
-  const result = resolveForEvent({ eventName, schedule, inputDate, policy, timeZone, now });
+  const result = resolveForEvent({ eventName, schedule, inputDate, policy, timeZone, dayBoundaryHour, now });
   if (args.has('json')) process.stdout.write(`${JSON.stringify(result)}\n`);
   else process.stdout.write(`${result.target_date}\n`);
 }
@@ -200,8 +222,10 @@ if (require.main === module) {
 
 module.exports = {
   applyCollectionPolicy,
+  logicalDateForOccurrence,
   matchesCron,
   normalizeCompactDate,
+  normalizeDayBoundaryHour,
   parseCron,
   resolveForEvent,
   resolveScheduledCollectionDate,
