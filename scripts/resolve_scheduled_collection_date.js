@@ -15,7 +15,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     if (!item.startsWith('--')) continue;
     const key = item.slice(2);
     const next = argv[i + 1];
-    if (!next || next.startsWith('--')) args.set(key, true);
+    if (next === undefined || next.startsWith('--')) args.set(key, true);
     else {
       args.set(key, next);
       i += 1;
@@ -226,6 +226,7 @@ module.exports = {
   matchesCron,
   normalizeCompactDate,
   normalizeDayBoundaryHour,
+  parseArgs,
   parseCron,
   resolveForEvent,
   resolveScheduledCollectionDate,
