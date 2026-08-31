@@ -23,8 +23,11 @@ permissions:
   pages: write
   id-token: write
 
+# All workflows that can write data_daily_gain_over_5/market-summary/YYYYMMDD.json
+# must share this repository-wide concurrency group. Keep retry/regenerate logic below
+# as a second line of defense against unrelated main-branch writers.
 concurrency:
-  group: refresh-daily-gainers-market-summary
+  group: daily-gainers-market-summary-writer
   cancel-in-progress: false
 
 jobs:
