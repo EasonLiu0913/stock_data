@@ -247,6 +247,7 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TESTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+          curl -fsSL "https://raw.githubusercontent.com/EasonLiu0913/stock_data/${TESTED_SHA}/scripts/write_workflow_schedule_summary.js" | node
