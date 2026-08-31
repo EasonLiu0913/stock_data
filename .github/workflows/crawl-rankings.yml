@@ -47,13 +47,42 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
+      - name: Resolve ranking date anchor
+        id: date-anchor
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --time-zone UTC \
+              --json)
+            anchor=$(printf '%s' "$resolved" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).scheduled_at_utc));")
+            echo "Scheduled Fubon anchor: $anchor"
+          else
+            anchor=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+            echo "Manual Fubon anchor: $anchor"
+          fi
+          echo "anchor=$anchor" >> "$GITHUB_OUTPUT"
+
       - name: Run Main Force Ranking Crawler
+        env:
+          FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
         run: node scripts/scraper_fubon.js
 
       - name: Run Foreign Investor Ranking Crawler
+        env:
+          FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
         run: node scripts/scraper_fubon_foreign.js
 
       - name: Run Market Cap and Volume Ranking Crawler
+        env:
+          FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
         run: node scripts/scraper_fubon_other.js
 
       - name: Generate Fubon files.json only
@@ -110,4 +139,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
