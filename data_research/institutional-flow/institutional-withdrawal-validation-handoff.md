@@ -14,6 +14,88 @@ The frozen Batch 1 result is evidence and must not be altered, expanded, or reus
 
 ---
 
+## Canonical validation phase flow
+
+This diagram is the authoritative phase-order summary for untouched Institutional Withdrawal validation. Detailed rules below still control when they are stricter.
+
+```text
+Frozen development methodology v6.0-v6.5
+        ↓
+Outcome-blind coverage / sample construction
+        ↓
+Prompt B sample-freeze closeout
+        ↓
+Exact untouched sample becomes immutable
+        ↓
+Prompt A untouched outcome-validation implementation
+        │
+        ├─ intermediate pre-outcome / regression gates PASS
+        │      ≠ Prompt A complete
+        │      ↓ continue
+        │
+        └─ lifecycle + preregistered outcomes / metrics
+               ↓
+          canonical artifacts generated
+               ↓
+          committed + pushed
+               ↓
+          remote main paths + identity verified
+               ↓
+          "Prompt A complete — ready for Prompt B"
+               ↓
+Prompt B independent outcome closeout
+        ↓
+Untouched batch permanently closed
+        ↓
+Production-promotion gate evaluated
+        ├─ met
+        │    ↓
+        │  separate production-review / promotion phase
+        │
+        └─ not met / underpowered / zero-event
+             ↓
+        DO NOT directly add another batch
+             ↓
+Prompt A prospective Batch 2+ expansion-protocol preregistration
+        ↓
+Prompt B protocol closeout
+        ↓
+Sampling / ordering / batching / stopping / pooling rules frozen
+        ↓
+Prompt A outcome-blind future sample construction
+        ↓
+Prompt B future sample-freeze closeout
+        ↓
+Exact future batch sample becomes immutable
+        ↓
+Prompt A untouched outcome validation for that frozen batch
+        ↓
+Prompt B independent outcome closeout
+        ↓
+Apply the preregistered finite stopping / accumulation rule
+```
+
+Two repository-wide acceptance rules apply at every applicable step:
+
+```text
+Intermediate gate PASS
+≠ Prompt A completion
+```
+
+and
+
+```text
+Writer workflow green
+≠ durable completion
+
+required durable evidence:
+generate → bounded write set → commit → push → fetch remote main → verify expected path/blob/identity
+```
+
+Once an untouched batch's outcomes are opened, that batch may never be expanded, reduced, substituted, or used to choose specific later stocks. Any later expansion must follow a prospective protocol frozen before those later candidate identities/outcomes are opened.
+
+---
+
 ## Objective
 
 Validate frozen methodology `institutional-withdrawal-lifecycle-v1` on untouched stock holdouts without retuning v6.0-v6.5 and without mixing development observations into untouched statistics.
