@@ -8,6 +8,9 @@ on:
       - 'tests/resolve_scheduled_collection_date.test.js'
       - 'tests/scheduled_date_third_wave.test.js'
       - 'tests/scheduled_date_fourth_wave.test.js'
+      - 'scripts/extract_warrant_data.js'
+      - 'tests/extract_warrant_data.test.js'
+      - '.github/workflows/warrant-scraper.yml'
       - '.github/workflows/test-scheduled-collection-date.yml'
       - '.github/workflows/crawl-twse-mi-index.yml'
       - '.github/workflows/crawl-twse-institutional-investors.yml'
@@ -73,12 +76,14 @@ jobs:
             scripts/crawl_taifex_major_institutional_traders_futures_options.js
             scripts/crawl_external_market_indicators.js
             scripts/crawl_refined_product_tightness.js
+            scripts/extract_warrant_data.js
             scripts/scraper_fubon.js
             scripts/scraper_fubon_foreign.js
             scripts/scraper_fubon_other.js
             tests/resolve_scheduled_collection_date.test.js
             tests/scheduled_date_third_wave.test.js
             tests/scheduled_date_fourth_wave.test.js
+            tests/extract_warrant_data.test.js
             tests/refined_product_tightness.test.js
             data_history_sma/non_trading_days.json
           )
@@ -108,6 +113,7 @@ jobs:
             crawl-rankings.yml
             crawl-taifex-major-institutional-traders-futures-contracts.yml
             crawl-taifex-major-institutional-traders-futures-options.yml
+            warrant-scraper.yml
           )
           for name in "${workflows[@]}"; do
             curl -fsSL "$base/.github/workflows/$name" -o ".github/workflows/$name"
@@ -126,11 +132,13 @@ jobs:
           node --check scripts/crawl_taifex_major_institutional_traders_futures_options.js
           node --check scripts/crawl_external_market_indicators.js
           node --check scripts/crawl_refined_product_tightness.js
+          node --check scripts/extract_warrant_data.js
           node --check scripts/scraper_fubon.js
           node --check scripts/scraper_fubon_foreign.js
           node --check scripts/scraper_fubon_other.js
           node --check tests/scheduled_date_fourth_wave.test.js
-          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/scheduled_date_fourth_wave.test.js tests/refined_product_tightness.test.js
+          node --check tests/extract_warrant_data.test.js
+          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/scheduled_date_fourth_wave.test.js tests/extract_warrant_data.test.js tests/refined_product_tightness.test.js
 
       - name: Verify first-wave workflows use the shared scheduled resolver
         shell: bash
@@ -226,6 +234,31 @@ jobs:
           grep -q 'outputFile: `${payloadDate}_${OUTPUT_SUFFIX}.csv`' "$crawler"
 
           echo 'Verified fifth-wave TAIFEX futures/options expected-date contract.'
+
+      - name: Verify warrant source-date fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          script=scripts/extract_warrant_data.js
+          workflow=.github/workflows/warrant-scraper.yml
+
+          grep -q 'function buildWarrantFilename' "$script"
+          grep -q 'refusing to fabricate an artifact date from runner time' "$script"
+          if grep -q 'twse_warrant_.*new Date' "$script"; then
+            echo 'Runner-date warrant filename fallback remains.'
+            exit 1
+          fi
+          grep -q 'node --test tests/extract_warrant_data.test.js' "$workflow"
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/warrant-scraper.yml').read_text()
+          start = text.index('      - name: Run TWSE warrant extractor')
+          end = text.index('      - name: Generate TWSE files.json only', start)
+          block = text[start:end]
+          if 'continue-on-error: true' in block:
+              raise SystemExit('Warrant extractor still ignores source-date failures')
+          PY
+          echo 'Verified warrant source date remains source-owned and degraded fallback fails closed.'
 
       - name: Confirm exact tested SHA
         shell: bash
