@@ -60,11 +60,24 @@ jobs:
       - name: Resolve target date
         id: target
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ inputs.date || '' }}
         run: |
-          if [ -n "${{ inputs.date }}" ]; then
-            target_date="${{ inputs.date }}"
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            target_date="$INPUT_DATE"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$SCHEDULE_EXPR" \
+              --policy same_trade_date \
+              --json)
+            target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$resolved")
+            echo "Delay-safe scheduled date: $resolved"
           else
-            # 將台北時間往前移 8 小時，讓 00:00～07:59 仍歸屬前一交易日。
+            # Preserve legacy manual no-date behavior; scheduled runs no longer use the 08:00 runner-clock boundary.
             target_date=$(TZ='Asia/Taipei' date -d '8 hours ago' '+%Y%m%d')
           fi
 
