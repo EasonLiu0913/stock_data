@@ -43,7 +43,7 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - name: Checkout diagnostic probe only
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
@@ -70,7 +70,7 @@ jobs:
             --delay-max-ms 5500 \
             --output "$RUNNER_TEMP/histock-probe/batch-${{ matrix.batch }}.json"
       - name: Upload diagnostic batch artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: histock-fresh-runner-batch-${{ matrix.batch }}
           path: ${{ runner.temp }}/histock-probe/batch-${{ matrix.batch }}.json
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all probe artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: histock-fresh-runner-batch-*
           path: probe-results
@@ -120,7 +120,7 @@ jobs:
           console.log('Diagnostic only: no production Broker daily/status files were written.');
           NODE
       - name: Upload comparison artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: histock-fresh-runner-comparison
           path: comparison.json
