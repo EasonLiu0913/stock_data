@@ -17,6 +17,11 @@ on:
       - '.github/workflows/retry-sma.yml'
       - '.github/workflows/crawl-twse-institutional-summaries.yml'
       - '.github/workflows/crawl-twse-twt49u.yml'
+      - '.github/workflows/build-twse-market-chart.yml'
+      - '.github/workflows/calculate-twse-margin-maintenance.yml'
+      - '.github/workflows/crawl-market-news.yml'
+      - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
+      - '.github/workflows/prepare-market-environment.yml'
   workflow_dispatch:
 
 permissions:
@@ -52,6 +57,11 @@ jobs:
             retry-sma.yml
             crawl-twse-institutional-summaries.yml
             crawl-twse-twt49u.yml
+            build-twse-market-chart.yml
+            calculate-twse-margin-maintenance.yml
+            crawl-market-news.yml
+            publish-daily-gainers-ai-analysis.yml
+            prepare-market-environment.yml
           )
           for name in "${workflows[@]}"; do
             curl -fsSL "$base/.github/workflows/$name" -o ".github/workflows/$name"
@@ -63,6 +73,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check scripts/resolve_scheduled_collection_date.js
+          node --check scripts/resolve_forecast_dates.js
           node --test tests/resolve_scheduled_collection_date.test.js
 
       - name: Verify first-wave workflows use the shared scheduled resolver
@@ -99,7 +110,51 @@ jobs:
             fi
           done
 
-          echo "Verified shared scheduled resolver wiring for ${#workflows[@]} workflows."
+          echo "Verified shared scheduled resolver wiring for ${#workflows[@]} first-wave workflows."
+
+      - name: Verify second-wave workflow semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          chart=.github/workflows/build-twse-market-chart.yml
+          margin=.github/workflows/calculate-twse-margin-maintenance.yml
+          news=.github/workflows/crawl-market-news.yml
+          gainers=.github/workflows/publish-daily-gainers-ai-analysis.yml
+          environment=.github/workflows/prepare-market-environment.yml
+
+          for file in "$chart" "$margin" "$news" "$gainers" "$environment"; do
+            grep -q 'resolve_scheduled_collection_date.js' "$file" || {
+              echo "Missing shared scheduled resolver in $file"
+              exit 1
+            }
+          done
+
+          grep -q -- '--day-boundary-hour 8' "$chart"
+          chart_schedule_line=$(grep -n 'EVENT_NAME.*schedule' "$chart" | head -1 | cut -d: -f1)
+          chart_legacy_line=$(grep -n "date --date='8 hours ago'" "$chart" | head -1 | cut -d: -f1)
+          [ "$chart_legacy_line" -gt "$chart_schedule_line" ] || { echo 'Market chart scheduled path still depends on runner -8h'; exit 1; }
+
+          margin_schedule_line=$(grep -n 'EVENT_NAME.*schedule' "$margin" | head -1 | cut -d: -f1)
+          margin_legacy_line=$(grep -n "date --date='8 hours ago'" "$margin" | head -1 | cut -d: -f1)
+          [ "$margin_legacy_line" -gt "$margin_schedule_line" ] || { echo 'Margin scheduled path still depends on runner -8h'; exit 1; }
+
+          grep -q -- '--policy same_calendar_date' "$news"
+          [ "$(grep -c 'steps.date.outputs.target_date' "$news")" -ge 2 ] || { echo 'Market news stages do not share one explicit date'; exit 1; }
+          grep -q 'crawl_market_news.js --date' "$news"
+          grep -q 'generate_market_risk_snapshot.js --date' "$news"
+
+          grep -q 'EVENT_SCHEDULE' "$gainers"
+          grep -q 'logical_hour' "$gainers"
+          grep -q 'logical_date' "$gainers"
+          grep -q 'mode="next_day_recheck"' "$gainers"
+          grep -q 'mode="same_day"' "$gainers"
+
+          grep -q 'EVENT_SCHEDULE' "$environment"
+          grep -q 'scheduled_at_utc' "$environment"
+          grep -q 'args+=(--now "$scheduled_at")' "$environment"
+          grep -q 'args+=(--target-date "$INPUT_DATE")' "$environment"
+
+          echo 'Verified five second-wave workflow contracts.'
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
