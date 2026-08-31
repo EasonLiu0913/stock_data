@@ -61,6 +61,20 @@ function getPayloadDate(csvText) {
     return normalizeDate(firstDataRow[0]);
 }
 
+function resolvePayloadArtifact(csvText, expectedDateValue = '') {
+    const expectedDate = normalizeDate(expectedDateValue);
+    const payloadDate = getPayloadDate(csvText);
+
+    if (expectedDate && payloadDate !== expectedDate) {
+        throw new Error(`TAIFEX returned ${payloadDate} for requested ${expectedDate}. This open-data URL only returns the latest available file.`);
+    }
+
+    return {
+        payloadDate,
+        outputFile: `${payloadDate}_${OUTPUT_SUFFIX}.csv`,
+    };
+}
+
 function refreshFilesJson() {
     const files = fs.readdirSync(OUTPUT_DIR)
         .filter(file => new RegExp(`^\\d{8}_${OUTPUT_SUFFIX}\\.csv$`).test(file))
@@ -84,29 +98,33 @@ async function fetchCsv() {
     return buffer.toString('utf8');
 }
 
-(async () => {
-    try {
-        const expectedDate = normalizeDate(getArg('--date'));
-        const csvText = await fetchCsv();
-        const payloadDate = getPayloadDate(csvText);
+async function main() {
+    const expectedDate = normalizeDate(getArg('--date'));
+    const csvText = await fetchCsv();
+    const { outputFile } = resolvePayloadArtifact(csvText, expectedDate);
 
-        if (expectedDate && payloadDate !== expectedDate) {
-            throw new Error(`TAIFEX returned ${payloadDate} for requested ${expectedDate}. This open-data URL only returns the latest available file.`);
-        }
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    const outputPath = path.join(OUTPUT_DIR, outputFile);
+    fs.writeFileSync(outputPath, csvText, 'utf8');
+    refreshFilesJson();
 
-        const outputFile = `${payloadDate}_${OUTPUT_SUFFIX}.csv`;
-        const outputPath = path.join(OUTPUT_DIR, outputFile);
-        fs.writeFileSync(outputPath, csvText, 'utf8');
-        refreshFilesJson();
+    const rowCount = csvText.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).length - 1;
+    console.log(`Saved ${outputFile}`);
+    console.log(`Path: ${outputPath}`);
+    console.log(`Rows: ${rowCount}`);
+}
 
-        const rowCount = csvText.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).length - 1;
-        console.log(`Saved ${outputFile}`);
-        console.log(`Path: ${outputPath}`);
-        console.log(`Rows: ${rowCount}`);
-    } catch (error) {
+if (require.main === module) {
+    main().catch((error) => {
         console.error(`Failed to crawl TAIFEX futures/options institutional trader data: ${error.message}`);
         process.exit(1);
-    }
-})();
+    });
+}
+
+module.exports = {
+    getPayloadDate,
+    normalizeDate,
+    parseCsvLine,
+    resolvePayloadArtifact,
+};

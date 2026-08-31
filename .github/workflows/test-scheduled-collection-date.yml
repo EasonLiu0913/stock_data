@@ -7,6 +7,7 @@ on:
       - 'scripts/resolve_scheduled_collection_date.js'
       - 'tests/resolve_scheduled_collection_date.test.js'
       - 'tests/scheduled_date_third_wave.test.js'
+      - 'tests/scheduled_date_fourth_wave.test.js'
       - '.github/workflows/test-scheduled-collection-date.yml'
       - '.github/workflows/crawl-twse-mi-index.yml'
       - '.github/workflows/crawl-twse-institutional-investors.yml'
@@ -27,9 +28,11 @@ on:
       - '.github/workflows/crawl-refined-product-tightness.yml'
       - '.github/workflows/crawl-rankings.yml'
       - '.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml'
+      - '.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml'
       - 'scripts/resolve_external_market_session_date.js'
       - 'scripts/resolve_fubon_ranking_date.js'
       - 'scripts/resolve_taifex_scheduled_date.js'
+      - 'scripts/crawl_taifex_major_institutional_traders_futures_options.js'
       - 'scripts/scraper_fubon.js'
       - 'scripts/scraper_fubon_foreign.js'
       - 'scripts/scraper_fubon_other.js'
@@ -49,6 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Materialize exact regression inputs from tested SHA
+        id: materialize
         shell: bash
         env:
           TESTED_SHA: ${{ github.sha }}
@@ -66,6 +70,7 @@ jobs:
             scripts/resolve_external_market_session_date.js
             scripts/resolve_fubon_ranking_date.js
             scripts/resolve_taifex_scheduled_date.js
+            scripts/crawl_taifex_major_institutional_traders_futures_options.js
             scripts/crawl_external_market_indicators.js
             scripts/crawl_refined_product_tightness.js
             scripts/scraper_fubon.js
@@ -73,6 +78,7 @@ jobs:
             scripts/scraper_fubon_other.js
             tests/resolve_scheduled_collection_date.test.js
             tests/scheduled_date_third_wave.test.js
+            tests/scheduled_date_fourth_wave.test.js
             tests/refined_product_tightness.test.js
             data_history_sma/non_trading_days.json
           )
@@ -101,6 +107,7 @@ jobs:
             crawl-refined-product-tightness.yml
             crawl-rankings.yml
             crawl-taifex-major-institutional-traders-futures-contracts.yml
+            crawl-taifex-major-institutional-traders-futures-options.yml
           )
           for name in "${workflows[@]}"; do
             curl -fsSL "$base/.github/workflows/$name" -o ".github/workflows/$name"
@@ -116,12 +123,14 @@ jobs:
           node --check scripts/resolve_external_market_session_date.js
           node --check scripts/resolve_fubon_ranking_date.js
           node --check scripts/resolve_taifex_scheduled_date.js
+          node --check scripts/crawl_taifex_major_institutional_traders_futures_options.js
           node --check scripts/crawl_external_market_indicators.js
           node --check scripts/crawl_refined_product_tightness.js
           node --check scripts/scraper_fubon.js
           node --check scripts/scraper_fubon_foreign.js
           node --check scripts/scraper_fubon_other.js
-          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/refined_product_tightness.test.js
+          node --check tests/scheduled_date_fourth_wave.test.js
+          node --test tests/resolve_scheduled_collection_date.test.js tests/scheduled_date_third_wave.test.js tests/scheduled_date_fourth_wave.test.js tests/refined_product_tightness.test.js
 
       - name: Verify first-wave workflows use the shared scheduled resolver
         shell: bash
@@ -197,12 +206,34 @@ jobs:
 
           echo 'Verified four third-wave workflow contracts.'
 
+      - name: Verify fifth-wave TAIFEX futures/options semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml
+          crawler=scripts/crawl_taifex_major_institutional_traders_futures_options.js
+
+          grep -q "if: github.event_name == 'schedule'" "$workflow"
+          grep -q 'resolve_scheduled_collection_date.js' "$workflow"
+          grep -q -- '--time-zone Asia/Taipei' "$workflow"
+          grep -q 'resolve_taifex_scheduled_date.js --base-date "$base_date"' "$workflow"
+          grep -q -- '--date "$TAIFEX_EXPECTED_DATE"' "$workflow"
+          grep -q -- '--date "${{ github.event.inputs.date }}"' "$workflow"
+          grep -q 'getPayloadDate(csvText)' "$crawler"
+          grep -q 'resolvePayloadArtifact(csvText, expectedDate)' "$crawler"
+          grep -q 'This open-data URL only returns the latest available file' "$crawler"
+          grep -q 'outputFile: `${payloadDate}_${OUTPUT_SUFFIX}.csv`' "$crawler"
+
+          echo 'Verified fifth-wave TAIFEX futures/options expected-date contract.'
+
       - name: Confirm exact tested SHA
         shell: bash
         env:
           TESTED_SHA: ${{ github.sha }}
+          MATERIALIZED_SHA: ${{ steps.materialize.outputs.tested_sha }}
         run: |
           set -euo pipefail
+          test "$TESTED_SHA" = "$MATERIALIZED_SHA"
           echo "Regression tested exact commit: ${TESTED_SHA}"
 
   schedule-timing-summary:

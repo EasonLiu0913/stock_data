@@ -32,9 +32,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Crawl TAIFEX futures/options institutional trader data
+      - name: Resolve scheduled TAIFEX expected date
+        if: github.event_name == 'schedule'
+        shell: bash
+        env:
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
+          set -euo pipefail
+          occurrence_json=$(node scripts/resolve_scheduled_collection_date.js \
+            --event-name schedule \
+            --schedule "$EVENT_SCHEDULE" \
+            --policy same_calendar_date \
+            --time-zone Asia/Taipei \
+            --json)
+          base_date=$(node -e 'const value=JSON.parse(process.argv[1]); process.stdout.write(value.target_date);' "$occurrence_json")
+          expected_date=$(node scripts/resolve_taifex_scheduled_date.js --base-date "$base_date")
+          echo "TAIFEX scheduled occurrence base date: $base_date"
+          echo "TAIFEX expected trading date: $expected_date"
+          echo "TAIFEX_EXPECTED_DATE=$expected_date" >> "$GITHUB_ENV"
+
+      - name: Crawl TAIFEX futures/options institutional trader data
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            node scripts/crawl_taifex_major_institutional_traders_futures_options.js --date "$TAIFEX_EXPECTED_DATE"
+          elif [ -n "${{ github.event.inputs.date }}" ]; then
             node scripts/crawl_taifex_major_institutional_traders_futures_options.js --date "${{ github.event.inputs.date }}"
           else
             node scripts/crawl_taifex_major_institutional_traders_futures_options.js
@@ -82,4 +105,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
