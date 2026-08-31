@@ -43,6 +43,34 @@ The documentation is a living project handoff. Do not rely only on prior chat hi
 
 When a major architecture decision, research conclusion, rejected approach, or active development phase changes, update the corresponding document in the same development cycle.
 
+## Repository short commands: `promptA` / `promptB`
+
+The repository owner may invoke the paired-prompt lifecycle with the short commands `promptA` or `promptB` instead of pasting the full generic runner instructions into chat.
+
+These short commands are routing commands only. They never replace the phase-specific Prompt A / Prompt B that must remain preregistered in the canonical handoff.
+
+Canonical runner protocols:
+
+- `promptA` → root entry point `promptA.md` → `docs/agent-prompts/prompt-a-runner.md`
+- `promptB` → root entry point `promptB.md` → `docs/agent-prompts/prompt-b-runner.md`
+
+When the owner sends exactly `promptA` or `promptB`, case-insensitive after trimming surrounding whitespace:
+
+1. Fetch current remote `main` before relying on repository state.
+2. Read this `AGENTS.md`.
+3. Read the corresponding runner protocol above.
+4. Resolve the current canonical handoff and round identity from durable repository state.
+5. Execute only the phase-specific Prompt A or Prompt B selected by that runner protocol.
+
+Important selection invariant:
+
+- `promptA` selects the explicitly active/promoted round whose Prompt A has not completed; it must not execute a future preregistered round while a closeout is pending.
+- `promptB` selects the most recent round whose Prompt A is complete but whose corresponding Prompt B does not yet have durable PASS evidence, and must recover the Prompt B preregistered for that same round before Prompt A began.
+- Never select Prompt A or Prompt B merely because it is the last one in a handoff document.
+- Conversation history, agent summaries, green CI, and prior completion messages are not substitutes for current remote and durable repository evidence.
+
+The detailed startup, freshness, failure, PASS, handoff, promotion, and stop rules live in the runner protocol files and are mandatory when these short commands are used.
+
 ## Phase handoff checkpoints
 
 Every multi-step task, investigation, research thread, backfill, workflow migration, or other effort that is expected to continue across rounds should remain ready for another agent to take over the next round without requiring the user to reconstruct the history manually.
