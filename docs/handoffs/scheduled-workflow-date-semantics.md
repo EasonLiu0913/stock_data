@@ -4,66 +4,62 @@ Canonical handoff: `docs/handoffs/scheduled-workflow-date-semantics.md`
 
 ## Current phase
 
-### Completed round — seventh-wave MOPS + VIX scheduled target migration
-
-Round identity: `seventh-wave-mops-vix-scheduled-target-migration`
-
-- Prompt A startup baseline: `a18279c017d14902bbc0d8909927d31eebf0a7fd`
-- Final implementation/test head: `396e8975517bbe0fc687bf9f8226825b35dacd40`
-- Prompt A handoff checkpoint: `a78357435bdb80bee37ab38d6d4effbe98e33da1`
-- Prompt B closeout checkpoint: `9345f1173e4be8261bf0112b7337fe64e796b7f2`
-- Prompt B closeout: **PASS**
-
-### Active round — eighth-wave final scheduled-date verification and retirement audit
+### Completed round — eighth-wave final scheduled-date verification and retirement audit
 
 Round identity: `eighth-wave-final-scheduled-date-verification-and-retirement-audit`
 
-Status: **Prompt A complete; pending the preregistered eighth-wave Prompt B closeout below.**
-
+- Seventh-wave Prompt B closeout checkpoint: `9345f1173e4be8261bf0112b7337fe64e796b7f2`
 - Prompt A startup baseline: `3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234`
 - Prompt A audit findings checkpoint: `a68dd703f75a481fb821fd67bcde97f05e4bdd2e`
-- Final Prompt A handoff checkpoint: this commit (`docs: finalize eighth-wave scheduled-date audit`)
-- Retirement decision: **retire / monitor-only if Prompt B independently passes**
+- Final Prompt A handoff checkpoint: `3cdcc1c686076f3a3045a91cd3eacb820d7ab47f`
+- Preregistered Prompt B identity source: durable pre-Prompt-A handoff at `3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234`
+- Prompt B closeout: **PASS**
+- Prompt B closeout checkpoint: this commit (`docs: retire scheduled-date migration after eighth-wave closeout`)
 
-The eighth-wave audit found no unresolved runner-clock-owned scheduled business-date defect and no new production migration candidate. Do not invent a ninth-wave implementation round merely to keep this project active.
+Project status: **retired / monitor-only**.
 
-## Objective
+There is no active ninth-wave implementation round and no speculative paired Prompt A / Prompt B is preregistered. If a future current-main change introduces a concrete scheduled-date defect, start a new explicitly preregistered implementation + closeout pair from then-current evidence.
 
-Make scheduled collection/business dates delay-safe while preserving each workflow's true domain policy and source-of-truth date semantics, then retire the migration project when the complete current scheduled-workflow inventory is accounted for and no unresolved runner-clock-owned target defect remains.
+## Objective — completed
 
-## Frozen decisions / constraints
+The migration objective was to make scheduled collection/business dates delay-safe while preserving each workflow's true domain policy and source-of-truth date semantics, then retire the project once the complete scheduled-workflow inventory was accounted for and no unresolved runner-clock-owned target defect remained.
+
+That retirement condition is satisfied.
+
+## Frozen decisions / constraints preserved
 
 - Manual explicit dates remain authoritative.
 - Source/API-derived canonical dates remain source-derived.
 - Repository/latest-complete-data workflows remain repository-driven.
-- Prediction/replay stale-data safety gates must not be weakened.
-- Do not silently fall back to an older trading date unless that fallback is an explicit preserved domain policy.
+- Prediction/replay stale-data safety gates remain protected.
+- No silent fallback to an older trading date was introduced unless it was an already-preserved domain policy.
 - `scripts/resolve_scheduled_collection_date.js` remains a bounded cron subset, not a general scheduler.
 - `github.event.schedule` occurrence ambiguity remains a known limitation.
 - TDCC `observed_date`, CNN timestamp/dataDate, TAIFEX payload date, and warrant source-title date remain source-owned.
 - Warrant missing/malformed source date remains fail-closed.
-- MOPS and VIX seventh-wave scheduled targets remain intended-occurrence anchored while manual behavior remains unchanged.
-- Do not migrate prediction/replay without separate preregistration.
-- Do not add a US holiday calendar, scheduler/DAG/plugin framework, or new fallback policy.
+- MOPS and VIX scheduled targets remain intended-occurrence anchored while manual behavior remains unchanged.
+- Prediction/replay was not migrated by this project without separate preregistration.
+- No US holiday calendar, scheduler/DAG/plugin framework, or new fallback policy was introduced.
 
-## Eighth-wave Prompt A audit evidence
+## Eighth-wave Prompt A evidence
 
 ### Freshness and inventory identity
 
-Prompt A freshly read current remote `main` at `3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234`.
+Prompt A started from current remote `main` at:
 
-Seventh-wave Prompt B closeout checkpoint was `9345f1173e4be8261bf0112b7337fe64e796b7f2`.
+`3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234`
 
-Compare `9345f1173e4be8261bf0112b7337fe64e796b7f2...3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234` showed eight later commits, but no `.github/workflows/*` file and no scheduled-date production/test script changed. Later changes were repository command/docs work plus unrelated daily data updates.
+Seventh-wave Prompt B closeout checkpoint was:
 
-The `.github/workflows` subtree SHA is identical at seventh-wave closeout and eighth-wave startup:
+`9345f1173e4be8261bf0112b7337fe64e796b7f2`
 
-- seventh-wave closeout: `039d67c50133b079e9a630303207f1de8ec6be1f`
-- eighth-wave startup: `039d67c50133b079e9a630303207f1de8ec6be1f`
+The `.github/workflows` subtree SHA at both seventh-wave closeout and eighth-wave Prompt A startup was:
 
-Therefore the current scheduled-workflow set is byte-identical to the durable seventh-wave-closeout workflow tree.
+`039d67c50133b079e9a630303207f1de8ec6be1f`
 
-### Final current scheduled-workflow inventory — 36 workflows
+Prompt A changed only this canonical handoff. No production workflow, production script, test, config, data contract, holiday calendar, scheduler framework, or fallback policy was changed.
+
+### Final scheduled-workflow inventory — 36 workflows
 
 | # | Workflow | Ownership / disposition |
 | ---: | --- | --- |
@@ -88,7 +84,7 @@ Therefore the current scheduled-workflow set is byte-identical to the durable se
 | 19 | `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml` | occurrence feeds preserved TAIFEX policy |
 | 20 | `.github/workflows/crawl-tdcc-shareholding-snapshot.yml` | source/API-owned |
 | 21 | `.github/workflows/crawl-cnn-fear-and-greed.yml` | source/API-owned |
-| 22 | `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml` | schedule only supplies expected date; payload date canonical |
+| 22 | `.github/workflows/crawl-taifex-major-institutional-traders-futures-options.yml` | schedule supplies expected date only; payload date canonical |
 | 23 | `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml` | repository/source-file-owned |
 | 24 | `.github/workflows/crawl-mops-monthly-revenue.yml` | seventh-wave intended occurrence complete |
 | 25 | `.github/workflows/crawl-pocket-00981a.yml` | source/API-owned |
@@ -104,47 +100,71 @@ Therefore the current scheduled-workflow set is byte-identical to the durable se
 | 35 | `.github/workflows/update-twse-industry.yml` | date-irrelevant universe refresh |
 | 36 | `.github/workflows/warrant-scraper.yml` | source-title/date-owned and fail-closed |
 
-Result: **36 accounted / 36 explained / 0 unexplained / 0 newly added or materially changed scheduled workflows since seventh-wave closeout.**
+Inventory result: **36 accounted / 36 explained / 0 unexplained / 0 newly added or materially changed scheduled workflows since seventh-wave closeout.**
 
-### Fresh exact-head regression
+## Eighth-wave Prompt B closeout evidence
 
-The eighth wave re-ran the exact-head regression rather than merely citing the prior green result.
+The eighth-wave closeout used the Prompt B preregistered before Prompt A at `3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234`. It did not use a future or rewritten acceptance contract.
 
-- Workflow: `.github/workflows/test-scheduled-collection-date.yml`
-- Run ID: `33374612312`
-- Fresh eighth-wave rerun regression job: `99443852753`
+### 1. Round identity and bounded scope — PASS
+
+- Seventh-wave Prompt B had already passed at `9345f1173e4be8261bf0112b7337fe64e796b7f2` before eighth-wave Prompt A began.
+- Eighth-wave Prompt A baseline was `3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234`.
+- Compare `3f3cd552a1a68ffc3f411fb66c78e2cfb90fe234...3cdcc1c686076f3a3045a91cd3eacb820d7ab47f` contains only `docs/handoffs/scheduled-workflow-date-semantics.md`.
+- No production workflow/script/test change was hidden inside the retirement audit.
+
+### 2. Complete scheduled-workflow accounting — PASS
+
+- Current remote `main` workflow subtree was independently re-read during Prompt B and is `039d67c50133b079e9a630303207f1de8ec6be1f`.
+- Seventh-wave closeout workflow subtree was independently re-read and is the exact same SHA: `039d67c50133b079e9a630303207f1de8ec6be1f`.
+- Therefore the complete workflow tree is byte-identical to the durable tree that had already been exhaustively re-accounted as 36 scheduled workflows.
+- The 36-workflow ownership table above remains complete: no workflow was added, deleted, or materially changed between seventh-wave closeout and eighth-wave closeout.
+- GitHub code-search indexing returned no usable schedule matches during closeout, so tree identity plus durable prior exhaustive inventory was used rather than treating an empty search index as evidence of zero schedules.
+
+### 3. No unresolved scheduled target defect — PASS
+
+- No remaining current workflow was found that owns a business target through runner actual start time where intended-occurrence reconstruction is required.
+- Current MOPS workflow keeps manual explicit `revenue_month` first, reconstructs `scheduled_at_utc` only for schedule events, feeds it into existing `autoRevenueMonth(now)`, and keeps manual no-date behavior separate.
+- Current VIX workflow keeps manual explicit `date` first, reconstructs `scheduled_at_utc` only for schedule events, feeds it into existing `resolveAutomaticTargetDate(now)`, and keeps manual no-date behavior separate.
+- Source/API-owned and repository-owned workflows remain classified by their actual source-of-truth rather than cron presence.
+
+### 4. Protected invariants and exact-head regression — PASS
+
+Prompt B independently re-ran the exact-head scheduled-date regression:
+
+- Workflow run: `33374612312`
+- Fresh Prompt B regression job: `99447487346`
 - Tested/materialized SHA: `396e8975517bbe0fc687bf9f8226825b35dacd40`
 - Conclusion: `success`
 - Deterministic tests: **51 pass / 0 fail**
 - `TESTED_SHA == MATERIALIZED_SHA`: PASS
 
-Fresh rerun verified resolver delay semantics, first-wave resolver wiring, second-wave contracts, third-wave contracts, fifth-wave TAIFEX futures/options, seventh-wave MOPS/VIX, warrant fail-closed behavior, and exact SHA identity.
+The fresh closeout rerun verified:
 
-Current `scripts/resolve_scheduled_collection_date.js` blob is `7f081771527ecf3b395d8f864aad93ac94c26325`; its parser remains limited to five-field wildcard/integer/comma-list/simple-range cron syntax.
+- resolver syntax and delay semantics;
+- all ten first-wave resolver-wired workflow contracts;
+- all five second-wave contracts;
+- all four third-wave contracts;
+- fifth-wave TAIFEX futures/options expected-date/source-payload contract;
+- seventh-wave MOPS/VIX intended-occurrence wiring and preserved manual paths;
+- warrant source-date fail-closed behavior;
+- exact tested SHA identity.
 
-Current `scripts/crawl_mops_monthly_revenue.js` blob is `89d5d68d2a9238905b672798e5b286f157646422`. Scheduled MOPS wiring feeds reconstructed `scheduled_at_utc` into existing `autoRevenueMonth(now)`; manual explicit and manual no-date paths remain distinct.
+Current `scripts/resolve_scheduled_collection_date.js` blob is still `7f081771527ecf3b395d8f864aad93ac94c26325`. Its cron grammar remains the bounded five-field subset using wildcard, integer, comma-separated integers, and simple integer ranges.
 
-Current VIX scheduled wiring feeds reconstructed `scheduled_at_utc` into existing `resolveAutomaticTargetDate(now)` while preserving manual explicit/manual no-date behavior and exact source-row validation.
+No US holiday calendar, scheduler/DAG/plugin framework, or new fallback policy was introduced.
 
-No workflow/script changes after seventh-wave closeout touched TDCC, CNN, TAIFEX, warrant, prediction/replay, MOPS/VIX, or shared scheduled-date code.
+### 5. Retirement decision durability — PASS
 
-### Prompt A changed-file set
+No unresolved scheduled-date migration candidate remains. The project is therefore **retired / monitor-only**.
 
-Clean retirement audit scope is documentation-only:
+There is no speculative ninth-wave production work and no future pair is promoted. A future concrete scheduled-date defect must be handled as a new evidence-backed round with its own preregistered Prompt A + Prompt B.
 
-- `docs/handoffs/scheduled-workflow-date-semantics.md`
+## Known limitation retained
 
-No production workflow, script, test, config, data contract, scheduler framework, holiday calendar, or fallback policy was changed by eighth-wave Prompt A.
+`github.event.schedule` is not an immutable occurrence timestamp. If a later identical cron occurrence has already passed, reconstructing which identical occurrence originally triggered a delayed run can remain ambiguous without another durable occurrence identifier. This known limitation was not hidden by expanding the resolver into a general scheduler.
 
-### Retirement decision
-
-**No unresolved scheduled target defect remains in the current 36-workflow scheduled inventory.**
-
-Decision: mark this migration project **retired / monitor-only pending Prompt B closeout**.
-
-Monitor-only means future newly added or materially changed scheduled workflows are evaluated from then-current evidence; no speculative migration wave is preregistered now. If a future concrete defect appears, create a new explicitly preregistered implementation + closeout pair at that time.
-
-## Entry points
+## Entry points for future monitor-only review
 
 - `AGENTS.md`
 - `promptA.md`
@@ -166,56 +186,6 @@ Monitor-only means future newly added or materially changed scheduled workflows 
 - `scripts/resolve_latest_complete_prediction_base.js`
 - `scripts/resolve_prediction_replay_date.js`
 
-## Safety / stop conditions
+## Monitor-only stop condition
 
-- Prompt A is complete; do not start another implementation round before the preregistered Prompt B below passes.
-- Do not invent a speculative ninth-wave migration candidate.
-- If current-main drift before closeout adds or materially changes scheduled workflows, Prompt B must re-account the affected inventory.
-
-## Prompt B — eighth-wave final scheduled-date verification and retirement closeout
-
-Perform phase-closeout verification for round `eighth-wave-final-scheduled-date-verification-and-retirement-audit` in repository `EasonLiu0913/stock_data`.
-
-Before verification:
-1. Fetch current remote `main` and read `AGENTS.md`, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, and this canonical handoff.
-2. Recover the eighth-wave Prompt A baseline, audit findings commit/head, and this preregistered Prompt B from durable pre-Prompt-A history.
-3. Verify seventh-wave Prompt B had already passed before eighth-wave Prompt A began.
-4. Do not use any later future Prompt B as the eighth-wave acceptance contract.
-
-Verify independently:
-
-1. **Round identity and scope**
-   - This was the promoted eighth-wave final audit, not a prematurely executed future round.
-   - Clean retirement should change only this canonical handoff; any additional change must be a strictly justified bounded verification repair recorded in the handoff.
-
-2. **Complete scheduled-workflow accounting**
-   - Independently enumerate all current `.github/workflows/*.yml` files containing `schedule:`.
-   - Confirm every current scheduled workflow is accounted for with actual target-date ownership evidence.
-   - Confirm no workflow was omitted merely because it had been classified in an older wave.
-   - Confirm any workflow newly added or materially changed after seventh-wave closeout was explicitly separated from historical evidence.
-
-3. **No unresolved scheduled target defect**
-   - Confirm no remaining scheduled workflow selects a schedule-owned business target from runner actual start time where intended-occurrence reconstruction is required.
-   - Confirm MOPS and VIX seventh-wave semantics remain correct.
-   - Confirm source/API-owned and repository-owned dates were not incorrectly converted to scheduled dates.
-
-4. **Protected invariants and regression**
-   - Exact-head scheduled-date regression passes on the recorded tested SHA and materializes that SHA rather than moving `/main`.
-   - Shared resolver cron grammar remains bounded.
-   - TDCC, CNN, TAIFEX, warrant fail-closed source ownership, prediction/replay, and prior migration contracts remain intact.
-   - No US holiday calendar, scheduler framework, or new fallback policy was introduced.
-
-5. **Retirement decision durability**
-   - If no unresolved candidate remains, the handoff explicitly marks the migration as retired/monitor-only and does not preregister speculative production work.
-   - If a genuine new defect was found, it has a separate preregistered paired implementation/closeout contract with exact entry points and evidence; it was not silently implemented beyond an allowed bounded freshness/correctness repair.
-   - Re-fetch current remote `main` after all writes and verify the final handoff, tested SHA, findings, changed-file set, and retirement/new-defect decision are durable.
-
-If any criterion fails, fix only the bounded eighth-wave audit/verification defect and repeat this Prompt B from criterion 1.
-
-If closeout passes:
-
-- update and commit this canonical handoff with eighth-wave Prompt B PASS evidence;
-- mark the migration project retired/monitor-only if no unresolved candidate exists;
-- if a separately preregistered defect round exists, promote only that already-preregistered pair;
-- re-fetch current remote `main` and verify durability/staleness;
-- stop. Do not start another Prompt A automatically.
+Do not start another scheduled-date migration round merely because this handoff exists. Resume implementation work only when current durable repository evidence identifies a concrete new or regressed scheduled-date defect, and preregister its paired implementation + closeout contracts before work begins.
