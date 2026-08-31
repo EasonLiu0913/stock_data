@@ -110,3 +110,17 @@ jobs:
           if(m.promotion_count_gate.met)throw new Error('promotion gate unexpectedly met');
           console.log(JSON.stringify({counts,promotion_count_gate:m.promotion_count_gate},null,2));
           NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
