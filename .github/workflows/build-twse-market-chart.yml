@@ -4,7 +4,7 @@ on:
   schedule:
     # 平日 23:07 台北時間 (15:07 UTC)
     - cron: '7 15 * * 1-5'
-    # 隔日 02:33 台北時間再次補抓；以早上 08:00 為日期切換點
+    # 隔日 02:33 台北時間再次補抓；scheduled occurrence 仍屬前一個台北交易日
     - cron: '33 18 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -40,17 +40,31 @@ jobs:
 
       - name: Resolve target date
         id: date
+        shell: bash
+        env:
+          DATE_INPUT: ${{ github.event.inputs.date }}
+          START_DATE_INPUT: ${{ github.event.inputs.start_date }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
-          DATE_INPUT="${{ github.event.inputs.date }}"
-          START_DATE_INPUT="${{ github.event.inputs.start_date }}"
+          set -euo pipefail
 
-          if [ -n "$DATE_INPUT" ]; then
+          if [ -n "${DATE_INPUT:-}" ]; then
             TARGET_DATE="$DATE_INPUT"
+            DATE_SOURCE="manual input"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            TARGET_DATE="$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_trade_date)"
+            DATE_SOURCE="logical scheduled trade date"
           else
+            # Preserve legacy manual-no-date 08:00 Taipei behavior.
             TARGET_DATE=$(TZ='Asia/Taipei' date --date='8 hours ago' '+%Y%m%d')
+            DATE_SOURCE="manual Taipei 08:00 cutoff"
           fi
 
-          if [ -n "$START_DATE_INPUT" ]; then
+          if [ -n "${START_DATE_INPUT:-}" ]; then
             START_DATE="$START_DATE_INPUT"
           else
             START_DATE=$(node - <<'NODE'
@@ -68,7 +82,7 @@ jobs:
 
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
-          echo "Target date: $TARGET_DATE"
+          echo "Target date: $TARGET_DATE ($DATE_SOURCE)"
           echo "Start date: $START_DATE"
 
       - name: Build chart data
@@ -119,4 +133,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
