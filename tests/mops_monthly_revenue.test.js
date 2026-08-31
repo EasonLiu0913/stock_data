@@ -11,6 +11,7 @@ const {
   previousRevenueMonth,
   rebuildDerivedCompanies,
 } = require('../scripts/crawl_mops_monthly_revenue');
+const { resolveScheduledOccurrence } = require('../scripts/resolve_scheduled_collection_date');
 
 const fixture = `
 <html><body>
@@ -32,6 +33,22 @@ test('builds MOPS URL from Gregorian revenue month', () => {
 test('automatic month uses previous Taipei calendar month', () => {
   assert.equal(autoRevenueMonth(new Date('2026-08-07T06:00:00Z')), '202607');
   assert.equal(autoRevenueMonth(new Date('2026-01-05T06:00:00Z')), '202512');
+});
+
+test('scheduled MOPS month remains anchored when runner crosses Taipei month boundary', () => {
+  const runnerNow = new Date('2026-09-01T09:00:00Z');
+  const occurrence = resolveScheduledOccurrence('30 10 1-15 * *', runnerNow);
+  assert.equal(occurrence.scheduled_at_utc, '2026-08-15T10:30:00.000Z');
+  assert.equal(autoRevenueMonth(new Date(occurrence.scheduled_at_utc)), '202607');
+  assert.equal(autoRevenueMonth(runnerNow), '202608');
+});
+
+test('scheduled MOPS month is unchanged by a normal same-month delay', () => {
+  const runnerNow = new Date('2026-08-10T12:00:00Z');
+  const occurrence = resolveScheduledOccurrence('30 10 1-15 * *', runnerNow);
+  assert.equal(occurrence.scheduled_at_utc, '2026-08-10T10:30:00.000Z');
+  assert.equal(autoRevenueMonth(new Date(occurrence.scheduled_at_utc)), '202607');
+  assert.equal(autoRevenueMonth(runnerNow), '202607');
 });
 
 test('parses company rows, industry, note and report date', () => {
