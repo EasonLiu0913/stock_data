@@ -39,6 +39,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: Validate EIA API key
         shell: bash
         env:
@@ -57,18 +58,41 @@ jobs:
           node --check scripts/crawl_refined_product_tightness.js
           node --test tests/refined_product_tightness.test.js
 
+      - name: Resolve scheduled query upper bound
+        id: query-date
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            echo "date=$INPUT_DATE" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            date=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --time-zone UTC)
+            echo "Scheduled EIA query upper bound: $date"
+            echo "date=$date" >> "$GITHUB_OUTPUT"
+          else
+            echo "date=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate refined-product tightness factor
         id: generate
         shell: bash
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
-          INPUT_DATE: ${{ inputs.date || '' }}
+          TARGET_DATE: ${{ steps.query-date.outputs.date }}
           FORCE_OVERWRITE: ${{ inputs.force_overwrite || 'false' }}
         run: |
           set -euo pipefail
           args=()
-          if [ -n "$INPUT_DATE" ]; then
-            args+=(--date "$INPUT_DATE")
+          if [ -n "$TARGET_DATE" ]; then
+            args+=(--date "$TARGET_DATE")
           fi
           if [ "$FORCE_OVERWRITE" = "true" ]; then
             args+=(--force)
@@ -134,4 +158,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
