@@ -32,16 +32,32 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Node.js for date resolution
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
       - name: Check existing TWSE margin balance file
         id: existing
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ github.event.inputs.date || '' }}
         run: |
           set -euo pipefail
-          DATE_INPUT="${{ github.event.inputs.date }}"
-          if [ -n "$DATE_INPUT" ]; then
-            TARGET_DATE="$DATE_INPUT"
+          if [ -n "$INPUT_DATE" ]; then
+            TARGET_DATE="$INPUT_DATE"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$SCHEDULE_EXPR" \
+              --policy same_trade_date \
+              --json)
+            TARGET_DATE=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$resolved")
+            echo "Delay-safe scheduled date: $resolved"
           else
-            # Before 03:00 Taipei time, the market data still belongs to the previous day.
+            # Preserve the legacy manual no-date behavior; scheduled runs no longer use runner time.
             TARGET_DATE=$(TZ='Asia/Taipei' date --date='3 hours ago' '+%Y%m%d')
           fi
 
