@@ -51,13 +51,14 @@ test('delay crossing old 08:00 Taipei boundary does not change scheduled target'
   assert.equal(result.target_date, '20260828');
 });
 
-test('delay crossing old 14:00 Taipei cutoff does not change scheduled target', () => {
+test('delay past the next Taipei 14:00 cutoff does not move the prior scheduled occurrence', () => {
   const result = resolveScheduledCollectionDate({
     schedule: '11 7 * * *',
     policy: 'same_trade_date',
-    now: new Date('2026-08-27T18:00:00Z'),
+    now: new Date('2026-08-28T07:00:00Z'),
     holidays,
   });
+  assert.equal(result.scheduled_at_utc, '2026-08-27T07:11:00.000Z');
   assert.equal(result.target_date, '20260827');
 });
 
