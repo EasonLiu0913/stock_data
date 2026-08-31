@@ -36,21 +36,29 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Crawl market news
+
+      - name: Resolve collection date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ -n "${{ inputs.date }}" ]; then
-            node scripts/crawl_market_news.js --date "${{ inputs.date }}"
-          else
-            node scripts/crawl_market_news.js
-          fi
+          set -euo pipefail
+          TARGET_DATE="$(node scripts/resolve_scheduled_collection_date.js \
+            --event-name "$EVENT_NAME" \
+            --schedule "$EVENT_SCHEDULE" \
+            --input-date "${INPUT_DATE:-}" \
+            --policy same_calendar_date)"
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          echo "Collection date: $TARGET_DATE"
+
+      - name: Crawl market news
+        run: node scripts/crawl_market_news.js --date "${{ steps.date.outputs.target_date }}"
 
       - name: Generate market risk snapshot
-        run: |
-          if [ -n "${{ inputs.date }}" ]; then
-            node scripts/generate_market_risk_snapshot.js --date "${{ inputs.date }}"
-          else
-            node scripts/generate_market_risk_snapshot.js
-          fi
+        run: node scripts/generate_market_risk_snapshot.js --date "${{ steps.date.outputs.target_date }}"
 
       - name: Generate relevant files.json only
         run: node scripts/generate_file_lists.js --only data_market_news,data_market_risk
@@ -106,4 +114,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
