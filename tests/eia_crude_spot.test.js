@@ -2,16 +2,46 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { SERIES, compactDate, changeFrom, buildBenchmark } = require('../scripts/crawl_eia_crude_spot');
+const {
+  SERIES,
+  PUBLICATION_POLICY,
+  compactDate,
+  calendarDayDiff,
+  buildSourceFreshness,
+  changeFrom,
+  buildBenchmark,
+} = require('../scripts/crawl_eia_crude_spot');
 
 test('canonical crude spot series are WTI Cushing and Brent Europe', () => {
   assert.equal(SERIES.wti_spot.id, 'PET.RWTC.D');
   assert.equal(SERIES.brent_spot.id, 'PET.RBRTE.D');
+  assert.equal(PUBLICATION_POLICY.cadence, 'weekly_wednesday_us_eastern');
 });
 
 test('compactDate accepts common date separators', () => {
   assert.equal(compactDate('2026-08-31'), '20260831');
   assert.equal(compactDate('2026/08/31'), '20260831');
+});
+
+test('calendarDayDiff measures source publication lag in calendar days', () => {
+  assert.equal(calendarDayDiff('20260825', '20260901'), 7);
+  assert.equal(calendarDayDiff('20260825', '20260903'), 9);
+});
+
+test('source freshness treats one-week EIA lag as expected and warns after the weekly window', () => {
+  const benchmarks = [
+    { id: 'wti_spot', latest_date: '20260825' },
+    { id: 'brent_spot', latest_date: '20260825' },
+  ];
+  const normal = buildSourceFreshness('20260901', benchmarks);
+  assert.equal(normal.overall_status, 'expected_weekly_publication_lag');
+  assert.equal(normal.benchmarks[0].lag_calendar_days, 7);
+  assert.equal(normal.benchmarks[0].status, 'expected_weekly_publication_lag');
+
+  const stale = buildSourceFreshness('20260903', benchmarks);
+  assert.equal(stale.overall_status, 'stale_warning');
+  assert.equal(stale.benchmarks[0].lag_calendar_days, 9);
+  assert.equal(stale.benchmarks[0].status, 'stale_warning');
 });
 
 test('changeFrom computes trading-observation changes', () => {
