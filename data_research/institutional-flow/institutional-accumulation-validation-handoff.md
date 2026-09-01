@@ -4,406 +4,287 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Phase 3 — development-only continuous outcome opening: Prompt A COMPLETE; mandatory Prompt B closeout pending.**
+**Phase 3 — development-only continuous outcome opening: COMPLETE / Prompt B PASS.**
 
-Active/promoted round:
+Promoted next round:
 
-`institutional-accumulation-outcome-opening-v1`
+`institutional-accumulation-development-association-v1`
 
 Status:
 
 - `institutional-accumulation-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-point-in-time-contract-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-sample-freeze-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
+- `institutional-accumulation-development-association-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
-Promotion does not execute the active Prompt A automatically.
+Promotion does not execute the promoted Prompt A automatically.
 
-## Objective
+## Objective and frozen constraints
 
-Detect cases where price has not yet fully repriced upward while durable institutional capital has already changed behavior in a bullish direction, then later test whether credible PIT-safe catalyst evidence adds incremental value.
+Detect cases where price has not yet fully repriced upward while durable institutional capital has already changed behavior in a bullish direction, then later test whether PIT-safe catalyst evidence adds incremental value.
 
 This remains research, not a production strategy.
-
-## Frozen decisions / constraints
 
 Canonical preregistration:
 
 `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`
 
-Methodology identity:
+Protected MediaTek `2454` remains `motivation_cases_only` and outside development/validation tuning evidence. Stock holdout and time holdout outcomes remain sealed. Withdrawal v6.0-v6.5 methodology, classifier/lifecycle rules, validation state, outcomes, and holdouts remain frozen and are not Accumulation inputs.
 
-`institutional-accumulation-preregistration-v1`
-
-Keep these conceptual layers separate until evidence supports combining them:
-
-1. Institutional Accumulation
-2. Supply Absorption
-3. Price Non-confirmation
-4. Catalyst Evidence / Catalyst Proximity
-5. Repricing Readiness
-6. Crowding / Retail-chasing Risk
-
-No arbitrary final weighted score is frozen.
-
-Protected MediaTek `2454` motivation cases remain `motivation_cases_only` and outside development/validation tuning evidence.
-
-Withdrawal v6.0-v6.5 classifier/lifecycle rules, specs, validation outcomes/metrics, holdouts, and methodology remain frozen and are not Accumulation inputs.
-
-Observation family remains:
-
-`T-20 / T-15 / T-10 / T-5 / T-3 / T-1 / T0`
+No arbitrary final weighted score is frozen. No binary repricing/success threshold has been introduced.
 
 Required lifecycle remains:
 
-`outcome-blind selection -> durable sample freeze -> stop -> development-only outcome opening -> closeout -> separately authorized holdout work`
+`outcome-blind selection -> durable sample freeze -> development-only outcome opening -> mandatory closeout -> development-only association analysis -> mandatory closeout -> separately authorized future work`
 
-## Phase 0 closeout
+## Durable prior-phase checkpoints
 
-Phase 0 Prompt B closeout: **PASS**.
+### Phase 0 — preregistration/source-semantics audit
 
-Key durable commits:
+Prompt B: **PASS**.
+
+Key commits:
 
 - `8a34187f87998fcc20c32024eeab47ac927f0957` — preregistration/source-semantics audit;
-- `34868751908edd18aea19dac35885c2c373be902` — Phase 0 handoff checkpoint;
-- preregistered Phase 0 Prompt B recoverable from `9d244fab0fe786393d8be72ab2f6327d306e7328`.
+- `34868751908edd18aea19dac35885c2c373be902` — Phase 0 checkpoint.
 
-## Phase 1 closeout
+### Phase 1 — PIT contract
 
-Round:
+Round: `institutional-accumulation-point-in-time-contract-v1`
 
-`institutional-accumulation-point-in-time-contract-v1`
+Prompt B: **PASS**.
 
-Prompt B closeout: **PASS**.
-
-Core artifacts:
+Core entry points:
 
 - `scripts/lib/institutional_accumulation_pit.js`
+- `scripts/lib/stock_price_provider.js`
+- `scripts/lib/histock_broker_quality.js`
 - `tests/institutional_accumulation_pit.test.js`
 - `tests/institutional_accumulation_pit_coverage.test.js`
-- `scripts/audit_institutional_accumulation_pit_coverage.js`
-- `.github/workflows/test-institutional-accumulation-pit.yml`
 - `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
-- `data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json`
 
-Closeout evidence:
+Closeout evidence included workflow run `33505951816`, job `99849911255`, tested head `801d15b006217842597b187baa0d548872382700`, with 9 tests passed and 0 failed.
 
-- workflow run `33505951816`, job `99849911255`;
-- tested head `801d15b006217842597b187baa0d548872382700`;
-- 9 tests passed, 0 failed;
-- semantic reproduction / outcome blindness / protected `2454` guards passed;
-- Phase 1 closeout and Phase 2 promotion commit `930b95edc40f0b9c55887cecd0f2c88c6a8d10f5`.
+### Phase 2 — durable development sample freeze
 
-## Phase 2 completed
+Round: `institutional-accumulation-development-sample-freeze-v1`
 
-Round:
-
-`institutional-accumulation-development-sample-freeze-v1`
-
-Phase 2 froze the development sample/event-anchor and partitions without opening candidate-specific future outcomes.
-
-### Durable implementation artifacts
-
-- `scripts/freeze_institutional_accumulation_development_sample.js`
-- `tests/institutional_accumulation_development_sample.test.js`
-- `.github/workflows/freeze-institutional-accumulation-development-sample.yml`
-- `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
-- `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.md`
-
-Implementation / manifest commits:
-
-- `5837550417a2045deeda581bedeb3025b5e725ce` — `feat: freeze accumulation development sample v1`;
-- `3810d00c4289c1067725f7b1ccdb5dc9da7dfffd` — `analysis: freeze accumulation development sample v1`;
-- `481fda6c543fb3850f3bc74a81a2b9255a255bee` — Prompt A handoff checkpoint.
-
-### Frozen deterministic universe / anchors
-
-Universe rule:
-
-- first 15 ascending four-digit TWSE equity codes with numeric code `>=1000` from `data_twse/twse_industry.csv`;
-- protected MediaTek `2454` excluded before selection;
-- current industry labels ignored.
+Prompt B: **PASS**.
 
 Frozen universe:
 
 `1101, 1102, 1103, 1104, 1108, 1109, 1110, 1201, 1203, 1210, 1213, 1215, 1216, 1217, 1218`
 
-Trading-session rule:
-
-- ascending intersection of foreign-investor, dealer, and margin archive manifests at or before fixed cutoff `20260827`;
-- offsets count exchange/source-shared trading sessions;
-- after 20-session warmup, freeze latest 10 usable T0 sessions.
-
-Frozen anchors:
+Frozen T0 anchors:
 
 `20260814, 20260817, 20260818, 20260819, 20260820, 20260821, 20260824, 20260825, 20260826, 20260827`
 
-### Frozen mandatory / optional source rules
+Frozen eligible counts:
 
-Mandatory for every `T-20/T-15/T-10/T-5/T-3/T-1/T0` observation:
+- methodology_development: `41`
+- stock_holdout: `11`
+- time_holdout: `10`
+- ineligible prospective anchors: `88`
 
-- unified price / volume;
-- foreign-investor flow;
-- dealer flow.
+Phase 2 manifest:
 
-Each required observation must have Phase 1 source state `available`. Every absent / missing / quality-rejected / availability-unsafe / not-applicable required value fails closed. Non-available observations are never zero-filled.
+`data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
 
-Optional/context-only:
-
-- investment trust;
-- margin financing;
-- HiStock broker history — no Phase 2 backfill and not an eligibility requirement;
-- catalyst/disclosure — separate PIT-safe optional layer only.
-
-Historical TDCC remains `availability_unsafe`. Current/static industry mapping is not used as historical membership.
-
-### Threshold-free event-anchor construction
-
-No numerical winning cutoff was selected. Every stock-session satisfying the mandatory PIT completeness gate is frozen as an eligible prospective anchor.
-
-PIT continuous/rank features preserved:
-
-- foreign sampled net shares;
-- dealer sampled net shares;
-- foreign + dealer core accumulation;
-- positive core-flow observation count;
-- sampled core net shares / sampled observed volume when valid;
-- T-20 to T0 price return;
-- cross-sectional accumulation percentile;
-- supply-absorption percentile;
-- price-return percentile;
-- price-non-confirmation rank gap.
-
-No free-float normalization is claimed and no final weighted score exists.
-
-### Frozen partitions
-
-Priority:
-
-1. `stock_holdout` — every fifth stock in ascending universe (`zero-based index % 5 === 4`) across all anchors;
-2. `time_holdout` — non-stock-holdout stocks in final 20% of frozen anchor sessions;
-3. `methodology_development` — remaining eligible anchors.
-
-Fresh-runner counts:
-
-| Partition / state | Count |
-| --- | ---: |
-| methodology_development | 41 |
-| stock_holdout | 11 |
-| time_holdout | 10 |
-| ineligible | 88 |
-
-Ineligible prospective anchors remain in the manifest with explicit PIT eligibility reasons.
-
-### Durable manifest / immutability evidence
-
-Manifest semantic content SHA-256:
+Manifest semantic SHA-256:
 
 `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`
 
-Fresh-runner remote file-byte SHA-256:
+The pre-Phase-3 durable file at commit `d1ff07d0499d25a818e45ff76a6c7afcde1a141d` and the Phase 3 closeout file both have Git blob SHA `4215a84a110406714e200618d280b70d0d1e7f46`, so the frozen manifest was not regenerated or changed during outcome opening.
 
-`1dd28b1e026122c185cae67d731f39d0895d9446017f9825e08ce001ecfb8272`
+The manifest carries SHA-256 identities for the source files referenced by frozen PIT observations.
 
-Fresh-runner workflow evidence:
-
-- workflow `.github/workflows/freeze-institutional-accumulation-development-sample.yml`;
-- run `33507122033`;
-- job `99853715397`;
-- head SHA `5837550417a2045deeda581bedeb3025b5e725ce`;
-- conclusion **SUCCESS**;
-- deterministic tests **4 passed, 0 failed**;
-- manifest outcome-blind / partition / content-hash verification **PASS**;
-- durable remote manifest verification **PASS**.
-
-The manifest stores SHA-256 identities for source files referenced by observation provenance for later immutability verification.
-
-## Phase 2 Prompt B closeout
+## Phase 3 — development-only continuous outcome opening
 
 Round:
 
-`institutional-accumulation-development-sample-freeze-v1`
+`institutional-accumulation-outcome-opening-v1`
+
+### Prompt A implementation
+
+Prompt A: **COMPLETE**.
+
+Durable implementation entry points:
+
+- `scripts/open_institutional_accumulation_development_outcomes.js`
+- `tests/institutional_accumulation_development_outcomes.test.js`
+- `.github/workflows/open-institutional-accumulation-development-outcomes.yml`
+- `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`
+
+Durable outcome commit:
+
+`429abae00b0a7cd6587c0a7e9a70b1c55315176a`
+
+Prompt A fresh-runner evidence:
+
+- workflow run `33514998467`;
+- original successful job `99879685892`;
+- frozen parent semantic SHA-256 verified: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- frozen referenced source files verified: `154`;
+- methodology-development outcomes materialized: `41`;
+- stock-holdout outcomes materialized: `0`;
+- time-holdout outcomes materialized: `0`;
+- protected `2454` outcomes materialized: `0`.
+
+Outcome coverage at closeout:
+
+| Horizon | Continuous outcome available | Not yet observed |
+| --- | ---: | ---: |
+| D+5 | 31 | 10 |
+| D+10 | 6 | 35 |
+| D+20 | 0 | 41 |
+| D+40 | 0 | 41 |
+
+Session coverage used by the durable Phase 3 artifact is `20260814` through `20260831` (11 sessions from the outcome session calendar). Not-yet-observed horizons remain explicit `null`; they are not converted to zero.
+
+Outcome contract:
+
+- D+5 / D+10 / D+20 / D+40 count exchange trading sessions;
+- stock prices use `scripts/lib/stock_price_provider.js:getDailyPrice`;
+- TAIEX-relative returns use the same session date and TWSE MI_INDEX `發行量加權股價指數`;
+- absolute forward return and TAIEX-relative forward return remain continuous;
+- MFE/MAE remain continuous and use the same T0/session convention;
+- same-industry-relative outcomes remain omitted because PIT-safe effective-dated historical industry membership is unproven;
+- `binary_success_threshold` remains `null`;
+- no production classifier, final weighted score, or strategy was promoted.
+
+## Phase 3 Prompt B closeout
 
 **Prompt B closeout: PASS**
 
-The exact Phase 2 Prompt B was recovered from pre-Prompt-A durable commit:
+The exact Phase 3 Prompt B was recovered from durable pre-Prompt-A commit:
 
-`930b95edc40f0b9c55887cecd0f2c88c6a8d10f5`
+`d1ff07d0499d25a818e45ff76a6c7afcde1a141d`
 
-Closeout independently re-established current remote state and verified all preregistered criteria:
+Independent closeout verification re-established current remote state and checked every preregistered criterion:
 
-1. deterministic/reproducible/outcome-blind sample and anchor selection — **PASS**;
-2. no candidate future return, MFE/MAE, breakout/repricing success, failure/reclaim label, or future catalyst/news opened or encoded — **PASS**;
-3. required observations reuse the frozen Phase 1 PIT source-state semantics and fail closed — **PASS**;
-4. mandatory/optional source rules were frozen pre-outcome and are independent of MediaTek motivation cases — **PASS**;
-5. protected `2454` remains excluded before universe construction — **PASS**;
-6. development / untouched-stock / untouched-time partitions are deterministic, non-empty, and durably identified — **PASS**;
-7. historical TDCC remains unsafe and current industry mapping is not projected backward — **PASS**;
-8. catalyst/disclosure remains a separate PIT-safe optional layer — **PASS**;
-9. manifest carries stable methodology/version identity, provenance/source states, partition identity, semantic content SHA-256, remote byte SHA-256, and source-file hashes — **PASS**;
-10. no production classifier/final weighted score was promoted and no outcome-opening round was executed during Phase 2 — **PASS**;
-11. Withdrawal v6.0-v6.5 and production strategy/prediction state remained untouched — **PASS**;
-12. changed-file scope, tests, commits, workflow evidence, and durable remote artifacts satisfy the Phase 2 contract — **PASS**.
+1. Phase 2 manifest identity/content hash and all referenced source identities were verified before outcome opening and the freeze was not regenerated/redefined — **PASS**.
+2. Outcome materialization is limited to eligible frozen `methodology_development` anchors — **PASS** (`41`).
+3. Stock holdout, time holdout, and protected MediaTek `2454` future outcomes were not opened, summarized, or encoded — **PASS** (`0 / 0 / 0`).
+4. D+5/D+10/D+20/D+40 count exchange trading sessions rather than calendar days — **PASS**.
+5. Stock prices use the unified provider and TAIEX-relative outcomes align to the same session sequence — **PASS**.
+6. Missing stock/benchmark or not-yet-mature observations remain explicit missing/null values and are never zero-filled — **PASS**.
+7. Same-industry-relative outcomes remain omitted while historical effective-dated membership is unproven — **PASS**.
+8. No post-outcome binary repricing/success cutoff was invented or tuned — **PASS**.
+9. Phase 2 features, universe, anchors, partitions, mandatory/optional source rules, manifest identity, and hashes remain unchanged — **PASS**.
+10. The durable development-only outcome artifact is reproducible and carries parent freeze identity/hash plus stock/benchmark outcome provenance — **PASS**.
+11. No production classifier/final weighted score/strategy was promoted, and Withdrawal v6.0-v6.5 state remains untouched — **PASS**.
+12. Changed files/tests/commits and durable remote artifacts satisfy the preregistered development-only outcome-opening contract — **PASS**.
 
-Changed-file audit from pre-Phase-2 baseline `930b95edc40f0b9c55887cecd0f2c88c6a8d10f5` through Prompt A checkpoint `481fda6c543fb3850f3bc74a81a2b9255a255bee` contains only:
+### Closeout reproducibility and bounded repair evidence
 
-- `.github/workflows/freeze-institutional-accumulation-development-sample.yml`;
-- `scripts/freeze_institutional_accumulation_development_sample.js`;
-- `tests/institutional_accumulation_development_sample.test.js`;
-- `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`;
-- `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.md`;
-- this canonical Accumulation handoff.
+Prompt B independently reran the Phase 3 writer. The first rerun reproduced all research tests and outcome bytes but exposed a sparse-checkout verification defect: after rebasing an already-applied generated-file commit, the sparse worktree did not rematerialize the artifact, causing the final local `sha256sum` check to fail even though the durable remote artifact existed.
 
-Concurrent commits after Prompt A checkpoint and before closeout updated Pocket `00981A` data and 2026-09-01 `data_fubon` institutional artifacts only. They did not alter the freeze manifest, Phase 2 generator/test/workflow, routing, Withdrawal state, or the frozen cutoff/input archives through `20260827`; therefore the acceptance evidence remained fresh.
+This was treated as a closeout defect rather than ignored. Only the workflow durability check was repaired:
 
-Phase 2 closeout promotes exactly the already-preregistered next round:
+- repair commit `4c3821759f4ac426cf72d9843f0851d0d02c7383` — `fix: verify regenerated accumulation artifact after rebase`;
+- repaired run `33516827150`;
+- repaired job `99885841794`;
+- conclusion: **SUCCESS**;
+- deterministic guards: **5 passed, 0 failed**;
+- regenerated outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`;
+- durable remote outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`;
+- writer reported the durable artifact/checkpoint already matched regenerated output, so no new outcome-data commit was needed.
 
-`institutional-accumulation-outcome-opening-v1`
+Changed-file audit from pre-Phase-3 baseline `d1ff07d0499d25a818e45ff76a6c7afcde1a141d` contains only the Phase 3 opener workflow/script/test/outcome artifact and this handoff as research changes. Concurrent market-news/risk, TWSE institutional-investor, and TWT49U data commits are unrelated. No Withdrawal methodology/validation files changed.
 
-Promotion does not execute it.
+## Known limitations carried forward
 
-## Exact repository entry points
-
-### Phase 2 freeze
-
-- `scripts/freeze_institutional_accumulation_development_sample.js`
-- `tests/institutional_accumulation_development_sample.test.js`
-- `.github/workflows/freeze-institutional-accumulation-development-sample.yml`
-- `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
-- `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.md`
-
-### Phase 1 PIT contract
-
-- `scripts/lib/institutional_accumulation_pit.js`
-- `scripts/lib/stock_price_provider.js`
-- `scripts/lib/histock_broker_quality.js`
-- `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
-- `data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json`
-
-### Institutional / margin inputs
-
-- `data_twse_foreign_investors/files.json`
-- `data_twse_investment_trust/files.json`
-- `data_twse_dealers/files.json`
-- `data_twse_margin_balance/files.json`
-- corresponding dated daily archives
-
-### TDCC / industry / disclosure restrictions
-
-- `scripts/backfill_tdcc_shareholding_history.js`
-- `data_tdcc_shareholding/history/2449/manifest.json`
-- `data_twse/twse_industry.csv`
-- `scripts/fundamental_event_timeline.js`
-- `scripts/build_fundamental_event_timeline.js`
-- `data_fundamental_events/<stock>/<year>.json`
-
-## Unresolved evidence carried forward
-
-1. normalized HiStock broker coverage remains insufficient for mandatory use;
-2. durable historical intraday publication timestamps for TWSE EOD archives remain unverified;
-3. TDCC historical publication timing remains unverified;
-4. effective-dated historical industry membership remains unverified;
-5. complete timestamped historical catalyst/news/analyst-revision evidence remains unverified;
-6. PIT-safe free-float/share-base support remains unaudited;
-7. numerical repricing/success thresholds remain deliberately unfrozen; Phase 3 must begin with continuous outcomes rather than retrofitting a binary success cutoff.
+- D+10 currently has only 6 complete development outcomes; D+20 and D+40 have not matured in the frozen Phase 3 artifact.
+- Normalized HiStock broker history remains insufficient for mandatory use.
+- Historical TDCC publication timing remains unsafe/unverified.
+- Effective-dated historical industry membership remains unverified.
+- Complete timestamped historical catalyst/news/analyst-revision evidence remains unverified.
+- PIT-safe free-float/share-base normalization remains unaudited.
+- Numerical binary repricing/success thresholds remain deliberately unfrozen.
+- Stock holdout, time holdout, and protected `2454` remain sealed.
 
 ## Next round
 
-Active/promoted round:
+Promoted round:
 
-`institutional-accumulation-outcome-opening-v1`
+`institutional-accumulation-development-association-v1`
 
-Prompt A has completed. The next authorized action for this round is the preregistered mandatory Prompt B closeout below. Do not execute another Prompt A or open any holdout before closeout.
+Purpose: inspect whether the already-frozen PIT accumulation / supply-absorption / price-non-confirmation features show useful monotonic association with the **already-opened development-only continuous outcomes**, without opening holdouts, inventing binary success thresholds, or promoting a production score.
 
-Stock holdout, time holdout, and protected MediaTek outcomes remain sealed.
+The round is preregistered now, before any association result is computed.
 
 ---
 
-## Prompt A — Development-only continuous outcome opening
+## Prompt A — Development-only continuous association analysis
 
 ```text
-Continue the Institutional Accumulation / Catalyst Pre-positioning research project only if mandatory Phase 2 closeout has PASSed and explicitly promoted round `institutional-accumulation-outcome-opening-v1`.
+Continue the Institutional Accumulation / Catalyst Pre-positioning research project only if Phase 3 round `institutional-accumulation-outcome-opening-v1` has mandatory Prompt B PASS and has explicitly promoted `institutional-accumulation-development-association-v1`.
 
-Before work, fetch current remote main; read AGENTS.md, project philosophy/roadmap, the canonical Accumulation handoff, preregistration, Phase 1 PIT contract, Phase 2 freeze contract, and the frozen manifest. Recover this exact future pair from durable history and verify it was preregistered before any candidate outcome was opened.
+Before work, fetch current remote main; read AGENTS.md, project philosophy/roadmap, this canonical handoff, the original preregistration, Phase 1 PIT contract, the immutable Phase 2 freeze manifest, and the durable Phase 3 development-only outcome artifact. Recover this exact Prompt A + Prompt B pair from durable history and verify it was preregistered before any association result was computed.
 
-First verify the frozen Phase 2 manifest methodology identity and `content_sha256`, and verify its referenced source-file SHA-256 identities still match the frozen inputs. If the frozen manifest or relevant source identities changed, stop rather than silently regenerate or redefine the sample.
+Use ONLY frozen eligible rows whose Phase 2 partition is `methodology_development` and whose identity matches the durable Phase 3 outcome artifact. Do not inspect, open, regenerate, summarize, or derive any stock-holdout, time-holdout, or protected MediaTek `2454` outcome.
 
-Open outcomes ONLY for anchors whose frozen partition is `methodology_development`. Do not inspect, summarize, materialize, or derive future outcomes for `stock_holdout`, `time_holdout`, or protected MediaTek `2454` motivation cases in this round.
+Do not extend or refresh the Phase 3 outcome artifact with newer sessions in this round. The Phase 3 artifact is a frozen input for this association analysis.
 
-Use only the preregistered continuous outcome families and session semantics:
-- D+5, D+10, D+20, D+40 exchange trading-session horizons;
+Primary frozen feature family for this round:
+- `pit_features.cross_sectional.core_accumulation_percentile`;
+- `pit_features.cross_sectional.supply_absorption_percentile`;
+- `pit_features.cross_sectional.price_return_percentile`;
+- `pit_features.cross_sectional.price_non_confirmation_rank_gap`.
+
+Primary continuous outcome family is restricted to values already present in the Phase 3 artifact:
 - absolute forward return;
-- TAIEX-relative forward return when the benchmark can be aligned to the same trading-session sequence;
-- optional continuous MFE/MAE only if computed from the same frozen base/session convention without using future information to redefine anchors/features;
-- unified stock price provider for stock prices;
-- missing stock/benchmark observations remain missing and are never converted to zero;
-- omit same-industry-relative outcomes while historical effective-dated industry membership remains unproven.
+- TAIEX-relative forward return;
+- MFE;
+- MAE;
+for D+5 / D+10 / D+20 / D+40 when present.
 
-Because numerical repricing/success thresholds were deliberately unfrozen in Phase 2, do not invent a binary success/failure cutoff after viewing outcomes. Preserve continuous outcomes and preregister any later binary-threshold experiment separately if evidence still requires one.
+Preregistered analysis rule:
+- use Spearman rank association for each feature/outcome/horizon pair;
+- pairwise complete observations only;
+- calculate/report an association statistic only when pairwise complete `n >= 20`;
+- when `n < 20`, report `insufficient_n` and do not interpret direction or strength;
+- do not search alternative minimum-n rules after seeing results;
+- do not add binary labels, success thresholds, optimized cutoffs, composite scores, or weights;
+- do not treat multiple pairwise associations as a production model;
+- preserve continuous values and report sample count/missingness for every attempted pair.
 
-Do not alter the frozen Phase 2 feature definitions, universe, anchors, partitions, source mandatory/optional rules, or source hashes. Do not use development outcomes to inspect or tune against untouched stock/time holdouts. Do not promote a production classifier, final weighted score, or strategy.
+At the current frozen Phase 3 coverage, D+5 may be analyzable while D+10/D+20/D+40 may fail the preregistered minimum-n gate. That is an allowed outcome and must not cause holdout opening, outcome refresh, or threshold relaxation.
 
-Write a durable development-only outcome artifact carrying frozen anchor identity, partition identity, methodology identities, outcome provenance, horizon/session contract, missingness state, and the parent Phase 2 manifest hash. Add deterministic regression/reproduction checks and update the canonical handoff while preserving the paired Prompt B.
+Write a durable development-only association artifact carrying parent Phase 2 freeze hash, parent Phase 3 outcome identity/byte identity, feature/outcome identities, horizon, n, missingness, Spearman statistic or `insufficient_n`, and research-only/no-production flags. Add deterministic regression/reproduction checks and update this canonical handoff while preserving the paired Prompt B.
 
-Stop after the development-only continuous outcome artifact is durably written and verified. Do not open holdouts automatically.
+Do not add catalyst/news evidence in this round. Do not alter Withdrawal v6.0-v6.5 state. Do not promote a production classifier, final weighted score, or strategy.
+
+Stop after the development-only association artifact is durably written and verified. Do not open holdouts automatically.
 
 When complete, report:
 `Prompt A complete — ready for Prompt B`
 and stop.
 ```
 
-## Phase 3 Prompt A implementation checkpoint
-
-Round: `institutional-accumulation-outcome-opening-v1`
-
-**Prompt A: COMPLETE — ready for mandatory Prompt B.**
-
-Durable implementation artifacts:
-
-- `scripts/open_institutional_accumulation_development_outcomes.js`;
-- `tests/institutional_accumulation_development_outcomes.test.js`;
-- `.github/workflows/open-institutional-accumulation-development-outcomes.yml`;
-- `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`.
-
-Fresh-runner Prompt A evidence:
-
-- workflow run: `33514998467`;
-- workflow head: `9abde9d1169b300561593e99893eb7a8ede013c7`;
-- frozen parent semantic SHA-256 verified: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
-- referenced frozen source files verified: `154`;
-- methodology-development outcomes materialized: `41`;
-- stock-holdout outcomes materialized: `0`;
-- time-holdout outcomes materialized: `0`;
-- protected 2454 outcomes materialized: `0`;
-- continuous coverage snapshot: `{"D+5":{"total_development_anchors":41,"observed_horizon_date":31,"absolute_return_available":31,"taiex_relative_available":31,"mfe_mae_available":31,"horizon_not_observed":10},"D+10":{"total_development_anchors":41,"observed_horizon_date":6,"absolute_return_available":6,"taiex_relative_available":6,"mfe_mae_available":6,"horizon_not_observed":35},"D+20":{"total_development_anchors":41,"observed_horizon_date":0,"absolute_return_available":0,"taiex_relative_available":0,"mfe_mae_available":0,"horizon_not_observed":41},"D+40":{"total_development_anchors":41,"observed_horizon_date":0,"absolute_return_available":0,"taiex_relative_available":0,"mfe_mae_available":0,"horizon_not_observed":41}}`;
-- binary success threshold: not introduced;
-- same-industry-relative outcomes: omitted as preregistered;
-- no production classifier/final weighted score/strategy promoted.
-
-This checkpoint records Prompt A implementation only. It does **not** execute or PASS Prompt B and does not authorize holdout opening.
-
-## Prompt B — Development-only outcome-opening closeout
+## Prompt B — Development-only association closeout
 
 ```text
-Perform mandatory closeout for round `institutional-accumulation-outcome-opening-v1` only after that round has been explicitly promoted and its Prompt A has completed.
+Perform mandatory closeout for round `institutional-accumulation-development-association-v1` only after its Prompt A has completed.
 
-Fetch current remote main; read AGENTS.md, the canonical Accumulation handoff, preregistration, Phase 1 PIT contract, Phase 2 freeze contract/manifest, and recover this exact preregistered Prompt B from durable history.
+Fetch current remote main; read AGENTS.md, this canonical handoff, the original preregistration, Phase 1 PIT contract, Phase 2 freeze manifest, and Phase 3 development-only outcome artifact. Recover this exact preregistered Prompt B from durable pre-Prompt-A history.
 
 Verify at minimum:
-1. the Phase 2 frozen manifest identity/content hash and referenced source identities were verified before outcome opening and were not regenerated/redefined;
-2. outcome materialization is limited strictly to frozen `methodology_development` anchors;
-3. no stock-holdout, time-holdout, or protected MediaTek 2454 candidate future outcome was opened, summarized, or encoded;
-4. D+5/D+10/D+20/D+40 count exchange trading sessions from the frozen anchor convention;
-5. stock prices use the unified provider and TAIEX-relative outcomes align to the same session sequence;
-6. missing stock/benchmark observations remain explicit missing values, never zero returns;
-7. same-industry-relative outcomes remain omitted without PIT-safe historical membership;
-8. no post-outcome binary repricing/success threshold was invented or tuned;
-9. Phase 2 features, anchors, partitions, mandatory/optional sources, and hashes remain unchanged;
-10. the durable development-only outcome artifact is reproducible and carries parent freeze identity/hash plus outcome provenance;
-11. no production classifier/final weighted score/strategy was promoted and Withdrawal v6.0-v6.5 state remains untouched;
-12. changed files/tests/commits and remote artifacts satisfy this preregistered development-only outcome-opening contract.
+1. Phase 2 freeze identity/hash and Phase 3 outcome artifact identity/bytes used by the analysis are durable and were not redefined or refreshed for this round;
+2. every analyzed row is an eligible frozen `methodology_development` identity and matches the Phase 3 outcome artifact;
+3. no stock-holdout, time-holdout, or protected MediaTek `2454` outcome was opened, summarized, derived, or encoded;
+4. only the four preregistered frozen feature fields were analyzed;
+5. only already-present Phase 3 continuous outcome fields were analyzed and the Phase 3 artifact was not extended with newer sessions;
+6. Spearman rank association is implemented correctly and deterministically;
+7. statistics are produced only for pairwise-complete `n >= 20`; all smaller samples are explicitly `insufficient_n` with no directional/strength conclusion;
+8. missing observations are excluded pairwise and are never zero-filled;
+9. no binary label, success threshold, optimized cutoff, composite score, weighting, or production model was introduced after viewing results;
+10. the durable association artifact is reproducible and carries parent identities/hashes, feature/outcome/horizon identities, n/missingness, and research-only flags;
+11. no catalyst/news layer was added, no production strategy was promoted, and Withdrawal v6.0-v6.5 state remains untouched;
+12. changed files/tests/commits and durable remote artifacts satisfy this preregistered development-only association contract.
 
-On PASS, update/commit the canonical handoff. Do not open untouched holdouts unless a separately preregistered and explicitly promoted future round authorizes it.
+On PASS, update/commit this canonical handoff. Do not open untouched holdouts unless a separately preregistered and explicitly promoted future round authorizes it.
 
 End with:
 `Prompt B closeout: PASS`
@@ -414,8 +295,9 @@ and stop.
 
 - No production strategy promotion.
 - No MediaTek outcome-driven tuning.
-- No stock-holdout/time-holdout outcome opening in `institutional-accumulation-outcome-opening-v1`.
-- No large network backfill unless separately planned under repository batch rules.
+- No stock-holdout/time-holdout outcome opening.
+- No Phase 3 outcome refresh/extension during the association round.
+- No binary cutoff or weighted score optimization.
+- No catalyst/news layer during the promoted association round.
 - No modification of frozen Withdrawal methodology/validation state.
-- Phase 3 Prompt A completion does not authorize Prompt B automatically.
 - Promotion does not execute the promoted Prompt A automatically.
