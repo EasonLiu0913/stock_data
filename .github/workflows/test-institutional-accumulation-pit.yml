@@ -1,0 +1,68 @@
+name: "[Research] Validate Institutional Accumulation PIT Contract"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/lib/institutional_accumulation_pit.js'
+      - 'scripts/audit_institutional_accumulation_pit_coverage.js'
+      - 'tests/institutional_accumulation_pit.test.js'
+      - 'data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md'
+      - 'data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json'
+      - '.github/workflows/test-institutional-accumulation-pit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current commit
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Run PIT regression tests
+        run: node --test tests/institutional_accumulation_pit.test.js
+
+      - name: Reproduce bounded coverage audit
+        run: |
+          node scripts/audit_institutional_accumulation_pit_coverage.js
+          git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json
+
+      - name: Guard outcome blindness
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const paths = [
+            'scripts/lib/institutional_accumulation_pit.js',
+            'scripts/audit_institutional_accumulation_pit_coverage.js',
+            'tests/institutional_accumulation_pit.test.js',
+            'data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md',
+            'data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json',
+          ];
+          const forbidden = [
+            /candidate[_ -]?future[_ -]?return/i,
+            /future[_ -]?mfe/i,
+            /future[_ -]?mae/i,
+            /repricing[_ -]?success/i,
+            /failure[_ -]?label/i,
+          ];
+          const hits = [];
+          for (const path of paths) {
+            const text = fs.readFileSync(path, 'utf8');
+            for (const pattern of forbidden) {
+              if (pattern.test(text)) hits.push(`${path}: ${pattern}`);
+            }
+          }
+          if (hits.length) {
+            console.error('Outcome-blindness guard failed:\n' + hits.join('\n'));
+            process.exit(1);
+          }
+          console.log('Outcome-blindness guard passed');
+          NODE
