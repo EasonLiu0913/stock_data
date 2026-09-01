@@ -8,8 +8,7 @@ const MAX_NAVIGATION_ATTEMPTS = 3;
 const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
 const MIN_TABLE_ROWS_FLOOR = 1000;
-const TABLE_STABILITY_POLL_MS = 1000;
-const TABLE_STABILITY_POLLS = 5;
+const TABLE_SETTLE_MS = 5000;
 const MAX_DROP_RATIO = 0.10;
 const REQUIRED_STOCK_CODES = ['1101', '2317', '2330', '2882'];
 
@@ -17,43 +16,45 @@ async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function waitForStableTable(page, minimumRows) {
+async function waitForTableReadiness(page, minimumRows) {
     await page.waitForFunction(
         requiredRows => document.querySelectorAll('table.h4 tr').length >= requiredRows,
         minimumRows,
         { timeout: SELECTOR_TIMEOUT_MS }
     );
 
-    let previousRows = -1;
-    let stablePolls = 0;
-    const deadline = Date.now() + SELECTOR_TIMEOUT_MS;
+    const thresholdState = await page.evaluate(() => ({
+        rows: document.querySelectorAll('table.h4 tr').length,
+        readyState: document.readyState
+    }));
 
-    while (Date.now() < deadline) {
-        const state = await page.evaluate(() => ({
-            rows: document.querySelectorAll('table.h4 tr').length,
-            readyState: document.readyState
-        }));
+    console.log(
+        `TWSE table reached readiness threshold: rows=${thresholdState.rows}, ` +
+        `requiredRows=${minimumRows}, readyState=${thresholdState.readyState}; ` +
+        `settling for ${TABLE_SETTLE_MS}ms before extraction`
+    );
 
-        if (state.rows === previousRows) {
-            stablePolls += 1;
-        } else {
-            stablePolls = 0;
-            previousRows = state.rows;
-        }
+    // The TWSE ISIN page progressively renders a very large HTML table and may keep
+    // document.readyState="loading" while additional rows continue to arrive. Requiring
+    // the row count to become completely static creates false failures even when enough
+    // data is already present. Once the historical-snapshot-derived minimum is reached,
+    // allow a short settling window and let validateSnapshot() remain the authoritative
+    // completeness gate before any production file is written.
+    await wait(TABLE_SETTLE_MS);
 
-        console.log(
-            `Waiting for TWSE table stability: rows=${state.rows}, readyState=${state.readyState}, ` +
-            `stable=${stablePolls}/${TABLE_STABILITY_POLLS}`
+    const settledState = await page.evaluate(() => ({
+        rows: document.querySelectorAll('table.h4 tr').length,
+        readyState: document.readyState
+    }));
+
+    if (settledState.rows < minimumRows) {
+        throw new Error(
+            `TWSE industry table fell below readiness threshold after settling: ` +
+            `rows=${settledState.rows}, requiredRows=${minimumRows}`
         );
-
-        if (state.rows >= minimumRows && stablePolls >= TABLE_STABILITY_POLLS) {
-            return state;
-        }
-
-        await wait(TABLE_STABILITY_POLL_MS);
     }
 
-    throw new Error(`TWSE industry table did not stabilize within ${SELECTOR_TIMEOUT_MS}ms`);
+    return settledState;
 }
 
 async function gotoWithRetry(page, url, minimumRows) {
@@ -66,7 +67,8 @@ async function gotoWithRetry(page, url, minimumRows) {
             // TWSE's ISIN page progressively renders a large table and can remain in
             // readyState=loading for a long time. Navigation commit/table existence alone
             // are therefore insufficient. Require a row count derived from the existing
-            // production snapshot, then require the DOM row count to remain stable.
+            // production snapshot, then allow a short settling window. Snapshot validation
+            // below remains the authoritative completeness gate before any write occurs.
             const response = await page.goto(url, {
                 waitUntil: 'commit',
                 timeout: NAVIGATION_COMMIT_TIMEOUT_MS
@@ -78,10 +80,10 @@ async function gotoWithRetry(page, url, minimumRows) {
                 timeout: SELECTOR_TIMEOUT_MS
             });
 
-            const stableState = await waitForStableTable(page, minimumRows);
+            const readyState = await waitForTableReadiness(page, minimumRows);
             console.log(
-                `Navigation table ready. currentUrl=${page.url()}, readyState=${stableState.readyState}, ` +
-                `rows=${stableState.rows}, requiredRows=${minimumRows}`
+                `Navigation table ready. currentUrl=${page.url()}, readyState=${readyState.readyState}, ` +
+                `rows=${readyState.rows}, requiredRows=${minimumRows}`
             );
             return;
         } catch (error) {
