@@ -1,0 +1,4579 @@
+{
+  "outcome_opening_id": "institutional-accumulation-outcome-opening-v1",
+  "methodology_version": "institutional-accumulation-outcome-opening-v1",
+  "research_only": true,
+  "production_strategy_promoted": false,
+  "binary_success_threshold": null,
+  "same_industry_relative_outcomes": "omitted: PIT-safe effective-dated historical industry membership remains unproven",
+  "protected_motivation_stock": {
+    "stock": "2454",
+    "outcome_opened": false
+  },
+  "holdout_contract": {
+    "stock_holdout_outcome_opened": false,
+    "time_holdout_outcome_opened": false
+  },
+  "parent_freeze": {
+    "freeze_id": "institutional-accumulation-development-sample-freeze-v1",
+    "content_sha256": "66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b",
+    "semantic_sha256_verified": "66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b",
+    "referenced_source_files_verified": 154
+  },
+  "outcome_contract": {
+    "horizons": [
+      "D+5",
+      "D+10",
+      "D+20",
+      "D+40"
+    ],
+    "horizon_unit": "exchange trading sessions represented by official TWSE foreign-investor EOD archive session identities",
+    "base": "frozen T0 close",
+    "stock_price_source": "scripts/lib/stock_price_provider.js:getDailyPrice",
+    "benchmark": "TWSE MI_INDEX 發行量加權股價指數 aligned to the same session date",
+    "absolute_forward_return": "close(D+h) / close(T0) - 1",
+    "taiex_relative_forward_return": "stock forward return - TAIEX forward return",
+    "mfe": "max daily high from T+1..D+h / close(T0) - 1; missing if any required window OHLC is missing",
+    "mae": "min daily low from T+1..D+h / close(T0) - 1; missing if any required window OHLC is missing",
+    "missingness": "missing observations remain null and are never converted to zero"
+  },
+  "session_coverage": {
+    "first": "20260814",
+    "last": "20260831",
+    "count": 11
+  },
+  "counts": {
+    "methodology_development": 41,
+    "stock_holdout_materialized": 0,
+    "time_holdout_materialized": 0,
+    "protected_2454_materialized": 0
+  },
+  "coverage": {
+    "D+5": {
+      "total_development_anchors": 41,
+      "observed_horizon_date": 31,
+      "absolute_return_available": 31,
+      "taiex_relative_available": 31,
+      "mfe_mae_available": 31,
+      "horizon_not_observed": 10
+    },
+    "D+10": {
+      "total_development_anchors": 41,
+      "observed_horizon_date": 6,
+      "absolute_return_available": 6,
+      "taiex_relative_available": 6,
+      "mfe_mae_available": 6,
+      "horizon_not_observed": 35
+    },
+    "D+20": {
+      "total_development_anchors": 41,
+      "observed_horizon_date": 0,
+      "absolute_return_available": 0,
+      "taiex_relative_available": 0,
+      "mfe_mae_available": 0,
+      "horizon_not_observed": 41
+    },
+    "D+40": {
+      "total_development_anchors": 41,
+      "observed_horizon_date": 0,
+      "absolute_return_available": 0,
+      "taiex_relative_available": 0,
+      "mfe_mae_available": 0,
+      "horizon_not_observed": 41
+    }
+  },
+  "outcomes": [
+    {
+      "stock": "1101",
+      "t0": "20260814",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260821",
+          "state": "available",
+          "absolute_forward_return": 0.024742268,
+          "taiex_forward_return": -0.0128074015,
+          "taiex_relative_forward_return": 0.0375496696,
+          "mfe": 0.0309278351,
+          "mae": -0.0164948454,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": 0.006185567,
+          "taiex_forward_return": 0.0069297752,
+          "taiex_relative_forward_return": -0.0007442082,
+          "mfe": 0.0597938144,
+          "mae": -0.0164948454,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260814",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260821",
+          "state": "available",
+          "absolute_forward_return": 0.0448430493,
+          "taiex_forward_return": -0.0128074015,
+          "taiex_relative_forward_return": 0.0576504509,
+          "mfe": 0.0478325859,
+          "mae": -0.0089686099,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": 0.0328849028,
+          "taiex_forward_return": 0.0069297752,
+          "taiex_relative_forward_return": 0.0259551277,
+          "mfe": 0.0553064275,
+          "mae": -0.0089686099,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1104",
+      "t0": "20260814",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260821",
+          "state": "available",
+          "absolute_forward_return": 0.0151228733,
+          "taiex_forward_return": -0.0128074015,
+          "taiex_relative_forward_return": 0.0279302749,
+          "mfe": 0.0151228733,
+          "mae": -0.0075614367,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": 0.0075614367,
+          "taiex_forward_return": 0.0069297752,
+          "taiex_relative_forward_return": 0.0006316615,
+          "mfe": 0.0151228733,
+          "mae": -0.0075614367,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1201",
+      "t0": "20260814",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260821",
+          "state": "available",
+          "absolute_forward_return": 0.0204918033,
+          "taiex_forward_return": -0.0128074015,
+          "taiex_relative_forward_return": 0.0332992048,
+          "mfe": 0.0245901639,
+          "mae": -0.0040983607,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": 0.0040983607,
+          "taiex_forward_return": 0.0069297752,
+          "taiex_relative_forward_return": -0.0028314145,
+          "mfe": 0.0245901639,
+          "mae": -0.0040983607,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1215",
+      "t0": "20260814",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260821",
+          "state": "available",
+          "absolute_forward_return": 0.046728972,
+          "taiex_forward_return": -0.0128074015,
+          "taiex_relative_forward_return": 0.0595363735,
+          "mfe": 0.046728972,
+          "mae": 0,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": 0.0046728972,
+          "taiex_forward_return": 0.0069297752,
+          "taiex_relative_forward_return": -0.002256878,
+          "mfe": 0.046728972,
+          "mae": 0,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260814",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260821",
+          "state": "available",
+          "absolute_forward_return": 0.0224274406,
+          "taiex_forward_return": -0.0128074015,
+          "taiex_relative_forward_return": 0.0352348422,
+          "mfe": 0.036939314,
+          "mae": -0.0158311346,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": 0.0052770449,
+          "taiex_forward_return": 0.0069297752,
+          "taiex_relative_forward_return": -0.0016527303,
+          "mfe": 0.036939314,
+          "mae": -0.0158311346,
+          "stock_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260814",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260814_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.020661157,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0445385052,
+          "mfe": 0.0619834711,
+          "mae": -0.0144628099,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.0403587444,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0642360925,
+          "mfe": 0.0508221226,
+          "mae": -0.0089686099,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1104",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.0018691589,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.025746507,
+          "mfe": 0.0037383178,
+          "mae": -0.0186915888,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1201",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.0081632653,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0320406134,
+          "mfe": 0.0204081633,
+          "mae": -0.0081632653,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1203",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": -0.0166112957,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0072660524,
+          "mfe": -0.0044296788,
+          "mae": -0.0520487265,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1215",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.0046082949,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0284856431,
+          "mfe": 0.0322580645,
+          "mae": -0.0092165899,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.0292553191,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0531326673,
+          "mfe": 0.045212766,
+          "mae": -0.0066489362,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1217",
+      "t0": "20260817",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260824",
+          "state": "available",
+          "absolute_forward_return": 0.0070140281,
+          "taiex_forward_return": -0.0238773481,
+          "taiex_relative_forward_return": 0.0308913762,
+          "mfe": 0.0070140281,
+          "mae": -0.0070140281,
+          "stock_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260817",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260817_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260824",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260818",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260825",
+          "state": "available",
+          "absolute_forward_return": 0.020746888,
+          "taiex_forward_return": -0.0030727004,
+          "taiex_relative_forward_return": 0.0238195884,
+          "mfe": 0.0663900415,
+          "mae": -0.010373444,
+          "stock_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260818",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260825",
+          "state": "available",
+          "absolute_forward_return": 0.0417910448,
+          "taiex_forward_return": -0.0030727004,
+          "taiex_relative_forward_return": 0.0448637452,
+          "mfe": 0.0492537313,
+          "mae": -0.0104477612,
+          "stock_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1104",
+      "t0": "20260818",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260825",
+          "state": "available",
+          "absolute_forward_return": 0.009469697,
+          "taiex_forward_return": -0.0030727004,
+          "taiex_relative_forward_return": 0.0125423974,
+          "mfe": 0.0170454545,
+          "mae": -0.0056818182,
+          "stock_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260818",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260825",
+          "state": "available",
+          "absolute_forward_return": 0.0223097113,
+          "taiex_forward_return": -0.0030727004,
+          "taiex_relative_forward_return": 0.0253824117,
+          "mfe": 0.031496063,
+          "mae": -0.0078740157,
+          "stock_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260818",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260818_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260825",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260819",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260826",
+          "state": "available",
+          "absolute_forward_return": 0.0103950104,
+          "taiex_forward_return": 0.0248945926,
+          "taiex_relative_forward_return": -0.0144995822,
+          "mfe": 0.0686070686,
+          "mae": 0.0020790021,
+          "stock_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260819",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260826",
+          "state": "available",
+          "absolute_forward_return": 0.0414201183,
+          "taiex_forward_return": 0.0248945926,
+          "taiex_relative_forward_return": 0.0165255257,
+          "mfe": 0.0443786982,
+          "mae": 0.0029585799,
+          "stock_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1104",
+      "t0": "20260819",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260826",
+          "state": "available",
+          "absolute_forward_return": 0.0151515152,
+          "taiex_forward_return": 0.0248945926,
+          "taiex_relative_forward_return": -0.0097430775,
+          "mfe": 0.0170454545,
+          "mae": 0,
+          "stock_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260819",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260826",
+          "state": "available",
+          "absolute_forward_return": 0.0025806452,
+          "taiex_forward_return": 0.0248945926,
+          "taiex_relative_forward_return": -0.0223139474,
+          "mfe": 0.0141935484,
+          "mae": -0.0167741935,
+          "stock_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260819",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260819_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260826",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260820",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260827",
+          "state": "available",
+          "absolute_forward_return": -0.0282258065,
+          "taiex_forward_return": 0.0231781285,
+          "taiex_relative_forward_return": -0.051403935,
+          "mfe": 0.0362903226,
+          "mae": -0.0282258065,
+          "stock_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260820",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260827",
+          "state": "available",
+          "absolute_forward_return": 0.0115273775,
+          "taiex_forward_return": 0.0231781285,
+          "taiex_relative_forward_return": -0.011650751,
+          "mfe": 0.0172910663,
+          "mae": -0.0028818444,
+          "stock_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1109",
+      "t0": "20260820",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260827",
+          "state": "available",
+          "absolute_forward_return": 0.0074074074,
+          "taiex_forward_return": 0.0231781285,
+          "taiex_relative_forward_return": -0.0157707211,
+          "mfe": 0.0185185185,
+          "mae": 0,
+          "stock_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1215",
+      "t0": "20260820",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260827",
+          "state": "available",
+          "absolute_forward_return": -0.0180995475,
+          "taiex_forward_return": 0.0231781285,
+          "taiex_relative_forward_return": -0.041277676,
+          "mfe": 0.0135746606,
+          "mae": -0.0271493213,
+          "stock_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260820",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260827",
+          "state": "available",
+          "absolute_forward_return": -0.0140664962,
+          "taiex_forward_return": 0.0231781285,
+          "taiex_relative_forward_return": -0.0372446247,
+          "mfe": 0.0051150895,
+          "mae": -0.0255754476,
+          "stock_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260820",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260820_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260827",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260821",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": -0.0181086519,
+          "taiex_forward_return": 0.0199932381,
+          "taiex_relative_forward_return": -0.0381018901,
+          "mfe": 0.0342052314,
+          "mae": -0.032193159,
+          "stock_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260821",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": -0.0114449213,
+          "taiex_forward_return": 0.0199932381,
+          "taiex_relative_forward_return": -0.0314381595,
+          "mfe": 0.0100143062,
+          "mae": -0.0185979971,
+          "stock_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1109",
+      "t0": "20260821",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": -0.0073800738,
+          "taiex_forward_return": 0.0199932381,
+          "taiex_relative_forward_return": -0.0273733119,
+          "mfe": 0.0147601476,
+          "mae": -0.0110701107,
+          "stock_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260821",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": "20260831",
+          "state": "available",
+          "absolute_forward_return": -0.0167741935,
+          "taiex_forward_return": 0.0199932381,
+          "taiex_relative_forward_return": -0.0367674317,
+          "mfe": 0.0129032258,
+          "mae": -0.0309677419,
+          "stock_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          },
+          "benchmark_provenance": {
+            "base": {
+              "date": "20260821",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260821_twse_mi_index.json",
+              "state": "available"
+            },
+            "horizon": {
+              "date": "20260831",
+              "source": "twse_mi_index:發行量加權股價指數",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json",
+              "state": "available"
+            }
+          },
+          "excursion_state": "available",
+          "excursion_missing_dates": [],
+          "excursion_provenance": [
+            {
+              "date": "20260824",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260824_twse_mi_index.json"
+            },
+            {
+              "date": "20260825",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260825_twse_mi_index.json"
+            },
+            {
+              "date": "20260826",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260826_twse_mi_index.json"
+            },
+            {
+              "date": "20260827",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260827_twse_mi_index.json"
+            },
+            {
+              "date": "20260831",
+              "source": "twse_mi_index",
+              "source_file": "data_twse_mi_index/20260831_twse_mi_index.json"
+            }
+          ]
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1103",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1104",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1109",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1215",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260824",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1101",
+      "t0": "20260825",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1102",
+      "t0": "20260825",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    },
+    {
+      "stock": "1216",
+      "t0": "20260825",
+      "partition": "methodology_development",
+      "horizons": {
+        "D+5": {
+          "horizon_sessions": 5,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+10": {
+          "horizon_sessions": 10,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+20": {
+          "horizon_sessions": 20,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        },
+        "D+40": {
+          "horizon_sessions": 40,
+          "horizon_date": null,
+          "state": "horizon_not_observed",
+          "absolute_forward_return": null,
+          "taiex_forward_return": null,
+          "taiex_relative_forward_return": null,
+          "mfe": null,
+          "mae": null,
+          "stock_provenance": null,
+          "benchmark_provenance": null,
+          "excursion_state": "horizon_not_observed"
+        }
+      }
+    }
+  ]
+}

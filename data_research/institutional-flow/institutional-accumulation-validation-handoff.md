@@ -4,7 +4,7 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Phase 3 — development-only continuous outcome opening: PROMOTED after Phase 2 Prompt B PASS.**
+**Phase 3 — development-only continuous outcome opening: Prompt A COMPLETE; mandatory Prompt B closeout pending.**
 
 Active/promoted round:
 
@@ -15,7 +15,7 @@ Status:
 - `institutional-accumulation-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-point-in-time-contract-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-sample-freeze-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-outcome-opening-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
 Promotion does not execute the active Prompt A automatically.
 
@@ -313,9 +313,9 @@ Active/promoted round:
 
 `institutional-accumulation-outcome-opening-v1`
 
-Execute only the preregistered Prompt A below when the owner next invokes `promptA` while Accumulation remains the sole globally active routed task.
+Prompt A has completed. The next authorized action for this round is the preregistered mandatory Prompt B closeout below. Do not execute another Prompt A or open any holdout before closeout.
 
-Do not open stock holdout, time holdout, or protected MediaTek outcomes in this round.
+Stock holdout, time holdout, and protected MediaTek outcomes remain sealed.
 
 ---
 
@@ -351,6 +351,36 @@ When complete, report:
 `Prompt A complete — ready for Prompt B`
 and stop.
 ```
+
+## Phase 3 Prompt A implementation checkpoint
+
+Round: `institutional-accumulation-outcome-opening-v1`
+
+**Prompt A: COMPLETE — ready for mandatory Prompt B.**
+
+Durable implementation artifacts:
+
+- `scripts/open_institutional_accumulation_development_outcomes.js`;
+- `tests/institutional_accumulation_development_outcomes.test.js`;
+- `.github/workflows/open-institutional-accumulation-development-outcomes.yml`;
+- `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`.
+
+Fresh-runner Prompt A evidence:
+
+- workflow run: `33514998467`;
+- workflow head: `9abde9d1169b300561593e99893eb7a8ede013c7`;
+- frozen parent semantic SHA-256 verified: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- referenced frozen source files verified: `154`;
+- methodology-development outcomes materialized: `41`;
+- stock-holdout outcomes materialized: `0`;
+- time-holdout outcomes materialized: `0`;
+- protected 2454 outcomes materialized: `0`;
+- continuous coverage snapshot: `{"D+5":{"total_development_anchors":41,"observed_horizon_date":31,"absolute_return_available":31,"taiex_relative_available":31,"mfe_mae_available":31,"horizon_not_observed":10},"D+10":{"total_development_anchors":41,"observed_horizon_date":6,"absolute_return_available":6,"taiex_relative_available":6,"mfe_mae_available":6,"horizon_not_observed":35},"D+20":{"total_development_anchors":41,"observed_horizon_date":0,"absolute_return_available":0,"taiex_relative_available":0,"mfe_mae_available":0,"horizon_not_observed":41},"D+40":{"total_development_anchors":41,"observed_horizon_date":0,"absolute_return_available":0,"taiex_relative_available":0,"mfe_mae_available":0,"horizon_not_observed":41}}`;
+- binary success threshold: not introduced;
+- same-industry-relative outcomes: omitted as preregistered;
+- no production classifier/final weighted score/strategy promoted.
+
+This checkpoint records Prompt A implementation only. It does **not** execute or PASS Prompt B and does not authorize holdout opening.
 
 ## Prompt B — Development-only outcome-opening closeout
 
