@@ -1,0 +1,112 @@
+name: "[Research] Open Institutional Accumulation Development Outcomes"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/open_institutional_accumulation_development_outcomes.js'
+      - 'tests/institutional_accumulation_development_outcomes.test.js'
+      - '.github/workflows/open-institutional-accumulation-development-outcomes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-outcome-opening-v1
+  cancel-in-progress: false
+
+jobs:
+  open-development-outcomes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout frozen sample and bounded outcome evidence
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts/lib/stock_price_provider.js
+            scripts/open_institutional_accumulation_development_outcomes.js
+            tests/institutional_accumulation_development_outcomes.test.js
+            data_twse_foreign_investors
+            data_twse_dealers
+            data_twse_investment_trust
+            data_twse_margin_balance
+            data_twse_mi_index
+            data_history_sma
+            data_fubon
+            data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json
+            data_research/institutional-flow/institutional-accumulation-preregistration-v1.md
+            data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md
+            data_research/institutional-flow/institutional-accumulation-validation-handoff.md
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Run development-only outcome guards
+        run: node --test tests/institutional_accumulation_development_outcomes.test.js
+
+      - name: Materialize continuous development outcomes
+        run: node scripts/open_institutional_accumulation_development_outcomes.js
+
+      - name: Verify output scope and continuous-only contract
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json';
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const expectedFreeze = '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b';
+          if (payload.outcome_opening_id !== 'institutional-accumulation-outcome-opening-v1') throw new Error('outcome identity mismatch');
+          if (payload.parent_freeze?.content_sha256 !== expectedFreeze) throw new Error('parent freeze mismatch');
+          if (payload.counts?.methodology_development !== 41) throw new Error('development count mismatch');
+          if (payload.outcomes?.length !== 41) throw new Error('unexpected outcome row count');
+          if (payload.outcomes.some(row => row.partition !== 'methodology_development')) throw new Error('holdout materialized');
+          if (payload.outcomes.some(row => row.stock === '2454')) throw new Error('protected 2454 materialized');
+          if (payload.counts.stock_holdout_materialized !== 0 || payload.counts.time_holdout_materialized !== 0 || payload.counts.protected_2454_materialized !== 0) throw new Error('sealed partition count invalid');
+          if (payload.binary_success_threshold !== null) throw new Error('post-outcome binary threshold introduced');
+          if (!String(payload.same_industry_relative_outcomes).startsWith('omitted:')) throw new Error('industry-relative outcome must remain omitted');
+          for (const row of payload.outcomes) {
+            for (const key of ['D+5','D+10','D+20','D+40']) {
+              const value = row.horizons?.[key];
+              if (!value) throw new Error(`missing ${key} for ${row.stock}/${row.t0}`);
+              if (value.state === 'horizon_not_observed') {
+                for (const metric of ['absolute_forward_return','taiex_forward_return','taiex_relative_forward_return','mfe','mae']) {
+                  if (value[metric] !== null) throw new Error(`unobserved ${key} metric must be null`);
+                }
+              }
+            }
+          }
+          const encoded = JSON.stringify(payload);
+          for (const forbidden of ['"repricing_success"','"failure_label"','"future_catalyst"']) {
+            if (encoded.includes(forbidden)) throw new Error(`forbidden outcome label ${forbidden}`);
+          }
+          console.log(JSON.stringify({ counts: payload.counts, coverage: payload.coverage, session_coverage: payload.session_coverage }, null, 2));
+          NODE
+
+      - name: Commit durable development-only outcome artifact
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json
+          if git diff --cached --quiet; then
+            echo "Development outcome artifact already matches generator output"
+            exit 0
+          fi
+          git commit -m "analysis: open accumulation development outcomes v1"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+
+      - name: Verify durable remote artifact
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          file='data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json'
+          remote_blob="$(git show origin/main:$file | sha256sum | awk '{print $1}')"
+          local_blob="$(sha256sum "$file" | awk '{print $1}')"
+          test "$remote_blob" = "$local_blob"
+          echo "Durable remote development outcome artifact verified: $remote_blob"
