@@ -8,12 +8,49 @@ const MAX_NAVIGATION_ATTEMPTS = 3;
 const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
 const MIN_TABLE_ROWS_FLOOR = 1000;
-const TABLE_SETTLE_MS = 5000;
+const END_MARKER_TEXT = '掛牌日以正式公告為準';
+const END_MARKER_DIAGNOSTIC_POLL_MS = 1000;
+const END_MARKER_DIAGNOSTIC_WINDOW_MS = 30000;
 const MAX_DROP_RATIO = 0.10;
 const REQUIRED_STOCK_CODES = ['1101', '2317', '2330', '2882'];
 
 async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function inspectTableState(page) {
+    return page.evaluate(markerText => {
+        const table = document.querySelector('table.h4');
+        const rows = table ? table.querySelectorAll('tr').length : 0;
+        let markerNode = null;
+
+        if (document.body) {
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+                if (node.nodeValue && node.nodeValue.includes(markerText)) {
+                    markerNode = node;
+                    break;
+                }
+            }
+        }
+
+        const markerParent = markerNode ? markerNode.parentElement : null;
+        const markerInsideTable = Boolean(table && markerParent && table.contains(markerParent));
+        const markerAfterTable = Boolean(
+            table && markerNode && (table.compareDocumentPosition(markerNode) & Node.DOCUMENT_POSITION_FOLLOWING)
+        );
+
+        return {
+            rows,
+            readyState: document.readyState,
+            hasEndMarker: Boolean(markerNode),
+            markerInsideTable,
+            markerAfterTable,
+            markerParentTag: markerParent ? markerParent.tagName : null,
+            bodyLength: document.body ? document.body.innerText.length : 0
+        };
+    }, END_MARKER_TEXT);
 }
 
 async function waitForTableReadiness(page, minimumRows) {
@@ -23,38 +60,54 @@ async function waitForTableReadiness(page, minimumRows) {
         { timeout: SELECTOR_TIMEOUT_MS }
     );
 
-    const thresholdState = await page.evaluate(() => ({
-        rows: document.querySelectorAll('table.h4 tr').length,
-        readyState: document.readyState
-    }));
-
+    const thresholdState = await inspectTableState(page);
     console.log(
         `TWSE table reached readiness threshold: rows=${thresholdState.rows}, ` +
-        `requiredRows=${minimumRows}, readyState=${thresholdState.readyState}; ` +
-        `settling for ${TABLE_SETTLE_MS}ms before extraction`
+        `requiredRows=${minimumRows}, readyState=${thresholdState.readyState}, ` +
+        `hasEndMarker=${thresholdState.hasEndMarker}`
     );
 
-    // The TWSE ISIN page progressively renders a very large HTML table and may keep
-    // document.readyState="loading" while additional rows continue to arrive. Requiring
-    // the row count to become completely static creates false failures even when enough
-    // data is already present. Once the historical-snapshot-derived minimum is reached,
-    // allow a short settling window and let validateSnapshot() remain the authoritative
-    // completeness gate before any production file is written.
-    await wait(TABLE_SETTLE_MS);
+    console.log(
+        `Starting end-marker diagnostic window: marker="${END_MARKER_TEXT}", ` +
+        `window=${END_MARKER_DIAGNOSTIC_WINDOW_MS}ms, poll=${END_MARKER_DIAGNOSTIC_POLL_MS}ms`
+    );
 
-    const settledState = await page.evaluate(() => ({
-        rows: document.querySelectorAll('table.h4 tr').length,
-        readyState: document.readyState
-    }));
+    const deadline = Date.now() + END_MARKER_DIAGNOSTIC_WINDOW_MS;
+    let lastState = thresholdState;
 
-    if (settledState.rows < minimumRows) {
-        throw new Error(
-            `TWSE industry table fell below readiness threshold after settling: ` +
-            `rows=${settledState.rows}, requiredRows=${minimumRows}`
+    while (Date.now() < deadline) {
+        if (lastState.hasEndMarker) break;
+        await wait(END_MARKER_DIAGNOSTIC_POLL_MS);
+        lastState = await inspectTableState(page);
+        console.log(
+            `TWSE end-marker diagnostic: rows=${lastState.rows}, readyState=${lastState.readyState}, ` +
+            `hasEndMarker=${lastState.hasEndMarker}, markerInsideTable=${lastState.markerInsideTable}, ` +
+            `markerAfterTable=${lastState.markerAfterTable}, markerParentTag=${lastState.markerParentTag || 'none'}, ` +
+            `bodyLength=${lastState.bodyLength}`
         );
     }
 
-    return settledState;
+    if (lastState.hasEndMarker) {
+        console.log(
+            `✅ TWSE end marker observed: rows=${lastState.rows}, readyState=${lastState.readyState}, ` +
+            `markerInsideTable=${lastState.markerInsideTable}, markerAfterTable=${lastState.markerAfterTable}, ` +
+            `markerParentTag=${lastState.markerParentTag || 'none'}`
+        );
+    } else {
+        console.warn(
+            `⚠️ TWSE end marker was not observed within ${END_MARKER_DIAGNOSTIC_WINDOW_MS}ms after readiness threshold; ` +
+            `continuing with existing snapshot validation. rows=${lastState.rows}, readyState=${lastState.readyState}`
+        );
+    }
+
+    if (lastState.rows < minimumRows) {
+        throw new Error(
+            `TWSE industry table fell below readiness threshold during diagnostics: ` +
+            `rows=${lastState.rows}, requiredRows=${minimumRows}`
+        );
+    }
+
+    return lastState;
 }
 
 async function gotoWithRetry(page, url, minimumRows) {
@@ -67,8 +120,9 @@ async function gotoWithRetry(page, url, minimumRows) {
             // TWSE's ISIN page progressively renders a large table and can remain in
             // readyState=loading for a long time. Navigation commit/table existence alone
             // are therefore insufficient. Require a row count derived from the existing
-            // production snapshot, then allow a short settling window. Snapshot validation
-            // below remains the authoritative completeness gate before any write occurs.
+            // production snapshot, then observe the known footer/end marker without yet
+            // making it an authoritative success condition. Snapshot validation below
+            // remains the authoritative completeness gate before any write occurs.
             const response = await page.goto(url, {
                 waitUntil: 'commit',
                 timeout: NAVIGATION_COMMIT_TIMEOUT_MS
@@ -83,7 +137,7 @@ async function gotoWithRetry(page, url, minimumRows) {
             const readyState = await waitForTableReadiness(page, minimumRows);
             console.log(
                 `Navigation table ready. currentUrl=${page.url()}, readyState=${readyState.readyState}, ` +
-                `rows=${readyState.rows}, requiredRows=${minimumRows}`
+                `rows=${readyState.rows}, requiredRows=${minimumRows}, hasEndMarker=${readyState.hasEndMarker}`
             );
             return;
         } catch (error) {
@@ -93,12 +147,7 @@ async function gotoWithRetry(page, url, minimumRows) {
             console.warn(`   currentUrl=${page.url()}, rows=${rowCount}, requiredRows=${minimumRows}`);
 
             try {
-                const debug = await page.evaluate(() => ({
-                    readyState: document.readyState,
-                    hasTable: Boolean(document.querySelector('table.h4')),
-                    rowCount: document.querySelectorAll('table.h4 tr').length,
-                    bodyLength: document.body ? document.body.innerText.length : 0
-                }));
+                const debug = await inspectTableState(page);
                 console.warn(`   pageState=${JSON.stringify(debug)}`);
             } catch (_) {
                 // The page may be between navigations; diagnostics are best-effort only.
