@@ -12,7 +12,7 @@ const OUTPUT_FILE = path.join(ROOT, 'data_research', 'institutional-flow', 'inst
 
 const ASSOCIATION_ID = 'institutional-accumulation-development-association-v1';
 const EXPECTED_FREEZE_SHA256 = '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b';
-const EXPECTED_OUTCOME_BYTE_SHA256 = 'a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58';
+const EXPECTED_OUTCOME_BYTE_SHA256 = 'f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e';
 const MIN_N = 20;
 const FEATURES = [
   'pit_features.cross_sectional.core_accumulation_percentile',
@@ -92,11 +92,11 @@ function round(value, digits = 10) {
 function validateParents(freeze, outcomes) {
   if (freeze.freeze_id !== 'institutional-accumulation-development-sample-freeze-v1') throw new Error('freeze identity mismatch');
   if (freeze.content_sha256 !== EXPECTED_FREEZE_SHA256) throw new Error(`freeze semantic SHA mismatch: ${freeze.content_sha256}`);
-  if (sha256File(OUTCOME_FILE) !== EXPECTED_OUTCOME_BYTE_SHA256) throw new Error('Phase 3 outcome bytes changed; refusing association analysis');
-  if (outcomes.outcome_opening_id !== 'institutional-accumulation-outcome-opening-v1') throw new Error('Phase 3 outcome identity mismatch');
-  if (outcomes.parent_freeze?.content_sha256 !== EXPECTED_FREEZE_SHA256) throw new Error('Phase 3 parent freeze mismatch');
-  if (outcomes.binary_success_threshold !== null) throw new Error('Phase 3 binary threshold unexpectedly present');
-  if (outcomes.holdout_contract?.stock_holdout_outcome_opened !== false || outcomes.holdout_contract?.time_holdout_outcome_opened !== false) throw new Error('Phase 3 holdout contract is not sealed');
+  if (sha256File(OUTCOME_FILE) !== EXPECTED_OUTCOME_BYTE_SHA256) throw new Error('refreshed development outcome bytes changed; refusing association analysis');
+  if (outcomes.outcome_opening_id !== 'institutional-accumulation-outcome-opening-v1') throw new Error('development outcome identity mismatch');
+  if (outcomes.parent_freeze?.content_sha256 !== EXPECTED_FREEZE_SHA256) throw new Error('development outcome parent freeze mismatch');
+  if (outcomes.binary_success_threshold !== null) throw new Error('development outcome binary threshold unexpectedly present');
+  if (outcomes.holdout_contract?.stock_holdout_outcome_opened !== false || outcomes.holdout_contract?.time_holdout_outcome_opened !== false) throw new Error('development outcome holdout contract is not sealed');
   if (outcomes.protected_motivation_stock?.stock !== '2454' || outcomes.protected_motivation_stock?.outcome_opened !== false) throw new Error('protected 2454 contract changed');
 }
 
@@ -111,12 +111,12 @@ function buildAssociation() {
 
   const outcomeRows = outcomes.outcomes || [];
   if (outcomeRows.length !== 41 || outcomeRows.some(row => row.partition !== 'methodology_development') || outcomeRows.some(row => row.stock === '2454')) {
-    throw new Error('Phase 3 outcome scope mismatch');
+    throw new Error('development outcome scope mismatch');
   }
   const outcomeById = new Map(outcomeRows.map(row => [identity(row), row]));
   const developmentIds = development.map(identity).sort();
   const outcomeIds = outcomeRows.map(identity).sort();
-  if (JSON.stringify(developmentIds) !== JSON.stringify(outcomeIds)) throw new Error('Phase 2/Phase 3 development identities differ');
+  if (JSON.stringify(developmentIds) !== JSON.stringify(outcomeIds)) throw new Error('Phase 2/development outcome identities differ');
 
   const attempts = [];
   for (const feature of FEATURES) {
