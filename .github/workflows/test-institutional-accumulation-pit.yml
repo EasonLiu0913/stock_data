@@ -19,8 +19,41 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout current commit
+      - name: Checkout bounded Phase 1 evidence
         uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            scripts/lib/institutional_accumulation_pit.js
+            scripts/lib/stock_price_provider.js
+            scripts/lib/histock_broker_quality.js
+            scripts/audit_institutional_accumulation_pit_coverage.js
+            tests/institutional_accumulation_pit.test.js
+            data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md
+            data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json
+            data_twse/twse_industry.csv
+            data_twse_foreign_investors/files.json
+            data_twse_foreign_investors/20260825_twse_foreign_investors.json
+            data_twse_foreign_investors/20260826_twse_foreign_investors.json
+            data_twse_foreign_investors/20260827_twse_foreign_investors.json
+            data_twse_investment_trust/files.json
+            data_twse_investment_trust/20260825_twse_investment_trust.json
+            data_twse_investment_trust/20260826_twse_investment_trust.json
+            data_twse_investment_trust/20260827_twse_investment_trust.json
+            data_twse_dealers/files.json
+            data_twse_dealers/20260825_twse_dealers.json
+            data_twse_dealers/20260826_twse_dealers.json
+            data_twse_dealers/20260827_twse_dealers.json
+            data_twse_margin_balance/files.json
+            data_twse_margin_balance/20260825_twse_margin_balance.csv
+            data_twse_margin_balance/20260826_twse_margin_balance.csv
+            data_twse_margin_balance/20260827_twse_margin_balance.csv
+            data_twse_mi_index/20260825_twse_mi_index.json
+            data_twse_mi_index/20260826_twse_mi_index.json
+            data_twse_mi_index/20260827_twse_mi_index.json
+            data_fubon/fubon_20260825_sma.json
+            data_fubon/fubon_20260826_sma.json
+            data_fubon/fubon_20260827_sma.json
+          sparse-checkout-cone-mode: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
