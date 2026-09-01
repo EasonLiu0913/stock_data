@@ -30,22 +30,12 @@ function semanticFreezeHash(payload) {
 }
 
 function verifyFrozenManifest(payload, root = ROOT) {
-  if (payload.freeze_id !== EXPECTED_FREEZE_ID) {
-    throw new Error(`freeze identity mismatch: ${payload.freeze_id}`);
-  }
-  if (payload.content_sha256 !== EXPECTED_FREEZE_SHA256) {
-    throw new Error(`freeze content_sha256 changed: ${payload.content_sha256}`);
-  }
+  if (payload.freeze_id !== EXPECTED_FREEZE_ID) throw new Error(`freeze identity mismatch: ${payload.freeze_id}`);
+  if (payload.content_sha256 !== EXPECTED_FREEZE_SHA256) throw new Error(`freeze content_sha256 changed: ${payload.content_sha256}`);
   const semantic = semanticFreezeHash(payload);
-  if (semantic !== EXPECTED_FREEZE_SHA256) {
-    throw new Error(`freeze semantic hash mismatch: ${semantic}`);
-  }
-  if (payload.protected_motivation_stock_excluded !== PROTECTED_STOCK) {
-    throw new Error('protected 2454 exclusion contract changed');
-  }
-  if (!payload.source_file_sha256 || typeof payload.source_file_sha256 !== 'object') {
-    throw new Error('frozen source-file hashes missing');
-  }
+  if (semantic !== EXPECTED_FREEZE_SHA256) throw new Error(`freeze semantic hash mismatch: ${semantic}`);
+  if (payload.protected_motivation_stock_excluded !== PROTECTED_STOCK) throw new Error('protected 2454 exclusion contract changed');
+  if (!payload.source_file_sha256 || typeof payload.source_file_sha256 !== 'object') throw new Error('frozen source-file hashes missing');
   const changed = [];
   for (const [relative, expected] of Object.entries(payload.source_file_sha256)) {
     const file = path.join(root, relative);
@@ -56,9 +46,7 @@ function verifyFrozenManifest(payload, root = ROOT) {
     const actual = sha256Bytes(file);
     if (actual !== expected) changed.push(`${relative}:${actual}`);
   }
-  if (changed.length) {
-    throw new Error(`frozen source identity mismatch (${changed.length}): ${changed.slice(0, 8).join(', ')}`);
-  }
+  if (changed.length) throw new Error(`frozen source identity mismatch (${changed.length}): ${changed.slice(0, 8).join(', ')}`);
   return { semantic_sha256: semantic, verified_source_files: Object.keys(payload.source_file_sha256).length };
 }
 
@@ -104,7 +92,7 @@ function selectDevelopmentAnchors(payload) {
   const anchors = Array.isArray(payload.anchors) ? payload.anchors : [];
   const development = [];
   for (const anchor of anchors) {
-    if (anchor.partition !== 'methodology_development') continue;
+    if (anchor.partition !== 'methodology_development' || anchor.eligibility?.eligible !== true) continue;
     const stock = String(anchor.stock || '');
     if (stock === PROTECTED_STOCK) throw new Error('protected 2454 entered methodology_development');
     if (!/^\d{4}$/.test(stock) || !/^20\d{6}$/.test(String(anchor.t0 || ''))) {
@@ -157,16 +145,8 @@ function computeExcursions(stock, baseClose, windowDates, root = ROOT) {
     minLowReturn = Math.min(minLowReturn, price.low / baseClose - 1);
     provenance.push({ date, source: price.source, source_file: price.source_file });
   }
-  if (missingDates.length) {
-    return { mfe: null, mae: null, state: 'missing_window_observation', missing_dates: missingDates, provenance };
-  }
-  return {
-    mfe: roundMetric(maxHighReturn),
-    mae: roundMetric(minLowReturn),
-    state: 'available',
-    missing_dates: [],
-    provenance,
-  };
+  if (missingDates.length) return { mfe: null, mae: null, state: 'missing_window_observation', missing_dates: missingDates, provenance };
+  return { mfe: roundMetric(maxHighReturn), mae: roundMetric(minLowReturn), state: 'available', missing_dates: [], provenance };
 }
 
 function computeHorizon(anchor, horizon, sessions, root = ROOT) {
