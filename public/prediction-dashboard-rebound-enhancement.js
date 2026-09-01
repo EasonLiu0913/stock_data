@@ -3,8 +3,8 @@
   const STRATEGY_ID = 'oversold_electronics_rebound_v1';
   const STRATEGY_LABEL = '跌深反彈電子股';
   const OIL_INDICATORS = [
-    { sourceId: 'wti_crude_oil', benchmarkId: 'wti_spot', shortName: 'WTI', name: 'WTI Crude Oil Futures' },
-    { sourceId: 'brent_crude_oil', benchmarkId: 'brent_spot', shortName: 'Brent', name: 'Brent Crude Oil Futures' },
+    { sourceId: 'wti_crude_oil', benchmarkId: 'wti_futures', shortName: 'WTI Futures', name: 'WTI Crude Oil Futures' },
+    { sourceId: 'brent_crude_oil', benchmarkId: 'brent_futures', shortName: 'Brent Futures', name: 'Brent Crude Oil Futures' },
   ];
 
   function isReboundCandidate(stock) {
@@ -65,6 +65,8 @@
         symbol: indicator.symbol,
         name: config.name,
         short_name: config.shortName,
+        instrument_type: 'futures',
+        benchmark: config.sourceId.startsWith('wti_') ? 'WTI' : 'Brent',
         source_name: 'Yahoo Finance / external-market',
         source_url: `https://finance.yahoo.com/quote/${encodeURIComponent(indicator.symbol || '')}`,
         latest_date: compactDate(indicator.market_date),
@@ -82,6 +84,16 @@
     }).filter(Boolean);
   }
 
+  function eiaSpotBenchmarks(payload) {
+    const benchmarks = Array.isArray(payload?.benchmarks) ? payload.benchmarks : [];
+    return benchmarks.filter(item => item?.id === 'wti_spot' || item?.id === 'brent_spot').map(item => ({
+      ...item,
+      instrument_type: 'spot',
+      source_name: 'U.S. EIA Open Data',
+      source_url: payload?.source_url || 'https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm',
+    }));
+  }
+
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
       FILTER_KEY,
@@ -91,6 +103,7 @@
       reboundCandidates,
       selectExternalMarketDate,
       externalOilBenchmarks,
+      eiaSpotBenchmarks,
     };
   }
 
@@ -106,6 +119,7 @@
   const signed = value => finite(value) ? `${Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(2)}%` : 'NA';
   let lastReadiness = null;
   let oilSourceDate = null;
+  let spotSourceDate = null;
 
   function conditionStateClass(condition) {
     if (condition?.status === 'full') return 'readiness-full';
@@ -267,17 +281,25 @@
     }
   }
 
+  function benchmarkById(id) {
+    return (typeof oilPrices !== 'undefined' ? oilPrices?.benchmarks : [])?.find(item => item.id === id);
+  }
+
   function decorateOilCard() {
     if (typeof oilPrices === 'undefined' || !oilPrices) return;
-    const wti = (oilPrices.benchmarks || []).find(item => item.id === 'wti_spot');
-    const brent = (oilPrices.benchmarks || []).find(item => item.id === 'brent_spot');
-    const card = [...document.querySelectorAll('.kpi-card')].find(item => item.querySelector('.label')?.textContent === '石油價格' || item.querySelector('.label')?.textContent === '原油期貨');
+    const wtiFutures = benchmarkById('wti_futures');
+    const wtiSpot = benchmarkById('wti_spot');
+    const brentFutures = benchmarkById('brent_futures');
+    const brentSpot = benchmarkById('brent_spot');
+    const card = [...document.querySelectorAll('.kpi-card')].find(item => ['石油價格', '原油期貨', '原油行情'].includes(item.querySelector('.label')?.textContent));
     if (!card) return;
     const label = card.querySelector('.label');
+    const value = card.querySelector('.value');
     const sub = card.querySelector('.sub');
-    if (label) label.textContent = '原油期貨';
-    if (sub && wti) {
-      sub.textContent = `WTI 日 ${signed(wti.change_pct)}；5日 ${signed(wti.change_pct_5d)}；Brent ${finite(brent?.latest_price) ? Number(brent.latest_price).toFixed(2) : 'NA'}；市場日 ${wti.latest_date || 'NA'}；來源 external-market`;
+    if (label) label.textContent = '原油行情';
+    if (value) value.textContent = finite(wtiFutures?.latest_price) ? `WTI F ${Number(wtiFutures.latest_price).toFixed(2)}` : 'NA';
+    if (sub) {
+      sub.textContent = `WTI Spot ${finite(wtiSpot?.latest_price) ? Number(wtiSpot.latest_price).toFixed(2) : 'NA'}；Brent F ${finite(brentFutures?.latest_price) ? Number(brentFutures.latest_price).toFixed(2) : 'NA'}；Brent Spot ${finite(brentSpot?.latest_price) ? Number(brentSpot.latest_price).toFixed(2) : 'NA'}`;
     }
   }
 
@@ -304,18 +326,18 @@
       if (controls) controls.style.display = 'none';
       if (typeof setListTableClass === 'function') setListTableClass();
       const head = document.getElementById('listHead');
-      if (head) head.innerHTML = '<tr><th>指標</th><th>實際市場日</th><th>價格</th><th>日漲跌</th><th>5日漲跌</th><th>20日漲跌</th><th>來源</th></tr>';
+      if (head) head.innerHTML = '<tr><th>基準</th><th>類型</th><th>實際資料日</th><th>價格</th><th>日漲跌</th><th>5日漲跌</th><th>20日漲跌</th><th>來源</th></tr>';
       const benchmarks = typeof oilPrices !== 'undefined' ? (oilPrices?.benchmarks || []) : [];
       const title = document.getElementById('stockListTitle');
       const note = document.getElementById('filterNote');
       const rows = document.getElementById('stockRows');
-      if (title) title.textContent = '原油期貨價格漲跌';
+      if (title) title.textContent = '原油行情：Futures + Spot';
       if (note) note.textContent = benchmarks.length
-        ? `canonical source: data_external_market；snapshot ${oilSourceDate || oilPrices?.source_date || 'NA'}；實際市場日 ${[...new Set(benchmarks.map(item => item.latest_date).filter(Boolean))].join('、') || 'NA'}`
-        : 'external-market 尚無可顯示的 WTI / Brent futures 資料';
+        ? `Futures: data_external_market snapshot ${oilSourceDate || 'NA'}；Spot: data_eia_crude_spot snapshot ${spotSourceDate || 'NA'}；各列顯示自己的實際資料日`
+        : '目前沒有可顯示的原油行情資料';
       if (rows) rows.innerHTML = benchmarks.length
-        ? benchmarks.map(item => `<tr><td>${esc(item.name)}</td><td>${esc(item.latest_iso_date || item.latest_date || '')}</td><td>${finite(item.latest_price) ? Number(item.latest_price).toFixed(2) : 'NA'}</td><td>${finite(item.change) ? `${Number(item.change) >= 0 ? '+' : ''}${Number(item.change).toFixed(2)}` : 'NA'}（${signed(item.change_pct)}）</td><td>${finite(item.change_5d) ? `${Number(item.change_5d) >= 0 ? '+' : ''}${Number(item.change_5d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_5d)}）</td><td>${finite(item.change_20d) ? `${Number(item.change_20d) >= 0 ? '+' : ''}${Number(item.change_20d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_20d)}）</td><td><a class="link" href="${esc(item.source_url)}" target="_blank" rel="noopener noreferrer">${esc(item.source_name)}</a></td></tr>`).join('')
-        : '<tr><td colspan="7">目前沒有可顯示的 WTI / Brent futures external-market 資料</td></tr>';
+        ? benchmarks.map(item => `<tr><td>${esc(item.benchmark || item.short_name || item.name)}</td><td>${item.instrument_type === 'spot' ? 'Spot' : 'Futures'}</td><td>${esc(item.latest_iso_date || item.latest_date || '')}</td><td>${finite(item.latest_price) ? Number(item.latest_price).toFixed(2) : 'NA'}</td><td>${finite(item.change) ? `${Number(item.change) >= 0 ? '+' : ''}${Number(item.change).toFixed(2)}` : 'NA'}（${signed(item.change_pct)}）</td><td>${finite(item.change_5d) ? `${Number(item.change_5d) >= 0 ? '+' : ''}${Number(item.change_5d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_5d)}）</td><td>${finite(item.change_20d) ? `${Number(item.change_20d) >= 0 ? '+' : ''}${Number(item.change_20d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_20d)}）</td><td><a class="link" href="${esc(item.source_url)}" target="_blank" rel="noopener noreferrer">${esc(item.source_name)}</a></td></tr>`).join('')
+        : '<tr><td colspan="8">目前沒有可顯示的 WTI / Brent futures + spot 資料</td></tr>';
       document.querySelector('.wide:last-of-type')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
   }
@@ -329,22 +351,31 @@
     }
     if (typeof dashboard === 'undefined' || !dashboard) return;
     const targetDate = compactDate(dashboard.base_trade_date || dashboard.forecast_date);
-    const manifest = await fetchJson('data_external_market/manifest.json');
-    const selectedDate = selectExternalMarketDate(manifest?.available_dates, targetDate);
-    if (!selectedDate) {
-      if (typeof oilPrices !== 'undefined') oilPrices = null;
-      return;
-    }
-    const snapshot = await fetchJson(`data_external_market/${selectedDate}/external_market_indicators.json`);
-    const benchmarks = externalOilBenchmarks(snapshot);
-    oilSourceDate = selectedDate;
+
+    const [externalManifest, spotManifest] = await Promise.all([
+      fetchJson('data_external_market/manifest.json'),
+      fetchJson('data_eia_crude_spot/manifest.json'),
+    ]);
+    const selectedExternalDate = selectExternalMarketDate(externalManifest?.available_dates, targetDate);
+    const selectedSpotDate = selectExternalMarketDate(spotManifest?.available_dates, targetDate);
+
+    const [externalSnapshot, spotSnapshot] = await Promise.all([
+      selectedExternalDate ? fetchJson(`data_external_market/${selectedExternalDate}/external_market_indicators.json`) : null,
+      selectedSpotDate ? fetchJson(`data_eia_crude_spot/${selectedSpotDate}/crude_spot.json`) : null,
+    ]);
+
+    const futuresBenchmarks = externalOilBenchmarks(externalSnapshot);
+    const spotBenchmarks = eiaSpotBenchmarks(spotSnapshot);
+    oilSourceDate = selectedExternalDate;
+    spotSourceDate = selectedSpotDate;
+
     if (typeof oilPrices !== 'undefined') {
       oilPrices = {
-        schemaVersion: 2,
-        source: 'data_external_market',
-        source_date: selectedDate,
-        generated_at: snapshot?.generated_at || null,
-        benchmarks,
+        schemaVersion: 3,
+        source: 'canonical_crude_market_bridge',
+        source_date: selectedExternalDate,
+        spot_source_date: selectedSpotDate,
+        benchmarks: [...futuresBenchmarks, ...spotBenchmarks],
       };
     }
     installOilRenderDecorator();
@@ -368,6 +399,6 @@
     render(null);
   });
   loadExternalOilData().catch(error => {
-    console.error('Unable to load external-market oil data:', error);
+    console.error('Unable to load canonical crude oil data:', error);
   });
 })();
