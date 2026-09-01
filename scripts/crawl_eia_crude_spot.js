@@ -165,6 +165,21 @@ function buildBenchmark(key, rows) {
   };
 }
 
+function artifactSupportsCurrentSchema(outputFile) {
+  if (!fs.existsSync(outputFile) || fs.statSync(outputFile).size <= 0) return false;
+  try {
+    const payload = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+    const ids = new Set((payload.benchmarks || []).map(item => item.id));
+    return Number(payload.schemaVersion) >= 2
+      && ids.has('wti_spot')
+      && ids.has('brent_spot')
+      && Boolean(payload.publication_policy?.cadence)
+      && Boolean(payload.source_freshness?.overall_status);
+  } catch {
+    return false;
+  }
+}
+
 function refreshIndexes(generatedAt) {
   fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
   const dateDirs = fs.readdirSync(OUTPUT_ROOT, { withFileTypes: true })
@@ -200,7 +215,7 @@ async function main() {
   const outputDir = path.join(OUTPUT_ROOT, snapshotDate);
   const outputFile = path.join(outputDir, 'crude_spot.json');
 
-  if (!force && fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0) {
+  if (!force && artifactSupportsCurrentSchema(outputFile)) {
     console.log(JSON.stringify({ reused: true, requested_date: requestedDate, snapshot_date: snapshotDate, source_freshness: sourceFreshness, output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'), benchmarks: benchmarks.map(({ id, latest_date }) => ({ id, latest_date })) }));
     return;
   }
@@ -230,4 +245,4 @@ if (require.main === module) {
   main().catch(error => { console.error(`Failed to crawl EIA crude spot: ${error.message}`); process.exitCode = 1; });
 }
 
-module.exports = { SERIES, PUBLICATION_POLICY, compactDate, calendarDayDiff, buildSourceFreshness, changeFrom, buildBenchmark };
+module.exports = { SERIES, PUBLICATION_POLICY, compactDate, calendarDayDiff, buildSourceFreshness, changeFrom, buildBenchmark, artifactSupportsCurrentSchema };
