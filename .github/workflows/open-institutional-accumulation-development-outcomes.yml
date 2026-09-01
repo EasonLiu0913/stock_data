@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/open_institutional_accumulation_development_outcomes.js'
       - 'tests/institutional_accumulation_development_outcomes.test.js'
+      - 'data_twse_mi_index/**_twse_mi_index.json'
       - '.github/workflows/open-institutional-accumulation-development-outcomes.yml'
   workflow_dispatch:
 
@@ -13,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: institutional-accumulation-outcome-opening-v1
+  group: institutional-accumulation-outcome-maturity-refresh-v1
   cancel-in-progress: false
 
 jobs:
@@ -38,6 +39,7 @@ jobs:
             data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json
             data_research/institutional-flow/institutional-accumulation-preregistration-v1.md
             data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md
+            data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json
             data_research/institutional-flow/institutional-accumulation-validation-handoff.md
           sparse-checkout-cone-mode: false
 
@@ -46,80 +48,127 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Verify active maturity-refresh round and preserve old bytes
+        run: |
+          set -euo pipefail
+          handoff='data_research/institutional-flow/institutional-accumulation-validation-handoff.md'
+          file='data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json'
+          grep -F '`institutional-accumulation-development-outcome-maturity-refresh-v1`' "$handoff" >/dev/null
+          grep -F -- '- `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.' "$handoff" >/dev/null
+          cp "$file" /tmp/outcome-before.json
+          echo "OLD_OUTCOME_SHA256=$(sha256sum "$file" | awk '{print $1}')" >> "$GITHUB_ENV"
+
       - name: Run development-only outcome guards
         run: node --test tests/institutional_accumulation_development_outcomes.test.js
 
-      - name: Materialize continuous development outcomes
+      - name: Materialize continuous development outcomes through latest available session
         run: |
           set -euo pipefail
           node scripts/open_institutional_accumulation_development_outcomes.js
           file='data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json'
           echo "GENERATED_OUTCOME_SHA256=$(sha256sum "$file" | awk '{print $1}')" >> "$GITHUB_ENV"
 
-      - name: Verify output scope and continuous-only contract
+      - name: Verify bounded maturity refresh and continuous-only contract
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const file = 'data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json';
-          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const oldPayload = JSON.parse(fs.readFileSync('/tmp/outcome-before.json', 'utf8'));
+          const payload = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json', 'utf8'));
           const expectedFreeze = '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b';
           if (payload.outcome_opening_id !== 'institutional-accumulation-outcome-opening-v1') throw new Error('outcome identity mismatch');
           if (payload.parent_freeze?.content_sha256 !== expectedFreeze) throw new Error('parent freeze mismatch');
-          if (payload.counts?.methodology_development !== 41) throw new Error('development count mismatch');
-          if (payload.outcomes?.length !== 41) throw new Error('unexpected outcome row count');
+          if (oldPayload.parent_freeze?.content_sha256 !== expectedFreeze) throw new Error('old parent freeze mismatch');
+          if (payload.counts?.methodology_development !== 41 || payload.outcomes?.length !== 41) throw new Error('development identity count mismatch');
           if (payload.outcomes.some(row => row.partition !== 'methodology_development')) throw new Error('holdout materialized');
           if (payload.outcomes.some(row => row.stock === '2454')) throw new Error('protected 2454 materialized');
           if (payload.counts.stock_holdout_materialized !== 0 || payload.counts.time_holdout_materialized !== 0 || payload.counts.protected_2454_materialized !== 0) throw new Error('sealed partition count invalid');
           if (payload.binary_success_threshold !== null) throw new Error('post-outcome binary threshold introduced');
           if (!String(payload.same_industry_relative_outcomes).startsWith('omitted:')) throw new Error('industry-relative outcome must remain omitted');
-          for (const row of payload.outcomes) {
-            for (const key of ['D+5','D+10','D+20','D+40']) {
-              const value = row.horizons?.[key];
-              if (!value) throw new Error(`missing ${key} for ${row.stock}/${row.t0}`);
-              if (value.state === 'horizon_not_observed') {
-                for (const metric of ['absolute_forward_return','taiex_forward_return','taiex_relative_forward_return','mfe','mae']) {
-                  if (value[metric] !== null) throw new Error(`unobserved ${key} metric must be null`);
+
+          const key = row => `${row.stock}/${row.t0}`;
+          const oldRows = new Map(oldPayload.outcomes.map(row => [key(row), row]));
+          const newRows = new Map(payload.outcomes.map(row => [key(row), row]));
+          if (oldRows.size !== 41 || newRows.size !== 41) throw new Error('unexpected frozen row-key count');
+          if ([...oldRows.keys()].some(k => !newRows.has(k)) || [...newRows.keys()].some(k => !oldRows.has(k))) throw new Error('frozen row identity changed');
+
+          const metrics = ['absolute_forward_return','taiex_forward_return','taiex_relative_forward_return','mfe','mae'];
+          for (const [rowKey, oldRow] of oldRows) {
+            const newRow = newRows.get(rowKey);
+            for (const horizon of ['D+5','D+10','D+20','D+40']) {
+              const before = oldRow.horizons?.[horizon];
+              const after = newRow.horizons?.[horizon];
+              if (!before || !after) throw new Error(`missing ${horizon} for ${rowKey}`);
+              for (const metric of metrics) {
+                if (before[metric] !== null && before[metric] !== after[metric]) {
+                  throw new Error(`mature value changed for ${rowKey} ${horizon} ${metric}: ${before[metric]} -> ${after[metric]}`);
                 }
+              }
+              if (after.state === 'horizon_not_observed') {
+                for (const metric of metrics) if (after[metric] !== null) throw new Error(`unobserved ${horizon} metric must remain null for ${rowKey}`);
               }
             }
           }
+
+          const oldLast = oldPayload.session_coverage?.last;
+          const newLast = payload.session_coverage?.last;
+          if (!oldLast || !newLast || newLast < oldLast) throw new Error(`session coverage regressed: ${oldLast} -> ${newLast}`);
+          for (const horizon of ['D+5','D+10','D+20','D+40']) {
+            const oldObserved = oldPayload.coverage?.[horizon]?.observed_horizon_date;
+            const newObserved = payload.coverage?.[horizon]?.observed_horizon_date;
+            if (!Number.isInteger(oldObserved) || !Number.isInteger(newObserved) || newObserved < oldObserved) {
+              throw new Error(`maturity regressed for ${horizon}: ${oldObserved} -> ${newObserved}`);
+            }
+            if (payload.coverage[horizon].horizon_not_observed !== 41 - newObserved) throw new Error(`coverage count incoherent for ${horizon}`);
+          }
+
           const encoded = JSON.stringify(payload);
           for (const forbidden of ['"repricing_success"','"failure_label"','"future_catalyst"']) {
             if (encoded.includes(forbidden)) throw new Error(`forbidden outcome label ${forbidden}`);
           }
-          console.log(JSON.stringify({ counts: payload.counts, coverage: payload.coverage, session_coverage: payload.session_coverage }, null, 2));
+          console.log(JSON.stringify({ old: { session_coverage: oldPayload.session_coverage, coverage: oldPayload.coverage }, refreshed: { session_coverage: payload.session_coverage, coverage: payload.coverage } }, null, 2));
           NODE
 
-      - name: Update canonical Prompt A checkpoint
+      - name: Verify deterministic regeneration
+        run: |
+          set -euo pipefail
+          file='data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json'
+          cp "$file" /tmp/outcome-first.json
+          node scripts/open_institutional_accumulation_development_outcomes.js
+          cmp -s /tmp/outcome-first.json "$file"
+          test "$(sha256sum "$file" | awk '{print $1}')" = "$GENERATED_OUTCOME_SHA256"
+
+      - name: Record Prompt A maturity-refresh checkpoint in canonical handoff
+        if: env.OLD_OUTCOME_SHA256 != env.GENERATED_OUTCOME_SHA256
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const handoffFile = 'data_research/institutional-flow/institutional-accumulation-validation-handoff.md';
+          const oldArtifact = JSON.parse(fs.readFileSync('/tmp/outcome-before.json', 'utf8'));
           const artifact = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json', 'utf8'));
           let text = fs.readFileSync(handoffFile, 'utf8');
+          const oldStatus = '- `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.';
+          const newStatus = '- `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.';
+          if (!text.includes(oldStatus)) throw new Error('active maturity-refresh status missing; refusing handoff mutation');
+          text = text.replace(oldStatus, newStatus);
           text = text.replace(
-            '**Phase 3 — development-only continuous outcome opening: PROMOTED after Phase 2 Prompt B PASS.**',
-            '**Phase 3 — development-only continuous outcome opening: Prompt A COMPLETE; mandatory Prompt B closeout pending.**'
+            '**Phase 4 — development-only continuous association analysis: COMPLETE / Prompt B PASS.**',
+            '**Development-only outcome maturity refresh: Prompt A COMPLETE / mandatory Prompt B closeout pending.**'
           );
-          text = text.replace(
-            '- `institutional-accumulation-outcome-opening-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.',
-            '- `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.'
-          );
-          text = text.replace(
-            'Execute only the preregistered Prompt A below when the owner next invokes `promptA` while Accumulation remains the sole globally active routed task.\n\nDo not open stock holdout, time holdout, or protected MediaTek outcomes in this round.',
-            'Prompt A has completed. The next authorized action for this round is the preregistered mandatory Prompt B closeout below. Do not execute another Prompt A or open any holdout before closeout.\n\nStock holdout, time holdout, and protected MediaTek outcomes remain sealed.'
-          );
-          const marker = '## Prompt B — Development-only outcome-opening closeout';
-          if (!text.includes('## Phase 3 Prompt A implementation checkpoint')) {
-            const coverage = JSON.stringify(artifact.coverage);
-            const checkpoint = `## Phase 3 Prompt A implementation checkpoint\n\nRound: \`institutional-accumulation-outcome-opening-v1\`\n\n**Prompt A: COMPLETE — ready for mandatory Prompt B.**\n\nDurable implementation artifacts:\n\n- \`scripts/open_institutional_accumulation_development_outcomes.js\`;\n- \`tests/institutional_accumulation_development_outcomes.test.js\`;\n- \`.github/workflows/open-institutional-accumulation-development-outcomes.yml\`;\n- \`data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json\`.\n\nFresh-runner Prompt A evidence:\n\n- workflow run: \`${process.env.GITHUB_RUN_ID}\`;\n- workflow head: \`${process.env.GITHUB_SHA}\`;\n- frozen parent semantic SHA-256 verified: \`${artifact.parent_freeze.content_sha256}\`;\n- referenced frozen source files verified: \`${artifact.parent_freeze.referenced_source_files_verified}\`;\n- methodology-development outcomes materialized: \`${artifact.counts.methodology_development}\`;\n- stock-holdout outcomes materialized: \`0\`;\n- time-holdout outcomes materialized: \`0\`;\n- protected 2454 outcomes materialized: \`0\`;\n- continuous coverage snapshot: \`${coverage}\`;\n- binary success threshold: not introduced;\n- same-industry-relative outcomes: omitted as preregistered;\n- no production classifier/final weighted score/strategy promoted.\n\nThis checkpoint records Prompt A implementation only. It does **not** execute or PASS Prompt B and does not authorize holdout opening.\n\n`;
-            if (!text.includes(marker)) throw new Error('Prompt B marker missing; refusing to rewrite handoff');
-            text = text.replace(marker, checkpoint + marker);
-          }
+          const marker = '## Prompt B — Development-only outcome maturity refresh closeout';
+          if (!text.includes(marker)) throw new Error('preregistered Prompt B marker missing; refusing handoff mutation');
+          const horizonLines = ['D+5','D+10','D+20','D+40'].map(h => {
+            const before = oldArtifact.coverage[h];
+            const after = artifact.coverage[h];
+            return `- ${h}: available \`${before.observed_horizon_date}\` -> \`${after.observed_horizon_date}\`; not yet observed \`${before.horizon_not_observed}\` -> \`${after.horizon_not_observed}\`.`;
+          }).join('\n');
+          const checkpoint = `## Prompt A implementation checkpoint — development outcome maturity refresh\n\nRound: \`institutional-accumulation-development-outcome-maturity-refresh-v1\`\n\n**Prompt A: COMPLETE — ready for mandatory Prompt B.**\n\nFresh-runner evidence:\n\n- workflow run: \`${process.env.GITHUB_RUN_ID}\`;\n- workflow head: \`${process.env.GITHUB_SHA}\`;\n- immutable Phase 2 freeze semantic SHA-256: \`${artifact.parent_freeze.content_sha256}\`;\n- methodology-development identities: \`${artifact.counts.methodology_development}\` (unchanged);\n- stock-holdout materialized: \`${artifact.counts.stock_holdout_materialized}\`;\n- time-holdout materialized: \`${artifact.counts.time_holdout_materialized}\`;\n- protected 2454 materialized: \`${artifact.counts.protected_2454_materialized}\`;\n- old outcome byte SHA-256: \`${process.env.OLD_OUTCOME_SHA256}\`;\n- refreshed outcome byte SHA-256: \`${process.env.GENERATED_OUTCOME_SHA256}\`;\n- old session coverage: \`${oldArtifact.session_coverage.first}\` through \`${oldArtifact.session_coverage.last}\` (\`${oldArtifact.session_coverage.count}\` sessions);\n- refreshed session coverage: \`${artifact.session_coverage.first}\` through \`${artifact.session_coverage.last}\` (\`${artifact.session_coverage.count}\` sessions);\n${horizonLines}\n- deterministic outcome regression/identity/monotonic-maturity guards: PASS;\n- regenerated bytes matched first generated bytes before commit;\n- Phase 4 association artifact was not rewritten or recomputed and is now historical/stale relative to the refreshed outcome bytes;\n- no binary threshold, optimized cutoff, composite score, weights, catalyst/news layer, production logic, holdout opening, protected 2454 outcome, or Withdrawal methodology mutation was introduced.\n\nThis checkpoint records Prompt A only. The preregistered Prompt B below remains mandatory before any further association analysis or round promotion.\n\n`;
+          if (text.includes('## Prompt A implementation checkpoint — development outcome maturity refresh')) throw new Error('maturity-refresh checkpoint already present');
+          text = text.replace(marker, checkpoint + marker);
           fs.writeFileSync(handoffFile, text);
           NODE
 
-      - name: Commit durable development-only outcome artifact
+      - name: Commit durable refreshed development-only outcome artifact
+        if: env.OLD_OUTCOME_SHA256 != env.GENERATED_OUTCOME_SHA256
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -127,16 +176,16 @@ jobs:
           git add --sparse \
             data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json \
             data_research/institutional-flow/institutional-accumulation-validation-handoff.md
-          if git diff --cached --quiet; then
-            echo "Development outcome artifact and Prompt A checkpoint already match generator output"
-          else
-            git commit -m "analysis: open accumulation development outcomes v1"
-            git fetch origin main
-            git rebase origin/main
-            git push origin HEAD:main
+          git commit -m "analysis: refresh accumulation development outcome maturity"
+          remote_head="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [ "$remote_head" != "$GITHUB_SHA" ]; then
+            echo "Remote main moved from workflow head $GITHUB_SHA to $remote_head; refusing to rebase/replay maturity bytes."
+            exit 1
           fi
+          git push origin HEAD:main
 
-      - name: Verify durable remote artifact
+      - name: Verify durable remote artifact and Prompt A checkpoint
+        if: env.OLD_OUTCOME_SHA256 != env.GENERATED_OUTCOME_SHA256
         run: |
           set -euo pipefail
           git fetch origin main
@@ -144,13 +193,11 @@ jobs:
           git show "origin/main:$file" > /tmp/remote-outcome.json
           remote_blob="$(sha256sum /tmp/remote-outcome.json | awk '{print $1}')"
           test "$remote_blob" = "$GENERATED_OUTCOME_SHA256"
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const payload = JSON.parse(fs.readFileSync('/tmp/remote-outcome.json', 'utf8'));
-          if (payload.outcome_opening_id !== 'institutional-accumulation-outcome-opening-v1') throw new Error('remote outcome identity mismatch');
-          if (payload.parent_freeze?.content_sha256 !== '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b') throw new Error('remote parent freeze mismatch');
-          if (payload.counts?.methodology_development !== 41) throw new Error('remote development count mismatch');
-          if (payload.counts?.stock_holdout_materialized !== 0 || payload.counts?.time_holdout_materialized !== 0 || payload.counts?.protected_2454_materialized !== 0) throw new Error('remote sealed partition mismatch');
-          NODE
           git show origin/main:data_research/institutional-flow/institutional-accumulation-validation-handoff.md | grep -F '**Prompt A: COMPLETE — ready for mandatory Prompt B.**'
-          echo "Durable remote development outcome artifact verified against regenerated bytes: $remote_blob"
+          git show origin/main:data_research/institutional-flow/institutional-accumulation-validation-handoff.md | grep -F "refreshed outcome byte SHA-256: \`$GENERATED_OUTCOME_SHA256\`"
+          echo "Durable remote refreshed outcome verified against regenerated bytes: $remote_blob"
+
+      - name: Report deterministic no-op
+        if: env.OLD_OUTCOME_SHA256 == env.GENERATED_OUTCOME_SHA256
+        run: |
+          echo "No new usable maturity was available; outcome bytes are unchanged and no handoff mutation is permitted."
