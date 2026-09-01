@@ -4,9 +4,9 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Development-only association refresh: COMPLETE / Prompt B PASS.**
+**Catalyst evidence readiness audit: Prompt A COMPLETE / mandatory Prompt B closeout pending.**
 
-Promoted next round:
+Current round:
 
 `institutional-accumulation-catalyst-evidence-readiness-audit-v1`
 
@@ -19,9 +19,9 @@ Status:
 - `institutional-accumulation-development-association-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-association-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-catalyst-evidence-readiness-audit-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-catalyst-evidence-readiness-audit-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
-Promotion does not execute the promoted Prompt A automatically.
+Prompt A completion does not execute Prompt B automatically.
 
 ## Objective
 
@@ -52,27 +52,13 @@ Frozen invariants:
 
 Prompt B: **PASS**.
 
-Key commits:
-
-- `8a34187f87998fcc20c32024eeab47ac927f0957`;
-- `34868751908edd18aea19dac35885c2c373be902`.
+Key commits: `8a34187f87998fcc20c32024eeab47ac927f0957`, `34868751908edd18aea19dac35885c2c373be902`.
 
 ### Phase 1 — PIT contract
 
 Round: `institutional-accumulation-point-in-time-contract-v1`
 
-Prompt B: **PASS**.
-
-Core entry points:
-
-- `scripts/lib/institutional_accumulation_pit.js`
-- `scripts/lib/stock_price_provider.js`
-- `scripts/lib/histock_broker_quality.js`
-- `tests/institutional_accumulation_pit.test.js`
-- `tests/institutional_accumulation_pit_coverage.test.js`
-- `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
-
-Closeout evidence: run `33505951816`, job `99849911255`, tested head `801d15b006217842597b187baa0d548872382700`, 9 tests passed / 0 failed.
+Prompt B: **PASS**. Closeout evidence: run `33505951816`, job `99849911255`, tested head `801d15b006217842597b187baa0d548872382700`, 9 tests passed / 0 failed.
 
 ### Phase 2 — durable development sample freeze
 
@@ -80,28 +66,15 @@ Round: `institutional-accumulation-development-sample-freeze-v1`
 
 Prompt B: **PASS**.
 
-Frozen universe:
+Frozen universe: `1101, 1102, 1103, 1104, 1108, 1109, 1110, 1201, 1203, 1210, 1213, 1215, 1216, 1217, 1218`.
 
-`1101, 1102, 1103, 1104, 1108, 1109, 1110, 1201, 1203, 1210, 1213, 1215, 1216, 1217, 1218`
+Frozen T0 anchors: `20260814, 20260817, 20260818, 20260819, 20260820, 20260821, 20260824, 20260825, 20260826, 20260827`.
 
-Frozen T0 anchors:
+Frozen counts: methodology_development `41`, stock_holdout `11`, time_holdout `10`, ineligible prospective anchors `88`.
 
-`20260814, 20260817, 20260818, 20260819, 20260820, 20260821, 20260824, 20260825, 20260826, 20260827`
+Immutable freeze: `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`.
 
-Frozen counts:
-
-- methodology_development: `41`
-- stock_holdout: `11`
-- time_holdout: `10`
-- ineligible prospective anchors: `88`
-
-Immutable freeze:
-
-`data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
-
-Semantic SHA-256:
-
-`66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`
+Semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`.
 
 ### Phase 3 — development-only continuous outcome opening
 
@@ -109,9 +82,7 @@ Round: `institutional-accumulation-outcome-opening-v1`
 
 Prompt A **COMPLETE** / Prompt B **PASS**.
 
-Durable original outcome byte SHA-256:
-
-`a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`
+Durable original outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`.
 
 ### Phase 4 — development-only continuous association analysis
 
@@ -119,9 +90,7 @@ Round: `institutional-accumulation-development-association-v1`
 
 Prompt A **COMPLETE** / Prompt B **PASS**.
 
-Original association byte SHA-256:
-
-`781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`
+Original association byte SHA-256: `781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`.
 
 Evidence: run `33524892264`, job `99913112251`, durable checkpoint `9c1037023a9e0feffb152fe1ddcd1c254a158d83`, 5 tests passed / 0 failed.
 
@@ -131,102 +100,138 @@ Round: `institutional-accumulation-development-outcome-maturity-refresh-v1`
 
 Prompt A **COMPLETE** / Prompt B **PASS**.
 
-Refreshed outcome byte SHA-256:
+Refreshed outcome byte SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`.
 
-`f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`
-
-Coverage through `20260901`:
-
-- D+5 available `38/41`;
-- D+10 available `14/41`;
-- D+20 available `0/41`;
-- D+40 available `0/41`.
+Coverage through `20260901`: D+5 `38/41`, D+10 `14/41`, D+20 `0/41`, D+40 `0/41`.
 
 Evidence: run `33533052151`, job `99940649047`, durable refreshed outcome commit `8acb153d5f588a1aca046eb500ff9e04ae1be0e9`, 5 tests passed / 0 failed.
 
-## Development-only association refresh closeout
+### Development-only association refresh closeout
 
-Round:
+Round: `institutional-accumulation-development-association-refresh-v1`
 
-`institutional-accumulation-development-association-refresh-v1`
+Prompt A **COMPLETE** / Prompt B **PASS**.
 
-### Prompt A implementation evidence
+Key evidence:
 
-**Prompt A: COMPLETE.**
+- workflow run `33535965601`, job `99950232207`;
+- exact Prompt A + Prompt B pair durable before implementation in handoff commit `6031af4e3adb26fa0c8cf79d788feccbbf49ba81`;
+- refreshed outcome byte SHA-256 `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
+- refreshed association byte SHA-256 `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
+- durable association commit `7678248ba74bac910ebc86701e6df24d54ced23a`;
+- Prompt A checkpoint commit `5d6406e151c47208d7b5e7e1dd15bcb039fd0a66`;
+- methodology-development identities remained exactly `41`;
+- stock holdout, time holdout, and protected `2454` outcomes remained sealed;
+- fixed `MIN_N = 20`, missingness, continuous outcome contract, and no-score/no-threshold constraints remained unchanged.
 
-- workflow run: `33535965601`;
-- workflow job: `99950232207` (`analyze-development-associations`);
-- implementation head: `075dc5e4aae7a6f5cf6d3e78c4d768168667017b`;
-- exact Prompt A + Prompt B pair was already durable in pre-Prompt-A handoff commit `6031af4e3adb26fa0c8cf79d788feccbbf49ba81`;
-- parent Phase 2 freeze semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
-- parent refreshed outcome byte SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
-- old association byte SHA-256: `781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`;
-- new association byte SHA-256: `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
-- durable artifact commit: `7678248ba74bac910ebc86701e6df24d54ced23a`;
-- Prompt A checkpoint commit: `5d6406e151c47208d7b5e7e1dd15bcb039fd0a66`;
-- durable remote association bytes matched generated bytes;
-- frozen methodology-development identities analyzed: `41`;
-- attempted pairs: `64`;
-- analyzable pairs: `16`;
-- insufficient-n pairs: `48`;
-- D+5: `n=38`, pair-missing `3`, 16 analyzable pairs;
-- D+10: `n=14`, pair-missing `27`, 16 insufficient-n pairs;
-- D+20: `n=0`, pair-missing `41`, 16 insufficient-n pairs;
-- D+40: `n=0`, pair-missing `41`, 16 insufficient-n pairs;
-- deterministic regression guards: `5 passed, 0 failed`.
+Association-refresh closeout commit `60b4a3142f83d63527142e387c39e5d20b8d3e9b` records Prompt B PASS and, before the present readiness audit began, promoted `institutional-accumulation-catalyst-evidence-readiness-audit-v1` with its exact Prompt A + Prompt B pair already durable.
 
-### Prompt B closeout
+## Catalyst evidence readiness audit — Prompt A checkpoint
 
-**Prompt B closeout: PASS**
+Round: `institutional-accumulation-catalyst-evidence-readiness-audit-v1`
 
-The exact closeout contract was recovered from durable pre-Prompt-A handoff commit `6031af4e3adb26fa0c8cf79d788feccbbf49ba81`, where `institutional-accumulation-development-association-refresh-v1` was still `NOT STARTED / ACTIVE` and its phase-specific Prompt B was already preregistered.
+**Prompt A: COMPLETE. Prompt B closeout remains mandatory and has not started.**
 
-Independent closeout verification against current remote state established all preregistered criteria:
+Durable audit artifact:
 
-1. Association parent outcome SHA-256 is exactly `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`; Phase 2 freeze semantic SHA-256 remains exactly `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b` — **PASS**.
-2. Analyzer requires exactly 41 eligible `methodology_development` identities, identity-equality with the 41 outcome rows, and explicitly rejects protected `2454` — **PASS**.
-3. Feature set remains exactly the four frozen accumulation features — **PASS**.
-4. Outcome set remains exactly continuous `absolute_forward_return`, `taiex_relative_forward_return`, `mfe`, and `mae` at D+5/D+10/D+20/D+40 — **PASS**.
-5. Spearman remains Pearson correlation over deterministic average ranks; tie/monotonic regression guards passed in fresh-runner run `33535965601` — **PASS**.
-6. `MIN_N` remains exactly `20`; `n < 20` rows are `insufficient_n`, `spearman_rho: null`, `interpretation_allowed: false`; no methodology relaxation occurred — **PASS**.
-7. Missingness remains pairwise-complete and non-zero-filled; durable artifact has D+5 `38/3`, D+10 `14/27`, D+20 `0/41`, D+40 `0/41` for n/pair-missing — **PASS**.
-8. `binary_success_threshold`, `optimized_cutoff`, `composite_score`, and `weights` remain null; no catalyst/news layer, same-industry outcome, production model, or strategy was introduced — **PASS**.
-9. Old/new association hashes, parent refreshed outcome hash, horizon maturity, pair counts, run/job/commit identity, and durable remote verification are recorded and internally consistent — **PASS**.
-10. Generated association bytes equal durable remote association bytes SHA-256 `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68` — **PASS**.
-11. Stock holdout, time holdout, and protected `2454` outcomes remain sealed. No Withdrawal v6.0-v6.5 methodology/validation file changed in the bounded round — **PASS**.
-12. Bounded compare `6031af4e3adb26fa0c8cf79d788feccbbf49ba81...5d6406e151c47208d7b5e7e1dd15bcb039fd0a66` is three commits and only four changed files: analyzer, association workflow, refreshed association artifact, and this canonical handoff. No unrelated research methodology file changed — **PASS**.
+`data_research/institutional-flow/institutional-accumulation-catalyst-evidence-readiness-audit-v1.md`
 
-Freshness / concurrent-change audit:
+Audit artifact commit:
 
-- current main had advanced from Prompt A checkpoint `5d6406e151c47208d7b5e7e1dd15bcb039fd0a66` to `2843f93e7cadf2088db83c1c3fa28f3fab0e777c` before closeout;
-- those four concurrent commits changed only `data_daily_gain_over_5/**`, `data_twse_margin_maintenance/**`, and `data_twse_quarterly_financial_quality/**` files;
-- they did not change the accumulation analyzer, workflow, freeze, refreshed outcome, association artifact, canonical handoff, routing registry, or Withdrawal protected files;
-- task routing remained `institutional-accumulation` as the sole active project.
+`b37410ecb5d3992986f457dff374ed53e40dc645`
 
-No holdout opening is authorized by this PASS.
+Readiness decision:
+
+`not_ready`
+
+Evidence-backed source classifications:
+
+1. **Official material-information / disclosure timeline — `conditional_with_cutoff`.**
+   - `.github/workflows/build-fundamental-event-timeline.yml`
+   - `scripts/fundamental_event_timeline.js`
+   - `scripts/build_fundamental_event_timeline.js`
+   - `tests/fundamental_event_timeline.test.js`
+   - `data_fundamental_events/<stock>/<year>.json`
+   - `data_fundamental_events/build-summary.json`
+   - official timestamp/date provenance is represented explicitly; minute/second timestamps before 09:00 may become effective that session, while at/after open, date-only, and fallback evidence is deferred conservatively to the next trading session;
+   - current OpenAPI rebuild behavior does not by itself prove immutable original-version availability at every frozen T0.
+
+2. **Official monthly revenue snapshots — `conditional_with_cutoff`.**
+   - `scripts/build_fundamental_event_timeline.js`
+   - `.github/workflows/crawl-mops-monthly-revenue.yml`
+   - `.github/workflows/backfill-mops-monthly-revenue.yml`
+   - `data_fundamental_events/<stock>/<year>.json`
+   - OpenAPI `出表日期` is explicitly an aggregate snapshot date, not company publication time; date-only/fallback evidence is deferred to the next trading session; backfilled current values are not proof of the exact earlier version.
+
+3. **Formal financial-report fallback events — `conditional_with_cutoff`.**
+   - `scripts/build_fundamental_event_timeline.js`
+   - `data_finmind_quarterly_financial_quality/<stock>/YYYYQn.json`
+   - `.github/workflows/backfill-finmind-quarterly-financial-quality-batch.yml`
+   - `.github/workflows/crawl-twse-quarterly-financial-quality.yml`
+   - conservative known date is an availability bound, not an original intraday publication timestamp or immutable value-version proof.
+
+4. **Generic market-news archive — `unsafe_or_unproven`.**
+   - `.github/workflows/crawl-market-news.yml`
+   - `scripts/crawl_market_news.js`
+   - `config/market_news_sources.json`
+   - `data_market_news/<collection-date>/...`
+   - RSS/article timestamps may exist, but Yahoo relative times are reconstructed relative to actual crawl time; historical search windows query what is visible at rebuild time rather than an immutable historical search/article version; edited/reindexed/post-close retrospective articles therefore cannot be reconstructed safely for frozen T0s from the current contract.
+
+5. **Daily-gainers news/theme analysis — `unsafe_or_unproven`.**
+   - `.github/workflows/publish-daily-gainers-news-summary.yml`
+   - `data_daily_gain_over_5/analysis-news/YYYYMMDD.json`
+   - `data_daily_gain_over_5/market-summary/YYYYMMDD.json`
+   - `scripts/canonicalize_daily_gainers_news_analysis.js`
+   - `scripts/validate_daily_gainers_news_analysis.js`
+   - `scripts/build_daily_gainers_market_summary.js`
+   - this evidence is produced for the already-observed daily-gainer cohort and is downstream of the price event; it is retrospective explanation, not admissible pre-positioning evidence.
+
+6. **Analyst revision / target-price / recommendation history — `unsafe_or_unproven`.**
+   - no dedicated historical repository source was verified by current-main search;
+   - original effective timestamp, timezone, version/revision sequence, historical snapshot availability, and non-future-aware consensus semantics are therefore unproven.
+
+Explicit leakage checks completed:
+
+- revised articles: generic news has no immutable original-version chain;
+- retrospectively normalized metadata: current historical search/rebuild behavior can expose later state;
+- post-close / same-day releases: official event resolver is conservative, generic news lacks an equivalent frozen availability gate;
+- missing original timestamps: date-only/fallback official evidence is deferred; unresolved generic-news timestamps remain unsafe;
+- future-aware analyst fields: no verified PIT analyst dataset exists;
+- retrospective price contamination: daily-gainers news/theme summaries are downstream of observed price-gainer selection and excluded.
+
+Historical reconstruction result:
+
+- official disclosure/fundamental infrastructure is promising but does not yet prove complete immutable historical coverage/version provenance for all 41 frozen methodology-development identities and T0 anchors;
+- generic news is not reconstructable as originally visible at each frozen T0 under the current crawler contract;
+- no dedicated PIT-safe analyst revision archive was verified.
+
+Therefore a general catalyst/news/analyst development-association round is **not ready** for preregistration. A later narrower official-disclosure-only proposal may be considered only after a separate outcome-blind coverage/provenance audit proves reconstructability for the intended frozen development anchors. No such future round is promoted or executed by this Prompt A.
+
+Prompt A changed only documentation/audit artifacts. It did not inspect/materialize stock-holdout, time-holdout, or protected `2454` outcomes; did not modify the immutable freeze, refreshed development outcome, refreshed association, or Withdrawal v6.0-v6.5 state; and did not create a catalyst feature/model/strategy.
 
 ## Current repository state
 
-Key durable research identities after closeout:
+Key research identities that Prompt B must independently re-verify:
 
 - immutable Phase 2 freeze SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
 - refreshed development outcome SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
 - refreshed development association SHA-256: `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
 - methodology-development identities: `41`;
-- D+5 analyzable association pairs: `16`;
-- D+10/D+20/D+40: below fixed `MIN_N = 20` and uninterpreted;
-- stock holdout, time holdout, and protected `2454`: sealed.
+- stock holdout, time holdout, and protected `2454`: sealed;
+- catalyst readiness decision: `not_ready`.
 
-## Known limitations / rejected approaches
+## Known limitations / unresolved readiness gaps
 
 - D+10 maturity is only `14/41`; D+20/D+40 are not yet observed.
 - Normalized HiStock broker history remains insufficient for mandatory use.
 - Historical TDCC publication timing remains unsafe/unverified.
 - Effective-dated historical industry membership remains unverified.
-- Complete timestamped historical catalyst/news/analyst-revision evidence remains unverified.
 - PIT-safe free-float/share-base normalization remains unaudited.
 - Numerical binary repricing/success thresholds remain deliberately unfrozen.
-- Do not infer catalyst value from current price/flow associations; catalyst evidence needs its own PIT-safe source audit and preregistration.
+- A mechanical, outcome-blind `data_fundamental_events` coverage audit across all frozen development identities/T0s has not yet been performed.
+- Immutable original-version provenance for official rows that can later be revised remains unproven.
+- Generic market-news records lack a versioned historical visibility/edit contract.
+- Dedicated historical PIT-safe analyst revisions are absent/unverified.
 
 ## Entry points
 
@@ -236,31 +241,14 @@ Key durable research identities after closeout:
 - immutable freeze: `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
 - refreshed outcome: `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`
 - refreshed association: `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`
-- analyzer: `scripts/analyze_institutional_accumulation_development_associations.js`
-- analyzer regression: `tests/institutional_accumulation_development_associations.test.js`
-- analyzer workflow: `.github/workflows/analyze-institutional-accumulation-development-associations.yml`
+- readiness audit: `data_research/institutional-flow/institutional-accumulation-catalyst-evidence-readiness-audit-v1.md`
+- official event workflow: `.github/workflows/build-fundamental-event-timeline.yml`
+- official event semantics: `scripts/fundamental_event_timeline.js`
+- official event builder: `scripts/build_fundamental_event_timeline.js`
+- generic market-news workflow: `.github/workflows/crawl-market-news.yml`
+- generic market-news crawler: `scripts/crawl_market_news.js`
+- daily-gainers news workflow: `.github/workflows/publish-daily-gainers-news-summary.yml`
 - task routing: `docs/agent-prompts/task-routing.json`
-
-Catalyst/news/analyst-revision source entry points are **not yet verified**. The next round must discover and record exact repo-relative paths instead of guessing them.
-
-## Next round
-
-Promoted round:
-
-`institutional-accumulation-catalyst-evidence-readiness-audit-v1`
-
-Purpose: perform a point-in-time/source-semantics readiness audit for potential catalyst/news/analyst-revision evidence before any catalyst feature is allowed into Accumulation research.
-
-This is an **audit/preregistration round only**. It must not add catalyst features to the development association, inspect stock/time holdout outcomes, tune thresholds, or promote a strategy.
-
-Required outcomes of the round:
-
-1. inventory candidate catalyst/news/analyst-revision sources already present in the repository;
-2. record exact repo-relative paths, collection timestamps/date semantics, source publication-time semantics, and whether historical point-in-time reconstruction is possible;
-3. identify leakage risks such as article update timestamps, same-day-after-close publication, backfilled metadata, retrospective summaries, or analyst revisions without original effective timestamps;
-4. classify each source as PIT-safe, conditionally usable with explicit cutoff rules, or unsafe/unproven;
-5. decide whether there is enough evidence to preregister a later development-only catalyst association round;
-6. if not enough, document the missing historical evidence and stop without adding a catalyst layer.
 
 ## Prompt A — Catalyst evidence readiness audit
 
@@ -334,4 +322,4 @@ and stop.
 - No binary cutoff or weighted score optimization.
 - No catalyst/news feature creation during the readiness audit.
 - No modification of frozen Withdrawal methodology/validation state.
-- Promotion does not execute the promoted Prompt A automatically.
+- Prompt A completion does not execute Prompt B automatically.
