@@ -7,6 +7,7 @@ const {
   classifyScore,
   alignSeries,
   buildFactor,
+  buildSeriesAlignment,
 } = require('../scripts/crawl_refined_product_tightness');
 
 test('percentileRank uses midpoint treatment for ties', () => {
@@ -30,6 +31,27 @@ test('alignSeries converts gallons to barrels before subtracting Brent', () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].jet_crack_usd_per_barrel, 14);
   assert.equal(rows[0].diesel_crack_usd_per_barrel, 35);
+});
+
+test('buildSeriesAlignment reports latest observation and aligned calendar-day lag', () => {
+  const rows = buildSeriesAlignment({
+    jet: [{ date: '20260827', value: 1 }],
+    diesel: [{ date: '20260826', value: 1 }],
+    brent: [{ date: '20260825', value: 1 }],
+  }, '20260825');
+
+  assert.deepEqual(
+    rows.map(({ key, latest_observation_date, aligned_lag_days }) => ({
+      key,
+      latest_observation_date,
+      aligned_lag_days,
+    })),
+    [
+      { key: 'jet', latest_observation_date: '20260827', aligned_lag_days: 2 },
+      { key: 'diesel', latest_observation_date: '20260826', aligned_lag_days: 1 },
+      { key: 'brent', latest_observation_date: '20260825', aligned_lag_days: 0 },
+    ],
+  );
 });
 
 test('buildFactor scores synchronized rising cracks as tighter context', () => {
