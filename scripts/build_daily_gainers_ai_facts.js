@@ -131,8 +131,13 @@ function technicalFacts(stock, currentSma, previousSma, date, previousDate) {
   const current = smaRow(currentSma, String(stock.code), date) || {};
   const previous = smaRow(previousSma, String(stock.code), previousDate) || {};
   const close = numeric(stock.close);
-  const sma5 = numeric(current.sma5), sma20 = numeric(current.sma20), sma60 = numeric(current.sma60);
-  const prevVolume = numeric(previous.volume), currentVolume = numeric(stock.volume);
+  // Canonical Fubon SMA snapshots use SMA5/SMA20/SMA60/Volume. Keep lowercase
+  // fallback only for historical compatibility; missing values must remain null.
+  const sma5 = numeric(current.SMA5 ?? current.sma5);
+  const sma20 = numeric(current.SMA20 ?? current.sma20);
+  const sma60 = numeric(current.SMA60 ?? current.sma60);
+  const prevVolume = numeric(previous.Volume ?? previous.volume);
+  const currentVolume = numeric(stock.volume);
   return {
     sma5, sma20, sma60,
     above_sma5: close !== null && sma5 !== null ? close >= sma5 : null,
@@ -232,4 +237,8 @@ function main() {
   console.log(JSON.stringify({ output: rel(out), stock_count: stocks.length, methodology_version: CONTRACT.facts.methodology_version, source_status: payload.source_status }, null, 2));
 }
 
-try { main(); } catch (error) { console.error(error.stack || error.message); process.exit(1); }
+if (require.main === module) {
+  try { main(); } catch (error) { console.error(error.stack || error.message); process.exit(1); }
+}
+
+module.exports = { numeric, smaRow, technicalFacts };
