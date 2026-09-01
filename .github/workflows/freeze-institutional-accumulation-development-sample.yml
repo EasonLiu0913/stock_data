@@ -1,0 +1,113 @@
+name: "[Research] Freeze Institutional Accumulation Development Sample"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/freeze_institutional_accumulation_development_sample.js'
+      - 'tests/institutional_accumulation_development_sample.test.js'
+      - '.github/workflows/freeze-institutional-accumulation-development-sample.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-development-sample-freeze-v1
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bounded PIT evidence
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts/lib/institutional_accumulation_pit.js
+            scripts/lib/stock_price_provider.js
+            scripts/lib/histock_broker_quality.js
+            scripts/freeze_institutional_accumulation_development_sample.js
+            tests/institutional_accumulation_development_sample.test.js
+            data_twse/twse_industry.csv
+            data_twse_foreign_investors
+            data_twse_investment_trust
+            data_twse_dealers
+            data_twse_margin_balance
+            data_twse_mi_index
+            data_history_sma
+            data_fubon
+            data_research/institutional-flow/institutional-accumulation-preregistration-v1.md
+            data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md
+            data_research/institutional-flow/institutional-accumulation-validation-handoff.md
+            data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Run Phase 2 deterministic tests
+        run: node --test tests/institutional_accumulation_development_sample.test.js
+
+      - name: Generate outcome-blind freeze manifest
+        run: node scripts/freeze_institutional_accumulation_development_sample.js
+
+      - name: Verify frozen manifest contract
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const file = 'data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json';
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (payload.freeze_id !== 'institutional-accumulation-development-sample-freeze-v1') throw new Error('freeze identity mismatch');
+          if (payload.outcome_blind !== true || payload.sample_freeze !== true) throw new Error('freeze flags invalid');
+          if (!Array.isArray(payload.outcome_fields_present) || payload.outcome_fields_present.length !== 0) throw new Error('outcome fields must remain empty');
+          if (payload.protected_motivation_stock_excluded !== '2454') throw new Error('2454 exclusion missing');
+          if (payload.universe.includes('2454')) throw new Error('2454 entered frozen universe');
+          if (!payload.counts || payload.counts.methodology_development < 1 || payload.counts.stock_holdout < 1 || payload.counts.time_holdout < 1) {
+            throw new Error(`all three eligible partitions must be non-empty: ${JSON.stringify(payload.counts)}`);
+          }
+          const forbiddenKeys = new Set(['forward_return','mfe','mae','breakout','repricing_success','failure_label','future_catalyst']);
+          function walk(value, trail = []) {
+            if (Array.isArray(value)) return value.forEach((item, index) => walk(item, trail.concat(index)));
+            if (!value || typeof value !== 'object') return;
+            for (const [key, child] of Object.entries(value)) {
+              if (forbiddenKeys.has(key)) throw new Error(`forbidden outcome field ${trail.concat(key).join('.')}`);
+              walk(child, trail.concat(key));
+            }
+          }
+          walk(payload);
+          const copy = JSON.parse(JSON.stringify(payload));
+          delete copy.content_sha256;
+          const actual = crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');
+          if (actual !== payload.content_sha256) throw new Error(`content hash mismatch ${actual} != ${payload.content_sha256}`);
+          console.log(JSON.stringify({ counts: payload.counts, content_sha256: payload.content_sha256 }, null, 2));
+          NODE
+
+      - name: Commit durable freeze manifest
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json
+          if git diff --cached --quiet; then
+            echo "Freeze manifest already matches generator output"
+            exit 0
+          fi
+          git commit -m "analysis: freeze accumulation development sample v1"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+
+      - name: Verify durable remote manifest
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test -f data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json
+          remote_blob="$(git show origin/main:data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json | sha256sum | awk '{print $1}')"
+          local_blob="$(sha256sum data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json | awk '{print $1}')"
+          test "$remote_blob" = "$local_blob"
+          echo "Durable remote freeze manifest verified: $remote_blob"
