@@ -126,15 +126,27 @@ If the finite cap is reached while counts remain insufficient, the result is und
 
 ## 11. Mechanical implementation audit
 
-Known entry points are sufficient to implement the protocol with bounded changes, but current code is not yet authorized to freeze Batch 2 without those changes:
+Known entry points are sufficient to implement the protocol with bounded changes, but current code/workflow state is not yet authorized to freeze Batch 2 without those changes:
 
 - `scripts/plan_institutional_withdrawal_validation_coverage.js` already enforces the frozen v1 coverage thresholds and source-derived calendar, but its current `stock_holdout_ready` behavior includes all non-development ready stocks and does not encode Batch 2+ ordering/batch identity.
 - `scripts/plan_institutional_withdrawal_validation_expansion_v1.js` already computes deterministic `sha256(seed|stock)` ordering and fixed source/coverage state, but currently excludes only development stocks and describes that order as network-request scheduling only. Before Batch 2 construction it must be boundedly changed to consume this protocol identity, permanently exclude Batch 1/prior holdouts, and expose deterministic sample-order/batch selection without reading outcomes.
-- `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js` remains the Broker physical-batch planner and must preserve <=5 exact-source-date requests per fresh runner.
+- `scripts/plan_institutional_withdrawal_validation_broker_batches_v1.js` remains the Broker physical-batch planner. Its default physical request batch is 5; future workflow invocation must continue to pass/guard `--batch-size-requests 5` so each fresh runner makes no more than five exact-source-date requests.
 - `scripts/audit_histock_broker_source_empty_checkpoints.js` remains the strict Broker source-status audit entry point.
-- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml` remains the coverage expansion workflow and must preserve plan -> bounded queue -> fresh runner -> jitter -> cooldown -> checkpoint -> exit -> re-plan architecture.
+- `.github/workflows/expand-institutional-withdrawal-validation-coverage-v1-recovery.yml` preserves `cancel-in-progress:false`, TDCC one-stock fresh runners, Broker fresh runners with `fail-fast:false`, `max-parallel:1`, <=5 exact-source-date requests, jitter/cooldowns, and bounded checkpoints. However, it is still a pre-Batch-1-closeout workflow and has two concrete incompatibilities that must be fixed before Batch 2 sample construction:
+  1. its sparse checkout does not include `data_research/institutional-flow/institutional-withdrawal-expansion-protocol-v1.md`, which the future protocol-aware planner must consume or whose identity it must otherwise verify;
+  2. its `finalize` step currently asserts `test ! -e data_research/institutional-flow/validation/validation-outcomes-v1.json` and `test ! -e .../validation-metrics-v1.json`. Those Batch 1 canonical artifacts now legitimately exist and must remain immutable, so future outcome-blind expansion must instead prove it does not read, rewrite, stage, or delete them rather than requiring their absence.
 
-Required bounded implementation change before any Batch 2 sample freeze: make the future sample planner read/encode this protocol identity, exclude development + all prior holdout identities, apply the frozen deterministic order to sample selection, select at most the next 10 eligible stocks without outcome inputs, and emit enough durable metadata to prove no earlier ordered candidate was improperly skipped.
+Required bounded implementation changes before any Batch 2 sample freeze:
+
+1. make the future sample planner read/encode `institutional-withdrawal-untouched-expansion-protocol-v1`;
+2. permanently exclude development + all prior holdout identities;
+3. use the frozen SHA-256 order as sample order;
+4. select at most the next 10 eligible stocks without outcome inputs;
+5. emit durable evidence proving no earlier ordered candidate was improperly skipped;
+6. update the recovery workflow sparse checkout/contract checks so the protocol identity is available and validated;
+7. replace the obsolete "Batch 1 outcome artifacts must not exist" assertions with bounded immutability/non-consumption checks that allow the existing Batch 1 artifacts to remain present while preventing them from influencing candidate order or sample selection.
+
+These changes must remain outcome-blind. The canonical Batch 1 outcome/metrics files may be checked only for immutable path/blob identity or absence from the planner's dependency/read set; their contents must not be consumed to select or order future candidates.
 
 This audit does not authorize running the planner now to reveal Batch 2 identities.
 
