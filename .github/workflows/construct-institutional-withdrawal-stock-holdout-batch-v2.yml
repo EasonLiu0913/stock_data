@@ -1,0 +1,312 @@
+name: "[07 研究] Construct Institutional Withdrawal Stock Holdout Batch 2"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data_research/institutional-flow/validation/batch-2-sample-construction-request-v1.json"
+  workflow_dispatch:
+    inputs:
+      wave:
+        description: "Deterministic coverage-resolution wave"
+        required: false
+        default: "1"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: institutional-withdrawal-stock-holdout-batch-2-v1
+  cancel-in-progress: false
+
+env:
+  RANGE_START: "2026-04-01"
+  RANGE_END: "2026-08-21"
+  BROKER_BATCH_SIZE: "5"
+  BROKER_MAX_BATCHES: "8"
+  MAX_WAVES: "24"
+  PROTECTED_OUTCOME_BLOB: "82fefaa25becce30a461c36cb85eba36dda44b8f"
+  PROTECTED_METRICS_BLOB: "709eb1772bfbb0040257fc78d84adeda3626e98c"
+
+jobs:
+  plan:
+    name: Protocol-aware outcome-blind plan
+    runs-on: ubuntu-latest
+    outputs:
+      sample_determined: ${{ steps.plan.outputs.sample_determined }}
+      blocking_stock: ${{ steps.plan.outputs.blocking_stock }}
+      blocking_state: ${{ steps.plan.outputs.blocking_state }}
+      selected_stocks: ${{ steps.plan.outputs.selected_stocks }}
+    steps:
+      - name: Checkout current main planning slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_fubon/fubon_202604*_sma.json
+            data_fubon/fubon_202605*_sma.json
+            data_fubon/fubon_202606*_sma.json
+            data_fubon/fubon_202607*_sma.json
+            data_fubon/fubon_202608*_sma.json
+            data_tdcc_shareholding/history/
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/validation/
+            data_research/institutional-flow/institutional-withdrawal-expansion-protocol-v1.md
+
+      - name: Verify protected Batch 1 blobs without reading outcomes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:data_research/institutional-flow/validation/validation-outcomes-v1.json)" = "$PROTECTED_OUTCOME_BLOB"
+          test "$(git rev-parse HEAD:data_research/institutional-flow/validation/validation-metrics-v1.json)" = "$PROTECTED_METRICS_BLOB"
+
+      - name: Run deterministic contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/plan_institutional_withdrawal_validation_sample_v2.js
+          node --check scripts/plan_institutional_withdrawal_validation_broker_batches_v2.js
+          node scripts/test_plan_institutional_withdrawal_validation_sample_v2.js
+          node scripts/test_histock_broker_status_policy_regressions.js
+
+      - name: Build protocol-aware coverage state
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          COVERAGE="data_research/institutional-flow/validation/batch-2-coverage-state-v1.json"
+          FREEZE="data_research/institutional-flow/validation/batch-2-sample-freeze-v1.json"
+          node scripts/plan_institutional_withdrawal_validation_sample_v2.js \
+            --output "$COVERAGE" \
+            --sample-freeze "$FREEZE" \
+            --protected-outcome-blob "$PROTECTED_OUTCOME_BLOB" \
+            --protected-metrics-blob "$PROTECTED_METRICS_BLOB" \
+            --github-output "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if test -s "$FREEZE"; then
+            scripts/checkpoint_bounded_research_paths.sh \
+              "research: freeze untouched Batch 2 sample" \
+              "$COVERAGE" "$FREEZE"
+          else
+            scripts/checkpoint_bounded_research_paths.sh \
+              "research: checkpoint Batch 2 coverage state" \
+              "$COVERAGE"
+          fi
+
+      - name: Summarize deterministic boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const p=require('./data_research/institutional-flow/validation/batch-2-coverage-state-v1.json');
+          console.log('## Outcome-blind Batch 2 sample construction');
+          console.log(`- methodology: ${p.methodology}`);
+          console.log(`- sample determined: ${p.selection.sample_determined}`);
+          console.log(`- selected: ${p.selection.selected_stocks.join(', ')||'none'}`);
+          console.log(`- blocking candidate: ${p.selection.blocking_candidate ? `${p.selection.blocking_candidate.stock} / ${p.selection.blocking_candidate.state}` : 'none'}`);
+          console.log('- Batch 1 outcomes/metrics content read by planner: **NO**');
+          NODE
+
+  tdcc-batch:
+    name: TDCC fresh runner / ${{ needs.plan.outputs.blocking_stock || 'noop' }}
+    needs: plan
+    if: needs.plan.outputs.sample_determined != 'true' && needs.plan.outputs.blocking_state == 'coverage_pending_tdcc'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout fresh TDCC runner slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_tdcc_shareholding/history/${{ needs.plan.outputs.blocking_stock }}/
+      - name: Randomized cooldown
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAUSE=$((25 + RANDOM % 31)); echo "TDCC cooldown ${PAUSE}s"; sleep "$PAUSE"
+      - name: Resolve exactly one TDCC stock
+        shell: bash
+        env:
+          STOCK: ${{ needs.plan.outputs.blocking_stock }}
+        run: |
+          set -euo pipefail
+          set +e
+          node scripts/backfill_tdcc_shareholding_history.js --stock "$STOCK" --start "$RANGE_START" --end "$RANGE_END" --delay-ms 2200 --jitter-ms 1800
+          RC=$?
+          set -e
+          ROOT="data_tdcc_shareholding/history/$STOCK"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if test -d "$ROOT"; then
+            scripts/checkpoint_bounded_research_paths.sh "research: Batch 2 TDCC coverage $STOCK" "$ROOT"
+          fi
+          if test "$RC" -ne 0; then echo "TDCC bounded attempt blocked with rc=$RC"; exit "$RC"; fi
+
+  broker-plan:
+    name: Freeze Broker <=5 request batches
+    needs: plan
+    if: needs.plan.outputs.sample_determined != 'true' && needs.plan.outputs.blocking_state == 'coverage_pending_broker'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.broker.outputs.matrix }}
+    steps:
+      - name: Checkout Broker planning slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/validation/batch-2-coverage-state-v1.json
+      - name: Freeze bounded Broker plan
+        id: broker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/plan_institutional_withdrawal_validation_broker_batches_v2.js \
+            --coverage data_research/institutional-flow/validation/batch-2-coverage-state-v1.json \
+            --batch-size-requests "$BROKER_BATCH_SIZE" \
+            --max-batches-per-run "$BROKER_MAX_BATCHES" \
+            --output "$RUNNER_TEMP/broker-plan-v2.json" \
+            --github-output "$GITHUB_OUTPUT"
+
+  broker-batch:
+    name: Broker fresh runner ${{ matrix.batch }}
+    needs: [plan, broker-plan]
+    if: needs.broker-plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.broker-plan.outputs.matrix) }}
+    steps:
+      - name: Checkout fresh Broker runner slice
+        if: matrix.skip != true
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_research/institutional-flow/histock/
+      - name: Fresh-runner cooldown
+        if: matrix.skip != true
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAUSE=$((40 + RANDOM % 41)); echo "Broker cooldown ${PAUSE}s"; sleep "$PAUSE"
+      - name: Fetch at most five exact source dates
+        if: matrix.skip != true
+        shell: bash
+        env:
+          TASKS: ${{ matrix.tasks }}
+          BATCH: ${{ matrix.batch }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra ITEMS <<< "$TASKS"
+          test "${#ITEMS[@]}" -le 5
+          for ITEM in "${ITEMS[@]}"; do
+            STOCK="${ITEM%@*}"; DATE="${ITEM#*@}"
+            set +e
+            node scripts/backfill_histock_broker_exact_source_date.js --stock "$STOCK" --date "$DATE" --delay-ms 1800 --jitter-ms 1200 --max-retries 2
+            RC=$?
+            set -e
+            echo "${STOCK}@${DATE} rc=${RC}"
+            sleep $((2 + RANDOM % 3))
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/checkpoint_bounded_research_paths.sh "research: Batch 2 Broker batch $BATCH checkpoint" data_research/institutional-flow/histock
+      - name: No Broker work
+        if: matrix.skip == true
+        run: echo "No Broker requests scheduled."
+
+  finalize:
+    name: Re-plan and freeze or continue
+    needs: [plan, tdcc-batch, broker-plan, broker-batch]
+    if: always() && needs.plan.result == 'success' && needs.tdcc-batch.result != 'failure' && needs.broker-plan.result != 'failure' && needs.broker-batch.result != 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main finalization slice
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/
+            data_twse_foreign_investors/202604*_twse_foreign_investors.json
+            data_twse_foreign_investors/202605*_twse_foreign_investors.json
+            data_twse_foreign_investors/202606*_twse_foreign_investors.json
+            data_twse_foreign_investors/202607*_twse_foreign_investors.json
+            data_twse_foreign_investors/202608*_twse_foreign_investors.json
+            data_fubon/fubon_202604*_sma.json
+            data_fubon/fubon_202605*_sma.json
+            data_fubon/fubon_202606*_sma.json
+            data_fubon/fubon_202607*_sma.json
+            data_fubon/fubon_202608*_sma.json
+            data_tdcc_shareholding/history/
+            data_research/institutional-flow/histock/
+            data_research/institutional-flow/validation/
+      - name: Verify protected blobs and refresh state
+        id: final
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD:data_research/institutional-flow/validation/validation-outcomes-v1.json)" = "$PROTECTED_OUTCOME_BLOB"
+          test "$(git rev-parse HEAD:data_research/institutional-flow/validation/validation-metrics-v1.json)" = "$PROTECTED_METRICS_BLOB"
+          COVERAGE="data_research/institutional-flow/validation/batch-2-coverage-state-v1.json"
+          FREEZE="data_research/institutional-flow/validation/batch-2-sample-freeze-v1.json"
+          node scripts/plan_institutional_withdrawal_validation_sample_v2.js \
+            --output "$COVERAGE" --sample-freeze "$FREEZE" \
+            --protected-outcome-blob "$PROTECTED_OUTCOME_BLOB" \
+            --protected-metrics-blob "$PROTECTED_METRICS_BLOB" \
+            --github-output "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if test -s "$FREEZE"; then
+            scripts/checkpoint_bounded_research_paths.sh "research: freeze untouched Batch 2 sample" "$COVERAGE" "$FREEZE"
+          else
+            scripts/checkpoint_bounded_research_paths.sh "research: checkpoint Batch 2 coverage state" "$COVERAGE"
+          fi
+      - name: Continue deterministic coverage resolution
+        if: steps.final.outputs.sample_determined != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WAVE="${{ github.event_name == 'workflow_dispatch' && inputs.wave || '1' }}"
+          NEXT=$((WAVE + 1))
+          if test "$NEXT" -gt "$MAX_WAVES"; then
+            echo "Reached bounded wave cap $MAX_WAVES without sample freeze" >&2
+            exit 1
+          fi
+          gh workflow run construct-institutional-withdrawal-stock-holdout-batch-v2.yml --ref main -f wave="$NEXT"
+          echo "Dispatched deterministic wave $NEXT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Report sample freeze
+        if: steps.final.outputs.sample_determined == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "## Batch 2 sample frozen" >> "$GITHUB_STEP_SUMMARY"
+          echo "- stocks: ${{ steps.final.outputs.selected_stocks }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- outcomes opened: NO" >> "$GITHUB_STEP_SUMMARY"
