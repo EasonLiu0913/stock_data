@@ -86,14 +86,45 @@ jobs:
           console.log(JSON.stringify({ counts: payload.counts, coverage: payload.coverage, session_coverage: payload.session_coverage }, null, 2));
           NODE
 
+      - name: Update canonical Prompt A checkpoint
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const handoffFile = 'data_research/institutional-flow/institutional-accumulation-validation-handoff.md';
+          const artifact = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json', 'utf8'));
+          let text = fs.readFileSync(handoffFile, 'utf8');
+          text = text.replace(
+            '**Phase 3 — development-only continuous outcome opening: PROMOTED after Phase 2 Prompt B PASS.**',
+            '**Phase 3 — development-only continuous outcome opening: Prompt A COMPLETE; mandatory Prompt B closeout pending.**'
+          );
+          text = text.replace(
+            '- `institutional-accumulation-outcome-opening-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.',
+            '- `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.'
+          );
+          text = text.replace(
+            'Execute only the preregistered Prompt A below when the owner next invokes `promptA` while Accumulation remains the sole globally active routed task.\n\nDo not open stock holdout, time holdout, or protected MediaTek outcomes in this round.',
+            'Prompt A has completed. The next authorized action for this round is the preregistered mandatory Prompt B closeout below. Do not execute another Prompt A or open any holdout before closeout.\n\nStock holdout, time holdout, and protected MediaTek outcomes remain sealed.'
+          );
+          const marker = '## Prompt B — Development-only outcome-opening closeout';
+          if (!text.includes('## Phase 3 Prompt A implementation checkpoint')) {
+            const coverage = JSON.stringify(artifact.coverage);
+            const checkpoint = `## Phase 3 Prompt A implementation checkpoint\n\nRound: \`institutional-accumulation-outcome-opening-v1\`\n\n**Prompt A: COMPLETE — ready for mandatory Prompt B.**\n\nDurable implementation artifacts:\n\n- \`scripts/open_institutional_accumulation_development_outcomes.js\`;\n- \`tests/institutional_accumulation_development_outcomes.test.js\`;\n- \`.github/workflows/open-institutional-accumulation-development-outcomes.yml\`;\n- \`data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json\`.\n\nFresh-runner Prompt A evidence:\n\n- workflow run: \`${process.env.GITHUB_RUN_ID}\`;\n- workflow head: \`${process.env.GITHUB_SHA}\`;\n- frozen parent semantic SHA-256 verified: \`${artifact.parent_freeze.content_sha256}\`;\n- referenced frozen source files verified: \`${artifact.parent_freeze.referenced_source_files_verified}\`;\n- methodology-development outcomes materialized: \`${artifact.counts.methodology_development}\`;\n- stock-holdout outcomes materialized: \`0\`;\n- time-holdout outcomes materialized: \`0\`;\n- protected 2454 outcomes materialized: \`0\`;\n- continuous coverage snapshot: \`${coverage}\`;\n- binary success threshold: not introduced;\n- same-industry-relative outcomes: omitted as preregistered;\n- no production classifier/final weighted score/strategy promoted.\n\nThis checkpoint records Prompt A implementation only. It does **not** execute or PASS Prompt B and does not authorize holdout opening.\n\n`;
+            if (!text.includes(marker)) throw new Error('Prompt B marker missing; refusing to rewrite handoff');
+            text = text.replace(marker, checkpoint + marker);
+          }
+          fs.writeFileSync(handoffFile, text);
+          NODE
+
       - name: Commit durable development-only outcome artifact
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json
+          git add \
+            data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json \
+            data_research/institutional-flow/institutional-accumulation-validation-handoff.md
           if git diff --cached --quiet; then
-            echo "Development outcome artifact already matches generator output"
+            echo "Development outcome artifact and Prompt A checkpoint already match generator output"
             exit 0
           fi
           git commit -m "analysis: open accumulation development outcomes v1"
@@ -109,4 +140,5 @@ jobs:
           remote_blob="$(git show origin/main:$file | sha256sum | awk '{print $1}')"
           local_blob="$(sha256sum "$file" | awk '{print $1}')"
           test "$remote_blob" = "$local_blob"
+          git show origin/main:data_research/institutional-flow/institutional-accumulation-validation-handoff.md | grep -F '**Prompt A: COMPLETE — ready for mandatory Prompt B.**'
           echo "Durable remote development outcome artifact verified: $remote_blob"
