@@ -4,19 +4,19 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Phase 0 — outcome-blind preregistration and source/semantics audit: Prompt A complete, Prompt B pending.**
+**Phase 1 — outcome-blind point-in-time feature/data contract: promoted after Phase 0 Prompt B PASS.**
 
 Active/promoted round:
 
-`institutional-accumulation-preregistration-v1`
+`institutional-accumulation-point-in-time-contract-v1`
 
 Status:
 
-- Prompt A: **COMPLETE**
-- Prompt B: **PREREGISTERED / PENDING**
-- future round `institutional-accumulation-point-in-time-contract-v1`: **PREREGISTERED / NOT PROMOTED**
+- completed round `institutional-accumulation-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PASS**
+- active round `institutional-accumulation-point-in-time-contract-v1`: Prompt A **NOT STARTED / ACTIVE**
+- active round Prompt B: **PREREGISTERED / NOT STARTED**
 
-Do not execute Phase 1 until this round's Prompt B passes and explicitly promotes it.
+Do not execute Phase 1 except through its preregistered Prompt A below. Phase 1 remains outcome-blind and must not select/freeze the development sample or open candidate outcomes.
 
 ## Objective
 
@@ -73,6 +73,10 @@ Phase 0 preregistration audit commit:
 
 `8a34187f87998fcc20c32024eeab47ac927f0957` — `docs: complete accumulation phase 0 preregistration audit`
 
+Phase 0 handoff checkpoint:
+
+`34868751908edd18aea19dac35885c2c373be902` — `docs: checkpoint accumulation phase 0 handoff`
+
 The canonical preregistration now contains:
 
 - exact verified repository paths for source/implementation entry points;
@@ -83,6 +87,31 @@ The canonical preregistration now contains:
 - prospective outcome/session semantics without opening outcomes;
 - unresolved evidence questions;
 - ordered Phase 1 proposal.
+
+## Phase 0 Prompt B closeout evidence
+
+`Prompt B closeout: PASS`
+
+Verified against current remote `main` with the preregistered Phase 0 Prompt B recovered from bootstrap commit:
+
+`9d244fab0fe786393d8be72ab2f6327d306e7328` — `docs: bootstrap institutional accumulation handoff`
+
+This proves the same Phase 0 Prompt B existed before Prompt A implementation commit `8a34187f87998fcc20c32024eeab47ac927f0957`.
+
+Closeout gates:
+
+1. **Durable artifacts — PASS.** Both canonical Accumulation documents are committed on remote `main` with stable methodology/round identity.
+2. **Research direction — PASS.** The target remains durable institutional behavior before upward repricing; six conceptual layers remain separate and no arbitrary final weighted score was frozen.
+3. **Outcome blindness / leakage — PASS.** The Phase 0 implementation commit changed only `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`; no candidate future-return, MFE/MAE, breakout/failure, or future-catalyst artifact was created or used. MediaTek May/June/late-August episodes remain `motivation_cases_only`.
+4. **Point-in-time semantics — PASS.** Institutional, broker, TDCC, margin, price/volume, disclosure/fundamental, and catalyst/news availability/missingness rules are explicit; future-publication evidence is forbidden and missing is not silently zero-filled.
+5. **Exact source inventory — PASS.** Verified repo-relative paths and stable symbols are recorded where known, with unresolved paths/timestamps left explicitly unresolved rather than guessed.
+6. **Withdrawal protection / evidence-before-abstraction — PASS.** No frozen Withdrawal v6.0-v6.5 code/spec/outcome/holdout state changed for Accumulation and no generic institutional-flow abstraction was introduced.
+7. **Prospective feature/outcome contract — PASS.** `T-20/T-15/T-10/T-5/T-3/T-1/T0` is preserved; future absolute/TAIEX-relative/same-industry-relative where PIT-safe, MFE, MAE, repricing/breakout, and D+5/D+10/D+20/D+40 session horizons are defined without opening candidate outcomes.
+8. **Validation architecture — PASS.** Development samples, untouched stock holdout, untouched time holdout where feasible, MediaTek motivation cases, and final production-gate evidence remain separated; the sample-freeze stop boundary is durable.
+9. **False-positive taxonomy — PASS.** Transient trading, no repricing, temporary pop/failure, catalyst non-materialization, already-priced catalyst, retail/margin crowding, and market/industry beta explanations remain documented in the preregistration.
+10. **Changed-file audit — PASS.** Phase 0 implementation commit `8a34187f...` changed only the preregistration document; checkpoint commit `34868751...` changed only this handoff. Concurrent 2026-09-01 SMA data updates and repository runner/routing protocol updates were separate changes and do not alter Phase 0 methodology, protected Withdrawal state, production strategies, or outcome blindness.
+
+No bounded repair was required. The unresolved evidence questions below remain legitimate Phase 1 inputs rather than closeout defects.
 
 ## Exact repository entry points
 
@@ -239,119 +268,23 @@ Future sample selection must be deterministic and outcome-independent.
 
 ## Next round
 
-The current active round is still:
+Active/promoted round:
 
-`institutional-accumulation-preregistration-v1`
+`institutional-accumulation-point-in-time-contract-v1`
 
-Prompt A is complete. The only authorized next action is the same preregistered **Prompt B — Phase 0 closeout / verification** below.
+Execute only the preregistered **Prompt A — Phase 1 point-in-time feature/data contract** below when the repository owner next invokes `promptA` while this project remains the sole globally active task.
 
-Do not promote or execute Phase 1 merely because its future pair is now preregistered.
-
----
-
-## Prompt B — Phase 0 closeout / verification
-
-```text
-Perform mandatory Prompt B closeout for the Institutional Accumulation / Catalyst Pre-positioning project in repository `EasonLiu0913/stock_data`.
-
-Round to verify:
-
-`institutional-accumulation-preregistration-v1`
-
-This Prompt B was preregistered before Prompt A execution.
-
-Do not begin Phase 1.
-
-Before verification:
-1. Fetch current remote `main`.
-2. Read repository-root `AGENTS.md`.
-3. Read `docs/project-philosophy.md` and `docs/roadmap/current-phase.md`.
-4. Read `data_research/institutional-flow/institutional-accumulation-validation-handoff.md`.
-5. Read `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`.
-6. Read `data_research/institutional-flow/institutional-withdrawal-validation-handoff.md` as methodological precedent.
-7. Recover durable repository history and verify this exact phase-specific Prompt B was preregistered for this round before Prompt A began.
-
-Use remote repository evidence, not the Prompt A summary, as source of truth.
-
-### Gate 1 — durable artifacts
-
-Verify remote `main` contains both canonical Accumulation documents, committed and pushed, with unambiguous project/methodology/round identity. Record commit SHA evidence.
-
-### Gate 2 — correct research direction
-
-Verify the project still targets `durable institutional behavior changes before upward price repricing`, not a simplistic foreign-buy, technical-breakout, volume-spike, news-sentiment, or analyst-call rule.
-
-Verify the six conceptual layers remain separately represented and no arbitrary final weighted score was frozen without evidence.
-
-### Gate 3 — outcome blindness / leakage
-
-Audit changed files and methodology history. Verify Prompt A did not calculate/use candidate future returns, MFE/MAE, future breakout labels, or future catalyst/news evidence to select features, windows, formulas, thresholds, or samples.
-
-Verify MediaTek `2454` May, June, and late-August/2026-09-01 episodes remain `motivation_cases_only` and were not tuned against.
-
-If future outcome information contaminated methodology decisions, FAIL. Do not repair contamination by merely deleting the visible result; redesign the affected methodology/sample boundary.
-
-### Gate 4 — point-in-time semantics
-
-Verify explicit availability/leakage/missingness policy exists for institutional investor, broker, TDCC, margin, price/volume, disclosure/fundamental, and catalyst/news evidence. Future-publication evidence must not be usable at earlier anchors. Missing must not silently equal zero unless proven by source semantics.
-
-### Gate 5 — exact source inventory
-
-Verify exact repo-relative paths were recorded for all source/implementation entry points actually verified by Prompt A, including stable symbols where useful. Conceptual names alone are insufficient when exact paths are known.
-
-For material sources verify the documentation records where determinable: schema/role, date semantics, useful coverage, missingness, point-in-time safety, and network-backfill requirement.
-
-### Gate 6 — Withdrawal protection / evidence-before-abstraction
-
-Compare pre-Prompt-A and current remote state. Verify frozen Withdrawal v6.0-v6.5 code/specs, outcomes/metrics, and holdout state were not changed for Accumulation. Verify no premature generic institutional-flow abstraction was introduced without repeated-use evidence.
-
-### Gate 7 — prospective feature/outcome contract
-
-Verify the T-20/T-15/T-10/T-5/T-3/T-1/T0 observation family is preserved or any change is prospectively justified by repository evidence.
-
-Verify future absolute, TAIEX-relative, same-industry-relative where supportable, MFE, MAE, repricing/breakout outcomes and candidate D+5/D+10/D+20/D+40 horizons are defined prospectively without candidate outcome values being opened.
-
-### Gate 8 — validation architecture
-
-Verify durable separation of development samples, untouched stock holdout, untouched time holdout where feasible, MediaTek motivation cases, and final production-gate evidence.
-
-Verify the future lifecycle requires:
-`outcome-blind selection -> durable sample freeze -> stop -> later round opens outcome`.
-
-### Gate 9 — false positives
-
-Verify the documented failure taxonomy includes transient trading, no repricing, temporary pop then failure, catalyst non-materialization, already-priced catalyst, retail/margin crowding, and market/industry beta explanations.
-
-### Gate 10 — changed-file audit
-
-Review every file changed during the round. Expected changes are research documentation and narrowly necessary documentation references. Fail or bounded-repair unexpected production strategy, registry, prediction/replay, frozen Withdrawal, unrelated workflow, source-data, large-backfill, or future-outcome changes.
-
-No large network collection belongs in Phase 0.
-
-### PASS behavior
-
-PASS only if durable artifacts exist, outcome blindness is intact, point-in-time rules are explicit, MediaTek cases are protected, exact entry points are recorded, Withdrawal remains untouched, and the next round remains pre-outcome.
-
-Bounded documentation/contract defects may be repaired, committed/pushed, refetched, and reverified. Outcome contamination is not a trivial bounded repair.
-
-On PASS:
-1. update the canonical handoff with Prompt A commits, Prompt B evidence, changed-file audit, PASS state, and unresolved questions;
-2. promote exactly one following round — normally Phase 1 outcome-blind point-in-time feature/data contract unless evidence requires a different pre-outcome step;
-3. preserve the already-preregistered future Prompt A/B pair or repair it before promotion if Phase 0 evidence required a prospective change;
-4. commit/push the handoff;
-5. refetch current remote `main` and verify durable promotion state;
-6. do not execute the newly promoted Prompt A.
-
-End with:
-
-`Prompt B closeout: PASS`
-
-plus the newly promoted round identity and exact canonical handoff path, then stop.
-```
+Do not execute Phase 2, select/freeze the development sample, or open candidate outcomes in Phase 1.
 
 ---
 
-## FUTURE / NOT PROMOTED — Prompt A — Phase 1 point-in-time feature/data contract
+## Completed Prompt B — Phase 0 closeout / verification
+
+The exact preregistered Prompt B for round `institutional-accumulation-preregistration-v1` is preserved durably in bootstrap commit `9d244fab0fe786393d8be72ab2f6327d306e7328` and closed with PASS as recorded above.
+
+---
+
+## Prompt A — Phase 1 point-in-time feature/data contract
 
 Round identity:
 
@@ -399,7 +332,7 @@ When complete, report:
 and stop.
 ```
 
-## FUTURE / NOT PROMOTED — Prompt B — Phase 1 closeout / verification
+## Prompt B — Phase 1 closeout / verification
 
 ```text
 Perform mandatory closeout for round `institutional-accumulation-point-in-time-contract-v1` only after it has been explicitly promoted and its Prompt A has completed.
@@ -432,7 +365,7 @@ and the promoted round identity/canonical handoff path, then stop.
 - No production strategy promotion.
 - No future-outcome opening in Phase 0 or Phase 1.
 - No MediaTek outcome-driven tuning.
-- No large network backfill in Phase 0.
+- No large network backfill in Phase 0 or Phase 1.
 - No modification of frozen Withdrawal methodology/validation state.
-- Current Prompt A completion does not authorize current Prompt B automatically.
-- Current Prompt B PASS will authorize promotion, not execution, of the future Phase 1 Prompt A.
+- Phase 1 Prompt A completion does not authorize Phase 1 Prompt B automatically.
+- Phase 1 Prompt B PASS will authorize promotion, not execution, of the future Phase 2 Prompt A.
