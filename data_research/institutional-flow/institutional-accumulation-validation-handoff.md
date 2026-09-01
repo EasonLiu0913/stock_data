@@ -4,7 +4,7 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Development-only outcome maturity refresh: COMPLETE / Prompt B PASS.**
+**Development-only association refresh: Prompt A COMPLETE / mandatory Prompt B closeout pending.**
 
 Promoted next round:
 
@@ -18,7 +18,7 @@ Status:
 - `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-association-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-development-association-refresh-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-development-association-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
 Promotion does not execute the promoted Prompt A automatically.
 
@@ -264,6 +264,36 @@ When complete, report:
 `Prompt A complete — ready for Prompt B`
 and stop. Do not open holdouts or promote a production strategy.
 ```
+
+## Development-only association refresh — Prompt A implementation checkpoint
+
+Round: `institutional-accumulation-development-association-refresh-v1`
+
+**Prompt A: COMPLETE — ready for mandatory Prompt B.**
+
+Fresh-runner evidence:
+
+- workflow run: `33535965601`;
+- workflow job: `99950232207` (`analyze-development-associations`);
+- implementation head: `075dc5e4aae7a6f5cf6d3e78c4d768168667017b`;
+- preregistered pair verified in pre-Prompt-A parent history: **PASS**;
+- parent Phase 2 freeze semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- parent refreshed outcome byte SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
+- old association byte SHA-256: `781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`;
+- new association byte SHA-256: `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
+- durable artifact/checkpoint commit: `PENDING_AFTER_REMOTE_PUSH`;
+- remote-byte verification: `PENDING_AFTER_REMOTE_PUSH`;
+- frozen methodology-development identities analyzed: `41`;
+- attempted pairs: `64`;
+- analyzable pairs: `16`;
+- insufficient-n pairs: `48`;
+- per-horizon n/missingness: `{"D+5":{"n_values":[38],"pair_missing_values":[3],"analyzable_pairs":16,"insufficient_n_pairs":0},"D+10":{"n_values":[14],"pair_missing_values":[27],"analyzable_pairs":0,"insufficient_n_pairs":16},"D+20":{"n_values":[0],"pair_missing_values":[41],"analyzable_pairs":0,"insufficient_n_pairs":16},"D+40":{"n_values":[0],"pair_missing_values":[41],"analyzable_pairs":0,"insufficient_n_pairs":16}}`;
+- deterministic regression guards: `5 passed, 0 failed`;
+- D+10 remains below fixed `MIN_N = 20`; D+20/D+40 remain unavailable and uninterpreted;
+- stock holdout, time holdout, and protected 2454 outcomes remain sealed;
+- no binary threshold, optimized cutoff, composite score, weights, catalyst/news layer, same-industry outcome, production model, or strategy promotion.
+
+This checkpoint records Prompt A implementation only. It preserves the preregistered Prompt B below and does not execute or PASS Prompt B.
 
 ## Prompt B — Development-only association refresh closeout
 
