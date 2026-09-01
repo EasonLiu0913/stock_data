@@ -85,13 +85,25 @@
   }
 
   function eiaSpotBenchmarks(payload) {
+    const freshnessRows = Array.isArray(payload?.source_freshness?.benchmarks) ? payload.source_freshness.benchmarks : [];
     const benchmarks = Array.isArray(payload?.benchmarks) ? payload.benchmarks : [];
     return benchmarks.filter(item => item?.id === 'wti_spot' || item?.id === 'brent_spot').map(item => ({
       ...item,
       instrument_type: 'spot',
+      freshness_status: freshnessRows.find(row => row.id === item.id)?.status || null,
+      freshness_lag_days: freshnessRows.find(row => row.id === item.id)?.lag_calendar_days ?? null,
       source_name: 'U.S. EIA Open Data',
       source_url: payload?.source_url || 'https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm',
     }));
+  }
+
+  function eiaSpotFreshnessLabel(sourceFreshness) {
+    const status = sourceFreshness?.overall_status;
+    const maxLag = Math.max(...(sourceFreshness?.benchmarks || []).map(item => Number(item.lag_calendar_days)).filter(Number.isFinite), 0);
+    if (status === 'stale_warning') return `⚠ EIA Spot 超出正常週更窗口（lag ${maxLag} 天）`;
+    if (status === 'expected_weekly_publication_lag') return `EIA Spot 正常週更延遲（lag ${maxLag} 天）`;
+    if (status === 'current_observation') return 'EIA Spot 已更新至查詢日';
+    return 'EIA Spot freshness 未知';
   }
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -104,6 +116,7 @@
       selectExternalMarketDate,
       externalOilBenchmarks,
       eiaSpotBenchmarks,
+      eiaSpotFreshnessLabel,
     };
   }
 
@@ -120,6 +133,7 @@
   let lastReadiness = null;
   let oilSourceDate = null;
   let spotSourceDate = null;
+  let spotSourceFreshness = null;
 
   function conditionStateClass(condition) {
     if (condition?.status === 'full') return 'readiness-full';
@@ -299,7 +313,7 @@
     if (label) label.textContent = '原油行情';
     if (value) value.textContent = finite(wtiFutures?.latest_price) ? `WTI F ${Number(wtiFutures.latest_price).toFixed(2)}` : 'NA';
     if (sub) {
-      sub.textContent = `WTI Spot ${finite(wtiSpot?.latest_price) ? Number(wtiSpot.latest_price).toFixed(2) : 'NA'}；Brent F ${finite(brentFutures?.latest_price) ? Number(brentFutures.latest_price).toFixed(2) : 'NA'}；Brent Spot ${finite(brentSpot?.latest_price) ? Number(brentSpot.latest_price).toFixed(2) : 'NA'}`;
+      sub.textContent = `WTI Spot ${finite(wtiSpot?.latest_price) ? Number(wtiSpot.latest_price).toFixed(2) : 'NA'}；Brent F ${finite(brentFutures?.latest_price) ? Number(brentFutures.latest_price).toFixed(2) : 'NA'}；Brent Spot ${finite(brentSpot?.latest_price) ? Number(brentSpot.latest_price).toFixed(2) : 'NA'}；${eiaSpotFreshnessLabel(spotSourceFreshness)}`;
     }
   }
 
@@ -333,7 +347,7 @@
       const rows = document.getElementById('stockRows');
       if (title) title.textContent = '原油行情：Futures + Spot';
       if (note) note.textContent = benchmarks.length
-        ? `Futures: data_external_market snapshot ${oilSourceDate || 'NA'}；Spot: data_eia_crude_spot snapshot ${spotSourceDate || 'NA'}；各列顯示自己的實際資料日`
+        ? `Futures: data_external_market snapshot ${oilSourceDate || 'NA'}；Spot: data_eia_crude_spot snapshot ${spotSourceDate || 'NA'}；${eiaSpotFreshnessLabel(spotSourceFreshness)}；EIA daily observations 採週批次發布，各列仍顯示自己的實際資料日`
         : '目前沒有可顯示的原油行情資料';
       if (rows) rows.innerHTML = benchmarks.length
         ? benchmarks.map(item => `<tr><td>${esc(item.benchmark || item.short_name || item.name)}</td><td>${item.instrument_type === 'spot' ? 'Spot' : 'Futures'}</td><td>${esc(item.latest_iso_date || item.latest_date || '')}</td><td>${finite(item.latest_price) ? Number(item.latest_price).toFixed(2) : 'NA'}</td><td>${finite(item.change) ? `${Number(item.change) >= 0 ? '+' : ''}${Number(item.change).toFixed(2)}` : 'NA'}（${signed(item.change_pct)}）</td><td>${finite(item.change_5d) ? `${Number(item.change_5d) >= 0 ? '+' : ''}${Number(item.change_5d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_5d)}）</td><td>${finite(item.change_20d) ? `${Number(item.change_20d) >= 0 ? '+' : ''}${Number(item.change_20d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_20d)}）</td><td><a class="link" href="${esc(item.source_url)}" target="_blank" rel="noopener noreferrer">${esc(item.source_name)}</a></td></tr>`).join('')
@@ -368,13 +382,15 @@
     const spotBenchmarks = eiaSpotBenchmarks(spotSnapshot);
     oilSourceDate = selectedExternalDate;
     spotSourceDate = selectedSpotDate;
+    spotSourceFreshness = spotSnapshot?.source_freshness || null;
 
     if (typeof oilPrices !== 'undefined') {
       oilPrices = {
-        schemaVersion: 3,
+        schemaVersion: 4,
         source: 'canonical_crude_market_bridge',
         source_date: selectedExternalDate,
         spot_source_date: selectedSpotDate,
+        spot_source_freshness: spotSourceFreshness,
         benchmarks: [...futuresBenchmarks, ...spotBenchmarks],
       };
     }
