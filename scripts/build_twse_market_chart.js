@@ -87,9 +87,10 @@ function selectMonthsToFetch(startDate, endDate, existingOutput, fullRebuild = f
 
     const currentMonth = `${endDate.slice(0, 6)}01`;
     const previousMonth = previousMonthStart(currentMonth);
-    return [...new Set([previousMonth, currentMonth])]
-        .filter(monthDate => monthDate.slice(0, 6) >= startDate.slice(0, 6))
-        .filter(monthDate => monthDate.slice(0, 6) <= endDate.slice(0, 6));
+    const existingEndMonth = `${String(existingOutput.endDate).slice(0, 6)}01`;
+    const refreshStart = existingEndMonth < previousMonth ? existingEndMonth : previousMonth;
+    return listMonths(refreshStart, endDate)
+        .filter(monthDate => monthDate.slice(0, 6) >= startDate.slice(0, 6));
 }
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
