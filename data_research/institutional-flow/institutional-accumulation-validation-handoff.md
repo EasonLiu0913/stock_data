@@ -281,8 +281,8 @@ Fresh-runner evidence:
 - parent refreshed outcome byte SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
 - old association byte SHA-256: `781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`;
 - new association byte SHA-256: `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
-- durable artifact/checkpoint commit: `PENDING_AFTER_REMOTE_PUSH`;
-- remote-byte verification: `PENDING_AFTER_REMOTE_PUSH`;
+- durable artifact/checkpoint commit: `7678248ba74bac910ebc86701e6df24d54ced23a`;
+- remote-byte verification: **PASS**, durable remote SHA-256 `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
 - frozen methodology-development identities analyzed: `41`;
 - attempted pairs: `64`;
 - analyzable pairs: `16`;
