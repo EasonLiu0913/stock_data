@@ -2,6 +2,10 @@
   const FILTER_KEY = 'oversoldElectronicsRebound';
   const STRATEGY_ID = 'oversold_electronics_rebound_v1';
   const STRATEGY_LABEL = '跌深反彈電子股';
+  const OIL_INDICATORS = [
+    { sourceId: 'wti_crude_oil', benchmarkId: 'wti_spot', shortName: 'WTI', name: 'WTI Crude Oil Futures' },
+    { sourceId: 'brent_crude_oil', benchmarkId: 'brent_spot', shortName: 'Brent', name: 'Brent Crude Oil Futures' },
+  ];
 
   function isReboundCandidate(stock) {
     if (!stock || typeof stock !== 'object') return false;
@@ -14,8 +18,80 @@
     return Array.isArray(payload?.stocks) ? payload.stocks.filter(isReboundCandidate) : [];
   }
 
+  function compactDate(value) {
+    return String(value || '').replace(/[^0-9]/g, '');
+  }
+
+  function selectExternalMarketDate(availableDates, targetDate) {
+    const target = compactDate(targetDate);
+    if (!/^\d{8}$/.test(target) || !Array.isArray(availableDates)) return null;
+    return availableDates
+      .map(compactDate)
+      .filter(date => /^\d{8}$/.test(date) && date <= target)
+      .sort()
+      .at(-1) || null;
+  }
+
+  function externalReturn(rows, offset) {
+    const valid = Array.isArray(rows)
+      ? rows.filter(row => /^\d{8}$/.test(compactDate(row?.date)) && Number.isFinite(Number(row?.close)))
+        .sort((left, right) => compactDate(left.date).localeCompare(compactDate(right.date)))
+      : [];
+    const latest = valid.at(-1);
+    const previous = valid.at(-1 - offset);
+    if (!latest || !previous || Number(previous.close) === 0) return { change: null, change_pct: null };
+    const change = Number(latest.close) - Number(previous.close);
+    return { change, change_pct: (change / Number(previous.close)) * 100 };
+  }
+
+  function externalOilBenchmarks(payload) {
+    const indicators = Array.isArray(payload?.indicators) ? payload.indicators : [];
+    return OIL_INDICATORS.map(config => {
+      const indicator = indicators.find(item => item?.id === config.sourceId);
+      if (!indicator || !Number.isFinite(Number(indicator.close))) return null;
+      const one = Number.isFinite(Number(indicator.previous_close)) && Number(indicator.previous_close) !== 0
+        ? {
+          change: Number(indicator.close) - Number(indicator.previous_close),
+          change_pct: Number.isFinite(Number(indicator.change_percent))
+            ? Number(indicator.change_percent)
+            : ((Number(indicator.close) - Number(indicator.previous_close)) / Number(indicator.previous_close)) * 100,
+        }
+        : { change: null, change_pct: null };
+      const five = externalReturn(indicator.rows, 5);
+      const twenty = externalReturn(indicator.rows, 20);
+      return {
+        id: config.benchmarkId,
+        source_indicator_id: config.sourceId,
+        symbol: indicator.symbol,
+        name: config.name,
+        short_name: config.shortName,
+        source_name: 'Yahoo Finance / external-market',
+        source_url: `https://finance.yahoo.com/quote/${encodeURIComponent(indicator.symbol || '')}`,
+        latest_date: compactDate(indicator.market_date),
+        latest_iso_date: String(indicator.market_date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'),
+        latest_price: Number(indicator.close),
+        previous_date: compactDate(indicator.previous_market_date),
+        previous_price: Number.isFinite(Number(indicator.previous_close)) ? Number(indicator.previous_close) : null,
+        change: one.change,
+        change_pct: one.change_pct,
+        change_5d: five.change,
+        change_pct_5d: five.change_pct,
+        change_20d: twenty.change,
+        change_pct_20d: twenty.change_pct,
+      };
+    }).filter(Boolean);
+  }
+
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { FILTER_KEY, STRATEGY_ID, STRATEGY_LABEL, isReboundCandidate, reboundCandidates };
+    module.exports = {
+      FILTER_KEY,
+      STRATEGY_ID,
+      STRATEGY_LABEL,
+      isReboundCandidate,
+      reboundCandidates,
+      selectExternalMarketDate,
+      externalOilBenchmarks,
+    };
   }
 
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -27,7 +103,9 @@
   }[char]));
   const finite = value => value !== null && value !== undefined && Number.isFinite(Number(value));
   const formatPct = value => finite(value) ? `${Number(value).toFixed(2)}%` : 'N/A';
+  const signed = value => finite(value) ? `${Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(2)}%` : 'NA';
   let lastReadiness = null;
+  let oilSourceDate = null;
 
   function conditionStateClass(condition) {
     if (condition?.status === 'full') return 'readiness-full';
@@ -180,6 +258,102 @@
     if (element) render(null);
   }
 
+  async function fetchJson(file) {
+    try {
+      const response = await fetch(`../${file}`, { cache: 'no-store' });
+      return response.ok ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function decorateOilCard() {
+    if (typeof oilPrices === 'undefined' || !oilPrices) return;
+    const wti = (oilPrices.benchmarks || []).find(item => item.id === 'wti_spot');
+    const brent = (oilPrices.benchmarks || []).find(item => item.id === 'brent_spot');
+    const card = [...document.querySelectorAll('.kpi-card')].find(item => item.querySelector('.label')?.textContent === '石油價格' || item.querySelector('.label')?.textContent === '原油期貨');
+    if (!card) return;
+    const label = card.querySelector('.label');
+    const sub = card.querySelector('.sub');
+    if (label) label.textContent = '原油期貨';
+    if (sub && wti) {
+      sub.textContent = `WTI 日 ${signed(wti.change_pct)}；5日 ${signed(wti.change_pct_5d)}；Brent ${finite(brent?.latest_price) ? Number(brent.latest_price).toFixed(2) : 'NA'}；市場日 ${wti.latest_date || 'NA'}；來源 external-market`;
+    }
+  }
+
+  function installOilRenderDecorator() {
+    if (window.__predictionOilRenderDecoratorInstalled || typeof window.renderKpis !== 'function') return;
+    const originalRenderKpis = window.renderKpis;
+    window.renderKpis = function (...args) {
+      const result = originalRenderKpis.apply(this, args);
+      decorateOilCard();
+      return result;
+    };
+    window.__predictionOilRenderDecoratorInstalled = true;
+  }
+
+  function installOilDetailsView() {
+    window.showOilPrices = function () {
+      if (typeof activeListView !== 'undefined') activeListView = 'oil';
+      if (typeof activeQuickFilter !== 'undefined') activeQuickFilter = '';
+      if (typeof selectedConceptId !== 'undefined') selectedConceptId = '';
+      if (typeof selectedElectronicsId !== 'undefined') selectedElectronicsId = '';
+      if (typeof renderKpis === 'function') renderKpis();
+      if (typeof renderConceptRows === 'function') renderConceptRows();
+      const controls = document.getElementById('stockControls');
+      if (controls) controls.style.display = 'none';
+      if (typeof setListTableClass === 'function') setListTableClass();
+      const head = document.getElementById('listHead');
+      if (head) head.innerHTML = '<tr><th>指標</th><th>實際市場日</th><th>價格</th><th>日漲跌</th><th>5日漲跌</th><th>20日漲跌</th><th>來源</th></tr>';
+      const benchmarks = typeof oilPrices !== 'undefined' ? (oilPrices?.benchmarks || []) : [];
+      const title = document.getElementById('stockListTitle');
+      const note = document.getElementById('filterNote');
+      const rows = document.getElementById('stockRows');
+      if (title) title.textContent = '原油期貨價格漲跌';
+      if (note) note.textContent = benchmarks.length
+        ? `canonical source: data_external_market；snapshot ${oilSourceDate || oilPrices?.source_date || 'NA'}；實際市場日 ${[...new Set(benchmarks.map(item => item.latest_date).filter(Boolean))].join('、') || 'NA'}`
+        : 'external-market 尚無可顯示的 WTI / Brent futures 資料';
+      if (rows) rows.innerHTML = benchmarks.length
+        ? benchmarks.map(item => `<tr><td>${esc(item.name)}</td><td>${esc(item.latest_iso_date || item.latest_date || '')}</td><td>${finite(item.latest_price) ? Number(item.latest_price).toFixed(2) : 'NA'}</td><td>${finite(item.change) ? `${Number(item.change) >= 0 ? '+' : ''}${Number(item.change).toFixed(2)}` : 'NA'}（${signed(item.change_pct)}）</td><td>${finite(item.change_5d) ? `${Number(item.change_5d) >= 0 ? '+' : ''}${Number(item.change_5d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_5d)}）</td><td>${finite(item.change_20d) ? `${Number(item.change_20d) >= 0 ? '+' : ''}${Number(item.change_20d).toFixed(2)}` : 'NA'}（${signed(item.change_pct_20d)}）</td><td><a class="link" href="${esc(item.source_url)}" target="_blank" rel="noopener noreferrer">${esc(item.source_name)}</a></td></tr>`).join('')
+        : '<tr><td colspan="7">目前沒有可顯示的 WTI / Brent futures external-market 資料</td></tr>';
+      document.querySelector('.wide:last-of-type')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  }
+
+  async function loadExternalOilData() {
+    let attempts = 0;
+    while (attempts < 200) {
+      attempts += 1;
+      if (typeof dashboard !== 'undefined' && dashboard) break;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    if (typeof dashboard === 'undefined' || !dashboard) return;
+    const targetDate = compactDate(dashboard.base_trade_date || dashboard.forecast_date);
+    const manifest = await fetchJson('data_external_market/manifest.json');
+    const selectedDate = selectExternalMarketDate(manifest?.available_dates, targetDate);
+    if (!selectedDate) {
+      if (typeof oilPrices !== 'undefined') oilPrices = null;
+      return;
+    }
+    const snapshot = await fetchJson(`data_external_market/${selectedDate}/external_market_indicators.json`);
+    const benchmarks = externalOilBenchmarks(snapshot);
+    oilSourceDate = selectedDate;
+    if (typeof oilPrices !== 'undefined') {
+      oilPrices = {
+        schemaVersion: 2,
+        source: 'data_external_market',
+        source_date: selectedDate,
+        generated_at: snapshot?.generated_at || null,
+        benchmarks,
+      };
+    }
+    installOilRenderDecorator();
+    installOilDetailsView();
+    if (typeof renderKpis === 'function') renderKpis();
+    decorateOilCard();
+    if (typeof activeListView !== 'undefined' && activeListView === 'oil') window.showOilPrices();
+  }
+
   const style = document.createElement('style');
   style.id = 'prediction-dashboard-rebound-style';
   style.textContent = `
@@ -192,5 +366,8 @@
   load().catch(error => {
     console.error('Unable to render oversold beta rebound readiness:', error);
     render(null);
+  });
+  loadExternalOilData().catch(error => {
+    console.error('Unable to load external-market oil data:', error);
   });
 })();
