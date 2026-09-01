@@ -1,0 +1,153 @@
+name: "[02 外部市場] EIA－原油現貨"
+
+on:
+  schedule:
+    # 台灣時間週二至週六 07:25；對應美國週一至週五晚間。
+    - cron: '25 23 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '查詢上限日期 YYYYMMDD；留空使用目前日期'
+        required: false
+        default: ''
+      force_overwrite:
+        description: '即使 snapshot_date 已存在也重新寫入（用於 EIA 修訂）'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-eia-crude-spot
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate EIA API key
+        shell: bash
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${EIA_API_KEY:-}" || { echo "Missing repository secret: EIA_API_KEY" >&2; exit 1; }
+
+      - name: Validate collector contract
+        run: |
+          set -euo pipefail
+          node --check scripts/crawl_eia_crude_spot.js
+          node --test tests/eia_crude_spot.test.js
+
+      - name: Resolve scheduled query upper bound
+        id: query-date
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ inputs.date || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            echo "date=$INPUT_DATE" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            date=$(node scripts/resolve_scheduled_collection_date.js \
+              --event-name "$EVENT_NAME" \
+              --schedule "$EVENT_SCHEDULE" \
+              --policy same_calendar_date \
+              --time-zone UTC)
+            echo "date=$date" >> "$GITHUB_OUTPUT"
+          else
+            echo "date=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Collect WTI and Brent spot prices
+        id: collect
+        shell: bash
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          TARGET_DATE: ${{ steps.query-date.outputs.date }}
+          FORCE_OVERWRITE: ${{ inputs.force_overwrite || 'false' }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$TARGET_DATE" ]; then args+=(--date "$TARGET_DATE"); fi
+          if [ "$FORCE_OVERWRITE" = "true" ]; then args+=(--force); fi
+          result=$(node scripts/crawl_eia_crude_spot.js "${args[@]}")
+          echo "$result"
+          parsed=$(printf '%s' "$result" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s);process.stdout.write(String(p.snapshot_date||'')+' '+(p.reused===true?'false':'true'));});")
+          snapshot_date="${parsed%% *}"
+          changed="${parsed##* }"
+          [[ "$snapshot_date" =~ ^[0-9]{8}$ ]] || { echo "Invalid snapshot_date" >&2; exit 1; }
+          echo "snapshot_date=$snapshot_date" >> "$GITHUB_OUTPUT"
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          printf '%s' "$result" | node -e '
+            let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+              const p=JSON.parse(s); const rows=Array.isArray(p.benchmarks)?p.benchmarks:[];
+              const lines=["### EIA crude spot","",`- Requested date: \`${p.requested_date||"unknown"}\``,`- Snapshot date: \`${p.snapshot_date||"unknown"}\``,`- Reused existing artifact: \`${p.reused===true}\``,"","| Benchmark | Latest observation |","| --- | --- |",...rows.map(r=>`| ${r.id} | \`${r.latest_date}\` |`),""];
+              process.stdout.write(lines.join("\n"));
+            });
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push spot snapshot
+        if: steps.collect.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_eia_crude_spot/
+          if git diff --staged --quiet; then
+            echo "No EIA crude spot changes."
+            exit 0
+          fi
+          snapshot_date="${{ steps.collect.outputs.snapshot_date }}"
+          git commit -m "data: update EIA crude spot ${snapshot_date}"
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
+
+      - name: Verify durable remote spot snapshot
+        if: steps.collect.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          snapshot_date="${{ steps.collect.outputs.snapshot_date }}"
+          git fetch origin main
+          git show "origin/main:data_eia_crude_spot/${snapshot_date}/crude_spot.json" | node -e '
+            let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+              const p=JSON.parse(s); const ids=new Set((p.benchmarks||[]).map(x=>x.id));
+              if (!ids.has("wti_spot") || !ids.has("brent_spot")) throw new Error("remote snapshot missing canonical spot benchmarks");
+            });
+          '
+          git show origin/main:data_eia_crude_spot/manifest.json >/dev/null
+
+  schedule-timing-summary:
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
