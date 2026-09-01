@@ -67,6 +67,34 @@ function todayCompact() {
   return new Date().toISOString().slice(0, 10).replaceAll('-', '');
 }
 
+function calendarDayDiff(laterCompact, earlierCompact) {
+  const later = new Date(`${compactToIso(compactDate(laterCompact))}T00:00:00Z`);
+  const earlier = new Date(`${compactToIso(compactDate(earlierCompact))}T00:00:00Z`);
+  return Math.round((later.getTime() - earlier.getTime()) / 86_400_000);
+}
+
+function buildSeriesAlignment(seriesRows, alignedObservationDate) {
+  const alignedDate = compactDate(alignedObservationDate);
+  return Object.entries(seriesRows).map(([key, rows]) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new Error(`EIA ${key}: no observations available for alignment metadata.`);
+    }
+    const latestObservationDate = compactDate(rows.at(-1).date);
+    const alignedLagDays = calendarDayDiff(latestObservationDate, alignedDate);
+    if (alignedLagDays < 0) {
+      throw new Error(`EIA ${key}: latest observation ${latestObservationDate} precedes aligned observation ${alignedDate}.`);
+    }
+    return {
+      key,
+      id: SERIES[key]?.id || key,
+      name: SERIES[key]?.name || key,
+      latest_observation_date: latestObservationDate,
+      aligned_observation_date: alignedDate,
+      aligned_lag_days: alignedLagDays,
+    };
+  });
+}
+
 function round(value, digits = 2) {
   return Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
 }
@@ -253,6 +281,7 @@ async function main() {
 
   const aligned = alignSeries(jetRows, dieselRows, brentRows);
   const factor = buildFactor(aligned, targetDate);
+  const seriesAlignment = buildSeriesAlignment({ jet: jetRows, diesel: dieselRows, brent: brentRows }, factor.observation_date);
   const outputDir = path.join(OUTPUT_ROOT, factor.observation_date);
   const outputFile = path.join(outputDir, 'refined_product_tightness.json');
 
@@ -262,6 +291,7 @@ async function main() {
       output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
       requested_date: targetDate,
       observation_date: factor.observation_date,
+      series_alignment: seriesAlignment,
       reason: 'observation-date artifact already exists; use --force to refresh a revised EIA observation',
     }));
     return;
@@ -287,6 +317,7 @@ async function main() {
       provider: 'U.S. Energy Information Administration Open Data API',
       series: SERIES,
     },
+    series_alignment: seriesAlignment,
     factor,
     aligned_observation_count: aligned.length,
   };
@@ -297,7 +328,9 @@ async function main() {
   console.log(JSON.stringify({
     reused: false,
     output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
+    requested_date: targetDate,
     observation_date: factor.observation_date,
+    series_alignment: seriesAlignment,
     score: factor.score,
     state: factor.state.code,
   }));
@@ -313,6 +346,8 @@ if (require.main === module) {
 module.exports = {
   BARRELS_PER_GALLON,
   SERIES,
+  calendarDayDiff,
+  buildSeriesAlignment,
   percentileRank,
   difference,
   rollingDifferences,
