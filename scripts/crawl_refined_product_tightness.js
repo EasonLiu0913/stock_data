@@ -73,13 +73,21 @@ function calendarDayDiff(laterCompact, earlierCompact) {
   return Math.round((later.getTime() - earlier.getTime()) / 86_400_000);
 }
 
+function latestSeriesObservationDate(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return rows.reduce((latest, row) => {
+    const date = compactDate(row?.date);
+    return latest === null || date > latest ? date : latest;
+  }, null);
+}
+
 function buildSeriesAlignment(seriesRows, alignedObservationDate) {
   const alignedDate = compactDate(alignedObservationDate);
   return Object.entries(seriesRows).map(([key, rows]) => {
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new Error(`EIA ${key}: no observations available for alignment metadata.`);
     }
-    const latestObservationDate = compactDate(rows.at(-1).date);
+    const latestObservationDate = latestSeriesObservationDate(rows);
     const alignedLagDays = calendarDayDiff(latestObservationDate, alignedDate);
     if (alignedLagDays < 0) {
       throw new Error(`EIA ${key}: latest observation ${latestObservationDate} precedes aligned observation ${alignedDate}.`);
@@ -242,7 +250,8 @@ async function fetchSeries(seriesId, startIso, endIso, apiKey) {
   const rows = data.map((row) => ({
     date: isoToCompact(row.period),
     value: Number(row.value),
-  })).filter((row) => /^\d{8}$/.test(row.date) && Number.isFinite(row.value));
+  })).filter((row) => /^\d{8}$/.test(row.date) && Number.isFinite(row.value))
+    .sort((a, b) => a.date.localeCompare(b.date));
   if (!rows.length) throw new Error(`EIA ${seriesId}: no daily observations returned.`);
   return rows;
 }
@@ -347,6 +356,7 @@ module.exports = {
   BARRELS_PER_GALLON,
   SERIES,
   calendarDayDiff,
+  latestSeriesObservationDate,
   buildSeriesAlignment,
   percentileRank,
   difference,
