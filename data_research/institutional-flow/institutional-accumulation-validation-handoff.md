@@ -4,7 +4,7 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Phase 3 — development-only continuous outcome opening: COMPLETE / Prompt B PASS.**
+**Phase 4 — development-only continuous association analysis: Prompt A COMPLETE; mandatory Prompt B closeout pending.**
 
 Promoted next round:
 
@@ -16,7 +16,7 @@ Status:
 - `institutional-accumulation-point-in-time-contract-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-sample-freeze-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-development-association-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-development-association-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
 Promotion does not execute the promoted Prompt A automatically.
 
@@ -262,6 +262,37 @@ When complete, report:
 `Prompt A complete — ready for Prompt B`
 and stop.
 ```
+
+## Phase 4 Prompt A implementation checkpoint
+
+Round: `institutional-accumulation-development-association-v1`
+
+**Prompt A: COMPLETE — ready for mandatory Prompt B.**
+
+Durable implementation artifacts:
+
+- `scripts/analyze_institutional_accumulation_development_associations.js`;
+- `tests/institutional_accumulation_development_associations.test.js`;
+- `.github/workflows/analyze-institutional-accumulation-development-associations.yml`;
+- `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`.
+
+Fresh-runner Prompt A evidence:
+
+- workflow run: `33524892264`;
+- workflow head: `f2b9ed955fd1cb07a2a22c13a07921ccb4cee137`;
+- parent Phase 2 freeze semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- parent Phase 3 outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`;
+- frozen methodology-development identities analyzed: `41`;
+- preregistered pair attempts: `64`;
+- analyzable pairs (n >= 20): `16`;
+- insufficient-n pairs: `48`;
+- D+5 result rows: `[{"feature":"pit_features.cross_sectional.core_accumulation_percentile","horizon":"D+5","outcome":"absolute_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.1568249491,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.core_accumulation_percentile","horizon":"D+5","outcome":"taiex_relative_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.0482226588,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.core_accumulation_percentile","horizon":"D+5","outcome":"mfe","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.1698095056,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.core_accumulation_percentile","horizon":"D+5","outcome":"mae","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":-0.1602489076,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.supply_absorption_percentile","horizon":"D+5","outcome":"absolute_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.1175174038,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.supply_absorption_percentile","horizon":"D+5","outcome":"taiex_relative_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.0235034808,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.supply_absorption_percentile","horizon":"D+5","outcome":"mfe","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.0624120856,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.supply_absorption_percentile","horizon":"D+5","outcome":"mae","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":-0.2339370518,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_return_percentile","horizon":"D+5","outcome":"absolute_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.1309701045,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_return_percentile","horizon":"D+5","outcome":"taiex_relative_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.0991399088,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_return_percentile","horizon":"D+5","outcome":"mfe","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.1929266542,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_return_percentile","horizon":"D+5","outcome":"mae","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":-0.1671421085,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_non_confirmation_rank_gap","horizon":"D+5","outcome":"absolute_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.026595655,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_non_confirmation_rank_gap","horizon":"D+5","outcome":"taiex_relative_forward_return","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":-0.0519446387,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_non_confirmation_rank_gap","horizon":"D+5","outcome":"mfe","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":-0.0052988873,"interpretation_allowed":true},{"feature":"pit_features.cross_sectional.price_non_confirmation_rank_gap","horizon":"D+5","outcome":"mae","total_frozen_development":41,"n":31,"missingness":{"feature_missing":0,"outcome_missing":10,"pair_missing":10},"status":"analyzable","spearman_rho":0.0350283464,"interpretation_allowed":true}]`;
+- D+10/D+20/D+40 remain `insufficient_n` and uninterpreted;
+- no Phase 3 outcome refresh/extension;
+- no stock holdout, time holdout, or protected 2454 outcome opening;
+- no binary threshold, optimized cutoff, composite score, weights, catalyst/news layer, production classifier, or strategy promotion.
+
+This checkpoint records Prompt A implementation only. It does **not** execute or PASS Prompt B and does not authorize holdout opening.
 
 ## Prompt B — Development-only association closeout
 
