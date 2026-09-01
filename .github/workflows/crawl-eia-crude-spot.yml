@@ -8,8 +8,10 @@ on:
       - 'tests/eia_crude_spot.test.js'
       - '.github/workflows/crawl-eia-crude-spot.yml'
   schedule:
-    # 台灣時間週二至週六 07:25；對應美國週一至週五晚間。
-    - cron: '25 23 * * 1-5'
+    # EIA Spot Prices 以美東週三為主要發布窗口。
+    # 台灣時間週四 07:25 主抓；週五 07:25 再補抓一次，容忍官方延遲或修訂。
+    - cron: '25 23 * * 3'
+    - cron: '25 23 * * 4'
   workflow_dispatch:
     inputs:
       date:
@@ -103,7 +105,8 @@ jobs:
           printf '%s' "$result" | node -e '
             let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
               const p=JSON.parse(s); const rows=Array.isArray(p.benchmarks)?p.benchmarks:[];
-              const lines=["### EIA crude spot","",`- Requested date: \`${p.requested_date||"unknown"}\``,`- Snapshot date: \`${p.snapshot_date||"unknown"}\``,`- Reused existing artifact: \`${p.reused===true}\``,"","| Benchmark | Latest observation |","| --- | --- |",...rows.map(r=>`| ${r.id} | \`${r.latest_date}\` |`),""];
+              const freshness=p.source_freshness||{};
+              const lines=["### EIA crude spot","",`- Requested date: \`${p.requested_date||"unknown"}\``,`- Snapshot date: \`${p.snapshot_date||"unknown"}\``,`- Source freshness: \`${freshness.overall_status||"unknown"}\``,`- Publication cadence: \`${freshness.policy?.cadence||"unknown"}\``,`- Reused existing artifact: \`${p.reused===true}\``,"","| Benchmark | Latest observation | Lag days | Freshness |","| --- | --- | ---: | --- |",...rows.map(r=>{const f=(freshness.benchmarks||[]).find(x=>x.id===r.id)||{};return `| ${r.id} | \`${r.latest_date}\` | ${f.lag_calendar_days??"NA"} | ${f.status||"unknown"} |`;}),""];
               process.stdout.write(lines.join("\n"));
             });
           ' >> "$GITHUB_STEP_SUMMARY"
@@ -141,6 +144,7 @@ jobs:
             let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
               const p=JSON.parse(s); const ids=new Set((p.benchmarks||[]).map(x=>x.id));
               if (!ids.has("wti_spot") || !ids.has("brent_spot")) throw new Error("remote snapshot missing canonical spot benchmarks");
+              if (!p.source_freshness?.overall_status) throw new Error("remote snapshot missing source-aware freshness metadata");
             });
           '
           git show origin/main:data_eia_crude_spot/manifest.json >/dev/null
