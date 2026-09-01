@@ -7,7 +7,6 @@ const SELECTOR_TIMEOUT_MS = 90000;
 const MAX_NAVIGATION_ATTEMPTS = 3;
 const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
-const MIN_TABLE_ROWS_FLOOR = 1000;
 const TAIL_CATEGORY = '受益證券-不動產投資信託';
 const LOAD_PROGRESS_POLL_MS = 1000;
 const LOAD_STALL_TIMEOUT_MS = 60000;
@@ -67,21 +66,15 @@ async function inspectTailState(page) {
     }, TAIL_CATEGORY);
 }
 
-async function waitForTableReadiness(page, minimumRows) {
-    await page.waitForFunction(
-        requiredRows => document.querySelectorAll('table.h4 tr').length >= requiredRows,
-        minimumRows,
-        { timeout: SELECTOR_TIMEOUT_MS }
-    );
-
+async function waitForTableReadiness(page) {
     let state = await inspectTailState(page);
     console.log(
-        `TWSE table reached readiness threshold: rows=${state.rows}, requiredRows=${minimumRows}, ` +
-        `readyState=${state.readyState}, tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}`
+        `TWSE table attached; starting progress-aware load watch: rows=${state.rows}, ` +
+        `readyState=${state.readyState}, tailCategorySeen=${state.tailCategorySeen}, ` +
+        `tailRecords=${state.tailRecords}`
     );
-
     console.log(
-        `Starting progress-aware TWSE load watch: poll=${LOAD_PROGRESS_POLL_MS}ms, ` +
+        `Progress watch settings: poll=${LOAD_PROGRESS_POLL_MS}ms, ` +
         `stallTimeout=${LOAD_STALL_TIMEOUT_MS}ms, hardTimeout=${LOAD_HARD_TIMEOUT_MS}ms`
     );
 
@@ -133,7 +126,7 @@ async function waitForTableReadiness(page, minimumRows) {
     }
 }
 
-async function gotoWithRetry(page, url, minimumRows) {
+async function gotoWithRetry(page, url) {
     let lastError = null;
 
     for (let attempt = 1; attempt <= MAX_NAVIGATION_ATTEMPTS; attempt++) {
@@ -150,18 +143,18 @@ async function gotoWithRetry(page, url, minimumRows) {
                 timeout: SELECTOR_TIMEOUT_MS
             });
 
-            const readyState = await waitForTableReadiness(page, minimumRows);
+            const readyState = await waitForTableReadiness(page);
             console.log(
                 `Navigation table ready. currentUrl=${page.url()}, readyState=${readyState.readyState}, ` +
-                `rows=${readyState.rows}, requiredRows=${minimumRows}, ` +
-                `tailCategorySeen=${readyState.tailCategorySeen}, tailRecords=${readyState.tailRecords}`
+                `rows=${readyState.rows}, tailCategorySeen=${readyState.tailCategorySeen}, ` +
+                `tailRecords=${readyState.tailRecords}`
             );
             return;
         } catch (error) {
             lastError = error;
             const rowCount = await page.locator('table.h4 tr').count().catch(() => 0);
             console.warn(`⚠️ Navigation attempt ${attempt} failed: ${error.message}`);
-            console.warn(`   currentUrl=${page.url()}, rows=${rowCount}, requiredRows=${minimumRows}`);
+            console.warn(`   currentUrl=${page.url()}, rows=${rowCount}`);
 
             try {
                 const debug = await inspectTailState(page);
@@ -275,15 +268,6 @@ function writeFileAtomic(filePath, content) {
     }
 
     const mainFile = path.join(outputDir, 'twse_industry.csv');
-    const previousCount = countCsvRecords(mainFile);
-    const minimumRowsBeforeExtract = Math.max(
-        MIN_TABLE_ROWS_FLOOR,
-        previousCount > 0 ? Math.floor(previousCount * (1 - MAX_DROP_RATIO)) : 0
-    );
-    console.log(
-        `TWSE readiness threshold: previous consolidated=${previousCount || 'none'}, ` +
-        `minimum table rows=${minimumRowsBeforeExtract}`
-    );
 
     console.log('Launching browser...');
     const browser = await chromium.launch({ headless: true });
@@ -306,7 +290,7 @@ function writeFileAtomic(filePath, content) {
     });
 
     try {
-        await gotoWithRetry(page, url, minimumRowsBeforeExtract);
+        await gotoWithRetry(page, url);
 
         console.log('Extracting data...');
         const data = await page.evaluate(() => {
