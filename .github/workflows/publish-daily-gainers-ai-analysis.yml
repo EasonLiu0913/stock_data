@@ -73,20 +73,34 @@ jobs:
           INPUT_DATE: ${{ github.event.inputs.date }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
+          PUSH_BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
           if [ -n "${INPUT_DATE:-}" ]; then
             target_date="$INPUT_DATE"
             mode="manual"
           elif [ "$EVENT_NAME" = "push" ]; then
+            pending_pathspec='research_pending/daily-gainers-ai/20????????.json'
             changed_path="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
+            if [ -z "$changed_path" ]; then
+              before="${PUSH_BEFORE:-}"
+              if [[ "$before" =~ ^[0-9a-fA-F]{40}$ ]] && [ "$before" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
+                changed_path="$(git diff --name-only "$before" HEAD -- "$pending_pathspec" | tail -1)"
+              else
+                changed_path="$(git diff-tree --no-commit-id --name-only -r HEAD -- "$pending_pathspec" | tail -1)"
+              fi
+              if [ -n "$changed_path" ]; then
+                echo "Resolved pending AI path from git diff fallback: $changed_path"
+                mode="pending_push_git_diff"
+              fi
+            fi
             if [ -n "$changed_path" ]; then
               target_date="$(basename "$changed_path" .json)"
-              mode="pending_push"
+              mode="${mode:-pending_push}"
             else
               target_date=""
               mode="code_or_workflow_push"
-              echo "No pending AI file changed in this push; skip data publication."
+              echo "No pending AI file changed in this push after payload and git-diff checks; skip data publication."
               echo "target_date=" >> "$GITHUB_OUTPUT"
               echo "mode=$mode" >> "$GITHUB_OUTPUT"
               exit 0
