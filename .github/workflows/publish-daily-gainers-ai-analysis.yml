@@ -80,7 +80,7 @@ jobs:
             target_date="$INPUT_DATE"
             mode="manual"
           elif [ "$EVENT_NAME" = "push" ]; then
-            pending_pathspec='research_pending/daily-gainers-ai/20????????.json'
+            pending_pathspec='research_pending/daily-gainers-ai/20??????.json'
             changed_path="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | map(select(test("^research_pending/daily-gainers-ai/20[0-9]{6}\\.json$"))) | last // empty' "$GITHUB_EVENT_PATH")"
             if [ -z "$changed_path" ]; then
               before="${PUSH_BEFORE:-}"
