@@ -164,6 +164,50 @@ The first production adopter is:
 
 It snapshots the validated target-date margin CSV under `$RUNNER_TEMP`, then uses the helper to restore that same CSV and regenerate target-date Daily Gainers flow from latest `main` before each publish attempt.
 
+## Mandatory workflow schedule summary normalization
+
+Every newly created `.github/workflows/*.yml` or `.yaml` file that contains a `jobs:` section must include the repository's canonical lightweight schedule summary job **at creation time**.
+
+Do not wait for the repository-wide audit to discover and repair the omission after the workflow has already been committed.
+
+The required managed marker is:
+
+```text
+# schedule-timing-summary:v1
+```
+
+The canonical implementation is defined by:
+
+```text
+scripts/migrate_workflow_schedule_summary.js
+```
+
+The repository-wide enforcement workflow is:
+
+```text
+.github/workflows/ensure-workflow-schedule-summary.yml
+```
+
+Required authoring rules:
+
+- Do not hand-roll a divergent `schedule-timing-summary` job when the canonical migration script already defines the exact managed block.
+- When creating a new workflow, include the canonical managed job in the same change that creates the workflow.
+- When modifying an existing workflow, preserve the managed marker and canonical job contents unless the canonical migration script itself is intentionally being changed.
+- After adding or modifying a workflow, run or otherwise verify `node scripts/migrate_workflow_schedule_summary.js` produces no diff for that workflow.
+- If normalization would still modify the workflow, the workflow change is **not complete** and must not be treated as ready for closeout.
+
+Expected invariant after workflow authoring:
+
+```text
+create / modify workflow
+  -> canonical schedule-timing-summary:v1 already present
+  -> run normalization check
+  -> changed_count = 0 for the authored workflow
+  -> workflow change may proceed to normal validation / closeout
+```
+
+This rule exists because repository-wide normalization intentionally fails when any workflow drifts from the managed summary contract. A workflow that relies on the audit to repair itself later is incomplete by construction.
+
 ## Before editing a workflow
 
 Search the repository for:
@@ -217,25 +261,3 @@ Preferred model:
 - Summaries/rankings: rebuild from already stored detail artifacts when needed.
 
 Do not recompute expensive immutable monthly returns merely because one new month was added.
-
-## Validation
-
-A workflow should validate required source files and its own output before committing or calling downstream workflows.
-
-Validation errors must be explicit; do not silently substitute today's date or unrelated available data.
-
-## Failure recovery
-
-For long workflows, log at least:
-
-- Planned units.
-- Completed units.
-- Skipped units and reason.
-- Failed unit.
-- Checkpoint state.
-
-A failed late unit should not erase validated earlier work.
-
-## Deployment performance
-
-Routine Pages deployment should validate only requested/current relevant dates and should preserve sparse checkout and dependency-driven packaging as required by `AGENTS.md`.
