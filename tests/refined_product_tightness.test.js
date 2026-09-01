@@ -54,6 +54,37 @@ test('buildSeriesAlignment reports latest observation and aligned calendar-day l
   );
 });
 
+test('buildSeriesAlignment does not depend on EIA row ordering', () => {
+  const rows = buildSeriesAlignment({
+    jet: [
+      { date: '20260827', value: 1 },
+      { date: '20061005', value: 1 },
+      { date: '20260826', value: 1 },
+    ],
+    diesel: [
+      { date: '20260826', value: 1 },
+      { date: '20061005', value: 1 },
+    ],
+    brent: [
+      { date: '20061005', value: 1 },
+      { date: '20260825', value: 1 },
+    ],
+  }, '20260825');
+
+  assert.deepEqual(
+    rows.map(({ key, latest_observation_date, aligned_lag_days }) => ({
+      key,
+      latest_observation_date,
+      aligned_lag_days,
+    })),
+    [
+      { key: 'jet', latest_observation_date: '20260827', aligned_lag_days: 2 },
+      { key: 'diesel', latest_observation_date: '20260826', aligned_lag_days: 1 },
+      { key: 'brent', latest_observation_date: '20260825', aligned_lag_days: 0 },
+    ],
+  );
+});
+
 test('buildFactor scores synchronized rising cracks as tighter context', () => {
   const rows = [];
   for (let i = 0; i < 120; i += 1) {
