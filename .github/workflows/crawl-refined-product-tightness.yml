@@ -112,6 +112,32 @@ jobs:
           echo "observation_date=$observation_date" >> "$GITHUB_OUTPUT"
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
 
+          printf '%s' "$result" | node -e '
+            let input = "";
+            process.stdin.on("data", (chunk) => input += chunk).on("end", () => {
+              const payload = JSON.parse(input);
+              const rows = Array.isArray(payload.series_alignment) ? payload.series_alignment : [];
+              if (rows.length !== 3) {
+                throw new Error(`Expected 3 EIA series_alignment rows, received ${rows.length}`);
+              }
+              const lines = [
+                "### EIA 成品油 series alignment",
+                "",
+                `- Requested date: \`${payload.requested_date || "unknown"}\``,
+                `- Aligned observation date: \`${payload.observation_date || "unknown"}\``,
+                `- Reused existing artifact: \`${payload.reused === true}\``,
+                "",
+                "| EIA series | Latest observation date | Aligned lag days |",
+                "| --- | --- | ---: |",
+                ...rows.map((row) => `| ${row.key} (\`${row.id}\`) | \`${row.latest_observation_date}\` | ${row.aligned_lag_days} |`),
+                "",
+                "`aligned lag days` = latest series observation date minus the common aligned observation date (calendar days).",
+                "",
+              ];
+              process.stdout.write(lines.join("\n"));
+            });
+          ' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Report unchanged observation
         if: steps.generate.outputs.changed != 'true'
         run: |
