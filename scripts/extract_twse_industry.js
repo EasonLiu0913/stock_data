@@ -9,9 +9,9 @@ const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
 const MIN_TABLE_ROWS_FLOOR = 1000;
 const TAIL_CATEGORY = '受益證券-不動產投資信託';
-const TAIL_DIAGNOSTIC_POLL_MS = 1000;
-const TAIL_DIAGNOSTIC_WINDOW_MS = 180000;
-const TEST_TAIL_RECORDS_THRESHOLD = 6;
+const LOAD_PROGRESS_POLL_MS = 1000;
+const LOAD_STALL_TIMEOUT_MS = 60000;
+const LOAD_HARD_TIMEOUT_MS = 600000;
 const MAX_DROP_RATIO = 0.10;
 const REQUIRED_STOCK_CODES = ['1101', '2317', '2330', '2882'];
 
@@ -81,36 +81,56 @@ async function waitForTableReadiness(page, minimumRows) {
     );
 
     console.log(
-        `Starting TWSE tail-category experiment: category="${TAIL_CATEGORY}", ` +
-        `testThreshold=${TEST_TAIL_RECORDS_THRESHOLD}, window=${TAIL_DIAGNOSTIC_WINDOW_MS}ms, ` +
-        `poll=${TAIL_DIAGNOSTIC_POLL_MS}ms`
+        `Starting progress-aware TWSE load watch: poll=${LOAD_PROGRESS_POLL_MS}ms, ` +
+        `stallTimeout=${LOAD_STALL_TIMEOUT_MS}ms, hardTimeout=${LOAD_HARD_TIMEOUT_MS}ms`
     );
 
-    const deadline = Date.now() + TAIL_DIAGNOSTIC_WINDOW_MS;
-    while (Date.now() < deadline) {
+    const startedAt = Date.now();
+    let lastProgressAt = startedAt;
+    let previousRows = state.rows;
+    let previousBodyLength = state.bodyLength;
+
+    while (true) {
         console.log(
-            `TWSE tail diagnostic: rows=${state.rows}, readyState=${state.readyState}, ` +
+            `TWSE load diagnostic: rows=${state.rows}, readyState=${state.readyState}, ` +
             `tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}, ` +
-            `bodyLength=${state.bodyLength}`
+            `bodyLength=${state.bodyLength}, idleMs=${Date.now() - lastProgressAt}`
         );
 
-        if (state.tailCategorySeen && state.tailRecords >= TEST_TAIL_RECORDS_THRESHOLD) {
+        if (state.readyState !== 'loading') {
             console.log(
-                `✅ TWSE experimental tail threshold observed: tailRecords=${state.tailRecords}, ` +
-                `rows=${state.rows}, readyState=${state.readyState}`
+                `✅ TWSE document left loading state: readyState=${state.readyState}, rows=${state.rows}, ` +
+                `tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}`
             );
             return state;
         }
 
-        await wait(TAIL_DIAGNOSTIC_POLL_MS);
-        state = await inspectTailState(page);
-    }
+        const now = Date.now();
+        if (now - startedAt >= LOAD_HARD_TIMEOUT_MS) {
+            throw new Error(
+                `TWSE load hard timeout after ${LOAD_HARD_TIMEOUT_MS}ms: ` +
+                `rows=${state.rows}, bodyLength=${state.bodyLength}, readyState=${state.readyState}, ` +
+                `tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}`
+            );
+        }
 
-    throw new Error(
-        `TWSE experimental tail threshold was not observed within ${TAIL_DIAGNOSTIC_WINDOW_MS}ms: ` +
-        `category=${TAIL_CATEGORY}, tailRecords=${state.tailRecords}, rows=${state.rows}, ` +
-        `readyState=${state.readyState}`
-    );
+        if (now - lastProgressAt >= LOAD_STALL_TIMEOUT_MS) {
+            throw new Error(
+                `TWSE load stalled for ${LOAD_STALL_TIMEOUT_MS}ms: ` +
+                `rows=${state.rows}, bodyLength=${state.bodyLength}, readyState=${state.readyState}, ` +
+                `tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}`
+            );
+        }
+
+        await wait(LOAD_PROGRESS_POLL_MS);
+        state = await inspectTailState(page);
+
+        if (state.rows > previousRows || state.bodyLength > previousBodyLength) {
+            lastProgressAt = Date.now();
+        }
+        previousRows = Math.max(previousRows, state.rows);
+        previousBodyLength = Math.max(previousBodyLength, state.bodyLength);
+    }
 }
 
 async function gotoWithRetry(page, url, minimumRows) {
