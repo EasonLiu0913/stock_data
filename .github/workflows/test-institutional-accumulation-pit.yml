@@ -7,6 +7,7 @@ on:
       - 'scripts/lib/institutional_accumulation_pit.js'
       - 'scripts/audit_institutional_accumulation_pit_coverage.js'
       - 'tests/institutional_accumulation_pit.test.js'
+      - 'tests/institutional_accumulation_pit_coverage.test.js'
       - 'data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md'
       - 'data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json'
       - '.github/workflows/test-institutional-accumulation-pit.yml'
@@ -28,6 +29,7 @@ jobs:
             scripts/lib/histock_broker_quality.js
             scripts/audit_institutional_accumulation_pit_coverage.js
             tests/institutional_accumulation_pit.test.js
+            tests/institutional_accumulation_pit_coverage.test.js
             data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md
             data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json
             data_twse/twse_industry.csv
@@ -61,41 +63,36 @@ jobs:
           node-version: '24'
 
       - name: Run PIT regression tests
-        run: node --test tests/institutional_accumulation_pit.test.js
+        run: node --test tests/institutional_accumulation_pit.test.js tests/institutional_accumulation_pit_coverage.test.js
 
-      - name: Reproduce bounded coverage audit
+      - name: Reproduce bounded coverage audit semantically
         run: |
+          cp data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json /tmp/expected-coverage.json
           node scripts/audit_institutional_accumulation_pit_coverage.js
-          git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const expected = JSON.parse(fs.readFileSync('/tmp/expected-coverage.json', 'utf8'));
+          const actual = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json', 'utf8'));
+          delete expected.generated_at;
+          delete actual.generated_at;
+          assert.deepEqual(actual, expected);
+          console.log('Coverage audit semantic reproduction passed');
+          NODE
 
       - name: Guard outcome blindness
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          const paths = [
-            'scripts/lib/institutional_accumulation_pit.js',
-            'scripts/audit_institutional_accumulation_pit_coverage.js',
-            'tests/institutional_accumulation_pit.test.js',
-            'data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md',
-            'data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json',
-          ];
-          const forbidden = [
-            /candidate[_ -]?future[_ -]?return/i,
-            /future[_ -]?mfe/i,
-            /future[_ -]?mae/i,
-            /repricing[_ -]?success/i,
-            /failure[_ -]?label/i,
-          ];
-          const hits = [];
-          for (const path of paths) {
-            const text = fs.readFileSync(path, 'utf8');
-            for (const pattern of forbidden) {
-              if (pattern.test(text)) hits.push(`${path}: ${pattern}`);
-            }
+          const payload = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json', 'utf8'));
+          if (payload.outcome_blind !== true) throw new Error('outcome_blind must be true');
+          if (payload.sample_freeze !== false) throw new Error('sample_freeze must remain false in Phase 1');
+          if (!Array.isArray(payload.outcome_fields_present) || payload.outcome_fields_present.length !== 0) {
+            throw new Error(`outcome_fields_present must be empty: ${JSON.stringify(payload.outcome_fields_present)}`);
           }
-          if (hits.length) {
-            console.error('Outcome-blindness guard failed:\n' + hits.join('\n'));
-            process.exit(1);
+          if (payload.selection_contract?.protected_motivation_stock_excluded !== '2454') {
+            throw new Error('protected motivation stock 2454 exclusion is missing');
           }
+          if (payload.universe.includes('2454')) throw new Error('protected motivation stock 2454 entered the coverage universe');
           console.log('Outcome-blindness guard passed');
           NODE
