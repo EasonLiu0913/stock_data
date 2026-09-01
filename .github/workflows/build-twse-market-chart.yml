@@ -16,6 +16,11 @@ on:
         description: 'History Start Date (YYYYMMDD)'
         required: false
         default: ''
+      full_rebuild:
+        description: 'Explicitly rebuild the complete history instead of refreshing only the previous/current month'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -87,13 +92,22 @@ jobs:
           echo "Start date: $START_DATE"
 
       - name: Build chart data
+        shell: bash
+        env:
+          FULL_REBUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.full_rebuild || false }}
         run: |
-          node scripts/build_twse_market_chart.js \
-            --date "${{ steps.date.outputs.target_date }}" \
-            --start-date "${{ steps.date.outputs.start_date }}" \
-            --min-delay 500 \
-            --max-delay 1100 \
+          set -euo pipefail
+          ARGS=(
+            --date "${{ steps.date.outputs.target_date }}"
+            --start-date "${{ steps.date.outputs.start_date }}"
+            --min-delay 500
+            --max-delay 1100
             --max-retries 3
+          )
+          if [ "$FULL_REBUILD" = "true" ]; then
+            ARGS+=(--full-rebuild)
+          fi
+          node scripts/build_twse_market_chart.js "${ARGS[@]}"
 
       - name: Commit and push changes
         run: |
