@@ -23,6 +23,13 @@ const SERIES = {
   },
 };
 
+const PUBLICATION_POLICY = {
+  cadence: 'weekly_wednesday_us_eastern',
+  normal_lag_calendar_days: 8,
+  stale_after_calendar_days: 8,
+  description: 'EIA publishes these daily spot observations in weekly batches. A multi-day lag is expected until the next Wednesday U.S. release window.',
+};
+
 function parseArgs(argv = process.argv.slice(2)) {
   const args = new Map();
   for (let i = 0; i < argv.length; i += 1) {
@@ -62,6 +69,38 @@ function todayCompact() {
 
 function round(value, digits = 4) {
   return Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
+}
+
+function calendarDayDiff(olderDate, newerDate) {
+  const older = new Date(`${compactToIso(compactDate(olderDate))}T00:00:00Z`);
+  const newer = new Date(`${compactToIso(compactDate(newerDate))}T00:00:00Z`);
+  return Math.round((newer - older) / 86400000);
+}
+
+function buildSourceFreshness(requestedDate, benchmarks) {
+  const rows = (Array.isArray(benchmarks) ? benchmarks : []).map(item => {
+    const lagDays = calendarDayDiff(item.latest_date, requestedDate);
+    return {
+      id: item.id,
+      latest_date: item.latest_date,
+      lag_calendar_days: lagDays,
+      status: lagDays > PUBLICATION_POLICY.stale_after_calendar_days
+        ? 'stale_warning'
+        : lagDays === 0
+          ? 'current_observation'
+          : 'expected_weekly_publication_lag',
+    };
+  });
+  return {
+    policy: PUBLICATION_POLICY,
+    requested_date: requestedDate,
+    overall_status: rows.some(item => item.status === 'stale_warning')
+      ? 'stale_warning'
+      : rows.some(item => item.status === 'expected_weekly_publication_lag')
+        ? 'expected_weekly_publication_lag'
+        : 'current_observation',
+    benchmarks: rows,
+  };
 }
 
 async function fetchSeries(seriesId, startIso, endIso, apiKey) {
@@ -156,24 +195,27 @@ async function main() {
   ]);
 
   const benchmarks = [buildBenchmark('wti_spot', wtiRows), buildBenchmark('brent_spot', brentRows)];
+  const sourceFreshness = buildSourceFreshness(requestedDate, benchmarks);
   const snapshotDate = benchmarks.map(item => item.latest_date).sort().at(-1);
   const outputDir = path.join(OUTPUT_ROOT, snapshotDate);
   const outputFile = path.join(outputDir, 'crude_spot.json');
 
   if (!force && fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0) {
-    console.log(JSON.stringify({ reused: true, requested_date: requestedDate, snapshot_date: snapshotDate, output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'), benchmarks: benchmarks.map(({ id, latest_date }) => ({ id, latest_date })) }));
+    console.log(JSON.stringify({ reused: true, requested_date: requestedDate, snapshot_date: snapshotDate, source_freshness: sourceFreshness, output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'), benchmarks: benchmarks.map(({ id, latest_date }) => ({ id, latest_date })) }));
     return;
   }
 
   const generatedAt = new Date().toISOString();
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generated_at: generatedAt,
     requested_date: requestedDate,
     snapshot_date: snapshotDate,
     role: 'canonical_crude_spot_market_data',
     provider: 'U.S. Energy Information Administration Open Data API',
     source_url: 'https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm',
+    publication_policy: PUBLICATION_POLICY,
+    source_freshness: sourceFreshness,
     series: SERIES,
     benchmarks,
   };
@@ -181,11 +223,11 @@ async function main() {
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(outputFile, `${JSON.stringify(payload, null, 2)}\n`);
   refreshIndexes(generatedAt);
-  console.log(JSON.stringify({ reused: false, requested_date: requestedDate, snapshot_date: snapshotDate, output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'), benchmarks: benchmarks.map(({ id, latest_date }) => ({ id, latest_date })) }));
+  console.log(JSON.stringify({ reused: false, requested_date: requestedDate, snapshot_date: snapshotDate, source_freshness: sourceFreshness, output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'), benchmarks: benchmarks.map(({ id, latest_date }) => ({ id, latest_date })) }));
 }
 
 if (require.main === module) {
   main().catch(error => { console.error(`Failed to crawl EIA crude spot: ${error.message}`); process.exitCode = 1; });
 }
 
-module.exports = { SERIES, compactDate, changeFrom, buildBenchmark };
+module.exports = { SERIES, PUBLICATION_POLICY, compactDate, calendarDayDiff, buildSourceFreshness, changeFrom, buildBenchmark };
