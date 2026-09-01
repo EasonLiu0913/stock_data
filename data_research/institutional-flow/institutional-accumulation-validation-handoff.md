@@ -4,11 +4,11 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Development-only outcome maturity refresh: Prompt A COMPLETE / mandatory Prompt B closeout pending.**
+**Development-only outcome maturity refresh: COMPLETE / Prompt B PASS.**
 
 Promoted next round:
 
-`institutional-accumulation-development-outcome-maturity-refresh-v1`
+`institutional-accumulation-development-association-refresh-v1`
 
 Status:
 
@@ -17,7 +17,8 @@ Status:
 - `institutional-accumulation-development-sample-freeze-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-outcome-opening-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-development-association-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-development-outcome-maturity-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
+- `institutional-accumulation-development-association-refresh-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
 Promotion does not execute the promoted Prompt A automatically.
 
@@ -31,13 +32,16 @@ Canonical preregistration:
 
 `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`
 
-Protected MediaTek `2454` remains `motivation_cases_only` and outside development/validation tuning evidence. Stock holdout and time holdout outcomes remain sealed. Withdrawal v6.0-v6.5 methodology, classifier/lifecycle rules, validation state, outcomes, and holdouts remain frozen and are not Accumulation inputs.
+Frozen invariants:
 
-No arbitrary final weighted score is frozen. No binary repricing/success threshold has been introduced.
-
-Required lifecycle remains:
-
-`outcome-blind selection -> durable sample freeze -> development-only outcome opening -> mandatory closeout -> development-only association analysis -> mandatory closeout -> separately authorized future work`
+- Phase 2 semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- methodology-development identities: exactly `41`;
+- protected MediaTek `2454` remains `motivation_cases_only` and excluded from development/validation outcome tuning;
+- stock holdout and time holdout outcomes remain sealed;
+- Withdrawal v6.0-v6.5 methodology, classifier/lifecycle rules, validation state, outcomes, and holdouts remain frozen and are not Accumulation inputs;
+- no binary repricing/success threshold, optimized cutoff, composite score, or production weighting is authorized;
+- no same-industry-relative outcome while PIT-safe effective-dated historical membership remains unproven;
+- no catalyst/news layer unless separately preregistered.
 
 ## Durable prior-phase checkpoints
 
@@ -47,8 +51,8 @@ Prompt B: **PASS**.
 
 Key commits:
 
-- `8a34187f87998fcc20c32024eeab47ac927f0957` — preregistration/source-semantics audit;
-- `34868751908edd18aea19dac35885c2c373be902` — Phase 0 checkpoint.
+- `8a34187f87998fcc20c32024eeab47ac927f0957`;
+- `34868751908edd18aea19dac35885c2c373be902`.
 
 ### Phase 1 — PIT contract
 
@@ -65,7 +69,7 @@ Core entry points:
 - `tests/institutional_accumulation_pit_coverage.test.js`
 - `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
 
-Closeout evidence included workflow run `33505951816`, job `99849911255`, tested head `801d15b006217842597b187baa0d548872382700`, with 9 tests passed and 0 failed.
+Closeout evidence: run `33505951816`, job `99849911255`, tested head `801d15b006217842597b187baa0d548872382700`, 9 tests passed / 0 failed.
 
 ### Phase 2 — durable development sample freeze
 
@@ -81,158 +85,118 @@ Frozen T0 anchors:
 
 `20260814, 20260817, 20260818, 20260819, 20260820, 20260821, 20260824, 20260825, 20260826, 20260827`
 
-Frozen eligible counts:
+Frozen counts:
 
 - methodology_development: `41`
 - stock_holdout: `11`
 - time_holdout: `10`
 - ineligible prospective anchors: `88`
 
-Phase 2 manifest:
+Immutable freeze:
 
 `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
 
-Manifest semantic SHA-256:
+Semantic SHA-256:
 
 `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`
-
-The frozen manifest must not be regenerated, reselected, repartitioned, or modified in later development rounds.
 
 ### Phase 3 — development-only continuous outcome opening
 
 Round: `institutional-accumulation-outcome-opening-v1`
 
-Prompt A: **COMPLETE**. Prompt B: **PASS**.
+Prompt A **COMPLETE** / Prompt B **PASS**.
 
-Durable implementation entry points:
+Durable Phase 3 outcome byte SHA-256:
 
-- `scripts/open_institutional_accumulation_development_outcomes.js`
-- `tests/institutional_accumulation_development_outcomes.test.js`
-- `.github/workflows/open-institutional-accumulation-development-outcomes.yml`
-- `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`
+`a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`
 
-Durable outcome commit:
+Phase 3 coverage through `20260831` (`11` sessions): D+5 `31`, D+10 `6`, D+20 `0`, D+40 `0`.
 
-`429abae00b0a7cd6587c0a7e9a70b1c55315176a`
+### Phase 4 — development-only continuous association analysis
 
-Closeout repair evidence:
+Round: `institutional-accumulation-development-association-v1`
 
-- repair commit `4c3821759f4ac426cf72d9843f0851d0d02c7383`;
-- repaired run `33516827150`;
-- repaired job `99885841794`;
-- deterministic guards: `5 passed, 0 failed`;
-- durable Phase 3 outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`.
+Prompt A **COMPLETE** / Prompt B **PASS**.
 
-Frozen Phase 3 session coverage:
+Durable association artifact:
 
-- first: `20260814`
-- last: `20260831`
-- count: `11`
+`data_research/institutional-flow/institutional-accumulation-development-association-v1.json`
 
-Outcome coverage at Phase 3 closeout:
+Durable association byte SHA-256:
 
-| Horizon | Continuous outcome available | Not yet observed |
-| --- | ---: | ---: |
-| D+5 | 31 | 10 |
-| D+10 | 6 | 35 |
-| D+20 | 0 | 41 |
-| D+40 | 0 | 41 |
+`781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`
 
-Not-yet-observed horizons remain explicit `null`; they are never zero-filled.
+Evidence: run `33524892264`, job `99913112251`, durable checkpoint `9c1037023a9e0feffb152fe1ddcd1c254a158d83`, tests 5 passed / 0 failed.
 
-Outcome contract:
+At the Phase 3 outcome bytes only D+5 met the fixed `MIN_N = 20` gate. The reported D+5 associations were generally weak and remain descriptive development-only evidence.
 
-- D+5 / D+10 / D+20 / D+40 count exchange trading sessions;
-- stock prices use `scripts/lib/stock_price_provider.js:getDailyPrice`;
-- TAIEX-relative returns use the same session date and TWSE MI_INDEX `發行量加權股價指數`;
-- absolute forward return and TAIEX-relative forward return remain continuous;
-- MFE/MAE remain continuous and use the same T0/session convention;
-- same-industry-relative outcomes remain omitted because PIT-safe effective-dated historical industry membership is unproven;
-- `binary_success_threshold` remains `null`;
-- no production classifier, final weighted score, or strategy was promoted.
-
-## Phase 4 — development-only continuous association analysis
+## Development-only outcome maturity refresh
 
 Round:
 
-`institutional-accumulation-development-association-v1`
+`institutional-accumulation-development-outcome-maturity-refresh-v1`
 
-### Prompt A implementation
+### Prompt A implementation checkpoint
 
-Prompt A: **COMPLETE**.
+**Prompt A: COMPLETE.**
 
-Durable implementation artifacts:
+Fresh-runner evidence:
 
-- `scripts/analyze_institutional_accumulation_development_associations.js`;
-- `tests/institutional_accumulation_development_associations.test.js`;
-- `.github/workflows/analyze-institutional-accumulation-development-associations.yml`;
-- `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`.
+- workflow run: `33533052151`;
+- workflow job: `99940649047`;
+- workflow head / pre-refresh implementation commit: `214d10ff77f3c2e6021313e957fb9a5dc084d50b`;
+- durable refreshed outcome commit: `8acb153d5f588a1aca046eb500ff9e04ae1be0e9`;
+- old outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`;
+- refreshed outcome byte SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
+- old session coverage: `20260814` through `20260831` (`11` sessions);
+- refreshed session coverage: `20260814` through `20260901` (`12` sessions);
+- D+5 available: `31 -> 38`; not observed: `10 -> 3`;
+- D+10 available: `6 -> 14`; not observed: `35 -> 27`;
+- D+20 available: `0 -> 0`; not observed: `41 -> 41`;
+- D+40 available: `0 -> 0`; not observed: `41 -> 41`;
+- methodology-development identities: `41` unchanged;
+- stock holdout materialized: `0`;
+- time holdout materialized: `0`;
+- protected 2454 materialized: `0`;
+- deterministic tests: `5 passed, 0 failed`;
+- deterministic second-generation bytes matched first generation;
+- durable remote bytes matched generated SHA-256;
+- Phase 4 association artifact was not rewritten or recomputed.
 
-Fresh-runner Prompt A evidence:
-
-- workflow run: `33524892264`;
-- workflow job: `99913112251`;
-- workflow head: `f2b9ed955fd1cb07a2a22c13a07921ccb4cee137`;
-- durable artifact/checkpoint commit: `9c1037023a9e0feffb152fe1ddcd1c254a158d83`;
-- parent Phase 2 freeze semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
-- parent Phase 3 outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`;
-- generated/durable association artifact byte SHA-256: `781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`;
-- frozen methodology-development identities analyzed: `41`;
-- preregistered pair attempts: `64`;
-- analyzable pairs (`n >= 20`): `16`;
-- insufficient-n pairs: `48`;
-- deterministic tests: `5 passed, 0 failed`.
-
-Only D+5 met the preregistered `n >= 20` gate at frozen Phase 3 coverage. D+10/D+20/D+40 remained `insufficient_n` and uninterpreted.
-
-### Phase 4 Prompt B closeout
+### Prompt B closeout
 
 **Prompt B closeout: PASS**
 
-The exact Phase 4 Prompt B was recovered from durable pre-Prompt-A commit `70c047b8b7b286a5efad1f9773dd43a7b1cd0419`, whose handoff already contained the Phase 4 Prompt A + Prompt B pair before implementation commit `e20deef6e8ae1e6caa92b29040205daeec2f2fda`.
+The exact maturity-refresh Prompt B was recovered from durable pre-Prompt-A handoff state at commit `214d10ff77f3c2e6021313e957fb9a5dc084d50b`; it was therefore preregistered before durable refresh commit `8acb153d5f588a1aca046eb500ff9e04ae1be0e9`.
 
-Independent closeout verification re-established current remote state and checked every preregistered criterion:
+Independent closeout verification against current remote state re-established all preregistered criteria:
 
-1. Phase 2 freeze identity/hash and Phase 3 outcome byte identity used by the analysis remain the preregistered values and were not redefined or refreshed in Phase 4 — **PASS**.
-2. Analyzer filters only eligible frozen `methodology_development` rows, requires exactly `41`, and requires identity equality with the 41 Phase 3 outcome rows — **PASS**.
-3. Stock holdout, time holdout, and protected MediaTek `2454` outcomes remain sealed; the analyzer explicitly rejects `2454` in the development partition/outcome scope — **PASS**.
-4. Only the four preregistered feature fields are present in `FEATURES` — **PASS**.
-5. Only `absolute_forward_return`, `taiex_relative_forward_return`, `mfe`, and `mae` for D+5/D+10/D+20/D+40 are analyzed; parent outcome bytes are pinned and `extended_or_refreshed_in_this_round` is false — **PASS**.
-6. Spearman is implemented as Pearson correlation of deterministic average ranks; tie behavior and monotonic examples are covered by regression tests — **PASS**.
-7. `MIN_N` is fixed at `20`; statistics are emitted only for `n >= 20`; smaller samples are `insufficient_n`, `spearman_rho: null`, `interpretation_allowed: false` — **PASS**.
-8. Feature/outcome missingness is handled pairwise; non-finite observations are skipped rather than zero-filled, and `pair_missing = 41 - n` is regression-checked — **PASS**.
-9. `binary_success_threshold`, `optimized_cutoff`, `composite_score`, and `weights` remain `null`; no production model is introduced — **PASS**.
-10. The durable artifact carries parent identities/hashes, feature/outcome/horizon identities, n/missingness, research-only/development-only flags, and reproduces deterministic bytes — **PASS**.
-11. `catalyst_news_layer_added` remains false, no production strategy/model was promoted, and the bounded changed-file audit contains no Withdrawal methodology/validation files — **PASS**.
-12. From pre-Phase-4 baseline `70c047b8b7b286a5efad1f9773dd43a7b1cd0419` to durable Phase-4 checkpoint `9c1037023a9e0feffb152fe1ddcd1c254a158d83`, the research change set is exactly the analyzer script, regression test, workflow, association artifact, and this canonical handoff — **PASS**.
+1. Phase 2 freeze identity/hash, universe, anchors, partition definitions, and all 41 methodology-development identities remain unchanged — **PASS**.
+2. Refreshed outcome contains exactly the same 41 methodology-development identities — **PASS**.
+3. Stock holdout, time holdout, and protected MediaTek `2454` remain sealed; materialized counts remain `0/0/0` — **PASS**.
+4. Outcome contract remains continuous absolute return, TAIEX-relative return, MFE, and MAE at D+5/D+10/D+20/D+40 — **PASS**.
+5. Session coverage advanced only from `20260831` to genuinely available `20260901`; unavailable horizons remain explicit null rather than zero — **PASS**.
+6. Stock prices still use `scripts/lib/stock_price_provider.js:getDailyPrice`; TAIEX-relative returns still use same-session TWSE MI_INDEX `發行量加權股價指數` — **PASS**.
+7. Same-industry-relative outcome remains omitted because PIT-safe effective-dated historical industry membership is unproven — **PASS**.
+8. `binary_success_threshold` remains null and no binary label, optimized cutoff, composite score, weighting, catalyst/news layer, production model, or strategy was introduced — **PASS**.
+9. Old/new outcome hashes, session coverage, and per-horizon maturity counts are recorded and internally consistent — **PASS**.
+10. Fresh-runner tests/reproduction passed and generated refreshed bytes equal durable remote bytes `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e` — **PASS**.
+11. Phase 4 association artifact was not rewritten/recomputed in the refresh; it remains historical evidence tied to old outcome bytes — **PASS**.
+12. Compare `214d10ff77f3c2e6021313e957fb9a5dc084d50b...8acb153d5f588a1aca046eb500ff9e04ae1be0e9` is exactly one commit and exactly two modified files: the development outcome artifact and this canonical handoff. No Withdrawal methodology/validation file changed — **PASS**.
 
-Fresh-runner evidence independently confirms:
+Freshness/concurrent-change audit:
 
-- workflow run `33524892264`, job `99913112251`, conclusion `success`;
-- all workflow steps including regression guards, scope/minimum-n verification, durable commit/push, and remote-byte verification succeeded;
-- tests: `5 passed, 0 failed`;
-- generated association SHA-256 = durable remote association SHA-256 = `781269adbe62b51a6b6fec9ac9325e602a2014f34282433dbfa04cbbd395e8d2`.
-
-Concurrent-change audit after `9c1037023a9e0feffb152fe1ddcd1c254a158d83` found only the unrelated CNN Fear & Greed data update `e22f32976aa724724ecf8fa6e49f5386865f2db0`; no Phase 4 implementation, routing, handoff, frozen input, or protected research state was changed.
+- current remote main advanced beyond the refresh checkpoint due unrelated operational/data workflow commits;
+- the observed current head during closeout was `2068657d1347fb622f29a02e8d0342a4ae9841cd`, a Fubon broker daily-data completion commit;
+- task routing remains `institutional-accumulation` as the sole active project;
+- no concurrent change identified here alters the frozen Phase 2 identity, refreshed outcome artifact, Phase 4 association artifact, routing state, or protected research assumptions.
 
 No holdout opening is authorized by this PASS.
 
-## Phase 4 development-only findings
-
-These are descriptive development-only associations, not a production model and not a strategy promotion.
-
-At D+5 (`n=31` for each analyzable pair):
-
-- `core_accumulation_percentile`: rho `0.1568` absolute return, `0.0482` TAIEX-relative return, `0.1698` MFE, `-0.1602` MAE;
-- `supply_absorption_percentile`: rho `0.1175` absolute return, `0.0235` TAIEX-relative return, `0.0624` MFE, `-0.2339` MAE;
-- `price_return_percentile`: rho `0.1310` absolute return, `0.0991` TAIEX-relative return, `0.1929` MFE, `-0.1671` MAE;
-- `price_non_confirmation_rank_gap`: rho `0.0266` absolute return, `-0.0519` TAIEX-relative return, `-0.0053` MFE, `0.0350` MAE.
-
-The current D+5 associations are generally weak in magnitude. No threshold, weight, ranking formula, or production decision may be inferred from them. D+10/D+20/D+40 were not interpreted because they failed the preregistered minimum-n gate.
-
 ## Known limitations carried forward
 
-- The frozen Phase 3 artifact is only mature enough for D+5 (`31`) and a small D+10 subset (`6`); D+20/D+40 are not yet mature there.
+- Refreshed maturity is D+5 `38/41`, D+10 `14/41`, D+20 `0/41`, D+40 `0/41`.
+- D+10 still fails the fixed preregistered `MIN_N = 20` gate.
 - Normalized HiStock broker history remains insufficient for mandatory use.
 - Historical TDCC publication timing remains unsafe/unverified.
 - Effective-dated historical industry membership remains unverified.
@@ -245,114 +209,84 @@ The current D+5 associations are generally weak in magnitude. No threshold, weig
 
 Promoted round:
 
-`institutional-accumulation-development-outcome-maturity-refresh-v1`
+`institutional-accumulation-development-association-refresh-v1`
 
-Purpose: separately authorize a bounded refresh of **development-only** continuous outcomes for the already-frozen 41 methodology-development identities as additional exchange sessions mature, without changing the Phase 2 sample, opening any holdout, tuning any threshold, or mixing the refresh with association re-analysis in the same round.
+Purpose: re-run the already-frozen development-only continuous association analysis against refreshed outcome byte identity `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`, without modifying the Phase 2 sample, opening holdouts, changing feature definitions, changing the fixed `MIN_N = 20` gate, or introducing thresholds/weights/production logic.
 
-This next round is preregistered only after Phase 4 Prompt B PASS. It does not alter the immutable Phase 2 freeze and does not authorize holdout opening.
+This round may update descriptive development-only associations because D+5 maturity increased from 31 to 38. D+10 remains below minimum-n at 14 and must remain uninterpreted unless current refreshed bytes independently show otherwise under the unchanged gate.
 
 ### Exact entry points
 
-- writer: `scripts/open_institutional_accumulation_development_outcomes.js`
-- writer regression: `tests/institutional_accumulation_development_outcomes.test.js`
-- writer workflow: `.github/workflows/open-institutional-accumulation-development-outcomes.yml`
+- analyzer: `scripts/analyze_institutional_accumulation_development_associations.js`
+- analyzer regression: `tests/institutional_accumulation_development_associations.test.js`
+- analyzer workflow: `.github/workflows/analyze-institutional-accumulation-development-associations.yml`
 - immutable freeze: `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`
-- current frozen outcome input: `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`
-- Phase 4 association evidence: `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`
+- refreshed outcome input: `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`
+- association artifact to refresh: `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`
+- preregistration: `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`
 - PIT contract: `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
 - canonical handoff: `data_research/institutional-flow/institutional-accumulation-validation-handoff.md`
 
-## Prompt A — Development-only outcome maturity refresh
+## Prompt A — Development-only association refresh
 
 ```text
-Continue the Institutional Accumulation / Catalyst Pre-positioning research project only if Phase 4 round `institutional-accumulation-development-association-v1` has mandatory Prompt B PASS and has explicitly promoted `institutional-accumulation-development-outcome-maturity-refresh-v1`.
+Continue the Institutional Accumulation / Catalyst Pre-positioning research project only if round `institutional-accumulation-development-outcome-maturity-refresh-v1` has durable Prompt B PASS and has explicitly promoted `institutional-accumulation-development-association-refresh-v1`.
 
-Before work, fetch current remote main; read AGENTS.md, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, this canonical handoff, `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`, `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`, immutable freeze `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`, current outcome artifact `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`, writer `scripts/open_institutional_accumulation_development_outcomes.js`, regression `tests/institutional_accumulation_development_outcomes.test.js`, workflow `.github/workflows/open-institutional-accumulation-development-outcomes.yml`, and Phase 4 association artifact `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`.
+Before work, fetch current remote main; read AGENTS.md, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, this canonical handoff, `data_research/institutional-flow/institutional-accumulation-preregistration-v1.md`, `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`, immutable freeze `data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json`, refreshed outcomes `data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json`, analyzer `scripts/analyze_institutional_accumulation_development_associations.js`, regression `tests/institutional_accumulation_development_associations.test.js`, workflow `.github/workflows/analyze-institutional-accumulation-development-associations.yml`, and current association artifact `data_research/institutional-flow/institutional-accumulation-development-association-v1.json`.
 
-Recover this exact Prompt A + Prompt B pair from durable history and verify it was preregistered after Phase 4 closeout and before this refresh begins.
+Recover this exact Prompt A + Prompt B pair from durable history and verify it was preregistered after maturity-refresh Prompt B PASS and before this association refresh begins.
 
-Implement only a bounded development-outcome maturity refresh:
-- keep the Phase 2 freeze semantic SHA-256 exactly `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
-- keep exactly the same 41 eligible `methodology_development` identities;
-- do not regenerate, reselect, repartition, or mutate the Phase 2 freeze;
-- extend outcome session coverage only with exchange sessions that are actually available on current remote data;
-- recompute continuous D+5/D+10/D+20/D+40 absolute return, TAIEX-relative return, MFE, and MAE under the existing Phase 3 contract;
-- preserve explicit null for not-yet-mature or unavailable observations and never zero-fill missing values;
-- do not add same-industry outcomes while effective-dated PIT-safe industry membership remains unproven;
-- do not open, inspect, summarize, derive, or encode stock-holdout, time-holdout, or protected MediaTek `2454` outcomes;
-- do not add binary labels, success thresholds, optimized cutoffs, composite scores, weights, catalyst/news evidence, or production logic;
+Implement only a bounded development-only association refresh:
+- pin refreshed parent outcome byte SHA-256 exactly `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
+- keep Phase 2 freeze semantic SHA-256 exactly `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- analyze exactly the same 41 `methodology_development` identities and no others;
+- preserve the same four frozen features: `core_accumulation_percentile`, `supply_absorption_percentile`, `price_return_percentile`, `price_non_confirmation_rank_gap`;
+- preserve the same continuous outcomes only: `absolute_forward_return`, `taiex_relative_forward_return`, `mfe`, `mae` at D+5/D+10/D+20/D+40;
+- preserve Spearman implementation/tie handling and fixed `MIN_N = 20` exactly; do not change methodology to make more pairs analyzable;
+- pairwise missingness remains non-zero-filled; `n < 20` remains `insufficient_n`, rho null, interpretation forbidden;
+- do not open or inspect stock-holdout, time-holdout, or protected `2454` outcomes;
+- do not add binary labels, thresholds, optimized cutoffs, composite scores, weights, catalyst/news evidence, production logic, or same-industry outcomes;
 - do not modify Withdrawal v6.0-v6.5 methodology/validation state.
 
-The existing Phase 4 association artifact is historical evidence from the prior frozen outcome bytes. Do not rewrite or recompute it in this round. This round must stop at the refreshed development-only outcome artifact plus deterministic reproduction/remote-durability verification.
-
-Record old and new outcome byte SHA-256, old and new session coverage, and per-horizon available/not-yet-observed counts in the canonical handoff. Add or update deterministic regression guards only when needed to preserve the existing outcome contract; do not change methodology to improve sample size.
+Regenerate only the descriptive development association artifact against the refreshed outcome bytes. Record old association byte SHA-256, new association byte SHA-256, parent refreshed outcome byte SHA-256, per-horizon n/missingness, analyzable/insufficient pair counts, deterministic test evidence, workflow/run/job identity, durable artifact commit, and remote-byte verification in the canonical handoff.
 
 Prompt A completion contract:
-1. the immutable Phase 2 freeze identity/hash is verified unchanged;
-2. exactly 41 methodology-development identities are refreshed;
-3. no holdout/2454 outcome is opened;
-4. the refreshed outcome artifact is durably present on remote main;
-5. regenerated bytes match durable remote bytes;
-6. tests/guards pass;
-7. the handoff records Prompt A completion evidence while preserving this preregistered Prompt B.
+1. refreshed outcome parent byte identity is verified exactly;
+2. immutable freeze and 41 development identities remain unchanged;
+3. frozen feature/outcome definitions, Spearman semantics, and MIN_N remain unchanged;
+4. no holdout/2454 outcome is opened;
+5. refreshed association artifact is durably present on remote main;
+6. regenerated bytes match durable remote bytes;
+7. tests/guards pass;
+8. handoff records Prompt A completion evidence while preserving this preregistered Prompt B.
 
 When complete, report:
 `Prompt A complete — ready for Prompt B`
-and stop. Do not rerun Phase 4 associations automatically.
+and stop. Do not open holdouts or promote a production strategy.
 ```
 
-## Prompt A implementation checkpoint — development outcome maturity refresh
-
-Round: `institutional-accumulation-development-outcome-maturity-refresh-v1`
-
-**Prompt A: COMPLETE — ready for mandatory Prompt B.**
-
-Fresh-runner evidence:
-
-- workflow run: `33533052151`;
-- workflow head: `214d10ff77f3c2e6021313e957fb9a5dc084d50b`;
-- immutable Phase 2 freeze semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
-- methodology-development identities: `41` (unchanged);
-- stock-holdout materialized: `0`;
-- time-holdout materialized: `0`;
-- protected 2454 materialized: `0`;
-- old outcome byte SHA-256: `a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58`;
-- refreshed outcome byte SHA-256: `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
-- old session coverage: `20260814` through `20260831` (`11` sessions);
-- refreshed session coverage: `20260814` through `20260901` (`12` sessions);
-- D+5: available `31` -> `38`; not yet observed `10` -> `3`.
-- D+10: available `6` -> `14`; not yet observed `35` -> `27`.
-- D+20: available `0` -> `0`; not yet observed `41` -> `41`.
-- D+40: available `0` -> `0`; not yet observed `41` -> `41`.
-- deterministic outcome regression/identity/monotonic-maturity guards: PASS;
-- regenerated bytes matched first generated bytes before commit;
-- Phase 4 association artifact was not rewritten or recomputed and is now historical/stale relative to the refreshed outcome bytes;
-- no binary threshold, optimized cutoff, composite score, weights, catalyst/news layer, production logic, holdout opening, protected 2454 outcome, or Withdrawal methodology mutation was introduced.
-
-This checkpoint records Prompt A only. The preregistered Prompt B below remains mandatory before any further association analysis or round promotion.
-
-## Prompt B — Development-only outcome maturity refresh closeout
+## Prompt B — Development-only association refresh closeout
 
 ```text
-Perform mandatory closeout for round `institutional-accumulation-development-outcome-maturity-refresh-v1` only after its Prompt A has completed.
+Perform mandatory closeout for round `institutional-accumulation-development-association-refresh-v1` only after its Prompt A has completed.
 
-Fetch current remote main; read AGENTS.md, this canonical handoff, the original preregistration, Phase 1 PIT contract, immutable Phase 2 freeze, the pre-refresh outcome artifact identity recorded in this handoff/history, `scripts/open_institutional_accumulation_development_outcomes.js`, `tests/institutional_accumulation_development_outcomes.test.js`, `.github/workflows/open-institutional-accumulation-development-outcomes.yml`, and the durable refreshed outcome artifact. Recover this exact preregistered Prompt B from durable pre-Prompt-A history.
+Fetch current remote main; read AGENTS.md, this canonical handoff, the original preregistration, Phase 1 PIT contract, immutable Phase 2 freeze, refreshed development outcome artifact, `scripts/analyze_institutional_accumulation_development_associations.js`, `tests/institutional_accumulation_development_associations.test.js`, `.github/workflows/analyze-institutional-accumulation-development-associations.yml`, and the durable refreshed association artifact. Recover this exact preregistered Prompt B from durable pre-Prompt-A history.
 
 Verify at minimum:
-1. Phase 2 freeze identity/hash, universe, anchors, partitions, mandatory/optional source rules, and all 41 methodology-development identities remain unchanged;
-2. refresh output contains only those same 41 eligible methodology-development identities;
-3. no stock-holdout, time-holdout, or protected MediaTek `2454` outcome was opened, summarized, derived, or encoded;
-4. the only outcome families remain continuous absolute return, TAIEX-relative return, MFE, and MAE at D+5/D+10/D+20/D+40 under the existing exchange-session convention;
-5. session coverage only advances through genuinely available exchange sessions and no unavailable/missing observation is zero-filled;
-6. unified stock-price provider and same-session TAIEX benchmark semantics remain unchanged;
-7. no same-industry outcome was introduced without proven PIT-safe effective-dated historical membership;
-8. no binary label, success threshold, optimized cutoff, composite score, weighting, catalyst/news layer, or production model/strategy was introduced;
-9. old and new outcome byte identities, session coverage, and per-horizon maturity counts are recorded and internally consistent;
-10. deterministic tests/reproduction pass and regenerated refreshed bytes match durable remote bytes;
-11. the prior Phase 4 association artifact was not rewritten or recomputed during this refresh;
-12. changed files/tests/commits and durable remote artifacts satisfy this bounded development-only maturity-refresh contract and Withdrawal v6.0-v6.5 state remains untouched.
+1. association parent outcome byte SHA-256 is exactly `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e` and Phase 2 freeze semantic SHA-256 remains exactly `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+2. analyzer uses exactly the same 41 methodology-development identities and excludes all holdout partitions and protected `2454`;
+3. feature set is unchanged and contains only the four preregistered accumulation features;
+4. outcome set remains only continuous absolute return, TAIEX-relative return, MFE, and MAE at D+5/D+10/D+20/D+40;
+5. Spearman implementation/tie behavior is unchanged and deterministic regression guards pass;
+6. `MIN_N` remains exactly `20`; pairs below 20 have null rho and forbidden interpretation; no sample-size-driven methodology relaxation occurred;
+7. pairwise missingness remains non-zero-filled and n/missing counts are internally consistent;
+8. no binary label, success threshold, optimized cutoff, composite score, weighting, catalyst/news layer, same-industry outcome, production model, or strategy was introduced;
+9. old/new association hashes, parent refreshed outcome hash, per-horizon n/missingness, analyzable/insufficient counts, run/job/commit identity, and durable remote verification are recorded and internally consistent;
+10. regenerated association bytes match durable remote bytes;
+11. stock holdout, time holdout, and protected 2454 outcomes remain sealed and no Withdrawal v6.0-v6.5 methodology/validation file changed;
+12. bounded changed-file/commit audit shows only the files necessary for this association refresh and canonical handoff checkpoint.
 
-On PASS, update/commit this canonical handoff. Any subsequent association re-analysis must be a separately preregistered next round using the refreshed outcome byte identity; do not open untouched holdouts automatically.
+On PASS, update/commit this canonical handoff. Do not open untouched holdouts automatically. Any next evidence class or holdout-opening decision requires a separately preregistered paired round.
 
 End with:
 `Prompt B closeout: PASS`
