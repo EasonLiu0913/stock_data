@@ -6,7 +6,7 @@
   "sample_freeze": false,
   "cutoff_session": "20260831",
   "selection_contract": {
-    "universe": "first 3 ascending four-digit TWSE codes from data_twse/twse_industry.csv, excluding protected motivation stock 2454; industry labels ignored",
+    "universe": "first 3 ascending four-digit TWSE equity codes >= 1000 from data_twse/twse_industry.csv, excluding protected motivation stock 2454; industry labels are ignored",
     "sessions": "latest 3 dates <= 20260831 shared by foreign/investment-trust/dealer/margin manifests",
     "purpose": "mechanical source-state coverage probe only; not development-sample selection",
     "protected_motivation_stock_excluded": "2454"
@@ -25,111 +25,33 @@
   "sources": {
     "unified_price": {
       "total": 9,
-      "counts": {
-        "available": 9,
-        "missing": 0,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "rates": {
-        "available": 1,
-        "missing": 0,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "provenance_note": "MI_INDEX files for all three probe sessions are empty; unified provider falls through to valid legacy data_fubon SMA records for all 9 stock-session observations"
+      "counts": { "available": 9, "missing": 0, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 },
+      "rates": { "available": 1, "missing": 0, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 }
     },
     "foreign": {
       "total": 9,
-      "counts": {
-        "available": 6,
-        "missing": 3,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "rates": {
-        "available": 0.6666666666666666,
-        "missing": 0.3333333333333333,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "provenance_note": "1101/1102/1103 are present on 20260825 and 20260826; none of the three probe rows is present in the 20260827 foreign archive, so row omission remains missing rather than zero"
+      "counts": { "available": 6, "missing": 3, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 },
+      "rates": { "available": 0.6666666666666666, "missing": 0.3333333333333333, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 }
     },
     "investment_trust": {
       "total": 9,
-      "counts": {
-        "available": 5,
-        "missing": 4,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "rates": {
-        "available": 0.5555555555555556,
-        "missing": 0.4444444444444444,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "provenance_note": "probe rows observed: 20260825=1102 only; 20260826=1101,1102; 20260827=1101,1102. Missing rows are not inferred as zero"
+      "counts": { "available": 5, "missing": 4, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 },
+      "rates": { "available": 0.5555555555555556, "missing": 0.4444444444444444, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 }
     },
     "dealer": {
       "total": 9,
-      "counts": {
-        "available": 0,
-        "missing": 0,
-        "quality_rejected": 9,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "rates": {
-        "available": 0,
-        "missing": 0,
-        "quality_rejected": 1,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "provenance_note": "dealer manifest lists all three sessions, but each corresponding JSON blob is empty; invalid archive payload is quality_rejected for every probe stock-session"
+      "counts": { "available": 0, "missing": 0, "quality_rejected": 9, "availability_unsafe": 0, "not_applicable": 0 },
+      "rates": { "available": 0, "missing": 0, "quality_rejected": 1, "availability_unsafe": 0, "not_applicable": 0 }
     },
     "margin": {
       "total": 9,
-      "counts": {
-        "available": 9,
-        "missing": 0,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "rates": {
-        "available": 1,
-        "missing": 0,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "provenance_note": "all three stocks have valid explicit financing-current-balance rows on all three sessions"
+      "counts": { "available": 9, "missing": 0, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 },
+      "rates": { "available": 1, "missing": 0, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 }
     },
     "histock_broker": {
       "total": 9,
-      "counts": {
-        "available": 0,
-        "missing": 9,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "rates": {
-        "available": 0,
-        "missing": 1,
-        "quality_rejected": 0,
-        "availability_unsafe": 0,
-        "not_applicable": 0
-      },
-      "provenance_note": "no normalized HiStock daily artifact exists for 1101/1102/1103 on 20260825-20260827"
+      "counts": { "available": 0, "missing": 9, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 },
+      "rates": { "available": 0, "missing": 1, "quality_rejected": 0, "availability_unsafe": 0, "not_applicable": 0 }
     }
   },
   "contract_only_exclusions": {
@@ -155,13 +77,5 @@
     "repricing_success",
     "failure_label",
     "future_catalyst"
-  ],
-  "known_data_quality_findings": [
-    "data_twse_dealers/20260825_twse_dealers.json is empty",
-    "data_twse_dealers/20260826_twse_dealers.json is empty",
-    "data_twse_dealers/20260827_twse_dealers.json is empty",
-    "data_twse_mi_index/20260825_twse_mi_index.json is empty",
-    "data_twse_mi_index/20260826_twse_mi_index.json is empty",
-    "data_twse_mi_index/20260827_twse_mi_index.json is empty"
   ]
 }
