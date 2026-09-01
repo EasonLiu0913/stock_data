@@ -29,6 +29,18 @@ test('incremental mode refreshes only previous and current month', () => {
   );
 });
 
+test('incremental recovery fills every month after an execution gap', () => {
+  const existingOutput = {
+    startDate: '20240101',
+    endDate: '20260831',
+    data: [{ date: '20240102' }, { date: '20260831' }]
+  };
+  assert.deepEqual(
+    selectMonthsToFetch('20240101', '20261215', existingOutput, false),
+    ['20260801', '20260901', '20261001', '20261101', '20261201']
+  );
+});
+
 test('full rebuild explicitly fetches the complete range', () => {
   const existingOutput = {
     startDate: '20240101',
