@@ -8,9 +8,10 @@ const MAX_NAVIGATION_ATTEMPTS = 3;
 const MIN_STOCK_RECORDS = 900;
 const MIN_MAIN_RECORDS = 1000;
 const MIN_TABLE_ROWS_FLOOR = 1000;
-const END_MARKER_TEXT = '掛牌日以正式公告為準';
-const END_MARKER_DIAGNOSTIC_POLL_MS = 1000;
-const END_MARKER_DIAGNOSTIC_WINDOW_MS = 30000;
+const TAIL_CATEGORY = '受益證券-不動產投資信託';
+const TAIL_DIAGNOSTIC_POLL_MS = 1000;
+const TAIL_DIAGNOSTIC_WINDOW_MS = 180000;
+const TEST_TAIL_RECORDS_THRESHOLD = 6;
 const MAX_DROP_RATIO = 0.10;
 const REQUIRED_STOCK_CODES = ['1101', '2317', '2330', '2882'];
 
@@ -18,39 +19,52 @@ async function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function inspectTableState(page) {
-    return page.evaluate(markerText => {
+async function inspectTailState(page) {
+    return page.evaluate(tailCategory => {
         const table = document.querySelector('table.h4');
-        const rows = table ? table.querySelectorAll('tr').length : 0;
-        let markerNode = null;
+        if (!table) {
+            return {
+                rows: 0,
+                readyState: document.readyState,
+                tailCategorySeen: false,
+                tailRecords: 0,
+                bodyLength: document.body ? document.body.innerText.length : 0
+            };
+        }
 
-        if (document.body) {
-            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-            while (walker.nextNode()) {
-                const node = walker.currentNode;
-                if (node.nodeValue && node.nodeValue.includes(markerText)) {
-                    markerNode = node;
-                    break;
-                }
+        const rows = Array.from(table.querySelectorAll('tr'));
+        let tailCategorySeen = false;
+        let tailRecords = 0;
+        let inTailCategory = false;
+
+        for (const row of rows) {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 0) continue;
+
+            const isCategoryRow = cells.length === 1 ||
+                (cells[0].hasAttribute('colspan') && parseInt(cells[0].getAttribute('colspan'), 10) > 1);
+
+            if (isCategoryRow) {
+                const text = cells[0].innerText.trim();
+                inTailCategory = text === tailCategory;
+                if (inTailCategory) tailCategorySeen = true;
+                continue;
+            }
+
+            if (inTailCategory && cells.length >= 5) {
+                const codeNameRaw = cells[0].innerText.trim();
+                if (codeNameRaw) tailRecords += 1;
             }
         }
 
-        const markerParent = markerNode ? markerNode.parentElement : null;
-        const markerInsideTable = Boolean(table && markerParent && table.contains(markerParent));
-        const markerAfterTable = Boolean(
-            table && markerNode && (table.compareDocumentPosition(markerNode) & Node.DOCUMENT_POSITION_FOLLOWING)
-        );
-
         return {
-            rows,
+            rows: rows.length,
             readyState: document.readyState,
-            hasEndMarker: Boolean(markerNode),
-            markerInsideTable,
-            markerAfterTable,
-            markerParentTag: markerParent ? markerParent.tagName : null,
+            tailCategorySeen,
+            tailRecords,
             bodyLength: document.body ? document.body.innerText.length : 0
         };
-    }, END_MARKER_TEXT);
+    }, TAIL_CATEGORY);
 }
 
 async function waitForTableReadiness(page, minimumRows) {
@@ -60,54 +74,43 @@ async function waitForTableReadiness(page, minimumRows) {
         { timeout: SELECTOR_TIMEOUT_MS }
     );
 
-    const thresholdState = await inspectTableState(page);
+    let state = await inspectTailState(page);
     console.log(
-        `TWSE table reached readiness threshold: rows=${thresholdState.rows}, ` +
-        `requiredRows=${minimumRows}, readyState=${thresholdState.readyState}, ` +
-        `hasEndMarker=${thresholdState.hasEndMarker}`
+        `TWSE table reached readiness threshold: rows=${state.rows}, requiredRows=${minimumRows}, ` +
+        `readyState=${state.readyState}, tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}`
     );
 
     console.log(
-        `Starting end-marker diagnostic window: marker="${END_MARKER_TEXT}", ` +
-        `window=${END_MARKER_DIAGNOSTIC_WINDOW_MS}ms, poll=${END_MARKER_DIAGNOSTIC_POLL_MS}ms`
+        `Starting TWSE tail-category experiment: category="${TAIL_CATEGORY}", ` +
+        `testThreshold=${TEST_TAIL_RECORDS_THRESHOLD}, window=${TAIL_DIAGNOSTIC_WINDOW_MS}ms, ` +
+        `poll=${TAIL_DIAGNOSTIC_POLL_MS}ms`
     );
 
-    const deadline = Date.now() + END_MARKER_DIAGNOSTIC_WINDOW_MS;
-    let lastState = thresholdState;
-
+    const deadline = Date.now() + TAIL_DIAGNOSTIC_WINDOW_MS;
     while (Date.now() < deadline) {
-        if (lastState.hasEndMarker) break;
-        await wait(END_MARKER_DIAGNOSTIC_POLL_MS);
-        lastState = await inspectTableState(page);
         console.log(
-            `TWSE end-marker diagnostic: rows=${lastState.rows}, readyState=${lastState.readyState}, ` +
-            `hasEndMarker=${lastState.hasEndMarker}, markerInsideTable=${lastState.markerInsideTable}, ` +
-            `markerAfterTable=${lastState.markerAfterTable}, markerParentTag=${lastState.markerParentTag || 'none'}, ` +
-            `bodyLength=${lastState.bodyLength}`
+            `TWSE tail diagnostic: rows=${state.rows}, readyState=${state.readyState}, ` +
+            `tailCategorySeen=${state.tailCategorySeen}, tailRecords=${state.tailRecords}, ` +
+            `bodyLength=${state.bodyLength}`
         );
+
+        if (state.tailCategorySeen && state.tailRecords >= TEST_TAIL_RECORDS_THRESHOLD) {
+            console.log(
+                `✅ TWSE experimental tail threshold observed: tailRecords=${state.tailRecords}, ` +
+                `rows=${state.rows}, readyState=${state.readyState}`
+            );
+            return state;
+        }
+
+        await wait(TAIL_DIAGNOSTIC_POLL_MS);
+        state = await inspectTailState(page);
     }
 
-    if (lastState.hasEndMarker) {
-        console.log(
-            `✅ TWSE end marker observed: rows=${lastState.rows}, readyState=${lastState.readyState}, ` +
-            `markerInsideTable=${lastState.markerInsideTable}, markerAfterTable=${lastState.markerAfterTable}, ` +
-            `markerParentTag=${lastState.markerParentTag || 'none'}`
-        );
-    } else {
-        console.warn(
-            `⚠️ TWSE end marker was not observed within ${END_MARKER_DIAGNOSTIC_WINDOW_MS}ms after readiness threshold; ` +
-            `continuing with existing snapshot validation. rows=${lastState.rows}, readyState=${lastState.readyState}`
-        );
-    }
-
-    if (lastState.rows < minimumRows) {
-        throw new Error(
-            `TWSE industry table fell below readiness threshold during diagnostics: ` +
-            `rows=${lastState.rows}, requiredRows=${minimumRows}`
-        );
-    }
-
-    return lastState;
+    throw new Error(
+        `TWSE experimental tail threshold was not observed within ${TAIL_DIAGNOSTIC_WINDOW_MS}ms: ` +
+        `category=${TAIL_CATEGORY}, tailRecords=${state.tailRecords}, rows=${state.rows}, ` +
+        `readyState=${state.readyState}`
+    );
 }
 
 async function gotoWithRetry(page, url, minimumRows) {
@@ -116,13 +119,6 @@ async function gotoWithRetry(page, url, minimumRows) {
     for (let attempt = 1; attempt <= MAX_NAVIGATION_ATTEMPTS; attempt++) {
         try {
             console.log(`Navigating to ${url} (attempt ${attempt}/${MAX_NAVIGATION_ATTEMPTS})...`);
-
-            // TWSE's ISIN page progressively renders a large table and can remain in
-            // readyState=loading for a long time. Navigation commit/table existence alone
-            // are therefore insufficient. Require a row count derived from the existing
-            // production snapshot, then observe the known footer/end marker without yet
-            // making it an authoritative success condition. Snapshot validation below
-            // remains the authoritative completeness gate before any write occurs.
             const response = await page.goto(url, {
                 waitUntil: 'commit',
                 timeout: NAVIGATION_COMMIT_TIMEOUT_MS
@@ -137,7 +133,8 @@ async function gotoWithRetry(page, url, minimumRows) {
             const readyState = await waitForTableReadiness(page, minimumRows);
             console.log(
                 `Navigation table ready. currentUrl=${page.url()}, readyState=${readyState.readyState}, ` +
-                `rows=${readyState.rows}, requiredRows=${minimumRows}, hasEndMarker=${readyState.hasEndMarker}`
+                `rows=${readyState.rows}, requiredRows=${minimumRows}, ` +
+                `tailCategorySeen=${readyState.tailCategorySeen}, tailRecords=${readyState.tailRecords}`
             );
             return;
         } catch (error) {
@@ -147,10 +144,10 @@ async function gotoWithRetry(page, url, minimumRows) {
             console.warn(`   currentUrl=${page.url()}, rows=${rowCount}, requiredRows=${minimumRows}`);
 
             try {
-                const debug = await inspectTableState(page);
+                const debug = await inspectTailState(page);
                 console.warn(`   pageState=${JSON.stringify(debug)}`);
             } catch (_) {
-                // The page may be between navigations; diagnostics are best-effort only.
+                // Best effort only.
             }
 
             if (attempt < MAX_NAVIGATION_ATTEMPTS) {
