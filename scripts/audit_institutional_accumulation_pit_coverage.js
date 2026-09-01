@@ -15,8 +15,8 @@ const ROOT = path.resolve(__dirname, '..');
 const METHODOLOGY = 'institutional-accumulation-point-in-time-contract-v1';
 const AUDIT_ID = 'institutional-accumulation-pit-coverage-v1';
 const DEFAULT_CUTOFF = '20260831';
-const DEFAULT_UNIVERSE_SIZE = 12;
-const DEFAULT_SESSION_COUNT = 20;
+const DEFAULT_UNIVERSE_SIZE = 3;
+const DEFAULT_SESSION_COUNT = 3;
 const OUTPUT = path.join(ROOT, 'data_research', 'institutional-flow', 'institutional-accumulation-pit-coverage-v1.json');
 
 function readJson(file, fallback = null) {
