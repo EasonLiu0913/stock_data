@@ -1,0 +1,148 @@
+name: "[Research] Analyze Institutional Accumulation Development Associations"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/analyze_institutional_accumulation_development_associations.js'
+      - 'tests/institutional_accumulation_development_associations.test.js'
+      - '.github/workflows/analyze-institutional-accumulation-development-associations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-development-association-v1
+  cancel-in-progress: false
+
+jobs:
+  analyze-development-associations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout frozen development inputs only
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts/analyze_institutional_accumulation_development_associations.js
+            tests/institutional_accumulation_development_associations.test.js
+            data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json
+            data_research/institutional-flow/institutional-accumulation-development-outcome-opening-v1.json
+            data_research/institutional-flow/institutional-accumulation-preregistration-v1.md
+            data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md
+            data_research/institutional-flow/institutional-accumulation-validation-handoff.md
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Run preregistered association regression guards
+        run: node --test tests/institutional_accumulation_development_associations.test.js
+
+      - name: Materialize development-only association artifact
+        run: |
+          set -euo pipefail
+          node scripts/analyze_institutional_accumulation_development_associations.js
+          file='data_research/institutional-flow/institutional-accumulation-development-association-v1.json'
+          echo "GENERATED_ASSOCIATION_SHA256=$(sha256sum "$file" | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Verify preregistered scope and minimum-n gate
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'data_research/institutional-flow/institutional-accumulation-development-association-v1.json';
+          const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const features = [
+            'pit_features.cross_sectional.core_accumulation_percentile',
+            'pit_features.cross_sectional.supply_absorption_percentile',
+            'pit_features.cross_sectional.price_return_percentile',
+            'pit_features.cross_sectional.price_non_confirmation_rank_gap',
+          ];
+          const outcomes = ['absolute_forward_return','taiex_relative_forward_return','mfe','mae'];
+          const horizons = ['D+5','D+10','D+20','D+40'];
+          if (payload.association_id !== 'institutional-accumulation-development-association-v1') throw new Error('association identity mismatch');
+          if (payload.parent_freeze?.content_sha256 !== '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b') throw new Error('parent freeze mismatch');
+          if (payload.parent_outcome?.byte_sha256 !== 'a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58') throw new Error('parent outcome bytes mismatch');
+          if (payload.parent_outcome?.extended_or_refreshed_in_this_round !== false) throw new Error('outcome artifact was refreshed');
+          if (payload.counts?.frozen_methodology_development !== 41 || payload.counts?.phase3_outcome_rows !== 41) throw new Error('development identity count mismatch');
+          if (payload.associations?.length !== 64) throw new Error('expected exactly 64 preregistered pair attempts');
+          if (JSON.stringify(payload.analysis_contract?.features) !== JSON.stringify(features)) throw new Error('feature family changed');
+          if (JSON.stringify(payload.analysis_contract?.outcomes) !== JSON.stringify(outcomes)) throw new Error('outcome family changed');
+          if (JSON.stringify(payload.analysis_contract?.horizons) !== JSON.stringify(horizons)) throw new Error('horizon family changed');
+          if (payload.analysis_contract?.minimum_pairwise_complete_n !== 20) throw new Error('minimum n changed');
+          for (const row of payload.associations) {
+            if (row.n < 20 && (row.status !== 'insufficient_n' || row.spearman_rho !== null || row.interpretation_allowed !== false)) throw new Error('minimum-n gate violated');
+            if (row.n >= 20 && row.status !== 'analyzable') throw new Error('analyzable row mislabeled');
+            if (row.missingness?.pair_missing !== 41 - row.n) throw new Error('pairwise missingness mismatch');
+          }
+          const later = payload.associations.filter(row => ['D+10','D+20','D+40'].includes(row.horizon));
+          if (!later.every(row => row.status === 'insufficient_n' && row.spearman_rho === null)) throw new Error('later horizons must remain uninterpreted');
+          if (payload.binary_success_threshold !== null || payload.optimized_cutoff !== null || payload.composite_score !== null || payload.weights !== null) throw new Error('post-outcome tuning introduced');
+          if (payload.production_strategy_promoted !== false || payload.production_model_promoted !== false || payload.catalyst_news_layer_added !== false) throw new Error('scope promotion violation');
+          if (payload.holdout_contract?.stock_holdout_outcome_opened !== false || payload.holdout_contract?.time_holdout_outcome_opened !== false || payload.holdout_contract?.protected_2454_outcome_opened !== false) throw new Error('sealed outcome contract violated');
+          console.log(JSON.stringify({ counts: payload.counts, associations: payload.associations }, null, 2));
+          NODE
+
+      - name: Update canonical Prompt A checkpoint
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const handoffFile = 'data_research/institutional-flow/institutional-accumulation-validation-handoff.md';
+          const artifact = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-development-association-v1.json', 'utf8'));
+          let text = fs.readFileSync(handoffFile, 'utf8');
+          text = text.replace(
+            '**Phase 3 — development-only continuous outcome opening: COMPLETE / Prompt B PASS.**',
+            '**Phase 4 — development-only continuous association analysis: Prompt A COMPLETE; mandatory Prompt B closeout pending.**'
+          );
+          text = text.replace(
+            '- `institutional-accumulation-development-association-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.',
+            '- `institutional-accumulation-development-association-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.'
+          );
+          const marker = '## Prompt B — Development-only association closeout';
+          if (!text.includes('## Phase 4 Prompt A implementation checkpoint')) {
+            const d5 = artifact.associations.filter(row => row.horizon === 'D+5');
+            const checkpoint = `## Phase 4 Prompt A implementation checkpoint\n\nRound: \`institutional-accumulation-development-association-v1\`\n\n**Prompt A: COMPLETE — ready for mandatory Prompt B.**\n\nDurable implementation artifacts:\n\n- \`scripts/analyze_institutional_accumulation_development_associations.js\`;\n- \`tests/institutional_accumulation_development_associations.test.js\`;\n- \`.github/workflows/analyze-institutional-accumulation-development-associations.yml\`;\n- \`data_research/institutional-flow/institutional-accumulation-development-association-v1.json\`.\n\nFresh-runner Prompt A evidence:\n\n- workflow run: \`${process.env.GITHUB_RUN_ID}\`;\n- workflow head: \`${process.env.GITHUB_SHA}\`;\n- parent Phase 2 freeze semantic SHA-256: \`${artifact.parent_freeze.content_sha256}\`;\n- parent Phase 3 outcome byte SHA-256: \`${artifact.parent_outcome.byte_sha256}\`;\n- frozen methodology-development identities analyzed: \`${artifact.counts.frozen_methodology_development}\`;\n- preregistered pair attempts: \`${artifact.counts.attempted_pairs}\`;\n- analyzable pairs (n >= 20): \`${artifact.counts.analyzable_pairs}\`;\n- insufficient-n pairs: \`${artifact.counts.insufficient_n_pairs}\`;\n- D+5 result rows: \`${JSON.stringify(d5)}\`;\n- D+10/D+20/D+40 remain \`insufficient_n\` and uninterpreted;\n- no Phase 3 outcome refresh/extension;\n- no stock holdout, time holdout, or protected 2454 outcome opening;\n- no binary threshold, optimized cutoff, composite score, weights, catalyst/news layer, production classifier, or strategy promotion.\n\nThis checkpoint records Prompt A implementation only. It does **not** execute or PASS Prompt B and does not authorize holdout opening.\n\n`;
+            if (!text.includes(marker)) throw new Error('Prompt B marker missing; refusing to rewrite handoff');
+            text = text.replace(marker, checkpoint + marker);
+          }
+          fs.writeFileSync(handoffFile, text);
+          NODE
+
+      - name: Commit durable association artifact and Prompt A checkpoint
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --sparse \
+            data_research/institutional-flow/institutional-accumulation-development-association-v1.json \
+            data_research/institutional-flow/institutional-accumulation-validation-handoff.md
+          if git diff --cached --quiet; then
+            echo "Association artifact and Prompt A checkpoint already match generator output"
+          else
+            git commit -m "analysis: add accumulation development associations v1"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
+
+      - name: Verify durable remote association artifact
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          file='data_research/institutional-flow/institutional-accumulation-development-association-v1.json'
+          git show "origin/main:$file" > /tmp/remote-association.json
+          remote_sha="$(sha256sum /tmp/remote-association.json | awk '{print $1}')"
+          test "$remote_sha" = "$GENERATED_ASSOCIATION_SHA256"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/remote-association.json', 'utf8'));
+          if (payload.association_id !== 'institutional-accumulation-development-association-v1') throw new Error('remote association identity mismatch');
+          if (payload.parent_freeze?.content_sha256 !== '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b') throw new Error('remote freeze identity mismatch');
+          if (payload.parent_outcome?.byte_sha256 !== 'a4422c23cfb749c6f484dfe99e7ca31d7477b410c430536d8314ca8c1bddea58') throw new Error('remote outcome identity mismatch');
+          if (payload.associations?.length !== 64) throw new Error('remote attempted pair count mismatch');
+          NODE
+          git show origin/main:data_research/institutional-flow/institutional-accumulation-validation-handoff.md | grep -F '**Prompt A: COMPLETE — ready for mandatory Prompt B.**'
+          echo "Durable remote association artifact verified against regenerated bytes: $remote_sha"
