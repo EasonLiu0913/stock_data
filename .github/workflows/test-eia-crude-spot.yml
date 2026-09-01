@@ -1,0 +1,30 @@
+name: "[CI] EIA crude spot contract"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/crawl_eia_crude_spot.js'
+      - 'tests/eia_crude_spot.test.js'
+      - 'tests/prediction_dashboard_external_oil_source.test.js'
+      - 'public/prediction-dashboard-rebound-enhancement.js'
+      - '.github/workflows/test-eia-crude-spot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate syntax and contracts
+        run: |
+          set -euo pipefail
+          node --check scripts/crawl_eia_crude_spot.js
+          node --check public/prediction-dashboard-rebound-enhancement.js
+          node --test tests/eia_crude_spot.test.js tests/prediction_dashboard_external_oil_source.test.js
