@@ -40,7 +40,7 @@ function parseUniverse(root = ROOT, size = DEFAULT_UNIVERSE_SIZE) {
   const rows = fs.readFileSync(file, 'utf8').split(/\r?\n/).slice(1).filter(Boolean);
   const codes = rows
     .map(line => line.split(',')[0]?.trim())
-    .filter(code => /^\d{4}$/.test(code) && code !== '2454')
+    .filter(code => /^\d{4}$/.test(code) && Number(code) >= 1000 && code !== '2454')
     .sort((a, b) => Number(a) - Number(b));
   return [...new Set(codes)].slice(0, size);
 }
@@ -79,9 +79,7 @@ function summarizeStates(observations) {
 function auditSource({ universe, sessions, loader }) {
   const observations = [];
   for (const stock of universe) {
-    for (const date of sessions) {
-      observations.push(loader(stock, date));
-    }
+    for (const date of sessions) observations.push(loader(stock, date));
   }
   return summarizeStates(observations);
 }
@@ -109,14 +107,15 @@ function runAudit(options = {}) {
   return {
     audit_id: AUDIT_ID,
     methodology: METHODOLOGY,
-    generated_at: new Date().toISOString(),
+    generated_at: options.generatedAt || new Date().toISOString(),
     outcome_blind: true,
     sample_freeze: false,
     cutoff_session: cutoff,
     selection_contract: {
-      universe: `first ${universeSize} ascending four-digit TWSE codes from data_twse/twse_industry.csv, excluding protected motivation stock 2454; industry labels are ignored`,
+      universe: `first ${universeSize} ascending four-digit TWSE equity codes >= 1000 from data_twse/twse_industry.csv, excluding protected motivation stock 2454; industry labels are ignored`,
       sessions: `latest ${sessionCount} dates <= ${cutoff} shared by foreign/investment-trust/dealer/margin manifests`,
       purpose: 'mechanical source-state coverage probe only; not development-sample selection',
+      protected_motivation_stock_excluded: '2454',
     },
     universe,
     sessions,
@@ -136,6 +135,7 @@ function runAudit(options = {}) {
         reason: 'optional separate layer; only timestamp-proven evidence may later enter',
       },
     },
+    outcome_fields_present: [],
     forbidden_outcome_fields: [
       'forward_return', 'mfe', 'mae', 'breakout', 'repricing_success', 'failure_label', 'future_catalyst',
     ],
