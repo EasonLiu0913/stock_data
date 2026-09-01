@@ -4,26 +4,27 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Phase 1 — outcome-blind point-in-time feature/data contract.**
+**Phase 2 — outcome-blind deterministic development sample / event-anchor freeze: PROMOTED after Phase 1 Prompt B PASS.**
 
-Round identity:
+Active/promoted round:
 
-`institutional-accumulation-point-in-time-contract-v1`
+`institutional-accumulation-development-sample-freeze-v1`
 
 Status:
 
-- completed round `institutional-accumulation-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- current round `institutional-accumulation-point-in-time-contract-v1`: Prompt A **COMPLETE / AWAITING PROMPT B CLOSEOUT**;
-- current round Prompt B: **PREREGISTERED / NOT STARTED**;
-- future round `institutional-accumulation-development-sample-freeze-v1`: **PREREGISTERED / FUTURE / NOT PROMOTED**.
+- `institutional-accumulation-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
+- `institutional-accumulation-point-in-time-contract-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
+- `institutional-accumulation-development-sample-freeze-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
-Do not execute Prompt B automatically. Do not execute the future Phase 2 pair until Phase 1 Prompt B explicitly PASSes and promotes it.
+Do not execute Phase 2 except through its preregistered Prompt A below. Promotion does not authorize automatic execution.
 
-## Objective and frozen boundaries
+## Objective
 
 Detect cases where price has not yet fully repriced upward while durable institutional capital has already changed behavior in a bullish direction, then later test whether credible PIT-safe catalyst evidence adds incremental value.
 
 This remains research, not a production strategy.
+
+## Frozen decisions / constraints
 
 Canonical preregistration:
 
@@ -44,13 +45,9 @@ Keep these conceptual layers separate until evidence supports combining them:
 
 No arbitrary final weighted score is frozen.
 
-Outcome blindness remains mandatory until an explicitly later outcome-opening round. Do not use candidate-specific future returns, MFE/MAE, future breakout/failure labels, or future catalyst/news evidence to choose features, windows, thresholds, formulas, samples, or anchors.
+Outcome blindness remains mandatory until an explicitly later outcome-opening round. Do not use candidate-specific future returns, MFE/MAE, future breakout/failure labels, or future catalyst/news evidence to choose features, thresholds, samples, partitions, or anchors.
 
-Protected MediaTek `2454` motivation cases remain `motivation_cases_only`:
-
-- May 2026 upward repricing wave;
-- June 2026 upward repricing wave;
-- late-August / 2026-09-01 upward repricing wave.
+Protected MediaTek `2454` motivation cases remain `motivation_cases_only` and outside development/validation tuning evidence.
 
 Withdrawal v6.0-v6.5 classifier/lifecycle rules, specs, validation outcomes/metrics, holdouts, and methodology remain frozen and are not Accumulation inputs.
 
@@ -64,47 +61,50 @@ Required lifecycle remains:
 
 ## Phase 0 closeout
 
-Phase 0 Prompt A audit commit:
-
-`8a34187f87998fcc20c32024eeab47ac927f0957` — `docs: complete accumulation phase 0 preregistration audit`
-
-Phase 0 handoff checkpoint:
-
-`34868751908edd18aea19dac35885c2c373be902` — `docs: checkpoint accumulation phase 0 handoff`
-
 Phase 0 Prompt B closeout: **PASS**.
 
-The exact preregistered Phase 0 Prompt B was recovered from bootstrap commit:
+Key durable commits:
 
-`9d244fab0fe786393d8be72ab2f6327d306e7328` — `docs: bootstrap institutional accumulation handoff`
+- `8a34187f87998fcc20c32024eeab47ac927f0957` — preregistration/source-semantics audit;
+- `34868751908edd18aea19dac35885c2c373be902` — Phase 0 handoff checkpoint;
+- preregistered Phase 0 Prompt B recoverable from `9d244fab0fe786393d8be72ab2f6327d306e7328`.
 
-Phase 0 froze source semantics, outcome-blindness, the unified-price requirement, TDCC no-lookahead restriction, conservative EOD availability, missing-vs-zero semantics, and the future sample-freeze boundary before Phase 1 began.
+## Phase 1 completed
 
-## Phase 1 Prompt A completed artifacts
+Round:
 
-Phase 1 was executed from current remote `main` while `institutional-accumulation` was the unique globally active routed task and while this exact Phase 1 Prompt B already existed in the canonical handoff.
+`institutional-accumulation-point-in-time-contract-v1`
 
-Durable implementation commits:
+Phase 1 built only the outcome-blind PIT observation/data contract and mechanical existing-repository coverage probe. It did not select/freeze a development sample, open outcomes, run a large network backfill, build a production classifier, or execute Phase 2.
 
-- `b394073c31ef97742d3228ac67ec0afc9bdfb12d` — `feat: add accumulation PIT observation contract`
-- `5fe29975020eec587d80dc3497e42a2b28d85e8c` — `test: cover accumulation PIT observation semantics`
-- `e44c583bbca30aa1df259c0464e7cfbd21726326` — `feat: add accumulation PIT coverage audit`
-- `9557b07b4203d75d32a1b03a3f75c6cd6bb5e6a4` — `analysis: checkpoint accumulation PIT coverage audit`
-- `fc9d539894e1375510f02042358c5f02460b4706` — `docs: define accumulation PIT observation contract`
-
-Durable Phase 1 artifacts:
+Durable Phase 1 implementation artifacts:
 
 - `scripts/lib/institutional_accumulation_pit.js`
 - `tests/institutional_accumulation_pit.test.js`
+- `tests/institutional_accumulation_pit_coverage.test.js`
 - `scripts/audit_institutional_accumulation_pit_coverage.js`
 - `data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json`
 - `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
+- `.github/workflows/test-institutional-accumulation-pit.yml`
 
-### Executable PIT contract
+Core implementation commits include:
 
-`scripts/lib/institutional_accumulation_pit.js` provides a domain-specific Accumulation contract rather than a speculative generic institutional-flow framework.
+- `b394073c31ef97742d3228ac67ec0afc9bdfb12d` — PIT observation contract;
+- `5fe29975020eec587d80dc3497e42a2b28d85e8c` — PIT semantic tests;
+- `e44c583bbca30aa1df259c0464e7cfbd21726326` — coverage audit;
+- `9557b07b4203d75d32a1b03a3f75c6cd6bb5e6a4` — first coverage artifact;
+- `fc9d539894e1375510f02042358c5f02460b4706` — PIT contract document;
+- `ca92e9827d4eb3f9b876d6bcd1db6f157a1fe125` — bounded audit defaults;
+- `83f4ca396e4f974aca9f2f9011dcbd13fa6c4281` / `119771cf989bf1f56a99e15c755902f873463c8a` — closeout validation workflow and sparse-checkout repair;
+- `402305f36d457ddfc2ac55adce5a15ece93e204b` — reproducible equity-universe rule;
+- `7ad163fc91d38bd37012f669fb1246afa01a80ed` — equity-universe regression test;
+- `da23101b70c07f9bb2225d298ab1d3cd0a5ed314` — generator-owned audit artifact;
+- `320aa280b1dae3d54092739fb7f15c71205282d6` — semantic reproduction / outcome guard;
+- `801d15b006217842597b187baa0d548872382700` — align durable coverage counts with fresh-runner truth.
 
-It preserves value separately from state/provenance and supports:
+## Phase 1 PIT contract
+
+The executable contract preserves value separately from state/provenance and supports at least:
 
 - `available`
 - `missing`
@@ -112,38 +112,13 @@ It preserves value separately from state/provenance and supports:
 - `availability_unsafe`
 - `not_applicable`
 
-A non-`available` observation cannot expose a PIT-safe value. Missing/rejected/unsafe/not-applicable states are never silently zero-filled. Explicit numeric zero remains valid only when supplied by a valid source row.
+Non-`available` observations cannot expose a PIT-safe value. Missing/rejected/unsafe/not-applicable are never silently zero-filled; explicit numeric zero is valid only from a valid source row.
 
-The record preserves source, source file, session date, known-time slot where available, availability rule, and source-specific details.
+T-offsets are trading-session offsets, never calendar-day offsets. EOD institutional, margin, broker, and price/volume facts are unavailable before source-session completion unless stronger publication-time evidence is independently proven.
 
-Implemented source loaders/helpers:
+Stock prices use `scripts/lib/stock_price_provider.js`. Historical TDCC remains `availability_unsafe` while `production_no_lookahead_safe=false`. Current/static industry membership is not projected backward. Catalyst/disclosure remains a separate optional layer and requires conservative publication/known-time evidence.
 
-- stock price/volume via the existing `scripts/lib/stock_price_provider.js` only;
-- foreign/investment-trust/dealer official daily archives;
-- TWSE margin financing;
-- normalized HiStock broker history using `scripts/lib/histock_broker_quality.js`;
-- TDCC historical exclusion helper;
-- historical-industry exclusion helper;
-- trading-session T-offset mapping;
-- deterministic fail-closed anchor eligibility.
-
-### T0 / session semantics
-
-`T-20/T-15/T-10/T-5/T-3/T-1/T0` are trading-session offsets, never calendar-day offsets.
-
-EOD TWSE institutional, margin, broker, and price/volume observations are withheld as `availability_unsafe` before source-session completion unless stronger publication-time evidence is independently proven.
-
-Historical TDCC remains excluded/`availability_unsafe` while its provenance says `production_no_lookahead_safe=false`.
-
-Current/static `data_twse/twse_industry.csv` is not projected backward as historical industry membership.
-
-Catalyst/disclosure remains a separate optional layer and may enter only when source identity plus conservative publication/known time proves availability by the anchor.
-
-### Deterministic prospective anchor/data-completeness semantics
-
-`evaluateAnchorEligibility` fails closed for every later-declared required observation. An absent, missing, quality-rejected, availability-unsafe, or not-applicable required input makes that prospective anchor ineligible and records the reason.
-
-Phase 1 does **not** decide the final required feature set, select development stocks/dates, freeze a development sample, open outcomes, or execute Phase 2.
+`evaluateAnchorEligibility` fails closed for every later-declared required observation.
 
 ## Phase 1 mechanical coverage audit
 
@@ -151,51 +126,81 @@ Durable artifact:
 
 `data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json`
 
-The bounded probe was selected without outcome information:
+Selection is deterministic and outcome-independent:
 
-- stocks: first three ascending four-digit TWSE codes from `data_twse/twse_industry.csv`, excluding protected motivation stock `2454`; industry labels ignored;
-- sessions: latest three dates `<= 20260831` shared by foreign/investment-trust/dealer/margin manifests;
+- universe: first 3 ascending four-digit TWSE equity codes with numeric code `>=1000` from `data_twse/twse_industry.csv`, excluding protected motivation stock `2454`;
 - resulting stocks: `1101`, `1102`, `1103`;
+- sessions: latest 3 dates `<=20260831` shared by foreign/investment-trust/dealer/margin manifests;
 - resulting sessions: `20260825`, `20260826`, `20260827`;
 - 9 stock-session observations per source;
-- purpose: source-state coverage measurement only, not development-sample selection.
+- purpose: source-state coverage probe only; `sample_freeze=false`.
 
-Observed source-state counts:
+Fresh-runner source-state counts after closeout repair:
 
 | Source | available | missing | quality_rejected |
 | --- | ---: | ---: | ---: |
 | Unified price | 9 | 0 | 0 |
-| Foreign | 6 | 3 | 0 |
+| Foreign | 9 | 0 | 0 |
 | Investment trust | 5 | 4 | 0 |
-| Dealer | 0 | 0 | 9 |
+| Dealer | 9 | 0 | 0 |
 | Margin | 9 | 0 | 0 |
 | HiStock broker | 0 | 9 | 0 |
 
-Key mechanical findings:
+The durable audit explicitly records `outcome_blind=true`, `sample_freeze=false`, `outcome_fields_present=[]`, and protected-stock exclusion `2454`.
 
-1. Dealer manifests list `20260825`, `20260826`, and `20260827`, but all three corresponding dealer JSON blobs are empty. The contract correctly records them as `quality_rejected`, not zero flow.
-2. MI_INDEX blobs for the same three sessions are empty. The canonical unified price provider falls through to valid legacy `data_fubon/fubon_YYYYMMDD_sma.json` values for all 9 probe observations and preserves fallback provenance.
-3. No normalized HiStock daily artifact exists for the three probe stocks/sessions, so broker coverage is `missing`, not zero.
-4. Margin rows are present for all 9 observations.
-5. Foreign and investment-trust row omission is preserved as missing rather than inferred zero.
+## Phase 1 Prompt B closeout evidence
 
-No network backfill or data repair was launched in Phase 1.
+`Prompt B closeout: PASS`
 
-## Validation / changed-file boundary
+The exact Phase 1 Prompt B was recovered from pre-implementation remote-main commit `d430ba015b085cefc3d9da599f8b121a434e9feb`, proving the closeout criteria were preregistered before Phase 1 began.
 
-Phase 1 added only Accumulation research code/tests/docs/audit artifacts and this canonical handoff checkpoint. It did not modify:
+Closeout initially found two real defects and did not PASS prematurely:
 
-- frozen Withdrawal v6.0-v6.5 methodology or outcome artifacts;
-- production prediction/strategy behavior;
-- routing state;
-- protected MediaTek motivation-case outcomes;
-- any development-sample/holdout identity.
+1. the audit universe rule accepted leading-zero ETF codes (`0050/0051/0052`), so the first durable `1101/1102/1103` artifact was not generator-reproducible;
+2. the first outcome-blindness guard searched forbidden words literally and would have misclassified the artifact's own `forbidden_outcome_fields` declaration.
 
-The authored regression tests cover trading-session offsets, explicit-zero-vs-missing semantics, EOD availability gating, unified price provenance, margin CSV parsing/zero semantics, TDCC exclusion, historical-industry exclusion, and fail-closed anchor eligibility.
+Bounded repairs fixed both without changing the PIT methodology, opening outcomes, touching Withdrawal, or executing Phase 2.
 
-No automatic GitHub Actions run was attached to the intermediate test commit; therefore Phase 1 Prompt B must independently execute/recover executable validation rather than infer test PASS from commit existence.
+Final executable closeout evidence:
 
-## Exact source entry points retained
+- workflow: `.github/workflows/test-institutional-accumulation-pit.yml`
+- run: `33505951816`
+- job: `99849911255`
+- head SHA: `801d15b006217842597b187baa0d548872382700`
+- conclusion: **SUCCESS**
+- regression tests: **9 passed, 0 failed**;
+- bounded coverage audit semantic reproduction: **PASS** after excluding only volatile `generated_at`;
+- outcome-blindness guard: **PASS**;
+- protected `2454` exclusion regression: **PASS**.
+
+Phase 1 Prompt B criteria:
+
+1. outcome-blind artifacts / no candidate outcomes — **PASS**;
+2. T-20/T-15/T-10/T-5/T-3/T-1/T0 and T0 session semantics — **PASS**;
+3. value separate from state/provenance; no zero-filling — **PASS**;
+4. unified stock-price provider used — **PASS**;
+5. conservative EOD availability — **PASS**;
+6. historical TDCC remains `availability_unsafe` — **PASS**;
+7. historical industry membership not guessed — **PASS**;
+8. catalyst/disclosure separate and publication-time safe — **PASS**;
+9. coverage audit mechanical/outcome-independent and reproducible — **PASS**;
+10. no development sample freeze and Phase 2 not executed — **PASS**;
+11. Withdrawal/production state untouched — **PASS**;
+12. files/tests/commits/remote durable artifacts satisfy Phase 1 contract — **PASS**.
+
+Changed-file comparison from Phase 1 pre-implementation baseline `d430ba015b085cefc3d9da599f8b121a434e9feb` through closeout head showed only the Accumulation Phase 1 code/tests/docs/workflow plus concurrent TWSE MI_INDEX data updates. No Withdrawal methodology or production strategy/prediction file was changed by this round.
+
+## Exact repository entry points
+
+### Phase 1 PIT implementation / validation
+
+- `scripts/lib/institutional_accumulation_pit.js`
+- `tests/institutional_accumulation_pit.test.js`
+- `tests/institutional_accumulation_pit_coverage.test.js`
+- `scripts/audit_institutional_accumulation_pit_coverage.js`
+- `.github/workflows/test-institutional-accumulation-pit.yml`
+- `data_research/institutional-flow/institutional-accumulation-pit-contract-v1.md`
+- `data_research/institutional-flow/institutional-accumulation-pit-coverage-v1.json`
 
 ### Unified stock price
 
@@ -204,13 +209,13 @@ No automatic GitHub Actions run was attached to the intermediate test commit; th
 - `data_history_sma/<stock>.json`
 - `data_fubon/fubon_YYYYMMDD_sma.json`
 
-### Official institutional / margin
+### Institutional / margin
 
 - `data_twse_foreign_investors/files.json`
 - `data_twse_investment_trust/files.json`
 - `data_twse_dealers/files.json`
 - `data_twse_margin_balance/files.json`
-- corresponding dated daily archives.
+- corresponding dated daily archives
 
 ### HiStock broker
 
@@ -218,86 +223,43 @@ No automatic GitHub Actions run was attached to the intermediate test commit; th
 - `data_research/institutional-flow/histock/<stock>/daily/YYYYMMDD.json`
 - `data_research/institutional-flow/histock/<stock>/batch-status/*.json`
 
-### TDCC
+### TDCC / industry / disclosure
 
 - `scripts/backfill_tdcc_shareholding_history.js`
 - `data_tdcc_shareholding/history/2449/YYYYMMDD.json`
 - `data_tdcc_shareholding/history/2449/manifest.json`
-
-### Universe / disclosure
-
 - `data_twse/twse_industry.csv`
 - `scripts/fundamental_event_timeline.js`
 - `scripts/build_fundamental_event_timeline.js`
 - `data_fundamental_events/<stock>/<year>.json`
 
-## Unresolved evidence after Phase 1
+## Unresolved evidence carried into Phase 2
 
-These are not silently repaired or guessed:
+1. normalized HiStock broker coverage is absent for the bounded Phase 1 probe;
+2. durable historical intraday publication timestamps for TWSE EOD archives remain unverified;
+3. TDCC historical publication timing remains unverified;
+4. effective-dated historical industry membership remains unverified;
+5. complete timestamped historical catalyst/news/analyst-revision evidence remains unverified;
+6. PIT-safe free-float/share-base support remains unaudited;
+7. numerical repricing/success thresholds remain deliberately unfrozen.
 
-1. dealer daily archives can be manifest-listed but empty;
-2. recent MI_INDEX files can be empty even when fallback price data exists;
-3. broker normalized coverage is sparse for the bounded probe;
-4. durable historical intraday publication timestamps for TWSE EOD archives remain unverified;
-5. TDCC historical publication timing remains unverified;
-6. effective-dated historical industry membership remains unverified;
-7. complete timestamped historical catalyst/news/analyst-revision evidence remains unverified;
-8. PIT-safe free-float/share-base support remains unaudited;
-9. numerical repricing/success thresholds remain deliberately unfrozen.
+## Next round
 
----
-
-## Prompt A — Phase 1 point-in-time feature/data contract
-
-Round identity:
-
-`institutional-accumulation-point-in-time-contract-v1`
-
-This Prompt A is now **COMPLETE**. Its original preregistered completion contract remains evidenced by repository history before the implementation commits. Do not rerun it while Prompt B is pending.
-
----
-
-## Prompt B — Phase 1 closeout / verification
-
-The following exact Prompt B remains the mandatory current closeout prompt and was preregistered before Phase 1 Prompt A implementation:
-
-```text
-Perform mandatory closeout for round `institutional-accumulation-point-in-time-contract-v1` only after it has been explicitly promoted and its Prompt A has completed.
-
-Fetch current remote main; read `AGENTS.md`, the canonical Accumulation handoff, and preregistration; recover this exact preregistered Prompt B from durable history.
-
-Verify at minimum:
-1. all Phase 1 artifacts are outcome-blind and contain no candidate future returns/MFE/MAE/breakout/failure labels;
-2. T-20/T-15/T-10/T-5/T-3/T-1/T0 and T0 trading-date semantics are explicit;
-3. value is separate from source-state/provenance and missing/rejected/unsafe are never zero-filled;
-4. unified stock-price provider is used rather than a new direct legacy price dependency;
-5. EOD source availability is conservative;
-6. TDCC historical data remains excluded/`availability_unsafe` unless an independently proven publication rule was preregistered before candidate outcomes;
-7. historical industry membership is not guessed from current mapping;
-8. catalyst/disclosure evidence remains separate and publication-time safe;
-9. coverage/source-state audit is mechanical and outcome-independent;
-10. no development sample was selected/frozen and Phase 2 was not executed;
-11. Withdrawal v6.0-v6.5 and production prediction/strategy state remain untouched;
-12. changed files, tests, commits, and remote durable artifacts satisfy the Phase 1 contract.
-
-On PASS, update/commit the handoff and promote exactly one Phase 2 deterministic development sample/event-anchor freeze round using its already-preregistered pair. Do not execute Phase 2.
-
-End with:
-`Prompt B closeout: PASS`
-and the promoted round identity/canonical handoff path, then stop.
-```
-
----
-
-# FUTURE / NOT PROMOTED — Phase 2 paired prompts
-
-Future round identity:
+Active/promoted round:
 
 `institutional-accumulation-development-sample-freeze-v1`
 
-Status: **PREREGISTERED / FUTURE / NOT PROMOTED**.
+Execute only the preregistered **Prompt A — Phase 2 deterministic development sample/event-anchor freeze** below when the repository owner next invokes `promptA` while Accumulation remains the sole globally active routed task.
 
-This pair exists only so Phase 1 Prompt B can verify it was frozen before Phase 2. Do not execute either prompt before explicit promotion by a PASSing Phase 1 Prompt B.
+Do not open outcomes in Phase 2. Stop after a durable deterministic sample/event-anchor and partition freeze.
+
+---
+
+## Completed Prompt B — Phase 1 closeout / verification
+
+Round `institutional-accumulation-point-in-time-contract-v1` closed with **PASS** using the exact preregistered Prompt B recoverable from commit `d430ba015b085cefc3d9da599f8b121a434e9feb`.
+
+---
 
 ## Prompt A — Phase 2 deterministic development sample/event-anchor freeze
 
@@ -361,9 +323,9 @@ and the promoted round identity/canonical handoff path, then stop.
 ## Safety / stop conditions
 
 - No production strategy promotion.
-- No future-outcome opening in Phase 0, Phase 1, or future Phase 2 sample-freeze work.
+- No future-outcome opening in Phase 2 sample-freeze work.
 - No MediaTek outcome-driven tuning.
-- No large network backfill in Phase 1.
+- No large network backfill unless separately planned under repository batch rules.
 - No modification of frozen Withdrawal methodology/validation state.
-- Current Phase 1 Prompt A completion does not authorize Prompt B automatically.
-- Only a PASSing Phase 1 Prompt B may promote Phase 2; promotion does not execute Phase 2.
+- Phase 2 Prompt A completion does not authorize Prompt B automatically.
+- Phase 2 Prompt B PASS may promote a later outcome-opening round; promotion does not execute it.
