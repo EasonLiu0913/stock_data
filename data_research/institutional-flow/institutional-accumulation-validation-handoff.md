@@ -160,7 +160,7 @@ Final collection-boundary state: Wave A complete; material-information machine c
 - methodology-development identities: `41`;
 - stock holdout, time holdout, and protected `2454`: sealed;
 - general catalyst/news/analyst readiness: `not_ready`;
-- official-disclosure source collection Prompt A: `complete`; Prompt B: `pending`;
+- official-disclosure source collection Prompt A: `complete`; Prompt B: `pass`;
 - current official-event PIT-safe identity coverage remains `8/41`;
 - unresolved official-event identities remain `33/41`; Wave A official monthly-revenue raw evidence is collected, while material-information enumeration remains blocked by fail-closed preflight;
 - no catalyst feature or catalyst/outcome association is authorized yet.
