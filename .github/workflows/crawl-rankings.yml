@@ -4,9 +4,9 @@ on:
   schedule:
     # 17:43 Taipei Time (09:43 UTC)
     - cron: '43 9 * * *'
-    # 19:37 Taipei Time (11:37 UTC)
+    # 19:37 Taipei Time (11:37 UTC) - recovery check; skips when the occurrence is already complete
     - cron: '37 11 * * *'
-    # 20:47 Taipei Time (12:47 UTC)
+    # 20:47 Taipei Time (12:47 UTC) - recovery check; skips when the occurrence is already complete
     - cron: '47 12 * * *'
   workflow_dispatch:
 
@@ -33,20 +33,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install chromium
-
       - name: Resolve ranking date anchor
         id: date-anchor
         shell: bash
@@ -70,25 +56,71 @@ jobs:
           fi
           echo "anchor=$anchor" >> "$GITHUB_OUTPUT"
 
+      - name: Test Fubon ranking completion gate
+        env:
+          FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
+        run: node scripts/check_fubon_ranking_completion.js --self-test
+
+      - name: Check whether this ranking occurrence is already complete
+        id: completion
+        env:
+          FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
+        run: node scripts/check_fubon_ranking_completion.js check
+
+      - name: Skip duplicate Fubon crawl
+        if: steps.completion.outputs.complete == 'true'
+        run: |
+          echo "✅ Fubon rankings are already complete for this scheduled occurrence."
+          echo "Source date: ${{ steps.completion.outputs.source_date }}"
+          echo "Skipping npm install, Playwright install, all Fubon page requests, file generation, and commit."
+
+      - name: Cache Playwright browsers
+        if: steps.completion.outputs.complete != 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        if: steps.completion.outputs.complete != 'true'
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: steps.completion.outputs.complete != 'true'
+        run: npx playwright install chromium
+
       - name: Run Main Force Ranking Crawler
+        if: steps.completion.outputs.complete != 'true'
         env:
           FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
         run: node scripts/scraper_fubon.js
 
       - name: Run Foreign Investor Ranking Crawler
+        if: steps.completion.outputs.complete != 'true'
         env:
           FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
         run: node scripts/scraper_fubon_foreign.js
 
       - name: Run Market Cap and Volume Ranking Crawler
+        if: steps.completion.outputs.complete != 'true'
         env:
           FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
         run: node scripts/scraper_fubon_other.js
 
+      - name: Verify outputs and finalize occurrence
+        if: steps.completion.outputs.complete != 'true'
+        env:
+          FUBON_DATE_ANCHOR: ${{ steps.date-anchor.outputs.anchor }}
+        run: node scripts/check_fubon_ranking_completion.js finalize
+
       - name: Generate Fubon files.json only
+        if: steps.completion.outputs.complete != 'true'
         run: node scripts/generate_file_lists.js --only data_fubon
 
       - name: Commit and push changes
+        if: steps.completion.outputs.complete != 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
