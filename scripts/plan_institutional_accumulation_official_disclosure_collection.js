@@ -15,7 +15,7 @@ const ROW_SHAPE_PREFLIGHT_VERSION = 'institutional-accumulation-material-informa
 const WAVE_C_METHODOLOGY = 'institutional-accumulation-material-information-wave-c-physical-batch-collection-v1';
 
 function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } }
-function qualityPassed(meta) { return meta && meta.quality_state === 'quality_passed'; }
+function qualityPassed(meta) { return meta?.quality_state === 'quality_passed'; }
 function attempts(meta) { return Number(meta?.attempt_count || 0); }
 function retryable(meta) { return !qualityPassed(meta) && attempts(meta) < MAX_ATTEMPTS && meta?.terminal_state !== 'manual_review' && meta?.terminal_state !== 'source_empty'; }
 function unresolvedIdentities(reconstruction) {
