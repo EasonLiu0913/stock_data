@@ -210,3 +210,17 @@ jobs:
           grep -F '## Prompt B — Development-only association refresh closeout' /tmp/final-handoff.md
           git show "origin/main:$routing" | grep -F '"active_task": "institutional-accumulation"'
           echo "Prompt A durable verification complete: $final_sha"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
