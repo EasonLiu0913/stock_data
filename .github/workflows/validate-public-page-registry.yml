@@ -18,15 +18,57 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
-# Validation-only layer: it does not persist repository data, so a newer CI run
-# may supersede an older validation run.
+# Validation-only layer normally uses read-only permissions. The temporary bounded
+# accumulation preflight job below is preregistered Prompt A work and removes
+# itself after durable evidence is verified.
 concurrency:
   group: public-page-registry-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  bounded-accumulation-row-shape-preflight:
+    name: Bounded accumulation row-shape preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run preregistered corrected listing preflight once
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json'
+          if [[ -f "$raw" ]]; then
+            echo 'Durable raw evidence already exists; no network request executed.'
+            exit 0
+          fi
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          set +e
+          node scripts/preflight_institutional_accumulation_mops_material_information.js
+          code=$?
+          set -e
+          echo "preflight diagnostic exit=$code"
+          test -f "$raw"
+          test -f 'data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json'
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const p=require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
+          const m=require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json');
+          const raw=fs.readFileSync('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json');
+          const h=crypto.createHash('sha256').update(raw).digest('hex');
+          if(p.contracts?.legacy?.attempt_count!==2) throw new Error('legacy attempt count changed');
+          if(p.diagnostics?.total_network_requests_this_round!==1) throw new Error('expected one corrected listing request');
+          if(m.response_sha256!==h||m.response_bytes!==raw.length) throw new Error('raw evidence hash/bytes mismatch');
+          if(!m.parseable_json) throw new Error('raw source is not parseable JSON');
+          NODE
+
   validate:
     name: Validate homepage registry and workflow deployment safety
     runs-on: ubuntu-latest
@@ -93,4 +135,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
