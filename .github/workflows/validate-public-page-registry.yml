@@ -27,6 +27,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  final-accumulation-prompt-a-verification:
+    name: Verify accumulation Prompt A durable state
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run regression and durable planner gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const p=require('/tmp/plan.json');
+          const f=require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
+          const m=require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json');
+          const raw=fs.readFileSync('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json');
+          const h=crypto.createHash('sha256').update(raw).digest('hex');
+          if(p.wave_a.length!==0||p.wave_b.length!==0||p.wave_c.length!==0) throw new Error(`queues not zero: ${JSON.stringify(p)}`);
+          if(p.material_information_authorized!==false) throw new Error('material-information collection unexpectedly authorized');
+          if(p.legacy_preflight_attempt_count!==2) throw new Error('legacy attempt count changed');
+          if(f.decision!=='listing_contract_passed_detail_contract_unproven') throw new Error(`unexpected durable decision ${f.decision}`);
+          if(f.contracts?.corrected_api?.listing_contract_passed!==true) throw new Error('listing contract is not PASS');
+          if(f.contracts?.corrected_api?.detail_contract?.status!=='unproven'||f.contracts?.corrected_api?.detail_contract?.request_executed!==false) throw new Error('detail contract state changed');
+          if(f.diagnostics?.total_network_requests_this_round!==1) throw new Error('request count is not exactly one');
+          if(m.response_sha256!==h||m.response_bytes!==raw.length) throw new Error('raw source hash/bytes mismatch');
+          if(m.coherent_row_structure!==true||m.row_shape?.row_type!=='array'||m.row_shape?.row_lengths?.length!==1||m.row_shape.row_lengths[0]!==6) throw new Error('row-shape contract mismatch');
+          if(m.detail_descriptor_count!==58) throw new Error('descriptor count mismatch');
+          NODE
+
   validate:
     name: Validate homepage registry and workflow deployment safety
     runs-on: ubuntu-latest
