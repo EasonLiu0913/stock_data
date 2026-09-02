@@ -2,6 +2,10 @@ name: "[研究] Institutional Accumulation Official Disclosure Collection"
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/collect-institutional-accumulation-official-disclosure.yml'
 
 permissions:
   contents: write
@@ -35,12 +39,12 @@ jobs:
           if (p.legacy_preflight_attempt_count !== 2 || p.legacy_preflight_retryable !== true || p.legacy_preflight_terminal_state !== null) {
             throw new Error(`Legacy baseline mismatch: ${JSON.stringify(p)}`);
           }
-          if (p.wave_c.length !== 0 || p.material_information_authorized) throw new Error('Wave C must be forbidden in this amendment round.');
+          if (p.wave_c.length !== 0 || p.material_information_authorized) throw new Error('Wave C must remain forbidden in this preflight round.');
           NODE
           echo "wave_a=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_a.length>0))")" >> "$GITHUB_OUTPUT"
           echo "wave_b=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_b.length>0))")" >> "$GITHUB_OUTPUT"
 
-  wave-b-corrected-api-preflight:
+  wave-b-row-shape-detail-preflight:
     needs: test-and-plan
     if: needs.test-and-plan.outputs.wave_b == 'true'
     runs-on: ubuntu-latest
@@ -49,51 +53,60 @@ jobs:
         with: { ref: main, fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Run corrected listing preflight exactly once
+      - name: Run corrected listing once and persist exact raw response
         shell: bash
         run: |
           set +e
           node scripts/preflight_institutional_accumulation_mops_material_information.js
           code=$?
-          echo "preflight exit code=$code (diagnostic decision is checkpointed even when blocked)"
+          echo "preflight exit code=$code (diagnostic evidence is checkpointed even when blocked)"
           exit 0
-      - name: Checkpoint corrected API preflight diagnostics
+      - name: Verify and checkpoint bounded raw evidence
         shell: bash
         run: |
           set -euo pipefail
-          file='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
+          preflight='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
+          source='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json'
+          meta='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json'
           node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
           const p = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
-          if (p.schema_version !== 2) throw new Error('Expected corrected preflight schema v2.');
+          const m = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json');
+          const raw = fs.readFileSync('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json');
+          const hash = crypto.createHash('sha256').update(raw).digest('hex');
+          if (p.schema_version !== 3) throw new Error('Expected row-shape preflight schema v3.');
           if (p.contracts?.legacy?.attempt_count !== 2) throw new Error('Legacy attempt counter changed.');
-          if (p.contracts?.corrected_api?.attempt_count !== 1) throw new Error('Corrected API must execute exactly once.');
-          if (p.diagnostics?.total_network_requests_this_round !== 1) throw new Error('Expected exactly one network request this round.');
-          if (p.contracts?.corrected_api?.endpoint !== 'https://mops.twse.com.tw/mops/api/t05st01') throw new Error('Wrong corrected endpoint.');
+          if (p.contracts?.corrected_api?.attempt_count !== 1) throw new Error('Corrected listing must execute exactly once in this round.');
+          if (p.diagnostics?.total_network_requests_this_round > 3) throw new Error('Network request cap exceeded.');
+          if (m.response_sha256 !== hash || p.contracts.corrected_api.listing_request.sha256 !== hash) throw new Error('Raw source hash mismatch.');
+          if (m.response_bytes !== raw.length) throw new Error('Raw source byte count mismatch.');
+          if (!m.parseable_json) throw new Error('Corrected listing raw source is not parseable JSON.');
           NODE
-          git add "$file"
+          git add "$preflight" "$source" "$meta"
           git diff --cached --quiet && exit 0
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'data: checkpoint corrected accumulation MOPS material API preflight'
+          git commit -m 'data: checkpoint accumulation MOPS row-shape preflight'
           git fetch origin main
           if ! git merge-base --is-ancestor origin/main HEAD^; then
             git reset --soft origin/main
             git restore --staged .
-            git add "$file"
-            git commit -m 'data: checkpoint corrected accumulation MOPS material API preflight'
+            git add "$preflight" "$source" "$meta"
+            git commit -m 'data: checkpoint accumulation MOPS row-shape preflight'
           fi
           git push origin HEAD:main
 
-  finalize-corrected-prompt-a:
-    needs: [test-and-plan, wave-b-corrected-api-preflight]
-    if: always() && needs.test-and-plan.result == 'success' && (needs.wave-b-corrected-api-preflight.result == 'success' || needs.test-and-plan.outputs.wave_b == 'false')
+  finalize-row-shape-prompt-a:
+    needs: [test-and-plan, wave-b-row-shape-detail-preflight]
+    if: always() && needs.test-and-plan.result == 'success' && (needs.wave-b-row-shape-detail-preflight.result == 'success' || needs.test-and-plan.outputs.wave_b == 'false')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Verify corrected durable state and forbidden Wave C
+      - name: Verify durable row-shape state and forbidden Wave C
         shell: bash
         run: |
           set -euo pipefail
@@ -104,12 +117,14 @@ jobs:
           node - <<'NODE'
           const p = require('/tmp/plan.json');
           const f = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
-          if (p.wave_a.length !== 0 || p.wave_b.length !== 0 || p.wave_c.length !== 0) throw new Error(`Post-run queues must all be zero in this preflight-only round: ${JSON.stringify(p)}`);
+          if (p.wave_a.length !== 0 || p.wave_b.length !== 0 || p.wave_c.length !== 0) throw new Error(`Post-run queues must all be zero: ${JSON.stringify(p)}`);
           if (p.material_information_authorized) throw new Error('Wave C collection must not be authorized.');
           if (f.contracts?.legacy?.attempt_count !== 2) throw new Error('Legacy attempt counter must remain 2.');
-          if (f.contracts?.corrected_api?.attempt_count !== 1) throw new Error('Corrected API attempt count must be 1.');
+          if (f.diagnostics?.total_network_requests_this_round > 3) throw new Error('Request cap exceeded.');
+          if (f.contracts?.corrected_api?.listing_contract_passed !== true) throw new Error(`Listing contract blocked: ${f.reason}`);
+          if (!['listing_contract_passed_detail_contract_unproven','listing_and_detail_contract_passed'].includes(f.decision)) throw new Error(`Unexpected decision: ${f.decision}`);
           NODE
-      - name: Checkpoint active amendment Prompt A
+      - name: Checkpoint active Prompt A
         shell: bash
         run: |
           set -euo pipefail
@@ -119,13 +134,13 @@ jobs:
           git diff --cached --quiet && exit 0
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'docs: checkpoint accumulation material API Prompt A'
+          git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
           git fetch origin main
           if ! git merge-base --is-ancestor origin/main HEAD^; then
             git reset --soft origin/main
             git restore --staged .
             node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
             git add "$file"
-            git commit -m 'docs: checkpoint accumulation material API Prompt A'
+            git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
           fi
           git push origin HEAD:main
