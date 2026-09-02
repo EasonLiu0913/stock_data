@@ -103,5 +103,23 @@ assert.equal(p.material_information_authorized, false);
 assert.equal(p.corrected_api_preflight_needed, false);
 assert.equal(p.corrected_api_state.listing_contract_passed, true);
 
+fs.writeFileSync(path.join(pref, 'preflight.json'), JSON.stringify({
+  schema_version: 4,
+  methodology: 'institutional-accumulation-material-information-detail-contract-resolution-v1',
+  decision: 'listing_contract_passed_detail_contract_unproven',
+  contracts: {
+    legacy: { attempt_count: 2, retryable: true, terminal_state: null },
+    corrected_api: { contract_version: CORRECTED_API_CONTRACT_VERSION, attempt_count: 1, listing_contract_passed: true, detail_contract: { status: 'unproven', request_executed: false } }
+  }
+}));
+p = plan({ reconstruction: reconstruction(), rawRoot: tmp });
+assert.equal(p.wave_a.length, 0);
+assert.equal(p.wave_b.length, 0);
+assert.equal(p.wave_c.length, 0);
+assert.equal(p.material_information_authorized, false);
+assert.equal(p.corrected_api_preflight_needed, false);
+assert.equal(p.corrected_api_state.methodology, 'institutional-accumulation-material-information-detail-contract-resolution-v1');
+assert.equal(p.corrected_api_state.detail_contract_status, 'unproven');
+
 assert.throws(() => unresolvedIdentities({ decisions: [{ stock: '1102', t0: '20260814', state: 'source_missing' }] }), /exactly 33/);
 console.log('institutional accumulation official disclosure collection tests passed');
