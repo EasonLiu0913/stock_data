@@ -4,9 +4,9 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Official-disclosure artifact reconstruction: COMPLETE / Prompt B PASS.**
+**Official-disclosure source-collection preregistration: Prompt A COMPLETE / Prompt B pending.**
 
-Promoted next round:
+Active round:
 
 `institutional-accumulation-official-disclosure-source-collection-preregistration-v1`
 
@@ -22,9 +22,9 @@ Status:
 - `institutional-accumulation-catalyst-evidence-readiness-audit-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-official-disclosure-pit-coverage-audit-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-official-disclosure-source-collection-preregistration-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-official-disclosure-source-collection-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
-Promotion does not execute the promoted Prompt A automatically.
+No later collection round is promoted until this round's Prompt B passes.
 
 ## Objective
 
@@ -117,6 +117,34 @@ Prompt A result:
 9. Changed-file scope is bounded to reconstruction/audit reproducibility and this handoff. No event artifacts were reconstructed, so no unrelated data tree was touched — **PASS**.
 10. Final decision: the remaining `33/41` official-disclosure gaps require a separately preregistered historical official-source/network-collection effort if this evidence class is to be expanded. No network collection, holdout opening, catalyst-development round, or catalyst layer is executed by this closeout — **PASS**.
 
+## Official-disclosure source-collection preregistration Prompt A
+
+Round: `institutional-accumulation-official-disclosure-source-collection-preregistration-v1`
+
+Prompt A durable preregistration file:
+
+`data_research/institutional-flow/institutional-accumulation-official-disclosure-source-collection-preregistration-v1.md`
+
+Prompt A documentation commit:
+
+`9f320065a180420d109d3606e474d567efdde706`
+
+Prompt A result:
+
+- exact unresolved identities mechanically preserved: `33` across nine unique TWSE stocks;
+- all identities remain outcome-blind and the holdouts / protected `2454` outcomes remain sealed;
+- MOPS historical monthly-revenue archive is accepted as a verified first-party historical single-month source contract;
+- MOPS historical material-information query is accepted as a first-party candidate, but exact machine enumeration / pagination / empty-response behavior is a mandatory fail-closed preflight gate before collection;
+- current TWSE OpenAPI `t187ap05_L` / `t187ap04_L` is rejected as the historical reconstruction source because no historical date/range/version contract is verified;
+- future collection is preregistered as plan -> deterministic queue -> fresh-runner physical batches -> checkpoint -> re-plan/resume, with `max-parallel: 1`, request caps, jitter, cooldown, retry-on-fresh-runner, response-quality guards, and stale-writer protection;
+- exact monthly raw-source artifact paths are preregistered; deeper material-information path naming remains intentionally gated on the preflight proving stable record/pagination keys;
+- provenance explicitly forbids using future collection time or future git commit time as historical availability proof;
+- `collection_preregistered` is the durable decision;
+- historical source collection itself was **not** executed;
+- no catalyst feature, development association, threshold, score, weight, production model, or strategy was created.
+
+Prompt A completion state: **COMPLETE — Prompt B pending**.
+
 ## Current repository state
 
 - immutable Phase 2 freeze SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
@@ -125,7 +153,7 @@ Prompt A result:
 - methodology-development identities: `41`;
 - stock holdout, time holdout, and protected `2454`: sealed;
 - general catalyst/news/analyst readiness: `not_ready`;
-- official-disclosure preregistration readiness: `official_disclosure_not_ready`;
+- official-disclosure source collection decision: `collection_preregistered`, awaiting mandatory Prompt B closeout;
 - current official-event PIT-safe identity coverage: `8/41`;
 - missing official-event artifact identities: `33/41`;
 - no catalyst feature or catalyst/outcome association is authorized yet.
@@ -139,7 +167,8 @@ Prompt A result:
 - PIT-safe free-float/share-base normalization remains unaudited.
 - Numerical binary repricing/success thresholds remain deliberately unfrozen.
 - Official-event coverage is only `8/41` identities and all accepted PIT-safe evidence is `fallback_deadline` provenance.
-- `33/41` identities still have no historically proven official-event artifact/source chain.
+- `33/41` identities still have no historically proven official-event artifact/source chain; this Prompt A preregistered later collection but did not fill them.
+- MOPS material-information machine enumeration/pagination and WAF behavior must pass the preregistered preflight before that source can be collected.
 - Immutable original-version provenance for official source rows remains incomplete/unproven beyond artifacts whose current version is durably proven by T0.
 - Generic market-news records lack a versioned historical visibility/edit contract.
 - Dedicated historical PIT-safe analyst revisions remain absent/unverified.
@@ -155,6 +184,7 @@ Prompt A result:
 - readiness audit: `data_research/institutional-flow/institutional-accumulation-catalyst-evidence-readiness-audit-v1.md`
 - official-disclosure coverage audit: `data_research/institutional-flow/institutional-accumulation-official-disclosure-pit-coverage-audit-v1.json`
 - reconstruction artifact: `data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json`
+- source-collection preregistration: `data_research/institutional-flow/institutional-accumulation-official-disclosure-source-collection-preregistration-v1.md`
 - reconstruction script: `scripts/reconstruct_institutional_accumulation_official_disclosure_artifacts.js`
 - reconstruction regression: `tests/institutional_accumulation_official_disclosure_artifact_reconstruction.test.js`
 - reconstruction workflow: `.github/workflows/reconstruct-institutional-accumulation-official-disclosure-artifacts.yml`
@@ -166,6 +196,7 @@ Prompt A result:
 - official event builder: `scripts/build_fundamental_event_timeline.js`
 - official event regression: `tests/fundamental_event_timeline.test.js`
 - official event artifacts: `data_fundamental_events/<stock>/<year>.json`, `data_fundamental_events/build-summary.json`
+- monthly revenue crawler: `scripts/crawl_mops_monthly_revenue.js`
 - monthly revenue workflows: `.github/workflows/crawl-mops-monthly-revenue.yml`, `.github/workflows/backfill-mops-monthly-revenue.yml`
 - financial fallback artifacts: `data_finmind_quarterly_financial_quality/<stock>/YYYYQn.json`
 - financial workflows: `.github/workflows/backfill-finmind-quarterly-financial-quality-batch.yml`, `.github/workflows/crawl-twse-quarterly-financial-quality.yml`
@@ -175,9 +206,9 @@ Prompt A result:
 
 Round: `institutional-accumulation-official-disclosure-source-collection-preregistration-v1`
 
-Purpose: define a reproducible, point-in-time-safe and physically bounded historical official-disclosure source-collection contract for the `33` unresolved identities before any network backfill is allowed. This round is still outcome-blind and performs **no historical source collection itself**.
+Next required action is the **mandatory Prompt B closeout for this same round**. Prompt A is complete; no historical source collection round is promoted or executed until Prompt B passes.
 
-The round must determine which official or first-party historical interfaces can actually reproduce source rows for the missing stock/T0 identities, what timestamp/version semantics they provide, what request/date/stock partition is safe, and what durable raw-source artifact layout and checkpoint rules the later collection round will use.
+Prompt B must independently verify the exact unresolved set, source classification, provenance semantics, physical-batch plan, changed-file scope, and the absence of historical backfill/outcome/catalyst work.
 
 ## Prompt A — Official-disclosure source-collection preregistration
 
