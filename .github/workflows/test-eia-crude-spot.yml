@@ -28,3 +28,17 @@ jobs:
           node --check scripts/crawl_eia_crude_spot.js
           node --check public/prediction-dashboard-rebound-enhancement.js
           node --test tests/eia_crude_spot.test.js tests/prediction_dashboard_external_oil_source.test.js
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
