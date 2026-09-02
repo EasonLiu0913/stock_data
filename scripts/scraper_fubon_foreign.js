@@ -33,6 +33,17 @@ function randomDelay(min, max) { return Math.floor(Math.random() * (max - min + 
 async function waitWithLog(label, min, max) { const delay = randomDelay(min, max); console.log(`⏳ ${label}: waiting ${delay}ms`); await wait(delay); }
 function csvEscape(value) { const text = String(value ?? ''); return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; }
 function getHeaders(targetName) { return ['Rank', 'Stock', 'Price', 'Change', 'ChangePercent', targetName.includes('賣超') ? 'NetSell' : 'NetBuy']; }
+function selectTargets(allTargets) {
+    const raw = String(process.env.FUBON_TARGET_NAMES || '').trim();
+    if (!raw) return allTargets;
+    let requested;
+    try { requested = JSON.parse(raw); } catch (error) { throw new Error(`Invalid FUBON_TARGET_NAMES JSON: ${error.message}`); }
+    if (!Array.isArray(requested) || requested.some(name => typeof name !== 'string')) throw new Error('FUBON_TARGET_NAMES must be a JSON array of strings');
+    const known = new Set(allTargets.map(target => target.name));
+    const unknown = requested.filter(name => !known.has(name));
+    if (unknown.length) console.log(`Skipping ${unknown.length} recovery target(s) owned by other Fubon crawlers.`);
+    return allTargets.filter(target => requested.includes(target.name));
+}
 
 async function extractTarget(browser, target) {
     let lastError = null;
@@ -69,14 +80,21 @@ async function extractTarget(browser, target) {
 }
 
 (async () => {
+    const selectedTargets = selectTargets(targets);
+    if (selectedTargets.length === 0) {
+        console.log('✅ No foreign ranking targets need recovery; skipping browser launch.');
+        return;
+    }
+    console.log(`Foreign ranking targets selected: ${selectedTargets.length}/${targets.length}`);
+
     const browser = await chromium.launch({ headless: true });
     const failedTargets = [];
     const dirPath = path.join(__dirname, '../data_fubon');
     const dateAnchor = requiredAnchorFromEnv();
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
     try {
-        for (let index = 0; index < targets.length; index++) {
-            const target = targets[index];
+        for (let index = 0; index < selectedTargets.length; index++) {
+            const target = selectedTargets[index];
             try {
                 const { data, pageDate } = await extractTarget(browser, target);
                 const csvContent = [getHeaders(target.name).map(csvEscape).join(','), ...data.map(row => row.map(csvEscape).join(','))].join('\n') + '\n';
@@ -88,12 +106,12 @@ async function extractTarget(browser, target) {
                 failedTargets.push({ name: target.name, url: target.url, error: error.message });
                 console.error(`❌ Giving up on ${target.name} after ${MAX_ATTEMPTS} attempts: ${error.message}`);
             }
-            if (index < targets.length - 1) await waitWithLog('Normal pacing before next ranking page', NORMAL_DELAY_MIN_MS, NORMAL_DELAY_MAX_MS);
+            if (index < selectedTargets.length - 1) await waitWithLog('Normal pacing before next ranking page', NORMAL_DELAY_MIN_MS, NORMAL_DELAY_MAX_MS);
         }
         if (failedTargets.length > 0) {
             console.error(`\n❌ ${failedTargets.length} foreign ranking target(s) still failed:`);
             for (const failure of failedTargets) console.error(`- ${failure.name}: ${failure.error}`);
             process.exitCode = 1;
-        } else console.log(`\n✅ All ${targets.length} foreign ranking targets completed successfully.`);
+        } else console.log(`\n✅ All ${selectedTargets.length} selected foreign ranking target(s) completed successfully.`);
     } finally { await browser.close(); }
 })();
