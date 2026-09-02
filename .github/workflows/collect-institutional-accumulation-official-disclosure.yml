@@ -1,4 +1,4 @@
-# Wave C rerun after boolean quality-gate regression fix
+# Wave C durable checkpoint fix: inspect origin/main blobs, never local untracked artifacts
 name: "[研究] Institutional Accumulation Official Disclosure Collection"
 
 on:
@@ -75,15 +75,15 @@ jobs:
           tar -cf /tmp/batch.tar "$d"
           git fetch origin main
           git reset --hard origin/main
-          if node -e "const fs=require('fs');const p='$d/source-meta.json';if(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p)).quality_state==='quality_passed')process.exit(0);process.exit(1)"; then
-            echo 'Remote quality-passed listing wins; no refetch overwrite.'
+          if git show "origin/main:$d/source-meta.json" 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.exit(JSON.parse(s).quality_state==='quality_passed'?0:1)}catch{process.exit(1)}})"; then
+            echo 'Durable remote quality-passed listing wins; no overwrite.'
           else
             tar -xf /tmp/batch.tar
             git add "$d"
             if ! git diff --cached --quiet; then
               git config user.name github-actions[bot]
               git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-              git commit -m "data: checkpoint accumulation MOPS listing ${{ matrix.stock }} 115"
+              git commit -m "data: checkpoint accumulation MOPS listing ${{ matrix.stock }} ${{ matrix.roc_year }}"
               git push origin HEAD:main
             fi
           fi
@@ -141,8 +141,8 @@ jobs:
           tar -cf /tmp/batch.tar "$d"
           git fetch origin main
           git reset --hard origin/main
-          if node -e "const fs=require('fs');const p='$d/source-meta.json';if(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p)).quality_state==='quality_passed')process.exit(0);process.exit(1)"; then
-            echo 'Remote quality-passed detail wins; no refetch overwrite.'
+          if git show "origin/main:$d/source-meta.json" 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.exit(JSON.parse(s).quality_state==='quality_passed'?0:1)}catch{process.exit(1)}})"; then
+            echo 'Durable remote quality-passed detail wins; no overwrite.'
           else
             tar -xf /tmp/batch.tar
             git add "$d"
@@ -169,9 +169,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - id: plan
+        shell: bash
         run: |
+          set -euo pipefail
           git fetch origin main && git reset --hard origin/main
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
           echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
 
   detail-batches-2:
@@ -196,9 +199,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - id: plan
+        shell: bash
         run: |
+          set -euo pipefail
           git fetch origin main && git reset --hard origin/main
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
           echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
 
   detail-batches-3:
