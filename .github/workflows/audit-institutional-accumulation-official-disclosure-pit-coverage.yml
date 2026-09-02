@@ -1,0 +1,75 @@
+name: "[07 研究] Institutional Accumulation Official Disclosure PIT Audit"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/audit_institutional_accumulation_official_disclosure_pit_coverage.js'
+      - 'tests/institutional_accumulation_official_disclosure_pit_coverage.test.js'
+      - '.github/workflows/audit-institutional-accumulation-official-disclosure-pit-coverage.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-official-disclosure-pit-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main with history
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Syntax and bounded regression tests
+        run: |
+          set -euo pipefail
+          node --check scripts/audit_institutional_accumulation_official_disclosure_pit_coverage.js
+          node --test tests/institutional_accumulation_official_disclosure_pit_coverage.test.js
+
+      - name: Build outcome-blind official-disclosure PIT audit
+        run: |
+          set -euo pipefail
+          node scripts/audit_institutional_accumulation_official_disclosure_pit_coverage.js
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'data_research/institutional-flow/institutional-accumulation-official-disclosure-pit-coverage-audit-v1.json';
+          const a = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (a.audit_id !== 'institutional-accumulation-official-disclosure-pit-coverage-audit-v1') throw new Error('unexpected audit id');
+          if (a.outcome_blind !== true || a.frozen_development_identity_count !== 41) throw new Error('audit boundary mismatch');
+          if (a.summary?.identity_count !== 41 || a.identities?.length !== 41) throw new Error('must audit exactly 41 identities');
+          if (a.scope?.outcome_values_read !== false || a.scope?.holdout_outcomes_read !== false || a.scope?.protected_2454_outcomes_read !== false) throw new Error('outcome-blind boundary missing');
+          if (a.identities.some(r => r.stock === '2454')) throw new Error('protected 2454 leaked into audit');
+          console.log(JSON.stringify({ decision: a.decision, summary: a.summary }, null, 2));
+          NODE
+
+      - name: Commit durable audit artifact
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/institutional-accumulation-official-disclosure-pit-coverage-audit-v1.json
+          if git diff --cached --quiet; then
+            echo "No audit artifact changes."
+            exit 0
+          fi
+          git commit -m "analysis: audit official disclosure PIT coverage v1"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main
+            sleep $((attempt * 2))
+          done
+          echo "Failed to push audit artifact after retries" >&2
+          exit 1
