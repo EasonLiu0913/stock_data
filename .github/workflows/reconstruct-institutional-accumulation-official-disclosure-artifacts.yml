@@ -79,6 +79,31 @@ jobs:
           const allowed=new Set(['reconstructable_from_pre_T0_durable_inputs','source_exists_but_version_or_timing_unsafe','source_missing','not_applicable']);
           if (p.decisions.length !== 33 || p.decisions.some(x=>!allowed.has(x.state))) throw new Error('classification contract violated');
           NODE
+      - name: Record Prompt A completion in canonical handoff
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const handoff='data_research/institutional-flow/institutional-accumulation-validation-handoff.md';
+          const artifact='data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json';
+          let text=fs.readFileSync(handoff,'utf8');
+          const oldStatus='- `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.';
+          const newStatus='- `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.';
+          if (text.includes(oldStatus)) text=text.replace(oldStatus,newStatus);
+          else if (!text.includes(newStatus)) throw new Error('Active-round status marker not found');
+          const marker='## Current repository state';
+          const sectionMarker='## Official-disclosure artifact reconstruction Prompt A completion';
+          if (!text.includes(sectionMarker)) {
+            const p=JSON.parse(fs.readFileSync(artifact,'utf8'));
+            const before=p.before_summary;
+            const after=p.after_summary;
+            const c=p.classification_counts;
+            const section=`## Official-disclosure artifact reconstruction Prompt A completion\n\nRound: \`institutional-accumulation-official-disclosure-artifact-reconstruction-v1\`\n\nPrompt A: **COMPLETE**. Prompt B remains **PREREGISTERED / NOT STARTED** and was not executed.\n\nFresh-runner evidence:\n\n- workflow run: \`${process.env.GITHUB_RUN_ID}\`;\n- tested head before writer commit: \`${process.env.GITHUB_SHA}\`;\n- bounded regressions: **PASS**;\n- reconstruction execution: **PASS**;\n- outcome-blind / no-network contract: **PASS**.\n\nDurable reconstruction result:\n\n- exact prior missing identities classified: \`${p.missing_identity_count}\`;\n- \`reconstructable_from_pre_T0_durable_inputs\`: \`${c.reconstructable_from_pre_T0_durable_inputs}\`;\n- \`source_exists_but_version_or_timing_unsafe\`: \`${c.source_exists_but_version_or_timing_unsafe}\`;\n- \`source_missing\`: \`${c.source_missing}\`;\n- \`not_applicable\`: \`${c.not_applicable}\`;\n- reconstructed event artifacts: \`${p.reconstructed_artifacts.length}\`;\n- official-disclosure PIT-safe identity coverage before/after: \`${before.identities_with_pit_safe_event}/${before.identity_count}\` -> \`${after.identities_with_pit_safe_event}/${after.identity_count}\`;\n- missing-artifact identities before/after: \`${before.missing_artifact_identities}\` -> \`${after.missing_artifact_identities}\`.\n\nBoundary result:\n\n- no current network collection was used;\n- development outcome values, stock/time holdout outcomes, and protected \`2454\` outcomes were not read;\n- no generic news, analyst-revision, catalyst feature, threshold, score, weighting, production model, or Withdrawal methodology change was introduced;\n- no current artifact commit timestamp was used as historical source proof;\n- the committed source set available to the existing offline builder contained no reconstructable pre-T0 source for the 33 missing identities, so all 33 remain \`source_missing\`;\n- remaining official-disclosure coverage gaps therefore require a separately preregistered source/network-collection round if the project chooses to pursue them. No such round is started automatically.\n\nDurable artifact:\n\n\`data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json\`\n\n`;
+            if (!text.includes(marker)) throw new Error('Current repository state marker not found');
+            text=text.replace(marker,section+marker);
+          }
+          fs.writeFileSync(handoff,text);
+          NODE
       - name: Commit bounded reconstruction outputs
         run: |
           set -euo pipefail
@@ -91,6 +116,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
           git add data_research/institutional-flow/institutional-accumulation-official-disclosure-pit-coverage-audit-v1.json
+          git add data_research/institutional-flow/institutional-accumulation-validation-handoff.md
           if [ -d data_fundamental_events ]; then
             while IFS= read -r f; do git add "$f"; done < <(git status --porcelain data_fundamental_events | awk '{print $2}')
           fi
@@ -98,5 +124,5 @@ jobs:
             echo "No bounded reconstruction outputs changed."
             exit 1
           fi
-          git commit -m "analysis: reconstruct official disclosure artifacts"
+          git commit -m "analysis: complete official disclosure reconstruction Prompt A"
           git push origin HEAD:main
