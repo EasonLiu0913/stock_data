@@ -42,6 +42,11 @@ function expectedFileNames(sourceDate) {
   return EXPECTED_NAMES.map((name) => `fubon_${sourceDate}_${name}.csv`);
 }
 
+function targetNameFromFileName(fileName) {
+  const match = String(fileName).match(/^fubon_\d{8}_(.+)\.csv$/);
+  return match ? match[1] : null;
+}
+
 function csvLooksComplete(filePath) {
   if (!fs.existsSync(filePath)) return false;
   const stat = fs.statSync(filePath);
@@ -64,26 +69,27 @@ function writeGithubOutput(values, env = process.env) {
 
 function inspectMarker(dataDir, occurrenceDate) {
   const file = markerPath(dataDir, occurrenceDate);
-  if (!fs.existsSync(file)) return { complete: false, reason: 'marker_missing' };
+  if (!fs.existsSync(file)) return { complete: false, reason: 'marker_missing', missingTargetNames: [...EXPECTED_NAMES] };
 
   let marker;
   try {
     marker = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (error) {
-    return { complete: false, reason: `marker_invalid_json:${error.message}` };
+    return { complete: false, reason: `marker_invalid_json:${error.message}`, missingTargetNames: [...EXPECTED_NAMES] };
   }
 
   if (marker.schema_version !== 1 || marker.occurrence_date !== occurrenceDate || !/^\d{8}$/.test(marker.source_date || '')) {
-    return { complete: false, reason: 'marker_contract_mismatch' };
+    return { complete: false, reason: 'marker_contract_mismatch', missingTargetNames: [...EXPECTED_NAMES] };
   }
 
   const expected = expectedFileNames(marker.source_date);
   const missingOrInvalid = expected.filter((name) => !csvLooksComplete(path.join(dataDir, name)));
+  const missingTargetNames = missingOrInvalid.map(targetNameFromFileName).filter(Boolean);
   if (missingOrInvalid.length > 0) {
-    return { complete: false, reason: 'marker_outputs_incomplete', sourceDate: marker.source_date, missingOrInvalid };
+    return { complete: false, reason: 'marker_outputs_incomplete', sourceDate: marker.source_date, missingOrInvalid, missingTargetNames };
   }
 
-  return { complete: true, reason: 'marker_and_outputs_complete', sourceDate: marker.source_date };
+  return { complete: true, reason: 'marker_and_outputs_complete', sourceDate: marker.source_date, missingTargetNames: [] };
 }
 
 function candidateDatesForName(dataDir, name) {
@@ -145,7 +151,8 @@ function selfTest() {
   try {
     const occurrenceDate = '20260903';
     const sourceDate = '20260903';
-    if (inspectMarker(root, occurrenceDate).complete) throw new Error('missing marker must not be complete');
+    const missingMarker = inspectMarker(root, occurrenceDate);
+    if (missingMarker.complete || missingMarker.missingTargetNames.length !== EXPECTED_NAMES.length) throw new Error('missing marker must request full recovery');
 
     for (const name of expectedFileNames(sourceDate)) {
       fs.writeFileSync(path.join(root, name), 'Rank,Stock\n1,2330 台積電\n', 'utf8');
@@ -154,8 +161,20 @@ function selfTest() {
     if (result.sourceDate !== sourceDate) throw new Error('finalize selected wrong source date');
     if (!inspectMarker(root, occurrenceDate).complete) throw new Error('complete marker was not accepted');
 
-    fs.unlinkSync(path.join(root, expectedFileNames(sourceDate)[0]));
-    if (inspectMarker(root, occurrenceDate).complete) throw new Error('missing output must invalidate marker');
+    const firstFile = expectedFileNames(sourceDate)[0];
+    fs.unlinkSync(path.join(root, firstFile));
+    const oneMissing = inspectMarker(root, occurrenceDate);
+    if (oneMissing.complete || oneMissing.missingTargetNames.length !== 1 || oneMissing.missingTargetNames[0] !== EXPECTED_NAMES[0]) {
+      throw new Error('single missing output must request only its matching target');
+    }
+
+    const crossCategoryFiles = [
+      `fubon_${sourceDate}_${FOREIGN_NAMES[0]}.csv`,
+      `fubon_${sourceDate}_${OTHER_NAMES[0]}.csv`,
+    ];
+    for (const file of crossCategoryFiles) fs.unlinkSync(path.join(root, file));
+    const threeMissing = inspectMarker(root, occurrenceDate);
+    if (threeMissing.missingTargetNames.length !== 3) throw new Error('cross-category missing outputs were not preserved');
 
     console.log('check_fubon_ranking_completion self-test passed');
   } finally {
@@ -174,9 +193,11 @@ function main() {
 
   if (mode === 'check') {
     const result = inspectMarker(dataDir, occurrenceDate);
+    const targetsJson = JSON.stringify(result.missingTargetNames || []);
     console.log(`Fubon ranking precheck: occurrence=${occurrenceDate}, complete=${result.complete}, reason=${result.reason}${result.sourceDate ? `, source_date=${result.sourceDate}` : ''}`);
     if (result.missingOrInvalid?.length) console.log(`Missing/invalid outputs: ${result.missingOrInvalid.join(', ')}`);
-    writeGithubOutput({ complete: result.complete ? 'true' : 'false', source_date: result.sourceDate || '' });
+    if (!result.complete) console.log(`Recovery targets (${result.missingTargetNames.length}): ${result.missingTargetNames.join(', ')}`);
+    writeGithubOutput({ complete: result.complete ? 'true' : 'false', source_date: result.sourceDate || '', targets_json: targetsJson });
     return;
   }
 
@@ -199,4 +220,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { EXPECTED_NAMES, expectedFileNames, inspectMarker, findLatestCompleteSourceDate, finalize, csvLooksComplete };
+module.exports = { EXPECTED_NAMES, expectedFileNames, inspectMarker, findLatestCompleteSourceDate, finalize, csvLooksComplete, targetNameFromFileName };
