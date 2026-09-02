@@ -13,8 +13,8 @@ This routing handoff superseded the previously preregistered legacy-third-retry 
 `institutional-accumulation-material-information-row-shape-detail-contract-preflight-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
-- Prompt B: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE — Prompt B pending**
+- Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
 
@@ -101,6 +101,28 @@ Exact new raw paths for this round:
 - `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json`
 - optional, only if a detail request is deterministically authorized: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/detail-source.json`
 - optional corresponding metadata: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/detail-source-meta.json`
+
+## Prompt A durable checkpoint — row-shape + detail-contract preflight
+
+Round: `institutional-accumulation-material-information-row-shape-detail-contract-preflight-v1`
+
+- Prompt A status: **COMPLETE — Prompt B pending**.
+- Fresh-runner workflow run: `33602540469`.
+- Triggering implementation head: `313bffb96ea07c609fbcc670c2311244b074b083`.
+- corrected listing endpoint/method: `https://mops.twse.com.tw/mops/api/t05st01` / `POST`.
+- deterministic request body: `{"companyId":"1102","year":"115","month":"all","firstDay":"","lastDay":""}`.
+- total network requests this round: `1` (cap 3); legacy attempt_count remains `2`.
+- raw listing source: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json`; metadata: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json`.
+- response bytes/SHA-256: `15049 / 4bf00b7a65ce051e67fa749424c9fac18524c4a49dcb93e9fc07b6fbedba21f5`.
+- application code/message: `200 / 查詢成功`.
+- row count/type/coherence: `58 / array / true`.
+- descriptor count: `58`; sample descriptor: `{"apiName":"t05st01_detail","parameters":{"enterDate":"1150115","serialNumber":"1","companyId":"1102","marketKind":"sii"}}`.
+- listing contract passed: `true`.
+- detail contract status: `unproven`; request executed: `false`.
+- durable decision: `listing_contract_passed_detail_contract_unproven`; reason: `corrected_api_listing_contract_verified_detail_method_url_body_not_proven`.
+- post-run planner: Wave A=`0`, Wave B=`0`, Wave C=`0`; material-information authorization=`false`.
+- Wave A was not refetched. Wave C did not run. Current collection time remains audit metadata only, not historical PIT proof.
+- Protected Phase 2/outcome/association/holdout/2454/Withdrawal state was not opened or modified by this bounded implementation.
 
 ## Prompt A — Row-shape + detail-contract preflight
 
