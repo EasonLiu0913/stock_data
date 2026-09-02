@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 'use strict';
 const crypto=require('node:crypto'); const fs=require('node:fs'); const path=require('node:path');
-const ROOT=path.resolve(__dirname,'..'); const OUT=path.join(ROOT,'data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
+const ROOT=path.resolve(__dirname,'..'); const OUT=path.join(ROOT,'data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'); const MAX_ATTEMPTS=3;
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));} function jitter(){return 2000+Math.floor(Math.random()*3001);} function sha(b){return crypto.createHash('sha256').update(b).digest('hex');}
 function blocked(html,bytes){const t=String(html).toLowerCase();return bytes.length<3000||/access denied|captcha|security|驗證碼|forbidden|request rejected|拒絕/.test(t);}
-function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+'\n');}
+function read(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}} function write(v){fs.mkdirSync(path.dirname(OUT),{recursive:true});fs.writeFileSync(OUT,JSON.stringify(v,null,2)+'\n');}
 async function request(url,options={}){await sleep(jitter());const r=await fetch(url,{redirect:'follow',...options,headers:{'user-agent':'Mozilla/5.0 (compatible; stock-data-accumulation-preflight/1.0)',accept:'text/html,application/xhtml+xml',...(options.headers||{})}});const b=Buffer.from(await r.arrayBuffer());return{status:r.status,url:r.url,bytes:b,html:new TextDecoder('utf-8').decode(b),sha256:sha(b)};}
+function isAmbiguousReason(reason){return /security_or_quality_block|soft_block|extraction_failure/.test(String(reason||''));}
 async function main(){
+  const existing=read(OUT); if(existing?.decision==='pass'){console.log(JSON.stringify({ok:true,skipped:true,reason:'already_passed'},null,2));return;}
+  const prior=Number(existing?.attempt_count || (existing?.decision==='blocked' ? 1 : 0)); const attempt=prior+1;
+  if(attempt>MAX_ATTEMPTS || existing?.terminal_state==='manual_review') throw new Error('Maximum preflight attempts reached; manual review required.');
   const started=new Date().toISOString(); const diag={stock:'1102',roc_year:'115',request_cap:3,requests:[]}; let decision='blocked',reason='unverified_machine_contract';
   try{
     const endpoint='https://mops.twse.com.tw/mops/web/ajax_t05st01';
@@ -24,7 +28,8 @@ async function main(){
     if(!noPagination) throw new Error('pagination_end_condition_unverified');
     decision='pass'; reason='machine_contract_verified';
   }catch(e){reason=e.message||reason;}
-  const result={schema_version:1,methodology:'institutional-accumulation-official-disclosure-source-collection-v1',outcome_blind:true,started_at:started,completed_at:new Date().toISOString(),decision,reason,diagnostics:diag}; write(result); console.log(JSON.stringify(result,null,2)); if(decision!=='pass') process.exitCode=2;
+  const retryable=decision==='blocked'&&isAmbiguousReason(reason)&&attempt<MAX_ATTEMPTS;
+  const result={schema_version:1,methodology:'institutional-accumulation-official-disclosure-source-collection-v1',outcome_blind:true,started_at:started,completed_at:new Date().toISOString(),decision,reason,attempt_count:attempt,retryable,terminal_state:decision==='blocked'&&isAmbiguousReason(reason)&&attempt>=MAX_ATTEMPTS?'manual_review':null,diagnostics:diag}; write(result); console.log(JSON.stringify(result,null,2)); if(decision!=='pass') process.exitCode=2;
 }
 if(require.main===module)main().catch(e=>{console.error(e.stack||e.message);process.exitCode=1;});
-module.exports={blocked};
+module.exports={blocked,isAmbiguousReason,MAX_ATTEMPTS};
