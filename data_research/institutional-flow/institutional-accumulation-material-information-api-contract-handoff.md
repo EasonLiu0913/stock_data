@@ -13,7 +13,7 @@ This routing handoff superseded the obsolete legacy-third-retry route. Completed
 `institutional-accumulation-material-information-detail-contract-resolution-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE — Prompt B pending**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -119,6 +119,29 @@ New evidence paths for this round:
 - `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/detail-contract-evidence-meta.json` — required metadata when the evidence file is created;
 - `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/detail-source.json` — only if a detail request becomes deterministically authorized;
 - `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/detail-source-meta.json` — required if a detail request runs.
+
+## Prompt A durable checkpoint — detail-contract resolution
+
+Round: `institutional-accumulation-material-information-detail-contract-resolution-v1`
+
+- Prompt A status: **COMPLETE — Prompt B pending**.
+- Pre-Prompt-A active handoff head: `8d282a80a0485d161ef3211b05507b9e7537beab`.
+- durable bounded-resolution state commit: `0b63a7c239dd394c97df49394f7a89dbfef33d78`.
+- planner fix commit: `b58db4bec1fa32970d1cca9c83be3a409749a529`.
+- regression test commit: `eaa7e85b9b04cbabc8f20921c37d012d1a6457bb`.
+- durable listing `corrected-api-preflight/source.json` was reused; corrected listing requests this round: `0`.
+- exactly one official frontend/static-contract request was used: `https://mops.twse.com.tw/mops/#/web/t05st01`.
+- the official SPA shell was reachable, but the bounded text extraction exposed no deterministic `t05st01_detail` request construction. No method, URL, headers, or request body was guessed.
+- detail request count: `0`; detail contract status remains `unproven`.
+- total network requests this round: `1` (cap `2`); no jitter requirement applied because no second request ran.
+- legacy `/mops/web/ajax_t05st01` was not requested; durable legacy `attempt_count` remains exactly `2`.
+- `preflight.json` schema is now `4`, methodology `institutional-accumulation-material-information-detail-contract-resolution-v1`, decision `listing_contract_passed_detail_contract_unproven`, reason `official_frontend_probe_did_not_expose_deterministic_detail_transport_contract`.
+- the first durable descriptor remained `apiName=t05st01_detail`, `enterDate=1150115`, `serialNumber=1`, `companyId=1102`, `marketKind=sii`; it was not converted into a guessed detail request.
+- during durable-state verification, a planner defect was found: it treated the current preflight methodology name as if the previously passed row-shape preflight had become stale, which would have requeued Wave B. `scripts/plan_institutional_accumulation_official_disclosure_collection.js` now treats the durable row-shape raw/meta plus `listing_contract_passed=true` as the listing gate, independent of later detail-round methodology identity.
+- `tests/institutional_accumulation_official_disclosure_collection.test.js` now covers the schema-v4 detail-resolution state and requires Wave A=`0`, Wave B=`0`, Wave C=`0`, `material_information_authorized=false`.
+- Wave A was not refetched. Wave C did not run and remains unauthorized.
+- No development outcomes, stock/time holdout outcomes, protected `2454`, catalyst/outcome association, threshold, score, model, strategy, production behavior, or Withdrawal v6.0-v6.5 state was opened or intentionally modified.
+- Current collection time/frontend visibility remains audit metadata only and is not historical PIT proof.
 
 ## Prompt A — Detail-contract resolution
 
