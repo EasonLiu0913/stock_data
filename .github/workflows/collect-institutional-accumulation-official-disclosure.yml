@@ -1,4 +1,4 @@
-# Wave C durable checkpoint fix: inspect origin/main blobs, never local untracked artifacts
+# Wave C durable checkpoint fix + sparse fresh-runner checkout
 name: "[研究] Institutional Accumulation Official Disclosure Collection"
 
 on:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: institutional-accumulation-official-disclosure
+  group: institutional-accumulation-official-disclosure-sparse-v2
   cancel-in-progress: false
 
 env:
@@ -24,7 +24,13 @@ jobs:
       listings: ${{ steps.plan.outputs.listings }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            tests
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: node tests/institutional_accumulation_official_disclosure_collection.test.js
@@ -55,7 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: Fresh-runner physical cooldown
@@ -99,7 +110,12 @@ jobs:
       details: ${{ steps.plan.outputs.details }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - id: plan
@@ -121,7 +137,12 @@ jobs:
     runs-on: ubuntu-latest
     steps: &detail_steps
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: Fresh-runner physical cooldown
@@ -165,7 +186,12 @@ jobs:
       details: ${{ steps.plan.outputs.details }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - id: plan
@@ -195,7 +221,12 @@ jobs:
       details: ${{ steps.plan.outputs.details }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - id: plan
@@ -223,7 +254,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            tests
+            data_research/institutional-flow
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: Verify durable remote Wave C state
