@@ -10,6 +10,7 @@ const MONTHLY_MONTH = '202607';
 const MATERIAL_YEAR = '115';
 const MAX_ATTEMPTS = 3;
 const CORRECTED_API_CONTRACT_VERSION = 'mops-api-t05st01-json-v1';
+const ROW_SHAPE_PREFLIGHT_VERSION = 'institutional-accumulation-material-information-row-shape-detail-contract-preflight-v1';
 
 function readJson(file, fallback = null) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } }
 function qualityPassed(meta) { return meta && meta.quality_state === 'quality_passed'; }
@@ -22,6 +23,8 @@ function unresolvedIdentities(reconstruction) {
 function uniqueStocks(rows) { return [...new Set(rows.map(r => r.stock))].sort(); }
 function monthlyMetaPath(root = RAW_ROOT) { return path.join(root, 'mops-monthly-revenue', MONTHLY_MONTH, 'source-meta.json'); }
 function preflightPath(root = RAW_ROOT) { return path.join(root, 'mops-material-information', 'preflight.json'); }
+function correctedRawPath(root = RAW_ROOT) { return path.join(root, 'mops-material-information', 'corrected-api-preflight', 'source.json'); }
+function correctedRawMetaPath(root = RAW_ROOT) { return path.join(root, 'mops-material-information', 'corrected-api-preflight', 'source-meta.json'); }
 
 function legacyState(preflight) {
   if (preflight?.contracts?.legacy) return preflight.contracts.legacy;
@@ -42,13 +45,15 @@ function correctedApiState(preflight) {
     listing_contract_passed: corrected.listing_contract_passed === true,
     detail_contract_status: corrected.detail_contract?.status || 'unproven',
     decision: preflight?.decision || null,
-    reason: preflight?.reason || null
+    reason: preflight?.reason || null,
+    methodology: preflight?.methodology || null
   };
 }
 
-function correctedPreflightNeeded(preflight) {
-  const corrected = correctedApiState(preflight);
-  return !corrected || corrected.attempt_count < 1;
+function rowShapePreflightNeeded(root, preflight) {
+  const raw = readJson(correctedRawPath(root));
+  const meta = readJson(correctedRawMetaPath(root));
+  return !(raw && meta && meta.methodology === ROW_SHAPE_PREFLIGHT_VERSION && preflight?.methodology === ROW_SHAPE_PREFLIGHT_VERSION);
 }
 
 function plan({ reconstruction = readJson(RECONSTRUCTION), rawRoot = RAW_ROOT } = {}) {
@@ -67,34 +72,31 @@ function plan({ reconstruction = readJson(RECONSTRUCTION), rawRoot = RAW_ROOT } 
     attempt_count: Number(monthlyMeta?.attempt_count || 0)
   }] : [];
 
-  const waveB = correctedPreflightNeeded(preflight) ? [{
-    key: `mops-material-information-api-preflight|stock=${stocks[0]}|roc_year=${MATERIAL_YEAR}|contract=${CORRECTED_API_CONTRACT_VERSION}`,
+  const needed = rowShapePreflightNeeded(rawRoot, preflight);
+  const waveB = needed ? [{
+    key: `mops-material-information-row-shape-preflight|stock=${stocks[0]}|roc_year=${MATERIAL_YEAR}|contract=${CORRECTED_API_CONTRACT_VERSION}`,
     stock: stocks[0],
     roc_year: MATERIAL_YEAR,
-    contract_version: CORRECTED_API_CONTRACT_VERSION,
-    corrected_api_attempt_count: corrected?.attempt_count || 0
+    contract_version: CORRECTED_API_CONTRACT_VERSION
   }] : [];
 
-  // This amendment round is preflight-only. A corrected listing/detail PASS does not authorize Wave C.
-  const waveC = [];
-
   return {
-    methodology: 'institutional-accumulation-material-information-final-preflight-v1',
+    methodology: ROW_SHAPE_PREFLIGHT_VERSION,
     outcome_blind: true,
     unresolved_identity_count: identities.length,
     unique_stocks: stocks,
     wave_a: waveA,
     wave_b: waveB,
-    wave_c: waveC,
+    wave_c: [],
     material_information_authorized: false,
     collection_round_preregistered: false,
     legacy_preflight_attempt_count: legacy.attempt_count,
     legacy_preflight_retryable: legacy.retryable,
     legacy_preflight_terminal_state: legacy.terminal_state,
     corrected_api_state: corrected,
-    corrected_api_preflight_needed: correctedPreflightNeeded(preflight)
+    corrected_api_preflight_needed: needed
   };
 }
 
 if (require.main === module) console.log(JSON.stringify(plan(), null, 2));
-module.exports = { MAX_ATTEMPTS, MONTHLY_MONTH, MATERIAL_YEAR, CORRECTED_API_CONTRACT_VERSION, plan, qualityPassed, retryable, unresolvedIdentities, uniqueStocks, legacyState, correctedApiState, correctedPreflightNeeded };
+module.exports = { MAX_ATTEMPTS, MONTHLY_MONTH, MATERIAL_YEAR, CORRECTED_API_CONTRACT_VERSION, ROW_SHAPE_PREFLIGHT_VERSION, plan, qualityPassed, retryable, unresolvedIdentities, uniqueStocks, legacyState, correctedApiState, rowShapePreflightNeeded };
