@@ -113,6 +113,7 @@ jobs:
           set -euo pipefail
           git pull --ff-only origin main
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
           echo "authorized=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.material_information_authorized))")" >> "$GITHUB_OUTPUT"
 
   wave-c-listing:
@@ -148,4 +149,47 @@ jobs:
             git commit -m 'data: checkpoint accumulation MOPS material ${{ matrix.stock }} 115'
           fi
           sleep $((20 + RANDOM % 41))
+          git push origin HEAD:main
+
+  finalize-prompt-a:
+    needs: test-and-plan
+    if: needs.test-and-plan.outputs.wave_a == 'false' && needs.test-and-plan.outputs.wave_b == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Verify re-plan has no completed Wave A refetch and Wave C stays blocked
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
+          node - <<'NODE'
+          const p = require('/tmp/plan.json');
+          if (p.wave_a.length !== 0) throw new Error('Completed Wave A key would be refetched');
+          if (p.wave_b.length !== 0) throw new Error('Durable Wave B result was not recognized');
+          if (p.material_information_authorized || p.wave_c.length !== 0) throw new Error('Wave C must remain blocked');
+          NODE
+      - name: Checkpoint Prompt A handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/checkpoint_institutional_accumulation_official_disclosure_prompt_a.js
+          file='data_research/institutional-flow/institutional-accumulation-validation-handoff.md'
+          git add "$file"
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'docs: checkpoint accumulation official disclosure Prompt A'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            node scripts/checkpoint_institutional_accumulation_official_disclosure_prompt_a.js
+            git add "$file"
+            git commit -m 'docs: checkpoint accumulation official disclosure Prompt A'
+          fi
           git push origin HEAD:main
