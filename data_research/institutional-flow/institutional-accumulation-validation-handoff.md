@@ -21,7 +21,7 @@ Status:
 - `institutional-accumulation-development-association-refresh-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-catalyst-evidence-readiness-audit-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-official-disclosure-pit-coverage-audit-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
 Promotion does not execute the promoted Prompt A automatically.
 
@@ -106,6 +106,44 @@ Independent verification against the preregistered Prompt B:
 A Prompt A plumbing defect was found during closeout: the durable audit and successful writer existed on remote `main`, but this handoff still said Prompt A was `NOT STARTED / ACTIVE`. Prompt B repaired only that bounded documentation defect and then re-ran verification from criterion 1.
 
 Readiness decision after closeout: `official_disclosure_not_ready`.
+
+## Official-disclosure artifact reconstruction Prompt A completion
+
+Round: `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`
+
+Prompt A: **COMPLETE**. Prompt B remains **PREREGISTERED / NOT STARTED** and was not executed.
+
+Fresh-runner evidence:
+
+- workflow run: `33587945257`;
+- tested head before writer commit: `cb0232a19d1bd476cde7cdb4f805dc40e53664dd`;
+- bounded regressions: **PASS**;
+- reconstruction execution: **PASS**;
+- outcome-blind / no-network contract: **PASS**.
+
+Durable reconstruction result:
+
+- exact prior missing identities classified: `33`;
+- `reconstructable_from_pre_T0_durable_inputs`: `0`;
+- `source_exists_but_version_or_timing_unsafe`: `0`;
+- `source_missing`: `33`;
+- `not_applicable`: `0`;
+- reconstructed event artifacts: `0`;
+- official-disclosure PIT-safe identity coverage before/after: `8/41` -> `8/41`;
+- missing-artifact identities before/after: `33` -> `33`.
+
+Boundary result:
+
+- no current network collection was used;
+- development outcome values, stock/time holdout outcomes, and protected `2454` outcomes were not read;
+- no generic news, analyst-revision, catalyst feature, threshold, score, weighting, production model, or Withdrawal methodology change was introduced;
+- no current artifact commit timestamp was used as historical source proof;
+- the committed source set available to the existing offline builder contained no reconstructable pre-T0 source for the 33 missing identities, so all 33 remain `source_missing`;
+- remaining official-disclosure coverage gaps therefore require a separately preregistered source/network-collection round if the project chooses to pursue them. No such round is started automatically.
+
+Durable artifact:
+
+`data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json`
 
 ## Current repository state
 
