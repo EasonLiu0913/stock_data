@@ -2,6 +2,10 @@ name: "[研究] Institutional Accumulation Official Disclosure Collection"
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/collect-institutional-accumulation-official-disclosure.yml'
 
 permissions:
   contents: write
@@ -18,146 +22,11 @@ jobs:
       wave_b: ${{ steps.plan.outputs.wave_b }}
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with: { ref: main, fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: node tests/institutional_accumulation_official_disclosure_collection.test.js
       - id: plan
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
-          cat /tmp/plan.json
-          echo "wave_a=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_a.length>0))")" >> "$GITHUB_OUTPUT"
-          echo "wave_b=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_b.length>0))")" >> "$GITHUB_OUTPUT"
-
-  wave-a-monthly-revenue:
-    needs: test-and-plan
-    if: needs.test-and-plan.outputs.wave_a == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - name: Collect one physical archive batch
-        run: node scripts/collect_institutional_accumulation_mops_monthly_revenue_batch.js
-      - name: Checkpoint bounded Wave A artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          root='data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607'
-          git add "$root/source.html" "$root/source-meta.json" "$root/rows.json"
-          git diff --cached --quiet && exit 0
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'data: checkpoint accumulation MOPS monthly revenue 202607'
-          git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD^; then
-            git reset --soft origin/main
-            git restore --staged .
-            git add "$root/source.html" "$root/source-meta.json" "$root/rows.json"
-            git commit -m 'data: checkpoint accumulation MOPS monthly revenue 202607'
-          fi
-          git push origin HEAD:main
-
-  wave-b-preflight:
-    needs: [test-and-plan, wave-a-monthly-revenue]
-    if: always() && needs.test-and-plan.result == 'success' && needs.test-and-plan.outputs.wave_b == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - name: Run bounded machine-contract preflight
-        shell: bash
-        run: |
-          set +e
-          node scripts/preflight_institutional_accumulation_mops_material_information.js
-          exit 0
-      - name: Checkpoint preflight PASS/BLOCKED diagnostics
-        shell: bash
-        run: |
-          set -euo pipefail
-          file='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
-          git add "$file"
-          git diff --cached --quiet && exit 0
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'data: checkpoint accumulation MOPS material preflight'
-          git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD^; then
-            git reset --soft origin/main
-            git restore --staged .
-            git add "$file"
-            git commit -m 'data: checkpoint accumulation MOPS material preflight'
-          fi
-          git push origin HEAD:main
-
-  replan-wave-c:
-    needs: wave-b-preflight
-    if: always() && needs.wave-b-preflight.result == 'success'
-    runs-on: ubuntu-latest
-    outputs:
-      authorized: ${{ steps.p.outputs.authorized }}
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main }
-      - id: p
-        shell: bash
-        run: |
-          set -euo pipefail
-          git pull --ff-only origin main
-          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
-          cat /tmp/plan.json
-          echo "authorized=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.material_information_authorized))")" >> "$GITHUB_OUTPUT"
-
-  wave-c-listing:
-    needs: replan-wave-c
-    if: needs.replan-wave-c.outputs.authorized == 'true'
-    strategy:
-      max-parallel: 1
-      fail-fast: false
-      matrix:
-        stock: ['1102','1103','1104','1109','1201','1203','1215','1216','1217']
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - run: node scripts/collect_institutional_accumulation_mops_material_information_batch.js '${{ matrix.stock }}' 115
-      - name: Checkpoint one company-year physical batch
-        shell: bash
-        run: |
-          set -euo pipefail
-          root='data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/${{ matrix.stock }}'
-          git add "$root/source.html" "$root/source-meta.json"
-          git diff --cached --quiet && exit 0
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'data: checkpoint accumulation MOPS material ${{ matrix.stock }} 115'
-          git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD^; then
-            git reset --soft origin/main
-            git restore --staged .
-            git add "$root/source.html" "$root/source-meta.json"
-            git commit -m 'data: checkpoint accumulation MOPS material ${{ matrix.stock }} 115'
-          fi
-          sleep $((20 + RANDOM % 41))
-          git push origin HEAD:main
-
-  finalize-prompt-a:
-    needs: test-and-plan
-    if: needs.test-and-plan.outputs.wave_a == 'false' && needs.test-and-plan.outputs.wave_b == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - name: Verify re-plan has no completed Wave A refetch and Wave C stays blocked
         shell: bash
         run: |
           set -euo pipefail
@@ -166,27 +35,101 @@ jobs:
           cat /tmp/plan.json
           node - <<'NODE'
           const p = require('/tmp/plan.json');
-          if (p.wave_a.length !== 0) throw new Error('Completed Wave A key would be refetched');
-          if (p.wave_b.length !== 0) throw new Error('Durable Wave B result was not recognized');
-          if (p.material_information_authorized || p.wave_c.length !== 0) throw new Error('Wave C must remain blocked');
+          if (p.wave_a.length !== 0) throw new Error('Wave A is already quality-passed and must not be refetched.');
+          if (p.legacy_preflight_attempt_count !== 2 || p.legacy_preflight_retryable !== true || p.legacy_preflight_terminal_state !== null) {
+            throw new Error(`Legacy baseline mismatch: ${JSON.stringify(p)}`);
+          }
+          if (p.wave_c.length !== 0 || p.material_information_authorized) throw new Error('Wave C must be forbidden in this amendment round.');
           NODE
-      - name: Checkpoint Prompt A handoff
+          echo "wave_a=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_a.length>0))")" >> "$GITHUB_OUTPUT"
+          echo "wave_b=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_b.length>0))")" >> "$GITHUB_OUTPUT"
+
+  wave-b-corrected-api-preflight:
+    needs: test-and-plan
+    if: needs.test-and-plan.outputs.wave_b == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Run corrected listing preflight exactly once
+        shell: bash
+        run: |
+          set +e
+          node scripts/preflight_institutional_accumulation_mops_material_information.js
+          code=$?
+          echo "preflight exit code=$code (diagnostic decision is checkpointed even when blocked)"
+          exit 0
+      - name: Checkpoint corrected API preflight diagnostics
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/checkpoint_institutional_accumulation_official_disclosure_prompt_a.js
-          file='data_research/institutional-flow/institutional-accumulation-validation-handoff.md'
+          file='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
+          node - <<'NODE'
+          const p = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
+          if (p.schema_version !== 2) throw new Error('Expected corrected preflight schema v2.');
+          if (p.contracts?.legacy?.attempt_count !== 2) throw new Error('Legacy attempt counter changed.');
+          if (p.contracts?.corrected_api?.attempt_count !== 1) throw new Error('Corrected API must execute exactly once.');
+          if (p.diagnostics?.total_network_requests_this_round !== 1) throw new Error('Expected exactly one network request this round.');
+          if (p.contracts?.corrected_api?.endpoint !== 'https://mops.twse.com.tw/mops/api/t05st01') throw new Error('Wrong corrected endpoint.');
+          NODE
           git add "$file"
           git diff --cached --quiet && exit 0
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'docs: checkpoint accumulation official disclosure Prompt A'
+          git commit -m 'data: checkpoint corrected accumulation MOPS material API preflight'
           git fetch origin main
           if ! git merge-base --is-ancestor origin/main HEAD^; then
             git reset --soft origin/main
             git restore --staged .
-            node scripts/checkpoint_institutional_accumulation_official_disclosure_prompt_a.js
             git add "$file"
-            git commit -m 'docs: checkpoint accumulation official disclosure Prompt A'
+            git commit -m 'data: checkpoint corrected accumulation MOPS material API preflight'
+          fi
+          git push origin HEAD:main
+
+  finalize-corrected-prompt-a:
+    needs: [test-and-plan, wave-b-corrected-api-preflight]
+    if: always() && needs.test-and-plan.result == 'success' && (needs.wave-b-corrected-api-preflight.result == 'success' || needs.test-and-plan.outputs.wave_b == 'false')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Verify corrected durable state and forbidden Wave C
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
+          node - <<'NODE'
+          const p = require('/tmp/plan.json');
+          const f = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
+          if (p.wave_a.length !== 0 || p.wave_b.length !== 0 || p.wave_c.length !== 0) throw new Error(`Post-run queues must all be zero in this preflight-only round: ${JSON.stringify(p)}`);
+          if (p.material_information_authorized) throw new Error('Wave C collection must not be authorized.');
+          if (f.contracts?.legacy?.attempt_count !== 2) throw new Error('Legacy attempt counter must remain 2.');
+          if (f.contracts?.corrected_api?.attempt_count !== 1) throw new Error('Corrected API attempt count must be 1.');
+          NODE
+      - name: Checkpoint active amendment Prompt A
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
+          file='data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md'
+          git add "$file"
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'docs: checkpoint accumulation material API Prompt A'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
+            git add "$file"
+            git commit -m 'docs: checkpoint accumulation material API Prompt A'
           fi
           git push origin HEAD:main
