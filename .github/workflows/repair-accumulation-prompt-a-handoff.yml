@@ -1,0 +1,63 @@
+name: "[研究維護] Repair Accumulation Prompt A Handoff"
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-accumulation-prompt-a-handoff.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-accumulation-prompt-a-handoff
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Repair canonical handoff only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('data_research/institutional-flow/institutional-accumulation-validation-handoff.md')
+          s = p.read_text()
+          s = s.replace('**Official-disclosure source-collection preregistration: COMPLETE / Prompt B PASS.**\n\nPromoted next round:\n\n`institutional-accumulation-official-disclosure-source-collection-v1`', '**Official-disclosure source collection: Prompt A COMPLETE / Prompt B pending.**\n\nPending closeout round:\n\n`institutional-accumulation-official-disclosure-source-collection-v1`')
+          s = s.replace('- `institutional-accumulation-official-disclosure-source-collection-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.', '- `institutional-accumulation-official-disclosure-source-collection-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / PENDING**.')
+          s = s.replace('Promotion does not execute the promoted Prompt A automatically.', 'Prompt A completion is durable; the preregistered Prompt B closeout has not yet run.')
+          marker = '## Current repository state\n'
+          block = '''## Official-disclosure source collection Prompt A checkpoint\n\nRound: `institutional-accumulation-official-disclosure-source-collection-v1`\n\nPrompt A status: **COMPLETE — Prompt B pending**.\n\nDurable implementation / execution evidence:\n\n- implementation commits: `a533656f9beb47d538a916ad5bb0d3b0690cb064`, `4b713dda720c42cb1120b3ef859e5914c52ecf9b`, `cc6ebbe230e3487bc4b092a842939961a422977e`, `6a069ac9023943587e643a55665a234bfebefbc1`, `4beb0761c68ddc7441b0b459ed0b3c35686cffd9`, `5b0422b36a08d162ba7a84cdeab0b4271a9f8750`;\n- execution workflow run: `33593814104`;\n- Wave A job: `100133419008`, conclusion `success`;\n- Wave A durable writer commit: `93a8ca2e7056bf2aee49cc185ebeb3765a243c98`;\n- Wave A request key: `mops-monthly-revenue | market=sii | revenue_month=202607`;\n- Wave A quality: `quality_passed`, HTTP `200`, response bytes `453020`, SHA-256 `ecb9dbd31124cc0afdf06c343e9bb2f0a41a16c0022b8d593eefcb53eeec66bd`, company rows `992`, all nine frozen stocks present;\n- Wave A durable artifacts: `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source.html`, `source-meta.json`, `rows.json`;\n- Wave B job: `100133797722`, workflow conclusion `success`, research decision `blocked`;\n- Wave B durable writer commit: `eb7767237`;\n- Wave B reason: `listing_security_or_quality_block`; deterministic preflight stock/year `1102 / ROC 115`; one listing request returned HTTP `200` but only `800` bytes, so it was correctly rejected as ambiguous security/quality failure rather than terminal source-empty;\n- Wave B durable diagnostic: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json`;\n- `replan-wave-c` completed successfully and `wave-c-listing` was **skipped by design** because durable Wave B decision was not PASS;\n- no material-information Wave C collection ran; no catalyst/outcome association, holdout opening, threshold, score, model, strategy, or production behavior was introduced.\n\nThis checkpoint is a bounded documentation repair performed before Prompt B closeout because Prompt A implementation and durable collection artifacts had completed, but the handoff still incorrectly said `NOT STARTED / ACTIVE`. The preregistered Prompt B below is preserved unchanged.\n\n'''
+          if block not in s:
+              if marker not in s:
+                  raise SystemExit('current repository state marker missing')
+              s = s.replace(marker, block + marker, 1)
+          s = s.replace('- official-disclosure source collection decision: `collection_preregistered`;', '- official-disclosure source collection Prompt A: `complete`; Prompt B: `pending`;')
+          s = s.replace('- unresolved official-event identities remain `33/41` until a later collection round runs;', '- unresolved official-event identities remain `33/41`; Wave A official monthly-revenue raw evidence is collected, while material-information enumeration remains blocked by fail-closed preflight;')
+          p.write_text(s)
+          PY
+          git diff --check
+          git diff -- data_research/institutional-flow/institutional-accumulation-validation-handoff.md
+      - name: Commit bounded handoff checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='data_research/institutional-flow/institutional-accumulation-validation-handoff.md'
+          git add "$file"
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'docs: checkpoint accumulation source collection Prompt A'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            git add "$file"
+            git commit -m 'docs: checkpoint accumulation source collection Prompt A'
+          fi
+          git push origin HEAD:main
