@@ -1,0 +1,81 @@
+name: "[Research] Reconstruct Accumulation Official Disclosure Artifacts"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/reconstruct_institutional_accumulation_official_disclosure_artifacts.js'
+      - 'tests/institutional_accumulation_official_disclosure_artifact_reconstruction.test.js'
+      - '.github/workflows/reconstruct-institutional-accumulation-official-disclosure-artifacts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: accumulation-official-disclosure-reconstruction
+  cancel-in-progress: false
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run bounded regressions
+        run: |
+          set -euo pipefail
+          node --test \
+            tests/fundamental_event_timeline.test.js \
+            tests/institutional_accumulation_official_disclosure_pit_coverage.test.js \
+            tests/institutional_accumulation_official_disclosure_artifact_reconstruction.test.js
+      - name: Reconstruct only from pre-T0 durable repository inputs
+        run: |
+          set -euo pipefail
+          node scripts/reconstruct_institutional_accumulation_official_disclosure_artifacts.js --apply
+          node scripts/audit_institutional_accumulation_official_disclosure_pit_coverage.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json';
+          const a='data_research/institutional-flow/institutional-accumulation-official-disclosure-pit-coverage-audit-v1.json';
+          const payload=JSON.parse(fs.readFileSync(p,'utf8'));
+          payload.after_summary=JSON.parse(fs.readFileSync(a,'utf8')).summary;
+          fs.writeFileSync(p,JSON.stringify(payload,null,2)+'\n');
+          NODE
+      - name: Verify outcome-blind and no-network contract
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json','utf8'));
+          if (p.missing_identity_count !== 33) throw new Error(`expected 33 missing identities, got ${p.missing_identity_count}`);
+          if (p.network_collection_used !== false || p.development_outcome_values_read !== false || p.holdout_outcomes_read !== false || p.protected_2454_outcomes_read !== false) throw new Error('outcome-blind/no-network contract violated');
+          const allowed=new Set(['reconstructable_from_pre_T0_durable_inputs','source_exists_but_version_or_timing_unsafe','source_missing','not_applicable']);
+          if (p.decisions.length !== 33 || p.decisions.some(x=>!allowed.has(x.state))) throw new Error('classification contract violated');
+          NODE
+      - name: Commit bounded reconstruction outputs
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+            echo "Remote main moved during reconstruction; refusing stale writer push."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
+          git add data_research/institutional-flow/institutional-accumulation-official-disclosure-pit-coverage-audit-v1.json
+          if [ -d data_fundamental_events ]; then
+            while IFS= read -r f; do git add "$f"; done < <(git status --porcelain data_fundamental_events | awk '{print $2}')
+          fi
+          if git diff --cached --quiet; then
+            echo "No bounded reconstruction outputs changed."
+            exit 1
+          fi
+          git commit -m "analysis: reconstruct official disclosure artifacts"
+          git push origin HEAD:main
