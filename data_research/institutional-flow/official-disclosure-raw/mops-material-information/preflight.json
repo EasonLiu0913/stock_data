@@ -1,11 +1,11 @@
 {
-  "schema_version": 3,
-  "methodology": "institutional-accumulation-material-information-row-shape-detail-contract-preflight-v1",
+  "schema_version": 4,
+  "methodology": "institutional-accumulation-material-information-detail-contract-resolution-v1",
   "outcome_blind": true,
-  "started_at": "2026-09-02T06:54:06.995Z",
-  "completed_at": "2026-09-02T06:54:12.997Z",
+  "started_at": "2026-09-02T07:43:00.000Z",
+  "completed_at": "2026-09-02T07:45:28.000Z",
   "decision": "listing_contract_passed_detail_contract_unproven",
-  "reason": "corrected_api_listing_contract_verified_detail_method_url_body_not_proven",
+  "reason": "official_frontend_probe_did_not_expose_deterministic_detail_transport_contract",
   "retryable": false,
   "terminal_state": null,
   "contracts": {
@@ -41,8 +41,9 @@
         "lastDay": ""
       },
       "attempt_count": 1,
-      "request_cap_this_round": 3,
-      "requests_used_this_round": 1,
+      "request_cap_this_round": 2,
+      "requests_used_this_round": 0,
+      "listing_reused_from_durable_source": true,
       "listing_request": {
         "status": 200,
         "final_url": "https://mops.twse.com.tw/mops/api/t05st01",
@@ -65,91 +66,25 @@
         "row_type_counts": {
           "array": 58
         },
-        "row_lengths": [
-          6
-        ],
+        "row_lengths": [6],
         "column_type_sets": [
-          [
-            "string"
-          ],
-          [
-            "string"
-          ],
-          [
-            "string"
-          ],
-          [
-            "string"
-          ],
-          [
-            "string"
-          ],
-          [
-            "object"
-          ]
+          ["string"],
+          ["string"],
+          ["string"],
+          ["string"],
+          ["string"],
+          ["object"]
         ],
         "object_key_signatures": []
       },
       "detail_descriptor_count": 58,
       "detail_descriptor_locations": [
-        "$[0][5]",
-        "$[1][5]",
-        "$[2][5]",
-        "$[3][5]",
-        "$[4][5]",
-        "$[5][5]",
-        "$[6][5]",
-        "$[7][5]",
-        "$[8][5]",
-        "$[9][5]",
-        "$[10][5]",
-        "$[11][5]",
-        "$[12][5]",
-        "$[13][5]",
-        "$[14][5]",
-        "$[15][5]",
-        "$[16][5]",
-        "$[17][5]",
-        "$[18][5]",
-        "$[19][5]",
-        "$[20][5]",
-        "$[21][5]",
-        "$[22][5]",
-        "$[23][5]",
-        "$[24][5]",
-        "$[25][5]",
-        "$[26][5]",
-        "$[27][5]",
-        "$[28][5]",
-        "$[29][5]",
-        "$[30][5]",
-        "$[31][5]",
-        "$[32][5]",
-        "$[33][5]",
-        "$[34][5]",
-        "$[35][5]",
-        "$[36][5]",
-        "$[37][5]",
-        "$[38][5]",
-        "$[39][5]",
-        "$[40][5]",
-        "$[41][5]",
-        "$[42][5]",
-        "$[43][5]",
-        "$[44][5]",
-        "$[45][5]",
-        "$[46][5]",
-        "$[47][5]",
-        "$[48][5]",
-        "$[49][5]",
-        "$[50][5]",
-        "$[51][5]",
-        "$[52][5]",
-        "$[53][5]",
-        "$[54][5]",
-        "$[55][5]",
-        "$[56][5]",
-        "$[57][5]"
+        "$[0][5]", "$[1][5]", "$[2][5]", "$[3][5]", "$[4][5]", "$[5][5]", "$[6][5]", "$[7][5]", "$[8][5]", "$[9][5]",
+        "$[10][5]", "$[11][5]", "$[12][5]", "$[13][5]", "$[14][5]", "$[15][5]", "$[16][5]", "$[17][5]", "$[18][5]", "$[19][5]",
+        "$[20][5]", "$[21][5]", "$[22][5]", "$[23][5]", "$[24][5]", "$[25][5]", "$[26][5]", "$[27][5]", "$[28][5]", "$[29][5]",
+        "$[30][5]", "$[31][5]", "$[32][5]", "$[33][5]", "$[34][5]", "$[35][5]", "$[36][5]", "$[37][5]", "$[38][5]", "$[39][5]",
+        "$[40][5]", "$[41][5]", "$[42][5]", "$[43][5]", "$[44][5]", "$[45][5]", "$[46][5]", "$[47][5]", "$[48][5]", "$[49][5]",
+        "$[50][5]", "$[51][5]", "$[52][5]", "$[53][5]", "$[54][5]", "$[55][5]", "$[56][5]", "$[57][5]"
       ],
       "sample_detail_descriptor": {
         "apiName": "t05st01_detail",
@@ -170,15 +105,36 @@
       "detail_contract": {
         "status": "unproven",
         "request_executed": false,
-        "rationale": "apiName alone is insufficient to guess detail HTTP method, URL, or body."
+        "rationale": "One bounded official frontend request did not expose deterministic request construction for t05st01_detail. apiName and descriptor parameters alone remain insufficient to guess HTTP method, URL, headers, or body.",
+        "resolution_round": {
+          "official_contract_requests": 1,
+          "detail_requests": 0,
+          "total_network_requests": 1,
+          "request_cap": 2,
+          "frontend_request_url": "https://mops.twse.com.tw/mops/#/web/t05st01",
+          "frontend_http_observation": "official MOPS SPA shell reachable; text extractor exposed no deterministic detail request-construction evidence",
+          "evidence_capture_status": "insufficient_to_prove_transport",
+          "extraction_identity": "web-open-text-extraction-v1",
+          "response_bytes_available": false,
+          "response_sha256_available": false,
+          "detail_transport_derived": false,
+          "bounded_stop_reason": "no deterministic official method_url_request_shape_proof within the allowed frontend-probe budget",
+          "pit_disclaimer": "Current collection time and current frontend/API visibility are audit metadata only and are not proof of historical T0 visibility or immutable historical value version."
+        }
       }
     }
   },
   "diagnostics": {
     "stock": "1102",
     "roc_year": "115",
-    "request_cap": 3,
+    "request_cap": 2,
     "total_network_requests_this_round": 1,
-    "collection_time_is_pit_proof": false
+    "corrected_listing_requests_this_round": 0,
+    "official_frontend_contract_requests_this_round": 1,
+    "detail_requests_this_round": 0,
+    "collection_time_is_pit_proof": false,
+    "wave_a_refetched": false,
+    "wave_c_ran": false,
+    "material_information_authorized": false
   }
 }
