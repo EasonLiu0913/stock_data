@@ -1,0 +1,88 @@
+name: "[研究] Accumulation Row-shape Preflight Once"
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/run-accumulation-row-shape-preflight-once.yml'
+permissions:
+  contents: write
+concurrency:
+  group: accumulation-row-shape-preflight-once
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Pre-run gates
+        run: |
+          set -euo pipefail
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          node - <<'NODE'
+          const p=require('/tmp/plan.json');
+          if(p.wave_a.length!==0||p.wave_b.length!==1||p.wave_c.length!==0||p.material_information_authorized) throw new Error(JSON.stringify(p));
+          if(p.legacy_preflight_attempt_count!==2) throw new Error('legacy attempt count changed');
+          NODE
+      - name: Run exactly one corrected listing request
+        run: |
+          set +e
+          node scripts/preflight_institutional_accumulation_mops_material_information.js
+          code=$?
+          echo "preflight exit code=$code"
+          exit 0
+      - name: Verify and checkpoint raw evidence
+        run: |
+          set -euo pipefail
+          preflight='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
+          source='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json'
+          meta='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json'
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const p=require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
+          const m=require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json');
+          const raw=fs.readFileSync('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json');
+          const h=crypto.createHash('sha256').update(raw).digest('hex');
+          if(p.schema_version!==3||p.contracts?.legacy?.attempt_count!==2||p.diagnostics?.total_network_requests_this_round>3) throw new Error('preflight invariant failed');
+          if(m.response_sha256!==h||m.response_bytes!==raw.length) throw new Error('raw evidence hash/bytes mismatch');
+          if(!m.parseable_json||p.contracts?.corrected_api?.listing_contract_passed!==true) throw new Error(`listing contract blocked: ${p.reason}`);
+          if(p.decision!=='listing_contract_passed_detail_contract_unproven'&&p.decision!=='listing_and_detail_contract_passed') throw new Error(`unexpected decision ${p.decision}`);
+          NODE
+          git add "$preflight" "$source" "$meta"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'data: checkpoint accumulation MOPS row-shape preflight'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            git add "$preflight" "$source" "$meta"
+            git commit -m 'data: checkpoint accumulation MOPS row-shape preflight'
+          fi
+          git push origin HEAD:main
+      - name: Final durable gate and handoff checkpoint
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          node - <<'NODE'
+          const p=require('/tmp/plan.json');
+          if(p.wave_a.length!==0||p.wave_b.length!==0||p.wave_c.length!==0||p.material_information_authorized) throw new Error(JSON.stringify(p));
+          NODE
+          node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
+          file='data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md'
+          git add "$file"
+          git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
+            git add "$file"
+            git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
+          fi
+          git push origin HEAD:main
