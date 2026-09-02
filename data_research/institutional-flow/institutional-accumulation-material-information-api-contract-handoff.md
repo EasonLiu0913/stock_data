@@ -12,8 +12,8 @@ This file is a bounded pre-execution amendment only. It supersedes the previousl
 `institutional-accumulation-material-information-final-preflight-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
-- Prompt B: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE — Prompt B pending**
+- Prompt B: **PREREGISTERED / PENDING**
 
 Reason for amendment:
 - on 2026-09-02, manual browser inspection of the official MOPS site observed current material-information listing request `POST https://mops.twse.com.tw/mops/api/t05st01`;
@@ -41,6 +41,26 @@ Durable prior source-collection state inherited from the historical handoff:
 - current legacy material-information preflight durable state is `attempt_count=2`, `retryable=true`, `terminal_state=null`;
 - current planner state before correction should be Wave A=0, Wave B=1, Wave C=0;
 - Wave C has never run.
+
+## Prompt A durable checkpoint
+
+Round: `institutional-accumulation-material-information-final-preflight-v1`
+
+- Prompt A status: **COMPLETE — Prompt B pending**.
+- Fresh-runner workflow run: `33596804900`.
+- Triggering implementation head: `eba27e009eea1d43283151b6cc423496ac48b6a4`.
+- corrected listing endpoint: `https://mops.twse.com.tw/mops/api/t05st01`; method: `POST`.
+- deterministic request body: `{"companyId":"1102","year":"115","month":"all","firstDay":"","lastDay":""}`.
+- corrected API attempts this round: `1`; total network requests this round: `1`.
+- application code/message: `200 / 查詢成功`.
+- response bytes/SHA-256: `15049 / ceac4726ca0ecf6fd50dc1b6432a21dd8910d7c2c3ad04a2b4110ee96515817e`.
+- row count: `58`; listing contract passed: `false`.
+- detail contract status: `unproven`; detail request executed: `false`.
+- durable decision: `corrected_api_contract_blocked`; reason: `corrected_api_listing_schema_or_detail_descriptor_unverified`.
+- legacy route evidence remains separate at attempt_count=`2`, retryable=`true`, terminal_state=`null`; no third legacy request was issued.
+- post-run planner: Wave A=`0`, Wave B=`0`, Wave C=`0`; material-information collection authorization remains `false`.
+- Wave A was not refetched. Wave C did not run. Collection/git time remains audit metadata only, not historical PIT-availability proof.
+- Protected Phase 2/outcome/association/holdout/2454/Withdrawal state was not opened or modified by this bounded implementation.
 
 ## Prompt A — Material-information API-contract correction preflight
 
