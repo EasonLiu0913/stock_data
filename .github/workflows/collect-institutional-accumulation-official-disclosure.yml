@@ -2,6 +2,9 @@ name: "[研究] Institutional Accumulation Official Disclosure Collection"
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/collect-institutional-accumulation-official-disclosure.yml'
 
 permissions:
   contents: write
@@ -10,12 +13,14 @@ concurrency:
   group: institutional-accumulation-official-disclosure
   cancel-in-progress: false
 
+env:
+  RAW_ROOT: data_research/institutional-flow/official-disclosure-raw/mops-material-information
+
 jobs:
   test-and-plan:
     runs-on: ubuntu-latest
     outputs:
-      wave_a: ${{ steps.plan.outputs.wave_a }}
-      wave_b: ${{ steps.plan.outputs.wave_b }}
+      listings: ${{ steps.plan.outputs.listings }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0 }
@@ -26,117 +31,207 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git pull --ff-only origin main
+          git fetch origin main
+          git reset --hard origin/main
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
           cat /tmp/plan.json
           node - <<'NODE'
-          const p = require('/tmp/plan.json');
-          if (p.wave_a.length !== 0) throw new Error('Wave A is already quality-passed and must not be refetched.');
-          if (p.legacy_preflight_attempt_count !== 2 || p.legacy_preflight_retryable !== true || p.legacy_preflight_terminal_state !== null) {
-            throw new Error(`Legacy baseline mismatch: ${JSON.stringify(p)}`);
-          }
-          if (p.wave_c.length !== 0 || p.material_information_authorized) throw new Error('Wave C must remain forbidden in this preflight round.');
+          const p=require('/tmp/plan.json');
+          if(p.wave_a.length||p.wave_b.length) throw new Error('Pre-Wave-C queues must remain closed.');
+          if(!p.material_information_authorized) throw new Error('Wave C requires durable listing+detail PASS.');
+          if(p.legacy_preflight_attempt_count!==2) throw new Error('Legacy attempt_count changed.');
+          if(p.unresolved_identity_count!==33) throw new Error('Frozen identity count changed.');
           NODE
-          echo "wave_a=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_a.length>0))")" >> "$GITHUB_OUTPUT"
-          echo "wave_b=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_b.length>0))")" >> "$GITHUB_OUTPUT"
+          echo "listings=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_listing}))")" >> "$GITHUB_OUTPUT"
 
-  wave-b-row-shape-detail-preflight:
+  listing-batches:
     needs: test-and-plan
-    if: needs.test-and-plan.outputs.wave_b == 'true'
+    if: ${{ fromJSON(needs.test-and-plan.outputs.listings).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.test-and-plan.outputs.listings) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Run corrected listing once and persist exact raw response
+      - name: Fresh-runner physical cooldown
         shell: bash
-        run: |
-          set +e
-          node scripts/preflight_institutional_accumulation_mops_material_information.js
-          code=$?
-          echo "preflight exit code=$code (diagnostic evidence is checkpointed even when blocked)"
-          exit 0
-      - name: Verify and checkpoint bounded raw evidence
+        run: sleep $((20 + RANDOM % 41))
+      - name: Collect exactly one listing partition
+        id: collect
+        continue-on-error: true
+        shell: bash
+        run: node scripts/collect_institutional_accumulation_mops_material_information_batch.js listing '${{ matrix.stock }}' '${{ matrix.roc_year }}'
+      - name: Checkpoint bounded listing key
         shell: bash
         run: |
           set -euo pipefail
-          preflight='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
-          source='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json'
-          meta='data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json'
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const crypto = require('node:crypto');
-          const p = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
-          const m = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json');
-          const raw = fs.readFileSync('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json');
-          const hash = crypto.createHash('sha256').update(raw).digest('hex');
-          if (p.schema_version !== 3) throw new Error('Expected row-shape preflight schema v3.');
-          if (p.contracts?.legacy?.attempt_count !== 2) throw new Error('Legacy attempt counter changed.');
-          if (p.contracts?.corrected_api?.attempt_count !== 1) throw new Error('Corrected listing must execute exactly once in this round.');
-          if (p.diagnostics?.total_network_requests_this_round > 3) throw new Error('Network request cap exceeded.');
-          if (m.response_sha256 !== hash || p.contracts.corrected_api.listing_request.sha256 !== hash) throw new Error('Raw source hash mismatch.');
-          if (m.response_bytes !== raw.length) throw new Error('Raw source byte count mismatch.');
-          if (!m.parseable_json) throw new Error('Corrected listing raw source is not parseable JSON.');
-          NODE
-          git add "$preflight" "$source" "$meta"
-          git diff --cached --quiet && exit 0
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'data: checkpoint accumulation MOPS row-shape preflight'
+          d="$RAW_ROOT/listings/${{ matrix.roc_year }}/${{ matrix.stock }}"
+          test -d "$d"
+          tar -cf /tmp/batch.tar "$d"
           git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD^; then
-            git reset --soft origin/main
-            git restore --staged .
-            git add "$preflight" "$source" "$meta"
-            git commit -m 'data: checkpoint accumulation MOPS row-shape preflight'
+          git reset --hard origin/main
+          if node -e "const fs=require('fs');const p='$d/source-meta.json';if(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p)).quality_state==='quality_passed')process.exit(0);process.exit(1)"; then
+            echo 'Remote quality-passed listing wins; no refetch overwrite.'
+          else
+            tar -xf /tmp/batch.tar
+            git add "$d"
+            if ! git diff --cached --quiet; then
+              git config user.name github-actions[bot]
+              git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+              git commit -m "data: checkpoint accumulation MOPS listing ${{ matrix.stock }} 115"
+              git push origin HEAD:main
+            fi
           fi
-          git push origin HEAD:main
+      - name: Preserve collector failure after checkpoint
+        if: steps.collect.outcome == 'failure'
+        run: exit 1
 
-  finalize-row-shape-prompt-a:
-    needs: [test-and-plan, wave-b-row-shape-detail-preflight]
-    if: always() && needs.test-and-plan.result == 'success' && (needs.wave-b-row-shape-detail-preflight.result == 'success' || needs.test-and-plan.outputs.wave_b == 'false')
+  plan-details-1:
+    needs: [test-and-plan, listing-batches]
+    if: always() && needs.test-and-plan.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      details: ${{ steps.plan.outputs.details }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main && git reset --hard origin/main
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
+          echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
+
+  detail-batches-1:
+    needs: plan-details-1
+    if: ${{ fromJSON(needs.plan-details-1.outputs.details).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan-details-1.outputs.details) }}
+    runs-on: ubuntu-latest
+    steps: &detail_steps
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Fresh-runner physical cooldown
+        shell: bash
+        run: sleep $((20 + RANDOM % 41))
+      - name: Collect exactly one detail descriptor
+        id: collect
+        continue-on-error: true
+        shell: bash
+        run: node scripts/collect_institutional_accumulation_mops_material_information_batch.js detail '${{ matrix.stock }}' '${{ matrix.roc_year }}' '${{ matrix.enterDate }}' '${{ matrix.serialNumber }}' '${{ matrix.marketKind }}'
+      - name: Checkpoint bounded detail key
+        shell: bash
+        run: |
+          set -euo pipefail
+          d="$RAW_ROOT/details/${{ matrix.roc_year }}/${{ matrix.stock }}/${{ matrix.enterDate }}_${{ matrix.serialNumber }}"
+          test -d "$d"
+          tar -cf /tmp/batch.tar "$d"
+          git fetch origin main
+          git reset --hard origin/main
+          if node -e "const fs=require('fs');const p='$d/source-meta.json';if(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p)).quality_state==='quality_passed')process.exit(0);process.exit(1)"; then
+            echo 'Remote quality-passed detail wins; no refetch overwrite.'
+          else
+            tar -xf /tmp/batch.tar
+            git add "$d"
+            if ! git diff --cached --quiet; then
+              git config user.name github-actions[bot]
+              git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+              git commit -m "data: checkpoint accumulation MOPS detail ${{ matrix.stock }} ${{ matrix.enterDate }} ${{ matrix.serialNumber }}"
+              git push origin HEAD:main
+            fi
+          fi
+      - name: Preserve collector failure after checkpoint
+        if: steps.collect.outcome == 'failure'
+        run: exit 1
+
+  plan-details-2:
+    needs: [plan-details-1, detail-batches-1]
+    if: always() && needs.plan-details-1.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      details: ${{ steps.plan.outputs.details }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - id: plan
+        run: |
+          git fetch origin main && git reset --hard origin/main
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
+
+  detail-batches-2:
+    needs: plan-details-2
+    if: ${{ fromJSON(needs.plan-details-2.outputs.details).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan-details-2.outputs.details) }}
+    runs-on: ubuntu-latest
+    steps: *detail_steps
+
+  plan-details-3:
+    needs: [plan-details-2, detail-batches-2]
+    if: always() && needs.plan-details-2.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      details: ${{ steps.plan.outputs.details }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - id: plan
+        run: |
+          git fetch origin main && git reset --hard origin/main
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
+
+  detail-batches-3:
+    needs: plan-details-3
+    if: ${{ fromJSON(needs.plan-details-3.outputs.details).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.plan-details-3.outputs.details) }}
+    runs-on: ubuntu-latest
+    steps: *detail_steps
+
+  final-reconcile:
+    needs: [test-and-plan, listing-batches, plan-details-1, detail-batches-1, plan-details-2, detail-batches-2, plan-details-3, detail-batches-3]
+    if: always() && needs.test-and-plan.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-      - name: Verify durable row-shape state and forbidden Wave C
+      - name: Verify durable remote Wave C state
         shell: bash
         run: |
           set -euo pipefail
-          git pull --ff-only origin main
+          git fetch origin main && git reset --hard origin/main
           node tests/institutional_accumulation_official_disclosure_collection.test.js
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
           cat /tmp/plan.json
           node - <<'NODE'
-          const p = require('/tmp/plan.json');
-          const f = require('./data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json');
-          if (p.wave_a.length !== 0 || p.wave_b.length !== 0 || p.wave_c.length !== 0) throw new Error(`Post-run queues must all be zero: ${JSON.stringify(p)}`);
-          if (p.material_information_authorized) throw new Error('Wave C collection must not be authorized.');
-          if (f.contracts?.legacy?.attempt_count !== 2) throw new Error('Legacy attempt counter must remain 2.');
-          if (f.diagnostics?.total_network_requests_this_round > 3) throw new Error('Request cap exceeded.');
-          if (f.contracts?.corrected_api?.listing_contract_passed !== true) throw new Error(`Listing contract blocked: ${f.reason}`);
-          if (!['listing_contract_passed_detail_contract_unproven','listing_and_detail_contract_passed'].includes(f.decision)) throw new Error(`Unexpected decision: ${f.decision}`);
+          const p=require('/tmp/plan.json');
+          if(p.wave_a.length||p.wave_b.length) throw new Error('Earlier waves reopened.');
+          if(p.legacy_preflight_attempt_count!==2) throw new Error('Legacy attempt count changed.');
+          if(p.wave_c_listing.length) throw new Error(`Listing queue not exhausted: ${p.wave_c_listing.length}`);
+          if(p.wave_c_detail.length) throw new Error(`Detail queue not exhausted: ${p.wave_c_detail.length}`);
+          console.log(JSON.stringify({wave_c_exhausted:true,manual_review:p.manual_review.length,unresolved_identity_count:p.unresolved_identity_count},null,2));
           NODE
-      - name: Checkpoint active Prompt A
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
-          file='data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md'
-          git add "$file"
-          git diff --cached --quiet && exit 0
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
-          git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD^; then
-            git reset --soft origin/main
-            git restore --staged .
-            node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
-            git add "$file"
-            git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
-          fi
-          git push origin HEAD:main
