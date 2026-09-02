@@ -111,3 +111,17 @@ jobs:
           local_blob="$(sha256sum data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json | awk '{print $1}')"
           test "$remote_blob" = "$local_blob"
           echo "Durable remote freeze manifest verified: $remote_blob"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
