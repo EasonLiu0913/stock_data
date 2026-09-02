@@ -1,0 +1,148 @@
+name: "[研究] Institutional Accumulation Official Disclosure Collection"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-official-disclosure
+  cancel-in-progress: false
+
+jobs:
+  test-and-plan:
+    runs-on: ubuntu-latest
+    outputs:
+      wave_a: ${{ steps.plan.outputs.wave_a }}
+      wave_b: ${{ steps.plan.outputs.wave_b }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node tests/institutional_accumulation_official_disclosure_collection.test.js
+      - id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          cat /tmp/plan.json
+          echo "wave_a=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_a.length>0))")" >> "$GITHUB_OUTPUT"
+          echo "wave_b=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_b.length>0))")" >> "$GITHUB_OUTPUT"
+
+  wave-a-monthly-revenue:
+    needs: test-and-plan
+    if: needs.test-and-plan.outputs.wave_a == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Collect one physical archive batch
+        run: node scripts/collect_institutional_accumulation_mops_monthly_revenue_batch.js
+      - name: Checkpoint bounded Wave A artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607'
+          git add "$root/source.html" "$root/source-meta.json" "$root/rows.json"
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'data: checkpoint accumulation MOPS monthly revenue 202607'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            git add "$root/source.html" "$root/source-meta.json" "$root/rows.json"
+            git commit -m 'data: checkpoint accumulation MOPS monthly revenue 202607'
+          fi
+          git push origin HEAD:main
+
+  wave-b-preflight:
+    needs: [test-and-plan, wave-a-monthly-revenue]
+    if: always() && needs.test-and-plan.result == 'success' && needs.test-and-plan.outputs.wave_b == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Run bounded machine-contract preflight
+        shell: bash
+        run: |
+          set +e
+          node scripts/preflight_institutional_accumulation_mops_material_information.js
+          exit 0
+      - name: Checkpoint preflight PASS/BLOCKED diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json'
+          git add "$file"
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'data: checkpoint accumulation MOPS material preflight'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            git add "$file"
+            git commit -m 'data: checkpoint accumulation MOPS material preflight'
+          fi
+          git push origin HEAD:main
+
+  replan-wave-c:
+    needs: wave-b-preflight
+    if: always() && needs.wave-b-preflight.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      authorized: ${{ steps.p.outputs.authorized }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - id: p
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          echo "authorized=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.material_information_authorized))")" >> "$GITHUB_OUTPUT"
+
+  wave-c-listing:
+    needs: replan-wave-c
+    if: needs.replan-wave-c.outputs.authorized == 'true'
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        stock: ['1102','1103','1104','1109','1201','1203','1215','1216','1217']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node scripts/collect_institutional_accumulation_mops_material_information_batch.js '${{ matrix.stock }}' 115
+      - name: Checkpoint one company-year physical batch
+        shell: bash
+        run: |
+          set -euo pipefail
+          root='data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/${{ matrix.stock }}'
+          git add "$root/source.html" "$root/source-meta.json"
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'data: checkpoint accumulation MOPS material ${{ matrix.stock }} 115'
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD^; then
+            git reset --soft origin/main
+            git restore --staged .
+            git add "$root/source.html" "$root/source-meta.json"
+            git commit -m 'data: checkpoint accumulation MOPS material ${{ matrix.stock }} 115'
+          fi
+          sleep $((20 + RANDOM % 41))
+          git push origin HEAD:main
