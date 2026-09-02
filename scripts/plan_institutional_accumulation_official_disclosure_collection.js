@@ -53,7 +53,8 @@ function correctedApiState(preflight) {
 function rowShapePreflightNeeded(root, preflight) {
   const raw = readJson(correctedRawPath(root));
   const meta = readJson(correctedRawMetaPath(root));
-  return !(raw && meta && meta.methodology === ROW_SHAPE_PREFLIGHT_VERSION && preflight?.methodology === ROW_SHAPE_PREFLIGHT_VERSION);
+  const durableListingPassed = preflight?.contracts?.corrected_api?.listing_contract_passed === true;
+  return !(raw && meta && meta.methodology === ROW_SHAPE_PREFLIGHT_VERSION && durableListingPassed);
 }
 
 function plan({ reconstruction = readJson(RECONSTRUCTION), rawRoot = RAW_ROOT } = {}) {
