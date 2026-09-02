@@ -201,3 +201,17 @@ jobs:
         if: env.OLD_OUTCOME_SHA256 == env.GENERATED_OUTCOME_SHA256
         run: |
           echo "No new usable maturity was available; outcome bytes are unchanged and no handoff mutation is permitted."
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
