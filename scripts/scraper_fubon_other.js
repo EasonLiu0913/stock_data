@@ -3,20 +3,39 @@ const fs = require('fs');
 const path = require('path');
 const { resolveFubonRankingDate, requiredAnchorFromEnv } = require('./resolve_fubon_ranking_date');
 
+const targets = [
+    { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_C.djhtm', name: '上市值增排行' },
+    { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_CA.djhtm', name: '上市值縮排行' },
+    { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_B.djhtm', name: '上市量增排行' },
+    { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_BA.djhtm', name: '上市量縮排行' }
+];
+
+function selectTargets(allTargets) {
+    const raw = String(process.env.FUBON_TARGET_NAMES || '').trim();
+    if (!raw) return allTargets;
+    let requested;
+    try { requested = JSON.parse(raw); } catch (error) { throw new Error(`Invalid FUBON_TARGET_NAMES JSON: ${error.message}`); }
+    if (!Array.isArray(requested) || requested.some(name => typeof name !== 'string')) throw new Error('FUBON_TARGET_NAMES must be a JSON array of strings');
+    const known = new Set(allTargets.map(target => target.name));
+    const unknown = requested.filter(name => !known.has(name));
+    if (unknown.length) console.log(`Skipping ${unknown.length} recovery target(s) owned by other Fubon crawlers.`);
+    return allTargets.filter(target => requested.includes(target.name));
+}
+
 (async () => {
-    const targets = [
-        { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_C.djhtm', name: '上市值增排行' },
-        { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_CA.djhtm', name: '上市值縮排行' },
-        { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_B.djhtm', name: '上市量增排行' },
-        { url: 'https://fubon-ebrokerdj.fbs.com.tw/Z/ZG/ZG_BA.djhtm', name: '上市量縮排行' }
-    ];
+    const selectedTargets = selectTargets(targets);
+    if (selectedTargets.length === 0) {
+        console.log('✅ No market-cap/volume ranking targets need recovery; skipping browser launch.');
+        return;
+    }
+    console.log(`Market-cap/volume ranking targets selected: ${selectedTargets.length}/${targets.length}`);
 
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     const dateAnchor = requiredAnchorFromEnv();
 
     try {
-        for (const target of targets) {
+        for (const target of selectedTargets) {
             console.log(`Navigating to ${target.url}...`);
             await page.goto(target.url, { waitUntil: 'domcontentloaded' });
             const data = await page.evaluate(() => {
