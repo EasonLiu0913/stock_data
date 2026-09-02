@@ -18,53 +18,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
+# Validation-only layer: it does not persist repository data, so a newer CI run
+# may supersede an older validation run.
 concurrency:
   group: public-page-registry-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  checkpoint-accumulation-prompt-a:
-    name: Checkpoint accumulation Prompt A handoff
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-          fetch-depth: 0
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
-            /scripts/plan_institutional_accumulation_official_disclosure_collection.js
-            /data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md
-            /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
-            /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
-            /data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json
-            /data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source.json
-            /data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json
-      - name: Write and push durable handoff checkpoint
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
-          file='data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md'
-          git add "$file"
-          git diff --cached --quiet && exit 0
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
-          git fetch origin main
-          if ! git merge-base --is-ancestor origin/main HEAD^; then
-            git reset --soft origin/main
-            git restore --staged .
-            node scripts/checkpoint_institutional_accumulation_material_api_prompt_a.js
-            git add "$file"
-            git commit -m 'docs: checkpoint accumulation row-shape Prompt A'
-          fi
-          git push origin HEAD:main
-
   validate:
     name: Validate homepage registry and workflow deployment safety
     runs-on: ubuntu-latest
