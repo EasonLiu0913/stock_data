@@ -4,9 +4,9 @@ Canonical handoff: `data_research/institutional-flow/institutional-accumulation-
 
 ## Current phase
 
-**Official-disclosure source-collection preregistration: COMPLETE / Prompt B PASS.**
+**Official-disclosure source collection: Prompt A COMPLETE / Prompt B pending.**
 
-Promoted next round:
+Active round:
 
 `institutional-accumulation-official-disclosure-source-collection-v1`
 
@@ -23,9 +23,9 @@ Status:
 - `institutional-accumulation-official-disclosure-pit-coverage-audit-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-official-disclosure-artifact-reconstruction-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
 - `institutional-accumulation-official-disclosure-source-collection-preregistration-v1`: Prompt A **COMPLETE**, Prompt B **PASS**;
-- `institutional-accumulation-official-disclosure-source-collection-v1`: Prompt A **NOT STARTED / ACTIVE**, Prompt B **PREREGISTERED / NOT STARTED**.
+- `institutional-accumulation-official-disclosure-source-collection-v1`: Prompt A **COMPLETE**, Prompt B **PREREGISTERED / NOT STARTED**.
 
-Promotion does not execute the promoted Prompt A automatically.
+Prompt A is complete; mandatory Prompt B closeout is pending. No later round is promoted.
 
 ## Objective
 
@@ -104,6 +104,57 @@ The exact phase-specific Prompt B was recovered from the pre-Prompt-A handoff at
 9. Bounded Prompt A compare `d77045c6855f6b26c3d01b03a8549b0d9eeed52d...01bb0cecbd19c27d00fdda9f86cd81b525324719` changed only the new source-collection preregistration document and this canonical handoff — **PASS**.
 10. Final decision is `collection_preregistered`. During Prompt B, a bounded documentation defect was found: the collection architecture was preregistered but the next round's literal paired Prompt A/Prompt B was not yet present. This closeout fixes only that defect by preregistering the pair below, then promotes that round without executing it — **PASS after bounded fix**.
 
+## Official-disclosure source collection Prompt A
+
+Round: `institutional-accumulation-official-disclosure-source-collection-v1`
+
+Pre-Prompt-A baseline: `bf048ec66ba570ee63aa39dbbf8feaf918825aac`.
+
+Implementation / execution evidence:
+
+- planner: `scripts/plan_institutional_accumulation_official_disclosure_collection.js`, commit `a533656f9beb47d538a916ad5bb0d3b0690cb064`;
+- monthly archive collector: `scripts/collect_institutional_accumulation_mops_monthly_revenue_batch.js`, commit `4b713dda720c42cb1120b3ef859e5914c52ecf9b`;
+- material-information preflight: `scripts/preflight_institutional_accumulation_mops_material_information.js`, commit `cc6ebbe230e3487bc4b092a842939961a422977e`;
+- gated material-information collector: `scripts/collect_institutional_accumulation_mops_material_information_batch.js`, commit `6a069ac9023943587e643a55665a234bfebefbc1`;
+- regression: `tests/institutional_accumulation_official_disclosure_collection.test.js`, commit `4beb0761c68ddc7441b0b459ed0b3c35686cffd9`;
+- physical-batch workflow: `.github/workflows/collect-institutional-accumulation-official-disclosure.yml`, implementation commit `5b0422b36a08d162ba7a84cdeab0b4271a9f8750`;
+- execution trigger head: `e9d49e0187208dcda6e8cf7938a4610672bf6c1e`;
+- fresh-runner workflow run: `33593814104`, overall conclusion `success`;
+- test/plan job `100133060762`: PASS;
+- Wave A job `100133419008`: PASS;
+- Wave B preflight job `100133797722`: PASS as an expected fail-closed BLOCKED result;
+- Wave C re-plan job `100134166246`: PASS;
+- Wave C listing job `100134929936`: SKIPPED because preflight did not authorize collection.
+
+Wave A durable checkpoint:
+
+- commit `93a8ca2e7056bf2aee49cc185ebeb3765a243c98`;
+- raw paths: `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source.html`, `source-meta.json`, `rows.json`;
+- HTTP `200`, response bytes `453020`, SHA-256 `ecb9dbd31124cc0afdf06c343e9bb2f0a41a16c0022b8d593eefcb53eeec66bd`;
+- parsed company rows `992`; all nine frozen stocks `1102, 1103, 1104, 1109, 1201, 1203, 1215, 1216, 1217` are present;
+- quality state `quality_passed`, attempt `1`;
+- source-reported aggregate `出表日期` is `20260902`, which is later than every August 2026 T0 in the frozen unresolved set. Therefore this currently collected archive is durable first-party raw evidence but does **not** prove that the current row/value version was PIT-visible at those T0s; `collected_at` and git commit time are not used to backdate availability;
+- `version_safety=historical_timing_safe_value_version_unproven`; no PIT-safe catalyst/event coverage upgrade is claimed from this archive.
+
+Wave B durable checkpoint:
+
+- commit `eb776723787f4589590ac7224c42d428b6137b0b`;
+- artifact: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json`;
+- deterministic stock/year: `1102`, ROC `115`;
+- only one request was needed before fail-closed stop; HTTP status was `200` but response size only `800` bytes, SHA-256 `dc84075a778159410fe68616a58326b8dbc1054b21b84d50dd4e121983a50582`;
+- durable decision `blocked`, reason `listing_security_or_quality_block`;
+- the response was **not** classified as source-empty; Wave C remained unauthorized and was skipped.
+
+Durable safety / scope evidence:
+
+- bounded compare `bf048ec66ba570ee63aa39dbbf8feaf918825aac...eb776723787f4589590ac7224c42d428b6137b0b` contains only this round's workflow, four collection/planning scripts, regression test, Wave A raw archive artifacts, and Wave B preflight artifact; no frozen outcome, holdout, protected `2454`, association, or Withdrawal file changed;
+- planner is outcome-blind and still derives exactly the frozen `33` unresolved identities;
+- current committed Wave A `quality_passed` metadata makes the deterministic planner omit that completed key on re-plan;
+- durable Wave B `blocked` state keeps material-information Wave C unauthorized;
+- no catalyst feature, catalyst/outcome association, threshold, score, weight, production model, strategy, generic-news substitution, or holdout opening occurred.
+
+Prompt A completion state: **COMPLETE — Prompt B pending**. The preregistered Prompt B below remains the only closeout contract for this round.
+
 ## Current repository state
 
 - immutable Phase 2 freeze SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
@@ -112,9 +163,11 @@ The exact phase-specific Prompt B was recovered from the pre-Prompt-A handoff at
 - methodology-development identities: `41`;
 - stock holdout, time holdout, and protected `2454`: sealed;
 - general catalyst/news/analyst readiness: `not_ready`;
-- official-disclosure source collection decision: `collection_preregistered`;
+- official-disclosure source collection Prompt A: `COMPLETE`, Prompt B pending;
+- Wave A July 2026 MOPS archive is durably quality-passed, but its source-reported aggregate date is `20260902`, so no August-T0 PIT-safe coverage upgrade is claimed;
+- Wave B MOPS material-information preflight is durably `blocked` on HTTP 200 + 800-byte security/quality response; Wave C did not run;
 - current official-event PIT-safe identity coverage remains `8/41`;
-- unresolved official-event identities remain `33/41` until a later collection round runs;
+- unresolved official-event identities remain `33/41`;
 - no catalyst feature or catalyst/outcome association is authorized yet.
 
 ## Known limitations / unresolved readiness gaps
@@ -124,7 +177,7 @@ The exact phase-specific Prompt B was recovered from the pre-Prompt-A handoff at
 - Effective-dated historical industry membership remains unverified.
 - PIT-safe free-float/share-base normalization remains unaudited.
 - Numerical binary repricing/success thresholds remain deliberately unfrozen.
-- MOPS material-information machine enumeration/pagination and WAF behavior must pass the preregistered preflight before that source can be collected.
+- MOPS material-information machine enumeration/pagination remains blocked: the bounded preflight returned HTTP 200 with only 800 bytes and was classified `listing_security_or_quality_block`; full material-information collection remains forbidden until a separately authorized retry/preflight proves the machine contract.
 - Immutable original-version provenance for official source rows remains incomplete/unproven unless source/version evidence independently proves it.
 - Generic market-news records lack a versioned historical visibility/edit contract.
 - Dedicated historical PIT-safe analyst revisions remain absent/unverified.
@@ -143,7 +196,7 @@ The exact phase-specific Prompt B was recovered from the pre-Prompt-A handoff at
 - existing monthly revenue workflows: `.github/workflows/crawl-mops-monthly-revenue.yml`, `.github/workflows/backfill-mops-monthly-revenue.yml`
 - task routing: `docs/agent-prompts/task-routing.json`
 
-Proposed exact collection-round implementation entry points:
+Implemented exact collection-round entry points:
 
 - `scripts/plan_institutional_accumulation_official_disclosure_collection.js`
 - `scripts/collect_institutional_accumulation_mops_monthly_revenue_batch.js`
