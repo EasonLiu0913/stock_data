@@ -1,26 +1,89 @@
 {
-  "schema_version": 1,
-  "methodology": "institutional-accumulation-official-disclosure-source-collection-v1",
+  "schema_version": 2,
+  "methodology": "institutional-accumulation-material-information-final-preflight-v1",
   "outcome_blind": true,
-  "started_at": "2026-09-02T05:36:13.175Z",
-  "completed_at": "2026-09-02T05:36:17.051Z",
-  "decision": "blocked",
-  "reason": "listing_security_or_quality_block",
-  "attempt_count": 2,
-  "retryable": true,
+  "started_at": "2026-09-02T06:02:06.391Z",
+  "completed_at": "2026-09-02T06:02:12.131Z",
+  "decision": "corrected_api_contract_blocked",
+  "reason": "corrected_api_listing_schema_or_detail_descriptor_unverified",
+  "retryable": false,
   "terminal_state": null,
+  "contracts": {
+    "legacy": {
+      "contract_version": "mops-web-ajax-t05st01-form-v1",
+      "endpoint": "https://mops.twse.com.tw/mops/web/ajax_t05st01",
+      "method": "POST",
+      "attempt_count": 2,
+      "retryable": true,
+      "terminal_state": null,
+      "historical_decision": "blocked",
+      "historical_reason": "listing_security_or_quality_block",
+      "requests": [
+        {
+          "kind": "listing",
+          "status": 200,
+          "final_url": "https://mops.twse.com.tw/mops/web/ajax_t05st01",
+          "bytes": 800,
+          "sha256": "c4f2d90f3cb5865daf8bbba9f0590fbdb39ed0d5b51f8c29db7c88e8010a25f8",
+          "contract_version": "mops-web-ajax-t05st01-form-v1"
+        }
+      ]
+    },
+    "corrected_api": {
+      "contract_version": "mops-api-t05st01-json-v1",
+      "endpoint": "https://mops.twse.com.tw/mops/api/t05st01",
+      "method": "POST",
+      "request_body": {
+        "companyId": "1102",
+        "year": "115",
+        "month": "all",
+        "firstDay": "",
+        "lastDay": ""
+      },
+      "attempt_count": 1,
+      "request_cap_this_round": 3,
+      "requests_used_this_round": 1,
+      "listing_request": {
+        "status": 200,
+        "final_url": "https://mops.twse.com.tw/mops/api/t05st01",
+        "bytes": 15049,
+        "sha256": "ceac4726ca0ecf6fd50dc1b6432a21dd8910d7c2c3ad04a2b4110ee96515817e",
+        "parseable_json": true,
+        "parse_error": null
+      },
+      "application_code": 200,
+      "application_message": "查詢成功",
+      "application_success": true,
+      "company_id_matches": true,
+      "result_data_is_array": true,
+      "row_count": 58,
+      "coherent_row_structure": false,
+      "sample_detail_descriptor": {
+        "apiName": "t05st01_detail",
+        "parameters": {
+          "enterDate": "1150115",
+          "serialNumber": "1",
+          "companyId": "1102",
+          "marketKind": "sii"
+        }
+      },
+      "listing_contract_passed": false,
+      "exact_empty_data_contract_observed": false,
+      "one_response_requested_period_observed": true,
+      "pagination_mechanism_observed": false,
+      "pagination_note": "No pagination field or end-condition is assumed. The corrected listing request asks for month=all and this preflight records only the single-response contract actually observed.",
+      "detail_contract": {
+        "status": "unproven",
+        "request_executed": false,
+        "rationale": "Listing metadata identifies apiName=t05st01_detail when present, but this round does not guess detail HTTP method, URL, or body without deterministic official frontend/network evidence."
+      }
+    }
+  },
   "diagnostics": {
     "stock": "1102",
     "roc_year": "115",
     "request_cap": 3,
-    "requests": [
-      {
-        "kind": "listing",
-        "status": 200,
-        "final_url": "https://mops.twse.com.tw/mops/web/ajax_t05st01",
-        "bytes": 800,
-        "sha256": "c4f2d90f3cb5865daf8bbba9f0590fbdb39ed0d5b51f8c29db7c88e8010a25f8"
-      }
-    ]
+    "total_network_requests_this_round": 1,
+    "collection_time_is_pit_proof": false
   }
 }
