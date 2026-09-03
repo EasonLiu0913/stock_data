@@ -8,6 +8,7 @@ const os = require('node:os');
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_WATCHLIST = path.join(ROOT, 'config', 'tsmc-equipment-demand-ai-watchlist.json');
 const DEFAULT_DASHBOARD = path.join(ROOT, 'data_prediction_analysis', 'tsmc-equipment-demand', 'dashboard.json');
+const RESEARCH_DAY_CUTOFF_HOUR = 6;
 
 const DIRECTIONS = new Set(['bullish', 'neutral', 'bearish', 'uncertain']);
 const CONFIDENCE = new Set(['high', 'medium', 'low']);
@@ -43,14 +44,15 @@ function isIsoDateTime(value) {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
 }
 
-function taipeiDate(iso) {
+function researchDate(iso) {
   const date = new Date(iso);
+  const shifted = new Date(date.getTime() - RESEARCH_DAY_CUTOFF_HOUR * 60 * 60 * 1000);
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).formatToParts(date);
+  }).formatToParts(shifted);
   const get = type => parts.find(part => part.type === type)?.value;
   return `${get('year')}${get('month')}${get('day')}`;
 }
@@ -77,7 +79,7 @@ function validateRaw(raw, watchlist) {
   assert(raw.timezone === 'Asia/Taipei', 'raw.timezone must be Asia/Taipei');
   assert(isIsoDateTime(raw.search_started_at), 'raw.search_started_at must be ISO date-time');
   assert(isIsoDateTime(raw.search_completed_at), 'raw.search_completed_at must be ISO date-time');
-  assert(taipeiDate(raw.search_started_at) === raw.report_date, 'raw.report_date must equal the Asia/Taipei search start date');
+  assert(researchDate(raw.search_started_at) === raw.report_date, 'raw.report_date must equal the Asia/Taipei 06:00-based research day of search_started_at');
   assert(Date.parse(raw.search_completed_at) >= Date.parse(raw.search_started_at), 'raw.search_completed_at precedes search_started_at');
   assert(raw.watchlist_methodology_version === watchlist.methodology_version, 'raw watchlist methodology version mismatch');
   assert(Array.isArray(raw.queries) && raw.queries.length > 0, 'raw.queries must be non-empty');
@@ -188,15 +190,20 @@ function validateFiles({ raw, analysis, dashboard = DEFAULT_DASHBOARD, watchlist
 }
 
 function selfTest() {
+  assert(researchDate('2026-09-04T00:00:00+08:00') === '20260903', '00:00 must remain on previous research day');
+  assert(researchDate('2026-09-04T05:59:59+08:00') === '20260903', '05:59:59 must remain on previous research day');
+  assert(researchDate('2026-09-04T06:00:00+08:00') === '20260904', '06:00 must begin the new research day');
+  assert(researchDate('2026-09-04T23:59:59+08:00') === '20260904', '23:59:59 must remain on current research day');
+
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'tsmc-equipment-ai-'));
   const watchlist = validateWatchlist(readJson(DEFAULT_WATCHLIST));
-  const started = '2026-09-03T20:30:00+08:00';
+  const started = '2026-09-04T00:30:00+08:00';
   const raw = {
     schema_version: 1,
     methodology_version: 'tsmc-equipment-demand-ai-raw-v1',
     report_date: '20260903',
     search_started_at: started,
-    search_completed_at: '2026-09-03T20:40:00+08:00',
+    search_completed_at: '2026-09-04T00:40:00+08:00',
     timezone: 'Asia/Taipei',
     watchlist_methodology_version: watchlist.methodology_version,
     queries: [{ id: 'Q001', query: 'TSMC equipment demand', status: 'ok', note: null }],
@@ -218,7 +225,7 @@ function selfTest() {
   const analysis = {
     schema_version: 1,
     methodology_version: 'tsmc-equipment-demand-ai-analysis-v1',
-    report_date: '20260903', generated_at: '2026-09-03T20:45:00+08:00', timezone: 'Asia/Taipei',
+    report_date: '20260903', generated_at: '2026-09-04T00:45:00+08:00', timezone: 'Asia/Taipei',
     raw_report_date: '20260903', raw_sha256: sha256File(rawFile), price_trading_date: '20260902',
     price_dashboard_generated_at: dashboard.generated_at,
     overall: { direction: 'bullish', confidence: 'medium', headline: 'Test', summary: 'Test summary', today_focus: ['Watch evidence'], evidence_ids: ['E001'] },
@@ -249,4 +256,4 @@ if (require.main === module) {
   else validateFiles(args);
 }
 
-module.exports = { validateFiles, validateRaw, validateAnalysis, validateWatchlist, sha256File };
+module.exports = { validateFiles, validateRaw, validateAnalysis, validateWatchlist, sha256File, researchDate };
