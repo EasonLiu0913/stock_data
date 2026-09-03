@@ -1,0 +1,73 @@
+name: "[03 市場環境] Refresh TSMC Equipment Demand Dashboard"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "data_twse_market_chart/market_chart.json"
+      - "data_twse_mi_index/**"
+      - "data_history_sma/**"
+      - "data_fubon/**"
+      - "scripts/lib/stock_price_provider.js"
+      - "scripts/build_tsmc_equipment_demand_dashboard_data.js"
+      - "public/tsmc-equipment-demand-dashboard.html"
+      - ".github/workflows/build-tsmc-equipment-demand-dashboard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tsmc-equipment-demand-dashboard
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Validate dashboard builder
+        run: |
+          set -euo pipefail
+          node --check scripts/build_tsmc_equipment_demand_dashboard_data.js
+          node scripts/build_tsmc_equipment_demand_dashboard_data.js --self-test
+
+      - name: Build daily dashboard payload
+        run: |
+          set -euo pipefail
+          node scripts/build_tsmc_equipment_demand_dashboard_data.js
+          test -s data_prediction_analysis/tsmc-equipment-demand/dashboard.json
+
+      - name: Commit generated payload
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data_prediction_analysis/tsmc-equipment-demand/dashboard.json
+          if git diff --cached --quiet; then
+            echo "Dashboard payload unchanged."
+            exit 0
+          fi
+          git commit -m "data: refresh TSMC equipment demand dashboard"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push race on attempt ${attempt}; rebasing onto latest main."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "Unable to push dashboard payload after retries." >&2
+          exit 1
