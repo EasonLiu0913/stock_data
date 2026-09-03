@@ -8,14 +8,22 @@ Keep public-market evidence separate from AI interpretation so analysis can be r
 
 ## Daily identity
 
-The daily identity is the **Asia/Taipei calendar date when the search starts**, formatted `YYYYMMDD`.
+The daily identity is the **Asia/Taipei research day**, formatted `YYYYMMDD`, with a fixed 06:00 boundary:
+
+- `06:00:00` through `23:59:59` Asia/Taipei belongs to that Taipei calendar date.
+- `00:00:00` through `05:59:59` Asia/Taipei still belongs to the previous Taipei calendar date.
+
+Equivalently, each research day runs from **06:00:00 Asia/Taipei through 05:59:59 the following morning**. This boundary is used consistently for the raw filename, analysis filename, `report_date`, validator, and dashboard lookup. It is not a fallback to yesterday's report; it is the canonical research-day identity.
 
 The research date is not the same concept as the latest stock-price trading date. A report may therefore legitimately contain:
 
 ```text
+search_started_at: 2026-09-04T00:30:00+08:00
 report_date: 20260903
 price_trading_date: 20260902
 ```
+
+At exactly `2026-09-04T06:00:00+08:00`, the canonical research date becomes `20260904`.
 
 ## Storage
 
@@ -80,7 +88,7 @@ node scripts/validate_tsmc_equipment_demand_ai_report.js \
 5. Price weakness alone must not rewrite the fundamental demand state.
 6. Failure to find negative evidence does not prove that no negative change exists. Use explicit insufficient-evidence language.
 7. A failed search, incomplete durable write, schema failure, or missing required input must not produce a false PASS report.
-8. The dashboard requests only the current Asia/Taipei research date. If that report is missing, it shows a pending state instead of silently using yesterday's analysis.
+8. The dashboard requests only the current canonical Asia/Taipei research day using the 06:00 boundary. If that report is missing, it shows a pending state instead of silently falling back to an older research day.
 
 ## Daily workflow intent
 
@@ -88,6 +96,7 @@ One ChatGPT research run per day, initially scheduled for 20:30 Asia/Taipei:
 
 ```text
 current remote main
+  -> resolve canonical research day with 06:00 Asia/Taipei boundary
   -> watchlist contract
   -> deterministic dashboard facts
   -> public web / official evidence search
