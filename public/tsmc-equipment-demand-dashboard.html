@@ -38,7 +38,7 @@
 
   <section class="section" id="aiSection">
     <h2>今日 AI 市場研究</h2>
-    <div id="aiPending" class="notice warn">今日 AI 研究尚未完成；價格 facts 仍可正常使用。</div>
+    <div id="aiPending" class="notice warn">本研究日 AI 研究尚未完成；價格 facts 仍可正常使用。</div>
     <div id="aiContent" style="display:none">
       <div id="aiHeadline" class="ai-headline"></div>
       <div id="aiMeta" class="ai-meta"></div>
@@ -70,6 +70,7 @@
 <script>
 const DATA_URL='../data_prediction_analysis/tsmc-equipment-demand/dashboard.json';
 const AI_ROOT='../data_prediction_analysis/tsmc-equipment-demand/ai/analysis';
+const RESEARCH_DAY_CUTOFF_HOUR=6;
 const fmtPct=value=>Number.isFinite(value)?`${value>0?'+':''}${value.toFixed(2)}%`:'—';
 const fmtPrice=value=>Number.isFinite(value)?value.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';
 const pctClass=value=>!Number.isFinite(value)?'muted':value>0?'good':value<0?'bad':'muted';
@@ -77,7 +78,7 @@ const stateMeta={strong:['🟢 強','good'],neutral:['🟡 中性','warn'],weak:
 const confirmationMeta={strong:['🟢 強','good'],mixed:['🟡 混合','warn'],weak:['🔴 弱','bad'],no_data:['⚪ 待資料','muted']};
 const directionMeta={bullish:['🟢 偏多','good'],neutral:['🟡 中性','warn'],bearish:['🔴 偏空','bad'],uncertain:['⚪ 證據不足','muted']};
 function setValue(id,text,className='muted'){const el=document.getElementById(id);el.textContent=text;el.className=`v ${className}`;}
-function taipeiDateKey(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const get=t=>parts.find(p=>p.type===t)?.value;return `${get('year')}${get('month')}${get('day')}`;}
+function researchDateKey(now=new Date()){const shifted=new Date(now.getTime()-RESEARCH_DAY_CUTOFF_HOUR*60*60*1000);const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(shifted);const get=t=>parts.find(p=>p.type===t)?.value;return `${get('year')}${get('month')}${get('day')}`;}
 function renderPrice(payload){
   const summary=payload.summary||{};const [label,cls]=confirmationMeta[summary.price_confirmation]||confirmationMeta.no_data;setValue('priceConfirmation',label,cls);
   document.getElementById('priceConfirmationNote').textContent=Number.isFinite(summary.average_excess_return_20d_pct)?`6 檔平均相對大盤 ${fmtPct(summary.average_excess_return_20d_pct)}`:'20D 完整資料不足';
@@ -98,8 +99,8 @@ function renderAi(payload){
 async function load(){
   let pricePayload=null;
   try{const response=await fetch(DATA_URL,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);pricePayload=await response.json();renderPrice(pricePayload);}catch(error){console.warn('TSMC equipment dashboard data unavailable',error);document.getElementById('loadError').style.display='block';}
-  const reportDate=taipeiDateKey();const aiUrl=`${AI_ROOT}/${reportDate}.json`;
-  try{const response=await fetch(aiUrl,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const ai=await response.json();if(ai.report_date!==reportDate)throw new Error(`AI report_date mismatch: ${ai.report_date}`);renderAi(ai);}catch(error){console.info('TSMC equipment AI report unavailable for today',reportDate,error);document.getElementById('aiPending').textContent=`${reportDate} 的 AI 研究尚未完成；不使用前一日報告冒充今日研究。`;}
+  const reportDate=researchDateKey();const aiUrl=`${AI_ROOT}/${reportDate}.json`;
+  try{const response=await fetch(aiUrl,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const ai=await response.json();if(ai.report_date!==reportDate)throw new Error(`AI report_date mismatch: ${ai.report_date}`);renderAi(ai);}catch(error){console.info('TSMC equipment AI report unavailable for research day',reportDate,error);document.getElementById('aiPending').textContent=`研究日 ${reportDate} 的 AI 研究尚未完成；不使用更早研究日報告冒充。`;}
 }
 load();
 </script>
