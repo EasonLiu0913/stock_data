@@ -23,7 +23,7 @@ jobs:
     outputs:
       listings: ${{ steps.plan.outputs.listings }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -31,8 +31,8 @@ jobs:
             scripts
             tests
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - run: node tests/institutional_accumulation_official_disclosure_collection.test.js
       - id: plan
         shell: bash
@@ -60,15 +60,15 @@ jobs:
       matrix: ${{ fromJSON(needs.test-and-plan.outputs.listings) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
           sparse-checkout: |
             scripts
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - name: Fresh-runner physical cooldown
         shell: bash
         run: sleep $((20 + RANDOM % 41))
@@ -109,15 +109,15 @@ jobs:
     outputs:
       details: ${{ steps.plan.outputs.details }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
           sparse-checkout: |
             scripts
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - id: plan
         shell: bash
         run: |
@@ -136,15 +136,15 @@ jobs:
       matrix: ${{ fromJSON(needs.plan-details-1.outputs.details) }}
     runs-on: ubuntu-latest
     steps: &detail_steps
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
           sparse-checkout: |
             scripts
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - name: Fresh-runner physical cooldown
         shell: bash
         run: sleep $((20 + RANDOM % 41))
@@ -185,15 +185,15 @@ jobs:
     outputs:
       details: ${{ steps.plan.outputs.details }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
           sparse-checkout: |
             scripts
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - id: plan
         shell: bash
         run: |
@@ -220,15 +220,15 @@ jobs:
     outputs:
       details: ${{ steps.plan.outputs.details }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
           sparse-checkout: |
             scripts
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - id: plan
         shell: bash
         run: |
@@ -253,7 +253,7 @@ jobs:
     if: always() && needs.test-and-plan.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -261,8 +261,8 @@ jobs:
             scripts
             tests
             data_research/institutional-flow
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
       - name: Verify durable remote Wave C state
         shell: bash
         run: |
