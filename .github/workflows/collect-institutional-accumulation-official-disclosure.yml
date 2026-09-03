@@ -133,7 +133,7 @@ jobs:
 
   detail-batches-1:
     needs: plan-details-1
-    if: ${{ needs.plan-details-1.outputs.detail_count != '' && needs.plan-details-1.outputs.detail_count != '0' }}
+    if: ${{ always() && needs.plan-details-1.result == 'success' && needs.plan-details-1.outputs.detail_count != '' && needs.plan-details-1.outputs.detail_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -211,7 +211,7 @@ jobs:
 
   detail-batches-2:
     needs: plan-details-2
-    if: ${{ needs.plan-details-2.outputs.detail_count != '' && needs.plan-details-2.outputs.detail_count != '0' }}
+    if: ${{ always() && needs.plan-details-2.result == 'success' && needs.plan-details-2.outputs.detail_count != '' && needs.plan-details-2.outputs.detail_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -248,7 +248,7 @@ jobs:
 
   detail-batches-3:
     needs: plan-details-3
-    if: ${{ needs.plan-details-3.outputs.detail_count != '' && needs.plan-details-3.outputs.detail_count != '0' }}
+    if: ${{ always() && needs.plan-details-3.result == 'success' && needs.plan-details-3.outputs.detail_count != '' && needs.plan-details-3.outputs.detail_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
