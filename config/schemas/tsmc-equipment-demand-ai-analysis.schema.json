@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tsmc-equipment-demand-ai-analysis-v1",
+  "title": "TSMC Equipment Demand AI Analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "methodology_version",
+    "report_date",
+    "generated_at",
+    "timezone",
+    "raw_report_date",
+    "raw_sha256",
+    "price_trading_date",
+    "price_dashboard_generated_at",
+    "overall",
+    "stocks"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "methodology_version": {"const": "tsmc-equipment-demand-ai-analysis-v1"},
+    "report_date": {"type": "string", "pattern": "^[0-9]{8}$"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "timezone": {"const": "Asia/Taipei"},
+    "raw_report_date": {"type": "string", "pattern": "^[0-9]{8}$"},
+    "raw_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "price_trading_date": {"type": "string", "pattern": "^[0-9]{8}$"},
+    "price_dashboard_generated_at": {"type": "string", "minLength": 1},
+    "overall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["direction", "confidence", "headline", "summary", "today_focus", "evidence_ids"],
+      "properties": {
+        "direction": {"enum": ["bullish", "neutral", "bearish", "uncertain"]},
+        "confidence": {"enum": ["high", "medium", "low"]},
+        "headline": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "today_focus": {"type": "array", "minItems": 1, "maxItems": 5, "items": {"type": "string", "minLength": 1}},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "stocks": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "name",
+          "direction",
+          "confidence",
+          "fundamental_evidence",
+          "price_observation",
+          "relationship",
+          "interpretation",
+          "watch_next",
+          "evidence_ids"
+        ],
+        "properties": {
+          "code": {"type": "string", "pattern": "^[0-9]{4}$"},
+          "name": {"type": "string", "minLength": 1},
+          "direction": {"enum": ["bullish", "neutral", "bearish", "uncertain"]},
+          "confidence": {"enum": ["high", "medium", "low"]},
+          "fundamental_evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["direction", "summary"],
+            "properties": {
+              "direction": {"enum": ["positive", "negative", "mixed", "neutral", "insufficient"]},
+              "summary": {"type": "string", "minLength": 1}
+            }
+          },
+          "price_observation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "summary"],
+            "properties": {
+              "state": {"enum": ["strong", "neutral", "weak", "no_data"]},
+              "summary": {"type": "string", "minLength": 1}
+            }
+          },
+          "relationship": {"enum": ["confirmed", "divergent", "mixed", "insufficient"]},
+          "interpretation": {"type": "string", "minLength": 1},
+          "watch_next": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "evidence_ids": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}
