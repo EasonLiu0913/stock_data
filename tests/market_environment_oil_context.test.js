@@ -6,6 +6,7 @@ const {
   buildOilMarketContext,
   classifyOilTrend,
   classifyOilShock,
+  instrumentMetrics,
 } = require('../scripts/market_environment_oil_context');
 
 function oilLeg({ oneDay, fiveDay, twentyDay }) {
@@ -77,4 +78,18 @@ test('missing oil indicators degrade to unavailable rather than failing market e
   assert.equal(context.instruments.brent.available, false);
   assert.equal(context.oil_trend.code, 'unavailable');
   assert.equal(context.oil_shock.direction, 'unavailable');
+});
+
+test('null Yahoo oil values remain null instead of becoming a false zero', () => {
+  const metrics = instrumentMetrics({
+    market_date: '20260902',
+    close: null,
+    change_percent: null,
+    rows: [],
+  });
+  assert.equal(metrics.available, true);
+  assert.equal(metrics.close, null);
+  assert.equal(metrics.change_1d_pct, null);
+  assert.equal(metrics.return_5d_pct, null);
+  assert.equal(metrics.return_20d_pct, null);
 });
