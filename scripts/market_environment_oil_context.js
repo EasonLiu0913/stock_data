@@ -8,6 +8,7 @@ const OIL_DOWNSIDE_SHOCK_1D_PCT = -5;
 const OIL_DOWNSIDE_SHOCK_5D_PCT = -10;
 
 function finiteOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
