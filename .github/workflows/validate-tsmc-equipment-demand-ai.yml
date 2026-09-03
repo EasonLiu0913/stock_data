@@ -1,0 +1,99 @@
+name: "[03 市場環境] Validate TSMC Equipment AI Research"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "data_prediction_analysis/tsmc-equipment-demand/ai/analysis/**"
+      - "config/tsmc-equipment-demand-ai-watchlist.json"
+      - "config/schemas/tsmc-equipment-demand-ai-raw.schema.json"
+      - "config/schemas/tsmc-equipment-demand-ai-analysis.schema.json"
+      - "scripts/validate_tsmc_equipment_demand_ai_report.js"
+      - ".github/workflows/validate-tsmc-equipment-demand-ai.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Validate contract implementation
+        run: |
+          set -euo pipefail
+          node --check scripts/validate_tsmc_equipment_demand_ai_report.js
+          node scripts/validate_tsmc_equipment_demand_ai_report.js --self-test
+
+      - name: Resolve analysis reports to validate
+        id: reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tsmc-ai
+          : > /tmp/tsmc-ai/reports.txt
+
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- \
+              'data_prediction_analysis/tsmc-equipment-demand/ai/analysis/*.json' \
+              | sort -u > /tmp/tsmc-ai/reports.txt
+          fi
+
+          if [ ! -s /tmp/tsmc-ai/reports.txt ]; then
+            latest=$(find data_prediction_analysis/tsmc-equipment-demand/ai/analysis -maxdepth 1 -type f -name '*.json' 2>/dev/null | sort | tail -1 || true)
+            if [ -n "$latest" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "$latest" > /tmp/tsmc-ai/reports.txt
+            fi
+          fi
+
+          count=$(grep -cve '^$' /tmp/tsmc-ai/reports.txt || true)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Reports selected: $count"
+          cat /tmp/tsmc-ai/reports.txt || true
+
+      - name: Validate changed daily analysis against raw evidence and facts
+        if: steps.reports.outputs.count != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r analysis; do
+            [ -n "$analysis" ] || continue
+            report_date=$(basename "$analysis" .json)
+            raw="data_research/tsmc-equipment-demand/ai/raw/${report_date}.json"
+            test -s "$raw" || {
+              echo "Missing raw evidence for analysis ${analysis}: ${raw}" >&2
+              exit 1
+            }
+            node scripts/validate_tsmc_equipment_demand_ai_report.js \
+              --raw "$raw" \
+              --analysis "$analysis"
+          done < /tmp/tsmc-ai/reports.txt
+
+      - name: Verify selected reports are durable on remote main
+        if: steps.reports.outputs.count != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          while IFS= read -r analysis; do
+            [ -n "$analysis" ] || continue
+            report_date=$(basename "$analysis" .json)
+            raw="data_research/tsmc-equipment-demand/ai/raw/${report_date}.json"
+            git cat-file -e "origin/main:${analysis}"
+            git cat-file -e "origin/main:${raw}"
+            test "$(git show "origin/main:${analysis}" | wc -c | tr -d ' ')" -gt 0
+            test "$(git show "origin/main:${raw}" | wc -c | tr -d ' ')" -gt 0
+          done < /tmp/tsmc-ai/reports.txt
