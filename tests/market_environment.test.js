@@ -216,3 +216,4 @@ test('shadow evaluation joins prediction features and replay outcomes by stock c
 });
 
 require('./market_environment_policy.test');
+require('./market_environment_oil_context.test');
