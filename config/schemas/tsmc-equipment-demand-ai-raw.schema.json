@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tsmc-equipment-demand-ai-raw-v1",
+  "title": "TSMC Equipment Demand AI Raw Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "methodology_version",
+    "report_date",
+    "search_started_at",
+    "search_completed_at",
+    "timezone",
+    "watchlist_methodology_version",
+    "queries",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "methodology_version": {"const": "tsmc-equipment-demand-ai-raw-v1"},
+    "report_date": {"type": "string", "pattern": "^[0-9]{8}$"},
+    "search_started_at": {"type": "string", "format": "date-time"},
+    "search_completed_at": {"type": "string", "format": "date-time"},
+    "timezone": {"const": "Asia/Taipei"},
+    "watchlist_methodology_version": {"type": "string", "minLength": 1},
+    "queries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "query", "status"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "query": {"type": "string", "minLength": 1},
+          "status": {"enum": ["ok", "no_results", "failed"]},
+          "note": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "query_ids",
+          "source_name",
+          "source_type",
+          "title",
+          "url",
+          "retrieved_at",
+          "companies",
+          "topics",
+          "summary",
+          "relevance",
+          "evidence_direction"
+        ],
+        "properties": {
+          "id": {"type": "string", "pattern": "^E[0-9]{3,}$"},
+          "query_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "source_name": {"type": "string", "minLength": 1},
+          "source_type": {"enum": ["official", "regulatory", "industry", "news", "other"]},
+          "title": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "pattern": "^https?://"},
+          "published_at": {"type": ["string", "null"]},
+          "retrieved_at": {"type": "string", "format": "date-time"},
+          "companies": {"type": "array", "items": {"type": "string"}},
+          "topics": {"type": "array", "items": {"type": "string"}},
+          "summary": {"type": "string", "minLength": 1},
+          "relevance": {"enum": ["high", "medium", "low"]},
+          "evidence_direction": {"enum": ["positive", "negative", "mixed", "neutral"]}
+        }
+      }
+    }
+  }
+}
