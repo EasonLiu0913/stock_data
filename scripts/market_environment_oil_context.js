@@ -13,6 +13,11 @@ function finiteOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function roundOrNull(value, digits = 2) {
+  const number = finiteOrNull(value);
+  return number === null ? null : round(number, digits);
+}
+
 function averageFinite(values) {
   const finite = values.filter(Number.isFinite);
   if (!finite.length) return null;
@@ -34,9 +39,9 @@ function instrumentMetrics(indicator) {
     available: true,
     market_date: indicator.market_date || null,
     close: finiteOrNull(indicator.close),
-    change_1d_pct: round(finiteOrNull(indicator.change_percent)),
-    return_5d_pct: round(trailingReturn(indicator, 5)),
-    return_20d_pct: round(trailingReturn(indicator, 20)),
+    change_1d_pct: roundOrNull(indicator.change_percent),
+    return_5d_pct: roundOrNull(trailingReturn(indicator, 5)),
+    return_20d_pct: roundOrNull(trailingReturn(indicator, 20)),
   };
 }
 
@@ -68,8 +73,8 @@ function classifyOilTrend(wti, brent) {
     code,
     label,
     basis: Number.isFinite(mean5d) ? 'mean_wti_brent_5d' : 'mean_wti_brent_20d',
-    mean_5d_pct: round(mean5d),
-    mean_20d_pct: round(mean20d),
+    mean_5d_pct: roundOrNull(mean5d),
+    mean_20d_pct: roundOrNull(mean20d),
   };
 }
 
@@ -103,10 +108,10 @@ function classifyOilShock(wti, brent) {
     direction,
     reason: upside || downside ? 'threshold_exceeded' : 'within_thresholds',
     observed: {
-      max_1d_pct: round(max1d),
-      min_1d_pct: round(min1d),
-      max_5d_pct: round(max5d),
-      min_5d_pct: round(min5d),
+      max_1d_pct: roundOrNull(max1d),
+      min_1d_pct: roundOrNull(min1d),
+      max_5d_pct: roundOrNull(max5d),
+      min_5d_pct: roundOrNull(min5d),
     },
     thresholds: {
       upside_1d_pct: OIL_UPSIDE_SHOCK_1D_PCT,
