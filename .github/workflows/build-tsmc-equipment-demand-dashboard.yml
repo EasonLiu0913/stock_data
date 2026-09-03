@@ -123,12 +123,15 @@ jobs:
             exit 1
           }
 
-          tar -tf "$artifact_tar" \
-            | sed 's#^\./##' \
-            | grep -Fxq "$DASHBOARD_PAYLOAD" || {
-              echo "Pages artifact is missing ${DASHBOARD_PAYLOAD}." >&2
-              exit 1
-            }
+          # Materialize the archive listing before matching. Using `grep -q`
+          # directly behind `tar | sed` under pipefail can close the pipe early
+          # after a match and falsely turn tar/sed SIGPIPE into a failure.
+          tar -tf "$artifact_tar" > /tmp/pages-artifact-files.txt
+          sed 's#^\./##' /tmp/pages-artifact-files.txt > /tmp/pages-artifact-files-normalized.txt
+          grep -Fx "$DASHBOARD_PAYLOAD" /tmp/pages-artifact-files-normalized.txt >/dev/null || {
+            echo "Pages artifact is missing ${DASHBOARD_PAYLOAD}." >&2
+            exit 1
+          }
 
           size=$(tar -xOf "$artifact_tar" "$DASHBOARD_PAYLOAD" 2>/dev/null | wc -c | tr -d ' ' || true)
           if [ "${size:-0}" -le 0 ]; then
