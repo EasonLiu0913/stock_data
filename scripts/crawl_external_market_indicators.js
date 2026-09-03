@@ -11,6 +11,7 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const NEW_YORK_TIME_ZONE = 'America/New_York';
 const US_MARKET_OPEN_MINUTES = 9 * 60 + 30;
 const US_MARKET_CLOSE_MINUTES = 16 * 60;
+const YAHOO_HISTORY_LOOKBACK_CALENDAR_DAYS = 45;
 const PRIMARY_MARKET_INDICATOR_IDS = new Set(['nasdaq', 'sp500', 'dow', 'sox', 'tsm_adr']);
 
 function parseArgs(argv) {
@@ -132,7 +133,7 @@ async function fetchJson(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
 
 function yahooChartUrl(symbol, targetDate) {
   const targetIso = compactToIso(targetDate);
-  const period1 = unixSeconds(addDaysIso(targetIso, -14));
+  const period1 = unixSeconds(addDaysIso(targetIso, -YAHOO_HISTORY_LOOKBACK_CALENDAR_DAYS));
   const period2 = unixSeconds(addDaysIso(targetIso, 2));
   return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d&events=history&includeAdjustedClose=true`;
 }
