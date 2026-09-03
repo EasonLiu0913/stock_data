@@ -26,6 +26,7 @@ const {
   latestActualEnvironment,
 } = require('./market_environment_lib');
 const { classifyPredictedEnvironment } = require('./classify_market_environment');
+const { buildOilMarketContext } = require('./market_environment_oil_context');
 
 function zonedDateTimeParts(date, timeZone) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -217,6 +218,7 @@ function main() {
   const sox1d = Number(sox?.change_percent);
   const sox3d = trailingReturn(sox, 3);
   const tsm1d = Number(tsmAdr?.change_percent);
+  const oilMarket = buildOilMarketContext(external);
   const twse1d = Number(twseCurrent?.change_percent);
   const twse3d = twseThreeBack ? pctChange(twseCurrent?.close, twseThreeBack.close) : null;
   const twseSoxGap = Number.isFinite(twse3d) && Number.isFinite(sox3d) ? twse3d - sox3d : null;
@@ -265,7 +267,7 @@ function main() {
   const generatedAt = new Date().toISOString();
   const historical = forecastDate < taipeiToday();
   const payloadWithoutHash = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     generated_at: generatedAt,
     forecast_date: compactToIso(forecastDate),
     forecast_date_compact: forecastDate,
@@ -297,6 +299,12 @@ function main() {
       sox_change_1d_pct: round(sox1d),
       sox_return_3d_pct: round(sox3d),
       tsm_adr_change_1d_pct: round(tsm1d),
+      wti_crude_change_1d_pct: oilMarket.instruments.wti.change_1d_pct,
+      wti_crude_return_5d_pct: oilMarket.instruments.wti.return_5d_pct,
+      wti_crude_return_20d_pct: oilMarket.instruments.wti.return_20d_pct,
+      brent_crude_change_1d_pct: oilMarket.instruments.brent.change_1d_pct,
+      brent_crude_return_5d_pct: oilMarket.instruments.brent.return_5d_pct,
+      brent_crude_return_20d_pct: oilMarket.instruments.brent.return_20d_pct,
       twse_change_1d_pct: round(twse1d),
       twse_return_3d_pct: round(twse3d),
       twse_minus_sox_3d_pct_points: round(twseSoxGap),
@@ -305,6 +313,7 @@ function main() {
       market_risk_score: round(riskScore, 1),
       adr_sox_nasdaq_market_risk: round(adrRisk, 1),
     },
+    oil_market: oilMarket,
     environment: {
       code,
       label: labels[code],
@@ -318,6 +327,7 @@ function main() {
       'Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。',
       '首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。',
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
+      'WTI／Brent 使用 Yahoo Finance 期貨作為即時市場風險參考；oil_trend／oil_shock 目前僅為 shadow context，不改正式環境分數。',
       '美股日期依紐約最近已完成的正常交易時段判定，盤中資料不會被誤認為缺漏。',
       '未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。',
       historical ? '此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。' : '此檔為目前流程產生的盤前環境快照。',
@@ -341,6 +351,8 @@ function main() {
     shock_gate_passed: decision.shock_gate.passed,
     freshness: freshnessStatus,
     freshness_reason: freshness.reason,
+    oil_trend: oilMarket.oil_trend.code,
+    oil_shock: oilMarket.oil_shock.direction,
     snapshot_hash: payload.snapshot_hash,
     dry_run: dryRun,
     output: path.relative(ROOT, outputFile).replaceAll(path.sep, '/'),
