@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: tsmc-equipment-demand-dashboard
@@ -26,6 +26,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Checkout current main
         uses: actions/checkout@v7
@@ -71,3 +73,12 @@ jobs:
           done
           echo "Unable to push dashboard payload after retries." >&2
           exit 1
+
+  deploy-pages:
+    name: Publish refreshed TSMC dashboard payload
+    needs: build
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
