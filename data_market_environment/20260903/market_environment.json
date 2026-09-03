@@ -1,11 +1,11 @@
 {
-  "schemaVersion": 3,
-  "generated_at": "2026-09-03T00:37:51.719Z",
+  "schemaVersion": 4,
+  "generated_at": "2026-09-03T03:18:47.238Z",
   "forecast_date": "2026-09-03",
   "forecast_date_compact": "20260903",
   "base_trade_date": "2026-09-02",
   "base_trade_date_compact": "20260902",
-  "information_cutoff": "2026-09-03T00:37:51.719Z",
+  "information_cutoff": "2026-09-03T03:18:47.238Z",
   "historical_reconstruction": false,
   "mode": "shadow",
   "data_freshness": {
@@ -37,6 +37,12 @@
     "sox_change_1d_pct": 0.45,
     "sox_return_3d_pct": -1.14,
     "tsm_adr_change_1d_pct": 0.36,
+    "wti_crude_change_1d_pct": 0.53,
+    "wti_crude_return_5d_pct": 10.3,
+    "wti_crude_return_20d_pct": null,
+    "brent_crude_change_1d_pct": 0.71,
+    "brent_crude_return_5d_pct": 8.52,
+    "brent_crude_return_20d_pct": null,
     "twse_change_1d_pct": -1.67,
     "twse_return_3d_pct": -0.36,
     "twse_minus_sox_3d_pct_points": 0.78,
@@ -44,6 +50,52 @@
     "foreign_futures_net_change_contracts": -6623,
     "market_risk_score": 52,
     "adr_sox_nasdaq_market_risk": 0
+  },
+  "oil_market": {
+    "source": "yahoo_finance_futures",
+    "scoring_effect": "none_shadow_context",
+    "instruments": {
+      "wti": {
+        "available": true,
+        "market_date": "20260902",
+        "close": 90.7,
+        "change_1d_pct": 0.53,
+        "return_5d_pct": 10.3,
+        "return_20d_pct": null
+      },
+      "brent": {
+        "available": true,
+        "market_date": "20260902",
+        "close": 95.32,
+        "change_1d_pct": 0.71,
+        "return_5d_pct": 8.52,
+        "return_20d_pct": null
+      }
+    },
+    "oil_trend": {
+      "code": "strong_up",
+      "label": "強勢上漲",
+      "basis": "mean_wti_brent_5d",
+      "mean_5d_pct": 9.41,
+      "mean_20d_pct": null
+    },
+    "oil_shock": {
+      "active": true,
+      "direction": "upside",
+      "reason": "threshold_exceeded",
+      "observed": {
+        "max_1d_pct": 0.71,
+        "min_1d_pct": 0.53,
+        "max_5d_pct": 10.3,
+        "min_5d_pct": 8.52
+      },
+      "thresholds": {
+        "upside_1d_pct": 5,
+        "upside_5d_pct": 10,
+        "downside_1d_pct": -5,
+        "downside_5d_pct": -10
+      }
+    }
   },
   "environment": {
     "code": "normal",
@@ -92,9 +144,10 @@
     "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
     "首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。",
     "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "WTI／Brent 使用 Yahoo Finance 期貨作為即時市場風險參考；oil_trend／oil_shock 目前僅為 shadow context，不改正式環境分數。",
     "美股日期依紐約最近已完成的正常交易時段判定，盤中資料不會被誤認為缺漏。",
     "未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。",
     "此檔為目前流程產生的盤前環境快照。"
   ],
-  "snapshot_hash": "76fe4ee92f59168268ef17d13aefbdef7098179cf3972c5f9c0fec59da4cd55e"
+  "snapshot_hash": "21e72bc050a7b43b71fa6b4c2b5cbe2ce46afb72681c79b29d8a2bfb11eada22"
 }
