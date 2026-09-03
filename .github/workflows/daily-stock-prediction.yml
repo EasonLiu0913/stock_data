@@ -70,6 +70,7 @@ jobs:
         env:
           INPUT_FORECAST_DATE: ${{ inputs.forecast_date }}
           FORCE_RUN: ${{ inputs.force_v1 }}
+          FORCE_ENVIRONMENT: ${{ inputs.force_environment }}
         run: |
           set -euo pipefail
 
@@ -101,21 +102,25 @@ jobs:
 
           manifest="data_predictions/$FORECAST_TARGET_DATE/manifest.json"
           status_file="data_predictions/$FORECAST_TARGET_DATE/generation-status.txt"
+          env_file="data_market_environment/$FORECAST_TARGET_DATE/market_environment.json"
           reusable=false
-          if [ "$FORCE_RUN" != "true" ] && [ -s "$manifest" ] && [ -s "$status_file" ] \
+          if [ "$FORCE_RUN" != "true" ] && [ "$FORCE_ENVIRONMENT" != "true" ] \
+            && [ -s "$manifest" ] && [ -s "$status_file" ] && [ -s "$env_file" ] \
             && [ "$(tr -d '\r\n' < "$status_file")" = "success" ]; then
-            if node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])process.exit(1);if(Number(m.generated_reports)<1)process.exit(1);if(!m.market_environment?.snapshot_hash)process.exit(1);" "$manifest" "$FORECAST_TARGET_DATE"; then
+            if node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const e=JSON.parse(fs.readFileSync(process.argv[2]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[3])process.exit(1);if(Number(m.generated_reports)<1)process.exit(1);const mh=m.market_environment?.snapshot_hash;if(!mh||!e.snapshot_hash||mh!==e.snapshot_hash)process.exit(1);" "$manifest" "$env_file" "$FORECAST_TARGET_DATE"; then
               reusable=true
+            else
+              echo "V1 exists but its environment hash is stale; regenerate against current $env_file"
             fi
           fi
 
           if [ "$reusable" = "true" ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "V1 complete; reuse $manifest"
-            echo "- V1：完整，沿用既有成果；仍會繼續檢查 V2 與後續發布" >> "$GITHUB_STEP_SUMMARY"
+            echo "V1 complete and environment hash is current; reuse $manifest"
+            echo "- V1：完整且 environment hash 與目前 snapshot 一致，沿用既有成果；仍會繼續檢查 V2 與後續發布" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "- V1：缺少或不完整，重新產生" >> "$GITHUB_STEP_SUMMARY"
+            echo "- V1：缺少、不完整、強制覆寫，或 environment snapshot 已更新；重新產生" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           echo "## 每日產生股票預測" >> "$GITHUB_STEP_SUMMARY"
@@ -282,10 +287,12 @@ jobs:
           set -euo pipefail
           manifest="data_predictions/$DATE/manifest.json"
           status_file="data_predictions/$DATE/generation-status.txt"
+          env_file="data_market_environment/$DATE/market_environment.json"
           test -s "$manifest"
           test -s "$status_file"
+          test -s "$env_file"
           test "$(tr -d '\r\n' < "$status_file")" = "success"
-          environment_hash=$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V1 date mismatch');if(Number(m.generated_reports)<1)throw Error('V1 has no reports');const h=m.market_environment?.snapshot_hash;if(!h)throw Error('V1 missing environment hash');process.stdout.write(h);" "$manifest" "$DATE")
+          environment_hash=$(node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const e=JSON.parse(fs.readFileSync(process.argv[2]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[3])throw Error('V1 date mismatch');if(Number(m.generated_reports)<1)throw Error('V1 has no reports');const h=m.market_environment?.snapshot_hash;if(!h)throw Error('V1 missing environment hash');if(!e.snapshot_hash)throw Error('Current environment missing snapshot hash');if(h!==e.snapshot_hash)throw Error('V1 environment hash does not match current environment snapshot');process.stdout.write(h);" "$manifest" "$env_file" "$DATE")
           echo "environment_hash=$environment_hash" >> "$GITHUB_OUTPUT"
 
       - name: Mark V1 generation failure
@@ -349,7 +356,7 @@ jobs:
             echo "- V2：完整，沿用既有成果" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "- V2：缺少或不完整，繼續產生" >> "$GITHUB_STEP_SUMMARY"
+            echo "- V2：缺少、不完整、強制覆寫，或 V1 environment hash 已更新；重新產生" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
@@ -379,8 +386,10 @@ jobs:
         run: |
           set -euo pipefail
           manifest="data_predictions_v2/${{ steps.source.outputs.date }}/manifest.json"
+          env_file="data_market_environment/${{ steps.source.outputs.date }}/market_environment.json"
           test -s "$manifest"
-          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[2])throw Error('V2 date mismatch');if(Number(m.generated_reports)<1)throw Error('V2 has no reports');if(m.market_environment?.snapshot_hash!==process.argv[3])throw Error('V2 environment hash mismatch');" "$manifest" "${{ steps.source.outputs.date }}" "${{ needs.generate_v1.outputs.environment_hash }}"
+          test -s "$env_file"
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1]));const e=JSON.parse(fs.readFileSync(process.argv[2]));const d=m.forecast_date_compact||String(m.forecast_date||'').replaceAll('-','');if(d!==process.argv[3])throw Error('V2 date mismatch');if(Number(m.generated_reports)<1)throw Error('V2 has no reports');const h=m.market_environment?.snapshot_hash;if(h!==process.argv[4])throw Error('V2 environment hash mismatch');if(!e.snapshot_hash)throw Error('Current environment missing snapshot hash');if(h!==e.snapshot_hash)throw Error('V2 environment hash does not match current environment snapshot');" "$manifest" "$env_file" "${{ steps.source.outputs.date }}" "${{ needs.generate_v1.outputs.environment_hash }}"
 
       - name: Commit V2 outputs and viewer
         if: steps.source.outputs.run == 'true'
@@ -422,4 +431,3 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
-
