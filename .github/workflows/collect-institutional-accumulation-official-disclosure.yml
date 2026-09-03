@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       listings: ${{ steps.plan.outputs.listings }}
+      listing_count: ${{ steps.plan.outputs.listing_count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -50,10 +51,11 @@ jobs:
           if(p.unresolved_identity_count!==33) throw new Error('Frozen identity count changed.');
           NODE
           echo "listings=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_listing}))")" >> "$GITHUB_OUTPUT"
+          echo "listing_count=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_c_listing.length))")" >> "$GITHUB_OUTPUT"
 
   listing-batches:
     needs: test-and-plan
-    if: ${{ fromJSON(needs.test-and-plan.outputs.listings).include[0] != null }}
+    if: ${{ needs.test-and-plan.outputs.listing_count != '' && needs.test-and-plan.outputs.listing_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -108,6 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       details: ${{ steps.plan.outputs.details }}
+      detail_count: ${{ steps.plan.outputs.detail_count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -126,10 +129,11 @@ jobs:
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
           cat /tmp/plan.json
           echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
+          echo "detail_count=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_c_detail.slice(0,200).length))")" >> "$GITHUB_OUTPUT"
 
   detail-batches-1:
     needs: plan-details-1
-    if: ${{ fromJSON(needs.plan-details-1.outputs.details).include[0] != null }}
+    if: ${{ needs.plan-details-1.outputs.detail_count != '' && needs.plan-details-1.outputs.detail_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -184,6 +188,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       details: ${{ steps.plan.outputs.details }}
+      detail_count: ${{ steps.plan.outputs.detail_count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -202,10 +207,11 @@ jobs:
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
           cat /tmp/plan.json
           echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
+          echo "detail_count=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_c_detail.slice(0,200).length))")" >> "$GITHUB_OUTPUT"
 
   detail-batches-2:
     needs: plan-details-2
-    if: ${{ fromJSON(needs.plan-details-2.outputs.details).include[0] != null }}
+    if: ${{ needs.plan-details-2.outputs.detail_count != '' && needs.plan-details-2.outputs.detail_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -219,6 +225,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       details: ${{ steps.plan.outputs.details }}
+      detail_count: ${{ steps.plan.outputs.detail_count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -237,10 +244,11 @@ jobs:
           node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
           cat /tmp/plan.json
           echo "details=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(JSON.stringify({include:p.wave_c_detail.slice(0,200)}))")" >> "$GITHUB_OUTPUT"
+          echo "detail_count=$(node -e "const p=require('/tmp/plan.json');process.stdout.write(String(p.wave_c_detail.slice(0,200).length))")" >> "$GITHUB_OUTPUT"
 
   detail-batches-3:
     needs: plan-details-3
-    if: ${{ fromJSON(needs.plan-details-3.outputs.details).include[0] != null }}
+    if: ${{ needs.plan-details-3.outputs.detail_count != '' && needs.plan-details-3.outputs.detail_count != '0' }}
     strategy:
       fail-fast: false
       max-parallel: 1
