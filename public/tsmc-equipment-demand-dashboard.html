@@ -5,100 +5,67 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>台積電設備需求追蹤 Dashboard</title>
 <style>
-:root{color-scheme:light dark;--bg:#f4f6f8;--card:#fff;--text:#17212b;--muted:#667085;--line:#d9dee5;--good:#087443;--warn:#a15c00;--bad:#b42318;--neutral:#667085;--accent:#2563eb}
-@media(prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#171d25;--text:#edf2f7;--muted:#aab4c0;--line:#2d3742;--good:#6ee7b7;--warn:#fbbf24;--bad:#fda29b;--neutral:#aab4c0;--accent:#8aa8ff}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.5}.wrap{max-width:1180px;margin:auto;padding:22px}.hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}.hero h1{margin:0;font-size:28px}.hero p{margin:4px 0 0;color:var(--muted)}.asof{font-size:12px;color:var(--muted);white-space:nowrap}.status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.card,.panel{background:var(--card);border:1px solid var(--line);border-radius:13px}.card{padding:15px}.label{font-size:12px;color:var(--muted)}.big{font-size:23px;font-weight:800;margin-top:5px}.sub{font-size:12px;color:var(--muted);margin-top:4px}.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}.neutral{color:var(--neutral)}.panel{padding:16px;margin:12px 0}.panel h2{font-size:18px;margin:0 0 12px}.headline{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}.headline:last-child{border-bottom:0}.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:0 0 auto}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}.dot.neutral{background:var(--neutral)}.headline b{display:block}.headline span{font-size:13px;color:var(--muted)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:740px}th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{font-size:12px;color:var(--muted)}td.name{font-weight:700}.price{font-variant-numeric:tabular-nums}.state{font-weight:700}.empty{color:var(--muted)}.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}.legend b{font-weight:700}.quadrant{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.q{padding:12px;border:1px solid var(--line);border-radius:10px}.q b{display:block;margin-bottom:2px}.q span{font-size:12px;color:var(--muted)}details{border-top:1px solid var(--line);padding:12px 0}details:first-of-type{border-top:0}summary{cursor:pointer;font-weight:700}.detail-body{padding:10px 0 0;color:var(--muted);font-size:14px}.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted)}.footer{font-size:12px;color:var(--muted);margin-top:14px}.back{color:var(--accent);text-decoration:none}
-@media(max-width:800px){.wrap{padding:13px}.hero{display:block}.asof{margin-top:7px}.status-grid{grid-template-columns:repeat(2,1fr)}.quadrant{grid-template-columns:1fr}.big{font-size:20px}.panel{padding:13px}}
+:root{color-scheme:light dark;--bg:#f4f6f8;--card:#fff;--text:#16202a;--muted:#667085;--line:#d9dee5;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b42318;--soft:#eff6ff}
+@media(prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#171d25;--text:#edf2f7;--muted:#aab4c0;--line:#2d3742;--accent:#7aa2ff;--good:#6ee7b7;--warn:#fbbf24;--bad:#f87171;--soft:#17243b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.5}.wrap{max-width:1180px;margin:auto;padding:24px}.hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}.hero h1{font-size:28px;margin:0 0 6px}.hero p{margin:0;color:var(--muted)}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;color:var(--muted);background:var(--card);white-space:nowrap}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.card,.section{background:var(--card);border:1px solid var(--line);border-radius:12px}.card{padding:15px}.card .k{font-size:13px;color:var(--muted)}.card .v{font-size:24px;font-weight:800;margin-top:4px}.card .s{font-size:12px;color:var(--muted);margin-top:4px}.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}.muted{color:var(--muted)}.section{padding:16px;margin-bottom:16px}.section h2{margin:0 0 12px;font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:11px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{font-size:12px;color:var(--muted)}td.company{font-weight:700}.ticker{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);font-weight:700}.state{font-weight:750}.today{display:grid;gap:8px}.today-item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}.today-item:last-child{border-bottom:0}.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);margin-top:6px;flex:0 0 auto}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}details{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}summary{cursor:pointer;font-weight:700}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.detail{border:1px solid var(--line);border-radius:10px;padding:12px}.detail strong{display:block;margin-bottom:4px}.foot{font-size:12px;color:var(--muted);margin-top:10px}
+@media(max-width:760px){.wrap{padding:14px}.hero{display:block}.hero .pill{margin-top:10px}.summary{grid-template-columns:repeat(2,1fr)}.detail-grid{grid-template-columns:1fr}.section{padding:12px}}
 </style>
 </head>
 <body>
 <main class="wrap">
   <div class="hero">
     <div>
-      <h1>台積電設備需求追蹤</h1>
-      <p>10 秒看懂：需求有沒有變？股價有沒有確認？哪家公司最值得注意？</p>
+      <h1>台積電設備需求追蹤 Dashboard</h1>
+      <p>只追蹤台灣證券交易所上市股；10 秒看懂設備需求與股價是否同步。</p>
     </div>
-    <div class="asof">研究基準：2026-09-03</div>
+    <span class="pill">監控範圍：TWSE 上市</span>
   </div>
 
-  <section class="status-grid" aria-label="今日核心狀態">
-    <div class="card">
-      <div class="label">設備需求</div>
-      <div class="big good">● 升溫</div>
-      <div class="sub">設備需求基準由 1.0× 上修至 1.9×</div>
-    </div>
-    <div class="card">
-      <div class="label">股價確認</div>
-      <div class="big neutral">● 尚未接入</div>
-      <div class="sub">等待每日收盤價與報酬資料</div>
-    </div>
-    <div class="card">
-      <div class="label">供應鏈廣度</div>
-      <div class="big neutral">— / 6</div>
-      <div class="sub">核心設備股今日上漲家數</div>
-    </div>
-    <div class="card">
-      <div class="label">今日新訊號</div>
-      <div class="big warn">0</div>
-      <div class="sub">尚未建立每日 evidence feed</div>
-    </div>
-  </section>
+  <div class="summary">
+    <div class="card"><div class="k">設備需求</div><div class="v good">🟢 升溫</div><div class="s">基準：2026 年 7 月需求約 1.9×</div></div>
+    <div class="card"><div class="k">股價確認</div><div class="v muted">⚪ 待接資料</div><div class="s">價格與報酬資料尚未接入</div></div>
+    <div class="card"><div class="k">上漲家數</div><div class="v muted">— / 6</div><div class="s">只計算下方 6 檔上市股</div></div>
+    <div class="card"><div class="k">今日新訊號</div><div class="v muted">—</div><div class="s">新增需求證據後更新</div></div>
+  </div>
 
-  <section class="panel">
-    <h2>今天要注意什麼</h2>
-    <div class="headline"><i class="dot good"></i><div><b>需求主趨勢仍偏強</b><span>台積電揭露的設備需求預估由 2025 年底的 1.0×，2026 Q1 提高至 1.5×，7 月再提高至 1.9×。</span></div></div>
-    <div class="headline"><i class="dot neutral"></i><div><b>價格尚未納入自動判讀</b><span>避免用假資料或手動價格誤導；接入正式每日收盤資料後，才顯示今日、5 日、20 日報酬與供應鏈廣度。</span></div></div>
-    <div class="headline"><i class="dot warn"></i><div><b>最重要的是需求與價格是否背離</b><span>需求持續上修但股價落後，才可能形成值得研究的預期差；股價先大漲而沒有新 evidence，反而要提高警戒。</span></div></div>
-  </section>
-
-  <section class="panel">
-    <h2>核心設備股</h2>
+  <section class="section">
+    <h2>上市供應鏈價格監控</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>公司</th><th>現價</th><th>今日</th><th>5 日</th><th>20 日</th><th>狀態</th><th>主要觀察</th></tr></thead>
+        <thead><tr><th>公司</th><th>現價</th><th>今日</th><th>5D</th><th>20D</th><th>相對大盤 20D</th><th>狀態</th></tr></thead>
         <tbody>
-          <tr><td class="name">弘塑 3131</td><td class="price empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="state neutral">待價格資料</td><td>CoWoS／濕製程</td></tr>
-          <tr><td class="name">辛耘 3583</td><td class="price empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="state neutral">待價格資料</td><td>Wet Process／Bonding</td></tr>
-          <tr><td class="name">萬潤 6187</td><td class="price empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="state neutral">待價格資料</td><td>CoWoS／CPO</td></tr>
-          <tr><td class="name">均華 6640</td><td class="price empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="state neutral">待價格資料</td><td>Die Bonder／Sorter</td></tr>
-          <tr><td class="name">志聖 2467</td><td class="price empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="state neutral">待價格資料</td><td>CoWoS／SoIC</td></tr>
-          <tr><td class="name">家登 3680</td><td class="price empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td><td class="state neutral">待價格資料</td><td>2nm／EUV</td></tr>
+          <tr><td class="company">辛耘 <span class="ticker">3583</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="state muted">待資料</td></tr>
+          <tr><td class="company">志聖 <span class="ticker">2467</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="state muted">待資料</td></tr>
+          <tr><td class="company">帆宣 <span class="ticker">6196</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="state muted">待資料</td></tr>
+          <tr><td class="company">亞翔 <span class="ticker">6139</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="state muted">待資料</td></tr>
+          <tr><td class="company">洋基工程 <span class="ticker">6691</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="state muted">待資料</td></tr>
+          <tr><td class="company">漢唐 <span class="ticker">2404</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="state muted">待資料</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="legend"><span><b class="good">● 綠</b> 變好</span><span><b class="warn">● 黃</b> 無明顯變化／待確認</span><span><b class="bad">● 紅</b> 變差</span><span><b class="neutral">● 灰</b> 尚無資料</span></div>
+    <div class="foot">價格欄位固定為：現價、今日、5D、20D、相對加權指數 20D。沒有可靠資料時顯示「—」，不補估值或假資料。</div>
   </section>
 
-  <section class="panel">
-    <h2>需求 × 股價</h2>
-    <div class="quadrant">
-      <div class="q"><b class="good">需求強 × 股價強</b><span>基本面與市場同步確認。</span></div>
-      <div class="q"><b class="warn">需求強 × 股價弱</b><span>優先研究區：可能尚未反映，或市場知道其他風險。</span></div>
-      <div class="q"><b class="warn">需求弱 × 股價強</b><span>股價跑在 evidence 前面，注意過度樂觀。</span></div>
-      <div class="q"><b class="bad">需求弱 × 股價弱</b><span>基本面與價格同步轉弱。</span></div>
+  <section class="section">
+    <h2>今天要看什麼</h2>
+    <div class="today">
+      <div class="today-item"><span class="dot good"></span><div><strong>需求有沒有變化</strong><div class="muted">台積電設備、先進封裝、全球新廠與資本支出是否新增上修或下修信號。</div></div></div>
+      <div class="today-item"><span class="dot"></span><div><strong>上市供應鏈是否一起動</strong><div class="muted">看 6 檔中有幾檔上漲、20 日是否普遍跑贏加權指數，不用被單一股票暴漲誤導。</div></div></div>
+      <div class="today-item"><span class="dot warn"></span><div><strong>有沒有需求／股價背離</strong><div class="muted">需求升溫但股價沒反映＝值得追蹤；股價大漲但沒有新需求證據＝小心市場先跑太遠。</div></div></div>
     </div>
-  </section>
 
-  <section class="panel">
-    <h2>詳細研究</h2>
     <details>
-      <summary>需求上修軌跡</summary>
-      <div class="detail-body">2025 年底預估為 1.0×；2026 Q1 提高至 1.5×；2026 年 7 月提高至 1.9×。這是本 Dashboard 的核心需求基準，後續只有新的可靠 evidence 才改變需求判斷。</div>
-    </details>
-    <details>
-      <summary>每天應更新哪些資料？</summary>
-      <div class="detail-body">收盤價、今日／5 日／20 日報酬、成交量變化、核心股上漲家數；另外檢查設備接單、交期、月營收、產能利用率、擴產、法說與台積電 CapEx／先進封裝相關訊息。價格只能做 confirmation，不能直接改寫需求狀態。</div>
-    </details>
-    <details>
-      <summary>核心公司為什麼放在這裡？</summary>
-      <div class="detail-body">
-        <div class="chips"><span class="chip">弘塑：濕製程／CoWoS</span><span class="chip">辛耘：Wet Process／Bonding</span><span class="chip">萬潤：CoWoS／CPO</span><span class="chip">均華：Die Bonder／Sorter</span><span class="chip">志聖：CoWoS／SoIC</span><span class="chip">家登：2nm／EUV</span></div>
-        <p>這六檔是目前優先觀察池，不等於買進建議。未來可把廠務工程與國際前段設備商放到次級頁面，不擠壓每日核心判讀。</p>
+      <summary>展開研究細節</summary>
+      <div class="detail-grid">
+        <div class="detail"><strong>辛耘 3583</strong><span class="muted">Wet Process、Temporary Bonding / Debonding、先進封裝設備。重點看自製設備出貨與毛利彈性。</span></div>
+        <div class="detail"><strong>志聖 2467</strong><span class="muted">CoWoS / SoIC 相關設備。重點看先進封裝設備出貨與營收占比。</span></div>
+        <div class="detail"><strong>帆宣 6196</strong><span class="muted">晶圓廠自動化、廠務與設備整合。重點看在手訂單與海外新廠進度。</span></div>
+        <div class="detail"><strong>亞翔 6139</strong><span class="muted">高科技廠房與無塵室工程。重點看全球 fab 建廠速度與工程認列。</span></div>
+        <div class="detail"><strong>洋基工程 6691</strong><span class="muted">高科技廠房機電／空調工程。重點看新廠工程訂單與認列節奏。</span></div>
+        <div class="detail"><strong>漢唐 2404</strong><span class="muted">半導體廠務與機電工程。重點看先進製程擴廠與海外工程訂單。</span></div>
       </div>
     </details>
   </section>
-
-  <div class="footer"><a class="back" href="index.html">← 回首頁</a>　｜　Dashboard 原則：需求事實與股價確認分開；缺資料顯示缺資料，不把缺值當成 0。</div>
 </main>
 </body>
 </html>
