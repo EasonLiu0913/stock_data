@@ -26,7 +26,9 @@ test('V1 is reusable only with an explicit successful generation status and a va
 
 test('V2 has an independent completion decision and final manifest verification', () => {
   assert.match(workflow, /v2_manifest="data_predictions_v2\/\$date\/manifest\.json"/);
-  assert.match(workflow, /V2：缺少或不完整，繼續產生/);
+  assert.match(workflow, /if \[ "\$FORCE_RUN" != "true" \] && \[ -s "\$v2_manifest" \]; then/);
+  assert.match(workflow, /m\.market_environment\?\.snapshot_hash!==process\.argv\[3\]/);
+  assert.match(workflow, /reusable=true/);
   assert.match(workflow, /Verify final V2 completion state/);
   assert.match(workflow, /V2 environment hash mismatch/);
 });
