@@ -69,7 +69,10 @@
 </main>
 <script>
 const DATA_URL='../data_prediction_analysis/tsmc-equipment-demand/dashboard.json';
+const MARKET_URL='../data_twse_market_chart/market_chart.json';
+const MI_ROOT='../data_twse_mi_index';
 const AI_ROOT='../data_prediction_analysis/tsmc-equipment-demand/ai/analysis';
+const TRACKED_STOCKS=[['3583','辛耘'],['2467','志聖'],['6196','帆宣'],['6139','亞翔'],['6691','洋基工程'],['2404','漢唐']];
 const RESEARCH_DAY_CUTOFF_HOUR=6;
 const fmtPct=value=>Number.isFinite(value)?`${value>0?'+':''}${value.toFixed(2)}%`:'—';
 const fmtPrice=value=>Number.isFinite(value)?value.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';
@@ -79,6 +82,35 @@ const confirmationMeta={strong:['🟢 強','good'],mixed:['🟡 混合','warn'],
 const directionMeta={bullish:['🟢 偏多','good'],neutral:['🟡 中性','warn'],bearish:['🔴 偏空','bad'],uncertain:['⚪ 證據不足','muted']};
 function setValue(id,text,className='muted'){const el=document.getElementById(id);el.textContent=text;el.className=`v ${className}`;}
 function researchDateKey(now=new Date()){const shifted=new Date(now.getTime()-RESEARCH_DAY_CUTOFF_HOUR*60*60*1000);const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(shifted);const get=t=>parts.find(p=>p.type===t)?.value;return `${get('year')}${get('month')}${get('day')}`;}
+function pctReturn(start,end){return Number.isFinite(start)&&start>0&&Number.isFinite(end)?Number((((end/start)-1)*100).toFixed(2)):null;}
+function round2(value){return Number.isFinite(value)?Number(value.toFixed(2)):null;}
+function parseTwseNumber(value){if(value==null)return null;const text=String(value).replaceAll(',','').trim();if(!text||text==='--'||text==='---'||text==='除權'||text==='除息')return null;const number=Number(text);return Number.isFinite(number)?number:null;}
+function twseCloseMap(payload){
+  const table=(payload?.tables||[]).find(table=>{const fields=table?.fields||[];return fields.includes('證券代號')&&fields.includes('收盤價');});
+  const quotes=new Map();if(!table)return quotes;
+  const codeIndex=table.fields.indexOf('證券代號');const closeIndex=table.fields.indexOf('收盤價');
+  for(const row of table.data||[]){const code=String(row?.[codeIndex]||'').trim();const close=parseTwseNumber(row?.[closeIndex]);if(code&&Number.isFinite(close)&&close>0)quotes.set(code,close);}
+  return quotes;
+}
+async function fetchJson(url){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`${url}: HTTP ${response.status}`);return response.json();}
+async function buildLatestPricePayload(){
+  const market=await fetchJson(MARKET_URL);
+  const rows=(market.data||[]).map(row=>({date:String(row.date||''),close:Number(row.close)})).filter(row=>/^20\d{6}$/.test(row.date)&&Number.isFinite(row.close)&&row.close>0).sort((a,b)=>a.date.localeCompare(b.date));
+  if(rows.length<21)throw new Error(`Need at least 21 market rows, got ${rows.length}`);
+  const latest=rows.at(-1),prev=rows.at(-2),row5=rows.at(-6),row20=rows.at(-21);
+  const needed=[latest,prev,row5,row20];const quoteMaps={};
+  await Promise.all(needed.map(async row=>{quoteMaps[row.date]=twseCloseMap(await fetchJson(`${MI_ROOT}/${row.date}_twse_mi_index.json`));}));
+  const market20d=pctReturn(row20.close,latest.close);
+  const stocks=TRACKED_STOCKS.map(([code,name])=>{
+    const close=quoteMaps[latest.date].get(code)??null;const prevClose=quoteMaps[prev.date].get(code)??null;const close5=quoteMaps[row5.date].get(code)??null;const close20=quoteMaps[row20.date].get(code)??null;
+    const return1d=pctReturn(prevClose,close);const return5d=pctReturn(close5,close);const return20d=pctReturn(close20,close);const excess=Number.isFinite(return20d)?round2(return20d-market20d):null;
+    let state='no_data';if(Number.isFinite(return20d)&&Number.isFinite(excess)){state=return20d>0&&excess>0?'strong':return20d<0&&excess<0?'weak':'neutral';}
+    return {code,name,trading_date:latest.date,close,return_1d_pct:return1d,return_5d_pct:return5d,return_20d_pct:return20d,market_return_20d_pct:market20d,excess_return_20d_pct:excess,state,source:Number.isFinite(close)?'twse_mi_index':null,source_file:Number.isFinite(close)?`data_twse_mi_index/${latest.date}_twse_mi_index.json`:null};
+  });
+  const complete1d=stocks.filter(stock=>Number.isFinite(stock.return_1d_pct));const rising=complete1d.filter(stock=>stock.return_1d_pct>0).length;const complete20d=stocks.filter(stock=>Number.isFinite(stock.excess_return_20d_pct));const outperforming=complete20d.filter(stock=>stock.excess_return_20d_pct>0).length;const avgExcess=complete20d.length?round2(complete20d.reduce((sum,stock)=>sum+stock.excess_return_20d_pct,0)/complete20d.length):null;
+  let confirmation='no_data';if(complete20d.length){confirmation=outperforming>complete20d.length/2&&avgExcess>0?'strong':outperforming<complete20d.length/2&&avgExcess<0?'weak':'mixed';}
+  return {schema_version:1,dataset:'tsmc_equipment_demand_twse_dashboard_live',generated_at:new Date().toISOString(),trading_date:latest.date,scope:'TWSE listed stocks only',benchmark:{code:'TAIEX',source:'data_twse_market_chart/market_chart.json',return_20d_pct:market20d},summary:{tracked:TRACKED_STOCKS.length,price_complete_1d:complete1d.length,rising_count:rising,price_complete_20d:complete20d.length,outperforming_20d_count:outperforming,average_excess_return_20d_pct:avgExcess,price_confirmation:confirmation},stocks};
+}
 function renderPrice(payload){
   const summary=payload.summary||{};const [label,cls]=confirmationMeta[summary.price_confirmation]||confirmationMeta.no_data;setValue('priceConfirmation',label,cls);
   document.getElementById('priceConfirmationNote').textContent=Number.isFinite(summary.average_excess_return_20d_pct)?`6 檔平均相對大盤 ${fmtPct(summary.average_excess_return_20d_pct)}`:'20D 完整資料不足';
@@ -98,7 +130,7 @@ function renderAi(payload){
 }
 async function load(){
   let pricePayload=null;
-  try{const response=await fetch(DATA_URL,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);pricePayload=await response.json();renderPrice(pricePayload);}catch(error){console.warn('TSMC equipment dashboard data unavailable',error);document.getElementById('loadError').style.display='block';}
+  try{pricePayload=await buildLatestPricePayload();renderPrice(pricePayload);}catch(liveError){console.warn('Live TSMC equipment price data unavailable; falling back to generated snapshot',liveError);try{pricePayload=await fetchJson(DATA_URL);renderPrice(pricePayload);const notice=document.getElementById('loadError');notice.textContent=`最新價格資料讀取失敗，目前顯示備援快照 ${pricePayload.trading_date||'—'}。`;notice.style.display='block';}catch(snapshotError){console.warn('TSMC equipment dashboard snapshot unavailable',snapshotError);document.getElementById('loadError').style.display='block';}}
   const reportDate=researchDateKey();const aiUrl=`${AI_ROOT}/${reportDate}.json`;
   try{const response=await fetch(aiUrl,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const ai=await response.json();if(ai.report_date!==reportDate)throw new Error(`AI report_date mismatch: ${ai.report_date}`);renderAi(ai);}catch(error){console.info('TSMC equipment AI report unavailable for research day',reportDate,error);document.getElementById('aiPending').textContent=`研究日 ${reportDate} 的 AI 研究尚未完成；不使用更早研究日報告冒充。`;}
 }
