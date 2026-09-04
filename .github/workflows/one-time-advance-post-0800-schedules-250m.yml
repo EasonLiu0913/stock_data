@@ -1,4 +1,4 @@
-# trigger-after-registration: 2026-09-04
+# trigger-after-registration: 2026-09-04-v2
 name: "[07 維護更新] One-time advance post-08:00 schedules 250m"
 
 on:
@@ -13,17 +13,22 @@ permissions:
 
 concurrency:
   group: one-time-advance-post-0800-schedules-250m
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   migrate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest main
+      - name: Checkout only workflows and migration script
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 0
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/workflows/
+            /scripts/advance_post_0800_workflow_schedules_250m.js
 
       - name: Shift all Taipei schedules after 08:00 by 250 minutes
         run: |
@@ -61,7 +66,7 @@ jobs:
           git diff --cached --check
           git commit -m "chore: advance post-08:00 schedules by 250 minutes"
           for attempt in 1 2 3 4 5; do
-            git fetch origin main
+            git fetch --depth=1 origin main
             if git rebase origin/main && git push origin HEAD:main; then
               exit 0
             fi
