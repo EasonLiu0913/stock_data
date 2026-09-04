@@ -89,7 +89,7 @@
 <main class="wrap">
   <header class="card">
     <h1>每日漲幅 5% 以上股票</h1>
-    <div class="muted">正式頁面只讀最新版 unified analysis contract；歷史日期若尚未完成新版 AI，會明確標示 deterministic fallback，不混用舊 schema。</div>
+    <div class="muted">Stage 1 有最新版 news-theme analysis 時先顯示題材與逐檔原因；Stage 2 Unified Analysis 完成後再補上籌碼與技術 facts，不混用舊 schema。</div>
     <div id="meta" class="muted">載入中…</div>
   </header>
   <section class="toolbar card">
@@ -101,7 +101,7 @@
   <section class="stock-list" id="content"><div class="card empty">載入中…</div></section>
 </main>
 <script>
-const ROOT='../data_daily_gain_over_5', ANALYSIS=`${ROOT}/analysis`, MARKET_SUMMARY=`${ROOT}/market-summary`;
+const ROOT='../data_daily_gain_over_5', ANALYSIS=`${ROOT}/analysis`, NEWS_ANALYSIS=`${ROOT}/analysis-news`, MARKET_SUMMARY=`${ROOT}/market-summary`;
 const $=id=>document.getElementById(id), dateSelect=$('dateSelect'),content=$('content'),meta=$('meta'),summary=$('summary'),status=$('status'),marketSummary=$('marketSummary');
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const num=v=>v==null||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:2});
@@ -124,47 +124,48 @@ function marketSummaryHtml(s){
   const themes=(t.theme_ranking||[]).slice(0,5);
   const watch=Array.isArray(s.next_day_watch)?s.next_day_watch:[];
   const badge=s.status==='final'?'完整總結':'初步總結';
-  const semanticReady=s.status==='final'||(s.source_lineage?.semantic_source&&s.source_lineage.semantic_source!=='none'&&s.coverage?.analysis!=='missing');
+  const semanticSource=s.source_lineage?.semantic_source;
+  const semanticReady=s.status==='final'||(semanticSource==='news_theme_analysis'&&s.coverage?.news==='complete')||(semanticSource==='unified_analysis'&&s.coverage?.analysis==='complete');
   const catalystReady=semanticReady&&Number(c.unavailable||0)===0;
   const fundingReady=f.coverage_status&&f.coverage_status!=='missing';
   const funding=fundingReady?`${num(f.available_stock_count)}/${num(b.stock_count)} 檔可判讀`:'籌碼 facts 尚未完成';
   const themeHtml=semanticReady
     ? (themes.length?`<ol class="theme-list">${themes.map(x=>`<li><b>${esc(x.label)}</b> ${num(x.stock_count)} 檔 · ${pct(x.share_pct)} · ${esc(x.strength)}</li>`).join('')}</ol>`:'<div class="muted">已完成新版語意分析，但目前沒有形成足夠集中的 canonical 主流題材。</div>')
-    : '<div class="muted"><b>新版題材結構化分析尚未完成。</b><br>目前可能已有逐檔新聞研究，但尚未轉換為最新 canonical theme schema；因此此處不以 0 檔表示。</div>';
+    : '<div class="muted"><b>新版題材結構化分析尚未完成。</b><br>尚無可用的 latest news-theme 或 Unified Analysis；因此此處不以 0 檔表示。</div>';
   const catalystHtml=catalystReady
     ? `<div class="detail">直接 ${num(c.direct)} · 交叉佐證 ${num(c.corroborated)} · 間接 ${num(c.circumstantial)} · 無明確證據 ${num(c.none)}</div><div class="detail">公開催化覆蓋：<b>${pct(c.public_catalyst_coverage_pct)}</b></div>`
-    : '<div class="muted"><b>尚待最新版 Unified AI Analysis 完成後統計。</b><br>目前缺的是結構化 evidence_strength，不代表今天公開催化為 0。</div>';
+    : '<div class="muted"><b>尚待最新版語意分析完成後統計。</b><br>目前缺的是結構化 evidence_strength，不代表今天公開催化為 0。</div>';
   const fundingHtml=fundingReady
     ? `<div class="detail">${esc(funding)}</div><div class="detail">法人偏多 ${num(f.institutional_support_count)} · 偏空 ${num(f.institutional_opposition_count)}</div><div class="detail">融資增加 ${num(f.margin_increase_count)} · 減少 ${num(f.margin_decrease_count)}</div>`
     : '<div class="muted"><b>籌碼 facts 尚未完成。</b><br>缺值不視為 0；待當日法人、融資、分點與 MI_INDEX 齊備後更新。</div>';
-  const narrative=semanticReady?(s.market_summary||''):'目前僅完成市場廣度等 deterministic 摘要；題材、催化與籌碼語意仍待最新版 Unified AI Analysis。';
+  const narrative=semanticReady?(s.market_summary||''):'目前僅完成市場廣度等 deterministic 摘要；題材與催化語意尚未完成。';
   return `<div class="market-summary-head"><div><div class="pane-label">今日強勢股總覽</div><div class="market-summary-title">${esc(s.headline||'市場總結')}</div></div><span class="summary-badge ${esc(s.status)}">${badge}</span></div>
     <div class="summary-metrics"><div class="summary-metric"><b>≥5% 強勢股</b><strong>${num(b.stock_count)} 檔</strong></div><div class="summary-metric"><b>≥9.5% 類漲停</b><strong>${num(b.gain_9_5_plus_count)} 檔</strong></div><div class="summary-metric"><b>較前交易日</b><strong>${change}</strong></div><div class="summary-metric"><b>市場結構</b><strong>${esc(REGIME_LABELS[s.market_context?.regime]||s.market_context?.regime||'—')}</strong></div></div>
     <div class="summary-grid"><div class="summary-block"><h3>主流題材</h3>${themeHtml}</div><div class="summary-block"><h3>催化可信度</h3>${catalystHtml}</div><div class="summary-block"><h3>籌碼結構</h3>${fundingHtml}</div></div>
-    <div class="market-summary-text">${esc(narrative)}</div>${watch.length?`<div class="summary-block" style="margin-top:12px"><h3>下一交易日觀察</h3><ul class="watch-list">${watch.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}<div class="coverage-note">資料覆蓋：analysis ${esc(s.coverage?.analysis||'—')}、facts ${esc(s.coverage?.facts||'—')}、funding ${esc(s.coverage?.funding||'—')}；缺值不會以 0 或鄰日資料替代。</div>`;
+    <div class="market-summary-text">${esc(narrative)}</div>${watch.length?`<div class="summary-block" style="margin-top:12px"><h3>下一交易日觀察</h3><ul class="watch-list">${watch.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}<div class="coverage-note">資料覆蓋：news ${esc(s.coverage?.news||'—')}、analysis ${esc(s.coverage?.analysis||'—')}、facts ${esc(s.coverage?.facts||'—')}、funding ${esc(s.coverage?.funding||'—')}；缺值不會以 0 或鄰日資料替代。</div>`;
 }
-function card(row,a){
+function card(row,a,hasUnified){
   const change=Number(row.change_pct),pctText=Number.isFinite(change)?`${change>=0?'+':''}${change.toFixed(2)}%`:'—';
-  const f=a?.flow||{},t=a?.technical||{},m=f.margin||{},b=f.broker||{};
+  const f=hasUnified?(a?.flow||{}):{},t=hasUnified?(a?.technical||{}):{},m=f.margin||{},b=f.broker||{};
   const evidence=Array.isArray(a?.evidence)?a.evidence.join('；'):'';
   const follow=Array.isArray(a?.follow_up)?a.follow_up.join('；'):'';
   const causeLabel=tagLabel('cause_type',a?.cause_type),evidenceLabel=tagLabel('evidence_strength',a?.evidence_strength),confidenceLabel=tagLabel('confidence',a?.confidence);
   return `<article class="stock-card card"><div class="stock-card-grid">
     <section class="stock-pane stock-pane-market"><div class="pane-label">股票與行情</div><div class="stock-heading"><div><div class="stock-code">${esc(row.code)}</div><div class="stock-name">${esc(row.name)}</div></div><div><div class="gain">${pctText}</div><div class="small">收盤 ${num(row.close)}</div></div></div><div class="metrics"><div class="metric"><b>前收</b>${num(row.previous_close)}</div><div class="metric"><b>開盤</b>${num(row.open)}</div><div class="metric"><b>最高</b>${num(row.high)}</div><div class="metric"><b>最低</b>${num(row.low)}</div></div><div class="detail">成交量：${num(row.volume)}</div></section>
-    <section class="stock-pane stock-pane-reason"><div class="pane-label">上漲可能原因</div>${a?`<div class="reason">${esc(a.reason_summary)}</div><div><span class="pill">${esc(causeLabel)} / ${esc(evidenceLabel)} / ${esc(confidenceLabel)}</span></div>${evidence?`<div class="detail"><b>證據：</b>${esc(evidence)}</div>`:''}${follow?`<div class="detail"><b>後續：</b>${esc(follow)}</div>`:''}${sources(a.sources)}`:'<div class="muted">尚未產生最新版 unified analysis。</div>'}</section>
-    <section class="stock-pane stock-pane-flow"><div class="pane-label">籌碼與技術 facts</div>${a?`<div class="flow-grid"><div class="metric"><b>外資</b>${esc(actor(f.foreign))}</div><div class="metric"><b>投信</b>${esc(actor(f.investment_trust))}</div><div class="metric"><b>自營商</b>${esc(actor(f.dealer))}</div></div><div class="detail"><b>融資：</b>${m.margin_delta==null?'—':num(m.margin_delta)}；<b>融券：</b>${m.short_delta==null?'—':num(m.short_delta)}</div><div class="detail"><b>分點集中：</b>Top3 買 ${num(b.top3_buy_share_pct)}% / Top3 賣 ${num(b.top3_sell_share_pct)}%</div><div class="detail"><b>技術：</b>SMA5 ${num(t.sma5)}、SMA20 ${num(t.sma20)}、SMA60 ${num(t.sma60)}；量比前日 ${num(t.volume_ratio_vs_previous)}x</div>`:'<div class="muted">尚無最新版 facts。</div>'}</section>
+    <section class="stock-pane stock-pane-reason"><div class="pane-label">上漲可能原因</div>${a?`<div class="reason">${esc(a.reason_summary)}</div><div><span class="pill">${esc(causeLabel)} / ${esc(evidenceLabel)} / ${esc(confidenceLabel)}</span></div>${evidence?`<div class="detail"><b>證據：</b>${esc(evidence)}</div>`:''}${follow?`<div class="detail"><b>後續：</b>${esc(follow)}</div>`:''}${sources(a.sources)}`:'<div class="muted">尚未產生最新版 news-theme 或 Unified Analysis。</div>'}</section>
+    <section class="stock-pane stock-pane-flow"><div class="pane-label">籌碼與技術 facts</div>${hasUnified?`<div class="flow-grid"><div class="metric"><b>外資</b>${esc(actor(f.foreign))}</div><div class="metric"><b>投信</b>${esc(actor(f.investment_trust))}</div><div class="metric"><b>自營商</b>${esc(actor(f.dealer))}</div></div><div class="detail"><b>融資：</b>${m.margin_delta==null?'—':num(m.margin_delta)}；<b>融券：</b>${m.short_delta==null?'—':num(m.short_delta)}</div><div class="detail"><b>分點集中：</b>Top3 買 ${num(b.top3_buy_share_pct)}% / Top3 賣 ${num(b.top3_sell_share_pct)}%</div><div class="detail"><b>技術：</b>SMA5 ${num(t.sma5)}、SMA20 ${num(t.sma20)}、SMA60 ${num(t.sma60)}；量比前日 ${num(t.volume_ratio_vs_previous)}x</div>`:'<div class="muted">Stage 1 已有新聞題材分析；籌碼與技術 facts 待 Unified Analysis 完成後補上。</div>'}</section>
   </div></article>`;
 }
 async function load(date){
   content.innerHTML='<div class="card empty">載入中…</div>';
   marketSummary.innerHTML='<div class="muted">載入整體市場總結…</div>';
-  const [raw,analysis,market]=await Promise.all([json(`${ROOT}/${date}.json`),json(`${ANALYSIS}/${date}.json`,true),json(`${MARKET_SUMMARY}/${date}.json`,true)]);
-  const rows=raw.stocks||[],map=new Map((analysis?.analyses||[]).map(x=>[String(x.code),x]));
+  const [raw,analysis,news,market]=await Promise.all([json(`${ROOT}/${date}.json`),json(`${ANALYSIS}/${date}.json`,true),json(`${NEWS_ANALYSIS}/${date}.json`,true),json(`${MARKET_SUMMARY}/${date}.json`,true)]);
+  const rows=raw.stocks||[],finalMap=new Map((analysis?.analyses||[]).map(x=>[String(x.code),x])),newsMap=new Map((news?.analyses||[]).map(x=>[String(x.code),x]));
   meta.textContent=`比較 ${fmtDate(raw.previous_date)} → ${fmtDate(raw.target_date)}；門檻 ≥ ${raw.threshold_pct}%`;
   summary.textContent=`符合 ${rows.length} 檔`;
   marketSummary.innerHTML=marketSummaryHtml(market);
-  status.innerHTML=analysis?`<b>正式分析：</b>${esc(analysis.methodology_version)}；模式 ${esc(analysis.generation_mode)}；${analysis.stock_count}/${rows.length} 檔。`:'<b>正式分析：</b>尚未回填至最新版 contract。';
-  content.innerHTML=rows.length?rows.map(r=>card(r,map.get(String(r.code)))).join(''):'<div class="card empty">本日沒有符合股票。</div>';
+  status.innerHTML=analysis?`<b>正式分析：</b>${esc(analysis.methodology_version)}；模式 ${esc(analysis.generation_mode)}；${analysis.stock_count}/${rows.length} 檔。`:news?`<b>初步新聞題材分析：</b>${esc(news.methodology_version)}；${news.stock_count}/${rows.length} 檔。Unified Analysis 與籌碼 facts 尚待後續階段。`:'<b>分析狀態：</b>尚未產生最新版 news-theme 或 Unified Analysis。';
+  content.innerHTML=rows.length?rows.map(r=>{const code=String(r.code),final=finalMap.get(code),stage1=newsMap.get(code);return card(r,final||stage1,Boolean(final))}).join(''):'<div class="card empty">本日沒有符合股票。</div>';
 }
 async function init(){try{const idx=await json(`${ROOT}/files.json`),files=idx.files||[];if(!files.length)throw new Error('目前沒有可用資料');dateSelect.innerHTML=files.map(f=>{const d=f.replace('.json','');return `<option value="${d}">${fmtDate(d)}</option>`}).join('');dateSelect.onchange=()=>load(dateSelect.value);await load(dateSelect.value)}catch(e){content.innerHTML=`<div class="card error">載入失敗：${esc(e.message)}</div>`}}
 init();
