@@ -26,13 +26,13 @@ function parseSimpleSet(field, min, max, aliasSunday = false) {
     if (part.includes('/')) throw new Error(`cron steps are not supported for shifted calendar fields: ${field}`);
     if (part.includes('-')) {
       const [aRaw, bRaw] = part.split('-');
-      let a = Number(aRaw), b = Number(bRaw);
+      const a = Number(aRaw), b = Number(bRaw);
       if (!Number.isInteger(a) || !Number.isInteger(b) || a < min || b > max || a > b) throw new Error(`unsupported cron range: ${field}`);
       for (let v = a; v <= b; v++) values.add(aliasSunday && v === 7 ? 0 : v);
     } else {
-      let v = Number(part);
-      if (!Number.isInteger(v) || v < min || v > max) throw new Error(`unsupported cron value: ${field}`);
-      values.add(aliasSunday && v === 7 ? 0 : v);
+      const raw = Number(part);
+      if (!Number.isInteger(raw) || raw < min || raw > max) throw new Error(`unsupported cron value: ${field}`);
+      values.add(aliasSunday && raw === 7 ? 0 : raw);
     }
   }
   return values;
@@ -64,9 +64,7 @@ function shiftDom(field, dayDelta) {
   const shifted = new Set();
   for (const v of values) {
     const next = v + dayDelta;
-    if (next < 1 || next > 31) {
-      throw new Error(`day-of-month boundary requires manual handling: ${field} delta=${dayDelta}`);
-    }
+    if (next < 1 || next > 31) throw new Error(`day-of-month boundary requires manual handling: ${field} delta=${dayDelta}`);
     shifted.add(next);
   }
   return compressSet(shifted);
@@ -107,24 +105,12 @@ function shiftExpression(expression) {
   };
 }
 
-function updateNearbyComments(lines, cronIndex, change, scheduleStart) {
-  for (let i = cronIndex - 1; i > scheduleStart; i--) {
-    const trimmed = lines[i].trim();
-    if (trimmed === '') continue;
-    if (!trimmed.startsWith('#')) break;
-    lines[i] = lines[i]
-      .replaceAll(change.old_taipei, change.new_taipei)
-      .replaceAll(change.old_utc, change.new_utc);
-  }
-}
-
 function migrateFile(filePath) {
   const original = fs.readFileSync(filePath, 'utf8');
   const lines = original.split('\n');
   const changes = [];
   let inSchedule = false;
   let scheduleIndent = -1;
-  let scheduleStart = -1;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -133,7 +119,6 @@ function migrateFile(filePath) {
       if (/^\s{2}schedule:\s*$/.test(line)) {
         inSchedule = true;
         scheduleIndent = indent;
-        scheduleStart = i;
       }
       continue;
     }
@@ -141,7 +126,6 @@ function migrateFile(filePath) {
     if (line.trim() && !line.trim().startsWith('#') && indent <= scheduleIndent) {
       inSchedule = false;
       scheduleIndent = -1;
-      scheduleStart = -1;
       i--;
       continue;
     }
@@ -150,12 +134,23 @@ function migrateFile(filePath) {
     if (!match) continue;
     const change = shiftExpression(match[2]);
     if (!change) continue;
-    updateNearbyComments(lines, i, change, scheduleStart);
     lines[i] = `${match[1]}${change.new_expression}${match[3]}`;
     changes.push({ line: i + 1, ...change });
   }
 
   if (!changes.length) return [];
+
+  // Keep human-readable schedule comments synchronized with the shifted cron times.
+  // Only comment lines are touched; workflow logic outside schedule cron expressions is unchanged.
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].trim().startsWith('#')) continue;
+    for (const change of changes) {
+      lines[i] = lines[i]
+        .replaceAll(change.old_taipei, change.new_taipei)
+        .replaceAll(change.old_utc, change.new_utc);
+    }
+  }
+
   const updated = lines.join('\n');
   if (updated === original) throw new Error(`internal error: expected ${filePath} to change`);
   fs.writeFileSync(filePath, updated, 'utf8');
