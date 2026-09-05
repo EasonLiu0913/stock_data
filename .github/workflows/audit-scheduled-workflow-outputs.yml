@@ -62,9 +62,13 @@ jobs:
           console.log(`TARGET_TRADE_DATE=${report.target_trade_date}`);
           console.log(`WORKFLOW_COUNT=${report.workflow_count}`);
           console.log(`MISSING_COUNT=${report.missing_count}`);
+          console.log(`REGISTRY_GAP_COUNT=${report.registry_gap_count}`);
+          console.log(`FAILURE_COUNT=${report.failure_count}`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `audit_date=${report.audit_date}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `target_trade_date=${report.target_trade_date}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `missing_count=${report.missing_count}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `registry_gap_count=${report.registry_gap_count}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `failure_count=${report.failure_count}\n`);
           NODE
 
       - name: Upload audit report
@@ -76,16 +80,20 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Fail on genuinely missing canonical outputs
-        if: steps.audit.outputs.missing_count != '0'
+      - name: Fail on missing outputs or audit registry gaps
+        if: steps.audit.outputs.failure_count != '0'
         shell: bash
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const report = JSON.parse(fs.readFileSync('workflow-audit/audit.json', 'utf8'));
-          console.error(`Scheduled workflow audit found ${report.missing_count} missing output group(s) for target trade date ${report.target_trade_date}.`);
+          console.error(`Scheduled workflow audit failed for target trade date ${report.target_trade_date}.`);
+          console.error(`Missing output groups: ${report.missing_count}`);
           for (const row of report.missing) {
             console.error(`- ${row.workflow}: ${row.missing.join(', ')}`);
+          }
+          if (report.unregistered_scheduled_workflows.length) {
+            console.error(`Unregistered scheduled workflows: ${report.unregistered_scheduled_workflows.join(', ')}`);
           }
           process.exit(1);
           NODE
