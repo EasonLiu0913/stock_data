@@ -11,6 +11,7 @@ const {
 
 const ROOT = path.resolve(__dirname, '..');
 const DATE_RE = /^20\d{6}$/;
+const SELF_WORKFLOW = 'audit-scheduled-workflow-outputs.yml';
 
 function parseArgs(argv = process.argv.slice(2)) {
   const args = new Map();
@@ -459,7 +460,8 @@ function markdownSummary(report) {
     `- Audit date (Taipei): **${report.audit_date}**`,
     `- Previous trading day: **${report.target_trade_date}**`,
     `- Workflows checked: **${report.workflow_count}**`,
-    `- Missing outputs: **${report.missing_count}**`,\n    `- Unregistered scheduled workflows: **${report.registry_gap_count}**`,
+    `- Missing outputs: **${report.missing_count}**`,
+    `- Unregistered scheduled workflows: **${report.registry_gap_count}**`,
     '',
     '| Workflow | Semantic | Status | Evidence |',
     '| --- | --- | --- | --- |',
@@ -518,4 +520,5 @@ module.exports = {
   previousMonth,
   rankingExpected,
   resolveAuditDates,
+  scheduledWorkflowFiles,
 };
