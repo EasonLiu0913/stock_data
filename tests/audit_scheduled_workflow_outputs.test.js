@@ -8,6 +8,7 @@ const {
   previousMonth,
   rankingExpected,
   resolveAuditDates,
+  scheduledWorkflowFiles,
 } = require('../scripts/audit_scheduled_workflow_outputs');
 
 test('2026-09-05 audit targets previous trading day 2026-09-04', () => {
