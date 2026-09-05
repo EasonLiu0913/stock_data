@@ -93,6 +93,20 @@ function previousMonth(compactDate) {
   return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+function scheduledWorkflowFiles() {
+  const workflowDir = path.join(ROOT, '.github', 'workflows');
+  if (!fs.existsSync(workflowDir)) return [];
+  return fs.readdirSync(workflowDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.ya?ml$/i.test(entry.name))
+    .filter((entry) => {
+      const text = fs.readFileSync(path.join(workflowDir, entry.name), 'utf8');
+      return /^\s*schedule\s*:/m.test(text);
+    })
+    .map((entry) => entry.name)
+    .filter((name) => name !== SELF_WORKFLOW)
+    .sort();
+}
+
 function newestPeriodDirectory(rootRel, pattern) {
   return listDirectories(rootRel).filter((name) => pattern.test(name)).sort().at(-1) || null;
 }
@@ -395,7 +409,8 @@ function buildRules() {
 
 function audit({ now = new Date(), auditDate = '', holidays = loadHolidaySet() } = {}) {
   const ctx = resolveAuditDates({ now, auditDate, holidays });
-  const results = buildRules().map((rule) => {
+  const rules = buildRules();
+  const results = rules.map((rule) => {
     const detail = rule.check(ctx);
     return {
       workflow: rule.workflow,
@@ -405,15 +420,33 @@ function audit({ now = new Date(), auditDate = '', holidays = loadHolidaySet() }
     };
   });
   const missing = results.filter((r) => !r.ok);
+  const registered = new Set(rules.map((rule) => rule.workflow));
+  const scheduled = scheduledWorkflowFiles();
+  const unregistered = scheduled.filter((name) => !registered.has(name));
+  const staleRegistry = [...registered].filter((name) => !scheduled.includes(name));
+
+  const status = unregistered.length
+    ? 'registry_gap'
+    : missing.length
+      ? 'missing_outputs'
+      : 'complete';
+
   return {
-    schema_version: 1,
+    schema_version: 2,
     generated_at: now.toISOString(),
     time_zone: 'Asia/Taipei',
     ...ctx,
     workflow_count: results.length,
+    scheduled_workflow_count: scheduled.length,
     missing_count: missing.length,
+    registry_gap_count: unregistered.length,
+    stale_registry_count: staleRegistry.length,
+    failure_count: missing.length + unregistered.length,
     ok_count: results.length - missing.length,
-    status: missing.length ? 'missing_outputs' : 'complete',
+    status,
+    scheduled_workflows: scheduled,
+    unregistered_scheduled_workflows: unregistered,
+    stale_registry_workflows: staleRegistry,
     results,
     missing,
   };
@@ -426,7 +459,7 @@ function markdownSummary(report) {
     `- Audit date (Taipei): **${report.audit_date}**`,
     `- Previous trading day: **${report.target_trade_date}**`,
     `- Workflows checked: **${report.workflow_count}**`,
-    `- Missing: **${report.missing_count}**`,
+    `- Missing outputs: **${report.missing_count}**`,\n    `- Unregistered scheduled workflows: **${report.registry_gap_count}**`,
     '',
     '| Workflow | Semantic | Status | Evidence |',
     '| --- | --- | --- | --- |',
@@ -462,10 +495,13 @@ function main() {
     target_trade_date: report.target_trade_date,
     workflow_count: report.workflow_count,
     missing_count: report.missing_count,
+    registry_gap_count: report.registry_gap_count,
+    failure_count: report.failure_count,
+    unregistered_scheduled_workflows: report.unregistered_scheduled_workflows,
     missing: report.missing.map((row) => ({ workflow: row.workflow, missing: row.missing })),
   }, null, 2)}\n`);
 
-  if (report.missing_count > 0 && !args.has('no-fail')) process.exitCode = 1;
+  if (report.failure_count > 0 && !args.has('no-fail')) process.exitCode = 1;
 }
 
 if (require.main === module) {
