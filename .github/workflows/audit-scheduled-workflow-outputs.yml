@@ -1,0 +1,105 @@
+name: "[00 稽核] Scheduled Workflow Outputs"
+
+on:
+  schedule:
+    # 台灣時間週二至週六 07:01；UTC 為週一至週五 23:01。
+    - cron: '1 23 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      audit_date:
+        description: '稽核執行日 YYYYMMDD；留空使用台北當天，程式會自動找前一交易日'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-scheduled-workflow-outputs
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate auditor
+        run: |
+          set -euo pipefail
+          node --check scripts/audit_scheduled_workflow_outputs.js
+          node --test tests/audit_scheduled_workflow_outputs.test.js
+
+      - name: Audit previous trading day outputs
+        id: audit
+        shell: bash
+        env:
+          INPUT_AUDIT_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.audit_date || '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p workflow-audit
+          args=(--output workflow-audit/audit.json --no-fail)
+          if [ -n "${INPUT_AUDIT_DATE:-}" ]; then
+            args+=(--audit-date "$INPUT_AUDIT_DATE")
+          fi
+
+          node scripts/audit_scheduled_workflow_outputs.js "${args[@]}"
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('workflow-audit/audit.json', 'utf8'));
+          console.log(`AUDIT_DATE=${report.audit_date}`);
+          console.log(`TARGET_TRADE_DATE=${report.target_trade_date}`);
+          console.log(`WORKFLOW_COUNT=${report.workflow_count}`);
+          console.log(`MISSING_COUNT=${report.missing_count}`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `audit_date=${report.audit_date}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `target_trade_date=${report.target_trade_date}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `missing_count=${report.missing_count}\n`);
+          NODE
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scheduled-workflow-output-audit-${{ steps.audit.outputs.audit_date || github.run_id }}
+          path: workflow-audit/audit.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail on genuinely missing canonical outputs
+        if: steps.audit.outputs.missing_count != '0'
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('workflow-audit/audit.json', 'utf8'));
+          console.error(`Scheduled workflow audit found ${report.missing_count} missing output group(s) for target trade date ${report.target_trade_date}.`);
+          for (const row of report.missing) {
+            console.error(`- ${row.workflow}: ${row.missing.join(', ')}`);
+          }
+          process.exit(1);
+          NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
