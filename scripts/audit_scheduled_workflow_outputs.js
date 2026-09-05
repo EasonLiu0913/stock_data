@@ -344,14 +344,51 @@ function buildRules() {
       (c) => [`data_predictions/${c.target_trade_date}`, `data_predictions_v2/${c.target_trade_date}`]),
     {
       workflow: 'momentum-history-replay.yml',
-      semantic: 'date_independent',
-      check() {
-        const files = listFiles('data_prediction_analysis').filter((f) => f.startsWith('momentum-'));
+      semantic: 'repository_versioned_snapshot',
+      note: 'Momentum outputs are versioned directories driven by completed strategy snapshots. signal_date is the base trade date, so it must not be forced to equal the audit target trade date.',
+      check(c) {
+        const historyManifestPath = 'data_prediction_analysis/momentum-history/v1/manifest.json';
+        const replayManifestPath = 'data_prediction_analysis/momentum-replay/v1/manifest.json';
+        const summaryPath = 'data_prediction_analysis/momentum-research/v1/summary.json';
+        const historyManifest = readJson(historyManifestPath);
+        const replayManifest = readJson(replayManifestPath);
+        const summary = readJson(summaryPath);
+        const historyDates = Object.keys(historyManifest?.dates || {}).filter((d) => DATE_RE.test(d)).sort();
+        const replayDates = Object.keys(replayManifest?.dates || {}).filter((d) => DATE_RE.test(d)).sort();
+        const summaryDates = Array.isArray(summary?.signal_dates)
+          ? summary.signal_dates.filter((d) => DATE_RE.test(String(d))).map(String).sort()
+          : [];
+        const latestHistory = historyDates.at(-1) || null;
+        const latestReplay = replayDates.at(-1) || null;
+        const latestSummary = summaryDates.at(-1) || null;
+        const historyFile = latestHistory
+          ? `data_prediction_analysis/momentum-history/v1/${latestHistory}.json`
+          : null;
+        const replayFile = latestReplay
+          ? `data_prediction_analysis/momentum-replay/v1/${latestReplay}.json`
+          : null;
+        const ok = Boolean(historyManifest)
+          && Boolean(replayManifest)
+          && Boolean(summary)
+          && Boolean(latestHistory)
+          && latestHistory <= c.target_trade_date
+          && latestReplay === latestHistory
+          && latestSummary === latestHistory
+          && exists(historyFile)
+          && exists(replayFile);
+        const expected = [
+          historyManifestPath,
+          replayManifestPath,
+          summaryPath,
+          historyFile || 'data_prediction_analysis/momentum-history/v1/<latest-signal-date>.json',
+          replayFile || 'data_prediction_analysis/momentum-replay/v1/<latest-signal-date>.json',
+        ];
         return {
-          expected: ['data_prediction_analysis/momentum-*'],
-          actual: files.map((f) => `data_prediction_analysis/${f}`),
-          ok: files.length > 0,
-          missing: files.length ? [] : ['data_prediction_analysis/momentum-*'],
+          expected,
+          actual: expected.filter((p) => !p.includes('<') && exists(p)),
+          ok,
+          missing: ok ? [] : ['consistent Momentum v1 history/replay manifests, summary, and latest signal-date files'],
+          signal_date: latestHistory,
         };
       },
     },
