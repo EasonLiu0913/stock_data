@@ -84,3 +84,11 @@ test('source-owned and non-daily workflows are not mislabeled as market-date exa
   assert.equal(semantics['crawl-twse-quarterly-financial-quality.yml'], 'fiscal_quarter');
   assert.equal(semantics['build-twse-market-chart.yml'], 'date_independent');
 });
+
+
+test('every current scheduled workflow has a registry rule', () => {
+  const registered = new Set(buildRules().map((rule) => rule.workflow));
+  const scheduled = scheduledWorkflowFiles();
+  const unregistered = scheduled.filter((name) => !registered.has(name));
+  assert.deepEqual(unregistered, []);
+});
