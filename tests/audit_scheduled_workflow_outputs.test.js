@@ -83,6 +83,7 @@ test('source-owned and non-daily workflows are not mislabeled as market-date exa
   assert.equal(semantics['crawl-tdcc-shareholding-snapshot.yml'], 'source_observation_date');
   assert.equal(semantics['crawl-mops-monthly-revenue.yml'], 'revenue_month');
   assert.equal(semantics['crawl-twse-quarterly-financial-quality.yml'], 'fiscal_quarter');
+  assert.equal(semantics['momentum-history-replay.yml'], 'repository_versioned_snapshot');
   assert.equal(semantics['build-twse-market-chart.yml'], 'date_independent');
 });
 
