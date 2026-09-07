@@ -166,7 +166,7 @@ It snapshots the validated target-date margin CSV under `$RUNNER_TEMP`, then use
 
 ## Mandatory workflow schedule summary normalization
 
-Every newly created `.github/workflows/*.yml` or `.yaml` file that contains a `jobs:` section must include the repository's canonical lightweight schedule summary job **at creation time**.
+Every newly created `.github/workflows/*.yml` or `.yaml` file that contains a `jobs:` section must include the repository's canonical repository-pinned schedule summary job **at creation time**.
 
 Do not wait for the repository-wide audit to discover and repair the omission after the workflow has already been committed.
 
@@ -205,6 +205,8 @@ create / modify workflow
   -> changed_count = 0 for the authored workflow
   -> workflow change may proceed to normal validation / closeout
 ```
+
+The canonical summary job checks out the exact `github.sha` for the run and executes `scripts/write_workflow_schedule_summary.js` locally. It must not fetch the summary implementation from `raw.githubusercontent.com/.../main`, because that makes the summary depend on mutable remote state and adds an unnecessary network failure point.
 
 This rule exists because repository-wide normalization intentionally fails when any workflow drifts from the managed summary contract. A workflow that relies on the audit to repair itself later is incomplete by construction.
 

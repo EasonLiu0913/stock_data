@@ -287,3 +287,21 @@ jobs:
           if(p.wave_c_detail.length) throw new Error(`Detail queue not exhausted: ${p.wave_c_detail.length}`);
           console.log(JSON.stringify({wave_c_exhausted:true,manual_review:p.manual_review.length,unresolved_identity_count:p.unresolved_identity_count},null,2));
           NODE
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
+

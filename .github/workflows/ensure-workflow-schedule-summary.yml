@@ -54,13 +54,13 @@ jobs:
             tests/evaluate_workflow_data_completeness.test.js \
             tests/collect_twse_margin_workflow_status.test.js
 
-      - name: Verify every workflow uses lightweight summary
+      - name: Verify every workflow uses repository-pinned summary
         shell: bash
         run: |
           set -euo pipefail
           node scripts/migrate_workflow_schedule_summary.js
           if git diff --quiet -- .github/workflows; then
-            echo "All workflows use the lightweight schedule timing summary"
+            echo "All workflows use the repository-pinned schedule timing summary"
             exit 0
           fi
           echo "Workflow schedule summary normalization is required:"
@@ -79,10 +79,14 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
       - name: Write schedule timing summary
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+        run: node scripts/write_workflow_schedule_summary.js
+

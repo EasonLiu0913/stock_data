@@ -9,44 +9,26 @@ const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
 const MARKER = '# schedule-timing-summary:v1';
 
 const JOB = `
-
   schedule-timing-summary:
     ${MARKER}
     name: 排程時間摘要
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          ref: \${{ github.sha }}
+          fetch-depth: 1
       - name: Write schedule timing summary
         shell: bash
         env:
           GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/EasonLiu0913/stock_data/main/scripts/write_workflow_schedule_summary.js | node
+        run: node scripts/write_workflow_schedule_summary.js
 `;
 
-const EXACT_TESTED_SHA_JOB = `
-
-  schedule-timing-summary:
-    ${MARKER}
-    name: 排程時間摘要
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          TESTED_SHA: \${{ github.sha }}
-        run: |
-          set -euo pipefail
-          curl -fsSL "https://raw.githubusercontent.com/EasonLiu0913/stock_data/\${TESTED_SHA}/scripts/write_workflow_schedule_summary.js" | node
-`;
-
-function managedJobForFile(file) {
-  return path.basename(file) === 'test-scheduled-collection-date.yml'
-    ? EXACT_TESTED_SHA_JOB
-    : JOB;
+function managedJobForFile() {
+  return JOB;
 }
 
 function normalizeTrailingWhitespace(text) {
@@ -91,12 +73,6 @@ function selfTest() {
   if (!migrateFile(file)) throw new Error('Managed job content drift must trigger migration');
   if (!fs.readFileSync(file, 'utf8').includes('name: 排程時間摘要')) throw new Error('Managed job was not restored');
 
-  const exactShaFile = path.join(tempDir, 'test-scheduled-collection-date.yml');
-  fs.writeFileSync(exactShaFile, `${base.replace(/\s+$/, '')}${EXACT_TESTED_SHA_JOB}`, 'utf8');
-  if (migrateFile(exactShaFile)) throw new Error('Exact-tested-SHA regression summary must remain canonical');
-  if (!fs.readFileSync(exactShaFile, 'utf8').includes('${TESTED_SHA}/scripts/write_workflow_schedule_summary.js')) {
-    throw new Error('Exact-tested-SHA summary contract was not preserved');
-  }
 
   console.log('migrate_workflow_schedule_summary self-test passed');
 }
