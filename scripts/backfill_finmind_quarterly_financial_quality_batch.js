@@ -95,6 +95,7 @@ function main(argv = process.argv.slice(2)) {
   const force = String(args.get('force') || 'false').toLowerCase() === 'true';
   const dueOnly = String(args.get('due-only') || 'false').toLowerCase() === 'true';
   const planDue = String(args.get('plan-due') || 'false').toLowerCase() === 'true';
+  const targetStockId = String(args.get('stock-id') || '').trim();
   const maxDueStocks = finiteInt(args.get('max-due-stocks'), 5, 1);
 
   const universe = readJson(UNIVERSE_FILE);
@@ -108,7 +109,7 @@ function main(argv = process.argv.slice(2)) {
   const boundedDueCandidates = dueCandidates.slice(0, maxDueStocks);
   if (planDue) {
     const totalBatches = Math.ceil(boundedDueCandidates.length / batchSize);
-    const matrix = { include: Array.from({ length: totalBatches }, (_, batch_index) => ({ batch_index })) };
+    const matrix = { include: boundedDueCandidates.map(row => ({ stock_id: row.stock_id })) };
     const plan = {
       as_of_date: asOfDate,
       start_quarter: startQuarter,
@@ -129,7 +130,12 @@ function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  const workCandidates = dueOnly && !force ? boundedDueCandidates : candidates;
+  const baseWorkCandidates = dueOnly && !force ? boundedDueCandidates : candidates;
+  const workCandidates = targetStockId ? baseWorkCandidates.filter(candidate => candidate.stock_id === targetStockId) : baseWorkCandidates;
+  if (targetStockId && workCandidates.length === 0) {
+    console.log(JSON.stringify({ as_of_date: asOfDate, stock_id: targetStockId, due_only: dueOnly, selected_count: 0, message: 'target stock is not due or not in candidate universe' }, null, 2));
+    return;
+  }
   const totalBatches = Math.ceil(workCandidates.length / batchSize);
   if (totalBatches === 0) {
     console.log(JSON.stringify({ as_of_date: asOfDate, due_only: dueOnly, selected_count: 0, message: 'no due work' }, null, 2));
@@ -192,7 +198,10 @@ function main(argv = process.argv.slice(2)) {
     counts, results,
   };
   fs.mkdirSync(STATUS_ROOT, { recursive: true });
-  const statusFile = path.join(STATUS_ROOT, `dual-track-batch${String(batchIndex).padStart(3, '0')}.json`);
+  const statusName = dueOnly
+    ? `due-refresh-${asOfDate}-${selected.length === 1 ? selected[0].stock_id : `batch${String(batchIndex).padStart(3, '0')}`}.json`
+    : `dual-track-batch${String(batchIndex).padStart(3, '0')}.json`;
+  const statusFile = path.join(STATUS_ROOT, statusName);
   fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify({ output: path.relative(ROOT, statusFile), unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, batch_index: batchIndex, batch_size: batchSize, selected_count: selected.length, processed_count: results.length, quota_exhausted: quotaExhausted, counts }, null, 2));
 
