@@ -1,0 +1,74 @@
+name: '[99 測試] Node Regression Suite'
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/test-node-regression-suite.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/test-node-regression-suite.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: node-regression-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check changed regression entry points
+        run: |
+          node --check scripts/sync_mops_monthly_signal_artifacts.js
+          node --check tests/sync_mops_monthly_signal_artifacts.test.js
+
+      - name: Run Node regression suite
+        run: npm test
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
