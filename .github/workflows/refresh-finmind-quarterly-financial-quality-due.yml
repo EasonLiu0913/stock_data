@@ -247,19 +247,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "No due FinMind quarterly financial-quality coverage; no API quota consumed."
-
   schedule-timing-summary:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout triggering revision
+      - name: Checkout repository for schedule summary
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Write schedule timing summary
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
