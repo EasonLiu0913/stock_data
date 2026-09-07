@@ -23,6 +23,13 @@ function parseArgs(argv) {
   return args;
 }
 function finiteInt(value, fallback, min = 0) { const n = Number(value); return Number.isInteger(n) && n >= min ? n : fallback; }
+function normalizeAsOfDate(value) {
+  const text = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) throw new Error(`Invalid as-of-date: ${value}`);
+  const date = new Date(`${text}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== text) throw new Error(`Invalid as-of-date: ${value}`);
+  return text;
+}
 function qualifyingHits(stock, threshold) { return (stock.hit_events || []).filter(event => Number(event.score) >= threshold).length; }
 function selectCandidates(universe, rule = {}) {
   const coreThreshold = finiteInt(rule.coreThreshold, 9, 0), coreMinHits = finiteInt(rule.coreMinHits, 2, 1);
@@ -43,11 +50,33 @@ function sleepSync(ms) {
   const sab = new SharedArrayBuffer(4);
   Atomics.wait(new Int32Array(sab), 0, 0, ms);
 }
-function coverageMatches(stockId, startQuarter, endQuarter) {
+function coverageFreshnessDecision(coverage, timelineExists, startQuarter, endQuarter, asOfDate) {
+  const date = normalizeAsOfDate(asOfDate);
+  if (!coverage || typeof coverage !== 'object') return { reusable: false, reason: 'missing_or_corrupt_coverage' };
+  if (coverage.requested?.start_quarter !== startQuarter || coverage.requested?.end_quarter !== endQuarter) return { reusable: false, reason: 'range_mismatch' };
+  if (!timelineExists) return { reusable: false, reason: 'missing_timeline' };
+
+  if (coverage.status === 'unsupported_financial_model') return { reusable: true, reason: 'unsupported_financial_model' };
+  if (!Array.isArray(coverage.missing_periods)) return { reusable: false, reason: 'missing_or_corrupt_missing_periods' };
+
+  for (const row of coverage.missing_periods) {
+    if (!row || typeof row !== 'object') return { reusable: false, reason: 'corrupt_missing_period' };
+    if (row.reason !== 'pending_not_yet_available') continue;
+    const knownDate = String(row.conservative_known_date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(knownDate)) return { reusable: false, reason: 'invalid_pending_known_date' };
+    if (knownDate <= date) return { reusable: false, reason: 'due_pending', fiscal_period: row.fiscal_period || null, conservative_known_date: knownDate };
+  }
+
+  return { reusable: true, reason: coverage.missing_periods.length ? 'future_pending_or_terminal_missing' : 'complete' };
+}
+function coverageDecision(stockId, startQuarter, endQuarter, asOfDate) {
   const dir = path.join(OUTPUT_ROOT, stockId);
   const coverage = readJson(path.join(dir, 'coverage-status.json'));
   const timeline = path.join(dir, 'financial-quality-score-timeline.json');
-  return Boolean(coverage && coverage.requested?.start_quarter === startQuarter && coverage.requested?.end_quarter === endQuarter && fs.existsSync(timeline));
+  return coverageFreshnessDecision(coverage, fs.existsSync(timeline), startQuarter, endQuarter, asOfDate);
+}
+function coverageMatches(stockId, startQuarter, endQuarter, asOfDate) {
+  return coverageDecision(stockId, startQuarter, endQuarter, asOfDate).reusable;
 }
 function compactError(result) { return (result.stderr || result.stdout || `exit status ${result.status}`).replace(/\s+/g, ' ').slice(0, 1200); }
 function isQuotaExhausted(result) {
@@ -62,8 +91,11 @@ function main(argv = process.argv.slice(2)) {
   const batchIndex = finiteInt(args.get('batch-index'), 0, 0), batchSize = finiteInt(args.get('batch-size'), 20, 1);
   const delayMs = finiteInt(args.get('delay-ms'), 2000, 0), jitterMs = finiteInt(args.get('jitter-ms'), 750, 0);
   const startQuarter = String(args.get('start-quarter') || '2023Q1'), endQuarter = String(args.get('end-quarter') || '2026Q2');
-  const asOfDate = String(args.get('as-of-date') || new Date().toISOString().slice(0, 10));
+  const asOfDate = normalizeAsOfDate(args.get('as-of-date') || new Date().toISOString().slice(0, 10));
   const force = String(args.get('force') || 'false').toLowerCase() === 'true';
+  const dueOnly = String(args.get('due-only') || 'false').toLowerCase() === 'true';
+  const planDue = String(args.get('plan-due') || 'false').toLowerCase() === 'true';
+  const maxDueStocks = finiteInt(args.get('max-due-stocks'), 5, 1);
 
   const universe = readJson(UNIVERSE_FILE);
   if (!universe || !Array.isArray(universe.stocks)) throw new Error(`Missing or invalid universe: ${path.relative(ROOT, UNIVERSE_FILE)}`);
@@ -72,14 +104,44 @@ function main(argv = process.argv.slice(2)) {
   console.log(JSON.stringify({ candidate_rule: `score>=${coreThreshold} in >=${coreMinHits} months OR score>=${persistentThreshold} in >=${persistentMinHits} months`, unique_candidates: candidates.length, includes_2059: includes2059, pacing: { delay_ms: delayMs, jitter_ms: jitterMs } }, null, 2));
   if (!includes2059) throw new Error('Candidate rule excludes calibration sample 2059; stop before consuming FinMind API.');
 
-  const totalBatches = Math.ceil(candidates.length / batchSize);
-  if (batchIndex >= totalBatches) throw new Error(`batch-index ${batchIndex} out of range; candidates=${candidates.length}, batch_size=${batchSize}`);
-  const selected = candidates.slice(batchIndex * batchSize, batchIndex * batchSize + batchSize), results = [];
+  const dueCandidates = force ? candidates : candidates.filter(candidate => !coverageMatches(candidate.stock_id, startQuarter, endQuarter, asOfDate));
+  const boundedDueCandidates = dueCandidates.slice(0, maxDueStocks);
+  if (planDue) {
+    const totalBatches = Math.ceil(boundedDueCandidates.length / batchSize);
+    const matrix = { include: Array.from({ length: totalBatches }, (_, batch_index) => ({ batch_index })) };
+    const plan = {
+      as_of_date: asOfDate,
+      start_quarter: startQuarter,
+      end_quarter: endQuarter,
+      unique_candidates: candidates.length,
+      due_candidates: dueCandidates.length,
+      scheduled_bounded_candidates: boundedDueCandidates.length,
+      max_due_stocks: maxDueStocks,
+      batch_size: batchSize,
+      total_batches: totalBatches,
+      matrix,
+      stock_ids: boundedDueCandidates.map(row => row.stock_id),
+    };
+    console.log(JSON.stringify(plan, null, 2));
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `due_count=${dueCandidates.length}\nselected_count=${boundedDueCandidates.length}\ntotal_batches=${totalBatches}\nmatrix=${JSON.stringify(matrix)}\n`);
+    }
+    return;
+  }
+
+  const workCandidates = dueOnly && !force ? boundedDueCandidates : candidates;
+  const totalBatches = Math.ceil(workCandidates.length / batchSize);
+  if (totalBatches === 0) {
+    console.log(JSON.stringify({ as_of_date: asOfDate, due_only: dueOnly, selected_count: 0, message: 'no due work' }, null, 2));
+    return;
+  }
+  if (batchIndex >= totalBatches) throw new Error(`batch-index ${batchIndex} out of range; candidates=${workCandidates.length}, batch_size=${batchSize}`);
+  const selected = workCandidates.slice(batchIndex * batchSize, batchIndex * batchSize + batchSize), results = [];
   let quotaExhausted = false;
 
   for (let i = 0; i < selected.length; i += 1) {
     const candidate = selected[i], stockId = candidate.stock_id;
-    if (!force && coverageMatches(stockId, startQuarter, endQuarter)) {
+    if (!force && coverageMatches(stockId, startQuarter, endQuarter, asOfDate)) {
       results.push({ ...candidate, status: 'skipped_complete' });
       console.log(`[skip] ${stockId} already complete`);
     } else {
@@ -124,7 +186,7 @@ function main(argv = process.argv.slice(2)) {
   const usable = (counts.complete || 0) + (counts.skipped_complete || 0) + (counts.unsupported_financial_model || 0);
   const status = {
     schema_version: 4, dataset: 'finmind_quarterly_financial_quality_batch_status', generated_at: new Date().toISOString(),
-    methodology: { candidate_rule: `monthly acceleration score >= ${coreThreshold} in at least ${coreMinHits} months OR score >= ${persistentThreshold} in at least ${persistentMinHits} months`, core: { score_threshold: coreThreshold, min_hits: coreMinHits }, persistent: { score_threshold: persistentThreshold, min_hits: persistentMinHits }, start_quarter: startQuarter, end_quarter: endQuarter, as_of_date: asOfDate, batch_index: batchIndex, batch_size: batchSize, delay_ms: delayMs, jitter_ms: jitterMs, force },
+    methodology: { candidate_rule: `monthly acceleration score >= ${coreThreshold} in at least ${coreMinHits} months OR score >= ${persistentThreshold} in at least ${persistentMinHits} months`, core: { score_threshold: coreThreshold, min_hits: coreMinHits }, persistent: { score_threshold: persistentThreshold, min_hits: persistentMinHits }, start_quarter: startQuarter, end_quarter: endQuarter, as_of_date: asOfDate, batch_index: batchIndex, batch_size: batchSize, delay_ms: delayMs, jitter_ms: jitterMs, force, due_only: dueOnly, max_due_stocks: maxDueStocks },
     universe: { unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, selected_start_offset: batchIndex * batchSize, selected_count: selected.length },
     execution: { quota_exhausted: quotaExhausted, processed_count: results.length, unprocessed_count: selected.length - results.length },
     counts, results,
@@ -143,4 +205,4 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (require.main === module) { try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; } }
-module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted };
+module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, coverageFreshnessDecision, coverageMatches };
