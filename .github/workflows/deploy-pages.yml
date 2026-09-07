@@ -49,6 +49,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy selective repository-root compatible site
+    if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, '🏦 Update Institutional data - ') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
