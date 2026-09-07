@@ -125,13 +125,20 @@ jobs:
           git pull --rebase origin main
           git push origin main
 
+  refresh-tsmc-equipment-dashboard:
+    name: Refresh TSMC equipment demand dashboard
+    needs: build-market-chart
+    uses: ./.github/workflows/build-tsmc-equipment-demand-dashboard.yml
+    with:
+      deploy_pages: false
+
   refresh_mops_revenue_events:
     name: Refresh MOPS revenue event study
-    needs: build-market-chart
+    needs: refresh-tsmc-equipment-dashboard
     uses: ./.github/workflows/refresh-mops-revenue-event-returns.yml
 
   deploy_pages:
-    name: Deploy latest TWSE market chart and event study to Pages
+    name: Deploy latest TWSE market chart, TSMC dashboard, and event study to Pages
     needs: refresh_mops_revenue_events
     uses: ./.github/workflows/deploy-pages.yml
 
