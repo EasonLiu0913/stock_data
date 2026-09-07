@@ -394,6 +394,9 @@ function buildRules() {
     },
     exactRule('prepare-market-environment.yml', 'forecast_date',
       (c) => [`data_market_environment/${c.target_trade_date}/market_environment.json`]),
+    exactRule('refresh-finmind-quarterly-financial-quality-due.yml', 'repository_versioned_snapshot',
+      () => ['data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json'],
+      'Scheduled freshness maintenance may be a no-op; the durable contract is that the canonical master exists and refresh waves rebuild it after due per-stock updates.'),
     exactRule('publish-daily-gainers-ai-analysis.yml', 'market_date',
       (c) => [
         `data_daily_gain_over_5/analysis-ai/${c.target_trade_date}.json`,
