@@ -5,8 +5,8 @@
   "stock_name": "泰福-KY",
   "history": {
     "first_date": "20260203",
-    "last_date": "20260828",
-    "trading_days": 136
+    "last_date": "20260904",
+    "trading_days": 141
   },
   "event_count": 7,
   "events": [
@@ -2172,11 +2172,16 @@
       "stock_code": "6541",
       "stock_name": "泰福-KY",
       "signal_date": "20260818",
-      "episode_end_date": "20260828",
-      "deepest_signal_date": "20260818",
-      "observation_count": 5,
+      "episode_end_date": "20260904",
+      "deepest_signal_date": "20260903",
+      "observation_count": 10,
       "trigger_ids": [
-        "drawdown_60d_lte"
+        "drawdown_60d_lte",
+        "drawdown_20d_lte",
+        "rsi14_lte",
+        "return_3d_lte",
+        "return_5d_lte",
+        "return_10d_lte"
       ],
       "signal": {
         "series_index": 127,
@@ -2222,47 +2227,72 @@
         "severity": 4.0593
       },
       "deepest_signal": {
-        "series_index": 127,
-        "date": "20260818",
-        "close": 35.5,
+        "series_index": 139,
+        "date": "20260903",
+        "close": 31.25,
         "triggers": [
           {
+            "id": "return_3d_lte",
+            "value": -8.0882,
+            "threshold": -8
+          },
+          {
+            "id": "return_5d_lte",
+            "value": -15.3117,
+            "threshold": -10
+          },
+          {
+            "id": "return_10d_lte",
+            "value": -15.7682,
+            "threshold": -15
+          },
+          {
+            "id": "drawdown_20d_lte",
+            "value": -21.875,
+            "threshold": -15
+          },
+          {
             "id": "drawdown_60d_lte",
-            "value": -22.1491,
+            "value": -31.4693,
             "threshold": -20
+          },
+          {
+            "id": "rsi14_lte",
+            "value": 20.91,
+            "threshold": 25
           }
         ],
         "is_oversold": true,
         "price_volume": {
-          "open": 37.3,
-          "high": 37.3,
-          "low": 35.5,
-          "close": 35.5,
-          "volume_lots": 708,
-          "return_1d": -4.8257,
-          "return_3d": -6.8241,
-          "return_5d": -9.4388,
-          "return_10d": -4.4415,
-          "return_20d": -12.1287,
-          "drawdown_20d": -12.8834,
-          "drawdown_60d": -22.1491,
-          "rsi14": 37.77,
-          "sma5": 37.49,
-          "sma20": 38.13,
-          "sma60": 39.63,
-          "gap_sma5": -5.3081,
-          "gap_sma20": -6.8975,
-          "gap_sma60": -10.4214,
-          "average_volume_5d_lots": 345,
-          "average_volume_20d_lots": 332.15,
-          "volume_ratio_5d": 2.0522,
-          "volume_ratio_20d": 2.1316,
-          "intraday_return": -4.8257,
-          "intraday_range_pct": 5.0704,
-          "consecutive_down_days": 5,
-          "volatility_20d": 2.0173
+          "open": 32.55,
+          "high": 32.65,
+          "low": 31.2,
+          "close": 31.25,
+          "volume_lots": 557,
+          "return_1d": -3.9939,
+          "return_3d": -8.0882,
+          "return_5d": -15.3117,
+          "return_10d": -15.7682,
+          "return_20d": -17.4373,
+          "drawdown_20d": -21.875,
+          "drawdown_60d": -31.4693,
+          "rsi14": 20.91,
+          "sma5": 33.28,
+          "sma20": 36.31,
+          "sma60": 38.66,
+          "gap_sma5": -6.0998,
+          "gap_sma20": -13.9356,
+          "gap_sma60": -19.1671,
+          "average_volume_5d_lots": 674.8,
+          "average_volume_20d_lots": 363.1,
+          "volume_ratio_5d": 0.8254,
+          "volume_ratio_20d": 1.534,
+          "intraday_return": -3.9939,
+          "intraday_range_pct": 4.64,
+          "consecutive_down_days": 1,
+          "volatility_20d": 2.3401
         },
-        "severity": 4.0593
+        "severity": 6.7888
       },
       "outcome_from_signal": {
         "base_date": "20260818",
@@ -2276,9 +2306,9 @@
         "future_return_5d": 2.1127,
         "max_return_5d": 5.493,
         "max_adverse_5d": -1.831,
-        "future_return_10d": null,
+        "future_return_10d": -8.4507,
         "max_return_10d": 5.493,
-        "max_adverse_10d": -1.831,
+        "max_adverse_10d": -8.4507,
         "days_to_close_rebound_5pct": null,
         "days_to_intraday_rebound_5pct": 2,
         "labels": {
@@ -2287,7 +2317,7 @@
           "close_rebound_3d_10pct": false,
           "close_rebound_5d_8pct": false,
           "close_rebound_5d_10pct": false,
-          "close_rebound_10d_15pct": null,
+          "close_rebound_10d_15pct": false,
           "intraday_rebound_3d_5pct": true,
           "intraday_rebound_5d_10pct": false
         },
@@ -2295,52 +2325,51 @@
           "completed_horizons": [
             1,
             3,
-            5
+            5,
+            10
           ],
-          "max_completed_horizon": 5,
+          "max_completed_horizon": 10,
           "has_complete_1d": true,
           "has_complete_3d": true,
           "has_complete_5d": true,
-          "has_complete_10d": false
+          "has_complete_10d": true
         }
       },
       "outcome_from_deepest_signal": {
-        "base_date": "20260818",
-        "base_close": 35.5,
-        "future_return_1d": 1.2676,
-        "max_return_1d": 2.1127,
-        "max_adverse_1d": -1.831,
-        "future_return_3d": 4.0845,
-        "max_return_3d": 5.493,
-        "max_adverse_3d": -1.831,
-        "future_return_5d": 2.1127,
-        "max_return_5d": 5.493,
-        "max_adverse_5d": -1.831,
+        "base_date": "20260903",
+        "base_close": 31.25,
+        "future_return_1d": 1.44,
+        "max_return_1d": 2.08,
+        "max_adverse_1d": -1.44,
+        "future_return_3d": null,
+        "max_return_3d": 2.08,
+        "max_adverse_3d": -1.44,
+        "future_return_5d": null,
+        "max_return_5d": 2.08,
+        "max_adverse_5d": -1.44,
         "future_return_10d": null,
-        "max_return_10d": 5.493,
-        "max_adverse_10d": -1.831,
+        "max_return_10d": 2.08,
+        "max_adverse_10d": -1.44,
         "days_to_close_rebound_5pct": null,
-        "days_to_intraday_rebound_5pct": 2,
+        "days_to_intraday_rebound_5pct": null,
         "labels": {
           "close_rebound_1d_5pct": false,
-          "close_rebound_3d_5pct": false,
-          "close_rebound_3d_10pct": false,
-          "close_rebound_5d_8pct": false,
-          "close_rebound_5d_10pct": false,
+          "close_rebound_3d_5pct": null,
+          "close_rebound_3d_10pct": null,
+          "close_rebound_5d_8pct": null,
+          "close_rebound_5d_10pct": null,
           "close_rebound_10d_15pct": null,
-          "intraday_rebound_3d_5pct": true,
-          "intraday_rebound_5d_10pct": false
+          "intraday_rebound_3d_5pct": null,
+          "intraday_rebound_5d_10pct": null
         },
         "verification": {
           "completed_horizons": [
-            1,
-            3,
-            5
+            1
           ],
-          "max_completed_horizon": 5,
+          "max_completed_horizon": 1,
           "has_complete_1d": true,
-          "has_complete_3d": true,
-          "has_complete_5d": true,
+          "has_complete_3d": false,
+          "has_complete_5d": false,
           "has_complete_10d": false
         }
       },
