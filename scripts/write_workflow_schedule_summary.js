@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const https = require('node:https');
+const { spawnSync } = require('node:child_process');
 
 const MINUTE_MS = 60 * 1000;
 const MAX_LOOKBACK_MINUTES = 60 * 24 * 40;
@@ -139,8 +140,41 @@ async function fetchRunCreatedAt() {
 
 function appendSummary(lines) {
   const text = `${lines.join('\n')}\n`;
-  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text, 'utf8');
-  else process.stdout.write(text);
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+
+  // Always mirror the exact markdown into the job log so a green step can never
+  // hide what was (or was not) submitted to the GitHub Summary UI.
+  console.log('[schedule-summary] markdown begin');
+  process.stdout.write(text);
+  console.log('[schedule-summary] markdown end');
+
+  if (!summaryPath) {
+    throw new Error('GITHUB_STEP_SUMMARY is missing; refusing green-without-summary');
+  }
+
+  // Use the runner's native tee utility for the environment-file write path.
+  // This keeps the write visible in stdout and matches GitHub's documented
+  // shell-oriented summary mechanism while retaining the shared Node renderer.
+  const result = spawnSync('tee', ['-a', summaryPath], {
+    input: text,
+    encoding: 'utf8',
+    stdio: ['pipe', 'ignore', 'inherit'],
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`tee failed with exit code ${result.status}`);
+
+  const saved = fs.readFileSync(summaryPath, 'utf8');
+  const required = ['原定排程時間', '實際開始時間', 'GitHub 排程延遲'];
+  for (const marker of required) {
+    if (!saved.includes(marker)) throw new Error(`Summary file missing required marker: ${marker}`);
+  }
+
+  const totalBytes = Buffer.byteLength(saved, 'utf8');
+  const appendedBytes = Buffer.byteLength(text, 'utf8');
+  if (totalBytes < appendedBytes || appendedBytes === 0) {
+    throw new Error(`Summary file byte validation failed: total=${totalBytes}, appended=${appendedBytes}`);
+  }
+  console.log(`[schedule-summary] persisted ${appendedBytes} bytes to GITHUB_STEP_SUMMARY; total=${totalBytes}`);
 }
 
 function selfTest() {
