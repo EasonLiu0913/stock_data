@@ -125,7 +125,7 @@ function main(argv = process.argv.slice(2)) {
     };
     console.log(JSON.stringify(plan, null, 2));
     if (process.env.GITHUB_OUTPUT) {
-      fs.appendFileSync(process.env.GITHUB_OUTPUT, `due_count=${dueCandidates.length}\nselected_count=${boundedDueCandidates.length}\ntotal_batches=${totalBatches}\nmatrix=${JSON.stringify(matrix)}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `due_count=${dueCandidates.length}\nselected_count=${boundedDueCandidates.length}\ntotal_batches=${totalBatches}\nmatrix=${JSON.stringify(matrix)}\nstock_ids=${boundedDueCandidates.map(row => row.stock_id).join(',')}\n`);
     }
     return;
   }
