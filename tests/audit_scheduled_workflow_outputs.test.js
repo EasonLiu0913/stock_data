@@ -61,7 +61,7 @@ test('audit registry covers every known scheduled workflow from the completed in
   const rules = buildRules();
   const names = rules.map((rule) => rule.workflow);
   assert.equal(new Set(names).size, names.length);
-  assert.equal(names.length, 39);
+  assert.equal(names.length, 40);
   for (const expected of [
     'crawl-cnn-fear-and-greed.yml',
     'crawl-eia-crude-spot.yml',
@@ -70,6 +70,7 @@ test('audit registry covers every known scheduled workflow from the completed in
     'crawl-tdcc-shareholding-snapshot.yml',
     'crawl-twse-quarterly-financial-quality.yml',
     'crawl-vix-index.yml',
+    'refresh-finmind-quarterly-financial-quality-due.yml',
     'update-official-market-constraints.yml',
   ]) {
     assert.ok(names.includes(expected), `missing registry entry: ${expected}`);
@@ -84,6 +85,7 @@ test('source-owned and non-daily workflows are not mislabeled as market-date exa
   assert.equal(semantics['crawl-mops-monthly-revenue.yml'], 'revenue_month');
   assert.equal(semantics['crawl-twse-quarterly-financial-quality.yml'], 'fiscal_quarter');
   assert.equal(semantics['momentum-history-replay.yml'], 'repository_versioned_snapshot');
+  assert.equal(semantics['refresh-finmind-quarterly-financial-quality-due.yml'], 'repository_versioned_snapshot');
   assert.equal(semantics['build-twse-market-chart.yml'], 'date_independent');
 });
 
