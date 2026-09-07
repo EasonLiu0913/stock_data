@@ -6,7 +6,7 @@ Canonical handoff: `docs/handoffs/finmind-quarterly-financial-quality-freshness.
 
 Active round: `due-pending-refresh-and-master-rebuild-v1`
 
-Round state: **Prompt A active / Prompt B preregistered**
+Round state: **Prompt A complete / ready for Prompt B**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -190,6 +190,83 @@ Required behavior:
 Run the relevant deterministic tests, including the 8021 regression. If a bounded real workflow run is available and safe, use it and record run/job/commit evidence. Otherwise explicitly record that real API refresh remains a Prompt B evidence item.
 
 Before declaring completion, update this handoff with durable Prompt A evidence while preserving the exact preregistered Prompt B below.
+
+## Prompt A completion evidence — 2026-09-07
+
+Prompt A implementation is durable on remote `main` and is ready for independent Prompt B closeout.
+
+### Implementation commits
+
+- `fae2f020b67fe2da2d7bf0f45e193f5b77e71362` — make FinMind quarterly coverage freshness `as_of_date` aware.
+- `e3043c1f1b3b6658405d4a12fc57904c082ce5b0` — add future-pending / due-pending / complete / corrupt freshness regressions.
+- `4ce31114857da6e933f29b4094aaec635429bb8d` — add canonical master propagation verifier.
+- `0437c8a337de68c7222339574816bd0bc399bf34` — stabilize bounded due-only execution / per-stock targeting.
+- `0aaf2be48e0e14142e068d2b41e7e913317eba27` — expose bounded due queue outputs.
+- `d4f2cb594d39a5ad4ea451dd409494a9ec3e9a69` — add FinMind-specific scheduled due refresh workflow.
+- `187db01f54bcaf19686175ffa8f3dbb296965dd8` — normalize the new workflow to the repository-managed schedule-summary contract.
+- `ee4fce4ef8e9b00958abdb977d308c3afbc3d274` — add fail-fast master propagation regressions.
+- `95aa63ae48d1e4d9d0bc418a13bb6f88b2d07761` — register scheduled FinMind refresh in the scheduled-output audit.
+- `9e4cd0e3685562b56fa4b3c86e450805197d73b2` — lock the scheduled-output registry regression.
+
+### Durable changed-file set for this round
+
+- `scripts/backfill_finmind_quarterly_financial_quality_batch.js`
+- `scripts/verify_financial_quality_master_propagation.js`
+- `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`
+- `scripts/audit_scheduled_workflow_outputs.js`
+- `tests/finmind_quarterly_freshness.test.js`
+- `tests/financial_quality_master_propagation.test.js`
+- `tests/audit_scheduled_workflow_outputs.test.js`
+- this canonical handoff
+
+Concurrent data-only commits under `data_fubon/` and unrelated scheduled collection outputs were observed while Prompt A was running. They were classified as unrelated and do not alter this round's FinMind freshness assumptions.
+
+### Implemented behavior
+
+1. Coverage reuse is now deterministic and `as_of_date` aware.
+   - A `pending_not_yet_available` quarter remains reusable only while its stored `conservative_known_date` is later than `as_of_date`.
+   - On or after that date the coverage becomes stale and the stock is eligible for refresh.
+   - Matching complete coverage remains reusable.
+   - Missing/corrupt coverage or missing timeline fails safe toward refresh.
+2. Scheduled automation is bounded and FinMind-specific.
+   - A local planner determines genuinely due stocks before API work.
+   - The scheduled wave is capped by `max_due_stocks`.
+   - Each selected stock runs on an independent fresh runner with `max-parallel: 1`.
+   - No due stocks => cheap no-op with no FinMind API quota consumption.
+   - Existing FinMind token/quota checks remain in force.
+3. Durable writes are race-safe and bounded.
+   - Per-stock refreshed data/status are replayed onto the latest remote `main` before push rather than blindly rebasing a stale working tree.
+4. The canonical master is rebuilt exactly once after the completed refresh wave.
+5. `scripts/verify_financial_quality_master_propagation.js` fails the workflow if a refreshed stock/quarter is missing from the master or if its conservative known date / FQ score does not match.
+6. The scheduled-workflow output audit now knows this maintenance workflow and treats its durable contract as the repository-versioned canonical `financial-quality-master.json`.
+7. No production FAS/FQ threshold, strategy id, signal-day semantics, monthly-revenue logic, or next-close execution policy was changed.
+
+### Deterministic test / CI evidence
+
+- `[99 測試] Node Regression Suite` run **34110636864** on `0aaf2be48e0e14142e068d2b41e7e913317eba27`: **PASS**.
+- A later regression run on `ee4fce4ef8e9b00958abdb977d308c3afbc3d274` correctly exposed that the newly scheduled workflow had not yet been registered in the scheduled-output audit. That was a real CI finding, not ignored.
+- The registry defect was fixed in `95aa63ae48d1e4d9d0bc418a13bb6f88b2d07761` / `9e4cd0e3685562b56fa4b3c86e450805197d73b2`.
+- Final `[99 測試] Node Regression Suite` run **34111883168** on implementation SHA `9e4cd0e3685562b56fa4b3c86e450805197d73b2`: **PASS**.
+- The frozen 8021 regression is included in the Node regression suite and remains green under the final implementation SHA.
+
+### Repository-wide guard classification
+
+Two repository-wide maintenance guards exposed pre-existing state outside this Prompt A scope:
+
+- Node 24 audit reports `.github/workflows/build-tsmc-equipment-demand-dashboard.yml` still using `actions/download-artifact@v6`.
+- The workflow-summary normalization audit reports broad pre-existing normalization drift across older workflows. The new `refresh-finmind-quarterly-financial-quality-due.yml` itself is normalized to the current managed summary block.
+
+These are not FinMind freshness implementation failures and were not expanded into this bounded round.
+
+### Real API refresh evidence
+
+No real FinMind API refresh was dispatched from this agent because the available GitHub connector does not expose a workflow-dispatch operation. No API-run evidence is fabricated.
+
+Per the preregistered contract, this does not block Prompt A completion because deterministic implementation and CI evidence are complete. Prompt B must independently verify the bounded real-run requirement if dispatch/secret access is available.
+
+### Prompt A closeout
+
+**Prompt A complete — ready for Prompt B**
 
 ## Preregistered Prompt B — Closeout / verification prompt
 
