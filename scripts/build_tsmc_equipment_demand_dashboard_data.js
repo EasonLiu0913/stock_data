@@ -82,11 +82,28 @@ function buildStock(stock, rows, root = ROOT) {
   };
 }
 
+function assertFreshTrackedPrices(stocks, expectedDate) {
+  const stale = stocks.filter(stock => (
+    stock.trading_date !== expectedDate
+    || !Number.isFinite(stock.close)
+    || stock.close <= 0
+    || !stock.source
+    || !stock.source_file
+  ));
+  if (!stale.length) return;
+  const detail = stale
+    .map(stock => `${stock.code} ${stock.name}: close=${stock.close ?? 'null'}, source=${stock.source || 'null'}`)
+    .join('; ');
+  throw new Error(`TSMC equipment dashboard latest-price freshness failed for ${expectedDate}: ${detail}`);
+}
+
 function buildPayload(root = ROOT) {
   clearCaches();
   const rows = loadMarketRows(root);
   if (rows.length < 21) throw new Error(`Need at least 21 TAIEX trading rows, got ${rows.length}`);
+  const latestTradingDate = rows.at(-1).date;
   const stocks = STOCKS.map(stock => buildStock(stock, rows, root));
+  assertFreshTrackedPrices(stocks, latestTradingDate);
   const complete1d = stocks.filter(stock => Number.isFinite(stock.return_1d_pct));
   const rising = complete1d.filter(stock => stock.return_1d_pct > 0).length;
   const complete20d = stocks.filter(stock => Number.isFinite(stock.excess_return_20d_pct));
@@ -104,7 +121,7 @@ function buildPayload(root = ROOT) {
     schema_version: 1,
     dataset: 'tsmc_equipment_demand_twse_dashboard',
     generated_at: new Date().toISOString(),
-    trading_date: rows.at(-1).date,
+    trading_date: latestTradingDate,
     scope: 'TWSE listed stocks only',
     benchmark: {
       code: 'TAIEX',
@@ -150,6 +167,17 @@ function selfTest() {
   const payload = buildPayload(tmp);
   if (payload.stocks.length !== 6 || payload.trading_date !== '20260125') throw new Error('self-test stock/date mismatch');
   if (!Number.isFinite(payload.stocks[0].return_20d_pct)) throw new Error('self-test missing 20D return');
+
+  fs.unlinkSync(path.join(tmp, 'data_twse_mi_index', '20260125_twse_mi_index.json'));
+  clearCaches();
+  let freshnessFailed = false;
+  try {
+    buildPayload(tmp);
+  } catch (error) {
+    freshnessFailed = /freshness failed/.test(String(error.message));
+  }
+  if (!freshnessFailed) throw new Error('self-test expected latest-price freshness failure');
+
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('build_tsmc_equipment_demand_dashboard_data self-test passed');
 }
@@ -169,4 +197,4 @@ if (require.main === module) {
   try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; }
 }
 
-module.exports = { STOCKS, buildPayload, buildStock, classify, pctReturn };
+module.exports = { STOCKS, assertFreshTrackedPrices, buildPayload, buildStock, classify, pctReturn };
