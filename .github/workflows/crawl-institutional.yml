@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       is_trading_day: ${{ steps.trading-day.outputs.is_trading_day }}
+      publish_ready: ${{ steps.reconcile.outputs.publish_ready }}
+      data_status: ${{ steps.reconcile.outputs.data_status }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -95,10 +97,24 @@ jobs:
         run: node scripts/crawl_institutional_data.js --date ${{ steps.date.outputs.target }}
 
       - name: Reconcile Institutional completeness and retry list
+        id: reconcile
         if: steps.trading-day.outputs.is_trading_day == 'true'
+        shell: bash
         run: |
+          set -euo pipefail
           node --check scripts/reconcile_institutional_data.js
           node scripts/reconcile_institutional_data.js --date ${{ steps.date.outputs.target }}
+
+          STATUS_FILE="data_fubon/fubon_${{ steps.date.outputs.target }}_institutional_status.json"
+          node - "$STATUS_FILE" "$GITHUB_OUTPUT" <<'NODE'
+          const fs = require('node:fs');
+          const [statusFile, outputFile] = process.argv.slice(2);
+          const status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+          const publishReady = status.status === 'ready';
+          fs.appendFileSync(outputFile, `publish_ready=${publishReady}\n`);
+          fs.appendFileSync(outputFile, `data_status=${status.status}\n`);
+          console.log(`Institutional publish gate: status=${status.status}, publish_ready=${publishReady}, completion_rate=${status.completion_rate}%`);
+          NODE
 
       - name: Write Institutional summary
         if: steps.trading-day.outputs.is_trading_day == 'true'
@@ -150,7 +166,7 @@ jobs:
   deploy-pages:
     name: 法人資料更新後發布 GitHub Pages
     needs: crawl-institutional
-    if: needs.crawl-institutional.result == 'success' && needs.crawl-institutional.outputs.is_trading_day == 'true'
+    if: needs.crawl-institutional.result == 'success' && needs.crawl-institutional.outputs.is_trading_day == 'true' && needs.crawl-institutional.outputs.publish_ready == 'true'
     uses: ./.github/workflows/deploy-pages.yml
 
   schedule-timing-summary:
