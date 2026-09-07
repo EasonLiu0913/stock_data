@@ -1,0 +1,264 @@
+name: '[07 研究] FinMind－季財報品質到期刷新'
+
+on:
+  schedule:
+    # Daily 09:35 Asia/Taipei. The planner is local-only and exits cheaply when nothing is due.
+    - cron: '35 1 * * *'
+  workflow_dispatch:
+    inputs:
+      as_of_date:
+        description: 'YYYY-MM-DD；留空使用 Asia/Taipei 執行日'
+        required: false
+        type: string
+      max_due_stocks:
+        description: '單次最多刷新股票數；每檔使用獨立 fresh runner'
+        required: true
+        type: number
+        default: 5
+
+permissions:
+  contents: write
+
+concurrency:
+  group: finmind-quarterly-financial-quality-continuous
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      as_of_date: ${{ steps.date.outputs.as_of_date }}
+      due_count: ${{ steps.plan.outputs.due_count }}
+      selected_count: ${{ steps.plan.outputs.selected_count }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      stock_ids: ${{ steps.plan.outputs.stock_ids }}
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Resolve explicit as-of date
+        id: date
+        env:
+          INPUT_AS_OF_DATE: ${{ inputs.as_of_date }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_AS_OF_DATE:-}" ]; then
+            as_of_date="$INPUT_AS_OF_DATE"
+          else
+            as_of_date="$(TZ=Asia/Taipei date +%F)"
+          fi
+          echo "as_of_date=$as_of_date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate deterministic freshness logic
+        run: |
+          node --check scripts/backfill_finmind_quarterly_financial_quality_batch.js
+          node --check scripts/verify_financial_quality_master_propagation.js
+          node --test tests/finmind_quarterly_freshness.test.js
+          node --test tests/fundamental_quality_8021_regression.test.js
+
+      - name: Build bounded due-only queue
+        id: plan
+        env:
+          AS_OF_DATE: ${{ steps.date.outputs.as_of_date }}
+          MAX_DUE_STOCKS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_due_stocks || 5 }}
+        run: |
+          set -euo pipefail
+          node scripts/backfill_finmind_quarterly_financial_quality_batch.js             --plan-due true             --due-only true             --start-quarter 2023Q1             --end-quarter 2026Q2             --as-of-date "$AS_OF_DATE"             --batch-size 1             --max-due-stocks "$MAX_DUE_STOCKS"
+
+      - name: Summarize plan
+        env:
+          AS_OF_DATE: ${{ steps.date.outputs.as_of_date }}
+          DUE_COUNT: ${{ steps.plan.outputs.due_count }}
+          SELECTED_COUNT: ${{ steps.plan.outputs.selected_count }}
+          STOCK_IDS: ${{ steps.plan.outputs.stock_ids }}
+        run: |
+          {
+            echo "## FinMind 季財報品質到期刷新"
+            echo "- as_of_date: $AS_OF_DATE"
+            echo "- due candidates: $DUE_COUNT"
+            echo "- bounded this run: $SELECTED_COUNT"
+            echo "- stock_ids: ${STOCK_IDS:-none}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  refresh:
+    needs: plan
+    if: needs.plan.outputs.selected_count != '0'
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout latest main on fresh runner
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate token and one-request quota
+        env:
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FINMIND_API_TOKEN:-}" ]; then
+            echo 'FINMIND_API_TOKEN is missing.' >&2
+            exit 1
+          fi
+          node scripts/check_finmind_api_quota.js             --configured-cap 500             --reserve-requests 20             --required-requests 1             --poll-seconds 60             --max-wait-minutes 90             --wait true
+
+      - name: Refresh one planned due stock
+        env:
+          FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
+          STOCK_ID: ${{ matrix.stock_id }}
+          AS_OF_DATE: ${{ needs.plan.outputs.as_of_date }}
+        run: |
+          set -euo pipefail
+          node scripts/backfill_finmind_quarterly_financial_quality_batch.js             --due-only true             --stock-id "$STOCK_ID"             --start-quarter 2023Q1             --end-quarter 2026Q2             --as-of-date "$AS_OF_DATE"             --batch-size 1             --batch-index 0             --max-due-stocks 5             --delay-ms 0             --jitter-ms 0
+
+      - name: Checkpoint bounded stock refresh safely
+        env:
+          STOCK_ID: ${{ matrix.stock_id }}
+          AS_OF_DATE: ${{ needs.plan.outputs.as_of_date }}
+        run: |
+          set -euo pipefail
+          status_file="data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-${AS_OF_DATE}-${STOCK_ID}.json"
+          if [ ! -s "$status_file" ]; then
+            echo "Missing due refresh status: $status_file" >&2
+            exit 1
+          fi
+
+          tmp="$(mktemp -d)"
+          cp -a "data_finmind_quarterly_financial_quality/$STOCK_ID" "$tmp/stock"
+          cp "$status_file" "$tmp/status.json"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            rm -rf "data_finmind_quarterly_financial_quality/$STOCK_ID"
+            mkdir -p "data_finmind_quarterly_financial_quality"
+            cp -a "$tmp/stock" "data_finmind_quarterly_financial_quality/$STOCK_ID"
+            mkdir -p "$(dirname "$status_file")"
+            cp "$tmp/status.json" "$status_file"
+
+            git add "data_finmind_quarterly_financial_quality/$STOCK_ID" "$status_file"
+            if git diff --cached --quiet; then
+              echo "[checkpoint] $STOCK_ID already durable on main"
+              exit 0
+            fi
+
+            git commit -m "data: refresh FinMind financial quality $STOCK_ID"
+            if git push origin HEAD:main; then
+              echo "[checkpoint] $STOCK_ID pushed"
+              exit 0
+            fi
+
+            git reset --hard "HEAD^"
+            sleep $((attempt * 5))
+          done
+
+          echo "Unable to checkpoint $STOCK_ID after push races" >&2
+          exit 1
+
+  rebuild-master:
+    needs: [plan, refresh]
+    if: needs.plan.outputs.selected_count != '0' && needs.refresh.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout latest main after refresh wave
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Rebuild and verify canonical master once
+        env:
+          STOCK_IDS: ${{ needs.plan.outputs.stock_ids }}
+        run: |
+          set -euo pipefail
+          node scripts/build_financial_quality_master.js
+          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+
+      - name: Commit master with latest-main retry
+        env:
+          STOCK_IDS: ${{ needs.plan.outputs.stock_ids }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            node scripts/build_financial_quality_master.js
+            node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+            git add data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json
+
+            if git diff --cached --quiet; then
+              echo "[master] already current on main"
+              break
+            fi
+
+            git commit -m "data: rebuild FinMind financial quality master"
+            if git push origin HEAD:main; then
+              echo "[master] pushed"
+              break
+            fi
+
+            git reset --hard "HEAD^"
+            if [ "$attempt" -eq 5 ]; then
+              echo "Unable to push rebuilt master" >&2
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+
+      - name: Verify durable remote propagation
+        env:
+          STOCK_IDS: ${{ needs.plan.outputs.stock_ids }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+
+  no-op:
+    needs: plan
+    if: needs.plan.outputs.selected_count == '0'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "No due FinMind quarterly financial-quality coverage; no API quota consumed."
+
+  schedule-timing-summary:
+    name: 排程時間摘要
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
