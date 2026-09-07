@@ -14,6 +14,13 @@ on:
       - "public/tsmc-equipment-demand-dashboard.html"
       - ".github/workflows/build-tsmc-equipment-demand-dashboard.yml"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      deploy_pages:
+        description: "Deploy Pages after refreshing the dashboard payload"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -23,7 +30,7 @@ env:
 
 concurrency:
   group: tsmc-equipment-demand-dashboard
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -54,6 +61,35 @@ jobs:
           set -euo pipefail
           node scripts/build_tsmc_equipment_demand_dashboard_data.js
           test -s "$DASHBOARD_PAYLOAD"
+
+      - name: Verify dashboard freshness before commit
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const market = JSON.parse(fs.readFileSync('data_twse_market_chart/market_chart.json', 'utf8'));
+          const dashboard = JSON.parse(fs.readFileSync(process.env.DASHBOARD_PAYLOAD, 'utf8'));
+          const latestMarketDate = (market.data || [])
+            .map(row => String(row.date || ''))
+            .filter(date => /^20\d{6}$/.test(date))
+            .sort()
+            .at(-1);
+          if (!latestMarketDate) throw new Error('Unable to resolve latest TAIEX market date');
+          if (dashboard.trading_date !== latestMarketDate) {
+            throw new Error(`Dashboard stale: trading_date=${dashboard.trading_date}, latest_market_date=${latestMarketDate}`);
+          }
+          const staleStocks = (dashboard.stocks || []).filter(stock => (
+            stock.trading_date !== latestMarketDate
+            || !Number.isFinite(stock.close)
+            || stock.close <= 0
+            || !stock.source
+            || !stock.source_file
+          ));
+          if (staleStocks.length) {
+            throw new Error(`Dashboard latest prices incomplete for ${latestMarketDate}: ${staleStocks.map(stock => stock.code).join(', ')}`);
+          }
+          console.log(`Dashboard freshness verified for ${latestMarketDate}`);
+          NODE
 
       - name: Commit generated payload
         run: |
@@ -87,10 +123,17 @@ jobs:
             echo "Remote main dashboard payload is empty: ${DASHBOARD_PAYLOAD}" >&2
             exit 1
           fi
-          echo "Verified ${DASHBOARD_PAYLOAD} on origin/main (${remote_bytes} bytes)."
+          remote_date=$(git show "origin/main:${DASHBOARD_PAYLOAD}" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).trading_date || ''))")
+          local_date=$(node -e "process.stdout.write(require('./${DASHBOARD_PAYLOAD}').trading_date || '')")
+          if [ "$remote_date" != "$local_date" ]; then
+            echo "Remote main dashboard date mismatch: remote=${remote_date}, local=${local_date}" >&2
+            exit 1
+          fi
+          echo "Verified ${DASHBOARD_PAYLOAD} on origin/main (${remote_bytes} bytes, trading_date=${remote_date})."
 
   deploy-pages:
     name: Publish refreshed TSMC dashboard payload
+    if: ${{ github.event_name != 'workflow_call' || inputs.deploy_pages }}
     needs: build
     permissions:
       contents: read
@@ -100,6 +143,7 @@ jobs:
 
   verify-pages-artifact:
     name: Verify TSMC payload in Pages artifact
+    if: ${{ github.event_name != 'workflow_call' || inputs.deploy_pages }}
     needs: deploy-pages
     runs-on: ubuntu-latest
     timeout-minutes: 5
