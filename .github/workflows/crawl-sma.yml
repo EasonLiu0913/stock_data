@@ -192,20 +192,91 @@ jobs:
     with:
       date: ${{ needs.crawl-sma.outputs.target_date }}
 
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
+  final-summary:
+    name: 執行摘要
+    needs:
+      - crawl-sma
+      - daily-gainers
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
       - name: Write schedule timing summary
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/scripts/write_workflow_schedule_summary.js" | node
+
+      - name: Write SMA execution summary
+        shell: bash
+        env:
+          CRAWL_RESULT: ${{ needs.crawl-sma.result }}
+          DAILY_GAINERS_RESULT: ${{ needs.daily-gainers.result }}
+          TARGET_DATE: ${{ needs.crawl-sma.outputs.target_date }}
+          READY: ${{ needs.crawl-sma.outputs.ready }}
+          AVAILABLE_SMA_DATE: ${{ needs.crawl-sma.outputs.available_sma_date }}
+        run: |
+          set -euo pipefail
+
+          target_date="${TARGET_DATE:-unknown}"
+          ready="${READY:-unknown}"
+          available_sma_date="${AVAILABLE_SMA_DATE:-unknown}"
+          crawl_result="${CRAWL_RESULT:-unknown}"
+          daily_result="${DAILY_GAINERS_RESULT:-unknown}"
+
+          {
+            echo
+            echo "## SMA 執行結果"
+            echo
+            echo "| 項目 | 結果 |"
+            echo "| --- | --- |"
+            echo "| 預計抓取交易日 | \`${target_date}\` |"
+            echo "| 富邦最新可用 SMA 日期 | \`${available_sma_date}\` |"
+            echo "| SMA ready | \`${ready}\` |"
+            echo "| SMA 主流程 | \`${crawl_result}\` |"
+            echo "| 產生當日 5% 漲幅清單並發布 | \`${daily_result}\` |"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$crawl_result" != "success" ]; then
+            {
+              echo "### ❌ 本輪未完成"
+              echo
+              echo "- 原因：\`crawl-sma\` 主流程結果為 **${crawl_result}**。"
+              echo "- 因主流程未成功完成，後續 5% 漲幅清單可能被 skipped。"
+              echo "- 請直接查看 \`crawl-sma\` job 的失敗 step；本 Summary 不會把失敗誤判成資料未 ready。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$ready" != "true" ]; then
+            {
+              echo "### ⚠️ 安全結束：來源資料尚未 Ready"
+              echo
+              echo "- 預計抓取 **${target_date}**，但富邦目前最新 SMA 日期是 **${available_sma_date}**。"
+              echo "- 因兩個日期不一致，workflow 刻意設定 \`ready=false\`，本輪不執行 SMA 爬取。"
+              echo "- 「產生當日 5% 漲幅清單並發布」因此被 **skipped**，不是該 job 自己發生錯誤。"
+              echo "- GitHub 整體可能仍顯示 success；這代表安全結束，不代表 ${target_date} 的資料已完成。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$daily_result" = "success" ]; then
+            {
+              echo "### ✅ 本輪完整完成"
+              echo
+              echo "- 富邦 SMA 已更新到預計交易日 **${target_date}**。"
+              echo "- SMA 主流程與當日 5% 漲幅清單均已成功執行。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$daily_result" = "skipped" ]; then
+            {
+              echo "### ⚠️ 狀態異常"
+              echo
+              echo "- SMA 顯示 \`ready=true\`，但 5% 漲幅清單仍被 skipped。"
+              echo "- 這不符合目前 workflow 的預期條件，請檢查 reusable workflow/job 條件。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### ❌ 5% 漲幅清單未完成"
+              echo
+              echo "- SMA 主流程已成功且 \`ready=true\`。"
+              echo "- 但「產生當日 5% 漲幅清單並發布」結果為 **${daily_result}**。"
+              echo "- 請查看該 reusable workflow 的失敗或取消原因。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
