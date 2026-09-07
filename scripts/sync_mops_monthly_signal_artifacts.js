@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const {
   loadHolidaySet,
   nextTradingDate,
@@ -121,6 +122,60 @@ function companyMap(payload) {
   return new Map((payload?.companies || []).map(row => [String(row.stock_code || row.stock_id || '').trim(), row]));
 }
 
+function sourceRevision(payload) {
+  if (!payload || !Array.isArray(payload.companies)) return null;
+  const normalized = {
+    revenue_month: payload.revenue_month || null,
+    source_sha256: payload.source?.sha256 || null,
+    report_date: payload.source?.report_date || null,
+    last_collected_at: payload.collection?.last_collected_at || null,
+    company_count: payload.collection?.company_count ?? payload.companies.length,
+    companies: payload.companies.map(row => ({
+      stock_code: String(row.stock_code || row.stock_id || ''),
+      monthly_revenue_thousand_twd: row.monthly_revenue_thousand_twd ?? null,
+      yoy_pct: row.yoy_pct ?? null,
+      mom_pct: row.mom_pct ?? null,
+      first_seen_at: row.first_seen_at || null,
+      last_seen_at: row.last_seen_at || null,
+    })),
+  };
+  return crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+}
+
+function sourceUpdatedAt(payload) {
+  const candidates = [
+    payload?.collection?.last_collected_at,
+    payload?.collection?.status_calculated_at,
+    payload?.source?.report_date,
+  ];
+  for (const value of candidates) {
+    const date = value ? new Date(String(value).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3T00:00:00Z')) : null;
+    if (date && Number.isFinite(date.getTime())) return date;
+  }
+  return null;
+}
+
+function artifactNeedsRefresh(artifact, payload, previousPayload) {
+  if (!artifact || !Array.isArray(artifact.events)) return true;
+
+  const currentRevision = sourceRevision(payload);
+  const previousRevision = sourceRevision(previousPayload);
+  if (artifact.source_revision || artifact.previous_source_revision) {
+    return artifact.source_revision !== currentRevision
+      || artifact.previous_source_revision !== previousRevision;
+  }
+
+  // Backward compatibility for artifacts created before source revisions were
+  // persisted. Rebuild only when source data was collected after the artifact.
+  const generatedAt = artifact.generated_at ? new Date(artifact.generated_at) : null;
+  if (!generatedAt || !Number.isFinite(generatedAt.getTime())) return true;
+  const currentUpdatedAt = sourceUpdatedAt(payload);
+  const previousUpdatedAt = sourceUpdatedAt(previousPayload);
+  return [currentUpdatedAt, previousUpdatedAt]
+    .filter(Boolean)
+    .some(updatedAt => updatedAt.getTime() > generatedAt.getTime());
+}
+
 function buildEvents(month, payload, previousPayload, holidays = loadHolidaySet()) {
   const previousByCode = companyMap(previousPayload || {});
   const events = [];
@@ -186,6 +241,11 @@ function syncMonth(month, options = {}) {
     event_count: events.length,
     anti_lookahead_policy: 'company availability date when present; file-level date only as conservative fallback; actionable on next TWSE trading day',
     source_file: `data_mops_monthly_revenue/${month}/monthly_revenue.json`,
+    source_revision: sourceRevision(payload),
+    previous_source_file: fs.existsSync(previousFile)
+      ? `data_mops_monthly_revenue/${previousMonth}/monthly_revenue.json`
+      : null,
+    previous_source_revision: sourceRevision(previousPayload),
     events,
   };
   fs.mkdirSync(SIGNAL_ROOT, { recursive: true });
@@ -208,7 +268,15 @@ function syncMissingMonths(options = {}) {
   const results = [];
   for (const month of requested) {
     const output = path.join(SIGNAL_ROOT, `${month}.json`);
-    if (!options.force && fs.existsSync(output) && fs.statSync(output).size > 0) continue;
+    if (!options.force && fs.existsSync(output) && fs.statSync(output).size > 0) {
+      const payload = readJson(path.join(REVENUE_ROOT, month, 'monthly_revenue.json'), null);
+      const previousPayload = readJson(
+        path.join(REVENUE_ROOT, monthBefore(month), 'monthly_revenue.json'),
+        { companies: [] },
+      );
+      const artifact = readJson(output, null);
+      if (!artifactNeedsRefresh(artifact, payload, previousPayload)) continue;
+    }
     results.push(syncMonth(month, options));
   }
   return { checked_months: requested.length, generated_months: results.length, results };
@@ -237,11 +305,14 @@ if (require.main === module) {
 }
 
 module.exports = {
+  artifactNeedsRefresh,
   availabilityDate,
   buildEvents,
   compactDate,
   momValue,
   monthBefore,
+  sourceRevision,
+  sourceUpdatedAt,
   syncMonth,
   syncMissingMonths,
   yoyValue,
