@@ -1,4 +1,4 @@
-name: '[07 研究] FinMind－季財報品質 backlog physical-batch canary'
+name: '[07 研究] FinMind－季財報品質 backlog physical-batch backlog wave'
 
 on:
   workflow_dispatch:
@@ -8,15 +8,15 @@ on:
         required: false
         type: string
       physical_batch_size:
-        description: '每個 fresh runner 的股票數；canary 預設 3，禁止大於 3'
+        description: '每個 fresh runner 的股票數；backlog wave 預設 3，禁止大於 3'
         required: true
         type: number
         default: 3
       max_physical_batches:
-        description: '本 wave 最多 physical batches；canary 預設 2，禁止大於 2'
+        description: '本 wave 最多 physical batches；預設 4，禁止大於 4'
         required: true
         type: number
-        default: 2
+        default: 4
 
 permissions:
   contents: write
@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       as_of_date: ${{ steps.date.outputs.as_of_date }}
+      wave_id: ${{ steps.date.outputs.wave_id }}
       due_count: ${{ steps.plan.outputs.due_count }}
       selected_count: ${{ steps.plan.outputs.selected_count }}
       total_batches: ${{ steps.plan.outputs.total_batches }}
@@ -46,7 +47,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Resolve bounded canary inputs
+      - name: Resolve bounded backlog wave inputs
         id: date
         env:
           INPUT_AS_OF_DATE: ${{ inputs.as_of_date }}
@@ -59,16 +60,18 @@ jobs:
             as_of_date="$(TZ=Asia/Taipei date +%F)"
           fi
           batch_size="${INPUT_BATCH_SIZE:-3}"
-          max_batches="${INPUT_MAX_BATCHES:-2}"
+          max_batches="${INPUT_MAX_BATCHES:-4}"
           if [ "$batch_size" -lt 1 ] || [ "$batch_size" -gt 3 ]; then
-            echo "physical_batch_size must be 1..3 for this canary" >&2
+            echo "physical_batch_size must be 1..3 for this backlog wave" >&2
             exit 1
           fi
-          if [ "$max_batches" -lt 1 ] || [ "$max_batches" -gt 2 ]; then
-            echo "max_physical_batches must be 1..2 for this canary" >&2
+          if [ "$max_batches" -lt 1 ] || [ "$max_batches" -gt 4 ]; then
+            echo "max_physical_batches must be 1..4 for this backlog wave" >&2
             exit 1
           fi
+          wave_id="run-${GITHUB_RUN_ID}"
           echo "as_of_date=$as_of_date" >> "$GITHUB_OUTPUT"
+          echo "wave_id=$wave_id" >> "$GITHUB_OUTPUT"
           echo "batch_size=$batch_size" >> "$GITHUB_OUTPUT"
           echo "max_batches=$max_batches" >> "$GITHUB_OUTPUT"
 
@@ -98,9 +101,9 @@ jobs:
             --as-of-date "$AS_OF_DATE" \
             --physical-batch-size "$BATCH_SIZE" \
             --max-physical-batches "$MAX_BATCHES" \
-            --max-due-stocks 6
+            --max-due-stocks 12
 
-      - name: Summarize canary plan
+      - name: Summarize backlog wave plan
         env:
           AS_OF_DATE: ${{ steps.date.outputs.as_of_date }}
           DUE_COUNT: ${{ steps.plan.outputs.due_count }}
@@ -109,7 +112,7 @@ jobs:
           STOCK_IDS: ${{ steps.plan.outputs.stock_ids }}
         run: |
           {
-            echo "## FinMind backlog physical-batch canary"
+            echo "## FinMind backlog physical-batch backlog wave"
             echo "- as_of_date: $AS_OF_DATE"
             echo "- due candidates: $DUE_COUNT"
             echo "- selected stocks: $SELECTED_COUNT"
@@ -169,6 +172,7 @@ jobs:
           FINMIND_API_TOKEN: ${{ secrets.FINMIND_API_TOKEN }}
           STOCK_IDS: ${{ matrix.stock_ids_csv }}
           AS_OF_DATE: ${{ needs.plan.outputs.as_of_date }}
+          WAVE_ID: ${{ needs.plan.outputs.wave_id }}
           BATCH_INDEX: ${{ matrix.batch_index }}
         run: |
           set -euo pipefail
@@ -178,9 +182,10 @@ jobs:
             --start-quarter 2023Q1 \
             --end-quarter 2026Q2 \
             --as-of-date "$AS_OF_DATE" \
+            --wave-id "$WAVE_ID" \
             --batch-size 3 \
             --batch-index "$BATCH_INDEX" \
-            --max-due-stocks 6 \
+            --max-due-stocks 12 \
             --delay-ms 1000 \
             --jitter-ms 2000
 
@@ -188,13 +193,14 @@ jobs:
         env:
           STOCK_IDS: ${{ matrix.stock_ids_csv }}
           AS_OF_DATE: ${{ needs.plan.outputs.as_of_date }}
+          WAVE_ID: ${{ needs.plan.outputs.wave_id }}
           BATCH_INDEX: ${{ matrix.batch_index }}
           COOLDOWN_SECONDS: ${{ steps.cooldown.outputs.seconds }}
           REQUEST_COUNT: ${{ matrix.request_count }}
         run: |
           set -euo pipefail
           batch_pad="$(printf '%03d' "$BATCH_INDEX")"
-          status_file="data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-${AS_OF_DATE}-batch${batch_pad}.json"
+          status_file="data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-${AS_OF_DATE}-wave-${WAVE_ID}-batch${batch_pad}.json"
           if [ ! -s "$status_file" ]; then
             echo "Missing physical batch status: $status_file" >&2
             exit 1
@@ -245,7 +251,7 @@ jobs:
               exit 0
             fi
 
-            git commit -m "data: refresh FinMind physical batch ${AS_OF_DATE} #${BATCH_INDEX}"
+            git commit -m "data: refresh FinMind ${WAVE_ID} physical batch ${AS_OF_DATE} #${BATCH_INDEX}"
             if git push origin HEAD:main; then
               echo "[checkpoint] physical batch $BATCH_INDEX pushed"
               exit 0
@@ -263,7 +269,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout latest main after canary wave
+      - name: Checkout latest main after backlog wave wave
         uses: actions/checkout@v7
         with:
           ref: main
@@ -301,7 +307,7 @@ jobs:
               break
             fi
 
-            git commit -m "data: rebuild FinMind backlog canary master"
+            git commit -m "data: rebuild FinMind backlog backlog wave master"
             if git push origin HEAD:main; then
               echo "[master] pushed"
               break
@@ -352,18 +358,18 @@ jobs:
             --end-quarter 2026Q2 \
             --as-of-date "$AS_OF_DATE" \
             --physical-batch-size 3 \
-            --max-physical-batches 2 \
-            --max-due-stocks 6
+            --max-physical-batches 4 \
+            --max-due-stocks 12
 
-      - name: Summarize post-canary remaining backlog
+      - name: Summarize post-backlog wave remaining backlog
         env:
           BEFORE: ${{ needs.plan.outputs.due_count }}
           AFTER: ${{ steps.post.outputs.due_count }}
         run: |
           {
-            echo "## Post-canary re-plan"
-            echo "- due before canary: $BEFORE"
-            echo "- due after committed canary: $AFTER"
+            echo "## Post-backlog wave re-plan"
+            echo "- due before backlog wave: $BEFORE"
+            echo "- due after committed backlog wave: $AFTER"
             echo "- no second wave executed"
           } >> "$GITHUB_STEP_SUMMARY"
 
