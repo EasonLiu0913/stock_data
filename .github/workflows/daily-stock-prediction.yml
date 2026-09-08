@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           expected_us_date=$(node <<'NODE'
-          const { weekdayAtOrBefore } = require('./scripts/market_environment_lib');
+          const { usMarketTradingDayAtOrBefore } = require('./scripts/market_environment_lib');
           function zonedParts(date, timeZone) {
             const parts = new Intl.DateTimeFormat('en-CA', {timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
             return Object.fromEntries(parts.map((part) => [part.type, part.value]));
@@ -149,8 +149,8 @@ jobs:
           if(!/^20\d{6}$/.test(baseDate)) throw new Error(`Invalid FORECAST_BASE_DATE: ${baseDate}`);
           const now=new Date(); const ny=zonedParts(now,'America/New_York'); const nyDate=`${ny.year}${ny.month}${ny.day}`;
           const hour=Number(ny.hour), minute=Number(ny.minute); const closed=hour>16||(hour===16&&minute>=30);
-          const latestCompleted=weekdayAtOrBefore(closed?nyDate:previousCalendarDate(nyDate));
-          const expectedFromBase=weekdayAtOrBefore(baseDate);
+          const latestCompleted=usMarketTradingDayAtOrBefore(closed?nyDate:previousCalendarDate(nyDate));
+          const expectedFromBase=usMarketTradingDayAtOrBefore(baseDate);
           process.stdout.write(expectedFromBase<latestCompleted?expectedFromBase:latestCompleted);
           NODE
           )
