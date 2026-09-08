@@ -10,7 +10,7 @@ Completed round state: **Prompt B closeout: PASS**
 
 Active round: `first-real-refresh-proof-v1`
 
-Round state: **Prompt A preregistered / not started**
+Round state: **Prompt A complete / Prompt B pending**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -466,6 +466,92 @@ Before completion:
 - update this handoff with run ID, job IDs, selected stock(s), durable commits/paths, master/no-op evidence, and any bounded fix;
 - re-fetch current remote `main`;
 - report exactly `Prompt A complete — ready for Prompt B` only if the completion contract above is actually satisfied.
+
+
+## Prompt A completion evidence — first-real-refresh-proof-v1 — 2026-09-08
+
+Prompt A completion contract is satisfied through **Path A — due work exists**.
+
+### Real workflow identity
+
+- Workflow: `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`
+- Name: `[07 研究] FinMind－季財報品質到期刷新`
+- Run ID: `34191540520`
+- Run number: `1`
+- Event: `workflow_dispatch`
+- Head SHA: `5caf2a3e1b11927e13eff3df725eba3c19804544`
+- Started: `2026-09-08T05:40:42Z`
+- Completed: `2026-09-08T05:48:31Z`
+- Conclusion: **success**
+
+### Plan evidence
+
+Plan job `101950453812`: **success**.
+
+- explicit `as_of_date=2026-09-08`;
+- `max_due_stocks=1`;
+- unique candidates: `551`;
+- due candidates: `419`;
+- selected count: `1`;
+- selected stock: `1316` (上曜);
+- deterministic freshness tests: `7/7 PASS`;
+- frozen 8021 regression: `PASS`.
+
+### Refresh / quota / checkpoint evidence
+
+Refresh job `101951184018` (`refresh (1316)`): **success**.
+
+Quota preflight reported:
+
+- authenticated: `true`;
+- API request limit: `600`;
+- configured safe cap: `500`;
+- reserve requests: `20`;
+- required requests: `1`;
+- remaining to safe cap: `500`;
+- enough for next batch: `true`.
+
+Refresh result:
+
+- stock `1316` completed with `available=14`, `missing={}`;
+- durable Q2 source: `data_finmind_quarterly_financial_quality/1316/2026Q2.json`;
+- durable coverage: `data_finmind_quarterly_financial_quality/1316/coverage-status.json`;
+- durable timeline: `data_finmind_quarterly_financial_quality/1316/financial-quality-score-timeline.json`;
+- durable status: `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-08-1316.json`;
+- refresh commit: `73ec1e297ad0c2c810cce2b0839c09122d4b3265`;
+- checkpoint push succeeded.
+
+The new 2026Q2 row preserves `conservative_known_date=2026-08-14` and is only refreshed under `as_of_date=2026-09-08`, preserving anti-lookahead.
+
+### Master propagation evidence
+
+Rebuild job `101951568293`: **success**.
+
+- canonical master rebuilt after refresh success;
+- pre-push propagation verifier passed;
+- master commit: `a8f5500721be4962c20a7e6d8325ee02affd6c25`;
+- master push succeeded;
+- final remote propagation verification reset to current remote main and passed;
+- canonical path: `data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json`;
+- master quarterly row count increased `6809 -> 6810`;
+- master contains 1316 2026Q2 with FQ score `5`, conservative known date `2026-08-14`, and refreshed coverage with no missing periods.
+
+No-op job `101951185250` was correctly skipped because due work existed.
+
+Schedule-summary job `101950453588`: **success**.
+
+### Production invariants
+
+- FAS threshold `>= 8`: unchanged.
+- FQ threshold `>= 10`: unchanged.
+- `two_stage_fundamental_quality_direct_entry_v1`: unchanged in meaning.
+- next-close execution semantics: unchanged.
+- 8021 regression passed inside the real run's plan job.
+
+### Prompt A closeout
+
+**Prompt A complete — ready for Prompt B**
+
 
 ## Preregistered Prompt B — first-real-refresh-proof-v1
 
