@@ -47,6 +47,90 @@ function weekdayAtOrBefore(value) {
   return date;
 }
 
+function nthWeekdayOfMonth(year, month, weekday, nth) {
+  const first = new Date(Date.UTC(year, month - 1, 1));
+  const delta = (weekday - first.getUTCDay() + 7) % 7;
+  const day = 1 + delta + (nth - 1) * 7;
+  return `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`;
+}
+
+function lastWeekdayOfMonth(year, month, weekday) {
+  const last = new Date(Date.UTC(year, month, 0));
+  const delta = (last.getUTCDay() - weekday + 7) % 7;
+  const day = last.getUTCDate() - delta;
+  return `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`;
+}
+
+function observedFixedHoliday(year, month, day) {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const weekday = date.getUTCDay();
+  if (weekday === 6) date.setUTCDate(date.getUTCDate() - 1);
+  else if (weekday === 0) date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10).replaceAll('-', '');
+}
+
+function easterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`;
+}
+
+function usMarketHolidays(year) {
+  const holidays = new Set([
+    observedFixedHoliday(year, 1, 1),
+    nthWeekdayOfMonth(year, 1, 1, 3),
+    nthWeekdayOfMonth(year, 2, 1, 3),
+    addDays(easterSunday(year), -2),
+    lastWeekdayOfMonth(year, 5, 1),
+    observedFixedHoliday(year, 6, 19),
+    observedFixedHoliday(year, 7, 4),
+    nthWeekdayOfMonth(year, 9, 1, 1),
+    nthWeekdayOfMonth(year, 11, 4, 4),
+    observedFixedHoliday(year, 12, 25),
+  ]);
+  // New Year's Day can be observed on Dec 31 of the prior calendar year.
+  holidays.add(observedFixedHoliday(year + 1, 1, 1));
+  return holidays;
+}
+
+function isUsMarketTradingDay(value) {
+  const date = compactDate(value);
+  const parsed = new Date(`${compactToIso(date)}T00:00:00Z`);
+  if ([0, 6].includes(parsed.getUTCDay())) return false;
+  const year = Number(date.slice(0, 4));
+  return !usMarketHolidays(year).has(date)
+    && !usMarketHolidays(year - 1).has(date);
+}
+
+function usMarketTradingDayAtOrBefore(value) {
+  let date = compactDate(value);
+  while (!isUsMarketTradingDay(date)) date = addDays(date, -1);
+  return date;
+}
+
+function usMarketTradingDayDistance(later, earlier, limit = 10) {
+  let cursor = compactDate(later);
+  const target = compactDate(earlier);
+  let distance = 0;
+  for (let guard = 0; guard < limit + 20 && cursor > target; guard += 1) {
+    cursor = addDays(cursor, -1);
+    if (isUsMarketTradingDay(cursor)) distance += 1;
+  }
+  return cursor === target ? distance : Infinity;
+}
+
 function businessDayDistance(later, earlier, limit = 10) {
   let cursor = compactDate(later);
   const target = compactDate(earlier);
@@ -271,6 +355,9 @@ module.exports = {
   compactToIso,
   addDays,
   weekdayAtOrBefore,
+  isUsMarketTradingDay,
+  usMarketTradingDayAtOrBefore,
+  usMarketTradingDayDistance,
   businessDayDistance,
   readJson,
   atomicWriteJson,
