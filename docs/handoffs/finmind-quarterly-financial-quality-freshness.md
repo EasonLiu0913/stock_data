@@ -4,9 +4,13 @@ Canonical handoff: `docs/handoffs/finmind-quarterly-financial-quality-freshness.
 
 ## Current phase
 
-Active round: `due-pending-refresh-and-master-rebuild-v1`
+Completed round: `due-pending-refresh-and-master-rebuild-v1`
 
-Round state: **Prompt A complete / ready for Prompt B**
+Completed round state: **Prompt B closeout: PASS**
+
+Active round: `first-real-refresh-proof-v1`
+
+Round state: **Prompt A preregistered / not started**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -333,6 +337,176 @@ If all criteria pass:
 - decide from evidence whether the project is complete/monitor-only or whether a narrowly scoped next round is genuinely required;
 - only then preregister/promote any next Prompt A + Prompt B;
 - commit the handoff and stop.
+
+## Prompt B closeout — due-pending-refresh-and-master-rebuild-v1
+
+**Prompt B closeout: PASS**
+
+Closeout was performed against current remote `main`, using the Prompt B preregistered before Prompt A began.
+
+### Acceptance results
+
+1. **Due-pending semantics — PASS**
+   - `coverageFreshnessDecision(...)` preserves future pending coverage, marks due pending stale, keeps truly complete matching coverage reusable, and fails missing/corrupt state safe toward refresh.
+   - Deterministic cases are locked in `tests/finmind_quarterly_freshness.test.js`.
+
+2. **Anti-lookahead — PASS**
+   - A stored `pending_not_yet_available` row is not stale until `conservative_known_date <= as_of_date`.
+   - The scheduled workflow resolves an explicit `as_of_date`; scheduled default is `TZ=Asia/Taipei date +%F`, and the same value is passed through planning and refresh jobs.
+   - No production FQ source row becomes known before its stored conservative known date.
+
+3. **Bounded refresh — PASS**
+   - `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` plans locally before API work.
+   - The due queue is capped by `max_due_stocks` (default 5).
+   - Refresh jobs target exact planned stock IDs, use fresh runners, and enforce `max-parallel: 1`.
+   - Each selected stock performs a one-request quota preflight; no due stocks take the `no-op` job and consume no FinMind API quota.
+   - Existing manual `.github/workflows/backfill-finmind-quarterly-financial-quality-batch.yml` remains available.
+
+4. **Propagation — PASS**
+   - `rebuild-master` runs only after the completed refresh wave succeeds.
+   - `scripts/build_financial_quality_master.js` is run once for the initial wave rebuild, then re-run only inside bounded latest-main push-retry attempts to avoid publishing a stale merge base.
+   - `scripts/verify_financial_quality_master_propagation.js` verifies refreshed rows before commit and again after resetting to remote `main`.
+   - Push exhaustion fails the job; a green-but-stale master is not accepted by the new workflow contract.
+   - `tests/financial_quality_master_propagation.test.js` covers missing quarter, stale known date, and stale score failures.
+
+5. **Production invariants — PASS**
+   - The Prompt A implementation range from `70077cce846891f07515e03c21c18bf78e6dc400` through `9e4cd0e3685562b56fa4b3c86e450805197d73b2` did not modify production strategy/FAS/FQ consumer files.
+   - FAS >= 8, FQ >= 10, `two_stage_fundamental_quality_direct_entry_v1`, and next-close execution semantics remain unchanged.
+   - Frozen 8021 regression remains part of the final passing Node suite.
+
+6. **CI — PASS**
+   - Final implementation SHA: `9e4cd0e3685562b56fa4b3c86e450805197d73b2`.
+   - `[99 測試] Node Regression Suite` run `34111883168`: **SUCCESS**.
+   - Job `101710901122` (`Node regression tests`): **SUCCESS**.
+   - Job `101710900956` (`排程時間摘要`): **SUCCESS**.
+   - The earlier scheduled-output registry failure was fixed before this final passing SHA.
+
+7. **Real refresh evidence — PASS WITH BOUNDED ROLLOUT REQUIREMENT**
+   - No real FinMind refresh run is claimed.
+   - The current connector does not expose GitHub workflow dispatch, so Prompt B cannot safely start a secret-backed real refresh itself.
+   - As of the 2026-09-08 closeout check, the repository's recent Actions runs also contain no observed run for `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` around its first expected 09:35 Asia/Taipei schedule; other scheduled workflows did run in the same general period.
+   - Per the preregistered Prompt B rule, absence of dispatch/secret permission does not fail this implementation round by itself. Production rollout remains **not fully proven** until one bounded real run is independently verified.
+
+8. **Durability / concurrent changes — PASS**
+   - Routing still has exactly one active task: `finmind-quarterly-financial-quality-freshness`.
+   - Current remote `main` advanced through unrelated market/news/data commits after Prompt A.
+   - Comparing the final implementation SHA with later remote state shows no FinMind freshness, financial-quality propagation, strategy-invariant, or task-routing changes that stale this closeout.
+   - Required implementation/test/handoff files remain durable on remote `main`.
+
+### Closeout decision
+
+The implementation round is closed successfully. The project is **not yet production-rollout-complete** because one bounded real refresh wave still needs durable run/job/output/master evidence.
+
+A narrowly scoped next round is therefore justified: `first-real-refresh-proof-v1`.
+
+That round must not redesign the implementation. Its only purpose is to obtain and verify one real bounded scheduled/manual refresh (or a genuine no-op run if no stocks are due), diagnose any first-run plumbing defect, and prove remote durability.
+
+## Active round — first-real-refresh-proof-v1
+
+### Objective
+
+Obtain the first real GitHub Actions execution evidence for:
+
+`.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`
+
+and prove the production path is operational without expanding scope.
+
+### Frozen constraints
+
+- Do not change FAS >= 8, FQ >= 10, strategy id, signal-day semantics, or next-close execution policy.
+- Do not refetch the full universe.
+- Keep `max_due_stocks <= 5`; prefer `1` for a manually dispatched proof.
+- Do not bypass FinMind quota/token preflight.
+- Do not fabricate a real run when workflow-dispatch/secret permission is unavailable.
+- A legitimate scheduled no-op run is acceptable evidence that scheduling/planning works, but it does not prove API write/master propagation; if due work exists, prefer one real due stock.
+- Fix only first-run plumbing defects proven by the real run.
+
+### Prompt A completion contract — first-real-refresh-proof-v1
+
+Prompt A is complete only when one of these bounded evidence paths is durable:
+
+**Path A — due work exists**
+1. A real run of `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` is identified.
+2. Planned due count / selected stock IDs are recorded.
+3. At most 5 stocks are selected; prefer 1 for manual proof.
+4. Refresh job(s), bounded checkpoint(s), master rebuild, durable remote propagation verification, and final workflow conclusion all succeed.
+5. The refreshed per-stock paths, batch-status path, canonical master, resulting remote-main commit(s), run ID, and job IDs are recorded in this handoff.
+6. 8021/strategy invariants remain unchanged.
+
+**Path B — no due work exists**
+1. A real scheduled/manual workflow run is identified.
+2. Plan reports `selected_count=0`.
+3. No refresh/master writer job consumes FinMind API quota.
+4. No-op job succeeds.
+5. Run ID/job evidence is recorded.
+6. Because API write/master propagation was not exercised, the project moves to monitor-only rather than claiming a real write-path proof.
+
+If no real run can be started or observed because permissions/scheduling evidence remain unavailable, record the blocker and do **not** report Prompt A complete.
+
+## Prompt A — first-real-refresh-proof-v1
+
+Execute only round `first-real-refresh-proof-v1` from this handoff.
+
+Startup:
+1. Fetch current remote `main`.
+2. Read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, and this handoff.
+3. Verify `finmind-quarterly-financial-quality-freshness` is still the unique active project.
+4. Inspect `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` and the latest Actions history.
+5. Do not modify implementation unless a real first-run failure proves a bounded plumbing defect.
+
+Execution:
+- First look for an already completed scheduled/manual run of the workflow.
+- If a real run exists, inspect plan/refresh/rebuild/no-op jobs and durable remote outputs.
+- If no run exists and workflow-dispatch permission is available, dispatch one bounded proof with `max_due_stocks=1` and an explicit current Asia/Taipei `as_of_date`.
+- If dispatch permission is unavailable, do not simulate or fabricate the run; record the blocker and stop without claiming completion.
+- If the real run exposes a bounded workflow defect, fix only that defect, run relevant regression, and repeat the same bounded proof.
+- Preserve all frozen production invariants.
+
+Before completion:
+- update this handoff with run ID, job IDs, selected stock(s), durable commits/paths, master/no-op evidence, and any bounded fix;
+- re-fetch current remote `main`;
+- report exactly `Prompt A complete — ready for Prompt B` only if the completion contract above is actually satisfied.
+
+## Preregistered Prompt B — first-real-refresh-proof-v1
+
+Close out round `first-real-refresh-proof-v1`.
+
+This Prompt B is preregistered before that Prompt A starts.
+
+Verify independently:
+
+1. Current remote `main`, routing, and handoff identity are fresh.
+2. The cited run is genuinely `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`, not another FinMind workflow.
+3. Run event, head SHA, conclusion, and relevant job IDs are recorded.
+4. The plan was bounded:
+   - selected_count <= 5;
+   - manual proof should normally use 1;
+   - exact selected stock IDs are known.
+5. If due work ran:
+   - each refresh job passed quota preflight;
+   - durable per-stock and due-refresh status paths exist on remote `main`;
+   - bounded checkpoint push succeeded;
+   - rebuild-master ran only after refresh success;
+   - canonical master contains the refreshed timeline rows;
+   - final remote propagation verification passed.
+6. If it was a no-op:
+   - selected_count=0;
+   - refresh and rebuild writer jobs did not run;
+   - no-op succeeded;
+   - no FinMind API quota was consumed by the workflow.
+7. Production invariants and 8021 regression remain unchanged.
+8. Any first-run fix is bounded, tested, durable, and does not weaken race/quota/anti-lookahead guarantees.
+9. Classify concurrent changes and verify final evidence remains current.
+
+If any criterion fails, repair only the bounded first-run defect and restart this Prompt B from criterion 1.
+
+If all criteria pass:
+- record `Prompt B closeout: PASS`;
+- decide whether the project is production-proven or monitor-only based on whether the write/master path was actually exercised;
+- update/commit this handoff;
+- do not invent another implementation round unless new evidence requires one;
+- re-fetch remote `main` and verify durable closeout;
+- stop.
 
 ## Safety / stop conditions
 
