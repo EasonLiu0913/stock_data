@@ -4,13 +4,15 @@ Canonical handoff: `docs/handoffs/finmind-quarterly-financial-quality-freshness.
 
 ## Current phase
 
-Completed round: `due-pending-refresh-and-master-rebuild-v1`
+Completed round: `first-real-refresh-proof-v1`
 
 Completed round state: **Prompt B closeout: PASS**
 
-Active round: `first-real-refresh-proof-v1`
+Project state: **production-proven / monitor-only**
 
-Round state: **Prompt A complete / Prompt B pending**
+Active round: **none**
+
+Round state: **no implementation round promoted**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -593,6 +595,92 @@ If all criteria pass:
 - do not invent another implementation round unless new evidence requires one;
 - re-fetch remote `main` and verify durable closeout;
 - stop.
+
+
+## Prompt B closeout — first-real-refresh-proof-v1
+
+**Prompt B closeout: PASS**
+
+Closeout was performed independently against current remote `main` using the Prompt B preregistered before `first-real-refresh-proof-v1` Prompt A began.
+
+### Acceptance results
+
+1. **Fresh routing / handoff identity — PASS**
+   - `docs/agent-prompts/task-routing.json` still identifies `finmind-quarterly-financial-quality-freshness` as the unique active project during this closeout.
+   - The selected round is exactly `first-real-refresh-proof-v1`; no future Prompt B was substituted.
+
+2. **Real workflow identity — PASS**
+   - Workflow: `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`.
+   - Run ID: `34191540520`.
+   - Run number: `1`.
+   - Event: `workflow_dispatch`.
+   - Head SHA: `5caf2a3e1b11927e13eff3df725eba3c19804544`.
+   - Started: `2026-09-08T05:40:42Z`.
+   - Completed: `2026-09-08T05:48:31Z`.
+   - Conclusion: **success**.
+
+3. **Bounded plan — PASS**
+   - Plan job `101950453812`: **success**.
+   - Explicit `as_of_date=2026-09-08`.
+   - Manual cap `max_due_stocks=1`.
+   - Due candidates: `419`.
+   - Selected count: `1`.
+   - Selected stock: `1316`.
+   - Deterministic freshness tests: `7/7 PASS`.
+   - Frozen 8021 regression: `PASS`.
+
+4. **Quota / refresh isolation — PASS**
+   - Refresh job `101951184018` (`refresh (1316)`): **success**.
+   - FinMind quota preflight: authenticated, API request limit `600`, configured safe cap `500`, reserve `20`, required requests `1`, enough-for-next-batch `true`.
+   - Only the selected stock `1316` was refreshed.
+   - Refresh finished with `available=14`, `missing={}`, quota not exhausted.
+
+5. **Durable bounded checkpoint — PASS**
+   - Refresh commit: `73ec1e297ad0c2c810cce2b0839c09122d4b3265`.
+   - Checkpoint push succeeded.
+   - Current remote `main` still contains:
+     - `data_finmind_quarterly_financial_quality/1316/2026Q2.json`;
+     - `data_finmind_quarterly_financial_quality/1316/coverage-status.json`;
+     - `data_finmind_quarterly_financial_quality/1316/financial-quality-score-timeline.json`;
+     - `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-08-1316.json`.
+   - Coverage now has all `14` periods through `2026Q2` and no missing periods.
+
+6. **Anti-lookahead — PASS**
+   - Refreshed `1316/2026Q2.json` retains `conservative_known_date=2026-08-14`.
+   - The real run used explicit `as_of_date=2026-09-08`, so the quarter was refreshed only after its conservative known date.
+   - No evidence of early eligibility or historical replay look-ahead was introduced.
+
+7. **Master propagation — PASS**
+   - Rebuild job `101951568293`: **success**.
+   - `rebuild-master` executed only after refresh success.
+   - Master commit: `a8f5500721be4962c20a7e6d8325ee02affd6c25`.
+   - Master push succeeded.
+   - Final remote propagation verification reset to current remote main and passed.
+   - `data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json` increased from `6809` to `6810` quarterly rows and includes `1316` `2026Q2` with FQ score `5`, conservative known date `2026-08-14`, and refreshed no-missing coverage.
+   - The no-op job `101951185250` was correctly skipped because due work existed.
+
+8. **Production invariants — PASS**
+   - `scripts/two_stage_fundamental_quality_signal.js` still requires FAS `>= 8` and FQ `>= 10`.
+   - The frozen 8021 regression passed inside the real plan job and still asserts FAS `8`, latest-known production FQ `2026Q1 = 12`, signal day `2026-09-07`, and next-close execution `2026-09-08`.
+   - No first-run fix changed strategy thresholds, strategy meaning, signal-day semantics, or next-close policy.
+
+9. **First-run fix scope — PASS**
+   - The real run required no workflow/code fix.
+   - No race/quota/anti-lookahead guarantees were weakened.
+
+10. **Concurrent changes / final freshness — PASS**
+    - Current `main` at Prompt B verification initially pointed to `164aacd4d2a3e098238a6c964778580cb211355d`.
+    - Comparing master commit `a8f5500721be4962c20a7e6d8325ee02affd6c25` to that state showed exactly one later commit and only one changed file: this canonical handoff.
+    - No concurrent production, FinMind, master, strategy, test, or routing change staled the real-run evidence.
+
+### Closeout decision
+
+The first real FinMind due-refresh path has now been proven end-to-end with a bounded real API-backed write, durable per-stock checkpoint, canonical master rebuild, and final remote propagation verification.
+
+Project disposition: **production-proven / monitor-only**.
+
+No additional implementation round is justified by current evidence. Continue normal scheduled monitoring; create a new paired Prompt A/Prompt B round only if a future real run exposes a new defect or requirement.
+
 
 ## Safety / stop conditions
 
