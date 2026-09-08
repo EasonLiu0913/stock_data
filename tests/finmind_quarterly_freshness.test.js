@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const {
   coverageFreshnessDecision,
   normalizeAsOfDate,
+  buildPhysicalBatchPlan,
 } = require('../scripts/backfill_finmind_quarterly_financial_quality_batch');
 
 function coverage(missingPeriods = []) {
@@ -78,4 +79,23 @@ test('invalid pending known date fails safe toward refresh', () => {
 test('as-of date must be explicit ISO calendar date', () => {
   assert.equal(normalizeAsOfDate('2026-09-07'), '2026-09-07');
   assert.throws(() => normalizeAsOfDate('2026-02-30'), /Invalid as-of-date/);
+});
+
+
+test('physical-batch planner groups a bounded deterministic wave', () => {
+  const due = ['1001','1002','1003','1004','1005','1006','1007'].map(stock_id => ({ stock_id }));
+  const plan = buildPhysicalBatchPlan(due, 3, 2);
+  assert.equal(plan.selected.length, 6);
+  assert.deepEqual(plan.batches, [
+    { batch_index: 0, stock_ids: ['1001','1002','1003'], stock_ids_csv: '1001,1002,1003', request_count: 3 },
+    { batch_index: 1, stock_ids: ['1004','1005','1006'], stock_ids_csv: '1004,1005,1006', request_count: 3 },
+  ]);
+});
+
+test('physical-batch re-plan is idempotent when completed stocks disappear from due rows', () => {
+  const first = ['1001','1002','1003','1004','1005','1006','1007'].map(stock_id => ({ stock_id }));
+  const second = first.filter(row => !['1001','1002','1003'].includes(row.stock_id));
+  const plan = buildPhysicalBatchPlan(second, 3, 2);
+  assert.deepEqual(plan.batches[0].stock_ids, ['1004','1005','1006']);
+  assert.equal(new Set(plan.selected.map(row => row.stock_id)).size, plan.selected.length);
 });
