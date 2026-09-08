@@ -55,6 +55,22 @@ test('external snapshot requires exact 5/5 primary date agreement', () => {
   assert.equal(primaryExternalValidation(mixed, '20260727').complete, false);
 });
 
+test('holiday-adjusted snapshot is fresh when primary and collection dates match resolved US trading day', () => {
+  const payload = external('20260904');
+  payload.snapshot_status = {
+    data_status: 'provisional',
+    is_final: false,
+    needs_refresh: true,
+    captured_at: '2026-09-08T01:31:35.813Z',
+  };
+  const validation = primaryExternalValidation(payload, '20260904');
+  assert.equal(validation.exact, false);
+  const freshness = classifyExternalFreshness(validation, '20260904');
+  assert.equal(freshness.status, 'fresh');
+  assert.equal(freshness.reason, 'calendar_adjusted_primary_market_date_match');
+  assert.equal(freshness.business_day_gap, 0);
+});
+
 test('one-business-day stale data is not labeled holiday adjusted', () => {
   const validation = primaryExternalValidation(external('20260724'), '20260727');
   const freshness = classifyExternalFreshness(validation, '20260727');
