@@ -39,24 +39,34 @@ function verifyStock(masterStock, timeline, stockId) {
   }
 }
 
-function verifyMasterPropagation(stockIds, master = readJson(MASTER_FILE)) {
+function verifyMasterPropagation(stockIds, master = readJson(MASTER_FILE), options = {}) {
   if (!master || !Array.isArray(master.stocks)) throw new Error('Missing or invalid financial-quality master');
   const masterStocks = new Map(master.stocks.map(stock => [String(stock.stock_id), stock]));
+  let skippedUnsupported = 0;
   for (const stockId of stockIds) {
     const timelineFile = path.join(SOURCE_ROOT, stockId, 'financial-quality-score-timeline.json');
-    if (!fs.existsSync(timelineFile)) throw new Error(`Missing refreshed timeline for ${stockId}`);
+    if (!fs.existsSync(timelineFile)) {
+      const coverageFile = path.join(SOURCE_ROOT, stockId, 'coverage-status.json');
+      const coverage = fs.existsSync(coverageFile) ? readJson(coverageFile) : null;
+      if (options.allowUnsupported && coverage?.status === 'unsupported_financial_model') {
+        skippedUnsupported += 1;
+        continue;
+      }
+      throw new Error(`Missing refreshed timeline for ${stockId}`);
+    }
     const timeline = readJson(timelineFile);
     if (!Array.isArray(timeline.rows)) throw new Error(`Invalid refreshed timeline for ${stockId}`);
     verifyStock(masterStocks.get(stockId), timeline, stockId);
   }
-  return { verified_stocks: stockIds.length };
+  return { verified_stocks: stockIds.length - skippedUnsupported, skipped_unsupported: skippedUnsupported };
 }
 
 function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   const stockIds = String(args.get('stock-ids') || '').split(',').map(value => value.trim()).filter(Boolean);
   if (!stockIds.length) throw new Error('--stock-ids requires at least one stock id');
-  const result = verifyMasterPropagation(stockIds);
+  const allowUnsupported = String(args.get('allow-unsupported') || 'false').toLowerCase() === 'true';
+  const result = verifyMasterPropagation(stockIds, readJson(MASTER_FILE), { allowUnsupported });
   console.log(JSON.stringify({ master: path.relative(ROOT, MASTER_FILE), ...result }, null, 2));
 }
 
