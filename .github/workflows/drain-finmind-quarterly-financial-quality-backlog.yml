@@ -216,6 +216,11 @@ jobs:
             inter_request_delay_ms: 1000,
             inter_request_jitter_ms: 2000,
           };
+          const terminal = new Set(['complete', 'skipped_complete', 'unsupported_financial_model']);
+          const invalid = (data.results || []).filter(row => !terminal.has(row.status));
+          if (invalid.length) {
+            throw new Error(`Physical batch contains non-terminal results: ${invalid.map(row => `${row.stock_id}:${row.status}`).join(',')}`);
+          }
           fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
           NODE
 
@@ -285,7 +290,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/build_financial_quality_master.js
-          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true
 
       - name: Commit master with latest-main retry
         env:
@@ -299,7 +304,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             node scripts/build_financial_quality_master.js
-            node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+            node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true
             git add data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json
 
             if git diff --cached --quiet; then
@@ -327,7 +332,7 @@ jobs:
           set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true
 
   replan:
     needs: [plan, rebuild-master]
