@@ -229,14 +229,6 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/scripts/write_workflow_schedule_summary.js" | node
-
       - name: Write SMA execution summary
         shell: bash
         env:
@@ -309,3 +301,19 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
