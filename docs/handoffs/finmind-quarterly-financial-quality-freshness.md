@@ -1495,6 +1495,100 @@ Bounded fix commits:
 
 This failure does not authorize expanding scope or wave size. Re-run the same bounded backlog workflow after the fix; Prompt A remains in progress until the full real-wave, master propagation, post-wave re-plan, regression/CI, and durability evidence passes.
 
+#### Prompt A completion evidence — backlog-drain-wave-12-v1 — 2026-09-08
+
+**Prompt A complete — ready for Prompt B**
+
+Real bounded wave evidence is now durable and satisfies the preregistered Prompt A completion contract.
+
+##### Real workflow identity
+
+- workflow: `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`
+- run id: `34213993759`
+- run number: `3`
+- event: `workflow_dispatch`
+- head SHA: `135946c12ccbb6b658dd1c75333233cbddabc3c3`
+- conclusion: **success**
+- wave id: `run-34213993759`
+- as-of date: `2026-09-08`
+
+##### Planner / bounded selection
+
+- unique candidates: `551`
+- due before wave: `398`
+- selected: `12`
+- `physical_batch_size=3`
+- `max_physical_batches_per_wave=4`
+- batch 0: `2883,6225,6901`
+- batch 1: `6994,5522,3017`
+- batch 2: `6934,2368,2425`
+- batch 3: `2505,2424,3135`
+- no outcome-based selection and no automatic second wave.
+
+##### True physical-batch jobs / pacing / quota
+
+All four matrix batches ran as distinct successful GitHub jobs with `strategy.max-parallel: 1`:
+
+- batch 0 job `102022578491`: cooldown `5s`; inter-request waits `2786ms, 2293ms`; quota required `3`, configured cap `500`, reserve `20`, enough `true`.
+- batch 1 job `102022578501`: cooldown `5s`; waits `1370ms, 1800ms`; quota required `3`, enough `true`.
+- batch 2 job `102022578543`: cooldown `8s`; waits `1148ms, 2193ms`; quota required `3`, enough `true`.
+- batch 3 job `102022578485`: cooldown `3s`; waits `1273ms, 1167ms`; quota required `3`, enough `true`.
+
+No trailing inter-request wait occurred after the final stock in any batch. No quota exhaustion or soft-block/response-quality anomaly was observed.
+
+##### Terminal classifications / response quality
+
+- `2883` was correctly classified and durably persisted as `unsupported_financial_model` rather than being misrepresented as a successful general-industry FQ timeline.
+- the other 11 stocks completed successfully.
+- explicit historical gaps for stocks such as `6994`, `6934`, and `3135` remained classified as historical missing/unavailable reasons rather than false successful quarters.
+- no non-terminal backfill/timeline/quality failure reached checkpoint.
+
+##### Unique durable checkpoint evidence
+
+Each physical batch pushed a unique wave-scoped checkpoint before runner exit:
+
+- batch 0: commit `fb71adef8fe268f378ef973a0be9f3353a867faf`; path `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-08-wave-run-34213993759-batch000.json`.
+- batch 1: commit `a11a72a836978e0f1fec99f78f8711c1b4e1f8a8`; path `...-batch001.json`.
+- batch 2: commit `a27b6bda537a15baafb8aaa9cc1f6da7607f5be0`; path `...-batch002.json`.
+- batch 3: commit `948a693fe4edf23eb6c2bae92b8e1e3ea10ac91b`; path `...-batch003.json`.
+
+Prior canary history preservation was independently checked against canary master commit `9007e9ef27ce5fc49445c32a8effdcef22d1fd6f`:
+
+- legacy canary `due-refresh-2026-09-08-batch000.json` blob remains `a16e28ad412615f857622af01490325377b67e42`.
+- legacy canary `due-refresh-2026-09-08-batch001.json` blob remains `3165810bb379e1e5d5bd99b339b75df80fd4e818`.
+
+Therefore the wave-id fix successfully prevents same-date checkpoint overwrite while preserving old evidence unchanged.
+
+##### Master propagation
+
+- rebuild-master job: `102025297689` — **success**.
+- master commit: `a7ddc0a118e028b19492cfe0559421483a12d966`.
+- verifier before push: `verified_stocks=11`, `skipped_unsupported=1`.
+- master push succeeded.
+- final verification after reset to remote main again reported `verified_stocks=11`, `skipped_unsupported=1`.
+- exactly one wave-level master publication occurred after all four physical batches succeeded.
+
+##### Post-wave re-plan / resume
+
+- replan job: `102025868238` — **success**.
+- due before wave: `398`.
+- due after committed wave: `386`.
+- delta: exactly `12`, reconciling all 12 terminal selected stocks, including the durable unsupported terminal.
+- next deterministic queue was derived from newly committed main; no second wave was executed automatically.
+
+##### Regression / invariant evidence
+
+- plan job `102021318078` passed FinMind freshness tests (`13`), master propagation tests (`5`), and frozen 8021 regression (`1`) on real-run head `135946c12ccbb6b658dd1c75333233cbddabc3c3`.
+- full `[99 測試] Node Regression Suite #27`, run `34213929739`, head SHA `32fee41d83089e0cbd4d43f29b59b57b5a7d0cbd`: **success**. Later changes before real run were backlog-workflow/documentation-only; the real plan revalidated the FinMind/master/8021 paths on the actual workflow head.
+- FAS threshold `>=8`, FQ threshold `>=10`, strategy identity, anti-lookahead, signal-day semantics, and next-close policy were not changed.
+- daily production freshness workflow was not modified by the bounded unsupported-terminal fix and remains a separate preserved path.
+
+##### Prompt A closeout
+
+All preregistered completion requirements are now durably satisfied. Prompt B remains exactly the preregistered closeout contract below and has not been executed automatically.
+
+**Prompt A complete — ready for Prompt B**
+
 #### Preregistered Prompt B — backlog-drain-wave-12-v1
 
 Close out round `backlog-drain-wave-12-v1`.
