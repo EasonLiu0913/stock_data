@@ -271,9 +271,10 @@ jobs:
     name: 發布每日漲幅清單到 GitHub Pages
     needs: generate
     if: needs.generate.result == 'success' && needs.generate.outputs.target_date != ''
+    # This workflow publishes the latest complete site. The daily-gainers date is
+    # not necessarily a prediction date, so do not force deploy-pages to validate
+    # data_predictions/<daily-gainers-date>/manifest.json.
     uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.generate.outputs.target_date }}
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
