@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-07T03:10:14.274Z",
+  "generated_at": "2026-09-08T08:31:27.889Z",
   "research_id": "historical_oversold_rebound_pattern_analysis_v1",
   "primary_outcome": "intraday_rebound_5d_10pct",
   "source_event_stock_count": 1306,
@@ -13,9 +13,9 @@
     "stock_like_equity": 37
   },
   "evidence_level_counts": {
-    "insufficient": 826,
-    "exploratory": 228,
-    "pattern_ready": 17
+    "insufficient": 825,
+    "exploratory": 227,
+    "pattern_ready": 19
   },
   "recurring_candidate_patterns": [
     {
@@ -85,12 +85,13 @@
       "label": "事件日振幅",
       "group": "price_volume",
       "direction": "success_higher",
-      "stock_count": 21,
+      "stock_count": 22,
       "stock_codes": [
         "1301",
         "1623",
         "1802",
         "2332",
+        "2355",
         "2409",
         "2429",
         "2489",
@@ -108,6 +109,35 @@
         "8150",
         "8210",
         "8478"
+      ]
+    },
+    {
+      "feature_id": "consecutive_down_days",
+      "label": "連續下跌日數",
+      "group": "price_volume",
+      "direction": "success_higher",
+      "stock_count": 20,
+      "stock_codes": [
+        "1735",
+        "2355",
+        "2383",
+        "2465",
+        "2481",
+        "2939",
+        "3030",
+        "3043",
+        "3047",
+        "3583",
+        "3605",
+        "3715",
+        "4934",
+        "4956",
+        "5471",
+        "6415",
+        "6789",
+        "6909",
+        "8028",
+        "9136"
       ]
     },
     {
@@ -198,67 +228,11 @@
       ]
     },
     {
-      "feature_id": "consecutive_down_days",
-      "label": "連續下跌日數",
-      "group": "price_volume",
-      "direction": "success_higher",
-      "stock_count": 19,
-      "stock_codes": [
-        "1735",
-        "2383",
-        "2465",
-        "2481",
-        "2939",
-        "3030",
-        "3043",
-        "3047",
-        "3583",
-        "3605",
-        "3715",
-        "4934",
-        "4956",
-        "5471",
-        "6415",
-        "6789",
-        "6909",
-        "8028",
-        "9136"
-      ]
-    },
-    {
-      "feature_id": "margin_change",
-      "label": "融資當日增減",
-      "group": "margin",
-      "direction": "success_lower",
-      "stock_count": 19,
-      "stock_codes": [
-        "1466",
-        "2348",
-        "2413",
-        "2431",
-        "2880",
-        "3002",
-        "3026",
-        "3035",
-        "3533",
-        "3550",
-        "4566",
-        "4977",
-        "6155",
-        "6202",
-        "6278",
-        "8162",
-        "8215",
-        "8271",
-        "8996"
-      ]
-    },
-    {
       "feature_id": "foreign_net_5d_shares",
       "label": "外資近 5 日累積買賣超",
       "group": "institutional",
       "direction": "success_lower",
-      "stock_count": 18,
+      "stock_count": 19,
       "stock_codes": [
         "1301",
         "1326",
@@ -277,34 +251,36 @@
         "6442",
         "6805",
         "6830",
-        "7749"
+        "7749",
+        "8499"
       ]
     },
     {
-      "feature_id": "gap_sma20",
-      "label": "距 SMA20 乖離",
-      "group": "price_volume",
-      "direction": "success_higher",
-      "stock_count": 18,
+      "feature_id": "margin_change",
+      "label": "融資當日增減",
+      "group": "margin",
+      "direction": "success_lower",
+      "stock_count": 19,
       "stock_codes": [
-        "1515",
-        "1582",
-        "2338",
-        "2375",
-        "2401",
-        "2404",
+        "1466",
+        "2348",
+        "2413",
         "2431",
-        "2491",
-        "3167",
-        "3518",
-        "3528",
-        "3563",
-        "4739",
-        "4919",
-        "6443",
-        "6573",
-        "6715",
-        "8374"
+        "2880",
+        "3002",
+        "3026",
+        "3035",
+        "3037",
+        "3533",
+        "3550",
+        "4566",
+        "4977",
+        "6155",
+        "6202",
+        "6278",
+        "8162",
+        "8215",
+        "8271"
       ]
     },
     {
@@ -335,6 +311,32 @@
       ]
     },
     {
+      "feature_id": "consecutive_down_days",
+      "label": "連續下跌日數",
+      "group": "price_volume",
+      "direction": "success_lower",
+      "stock_count": 17,
+      "stock_codes": [
+        "1515",
+        "1721",
+        "2323",
+        "2327",
+        "2332",
+        "2349",
+        "2359",
+        "2436",
+        "2464",
+        "2492",
+        "3054",
+        "4949",
+        "5258",
+        "6239",
+        "6668",
+        "6805",
+        "8374"
+      ]
+    },
+    {
       "feature_id": "drawdown_20d",
       "label": "距近 20 日高點跌幅",
       "group": "price_volume",
@@ -353,11 +355,37 @@
         "3504",
         "3605",
         "3715",
-        "4927",
+        "4722",
         "6937",
         "7795",
         "8210",
         "9136"
+      ]
+    },
+    {
+      "feature_id": "gap_sma20",
+      "label": "距 SMA20 乖離",
+      "group": "price_volume",
+      "direction": "success_higher",
+      "stock_count": 17,
+      "stock_codes": [
+        "1515",
+        "1582",
+        "2338",
+        "2375",
+        "2401",
+        "2404",
+        "2431",
+        "3167",
+        "3518",
+        "3528",
+        "3563",
+        "4739",
+        "4919",
+        "6443",
+        "6573",
+        "6715",
+        "8374"
       ]
     },
     {
@@ -387,31 +415,6 @@
       ]
     },
     {
-      "feature_id": "consecutive_down_days",
-      "label": "連續下跌日數",
-      "group": "price_volume",
-      "direction": "success_lower",
-      "stock_count": 16,
-      "stock_codes": [
-        "1515",
-        "1721",
-        "2323",
-        "2327",
-        "2332",
-        "2349",
-        "2359",
-        "2436",
-        "2464",
-        "2492",
-        "3054",
-        "4949",
-        "6239",
-        "6668",
-        "6805",
-        "8374"
-      ]
-    },
-    {
       "feature_id": "return_10d",
       "label": "事件日前 10 日報酬",
       "group": "price_volume",
@@ -434,6 +437,54 @@
         "6672",
         "6906",
         "6909"
+      ]
+    },
+    {
+      "feature_id": "intraday_return",
+      "label": "事件日開收盤報酬",
+      "group": "price_volume",
+      "direction": "success_higher",
+      "stock_count": 15,
+      "stock_codes": [
+        "1721",
+        "1809",
+        "2408",
+        "2491",
+        "2492",
+        "3008",
+        "3041",
+        "3443",
+        "3652",
+        "3711",
+        "5258",
+        "6449",
+        "6742",
+        "8039",
+        "8996"
+      ]
+    },
+    {
+      "feature_id": "rsi14",
+      "label": "RSI14",
+      "group": "price_volume",
+      "direction": "success_lower",
+      "stock_count": 15,
+      "stock_codes": [
+        "2059",
+        "2313",
+        "2316",
+        "2342",
+        "2355",
+        "2441",
+        "2464",
+        "2493",
+        "3532",
+        "5269",
+        "6141",
+        "7721",
+        "8021",
+        "8210",
+        "8261"
       ]
     },
     {
@@ -460,6 +511,29 @@
       ]
     },
     {
+      "feature_id": "drawdown_60d",
+      "label": "距近 60 日高點跌幅",
+      "group": "price_volume",
+      "direction": "success_lower",
+      "stock_count": 14,
+      "stock_codes": [
+        "2059",
+        "2301",
+        "2342",
+        "2348",
+        "2397",
+        "2484",
+        "3605",
+        "3711",
+        "3712",
+        "4927",
+        "5258",
+        "6239",
+        "6933",
+        "7769"
+      ]
+    },
+    {
       "feature_id": "return_1d",
       "label": "事件日 1 日報酬",
       "group": "price_volume",
@@ -480,29 +554,6 @@
         "6477",
         "8046",
         "8478"
-      ]
-    },
-    {
-      "feature_id": "return_5d",
-      "label": "事件日前 5 日報酬",
-      "group": "price_volume",
-      "direction": "success_lower",
-      "stock_count": 14,
-      "stock_codes": [
-        "2313",
-        "2344",
-        "2345",
-        "2367",
-        "2388",
-        "2923",
-        "4583",
-        "4927",
-        "4952",
-        "4956",
-        "6155",
-        "6168",
-        "6526",
-        "8104"
       ]
     },
     {
@@ -529,51 +580,6 @@
       ]
     },
     {
-      "feature_id": "short_change_3d",
-      "label": "融券近 3 日累積增減",
-      "group": "margin",
-      "direction": "success_higher",
-      "stock_count": 14,
-      "stock_codes": [
-        "1528",
-        "1711",
-        "1717",
-        "2049",
-        "2340",
-        "2464",
-        "2880",
-        "3135",
-        "3714",
-        "4526",
-        "4952",
-        "6669",
-        "6862",
-        "8499"
-      ]
-    },
-    {
-      "feature_id": "drawdown_60d",
-      "label": "距近 60 日高點跌幅",
-      "group": "price_volume",
-      "direction": "success_lower",
-      "stock_count": 13,
-      "stock_codes": [
-        "2059",
-        "2301",
-        "2342",
-        "2348",
-        "2397",
-        "2484",
-        "3605",
-        "3711",
-        "3712",
-        "4927",
-        "5258",
-        "6239",
-        "6933"
-      ]
-    },
-    {
       "feature_id": "foreign_net_3d_shares",
       "label": "外資近 3 日累積買賣超",
       "group": "institutional",
@@ -593,50 +599,6 @@
         "6152",
         "7749",
         "8499"
-      ]
-    },
-    {
-      "feature_id": "intraday_return",
-      "label": "事件日開收盤報酬",
-      "group": "price_volume",
-      "direction": "success_higher",
-      "stock_count": 13,
-      "stock_codes": [
-        "1721",
-        "1809",
-        "2399",
-        "2408",
-        "2492",
-        "3008",
-        "3041",
-        "3443",
-        "3652",
-        "3711",
-        "5258",
-        "6449",
-        "6742"
-      ]
-    },
-    {
-      "feature_id": "return_3d",
-      "label": "事件日前 3 日報酬",
-      "group": "price_volume",
-      "direction": "success_higher",
-      "stock_count": 13,
-      "stock_codes": [
-        "1312",
-        "1590",
-        "2491",
-        "3443",
-        "4722",
-        "6155",
-        "6226",
-        "6573",
-        "6770",
-        "6805",
-        "6830",
-        "6921",
-        "8162"
       ]
     },
     {
@@ -684,25 +646,25 @@
       ]
     },
     {
-      "feature_id": "rsi14",
-      "label": "RSI14",
+      "feature_id": "return_5d",
+      "label": "事件日前 5 日報酬",
       "group": "price_volume",
       "direction": "success_lower",
       "stock_count": 13,
       "stock_codes": [
-        "2059",
         "2313",
-        "2316",
-        "2342",
-        "2441",
-        "2493",
-        "3532",
-        "5269",
-        "6141",
-        "7721",
-        "8021",
-        "8210",
-        "8261"
+        "2344",
+        "2345",
+        "2367",
+        "2388",
+        "2923",
+        "4583",
+        "4952",
+        "4956",
+        "6155",
+        "6168",
+        "6526",
+        "8104"
       ]
     },
     {
@@ -725,6 +687,28 @@
         "7799",
         "8271",
         "8422"
+      ]
+    },
+    {
+      "feature_id": "short_change_3d",
+      "label": "融券近 3 日累積增減",
+      "group": "margin",
+      "direction": "success_higher",
+      "stock_count": 13,
+      "stock_codes": [
+        "1528",
+        "1711",
+        "1717",
+        "2049",
+        "2340",
+        "2880",
+        "3135",
+        "3714",
+        "4526",
+        "4952",
+        "6669",
+        "6862",
+        "8499"
       ]
     },
     {
@@ -770,24 +754,24 @@
       ]
     },
     {
-      "feature_id": "foreign_turned_to_buy",
-      "label": "外資是否由賣轉買",
-      "group": "institutional",
-      "direction": "success_higher",
+      "feature_id": "margin_change_3d",
+      "label": "融資近 3 日累積增減",
+      "group": "margin",
+      "direction": "success_lower",
       "stock_count": 12,
       "stock_codes": [
-        "2308",
-        "2324",
-        "3030",
-        "3037",
-        "3049",
-        "3481",
-        "6117",
-        "6285",
-        "6515",
-        "8162",
-        "8271",
-        "8996"
+        "2344",
+        "2383",
+        "2401",
+        "3533",
+        "3583",
+        "4540",
+        "4916",
+        "4989",
+        "6209",
+        "6213",
+        "6278",
+        "6742"
       ]
     },
     {
@@ -832,42 +816,43 @@
       ]
     },
     {
-      "feature_id": "margin_change_3d",
-      "label": "融資近 3 日累積增減",
-      "group": "margin",
-      "direction": "success_lower",
+      "feature_id": "foreign_turned_to_buy",
+      "label": "外資是否由賣轉買",
+      "group": "institutional",
+      "direction": "success_higher",
       "stock_count": 11,
       "stock_codes": [
-        "2383",
-        "2401",
-        "3533",
-        "3583",
-        "4540",
-        "4916",
-        "4989",
-        "6209",
-        "6213",
-        "6278",
-        "6742"
+        "2308",
+        "2324",
+        "3030",
+        "3049",
+        "3481",
+        "6117",
+        "6285",
+        "6515",
+        "8162",
+        "8271",
+        "8996"
       ]
     },
     {
-      "feature_id": "broker_total_net_lots",
-      "label": "券商分點合計淨買賣超",
-      "group": "broker",
+      "feature_id": "return_3d",
+      "label": "事件日前 3 日報酬",
+      "group": "price_volume",
       "direction": "success_higher",
-      "stock_count": 10,
+      "stock_count": 11,
       "stock_codes": [
-        "2344",
-        "2630",
-        "3008",
-        "3027",
-        "3090",
-        "4562",
-        "4576",
-        "4764",
-        "8213",
-        "8438"
+        "1312",
+        "1590",
+        "3443",
+        "6155",
+        "6226",
+        "6573",
+        "6770",
+        "6805",
+        "6830",
+        "6921",
+        "8162"
       ]
     },
     {
@@ -890,6 +875,25 @@
       ]
     },
     {
+      "feature_id": "intraday_range_pct",
+      "label": "事件日振幅",
+      "group": "price_volume",
+      "direction": "success_lower",
+      "stock_count": 10,
+      "stock_codes": [
+        "1536",
+        "2324",
+        "2408",
+        "2491",
+        "4960",
+        "4967",
+        "6415",
+        "6426",
+        "6449",
+        "7721"
+      ]
+    },
+    {
       "feature_id": "return_10d",
       "label": "事件日前 10 日報酬",
       "group": "price_volume",
@@ -906,25 +910,6 @@
         "7749",
         "8215",
         "8261"
-      ]
-    },
-    {
-      "feature_id": "return_1d",
-      "label": "事件日 1 日報酬",
-      "group": "price_volume",
-      "direction": "success_higher",
-      "stock_count": 10,
-      "stock_codes": [
-        "1536",
-        "1721",
-        "1809",
-        "2316",
-        "5258",
-        "6139",
-        "6426",
-        "6442",
-        "8039",
-        "8213"
       ]
     },
     {
@@ -946,6 +931,24 @@
       ]
     },
     {
+      "feature_id": "broker_total_net_lots",
+      "label": "券商分點合計淨買賣超",
+      "group": "broker",
+      "direction": "success_higher",
+      "stock_count": 9,
+      "stock_codes": [
+        "2630",
+        "3008",
+        "3027",
+        "3090",
+        "4562",
+        "4576",
+        "4764",
+        "8213",
+        "8438"
+      ]
+    },
+    {
       "feature_id": "drawdown_20d",
       "label": "距近 20 日高點跌幅",
       "group": "price_volume",
@@ -961,24 +964,6 @@
         "6116",
         "6533",
         "7711"
-      ]
-    },
-    {
-      "feature_id": "intraday_range_pct",
-      "label": "事件日振幅",
-      "group": "price_volume",
-      "direction": "success_lower",
-      "stock_count": 9,
-      "stock_codes": [
-        "1536",
-        "2324",
-        "2408",
-        "4960",
-        "4967",
-        "6415",
-        "6426",
-        "6449",
-        "7721"
       ]
     },
     {
@@ -1052,6 +1037,40 @@
       ]
     },
     {
+      "feature_id": "return_1d",
+      "label": "事件日 1 日報酬",
+      "group": "price_volume",
+      "direction": "success_higher",
+      "stock_count": 8,
+      "stock_codes": [
+        "1536",
+        "1721",
+        "1809",
+        "2316",
+        "6139",
+        "6426",
+        "6442",
+        "8213"
+      ]
+    },
+    {
+      "feature_id": "volatility_20d",
+      "label": "20 日已實現波動",
+      "group": "price_volume",
+      "direction": "success_lower",
+      "stock_count": 8,
+      "stock_codes": [
+        "1312",
+        "2103",
+        "2489",
+        "2923",
+        "3645",
+        "3711",
+        "4927",
+        "6862"
+      ]
+    },
+    {
       "feature_id": "volatility_20d",
       "label": "20 日已實現波動",
       "group": "price_volume",
@@ -1069,19 +1088,19 @@
       ]
     },
     {
-      "feature_id": "broker_top5_sell_net_lots",
-      "label": "前 5 大賣方淨賣超",
-      "group": "broker",
+      "feature_id": "gap_sma60",
+      "label": "距 SMA60 乖離",
+      "group": "price_volume",
       "direction": "success_lower",
       "stock_count": 7,
       "stock_codes": [
-        "1303",
-        "2368",
-        "2388",
-        "2449",
-        "6921",
-        "7769",
-        "8039"
+        "1708",
+        "2103",
+        "2301",
+        "3645",
+        "4927",
+        "4967",
+        "6168"
       ]
     },
     {
@@ -1098,38 +1117,6 @@
         "4722",
         "6205",
         "6706"
-      ]
-    },
-    {
-      "feature_id": "margin_change_3d",
-      "label": "融資近 3 日累積增減",
-      "group": "margin",
-      "direction": "success_higher",
-      "stock_count": 7,
-      "stock_codes": [
-        "1326",
-        "2464",
-        "2939",
-        "3006",
-        "6205",
-        "8039",
-        "8499"
-      ]
-    },
-    {
-      "feature_id": "volatility_20d",
-      "label": "20 日已實現波動",
-      "group": "price_volume",
-      "direction": "success_lower",
-      "stock_count": 7,
-      "stock_codes": [
-        "1312",
-        "2103",
-        "2489",
-        "2923",
-        "3645",
-        "3711",
-        "6862"
       ]
     },
     {
@@ -1164,6 +1151,21 @@
       ]
     },
     {
+      "feature_id": "broker_top5_sell_net_lots",
+      "label": "前 5 大賣方淨賣超",
+      "group": "broker",
+      "direction": "success_lower",
+      "stock_count": 6,
+      "stock_codes": [
+        "1303",
+        "2368",
+        "2388",
+        "2449",
+        "6921",
+        "8039"
+      ]
+    },
+    {
       "feature_id": "gap_sma20",
       "label": "距 SMA20 乖離",
       "group": "price_volume",
@@ -1194,18 +1196,18 @@
       ]
     },
     {
-      "feature_id": "gap_sma60",
-      "label": "距 SMA60 乖離",
-      "group": "price_volume",
-      "direction": "success_lower",
+      "feature_id": "margin_change_3d",
+      "label": "融資近 3 日累積增減",
+      "group": "margin",
+      "direction": "success_higher",
       "stock_count": 6,
       "stock_codes": [
-        "1708",
-        "2103",
-        "2301",
-        "3645",
-        "4967",
-        "6168"
+        "1326",
+        "2464",
+        "2939",
+        "3006",
+        "6205",
+        "8039"
       ]
     },
     {
@@ -1267,6 +1269,20 @@
       ]
     },
     {
+      "feature_id": "trust_net_3d_shares",
+      "label": "投信近 3 日累積買賣超",
+      "group": "institutional",
+      "direction": "success_lower",
+      "stock_count": 5,
+      "stock_codes": [
+        "2399",
+        "3030",
+        "6451",
+        "6515",
+        "8112"
+      ]
+    },
+    {
       "feature_id": "foreign_turned_to_buy",
       "label": "外資是否由賣轉買",
       "group": "institutional",
@@ -1289,19 +1305,6 @@
         "3450",
         "4958",
         "6415",
-        "8112"
-      ]
-    },
-    {
-      "feature_id": "trust_net_3d_shares",
-      "label": "投信近 3 日累積買賣超",
-      "group": "institutional",
-      "direction": "success_lower",
-      "stock_count": 4,
-      "stock_codes": [
-        "3030",
-        "6451",
-        "6515",
         "8112"
       ]
     },
