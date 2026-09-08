@@ -159,8 +159,7 @@ jobs:
     needs: publish
     if: needs.publish.result == 'success' && needs.publish.outputs.changed == 'true'
     uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.publish.outputs.target_date }}
+    # Research dates are not prediction dates; deploy the latest complete prediction site.
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
