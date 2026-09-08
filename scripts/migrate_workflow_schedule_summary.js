@@ -9,6 +9,7 @@ const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
 const MARKER = '# schedule-timing-summary:v1';
 
 const JOB = `
+
   schedule-timing-summary:
     ${MARKER}
     name: 排程時間摘要
