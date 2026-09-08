@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-drain-wave-24-v1`
 
-Round state: **Prompt A/B preregistered / Prompt A not started**
+Round state: **Prompt A in progress — 24-stock workflow bound committed; real 8×3 runtime wave pending dispatch**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -1770,6 +1770,34 @@ The round is closed PASS. No further change to `backlog-drain-wave-12-v1` is req
 #### Objective
 
 Expand the proven backlog drain from 4 × 3 to **8 sequential physical batches × 3 stocks = at most 24 stocks** while preserving the exact safety model proven by the 12-stock wave.
+
+#### Prompt A intermediate checkpoint — 2026-09-08
+
+Prompt A is **not complete**. Implementation-only progress is durable on remote `main`; the required real 8×3 backlog wave has not yet been started from this agent because the available GitHub connection does not expose a new `workflow_dispatch` action.
+
+Durable implementation evidence:
+
+- `6b8ac1be5cb71d6ca3b340ab97f6bb0051589baf` — `ci: expand FinMind backlog wave to 24 stocks`.
+- `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` now uses:
+  - `max_physical_batches` default/fallback/guard = 8;
+  - planner/refresh/re-plan `--max-due-stocks 24`;
+  - post-wave re-plan `--max-physical-batches 8`.
+- Frozen safety settings were re-read after the commit and remain present:
+  - `physical_batch_size=3`;
+  - `strategy.max-parallel: 1`;
+  - randomized 3–8s batch-start cooldown;
+  - randomized 1–3s inter-request pacing via `--delay-ms 1000 --jitter-ms 2000`;
+  - quota cap/reserve 500/20;
+  - wave-scoped checkpoint identity and one wave-level master rebuild remain unchanged.
+
+Remaining Prompt A work, in order:
+
+1. Dispatch `[07 研究] FinMind－季財報品質 backlog physical-batch wave` from current remote `main` with the promoted defaults (3 stocks × max 8 physical batches).
+2. Verify the fresh planner count and selected <=24 stocks from committed state.
+3. Let every selected physical batch finish/checkpoint on its own fresh runner; if a bounded defect occurs, fix only that defect and rerun the same max-8×3 round.
+4. Verify one master rebuild, durable remote propagation, post-wave re-plan, regressions/Node Regression Suite, daily production path, and all Prompt A completion evidence.
+5. Update this handoff with run/head SHA, wave id, jobs, pacing/quota/checkpoint/master/re-plan evidence, then report exactly `Prompt A complete — ready for Prompt B`.
+
 
 Current baseline at promotion:
 
