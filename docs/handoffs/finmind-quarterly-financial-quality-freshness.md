@@ -1448,6 +1448,36 @@ If the real wave exposes a bounded defect, fix only that defect and rerun this s
 
 Run deterministic FinMind/master/8021 tests and Node Regression Suite. Update this handoff with exact durable evidence while preserving the preregistered Prompt B below.
 
+#### Prompt A implementation checkpoint — backlog-drain-wave-12-v1 — 2026-09-08
+
+Prompt A is **in progress; not complete**. The implementation portion is durable on remote `main`, but the preregistered completion contract still requires a real bounded backlog wave and final CI/run evidence.
+
+Implementation commits:
+
+- `1d352a1d10378bb1038ec4b7c69428dd3c2b1cdb` — add explicit backlog `wave_id` support and wave-scoped due-refresh status naming while preserving legacy daily single-stock naming when no wave id is supplied.
+- `a06394081b100d1b9880196527777d55fbfd16b5` — add regression coverage proving two same-date backlog waves cannot target the same durable checkpoint path and daily naming remains backward compatible.
+- `74b9fe53d0c9efb99f2f793e878a997b1870a320` — expand only the backlog workflow bound from 2×3 to max 4×3 / 12 stocks; keep physical batch size <=3 and `strategy.max-parallel: 1`.
+- `9fadd0b071d14c15d72d45e62d29bc84071fc853` — clarify backlog wave labels only.
+
+Current durable implementation behavior:
+
+- backlog workflow derives `wave_id=run-${GITHUB_RUN_ID}` from explicit GitHub workflow run identity;
+- backlog physical-batch status paths are now `due-refresh-<as_of_date>-wave-<wave_id>-batchNNN.json`;
+- status methodology records `wave_id`;
+- prior canary files `due-refresh-2026-09-08-batch000.json` and `batch001.json` are not renamed or overwritten by the new naming rule;
+- daily production single-stock due-refresh status naming remains unchanged when no `--wave-id` is supplied;
+- workflow input guard now permits at most 4 physical batches while preserving `physical_batch_size<=3`, 3–8 second batch cooldown, 1–3 second inter-request pacing, proportional quota preflight, checkpoint-per-batch, one wave-level master rebuild, post-wave re-plan, and no automatic second wave.
+
+Evidence still required before Prompt A may complete:
+
+1. Dispatch and observe one real `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` wave from current main with the default bounded values (3 stocks per physical batch, max 4 batches).
+2. Record current due count, selected stocks grouped by batch, real `wave_id`, run/head SHA, job IDs, cooldown/jitter/quota logs, unique checkpoint commits/paths, master commit, propagation verifier result, and post-wave due count.
+3. Verify the two old canary batch-status blobs are unchanged after the new run.
+4. Run/verify the relevant deterministic regressions and `[99 測試] Node Regression Suite` on the final implementation SHA.
+5. Re-fetch current main and update this handoff with the real-run evidence before reporting `Prompt A complete — ready for Prompt B`.
+
+Tool limitation in this agent session: the connected GitHub actions available here do not expose workflow dispatch, and these commits did not produce automatic workflow runs. Therefore no real-run or CI PASS evidence is fabricated, and Prompt A remains open.
+
 #### Preregistered Prompt B — backlog-drain-wave-12-v1
 
 Close out round `backlog-drain-wave-12-v1`.
