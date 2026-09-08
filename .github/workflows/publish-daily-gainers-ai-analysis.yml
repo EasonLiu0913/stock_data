@@ -354,8 +354,7 @@ jobs:
     needs: validate-and-publish
     if: needs.validate-and-publish.result == 'success' && needs.validate-and-publish.outputs.publish_ready == 'true' && needs.validate-and-publish.outputs.target_date != ''
     uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.validate-and-publish.outputs.target_date }}
+    # Research dates are not prediction dates; deploy the latest complete prediction site.
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
