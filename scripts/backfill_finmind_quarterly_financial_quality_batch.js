@@ -78,6 +78,17 @@ function coverageDecision(stockId, startQuarter, endQuarter, asOfDate) {
 function coverageMatches(stockId, startQuarter, endQuarter, asOfDate) {
   return coverageDecision(stockId, startQuarter, endQuarter, asOfDate).reusable;
 }
+function normalizeWaveId(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (!/^[A-Za-z0-9._-]+$/.test(text)) throw new Error(`Invalid wave-id: ${value}`);
+  return text;
+}
+function buildDueStatusName(asOfDate, selected, batchIndex, waveId = '') {
+  const normalizedWaveId = normalizeWaveId(waveId);
+  if (normalizedWaveId) return `due-refresh-${asOfDate}-wave-${normalizedWaveId}-batch${String(batchIndex).padStart(3, '0')}.json`;
+  return `due-refresh-${asOfDate}-${selected.length === 1 ? selected[0].stock_id : `batch${String(batchIndex).padStart(3, '0')}`}.json`;
+}
 function buildPhysicalBatchPlan(dueCandidates, physicalBatchSize, maxPhysicalBatches) {
   const size = finiteInt(physicalBatchSize, 3, 1);
   const maxBatches = finiteInt(maxPhysicalBatches, 2, 1);
@@ -117,6 +128,7 @@ function main(argv = process.argv.slice(2)) {
   const maxDueStocks = finiteInt(args.get('max-due-stocks'), 5, 1);
   const physicalBatchSize = finiteInt(args.get('physical-batch-size'), 3, 1);
   const maxPhysicalBatches = finiteInt(args.get('max-physical-batches'), 2, 1);
+  const waveId = normalizeWaveId(args.get('wave-id'));
 
   const universe = readJson(UNIVERSE_FILE);
   if (!universe || !Array.isArray(universe.stocks)) throw new Error(`Missing or invalid universe: ${path.relative(ROOT, UNIVERSE_FILE)}`);
@@ -234,14 +246,14 @@ function main(argv = process.argv.slice(2)) {
   const usable = (counts.complete || 0) + (counts.skipped_complete || 0) + (counts.unsupported_financial_model || 0);
   const status = {
     schema_version: 4, dataset: 'finmind_quarterly_financial_quality_batch_status', generated_at: new Date().toISOString(),
-    methodology: { candidate_rule: `monthly acceleration score >= ${coreThreshold} in at least ${coreMinHits} months OR score >= ${persistentThreshold} in at least ${persistentMinHits} months`, core: { score_threshold: coreThreshold, min_hits: coreMinHits }, persistent: { score_threshold: persistentThreshold, min_hits: persistentMinHits }, start_quarter: startQuarter, end_quarter: endQuarter, as_of_date: asOfDate, batch_index: batchIndex, batch_size: batchSize, delay_ms: delayMs, jitter_ms: jitterMs, force, due_only: dueOnly, max_due_stocks: maxDueStocks },
+    methodology: { candidate_rule: `monthly acceleration score >= ${coreThreshold} in at least ${coreMinHits} months OR score >= ${persistentThreshold} in at least ${persistentMinHits} months`, core: { score_threshold: coreThreshold, min_hits: coreMinHits }, persistent: { score_threshold: persistentThreshold, min_hits: persistentMinHits }, start_quarter: startQuarter, end_quarter: endQuarter, as_of_date: asOfDate, wave_id: waveId || null, batch_index: batchIndex, batch_size: batchSize, delay_ms: delayMs, jitter_ms: jitterMs, force, due_only: dueOnly, max_due_stocks: maxDueStocks },
     universe: { unique_candidates: candidates.length, includes_2059: includes2059, total_batches: totalBatches, selected_start_offset: batchIndex * batchSize, selected_count: selected.length },
     execution: { quota_exhausted: quotaExhausted, processed_count: results.length, unprocessed_count: selected.length - results.length },
     counts, results,
   };
   fs.mkdirSync(STATUS_ROOT, { recursive: true });
   const statusName = dueOnly
-    ? `due-refresh-${asOfDate}-${selected.length === 1 ? selected[0].stock_id : `batch${String(batchIndex).padStart(3, '0')}`}.json`
+    ? buildDueStatusName(asOfDate, selected, batchIndex, waveId)
     : `dual-track-batch${String(batchIndex).padStart(3, '0')}.json`;
   const statusFile = path.join(STATUS_ROOT, statusName);
   fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
@@ -256,4 +268,4 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (require.main === module) { try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; } }
-module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, coverageFreshnessDecision, coverageMatches, buildPhysicalBatchPlan };
+module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, normalizeWaveId, buildDueStatusName, coverageFreshnessDecision, coverageMatches, buildPhysicalBatchPlan };
