@@ -58,3 +58,20 @@ test('master propagation fails when refreshed score is stale', () => {
     /Master score mismatch/,
   );
 });
+
+
+test('master propagation may explicitly skip durable unsupported financial models', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const sourceRoot = path.join(__dirname, '..', 'data_finmind_quarterly_financial_quality');
+  const stockId = '__test_unsupported__';
+  const dir = path.join(sourceRoot, stockId);
+  fs.mkdirSync(dir, { recursive: true });
+  try {
+    fs.writeFileSync(path.join(dir, 'coverage-status.json'), JSON.stringify({ status: 'unsupported_financial_model' }));
+    const { verifyMasterPropagation } = require('../scripts/verify_financial_quality_master_propagation');
+    assert.deepEqual(verifyMasterPropagation([stockId], { stocks: [] }, { allowUnsupported: true }), { verified_stocks: 0, skipped_unsupported: 1 });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
