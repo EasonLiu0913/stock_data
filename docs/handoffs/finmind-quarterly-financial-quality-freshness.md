@@ -8,11 +8,11 @@ Completed round: `first-real-refresh-proof-v1`
 
 Completed round state: **Prompt B closeout: PASS**
 
-Project state: **production-proven / monitor-only**
+Project state: **production-proven; backlog drain expansion active**
 
-Active round: **none**
+Active round: `backlog-physical-batch-canary-v1`
 
-Round state: **no implementation round promoted**
+Round state: **Prompt A preregistered / not started**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -706,3 +706,248 @@ Current verification against remote `main` established:
 - Representative stock `8021` timeline still ends at `2026Q1`.
 
 Per the preregistered Prompt A contract, lack of a real observable/dispatchable workflow run is a hard completion blocker. Do not report `Prompt A complete — ready for Prompt B` until a real run is observed and the applicable Path A or Path B evidence is durable.
+
+
+## Active round — backlog-physical-batch-canary-v1
+
+### Why this round exists
+
+The first real due-refresh proof established a current backlog of **419 due candidates**, of which stock `1316` was refreshed successfully in the proof run. The remaining backlog is therefore large enough that the daily freshness workflow's default `max_due_stocks=5` would take far too long to drain.
+
+This is a large multi-stock external-source fetch and is therefore governed by the repository-level mandatory architecture in `AGENTS.md`:
+
+```text
+plan
+→ deterministic bounded queue
+→ split queue into physical batches
+→ fresh runner per physical batch
+→ randomized batch cooldown
+→ randomized per-request jitter
+→ checkpoint/push each physical batch
+→ runner exits
+→ re-plan from committed state between waves
+```
+
+A loop over many logical batches inside one long-running runner is forbidden for this round.
+
+### Objective
+
+Create and prove a FinMind-specific backlog-drain path that clears due quarterly-FQ backlog materially faster than the daily 5-stock maintenance path while preserving:
+
+- fresh-runner physical batch isolation;
+- FinMind quota safety;
+- polite request pacing;
+- anti-lookahead;
+- bounded durable checkpoints;
+- race-safe push behavior;
+- re-plan/resume from committed `main`;
+- canonical master propagation.
+
+This round is a **canary / calibration round**, not authorization to consume the entire remaining backlog in one static workflow run.
+
+### Frozen physical-batch architecture
+
+The implementation must start from these bounded canary defaults unless real evidence proves a smaller value is required:
+
+- `physical_batch_size = 3` stocks per fresh runner for the first real canary;
+- `max_physical_batches_per_wave = 2` for the first real canary;
+- therefore first canary wave: **at most 6 due stocks**;
+- `strategy.max-parallel: 1`;
+- each matrix item is one **physical batch**, not one logical loop over the whole queue;
+- each physical batch must checkout latest committed `main` on a fresh runner;
+- randomized cooldown at the start of each physical batch: **3–8 seconds**;
+- randomized delay between stock/API requests within a physical batch: **1–3 seconds**;
+- no unnecessary fixed sleep after the last request in a batch;
+- quota preflight must reserve/check requests proportional to the physical batch's actual stock count;
+- checkpoint/push after each physical batch;
+- runner exits after its physical batch;
+- master rebuild occurs once after the completed wave, followed by durable remote propagation verification;
+- next wave must be created by **re-planning from remote committed state**, not by continuing an old 419-stock static matrix.
+
+These pacing numbers are starting canary values, not permanent magic constants. Prompt B must inspect real-run response/API diagnostics before any later round increases `physical_batch_size` or wave size.
+
+### Exact entry points
+
+- `AGENTS.md`
+  - mandatory `Safe large-fetch architecture: plan + fresh-runner physical batches` rules.
+- `scripts/backfill_finmind_quarterly_financial_quality_batch.js`
+  - existing due/freshness planner and bounded stock execution.
+- `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`
+  - proven daily freshness path; keep production behavior intact.
+- proposed dedicated backlog path:
+  - `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`
+- `scripts/check_finmind_api_quota.js`
+  - FinMind authenticated quota guard.
+- `scripts/build_financial_quality_master.js`
+  - canonical master builder.
+- `scripts/verify_financial_quality_master_propagation.js`
+  - required propagation verifier.
+- `data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json`
+  - canonical production-consumed master.
+- `data_prediction_analysis/quarterly-financial-quality/batch-status/`
+  - durable per-batch/per-stock progress evidence.
+- `tests/finmind_quarterly_freshness.test.js`
+- `tests/financial_quality_master_propagation.test.js`
+- `tests/fundamental_quality_8021_regression.test.js`
+- `.github/workflows/test-node-regression-suite.yml`
+
+### Prompt A completion contract — backlog-physical-batch-canary-v1
+
+Prompt A is complete only when all of the following are durable:
+
+1. A deterministic backlog planner derives due work from current committed `main`; it does not hard-code the old 419-stock list.
+2. The planner groups only the bounded current wave into physical-batch matrix entries, with explicit `physical_batch_size` and `max_physical_batches_per_wave`.
+3. The first canary uses at most **2 physical batches × 3 stocks = 6 stocks**.
+4. Each matrix batch uses a separate fresh GitHub runner with `max-parallel: 1`.
+5. Each physical batch:
+   - performs quota preflight for its actual request count;
+   - waits a randomized 3–8 second batch-start cooldown;
+   - uses randomized 1–3 second pacing between stock requests;
+   - validates successful FinMind responses/output completeness;
+   - writes a durable checkpoint;
+   - pushes safely against latest remote `main`;
+   - exits after that batch.
+6. There is no one-runner loop that processes multiple physical batches.
+7. After both canary physical batches finish successfully, rebuild canonical master once for the wave and run final remote propagation verification.
+8. Re-plan after the canary against newly committed `main` and record the new due count. The second plan is evidence only; do not automatically execute another wave in this round.
+9. Relevant deterministic tests and Node Regression Suite pass.
+10. Existing daily freshness workflow remains operational and production invariants remain unchanged.
+11. Canonical handoff records:
+    - canary run ID / head SHA;
+    - planner due count and selected stock IDs grouped by physical batch;
+    - physical batch job IDs;
+    - actual cooldown/jitter/request counts;
+    - quota preflight evidence;
+    - checkpoint commit SHAs;
+    - master commit SHA;
+    - final propagation verification;
+    - post-canary re-plan due count;
+    - any response-quality/API anomalies.
+12. Re-fetch remote `main` and verify all required durable paths.
+13. Report exactly **`Prompt A complete — ready for Prompt B`** and stop.
+
+If workflow dispatch is unavailable, do not fabricate canary evidence and do not claim Prompt A complete.
+
+### Prompt A — backlog-physical-batch-canary-v1
+
+Execute only round `backlog-physical-batch-canary-v1` from this canonical handoff.
+
+Startup:
+
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`, especially `Safe large-fetch architecture: plan + fresh-runner physical batches`.
+3. Read `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, `docs/agent-prompts/task-routing.json`, and this canonical handoff.
+4. Verify `finmind-quarterly-financial-quality-freshness` is still the unique active project and this round is the active promoted round.
+5. Re-read all exact entry points above.
+6. Verify current due backlog from committed state; do not reuse 419 as an authoritative current count.
+
+Implementation:
+
+- Add a dedicated backlog-drain workflow at `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` unless current-main evidence proves a smaller safe extension of the daily workflow is materially better.
+- Preserve the daily freshness workflow's existing production semantics.
+- Build a deterministic bounded wave from current due state.
+- The matrix must represent **physical batches**. Do not create one matrix job per stock if the purpose of the canary is to calibrate 3-stock physical batches, and do not create one long runner that loops across multiple batches.
+- First canary:
+  - `physical_batch_size=3`;
+  - `max_physical_batches_per_wave=2`;
+  - at most 6 stocks;
+  - `max-parallel: 1`.
+- Fresh runner for each physical batch.
+- Add randomized 3–8s cooldown at physical-batch start.
+- Within a 3-stock physical batch, use randomized 1–3s delay between requests; skip unnecessary trailing delay after the final request.
+- Quota preflight must use the actual number of requests/stocks selected in that batch and preserve existing reserve/safe-cap behavior.
+- Validate output quality before checkpointing. HTTP/API transport success alone is not sufficient if returned data is structurally incomplete.
+- Checkpoint and push each physical batch before its runner exits, using latest-main race-safe replay semantics.
+- Rebuild the canonical master once after the whole canary wave succeeds, verify propagation, commit/push it, then verify again from current remote `main`.
+- Re-run the planner from committed state after the canary and record remaining due count. Do not automatically run a second wave during this Prompt A.
+- Do not modify FAS/FQ thresholds, strategy identity, signal/execution semantics, or anti-lookahead policy.
+- Do not generalize into a generic scheduler/backfill framework.
+
+Testing / evidence:
+
+- Add deterministic tests for physical-batch grouping, bounded wave size, idempotent re-plan/resume, and no duplicate already-completed stocks.
+- Run existing FinMind freshness/master/8021 regressions and Node Regression Suite.
+- If the real canary shows a bounded plumbing defect, fix only that defect and rerun the same bounded canary.
+- Record exact run/job/commit/durable-path evidence in this handoff.
+
+Stop only when the Prompt A completion contract is satisfied.
+
+### Preregistered Prompt B — backlog-physical-batch-canary-v1
+
+Close out round `backlog-physical-batch-canary-v1`.
+
+This Prompt B is preregistered before Prompt A starts and must not be rewritten to fit the result.
+
+Verify independently:
+
+1. **Fresh identity**
+   - current remote `main`, routing, handoff, and active round are fresh;
+   - recover this exact preregistered Prompt B if handoff history advanced.
+2. **Planner correctness**
+   - due queue came from current committed state;
+   - selected wave was bounded and deterministic;
+   - no outcome-based cherry-picking;
+   - canary selected at most 6 stocks;
+   - post-canary re-plan removed successfully checkpointed stocks.
+3. **True physical batches**
+   - matrix entries represent physical batches;
+   - exactly separate GitHub runner/job lifecycles are visible for each canary batch;
+   - no single runner processed multiple physical batches;
+   - `max-parallel: 1`.
+4. **Polite pacing**
+   - each physical batch shows randomized 3–8s batch-start cooldown;
+   - 1–3s randomized inter-request pacing inside multi-stock batches;
+   - no excessive fixed sleeps unrelated to source safety;
+   - no unnecessary trailing delay after the final request.
+5. **Quota safety**
+   - authenticated quota preflight passed;
+   - required request count matches actual stocks in each physical batch;
+   - existing safe cap/reserve remains intact;
+   - no quota exhaustion was hidden.
+6. **Response quality**
+   - each selected stock has structurally valid durable source/coverage/timeline output;
+   - no ambiguous degraded/empty response was persisted as success;
+   - any transient/soft-block condition remained retryable and was not converted to terminal negative without evidence.
+7. **Checkpoint durability**
+   - each physical batch produced a bounded checkpoint commit before runner exit;
+   - current remote `main` contains all selected stocks' durable refreshed paths/status;
+   - push-race handling did not lose another batch's committed output.
+8. **Master propagation**
+   - master rebuilt only after canary batch jobs succeeded;
+   - one wave-level master publication is present, excluding bounded retry rebuilds required by push races;
+   - final remote propagation verification passed for every canary stock.
+9. **Re-plan / resume**
+   - a fresh post-canary planner run used committed `main`;
+   - new due count and remaining queue are recorded;
+   - successful canary stocks disappeared from due work without manual suppression.
+10. **Regression / invariants**
+    - deterministic physical-batch tests PASS;
+    - Node Regression Suite PASS on final implementation SHA;
+    - FinMind freshness/master tests and 8021 regression PASS;
+    - FAS >= 8, FQ >= 10, strategy ID, anti-lookahead, and next-close policy remain unchanged.
+11. **Canary calibration decision**
+    - use real evidence to decide the next production drain values;
+    - do not automatically increase above 5 requests/stocks per fresh runner without documented evidence;
+    - preregister a next drain-wave Prompt A/B only if remaining due backlog justifies it.
+
+If any criterion fails, fix only the bounded defect and restart this same Prompt B from criterion 1.
+
+If all criteria pass:
+
+- record `Prompt B closeout: PASS`;
+- record evidence-backed recommended `physical_batch_size`, batches-per-wave, jitter/cooldown, and estimated remaining waves;
+- if backlog remains, preregister/promote the next bounded drain-wave Prompt A + Prompt B;
+- commit this handoff;
+- re-fetch remote `main` and verify durability;
+- stop.
+
+### Safety / stop conditions — backlog drain
+
+- Never execute the entire remaining backlog as one static matrix.
+- Never replace physical batches with one long-running runner loop.
+- Never increase parallelism above 1 against FinMind in this project without new evidence and explicit owner approval.
+- Never remove quota reserve/preflight to gain speed.
+- Never remove jitter/cooldown merely to reduce Actions duration.
+- Do not over-throttle with minute-scale sleeps when current evidence supports second-scale polite pacing.
+- Never persist missing/ambiguous API data as a successful complete quarter without structural validation.
+- Preserve restartability: completed remote checkpoints must disappear from subsequent plans.
