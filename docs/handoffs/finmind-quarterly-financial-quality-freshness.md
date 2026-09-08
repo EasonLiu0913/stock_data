@@ -515,3 +515,20 @@ If all criteria pass:
 - Do not use 2026Q2 values before their conservative known date in historical replay.
 - Do not claim a real API refresh occurred unless durable workflow/API evidence proves it.
 - Do not mark this round complete from a green CI alone if master propagation or remote persistence is unverified.
+
+
+## Prompt A blocker evidence — first-real-refresh-proof-v1 — 2026-09-08
+
+Prompt A is **not complete**.
+
+Current verification against remote `main` established:
+
+- `docs/agent-prompts/task-routing.json` still routes the unique active task to `finmind-quarterly-financial-quality-freshness`.
+- The target workflow remains `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`.
+- The available GitHub connector in this agent session does not expose workflow dispatch and does not expose a list-runs operation for this workflow, so a bounded manual proof cannot be started and an existing run cannot be authoritatively enumerated from the connector.
+- Public web lookup did not surface a verifiable run for this repository/workflow and therefore is not accepted as run evidence.
+- Current remote batch-status directory contains only legacy `dual-track-batch*.json` files and no `due-refresh-2026-09-08-<stock>.json` durable status artifact.
+- Representative stock `8021` still has coverage generated at `2026-08-10T02:37:25.233Z`, with `2026Q2` recorded as `pending_not_yet_available` and `conservative_known_date=2026-08-14`.
+- Representative stock `8021` timeline still ends at `2026Q1`.
+
+Per the preregistered Prompt A contract, lack of a real observable/dispatchable workflow run is a hard completion blocker. Do not report `Prompt A complete — ready for Prompt B` until a real run is observed and the applicable Path A or Path B evidence is durable.
