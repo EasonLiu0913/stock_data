@@ -8,6 +8,7 @@ const {
   normalizeAsOfDate,
   buildPhysicalBatchPlan,
   buildDueStatusName,
+  persistUnsupportedCoverage,
 } = require('../scripts/backfill_finmind_quarterly_financial_quality_batch');
 
 function coverage(missingPeriods = []) {
@@ -126,4 +127,13 @@ test('legacy daily due-refresh status identity remains backward compatible witho
     buildDueStatusName('2026-09-08', [{ stock_id: '1316' }], 0, ''),
     'due-refresh-2026-09-08-1316.json',
   );
+});
+
+
+test('unsupported financial model is reusable without a timeline once terminal coverage is durable', () => {
+  const result = coverageFreshnessDecision({
+    status: 'unsupported_financial_model',
+    requested: { start_quarter: '2023Q1', end_quarter: '2026Q2' },
+  }, false, '2023Q1', '2026Q2', '2026-09-08');
+  assert.deepEqual(result, { reusable: true, reason: 'unsupported_financial_model' });
 });
