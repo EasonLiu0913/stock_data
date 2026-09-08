@@ -248,23 +248,85 @@ jobs:
           set -euo pipefail
           date="${{ needs.generate.outputs.target_date }}"
           list="data_daily_gain_over_5/${date}.json"
-          cause="data_daily_gain_over_5/analysis/${date}.json"
-          node - "$list" "$cause" <<'NODE'
+          contract="config/daily-gainers-ai-contract.json"
+          node - "$list" "$contract" "$date" <<'NODE'
           const fs = require('node:fs');
+
           const listFile = process.argv[2];
-          const causeFile = process.argv[3];
+          const contractFile = process.argv[3];
+          const date = process.argv[4];
           const list = JSON.parse(fs.readFileSync(listFile, 'utf8'));
+          const contract = JSON.parse(fs.readFileSync(contractFile, 'utf8'));
           const stocks = Array.isArray(list?.stocks) ? list.stocks : [];
-          let analyses = [];
-          if (fs.existsSync(causeFile)) {
-            try { analyses = JSON.parse(fs.readFileSync(causeFile, 'utf8'))?.analyses || []; } catch {}
+
+          const newsTemplate = String(contract?.news?.path_template || '');
+          const newsFile = newsTemplate.replace('YYYYMMDD', date);
+          let news = null;
+          let invalidReason = null;
+
+          if (!newsTemplate.includes('YYYYMMDD')) {
+            invalidReason = 'canonical news path_template missing YYYYMMDD';
+          } else if (fs.existsSync(newsFile)) {
+            try {
+              news = JSON.parse(fs.readFileSync(newsFile, 'utf8'));
+            } catch (error) {
+              invalidReason = `invalid JSON: ${error.message}`;
+            }
           }
-          const expected = new Set(stocks.map(x => String(x.code || '')).filter(Boolean));
-          const actual = new Set(analyses.map(x => String(x.code || '')).filter(Boolean));
+
+          if (news) {
+            if (Number(news.contract_version) !== Number(contract.contract_version)) {
+              invalidReason = `contract_version mismatch: expected ${contract.contract_version}, got ${news.contract_version}`;
+            } else if (String(news.target_date || '') !== date) {
+              invalidReason = `target_date mismatch: expected ${date}, got ${news.target_date || 'missing'}`;
+            }
+          }
+
+          const analyses = !invalidReason && Array.isArray(news?.analyses) ? news.analyses : [];
+          const expectedCodes = stocks.map(x => String(x.code || '')).filter(Boolean);
+          const actualCodes = analyses.map(x => String(x.code || '')).filter(Boolean);
+          const expected = new Set(expectedCodes);
+          const actual = new Set(actualCodes);
           const missing = [...expected].filter(code => !actual.has(code));
-          console.log(JSON.stringify({date: list.target_date || '', expected: expected.size, completed: actual.size, missing}, null, 2));
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            `## 5% 上漲原因 coverage\n- 日期：${list.target_date || ''}\n- 應分析：${expected.size}\n- 已分析：${actual.size}\n- 缺漏：${missing.length ? missing.join(', ') : '無'}\n`);
+          const unexpected = [...actual].filter(code => !expected.has(code));
+          const duplicateCodes = actualCodes.filter((code, index) => actualCodes.indexOf(code) !== index)
+            .filter((code, index, array) => array.indexOf(code) === index);
+
+          if (!invalidReason && news && Number(news.stock_count) !== expected.size) {
+            invalidReason = `stock_count mismatch: expected ${expected.size}, got ${news.stock_count}`;
+          }
+
+          const completed = invalidReason ? 0 : [...expected].filter(code => actual.has(code)).length;
+          const status = !invalidReason && missing.length === 0 && unexpected.length === 0 && duplicateCodes.length === 0
+            ? 'complete'
+            : 'incomplete';
+
+          const result = {
+            date: list.target_date || date,
+            source: newsFile,
+            status,
+            expected: expected.size,
+            completed,
+            missing,
+            unexpected,
+            duplicate_codes: duplicateCodes,
+            invalid_reason: invalidReason,
+          };
+          console.log(JSON.stringify(result, null, 2));
+
+          const lines = [
+            '## 5% 上漲原因 coverage',
+            `- 日期：${result.date}`,
+            `- Canonical source：\`${newsFile}\``,
+            `- 狀態：${status}`,
+            `- 應分析：${expected.size}`,
+            `- 已分析：${completed}`,
+            `- 缺漏：${missing.length ? missing.join(', ') : '無'}`,
+          ];
+          if (unexpected.length) lines.push(`- 非清單股票：${unexpected.join(', ')}`);
+          if (duplicateCodes.length) lines.push(`- 重複 code：${duplicateCodes.join(', ')}`);
+          if (invalidReason) lines.push(`- Contract 驗證：${invalidReason}`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           NODE
 
   deploy:
