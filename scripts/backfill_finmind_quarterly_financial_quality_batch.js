@@ -54,9 +54,8 @@ function coverageFreshnessDecision(coverage, timelineExists, startQuarter, endQu
   const date = normalizeAsOfDate(asOfDate);
   if (!coverage || typeof coverage !== 'object') return { reusable: false, reason: 'missing_or_corrupt_coverage' };
   if (coverage.requested?.start_quarter !== startQuarter || coverage.requested?.end_quarter !== endQuarter) return { reusable: false, reason: 'range_mismatch' };
-  if (!timelineExists) return { reusable: false, reason: 'missing_timeline' };
-
   if (coverage.status === 'unsupported_financial_model') return { reusable: true, reason: 'unsupported_financial_model' };
+  if (!timelineExists) return { reusable: false, reason: 'missing_timeline' };
   if (!Array.isArray(coverage.missing_periods)) return { reusable: false, reason: 'missing_or_corrupt_missing_periods' };
 
   for (const row of coverage.missing_periods) {
@@ -106,6 +105,24 @@ function buildPhysicalBatchPlan(dueCandidates, physicalBatchSize, maxPhysicalBat
   return { physical_batch_size: size, max_physical_batches_per_wave: maxBatches, selected, batches };
 }
 function compactError(result) { return (result.stderr || result.stdout || `exit status ${result.status}`).replace(/\s+/g, ' ').slice(0, 1200); }
+function persistUnsupportedCoverage(stockId, startQuarter, endQuarter, asOfDate, errorText) {
+  const dir = path.join(OUTPUT_ROOT, stockId);
+  fs.mkdirSync(dir, { recursive: true });
+  const coverage = {
+    schema_version: 1,
+    dataset: 'finmind_quarterly_financial_quality_coverage',
+    generated_at: new Date().toISOString(),
+    stock_id: stockId,
+    status: 'unsupported_financial_model',
+    requested: { start_quarter: startQuarter, end_quarter: endQuarter, as_of_date: asOfDate },
+    available_periods: [],
+    missing_periods: [],
+    terminal_reason: 'unsupported_financial_model',
+    diagnostic: String(errorText || '').slice(0, 1200),
+  };
+  fs.writeFileSync(path.join(dir, 'coverage-status.json'), `${JSON.stringify(coverage, null, 2)}\n`, 'utf8');
+  return coverage;
+}
 function isQuotaExhausted(result) {
   const text = `${result.stderr || ''} ${result.stdout || ''}`;
   return /FinMind HTTP 402|Requests reach the upper limit|quota[_ -]?exhausted/i.test(text);
@@ -209,7 +226,9 @@ function main(argv = process.argv.slice(2)) {
           break;
         }
         if (backfill.status === 3 || /unsupported_financial_model/i.test(`${backfill.stderr} ${backfill.stdout}`)) {
-          results.push({ ...candidate, status: 'unsupported_financial_model', error: compactError(backfill) });
+          const errorText = compactError(backfill);
+          persistUnsupportedCoverage(stockId, startQuarter, endQuarter, asOfDate, errorText);
+          results.push({ ...candidate, status: 'unsupported_financial_model', error: errorText });
           console.warn(`[unsupported] ${stockId}: general-industry financial-quality model does not apply`);
         } else {
           results.push({ ...candidate, status: 'backfill_failed', error: compactError(backfill) });
@@ -268,4 +287,4 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (require.main === module) { try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; } }
-module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, normalizeWaveId, buildDueStatusName, coverageFreshnessDecision, coverageMatches, buildPhysicalBatchPlan };
+module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, normalizeWaveId, buildDueStatusName, persistUnsupportedCoverage, coverageFreshnessDecision, coverageMatches, buildPhysicalBatchPlan };
