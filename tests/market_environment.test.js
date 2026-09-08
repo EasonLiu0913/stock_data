@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { primaryExternalValidation, trailingReturn } = require('../scripts/market_environment_lib');
+const { primaryExternalValidation, trailingReturn, isUsMarketTradingDay, usMarketTradingDayAtOrBefore, usMarketTradingDayDistance } = require('../scripts/market_environment_lib');
 const { strategyPolicy, classifyExternalFreshness } = require('../scripts/generate_market_environment');
 const {
   evaluateFirstDayShockGate,
@@ -28,6 +28,24 @@ function external(date = '20260727') {
     indicators: ['nasdaq', 'sp500', 'dow', 'sox', 'tsm_adr'].map((id) => ({ id, market_date: date })),
   };
 }
+
+test('US market calendar resolves 2026 Labor Day to prior trading day', () => {
+  assert.equal(isUsMarketTradingDay('20260907'), false);
+  assert.equal(usMarketTradingDayAtOrBefore('20260907'), '20260904');
+  assert.equal(usMarketTradingDayDistance('20260908', '20260904'), 1);
+});
+
+test('US market calendar handles observed Independence Day and Good Friday', () => {
+  assert.equal(isUsMarketTradingDay('20260703'), false);
+  assert.equal(usMarketTradingDayAtOrBefore('20260703'), '20260702');
+  assert.equal(isUsMarketTradingDay('20260403'), false);
+  assert.equal(usMarketTradingDayAtOrBefore('20260403'), '20260402');
+});
+
+test('US market calendar keeps early-close trading days as trading days', () => {
+  assert.equal(isUsMarketTradingDay('20261127'), true);
+  assert.equal(usMarketTradingDayAtOrBefore('20261127'), '20261127');
+});
 
 test('external snapshot requires exact 5/5 primary date agreement', () => {
   const valid = primaryExternalValidation(external(), '20260727');
