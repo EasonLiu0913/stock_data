@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-physical-batch-canary-v1`
 
-Round state: **Prompt A real canary durable / run-identity and regression evidence still pending**
+Round state: **Prompt A runtime evidence complete / final Node Regression Suite pending**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -992,6 +992,115 @@ Therefore the round remains:
 **Prompt A real canary succeeded durably, but Prompt A completion evidence is incomplete.**
 
 Do not report `Prompt A complete — ready for Prompt B` until the three remaining evidence items above are recovered or independently produced.
+
+### Prompt A recovered runtime evidence — backlog-physical-batch-canary-v1 — 2026-09-08
+
+The previously missing workflow/runtime evidence has now been recovered directly from GitHub Actions durable metadata/logs.
+
+Real canary workflow:
+
+- workflow: `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`
+- workflow name: `[07 研究] FinMind－季財報品質 backlog physical-batch canary`
+- run ID: `34193149003`
+- run number: `1`
+- event: `workflow_dispatch`
+- head SHA: `f250d957040364dd5cd462c0012f3a36378abf42`
+- created: `2026-09-08T06:05:02Z`
+- completed: `2026-09-08T06:19:25Z`
+- conclusion: **success**
+
+Job identities:
+
+- plan job: `101955172203` — success
+- physical batch 0 job: `101956016082` — success
+- physical batch 1 job: `101956016099` — success
+- rebuild-master job: `101956883366` — success
+- replan job: `101957290626` — success
+- no-op job: `101956016987` — skipped as expected because due work existed
+
+Planner evidence:
+
+- `as_of_date=2026-09-08`
+- unique candidates: `551`
+- due before canary: `418`
+- `physical_batch_size=3`
+- `max_physical_batches_per_wave=2`
+- selected stock IDs:
+  - batch 0: `3167,7769,3432`
+  - batch 1: `2363,5484,6919`
+- total selected: `6`
+
+Physical batch 0 runtime evidence — job `101956016082`:
+
+- fresh runner job lifecycle is distinct from batch 1
+- cooldown: `8s`
+- quota preflight:
+  - authenticated: `true`
+  - user_count: `1`
+  - api_request_limit: `600`
+  - configured cap: `500`
+  - reserve: `20`
+  - required requests: `3`
+  - enough for next batch: `true`
+- actual inter-request waits:
+  - after 3167: `1418ms`
+  - after 7769: `2059ms`
+  - no trailing wait after final 3432
+- all three stocks completed with structural freshness validation
+- checkpoint push succeeded
+- checkpoint commit: `5a94d8efa0b48fd468f24a9a4bed93d7f862f2b3`
+
+Physical batch 1 runtime evidence — job `101956016099`:
+
+- fresh runner job lifecycle is distinct from batch 0
+- cooldown: `3s`
+- quota preflight:
+  - authenticated: `true`
+  - user_count: `4`
+  - api_request_limit: `600`
+  - configured cap: `500`
+  - reserve: `20`
+  - required requests: `3`
+  - enough for next batch: `true`
+- actual inter-request waits:
+  - after 2363: `1346ms`
+  - after 5484: `1205ms`
+  - no trailing wait after final 6919
+- all three stocks completed with structural freshness validation
+- checkpoint push succeeded
+- checkpoint commit: `5b8aedd59df6b0e344b5d4e767f95d88bd8d18d5`
+
+Master propagation:
+
+- rebuild-master job `101956883366`: success
+- `Rebuild and verify canonical master`: success
+- `Commit master with latest-main retry`: success
+- `Verify durable remote propagation`: success
+- master commit: `9007e9ef27ce5fc49445c32a8effdcef22d1fd6f`
+- canonical master rows: `6810 -> 6816`
+
+Post-canary re-plan:
+
+- replan job `101957290626`: success
+- re-plan checked out newly committed `main`
+- due after committed canary: `412`
+- therefore successful canary checkpoints removed exactly six due stocks from the planner: `418 -> 412`
+- next planned sample visible in the evidence:
+  - batch 0: `6625,2539,6446`
+  - batch 1: `2438,3706,1235`
+- no second backlog wave was automatically executed by this canary run
+
+Regression evidence:
+
+- deterministic FinMind freshness/master/8021 regressions passed inside canary plan job `101955172203`.
+- Node Regression Suite run `34192958111` on `f1b3adbaa0f9ff4f523043f3a0cf3a34a1701389`: **success**.
+- To remove ambiguity about the later workflow implementation commit, an additional bounded deterministic test was committed:
+  - `b7e131a6e7502365ae86b27fd44fe0390c39c358` — `test: lock bounded FinMind canary wave sizing`.
+- This triggered Node Regression Suite run `34199059293`.
+- At the latest verification in this checkpoint, run `34199059293` is **in_progress**; jobs `101973411652` (Node regression tests) and `101973411811` (排程時間摘要) have started but are still in their checkout stages.
+- Do not claim final Prompt A completion until run `34199059293` reaches a terminal successful conclusion.
+
+All canary runtime, physical-batch, quota, pacing, checkpoint, master, and re-plan acceptance evidence is now complete. The only remaining Prompt A gate is the terminal PASS of Node Regression Suite run `34199059293`.
 
 ### Preregistered Prompt B — backlog-physical-batch-canary-v1
 
