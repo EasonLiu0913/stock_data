@@ -1478,6 +1478,23 @@ Evidence still required before Prompt A may complete:
 
 Tool limitation in this agent session: the connected GitHub actions available here do not expose workflow dispatch, and these commits did not produce automatic workflow runs. Therefore no real-run or CI PASS evidence is fabricated, and Prompt A remains open.
 
+Real wave attempt #2 exposed a bounded checkpoint contract defect before Prompt A completion:
+
+- failing job label: `refresh-batch (1, 2883, 6225, 6901, 2883,6225,6901, 3)`;
+- failing step: `Checkpoint entire physical batch safely`;
+- observed error: `cp: cannot stat 'data_finmind_quarterly_financial_quality/2883': No such file or directory`;
+- root cause: `backfill_finmind_quarterly_financial_quality.js` can terminate with exit code 3 for `unsupported_financial_model` before creating a stock output directory, while the batch runner treated that as a valid terminal classification and checkpoint code incorrectly assumed every selected stock must have a directory.
+
+Bounded fix commits:
+
+- `13a61ce69e276da95ccc69aa0ee229b128687441` — persist a durable `unsupported_financial_model` coverage terminal marker and make freshness reuse it without requiring a timeline.
+- `56fd7d291ac840f2e39fc87492812122a20010db` — allow explicit master propagation verification to skip durable unsupported terminals while still requiring timelines for supported refreshed stocks.
+- `bd633db29c897095a882180333e8c4aca630f35e` — lock unsupported freshness terminal behavior.
+- `32fee41d83089e0cbd4d43f29b59b57b5a7d0cbd` — lock unsupported master propagation behavior.
+- `a669375d92951a309a8905f714c1a269a97b285d` — checkpoint only when every batch result is an accepted terminal status; non-terminal backfill/timeline/quality failures now fail explicitly instead of surfacing later as a misleading missing-directory `cp` error.
+
+This failure does not authorize expanding scope or wave size. Re-run the same bounded backlog workflow after the fix; Prompt A remains in progress until the full real-wave, master propagation, post-wave re-plan, regression/CI, and durability evidence passes.
+
 #### Preregistered Prompt B — backlog-drain-wave-12-v1
 
 Close out round `backlog-drain-wave-12-v1`.
