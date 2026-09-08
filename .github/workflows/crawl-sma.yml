@@ -30,9 +30,10 @@ jobs:
       ready: ${{ steps.crawl.outputs.ready }}
       available_sma_date: ${{ steps.crawl.outputs.available_sma_date }}
     steps:
-      - name: Checkout repository
+      - name: Checkout latest main
         uses: actions/checkout@v7
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -102,6 +103,51 @@ jobs:
             echo "Invalid SMA target date: $target_date"
             exit 1
           }
+
+          persisted_sma_file="data_fubon/fubon_${target_date}_sma.json"
+          persisted_sma_valid="false"
+
+          if [ -f "$persisted_sma_file" ]; then
+            if node - "$persisted_sma_file" "$target_date" <<'NODE'
+const fs = require('node:fs');
+const file = process.argv[2];
+const compact = process.argv[3];
+const expectedDate = `${compact.slice(0,4)}/${compact.slice(4,6)}/${compact.slice(6,8)}`;
+const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+const entries = Object.entries(data || {});
+if (entries.length < 100) process.exit(1);
+let matchingRows = 0;
+for (const [, stock] of entries) {
+  const row = stock && stock[expectedDate];
+  if (row && row.Price != null && row.SMA5 != null) matchingRows += 1;
+}
+if (matchingRows < 100) process.exit(1);
+console.log(`Validated persisted SMA checkpoint: ${file}; stocks=${entries.length}; matchingRows=${matchingRows}`);
+NODE
+            then
+              persisted_sma_valid="true"
+            else
+              echo "::warning::Existing $persisted_sma_file is invalid or incomplete; crawler will refresh it."
+            fi
+          fi
+
+          if [ "$persisted_sma_valid" = "true" ]; then
+            available_sma_date="$target_date"
+            echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "available_sma_date=$available_sma_date" >> "$GITHUB_OUTPUT"
+            echo "## SMA Crawl" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 日期來源：$target_source" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 流程目標交易日：$target_date" >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "$scheduled_at_taipei" ]; then
+              echo "- 原定排程時間（台北時間）：$scheduled_at_taipei" >> "$GITHUB_STEP_SUMMARY"
+              echo "- GitHub 排程延遲：約 ${schedule_delay_minutes} 分鐘" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "- 富邦最新可用 SMA 日期：$available_sma_date" >> "$GITHUB_STEP_SUMMARY"
+            echo "- SMA 狀態：remote main 已有完整 durable checkpoint，本輪跳過外部爬取。" >> "$GITHUB_STEP_SUMMARY"
+            echo "⏭️ $persisted_sma_file 已存在且驗證通過；跳過重複 SMA crawl。"
+            exit 0
+          fi
 
           available_sma_date=$(node scripts/detect_latest_sma_date.js)
           echo "📈 富邦最新可用 SMA 日期：$available_sma_date"
