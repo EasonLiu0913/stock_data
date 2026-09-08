@@ -81,10 +81,16 @@ function classifyExternalFreshness(externalValidation, expectedUsDate) {
     ? usMarketTradingDayDistance(expectedUsDate, actualUsDate, 7)
     : Infinity;
 
-  if (externalValidation?.exact) {
+  const calendarExact = externalValidation?.complete
+    && actualUsDate === expectedUsDate
+    && externalValidation?.collection_date === actualUsDate;
+
+  if (calendarExact) {
     return {
       status: 'fresh',
-      reason: 'exact_primary_market_date_match',
+      reason: externalValidation?.exact
+        ? 'exact_primary_market_date_match'
+        : 'calendar_adjusted_primary_market_date_match',
       business_day_gap: Number.isFinite(usDateGap) ? usDateGap : 0,
     };
   }
@@ -329,7 +335,7 @@ function main() {
       '首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。',
       'WTI／Brent 使用 Yahoo Finance 期貨作為即時市場風險參考；oil_trend／oil_shock 目前僅為 shadow context，不改正式環境分數。',
       '美股日期依紐約最近已完成的正常交易時段判定，盤中資料不會被誤認為缺漏。',
-      '未接入明確的美股休市日曆前，不允許僅因行情落後一個工作日就標記為 holiday_adjusted。',
+      '美股日期使用交易所共同休市日曆；若來源 requested directory 落在休市日，但 5/5 primary market date 與正確最近交易日一致，視為 fresh。',
       historical ? '此檔為歷史重建，generated_at 不代表當時實際盤前取得時間。' : '此檔為目前流程產生的盤前環境快照。',
     ],
   };
