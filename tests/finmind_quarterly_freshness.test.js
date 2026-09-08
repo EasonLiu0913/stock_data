@@ -99,3 +99,13 @@ test('physical-batch re-plan is idempotent when completed stocks disappear from 
   assert.deepEqual(plan.batches[0].stock_ids, ['1004','1005','1006']);
   assert.equal(new Set(plan.selected.map(row => row.stock_id)).size, plan.selected.length);
 });
+
+
+test('physical-batch planner respects a smaller requested wave', () => {
+  const due = ['1001','1002','1003','1004','1005'].map(stock_id => ({ stock_id }));
+  const plan = buildPhysicalBatchPlan(due, 2, 1);
+  assert.equal(plan.selected.length, 2);
+  assert.equal(plan.batches.length, 1);
+  assert.deepEqual(plan.batches[0].stock_ids, ['1001','1002']);
+  assert.equal(plan.batches[0].request_count, 2);
+});
