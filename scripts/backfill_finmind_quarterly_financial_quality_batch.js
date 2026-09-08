@@ -78,6 +78,22 @@ function coverageDecision(stockId, startQuarter, endQuarter, asOfDate) {
 function coverageMatches(stockId, startQuarter, endQuarter, asOfDate) {
   return coverageDecision(stockId, startQuarter, endQuarter, asOfDate).reusable;
 }
+function buildPhysicalBatchPlan(dueCandidates, physicalBatchSize, maxPhysicalBatches) {
+  const size = finiteInt(physicalBatchSize, 3, 1);
+  const maxBatches = finiteInt(maxPhysicalBatches, 2, 1);
+  const selected = dueCandidates.slice(0, size * maxBatches);
+  const batches = [];
+  for (let offset = 0; offset < selected.length; offset += size) {
+    const rows = selected.slice(offset, offset + size);
+    batches.push({
+      batch_index: batches.length,
+      stock_ids: rows.map(row => row.stock_id),
+      stock_ids_csv: rows.map(row => row.stock_id).join(','),
+      request_count: rows.length,
+    });
+  }
+  return { physical_batch_size: size, max_physical_batches_per_wave: maxBatches, selected, batches };
+}
 function compactError(result) { return (result.stderr || result.stdout || `exit status ${result.status}`).replace(/\s+/g, ' ').slice(0, 1200); }
 function isQuotaExhausted(result) {
   const text = `${result.stderr || ''} ${result.stdout || ''}`;
@@ -95,8 +111,12 @@ function main(argv = process.argv.slice(2)) {
   const force = String(args.get('force') || 'false').toLowerCase() === 'true';
   const dueOnly = String(args.get('due-only') || 'false').toLowerCase() === 'true';
   const planDue = String(args.get('plan-due') || 'false').toLowerCase() === 'true';
+  const planPhysicalBatches = String(args.get('plan-physical-batches') || 'false').toLowerCase() === 'true';
   const targetStockId = String(args.get('stock-id') || '').trim();
+  const targetStockIds = String(args.get('stock-ids') || '').split(',').map(value => value.trim()).filter(Boolean);
   const maxDueStocks = finiteInt(args.get('max-due-stocks'), 5, 1);
+  const physicalBatchSize = finiteInt(args.get('physical-batch-size'), 3, 1);
+  const maxPhysicalBatches = finiteInt(args.get('max-physical-batches'), 2, 1);
 
   const universe = readJson(UNIVERSE_FILE);
   if (!universe || !Array.isArray(universe.stocks)) throw new Error(`Missing or invalid universe: ${path.relative(ROOT, UNIVERSE_FILE)}`);
@@ -108,32 +128,45 @@ function main(argv = process.argv.slice(2)) {
   const dueCandidates = force ? candidates : candidates.filter(candidate => !coverageMatches(candidate.stock_id, startQuarter, endQuarter, asOfDate));
   const boundedDueCandidates = dueCandidates.slice(0, maxDueStocks);
   if (planDue) {
-    const totalBatches = Math.ceil(boundedDueCandidates.length / batchSize);
-    const matrix = { include: boundedDueCandidates.map(row => ({ stock_id: row.stock_id })) };
+    const physicalPlan = planPhysicalBatches
+      ? buildPhysicalBatchPlan(dueCandidates, physicalBatchSize, maxPhysicalBatches)
+      : null;
+    const plannedCandidates = physicalPlan ? physicalPlan.selected : boundedDueCandidates;
+    const totalBatches = physicalPlan ? physicalPlan.batches.length : Math.ceil(plannedCandidates.length / batchSize);
+    const matrix = physicalPlan
+      ? { include: physicalPlan.batches }
+      : { include: plannedCandidates.map(row => ({ stock_id: row.stock_id })) };
     const plan = {
       as_of_date: asOfDate,
       start_quarter: startQuarter,
       end_quarter: endQuarter,
       unique_candidates: candidates.length,
       due_candidates: dueCandidates.length,
-      scheduled_bounded_candidates: boundedDueCandidates.length,
+      scheduled_bounded_candidates: plannedCandidates.length,
       max_due_stocks: maxDueStocks,
       batch_size: batchSize,
+      physical_batch_size: physicalPlan?.physical_batch_size || null,
+      max_physical_batches_per_wave: physicalPlan?.max_physical_batches_per_wave || null,
       total_batches: totalBatches,
       matrix,
-      stock_ids: boundedDueCandidates.map(row => row.stock_id),
+      stock_ids: plannedCandidates.map(row => row.stock_id),
     };
     console.log(JSON.stringify(plan, null, 2));
     if (process.env.GITHUB_OUTPUT) {
-      fs.appendFileSync(process.env.GITHUB_OUTPUT, `due_count=${dueCandidates.length}\nselected_count=${boundedDueCandidates.length}\ntotal_batches=${totalBatches}\nmatrix=${JSON.stringify(matrix)}\nstock_ids=${boundedDueCandidates.map(row => row.stock_id).join(',')}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `due_count=${dueCandidates.length}\nselected_count=${plannedCandidates.length}\ntotal_batches=${totalBatches}\nmatrix=${JSON.stringify(matrix)}\nstock_ids=${plannedCandidates.map(row => row.stock_id).join(',')}\n`);
     }
     return;
   }
 
   const baseWorkCandidates = dueOnly && !force ? boundedDueCandidates : candidates;
-  const workCandidates = targetStockId ? baseWorkCandidates.filter(candidate => candidate.stock_id === targetStockId) : baseWorkCandidates;
-  if (targetStockId && workCandidates.length === 0) {
-    console.log(JSON.stringify({ as_of_date: asOfDate, stock_id: targetStockId, due_only: dueOnly, selected_count: 0, message: 'target stock is not due or not in candidate universe' }, null, 2));
+  const targetStockSet = new Set(targetStockIds);
+  const workCandidates = targetStockIds.length
+    ? baseWorkCandidates.filter(candidate => targetStockSet.has(candidate.stock_id))
+    : targetStockId
+      ? baseWorkCandidates.filter(candidate => candidate.stock_id === targetStockId)
+      : baseWorkCandidates;
+  if ((targetStockId || targetStockIds.length) && workCandidates.length === 0) {
+    console.log(JSON.stringify({ as_of_date: asOfDate, stock_id: targetStockId || null, stock_ids: targetStockIds, due_only: dueOnly, selected_count: 0, message: 'target stock set is not due or not in candidate universe' }, null, 2));
     return;
   }
   const totalBatches = Math.ceil(workCandidates.length / batchSize);
@@ -141,8 +174,11 @@ function main(argv = process.argv.slice(2)) {
     console.log(JSON.stringify({ as_of_date: asOfDate, due_only: dueOnly, selected_count: 0, message: 'no due work' }, null, 2));
     return;
   }
-  if (batchIndex >= totalBatches) throw new Error(`batch-index ${batchIndex} out of range; candidates=${workCandidates.length}, batch_size=${batchSize}`);
-  const selected = workCandidates.slice(batchIndex * batchSize, batchIndex * batchSize + batchSize), results = [];
+  if (!targetStockIds.length && batchIndex >= totalBatches) throw new Error(`batch-index ${batchIndex} out of range; candidates=${workCandidates.length}, batch_size=${batchSize}`);
+  const selected = targetStockIds.length
+    ? workCandidates
+    : workCandidates.slice(batchIndex * batchSize, batchIndex * batchSize + batchSize);
+  const results = [];
   let quotaExhausted = false;
 
   for (let i = 0; i < selected.length; i += 1) {
@@ -175,8 +211,14 @@ function main(argv = process.argv.slice(2)) {
         } else {
           const coverage = readJson(path.join(OUTPUT_ROOT, stockId, 'coverage-status.json'), {});
           const missingCounts = (coverage.missing_periods || []).reduce((acc, row) => { acc[row.reason] = (acc[row.reason] || 0) + 1; return acc; }, {});
-          results.push({ ...candidate, status: 'complete', available_periods: (coverage.available_periods || []).length, missing_period_counts: missingCounts });
-          console.log(`[ok] ${stockId} available=${(coverage.available_periods || []).length} missing=${JSON.stringify(missingCounts)}`);
+          const postRefreshDecision = coverageDecision(stockId, startQuarter, endQuarter, asOfDate);
+          if (!postRefreshDecision.reusable) {
+            results.push({ ...candidate, status: 'quality_failed', reason: postRefreshDecision.reason, available_periods: (coverage.available_periods || []).length, missing_period_counts: missingCounts });
+            console.error(`[quality failed] ${stockId}: ${JSON.stringify(postRefreshDecision)}`);
+          } else {
+            results.push({ ...candidate, status: 'complete', available_periods: (coverage.available_periods || []).length, missing_period_counts: missingCounts });
+            console.log(`[ok] ${stockId} available=${(coverage.available_periods || []).length} missing=${JSON.stringify(missingCounts)}`);
+          }
         }
       }
     }
@@ -214,4 +256,4 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (require.main === module) { try { main(); } catch (error) { console.error(error.stack || error.message); process.exitCode = 1; } }
-module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, coverageFreshnessDecision, coverageMatches };
+module.exports = { qualifyingHits, selectCandidates, isQuotaExhausted, normalizeAsOfDate, coverageFreshnessDecision, coverageMatches, buildPhysicalBatchPlan };
