@@ -108,29 +108,12 @@ jobs:
           persisted_sma_valid="false"
 
           if [ -f "$persisted_sma_file" ]; then
-            if node - "$persisted_sma_file" "$target_date" <<'NODE'
-const fs = require('node:fs');
-const file = process.argv[2];
-const compact = process.argv[3];
-const expectedDate = `${compact.slice(0,4)}/${compact.slice(4,6)}/${compact.slice(6,8)}`;
-const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-const entries = Object.entries(data || {});
-if (entries.length < 100) process.exit(1);
-let matchingRows = 0;
-for (const [, stock] of entries) {
-  const row = stock && stock[expectedDate];
-  if (row && row.Price != null && row.SMA5 != null) matchingRows += 1;
-}
-if (matchingRows < 100) process.exit(1);
-console.log(`Validated persisted SMA checkpoint: ${file}; stocks=${entries.length}; matchingRows=${matchingRows}`);
-NODE
-            then
+            if node -e 'const fs=require("node:fs");const file=process.argv[1];const compact=process.argv[2];const expectedDate=`${compact.slice(0,4)}/${compact.slice(4,6)}/${compact.slice(6,8)}`;const data=JSON.parse(fs.readFileSync(file,"utf8"));const entries=Object.entries(data||{});let matchingRows=0;for(const [,stock] of entries){const row=stock&&stock[expectedDate];if(row&&row.Price!=null&&row.SMA5!=null)matchingRows++;}if(entries.length<100||matchingRows<100)process.exit(1);console.log(`Validated persisted SMA checkpoint: ${file}; stocks=${entries.length}; matchingRows=${matchingRows}`);' "$persisted_sma_file" "$target_date"; then
               persisted_sma_valid="true"
             else
               echo "::warning::Existing $persisted_sma_file is invalid or incomplete; crawler will refresh it."
             fi
           fi
-
           if [ "$persisted_sma_valid" = "true" ]; then
             available_sma_date="$target_date"
             echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
