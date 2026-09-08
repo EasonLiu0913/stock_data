@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-physical-batch-canary-v1`
 
-Round state: **Prompt A runtime evidence complete / final Node Regression Suite pending**
+Round state: **Prompt A complete / Prompt B pending**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -1101,6 +1101,52 @@ Regression evidence:
 - Do not claim final Prompt A completion until run `34199059293` reaches a terminal successful conclusion.
 
 All canary runtime, physical-batch, quota, pacing, checkpoint, master, and re-plan acceptance evidence is now complete. The only remaining Prompt A gate is the terminal PASS of Node Regression Suite run `34199059293`.
+
+### Prompt A completion evidence — backlog-physical-batch-canary-v1 — 2026-09-08
+
+**Prompt A complete — ready for Prompt B**
+
+All preregistered Prompt A completion criteria are now satisfied on durable remote `main`.
+
+Final regression gate:
+
+- final bounded test commit: `b7e131a6e7502365ae86b27fd44fe0390c39c358` — `test: lock bounded FinMind canary wave sizing`
+- Node Regression Suite run: `34199059293`
+- run status: `completed`
+- run conclusion: **success**
+- head SHA: `b7e131a6e7502365ae86b27fd44fe0390c39c358`
+- Node regression job: `101973411652` — **success**
+  - syntax check changed regression entry points: success
+  - run Node regression suite: success
+- schedule-summary job: `101973411811` — **success**
+
+The earlier canary runtime evidence remains the acceptance basis:
+
+- real canary run `34193149003`: success
+- plan job `101955172203`: success
+- batch 0 job `101956016082`: success
+- batch 1 job `101956016099`: success
+- rebuild-master job `101956883366`: success
+- replan job `101957290626`: success
+- due backlog `418 -> 412`
+- six bounded stocks were refreshed in two true fresh-runner physical batches
+- quota preflight passed proportionally for 3 requests per batch
+- actual batch cooldowns were 8s and 3s
+- actual inter-request waits were 1418ms / 2059ms and 1346ms / 1205ms, with no trailing sleep after the final request
+- physical-batch checkpoint commits:
+  - `5a94d8efa0b48fd468f24a9a4bed93d7f862f2b3`
+  - `5b8aedd59df6b0e344b5d4e767f95d88bd8d18d5`
+- wave-level master commit:
+  - `9007e9ef27ce5fc49445c32a8effdcef22d1fd6f`
+- canonical master rows `6810 -> 6816`
+- final durable propagation verification passed
+- post-canary planner used committed `main` and reduced due work by exactly six without manual suppression
+- daily FinMind freshness workflow remained operational after the canary
+- FAS >= 8, FQ >= 10, strategy identity, anti-lookahead, signal-day semantics, and next-close execution policy remain unchanged
+
+Concurrent remote changes after the canary were limited to unrelated market/data maintenance and documentation checkpoints; no concurrent change invalidated the FinMind canary implementation, workflow architecture, test contract, routing identity, or evidence.
+
+Per the repository runner protocol, Prompt A stops here. Do not execute Prompt B automatically.
 
 ### Preregistered Prompt B — backlog-physical-batch-canary-v1
 
