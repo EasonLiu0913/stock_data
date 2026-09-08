@@ -8,8 +8,8 @@ const {
   parseArgs,
   compactDate,
   compactToIso,
-  weekdayAtOrBefore,
-  businessDayDistance,
+  usMarketTradingDayAtOrBefore,
+  usMarketTradingDayDistance,
   readJson,
   atomicWriteJson,
   round,
@@ -62,11 +62,11 @@ function latestCompletedUsMarketDate(now = new Date()) {
   const minute = Number(values.minute);
   const regularSessionClosed = hour > 16 || (hour === 16 && minute >= 30);
   const candidateDate = regularSessionClosed ? newYorkDate : previousCalendarDate(newYorkDate);
-  return weekdayAtOrBefore(candidateDate);
+  return usMarketTradingDayAtOrBefore(candidateDate);
 }
 
 function expectedUsMarketDate(baseDate, now = new Date()) {
-  const expectedFromBaseDate = weekdayAtOrBefore(baseDate);
+  const expectedFromBaseDate = usMarketTradingDayAtOrBefore(baseDate);
   const latestCompletedDate = latestCompletedUsMarketDate(now);
   return expectedFromBaseDate < latestCompletedDate ? expectedFromBaseDate : latestCompletedDate;
 }
@@ -78,7 +78,7 @@ function trigger(id, label, value, points) {
 function classifyExternalFreshness(externalValidation, expectedUsDate) {
   const actualUsDate = externalValidation?.actual_date || null;
   const usDateGap = actualUsDate
-    ? businessDayDistance(expectedUsDate, actualUsDate, 7)
+    ? usMarketTradingDayDistance(expectedUsDate, actualUsDate, 7)
     : Infinity;
 
   if (externalValidation?.exact) {
