@@ -12,7 +12,7 @@ const JOB = `
   schedule-timing-summary:
     ${MARKER}
     name: 排程時間摘要
-    if: always()
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository for schedule summary
