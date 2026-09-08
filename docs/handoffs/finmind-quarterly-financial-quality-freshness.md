@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-physical-batch-canary-v1`
 
-Round state: **Prompt A preregistered / not started**
+Round state: **Prompt A implementation durable / real canary blocked on workflow dispatch**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -871,6 +871,49 @@ Testing / evidence:
 - Record exact run/job/commit/durable-path evidence in this handoff.
 
 Stop only when the Prompt A completion contract is satisfied.
+
+### Prompt A implementation checkpoint — backlog-physical-batch-canary-v1 — 2026-09-08
+
+Prompt A implementation work is durable on remote `main`, but the round is **not complete** because the preregistered contract requires one real physical-batch canary run and the available GitHub connector in this agent session does not expose workflow dispatch.
+
+Implementation commits:
+
+- `8df69f57d13edb2eb16bda45825568064ac6396d` — extend `scripts/backfill_finmind_quarterly_financial_quality_batch.js` with deterministic physical-batch planning, exact multi-stock execution, and post-refresh freshness/quality validation.
+- `f1b3adbaa0f9ff4f523043f3a0cf3a34a1701389` — add deterministic physical-batch grouping / bounded-wave / re-plan regression coverage.
+- `be15815c97bcc639943010ee9003ce51198e38b8` — add dedicated manual canary workflow `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`.
+
+Implemented canary contract:
+
+- planner derives due work from current committed state rather than hard-coding the old 419-stock list;
+- first-wave inputs are hard-bounded to `physical_batch_size <= 3` and `max_physical_batches <= 2`;
+- matrix entries are physical batches, each containing up to 3 exact stock IDs;
+- `strategy.max-parallel: 1`;
+- each physical-batch job starts on a fresh runner and checks out latest `main`;
+- randomized batch-start cooldown is 3–8 seconds;
+- intra-batch request pacing is 1–3 seconds and the batch script does not sleep after its final request;
+- quota preflight uses the matrix batch's actual `request_count`;
+- each physical batch writes one bounded status/checkpoint and replays all selected stock directories onto latest remote `main` before push;
+- canonical master rebuild occurs only after the whole canary wave succeeds;
+- durable propagation verification runs after the master push;
+- a post-canary planner job re-checks committed `main` and records remaining due count without automatically executing another wave;
+- daily `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` was not modified;
+- FAS/FQ thresholds, strategy identity, anti-lookahead, signal date, and next-close execution semantics were not modified.
+
+Real-canary blocker:
+
+- This agent's available GitHub connector exposes workflow/job inspection and rerun operations but **does not expose workflow dispatch**.
+- Therefore no real run ID, physical-batch job IDs, actual randomized cooldown/jitter observations, quota logs, checkpoint commits, master commit, or post-canary due count can be truthfully recorded yet.
+- Per the preregistered completion contract: **do not report `Prompt A complete — ready for Prompt B` until the real canary is run and verified.**
+
+The required manual workflow is:
+
+`.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`
+
+Use the preregistered first-canary defaults:
+
+- `physical_batch_size = 3`
+- `max_physical_batches = 2`
+- explicit current Asia/Taipei `as_of_date` if manually dispatched.
 
 ### Preregistered Prompt B — backlog-physical-batch-canary-v1
 
