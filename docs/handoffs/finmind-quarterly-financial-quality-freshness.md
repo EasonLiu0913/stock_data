@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-physical-batch-canary-v1`
 
-Round state: **Prompt A implementation durable / real canary blocked on workflow dispatch**
+Round state: **Prompt A real canary durable / run-identity and regression evidence still pending**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -914,6 +914,84 @@ Use the preregistered first-canary defaults:
 - `physical_batch_size = 3`
 - `max_physical_batches = 2`
 - explicit current Asia/Taipei `as_of_date` if manually dispatched.
+
+### Prompt A real-canary evidence checkpoint — backlog-physical-batch-canary-v1 — 2026-09-08
+
+A real canary has now executed and durable remote `main` proves the bounded physical-batch write/master path worked. Prompt A is still **not complete** because the current connector cannot enumerate the workflow run/job identities, and the preregistered completion contract also requires the exact post-canary re-plan due count plus Node Regression Suite PASS evidence.
+
+Durable physical-batch evidence:
+
+- Physical batch 0 checkpoint commit: `5a94d8efa0b48fd468f24a9a4bed93d7f862f2b3`.
+- Physical batch 1 checkpoint commit: `5b8aedd59df6b0e344b5d4e767f95d88bd8d18d5`.
+- Wave-level master commit: `9007e9ef27ce5fc49445c32a8effdcef22d1fd6f`.
+
+Batch 0 durable status:
+
+- path: `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-08-batch000.json`;
+- selected stocks: `3167,7769,3432`;
+- selected count: `3`;
+- processed count: `3`;
+- result: `complete=3`;
+- quota exhausted: `false`;
+- physical-batch start cooldown: `8s`;
+- request count: `3`;
+- configured inter-request pacing: `1000ms + 0..2000ms jitter`;
+- all three refreshed outputs passed the batch script's post-refresh freshness/quality decision before checkpoint.
+
+Batch 1 durable status:
+
+- path: `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-08-batch001.json`;
+- selected stocks: `2363,5484,6919`;
+- selected count: `3`;
+- processed count: `3`;
+- result: `complete=3`;
+- quota exhausted: `false`;
+- physical-batch start cooldown: `3s`;
+- request count: `3`;
+- configured inter-request pacing: `1000ms + 0..2000ms jitter`;
+- all three refreshed outputs passed the batch script's post-refresh freshness/quality decision before checkpoint.
+
+Master propagation evidence:
+
+- `9007e9ef27ce5fc49445c32a8effdcef22d1fd6f` is authored by `github-actions[bot]` with message `data: rebuild FinMind backlog canary master`.
+- canonical master row count increased from `6810` to `6816`, exactly six additional quarterly rows.
+- the master diff contains the six canary stocks' refreshed 2026Q2 data/coverage changes, including preserved `conservative_known_date=2026-08-14` where applicable.
+- this proves the wave-level master publication happened after the two physical-batch checkpoints.
+
+Fresh-runner / physical-batch architecture remains durable in:
+
+`.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`
+
+The workflow still enforces:
+
+- matrix item = physical batch;
+- `strategy.max-parallel: 1`;
+- fresh `ubuntu-latest` job per matrix item;
+- checkout latest `main` per physical batch;
+- randomized 3–8s batch-start cooldown;
+- proportional quota preflight using `matrix.request_count`;
+- 1–3s request pacing inside the batch;
+- bounded latest-main checkpoint replay/push;
+- one master rebuild after the completed wave;
+- a separate post-wave re-plan job that does not automatically execute another wave.
+
+Observed later production activity:
+
+After the canary master commit, current remote `main` contains later normal FinMind refresh commits for `6625`, `2539`, `6446`, `2438`, and `3706`, followed by another canonical master rebuild. These are later production maintenance activity and do not invalidate the canary's bounded six-stock evidence.
+
+Remaining completion evidence not currently observable through the available connector:
+
+1. exact canary workflow **run ID / head SHA / physical-batch job IDs**;
+2. the exact **post-canary re-plan due count** emitted in the re-plan job summary;
+3. **Node Regression Suite PASS** on the final implementation SHA.
+
+The GitHub connector available in this session has job-log/job-step readers only when a run/job ID is already known, but it does not expose workflow-run enumeration for this workflow. Public GitHub/web lookup did not provide an authoritative run identity. Do not invent those identifiers.
+
+Therefore the round remains:
+
+**Prompt A real canary succeeded durably, but Prompt A completion evidence is incomplete.**
+
+Do not report `Prompt A complete — ready for Prompt B` until the three remaining evidence items above are recovered or independently produced.
 
 ### Preregistered Prompt B — backlog-physical-batch-canary-v1
 
