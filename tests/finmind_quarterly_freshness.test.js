@@ -7,6 +7,7 @@ const {
   coverageFreshnessDecision,
   normalizeAsOfDate,
   buildPhysicalBatchPlan,
+  buildDueStatusName,
 } = require('../scripts/backfill_finmind_quarterly_financial_quality_batch');
 
 function coverage(missingPeriods = []) {
@@ -108,4 +109,21 @@ test('physical-batch planner respects a smaller requested wave', () => {
   assert.equal(plan.batches.length, 1);
   assert.deepEqual(plan.batches[0].stock_ids, ['1001','1002']);
   assert.equal(plan.batches[0].request_count, 2);
+});
+
+
+test('backlog wave identity makes same-date physical-batch checkpoints unique', () => {
+  const selected = [{ stock_id: '1001' }, { stock_id: '1002' }, { stock_id: '1003' }];
+  const first = buildDueStatusName('2026-09-08', selected, 0, 'run-34193149003');
+  const second = buildDueStatusName('2026-09-08', selected, 0, 'run-34199999999');
+  assert.equal(first, 'due-refresh-2026-09-08-wave-run-34193149003-batch000.json');
+  assert.equal(second, 'due-refresh-2026-09-08-wave-run-34199999999-batch000.json');
+  assert.notEqual(first, second);
+});
+
+test('legacy daily due-refresh status identity remains backward compatible without wave id', () => {
+  assert.equal(
+    buildDueStatusName('2026-09-08', [{ stock_id: '1316' }], 0, ''),
+    'due-refresh-2026-09-08-1316.json',
+  );
 });
