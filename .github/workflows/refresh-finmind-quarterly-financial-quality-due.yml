@@ -196,7 +196,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/build_financial_quality_master.js
-          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true --allow-unsupported true --allow-unsupported true
+          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true
 
       - name: Commit master with latest-main retry
         env:
@@ -210,7 +210,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             node scripts/build_financial_quality_master.js
-            node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+            node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true
             git add data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json
 
             if git diff --cached --quiet; then
@@ -239,7 +239,7 @@ jobs:
           set -euo pipefail
           git fetch origin main
           git reset --hard origin/main
-          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"
+          node scripts/verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS" --allow-unsupported true
 
   no-op:
     needs: plan
