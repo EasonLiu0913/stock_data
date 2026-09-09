@@ -25,6 +25,7 @@ function main() {
     const dir = path.join(INPUT_ROOT, stockId);
     const timeline = readJson(path.join(dir, 'financial-quality-score-timeline.json'));
     const coverage = readJson(path.join(dir, 'coverage-status.json'));
+    if (coverage?.status === 'unsupported_financial_model') unsupported += 1;
     if (!timeline || !Array.isArray(timeline.rows)) continue;
     const rows = timeline.rows.map((row, index) => {
       const prevScore = index > 0 ? Number(timeline.rows[index - 1]?.financial_quality_score) : null;
@@ -44,7 +45,6 @@ function main() {
       };
     });
     quarterlyRows += rows.length;
-    if (coverage?.status === 'unsupported_financial_model') unsupported += 1;
     stocks.push({
       stock_id: stockId,
       coverage: coverage || null,
