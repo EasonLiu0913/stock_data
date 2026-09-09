@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-drain-wave-48-v1`
 
-Round state: **Prompt A not started — preregistered paired Prompt A/B**
+Round state: **Prompt A complete — ready for Prompt B**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -2264,6 +2264,110 @@ Blocked completion evidence:
 - Prompt A remains active and must continue with the same preregistered contract once the workflow is manually dispatched or another authorized runner can dispatch it.
 
 Do not promote another round and do not execute Prompt B yet.
+
+#### Prompt A completion evidence — backlog-drain-wave-48-v1 — 2026-09-09
+
+**Prompt A complete — ready for Prompt B**
+
+Durable implementation / execution evidence:
+
+- Workflow bound commit: `60953e4fdc24b713ac56e71647d73cf035677eac`.
+  - `max_physical_batches` default/ceiling: 8 → 16.
+  - `max_due_stocks`: 24 → 48.
+  - `physical_batch_size=3` unchanged.
+  - `strategy.max-parallel=1` unchanged.
+  - 3–8s batch cooldown, 1–3s inter-request pacing, quota cap/reserve 500/20, wave-scoped checkpoints, latest-main replay, one master rebuild, and one post-wave re-plan unchanged.
+- Real backlog wave run: `34336822092`.
+  - planner job: `102418061360`.
+  - planner checked out fresh committed main at `11d48d77cefffbdc51f227d00b2bfc38386c3193`.
+  - due candidates: **328**.
+  - selected: **48**.
+  - physical batches: **16 × 3**.
+  - deterministic stock order:
+    `2712,2820,1418,1808,2427,2466,2545,3018,6024,1442,1456,2501,6589,2515,6782,4164,6614,6937,8033,2330,2882,5521,2364,2891,3033,7786,9906,2524,6658,6177,3717,2376,2881,2429,2542,6209,2208,2527,2905,6969,7730,2538,6472,6909,8249,3164,2889,3025`.
+- True physical-batch runner evidence:
+  - batch 0 job `102419504863`
+  - batch 1 job `102419504837`
+  - batch 2 job `102419504839`
+  - batch 3 job `102419504793`
+  - batch 4 job `102419504812`
+  - batch 5 job `102419504854`
+  - batch 6 job `102419504814`
+  - batch 7 job `102419504789`
+  - batch 8 job `102419504798`
+  - batch 9 job `102419504827`
+  - batch 10 job `102419504832`
+  - batch 11 job `102419506070`
+  - batch 12 job `102419506138`
+  - batch 13 job `102419506235`
+  - batch 14 job `102419506380`
+  - batch 15 job `102419506324`
+  - all 16 jobs completed successfully and each matrix item was one runner lifecycle.
+- Pacing / quota:
+  - cooldowns by batch: `3,8,4,3,3,4,3,4,8,8,7,6,3,4,7,8` seconds.
+  - actual inter-request waits:
+    - b0 `2496/1361ms`
+    - b1 `1446/2198ms`
+    - b2 `1314/2227ms`
+    - b3 `1068/2282ms`
+    - b4 `2085/2346ms`
+    - b5 `1792/2660ms`
+    - b6 `1381/2215ms`
+    - b7 `2237/1430ms`
+    - b8 `2062/1659ms`
+    - b9 `1567/2584ms`
+    - b10 `1419/1366ms`
+    - b11 `1044/1042ms`
+    - b12 `2538/1494ms`
+    - b13 `1135/1363ms`
+    - b14 `1607/2142ms`
+    - b15 `1756/1481ms`
+  - every 3-stock batch emitted exactly two waits; no trailing delay.
+  - every batch quota preflight used `required_requests=3`, cap/reserve `500/20`, and reported enough quota.
+- Terminal results:
+  - **41 complete**.
+  - **7 unsupported_financial_model**: `2820,6024,2882,2891,2881,2905,2889`.
+  - total terminal results = 48.
+  - no non-terminal/degraded result was checkpointed.
+- Durable batch checkpoint commits:
+  - b0 `91d34af8622bebfdbc0c7c602675a0e93a0aada4`
+  - b1 `022d1d9820a22ecebd612f3af398b451e86081d7`
+  - b2 `3e53172c5de5f69fe01ad2577bdd79823659eada`
+  - b3 `c1160e637fb9aa37597004ae95f255b75f735808`
+  - b4 `29dbe27bd21643d04706c2fc11f224db6d5e3ae1`
+  - b5 `4021c9cc54b910531c31e7755c9bc4546373f1e5`
+  - b6 `4395d6972bc357d6ff9c1414f650a534fb11fc97`
+  - b7 `c769700ebfdf584b1c9895090957888740d59b96`
+  - b8 `2c8d489eb4c79be2a971d1e1e20df165de34ac36`
+  - b9 `0eb3ebb80c8fab66e32386ba285b942d0d7146ce`
+  - b10 `cae86e5d8a0b9971a66af8c11d45b40fdc82ee78`
+  - b11 `51b39b5a4865031525d4235dd0c60af512caeb8b`
+  - b12 `d7bb2b3fff60da65902b4b88781669679b1cb821`
+  - b13 `65d9ba77112ae2c5c3f6c25fe1b910ce771f2ce5`
+  - b14 `aae2b574e044dbfbc123fe21c0d0b8a15052dad7`
+  - b15 `9e4ae55a6cd6595f526f709476bb889c9090234e`
+  - all new status files are wave-scoped under `due-refresh-2026-09-09-wave-run-34336822092-batch000..015.json`.
+  - prior canary / 12-stock / 24-stock status artifacts were not targeted by this run; the new run wrote a distinct wave id and new batch paths.
+- Master propagation:
+  - rebuild-master job `102430336080`: success.
+  - exactly one master publication commit: `0f0d7febdae1d1b6cf5bc5d474d56602528d904a`.
+  - verifier passed before publication, during latest-main retry, and again after reset to durable remote main.
+  - verifier reported `verified_stocks=41`; the remaining 7 selected stocks were explicit durable unsupported terminals.
+- Re-plan / resume:
+  - replan job `102430897367`: success.
+  - committed due count: **328 → 280**.
+  - delta = **48**, exactly reconciling the 48 terminal selected stocks.
+  - no automatic second wave executed.
+- Regression / invariants:
+  - the planner job ran and passed the deterministic FinMind freshness, master propagation, and frozen 8021 regression tests on the current workflow run.
+  - no scripts/tests/production strategy files changed in this round; only the backlog workflow bound changed.
+  - the most recent applicable full `[99 測試] Node Regression Suite` evidence remains run `34330795035` from the immediately preceding 24-stock calibration, which PASSed the unchanged scripts/tests. The suite was not automatically retriggered by `60953e4f...` because its path filter does not include `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`.
+  - an attempted local clone to rerun `npm test` from this agent was blocked by the execution container's lack of GitHub DNS/network access; no false CI result is claimed.
+  - daily FinMind production path remains represented by same-day successful run `34324652707` from the prior closeout; this round did not modify the daily workflow or production signal code.
+  - FAS>=8, FQ>=10, strategy identity, anti-lookahead, signal-date semantics, and next-close policy were not changed.
+- Concurrent changes observed during the real wave included unrelated Stock Rankings and Pocket/TWSE data commits. Latest-main replay preserved them while the 16 FinMind checkpoints and master publication were pushed.
+
+Prompt A is complete for the 48-stock calibration round. Prompt B must independently verify these claims against current remote main and the preregistered acceptance criteria below.
 
 #### Preregistered Prompt B — backlog-drain-wave-48-v1
 
