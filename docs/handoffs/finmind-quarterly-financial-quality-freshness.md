@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-drain-wave-24-v1`
 
-Round state: **Prompt A in progress — 24-stock workflow bound committed; real 8×3 runtime wave pending dispatch**
+Round state: **Prompt A complete — ready for Prompt B**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -1901,6 +1901,68 @@ Implementation/execution:
 - preserve daily workflow and all production strategy/anti-lookahead invariants.
 
 Run deterministic FinMind/master/8021 tests and Node Regression Suite as required. Update this handoff with durable Prompt A evidence while preserving the exact preregistered Prompt B below.
+
+#### Prompt A completion evidence — backlog-drain-wave-24-v1 — 2026-09-09
+
+**Prompt A complete — ready for Prompt B**
+
+Real bounded runtime wave completed successfully and is durable on remote `main`.
+
+- Workflow: `[07 研究] FinMind－季財報品質 backlog physical-batch wave #5`
+- Run id: `34330511902`
+- Trigger head SHA: `8fedd79d9ef2e4a1025040748bebb934d0717068`
+- Wave id: `run-34330511902`
+- Run conclusion: **success**
+- Planner due candidates before wave: **352**
+- Deterministic selected stocks: **24**
+- Physical layout: **8 fresh-runner batches × 3 stocks**
+- Post-wave due candidates: **328**
+- Reconciled delta: **24**, exactly matching all selected terminal results
+- No automatic second wave ran.
+
+Batch groups / jobs / checkpoints:
+
+- batch 0 — job `102399065862` — `1529,2404,6869` — cooldown 8s — waits 2015ms / 2819ms — checkpoint `87a03bf8d3c0aa05350cc3948fbedb321142ef70`
+- batch 1 — job `102399065906` — `9945,1522,7740` — cooldown 5s — waits 2615ms / 2395ms — checkpoint `871f9c372375289022c3f32ecc41e5fb997b5bb1`
+- batch 2 — job `102399065840` — `3036,3443,1472` — cooldown 6s — waits 1746ms / 1277ms — checkpoint `56e3d7d02d06147ac730bd26492b3fddced01828`
+- batch 3 — job `102399065905` — `2442,5534,6533` — cooldown 8s — waits 1890ms / 2152ms — checkpoint `cbba2ec0aaef0e4c9333eed1b05d6c310d8d7dbd`
+- batch 4 — job `102399065897` — `6657,6691,2258` — cooldown 5s — waits 1029ms / 2236ms — checkpoint `228fad97c29bd6191bea717fd2cccfd21f70d63c`
+- batch 5 — job `102399065868` — `2344,8114,1533` — cooldown 5s — waits 2569ms / 2489ms — checkpoint `0d14343d1b2c9fcb417ed474a8daa8935e58af65`
+- batch 6 — job `102399065848` — `3450,6283,2414` — cooldown 8s — waits 2021ms / 2864ms — checkpoint `c7579562d8184087d3a51f4fe52b47480455fb17`
+- batch 7 — job `102399065956` — `6139,1439,2485` — cooldown 8s — waits 2061ms / 2234ms — checkpoint `59e12f3b44200e9876a161184ee1cee030730eb4`
+
+Runtime safety / quality evidence:
+
+- every physical batch was a distinct matrix job / fresh runner;
+- `strategy.max-parallel=1` remained enforced;
+- every quota preflight used actual `request_count=3`;
+- configured safe cap/reserve remained `500/20`;
+- all batches reported `enough_for_next_batch=true`;
+- all 24 selected results were durable terminal `complete`;
+- historical missing periods remained explicitly classified where present, e.g. `7740`;
+- no non-terminal or ambiguous/degraded result was checkpointed;
+- every wave checkpoint uses unique wave-scoped paths:
+  `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-09-wave-run-34330511902-batch000..007.json`;
+- earlier canary / 12-stock-wave artifacts were not reused or overwritten.
+
+Master / re-plan evidence:
+
+- master job `102405321819`: **success**;
+- exactly one wave-level master publication commit:
+  `ceea1eac9bab16e1dea2b8c643add3b469ff7ec0`;
+- master propagation verifier reported `verified_stocks=24` before and after durable remote reset;
+- re-plan job `102405927436`: **success**;
+- due count `352 -> 328`, delta `24`;
+- fresh re-plan still produces max 8×3 only and did not auto-dispatch another wave.
+
+Regression / production-path evidence:
+
+- planner job `102397745726` passed deterministic FinMind freshness, physical-batch identity, unsupported-model, master propagation, and frozen 8021 regressions before runtime execution;
+- `[99 測試] Node Regression Suite #33`, run `34330795035`: **PASS**;
+- latest daily production FinMind workflow `[07 研究] FinMind－季財報品質到期刷新 #5`, run `34324652707`: **PASS**;
+- FAS >= 8, FQ >= 10, strategy identity, anti-lookahead, signal-date semantics, and next-close policy remain unchanged.
+
+Concurrent changes during the wave included unrelated TWSE / Pocket / Pages commits. Race-safe latest-main checkpoint replay preserved them; none invalidated this round's FinMind assumptions.
 
 #### Preregistered Prompt B — backlog-drain-wave-24-v1
 
