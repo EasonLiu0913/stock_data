@@ -2241,6 +2241,30 @@ Implementation/execution:
 
 Update this handoff with durable Prompt A evidence while preserving the exact preregistered Prompt B below.
 
+#### Prompt A progress — backlog-drain-wave-48-v1 — 2026-09-09
+
+Prompt A has started but is **not complete**.
+
+Durable implementation evidence:
+
+- `60953e4fdc24b713ac56e71647d73cf035677eac` — minimally expands `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` from max/default 8 to 16 physical batches and from max 24 to 48 selected due stocks.
+- Verified on current remote `main` after the commit:
+  - `physical_batch_size` remains capped at 3;
+  - `strategy.max-parallel: 1` remains unchanged;
+  - randomized batch cooldown remains 3–8s;
+  - inter-request pacing remains 1–3s with existing no-trailing-delay behavior;
+  - quota cap/reserve remain 500/20 and per-batch request count stays proportional;
+  - wave-scoped checkpointing, latest-main replay, one master rebuild, final propagation verification, and post-wave re-plan remain in place.
+- Global routing still selects `finmind-quarterly-financial-quality-freshness` as the unique active task.
+
+Blocked completion evidence:
+
+- The connected GitHub toolset available to this agent does not expose a workflow-dispatch operation, so the required real `backlog-drain-wave-48-v1` run cannot be started from this agent.
+- Therefore no fresh planner count, 16×3 batch run/job IDs, pacing/quota logs, checkpoint commits, master publication commit, post-wave re-plan, or Node Regression Suite result for this new 48-stock round is fabricated or claimed.
+- Prompt A remains active and must continue with the same preregistered contract once the workflow is manually dispatched or another authorized runner can dispatch it.
+
+Do not promote another round and do not execute Prompt B yet.
+
 #### Preregistered Prompt B — backlog-drain-wave-48-v1
 
 Close out round `backlog-drain-wave-48-v1`.
