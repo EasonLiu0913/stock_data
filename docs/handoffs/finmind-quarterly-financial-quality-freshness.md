@@ -4,15 +4,15 @@ Canonical handoff: `docs/handoffs/finmind-quarterly-financial-quality-freshness.
 
 ## Current phase
 
-Completed round: `backlog-drain-wave-12-v1`
+Completed round: `backlog-drain-wave-24-v1`
 
 Completed round state: **Prompt B closeout: PASS**
 
 Project state: **production-proven; backlog drain expansion active**
 
-Active round: `backlog-drain-wave-24-v1`
+Active round: `backlog-drain-wave-48-v1`
 
-Round state: **Prompt A complete — ready for Prompt B**
+Round state: **Prompt A not started — preregistered paired Prompt A/B**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -2022,6 +2022,244 @@ Verify independently:
     - do not increase physical batch size above 3 without new explicit evidence;
     - do not increase parallelism above 1;
     - record remaining due backlog and estimated waves.
+
+If any criterion fails, fix only the bounded defect and restart this same Prompt B from criterion 1. Do not promote another round.
+
+If all PASS:
+
+- record `Prompt B closeout: PASS`;
+- record evidence-backed next calibration;
+- preregister/promote another bounded drain round only if backlog remains;
+- commit handoff;
+- re-fetch current main and verify durability;
+- stop without executing the next Prompt A.
+
+#### Prompt B closeout — backlog-drain-wave-24-v1 — 2026-09-09
+
+**Prompt B closeout: PASS**
+
+This closeout used the phase-specific Prompt B preregistered before Prompt A at durable promotion commit `d1a43dd940d9f1f551a037ba5cbccc59501a5128`. Prompt A implementation began afterward at `6b8ac1be5cb71d6ca3b340ab97f6bb0051589baf`. Current routing still has `finmind-quarterly-financial-quality-freshness` as the sole active task.
+
+Independent acceptance results:
+
+1. **Fresh identity — PASS**
+   - current remote main was re-fetched;
+   - Prompt B identity was recovered from pre-Prompt-A durable history;
+   - the post-Prompt-A concurrent commit `f3a355068091a267dc9615d6d28d49f101872492` is unrelated TAIFEX data and does not stale this round.
+
+2. **Planner / bound — PASS**
+   - run `34330511902` planner job `102397745726` derived **352** due candidates from committed state;
+   - deterministic selected count was **24**;
+   - exactly **8 physical batches × 3 stocks** were planned;
+   - no outcome-based selection or cherry-picking was observed.
+
+3. **True physical batches — PASS**
+   - eight distinct successful matrix jobs were used:
+     `102399065862`, `102399065906`, `102399065840`, `102399065905`,
+     `102399065897`, `102399065868`, `102399065848`, `102399065956`;
+   - workflow still enforces `strategy.max-parallel: 1`;
+   - one matrix item is one runner lifecycle; no runner spans multiple physical batches.
+
+4. **Wave identity / history — PASS**
+   - all new checkpoints are wave-scoped under
+     `due-refresh-2026-09-09-wave-run-34330511902-batch000..007.json`;
+   - legacy canary blobs remain unchanged:
+     - `due-refresh-2026-09-08-batch000.json` = `a16e28ad412615f857622af01490325377b67e42`;
+     - `due-refresh-2026-09-08-batch001.json` = `3165810bb379e1e5d5bd99b339b75df80fd4e818`;
+   - all four prior 12-stock wave blobs match their original checkpoint-commit blobs exactly;
+   - same-day wave overwrite protection therefore remains intact.
+
+5. **Pacing / quota — PASS**
+   - cooldowns by batch: **8, 5, 6, 8, 5, 5, 8, 8 seconds**;
+   - actual inter-request waits:
+     - b0 `2015/2819ms`
+     - b1 `2615/2395ms`
+     - b2 `1746/1277ms`
+     - b3 `1890/2152ms`
+     - b4 `1029/2236ms`
+     - b5 `2569/2489ms`
+     - b6 `2021/2864ms`
+     - b7 `2061/2234ms`;
+   - each three-stock batch produced exactly two waits, so no trailing post-final-request delay occurred;
+   - authenticated quota guard used actual `required_requests=3` on every batch;
+   - configured cap/reserve remained `500/20`;
+   - every batch reported enough quota; no quota or soft-ban anomaly appeared.
+
+6. **Response quality / terminals — PASS**
+   - all 24 selected stocks reached durable terminal `complete`;
+   - checkpoint code rejects any result outside `complete`, `skipped_complete`, or `unsupported_financial_model`;
+   - historical gaps remained explicit where applicable, including `7740`;
+   - no non-terminal/degraded result was checkpointed as success;
+   - the master propagation verifier independently validated all 24 selected stocks against durable source/timeline/master state.
+
+7. **Checkpoint durability — PASS**
+   - eight batch checkpoint commits were pushed before runner exit:
+     `87a03bf8d3c0aa05350cc3948fbedb321142ef70`,
+     `871f9c372375289022c3f32ecc41e5fb997b5bb1`,
+     `56e3d7d02d06147ac730bd26492b3fddced01828`,
+     `cbba2ec0aaef0e4c9333eed1b05d6c310d8d7dbd`,
+     `228fad97c29bd6191bea717fd2cccfd21f70d63c`,
+     `0d14343d1b2c9fcb417ed474a8daa8935e58af65`,
+     `c7579562d8184087d3a51f4fe52b47480455fb17`,
+     `59e12f3b44200e9876a161184ee1cee030730eb4`;
+   - latest-main replay preserved unrelated TWSE/Pocket/Pages commits during the wave.
+
+8. **Master propagation — PASS**
+   - rebuild-master job `102405321819`: success;
+   - exactly one wave-level master publication commit:
+     `ceea1eac9bab16e1dea2b8c643add3b469ff7ec0`;
+   - propagation verifier reported `verified_stocks=24` at all three verification points, including after reset to durable remote main.
+
+9. **Re-plan / resume — PASS**
+   - re-plan job `102405927436`: success;
+   - committed-state due count changed **352 → 328**;
+   - delta **24** exactly reconciles all terminal selected stocks;
+   - no automatic second wave ran.
+
+10. **Regression / invariants — PASS**
+    - real planner job passed FinMind freshness, master propagation, wave identity/unsupported handling, and frozen 8021 regressions;
+    - `[99 測試] Node Regression Suite #33`, run `34330795035`: success;
+    - daily production `[07 研究] FinMind－季財報品質到期刷新 #5`, run `34324652707`: success;
+    - current production signal code still qualifies only at FAS `>=8` and FQ `>=10`;
+    - strategy identity, anti-lookahead, signal-date semantics, and next-close policy remain unchanged.
+
+11. **Calibration — PASS**
+    - the 24-stock wave showed no runner-lifecycle, quota, pacing, checkpoint, response-quality, propagation, or re-plan anomaly;
+    - evidence supports increasing **only sequential fresh-runner batch count** again;
+    - next calibration:
+      - `physical_batch_size=3` unchanged;
+      - `max_physical_batches_per_wave=16`;
+      - at most **48 stocks** per wave;
+      - `strategy.max-parallel=1` unchanged;
+      - cooldown remains randomized 3–8s;
+      - per-request pacing remains randomized 1–3s;
+      - quota cap/reserve remain 500/20;
+      - wave-scoped checkpoint after every physical batch;
+      - exactly one master rebuild after the wave;
+      - one post-wave re-plan;
+      - no automatic second wave.
+    - evidence-backed remaining backlog is **328**;
+    - at 48 terminal stocks per wave, approximately **7 bounded waves** remain if daily maintenance does not reduce the queue first.
+
+The round is closed PASS. Do not execute another 24-stock Prompt A.
+
+### Active round — backlog-drain-wave-48-v1
+
+#### Objective
+
+Calibrate the proven backlog drain from 8 × 3 to **16 sequential fresh-runner physical batches × 3 stocks = at most 48 stocks**, without changing requests per runner, parallelism, quota reserve, pacing, wave identity, checkpoint semantics, or production strategy rules.
+
+#### Exact entry points
+
+- `AGENTS.md`
+- `docs/agent-prompts/task-routing.json`
+- `docs/handoffs/finmind-quarterly-financial-quality-freshness.md`
+- `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml`
+- `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`
+- `scripts/backfill_finmind_quarterly_financial_quality_batch.js`
+- `scripts/check_finmind_api_quota.js`
+- `scripts/build_financial_quality_master.js`
+- `scripts/verify_financial_quality_master_propagation.js`
+- `data_prediction_analysis/quarterly-financial-quality/financial-quality-master.json`
+- `data_prediction_analysis/quarterly-financial-quality/batch-status/`
+- `tests/finmind_quarterly_freshness.test.js`
+- `tests/financial_quality_master_propagation.test.js`
+- `tests/fundamental_quality_8021_regression.test.js`
+- `.github/workflows/test-node-regression-suite.yml`
+
+#### Frozen architecture — backlog-drain-wave-48-v1
+
+- `physical_batch_size=3`.
+- `max_physical_batches_per_wave=16`.
+- at most 48 selected terminal stocks.
+- `strategy.max-parallel=1`.
+- one matrix item = one fresh runner.
+- randomized 3–8s batch-start cooldown.
+- randomized 1–3s inter-request pacing and no trailing delay.
+- quota preflight uses each matrix batch's actual request count.
+- configured safe cap/reserve remain 500/20 unless current API evidence requires stricter limits.
+- wave-scoped checkpoint filename/metadata remains mandatory.
+- checkpoint and push every batch before runner exit.
+- race-safe replay onto latest committed main.
+- one master rebuild only after every selected batch succeeds.
+- final remote propagation verification.
+- one post-wave re-plan from committed main.
+- no automatic second wave.
+- do not increase physical batch size above 3.
+- do not increase parallelism above 1.
+- preserve daily workflow plus FAS/FQ, anti-lookahead, signal-date and next-close invariants.
+
+#### Prompt A completion contract — backlog-drain-wave-48-v1
+
+Prompt A is complete only when:
+
+1. fresh remote main/routing/handoff identifies this as the active promoted round;
+2. backlog workflow bound is changed only from max 8 to max 16 physical batches and max due selection from 24 to 48;
+3. physical batch size remains <=3 and `max-parallel=1`;
+4. fresh due count is computed from committed main rather than reusing 328 blindly;
+5. at most 48 deterministic due stocks are selected into max 16×3 batches;
+6. every selected batch runs in its own fresh runner and proves 3–8s cooldown, 1–3s request pacing, proportional quota guard, structural validation, wave-scoped checkpoint, push, and runner exit;
+7. unsupported financial models remain explicit durable terminal classifications;
+8. no non-terminal/degraded result is checkpointed;
+9. all old canary, 12-stock-wave, and 24-stock-wave artifacts remain immutable;
+10. exactly one master publication occurs after all selected batches succeed and final durable remote verifier passes;
+11. committed-state post-wave re-plan reconciles before/after due counts and does not auto-start another wave;
+12. FinMind/master/8021 regressions and Node Regression Suite pass;
+13. daily FinMind production path remains operational;
+14. handoff records run/head SHA, wave id, planner counts, exact batch groups/jobs, pacing/quota evidence, terminals, checkpoint commits/paths, master commit, verifier, re-plan result, anomalies, and historical artifact preservation;
+15. current remote main is re-fetched and durable evidence remains fresh;
+16. report exactly `Prompt A complete — ready for Prompt B` and stop.
+
+If a bounded defect appears, fix only that defect and rerun the same max-16×3 round. Do not increase beyond 48 stocks in this round.
+
+#### Prompt A — backlog-drain-wave-48-v1
+
+Execute only round `backlog-drain-wave-48-v1`.
+
+Startup:
+
+1. Fetch current remote main.
+2. Read `AGENTS.md`, root `promptA.md`, `docs/agent-prompts/prompt-a-runner.md`, `docs/agent-prompts/task-routing.json`, and this canonical handoff.
+3. Verify `finmind-quarterly-financial-quality-freshness` remains the unique active project and this round is active.
+4. Re-read the exact entry points and frozen architecture above.
+5. Recompute current due backlog from committed main.
+
+Implementation/execution:
+
+- minimally raise `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` maximum/default from 8 to 16 physical batches and max due bound from 24 to 48;
+- keep `physical_batch_size=3`;
+- keep `strategy.max-parallel=1`;
+- preserve 3–8s cooldown, 1–3s inter-request pacing, quota cap/reserve 500/20, wave identity, structural validation and latest-main replay;
+- produce one deterministic current-state wave of at most 48 stocks;
+- one matrix entry must remain one fresh runner;
+- checkpoint each physical batch before runner exit;
+- after all batches succeed, rebuild master exactly once, verify, push, reset to current remote main, and verify again;
+- post-wave re-plan from committed main;
+- do not automatically start a second wave;
+- preserve daily workflow and production strategy/anti-lookahead invariants;
+- run the required deterministic tests and Node Regression Suite.
+
+Update this handoff with durable Prompt A evidence while preserving the exact preregistered Prompt B below.
+
+#### Preregistered Prompt B — backlog-drain-wave-48-v1
+
+Close out round `backlog-drain-wave-48-v1`.
+
+This Prompt B is preregistered before Prompt A begins and must not be rewritten to fit results.
+
+Verify independently:
+
+1. **Fresh identity** — fresh remote main/routing/handoff; recover this exact preregistered Prompt B; classify concurrent changes.
+2. **Planner / bound** — fresh committed due count; deterministic selection <=48; max 16 physical batches ×3; no outcome cherry-picking.
+3. **True physical batches** — one distinct job/runner lifecycle per matrix batch; `max-parallel=1`; no runner spans batches.
+4. **Wave identity / history** — new checkpoints wave-scoped; all canary/12/24-wave blobs unchanged; same-day waves cannot overwrite.
+5. **Pacing / quota** — each cooldown 3–8s; actual waits 1–3s with no trailing wait; quota guard uses actual request count; cap/reserve 500/20 or stricter; no quota/soft-ban anomaly.
+6. **Response quality / terminals** — durable structural source/coverage/timeline for supported stocks; explicit unsupported terminals; historical missing remains explicit; no degraded/non-terminal checkpoint.
+7. **Checkpoint durability** — every batch pushes unique checkpoint before runner exit; race-safe replay preserves prior batches and unrelated commits.
+8. **Master propagation** — exactly one wave-level master publication; final remote verifier passes for supported selected stocks and accounts for unsupported terminals.
+9. **Re-plan / resume** — fresh post-wave committed plan; terminal selected stocks disappear; before/after counts reconcile; no automatic second wave.
+10. **Regression / invariants** — FinMind/master/8021 regressions and Node Regression Suite PASS; daily path operational; FAS>=8, FQ>=10, strategy identity, anti-lookahead, signal date and next-close unchanged.
+11. **Calibration** — use real 48-stock evidence to decide the next sequential-batch ceiling; never raise physical batch size >3 or parallelism >1 without new explicit evidence; record remaining backlog and estimated bounded waves.
 
 If any criterion fails, fix only the bounded defect and restart this same Prompt B from criterion 1. Do not promote another round.
 
