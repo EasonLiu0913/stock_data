@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   coverageFreshnessDecision,
@@ -136,4 +138,29 @@ test('unsupported financial model is reusable without a timeline once terminal c
     requested: { start_quarter: '2023Q1', end_quarter: '2026Q2' },
   }, false, '2023Q1', '2026Q2', '2026-09-08');
   assert.deepEqual(result, { reusable: true, reason: 'unsupported_financial_model' });
+});
+
+
+test('due-refresh propagation accepts terminal unsupported financial models at every verification gate', () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, '..', '.github', 'workflows', 'refresh-finmind-quarterly-financial-quality-due.yml'),
+    'utf8',
+  );
+  const verifierCalls = workflow
+    .split('\n')
+    .filter(line => line.includes('verify_financial_quality_master_propagation.js --stock-ids "$STOCK_IDS"'));
+  assert.equal(verifierCalls.length, 3);
+  assert.ok(verifierCalls.every(line => line.includes('--allow-unsupported true')));
+});
+
+test('master builder counts unsupported coverage before skipping missing timelines', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'scripts', 'build_financial_quality_master.js'),
+    'utf8',
+  );
+  const countIndex = source.indexOf("if (coverage?.status === 'unsupported_financial_model') unsupported += 1;");
+  const skipIndex = source.indexOf("if (!timeline || !Array.isArray(timeline.rows)) continue;");
+  assert.ok(countIndex >= 0);
+  assert.ok(skipIndex >= 0);
+  assert.ok(countIndex < skipIndex);
 });
