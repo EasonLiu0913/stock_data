@@ -13,10 +13,10 @@ on:
         type: number
         default: 3
       max_physical_batches:
-        description: '本 wave 最多 physical batches；預設 8，禁止大於 8'
+        description: '本 wave 最多 physical batches；預設 16，禁止大於 16'
         required: true
         type: number
-        default: 8
+        default: 16
 
 permissions:
   contents: write
@@ -60,13 +60,13 @@ jobs:
             as_of_date="$(TZ=Asia/Taipei date +%F)"
           fi
           batch_size="${INPUT_BATCH_SIZE:-3}"
-          max_batches="${INPUT_MAX_BATCHES:-8}"
+          max_batches="${INPUT_MAX_BATCHES:-16}"
           if [ "$batch_size" -lt 1 ] || [ "$batch_size" -gt 3 ]; then
             echo "physical_batch_size must be 1..3 for this backlog wave" >&2
             exit 1
           fi
-          if [ "$max_batches" -lt 1 ] || [ "$max_batches" -gt 8 ]; then
-            echo "max_physical_batches must be 1..8 for this backlog wave" >&2
+          if [ "$max_batches" -lt 1 ] || [ "$max_batches" -gt 16 ]; then
+            echo "max_physical_batches must be 1..16 for this backlog wave" >&2
             exit 1
           fi
           wave_id="run-${GITHUB_RUN_ID}"
@@ -101,7 +101,7 @@ jobs:
             --as-of-date "$AS_OF_DATE" \
             --physical-batch-size "$BATCH_SIZE" \
             --max-physical-batches "$MAX_BATCHES" \
-            --max-due-stocks 24
+            --max-due-stocks 48
 
       - name: Summarize backlog wave plan
         env:
@@ -185,7 +185,7 @@ jobs:
             --wave-id "$WAVE_ID" \
             --batch-size 3 \
             --batch-index "$BATCH_INDEX" \
-            --max-due-stocks 24 \
+            --max-due-stocks 48 \
             --delay-ms 1000 \
             --jitter-ms 2000
 
@@ -363,8 +363,8 @@ jobs:
             --end-quarter 2026Q2 \
             --as-of-date "$AS_OF_DATE" \
             --physical-batch-size 3 \
-            --max-physical-batches 8 \
-            --max-due-stocks 24
+            --max-physical-batches 16 \
+            --max-due-stocks 48
 
       - name: Summarize post-backlog wave remaining backlog
         env:
