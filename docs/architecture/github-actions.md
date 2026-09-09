@@ -156,13 +156,16 @@ Important invariants:
 - Same-artifact writers may additionally share a `concurrency` group, always with `cancel-in-progress: false`. Concurrency is a first defense; regenerate-after-race remains the second defense against unrelated writers.
 - Pages deployment remains downstream of a successful repository publish.
 
-The first production adopter is:
+Production adopters include:
 
 ```text
 .github/workflows/crawl-twse-margin-balance.yml
+.github/workflows/crawl-external-market-indicators.yml
 ```
 
-It snapshots the validated target-date margin CSV under `$RUNNER_TEMP`, then uses the helper to restore that same CSV and regenerate target-date Daily Gainers flow from latest `main` before each publish attempt.
+The TWSE margin workflow snapshots the validated target-date margin CSV under `$RUNNER_TEMP`, then restores that same CSV and regenerates target-date Daily Gainers flow from latest `main` before each publish attempt.
+
+The External Market workflow snapshots the validated external-market JSON under `$RUNNER_TEMP`. On every publish attempt it rebuilds the external-market indexes/manifest from latest `main`, and when the snapshot is final it regenerates the market-risk snapshot/indexes from that same latest repository state. It must not use blind `git pull --rebase` retry loops for these derived outputs.
 
 ## Mandatory workflow schedule summary normalization
 

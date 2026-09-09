@@ -166,28 +166,118 @@ jobs:
             echo "- Ready for downstream market environment: \`${{ steps.validate.outputs.ready || 'false' }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Commit and push changes
+      - name: Snapshot validated external market artifact outside worktree
+        id: snapshot
         if: success()
         shell: bash
+        env:
+          OUTPUT_FILE: ${{ steps.crawl.outputs.output_file }}
+        run: |
+          set -euo pipefail
+          test -n "$OUTPUT_FILE"
+          test -s "$OUTPUT_FILE"
+          SNAPSHOT_DIR="$RUNNER_TEMP/external-market-publish"
+          SNAPSHOT_FILE="$SNAPSHOT_DIR/external_market_indicators.json"
+          mkdir -p "$SNAPSHOT_DIR"
+          cp "$OUTPUT_FILE" "$SNAPSHOT_FILE"
+          node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$SNAPSHOT_FILE"
+          echo "snapshot_file=$SNAPSHOT_FILE" >> "$GITHUB_OUTPUT"
+          echo "Preserved validated external-market artifact outside the repository worktree: $SNAPSHOT_FILE"
+
+      - name: Commit and race-safe push changes
+        if: success()
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.target.outputs.target_date }}
+          MARKET_DATE: ${{ steps.validate.outputs.actual_date }}
+          READY: ${{ steps.validate.outputs.ready || 'false' }}
+          EXTERNAL_SNAPSHOT: ${{ steps.snapshot.outputs.snapshot_file }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add config/external_market_indicators.json config/stock_news_aliases.json data_external_market/ data_market_risk/
-          if git diff --staged --quiet; then
-            echo "No external market changes"
-            exit 0
+
+          export EXTERNAL_FILE="data_external_market/${TARGET_DATE}/external_market_indicators.json"
+          export EXTERNAL_FILES_INDEX="data_external_market/files.json"
+          export EXTERNAL_MANIFEST="data_external_market/manifest.json"
+          export RISK_FILE="data_market_risk/${MARKET_DATE}/market_risk_snapshot.json"
+          export RISK_FILES_INDEX="data_market_risk/files.json"
+          export RISK_MANIFEST="data_market_risk/manifest.json"
+
+          PREPARE_SCRIPT="$RUNNER_TEMP/external-market-publish/prepare.sh"
+          VALIDATE_SCRIPT="$RUNNER_TEMP/external-market-publish/validate.sh"
+
+          cat > "$PREPARE_SCRIPT" <<'PREPARE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          mkdir -p "$(dirname "$EXTERNAL_FILE")"
+          cp "$EXTERNAL_SNAPSHOT" "$EXTERNAL_FILE"
+
+          node scripts/generate_file_lists.js --only data_external_market
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.cwd();
+          const dir = path.join(root, 'data_external_market');
+          const payload = JSON.parse(fs.readFileSync(process.env.EXTERNAL_FILE, 'utf8'));
+          const dates = fs.readdirSync(dir, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory() && /^\d{8}$/.test(entry.name))
+            .map((entry) => entry.name)
+            .sort();
+          const latestDate = dates.at(-1) || null;
+          const manifest = {
+            schemaVersion: 1,
+            generated_at: payload.generated_at,
+            latest_date: latestDate,
+            latest_file: latestDate ? `data_external_market/${latestDate}/external_market_indicators.json` : null,
+            available_dates: dates,
+          };
+          fs.writeFileSync(process.env.EXTERNAL_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+
+          if [ "$READY" = "true" ]; then
+            node scripts/generate_market_risk_snapshot.js --date "$MARKET_DATE"
+            node scripts/generate_file_lists.js --only data_market_risk
           fi
+          PREPARE
+
+          cat > "$VALIDATE_SCRIPT" <<'VALIDATE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          node scripts/validate_external_market_snapshot.js \
+            --expected-date "$TARGET_DATE" \
+            --file "$EXTERNAL_FILE"
+
+          node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$EXTERNAL_MANIFEST"
+          node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$EXTERNAL_FILES_INDEX"
+
+          if [ "$READY" = "true" ]; then
+            test -s "$RISK_FILE"
+            node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$RISK_FILE"
+            node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$RISK_MANIFEST"
+            node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$RISK_FILES_INDEX"
+          fi
+
+          node --test tests/external_market_snapshot_status.test.js tests/market_environment.test.js
+          VALIDATE
+
+          chmod +x "$PREPARE_SCRIPT" "$VALIDATE_SCRIPT"
           current_date=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
           status="${{ steps.validate.outputs.data_status || steps.crawl.outputs.data_status || 'snapshot' }}"
-          git commit -m "chore: update ${status} external market indicators ${current_date}"
-          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then exit 0; fi
-            git rebase --abort 2>/dev/null || true
-            sleep 5
-          done
-          exit 1
+
+          scripts/race_safe_main_publish.sh \
+            --prepare-script "$PREPARE_SCRIPT" \
+            --validate-script "$VALIDATE_SCRIPT" \
+            --commit-message "chore: update ${status} external market indicators ${current_date}" \
+            --add-path "$EXTERNAL_FILE" \
+            --add-path "$EXTERNAL_FILES_INDEX" \
+            --add-path "$EXTERNAL_MANIFEST" \
+            --add-path "$RISK_FILE" \
+            --add-path "$RISK_FILES_INDEX" \
+            --add-path "$RISK_MANIFEST" \
+            --max-attempts 5
 
   schedule-timing-summary:
     # schedule-timing-summary:v1

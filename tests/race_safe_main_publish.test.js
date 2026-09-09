@@ -131,3 +131,18 @@ test('fails closed when prepare changes an unowned path', () => {
   assert.match(result.stderr, /outside the explicitly staged publish paths/);
   assert.equal(git(writer, 'log', '--format=%s', '-1'), 'seed');
 });
+
+
+test('external market workflow uses race-safe publish helper instead of blind rebase', () => {
+  const workflow = fs.readFileSync(
+    path.join(__dirname, '..', '.github', 'workflows', 'crawl-external-market-indicators.yml'),
+    'utf8'
+  );
+
+  assert.match(workflow, /Snapshot validated external market artifact outside worktree/);
+  assert.match(workflow, /scripts\/race_safe_main_publish\.sh/);
+  assert.match(workflow, /--add-path "\$EXTERNAL_MANIFEST"/);
+  assert.match(workflow, /--add-path "\$RISK_MANIFEST"/);
+  assert.doesNotMatch(workflow, /git pull --rebase origin main/);
+  assert.doesNotMatch(workflow, /git rebase --abort/);
+});
