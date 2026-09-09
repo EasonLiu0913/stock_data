@@ -203,9 +203,10 @@ jobs:
           # Stage 1: normal presentation windows and known non-public workfiles.
           node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
 
-          # Stage 2: only when Stage 1 still exceeds 850 MiB. Tighten secondary
-          # history windows and discard research-only publication copies until the
-          # artifact approaches the 800 MiB operating target. Repository data is untouched.
+          # Stage 2/3: only when Stage 1 still exceeds 850 MiB. Tighten secondary
+          # history windows, discard research-only publication copies, then trim
+          # stale strategy snapshots to the same recent publication window when
+          # still needed. Repository data is untouched.
           node scripts/apply_pages_size_budget.js \
             --site _site \
             --target-mib 800 \
@@ -266,6 +267,7 @@ jobs:
           echo "- Stage 1 windows: fubon 10, TWSE index 8, institutional/dealer/foreign 10, normalized 4, predictions 1" >> "$GITHUB_STEP_SUMMARY"
           echo "- Stage 2 windows when needed: fubon 6, TWSE index 5, institutional/dealer/foreign 6, normalized 2, prediction-analysis dates 5" >> "$GITHUB_STEP_SUMMARY"
           echo "- Stage 2 secondary research cuts when still above target: momentum history/replay/research and tag-strategy recalculation" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 3 when still above target: strategy snapshots are limited to the latest 5 manifest dates" >> "$GITHUB_STEP_SUMMARY"
           echo "- EPS valuation core summaries and strategy snapshot manifest are protected and revalidated after trimming" >> "$GITHUB_STEP_SUMMARY"
           echo "- Repository historical data remains untouched; slimming affects only the _site publication artifact" >> "$GITHUB_STEP_SUMMARY"
 
