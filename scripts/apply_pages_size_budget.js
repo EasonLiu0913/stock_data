@@ -287,8 +287,8 @@ function main(argv = process.argv.slice(2)) {
   summary.reclaimed_mebibytes = mib(beforeBytes - currentBytes);
   summary.target_met = currentBytes <= targetMiB * MIB;
   summary.message = summary.target_met
-    ? 'Stage 2 reduced the Pages artifact to the target budget.'
-    : 'Stage 2 completed but the target budget was not met; the deployment hard cap remains the final safety guard.';
+    ? `Stage ${summary.stage} reduced the Pages artifact to the target budget.`
+    : `Stage ${summary.stage} completed but the target budget was not met; the deployment hard cap remains the final safety guard.`;
   console.log(JSON.stringify(summary, null, 2));
 }
 
