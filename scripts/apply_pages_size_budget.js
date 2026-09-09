@@ -101,6 +101,65 @@ function trimPredictionAnalysisDates(siteRoot, maxDates) {
   };
 }
 
+function trimStrategySnapshots(siteRoot, maxDates) {
+  const root = path.join(siteRoot, 'data_prediction_analysis', 'strategy-snapshots');
+  const manifestFile = path.join(root, 'manifest.json');
+  if (!fs.existsSync(root)) {
+    return { dataset: 'strategy_snapshots', skipped: true, reason: 'dataset_missing' };
+  }
+  if (!fs.existsSync(manifestFile)) {
+    throw new Error('data_prediction_analysis/strategy-snapshots/manifest.json is required');
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+  const manifestDates = manifest.dates && typeof manifest.dates === 'object'
+    ? Object.keys(manifest.dates).filter((date) => /^20\d{6}$/.test(date)).sort()
+    : [];
+  const keepDates = new Set(manifestDates.slice(-maxDates));
+  let removedBytes = 0;
+  let removedEntries = 0;
+
+  const datedSubtrees = [
+    ['historical_recalculation', 'directory'],
+    ['live_snapshot_history', 'directory'],
+    ['live_snapshot', 'file'],
+  ];
+
+  for (const [subtree, mode] of datedSubtrees) {
+    const subtreeRoot = path.join(root, subtree);
+    if (!fs.existsSync(subtreeRoot)) continue;
+    for (const entry of fs.readdirSync(subtreeRoot, { withFileTypes: true })) {
+      const date = mode === 'file'
+        ? String(entry.name).match(/^(20\d{6})\.json$/)?.[1]
+        : (/^20\d{6}$/.test(entry.name) ? entry.name : null);
+      if (!date || keepDates.has(date)) continue;
+      const absolute = path.join(subtreeRoot, entry.name);
+      removedBytes += directoryBytes(absolute);
+      fs.rmSync(absolute, { recursive: true, force: true });
+      removedEntries += 1;
+    }
+  }
+
+  if (manifest.dates && typeof manifest.dates === 'object') {
+    manifest.dates = Object.fromEntries(
+      Object.entries(manifest.dates).filter(([date]) => keepDates.has(date))
+    );
+  }
+  fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+  return {
+    dataset: 'strategy_snapshots',
+    max_dates: maxDates,
+    original_dates: manifestDates.length,
+    published_dates: keepDates.size,
+    removed_entries: removedEntries,
+    removed_bytes: removedBytes,
+    removed_mebibytes: mib(removedBytes),
+    first_published_date: [...keepDates].sort()[0] || null,
+    last_published_date: [...keepDates].sort().at(-1) || null,
+  };
+}
+
 function applyAggressiveWindows(siteRoot) {
   const policies = [
     ['data_fubon', 6],
@@ -148,6 +207,31 @@ function runSelfTest() {
   if (fs.existsSync(path.join(analysis, '20260103'))) throw new Error('budget self-test retained expired analysis date');
   const manifest = JSON.parse(fs.readFileSync(path.join(analysis, 'manifest.json'), 'utf8'));
   if (manifest.available_volume_filter_dates.length !== 3) throw new Error('budget self-test did not trim manifest dates');
+
+  const snapshotRoot = path.join(analysis, 'strategy-snapshots');
+  fs.mkdirSync(path.join(snapshotRoot, 'historical_recalculation'), { recursive: true });
+  fs.mkdirSync(path.join(snapshotRoot, 'live_snapshot'), { recursive: true });
+  fs.mkdirSync(path.join(snapshotRoot, 'live_snapshot_history'), { recursive: true });
+  const snapshotDates = ['20260101', '20260102', '20260103', '20260104', '20260105', '20260106'];
+  for (const date of snapshotDates) {
+    fs.mkdirSync(path.join(snapshotRoot, 'historical_recalculation', date));
+    fs.writeFileSync(path.join(snapshotRoot, 'historical_recalculation', date, 'snapshot.json'), date);
+    fs.writeFileSync(path.join(snapshotRoot, 'live_snapshot', `${date}.json`), date);
+    fs.mkdirSync(path.join(snapshotRoot, 'live_snapshot_history', date));
+    fs.writeFileSync(path.join(snapshotRoot, 'live_snapshot_history', date, 'history.json'), date);
+  }
+  fs.writeFileSync(path.join(snapshotRoot, 'manifest.json'), JSON.stringify({
+    schema_version: 2,
+    dates: Object.fromEntries(snapshotDates.map((date) => [date, {
+      live_snapshot: { file: `data_prediction_analysis/strategy-snapshots/live_snapshot/${date}.json` },
+    }])),
+  }));
+  const snapshotResult = trimStrategySnapshots(root, 2);
+  if (snapshotResult.published_dates !== 2) throw new Error('budget self-test expected two strategy snapshot dates');
+  if (fs.existsSync(path.join(snapshotRoot, 'live_snapshot', '20260104.json'))) throw new Error('budget self-test retained expired live snapshot');
+  if (!fs.existsSync(path.join(snapshotRoot, 'live_snapshot', '20260106.json'))) throw new Error('budget self-test removed latest live snapshot');
+  const snapshotManifest = JSON.parse(fs.readFileSync(path.join(snapshotRoot, 'manifest.json'), 'utf8'));
+  if (Object.keys(snapshotManifest.dates).join(',') !== '20260105,20260106') throw new Error('budget self-test did not trim snapshot manifest dates');
   console.log('apply_pages_size_budget self-test passed');
 }
 
@@ -173,6 +257,7 @@ function main(argv = process.argv.slice(2)) {
     stage: 1,
     aggressive_window_results: [],
     secondary_research_removals: [],
+    strategy_snapshot_trim: null,
   };
 
   if (beforeBytes <= triggerMiB * MIB) {
@@ -189,6 +274,12 @@ function main(argv = process.argv.slice(2)) {
 
   if (currentBytes > targetMiB * MIB) {
     summary.secondary_research_removals = applySecondaryResearchCuts(siteRoot);
+    currentBytes = directoryBytes(siteRoot);
+  }
+
+  if (currentBytes > targetMiB * MIB) {
+    summary.stage = 3;
+    summary.strategy_snapshot_trim = trimStrategySnapshots(siteRoot, 5);
     currentBytes = directoryBytes(siteRoot);
   }
 
@@ -214,4 +305,5 @@ module.exports = {
   applyAggressiveWindows,
   applySecondaryResearchCuts,
   trimPredictionAnalysisDates,
+  trimStrategySnapshots,
 };
