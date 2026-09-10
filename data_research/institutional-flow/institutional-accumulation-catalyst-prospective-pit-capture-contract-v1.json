@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "contract_id": "institutional-accumulation-catalyst-prospective-pit-capture-contract-v1",
+  "scope": "forward_only_catalyst_source_value_version_capture",
+  "network_validation": "zero_network_fixture_only",
+  "historical_reopen_authorized": false,
+  "outcomes_authorized": false,
+  "required_snapshot_fields": [
+    "immutable_snapshot_id",
+    "source_provider",
+    "source_interface",
+    "source_request_key",
+    "collected_at",
+    "source_reported_at",
+    "source_timestamp_precision",
+    "parser_version",
+    "methodology_identity",
+    "response_sha256",
+    "response_bytes",
+    "raw_response_encoding",
+    "raw_response_base64",
+    "pit_known_at",
+    "pit_known_at_basis",
+    "pit_value_version_safety",
+    "historical_back_imputation_allowed"
+  ],
+  "immutable_value_version": {
+    "content_hash": "sha256(raw_response_bytes)",
+    "snapshot_identity": "sha256(contract_id + source identity + collected_at + response_sha256 + parser_version + methodology_identity)",
+    "raw_representation": "base64 encoded immutable response bytes checked into each snapshot",
+    "write_policy": "append_only",
+    "same_identity_same_bytes": "idempotent_noop",
+    "same_identity_different_bytes": "fail_closed_collision"
+  },
+  "pit_semantics": {
+    "pit_known_at": "collected_at",
+    "basis": "immutable_version_observed_at_collection_time",
+    "safety_state": "prospective_capture_safe_from_collection_time_only",
+    "collection_time_claim": "the captured immutable version existed no later than collected_at",
+    "forbidden_inference": [
+      "collection time must not imply visibility before collection",
+      "present-day source visibility must not imply historical visibility",
+      "source-reported event time must not move pit_known_at earlier without separate immutable value-version proof"
+    ],
+    "unresolved_state_policy": "fail_closed"
+  },
+  "storage": {
+    "root": "data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit",
+    "path_shape": "<source_interface>/<source_request_key>/<collected_at>--<immutable_snapshot_id>.json",
+    "overwrite_existing_snapshot": false
+  },
+  "protected_state": {
+    "historical_33_identity_upgrade": false,
+    "development_outcomes_read": false,
+    "stock_time_holdout_outcomes_read": false,
+    "protected_2454_outcomes_read": false,
+    "catalyst_outcome_association_opened": false,
+    "withdrawal_used_as_input": false,
+    "threshold_score_model_strategy_production_behavior_authorized": false,
+    "legacy_ajax_t05st01_retry_authorized": false
+  }
+}
