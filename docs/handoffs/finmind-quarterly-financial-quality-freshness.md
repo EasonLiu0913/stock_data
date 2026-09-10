@@ -12,7 +12,7 @@ Project state: **production-proven; backlog drain expansion active**
 
 Active round: `backlog-drain-wave-96-v1`
 
-Round state: **Prompt A not started — preregistered paired Prompt A/B**
+Round state: **Prompt A complete — Prompt B pending**
 
 Global routing task id: `finmind-quarterly-financial-quality-freshness`
 
@@ -2610,6 +2610,26 @@ Implementation/execution:
 - run the required deterministic FinMind/master/8021 tests and preserve applicable Node Regression Suite evidence.
 
 Update this handoff with durable Prompt A evidence while preserving the exact preregistered Prompt B below.
+
+#### Prompt A completion evidence — backlog-drain-wave-96-v1 — 2026-09-10
+
+**Prompt A complete — Prompt B pending.**
+
+- Workflow bound commit: `578c63e157986b005a2cb7f0d39248a0314b11b0` — raised only the bounded backlog-wave ceiling from 16×3/48 to 32×3/96 while preserving `physical_batch_size=3`, `strategy.max-parallel=1`, 3–8s batch cooldown, 1–3s inter-request pacing, quota cap/reserve 500/20, per-batch checkpointing, latest-main replay, one master rebuild, one re-plan, and no automatic second wave.
+- Real workflow run: `34370457967`, head SHA `14db095b698929bbd35d4eec92201260becf657f`, conclusion **success**.
+- Planner job `102530056051`: fresh committed due count **280**; selected **96**; exactly **32 physical batches × 3 stocks**.
+- Refresh job identities by batch: `0:102532052783, 1:102532052713, 2:102532052701, 3:102532052735, 4:102532052739, 5:102532052705, 6:102532052787, 7:102532052733, 8:102532052725, 9:102532052728, 10:102532052708, 11:102532054725, 12:102532054608, 13:102532054721, 14:102532054711, 15:102532054807, 16:102532054792, 17:102532054928, 18:102532054896, 19:102532054972, 20:102532055356, 21:102532056697, 22:102532056810, 23:102532056838, 24:102532056749, 25:102532057075, 26:102532057077, 27:102532056988, 28:102532057103, 29:102532057744, 30:102532058066, 31:102532058850`. Every batch job concluded success and used a distinct GitHub-hosted runner identity.
+- Durable batch checkpoint commits by batch: `0:be4f2faf769663e796114d3c1e5e4dfe03b894b2, 1:5576e72f5be9e41cca8dc3099900378893cb4923, 2:58ac8061a0b7aa7cc6af9168fa15ef8f60bb2dfb, 3:212032e2e87bf01dd1e12682237b2882d6976fc5, 4:362b1760b37f00d1c61b4cd0f5f0d474d9e75690, 5:abe7ab1f6b0ed63fd08ffa28bf16eeede94d2fe7, 6:b78aafd197c7e6428270a834f439de3644b38d85, 7:690ede95a7d6d13c8f8847d5f34575fc3df5c10d, 8:5522adda869b9752f4d726215176838369bf2a56, 9:b0a3126fb1104d6dc4868fec672c28d4a19642cf, 10:e273f0dea67859fa87f9b3d038395e8c57a06019, 11:21b330c1722d00a524786893c20f0eec291dfaaf, 12:40fc2b07b2ad2984ddbcf82afb256f5b08e34920, 13:738447b678c801887adf7d913c4563c578c47981, 14:8cc5f9ccb16db49e768388cb8b9c239283d6b654, 15:ff749bd3c7df31716f2cd2e50b2e75c8151b256a, 16:22c14782b729dee62ab1269eae4cb8e2895998f4, 17:189ad73548b1de00fe9df112c8769abb80a63c78, 18:c5030e60ce7ae5c043a57adde692c78706416011, 19:1c3b259a6acacf1b64095d9591b2e4e322c01254, 20:2e0dd221c28b249adc6422262eb9070553cb81f2, 21:7baed023d19b95eb13a709a155d4a7a5f18e4930, 22:871e6572f938e2dbd24e302a0b61ef168ccbdcb3, 23:198dbedf8e671c79eb953242c80e7bc580a1c71e, 24:17254c55716203aa652e6b1bfae4dd9c75558487, 25:3c028b1365d0ea2460bc6e29239f14672dc3ab70, 26:8d2cca1fafd6b7b9b7be5181aadb3ac4881ef7a5, 27:b5e73a1ba91eea670742a9a7c08270c168821610, 28:47a0e083fa1b3ead57e71d90c60b168b7bd2c7f1, 29:acaf123d18da97adff3cd748144626ec717b9739, 30:983c88fcb65aaedf188d2ccb3661b426961dab16, 31:b5926f0e1fc690a00e6a3548dffb3ba040517840`.
+- Durable status paths exist on current remote main for `data_prediction_analysis/quarterly-financial-quality/batch-status/due-refresh-2026-09-09-wave-run-34370457967-batch000..031.json`.
+- All 32 status artifacts record `request_count=3`, `inter_request_delay_ms=1000`, `inter_request_jitter_ms=2000`, and batch-start cooldowns within 3–8s. Direct job-log verification found exactly two actual inter-request waits per 3-stock batch, every wait within 1000–3000ms and no trailing third wait. Quota diagnostics remained non-exhausted for every checked batch.
+- Terminal result accounting: **93 complete + 3 unsupported_financial_model = 96**. Unsupported stocks: `2885`, `2884`, `6005`. No durable batch status contains a non-terminal/degraded result.
+- Master rebuild job `102559774287`: success. Master verifier reported `verified_stocks=93`, `skipped_unsupported=3`; canonical master publication commit: `9e5a8ae4afd6dd820c968003fdb58dc0f89bc136`; durable remote verification passed after push.
+- Re-plan job `102560700474`: success. Due backlog reconciled **280 → 184**, delta **96**, with no automatic second wave.
+- Deterministic FinMind freshness/master/8021 regression steps passed in the real planner job. The latest applicable full Node Regression Suite evidence from the immediately preceding unchanged script/test implementation remains green; this round itself changed only the bounded backlog workflow ceiling before execution.
+- Concurrent remote change `89204d7b4feeb526a1d876c0f64b87c8c6df2e68` later updated the 8021 regression expectation from 2026Q1/FQ12 to the newly durable, conservatively-known 2026Q2/FQ14 (`conservative_known_date=2026-08-14`). It does not change FAS>=8, FQ>=10, strategy identity, anti-lookahead, signal-date semantics, or next-close execution policy, so it is classified as an evidence refresh rather than a violation of the frozen production invariants.
+- Global routing remains `finmind-quarterly-financial-quality-freshness` as the sole active project. Institutional Accumulation, Institutional Withdrawal, and Oil Market Context remain pending.
+
+The exact preregistered Prompt B below is preserved unchanged. Prompt B must independently verify historical-wave immutability, full pacing/quota evidence, remote checkpoint durability, master propagation, re-plan accounting, and calibration before any next round is promoted.
 
 #### Preregistered Prompt B — backlog-drain-wave-96-v1
 
