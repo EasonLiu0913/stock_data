@@ -1,0 +1,52 @@
+name: "[研究] Wave C Manual Review Reconciliation"
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reconcile-institutional-accumulation-wave-c-manual-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Enrich terminal manual review from durable attempt metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const p=require('/tmp/plan.json');
+          const root='data_research/institutional-flow/official-disclosure-raw/mops-material-information/details/115';
+          const read=f=>JSON.parse(fs.readFileSync(f,'utf8'));
+          const rows=(p.manual_review||[]).filter(x=>x.kind==='detail').map(x=>{
+            const f=path.join(root,String(x.companyId),`${x.enterDate}_${x.serialNumber}`,'attempt-meta.json');
+            const m=read(f);
+            return {
+              request_key:`mops-material-information-detail|stock=${x.companyId}|enterDate=${x.enterDate}|serial=${x.serialNumber}|market=${x.marketKind}`,
+              durable_request_key:m.source_url_or_request_key||null,
+              attempt_count:Number(m.attempt_count||0),
+              failure_reason:m.failure_reason||m.reason||'unspecified',
+              terminal_state:m.terminal_state||null,
+              quality_state:m.quality_state||null
+            };
+          });
+          const reason_counts=Object.fromEntries([...new Set(rows.map(r=>r.failure_reason))].sort().map(k=>[k,rows.filter(r=>r.failure_reason===k).length]));
+          const out={manual_review_detail_count:rows.length,reason_counts,manual_review_details:rows,attempt_ceiling_violation_count:rows.filter(r=>r.attempt_count>3).length,planner_remaining_queue_count:(p.wave_c||[]).length};
+          console.log('WAVE_C_MANUAL_REVIEW_JSON_START');
+          console.log(JSON.stringify(out,null,2));
+          console.log('WAVE_C_MANUAL_REVIEW_JSON_END');
+          NODE
