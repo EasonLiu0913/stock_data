@@ -46,7 +46,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: main
-          fetch-depth: 0
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/build_twse_market_chart.js
+            /scripts/resolve_scheduled_collection_date.js
+            /scripts/resolve_forecast_dates.js
+            /data_history_sma/non_trading_days.json
+            /data_twse_market_chart/market_chart.json
 
       - name: Resolve target date and route workload
         id: route
