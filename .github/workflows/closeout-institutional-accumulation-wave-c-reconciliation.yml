@@ -1,0 +1,149 @@
+name: "[研究] Wave C Durable Closeout Repair"
+
+on:
+  push:
+    paths:
+      - '.github/workflows/closeout-institutional-accumulation-wave-c-reconciliation.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-wave-c-closeout-repair
+  cancel-in-progress: false
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Re-fetch current main and reconcile durable state only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          echo "CLOSEOUT_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const crypto=require('node:crypto');
+          const plan=require('/tmp/plan.json');
+          const methodology='institutional-accumulation-material-information-wave-c-physical-batch-collection-v1';
+          const rawRoot='data_research/institutional-flow/official-disclosure-raw/mops-material-information';
+          const handoffPath='data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md';
+          const closeoutPath=path.join(rawRoot,'wave-c-durable-closeout.json');
+          const stocks=['1102','1103','1104','1109','1201','1203','1215','1216','1217'];
+          const readJson=f=>{try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch{return null}};
+          const walk=d=>{if(!fs.existsSync(d))return[];const out=[];for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);e.isDirectory()?out.push(...walk(p)):out.push(p)}return out};
+          if(plan.methodology!==methodology) throw new Error(`Unexpected methodology ${plan.methodology}`);
+          if((plan.wave_a||[]).length || (plan.wave_b||[]).length) throw new Error('Pre-Wave-C queue reopened');
+          if(plan.legacy_preflight_attempt_count!==2) throw new Error('Legacy attempt_count changed');
+          if(!plan.material_information_authorized) throw new Error('Material-information authorization not durable');
+          if((plan.wave_c_listing||[]).length || (plan.wave_c_detail||[]).length || (plan.wave_c||[]).length) throw new Error('Retryable Wave C queue is not zero; closeout must not run');
+
+          const listingState=stocks.map(stock=>{
+            const d=path.join(rawRoot,'listings','115',stock);
+            const m=readJson(path.join(d,'source-meta.json'));
+            if(!m || m.quality_state!=='quality_passed') throw new Error(`Listing not complete: ${stock}`);
+            return {request_key:`mops-material-information-listing|stock=${stock}|roc_year=115`,stock_id:stock,attempt_count:Number(m.attempt_count||0),quality_state:m.quality_state};
+          });
+          const detailRoot=path.join(rawRoot,'details','115');
+          const detailSourceMetas=walk(detailRoot).filter(f=>f.endsWith('/source-meta.json')).map(f=>({file:f,meta:readJson(f)})).filter(x=>x.meta);
+          const completedDetails=detailSourceMetas.filter(x=>x.meta.quality_state==='quality_passed');
+          const manual=(plan.manual_review||[]).filter(x=>x.kind==='detail').map(x=>{
+            const f=path.join(detailRoot,String(x.companyId),`${x.enterDate}_${x.serialNumber}`,'attempt-meta.json');
+            const m=readJson(f);
+            if(!m) throw new Error(`Missing attempt-meta for terminal manual_review ${f}`);
+            return {
+              request_key:`mops-material-information-detail|stock=${x.companyId}|enterDate=${x.enterDate}|serial=${x.serialNumber}|market=${x.marketKind}`,
+              durable_request_key:m.source_url_or_request_key||null,
+              stock_id:String(x.companyId),enterDate:String(x.enterDate),serialNumber:String(x.serialNumber),marketKind:String(x.marketKind),
+              attempt_count:Number(m.attempt_count||0),failure_reason:m.failure_reason||m.reason||'unspecified',
+              quality_state:m.quality_state||null,terminal_state:m.terminal_state||null
+            };
+          });
+          for(const r of manual){if(r.attempt_count!==3||r.terminal_state!=='manual_review') throw new Error(`Manual review state invalid for ${r.request_key}`)}
+          const requestMax=new Map();
+          for(const f of [...walk(path.join(rawRoot,'listings','115')),...walk(detailRoot)].filter(f=>f.endsWith('.json'))){
+            const m=readJson(f); if(!m) continue;
+            const key=m.source_url_or_request_key||m.request_key||f.replace(rawRoot+'/','');
+            const n=Number(m.attempt_count||0);
+            requestMax.set(key,Math.max(requestMax.get(key)||0,n));
+          }
+          const violations=[...requestMax.entries()].filter(([,n])=>n>3).map(([request_key,attempt_count])=>({request_key,attempt_count}));
+          if(violations.length) throw new Error(`Attempt ceiling violations: ${JSON.stringify(violations)}`);
+          const reasonCounts=Object.fromEntries([...new Set(manual.map(r=>r.failure_reason))].sort().map(k=>[k,manual.filter(r=>r.failure_reason===k).length]));
+          const sourceSha=process.env.CLOSEOUT_SOURCE_SHA||null;
+          const closeout={
+            schema_version:1,methodology,
+            reconciliation_baseline_sha:'ce2da9227b0383932e4dc1b80d4cbcae7dfc6430',
+            closeout_source_sha:sourceSha,
+            reconciled_at:'2026-09-10T08:18:54Z',
+            prompt_a_state:'COMPLETE',prompt_b_state:'PENDING',
+            network_requests_during_reconciliation:0,
+            legacy_endpoint_requests_during_reconciliation:0,
+            wave_a_refetches_during_reconciliation:0,
+            legacy_preflight_attempt_count:plan.legacy_preflight_attempt_count,
+            completed_listing_count:listingState.length,
+            unfinished_listings:[],
+            completed_detail_count:completedDetails.length,
+            retryable_detail_count:(plan.wave_c_detail||[]).length,
+            manual_review_detail_count:manual.length,
+            manual_review_reason_counts:reasonCounts,
+            planner_listing_queue_count:(plan.wave_c_listing||[]).length,
+            planner_detail_queue_count:(plan.wave_c_detail||[]).length,
+            planner_remaining_queue_count:(plan.wave_c||[]).length,
+            planner_remaining_queue:plan.wave_c||[],
+            attempt_ceiling:3,request_key_count_checked:requestMax.size,
+            attempt_ceiling_violation_count:violations.length,attempt_ceiling_violations:violations,
+            listing_state:listingState,manual_review_details:manual,
+            reconciliation_workflow_runs:[34454300824,34454472668],
+            regression_test:'tests/institutional_accumulation_official_disclosure_collection.test.js: PASS'
+          };
+          fs.writeFileSync(closeoutPath,JSON.stringify(closeout,null,2)+'\n');
+
+          const old=fs.readFileSync(handoffPath,'utf8');
+          const marker='## Prompt B — Wave C physical-batch collection closeout';
+          const markerIndex=old.indexOf(marker);
+          if(markerIndex<0) throw new Error('Prompt B marker missing');
+          const promptB=old.slice(markerIndex);
+          const promptBHash=crypto.createHash('sha256').update(promptB).digest('hex');
+          let revised=old.replace('- Prompt A: **NOT STARTED / ACTIVE**\n- Prompt B: **PREREGISTERED / PENDING**','- Prompt A: **COMPLETE**\n- Prompt B: **PREREGISTERED / PENDING**');
+          if(revised===old) throw new Error('Prompt A status replacement did not apply');
+          const rows=manual.map(r=>`| \`${r.request_key}\` | ${r.attempt_count} | \`${r.failure_reason}\` |`).join('\n');
+          const closeoutSection=`## Prompt A durable-state reconciliation closeout\n\nPrompt A status: **COMPLETE**. Prompt B remains **PREREGISTERED / PENDING** and is intentionally not executed by this repair.\n\nDurable-state reconciliation was performed from current remote \`main\` without issuing any MOPS request. The handoff's former \`NOT STARTED\` label was stale relative to committed Wave C checkpoints. No legacy \`/mops/web/ajax_t05st01\` request ran, Wave A monthly revenue was not refetched, and no protected outcome/catalyst/model/strategy state was opened.\n\nReconciliation accounting:\n- initial reconciliation baseline SHA: \`ce2da9227b0383932e4dc1b80d4cbcae7dfc6430\`;\n- read-only reconciliation runs: \`34454300824\` and \`34454472668\`;\n- completed listings: **${listingState.length}/9**; unfinished listings: **0**;\n- completed quality-passed details: **${completedDetails.length}**;\n- retryable details: **${(plan.wave_c_detail||[]).length}**;\n- terminal manual_review details: **${manual.length}**;\n- planner listing/detail/final remaining queues: **${(plan.wave_c_listing||[]).length}/${(plan.wave_c_detail||[]).length}/${(plan.wave_c||[]).length}**;\n- durable request keys checked for attempt ceiling: **${requestMax.size}**; maximum allowed fresh-runner attempts: **3**; violations: **${violations.length}**;\n- manual_review failure reasons: ${Object.entries(reasonCounts).map(([k,v])=>`\`${k}\`=${v}`).join(', ')}.\n\nAll terminal manual_review keys are removed from automatic retry. The preregistered attempt ceiling remains 3 and is not raised.\n\n| request key | attempt_count | failure reason |\n| --- | ---: | --- |\n${rows}\n\nCanonical machine-readable closeout: \`${closeoutPath}\`.\n\n`;
+          revised=revised.replace(marker,closeoutSection+marker);
+          const newMarkerIndex=revised.indexOf(marker);
+          const newPromptB=revised.slice(newMarkerIndex);
+          const newPromptBHash=crypto.createHash('sha256').update(newPromptB).digest('hex');
+          if(newPromptBHash!==promptBHash) throw new Error(`Prompt B changed: ${promptBHash} -> ${newPromptBHash}`);
+          fs.writeFileSync(handoffPath,revised);
+          console.log(JSON.stringify({completed_listings:listingState.length,completed_details:completedDetails.length,retryable_details:(plan.wave_c_detail||[]).length,manual_review:manual.length,reason_counts:reasonCounts,planner_queue:(plan.wave_c||[]).length,request_keys_checked:requestMax.size,attempt_ceiling_violations:violations.length,prompt_b_sha256:promptBHash},null,2));
+          NODE
+      - name: Remove one-shot reconciliation workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f \
+            .github/workflows/reconcile-institutional-accumulation-wave-c-closeout.yml \
+            .github/workflows/reconcile-institutional-accumulation-wave-c-manual-review.yml \
+            .github/workflows/closeout-institutional-accumulation-wave-c-reconciliation.yml
+      - name: Commit durable closeout repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md \
+                  data_research/institutional-flow/official-disclosure-raw/mops-material-information/wave-c-durable-closeout.json
+          git diff --cached --check
+          git commit -m "research: close out Wave C durable collection state"
+          git push origin HEAD:main
