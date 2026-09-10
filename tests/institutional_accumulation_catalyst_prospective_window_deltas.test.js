@@ -13,7 +13,7 @@ const {
   buildWindowDeltaAudit,
 } = require('../scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas');
 
-const ROOT_RELATIVE = 'fixture/prospective-catalyst-pit';
+const ROOT_RELATIVE = 'data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit';
 const STOCKS = ['1102', '1104', '1216'];
 const INTERFACES = ['prospective_material_information_detail', 'prospective_material_information_listing'];
 const METHODOLOGY = 'institutional-accumulation-catalyst-prospective-live-capture-canary-v1';
@@ -43,8 +43,7 @@ function fixtureSnapshot(stock, sourceInterface, collectedAt, payload) {
 
 function writeSnapshot(repoRoot, snapshot, overridePath = null) {
   const canonical = snapshotRelativePath(snapshot);
-  const suffix = canonical.split('prospective-catalyst-pit/')[1];
-  const relative = overridePath || `${ROOT_RELATIVE}/${suffix}`;
+  const relative = overridePath || canonical;
   const absolute = path.join(repoRoot, ...relative.split('/'));
   fs.mkdirSync(path.dirname(absolute), { recursive: true });
   fs.writeFileSync(absolute, `${JSON.stringify(snapshot, null, 2)}\n`);
