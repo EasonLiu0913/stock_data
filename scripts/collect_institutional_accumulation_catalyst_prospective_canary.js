@@ -93,8 +93,8 @@ function rocDateTimeToIso(rocDate, time) {
   return Number.isNaN(iso.getTime()) ? null : iso.toISOString();
 }
 
-async function requestOnce(endpoint, payload, fetchImpl = fetch, random = Math.random) {
-  await sleep(boundedCooldownMs(random));
+async function requestOnce(endpoint, payload, fetchImpl = fetch, random = Math.random, sleepImpl = sleep) {
+  await sleepImpl(boundedCooldownMs(random));
   const response = await fetchImpl(endpoint, {
     method: 'POST',
     headers: {
@@ -132,11 +132,12 @@ async function collectStock(root, stock, options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
   const random = options.random || Math.random;
   const now = options.now || (() => new Date().toISOString());
+  const sleepImpl = options.sleepImpl || sleep;
   let requestCount = 0;
   const written = [];
 
   const listingPayload = { companyId: stock, year: ROC_YEAR, month: 'all', firstDay: '', lastDay: '' };
-  const listing = await requestOnce(LIST_ENDPOINT, listingPayload, fetchImpl, random);
+  const listing = await requestOnce(LIST_ENDPOINT, listingPayload, fetchImpl, random, sleepImpl);
   requestCount += 1;
   const descriptors = validateListingBody(listing.body, stock);
   const listingSnapshot = makeSnapshot({
@@ -151,7 +152,7 @@ async function collectStock(root, stock, options = {}) {
   if (descriptors.length > 0) {
     const d = descriptors[0];
     const detailPayload = { enterDate: d.enterDate, serialNumber: d.serialNumber, companyId: stock, marketKind: d.marketKind };
-    const detail = await requestOnce(DETAIL_ENDPOINT, detailPayload, fetchImpl, random);
+    const detail = await requestOnce(DETAIL_ENDPOINT, detailPayload, fetchImpl, random, sleepImpl);
     requestCount += 1;
     const validated = validateDetailBody(detail.body, d);
     const detailSnapshot = makeSnapshot({
