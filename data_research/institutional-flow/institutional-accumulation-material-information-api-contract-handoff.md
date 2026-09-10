@@ -13,7 +13,7 @@ This routing handoff supersedes the obsolete legacy-third-retry route. Completed
 `institutional-accumulation-material-information-wave-c-physical-batch-collection-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -252,6 +252,70 @@ When complete, report:
 `Prompt A complete — ready for Prompt B`
 and stop.
 ```
+
+## Prompt A durable-state reconciliation closeout
+
+Prompt A status: **COMPLETE**. Prompt B remains **PREREGISTERED / PENDING** and is intentionally not executed by this repair.
+
+Durable-state reconciliation was performed from current remote `main` without issuing any MOPS request. The handoff's former `NOT STARTED` label was stale relative to committed Wave C checkpoints. No legacy `/mops/web/ajax_t05st01` request ran, Wave A monthly revenue was not refetched, and no protected outcome/catalyst/model/strategy state was opened.
+
+Reconciliation accounting:
+- initial reconciliation baseline SHA: `ce2da9227b0383932e4dc1b80d4cbcae7dfc6430`;
+- read-only reconciliation runs: `34454300824` and `34454472668`;
+- completed listings: **9/9**; unfinished listings: **0**;
+- completed quality-passed details: **255**;
+- retryable details: **0**;
+- terminal manual_review details: **40**;
+- planner listing/detail/final remaining queues: **0/0/0**;
+- durable request keys checked for attempt ceiling: **682**; maximum allowed fresh-runner attempts: **3**; violations: **0**;
+- manual_review failure reasons: `descriptor_identity_mismatch`=39, `suspected_soft_block_or_transport_failure`=1.
+
+All terminal manual_review keys are removed from automatic retry. The preregistered attempt ceiling remains 3 and is not raised.
+
+| request key | attempt_count | failure reason |
+| --- | ---: | --- |
+| `mops-material-information-detail|stock=1102|enterDate=1150310|serial=2|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1102|enterDate=1150330|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1102|enterDate=1150512|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1102|enterDate=1150812|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1103|enterDate=1150302|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1103|enterDate=1150407|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1103|enterDate=1150519|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1103|enterDate=1150519|serial=2|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1103|enterDate=1150519|serial=3|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1104|enterDate=1150309|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1104|enterDate=1150511|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1104|enterDate=1150811|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150212|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150226|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150305|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150305|serial=2|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150305|serial=3|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150305|serial=4|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150305|serial=5|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150305|serial=6|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150306|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150309|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150428|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150508|serial=3|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150803|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1109|enterDate=1150805|serial=1|market=sii` | 3 | `suspected_soft_block_or_transport_failure` |
+| `mops-material-information-detail|stock=1201|enterDate=1150225|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1201|enterDate=1150622|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1201|enterDate=1150622|serial=2|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1201|enterDate=1150714|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1201|enterDate=1150720|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150224|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150224|serial=3|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150224|serial=4|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150309|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150423|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150506|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150506|serial=2|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150622|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+| `mops-material-information-detail|stock=1217|enterDate=1150707|serial=1|market=sii` | 3 | `descriptor_identity_mismatch` |
+
+Canonical machine-readable closeout: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/wave-c-durable-closeout.json`.
 
 ## Prompt B — Wave C physical-batch collection closeout
 
