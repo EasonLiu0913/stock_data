@@ -17,7 +17,7 @@ test('previousMonthStart crosses year boundary', () => {
   assert.equal(previousMonthStart('20260101'), '20251201');
 });
 
-test('incremental mode refreshes only previous and current month', () => {
+test('incremental mode does not refetch a sealed historical month', () => {
   const existingOutput = {
     startDate: '20240101',
     endDate: '20260831',
@@ -25,7 +25,19 @@ test('incremental mode refreshes only previous and current month', () => {
   };
   assert.deepEqual(
     selectMonthsToFetch('20240101', '20260902', existingOutput, false),
-    ['20260801', '20260901']
+    ['20260901']
+  );
+});
+
+test('incremental mode skips all TWSE monthly fetches when target date is already covered', () => {
+  const existingOutput = {
+    startDate: '20240101',
+    endDate: '20260909',
+    data: [{ date: '20240102' }, { date: '20260909' }]
+  };
+  assert.deepEqual(
+    selectMonthsToFetch('20240101', '20260909', existingOutput, false),
+    []
   );
 });
 
@@ -37,7 +49,7 @@ test('incremental recovery fills every month after an execution gap', () => {
   };
   assert.deepEqual(
     selectMonthsToFetch('20240101', '20261215', existingOutput, false),
-    ['20260801', '20260901', '20261001', '20261101', '20261201']
+    ['20260901', '20261001', '20261101', '20261201']
   );
 });
 
