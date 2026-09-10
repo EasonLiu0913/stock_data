@@ -1,0 +1,106 @@
+name: "[研究] Wave C Durable Reconciliation"
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reconcile-institutional-accumulation-wave-c-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            tests
+            data_research/institutional-flow
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - name: Regression tests
+        run: node tests/institutional_accumulation_official_disclosure_collection.test.js
+      - name: Read-only durable reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const plan = require('/tmp/plan.json');
+          const root = 'data_research/institutional-flow/official-disclosure-raw/mops-material-information';
+          const stocks = ['1102','1103','1104','1109','1201','1203','1215','1216','1217'];
+          const read = p => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
+          const walk = d => {
+            if (!fs.existsSync(d)) return [];
+            const out=[];
+            for (const e of fs.readdirSync(d,{withFileTypes:true})) {
+              const p=path.join(d,e.name);
+              if(e.isDirectory()) out.push(...walk(p)); else out.push(p);
+            }
+            return out;
+          };
+          const listing = stocks.map(stock => {
+            const d=path.join(root,'listings','115',stock);
+            const sourceMeta=read(path.join(d,'source-meta.json'));
+            const attemptMeta=read(path.join(d,'attempt-meta.json'));
+            const attemptFiles=walk(path.join(d,'attempts'));
+            const attemptJson=attemptFiles.filter(p=>p.endsWith('.json')).map(read).filter(Boolean);
+            const observed=[sourceMeta,attemptMeta,...attemptJson].filter(Boolean).map(x=>Number(x.attempt_count||0));
+            return {stock,complete:sourceMeta?.quality_state==='quality_passed',attempt_count_max:Math.max(0,...observed),attempt_files:attemptFiles.length,terminal_state:(attemptMeta||sourceMeta)?.terminal_state??null};
+          });
+          const detailRoot=path.join(root,'details','115');
+          const detailMetas=walk(detailRoot).filter(p=>p.endsWith('/source-meta.json')).map(p=>({p,m:read(p)})).filter(x=>x.m);
+          const detailAttemptMetas=walk(detailRoot).filter(p=>p.endsWith('/attempt-meta.json')).map(p=>({p,m:read(p)})).filter(x=>x.m);
+          const detailAttemptFiles=walk(detailRoot).filter(p=>p.includes('/attempts/'));
+          const detailComplete=detailMetas.filter(x=>x.m.quality_state==='quality_passed');
+          const requestMax=new Map();
+          const record=(p,m)=>{
+            if(!m) return;
+            const key=m.source_url_or_request_key || m.request_key || p.replace(root+'/','');
+            const n=Number(m.attempt_count||0);
+            requestMax.set(key,Math.max(requestMax.get(key)||0,n));
+          };
+          listing.forEach(x=>{});
+          for(const p of walk(path.join(root,'listings','115')).filter(p=>p.endsWith('.json'))) record(p,read(p));
+          for(const p of walk(detailRoot).filter(p=>p.endsWith('.json'))) record(p,read(p));
+          const attemptCeilingViolations=[...requestMax.entries()].filter(([,n])=>n>3).map(([key,attempt_count])=>({key,attempt_count}));
+          const manual=plan.manual_review||[];
+          const summary={
+            methodology:plan.methodology,
+            material_information_authorized:plan.material_information_authorized,
+            legacy_preflight_attempt_count:plan.legacy_preflight_attempt_count,
+            completed_listing_count:listing.filter(x=>x.complete).length,
+            unfinished_listings:listing.filter(x=>!x.complete),
+            completed_detail_count:detailComplete.length,
+            retryable_detail_count:(plan.wave_c_detail||[]).length,
+            retryable_details:plan.wave_c_detail||[],
+            manual_review_detail_count:manual.filter(x=>x.kind==='detail').length,
+            manual_review_details:manual.filter(x=>x.kind==='detail'),
+            manual_review_listing_count:manual.filter(x=>x.kind==='listing').length,
+            planner_listing_queue_count:(plan.wave_c_listing||[]).length,
+            planner_detail_queue_count:(plan.wave_c_detail||[]).length,
+            planner_remaining_queue_count:(plan.wave_c||[]).length,
+            planner_remaining_queue:plan.wave_c||[],
+            detail_attempt_meta_count:detailAttemptMetas.length,
+            detail_attempt_file_count:detailAttemptFiles.length,
+            listing_state:listing,
+            attempt_ceiling:3,
+            request_key_count_checked:requestMax.size,
+            attempt_ceiling_violation_count:attemptCeilingViolations.length,
+            attempt_ceiling_violations:attemptCeilingViolations,
+            wave_a_queue_count:(plan.wave_a||[]).length,
+            wave_b_queue_count:(plan.wave_b||[]).length
+          };
+          console.log('WAVE_C_RECONCILIATION_JSON_START');
+          console.log(JSON.stringify(summary,null,2));
+          console.log('WAVE_C_RECONCILIATION_JSON_END');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Wave C durable reconciliation\n\n```json\n'+JSON.stringify(summary,null,2)+'\n```\n');
+          if(summary.attempt_ceiling_violation_count) process.exitCode=2;
+          NODE
