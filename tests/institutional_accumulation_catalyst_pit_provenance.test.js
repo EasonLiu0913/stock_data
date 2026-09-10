@@ -12,12 +12,7 @@ const READINESS = path.join(ROOT, 'data_research/institutional-flow/institutiona
 const OUTPUT = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json');
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
-assert.strictEqual(
-  execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: ROOT, encoding: 'utf8' }).trim(),
-  'false',
-  'regression must run with complete git history',
-);
-
+assert.strictEqual(execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: ROOT, encoding: 'utf8' }).trim(), 'false');
 execFileSync(process.execPath, [SCRIPT], { cwd: ROOT, stdio: 'pipe' });
 
 const frozen = readJson(FROZEN).decisions.filter((row) => row.state === 'source_missing');
@@ -47,6 +42,14 @@ assert.strictEqual(output.shared_evidence.wave_a_version_safety, 'historical_tim
 assert.strictEqual(output.shared_evidence.wave_c_source_timestamp_precision, 'listing_only');
 assert.strictEqual(output.shared_evidence.wave_c_version_safety, 'historical_timing_safe_value_version_unproven');
 assert.strictEqual(output.shared_evidence.wave_c_declared_pit_known_at, null);
+assert.deepStrictEqual(output.shared_evidence.decision_reason_codes, [
+  'wave_a_declared_known_after_t0',
+  'wave_a_no_durable_path_commit_at_or_before_t0',
+  'wave_c_no_durable_path_commit_at_or_before_t0',
+  'wave_a_immutable_value_version_unproven',
+  'wave_c_immutable_value_version_unproven',
+  'wave_c_pit_known_at_unproven',
+]);
 assert.strictEqual(output.protected_state.phase_2_semantic_sha256, '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b');
 assert.strictEqual(output.protected_state.methodology_development_identity_count, 41);
 
@@ -58,16 +61,8 @@ assert.strictEqual(new Set(outputKeys).size, 33);
 for (const row of output.decisions) {
   assert.strictEqual(row.decision, 'not_pit_ready');
   assert.strictEqual(row.positive_imputation, false);
-  assert.strictEqual(row.wave_a_commit_count_at_or_before_t0, 0);
   assert.deepStrictEqual(row.wave_a_commits_at_or_before_t0, []);
-  assert.strictEqual(row.wave_c_commit_count_at_or_before_t0, 0);
   assert.deepStrictEqual(row.wave_c_commits_at_or_before_t0, []);
-  assert.ok(row.reason_codes.includes('wave_a_declared_known_after_t0'));
-  assert.ok(row.reason_codes.includes('wave_a_no_durable_path_commit_at_or_before_t0'));
-  assert.ok(row.reason_codes.includes('wave_c_no_durable_path_commit_at_or_before_t0'));
-  assert.ok(row.reason_codes.includes('wave_a_immutable_value_version_unproven'));
-  assert.ok(row.reason_codes.includes('wave_c_immutable_value_version_unproven'));
-  assert.ok(row.reason_codes.includes('wave_c_pit_known_at_unproven'));
   assert.ok(fs.existsSync(path.join(ROOT, output.shared_evidence.wave_a_source_meta_path)));
   assert.ok(fs.existsSync(path.join(ROOT, row.wave_c_source_meta_path)));
 }
