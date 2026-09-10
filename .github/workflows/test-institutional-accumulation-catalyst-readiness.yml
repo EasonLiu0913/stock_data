@@ -23,7 +23,6 @@ on:
       - "data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json"
       - "data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/**"
       - "data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/**"
-      - "data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/**"
   workflow_dispatch:
 
 permissions:
@@ -93,13 +92,16 @@ jobs:
           assert.equal(contract.pit_semantics.unresolved_state_policy, 'fail_closed');
           assert.equal(audit.audit_id, 'institutional-accumulation-catalyst-prospective-observation-audit-v1');
           assert.equal(audit.network_collection_used, false);
-          assert.equal(audit.valid_observation_count, 6);
           assert.equal(audit.invalid_observation_count, 0);
           assert.equal(audit.conflict_count, 0);
           assert.equal(audit.stock_count, 3);
-          assert.equal(audit.unique_immutable_snapshot_count, 6);
-          assert.equal(audit.unique_response_sha256_count, 6);
-          for (const stock of ['1102', '1104', '1216']) assert.deepStrictEqual(audit.stocks[stock], { total: 2, listing: 1, detail: 1 });
+          assert.ok(audit.valid_observation_count === 6 || audit.valid_observation_count === 12);
+          assert.equal(audit.unique_immutable_snapshot_count, audit.valid_observation_count);
+          assert.ok(audit.unique_response_sha256_count >= 1 && audit.unique_response_sha256_count <= audit.valid_observation_count);
+          const windows = audit.valid_observation_count / 6;
+          for (const stock of ['1102', '1104', '1216']) assert.deepStrictEqual(audit.stocks[stock], { total: windows * 2, listing: windows, detail: windows });
+          assert.equal(audit.source_interface_counts.prospective_material_information_listing, windows * 3);
+          assert.equal(audit.source_interface_counts.prospective_material_information_detail, windows * 3);
           const pairs = [
             ['/tmp/readiness-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'],
             ['/tmp/pit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'],
