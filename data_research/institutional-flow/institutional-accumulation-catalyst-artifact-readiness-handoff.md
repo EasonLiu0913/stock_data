@@ -110,23 +110,70 @@ No bounded defect requires repair. The historical catalyst evidence limitation i
 `institutional-accumulation-catalyst-prospective-pit-capture-contract-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
-Promotion does not execute Prompt A automatically.
+### Prompt A implementation evidence
+
+Prompt A was executed from current remote `main` after confirming `docs/agent-prompts/task-routing.json` still had the sole active task `institutional-accumulation` and routed to this handoff.
+
+Implementation commits:
+- `96319a7636e99584a935fe043d7acdcf305fb153` — add the domain-specific prospective PIT capture implementation;
+- `3ed6f6f7c0b66209af9880a62426f14fb311523a` — add zero-network prospective capture contract regression tests;
+- `57046dce6c00167003e39a8d01f3ecbc517f4232` — add the machine-readable prospective capture contract;
+- `a9d68a9ec0855b8413b636940f09ed87b0033247` — extend the bounded Node 24 readiness workflow to verify the prospective contract.
+
+Durable outputs:
+- `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js`;
+- `tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js`;
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json`;
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`.
+
+Implemented contract semantics:
+- immutable raw response bytes are preserved as base64 in each future snapshot;
+- `response_sha256` proves captured content identity;
+- `immutable_snapshot_id` binds source identity, collection timestamp, content hash, parser version, and methodology identity;
+- `pit_known_at` equals the actual immutable collection timestamp and proves only that the captured value/version existed no later than that time;
+- source-reported event timing and present-day visibility cannot move `pit_known_at` earlier;
+- storage is append-only under `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/`;
+- exact deterministic reruns are idempotent no-ops;
+- an attempted different write to an existing immutable snapshot path fails closed instead of overwriting;
+- no live canary was necessary, so this round used zero network requests and created no broad or physical-batch crawl.
+
+Node 24 verification:
+- workflow `test: institutional accumulation catalyst readiness`;
+- run `34479732345`;
+- job `102879203734` (`regression`);
+- tested SHA `a9d68a9ec0855b8413b636940f09ed87b0033247`;
+- checkout used `actions/checkout@v7`, `fetch-depth: 0`, `filter: blob:none`, bounded non-cone sparse checkout;
+- Node `v24.20.0`;
+- readiness regression: 1 pass / 0 fail;
+- historical PIT provenance regression: 1 pass / 0 fail;
+- prospective capture contract regression: 5 pass / 0 fail;
+- machine-readable contract assertions passed;
+- readiness/PIT artifacts were verified unchanged during the workflow;
+- no source-fetch stage exists.
+
+Protected-state confirmation:
+- historical 33 identities remain closed at `pit_ready=0`, `not_pit_ready=33`, `manual_review=0` and were not rewritten or upgraded;
+- no development outcome, stock/time holdout, protected `2454` outcome, future-return data, catalyst/outcome association, or Withdrawal input was opened;
+- no threshold, score, optimized weighting, model, strategy, production behavior, or generic-news feature was introduced;
+- legacy `/mops/web/ajax_t05st01` was not retried.
+
+Prompt A completion boundary reached. Prompt B below remains the exact preregistered closeout contract for this round and has not been executed automatically.
 
 ## Next round objective
 
-Create the smallest forward-only, PIT-safe catalyst capture contract needed to accumulate **future** immutable known-at evidence without reopening the failed historical 33 identities and without opening outcomes. This round is data/provenance infrastructure only; it does not authorize catalyst/outcome association.
+Mandatory next action is Prompt B closeout for `institutional-accumulation-catalyst-prospective-pit-capture-contract-v1`. Do not promote or execute a future Prompt A until this Prompt B passes and the next round is explicitly justified and preregistered.
 
-Exact starting entry points:
-- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json` — closed historical limitation evidence;
-- `data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/` — existing Wave C listing representation;
-- `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json` — existing Wave A provenance shape;
-- `scripts/audit_institutional_accumulation_catalyst_pit_provenance.js` — PIT audit semantics;
-- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml` — current bounded Node 24 regression pattern;
-- `data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md` — prior MOPS API/source contract history;
-- repository-root `AGENTS.md` — mandatory crawl safety, plan, physical-batch, checkpoint, and paired-prompt rules.
+Exact entry points for closeout:
+- `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js` — executable forward-only snapshot contract;
+- `tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js` — zero-network regression;
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json` — machine-readable contract;
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml` — bounded Node 24 regression;
+- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json` — frozen historical 33 limitation evidence;
+- `docs/agent-prompts/task-routing.json` — repository-wide active routing source of truth;
+- repository-root `AGENTS.md` — mandatory paired-prompt and closeout rules.
 
 ## Prompt A — prospective PIT-safe catalyst capture contract
 
