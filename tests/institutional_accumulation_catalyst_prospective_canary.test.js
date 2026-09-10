@@ -9,7 +9,6 @@ const test = require('node:test');
 const {
   ALLOWED_STOCKS,
   boundedCooldownMs,
-  detailDescriptors,
   parseJsonResponse,
   validateListingBody,
   validateDetailBody,
@@ -68,8 +67,7 @@ test('listing and detail validation preserve official descriptor identity', () =
 });
 
 test('degraded, malformed, and application-failure responses fail before snapshot creation', () => {
-  const degraded = { status: 200 };
-  assert.throws(() => parseJsonResponse(degraded, Buffer.from('Access denied')), /degraded/);
+  assert.throws(() => parseJsonResponse({ status: 200 }, Buffer.from('Access denied')), /degraded/);
   assert.throws(() => parseJsonResponse({ status: 200 }, Buffer.from('x'.repeat(120))), /malformed_json/);
   const bad = Buffer.from(JSON.stringify({ code: 500, message: 'error', padding: 'x'.repeat(150) }));
   assert.throws(() => parseJsonResponse({ status: 200 }, bad), /application_contract_failure/);
@@ -101,6 +99,7 @@ test('zero-network fake fetch produces at most one listing and one detail snapsh
   const result = await collectStock(root, '1102', {
     fetchImpl,
     random: () => 0,
+    sleepImpl: async () => {},
     now: () => `2026-09-10T12:00:0${n++}.000Z`,
   });
   assert.equal(result.request_count, 2);
