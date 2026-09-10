@@ -261,6 +261,7 @@ Durable-state reconciliation was performed from current remote `main` without is
 
 Reconciliation accounting:
 - initial reconciliation baseline SHA: `ce2da9227b0383932e4dc1b80d4cbcae7dfc6430`;
+- closeout source SHA immediately before the durable closeout commit: `1af8cc77aac34492ad63367c04420720d7ad2559`;
 - read-only reconciliation runs: `34454300824` and `34454472668`;
 - completed listings: **9/9**; unfinished listings: **0**;
 - completed quality-passed details: **255**;
