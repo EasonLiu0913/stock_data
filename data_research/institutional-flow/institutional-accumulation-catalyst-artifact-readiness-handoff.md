@@ -18,153 +18,154 @@ This file is the canonical routing state for the active Institutional Accumulati
 - legacy `/mops/web/ajax_t05st01` attempt count remains frozen at exactly `2`.
 - present-day API visibility, collection timestamps, and source event dates alone are never historical PIT/value-version proof.
 
-## Closed round — catalyst artifact reconstruction/readiness
+## Closed prerequisite rounds
+
+### Catalyst artifact reconstruction/readiness
 
 Round: `institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1`
 
-Status:
 - Prompt A: **COMPLETE**
 - Prompt B closeout: **PASS**
-
-Durable evidence:
-- 33 total identities / 0 ready / 33 `not_pit_ready`;
+- durable result: 33 total identities / 0 ready / 33 `not_pit_ready`;
 - Node 24 closeout run `34466672001`, job `102836756516`.
 
-## Closed round — PIT provenance resolution
+### PIT provenance resolution
 
 Round: `institutional-accumulation-catalyst-pit-provenance-resolution-v1`
 
-Status:
 - Prompt A: **COMPLETE**
 - Prompt B closeout: **PASS**
-
-Durable evidence:
-- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json`;
-- audit result remains `identity_count=33`, `pit_ready=0`, `not_pit_ready=33`, `manual_review=0`;
+- durable artifact: `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json`;
+- current frozen result remains `identity_count=33`, `pit_ready=0`, `not_pit_ready=33`, `manual_review=0`;
 - `network_collection_used=false`, `source_network_requests=0`, `outcome_blind=true`;
-- Node 24 closeout run `34478084243`, job `102873698591`;
-- no historical identity may be positively imputed from present-day source visibility, collection time, or source event date.
+- Node 24 closeout run `34478084243`, job `102873698591`.
 
-## Closed round — prospective PIT-safe catalyst capture contract
+### Prospective PIT-safe catalyst capture contract
 
 Round: `institutional-accumulation-catalyst-prospective-pit-capture-contract-v1`
 
-Status:
 - Prompt A: **COMPLETE**
-- **Prompt B closeout: PASS**
+- Prompt B closeout: **PASS**
+- pre-Prompt-A baseline `0d025c6676f3f1675a00f42c808db2d6dfeecfbd`;
+- implementation commits `96319a7636e99584a935fe043d7acdcf305fb153`, `3ed6f6f7c0b66209af9880a62426f14fb311523a`, `57046dce6c00167003e39a8d01f3ecbc517f4232`, `a9d68a9ec0855b8413b636940f09ed87b0033247`;
+- Prompt A checkpoint `8aeac8942d61b43e4a5ea5e33abf416c8f72c5ed`;
+- Prompt B closeout/promotion checkpoint `4c782bebffb892540f74d0f5e1bc151065edfb59`;
+- Node 24 regression run `34479732345`, job `102879203734`, Node `v24.20.0`, readiness 1/1, PIT provenance 1/1, prospective contract 5/5, all PASS.
 
-Pre-Prompt-A durable handoff checkpoint used to recover the exact preregistered Prompt B:
-- baseline `0d025c6676f3f1675a00f42c808db2d6dfeecfbd`.
-
-Prompt A implementation commits:
-- `96319a7636e99584a935fe043d7acdcf305fb153` — prospective PIT capture implementation;
-- `3ed6f6f7c0b66209af9880a62426f14fb311523a` — zero-network contract tests;
-- `57046dce6c00167003e39a8d01f3ecbc517f4232` — machine-readable contract;
-- `a9d68a9ec0855b8413b636940f09ed87b0033247` — bounded Node 24 workflow coverage;
-- `8aeac8942d61b43e4a5ea5e33abf416c8f72c5ed` — Prompt A handoff checkpoint.
-
-Durable outputs:
+Durable contract entry points:
 - `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js`;
 - `tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js`;
 - `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json`;
 - `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`.
 
-### Prompt B independent closeout evidence
+Contract invariants remain append-only immutable raw-response capture, SHA-256 content identity, parser/methodology identity, `pit_known_at=collected_at`, no historical back-imputation, identical rerun as no-op, and same-path conflicting content as fail-closed.
 
-The exact Prompt B was recovered from the pre-Prompt-A baseline `0d025c6676f3f1675a00f42c808db2d6dfeecfbd` before closeout.
-
-Criterion-by-criterion verification:
-
-1. Sole global active routing remains `institutional-accumulation`, pointing to this handoff — **PASS**.
-2. Prior PIT-resolution round remains durable PASS; current PIT artifact still reports exactly 33 identities, `0 pit_ready`, `33 not_pit_ready`, `0 manual_review`, zero network collection and outcome-blind state — **PASS**.
-3. Prospective capture implementation binds source identity, collection timestamp, raw-response SHA-256, parser version, and methodology identity into `immutable_snapshot_id` — **PASS**.
-4. Raw response bytes are preserved as base64 and re-hashed on validation; hash/byte mismatch fails closed — **PASS**.
-5. `pit_known_at` is exactly `collected_at`; source-reported timing and present-day visibility cannot move known-at earlier — **PASS**.
-6. Storage semantics are append-only: identical deterministic rerun is an idempotent no-op, while an existing-path content collision fails instead of overwriting — **PASS**.
-7. The machine-readable contract explicitly records forward-only scope, zero-network validation, no historical reopen, no outcomes, append-only storage, and fail-closed PIT semantics — **PASS**.
-8. Prompt A performed no live canary and no broad backfill, so there were zero new MOPS requests and no physical-batch safety exposure — **PASS**.
-9. Legacy `/mops/web/ajax_t05st01` was not retried — **PASS**.
-10. Bounded change review from `0d025c6676f3f1675a00f42c808db2d6dfeecfbd` through `8aeac8942d61b43e4a5ea5e33abf416c8f72c5ed` is exactly five paths: this handoff, the prospective implementation, its test, its machine-readable contract, and the bounded readiness workflow. No protected Phase 2, outcome, holdout, association, Withdrawal, Wave A raw, Wave C raw, or historical 33 identity artifact changed — **PASS**.
-11. Node 24 workflow `test: institutional accumulation catalyst readiness`, run `34479732345`, job `102879203734`, tested SHA `a9d68a9ec0855b8413b636940f09ed87b0033247`, Node `v24.20.0` reproduced readiness `1/1`, PIT provenance `1/1`, and prospective contract `5/5`, all with zero failures and no source-fetch stage — **PASS**.
-12. Required implementation/test/contract/workflow outputs exist durably on current remote `main` and match the contract markers above — **PASS**.
-
-Closeout limitation:
-- this round proves the forward-only immutable capture contract itself, not live-source integration. No claim is made yet that a production or scheduled collector is writing prospective snapshots.
-
-**Prompt B closeout: PASS**
-
-## Current active round
+## Current round
 
 `institutional-accumulation-catalyst-prospective-live-capture-canary-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
-Promotion does not execute Prompt A automatically.
+Pre-Prompt-A durable baseline:
+- `4c782bebffb892540f74d0f5e1bc151065edfb59`.
 
-## Next round objective
+### Prompt A implementation
 
-Wire the proven prospective PIT capture contract into the smallest real forward-only MOPS collection canary. Validate that actual future listing/detail responses can be checkpointed under the immutable prospective snapshot contract without changing the historical Wave C store and without opening outcomes.
+Durable implementation commits:
+- `18576518ebbcd016521b754f31c46ec2cae9d7a2` — add domain-specific prospective catalyst live canary collector;
+- `8433ce7e19196aac344336aa35b8a14442b021d2` — add zero-network canary regression;
+- `bfebc092d543ddd13311b832e361ee3a4ce8c597` — inject test-only sleep adapter while keeping production 20–60 second cooldown;
+- `6d5f9d2d21afecb5d5ad95c3d886de283bf4dfe9` — use no-op sleep in zero-network test;
+- `87c7acc5bd54fe2563c639ed6800fc3bdba8f9c7` — add dedicated fresh-runner canary workflow;
+- `21e80a477fde8679d1f766b4a2dc124159886e9e` — extend bounded Node 24 readiness workflow to cover canary adapter;
+- `187945da80824d4a852fa0739f37efdc5d860c04` — bounded test-only repair for inclusive 60-second cooldown upper bound;
+- `3e3ae88163d379e0ccc5f11aa3174ba4046edf11` — trigger the preregistered three-stock live canary.
 
-The canary is deliberately small: exactly three preregistered non-protected stocks `1102`, `1104`, `1216`, each in its own fresh-runner physical job, `max-parallel: 1`. One listing request per stock is permitted; at most one verified detail descriptor per stock may be fetched if needed to prove detail wiring. Maximum repository-controlled live requests for this round is therefore `6`. No historical range/backfill is authorized.
+Durable implementation entry points:
+- `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`;
+- `tests/institutional_accumulation_catalyst_prospective_canary.test.js`;
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`;
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`;
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/`.
 
-Exact entry points:
-- `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js` — immutable prospective snapshot builder/validator/writer;
-- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json` — machine-readable PIT contract;
-- `scripts/collect_institutional_accumulation_mops_material_information_batch.js` — verified MOPS listing/detail request and response-quality reference; do not reuse its historical output path for prospective snapshots;
-- `.github/workflows/collect-institutional-accumulation-official-disclosure.yml` — reference for fresh-runner physical-job, `max-parallel: 1`, cooldown and race-safe checkpoint patterns;
-- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml` — existing zero-network Node 24 regression;
-- `tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js` — existing contract regression;
-- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/` — canonical forward-only snapshot root;
-- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json` — frozen historical 33 limitation evidence;
-- `docs/agent-prompts/task-routing.json` — global routing source of truth;
-- repository-root `AGENTS.md` — mandatory crawl-safety, physical-batch, checkpoint and paired-prompt rules.
+### Zero-network regression gate
 
-## Prompt A — prospective live-capture canary
+Initial Node 24 run:
+- run `34480920549`, job `102883215878` — **FAIL**;
+- failure was bounded to a test expectation: `boundedCooldownMs(() => 0.999999)` legitimately produced inclusive upper bound `60000`, while the test expected `59999`;
+- no live MOPS request was started before this gate passed.
 
-```text
-Continue the Institutional Accumulation / Catalyst Pre-positioning project only if `docs/agent-prompts/task-routing.json` still routes the sole active task to `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md` and round `institutional-accumulation-catalyst-prospective-live-capture-canary-v1` remains Prompt A NOT STARTED / ACTIVE.
+Bounded repair:
+- commit `187945da80824d4a852fa0739f37efdc5d860c04` updated only the test expectation to accept the preregistered inclusive 20–60 second range.
 
-Before work:
-1. fetch current remote `main` and read repository-root `AGENTS.md`;
-2. read `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, `docs/agent-prompts/task-routing.json`, this canonical handoff, `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json`, `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js`, `scripts/collect_institutional_accumulation_mops_material_information_batch.js`, `.github/workflows/collect-institutional-accumulation-official-disclosure.yml`, `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`, and the frozen PIT provenance artifact;
-3. recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history;
-4. independently verify the prospective PIT contract round has durable Prompt B PASS, historical 33 identities remain `0 pit_ready / 33 not_pit_ready`, and protected outcome/holdout/association state remains unopened.
+Successful Node 24 gate:
+- run `34481090029`;
+- job `102883774145` (`regression`) — **SUCCESS**;
+- Node `v24.20.0`;
+- readiness, historical PIT provenance, prospective PIT contract, and prospective canary adapter regressions all passed;
+- canary fake-fetch tests use an injected no-op sleep and issue zero network requests; production collector still defaults to randomized 20–60 second pre-request cooldown.
 
-Objective: implement and execute the smallest real forward-only live canary that writes current/future MOPS listing/detail responses through the prospective immutable snapshot contract.
+### Live canary execution
 
-Implementation requirements:
-- create a domain-specific prospective collector rather than modifying historical Wave C artifacts in place; preferred exact new path is `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`;
-- create a dedicated fresh-runner canary workflow at `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`;
-- use only the already verified official MOPS endpoints `POST https://mops.twse.com.tw/mops/api/t05st01` and, when needed, `POST https://mops.twse.com.tw/mops/api/t05st01_detail`;
-- preregister exactly stocks `1102`, `1104`, `1216`; each stock must run in a separate fresh-runner physical matrix job with `max-parallel: 1`;
-- permit exactly one listing request per stock and at most one detail request per stock; total repository-controlled request cap is `6`;
-- use a bounded randomized cooldown of at least 20-60 seconds before each live request; no tight retry loop;
-- write successful observations only under `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/` using the proven append-only writer;
-- verify raw bytes/hash, source identity, collection timestamp, parser/methodology identity, `pit_known_at=collected_at`, and immutable snapshot identity before checkpoint;
-- after each stock physical job, checkpoint only that bounded snapshot set with race-safe fetch/reset/reapply behavior; remote immutable snapshot wins on exact identity; any conflicting content must fail closed;
-- failed, malformed, WAF/security, ambiguous, or schema-invalid responses must not become PIT-safe snapshots; persist only bounded diagnostics if needed and do not infer `source_empty` from degraded responses;
-- extend zero-network regression to cover the live collector's serialization/checkpoint adapter without making network calls in CI.
+Workflow:
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`;
+- run `34481151262` — three independent matrix jobs, `max-parallel: 1`;
+- only preregistered stocks `1102`, `1104`, `1216` ran;
+- only official MOPS `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail` were used;
+- each stock performed exactly one listing request and one verified-detail request;
+- total repository-controlled requests: exactly `6 / 6` maximum;
+- no retry loop, no legacy endpoint, no historical range/backfill.
 
-Frozen/safety rules:
-- no historical backfill or historical 33 identity upgrade/rewrite;
-- never retry legacy `/mops/web/ajax_t05st01`;
-- do not refetch or mutate historical Wave A/Wave C raw evidence merely to satisfy this canary;
-- do not open development outcomes, stock/time holdouts, protected `2454` outcomes, future-return data, catalyst/outcome association, or Withdrawal state;
-- no thresholds, scores, optimized weights, model, strategy, production behavior, or generic-news layer.
+Jobs and durable checkpoints:
 
-Completion contract:
-- dedicated prospective collector/workflow and zero-network regression are durable on remote `main`;
-- a live canary runs for no more than the three preregistered stocks and no more than six total source requests;
-- every accepted live observation is an append-only prospective snapshot with reproducible content/version identity and `pit_known_at=collected_at`;
-- no accepted snapshot can be produced from degraded/ambiguous response quality;
-- each physical stock job checkpoints independently and survives concurrent `main` movement without overwriting immutable observations;
-- historical 33/protected state remains unchanged;
-- record exact commits, workflow run/job IDs, request counts, snapshot paths/hashes, failures/limitations in this handoff;
-- preserve this same preregistered Prompt B;
-- stop with `Prompt A complete — ready for Prompt B.` Do not execute Prompt B.
-```
+#### 1102
+- job `102883992555` — **SUCCESS**;
+- requests `2`, snapshots `2`;
+- checkpoint commit `224e5574f0f7adad2d33890f4948388b97685979`;
+- listing snapshot: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1102_115_all/20260910T131236863Z--0e5de2e07f85ea7cd3bff45f99fb9f19342feef3e7cfc5998bf8254329693851.json`;
+- detail snapshot: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1102_1150115_1_sii/20260910T131322218Z--26ffb7f87af3f023fbb98ea7ba9f3cc1b54170bccedf11c1a21bd2486d149e8c.json`.
+
+#### 1104
+- job `102883992117` — **SUCCESS**;
+- requests `2`, snapshots `2`;
+- checkpoint commit `7122ab57a5a8947b5a7a15bcf223b25caf48145c`;
+- listing snapshot: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1104_115_all/20260910T131445723Z--75f4d44b45282d9f089d60fc671f029f4dd45fe2e948110687ee0ad0a6dea155.json`;
+- detail snapshot: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1104_1150113_1_sii/20260910T131535098Z--9f5c34d4c53d6e51ddd33fab7018977faa95e4a798d7069e37ba662753dc6561.json`.
+
+#### 1216
+- job `102883992512` — **SUCCESS**;
+- requests `2`, snapshots `2`;
+- checkpoint commit `f71ab6e689ce18d3655fe64ba462555398654703`;
+- listing snapshot: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1216_115_all/20260910T131622449Z--d800e353f5b1694e68038508277fc20486f8d73fc58a23807231b235140725f7.json`;
+- detail snapshot: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1216_1150109_1_sii/20260910T131719439Z--25a623c03b29c52a7c9cd88c0fc6d4239ccf50340086e81bb9a27ab75d937eb7.json`.
+
+All six accepted snapshots passed durable remote verification for:
+- prospective PIT contract ID;
+- methodology identity `institutional-accumulation-catalyst-prospective-live-capture-canary-v1`;
+- `pit_known_at === collected_at`;
+- 64-hex `response_sha256` and `immutable_snapshot_id`;
+- `historical_back_imputation_allowed=false`.
+
+The three physical jobs checkpointed sequentially against moving `main`: 1102 first, 1104 refetched/rebased its bounded candidate set on the 1102 checkpoint, and 1216 did the same on the 1104 checkpoint. The workflow compares any existing remote immutable path byte-for-byte and fails closed on conflicting content; no overwrite conflict occurred.
+
+Response-quality behavior is fail-closed before snapshot creation for HTTP failure, degraded/WAF/security response, malformed JSON, application contract failure, listing schema/descriptor mismatch, and detail schema/title/identity mismatch. No degraded or ambiguous response was accepted in this live run.
+
+### Protected-state confirmation
+
+- historical PIT artifact remains exactly 33 identities / `0 pit_ready` / `33 not_pit_ready` and outcome-blind;
+- no historical 33 identity was upgraded or rewritten;
+- historical Wave A/Wave C raw stores were not refetched or mutated by this canary;
+- legacy `/mops/web/ajax_t05st01` was not retried;
+- development outcomes, stock/time holdouts, protected `2454` outcomes, future-return data, catalyst/outcome association, and Withdrawal state remained unopened/unchanged;
+- no threshold, score, optimized weighting, model, strategy, production behavior, or generic-news layer was introduced.
+
+### Prompt A limitation
+
+This round proves only a bounded three-stock current/future live capture path and immutable durable checkpoint behavior. It does not authorize historical backfill, broad-universe collection, scheduled production rollout, historical identity upgrade, or any catalyst/outcome association.
+
+Prompt A completion boundary reached. The exact preregistered Prompt B below remains pending and has not been executed automatically.
 
 ## Prompt B — prospective live-capture canary closeout
 
@@ -174,7 +175,8 @@ Perform mandatory closeout for `institutional-accumulation-catalyst-prospective-
 
 ## Stop conditions
 
-- Do not execute the promoted Prompt A automatically.
+- Do not execute Prompt B automatically.
+- Do not promote or execute a future Prompt A before this Prompt B passes.
 - Do not reopen or upgrade the historical 33 identities.
 - Do not open protected outcomes, holdouts, association, or Withdrawal state.
 - Do not mutate frozen Phase 2/outcome/association artifacts.
