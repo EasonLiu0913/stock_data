@@ -1,0 +1,39 @@
+name: "test: institutional accumulation catalyst readiness"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/test-institutional-accumulation-catalyst-readiness.yml"
+      - "scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js"
+      - "tests/institutional_accumulation_catalyst_artifact_readiness.test.js"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json"
+      - "data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/**"
+      - "data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Verify zero-network catalyst readiness reconstruction
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
+          git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
