@@ -8,10 +8,13 @@ on:
       - ".github/workflows/test-institutional-accumulation-catalyst-readiness.yml"
       - "scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js"
       - "scripts/audit_institutional_accumulation_catalyst_pit_provenance.js"
+      - "scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js"
       - "tests/institutional_accumulation_catalyst_artifact_readiness.test.js"
       - "tests/institutional_accumulation_catalyst_pit_provenance.test.js"
+      - "tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json"
       - "data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/**"
       - "data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/**"
@@ -35,18 +38,21 @@ jobs:
           sparse-checkout: |
             /scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js
             /scripts/audit_institutional_accumulation_catalyst_pit_provenance.js
+            /scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js
             /tests/institutional_accumulation_catalyst_artifact_readiness.test.js
             /tests/institutional_accumulation_catalyst_pit_provenance.test.js
+            /tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json
             /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
             /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
       - name: Setup Node 24
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Verify zero-network catalyst readiness and PIT provenance
+      - name: Verify zero-network catalyst readiness, PIT provenance, and prospective capture contract
         shell: bash
         run: |
           set -euo pipefail
@@ -54,9 +60,18 @@ jobs:
           cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-before.json
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
+          const contract = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json', 'utf8'));
+          assert.equal(contract.contract_id, 'institutional-accumulation-catalyst-prospective-pit-capture-contract-v1');
+          assert.equal(contract.network_validation, 'zero_network_fixture_only');
+          assert.equal(contract.historical_reopen_authorized, false);
+          assert.equal(contract.outcomes_authorized, false);
+          assert.equal(contract.immutable_value_version.write_policy, 'append_only');
+          assert.equal(contract.pit_semantics.pit_known_at, 'collected_at');
+          assert.equal(contract.pit_semantics.unresolved_state_policy, 'fail_closed');
           const pairs = [
             ['/tmp/readiness-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'],
             ['/tmp/pit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'],
