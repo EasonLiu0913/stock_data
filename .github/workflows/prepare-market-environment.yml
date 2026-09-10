@@ -2,10 +2,12 @@ name: "[03 市場環境] Prepare Market Environment"
 
 on:
   schedule:
-    # 台北時間週二至週六 06:35、07:01、03:52，後兩次作為完整性檢查與補跑
-    - cron: '35 22 * * 1-5'
-    - cron: '1 23 * * 1-5'
-    - cron: '52 19 * * 1-5'
+    # 台北時間週二至週六 06:55、07:25、07:55。
+    # 上游 [02 外部市場] 於 06:40、07:10、07:40 抓取，這裡固定延後 15 分鐘，
+    # 避免 Prepare 在 final external-market snapshot 尚未 push 到 main 前先啟動。
+    - cron: '55 22 * * 1-5'
+    - cron: '25 23 * * 1-5'
+    - cron: '55 23 * * 1-5'
   workflow_dispatch:
     inputs:
       forecast_date:
@@ -101,6 +103,15 @@ jobs:
             echo "Existing market environment snapshot is missing, incomplete, stale, or invalid; regeneration is required."
           fi
 
+      - name: Refresh external market inputs from current main
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout origin/main -- data_external_market data_market_risk
+          echo "Refreshed external-market and market-risk inputs from current origin/main immediately before generation."
+
       - name: Generate immutable shadow environment snapshot
         if: steps.existing.outputs.skip != 'true'
         shell: bash
@@ -160,8 +171,8 @@ jobs:
           {
             echo "## Prepare Market Environment"
             echo ""
-            echo "- Forecast date: \`${FORECAST_TARGET_DATE}\`"
-            echo "- Base trade date: \`${FORECAST_BASE_DATE}\`"
+            echo "- Forecast date: \`$FORECAST_TARGET_DATE\`"
+            echo "- Base trade date: \`$FORECAST_BASE_DATE\`"
             if [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
               echo "- Result: existing snapshot passed full integrity validation; generation skipped."
             else
