@@ -17,7 +17,7 @@ on:
         required: false
         default: ''
       full_rebuild:
-        description: 'Explicitly rebuild the complete history instead of refreshing only the previous/current month'
+        description: 'Explicitly rebuild the complete history using fresh-runner physical month batches'
         required: false
         type: boolean
         default: false
@@ -33,25 +33,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-market-chart:
+  plan:
+    name: Plan bounded TWSE month batches
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.plan.outputs.target_date }}
+      start_date: ${{ steps.plan.outputs.start_date }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_work: ${{ steps.plan.outputs.has_work }}
     steps:
-      - name: Checkout repository
+      - name: Checkout current main
         uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Resolve target date
-        id: date
+      - name: Resolve target date and immutable month plan
+        id: plan
         shell: bash
         env:
-          DATE_INPUT: ${{ github.event.inputs.date }}
-          START_DATE_INPUT: ${{ github.event.inputs.start_date }}
+          DATE_INPUT: ${{ github.event.inputs.date || '' }}
+          START_DATE_INPUT: ${{ github.event.inputs.start_date || '' }}
+          FULL_REBUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.full_rebuild || false }}
           EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
         run: |
           set -euo pipefail
 
@@ -66,7 +76,6 @@ jobs:
               --day-boundary-hour 8)"
             DATE_SOURCE="logical scheduled trade date with 08:00 boundary"
           else
-            # Preserve legacy manual-no-date 08:00 Taipei behavior.
             TARGET_DATE=$(TZ='Asia/Taipei' date --date='8 hours ago' '+%Y%m%d')
             DATE_SOURCE="manual Taipei 08:00 cutoff"
           fi
@@ -87,48 +96,158 @@ jobs:
             )
           fi
 
+          PLAN_JSON=$(START_DATE="$START_DATE" TARGET_DATE="$TARGET_DATE" FULL_REBUILD="$FULL_REBUILD" node - <<'NODE'
+          const fs = require('node:fs');
+          const { selectMonthsToFetch } = require('./scripts/build_twse_market_chart');
+          let existing = null;
+          try {
+            existing = JSON.parse(fs.readFileSync('data_twse_market_chart/market_chart.json', 'utf8'));
+          } catch {}
+          const months = selectMonthsToFetch(
+            process.env.START_DATE,
+            process.env.TARGET_DATE,
+            existing,
+            process.env.FULL_REBUILD === 'true'
+          ).map(value => value.slice(0, 6));
+          process.stdout.write(JSON.stringify(months));
+          NODE
+          )
+
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
+          echo "matrix=$PLAN_JSON" >> "$GITHUB_OUTPUT"
+          if [ "$PLAN_JSON" = "[]" ]; then
+            echo "has_work=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_work=true" >> "$GITHUB_OUTPUT"
+          fi
+
           echo "Target date: $TARGET_DATE ($DATE_SOURCE)"
           echo "Start date: $START_DATE"
+          echo "Physical month batches: $PLAN_JSON"
+          if [ "$FULL_REBUILD" = "true" ]; then
+            echo "Full rebuild requested; every planned month will run on a fresh runner."
+          fi
 
-      - name: Build chart data
+  build-market-chart:
+    name: Fetch TWSE month ${{ matrix.month }}
+    needs: plan
+    if: needs.plan.outputs.has_work == 'true'
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        month: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main on fresh runner
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Randomized physical-batch cooldown
         shell: bash
-        env:
-          FULL_REBUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.full_rebuild || false }}
         run: |
           set -euo pipefail
-          ARGS=(
-            --date "${{ steps.date.outputs.target_date }}"
-            --start-date "${{ steps.date.outputs.start_date }}"
-            --min-delay 500
-            --max-delay 1100
-            --max-retries 3
-          )
-          if [ "$FULL_REBUILD" = "true" ]; then
-            ARGS+=(--full-rebuild)
-          fi
-          node scripts/build_twse_market_chart.js "${ARGS[@]}"
+          delay=$((5 + RANDOM % 16))
+          echo "Physical batch cooldown: ${delay}s"
+          sleep "$delay"
 
-      - name: Commit and push changes
+      - name: Fetch one bounded TWSE month
+        shell: bash
         run: |
+          set -euo pipefail
+          node scripts/build_twse_market_chart.js \
+            --date "${{ needs.plan.outputs.target_date }}" \
+            --start-date "${{ needs.plan.outputs.start_date }}" \
+            --fetch-month "${{ matrix.month }}" \
+            --min-delay 1200 \
+            --max-delay 2500 \
+            --max-retries 3
+
+      - name: Commit and checkpoint physical batch
+        shell: bash
+        env:
+          BATCH_MONTH: ${{ matrix.month }}
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data_twse_market_chart/market_chart.json
 
           if git diff --staged --quiet; then
-            echo "No TWSE market chart changes to commit"
+            echo "No TWSE market chart changes for ${BATCH_MONTH}; checkpoint not needed."
             exit 0
           fi
 
-          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update TWSE market chart ${CURRENT_DATE}"
-          git pull --rebase origin main
-          git push origin main
+          git commit -m "chore: update TWSE market chart ${BATCH_MONTH}"
+          for attempt in 1 2 3 4 5; do
+            if git fetch origin main && git rebase origin/main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Checkpoint race; retry ${attempt}/5 after cooldown."
+            sleep $((attempt * 5))
+          done
+          echo "Unable to checkpoint TWSE month ${BATCH_MONTH} after retries." >&2
+          exit 1
+
+      - name: Verify physical batch is durable on remote main
+        shell: bash
+        env:
+          BATCH_MONTH: ${{ matrix.month }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:data_twse_market_chart/market_chart.json > /tmp/market_chart.json
+          BATCH_MONTH="$BATCH_MONTH" node - <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/market_chart.json', 'utf8'));
+          const rows = Array.isArray(payload.data) ? payload.data : [];
+          const monthRows = rows.filter(row => String(row.date || '').startsWith(process.env.BATCH_MONTH));
+          if (!monthRows.length) {
+            throw new Error(`Remote main has no durable TWSE rows for physical batch ${process.env.BATCH_MONTH}`);
+          }
+          console.log(`Verified durable TWSE batch ${process.env.BATCH_MONTH}: ${monthRows.length} rows`);
+          NODE
+
+  build-market-chart-gate:
+    name: TWSE month batch gate
+    needs: [plan, build-market-chart]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate planner and batch result
+        shell: bash
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          BATCH_RESULT: ${{ needs.build-market-chart.result }}
+          HAS_WORK: ${{ needs.plan.outputs.has_work }}
+        run: |
+          set -euo pipefail
+          if [ "$PLAN_RESULT" != "success" ]; then
+            echo "TWSE month planner failed." >&2
+            exit 1
+          fi
+          if [ "$HAS_WORK" = "true" ] && [ "$BATCH_RESULT" != "success" ]; then
+            echo "At least one TWSE physical month batch failed: $BATCH_RESULT" >&2
+            exit 1
+          fi
+          if [ "$HAS_WORK" != "true" ]; then
+            echo "Target date is already covered; no TWSE fetch was required."
+          else
+            echo "All planned TWSE physical month batches completed."
+          fi
 
   refresh-tsmc-equipment-dashboard:
     name: Refresh TSMC equipment demand dashboard
-    needs: build-market-chart
+    needs: build-market-chart-gate
     uses: ./.github/workflows/build-tsmc-equipment-demand-dashboard.yml
     with:
       deploy_pages: false
@@ -159,4 +278,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
-
