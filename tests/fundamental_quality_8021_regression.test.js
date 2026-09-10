@@ -48,8 +48,9 @@ test('8021 August 2026 fundamental signal is qualified on 2026-09-07 with next-c
   const timeline = readJson('data_finmind_quarterly_financial_quality/8021/financial-quality-score-timeline.json');
   const financial = latestKnownFinancial(timeline.rows, event.base_trading_date);
   assert.ok(financial);
-  assert.equal(financial.fiscal_period, '2026Q1');
-  assert.equal(financial.financial_quality_score, 12);
+  assert.equal(financial.fiscal_period, '2026Q2');
+  assert.equal(financial.conservative_known_date, '2026-08-14');
+  assert.equal(financial.financial_quality_score, 14);
 
   assert.ok(fas.total_score >= 8);
   assert.ok(financial.financial_quality_score >= 10);
