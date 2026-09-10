@@ -11,22 +11,25 @@ on:
       - "scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js"
       - "scripts/collect_institutional_accumulation_catalyst_prospective_canary.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_observations.js"
+      - "scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js"
       - "tests/institutional_accumulation_catalyst_artifact_readiness.test.js"
       - "tests/institutional_accumulation_catalyst_pit_provenance.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_canary.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_observations.test.js"
+      - "tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json"
       - "data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/**"
       - "data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/**"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   regression:
@@ -46,16 +49,19 @@ jobs:
             /scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js
             /scripts/collect_institutional_accumulation_catalyst_prospective_canary.js
             /scripts/audit_institutional_accumulation_catalyst_prospective_observations.js
+            /scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js
             /tests/institutional_accumulation_catalyst_artifact_readiness.test.js
             /tests/institutional_accumulation_catalyst_pit_provenance.test.js
             /tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
             /tests/institutional_accumulation_catalyst_prospective_canary.test.js
             /tests/institutional_accumulation_catalyst_prospective_observations.test.js
+            /tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
             /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
             /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
             /data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/
@@ -63,52 +69,94 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Verify zero-network catalyst readiness, PIT provenance, prospective contract, canary adapter, and observation audit
+      - name: Verify zero-network catalyst readiness and delta audit
         shell: bash
         run: |
           set -euo pipefail
           cp data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json /tmp/readiness-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json /tmp/prospective-audit-before.json
+          if test -f data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json; then
+            cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json /tmp/delta-before.json
+          fi
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_canary.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_observations.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
           cmp -s /tmp/prospective-audit-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
           git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+          node scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js --write
+          if test -f /tmp/delta-before.json; then
+            cmp -s /tmp/delta-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+          fi
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
-          const contract = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json', 'utf8'));
+          const pit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json', 'utf8'));
           const audit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json', 'utf8'));
-          assert.equal(contract.contract_id, 'institutional-accumulation-catalyst-prospective-pit-capture-contract-v1');
-          assert.equal(contract.network_validation, 'zero_network_fixture_only');
-          assert.equal(contract.historical_reopen_authorized, false);
-          assert.equal(contract.outcomes_authorized, false);
-          assert.equal(contract.immutable_value_version.write_policy, 'append_only');
-          assert.equal(contract.pit_semantics.pit_known_at, 'collected_at');
-          assert.equal(contract.pit_semantics.unresolved_state_policy, 'fail_closed');
-          assert.equal(audit.audit_id, 'institutional-accumulation-catalyst-prospective-observation-audit-v1');
-          assert.equal(audit.network_collection_used, false);
+          const delta = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json', 'utf8'));
+          assert.equal(pit.identity_count, 33);
+          assert.equal(pit.pit_ready_identity_count, 0);
+          assert.equal(pit.not_pit_ready_identity_count, 33);
+          assert.equal(pit.outcome_blind, true);
+          assert.equal(audit.valid_observation_count, 12);
           assert.equal(audit.invalid_observation_count, 0);
           assert.equal(audit.conflict_count, 0);
-          assert.equal(audit.stock_count, 3);
-          assert.ok(audit.valid_observation_count === 6 || audit.valid_observation_count === 12);
-          assert.equal(audit.unique_immutable_snapshot_count, audit.valid_observation_count);
-          assert.ok(audit.unique_response_sha256_count >= 1 && audit.unique_response_sha256_count <= audit.valid_observation_count);
-          const windows = audit.valid_observation_count / 6;
-          for (const stock of ['1102', '1104', '1216']) assert.deepStrictEqual(audit.stocks[stock], { total: windows * 2, listing: windows, detail: windows });
-          assert.equal(audit.source_interface_counts.prospective_material_information_listing, windows * 3);
-          assert.equal(audit.source_interface_counts.prospective_material_information_detail, windows * 3);
-          const pairs = [
+          assert.equal(delta.network_collection_used, false);
+          assert.equal(delta.observation_count, 12);
+          assert.equal(delta.pair_count, 6);
+          assert.equal(delta.changed_pair_count + delta.unchanged_pair_count, 6);
+          assert.equal(delta.pairs.length, 6);
+          for (const pair of delta.pairs) {
+            assert.ok(pair.elapsed_milliseconds > 0);
+            assert.equal(typeof pair.raw_content_changed, 'boolean');
+            assert.equal(typeof pair.response_bytes_delta, 'number');
+          }
+          for (const [beforePath, afterPath] of [
             ['/tmp/readiness-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'],
             ['/tmp/pit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'],
-          ];
-          for (const [beforePath, afterPath] of pairs) {
-            const before = JSON.parse(fs.readFileSync(beforePath, 'utf8'));
-            const after = JSON.parse(fs.readFileSync(afterPath, 'utf8'));
-            assert.deepStrictEqual(after, before);
+            ['/tmp/prospective-audit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json'],
+          ]) {
+            assert.deepStrictEqual(JSON.parse(fs.readFileSync(afterPath, 'utf8')), JSON.parse(fs.readFileSync(beforePath, 'utf8')));
           }
           NODE
+      - name: Checkpoint deterministic delta audit if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact='data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'
+          cp "$artifact" /tmp/delta-candidate.json
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/delta-candidate.json "$artifact"
+            node scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js --write
+            cmp -s /tmp/delta-candidate.json "$artifact"
+            git add "$artifact"
+            if git diff --cached --quiet; then
+              echo 'delta audit already durable on remote main'
+              pushed=1
+              break
+            fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m 'research: checkpoint prospective catalyst two-window delta audit'
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+            echo "push race on attempt $attempt; refetching current main"
+          done
+          test "$pushed" -eq 1
+      - name: Verify durable delta audit on remote main
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact='data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'
+          git fetch origin main
+          git show "origin/main:$artifact" > /tmp/remote-delta.json
+          cmp -s /tmp/delta-candidate.json /tmp/remote-delta.json
