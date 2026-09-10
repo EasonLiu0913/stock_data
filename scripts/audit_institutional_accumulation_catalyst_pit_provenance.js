@@ -10,13 +10,8 @@ const READINESS_PATH = path.join(ROOT, 'data_research/institutional-flow/institu
 const WAVE_A_META = path.join(ROOT, 'data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json');
 const OUTPUT_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json');
 
-function readJson(file) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
-
-function rel(file) {
-  return path.relative(ROOT, file).replaceAll(path.sep, '/');
-}
+const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+const rel = (file) => path.relative(ROOT, file).replaceAll(path.sep, '/');
 
 function t0EndTaipei(t0) {
   const value = String(t0 || '');
@@ -25,10 +20,7 @@ function t0EndTaipei(t0) {
 }
 
 function assertFullHistory() {
-  const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  }).trim();
+  const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: ROOT, encoding: 'utf8' }).trim();
   if (shallow !== 'false') throw new Error('PIT provenance audit requires complete local git history');
 }
 
@@ -51,7 +43,6 @@ function listingMetaPath(stock) {
 
 function main() {
   assertFullHistory();
-
   const frozen = readJson(FROZEN_PATH);
   const readiness = readJson(READINESS_PATH);
   const waveA = readJson(WAVE_A_META);
@@ -59,33 +50,26 @@ function main() {
 
   if (missing.length !== 33) throw new Error(`Expected 33 frozen source_missing identities, got ${missing.length}`);
   if (readiness.identity_count !== 33 || readiness.ready_identity_count !== 0 || readiness.not_ready_identity_count !== 33) {
-    throw new Error('Immediately prior readiness contract is not 33 total / 0 ready / 33 not ready');
+    throw new Error('Prior readiness contract is not 33 total / 0 ready / 33 not ready');
   }
   const readinessKeys = new Set(readiness.decisions.map((row) => row.source_identity));
   if (readinessKeys.size !== 33) throw new Error('Prior readiness identity set is not unique');
-  if (waveA.quality_state !== 'quality_passed') throw new Error('Wave A source meta is not quality_passed');
-  if (waveA.version_safety !== 'historical_timing_safe_value_version_unproven') {
-    throw new Error('Wave A version-safety contract changed; manual re-audit required');
+  if (waveA.quality_state !== 'quality_passed' || waveA.version_safety !== 'historical_timing_safe_value_version_unproven') {
+    throw new Error('Wave A provenance contract changed; manual re-audit required');
   }
 
   const decisions = missing.map((row) => {
     const stock = String(row.stock);
     const t0 = String(row.t0);
     const sourceIdentity = `${stock}|${t0}`;
-    if (!readinessKeys.has(sourceIdentity)) throw new Error(`Identity missing from prior readiness artifact: ${sourceIdentity}`);
+    if (!readinessKeys.has(sourceIdentity)) throw new Error(`Missing prior readiness identity: ${sourceIdentity}`);
 
     const waveCPath = listingMetaPath(stock);
     const waveC = readJson(waveCPath);
-    if (waveC.stock_id !== stock) throw new Error(`Wave C stock mismatch for ${stock}`);
-    if (waveC.quality_state !== 'quality_passed') throw new Error(`Wave C quality not passed for ${stock}`);
-    if (waveC.source_timestamp_precision !== 'listing_only') throw new Error(`Unexpected Wave C timestamp precision for ${stock}`);
-    if (waveC.version_safety !== 'historical_timing_safe_value_version_unproven') {
-      throw new Error(`Wave C version-safety contract changed for ${stock}; manual re-audit required`);
+    if (waveC.stock_id !== stock || waveC.quality_state !== 'quality_passed') throw new Error(`Invalid Wave C provenance for ${stock}`);
+    if (waveC.source_timestamp_precision !== 'listing_only' || waveC.version_safety !== 'historical_timing_safe_value_version_unproven' || waveC.pit_known_at != null) {
+      throw new Error(`Wave C PIT/version contract changed for ${stock}; manual re-audit required`);
     }
-    if (waveC.pit_known_at != null) throw new Error(`Wave C PIT known-at unexpectedly populated for ${stock}`);
-
-    const waveAHistory = commitsAtOrBefore(rel(WAVE_A_META), t0);
-    const waveCHistory = commitsAtOrBefore(rel(waveCPath), t0);
 
     return {
       stock,
@@ -93,23 +77,18 @@ function main() {
       source_identity: sourceIdentity,
       decision: 'not_pit_ready',
       positive_imputation: false,
-      wave_a_commit_count_at_or_before_t0: waveAHistory.length,
-      wave_a_commits_at_or_before_t0: waveAHistory,
+      wave_a_commits_at_or_before_t0: commitsAtOrBefore(rel(WAVE_A_META), t0),
       wave_c_source_meta_path: rel(waveCPath),
-      wave_c_commit_count_at_or_before_t0: waveCHistory.length,
-      wave_c_commits_at_or_before_t0: waveCHistory,
-      reason_codes: [
-        ...(String(waveA.pit_known_at || '') > t0 ? ['wave_a_declared_known_after_t0'] : []),
-        ...(waveAHistory.length === 0 ? ['wave_a_no_durable_path_commit_at_or_before_t0'] : []),
-        ...(waveCHistory.length === 0 ? ['wave_c_no_durable_path_commit_at_or_before_t0'] : []),
-        'wave_a_immutable_value_version_unproven',
-        'wave_c_immutable_value_version_unproven',
-        'wave_c_pit_known_at_unproven',
-      ],
+      wave_c_commits_at_or_before_t0: commitsAtOrBefore(rel(waveCPath), t0),
     };
   });
 
   if (new Set(decisions.map((row) => row.source_identity)).size !== 33) throw new Error('Audit decisions contain duplicate identities');
+  for (const row of decisions) {
+    if (row.wave_a_commits_at_or_before_t0.length !== 0 || row.wave_c_commits_at_or_before_t0.length !== 0) {
+      throw new Error(`Unexpected pre-/at-T0 durable path history for ${row.source_identity}; manual evidence review required`);
+    }
+  }
 
   const output = {
     schema_version: 1,
@@ -122,10 +101,10 @@ function main() {
     development_outcome_values_read: false,
     holdout_outcomes_read: false,
     catalyst_outcome_association_opened: false,
-    identity_count: decisions.length,
-    pit_ready_identity_count: decisions.filter((row) => row.decision === 'pit_ready').length,
-    not_pit_ready_identity_count: decisions.filter((row) => row.decision === 'not_pit_ready').length,
-    manual_review_identity_count: decisions.filter((row) => row.decision === 'manual_review').length,
+    identity_count: 33,
+    pit_ready_identity_count: 0,
+    not_pit_ready_identity_count: 33,
+    manual_review_identity_count: 0,
     methodology: {
       t0_history_cutoff_timezone: 'Asia/Taipei (+08:00)',
       upgrade_rule: 'pit_ready requires affirmative durable evidence that the relevant immutable value/version was knowable no later than T0',
@@ -141,26 +120,27 @@ function main() {
       wave_c_version_safety: 'historical_timing_safe_value_version_unproven',
       wave_c_declared_pit_known_at: null,
       history_command: 'git log --all --format=%H%x09%cI --until=<T0 23:59:59+08:00> -- <repo-path>',
+      decision_reason_codes: [
+        'wave_a_declared_known_after_t0',
+        'wave_a_no_durable_path_commit_at_or_before_t0',
+        'wave_c_no_durable_path_commit_at_or_before_t0',
+        'wave_a_immutable_value_version_unproven',
+        'wave_c_immutable_value_version_unproven',
+        'wave_c_pit_known_at_unproven',
+      ],
     },
     protected_state: {
       phase_2_semantic_sha256: '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b',
       methodology_development_identity_count: 41,
-      readiness_identity_count: readiness.identity_count,
-      readiness_ready_identity_count: readiness.ready_identity_count,
-      readiness_not_ready_identity_count: readiness.not_ready_identity_count,
+      readiness_identity_count: 33,
+      readiness_ready_identity_count: 0,
+      readiness_not_ready_identity_count: 33,
     },
     decisions,
   };
 
   fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(output, null, 2)}\n`);
-  console.log(JSON.stringify({
-    output: rel(OUTPUT_PATH),
-    identities: output.identity_count,
-    pit_ready: output.pit_ready_identity_count,
-    not_pit_ready: output.not_pit_ready_identity_count,
-    manual_review: output.manual_review_identity_count,
-    source_network_requests: 0,
-  }));
+  console.log(JSON.stringify({ output: rel(OUTPUT_PATH), identities: 33, pit_ready: 0, not_pit_ready: 33, manual_review: 0, source_network_requests: 0 }));
 }
 
 if (require.main === module) main();
