@@ -29,7 +29,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   regression:
@@ -76,9 +76,7 @@ jobs:
           cp data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json /tmp/readiness-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json /tmp/prospective-audit-before.json
-          if test -f data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json; then
-            cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json /tmp/delta-before.json
-          fi
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json /tmp/delta-before.json
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
@@ -89,9 +87,8 @@ jobs:
           cmp -s /tmp/prospective-audit-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
           git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
           node scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js --write
-          if test -f /tmp/delta-before.json; then
-            cmp -s /tmp/delta-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
-          fi
+          cmp -s /tmp/delta-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+          git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
@@ -119,44 +116,8 @@ jobs:
             ['/tmp/readiness-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'],
             ['/tmp/pit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'],
             ['/tmp/prospective-audit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json'],
+            ['/tmp/delta-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'],
           ]) {
             assert.deepStrictEqual(JSON.parse(fs.readFileSync(afterPath, 'utf8')), JSON.parse(fs.readFileSync(beforePath, 'utf8')));
           }
           NODE
-      - name: Checkpoint deterministic delta audit if needed
-        shell: bash
-        run: |
-          set -euo pipefail
-          artifact='data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'
-          cp "$artifact" /tmp/delta-candidate.json
-          pushed=0
-          for attempt in 1 2 3; do
-            git fetch origin main
-            git reset --hard origin/main
-            cp /tmp/delta-candidate.json "$artifact"
-            node scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js --write
-            cmp -s /tmp/delta-candidate.json "$artifact"
-            git add "$artifact"
-            if git diff --cached --quiet; then
-              echo 'delta audit already durable on remote main'
-              pushed=1
-              break
-            fi
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git commit -m 'research: checkpoint prospective catalyst two-window delta audit'
-            if git push origin HEAD:main; then
-              pushed=1
-              break
-            fi
-            echo "push race on attempt $attempt; refetching current main"
-          done
-          test "$pushed" -eq 1
-      - name: Verify durable delta audit on remote main
-        shell: bash
-        run: |
-          set -euo pipefail
-          artifact='data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'
-          git fetch origin main
-          git show "origin/main:$artifact" > /tmp/remote-delta.json
-          cmp -s /tmp/delta-candidate.json /tmp/remote-delta.json
