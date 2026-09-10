@@ -44,20 +44,20 @@ function writeSnapshot(repo, snapshot, overrideRelative = null) {
   return absolute;
 }
 
-function writeSix(repo) {
+function writeWindow(repo, minuteBase, rawSuffix = '') {
   const stocks = ['1102', '1104', '1216'];
-  let second = 0;
+  let offset = 0;
   for (const stock of stocks) {
-    writeSnapshot(repo, makeSnapshot(stock, 'prospective_material_information_listing', `2026-09-10T13:1${second}:00.000Z`, `listing-${stock}`));
-    second += 1;
-    writeSnapshot(repo, makeSnapshot(stock, 'prospective_material_information_detail', `2026-09-10T13:1${second}:00.000Z`, `detail-${stock}`));
-    second += 1;
+    writeSnapshot(repo, makeSnapshot(stock, 'prospective_material_information_listing', `2026-09-10T13:${String(minuteBase + offset).padStart(2, '0')}:00.000Z`, `listing-${stock}${rawSuffix}`));
+    offset += 1;
+    writeSnapshot(repo, makeSnapshot(stock, 'prospective_material_information_detail', `2026-09-10T13:${String(minuteBase + offset).padStart(2, '0')}:00.000Z`, `detail-${stock}${rawSuffix}`));
+    offset += 1;
   }
 }
 
-test('deterministic audit reports exactly three stock listing/detail pairs', () => {
+test('deterministic audit reports one complete three-stock listing/detail window', () => {
   const repo = tempRepo();
-  writeSix(repo);
+  writeWindow(repo, 10);
   const first = auditObservations(repo);
   const second = auditObservations(repo);
   assert.equal(first.valid_observation_count, 6);
@@ -68,6 +68,43 @@ test('deterministic audit reports exactly three stock listing/detail pairs', () 
   assert.equal(first.unique_response_sha256_count, 6);
   for (const stock of ['1102', '1104', '1216']) assert.deepEqual(first.stocks[stock], { total: 2, listing: 1, detail: 1 });
   assert.equal(serializeAudit(first), serializeAudit(second));
+});
+
+test('deterministic audit accepts exactly two complete repeated windows', () => {
+  const repo = tempRepo();
+  writeWindow(repo, 10, '-window-1');
+  writeWindow(repo, 20, '-window-2');
+  const audit = auditObservations(repo);
+  assert.equal(audit.valid_observation_count, 12);
+  assert.equal(audit.unique_immutable_snapshot_count, 12);
+  for (const stock of ['1102', '1104', '1216']) assert.deepEqual(audit.stocks[stock], { total: 4, listing: 2, detail: 2 });
+  assert.deepEqual(audit.source_interface_counts, {
+    prospective_material_information_detail: 6,
+    prospective_material_information_listing: 6,
+  });
+});
+
+test('repeated official content may share response hash while immutable observations remain unique', () => {
+  const repo = tempRepo();
+  const stocks = ['1102', '1104', '1216'];
+  let minute = 10;
+  for (let window = 0; window < 2; window += 1) {
+    for (const stock of stocks) {
+      writeSnapshot(repo, makeSnapshot(stock, 'prospective_material_information_listing', `2026-09-10T13:${String(minute++).padStart(2, '0')}:00.000Z`, `same-listing-${stock}`));
+      writeSnapshot(repo, makeSnapshot(stock, 'prospective_material_information_detail', `2026-09-10T13:${String(minute++).padStart(2, '0')}:00.000Z`, `same-detail-${stock}`));
+    }
+  }
+  const audit = auditObservations(repo);
+  assert.equal(audit.valid_observation_count, 12);
+  assert.equal(audit.unique_immutable_snapshot_count, 12);
+  assert.equal(audit.unique_response_sha256_count, 6);
+});
+
+test('incomplete repeated window fails closed', () => {
+  const repo = tempRepo();
+  writeWindow(repo, 10);
+  writeSnapshot(repo, makeSnapshot('1102', 'prospective_material_information_listing', '2026-09-10T13:20:00.000Z', 'partial'));
+  assert.throws(() => auditObservations(repo), /incomplete_observation_window/);
 });
 
 test('malformed JSON fails closed', () => {
