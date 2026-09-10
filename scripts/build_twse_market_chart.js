@@ -78,19 +78,32 @@ function previousMonthStart(date) {
 
 function selectMonthsToFetch(startDate, endDate, existingOutput, fullRebuild = false) {
     const fullRange = listMonths(startDate, endDate);
+    if (fullRebuild) return fullRange;
+
     const rows = Array.isArray(existingOutput?.data) ? existingOutput.data : [];
-    const hasReusableCoverage = !fullRebuild
-        && rows.length > 0
+    const hasReusableCoverage = rows.length > 0
         && String(existingOutput.startDate || '') <= startDate
         && String(existingOutput.endDate || '') >= startDate;
     if (!hasReusableCoverage) return fullRange;
 
-    const currentMonth = `${endDate.slice(0, 6)}01`;
-    const previousMonth = previousMonthStart(currentMonth);
-    const existingEndMonth = `${String(existingOutput.endDate).slice(0, 6)}01`;
-    const refreshStart = existingEndMonth < previousMonth ? existingEndMonth : previousMonth;
-    return listMonths(refreshStart, endDate)
-        .filter(monthDate => monthDate.slice(0, 6) >= startDate.slice(0, 6));
+    const existingEndDate = String(existingOutput.endDate || '');
+    if (/^20\d{6}$/.test(existingEndDate) && existingEndDate >= endDate) return [];
+
+    const targetMonth = `${endDate.slice(0, 6)}01`;
+    const existingEndMonth = /^20\d{6}$/.test(existingEndDate)
+        ? `${existingEndDate.slice(0, 6)}01`
+        : null;
+
+    // A completed historical month is immutable for normal incremental runs.
+    // The monthly TWSE endpoints return the whole available month atomically, so once
+    // the chart has advanced into a later month, do not keep re-fetching old months.
+    if (existingEndMonth && existingEndMonth < targetMonth) {
+        const next = listMonths(existingEndMonth, endDate).slice(1);
+        return next.filter(monthDate => monthDate.slice(0, 6) >= startDate.slice(0, 6));
+    }
+
+    // We are still inside the current month and need newer trading days.
+    return [targetMonth].filter(monthDate => monthDate.slice(0, 6) >= startDate.slice(0, 6));
 }
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -109,7 +122,14 @@ async function fetchJson(url, label, maxRetries) {
                 }
             });
             if (!response.ok) {
-                const error = new Error(`${label} failed: ${response.status} ${response.statusText}`);
+                const location = response.headers.get('location');
+                const details = [
+                    `status=${response.status} ${response.statusText}`,
+                    `url=${response.url}`,
+                    `redirected=${response.redirected}`,
+                    location ? `location=${location}` : null,
+                ].filter(Boolean).join(' ');
+                const error = new Error(`${label} failed: ${details}`);
                 error.status = response.status;
                 throw error;
             }
@@ -215,6 +235,7 @@ async function main() {
     const maxRetries = getNumberArg('--max-retries', 3);
     const forceForeign = args.includes('--force-foreign');
     const fullRebuild = args.includes('--full-rebuild');
+    const requestedFetchMonth = getArg('--fetch-month');
     const existingOutput = readJsonIfExists(OUTPUT_PATH);
     const existingRows = getExistingRows(existingOutput);
     const rowsByDate = new Map();
@@ -225,7 +246,14 @@ async function main() {
         }
     }
 
-    const months = selectMonthsToFetch(startDate, endDate, existingOutput, fullRebuild);
+    const months = requestedFetchMonth
+        ? [normalizeDate(requestedFetchMonth.length === 6 ? `${requestedFetchMonth}01` : requestedFetchMonth, '--fetch-month')]
+        : selectMonthsToFetch(startDate, endDate, existingOutput, fullRebuild);
+    for (const monthDate of months) {
+        if (monthDate < `${startDate.slice(0, 6)}01` || monthDate > `${endDate.slice(0, 6)}01`) {
+            throw new Error(`--fetch-month outside requested range: ${monthDate}`);
+        }
+    }
     const refreshedPrefixes = new Set(months.map(monthDate => monthDate.slice(0, 6)));
     for (const date of [...rowsByDate.keys()]) {
         if (refreshedPrefixes.has(date.slice(0, 6))) rowsByDate.delete(date);
@@ -238,7 +266,7 @@ async function main() {
     for (const [index, monthDate] of months.entries()) {
         console.log(`📅 月資料 ${index + 1}/${months.length}: ${monthDate.slice(0, 6)}`);
         const [ohlcPayload, volumePayload] = await Promise.all([
-            fetchJson(`https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?date=${monthDate}&response=json`, `MI_5MINS_HIST ${monthDate}`, maxRetries),
+            fetchJson(`https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=${monthDate}&response=json`, `MI_5MINS_HIST ${monthDate}`, maxRetries),
             fetchJson(`https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=${monthDate}&response=json`, `FMTQIK ${monthDate}`, maxRetries)
         ]);
         mergeOhlcRows(rowsByDate, ohlcPayload, startDate, endDate);
