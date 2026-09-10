@@ -10,10 +10,10 @@ This routing handoff supersedes the obsolete legacy-third-retry route. Completed
 
 ## Current active round
 
-`institutional-accumulation-material-information-wave-c-physical-batch-collection-v1`
+`institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1`
 
 Status:
-- Prompt A: **COMPLETE**
+- Prompt A: **NOT STARTED / ACTIVE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -318,6 +318,20 @@ All terminal manual_review keys are removed from automatic retry. The preregiste
 
 Canonical machine-readable closeout: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/wave-c-durable-closeout.json`.
 
+## Wave C Prompt B closeout
+
+Round: `institutional-accumulation-material-information-wave-c-physical-batch-collection-v1`
+
+**Prompt B closeout: PASS**
+
+Preregistered baseline: `2c695abc191cc30d198c01d9bc8e68c66df030b8`; Wave C execution-end checkpoint: `3c427e570b0856f0bab8153872c7f5c2986faae5`; audited current-main SHA: `6525ea24884c96429d5b318401da12e5658780a7`; preregistered Prompt B SHA-256: `83046046b3aba8f31616086a287bf3d1ca5ed0242a3ffcd1998f6448a9e3c96f`.
+
+Verified: listings **9/9**; quality-passed details **255**; retryable **0**; terminal manual_review **40** (descriptor_identity_mismatch=39, suspected_soft_block_or_transport_failure=1); planner queue **0**; legacy attempt_count **2**; Wave A byte-identical to preregistration; protected artifacts unchanged across the Wave C execution window; raw bytes/hashes/provenance/PIT/version-safety fields revalidated. Workflow remains one key per fresh runner, max-parallel=1, 2-5s jitter, 20-60s cooldown, ceiling=3, cancel-in-progress=false, remote-completed-wins, with no legacy endpoint.
+
+A first closeout audit incorrectly compared protected files through 2026-09-10 and therefore included later independent Withdrawal/multi-stock backtest changes from 2026-09-07/08. The corrected criterion compares the preregistered baseline through the final Wave C durable checkpoint only; those later changes are explicitly outside Wave C attribution.
+
+Canonical closeout: `data_research/institutional-flow/official-disclosure-raw/mops-material-information/wave-c-prompt-b-closeout.json`. No outcome/holdout/catalyst-association/threshold/score/model/strategy/production behavior was opened by this Prompt B.
+
 ## Prompt B — Wave C physical-batch collection closeout
 
 ```text
@@ -344,6 +358,22 @@ If any important defect is found, fix only the bounded defect or rerun only the 
 On PASS, update/commit this routing handoff, preregister and promote only the correct next round, do not execute it, end with:
 `Prompt B closeout: PASS`
 and stop.
+```
+
+## Prompt A — Catalyst artifact reconstruction/readiness
+
+```text
+Continue only if current remote main still routes the sole active task to this handoff and round institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1 is Prompt A NOT STARTED / ACTIVE. Fetch current main and read AGENTS.md, project philosophy/roadmap, this handoff, historical validation handoff, frozen source-collection preregistration, exact 33-identity reconstruction artifact, Wave C Prompt B closeout, Wave A raw files, and all Wave C durable listing/detail evidence.
+
+Reconstruct an outcome-blind, PIT-safe catalyst-evidence readiness artifact for exactly the frozen 33 source_missing identities using only already-collected official evidence. Issue zero MOPS or other source network requests. Do not open development outcomes, stock/time holdouts, protected 2454 outcomes, catalyst/outcome association, thresholds, scores, models, strategies, or production behavior. Preserve exact source identity, source-reported timestamp precision, parser/provenance, version_safety and PIT disclaimer. Manual_review/missing/ambiguous evidence stays explicit and cannot be imputed positive. Produce machine-readable output plus regression tests.
+
+Completion requires all 33 identities exactly once, zero network, protected state unchanged/unopened, tests PASS, durable commit, then mark Prompt A COMPLETE / Prompt B pending and stop: Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — Catalyst artifact reconstruction/readiness closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1 only after Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history. Independently verify sole active routing; exact 33 identities each once; only already-durable Wave A/Wave C evidence; zero source network requests; exact source/timestamp/parser/provenance/version_safety/PIT fields; manual_review ambiguity preserved; protected development outcomes/holdouts/2454/refreshed association/Withdrawal v6 unchanged/unopened by this round; no catalyst/outcome association or thresholds/scores/models/strategies/production behavior; tests reproduce counts/readiness; durable outputs exist on remote main. Fix only bounded defects and restart verification. On PASS record exact commits/tests/counts/limitations, preregister/promote only the correct next round without executing it, end Prompt B closeout: PASS, and stop.
 ```
 
 ## Stop conditions
