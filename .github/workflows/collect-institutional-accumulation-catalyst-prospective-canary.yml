@@ -1,0 +1,166 @@
+name: "[研究] Institutional Accumulation Prospective Catalyst Canary"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "data_research/institutional-flow/prospective-catalyst-canary-trigger-v1.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-prospective-catalyst-canary-v1
+  cancel-in-progress: false
+
+env:
+  SNAPSHOT_ROOT: data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit
+
+jobs:
+  canary:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        stock: ['1102', '1104', '1216']
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout current main bounded canary inputs
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json
+            data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
+            data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Verify preregistered stock and frozen historical PIT state
+        shell: bash
+        run: |
+          set -euo pipefail
+          case '${{ matrix.stock }}' in
+            1102|1104|1216) ;;
+            *) echo 'stock outside preregistered canary' >&2; exit 1 ;;
+          esac
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const pit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json', 'utf8'));
+          if (pit.identity_count !== 33 || pit.pit_ready_identity_count !== 0 || pit.not_pit_ready_identity_count !== 33) throw new Error('historical PIT freeze changed');
+          if (pit.outcome_blind !== true || pit.network_collection_used !== false) throw new Error('historical PIT protected state changed');
+          NODE
+      - name: Collect one bounded prospective stock canary
+        id: collect
+        shell: bash
+        run: |
+          set -euo pipefail
+          before=$(mktemp)
+          after=$(mktemp)
+          find "$SNAPSHOT_ROOT" -type f -print 2>/dev/null | sort > "$before" || true
+          node scripts/collect_institutional_accumulation_catalyst_prospective_canary.js '${{ matrix.stock }}' | tee /tmp/canary-result.json
+          find "$SNAPSHOT_ROOT" -type f -print 2>/dev/null | sort > "$after" || true
+          comm -13 "$before" "$after" > /tmp/canary-paths.txt
+          count=$(wc -l < /tmp/canary-paths.txt | tr -d ' ')
+          requests=$(node -e "const r=require('/tmp/canary-result.json');process.stdout.write(String(r.request_count))")
+          snapshots=$(node -e "const r=require('/tmp/canary-result.json');process.stdout.write(String(r.snapshot_count))")
+          test "$requests" -ge 1
+          test "$requests" -le 2
+          test "$snapshots" -eq "$count"
+          test "$snapshots" -ge 1
+          echo "request_count=$requests" >> "$GITHUB_OUTPUT"
+          echo "snapshot_count=$snapshots" >> "$GITHUB_OUTPUT"
+          echo "New snapshot paths:"
+          cat /tmp/canary-paths.txt
+      - name: Save bounded candidate snapshots outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/prospective-candidates
+          while IFS= read -r p; do
+            test -n "$p"
+            mkdir -p "/tmp/prospective-candidates/$(dirname "$p")"
+            cp "$p" "/tmp/prospective-candidates/$p"
+          done < /tmp/canary-paths.txt
+      - name: Race-safe append-only checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            conflict=0
+            while IFS= read -r p; do
+              test -n "$p"
+              candidate="/tmp/prospective-candidates/$p"
+              if git show "origin/main:$p" > /tmp/remote-snapshot 2>/dev/null; then
+                if ! cmp -s "$candidate" /tmp/remote-snapshot; then
+                  echo "immutable snapshot conflict: $p" >&2
+                  conflict=1
+                  break
+                fi
+                echo "remote immutable snapshot already identical: $p"
+              else
+                mkdir -p "$(dirname "$p")"
+                cp "$candidate" "$p"
+              fi
+            done < /tmp/canary-paths.txt
+            test "$conflict" -eq 0
+            while IFS= read -r p; do
+              test -n "$p"
+              git add "$p"
+            done < /tmp/canary-paths.txt
+            if git diff --cached --quiet; then
+              echo 'all bounded snapshots already durable on remote main'
+              pushed=1
+              break
+            fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "data: checkpoint prospective catalyst canary ${{ matrix.stock }}"
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+            echo "push race on attempt $attempt; refetching and reapplying immutable candidates"
+          done
+          test "$pushed" -eq 1
+      - name: Verify durable remote prospective snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          while IFS= read -r p; do
+            test -n "$p"
+            git show "origin/main:$p" > /tmp/verified-snapshot.json
+            node - "$p" <<'NODE'
+          const fs = require('node:fs');
+          const p = process.argv[2];
+          const s = JSON.parse(fs.readFileSync('/tmp/verified-snapshot.json', 'utf8'));
+          if (s.contract_id !== 'institutional-accumulation-catalyst-prospective-pit-capture-contract-v1') throw new Error(`contract mismatch ${p}`);
+          if (s.methodology_identity !== 'institutional-accumulation-catalyst-prospective-live-capture-canary-v1') throw new Error(`methodology mismatch ${p}`);
+          if (s.pit_known_at !== s.collected_at) throw new Error(`known-at mismatch ${p}`);
+          if (!/^[a-f0-9]{64}$/.test(s.response_sha256 || '') || !/^[a-f0-9]{64}$/.test(s.immutable_snapshot_id || '')) throw new Error(`hash identity invalid ${p}`);
+          if (s.historical_back_imputation_allowed !== false) throw new Error(`back-imputation unsafe ${p}`);
+          NODE
+          done < /tmp/canary-paths.txt
+      - name: Summarize bounded canary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Prospective catalyst canary — ${{ matrix.stock }}"
+            echo "- request count: ${{ steps.collect.outputs.request_count || 'n/a' }} / max 2"
+            echo "- snapshot count: ${{ steps.collect.outputs.snapshot_count || 'n/a' }}"
+            echo "- stock physical job: independent matrix runner"
+            echo "- max-parallel: 1"
+            echo "- per-request cooldown: collector-enforced randomized 20-60s"
+            echo "- historical backfill: prohibited"
+          } >> "$GITHUB_STEP_SUMMARY"
