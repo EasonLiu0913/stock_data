@@ -7,8 +7,11 @@ on:
     paths:
       - ".github/workflows/test-institutional-accumulation-catalyst-readiness.yml"
       - "scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js"
+      - "scripts/audit_institutional_accumulation_catalyst_pit_provenance.js"
       - "tests/institutional_accumulation_catalyst_artifact_readiness.test.js"
+      - "tests/institutional_accumulation_catalyst_pit_provenance.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json"
       - "data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/**"
       - "data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/**"
@@ -20,36 +23,47 @@ permissions:
 jobs:
   regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Checkout bounded readiness inputs
+      - name: Checkout bounded catalyst provenance inputs with complete history
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           filter: blob:none
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js
+            /scripts/audit_institutional_accumulation_catalyst_pit_provenance.js
             /tests/institutional_accumulation_catalyst_artifact_readiness.test.js
+            /tests/institutional_accumulation_catalyst_pit_provenance.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
             /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
             /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
       - name: Setup Node 24
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Verify zero-network catalyst readiness reconstruction
+      - name: Verify zero-network catalyst readiness and PIT provenance
         shell: bash
         run: |
           set -euo pipefail
           cp data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json /tmp/readiness-before.json
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-before.json
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
+          node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
-          const before = JSON.parse(fs.readFileSync('/tmp/readiness-before.json', 'utf8'));
-          const after = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json', 'utf8'));
-          assert.deepStrictEqual(after, before);
+          const pairs = [
+            ['/tmp/readiness-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'],
+            ['/tmp/pit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'],
+          ];
+          for (const [beforePath, afterPath] of pairs) {
+            const before = JSON.parse(fs.readFileSync(beforePath, 'utf8'));
+            const after = JSON.parse(fs.readFileSync(afterPath, 'utf8'));
+            assert.deepStrictEqual(after, before);
+          }
           NODE
