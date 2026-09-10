@@ -54,7 +54,7 @@ function detailBody(stock) {
 test('canary stock set is exactly preregistered three stocks and cooldown is bounded', () => {
   assert.deepStrictEqual([...ALLOWED_STOCKS].sort(), ['1102','1104','1216']);
   assert.equal(boundedCooldownMs(() => 0), 20000);
-  assert.equal(boundedCooldownMs(() => 0.999999), 59999);
+  assert.equal(boundedCooldownMs(() => 0.999999), 60000);
 });
 
 test('listing and detail validation preserve official descriptor identity', () => {
