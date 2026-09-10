@@ -9,9 +9,11 @@ on:
       - "scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js"
       - "scripts/audit_institutional_accumulation_catalyst_pit_provenance.js"
       - "scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js"
+      - "scripts/collect_institutional_accumulation_catalyst_prospective_canary.js"
       - "tests/institutional_accumulation_catalyst_artifact_readiness.test.js"
       - "tests/institutional_accumulation_catalyst_pit_provenance.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js"
+      - "tests/institutional_accumulation_catalyst_prospective_canary.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json"
@@ -39,9 +41,11 @@ jobs:
             /scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js
             /scripts/audit_institutional_accumulation_catalyst_pit_provenance.js
             /scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js
+            /scripts/collect_institutional_accumulation_catalyst_prospective_canary.js
             /tests/institutional_accumulation_catalyst_artifact_readiness.test.js
             /tests/institutional_accumulation_catalyst_pit_provenance.test.js
             /tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
+            /tests/institutional_accumulation_catalyst_prospective_canary.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
@@ -52,7 +56,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Verify zero-network catalyst readiness, PIT provenance, and prospective capture contract
+      - name: Verify zero-network catalyst readiness, PIT provenance, prospective contract, and canary adapter
         shell: bash
         run: |
           set -euo pipefail
@@ -61,6 +65,7 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_canary.test.js
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
