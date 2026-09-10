@@ -1,0 +1,54 @@
+name: "[研究] Wave C Prompt B Closeout Audit v2"
+
+on:
+  push:
+    paths:
+      - '.github/workflows/closeout-wave-c-prompt-b-audit-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout: |
+            .github/workflows
+            scripts
+            tests
+            docs/agent-prompts
+            data_research/institutional-flow
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Re-fetch current main and rerun bounded Prompt B verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git reset --hard origin/main
+          git fetch origin 2c695abc191cc30d198c01d9bc8e68c66df030b8 --depth=1
+          git fetch origin 3c427e570b0856f0bab8153872c7f5c2986faae5 --depth=1
+          node tests/institutional_accumulation_official_disclosure_collection.test.js
+          node scripts/plan_institutional_accumulation_official_disclosure_collection.js > /tmp/plan.json
+          node scripts/tmp_wave_c_prompt_b_closeout_v2.js
+      - name: Self-clean and commit PASS only after verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f .github/workflows/closeout-wave-c-prompt-b-audit.yml \
+                    .github/workflows/closeout-wave-c-prompt-b-audit-v2.yml \
+                    scripts/tmp_wave_c_prompt_b_closeout_v2.js
+          git add data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md \
+                  data_research/institutional-flow/official-disclosure-raw/mops-material-information/wave-c-prompt-b-closeout.json
+          git diff --cached --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "research: close Wave C Prompt B and preregister catalyst readiness"
+          git fetch origin main --depth=1
+          test "$(git rev-parse origin/main)" = "$(git rev-parse HEAD^)" || { echo 'main advanced; fail closed'; exit 1; }
+          git push origin HEAD:main
