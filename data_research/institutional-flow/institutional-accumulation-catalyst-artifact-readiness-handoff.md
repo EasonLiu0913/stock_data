@@ -14,164 +14,110 @@ Status:
 - Prompt A: **COMPLETE**
 - Prompt B closeout: **PASS**
 
-### Frozen boundaries preserved
+Frozen state carried forward:
+- Phase 2 semantic SHA-256: `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`;
+- methodology-development identities: exactly `41`;
+- protected `2454` remains motivation-only;
+- stock/time holdout outcomes remain sealed;
+- refreshed development outcome SHA-256 remains `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`;
+- refreshed association SHA-256 remains `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`;
+- Withdrawal v6.0-v6.5 remains frozen and is not an Accumulation input;
+- no catalyst/outcome association, threshold, score, optimized weighting, model, strategy, production behavior, generic-news layer, or outcome-driven tuning is authorized;
+- Wave A was not refetched and legacy `/mops/web/ajax_t05st01` attempt count remains frozen at exactly `2`.
 
-- Phase 2 semantic SHA-256 remains `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b`.
-- methodology-development identities remain exactly `41`.
-- protected `2454` remains motivation-only and excluded from development/validation outcome tuning.
-- stock holdout and time holdout outcomes remain sealed.
-- refreshed development outcome SHA-256 remains `f1c94313a023b420501033b26ce35f90ba8d52c89a0756ce9b6fc42f44a2c59e`.
-- refreshed association SHA-256 remains `779e2be6708e6d8bc55062058ede6178e2dd4cf7634621d05ab05228c31e7b68`.
-- Withdrawal v6.0-v6.5 remains frozen and is not an Accumulation input.
-- no catalyst/outcome association, threshold, score, optimized weighting, model, strategy, production behavior, generic-news layer, or outcome-driven tuning was authorized or introduced.
-- Wave A monthly revenue was not refetched.
-- legacy `/mops/web/ajax_t05st01` attempt count remains frozen at exactly `2`.
-- current collection timestamps/API visibility remain audit metadata only and are never historical PIT proof.
+Prior readiness evidence remains durable in repository history, including Prompt B PASS run `34466672001`, job `102836756516`, and readiness result 33 total / 0 ready / 33 `not_pit_ready`.
 
-### Prompt A durable implementation evidence
+## Current round
+
+`institutional-accumulation-catalyst-pit-provenance-resolution-v1`
+
+Status:
+- Prompt A: **COMPLETE**
+- Prompt B: **PREREGISTERED / PENDING**
 
 Prompt A baseline immediately before implementation:
-`10408365158e2ef67e219f5a0a0d98c1d9821ed6`.
+`dd9566de193d8d970f047204e2ab8a7a926b44d2`.
 
-Durable implementation/checkpoint commits:
-- `a0daefe6fe72dddfa975fd0818dc03bf6bbab209` — add zero-network readiness reconstruction script;
-- `840ccdccad923f92b53b08660d835583fe496cc4` — add readiness regression test;
-- `73a386c73be1aab7cc3c85340b40f72a72195bc9` — checkpoint machine-readable readiness artifact;
-- `778511920a632965ada5d32956097c1aaedf085a` — align generator with committed artifact contract;
-- `4c95ece18f7667149fa253a0241738a315e791eb` — align regression assertions;
-- `121257a6b342b4f723de869fb052669e0ed42a1d` — add dedicated Node 24 remote regression workflow;
-- `4a91672f496e1216d51562cd0a42d61181749029` — compare generated/committed artifact semantically;
-- `de95c59d468114098a506ed2a088382278295d11` — bound checkout to only readiness inputs;
-- `db9023a9f7b24614076ffe2d0da34727401a4b58` — durable Prompt A handoff checkpoint;
-- `19ff42143a2b987b7f85db47f4b1bea67342f23d` — route active project to this closeout handoff.
+### Prompt A result
 
-Durable outputs:
-- `scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js`;
-- `tests/institutional_accumulation_catalyst_artifact_readiness.test.js`;
-- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json`;
-- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`.
+The zero-network, outcome-blind repository/git-history audit completed for exactly the frozen 33 identities.
 
-Reconstruction accounting independently re-established during Prompt B:
-- frozen `source_missing` identities: **33**;
-- exact unique identities reconstructed: **33/33**;
-- readiness-positive identities: **0**;
+Deterministic decision counts:
+- identities: **33/33**, each exactly once;
+- `pit_ready`: **0**;
 - `not_pit_ready`: **33**;
-- `manual_review`: **true**;
-- positive imputation: **false**;
-- readiness artifact records `network_collection_used=false`;
-- readiness artifact records `outcome_blind=true`;
-- protected `2454` outcomes read: **false**;
-- development outcome values read: **false**;
-- holdout outcomes read: **false**.
+- `manual_review`: **0**;
+- positive imputation: **0**;
+- source/MOPS network requests: **0**.
 
-PIT/readiness basis independently re-established during Prompt B:
-- Wave A `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json` remains `quality_passed`, with `pit_known_at=20260902` and `version_safety=historical_timing_safe_value_version_unproven`.
-- `20260902` is after every frozen T0 represented in the 33-identity artifact (`20260814` through `20260825`).
-- Wave C provenance remains listing-only for the frozen stocks; historical immutable-value known-at safety is not established.
-- later API visibility/raw availability is not back-imputed as proof that the same immutable value version was known at T0.
-- therefore all 33 identities remain conservatively `not_pit_ready`; no catalyst-positive imputation is permitted.
+The result is intentionally fail-closed. No identity was upgraded merely to force progress.
 
-### Prompt B independent regression verification
+Durable evidence:
+- Wave A source meta remains `pit_known_at=20260902` and `version_safety=historical_timing_safe_value_version_unproven`;
+- all frozen T0 values are between `20260814` and `20260825`, so Wave A's declared known-at is after every T0;
+- for every identity, complete git history contains no commit for the Wave A source-meta path at or before that identity's T0;
+- for every identity, complete git history contains no commit for its Wave C listing source-meta path at or before that identity's T0;
+- Wave C remains `source_timestamp_precision=listing_only`, `pit_known_at=null`, and `version_safety=historical_timing_safe_value_version_unproven`;
+- present-day API visibility, collection time, and source event date were not back-imputed as historical PIT/version proof.
 
-Preregistered Prompt B identity was recovered from durable pre-Prompt-A history at commit `10408365158e2ef67e219f5a0a0d98c1d9821ed6` in the prior canonical handoff. The Prompt B text matches the current round contract.
+Audit history cutoff is deterministic and Taiwan-local:
+`git log --all --format=%H%x09%cI --until=<T0 23:59:59+08:00> -- <repo-path>`.
+
+### Prompt A implementation / checkpoint commits
+
+- `c8e50795cd99432d4df84dce98469fd85186e3b7` — add catalyst PIT provenance audit;
+- `6ec1cd138507e59bed6516f9393b8304e33cec07` — add PIT provenance regression;
+- `2f5c6db23dad969363235a09fd1880587ca154b2` — compact audit evidence;
+- `d0d9747d391cf2182ef77de73e560ce9e8474523` — align regression output contract;
+- `1f3435defeeb0b317307be7d04cd6bad7af3dedf` — finalize compact PIT provenance audit;
+- `ba8ad877259fd960bb5cc5bde33ad74fbe229b8d` — finalize regression assertions;
+- `ffab75ac02d3a45dc35f6ea7af69bb416dca3c70` — checkpoint machine-readable PIT decisions;
+- `f96797fcbe5630470390e57dbac28586c2aa32e7` — verify PIT provenance under Node 24 with complete git history.
+
+Durable outputs / entry points:
+- `scripts/audit_institutional_accumulation_catalyst_pit_provenance.js` — zero-network git-history PIT audit;
+- `tests/institutional_accumulation_catalyst_pit_provenance.test.js` — deterministic regression contract;
+- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json` — 33-identity machine-readable audit artifact;
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml` — Node 24 remote regression with full git history and bounded sparse worktree;
+- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json` — prior readiness decisions;
+- `data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json` — frozen unresolved identity source;
+- `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json` — Wave A provenance;
+- `data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/` — Wave C listing provenance;
+- `data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md` — prior Wave C/PIT contract history.
+
+### Node 24 validation
 
 Workflow:
 `test: institutional accumulation catalyst readiness`
 
 Run/job:
-- run `34466672001`;
-- job `102836756516` (`regression`);
-- conclusion **success**.
+- run `34478084243`;
+- job `102873698591` (`regression`);
+- conclusion: **success**.
 
-Verified job properties:
-- checkout ref exactly `de95c59d468114098a506ed2a088382278295d11`;
-- `actions/checkout@v7` with `filter: blob:none` and bounded non-cone sparse checkout;
-- checkout scope restricted to the reconstruction script/test, reconstruction/readiness artifacts, Wave A source-meta, and Wave C listing provenance root;
+Verified remote properties:
+- checkout ref exactly `f96797fcbe5630470390e57dbac28586c2aa32e7`;
+- `actions/checkout@v7` with `fetch-depth: 0`, `filter: blob:none`, and bounded non-cone sparse checkout;
 - Node `v24.20.0`;
-- `node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js` PASS: 1 test, 1 pass, 0 fail;
-- semantic deep equality between regenerated and committed readiness artifact PASS;
-- no source-fetch step exists in the regression job.
+- readiness regression: **1 pass / 0 fail**;
+- PIT provenance regression: **1 pass / 0 fail**;
+- regenerated readiness artifact deep-equals the committed readiness artifact;
+- regenerated PIT provenance artifact deep-equals the committed PIT artifact;
+- workflow contains no source-fetch stage.
 
-### Concurrent-change freshness review
+### Protected-state / scope verification
 
-Current `main` advanced after tested commit `de95c59d...`. The later changes reviewed are routing/handoff checkpointing plus unrelated same-day market/broker data updates. They do not modify the bounded readiness script, regression test, readiness artifact, Wave A source-meta contract, Wave C provenance contract, or protected Accumulation outcome/association state. They therefore do not stale this closeout evidence.
+Prompt A did not open development outcome values, stock/time holdout outcomes, or protected `2454` outcomes. It did not open catalyst/outcome association values. It did not mutate frozen Phase 2/outcome/association artifacts, did not use Withdrawal as an input, did not refetch Wave A or Wave C, did not retry the legacy endpoint, and introduced no catalyst/outcome association, threshold, score, optimized weighting, model, strategy, production behavior, or generic-news layer.
 
-### Closeout decision
+## Next required action
 
-**Prompt B closeout: PASS**
+Mandatory Prompt B closeout is pending for the **same round**. No future Prompt A is promoted while Prompt B remains pending.
 
-The round closes conservatively with official evidence present now but historical immutable-value known-at safety unresolved for every frozen identity. This is a research-data limitation, not a failed implementation. Outcome association remains unauthorized until a later round can establish acceptable PIT/value-version provenance without leakage or positive imputation.
+The closeout must independently verify routing, exact 33-identity membership, zero-network execution, complete-history evidence, fail-closed decisions, protected-state invariants, Node 24 reproducibility, and durable remote outputs.
 
-## Current active round
+## Prompt A — PIT provenance resolution audit (completed contract)
 
-`institutional-accumulation-catalyst-pit-provenance-resolution-v1`
-
-Status:
-- Prompt A: **NOT STARTED / ACTIVE**
-- Prompt B: **PREREGISTERED / PENDING**
-
-Promotion does not execute Prompt A automatically.
-
-## Next round objective
-
-Resolve whether any of the 33 frozen `not_pit_ready` catalyst identities can be upgraded using **already-durable repository provenance only**, without source network requests and without opening outcomes. The round is an evidence/provenance audit, not catalyst/outcome analysis.
-
-Exact entry points:
-- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json` — current 33-identity readiness decisions;
-- `data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json` — frozen unresolved identity source;
-- `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json` — Wave A provenance;
-- `data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/` — Wave C listing provenance;
-- `scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js` — current readiness reconstruction logic;
-- `tests/institutional_accumulation_catalyst_artifact_readiness.test.js` — current regression contract;
-- `data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md` — prior Wave C/PIT contract history;
-- this handoff — current canonical routing state.
-
-The next round must fail closed: repository evidence that merely proves present-day existence, retrieval time, source-reported event date, or current API visibility is insufficient to establish historical immutable-value known-at safety.
-
-## Prompt A — PIT provenance resolution audit
-
-```text
-Continue the Institutional Accumulation / Catalyst Pre-positioning project only if `docs/agent-prompts/task-routing.json` still routes the sole active task to `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md` and round `institutional-accumulation-catalyst-pit-provenance-resolution-v1` is still Prompt A NOT STARTED / ACTIVE.
-
-Before work:
-1. fetch current remote `main`; do not rely on conversation state;
-2. read repository-root `AGENTS.md`, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, `docs/agent-prompts/task-routing.json`, this canonical handoff, prior material-information handoff `data_research/institutional-flow/institutional-accumulation-material-information-api-contract-handoff.md`, current readiness artifact `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json`, frozen reconstruction artifact `data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json`, Wave A source-meta `data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json`, Wave C listing provenance root `data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/`, readiness generator `scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js`, and regression `tests/institutional_accumulation_catalyst_artifact_readiness.test.js`;
-3. recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history;
-4. verify the immediately prior readiness round has durable `Prompt B closeout: PASS`, exact counts 33 total / 0 ready / 33 not_pit_ready, and protected research state unchanged.
-
-Perform an outcome-blind, zero-network provenance audit for exactly the frozen 33 identities. Search only already-committed repository evidence and git history that can materially establish or refute historical known-at timing and immutable-value/version safety at each identity's T0. Do not use present-day API visibility, collection timestamps after T0, or source event dates alone as PIT proof. Do not infer missing historical version safety.
-
-For each identity, produce a deterministic machine-readable audit decision with explicit evidence paths/commit identities and one of: `pit_ready`, `not_pit_ready`, or `manual_review`. Any upgrade to `pit_ready` requires affirmative durable evidence that the relevant value/version was knowable no later than T0 under the frozen methodology. Absence of such proof must remain fail-closed.
-
-Network/source rules:
-- issue **zero** MOPS or other source network requests;
-- do not refetch Wave A or Wave C;
-- never retry `/mops/web/ajax_t05st01`;
-- use repository files and durable git history only.
-
-Protected-state rules:
-- do not open development outcomes, stock/time holdout outcomes, protected `2454` outcomes, or any future-return outcome data;
-- do not inspect or mutate catalyst/outcome association beyond verifying its protected hash/unchanged state when possible without opening values;
-- do not introduce thresholds, scores, optimized weights, models, strategies, production behavior, or generic-news features;
-- Withdrawal v6.0-v6.5 remains frozen and is not an input.
-
-Implementation scope:
-- add only the smallest domain-specific audit script/artifact/test needed to make the 33 identity decisions reproducible;
-- preserve exact stock/T0/source identity and provenance fields;
-- keep ambiguous evidence explicit; never impute catalyst-positive state;
-- if no identity can be upgraded, that is a valid result and must be recorded rather than forcing progress.
-
-Completion contract:
-- all 33 frozen identities appear exactly once in the audit artifact;
-- zero network requests;
-- every `pit_ready` decision, if any, has explicit pre-/at-T0 durable proof and version-safety rationale;
-- all unresolved identities remain explicitly fail-closed;
-- deterministic regression tests PASS under Node 24;
-- outputs are committed durably to remote `main`;
-- protected state remains unopened/unchanged;
-- update this canonical handoff with exact commits/tests/counts and preserve the same preregistered Prompt B;
-- stop with `Prompt A complete — ready for Prompt B.` Do not execute Prompt B.
-```
+The exact Prompt A executed in this round remains recoverable from pre-Prompt-A durable repository history at baseline `dd9566de193d8d970f047204e2ab8a7a926b44d2`. Its completion contract is satisfied; it must not be re-executed while Prompt B is pending.
 
 ## Prompt B — PIT provenance resolution closeout
 
@@ -181,7 +127,8 @@ Perform mandatory closeout for `institutional-accumulation-catalyst-pit-provenan
 
 ## Stop conditions
 
-- Do not execute the promoted Prompt A as part of this Prompt B closeout.
+- Do not execute Prompt B automatically as part of Prompt A.
+- Do not promote or execute a future Prompt A while current Prompt B is pending.
 - Do not open protected outcomes or holdouts.
 - Do not mutate frozen Phase 2/outcome/association artifacts.
 - Do not introduce catalyst/outcome association, thresholds, scores, models, strategies, or production behavior.
