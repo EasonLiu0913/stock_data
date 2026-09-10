@@ -22,11 +22,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout current main
+      - name: Checkout bounded readiness inputs
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js
+            /tests/institutional_accumulation_catalyst_artifact_readiness.test.js
+            /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
+            /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
+            /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
       - name: Setup Node 24
         uses: actions/setup-node@v7
         with:
