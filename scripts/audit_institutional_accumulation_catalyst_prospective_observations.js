@@ -16,6 +16,7 @@ const EXPECTED_INTERFACES = [
   'prospective_material_information_listing',
 ];
 const EXPECTED_METHODOLOGY = 'institutional-accumulation-catalyst-prospective-live-capture-canary-v1';
+const ALLOWED_COMPLETE_WINDOW_COUNTS = [1, 2];
 
 function walkJsonFiles(root) {
   const out = [];
@@ -104,9 +105,12 @@ function auditObservations(repoRoot, options = {}) {
   }
 
   if (options.requireCurrentBaseline !== false) {
-    if (observations.length !== 6) throw new Error(`unexpected_observation_count:${observations.length}`);
+    const completeWindowSize = EXPECTED_STOCKS.length * EXPECTED_INTERFACES.length;
+    if (observations.length % completeWindowSize !== 0) throw new Error(`incomplete_observation_window:${observations.length}`);
+    const windowCount = observations.length / completeWindowSize;
+    if (!ALLOWED_COMPLETE_WINDOW_COUNTS.includes(windowCount)) throw new Error(`unexpected_observation_window_count:${windowCount}`);
     for (const stock of EXPECTED_STOCKS) {
-      if (byStock[stock].total !== 2 || byStock[stock].listing !== 1 || byStock[stock].detail !== 1) {
+      if (byStock[stock].total !== windowCount * 2 || byStock[stock].listing !== windowCount || byStock[stock].detail !== windowCount) {
         throw new Error(`unexpected_stock_interface_pair:${stock}`);
       }
     }
@@ -182,6 +186,7 @@ module.exports = {
   EXPECTED_STOCKS,
   EXPECTED_INTERFACES,
   EXPECTED_METHODOLOGY,
+  ALLOWED_COMPLETE_WINDOW_COUNTS,
   walkJsonFiles,
   assertCanonicalBase64,
   observationFromFile,
