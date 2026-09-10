@@ -2795,6 +2795,37 @@ Implementation/execution:
 - preserve daily workflow, FAS/FQ thresholds, strategy identity, anti-lookahead, signal-date and next-close semantics;
 - update this handoff with durable Prompt A evidence while preserving the exact Prompt B below.
 
+#### Prompt A progress — backlog-drain-wave-192-cap-v1 — 2026-09-10
+
+Prompt A is **in progress; not complete**.
+
+Durable implementation evidence:
+
+- `e84b6e0da0aeff6167ccd1b5a5fe0eb1b5f1c048` — `ci: expand FinMind backlog wave to 192-stock cap`.
+- `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` now changes only the promoted bounded ceiling:
+  - `max_physical_batches` default/guard/fallback: `32 -> 64`;
+  - planner / batch execution / post-wave re-plan max due selection: `96 -> 192`.
+- Re-read from current remote main after the commit:
+  - `physical_batch_size` remains capped at `3`;
+  - `strategy.max-parallel: 1` remains unchanged;
+  - randomized batch-start cooldown remains `3–8s`;
+  - inter-request pacing remains `1–3s` via `--delay-ms 1000 --jitter-ms 2000`;
+  - quota safe cap/reserve remain `500/20`;
+  - wave-scoped checkpoint identity, structural terminal validation, latest-main replay, one wave-level master rebuild, final durable propagation verification, one post-wave re-plan, and no automatic second wave remain unchanged.
+
+Remaining Prompt A completion evidence:
+
+1. Dispatch one real `.github/workflows/drain-finmind-quarterly-financial-quality-backlog.yml` run from current main with `physical_batch_size=3` and `max_physical_batches=64` (or the default values).
+2. Recover the fresh committed due count and deterministic selected <=192 stocks.
+3. Verify every selected physical batch executes on its own fresh runner with `max-parallel=1`, proportional quota preflight, 3–8s cooldown, 1–3s inter-request waits, durable terminal validation, unique checkpoint commit/path, and runner exit.
+4. Verify all pre-existing canary / 12 / 24 / 48 / 96-wave checkpoint blobs remain unchanged.
+5. Verify exactly one master publication, final remote propagation verification, and committed-state post-wave re-plan.
+6. Record final backlog accounting (zero or exact bounded remainder), applicable deterministic regression / Node Regression Suite evidence, and current remote durability.
+
+Tool limitation in this agent session: the connected GitHub toolset exposes workflow/job inspection and rerun operations but does **not** expose a new `workflow_dispatch` operation. Therefore the required final real 64×3-cap wave cannot be truthfully started from this agent, and no run/job/checkpoint/master evidence is fabricated.
+
+Do not execute Prompt B and do not promote another round until the real wave completes and this Prompt A contract is fully satisfied.
+
 #### Preregistered Prompt B — backlog-drain-wave-192-cap-v1
 
 Close out round `backlog-drain-wave-192-cap-v1`.
