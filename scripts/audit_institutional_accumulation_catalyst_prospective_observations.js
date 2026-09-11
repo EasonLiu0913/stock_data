@@ -16,7 +16,7 @@ const EXPECTED_INTERFACES = [
   'prospective_material_information_listing',
 ];
 const EXPECTED_METHODOLOGY = 'institutional-accumulation-catalyst-prospective-live-capture-canary-v1';
-const ALLOWED_COMPLETE_WINDOW_COUNTS = [1, 2];
+const ALLOWED_COMPLETE_WINDOW_COUNTS = [1, 2, 3];
 
 function walkJsonFiles(root) {
   const out = [];
