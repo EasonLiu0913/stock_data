@@ -17,137 +17,166 @@ Canonical active routing handoff:
 
 ## Closed prerequisite state
 
-- Catalyst artifact reconstruction/readiness: Prompt A COMPLETE / Prompt B PASS; 33 total / 0 ready / 33 not_pit_ready; Node24 run `34466672001`, job `102836756516`.
+- Catalyst artifact reconstruction/readiness: Prompt A COMPLETE / Prompt B PASS; 33 total / 0 ready / 33 not_pit_ready.
 - PIT provenance resolution: Prompt A COMPLETE / Prompt B PASS; durable artifact remains 33 / 0 / 33 / 0 manual review, zero historical network, outcome-blind.
 - Prospective PIT-safe capture contract: Prompt A COMPLETE / Prompt B PASS; checkpoint `4c782bebffb892540f74d0f5e1bc151065edfb59`.
 - Prospective live-capture canary: Prompt A COMPLETE / Prompt B PASS; checkpoint `017ee0fb03b626e7607af10916594f33320c0b48`; first live run `34481151262`.
 - Prospective observation audit: Prompt A COMPLETE / Prompt B PASS; checkpoint `57f5a9faca0c20bfe5339230fa521414e696f4ae`.
-- Prospective repeat-capture canary: Prompt A COMPLETE / Prompt B PASS; checkpoint `d26907c9b4ae371027820ec53fdda80a0a0c4011`; two bounded same-day windows total 12 immutable observations for 1102/1104/1216.
+- Prospective repeat-capture canary: Prompt A COMPLETE / Prompt B PASS; checkpoint `d26907c9b4ae371027820ec53fdda80a0a0c4011`; two bounded same-day windows total 12 immutable observations.
+- Prospective two-window delta audit: Prompt A COMPLETE / Prompt B PASS; closeout checkpoint `fac7376c16e77a10501fe0d237a171e837b5231b`; closed delta artifact blob `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`.
 
-## Closed round — prospective two-window delta audit
-
-Round: `institutional-accumulation-catalyst-prospective-window-delta-audit-v1`
-
-Status:
-- Prompt A: **COMPLETE**
-- **Prompt B closeout: PASS**
-
-Pre-Prompt-A durable baseline:
-- `d26907c9b4ae371027820ec53fdda80a0a0c4011`
-
-Prompt A checkpoint:
-- `6f0cc9181767e7f20b323601d6f8416d58cb3a4c`
-
-### Prompt B independent verification
-
-The exact phase-specific Prompt B was recovered from the durable pre-Prompt-A handoff at `d26907c9b4ae371027820ec53fdda80a0a0c4011`, not from conversation state or the Prompt A completion summary.
-
-1. Current routing has exactly one active task, `institutional-accumulation`, routed to this handoff — PASS.
-2. The preceding repeat-capture round has durable Prompt B PASS at baseline `d26907c9...` — PASS.
-3. Historical PIT remains exactly `identity_count=33`, `pit_ready=0`, `not_pit_ready=33`, `manual_review=0`, `network_collection_used=false`, `source_network_requests=0`, `outcome_blind=true`; protected 2454/development outcome/holdout/association flags remain unopened — PASS.
-4. Current observation audit blob remains byte-identical to the pre-A baseline: `86a3b0b8059e8f78ec46a01a16cb3498072e453c`. It still reports exactly `12 valid / 0 invalid / 0 conflict`, only stocks 1102/1104/1216, each `4 total / 2 listing / 2 detail`, with 12 unique immutable observations — PASS.
-5. Baseline comparison `d26907c9... -> 6f0cc918...` contains no added/modified/deleted file under `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/`; no third capture window or live-collector data was introduced — PASS.
-6. Delta auditor `scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js` calls the existing canonical observation auditor, requires exactly the current 12 valid observations and two occurrences per stock/interface, and does not weaken snapshot validation — PASS.
-7. Pairing is deterministic by validated ISO `collected_at` within each stock + source interface. Invalid timestamps, ties, missing/extra occurrences, request-key mismatch, or duplicate immutable identities fail closed in code — PASS.
-8. Delta artifact `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json` is durable with blob identity `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00` and reports exactly `observation_count=12`, `pair_count=6`, `changed_pair_count=6`, `unchanged_pair_count=0` — PASS.
-9. Each of the six pairs records stock, interface, source-request key, exact window-1/window-2 path, collected_at, immutable snapshot ID, response SHA-256, response bytes, elapsed milliseconds, `raw_content_changed`, and byte delta. The artifact explicitly records that raw-content change is not catalyst significance and that outcome association remains unopened — PASS.
-10. Regression `tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js` covers deterministic pairing, unchanged-content acceptance, partial-window rejection, third-window rejection, timestamp-tie rejection, request-key mismatch, unexpected stock/interface, and inherited malformed/hash/base64/PIT/path/immutable fail-closed behavior — PASS.
-11. The initial failed Node24 run `34493499343`, job `102925941917`, correctly exposed only a fixture-path defect; inherited canonical path validation rejected noncanonical fixture paths. No artifact checkpoint or source-network request occurred. The bounded repair was commit `12afc0efb2d7cff9c2e41edb623d135774352148` — classified and closed.
-12. Artifact-generation run `34493611703`, job `102926333075`, tested SHA `12afc0efb2d7cff9c2e41edb623d135774352148`, completed SUCCESS and durably checkpointed the delta artifact at commit `c68e92b142dfa1d11694658997c2ae4f8dddf127` — PASS.
-13. Final read-only Node24 deterministic run `34493825499`, job `102927082435`, tested SHA `04e6c0c9a91f08cc2f0040000f4dfe56089fcd61`, Node `v24.20.0`, completed SUCCESS. Test counts were readiness `1/1`, historical PIT `1/1`, prospective PIT contract `5/5`, canary adapter `6/6`, observation audit `10/10`, delta audit `8/8` — PASS.
-14. Final workflow permission is `contents: read`. It regenerated both observation and delta audits and passed `cmp`, `git diff --exit-code`, and deep-equality checks against committed artifacts. It has no live source-fetch step — PASS.
-15. Baseline diff contains this round's bounded research-owned script/test/workflow/delta-artifact/handoff changes plus explicitly classified concurrent 20260910 daily-gainers, 202608 MOPS monthly-revenue, TWSE market-chart, and daily-gainers research-pending data. No protected Phase 2, Wave A/Wave C, outcome, holdout, association, Withdrawal, model, strategy, production, scheduler, broad-universe, or generic-news path changed — PASS.
-16. This round made zero MOPS/source-network requests and did not dispatch the live collector — PASS.
-
-Closeout limitation:
-- this proves deterministic zero-network comparison of exactly two same-day prospective windows;
-- all six pairs changed raw-response SHA identity while response byte lengths stayed equal, but this must not be interpreted as catalyst importance or business meaning;
-- multi-day stability, catalyst/outcome relationship, broad-universe quality, scheduler readiness, historical PIT upgrade, model/strategy value, and production behavior remain unproven and unauthorized.
-
-**Prompt B closeout: PASS**
-
-## Current active round
+## Current round
 
 `institutional-accumulation-catalyst-prospective-cross-day-repeat-capture-canary-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
-Promotion does not execute Prompt A automatically.
+Pre-Prompt-A durable baseline:
+- `fac7376c16e77a10501fe0d237a171e837b5231b`
 
-## Next round objective
+Operational start head after unrelated 20260911 data updates:
+- `b8940dcae6e69557badf9318b760856e04811540`
 
-The two existing windows are both from 2026-09-10. The next smallest evidence step is one additional **cross-day** bounded prospective capture for the same three stocks, without scheduler or universe expansion. It must not start until the next capture is both on a later Asia/Taipei calendar date and at least 12 hours after the latest existing collection timestamp (`2026-09-10T14:15:57.012Z`). This prevents a near-midnight third sample from being mislabeled as meaningful multi-day evidence.
+## Prompt A implementation and evidence
 
-Exact entry points:
-- `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js`
-- `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`
-- `scripts/audit_institutional_accumulation_catalyst_prospective_observations.js`
-- `scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js`
-- `tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js`
-- `tests/institutional_accumulation_catalyst_prospective_canary.test.js`
-- `tests/institutional_accumulation_catalyst_prospective_observations.test.js`
-- `tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js`
-- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
-- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`
-- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/`
-- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`
-- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json`
-- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json`
-- `docs/agent-prompts/task-routing.json`
-- `AGENTS.md`
+### Eligibility gate
 
-## Prompt A — cross-day repeat-capture canary
+- Pre-A latest accepted observation remained `2026-09-10T14:15:57.012Z` = 2026-09-10 Asia/Taipei.
+- At execution time the proposed capture was on 2026-09-11 Asia/Taipei and more than 12 elapsed hours after the old latest observation.
+- Final deterministic cross-day artifact records:
+  - latest prior: `2026-09-10T14:15:57.012Z`, Asia/Taipei `2026-09-10`;
+  - earliest third-window observation: `2026-09-11T14:06:23.044Z`, Asia/Taipei `2026-09-11`;
+  - elapsed: `85826032` ms;
+  - required minimum: `43200000` ms;
+  - later local date: true;
+  - minimum elapsed satisfied: true.
 
-```text
-Continue the Institutional Accumulation / Catalyst Pre-positioning project only if `docs/agent-prompts/task-routing.json` still routes the sole active task to `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md` and round `institutional-accumulation-catalyst-prospective-cross-day-repeat-capture-canary-v1` remains Prompt A NOT STARTED / ACTIVE.
+### Pre-live bounded zero-network evolution
 
-Before work:
-1. fetch current remote `main`; read repository-root `AGENTS.md`, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, routing, this handoff, the canonical PIT contract, collector, observation auditor, two-window delta auditor, their tests, both relevant workflows, current 12-observation audit, current two-window delta audit, and frozen PIT provenance artifact;
-2. recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history;
-3. independently confirm the two-window delta-audit round has durable Prompt B PASS, current raw root still contains exactly the 12 accepted observations, current observation/delta artifacts retain their recorded blob identities, and historical/protected state remains frozen;
-4. classify any concurrent changes before continuing.
+- `dc25b22189e75c796402427f40e8e026a74250a8` — `research: allow bounded third prospective observation window`.
+  - observation auditor now permits exactly 1/2/3 complete windows while retaining canonical raw-base64/hash/PIT/path/immutable validation.
+- `741894c431b6043b4ffcc7afa4440282e820ed1d` — `research: preserve first two windows after cross-day capture`.
+  - closed two-window delta auditor consumes 12 or 18 validated observations but remains explicitly bound to the earliest two occurrences for each stock/interface.
+- `bbb4026848e63baf39c63fec05828f65bde7f5c6` — `test: preserve closed two-window delta after third window`.
+  - delta regression verifies third-window append leaves the closed artifact byte-equivalent; a fourth window remains fail-closed.
+- Pre-live Node24 zero-network gate run `34608058210` at tested SHA `bbb4026848e63baf39c63fec05828f65bde7f5c6` completed SUCCESS before any third-window source request.
 
-Eligibility gate before any live request:
-- derive the latest accepted collection timestamp from canonical validated evidence; it must remain `2026-09-10T14:15:57.012Z` unless a concurrent change is explicitly classified;
-- the proposed new capture must occur on an Asia/Taipei calendar date later than 2026-09-10 **and** at least 12 elapsed hours after that latest timestamp;
-- if either condition is not yet true, make no source request, do not dispatch the collector, do not mark Prompt A complete, and stop with an explicit `Prompt A not yet eligible for cross-day capture` status.
+### Live cross-day window
 
-Objective: prove one additional cross-day forward-only capture window for exactly stocks 1102, 1104, 1216 while preserving append-only PIT identity and the already-closed two-window delta artifact. This remains evidence collection only.
+Trigger commit:
+- `0091948812ab8c6c7c4af076410262cc7b87e49e` — `research: trigger cross-day prospective catalyst canary`.
 
-Ordered execution after eligibility is satisfied:
-A. Before any live request, make only the bounded zero-network auditor/test/readiness changes required to accept and deterministically audit exactly three complete windows without weakening canonical snapshot validation. Preserve the existing two-window delta artifact byte-identically; if the current two-window delta auditor would become invalid merely because a third window exists, evolve its input boundary so the already-closed first-two-window evidence remains reproducible rather than silently redefining that artifact.
-B. Run the Node 24 zero-network readiness gate and require all contract/canary/observation/delta regressions to pass before source requests. Repair only bounded defects; do not launch live requests until green.
-C. Launch exactly one additional live capture window using `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml` for only 1102, 1104, 1216. Keep independent fresh-runner physical jobs, `max-parallel:1`, randomized production 20-60 second pre-request cooldown, one listing and at most one verified detail request per stock, no tight retry, and total repository-controlled source requests <=6.
-D. Use only official `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail`. Never retry `/mops/web/ajax_t05st01`, never run historical range/backfill, and never touch historical Wave A/Wave C.
-E. Require race-safe append-only checkpointing. All original 12 snapshot files must remain byte-identical and present. Every new accepted snapshot must satisfy raw base64/decoded length/response SHA-256/parser/methodology/PIT/canonical immutable-path validation and `historical_back_imputation_allowed=false`.
-F. After all three jobs checkpoint durably, regenerate the canonical prospective observation audit. Expected successful shape is 18 valid / 0 invalid / 0 conflict, exactly the same three stocks, each 6 total / 3 listing / 3 detail, 9 listing + 9 detail, and 18 unique immutable snapshot IDs. Report actual unique response-hash count; do not require 18 unique raw hashes.
-G. Add or regenerate only the minimum deterministic cross-day evidence needed to distinguish the new third window from the two same-day windows. Record exact local/UTC window dates and elapsed spacing, but do not interpret catalyst significance or open outcomes.
-H. Run the final Node 24 read-only deterministic gate on the final checked-in state and require committed audit regeneration to byte-match.
-I. Compare the pre-A baseline to final Prompt-A head. Only bounded auditor/test/readiness changes, six-or-fewer new prospective snapshots, regenerated/new cross-day audit evidence, trigger/checkpoint metadata if required, and this handoff may belong to this round; classify unrelated concurrent data-only changes separately.
+Live workflow:
+- run `34608110779` — SUCCESS.
+- exactly three independent fresh-runner matrix jobs, serial through `max-parallel:1`:
+  - 1102 job `103291475228` — SUCCESS; 2 requests / 2 snapshots; checkpoint `732a1f3a34449ab5c6656ed61843af2b9036eac1`.
+  - 1104 job `103291474942` — SUCCESS; 2 requests / 2 snapshots; checkpoint `2f5978dc61cc4fff8a8ad3e2c50188803ef041b5`.
+  - 1216 job `103291475152` — SUCCESS; 2 requests / 2 snapshots; checkpoint `06221112168858730937592e5579b4271d3fcaed`.
+- total repository-controlled source requests: exactly `6`.
+- total newly accepted snapshots: exactly `6`.
+- only official POST `/mops/api/t05st01` and POST `/mops/api/t05st01_detail` were used.
+- production 20-60 second pre-request cooldown and per-stock request cap remained active.
+- no legacy endpoint retry, historical range/backfill, Wave A/Wave C refetch/rewrite, scheduler, or broad-universe rollout occurred.
 
-Frozen/safety rules:
-- no scheduler or recurring automation;
-- no broad-universe expansion;
-- no historical PIT upgrade/backfill or Wave A/Wave C refetch;
-- no development outcomes, holdouts, protected 2454 outcomes, future returns, catalyst/outcome association, Withdrawal, threshold, score, optimized weighting, model, strategy, production behavior, or generic-news layer;
-- zero legacy endpoint retries;
-- fail closed on degraded/WAF/security/malformed/application/schema/identity ambiguity before snapshot acceptance;
-- raw response changes are not business significance;
-- do not execute Prompt B automatically.
+New append-only snapshots:
+- 1102 listing: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1102_115_all/20260911T140623044Z--6dbbdff83a039f5520d5e17612e5fdb3ff39a7ddc27b3182f54277f1215784fc.json`
+- 1102 detail: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1102_1150115_1_sii/20260911T140711456Z--db3f5f60c4381b2791b2c428dc36a776540b1489960eb9b776415a7d8397be58.json`
+- 1104 listing: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1104_115_all/20260911T140815880Z--df65e78c31adfaa6584284030d5c4be8ada2f32e46db776089dd0484fb2e5c8e.json`
+- 1104 detail: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1104_1150113_1_sii/20260911T140857267Z--c8e9554b2fb616129fe0fb1a550044711b0d49d427087640f9e01c5637aaec93.json`
+- 1216 listing: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1216_115_all/20260911T140950696Z--7120462d792f92be7fd651e232ede21f42a750bca48703b98b212c063bdc2415.json`
+- 1216 detail: `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1216_1150109_1_sii/20260911T141045797Z--24f973a1c8bbc19e901a5b9adb0b14fcc9f3dae2b4aaf1436a16d84debc4780c.json`
 
-Completion contract:
-- eligibility gate was satisfied before any live request;
-- pre-live Node24 zero-network gate PASS;
-- exactly one bounded cross-day live window completes within <=6 repository-controlled requests;
-- original 12 snapshots and the already-closed two-window delta artifact remain byte-identical;
-- all new accepted snapshots are durable append-only on current remote main;
-- deterministic audit evidence records the exact observed three-window/cross-day counts and spacing with no conflicts;
-- final Node24 read-only deterministic gate PASS at recorded tested SHA;
-- canonical handoff records exact implementation commits, live run/job IDs, request/snapshot counts, checkpoint commits, artifact identities/counts/limitations, and preserves the exact preregistered Prompt B below;
-- stop with `Prompt A complete — ready for Prompt B.`
-```
+Comparison `bbb40268... -> 06221112...` contains exactly these six added raw snapshot paths plus the bounded trigger metadata change; no original prospective snapshot was modified or deleted.
+
+### Three-window deterministic evidence
+
+- `3505fc8129c31e628e85be88f72b64d34dca3d08` — added `scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js`.
+- `e9ba2c8ab675c5abc5fd671f992b0edf749b475a` — added cross-day zero-network regression.
+- Initial writer commit `4d458a52d218d7df4795ce253b747cd15ec10051`, run `34608932469`, job `103294224045`: all validation passed but persistence failed because the new artifact was outside the sparse-checkout cone. This was correctly treated as green-analysis / incomplete-persistence plumbing failure.
+- Bounded fix `241a50dec28859e4ecd6d97062963ed3c9ffd13f` used `git add --sparse`.
+- Writer rerun `34609052282`, job `103294619159` — SUCCESS.
+- Durable evidence checkpoint commit: `5b73cf7b0d3897a4f34aed0cb3da7df24d26d007` — `research: checkpoint prospective catalyst cross-day evidence`.
+
+Canonical observation audit:
+- path: `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`
+- blob: `8dca5d431861f278279329014300953b8a1f84ec`
+- exactly 18 valid / 0 invalid / 0 conflict;
+- stocks 1102/1104/1216 each 6 total / 3 listing / 3 detail;
+- interfaces 9 listing + 9 detail;
+- 18 unique immutable snapshot IDs;
+- actual unique response SHA-256 count 18, reported only and not required;
+- collection range `2026-09-10T13:12:36.863Z` through `2026-09-11T14:10:45.797Z`.
+
+Cross-day audit:
+- path: `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json`
+- blob: `9dbee14b300980fb46ea7251b5707429071a80bf`
+- 18 observations / 6 stock-interface chains;
+- exact three-window UTC and Asia/Taipei identities plus window-2-to-window-3 spacing;
+- no catalyst-significance interpretation; outcome association remains unopened; scheduler/broad-universe authorization remain false.
+
+Previously closed two-window delta:
+- path: `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json`
+- blob remains exactly `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+- still 12 observations / 6 pairs / 6 changed / 0 unchanged;
+- final regression and deterministic regeneration prove the third window does not redefine the closed artifact.
+
+### Final read-only deterministic gate
+
+The finalization workflow went through bounded validation-plumbing fixes only:
+- `10ca013f0c65498f9e33f4361c3e2e4fd4cdc965` — initial read-only final gate;
+- `965773c09772afe4b986c47dbc18841625662fbe` — instrumented byte checks;
+- `44c4add3995c2562470b52a706b2e929677e0f1a` — corrected readiness validation from erroneous byte-freeze to its documented reconstruction semantics;
+- `fdeb25641df4c167101c44e5b00f179c57e352f0` — separated durable PIT blob identity from runner-local PIT regeneration semantics.
+
+Final workflow:
+- run `34609666561`
+- job `103296685760`
+- tested SHA `fdeb25641df4c167101c44e5b00f179c57e352f0`
+- Node `v24.20.0`
+- permissions `contents: read`
+- SUCCESS.
+
+Observed test counts:
+- readiness 1/1
+- historical PIT 1/1
+- prospective PIT contract 5/5
+- canary adapter 6/6
+- observation audit 10/10
+- closed delta audit 9/9
+- cross-day audit 5/5
+- all PASS.
+
+Final deterministic checks:
+- observation audit byte-match: PASS;
+- closed two-window delta byte-match: PASS;
+- cross-day audit byte-match: PASS;
+- durable + regenerated PIT semantics: 33 / 0 / 33 / 0 manual, zero historical network, outcome-blind, protected flags unopened — PASS;
+- current remote durable PIT blob remains the pre-A identity `7ccafbe36206770d93f454feefdca81a082d4cd0`.
+
+## Bounded diff / protected-state confirmation
+
+Baseline `fac7376...` to Prompt-A final tested SHA contains many unrelated 20260911 daily market/broker/external data updates. Those are classified as concurrent data-only changes and do not alter routing, active handoff, prospective contracts, protected outcome/holdout/association state, or this research methodology.
+
+Round-owned changes are bounded to:
+- observation auditor three-window support;
+- closed two-window delta boundary + regression;
+- canary trigger metadata;
+- exactly six new prospective raw snapshots;
+- cross-day auditor + regression;
+- regenerated 18-observation audit;
+- new cross-day audit;
+- readiness workflow validation/checkpoint plumbing;
+- this handoff.
+
+No protected Phase 2, historical Wave A/Wave C, development outcome, protected 2454 outcome, holdout, catalyst/outcome association, Withdrawal, model, strategy, production, scheduler, broad-universe, or generic-news path was intentionally opened or modified by this round.
+
+## Prompt A limitation
+
+This round proves one bounded cross-day prospective observation window for the same three stocks and deterministic three-window evidence. It does not establish long-duration stability, broad-universe quality, scheduler readiness, catalyst significance, catalyst/outcome relationship, historical PIT upgrades, model/strategy value, or production behavior. Three windows across two Asia/Taipei calendar dates remain a very small research sample.
+
+Prompt A completion boundary reached. The Prompt B preregistered before Prompt A began is preserved verbatim below and remains pending; it has not been executed automatically.
 
 ## Prompt B — cross-day repeat-capture canary closeout
 
@@ -157,8 +186,8 @@ Perform mandatory closeout for `institutional-accumulation-catalyst-prospective-
 
 ## Stop conditions
 
-- Do not execute the promoted Prompt A automatically.
-- Do not perform a cross-day capture before the eligibility gate is satisfied.
+- Do not execute Prompt B automatically.
+- Do not run another prospective capture window in this Prompt A.
 - Do not reopen or upgrade the historical 33 identities.
 - Do not open protected outcomes, holdouts, association, or Withdrawal state.
 - Do not mutate frozen Phase 2/outcome/association artifacts.
