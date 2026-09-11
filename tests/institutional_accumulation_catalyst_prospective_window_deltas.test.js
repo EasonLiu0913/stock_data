@@ -68,6 +68,17 @@ function buildTwoWindows(repoRoot, mutator = null) {
   return paths;
 }
 
+function appendWindow(repoRoot, windowNumber, day = '11') {
+  for (let s = 0; s < STOCKS.length; s += 1) {
+    for (let i = 0; i < INTERFACES.length; i += 1) {
+      const stock = STOCKS[s];
+      const sourceInterface = INTERFACES[i];
+      const snap = fixtureSnapshot(stock, sourceInterface, `2026-09-${day}T01:${String(s * 2 + i).padStart(2, '0')}:00.000Z`, `${stock}|${sourceInterface}|window=${windowNumber}`);
+      writeSnapshot(repoRoot, snap);
+    }
+  }
+}
+
 function run(repoRoot) {
   return buildWindowDeltaAudit(repoRoot, { rootRelative: ROOT_RELATIVE, skipCommittedAuditCheck: true });
 }
@@ -113,17 +124,20 @@ test('partial second window fails closed', () => {
   assert.throws(() => run(repo), /unexpected_observation_shape|unexpected_stock_window_shape/);
 });
 
-test('third window fails closed', () => {
+test('third window preserves the already-closed first-two-window delta', () => {
   const repo = tmpRepo();
   buildTwoWindows(repo);
-  for (let s = 0; s < STOCKS.length; s += 1) {
-    for (let i = 0; i < INTERFACES.length; i += 1) {
-      const stock = STOCKS[s];
-      const sourceInterface = INTERFACES[i];
-      const snap = fixtureSnapshot(stock, sourceInterface, `2026-09-10T14:${String(s * 2 + i).padStart(2, '0')}:00.000Z`, `${stock}|${sourceInterface}|window=3`);
-      writeSnapshot(repo, snap);
-    }
-  }
+  const before = run(repo);
+  appendWindow(repo, 3, '11');
+  const after = run(repo);
+  assert.deepEqual(after, before);
+});
+
+test('fourth window fails closed for this frozen two-window artifact boundary', () => {
+  const repo = tmpRepo();
+  buildTwoWindows(repo);
+  appendWindow(repo, 3, '11');
+  appendWindow(repo, 4, '12');
   assert.throws(() => run(repo), /unexpected_observation_shape/);
 });
 
