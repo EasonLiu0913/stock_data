@@ -58,7 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-before.json
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-durable-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json /tmp/observation-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json /tmp/delta-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json /tmp/cross-before.json
@@ -83,14 +83,12 @@ jobs:
           cmp -s /tmp/cross-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
           echo 'cross-day audit byte-match: PASS'
 
-          cmp -s /tmp/pit-before.json data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
-          echo 'historical PIT frozen byte-match: PASS'
-
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
           const readiness = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'));
-          const pit = JSON.parse(fs.readFileSync('/tmp/pit-before.json'));
+          const pitDurable = JSON.parse(fs.readFileSync('/tmp/pit-durable-before.json'));
+          const pitRegenerated = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'));
           const audit = JSON.parse(fs.readFileSync('/tmp/observation-before.json'));
           const delta = JSON.parse(fs.readFileSync('/tmp/delta-before.json'));
           const cross = JSON.parse(fs.readFileSync('/tmp/cross-before.json'));
@@ -99,10 +97,21 @@ jobs:
           assert.equal(readiness.not_ready_identity_count, 33);
           assert.equal(readiness.network_collection_used, false);
           assert.equal(readiness.outcome_blind, true);
-          assert.equal(pit.identity_count, 33);
-          assert.equal(pit.pit_ready_identity_count, 0);
-          assert.equal(pit.not_pit_ready_identity_count, 33);
-          assert.equal(pit.outcome_blind, true);
+          for (const pit of [pitDurable, pitRegenerated]) {
+            assert.equal(pit.identity_count, 33);
+            assert.equal(pit.pit_ready_identity_count, 0);
+            assert.equal(pit.not_pit_ready_identity_count, 33);
+            assert.equal(pit.manual_review_identity_count, 0);
+            assert.equal(pit.network_collection_used, false);
+            assert.equal(pit.source_network_requests, 0);
+            assert.equal(pit.outcome_blind, true);
+            assert.equal(pit.protected_2454_outcomes_read, false);
+            assert.equal(pit.development_outcome_values_read, false);
+            assert.equal(pit.holdout_outcomes_read, false);
+            assert.equal(pit.catalyst_outcome_association_opened, false);
+            assert.equal(pit.protected_state.phase_2_semantic_sha256, '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b');
+            assert.equal(pit.protected_state.methodology_development_identity_count, 41);
+          }
           assert.equal(audit.valid_observation_count, 18);
           assert.equal(audit.invalid_observation_count, 0);
           assert.equal(audit.conflict_count, 0);
@@ -119,5 +128,5 @@ jobs:
           assert.equal(cross.cross_day_gate.latest_prior_collected_at, '2026-09-10T14:15:57.012Z');
           assert.equal(cross.cross_day_gate.later_asia_taipei_date, true);
           assert.equal(cross.cross_day_gate.minimum_elapsed_satisfied, true);
-          console.log('readiness + cross-day semantic assertions: PASS');
+          console.log('durable/regenerated PIT semantics + cross-day assertions: PASS');
           NODE
