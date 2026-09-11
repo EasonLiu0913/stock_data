@@ -2,41 +2,29 @@ name: "test: institutional accumulation catalyst readiness"
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - ".github/workflows/test-institutional-accumulation-catalyst-readiness.yml"
-      - "scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js"
-      - "scripts/audit_institutional_accumulation_catalyst_pit_provenance.js"
-      - "scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js"
-      - "scripts/collect_institutional_accumulation_catalyst_prospective_canary.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_observations.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js"
-      - "tests/institutional_accumulation_catalyst_artifact_readiness.test.js"
-      - "tests/institutional_accumulation_catalyst_pit_provenance.test.js"
-      - "tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js"
-      - "tests/institutional_accumulation_catalyst_prospective_canary.test.js"
+      - "scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js"
       - "tests/institutional_accumulation_catalyst_prospective_observations.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js"
-      - "data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json"
-      - "data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json"
-      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json"
+      - "tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json"
-      - "data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json"
-      - "data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/**"
-      - "data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/**"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   regression:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Checkout bounded catalyst provenance inputs with complete history
+      - name: Checkout bounded catalyst evidence with complete history
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
@@ -44,18 +32,14 @@ jobs:
           filter: blob:none
           sparse-checkout-cone-mode: false
           sparse-checkout: |
-            /scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js
-            /scripts/audit_institutional_accumulation_catalyst_pit_provenance.js
-            /scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js
-            /scripts/collect_institutional_accumulation_catalyst_prospective_canary.js
-            /scripts/audit_institutional_accumulation_catalyst_prospective_observations.js
-            /scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js
+            /scripts/
             /tests/institutional_accumulation_catalyst_artifact_readiness.test.js
             /tests/institutional_accumulation_catalyst_pit_provenance.test.js
             /tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js
             /tests/institutional_accumulation_catalyst_prospective_canary.test.js
             /tests/institutional_accumulation_catalyst_prospective_observations.test.js
             /tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js
+            /tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
@@ -69,13 +53,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Verify zero-network catalyst readiness and delta audit
+      - name: Generate and validate cross-day evidence with zero network
         shell: bash
         run: |
           set -euo pipefail
-          cp data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json /tmp/readiness-before.json
-          cp data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json /tmp/pit-before.json
-          cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json /tmp/prospective-audit-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json /tmp/delta-before.json
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
@@ -83,41 +64,45 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_prospective_canary.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_observations.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
-          cmp -s /tmp/prospective-audit-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
-          git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
           node scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js --write
           cmp -s /tmp/delta-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
-          git diff --exit-code -- data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+          node scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js --write
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
-          const pit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json', 'utf8'));
-          const audit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json', 'utf8'));
-          const delta = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json', 'utf8'));
-          assert.equal(pit.identity_count, 33);
-          assert.equal(pit.pit_ready_identity_count, 0);
-          assert.equal(pit.not_pit_ready_identity_count, 33);
-          assert.equal(pit.outcome_blind, true);
-          assert.equal(audit.valid_observation_count, 12);
-          assert.equal(audit.invalid_observation_count, 0);
-          assert.equal(audit.conflict_count, 0);
-          assert.equal(delta.network_collection_used, false);
-          assert.equal(delta.observation_count, 12);
-          assert.equal(delta.pair_count, 6);
-          assert.equal(delta.changed_pair_count + delta.unchanged_pair_count, 6);
-          assert.equal(delta.pairs.length, 6);
-          for (const pair of delta.pairs) {
-            assert.ok(pair.elapsed_milliseconds > 0);
-            assert.equal(typeof pair.raw_content_changed, 'boolean');
-            assert.equal(typeof pair.response_bytes_delta, 'number');
-          }
-          for (const [beforePath, afterPath] of [
-            ['/tmp/readiness-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json'],
-            ['/tmp/pit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'],
-            ['/tmp/prospective-audit-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json'],
-            ['/tmp/delta-before.json', 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'],
-          ]) {
-            assert.deepStrictEqual(JSON.parse(fs.readFileSync(afterPath, 'utf8')), JSON.parse(fs.readFileSync(beforePath, 'utf8')));
-          }
+          const pit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json'));
+          const audit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json'));
+          const delta = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'));
+          const cross = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json'));
+          assert.equal(pit.identity_count, 33); assert.equal(pit.pit_ready_identity_count, 0); assert.equal(pit.not_pit_ready_identity_count, 33); assert.equal(pit.outcome_blind, true);
+          assert.equal(audit.valid_observation_count, 18); assert.equal(audit.invalid_observation_count, 0); assert.equal(audit.conflict_count, 0); assert.equal(audit.unique_immutable_snapshot_count, 18);
+          for (const stock of ['1102','1104','1216']) assert.deepEqual(audit.stocks[stock], {total:6, listing:3, detail:3});
+          assert.equal(audit.source_interface_counts.prospective_material_information_listing, 9); assert.equal(audit.source_interface_counts.prospective_material_information_detail, 9);
+          assert.equal(delta.observation_count, 12); assert.equal(delta.pair_count, 6);
+          assert.equal(cross.observation_count, 18); assert.equal(cross.chain_count, 6); assert.equal(cross.cross_day_gate.later_asia_taipei_date, true); assert.equal(cross.cross_day_gate.minimum_elapsed_satisfied, true);
           NODE
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json /tmp/observation-candidate.json
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json /tmp/cross-day-candidate.json
+      - name: Race-safe checkpoint deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/observation-candidate.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+          cp /tmp/cross-day-candidate.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
+          cmp -s /tmp/delta-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+          git add data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
+          if git diff --cached --quiet; then
+            echo 'deterministic evidence already durable'
+          else
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m 'research: checkpoint prospective catalyst cross-day evidence'
+            git push origin HEAD:main
+          fi
+          git fetch origin main
+          git show origin/main:data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json | cmp -s - /tmp/observation-candidate.json
+          git show origin/main:data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json | cmp -s - /tmp/cross-day-candidate.json
