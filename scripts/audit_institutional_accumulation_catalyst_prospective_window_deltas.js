@@ -9,6 +9,7 @@ const OBSERVATION_AUDIT_RELATIVE = 'data_research/institutional-flow/institution
 const OUTPUT_RELATIVE = 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json';
 const EXPECTED_STOCKS = ['1102', '1104', '1216'];
 const EXPECTED_INTERFACES = ['prospective_material_information_detail', 'prospective_material_information_listing'];
+const ALLOWED_SOURCE_OBSERVATION_COUNTS = [12, 18];
 
 function assertIsoTimestamp(value, label) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
@@ -36,32 +37,36 @@ function buildWindowDeltaAudit(repoRoot, options = {}) {
   const observationOptions = options.rootRelative ? { rootRelative: options.rootRelative, requireCurrentBaseline: false } : { requireCurrentBaseline: false };
   const source = auditObservations(repoRoot, observationOptions);
 
-  if (source.valid_observation_count !== 12 || source.invalid_observation_count !== 0 || source.conflict_count !== 0) {
+  if (!ALLOWED_SOURCE_OBSERVATION_COUNTS.includes(source.valid_observation_count) || source.invalid_observation_count !== 0 || source.conflict_count !== 0) {
     throw new Error(`unexpected_observation_shape:${source.valid_observation_count}/${source.invalid_observation_count}/${source.conflict_count}`);
   }
-  if (source.stock_count !== 3 || source.unique_immutable_snapshot_count !== 12) throw new Error('unexpected_observation_identity_count');
+  if (source.stock_count !== 3 || source.unique_immutable_snapshot_count !== source.valid_observation_count) throw new Error('unexpected_observation_identity_count');
+  const sourceWindowCount = source.valid_observation_count / 6;
   for (const stock of EXPECTED_STOCKS) {
     const bucket = source.stocks[stock];
-    if (!bucket || bucket.total !== 4 || bucket.listing !== 2 || bucket.detail !== 2) throw new Error(`unexpected_stock_window_shape:${stock}`);
+    if (!bucket || bucket.total !== sourceWindowCount * 2 || bucket.listing !== sourceWindowCount || bucket.detail !== sourceWindowCount) throw new Error(`unexpected_stock_window_shape:${stock}`);
   }
-  if (source.source_interface_counts.prospective_material_information_listing !== 6 || source.source_interface_counts.prospective_material_information_detail !== 6) {
+  if (source.source_interface_counts.prospective_material_information_listing !== sourceWindowCount * 3 || source.source_interface_counts.prospective_material_information_detail !== sourceWindowCount * 3) {
     throw new Error('unexpected_interface_window_shape');
   }
 
   if (options.skipCommittedAuditCheck !== true) assertCommittedObservationAudit(repoRoot, source);
 
   const pairs = [];
+  const selectedObservations = [];
   for (const stock of EXPECTED_STOCKS) {
     for (const sourceInterface of EXPECTED_INTERFACES) {
       const occurrences = source.observations
         .filter(x => x.stock === stock && x.source_interface === sourceInterface)
         .map(x => ({ ...x, collected_ms: assertIsoTimestamp(x.collected_at, `${stock}:${sourceInterface}`) }))
         .sort((a, b) => a.collected_ms - b.collected_ms || a.source_path.localeCompare(b.source_path));
-      if (occurrences.length !== 2) throw new Error(`pair_occurrence_count:${stock}:${sourceInterface}:${occurrences.length}`);
+      if (occurrences.length !== sourceWindowCount) throw new Error(`pair_occurrence_count:${stock}:${sourceInterface}:${occurrences.length}`);
       const [window1, window2] = occurrences;
+      if (!window1 || !window2) throw new Error(`pair_missing_first_two:${stock}:${sourceInterface}`);
       if (window1.collected_ms === window2.collected_ms) throw new Error(`collection_time_tie:${stock}:${sourceInterface}`);
       if (window1.source_request_key !== window2.source_request_key) throw new Error(`source_request_key_mismatch:${stock}:${sourceInterface}`);
       if (window1.immutable_snapshot_id === window2.immutable_snapshot_id) throw new Error(`duplicate_window_immutable_identity:${stock}:${sourceInterface}`);
+      selectedObservations.push(window1, window2);
       pairs.push({
         stock,
         source_interface: sourceInterface,
@@ -88,13 +93,13 @@ function buildWindowDeltaAudit(repoRoot, options = {}) {
   }
 
   const changedPairCount = pairs.filter(x => x.raw_content_changed).length;
-  const allTimes = source.observations.map(x => ({ value: x.collected_at, ms: assertIsoTimestamp(x.collected_at, x.source_path) })).sort((a, b) => a.ms - b.ms);
+  const allTimes = selectedObservations.map(x => ({ value: x.collected_at, ms: assertIsoTimestamp(x.collected_at, x.source_path) })).sort((a, b) => a.ms - b.ms);
   return {
     schema_version: 1,
     audit_id: DELTA_AUDIT_ID,
     source_observation_audit_id: source.audit_id,
     network_collection_used: false,
-    observation_count: source.valid_observation_count,
+    observation_count: 12,
     pair_count: pairs.length,
     changed_pair_count: changedPairCount,
     unchanged_pair_count: pairs.length - changedPairCount,
@@ -141,6 +146,7 @@ module.exports = {
   OUTPUT_RELATIVE,
   EXPECTED_STOCKS,
   EXPECTED_INTERFACES,
+  ALLOWED_SOURCE_OBSERVATION_COUNTS,
   assertIsoTimestamp,
   buildWindowDeltaAudit,
   serializeAudit,
