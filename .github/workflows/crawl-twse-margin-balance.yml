@@ -230,8 +230,6 @@ jobs:
     needs: crawl-twse-margin-balance
     if: needs.crawl-twse-margin-balance.result == 'success' && needs.crawl-twse-margin-balance.outputs.pages_changed == 'true'
     uses: ./.github/workflows/deploy-pages.yml
-    with:
-      target_date: ${{ needs.crawl-twse-margin-balance.outputs.target_date }}
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
@@ -249,4 +247,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
-
