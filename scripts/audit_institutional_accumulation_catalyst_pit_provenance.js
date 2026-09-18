@@ -8,7 +8,9 @@ const ROOT = path.resolve(__dirname, '..');
 const FROZEN_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json');
 const READINESS_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json');
 const WAVE_A_META = path.join(ROOT, 'data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json');
-const OUTPUT_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json');
+const OUTPUT_PATH = process.env.INSTITUTIONAL_ACCUMULATION_CATALYST_PIT_PROVENANCE_OUTPUT
+  ? path.resolve(process.env.INSTITUTIONAL_ACCUMULATION_CATALYST_PIT_PROVENANCE_OUTPUT)
+  : path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json');
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const rel = (file) => path.relative(ROOT, file).replaceAll(path.sep, '/');
@@ -139,6 +141,7 @@ function main() {
     decisions,
   };
 
+  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
   fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(output, null, 2)}\n`);
   console.log(JSON.stringify({ output: rel(OUTPUT_PATH), identities: 33, pit_ready: 0, not_pit_ready: 33, manual_review: 0, source_network_requests: 0 }));
 }

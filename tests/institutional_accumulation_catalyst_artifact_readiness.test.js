@@ -2,16 +2,23 @@
 
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SCRIPT = path.join(ROOT, 'scripts/reconstruct_institutional_accumulation_catalyst_artifact_readiness.js');
 const FROZEN = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json');
-const OUTPUT = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json');
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'institutional-catalyst-readiness-'));
+const OUTPUT = path.join(TMP_DIR, 'readiness.json');
+process.on('exit', () => fs.rmSync(TMP_DIR, { recursive: true, force: true }));
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
-execFileSync(process.execPath, [SCRIPT], { cwd: ROOT, stdio: 'pipe' });
+execFileSync(process.execPath, [SCRIPT], {
+  cwd: ROOT,
+  stdio: 'pipe',
+  env: { ...process.env, INSTITUTIONAL_ACCUMULATION_CATALYST_READINESS_OUTPUT: OUTPUT },
+});
 
 const frozen = readJson(FROZEN).decisions.filter((row) => row.state === 'source_missing');
 const output = readJson(OUTPUT);

@@ -6,7 +6,9 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const FROZEN_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json');
 const WAVE_A_META = path.join(ROOT, 'data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json');
-const OUTPUT_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json');
+const OUTPUT_PATH = process.env.INSTITUTIONAL_ACCUMULATION_CATALYST_READINESS_OUTPUT
+  ? path.resolve(process.env.INSTITUTIONAL_ACCUMULATION_CATALYST_READINESS_OUTPUT)
+  : path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json');
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -97,6 +99,7 @@ function main() {
     decisions,
   };
 
+  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
   fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(output, null, 2)}\n`);
   console.log(JSON.stringify({ output: path.relative(ROOT, OUTPUT_PATH).replaceAll(path.sep, '/'), identities: 33, ready: 0, not_ready: 33, network_requests: 0 }));
 }

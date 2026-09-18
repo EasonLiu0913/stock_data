@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
@@ -9,11 +10,17 @@ const ROOT = path.resolve(__dirname, '..');
 const SCRIPT = path.join(ROOT, 'scripts/audit_institutional_accumulation_catalyst_pit_provenance.js');
 const FROZEN = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json');
 const READINESS = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json');
-const OUTPUT = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json');
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'institutional-catalyst-pit-provenance-'));
+const OUTPUT = path.join(TMP_DIR, 'pit-provenance.json');
+process.on('exit', () => fs.rmSync(TMP_DIR, { recursive: true, force: true }));
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 assert.strictEqual(execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: ROOT, encoding: 'utf8' }).trim(), 'false');
-execFileSync(process.execPath, [SCRIPT], { cwd: ROOT, stdio: 'pipe' });
+execFileSync(process.execPath, [SCRIPT], {
+  cwd: ROOT,
+  stdio: 'pipe',
+  env: { ...process.env, INSTITUTIONAL_ACCUMULATION_CATALYST_PIT_PROVENANCE_OUTPUT: OUTPUT },
+});
 
 const frozen = readJson(FROZEN).decisions.filter((row) => row.state === 'source_missing');
 const readiness = readJson(READINESS);
