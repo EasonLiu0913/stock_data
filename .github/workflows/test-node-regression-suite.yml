@@ -39,6 +39,15 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
 
+      - name: Fetch commit history required by PIT provenance regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            git fetch --unshallow --filter=blob:none origin main
+          fi
+          test "$(git rev-parse --is-shallow-repository)" = "false"
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -55,6 +64,17 @@ jobs:
 
       - name: Run Node regression suite
         run: npm test
+
+      - name: Verify regression suite leaves tracked tree clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          dirty="$(git status --porcelain --untracked-files=no)"
+          if [ -n "$dirty" ]; then
+            echo "Regression suite modified tracked repository files:"
+            git status --short --untracked-files=no
+            exit 1
+          fi
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
