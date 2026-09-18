@@ -369,6 +369,18 @@ jobs:
         if: steps.source.outputs.run == 'true'
         run: npm test
 
+      - name: Verify V2 rule tests leave tracked tree clean
+        if: steps.source.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dirty="$(git status --porcelain --untracked-files=no)"
+          if [ -n "$dirty" ]; then
+            echo "V2 rule tests modified tracked repository files:"
+            git status --short --untracked-files=no
+            exit 1
+          fi
+
       - name: Generate V2 only
         if: steps.source.outputs.run == 'true'
         run: node scripts/generate_all_stock_predictions_v2.js --date "${{ steps.source.outputs.date }}"
