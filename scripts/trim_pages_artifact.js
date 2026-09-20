@@ -165,6 +165,87 @@ function directoryBytes(root) {
   return total;
 }
 
+function compactDateMs(value) {
+  const s = String(value || '').replace(/[^0-9]/g, '');
+  if (!/^20\d{6}$/.test(s)) return NaN;
+  return Date.UTC(Number(s.slice(0, 4)), Number(s.slice(4, 6)) - 1, Number(s.slice(6, 8)));
+}
+
+function buildTdccTrendSummary(datasetDir, weeklyDates, horizons = [5, 10, 20]) {
+  if (!weeklyDates.length) return { skipped: true, reason: 'weekly_missing' };
+  const latestItem = weeklyDates.at(-1);
+  const latest = readJson(path.join(datasetDir, 'weekly', latestItem.name));
+  const latestStocks = latest?.stocks || {};
+  const latestMs = compactDateMs(latestItem.date);
+  if (!Number.isFinite(latestMs)) throw new Error(`Invalid latest TDCC date: ${latestItem.date}`);
+
+  const refs = {};
+  for (const horizon of horizons) {
+    const targetMs = latestMs - horizon * 86400000;
+    const candidate = weeklyDates.filter((item) => compactDateMs(item.date) <= targetMs).at(-1) || null;
+    refs[horizon] = candidate;
+  }
+
+  const uniqueRefDates = [...new Set(Object.values(refs).filter(Boolean).map((item) => item.date))];
+  const refPayloads = new Map();
+  for (const date of uniqueRefDates) {
+    const item = weeklyDates.find((entry) => entry.date === date);
+    refPayloads.set(date, readJson(path.join(datasetDir, 'weekly', item.name)));
+  }
+
+  const stocks = {};
+  for (const [code, stock] of Object.entries(latestStocks)) {
+    const current = stock?.derived || {};
+    const row = {
+      large_holder_pct: Number.isFinite(Number(current.large_holder_pct)) ? Number(current.large_holder_pct) : null,
+      small_holder_pct: Number.isFinite(Number(current.small_holder_pct)) ? Number(current.small_holder_pct) : null,
+      large_holder_change_pp: {},
+      small_holder_change_pp: {},
+    };
+    for (const horizon of horizons) {
+      const ref = refs[horizon];
+      const previous = ref ? refPayloads.get(ref.date)?.stocks?.[code]?.derived || {} : {};
+      const previousLarge = Number(previous.large_holder_pct);
+      const previousSmall = Number(previous.small_holder_pct);
+      row.large_holder_change_pp[horizon] = Number.isFinite(row.large_holder_pct) && Number.isFinite(previousLarge)
+        ? Number((row.large_holder_pct - previousLarge).toFixed(2))
+        : null;
+      row.small_holder_change_pp[horizon] = Number.isFinite(row.small_holder_pct) && Number.isFinite(previousSmall)
+        ? Number((row.small_holder_pct - previousSmall).toFixed(2))
+        : null;
+    }
+    stocks[code] = row;
+  }
+
+  const horizonMeta = {};
+  for (const horizon of horizons) {
+    const ref = refs[horizon];
+    horizonMeta[horizon] = ref ? {
+      reference_date: ref.date,
+      actual_days: Math.round((latestMs - compactDateMs(ref.date)) / 86400000),
+    } : { reference_date: null, actual_days: null };
+  }
+
+  const output = {
+    schema_version: 1,
+    source: 'tdcc_official_openapi_1_5',
+    observed_date: latestItem.date,
+    value_unit: 'pct',
+    change_unit: 'percentage_point',
+    horizon_policy: 'nearest archived TDCC snapshot on or before observed_date minus requested calendar days',
+    horizons: horizonMeta,
+    stocks,
+  };
+  const outputFile = path.join(datasetDir, 'trends.json');
+  fs.writeFileSync(outputFile, `${JSON.stringify(output)}\n`, 'utf8');
+  return {
+    output: 'trends.json',
+    bytes: fs.statSync(outputFile).size,
+    stocks: Object.keys(stocks).length,
+    horizons: horizonMeta,
+  };
+}
+
 function trimTdccShareholding(siteRoot, maxWeeks = 2) {
   const dataset = 'data_tdcc_shareholding';
   const datasetDir = path.join(siteRoot, dataset);
@@ -178,6 +259,7 @@ function trimTdccShareholding(siteRoot, maxWeeks = 2) {
       .sort((a, b) => a.date.localeCompare(b.date))
     : [];
   const keepDates = new Set(weeklyDates.slice(-maxWeeks).map((item) => item.date));
+  const trends = buildTdccTrendSummary(datasetDir, weeklyDates);
 
   let removedBytes = 0;
   const removed = [];
@@ -214,6 +296,7 @@ function trimTdccShareholding(siteRoot, maxWeeks = 2) {
     max_weeks: maxWeeks,
     original_weeks: weeklyDates.length,
     published_weeks: [...keepDates].sort(),
+    trend_summary: trends,
     removed_entries: removed.length,
     removed_bytes: removedBytes,
     removed_mebibytes: Number((removedBytes / 1024 / 1024).toFixed(1)),
@@ -348,4 +431,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { directoryBytes, extractDate, trimDataset, trimTdccShareholding, trimPredictionDates, trimNonPublishedWorkfiles };
+module.exports = { buildTdccTrendSummary, directoryBytes, extractDate, trimDataset, trimTdccShareholding, trimPredictionDates, trimNonPublishedWorkfiles };
