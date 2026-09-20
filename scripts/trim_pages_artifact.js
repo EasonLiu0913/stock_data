@@ -171,6 +171,17 @@ function compactDateMs(value) {
   return Date.UTC(Number(s.slice(0, 4)), Number(s.slice(4, 6)) - 1, Number(s.slice(6, 8)));
 }
 
+function tdccPctAtOrAbove400Lots(stock) {
+  const levels = Array.isArray(stock?.levels) ? stock.levels : [];
+  const values = levels
+    .filter((item) => [12, 13, 14, 15].includes(Number(item.level)))
+    .map((item) => Number(item.ratio_pct))
+    .filter(Number.isFinite);
+  if (values.length === 4) return Number(values.reduce((sum, value) => sum + value, 0).toFixed(2));
+  const fallback = Number(stock?.derived?.holder_400_lots_plus_pct);
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
 function buildTdccTrendSummary(datasetDir, weeklyDates, horizons = [5, 10, 20]) {
   if (!weeklyDates.length) return { skipped: true, reason: 'weekly_missing' };
   const latestItem = weeklyDates.at(-1);
@@ -197,15 +208,16 @@ function buildTdccTrendSummary(datasetDir, weeklyDates, horizons = [5, 10, 20]) 
   for (const [code, stock] of Object.entries(latestStocks)) {
     const current = stock?.derived || {};
     const row = {
-      large_holder_pct: Number.isFinite(Number(current.large_holder_pct)) ? Number(current.large_holder_pct) : null,
+      large_holder_pct: tdccPctAtOrAbove400Lots(stock),
       small_holder_pct: Number.isFinite(Number(current.small_holder_pct)) ? Number(current.small_holder_pct) : null,
       large_holder_change_pp: {},
       small_holder_change_pp: {},
     };
     for (const horizon of horizons) {
       const ref = refs[horizon];
-      const previous = ref ? refPayloads.get(ref.date)?.stocks?.[code]?.derived || {} : {};
-      const previousLarge = Number(previous.large_holder_pct);
+      const previousStock = ref ? refPayloads.get(ref.date)?.stocks?.[code] || {} : {};
+      const previous = previousStock?.derived || {};
+      const previousLarge = tdccPctAtOrAbove400Lots(previousStock);
       const previousSmall = Number(previous.small_holder_pct);
       row.large_holder_change_pp[horizon] = Number.isFinite(row.large_holder_pct) && Number.isFinite(previousLarge)
         ? Number((row.large_holder_pct - previousLarge).toFixed(2))
@@ -227,9 +239,10 @@ function buildTdccTrendSummary(datasetDir, weeklyDates, horizons = [5, 10, 20]) 
   }
 
   const output = {
-    schema_version: 1,
+    schema_version: 2,
     source: 'tdcc_official_openapi_1_5',
     observed_date: latestItem.date,
+    large_holder_definition: 'TDCC levels 12-15: 400,001 shares or more (400 lots+)',
     value_unit: 'pct',
     change_unit: 'percentage_point',
     horizon_policy: 'nearest archived TDCC snapshot on or before observed_date minus requested calendar days',
@@ -431,4 +444,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { buildTdccTrendSummary, directoryBytes, extractDate, trimDataset, trimTdccShareholding, trimPredictionDates, trimNonPublishedWorkfiles };
+module.exports = { tdccPctAtOrAbove400Lots, buildTdccTrendSummary, directoryBytes, extractDate, trimDataset, trimTdccShareholding, trimPredictionDates, trimNonPublishedWorkfiles };
