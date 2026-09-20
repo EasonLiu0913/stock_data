@@ -9,11 +9,12 @@ on:
       - 'tests/tdcc_shareholding_snapshot.test.js'
       - '.github/workflows/crawl-tdcc-shareholding-snapshot.yml'
   schedule:
-    # 台北時間週五 16:00 / 17:00 / 18:00 多次探測；週六 04:00 補抓
+    # 台北時間週五 16:00 / 17:00 / 18:00 多次探測；週六 04:00、週一 08:10 補抓
     - cron: '0 8 * * 5'
     - cron: '0 9 * * 5'
     - cron: '0 10 * * 5'
     - cron: '0 20 * * 5'
+    - cron: '10 0 * * 1'
 
 permissions:
   contents: write
@@ -101,7 +102,7 @@ jobs:
           console.log(`- Rows: ${p.rows}`);
           console.log(`- Canonical: ${p.canonical_file || 'n/a'}`);
           console.log('- Layout: one consolidated weekly JSON keyed by stock code.');
-          console.log('- Probe policy: Friday 20:10 / 21:10 / 22:10, Saturday 08:10 Taipei time.');
+          console.log('- Probe policy: Friday 16:00 / 17:00 / 18:00, Saturday 04:00, Monday 08:10 Taipei time.');
           console.log('- Duplicate policy: an already archived observed_date is skipped and its first available_at is preserved.');
           console.log('- No-lookahead: available_at is never backdated to observation date.');
           NODE
