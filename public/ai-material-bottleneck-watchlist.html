@@ -58,8 +58,9 @@ const pct=v=>Number.isFinite(v)?`${v>0?'+':''}${v.toFixed(1)}%`:'—';
 const fmt=v=>Number.isFinite(v)?v.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';
 const cls=v=>!Number.isFinite(v)?'muted':v>0?'good':v<0?'bad':'muted';
 const dateKey=s=>String(s||'').replaceAll('/','').replaceAll('-','');
-async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(String(r.status));return r.json()}
-async function text(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(String(r.status));return r.text()}
+async function fetchSafe(url,kind='json',timeoutMs=12000){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const r=await fetch(url,{cache:'no-store',signal:ctrl.signal});if(!r.ok)throw new Error(url+' HTTP '+r.status);return kind==='json'?r.json():r.text()}finally{clearTimeout(timer)}}
+async function json(url){return fetchSafe(url,'json')}
+async function text(url){return fetchSafe(url,'text')}
 function ret(a,b){return Number.isFinite(a)&&a!==0&&Number.isFinite(b)?(b/a-1)*100:null}
 async function priceData(s){
  try{const d=await json(`${base()}/data_history_sma/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).filter(x=>Number.isFinite(num(x.price))).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));if(!a.length)return{};
@@ -70,7 +71,7 @@ async function instData(s){
  try{const d=await json(`${base()}/data_institutional/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));const top=a[0];if(!top)return{};
  const five=a.slice(0,5);return{iDate:dateKey(top.k),foreign:num(top.ForeignInvestors),foreign5:five.reduce((q,x)=>q+(num(x.ForeignInvestors)||0),0),trust5:five.reduce((q,x)=>q+(num(x.InvestmentTrust)||0),0),inst5:five.reduce((q,x)=>q+(num(x.DailyTotal)||0),0)};}catch{return{}}
 }
-function priorWeek(iso){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-7);return d.toISOString().slice(0,10).replaceAll('-','')}
+function priorWeek(value){const s=dateKey(value);if(!/^20\d{6}$/.test(s))return '';const d=new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return d.toISOString().slice(0,10).replaceAll('-','')}
 async function tdccMaps(){
  try{const m=await json(`${base()}/data_tdcc_shareholding/latest.json`),curDate=dateKey(m.observed_date),prevDate=priorWeek(m.observed_date);const [cur,prev]=await Promise.all([json(`${base()}/data_tdcc_shareholding/weekly/${curDate}.json`),json(`${base()}/data_tdcc_shareholding/weekly/${prevDate}.json`).catch(()=>({stocks:{}}))]);return{date:curDate,prevDate,cur:cur.stocks||{},prev:prev.stocks||{}};}catch{return{cur:{},prev:{}}}
 }
