@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 材料瓶頸與籌碼觀察 Dashboard</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#667085;--line:#d9e0ea;--good:#047857;--bad:#b42318;--warn:#b45309;--accent:#2563eb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}.wrap{max-width:1880px;margin:auto;padding:20px}.hero,.panel,.card{background:var(--card);border:1px solid var(--line);border-radius:12px}.hero{padding:20px;margin-bottom:14px}.hero h1{margin:0 0 6px;font-size:26px}.hero p{margin:5px 0;color:var(--muted)}.summary{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px;margin-bottom:14px}.card{padding:14px}.k{font-size:12px;color:var(--muted);font-weight:700}.v{font-size:22px;font-weight:850;margin-top:3px}.panel{padding:15px;margin-bottom:14px}.panel h2{font-size:18px;margin:0 0 10px}.analysis{display:grid;gap:8px}.analysis-item{padding:10px 12px;border-left:4px solid var(--line);background:#f8fafc;border-radius:7px}.analysis-item.good{border-left-color:var(--good)}.analysis-item.bad{border-left-color:var(--bad)}.analysis-item.warn{border-left-color:var(--warn)}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}.muted{color:var(--muted)}.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.toolbar input,.toolbar select{min-height:38px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:white}.toolbar input{min-width:220px}.table-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:9px}table{border-collapse:collapse;width:100%;min-width:1900px;font-size:13px}th,td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}th{position:sticky;top:0;background:#1d4ed8;color:white;z-index:3;cursor:pointer}th.left,td.left{text-align:left}tbody tr:hover{background:#eff6ff}.name{font-weight:800}.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);font-weight:800}.signal{font-weight:850}.focus{white-space:normal;min-width:300px;max-width:420px;line-height:1.4}.foot{font-size:12px;color:var(--muted);line-height:1.55;margin-top:9px}.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.rule{border:1px solid var(--line);border-radius:8px;padding:11px}.rule strong{display:block;margin-bottom:4px}.loading{padding:30px;text-align:center;font-weight:800;color:var(--muted)}
+@media(max-width:900px){.wrap{padding:10px}.summary{grid-template-columns:repeat(2,1fr)}.rules{grid-template-columns:1fr}.hero h1{font-size:21px}}
+</style>
+</head>
+<body><main class="wrap">
+<section class="hero"><h1>AI 材料瓶頸與籌碼觀察 Dashboard</h1>
+<p>觀察清單來自《雪寶家族九月產業研討》中的台灣指標股與個股案例；每日用價格、量能、均線、法人、融資與 TDCC 大小戶分布交叉判讀。</p>
+<p id="asOf">資料載入中…</p></section>
+<section class="summary">
+<div class="card"><div class="k">觀察股票</div><div class="v" id="countAll">—</div></div>
+<div class="card"><div class="k">籌碼偏強</div><div class="v good" id="countStrong">—</div></div>
+<div class="card"><div class="k">派發/散戶化警訊</div><div class="v bad" id="countRisk">—</div></div>
+<div class="card"><div class="k">站上 SMA20</div><div class="v" id="countSma">—</div></div>
+<div class="card"><div class="k">動能偏強</div><div class="v" id="countMomentum">—</div></div>
+</section>
+<section class="panel"><h2>今日快速解讀</h2><div class="analysis" id="dailyAnalysis"><div class="loading">正在交叉比對資料…</div></div></section>
+<section class="panel">
+<h2>觀察清單</h2>
+<div class="toolbar"><input id="q" placeholder="搜尋股票、產業或觀察重點"><select id="theme"><option value="">全部產業主線</option></select><select id="sig"><option value="">全部籌碼狀態</option><option value="strong">偏強</option><option value="mixed">混合</option><option value="risk">警訊</option><option value="nodata">資料不足</option></select></div>
+<div class="table-wrap"><table><thead><tr>
+<th class="left" data-k="theme">主線</th><th class="left" data-k="code">股票</th><th data-k="price">現價</th><th data-k="r1">1D</th><th data-k="r5">5D</th><th data-k="r20">20D</th><th data-k="vr">量比20D</th><th data-k="sma">SMA20差</th>
+<th data-k="large">大戶%</th><th data-k="largeD">大戶週變</th><th data-k="small">散戶%</th><th data-k="smallD">散戶週變</th>
+<th data-k="foreign5">外資5D</th><th data-k="trust5">投信5D</th><th data-k="marginD">融資日變</th><th data-k="marginUse">融資使用率</th><th data-k="score">籌碼判讀</th><th class="left">每日觀察重點</th>
+</tr></thead><tbody id="rows"></tbody></table></div>
+<div class="foot" id="dataFoot"></div>
+</section>
+<section class="panel"><h2>數據如何解讀未來走勢</h2><div class="rules">
+<div class="rule"><strong class="good">健康承接</strong>股價上漲或守住 SMA20，同時大戶比例增加、散戶比例下降，且融資沒有追高增加，代表上漲較有籌碼支撐。</div>
+<div class="rule"><strong class="bad">派發／散戶化警訊</strong>股價維持強勢，但大戶連續下降、散戶比例升高，融資又增加，代表價格與籌碼背離；後續若跌破 SMA20／SMA60，風險會放大。</div>
+<div class="rule"><strong class="warn">動能確認</strong>5D、20D 報酬為正且量比高於約 1.2，代表資金動能仍在；若高檔爆量但價格漲不動，需搭配大戶與法人是否同步下降判斷換手或出貨。</div>
+</div><div class="foot">這些訊號用來描述資金結構與可能影響，不是保證股價方向。TDCC「大戶」採 repository 既有定義：第 15 級（持有 1,000 張以上）；「散戶」採第 1–9 級（100 張以下）。</div></section>
+</main>
+<script>
+const WATCH=[
+['HBM / DRAM','2408','南亞科','記憶體缺貨延續性、報價、產能與毛利率'],['HBM / DRAM','2344','華邦電','DRAM/NAND 報價、產能利用率與高階產品組合'],
+['高階 MLCC','2327','國巨','AI伺服器高階MLCC需求、稼動率與漲價'],['高階 MLCC','2492','華新科','高階MLCC需求與產品Mix'],['高階 MLCC','3026','禾伸堂','高階被動元件需求與毛利率'],['高階 MLCC','6173','信昌電','MLCC供需與報價'],
+['ABF 載板','8046','南電','ABF稼動率、AI/HPC比重與毛利率'],['ABF 載板','3037','欣興','AI載板、CoWoS協同與新產能利用率'],['ABF 載板','3189','景碩','Vera/ASIC載板、ABF稼動率、T-Glass瓶頸'],['ABF 載板','4958','臻鼎-KY','AI伺服器板、CPO、高階載板營收占比'],
+['ABF 增層膜','5483','中美晶','PDF列為ABF增層膜相關供應鏈；確認實際材料業務貢獻'],
+['T-Glass','1815','富喬','Low-Dk/T-Glass放量、稼動率與毛利率'],['T-Glass / CCL','1303','南亞','Low-Dk玻纖布、HVLP、高階CCL M7-M10進度'],
+['NAND','2337','旺宏','NAND供需、報價與庫存週期'],
+['高階 CCL','2383','台光電','M9/M10、AI伺服器與交換器板材、滿載與擴產'],['高階 CCL','6274','台燿','M8/M9認證、泰國產能、ASIC/交換器需求'],['高階 CCL','6213','聯茂','M7/M9、高階與一般伺服器排擠效應、擴產'],
+['Q-Glass','5475','德宏','Q-Glass/石英布占比、毛利率能否跟營收同步上升'],['Q-Glass','5340','建榮','玻纖布需求、產品升級與獲利改善'],
+['HVLP 銅箔','8358','金居','HVLP4月產量/ASP、雲林三廠、籌碼是否停止散戶化'],['HVLP 銅箔','4989','榮科','HVLP銅箔、泰國擴產與虧轉盈進度'],
+['InP / 光通訊','3081','聯亞','InP磊晶、高速光通訊與CPO需求'],['InP / 光通訊','4991','環宇-KY','化合物半導體與高速光通訊需求'],['InP / 光通訊','2455','全新','InP/GaAs磊晶、資料中心光通訊需求'],['InP / 光通訊','3105','穩懋','化合物半導體稼動率與光通訊復甦'],['InP / 光通訊','4971','IET-KY','InP磊晶、高速傳輸需求與產能'],['InP / 光通訊','2426','鼎元','光電元件與高速傳輸題材實際營收'],
+['CCL 特化','4722','國精化','UV固化/HC/PSMA擴產與高階材料放量'],['CCL 特化','4764','雙鍵','特殊添加劑擴產與AI材料需求'],['CCL 特化','3388','崇越電','特殊樹脂/PTFE等高階材料需求'],['CCL 特化','7932','昱鐳應材','高成長材料業務、毛利率與規模化'],
+['SiGe / GaN / SiC','3016','嘉晶','SiGe矽光子營收占比、GaN AI Server、8吋SiC/GaN量產'],['TGV / 玻璃基板','3055','蔚華科','TGV檢測設備量產訂單、repeat order與新客戶'],['鎢 / 鈷','7610','聯友金屬-創','鎢價與鎢酸鈉出貨、鈷粉量產、高階鎢材料接棒'],['光纖 / 濾光片','6426','統新','DWDM/800G/1.6T訂單、毛利率、擴產與大戶集中']
+].map(x=>({theme:x[0],code:x[1],name:x[2],focus:x[3]}));
+const base=()=>location.hostname.includes('github.io')?'/stock_data':'..';
+const num=v=>{const n=Number(String(v??'').replaceAll(',',''));return Number.isFinite(n)?n:null};
+const pct=v=>Number.isFinite(v)?`${v>0?'+':''}${v.toFixed(1)}%`:'—';
+const fmt=v=>Number.isFinite(v)?v.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';
+const cls=v=>!Number.isFinite(v)?'muted':v>0?'good':v<0?'bad':'muted';
+const dateKey=s=>String(s||'').replaceAll('/','').replaceAll('-','');
+async function json(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(String(r.status));return r.json()}
+async function text(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(String(r.status));return r.text()}
+function ret(a,b){return Number.isFinite(a)&&a!==0&&Number.isFinite(b)?(b/a-1)*100:null}
+async function priceData(s){
+ try{const d=await json(`${base()}/data_history_sma/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).filter(x=>Number.isFinite(num(x.price))).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));if(!a.length)return{};
+ const z=a[0],p=a[1],d5=a[Math.min(5,a.length-1)],d20=a[Math.min(20,a.length-1)];const vols=a.slice(1,21).map(x=>num(x.volume)).filter(Number.isFinite);const av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
+ return{pDate:dateKey(z.k),price:num(z.price),r1:ret(num(p?.price),num(z.price)),r5:ret(num(d5?.price),num(z.price)),r20:ret(num(d20?.price),num(z.price)),vr:Number.isFinite(av)&&av?num(z.volume)/av:null,sma20:num(z.sma20),sma60:num(z.sma60),smaGap:Number.isFinite(num(z.sma20))?ret(num(z.sma20),num(z.price)):null};}catch{return{}}
+}
+async function instData(s){
+ try{const d=await json(`${base()}/data_institutional/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));const top=a[0];if(!top)return{};
+ const five=a.slice(0,5);return{iDate:dateKey(top.k),foreign:num(top.ForeignInvestors),foreign5:five.reduce((q,x)=>q+(num(x.ForeignInvestors)||0),0),trust5:five.reduce((q,x)=>q+(num(x.InvestmentTrust)||0),0),inst5:five.reduce((q,x)=>q+(num(x.DailyTotal)||0),0)};}catch{return{}}
+}
+function priorWeek(iso){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-7);return d.toISOString().slice(0,10).replaceAll('-','')}
+async function tdccMaps(){
+ try{const m=await json(`${base()}/data_tdcc_shareholding/latest.json`),curDate=dateKey(m.observed_date),prevDate=priorWeek(m.observed_date);const [cur,prev]=await Promise.all([json(`${base()}/data_tdcc_shareholding/weekly/${curDate}.json`),json(`${base()}/data_tdcc_shareholding/weekly/${prevDate}.json`).catch(()=>({stocks:{}}))]);return{date:curDate,prevDate,cur:cur.stocks||{},prev:prev.stocks||{}};}catch{return{cur:{},prev:{}}}
+}
+function csvRows(src){const lines=src.trim().split(/\r?\n/);const parse=l=>{let q=false,c='',a=[];for(let i=0;i<l.length;i++){const ch=l[i];if(ch=='"'){if(q&&l[i+1]=='"'){c+='"';i++}else q=!q}else if(ch==','&&!q){a.push(c);c=''}else c+=ch}a.push(c);return a};const h=parse(lines.shift()||'');return lines.map(l=>{const v=parse(l);return Object.fromEntries(h.map((x,i)=>[x,v[i]??'']))})}
+async function marginMaps(){
+ let tw={date:null,map:{}},tp={date:null,map:{},stale:true};
+ try{const f=await json(`${base()}/data_twse_margin_balance/files.json`);const n=f.filter(x=>/_twse_margin_balance\.csv$/.test(x)).sort().at(-1),d=n?.slice(0,8);if(d){const rows=csvRows(await text(`${base()}/data_twse_margin_balance/${n}`));for(const r of rows)tw.map[r['股票代號']]={balance:num(r['融資今日餘額']),prev:num(r['融資前日餘額']),limit:num(r['融資限額'])};tw.date=d}}catch{}
+ try{const f=await json(`${base()}/data_tpex_margin_balance/files.json`);const n=f.filter(x=>/_tpex_margin_balance\.json$/.test(x)).sort().at(-1),d=n?.slice(0,8);if(d){const p=await json(`${base()}/data_tpex_margin_balance/${n}`),t=(p.tables||[]).find(x=>(x.fields||[]).includes('代號'));if(t){const ix=Object.fromEntries(t.fields.map((x,i)=>[x,i]));for(const r of t.data||[])tp.map[String(r[ix['代號']])]={balance:num(r[ix['資餘額']]),prev:num(r[ix['前資餘額(張)']]),use:num(r[ix['資使用率(%)']])};}tp.date=d;const age=(Date.now()-new Date(d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)).getTime())/86400000;tp.stale=age>7}}catch{}
+ return{tw,tp}
+}
+function tdccFor(code,t){const c=t.cur?.[code]?.derived||{},p=t.prev?.[code]?.derived||{};const large=num(c.large_holder_pct),small=num(c.small_holder_pct),pl=num(p.large_holder_pct),ps=num(p.small_holder_pct);return{large,small,largeD:Number.isFinite(large)&&Number.isFinite(pl)?large-pl:null,smallD:Number.isFinite(small)&&Number.isFinite(ps)?small-ps:null}}
+function marginFor(code,m){const a=m.tw.map[code]||m.tp.map[code];if(!a)return{};const d=Number.isFinite(a.balance)&&Number.isFinite(a.prev)?a.balance-a.prev:null;const use=Number.isFinite(a.use)?a.use:(Number.isFinite(a.balance)&&Number.isFinite(a.limit)&&a.limit?100*a.balance/a.limit:null);return{margin:a.balance,marginD:d,marginUse:use,marginDate:m.tw.map[code]?m.tw.date:m.tp.date,marginStale:!!m.tp.map[code]&&m.tp.stale}}
+function judge(x){
+ let score=0,reasons=[];if(Number.isFinite(x.largeD)){if(x.largeD>=.5){score+=2;reasons.push('大戶增加')}else if(x.largeD<=-.5){score-=2;reasons.push('大戶下降')}}
+ if(Number.isFinite(x.smallD)&&x.smallD>=.5){score-=1;reasons.push('散戶增加')}if(Number.isFinite(x.foreign5)){if(x.foreign5>0)score+=1;else if(x.foreign5<0)score-=1}
+ if(Number.isFinite(x.marginD)&&Number.isFinite(x.r5)&&x.r5>0){if(x.marginD<0)score+=1;else if(x.marginD>0){score-=1;reasons.push('上漲增融資')}}
+ if(Number.isFinite(x.smaGap)){if(x.smaGap>=0)score+=1;else score-=1}if(Number.isFinite(x.vr)&&x.vr>=1.2&&Number.isFinite(x.r5)&&x.r5>0)score+=1;
+ let sig='mixed',label='🟡 混合';if(score>=3){sig='strong';label='🟢 偏強'}else if(score<=-2){sig='risk';label='🔴 警訊'}if(![x.price,x.large,x.foreign5,x.margin].some(Number.isFinite)){sig='nodata';label='⚪ 資料不足'}
+ const momentum=Number.isFinite(x.r5)&&Number.isFinite(x.r20)&&x.r5>3&&x.r20>8&&(x.vr??0)>=1.1?'strong':(x.r5??-1)>0&&(x.r20??-1)>0?'positive':'weak';
+ return{score,sig,label,reasons,momentum}
+}
+let DATA=[],sort={k:'score',dir:-1};
+function cell(v,type='num'){if(type==='pct')return `<span class="${cls(v)}">${pct(v)}</span>`;return fmt(v)}
+function render(){
+ const q=document.getElementById('q').value.trim().toLowerCase(),th=document.getElementById('theme').value,sg=document.getElementById('sig').value;
+ let a=DATA.filter(x=>(!q||[x.code,x.name,x.theme,x.focus].join(' ').toLowerCase().includes(q))&&(!th||x.theme===th)&&(!sg||x.sig===sg));
+ a.sort((x,y)=>{let A=x[sort.k],B=y[sort.k];if(typeof A==='string')return A.localeCompare(B)*sort.dir;A=Number.isFinite(A)?A:-Infinity;B=Number.isFinite(B)?B:-Infinity;return(A-B)*sort.dir});
+ document.getElementById('rows').innerHTML=a.map(x=>`<tr><td class="left">${x.theme}</td><td class="left"><span class="code">${x.code}</span> <span class="name">${x.name}</span></td><td>${fmt(x.price)}</td><td>${cell(x.r1,'pct')}</td><td>${cell(x.r5,'pct')}</td><td>${cell(x.r20,'pct')}</td><td>${Number.isFinite(x.vr)?x.vr.toFixed(2)+'×':'—'}</td><td>${cell(x.smaGap,'pct')}</td><td>${cell(x.large,'pct')}</td><td>${cell(x.largeD,'pct')}</td><td>${cell(x.small,'pct')}</td><td>${cell(x.smallD,'pct')}</td><td class="${cls(x.foreign5)}">${fmt(x.foreign5)}</td><td class="${cls(x.trust5)}">${fmt(x.trust5)}</td><td class="${cls(-x.marginD)}">${fmt(x.marginD)}${x.marginStale?' ⚠':''}</td><td>${Number.isFinite(x.marginUse)?x.marginUse.toFixed(1)+'%':'—'}</td><td class="signal ${x.sig==='strong'?'good':x.sig==='risk'?'bad':'warn'}">${x.label}</td><td class="left focus">${x.focus}</td></tr>`).join('');
+}
+function summary(td,m){
+ const strong=DATA.filter(x=>x.sig==='strong'),risk=DATA.filter(x=>x.sig==='risk'),sma=DATA.filter(x=>(x.smaGap??-1)>=0),mom=DATA.filter(x=>x.momentum==='strong');
+ countAll.textContent=DATA.length;countStrong.textContent=strong.length;countRisk.textContent=risk.length;countSma.textContent=sma.length;countMomentum.textContent=mom.length;
+ const top=strong.slice().sort((a,b)=>b.score-a.score).slice(0,6).map(x=>x.code+' '+x.name).join('、')||'目前沒有達到偏強門檻的股票';
+ const bad=risk.slice().sort((a,b)=>a.score-b.score).slice(0,6).map(x=>x.code+' '+x.name).join('、')||'目前沒有達到警訊門檻的股票';
+ const diverge=DATA.filter(x=>(x.r5??0)>0&&(x.largeD??0)<-.5&&(x.marginD??0)>0).map(x=>x.code+' '+x.name).join('、')||'無明顯個股';
+ dailyAnalysis.innerHTML=`<div class="analysis-item good"><b>籌碼相對健康：</b>${top}。偏強條件主要來自大戶增加、法人近5日偏買、融資未追高及價格站穩SMA20。</div><div class="analysis-item bad"><b>需優先檢查派發：</b>${bad}。警訊不是直接等於會跌，而是代表價格與籌碼支撐較弱。</div><div class="analysis-item warn"><b>股價上漲但籌碼散戶化：</b>${diverge}。若後續再跌破SMA20且量能放大，風險會比單純整理高。</div><div class="analysis-item"><b>動能：</b>${mom.length} 檔同時具備近5日/20日正報酬與量能確認；${sma.length} 檔仍站在SMA20之上。</div>`;
+ const dates=[...new Set(DATA.map(x=>x.pDate).filter(Boolean))].sort();asOf.textContent=`價格最新日：${dates.at(-1)||'—'}｜TDCC：${td.date||'—'}｜上市融資：${m.tw.date||'—'}｜上櫃融資：${m.tp.date||'—'}${m.tp.stale?'（上櫃融資資料已過期，僅供參考）':''}`;
+ dataFoot.textContent='資料來源：repository data_history_sma、data_tdcc_shareholding、data_institutional、data_twse_margin_balance、data_tpex_margin_balance。法人欄位若無 canonical 個股檔會顯示空白；不以外部網站臨時數據覆寫。';
+}
+async function init(){
+ const themes=[...new Set(WATCH.map(x=>x.theme))];theme.innerHTML+=[...themes].sort().map(x=>`<option>${x}</option>`).join('');
+ const [td,m]=await Promise.all([tdccMaps(),marginMaps()]);
+ const arr=await Promise.all(WATCH.map(async s=>{const [p,i]=await Promise.all([priceData(s),instData(s)]);const x={...s,...p,...i,...tdccFor(s.code,td),...marginFor(s.code,m)};return{...x,...judge(x)}}));
+ DATA=arr;summary(td,m);render();
+}
+[q,theme,sig].forEach(el=>el.addEventListener('input',render));document.querySelectorAll('th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;if(sort.k===k)sort.dir*=-1;else{sort.k=k;sort.dir=-1}render()});init().catch(e=>dailyAnalysis.innerHTML='<div class="analysis-item bad">載入失敗：'+e.message+'</div>');
+</script></body></html>
