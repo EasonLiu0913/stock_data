@@ -97,8 +97,10 @@ function summarizeStock(rows) {
   const ratioSum = (levels) => levels.reduce((sum, level) => sum + (byLevel.get(level)?.ratio_pct || 0), 0);
   return {
     large_holder_definition: 'TDCC level 15: 1,000,001 shares or more (more than 1,000 lots)',
+    holder_400_lots_plus_definition: 'TDCC levels 12-15: 400,001 shares or more (400 lots+)',
     small_holder_definition: 'TDCC levels 1-9: up to 100,000 shares (up to 100 lots)',
     large_holder_pct: Number((byLevel.get(15)?.ratio_pct || 0).toFixed(2)),
+    holder_400_lots_plus_pct: Number(ratioSum([12,13,14,15]).toFixed(2)),
     small_holder_pct: Number(ratioSum([1,2,3,4,5,6,7,8,9]).toFixed(2)),
     levels_present: [...byLevel.keys()].sort((a,b) => a-b),
   };
