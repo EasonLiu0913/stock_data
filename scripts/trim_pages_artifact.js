@@ -165,6 +165,62 @@ function directoryBytes(root) {
   return total;
 }
 
+function trimTdccShareholding(siteRoot, maxWeeks = 2) {
+  const dataset = 'data_tdcc_shareholding';
+  const datasetDir = path.join(siteRoot, dataset);
+  if (!fs.existsSync(datasetDir)) return { dataset, skipped: true, reason: 'dataset_missing' };
+
+  const weeklyDir = path.join(datasetDir, 'weekly');
+  const weeklyDates = fs.existsSync(weeklyDir)
+    ? fs.readdirSync(weeklyDir)
+      .map((name) => ({ name, date: extractDate(name) }))
+      .filter((item) => item.date && item.name.endsWith('.json'))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+  const keepDates = new Set(weeklyDates.slice(-maxWeeks).map((item) => item.date));
+
+  let removedBytes = 0;
+  const removed = [];
+  for (const relative of ['raw', 'stocks', 'history']) {
+    const absolute = path.join(datasetDir, relative);
+    if (!fs.existsSync(absolute)) continue;
+    removedBytes += directoryBytes(absolute);
+    fs.rmSync(absolute, { recursive: true, force: true });
+    removed.push(relative);
+  }
+
+  if (fs.existsSync(weeklyDir)) {
+    for (const item of weeklyDates) {
+      if (keepDates.has(item.date)) continue;
+      const absolute = path.join(weeklyDir, item.name);
+      removedBytes += directoryBytes(absolute);
+      fs.rmSync(absolute, { force: true });
+      removed.push(`weekly/${item.name}`);
+    }
+  }
+
+  for (const entry of fs.readdirSync(datasetDir, { withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const match = entry.name.match(/^manifest-(20\d{6})\.json$/);
+    if (!match || keepDates.has(match[1])) continue;
+    const absolute = path.join(datasetDir, entry.name);
+    removedBytes += directoryBytes(absolute);
+    fs.rmSync(absolute, { force: true });
+    removed.push(entry.name);
+  }
+
+  return {
+    dataset,
+    max_weeks: maxWeeks,
+    original_weeks: weeklyDates.length,
+    published_weeks: [...keepDates].sort(),
+    removed_entries: removed.length,
+    removed_bytes: removedBytes,
+    removed_mebibytes: Number((removedBytes / 1024 / 1024).toFixed(1)),
+    removed,
+  };
+}
+
 function trimNonPublishedWorkfiles(siteRoot) {
   const removals = [
     'data_prediction_analysis/eps-valuation/valuation-batches',
@@ -277,6 +333,7 @@ function main(argv = process.argv.slice(2)) {
     ['data_normalized', 4],
   ];
   const results = policies.map(([dataset, maxDates]) => trimDataset(siteRoot, dataset, maxDates));
+  results.push(trimTdccShareholding(siteRoot, 2));
   results.push(trimPredictionDates(siteRoot, 1));
   results.push(trimNonPublishedWorkfiles(siteRoot));
   const bytes = directoryBytes(siteRoot);
@@ -291,4 +348,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { directoryBytes, extractDate, trimDataset, trimPredictionDates, trimNonPublishedWorkfiles };
+module.exports = { directoryBytes, extractDate, trimDataset, trimTdccShareholding, trimPredictionDates, trimNonPublishedWorkfiles };
