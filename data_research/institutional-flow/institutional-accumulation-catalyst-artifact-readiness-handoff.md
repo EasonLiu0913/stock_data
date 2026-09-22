@@ -25,13 +25,13 @@ Canonical active routing handoff:
 - Prospective repeat-capture canary: Prompt A COMPLETE / Prompt B PASS; checkpoint `d26907c9b4ae371027820ec53fdda80a0a0c4011`; two bounded same-day windows total 12 immutable observations.
 - Prospective two-window delta audit: Prompt A COMPLETE / Prompt B PASS; closeout checkpoint `fac7376c16e77a10501fe0d237a171e837b5231b`; closed delta artifact blob `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`.
 
-## Current round
+## Closed round — prospective cross-day repeat-capture canary
 
-`institutional-accumulation-catalyst-prospective-cross-day-repeat-capture-canary-v1`
+Round: `institutional-accumulation-catalyst-prospective-cross-day-repeat-capture-canary-v1`
 
 Status:
 - Prompt A: **COMPLETE**
-- Prompt B: **PREREGISTERED / PENDING**
+- **Prompt B closeout: PASS**
 
 Pre-Prompt-A durable baseline:
 - `fac7376c16e77a10501fe0d237a171e837b5231b`
@@ -176,7 +176,7 @@ No protected Phase 2, historical Wave A/Wave C, development outcome, protected 2
 
 This round proves one bounded cross-day prospective observation window for the same three stocks and deterministic three-window evidence. It does not establish long-duration stability, broad-universe quality, scheduler readiness, catalyst significance, catalyst/outcome relationship, historical PIT upgrades, model/strategy value, or production behavior. Three windows across two Asia/Taipei calendar dates remain a very small research sample.
 
-Prompt A completion boundary reached. The Prompt B preregistered before Prompt A began is preserved verbatim below and remains pending; it has not been executed automatically.
+Prompt A completion boundary was reached. The Prompt B preregistered before Prompt A began is preserved verbatim below for durable round identity.
 
 ## Prompt B — cross-day repeat-capture canary closeout
 
@@ -184,9 +184,108 @@ Prompt A completion boundary reached. The Prompt B preregistered before Prompt A
 Perform mandatory closeout for `institutional-accumulation-catalyst-prospective-cross-day-repeat-capture-canary-v1` only after its Prompt A completes. Fetch current remote `main` and recover this exact Prompt B from durable pre-Prompt-A history. Independently verify: sole active routing still points to this handoff; the preceding two-window delta-audit round has durable Prompt B PASS; historical 33/protected state remains frozen and unopened; eligibility was satisfied before any source request, with the third window occurring on an Asia/Taipei calendar date later than 2026-09-10 and at least 12 elapsed hours after `2026-09-10T14:15:57.012Z`; the pre-live Node24 zero-network gate passed before the third-window source requests; exactly one additional bounded live capture window ran for only 1102/1104/1216 through independent fresh-runner jobs with max-parallel 1; total repository-controlled source requests were <=6 with one listing and at most one detail per stock and production 20-60 second pre-request cooldown; only official t05st01/t05st01_detail APIs were used; no legacy endpoint, historical backfill, Wave A/Wave C refetch/rewrite, scheduler, or broad-universe rollout occurred; the original 12 snapshots remain byte-identical and durable; the previously closed two-window delta artifact remains byte-identical and reproducible rather than being silently redefined by the third window; every newly accepted snapshot is append-only and passes raw-base64/byte/hash/parser/methodology/PIT/canonical-path validation with historical_back_imputation_allowed=false; the final observation audit correctly represents exactly three complete windows and, on full success, reports 18 valid / 0 invalid / 0 conflict, the same three stocks with 3 listing + 3 detail each and 18 unique immutable IDs while merely reporting actual raw-response hash uniqueness; deterministic cross-day evidence records the new window's exact UTC/Asia-Taipei date and spacing without interpreting catalyst significance or opening outcomes; final Node24 read-only workflow passes at recorded tested SHA and deterministic regeneration byte-matches committed audit artifacts; baseline diff contains only bounded auditor/test/workflow/audit/snapshot/handoff changes plus classified unrelated concurrent changes and no protected Phase 2, historical Wave A/Wave C, outcome, holdout, association, Withdrawal, model/strategy/production/scheduler/broad-universe paths. Fix only bounded defects and restart verification. On PASS record exact commits/runs/jobs/request counts/checkpoints/artifact identities/counts/limitations, promote only a justified next preregistered round, end `Prompt B closeout: PASS`, and stop without executing the promoted Prompt A.
 ```
 
+## Prompt B independent closeout verification
+
+The exact Prompt B above was recovered from the durable pre-Prompt-A handoff at `fac7376c16e77a10501fe0d237a171e837b5231b`, not from conversation history or the Prompt A completion summary.
+
+1. Current remote main at closeout start was `c43acc25b2b0acac0d5683e2f827ffbef2f3e465`; `docs/agent-prompts/task-routing.json` still has exactly one active task, `institutional-accumulation`, routed to this handoff — PASS.
+2. The preceding two-window delta-audit round has durable Prompt B PASS at `fac7376c16e77a10501fe0d237a171e837b5231b` — PASS.
+3. Historical PIT artifact blob remains `7ccafbe36206770d93f454feefdca81a082d4cd0` and still reports 33 identities / 0 pit_ready / 33 not_pit_ready / 0 manual review, zero historical network, outcome-blind, with protected 2454/development outcome/holdout/association flags unopened — PASS.
+4. Eligibility evidence in cross-day artifact blob `9dbee14b300980fb46ea7251b5707429071a80bf` records latest prior `2026-09-10T14:15:57.012Z`, earliest third-window observation `2026-09-11T14:06:23.044Z`, Asia/Taipei dates 2026-09-10 -> 2026-09-11, elapsed `85826032` ms >= `43200000` ms — PASS.
+5. Pre-live Node24 zero-network gate run `34608058210`, job `103291291083`, tested SHA `bbb4026848e63baf39c63fec05828f65bde7f5c6`, completed SUCCESS before the live capture — PASS.
+6. Live run `34608110779` contains exactly three successful independent matrix jobs: 1102 job `103291475228`, 1104 job `103291474942`, 1216 job `103291475152`. Each reports 2 requests / 2 snapshots, `max-parallel: 1`, and collector-enforced randomized 20-60 second per-request cooldown; total repository-controlled source requests = 6 and new snapshots = 6 — PASS.
+7. Collector code still uses only official `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail`; no legacy `/mops/web/ajax_t05st01` path exists in the collector. Live job validation prohibits historical backfill — PASS.
+8. Comparison `bbb4026848e63baf39c63fec05828f65bde7f5c6 -> 06221112168858730937592e5579b4271d3fcaed` contains exactly six added prospective snapshot files plus the bounded trigger metadata change; no original snapshot path was modified or deleted — PASS.
+9. The canonical observation audit currently has blob `8dca5d431861f278279329014300953b8a1f84ec` and reports exactly 18 valid / 0 invalid / 0 conflict, only 1102/1104/1216, each 6 total / 3 listing / 3 detail, 9 listing + 9 detail, 18 unique immutable snapshot IDs and 18 observed response hashes — PASS.
+10. The closed two-window delta artifact remains byte-identical with blob `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`, still 12 observations / 6 pairs / 6 changed / 0 unchanged, and explicitly states raw-content change is not catalyst significance and outcomes remain unopened — PASS.
+11. Writer rerun `34609052282`, job `103294619159`, completed SUCCESS and durably checkpointed deterministic evidence at commit `5b73cf7b0d3897a4f34aed0cb3da7df24d26d007` after the bounded sparse-checkout persistence repair — PASS.
+12. Final read-only Node24 run `34609666561`, job `103296685760`, tested SHA `fdeb25641df4c167101c44e5b00f179c57e352f0`, Node v24.20.0, completed SUCCESS. It passed readiness 1/1, historical PIT 1/1, prospective PIT contract 5/5, canary 6/6, observation 10/10, closed delta 9/9, cross-day 5/5, plus observation/delta/cross-day byte-match and durable/regenerated PIT assertions — PASS.
+13. Critical artifacts from Prompt-A closeout remain byte-identical on current main: observation `8dca5d43...`, delta `cc5683ce...`, cross-day `9dbee14b...`, PIT `7ccafbe3...`. Later workflow changes only added the repository-standard schedule timing summary job and did not alter capture/audit semantics — classified concurrent non-material change.
+14. No evidence was opened for development outcomes, holdouts, protected 2454 outcomes, catalyst/outcome association, Withdrawal, thresholds, scores, optimized weighting, model, strategy, production behavior, scheduler authorization, broad-universe authorization, historical Wave A/Wave C rewrite, or generic-news interpretation — PASS.
+
+Closeout limitations:
+- this proves exactly three prospective windows across two Asia/Taipei calendar dates for only three preregistered stocks;
+- it does not establish long-duration stability, broad-universe quality, catalyst significance, catalyst/outcome relationship, scheduler readiness, historical PIT upgrade, model/strategy value, or production behavior;
+- raw-response identity change remains transport/source evidence only, not business significance.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-prospective-fourth-window-repeat-capture-canary-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+## Next round objective
+
+The smallest justified next evidence step is one additional forward-only prospective window for the same three stocks on a later Asia/Taipei date, while preserving all already-closed 12-observation delta evidence and the current three-window cross-day artifact byte-identically. This extends duration without authorizing scheduler or universe expansion.
+
+Eligibility must be derived from canonical validated evidence. The latest accepted observation is currently `2026-09-11T14:10:45.797Z`; a fourth live window is allowed only on a later Asia/Taipei calendar date and at least 12 elapsed hours after that timestamp.
+
+Exact entry points:
+- `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js`
+- `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`
+- `scripts/audit_institutional_accumulation_catalyst_prospective_observations.js`
+- `scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js`
+- `scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js`
+- `tests/institutional_accumulation_catalyst_prospective_pit_capture_contract.test.js`
+- `tests/institutional_accumulation_catalyst_prospective_canary.test.js`
+- `tests/institutional_accumulation_catalyst_prospective_observations.test.js`
+- `tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js`
+- `tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js`
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json`
+- `docs/agent-prompts/task-routing.json`
+- `AGENTS.md`
+
+## Prompt A — fourth-window repeat-capture canary
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning project only if `docs/agent-prompts/task-routing.json` still routes the sole active task to `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md` and round `institutional-accumulation-catalyst-prospective-fourth-window-repeat-capture-canary-v1` remains Prompt A NOT STARTED / ACTIVE.
+
+Before work: fetch current remote main; read AGENTS.md, project philosophy/roadmap, routing, this handoff, canonical PIT contract, collector, observation/delta/cross-day auditors and tests, both workflows, current 18-observation audit, closed delta artifact, closed three-window cross-day artifact, and frozen PIT provenance artifact. Recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history and classify concurrent changes.
+
+Eligibility gate before any source request:
+- derive the latest accepted collected_at from canonical validated observations; it must remain `2026-09-11T14:10:45.797Z` unless a concurrent change is explicitly classified;
+- the proposed fourth capture must be on a later Asia/Taipei calendar date and at least 12 elapsed hours after that timestamp;
+- if either condition fails, make zero source requests and stop with `Prompt A not yet eligible for fourth-window capture`.
+
+Objective: collect exactly one additional forward-only window for only 1102/1104/1216 while preserving append-only PIT identity and all previously closed evidence.
+
+Ordered execution:
+A. Before live requests, make only bounded zero-network changes needed for exactly four complete windows. Preserve the closed two-window delta artifact blob `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00` and the existing three-window cross-day artifact blob `9dbee14b300980fb46ea7251b5707429071a80bf` byte-identically. If their auditors would fail merely because a fourth window exists, bind them explicitly to their original earliest-window evidence rather than redefining those artifacts.
+B. Add only the minimum deterministic fourth-window/longitudinal audit evidence required to record exact UTC/Asia-Taipei dates and spacing. Do not interpret catalyst significance or open outcomes.
+C. Run Node24 zero-network readiness/regression before any source request; all suites and closed-artifact byte checks must pass.
+D. Launch exactly one live window through `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml` for only 1102/1104/1216, using independent fresh-runner matrix jobs, `max-parallel:1`, randomized 20-60 second pre-request cooldown, one listing and at most one verified detail request per stock, no tight retry, total repository-controlled requests <=6.
+E. Use only official POST `/mops/api/t05st01` and POST `/mops/api/t05st01_detail`; never use the legacy endpoint, historical range/backfill, or Wave A/Wave C.
+F. Require race-safe append-only checkpointing. All existing 18 snapshot files must remain byte-identical and present; every new accepted snapshot must pass raw-base64/decoded-length/response-hash/parser/methodology/PIT/canonical-path validation with `historical_back_imputation_allowed=false`.
+G. On full success, canonical observation audit should become exactly 24 valid / 0 invalid / 0 conflict, same three stocks each 8 total / 4 listing / 4 detail, 12 listing + 12 detail, 24 unique immutable snapshot IDs. Report actual raw-response hash uniqueness without requiring all hashes to differ.
+H. Run final Node24 read-only deterministic gate on checked-in state; committed observation/new longitudinal evidence must regenerate byte-identically, while the closed delta and three-window cross-day artifacts remain byte-identical to their frozen blobs.
+I. Compare pre-A baseline to final Prompt-A head and classify all concurrent changes. No protected Phase 2, outcomes, holdouts, association, Withdrawal, strategy/model/production/scheduler/broad-universe/generic-news path may be opened.
+
+Frozen rules: no scheduler, no broad-universe expansion, no historical PIT upgrade/backfill, no outcomes or future returns, no catalyst/outcome association, no thresholds/scores/models/strategies/production behavior, zero legacy retries, fail closed on response/schema/identity ambiguity, and raw response changes are not business significance.
+
+Completion contract: eligibility PASS before requests; pre-live zero-network gate PASS; exactly one <=6-request live window; original 18 snapshots plus closed delta/cross-day artifacts unchanged; new snapshots durable append-only; canonical observation audit records exact four-window counts with zero conflicts; new deterministic longitudinal evidence records spacing only; final read-only Node24 gate PASS at recorded tested SHA; handoff records exact commits/runs/jobs/request counts/checkpoints/blob identities/counts/limitations and preserves the preregistered Prompt B below; stop with `Prompt A complete — ready for Prompt B.`
+```
+
+## Prompt B — fourth-window repeat-capture canary closeout
+
+```text
+Perform mandatory closeout for `institutional-accumulation-catalyst-prospective-fourth-window-repeat-capture-canary-v1` only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history. Independently verify: sole active routing still points to this handoff; the preceding cross-day three-window round has durable Prompt B PASS; historical 33/protected state remains frozen and unopened; eligibility was satisfied before source requests using the canonical latest accepted timestamp `2026-09-11T14:10:45.797Z`, a later Asia/Taipei date, and >=12 elapsed hours; the pre-live Node24 zero-network gate passed; exactly one bounded fourth live window ran for only 1102/1104/1216 through independent fresh-runner jobs with max-parallel 1; total repository-controlled requests <=6 with one listing and at most one detail per stock and 20-60 second cooldown; only official t05st01/t05st01_detail APIs were used; no legacy endpoint, historical backfill, Wave A/Wave C, scheduler, or broad-universe rollout occurred; all original 18 snapshots remain byte-identical and durable; closed two-window delta blob remains `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`; closed three-window cross-day blob remains `9dbee14b300980fb46ea7251b5707429071a80bf`; every new snapshot is append-only and passes canonical raw/hash/PIT/path validation with historical_back_imputation_allowed=false; successful observation audit reports exactly 24 valid / 0 invalid / 0 conflict, same three stocks with 4 listing + 4 detail each and 24 unique immutable IDs while only reporting actual raw-hash uniqueness; deterministic fourth-window evidence records UTC/Asia-Taipei date and spacing without catalyst interpretation or outcome access; final Node24 read-only workflow passes at recorded tested SHA with byte-identical regeneration; bounded diff contains only authorized auditor/test/workflow/audit/snapshot/handoff changes plus classified unrelated concurrent changes and no protected paths. Fix only bounded defects and restart verification. On PASS record exact durable evidence, promote only a justified next paired round, end `Prompt B closeout: PASS`, and stop without executing the promoted Prompt A.
+```
+
 ## Stop conditions
 
-- Do not execute Prompt B automatically.
+- Do not execute the promoted Prompt A automatically.
 - Do not run another prospective capture window in this Prompt A.
 - Do not reopen or upgrade the historical 33 identities.
 - Do not open protected outcomes, holdouts, association, or Withdrawal state.
