@@ -171,6 +171,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
 
           export MARGIN_FILE="data_twse_margin_balance/${TARGET_DATE}_twse_margin_balance.csv"
+          export MARGIN_INDEX_FILE="data_twse_margin_balance/files.json"
           export LIST_FILE="data_daily_gain_over_5/${TARGET_DATE}.json"
           export ANALYSIS_FILE="data_daily_gain_over_5/analysis/${TARGET_DATE}.json"
           export FLOW_FILE="data_daily_gain_over_5/analysis-flow/${TARGET_DATE}.json"
@@ -183,6 +184,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$(dirname "$MARGIN_FILE")"
           cp "$MARGIN_SNAPSHOT" "$MARGIN_FILE"
+          node scripts/generate_file_lists.js --only data_twse_margin_balance
 
           if [ -f "$LIST_FILE" ]; then
             echo "Refreshing flow analysis from latest main + validated margin snapshot for $TARGET_DATE"
@@ -199,6 +201,12 @@ jobs:
           const fs = require('node:fs');
           const { validateCsv } = require('./scripts/crawl_twse_margin_balance');
           validateCsv(fs.readFileSync(process.env.MARGIN_FILE, 'utf8'));
+
+          const marginIndex = JSON.parse(fs.readFileSync(process.env.MARGIN_INDEX_FILE, 'utf8'));
+          const marginBasename = process.env.MARGIN_FILE.split('/').at(-1);
+          if (!Array.isArray(marginIndex) || !marginIndex.includes(marginBasename)) {
+            throw new Error(`Margin files.json is missing ${marginBasename}`);
+          }
 
           if (fs.existsSync(process.env.LIST_FILE)) {
             if (!fs.existsSync(process.env.FLOW_FILE)) {
@@ -220,6 +228,7 @@ jobs:
             --validate-script "$VALIDATE_SCRIPT" \
             --commit-message "chore: update TWSE margin balance and flow analysis ${CURRENT_DATE}" \
             --add-path "$MARGIN_FILE" \
+            --add-path "$MARGIN_INDEX_FILE" \
             --add-path "$ANALYSIS_FILE" \
             --add-path "$FLOW_FILE" \
             --max-attempts 5 \
