@@ -85,17 +85,40 @@ function listedPriceData(s,store){
  const vols=a.slice(1,21).map(x=>x.volume).filter(Number.isFinite),av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
  return{pDate:z.k,price:z.price,r1:ret(p?.price,z.price),r5:ret(d5?.price,z.price),r20:ret(d20?.price,z.price),vr:Number.isFinite(av)&&av?z.volume/av:null,sma20:z.sma20,sma60:z.sma60,smaGap:Number.isFinite(z.sma20)?ret(z.sma20,z.price):null,priceSource:'fubon_daily',pStale:!!store.latestDate&&z.k!==store.latestDate};
 }
+async function tpexPriceStore(){
+ try{
+  const d=await json(`${base()}/data_tpex_daily_quotes/compact-history.json`);
+  return{latestDate:dateKey(d.latest_date),stocks:d.stocks||{}};
+ }catch{return{latestDate:null,stocks:{}}}
+}
+function dateAgeDays(newer,older){
+ if(!/^20\d{6}$/.test(newer||'')||!/^20\d{6}$/.test(older||''))return null;
+ const toDate=x=>new Date(x.slice(0,4)+'-'+x.slice(4,6)+'-'+x.slice(6,8)+'T00:00:00Z');
+ return Math.round((toDate(newer)-toDate(older))/86400000);
+}
+function tpexPriceData(s,store,referenceLatestDate){
+ const rows=(store.stocks?.[s.code]?.rows||[]).map(x=>({k:dateKey(x.date),price:num(x.close),volume:num(x.volume)})).filter(x=>Number.isFinite(x.price)).sort((a,b)=>b.k.localeCompare(a.k));
+ if(!rows.length)return null;
+ const z=rows[0],p=rows[1],d5=rows[Math.min(5,rows.length-1)],d20=rows[Math.min(20,rows.length-1)];
+ const vols=rows.slice(1,21).map(x=>x.volume).filter(Number.isFinite),av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
+ const closes20=rows.slice(0,20).map(x=>x.price).filter(Number.isFinite),sma20=closes20.length>=20?closes20.reduce((x,y)=>x+y,0)/closes20.length:null;
+ const age=dateAgeDays(referenceLatestDate||store.latestDate,z.k);
+ return{pDate:z.k,price:z.price,r1:ret(p?.price,z.price),r5:ret(d5?.price,z.price),r20:ret(d20?.price,z.price),vr:Number.isFinite(av)&&av?z.volume/av:null,sma20,sma60:null,smaGap:Number.isFinite(sma20)?ret(sma20,z.price):null,priceSource:'tpex_daily',pStale:Number.isFinite(age)?age>7:true};
+}
 async function fallbackPriceData(s,latestDate){
  try{
   const d=await json(`${base()}/data_history_sma/${s.code}.json`);
   const a=Object.entries(d).map(([k,v])=>({k,...v})).filter(x=>Number.isFinite(num(x.price))).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));if(!a.length)return{};
   const z=a[0],p=a[1],d5=a[Math.min(5,a.length-1)],d20=a[Math.min(20,a.length-1)],pDate=dateKey(z.k);
   const vols=a.slice(1,21).map(x=>num(x.volume)).filter(Number.isFinite),av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
-  const ageDays=latestDate?(new Date(latestDate.slice(0,4)+'-'+latestDate.slice(4,6)+'-'+latestDate.slice(6,8))-new Date(pDate.slice(0,4)+'-'+pDate.slice(4,6)+'-'+pDate.slice(6,8)))/86400000:null;
+  const ageDays=dateAgeDays(latestDate,pDate);
   return{pDate,price:num(z.price),r1:ret(num(p?.price),num(z.price)),r5:ret(num(d5?.price),num(z.price)),r20:ret(num(d20?.price),num(z.price)),vr:Number.isFinite(av)&&av?num(z.volume)/av:null,sma20:num(z.sma20),sma60:num(z.sma60),smaGap:Number.isFinite(num(z.sma20))?ret(num(z.sma20),num(z.price)):null,priceSource:'history_fallback',pStale:Number.isFinite(ageDays)?ageDays>7:true};
  }catch{return{}}
 }
-async function priceData(s,store){return listedPriceData(s,store)||fallbackPriceData(s,store.latestDate)}
+async function priceData(s,listedStore,tpexStore){
+ const referenceLatestDate=[listedStore.latestDate,tpexStore.latestDate].filter(Boolean).sort().at(-1)||null;
+ return listedPriceData(s,listedStore)||tpexPriceData(s,tpexStore,referenceLatestDate)||fallbackPriceData(s,referenceLatestDate)
+}
 async function instData(s){
  try{const d=await json(`${base()}/data_institutional/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));const top=a[0];if(!top)return{};
  const five=a.slice(0,5);return{iDate:dateKey(top.k),foreign:num(top.ForeignInvestors),foreign5:five.reduce((q,x)=>q+(num(x.ForeignInvestors)||0),0),trust5:five.reduce((q,x)=>q+(num(x.InvestmentTrust)||0),0),inst5:five.reduce((q,x)=>q+(num(x.DailyTotal)||0),0)};}catch{return{}}
@@ -152,13 +175,13 @@ function summary(td,m){
  const diverge=DATA.filter(x=>(x.r5??0)>0&&(x.large10??0)<-.5&&(x.large20??0)<-1&&(x.marginD??0)>0).map(x=>x.code+' '+x.name).join('、')||'無明顯個股';
  const ready=DATA.filter(x=>x.entryScore>=8).sort((a,b)=>b.entryScore-a.entryScore).slice(0,8).map(x=>x.code+' '+x.name).join('、')||'目前沒有達到 8/10 的股票';
  dailyAnalysis.innerHTML=`<div class="analysis-item good"><b>籌碼相對健康：</b>${top}。偏強條件主要來自大戶 5/10/20 日趨勢、法人近5日偏買、融資未追高及價格站穩SMA20。</div><div class="analysis-item good"><b>進場條件較完整（≥8/10）：</b>${ready}。仍應逐項確認缺分來源，不把總分視為買進訊號。</div><div class="analysis-item bad"><b>需優先檢查派發：</b>${bad}。警訊不是直接等於會跌，而是代表價格與籌碼支撐較弱。</div><div class="analysis-item warn"><b>股價上漲但籌碼散戶化：</b>${diverge}。若後續再跌破SMA20且量能放大，風險會比單純整理高。</div><div class="analysis-item"><b>動能：</b>${mom.length} 檔同時具備近5日/20日正報酬與量能確認；${sma.length} 檔仍站在SMA20之上。</div>`;
- const listedDates=[...new Set(DATA.filter(x=>x.priceSource==='fubon_daily').map(x=>x.pDate).filter(Boolean))].sort(),fallbackDates=[...new Set(DATA.filter(x=>x.priceSource==='history_fallback').map(x=>x.pDate).filter(Boolean))].sort();asOf.textContent=`上市價格最新日：${listedDates.at(-1)||'—'}｜上櫃/其他價格：${fallbackDates.at(-1)||'—'}${DATA.some(x=>x.priceSource==='history_fallback'&&x.pStale)?'（過期資料不計入價格/量能評分）':''}｜TDCC：${td.date||'—'}｜上市融資：${m.tw.date||'—'}｜上櫃融資：${m.tp.date||'—'}${m.tp.stale?'（過期，不計入評分）':''}`;
- const hz=td.horizons||{},h5=hz['5'],h10=hz['10'],h20=hz['20'];dataFoot.textContent=`資料來源：repository data_fubon（上市每日價格/SMA）、data_history_sma（缺少每日上市資料時的 fallback）、data_tdcc_shareholding、data_institutional、data_twse_margin_balance、data_tpex_margin_balance。過期 fallback 價格與過期上櫃融資只顯示警告，不參與評分。大戶 5/10/20 日變化以各目標日「當日或之前最近一筆 TDCC 週資料」計算；本期實際比較間隔：5日→${h5?.actual_days??'—'}日、10日→${h10?.actual_days??'—'}日、20日→${h20?.actual_days??'—'}日。變化單位為百分點 pp。法人欄位若無 canonical 個股檔會顯示空白。`;
+ const listedDates=[...new Set(DATA.filter(x=>x.priceSource==='fubon_daily').map(x=>x.pDate).filter(Boolean))].sort(),tpexDates=[...new Set(DATA.filter(x=>x.priceSource==='tpex_daily').map(x=>x.pDate).filter(Boolean))].sort(),fallbackDates=[...new Set(DATA.filter(x=>x.priceSource==='history_fallback').map(x=>x.pDate).filter(Boolean))].sort();asOf.textContent=`上市價格最新日：${listedDates.at(-1)||'—'}｜上櫃價格最新日：${tpexDates.at(-1)||fallbackDates.at(-1)||'—'}${DATA.some(x=>x.priceSource==='history_fallback'&&x.pStale)?'（部分 fallback 已過期，不計入價格/量能評分）':''}｜TDCC：${td.date||'—'}｜上市融資：${m.tw.date||'—'}｜上櫃融資：${m.tp.date||'—'}${m.tp.stale?'（過期，不計入評分）':''}`;
+ const hz=td.horizons||{},h5=hz['5'],h10=hz['10'],h20=hz['20'];dataFoot.textContent=`資料來源：repository data_fubon（上市每日價格/SMA）、data_tpex_daily_quotes/compact-history.json（上櫃每日價格/量能）、data_history_sma（fallback）、data_tdcc_shareholding、data_institutional、data_twse_margin_balance、data_tpex_margin_balance。過期 fallback 價格與過期上櫃融資只顯示警告，不參與評分。大戶 5/10/20 日變化以各目標日「當日或之前最近一筆 TDCC 週資料」計算；本期實際比較間隔：5日→${h5?.actual_days??'—'}日、10日→${h10?.actual_days??'—'}日、20日→${h20?.actual_days??'—'}日。變化單位為百分點 pp。法人欄位若無 canonical 個股檔會顯示空白。`;
 }
 async function init(){
  const themes=[...new Set(WATCH.map(x=>x.theme))];theme.innerHTML+=[...themes].sort().map(x=>`<option>${x}</option>`).join('');
- const [td,m,priceStore]=await Promise.all([tdccMaps(),marginMaps(),listedPriceStore()]);
- const arr=await Promise.all(WATCH.map(async s=>{const [p,i]=await Promise.all([priceData(s,priceStore),instData(s)]);const x={...s,...p,...i,...tdccFor(s.code,td),...marginFor(s.code,m)};const judged={...x,...judge(x)};return{...judged,...entryRadar(judged)}}));
+ const [td,m,priceStore,tpexStore]=await Promise.all([tdccMaps(),marginMaps(),listedPriceStore(),tpexPriceStore()]);
+ const arr=await Promise.all(WATCH.map(async s=>{const [p,i]=await Promise.all([priceData(s,priceStore,tpexStore),instData(s)]);const x={...s,...p,...i,...tdccFor(s.code,td),...marginFor(s.code,m)};const judged={...x,...judge(x)};return{...judged,...entryRadar(judged)}}));
  DATA=arr;summary(td,m);render();
 }
 [q,theme,sig].forEach(el=>el.addEventListener('input',render));document.querySelectorAll('th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;if(sort.k===k)sort.dir*=-1;else{sort.k=k;sort.dir=-1}render()});init().catch(e=>dailyAnalysis.innerHTML='<div class="analysis-item bad">載入失敗：'+e.message+'</div>');
