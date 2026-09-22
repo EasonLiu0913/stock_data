@@ -76,9 +76,11 @@ test('partial third window fails closed through canonical observation audit', ()
   assert.throws(() => buildCrossDayAudit(root, { rootRelative: ROOT }), /incomplete_observation_window/);
 });
 
-test('fourth window fails closed through bounded observation window policy', () => {
+test('fourth window preserves the closed earliest-three-window cross-day evidence', () => {
   const root = repo();
   buildThree(root);
+  const before = buildCrossDayAudit(root, { rootRelative: ROOT });
   addWindow(root, 12, 14, 'w4');
-  assert.throws(() => buildCrossDayAudit(root, { rootRelative: ROOT }), /unexpected_observation_window_count/);
+  const after = buildCrossDayAudit(root, { rootRelative: ROOT });
+  assert.deepEqual(after, before);
 });
