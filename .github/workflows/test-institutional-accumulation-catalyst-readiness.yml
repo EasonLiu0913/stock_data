@@ -16,6 +16,7 @@ on:
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json"
   workflow_dispatch:
 
 permissions:
@@ -50,6 +51,7 @@ jobs:
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
             /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
             /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
             /data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/
@@ -65,6 +67,9 @@ jobs:
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json /tmp/observation-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json /tmp/delta-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json /tmp/cross-before.json
+          if test -f data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json; then
+            cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json /tmp/fourth-before.json
+          fi
 
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
@@ -86,6 +91,12 @@ jobs:
           node scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js --write
           cmp -s /tmp/cross-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
           echo 'cross-day audit byte-match: PASS'
+
+          if test -f /tmp/fourth-before.json; then
+            node scripts/audit_institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.js --write
+            cmp -s /tmp/fourth-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
+            echo 'fourth-window longitudinal audit byte-match: PASS'
+          fi
 
           node - <<'NODE'
           const assert = require('node:assert/strict');
@@ -116,13 +127,27 @@ jobs:
             assert.equal(pit.protected_state.phase_2_semantic_sha256, '66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b');
             assert.equal(pit.protected_state.methodology_development_identity_count, 41);
           }
-          assert.equal(audit.valid_observation_count, 18);
           assert.equal(audit.invalid_observation_count, 0);
           assert.equal(audit.conflict_count, 0);
-          assert.equal(audit.unique_immutable_snapshot_count, 18);
-          for (const stock of ['1102','1104','1216']) assert.deepEqual(audit.stocks[stock], {total:6, listing:3, detail:3});
-          assert.equal(audit.source_interface_counts.prospective_material_information_listing, 9);
-          assert.equal(audit.source_interface_counts.prospective_material_information_detail, 9);
+          if (audit.valid_observation_count === 18) {
+            assert.equal(audit.unique_immutable_snapshot_count, 18);
+            for (const stock of ['1102','1104','1216']) assert.deepEqual(audit.stocks[stock], {total:6, listing:3, detail:3});
+            assert.equal(audit.source_interface_counts.prospective_material_information_listing, 9);
+            assert.equal(audit.source_interface_counts.prospective_material_information_detail, 9);
+          } else if (audit.valid_observation_count === 24) {
+            assert.equal(audit.unique_immutable_snapshot_count, 24);
+            for (const stock of ['1102','1104','1216']) assert.deepEqual(audit.stocks[stock], {total:8, listing:4, detail:4});
+            assert.equal(audit.source_interface_counts.prospective_material_information_listing, 12);
+            assert.equal(audit.source_interface_counts.prospective_material_information_detail, 12);
+            const fourth = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json'));
+            assert.equal(fourth.observation_count, 24);
+            assert.equal(fourth.chain_count, 6);
+            assert.equal(fourth.fourth_window_gate.latest_third_collected_at, '2026-09-11T14:10:45.797Z');
+            assert.equal(fourth.fourth_window_gate.later_asia_taipei_date, true);
+            assert.equal(fourth.fourth_window_gate.minimum_elapsed_satisfied, true);
+          } else {
+            throw new Error(`unexpected canonical observation count ${audit.valid_observation_count}`);
+          }
           assert.equal(delta.observation_count, 12);
           assert.equal(delta.pair_count, 6);
           assert.equal(delta.changed_pair_count, 6);
@@ -132,7 +157,7 @@ jobs:
           assert.equal(cross.cross_day_gate.latest_prior_collected_at, '2026-09-10T14:15:57.012Z');
           assert.equal(cross.cross_day_gate.later_asia_taipei_date, true);
           assert.equal(cross.cross_day_gate.minimum_elapsed_satisfied, true);
-          console.log('durable/regenerated PIT semantics + cross-day assertions: PASS');
+          console.log('durable/regenerated PIT semantics + bounded longitudinal assertions: PASS');
           NODE
 
   schedule-timing-summary:
