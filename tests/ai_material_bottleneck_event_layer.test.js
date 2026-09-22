@@ -33,6 +33,8 @@ test('AI material bottleneck event contract keeps event interpretation separate 
   assert.match(html, /事件／催化劑/);
   assert.match(html, /D1\/D3\/D5/);
   assert.match(html, /事件訊號獨立於 10 分進場條件雷達/);
+  assert.match(html, /id="evt"/);
+  assert.match(html, /市場確認與 D1\/D3\/D5/);
 
   const entryRadar = html.match(/function entryRadar\(x\)\{[\s\S]*?return\{entryScore:/);
   assert.ok(entryRadar, 'entryRadar function not found');
