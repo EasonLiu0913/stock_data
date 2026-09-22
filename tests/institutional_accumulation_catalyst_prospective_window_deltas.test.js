@@ -133,12 +133,14 @@ test('third window preserves the already-closed first-two-window delta', () => {
   assert.deepEqual(after, before);
 });
 
-test('fourth window fails closed for this frozen two-window artifact boundary', () => {
+test('fourth window preserves the already-closed first-two-window delta', () => {
   const repo = tmpRepo();
   buildTwoWindows(repo);
+  const before = run(repo);
   appendWindow(repo, 3, '11');
   appendWindow(repo, 4, '12');
-  assert.throws(() => run(repo), /unexpected_observation_shape/);
+  const after = run(repo);
+  assert.deepEqual(after, before);
 });
 
 test('timestamp tie fails closed', () => {
