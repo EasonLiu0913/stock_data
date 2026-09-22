@@ -1,0 +1,238 @@
+name: "[01 台股資料] Crawl TPEx Daily Market Data"
+
+on:
+  # Bootstrap once when this workflow is introduced or deliberately edited.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crawl-tpex-daily-market-data.yml"
+  schedule:
+    # TPEx post-close data can publish at different times; retry in bounded windows.
+    # Taipei 16:17 / 17:23 / 18:29 = UTC 08:17 / 09:23 / 10:29.
+    - cron: '17 8 * * 1-5'
+    - cron: '23 9 * * 1-5'
+    - cron: '29 10 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target date (YYYYMMDD). Leave empty for Taipei today.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crawl-tpex-daily-market-data
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.resolve.outputs.target_date }}
+      changed: ${{ steps.publish.outputs.pages_changed }}
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate TPEx crawler and compact generator syntax
+        run: |
+          node --check scripts/crawl_tpex_daily_quotes.js
+          node --check scripts/crawl_tpex_margin_balance.js
+          node --check scripts/generate_tpex_quote_compact_history.js
+          node scripts/generate_tpex_quote_compact_history.js --self-test
+
+      - name: Resolve target date
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_EXPR: ${{ github.event.schedule || '' }}
+          INPUT_DATE: ${{ github.event.inputs.date || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_DATE" ]; then
+            target_date="$INPUT_DATE"
+            source="manual_explicit"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            resolved=$(node scripts/resolve_scheduled_collection_date.js               --event-name "$EVENT_NAME"               --schedule "$SCHEDULE_EXPR"               --policy same_trade_date               --json)
+            target_date=$(node -e 'const p=JSON.parse(process.argv[1]);process.stdout.write(p.target_date);' "$resolved")
+            source="scheduled_same_trade_date"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            # Bootstrap against the newest already-confirmed TWSE margin trade date,
+            # avoiding a premature same-day TPEx margin request.
+            target_date=$(node -e '
+              const fs=require("node:fs");
+              const f=JSON.parse(fs.readFileSync("data_twse_margin_balance/files.json","utf8"));
+              const a=f.filter(x=>/^\\d{8}_twse_margin_balance\\.csv$/.test(x)).sort();
+              if(!a.length)process.exit(1);
+              process.stdout.write(a.at(-1).slice(0,8));
+            ')
+            source="bootstrap_latest_confirmed_trade_date"
+          else
+            target_date=$(TZ='Asia/Taipei' date '+%Y%m%d')
+            source="manual_taipei_today"
+          fi
+
+          [[ "$target_date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target date: $target_date"; exit 1; }
+          echo "target_date=$target_date" >> "$GITHUB_OUTPUT"
+          echo "Target date: $target_date ($source)"
+          {
+            echo "## TPEx Daily Market Data"
+            echo "- 目標交易日：`$target_date`"
+            echo "- 日期來源：`$source`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Crawl missing TPEx daily quotes
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ steps.resolve.outputs.target_date }}"
+          file="data_tpex_daily_quotes/${target}_tpex_daily_quotes.json"
+          if [ -f "$file" ]; then
+            echo "Existing quote checkpoint: $file"
+          else
+            node scripts/crawl_tpex_daily_quotes.js --date "$target"
+          fi
+
+      - name: Crawl missing TPEx margin balance
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ steps.resolve.outputs.target_date }}"
+          file="data_tpex_margin_balance/${target}_tpex_margin_balance.json"
+          if [ -f "$file" ]; then
+            echo "Existing margin checkpoint: $file"
+          else
+            node scripts/crawl_tpex_margin_balance.js --date "$target"
+          fi
+
+      - name: Build compact TPEx price history
+        run: node scripts/generate_tpex_quote_compact_history.js --limit 30
+
+      - name: Validate fetched TPEx artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ steps.resolve.outputs.target_date }}"
+          TARGET_DATE="$target" node - <<'NODE'
+          const fs=require('node:fs');
+          const target=process.env.TARGET_DATE;
+          const checks=[
+            ['data_tpex_daily_quotes/'+target+'_tpex_daily_quotes.json','quote'],
+            ['data_tpex_margin_balance/'+target+'_tpex_margin_balance.json','margin']
+          ];
+          for(const [file,kind] of checks){
+            const p=JSON.parse(fs.readFileSync(file,'utf8'));
+            const date=String(p.date||'').replaceAll('/','').replaceAll('-','');
+            if(p.stat!=='ok'||date!==target)throw new Error(`${kind} artifact failed date/stat validation: ${file}`);
+            const rows=(p.tables||[]).reduce((n,t)=>n+(Array.isArray(t.data)?t.data.length:0),0);
+            if(rows<100)throw new Error(`${kind} artifact has suspicious row count ${rows}: ${file}`);
+          }
+          const compact=JSON.parse(fs.readFileSync('data_tpex_daily_quotes/compact-history.json','utf8'));
+          if(compact.latest_date < target)throw new Error(`compact history latest ${compact.latest_date} is older than ${target}`);
+          if(Object.keys(compact.stocks||{}).length<100)throw new Error('compact history stock coverage is suspiciously small');
+          console.log(`Validated TPEx target ${target}; compact latest=${compact.latest_date}, stocks=${Object.keys(compact.stocks).length}`);
+          NODE
+
+      - name: Snapshot validated raw artifacts
+        id: snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ steps.resolve.outputs.target_date }}"
+          dir="$RUNNER_TEMP/tpex-publish"
+          mkdir -p "$dir"
+          cp "data_tpex_daily_quotes/${target}_tpex_daily_quotes.json" "$dir/quote.json"
+          cp "data_tpex_margin_balance/${target}_tpex_margin_balance.json" "$dir/margin.json"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - name: Race-safe publish TPEx artifacts
+        id: publish
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.resolve.outputs.target_date }}
+          SNAPSHOT_DIR: ${{ steps.snapshot.outputs.dir }}
+        run: |
+          set -euo pipefail
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+          export QUOTE_FILE="data_tpex_daily_quotes/${TARGET_DATE}_tpex_daily_quotes.json"
+          export MARGIN_FILE="data_tpex_margin_balance/${TARGET_DATE}_tpex_margin_balance.json"
+          export QUOTE_INDEX="data_tpex_daily_quotes/files.json"
+          export MARGIN_INDEX="data_tpex_margin_balance/files.json"
+          export COMPACT_FILE="data_tpex_daily_quotes/compact-history.json"
+
+          PREPARE_SCRIPT="$RUNNER_TEMP/tpex-publish/prepare.sh"
+          VALIDATE_SCRIPT="$RUNNER_TEMP/tpex-publish/validate.sh"
+
+          cat > "$PREPARE_SCRIPT" <<'PREPARE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          mkdir -p "$(dirname "$QUOTE_FILE")" "$(dirname "$MARGIN_FILE")"
+          cp "$SNAPSHOT_DIR/quote.json" "$QUOTE_FILE"
+          cp "$SNAPSHOT_DIR/margin.json" "$MARGIN_FILE"
+          node scripts/generate_file_lists.js --only data_tpex_daily_quotes,data_tpex_margin_balance
+          node scripts/generate_tpex_quote_compact_history.js --limit 30
+          PREPARE
+
+          cat > "$VALIDATE_SCRIPT" <<'VALIDATE'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const target=process.env.TARGET_DATE;
+          for(const [file,indexFile] of [
+            [process.env.QUOTE_FILE,process.env.QUOTE_INDEX],
+            [process.env.MARGIN_FILE,process.env.MARGIN_INDEX]
+          ]){
+            const p=JSON.parse(fs.readFileSync(file,'utf8'));
+            const date=String(p.date||'').replaceAll('/','').replaceAll('-','');
+            if(p.stat!=='ok'||date!==target)throw new Error(`Invalid persisted TPEx artifact: ${file}`);
+            const index=JSON.parse(fs.readFileSync(indexFile,'utf8'));
+            if(!index.includes(file.split('/').at(-1)))throw new Error(`Index missing ${file}`);
+          }
+          const compact=JSON.parse(fs.readFileSync(process.env.COMPACT_FILE,'utf8'));
+          if(compact.latest_date < target)throw new Error(`Persisted compact history is stale: ${compact.latest_date} < ${target}`);
+          NODE
+          VALIDATE
+
+          chmod +x "$PREPARE_SCRIPT" "$VALIDATE_SCRIPT"
+          current=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+          scripts/race_safe_main_publish.sh             --prepare-script "$PREPARE_SCRIPT"             --validate-script "$VALIDATE_SCRIPT"             --commit-message "data: update TPEx daily market data ${TARGET_DATE} (${current})"             --add-path "$QUOTE_FILE"             --add-path "$MARGIN_FILE"             --add-path "$QUOTE_INDEX"             --add-path "$MARGIN_INDEX"             --add-path "$COMPACT_FILE"             --max-attempts 5             --output-key pages_changed
+
+      - name: Write result summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "- 行情 raw：`data_tpex_daily_quotes/${{ steps.resolve.outputs.target_date }}_tpex_daily_quotes.json`"
+            echo "- 融資 raw：`data_tpex_margin_balance/${{ steps.resolve.outputs.target_date }}_tpex_margin_balance.json`"
+            echo "- 前端 compact：`data_tpex_daily_quotes/compact-history.json`"
+            echo "- Repository 更新：`${{ steps.publish.outputs.pages_changed || 'unknown' }}`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  schedule-timing-summary:
+    name: 排程時間摘要
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
