@@ -64,11 +64,38 @@ async function fetchSafe(url,kind='json',timeoutMs=12000){const ctrl=new AbortCo
 async function json(url){return fetchSafe(url,'json')}
 async function text(url){return fetchSafe(url,'text')}
 function ret(a,b){return Number.isFinite(a)&&a!==0&&Number.isFinite(b)?(b/a-1)*100:null}
-async function priceData(s){
- try{const d=await json(`${base()}/data_history_sma/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).filter(x=>Number.isFinite(num(x.price))).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));if(!a.length)return{};
- const z=a[0],p=a[1],d5=a[Math.min(5,a.length-1)],d20=a[Math.min(20,a.length-1)];const vols=a.slice(1,21).map(x=>num(x.volume)).filter(Number.isFinite);const av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
- return{pDate:dateKey(z.k),price:num(z.price),r1:ret(num(p?.price),num(z.price)),r5:ret(num(d5?.price),num(z.price)),r20:ret(num(d20?.price),num(z.price)),vr:Number.isFinite(av)&&av?num(z.volume)/av:null,sma20:num(z.sma20),sma60:num(z.sma60),smaGap:Number.isFinite(num(z.sma20))?ret(num(z.sma20),num(z.price)):null};}catch{return{}}
+async function listedPriceStore(){
+ try{
+  const f=await json(`${base()}/data_fubon/files.json`);
+  const names=f.filter(x=>/^fubon_\d{8}_sma\.json$/.test(x)).sort().slice(-21).reverse();
+  const rows=await Promise.all(names.map(async name=>({date:name.match(/(\d{8})/)[1],data:await json(`${base()}/data_fubon/${name}`)})));
+  return{latestDate:rows[0]?.date||null,rows};
+ }catch{return{latestDate:null,rows:[]}}
 }
+function listedPriceData(s,store){
+ const a=[];
+ for(const snapshot of store.rows||[]){
+  const stock=snapshot.data?.[s.code];if(!stock)continue;
+  const key=Object.keys(stock).find(k=>dateKey(k)===snapshot.date);
+  const row=key?stock[key]:null;if(!row||!Number.isFinite(num(row.Price)))continue;
+  a.push({k:snapshot.date,price:num(row.Price),volume:num(row.Volume),sma20:num(row.SMA20),sma60:num(row.SMA60)});
+ }
+ if(!a.length)return null;
+ const z=a[0],p=a[1],d5=a[Math.min(5,a.length-1)],d20=a[Math.min(20,a.length-1)];
+ const vols=a.slice(1,21).map(x=>x.volume).filter(Number.isFinite),av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
+ return{pDate:z.k,price:z.price,r1:ret(p?.price,z.price),r5:ret(d5?.price,z.price),r20:ret(d20?.price,z.price),vr:Number.isFinite(av)&&av?z.volume/av:null,sma20:z.sma20,sma60:z.sma60,smaGap:Number.isFinite(z.sma20)?ret(z.sma20,z.price):null,priceSource:'fubon_daily',pStale:!!store.latestDate&&z.k!==store.latestDate};
+}
+async function fallbackPriceData(s,latestDate){
+ try{
+  const d=await json(`${base()}/data_history_sma/${s.code}.json`);
+  const a=Object.entries(d).map(([k,v])=>({k,...v})).filter(x=>Number.isFinite(num(x.price))).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));if(!a.length)return{};
+  const z=a[0],p=a[1],d5=a[Math.min(5,a.length-1)],d20=a[Math.min(20,a.length-1)],pDate=dateKey(z.k);
+  const vols=a.slice(1,21).map(x=>num(x.volume)).filter(Number.isFinite),av=vols.length?vols.reduce((x,y)=>x+y,0)/vols.length:null;
+  const ageDays=latestDate?(new Date(latestDate.slice(0,4)+'-'+latestDate.slice(4,6)+'-'+latestDate.slice(6,8))-new Date(pDate.slice(0,4)+'-'+pDate.slice(4,6)+'-'+pDate.slice(6,8)))/86400000:null;
+  return{pDate,price:num(z.price),r1:ret(num(p?.price),num(z.price)),r5:ret(num(d5?.price),num(z.price)),r20:ret(num(d20?.price),num(z.price)),vr:Number.isFinite(av)&&av?num(z.volume)/av:null,sma20:num(z.sma20),sma60:num(z.sma60),smaGap:Number.isFinite(num(z.sma20))?ret(num(z.sma20),num(z.price)):null,priceSource:'history_fallback',pStale:Number.isFinite(ageDays)?ageDays>7:true};
+ }catch{return{}}
+}
+async function priceData(s,store){return listedPriceData(s,store)||fallbackPriceData(s,store.latestDate)}
 async function instData(s){
  try{const d=await json(`${base()}/data_institutional/${s.code}.json`);const a=Object.entries(d).map(([k,v])=>({k,...v})).sort((x,y)=>dateKey(y.k).localeCompare(dateKey(x.k)));const top=a[0];if(!top)return{};
  const five=a.slice(0,5);return{iDate:dateKey(top.k),foreign:num(top.ForeignInvestors),foreign5:five.reduce((q,x)=>q+(num(x.ForeignInvestors)||0),0),trust5:five.reduce((q,x)=>q+(num(x.InvestmentTrust)||0),0),inst5:five.reduce((q,x)=>q+(num(x.DailyTotal)||0),0)};}catch{return{}}
@@ -87,23 +114,23 @@ async function marginMaps(){
  return{tw,tp}
 }
 function tdccFor(code,t){const x=t.trends?.[code]||{},lc=x.large_holder_change_pp||{},sc=x.small_holder_change_pp||{};return{large:num(x.large_holder_pct),small:num(x.small_holder_pct),large5:num(lc['5']),large10:num(lc['10']),large20:num(lc['20']),small5:num(sc['5']),small10:num(sc['10']),small20:num(sc['20'])}}
-function marginFor(code,m){const a=m.tw.map[code]||m.tp.map[code];if(!a)return{};const d=Number.isFinite(a.balance)&&Number.isFinite(a.prev)?a.balance-a.prev:null;const use=Number.isFinite(a.use)?a.use:(Number.isFinite(a.balance)&&Number.isFinite(a.limit)&&a.limit?100*a.balance/a.limit:null);return{margin:a.balance,marginD:d,marginUse:use,marginDate:m.tw.map[code]?m.tw.date:m.tp.date,marginStale:!!m.tp.map[code]&&m.tp.stale}}
+function marginFor(code,m){const isTpex=!!m.tp.map[code],a=m.tw.map[code]||m.tp.map[code];if(!a)return{};if(isTpex&&m.tp.stale)return{margin:null,marginD:null,marginUse:null,marginDate:m.tp.date,marginStale:true};const d=Number.isFinite(a.balance)&&Number.isFinite(a.prev)?a.balance-a.prev:null;const use=Number.isFinite(a.use)?a.use:(Number.isFinite(a.balance)&&Number.isFinite(a.limit)&&a.limit?100*a.balance/a.limit:null);return{margin:a.balance,marginD:d,marginUse:use,marginDate:isTpex?m.tp.date:m.tw.date,marginStale:false}}
 function judge(x){
  let score=0,reasons=[];const largeTrend=[x.large5,x.large10,x.large20].filter(Number.isFinite),largeUp=largeTrend.filter(v=>v>=.5).length,largeDown=largeTrend.filter(v=>v<=-.5).length;
  if(largeUp>=2){score+=2;reasons.push('大戶多週期增加')}else if(largeDown>=2){score-=2;reasons.push('大戶多週期下降')}
  if(largeDown===3&&Number.isFinite(x.large20)&&x.large20<=-2){score-=1;reasons.push('大戶持續撤退')}
  if(Number.isFinite(x.small20)&&x.small20>=.5){score-=1;reasons.push('散戶20日增加')}if(Number.isFinite(x.foreign5)){if(x.foreign5>0)score+=1;else if(x.foreign5<0)score-=1}
  if(Number.isFinite(x.marginD)&&Number.isFinite(x.r5)&&x.r5>0){if(x.marginD<0)score+=1;else if(x.marginD>0){score-=1;reasons.push('上漲增融資')}}
- if(Number.isFinite(x.smaGap)){if(x.smaGap>=0)score+=1;else score-=1}if(Number.isFinite(x.vr)&&x.vr>=1.2&&Number.isFinite(x.r5)&&x.r5>0)score+=1;
+ if(!x.pStale&&Number.isFinite(x.smaGap)){if(x.smaGap>=0)score+=1;else score-=1}if(!x.pStale&&Number.isFinite(x.vr)&&x.vr>=1.2&&Number.isFinite(x.r5)&&x.r5>0)score+=1;
  let sig='mixed',label='🟡 混合';if(score>=3){sig='strong';label='🟢 偏強'}else if(score<=-2){sig='risk';label='🔴 警訊'}if(![x.price,x.large,x.foreign5,x.margin].some(Number.isFinite)){sig='nodata';label='⚪ 資料不足'}
- const momentum=Number.isFinite(x.r5)&&Number.isFinite(x.r20)&&x.r5>3&&x.r20>8&&(x.vr??0)>=1.1?'strong':(x.r5??-1)>0&&(x.r20??-1)>0?'positive':'weak';
+ const momentum=x.pStale?'stale':Number.isFinite(x.r5)&&Number.isFinite(x.r20)&&x.r5>3&&x.r20>8&&(x.vr??0)>=1.1?'strong':(x.r5??-1)>0&&(x.r20??-1)>0?'positive':'weak';
  return{score,sig,label,reasons,momentum}
 }
 function entryRadar(x){
  const chip=(Number.isFinite(x.large10)&&x.large10>0?1:0)+(Number.isFinite(x.large20)&&x.large20>0?1:0)+(Number.isFinite(x.small20)&&x.small20<0?1:0);
  const inst=(Number.isFinite(x.foreign5)&&x.foreign5>0?1:0)+(Number.isFinite(x.trust5)&&x.trust5>0?1:0);
- const price=(Number.isFinite(x.smaGap)&&x.smaGap>=0?1:0)+(Number.isFinite(x.smaGap)&&x.smaGap>=0&&x.smaGap<=10?1:0);
- const volume=(Number.isFinite(x.r5)&&x.r5>0?1:0)+(Number.isFinite(x.vr)&&x.vr>=1.1?1:0);
+ const price=x.pStale?0:(Number.isFinite(x.smaGap)&&x.smaGap>=0?1:0)+(Number.isFinite(x.smaGap)&&x.smaGap>=0&&x.smaGap<=10?1:0);
+ const volume=x.pStale?0:(Number.isFinite(x.r5)&&x.r5>0?1:0)+(Number.isFinite(x.vr)&&x.vr>=1.1?1:0);
  const margin=Number.isFinite(x.marginD)&&x.marginD<=0?1:0;
  const total=chip+inst+price+volume+margin;
  const label=total>=8?'🟢 條件較完整':total>=5?'🟡 等待確認':'🔴 風險較高';
@@ -115,7 +142,7 @@ function render(){
  const q=document.getElementById('q').value.trim().toLowerCase(),th=document.getElementById('theme').value,sg=document.getElementById('sig').value;
  let a=DATA.filter(x=>(!q||[x.code,x.name,x.theme,x.focus].join(' ').toLowerCase().includes(q))&&(!th||x.theme===th)&&(!sg||x.sig===sg));
  a.sort((x,y)=>{let A=x[sort.k],B=y[sort.k];if(typeof A==='string')return A.localeCompare(B)*sort.dir;A=Number.isFinite(A)?A:-Infinity;B=Number.isFinite(B)?B:-Infinity;return(A-B)*sort.dir});
- document.getElementById('rows').innerHTML=a.map(x=>`<tr><td class="left">${x.theme}</td><td class="left"><span class="code">${x.code}</span> <span class="name">${x.name}</span></td><td>${fmt(x.price)}</td><td>${cell(x.r1,'pct')}</td><td>${cell(x.r5,'pct')}</td><td>${cell(x.r20,'pct')}</td><td>${Number.isFinite(x.vr)?x.vr.toFixed(2)+'×':'—'}</td><td>${cell(x.smaGap,'pct')}</td><td>${levelPct(x.large)}</td><td class="${cls(x.large5)}">${pp(x.large5)}</td><td class="${cls(x.large10)}">${pp(x.large10)}</td><td class="${cls(x.large20)}">${pp(x.large20)}</td><td>${levelPct(x.small)}</td><td class="${cls(x.foreign5)}">${fmt(x.foreign5)}</td><td class="${cls(x.trust5)}">${fmt(x.trust5)}</td><td class="${cls(-x.marginD)}">${fmt(x.marginD)}${x.marginStale?' ⚠':''}</td><td>${Number.isFinite(x.marginUse)?x.marginUse.toFixed(1)+'%':'—'}</td><td class="left"><b class="${x.entryScore>=8?'good':x.entryScore>=5?'warn':'bad'}">${x.entryLabel} ${x.entryScore}/${x.entryMax}</b><br><span class="muted">籌${x.entryParts.chip}/3｜法${x.entryParts.inst}/2｜價${x.entryParts.price}/2｜量${x.entryParts.volume}/2｜融${x.entryParts.margin}/1</span></td><td class="signal ${x.sig==='strong'?'good':x.sig==='risk'?'bad':'warn'}">${x.label}</td><td class="left focus">${x.focus}</td></tr>`).join('');
+ document.getElementById('rows').innerHTML=a.map(x=>`<tr><td class="left">${x.theme}</td><td class="left"><span class="code">${x.code}</span> <span class="name">${x.name}</span></td><td>${fmt(x.price)}${x.pStale?' ⚠':''}</td><td>${cell(x.r1,'pct')}</td><td>${cell(x.r5,'pct')}</td><td>${cell(x.r20,'pct')}</td><td>${Number.isFinite(x.vr)?x.vr.toFixed(2)+'×':'—'}</td><td>${cell(x.smaGap,'pct')}</td><td>${levelPct(x.large)}</td><td class="${cls(x.large5)}">${pp(x.large5)}</td><td class="${cls(x.large10)}">${pp(x.large10)}</td><td class="${cls(x.large20)}">${pp(x.large20)}</td><td>${levelPct(x.small)}</td><td class="${cls(x.foreign5)}">${fmt(x.foreign5)}</td><td class="${cls(x.trust5)}">${fmt(x.trust5)}</td><td class="${cls(-x.marginD)}">${fmt(x.marginD)}${x.marginStale?' ⚠':''}</td><td>${Number.isFinite(x.marginUse)?x.marginUse.toFixed(1)+'%':'—'}</td><td class="left"><b class="${x.entryScore>=8?'good':x.entryScore>=5?'warn':'bad'}">${x.entryLabel} ${x.entryScore}/${x.entryMax}</b><br><span class="muted">籌${x.entryParts.chip}/3｜法${x.entryParts.inst}/2｜價${x.entryParts.price}/2｜量${x.entryParts.volume}/2｜融${x.entryParts.margin}/1</span></td><td class="signal ${x.sig==='strong'?'good':x.sig==='risk'?'bad':'warn'}">${x.label}</td><td class="left focus">${x.focus}</td></tr>`).join('');
 }
 function summary(td,m){
  const strong=DATA.filter(x=>x.sig==='strong'),risk=DATA.filter(x=>x.sig==='risk'),sma=DATA.filter(x=>(x.smaGap??-1)>=0),mom=DATA.filter(x=>x.momentum==='strong');
@@ -125,13 +152,13 @@ function summary(td,m){
  const diverge=DATA.filter(x=>(x.r5??0)>0&&(x.large10??0)<-.5&&(x.large20??0)<-1&&(x.marginD??0)>0).map(x=>x.code+' '+x.name).join('、')||'無明顯個股';
  const ready=DATA.filter(x=>x.entryScore>=8).sort((a,b)=>b.entryScore-a.entryScore).slice(0,8).map(x=>x.code+' '+x.name).join('、')||'目前沒有達到 8/10 的股票';
  dailyAnalysis.innerHTML=`<div class="analysis-item good"><b>籌碼相對健康：</b>${top}。偏強條件主要來自大戶 5/10/20 日趨勢、法人近5日偏買、融資未追高及價格站穩SMA20。</div><div class="analysis-item good"><b>進場條件較完整（≥8/10）：</b>${ready}。仍應逐項確認缺分來源，不把總分視為買進訊號。</div><div class="analysis-item bad"><b>需優先檢查派發：</b>${bad}。警訊不是直接等於會跌，而是代表價格與籌碼支撐較弱。</div><div class="analysis-item warn"><b>股價上漲但籌碼散戶化：</b>${diverge}。若後續再跌破SMA20且量能放大，風險會比單純整理高。</div><div class="analysis-item"><b>動能：</b>${mom.length} 檔同時具備近5日/20日正報酬與量能確認；${sma.length} 檔仍站在SMA20之上。</div>`;
- const dates=[...new Set(DATA.map(x=>x.pDate).filter(Boolean))].sort();asOf.textContent=`價格最新日：${dates.at(-1)||'—'}｜TDCC：${td.date||'—'}｜上市融資：${m.tw.date||'—'}｜上櫃融資：${m.tp.date||'—'}${m.tp.stale?'（上櫃融資資料已過期，僅供參考）':''}`;
- const hz=td.horizons||{},h5=hz['5'],h10=hz['10'],h20=hz['20'];dataFoot.textContent=`資料來源：repository data_history_sma、data_tdcc_shareholding、data_institutional、data_twse_margin_balance、data_tpex_margin_balance。大戶 5/10/20 日變化以各目標日「當日或之前最近一筆 TDCC 週資料」計算；本期實際比較間隔：5日→${h5?.actual_days??'—'}日、10日→${h10?.actual_days??'—'}日、20日→${h20?.actual_days??'—'}日。變化單位為百分點 pp。法人欄位若無 canonical 個股檔會顯示空白。`;
+ const listedDates=[...new Set(DATA.filter(x=>x.priceSource==='fubon_daily').map(x=>x.pDate).filter(Boolean))].sort(),fallbackDates=[...new Set(DATA.filter(x=>x.priceSource==='history_fallback').map(x=>x.pDate).filter(Boolean))].sort();asOf.textContent=`上市價格最新日：${listedDates.at(-1)||'—'}｜上櫃/其他價格：${fallbackDates.at(-1)||'—'}${DATA.some(x=>x.priceSource==='history_fallback'&&x.pStale)?'（過期資料不計入價格/量能評分）':''}｜TDCC：${td.date||'—'}｜上市融資：${m.tw.date||'—'}｜上櫃融資：${m.tp.date||'—'}${m.tp.stale?'（過期，不計入評分）':''}`;
+ const hz=td.horizons||{},h5=hz['5'],h10=hz['10'],h20=hz['20'];dataFoot.textContent=`資料來源：repository data_fubon（上市每日價格/SMA）、data_history_sma（缺少每日上市資料時的 fallback）、data_tdcc_shareholding、data_institutional、data_twse_margin_balance、data_tpex_margin_balance。過期 fallback 價格與過期上櫃融資只顯示警告，不參與評分。大戶 5/10/20 日變化以各目標日「當日或之前最近一筆 TDCC 週資料」計算；本期實際比較間隔：5日→${h5?.actual_days??'—'}日、10日→${h10?.actual_days??'—'}日、20日→${h20?.actual_days??'—'}日。變化單位為百分點 pp。法人欄位若無 canonical 個股檔會顯示空白。`;
 }
 async function init(){
  const themes=[...new Set(WATCH.map(x=>x.theme))];theme.innerHTML+=[...themes].sort().map(x=>`<option>${x}</option>`).join('');
- const [td,m]=await Promise.all([tdccMaps(),marginMaps()]);
- const arr=await Promise.all(WATCH.map(async s=>{const [p,i]=await Promise.all([priceData(s),instData(s)]);const x={...s,...p,...i,...tdccFor(s.code,td),...marginFor(s.code,m)};const judged={...x,...judge(x)};return{...judged,...entryRadar(judged)}}));
+ const [td,m,priceStore]=await Promise.all([tdccMaps(),marginMaps(),listedPriceStore()]);
+ const arr=await Promise.all(WATCH.map(async s=>{const [p,i]=await Promise.all([priceData(s,priceStore),instData(s)]);const x={...s,...p,...i,...tdccFor(s.code,td),...marginFor(s.code,m)};const judged={...x,...judge(x)};return{...judged,...entryRadar(judged)}}));
  DATA=arr;summary(td,m);render();
 }
 [q,theme,sig].forEach(el=>el.addEventListener('input',render));document.querySelectorAll('th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;if(sort.k===k)sort.dir*=-1;else{sort.k=k;sort.dir=-1}render()});init().catch(e=>dailyAnalysis.innerHTML='<div class="analysis-item bad">載入失敗：'+e.message+'</div>');
