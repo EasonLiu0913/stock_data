@@ -1,0 +1,57 @@
+name: "[Research] Verify Accumulation Outcome Association Protocol"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_institutional_accumulation_catalyst_outcome_association_protocol.js'
+      - 'tests/institutional_accumulation_catalyst_outcome_association_protocol.test.js'
+      - 'data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json'
+      - '.github/workflows/test-institutional-accumulation-catalyst-outcome-association-protocol.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: institutional-accumulation-outcome-association-protocol-v1
+  cancel-in-progress: false
+
+jobs:
+  verify-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout checked-in protocol inputs
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts/build_institutional_accumulation_catalyst_outcome_association_protocol.js
+            tests/institutional_accumulation_catalyst_outcome_association_protocol.test.js
+            data_research/institutional-flow/institutional-accumulation-catalyst-five-window-event-intelligence-v1.json
+            data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Run zero-outcome protocol regressions
+        run: node --test tests/institutional_accumulation_catalyst_outcome_association_protocol.test.js
+
+      - name: Verify deterministic byte regeneration
+        run: node scripts/build_institutional_accumulation_catalyst_outcome_association_protocol.js
+
+      - name: Verify authorization remains closed
+        run: |
+          node - <<'NODE'
+          const p = require('./data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json');
+          if (p.cohort.primary_count !== 11 || p.cohort.excluded_left_censored_count !== 169) throw new Error('cohort count drift');
+          if (p.authorization_gate.outcome_values_read !== false) throw new Error('outcome values were opened');
+          if (p.authorization_gate.outcome_association_execution_authorized !== false) throw new Error('execution was authorized');
+          for (const [key, value] of Object.entries(p.protected_state)) {
+            if (value !== false) throw new Error(`protected_state ${key} is not false`);
+          }
+          console.log('protocol cohort + authorization + protected-state assertions: PASS');
+          NODE

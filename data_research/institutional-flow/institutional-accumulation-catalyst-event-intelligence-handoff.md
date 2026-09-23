@@ -412,3 +412,28 @@ Independently verify:
 
 Fix bounded defects if required. On PASS, record closeout and prepare the next outcome-association execution pair, but do not activate execution unless the repository owner explicitly authorizes opening outcome values after seeing this protocol closeout. End: Prompt B closeout: PASS.
 ```
+
+
+## Outcome-association protocol Prompt A — implementation checkpoint
+
+Round: `institutional-accumulation-catalyst-outcome-association-protocol-v1`
+
+Status:
+- Prompt A: **IMPLEMENTED / NODE24 READ-ONLY GATE PENDING**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Implementation boundary:
+- frozen parent Event Intelligence blob: `ee34b995148886ed4f4b27940c6a854fff26f3bb`;
+- primary cohort: exactly **11** prospectively first-seen events;
+- excluded left-censored events: **169**;
+- captured-detail context: **3**, separate from primary analysis;
+- methodology id: `institutional-accumulation-catalyst-outcome-association-protocol-methodology-v1`;
+- methodology SHA256: `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be`;
+- canonical protocol artifact: `data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json`;
+- deterministic builder: `scripts/build_institutional_accumulation_catalyst_outcome_association_protocol.js`;
+- regression suite: `tests/institutional_accumulation_catalyst_outcome_association_protocol.test.js`;
+- read-only Node24 gate: `.github/workflows/test-institutional-accumulation-catalyst-outcome-association-protocol.yml`;
+- outcome values read: **false**;
+- outcome-association execution authorized: **false**.
+
+The implementation is intentionally not marked Prompt A complete until the pushed checked-in state passes the Node24 read-only deterministic gate and the exact run/job evidence is recorded here. The preregistered Prompt B above remains unchanged.
