@@ -282,3 +282,133 @@ Known unrelated repository guard:
 Prompt A completion boundary reached.
 
 **Prompt A complete — ready for Prompt B.**
+
+
+## Prompt B closeout — five-window Event Intelligence / Blind Feature Freeze
+
+Round:
+`institutional-accumulation-catalyst-five-window-event-intelligence-v1`
+
+Independent closeout verification:
+- sole active routing remains `institutional-accumulation-event-intelligence` and points to this handoff — PASS;
+- canonical source remains blob `e713de686951dbb7eba1bb9cd4e8a96ba62cfe68` with exactly 30 valid / 0 invalid / 0 conflict / 30 immutable snapshots — PASS;
+- builder reads only the canonical observation audit, the observation-referenced prospective PIT snapshots, and the five explicitly frozen evidence/provenance artifacts — PASS;
+- builder contains no network client, fetch, HTTP, price provider, broker, margin, institutional-outcome, Withdrawal, holdout, or future-return input — PASS;
+- listing event identity is derived only from official `t05st01_detail` parameters as `companyId|marketKind|enterDate|serialNumber` — PASS;
+- detail identity is derived only from exact `source_request_key` and must match an observed listing identity — PASS;
+- `first_seen_at` / `last_seen_at` remain checked-in collection timestamps; `source_reported_at` is retained separately and cannot backdate PIT availability — PASS;
+- deterministic taxonomy and feature regex source+flags are embedded in methodology identity — PASS;
+- methodology SHA256 remains `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96` — PASS;
+- canonical artifact blob remains `ee34b995148886ed4f4b27940c6a854fff26f3bb` — PASS;
+- artifact remains exactly 180 events:
+  - 1102 = 60, including 2 prospective-first-seen and 58 left-censored;
+  - 1104 = 27, including 0 prospective-first-seen and 27 left-censored;
+  - 1216 = 93, including 9 prospective-first-seen and 84 left-censored;
+  - total prospective-first-seen = 11;
+  - total left-censored = 169;
+- captured detail coverage remains exactly 3 event identities, one per stock, and is explicitly not treated as generally available across all events — PASS;
+- artifact contains no D1/D3/D5 returns, price change, benchmark-relative return, post-event institutional/broker/margin labels, score, rank, model output, strategy recommendation, or production decision — PASS;
+- artifact protected-state flags all remain false — PASS;
+- current frozen blobs independently re-fetched from remote main remain byte-identical:
+  - delta `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+  - cross-day `9dbee14b300980fb46ea7251b5707429071a80bf`;
+  - fourth longitudinal `31c13856af41fee4f277103807b081873dd780e1`;
+  - fifth longitudinal `d3ae72fea05ace0815b9c7d22931a19a7fb32fdd`;
+  - historical PIT provenance `7ccafbe36206770d93f454feefdca81a082d4cd0`;
+- bounded diff from preregistration baseline contains only routing/handoff, event-intelligence builder/test/workflows/artifact plus unrelated concurrent TWSE margin-maintenance files; no protected Phase 2/outcome/2454/holdout/Withdrawal path was opened — PASS;
+- final checked-in-state Node24 run `35872392427`, regression job `107219551950`, tested SHA `7b8d376682017cc471c5ae6f148012bedda3bfae` completed SUCCESS — PASS;
+- independent final log confirms **8 pass / 0 fail** and `final event intelligence byte-match + protected-state assertions: PASS` — PASS.
+
+Closeout interpretation:
+- the methodology is now frozen before any outcome access;
+- only the 11 non-left-censored events have clean prospective publication-interval first-seen evidence suitable for the primary future outcome cohort;
+- the 169 left-censored events may be retained only as descriptive/secondary context unless a separate historical PIT-safe design is authorized;
+- full-detail features are not generally available because only 3 event identities have captured detail snapshots;
+- no observed listing/detail revisions in this sample should be interpreted only as a sample result, not global MOPS immutability.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-outcome-association-protocol-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+This promotion does not authorize or read outcomes. It is a protocol-preregistration round only.
+
+## Next round objective
+
+Freeze the future outcome-association protocol before any outcome file is opened.
+
+The primary cohort must be the 11 prospectively first-seen event identities from the frozen Event Intelligence artifact. The 169 left-censored events must not enter the primary cohort. The 3-event captured-detail subset must be analyzed separately from listing-level features.
+
+The protocol must define, without reading results:
+- event T0 semantics;
+- trading-day alignment for after-hours vs intraday announcements;
+- D1/D3/D5 price return definitions;
+- benchmark-relative return definition and benchmark source;
+- pre-event and post-event institutional-flow windows;
+- broker-flow alignment;
+- margin-financing alignment;
+- large-holder/retail ownership alignment if an existing PIT-safe source is available;
+- missing-data and non-trading-day policy;
+- same-event multiple announcement handling;
+- primary vs secondary analyses;
+- no-threshold / no-ranking exploratory reporting rules;
+- explicit minimum-sample warning because the clean primary cohort is only 11 events.
+
+No outcome values may be read in this round.
+
+## Prompt A — outcome-association protocol preregistration
+
+```text
+Continue repository EasonLiu0913/stock_data only if docs/agent-prompts/task-routing.json still routes the sole active task to data_research/institutional-flow/institutional-accumulation-catalyst-event-intelligence-handoff.md and round institutional-accumulation-catalyst-outcome-association-protocol-v1 remains Prompt A NOT STARTED / ACTIVE.
+
+Before work read AGENTS.md, docs/project-philosophy.md, docs/roadmap/current-phase.md, this handoff, the frozen five-window Event Intelligence artifact, the prospective PIT capture contract, and relevant existing documentation for unified prices, institutional investors, broker data, margin data, and any PIT-safe large-holder ownership source. Fetch current main and classify concurrent changes.
+
+This is a zero-outcome protocol-preregistration round. Do not read any actual price rows, future returns, post-event institutional values, broker values, margin values, TDCC/ownership values, protected outcomes, 2454 outcomes, holdouts, or Withdrawal outcomes.
+
+Required work:
+1. Derive and freeze the exact 11-event primary cohort identity list from the frozen Event Intelligence artifact. Record identity, stock, first_seen_at, source_reported_at, first-listing taxonomy/features only. Do not attach outcomes.
+2. Define T0 trading-session semantics before reading market data:
+   - event first_seen during regular session;
+   - event first_seen after regular close;
+   - weekend/holiday handling;
+   - next eligible trading session mapping;
+   - never backdate from source_reported_at.
+3. Preregister D1/D3/D5 return formulas, benchmark-relative return formula, and exact intended unified-price-provider entry point. Do not calculate any return.
+4. Preregister institutional-flow, broker-flow, margin-financing, and optional PIT-safe large-holder/retail windows relative to T0. Name exact existing repository paths/functions/providers after verifying them.
+5. Define missing-data policy, non-trading-day policy, duplicate/same-day multi-event policy, event clustering policy, and rules separating listing-level primary analysis from the 3-event detail-feature secondary analysis.
+6. Define exploratory outputs only: per-event joined record, descriptive counts/distributions, no optimized threshold, no score/rank, no predictive model, no production strategy, no statistical significance claim from n=11.
+7. Create a canonical protocol JSON under data_research/institutional-flow/ containing methodology identity/hash, frozen Event Intelligence blob/hash, exact primary cohort identities, all formulas/alignment policies, intended provider paths, protected-state assertions, and authorization gate:
+   outcome_values_read=false,
+   outcome_association_execution_authorized=false.
+8. Add deterministic Node24 tests and a read-only byte-regeneration workflow proving the protocol artifact is reproducible without opening outcome files.
+9. Preserve byte-identically Event Intelligence blob ee34b995148886ed4f4b27940c6a854fff26f3bb and all prior frozen evidence.
+10. Record exact commits/runs/jobs/blob/methodology hash in this handoff.
+
+Prompt A completes only when the protocol artifact is durable and the read-only deterministic gate passes while outcome_values_read=false and outcome_association_execution_authorized=false. Stop with: Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — outcome-association protocol closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-outcome-association-protocol-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify:
+- routing still points to this handoff and round;
+- frozen Event Intelligence artifact remains blob ee34b995148886ed4f4b27940c6a854fff26f3bb with methodology SHA256 27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96;
+- primary cohort is exactly the 11 non-left-censored event identities and excludes all 169 left-censored events;
+- no actual outcome/price/institutional/broker/margin/ownership values were read or embedded;
+- T0, trading-session, D1/D3/D5, benchmark, institutional, broker, margin and optional ownership alignment rules were fixed before outcome access;
+- exact provider/repository entry points were documented;
+- listing-level primary analysis is separated from the 3-event detail-feature secondary subset;
+- no score/rank/threshold/model/strategy/production behavior was introduced;
+- protocol artifact has outcome_values_read=false and outcome_association_execution_authorized=false;
+- Node24 read-only deterministic gate passes with byte-identical protocol regeneration;
+- all prior frozen blobs and protected state remain unchanged.
+
+Fix bounded defects if required. On PASS, record closeout and prepare the next outcome-association execution pair, but do not activate execution unless the repository owner explicitly authorizes opening outcome values after seeing this protocol closeout. End: Prompt B closeout: PASS.
+```
