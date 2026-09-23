@@ -43,6 +43,8 @@ test('title revision summary preserves first and last collection semantics', () 
 
 test('taxonomy and features are outcome-blind text rules', () => {
   assert.deepEqual(classifyTaxonomy('公告第二季法人說明會召開資訊'), ['investor_conference']);
+  assert.deepEqual(classifyTaxonomy('受邀參加投資人說明會'), ['investor_conference']);
+  assert.deepEqual(classifyTaxonomy('公告處分理財產品'), ['asset_transaction']);
   const f = textFeatures('預期產能增加20%，客戶訂單與ASP展望改善');
   assert.equal(f.has_numeric_content, true);
   assert.equal(f.has_percentage, true);
