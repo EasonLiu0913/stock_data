@@ -419,7 +419,7 @@ Fix bounded defects if required. On PASS, record closeout and prepare the next o
 Round: `institutional-accumulation-catalyst-outcome-association-protocol-v1`
 
 Status:
-- Prompt A: **IMPLEMENTED / NODE24 READ-ONLY GATE PENDING**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Implementation boundary:
@@ -436,4 +436,18 @@ Implementation boundary:
 - outcome values read: **false**;
 - outcome-association execution authorized: **false**.
 
-The implementation is intentionally not marked Prompt A complete until the pushed checked-in state passes the Node24 read-only deterministic gate and the exact run/job evidence is recorded here. The preregistered Prompt B above remains unchanged.
+Completion evidence:
+- implementation commit: `7b6cb1a8acbc52c298b6b75ac62a867f80707617`;
+- read-only Node24 workflow run: `35873823675`;
+- verify job: `107224467351`;
+- regression result: **8 pass / 0 fail**;
+- deterministic checked-in artifact regeneration: **byte-match PASS**;
+- cohort assertion: **11 primary / 169 left-censored excluded / 3 captured-detail context**;
+- authorization/protected-state assertion: **PASS**;
+- `outcome_values_read=false`;
+- `outcome_association_execution_authorized=false`;
+- current-main observed before this closeout checkpoint: `7b6cb1a8acbc52c298b6b75ac62a867f80707617`; unrelated concurrent commits did not alter the frozen Event Intelligence blob or active routing.
+
+**Prompt A complete — ready for Prompt B.**
+
+The preregistered Prompt B above remains unchanged and has not been executed.
