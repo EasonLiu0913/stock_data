@@ -1,0 +1,73 @@
+name: "[Research] Repair Trading Calendar Freshness"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/sync_trading_calendar_from_daily_sma.js'
+      - 'tests/sync_trading_calendar_from_daily_sma.test.js'
+      - '.github/workflows/repair-trading-calendar-freshness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-calendar-repair-v1
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bounded calendar inputs
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts/sync_trading_calendar_from_daily_sma.js
+            tests/sync_trading_calendar_from_daily_sma.test.js
+            data_history_sma/trading_days.json
+            data_history_sma/non_trading_days.json
+            data_fubon/fubon_202608*_sma.json
+            data_fubon/fubon_202609*_sma.json
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Run calendar regression tests
+        run: node --test tests/sync_trading_calendar_from_daily_sma.test.js
+
+      - name: Repair canonical calendar from validated durable SMA checkpoints
+        run: |
+          set -euo pipefail
+          node scripts/sync_trading_calendar_from_daily_sma.js \
+            --start 20260805 \
+            --end 20260923 \
+            --require-latest 20260923
+
+      - name: Commit bounded calendar repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add data_history_sma/trading_days.json
+          if git diff --cached --quiet; then
+            echo "Canonical trading calendar already fresh through 20260923."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data: refresh canonical trading calendar through 20260923"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if git rebase origin/main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          echo "Failed to checkpoint calendar repair after bounded retries." >&2
+          exit 1
