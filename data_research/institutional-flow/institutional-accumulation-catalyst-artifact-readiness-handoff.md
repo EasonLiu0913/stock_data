@@ -630,3 +630,100 @@ Prompt A limitation:
 Prompt A completion boundary reached. The preregistered fifth-window Prompt B above remains unchanged and pending.
 
 **Prompt A complete — ready for Prompt B.**
+
+
+## Prompt B closeout — fifth-window repeat-capture canary
+
+Round:
+`institutional-accumulation-catalyst-prospective-fifth-window-repeat-capture-canary-v1`
+
+Independent closeout verification:
+- sole active routing still points to this handoff through `institutional-accumulation` — PASS;
+- fourth-window round already has durable Prompt B PASS — PASS;
+- historical PIT provenance blob remains `7ccafbe36206770d93f454feefdca81a082d4cd0`, with 33 identities / 0 PIT-ready / 33 not-PIT-ready, outcome-blind and protected state unopened — PASS;
+- eligibility used canonical latest-fourth `2026-09-22T11:14:18.342Z`; earliest fifth observation is `2026-09-23T12:05:25.823Z`, later Asia/Taipei date and `89467481` ms elapsed >= `43200000` ms — PASS;
+- pre-live Node24 zero-network run `35858153046` at tested SHA `5c96a1ba3c94a5f43fe867d0eba35265097cd144` completed SUCCESS before source requests — PASS;
+- exactly one live fifth-window run `35858213811` executed for only 1102/1104/1216 through independent matrix jobs with `max-parallel:1` — PASS;
+- live jobs:
+  - 1102 job `107171736507`: 2 requests / 2 snapshots, checkpoint `30ef34c2482892ccd89119b0ae313d8160e31366`;
+  - 1104 job `107171735995`: 2 requests / 2 snapshots, checkpoint `16e0c0b6c110118a3a1faddd9f9dc51f54298032`;
+  - 1216 job `107171737328`: 2 requests / 2 snapshots, checkpoint `7c47701a4678e4fbeb1431eafee671ffe155d82d`;
+- total repository-controlled source requests = exactly 6, with collector-enforced randomized 20–60 second cooldown and historical backfill prohibited — PASS;
+- collector at final tested SHA uses only official `https://mops.twse.com.tw/mops/api/t05st01` and `https://mops.twse.com.tw/mops/api/t05st01_detail`; no legacy endpoint is present — PASS;
+- no historical backfill, Wave A/Wave C, scheduler, broad-universe rollout, outcome access, or second live fifth-window capture occurred — PASS;
+- all original 24 snapshots remain durable and the baseline-to-final-tested-SHA diff adds exactly six fifth-window snapshots — PASS;
+- canonical observation audit blob remains `e713de686951dbb7eba1bb9cd4e8a96ba62cfe68`: exactly 30 valid / 0 invalid / 0 conflict, each stock 10 total / 5 listing / 5 detail, interfaces 15 listing + 15 detail, 30 unique immutable snapshot IDs — PASS;
+- fifth-window longitudinal blob remains `d3ae72fea05ace0815b9c7d22931a19a7fb32fdd`: 30 observations / 6 chains, exact fourth-to-fifth timing evidence only, no catalyst-significance or outcome interpretation — PASS;
+- frozen closed artifacts remain byte-identical:
+  - two-window delta `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+  - three-window cross-day `9dbee14b300980fb46ea7251b5707429071a80bf`;
+  - fourth-window longitudinal `31c13856af41fee4f277103807b081873dd780e1`;
+- final read-only Node24 run `35859084861`, regression job `107174573118`, tested SHA `ad31dae7295e560d1fa92a26dc28208f28387721`, completed SUCCESS — PASS;
+- final log independently confirms observation, closed delta, cross-day, fourth-window longitudinal, and fifth-window longitudinal byte-match PASS, plus durable/regenerated PIT assertions PASS — PASS;
+- bounded baseline `20e222d6ea64c03704c8240e84dd06e3891a9f1c` -> final tested SHA contains only authorized fifth-window workflow/auditor/test/audit/trigger/snapshot changes and no protected Phase 2, outcomes, holdouts, association, Withdrawal, strategy/model/production/scheduler/broad-universe/generic-news or historical Wave A/Wave C paths — PASS;
+- later commits after Prompt A completion are unrelated market/data refreshes (Fubon, CNN Fear & Greed, TAIFEX) and do not alter this routing or frozen evidence — PASS.
+
+Closeout limitations:
+- evidence remains only five forward prospective windows for the same three preregistered stocks;
+- this still does not establish catalyst significance, outcome relationship, scheduler readiness, broad-universe quality, historical PIT upgrade, model/strategy value, or production behavior;
+- raw response/content differences remain transport/source evidence only.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+## Next round objective
+
+Extend duration evidence by exactly one additional forward-only prospective window for the same three preregistered stocks while preserving all closed two-, three-, four-, and five-window artifacts byte-identically. No scheduler or universe expansion is authorized.
+
+Eligibility must be derived from canonical validated evidence. The latest accepted observation is currently
+`2026-09-23T12:09:31.642Z`. A sixth live window is allowed only on a later Asia/Taipei calendar date and at least 12 elapsed hours after that timestamp.
+
+## Prompt A — sixth-window repeat-capture canary
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning project only if docs/agent-prompts/task-routing.json still routes the sole active task to data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md and round institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1 remains Prompt A NOT STARTED / ACTIVE.
+
+Before work: fetch current remote main; read AGENTS.md, routing, this handoff, canonical PIT contract, collector, observation/delta/cross-day/fourth/fifth longitudinal auditors and tests, relevant workflows, current 30-observation audit, all frozen closed artifacts, and frozen PIT provenance artifact. Recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history and classify concurrent changes.
+
+Eligibility gate before any source request:
+- derive latest accepted collected_at from canonical validated observations; it must remain 2026-09-23T12:09:31.642Z unless a concurrent change is explicitly classified;
+- proposed sixth capture must be on a later Asia/Taipei calendar date and at least 12 elapsed hours after that timestamp;
+- if either condition fails, make zero source requests and stop with Prompt A not yet eligible for sixth-window capture.
+
+Objective: collect exactly one additional forward-only window for only 1102/1104/1216 while preserving append-only PIT identity and all previously closed evidence.
+
+Ordered execution:
+A. Before live requests, make only bounded zero-network changes needed for exactly six complete windows. Preserve byte-identically:
+   - two-window delta blob cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00;
+   - three-window cross-day blob 9dbee14b300980fb46ea7251b5707429071a80bf;
+   - fourth-window longitudinal blob 31c13856af41fee4f277103807b081873dd780e1;
+   - fifth-window longitudinal blob d3ae72fea05ace0815b9c7d22931a19a7fb32fdd.
+   Bind each closed auditor explicitly to its original earliest-window evidence if a sixth window would otherwise change it.
+B. Add only minimum deterministic sixth-window longitudinal evidence for exact UTC/Asia-Taipei date and fifth-to-sixth spacing; do not interpret catalyst significance or open outcomes.
+C. Run Node24 zero-network readiness/regression before any source request; all suites and frozen-artifact byte checks must pass.
+D. Launch exactly one live window through .github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml for only 1102/1104/1216, independent fresh-runner matrix jobs, max-parallel:1, randomized 20–60 second pre-request cooldown, one listing and at most one verified detail request per stock, no tight retry, total repository-controlled requests <=6.
+E. Use only official POST /mops/api/t05st01 and POST /mops/api/t05st01_detail; never legacy endpoint, historical range/backfill, or Wave A/Wave C.
+F. Require race-safe append-only checkpointing. Existing 30 snapshot files must remain byte-identical and present; every new accepted snapshot must pass raw-base64/decoded-length/response-hash/parser/methodology/PIT/canonical-path validation with historical_back_imputation_allowed=false.
+G. On full success canonical observation audit should become exactly 36 valid / 0 invalid / 0 conflict, same three stocks each 12 total / 6 listing / 6 detail, 18 listing + 18 detail, 36 unique immutable snapshot IDs; report actual raw-response hash uniqueness without requiring all hashes to differ.
+H. Run final Node24 read-only deterministic gate on checked-in state; committed observation/new sixth-window longitudinal evidence must regenerate byte-identically while all prior frozen evidence blobs remain byte-identical.
+I. Compare pre-A baseline to final Prompt-A head and classify concurrent changes. No protected Phase 2, outcomes, holdouts, association, Withdrawal, strategy/model/production/scheduler/broad-universe/generic-news path may be opened.
+
+Frozen rules: no scheduler, no broad-universe expansion, no historical PIT upgrade/backfill, no outcomes or future returns, no catalyst/outcome association, no thresholds/scores/models/strategies/production behavior, zero legacy retries, fail closed on response/schema/identity ambiguity, raw response changes are not business significance.
+
+Completion contract: eligibility PASS before requests; pre-live zero-network gate PASS; exactly one <=6-request live window; original 30 snapshots and all frozen closed artifacts unchanged; new snapshots durable append-only; canonical observation audit records exact six-window counts with zero conflicts; new deterministic sixth-window evidence records spacing only; final read-only Node24 gate PASS at recorded tested SHA; handoff records exact commits/runs/jobs/request counts/checkpoints/blob identities/counts/limitations and preserves the preregistered Prompt B below; stop with Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — sixth-window repeat-capture canary closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history. Independently verify: sole active routing still points to this handoff; fifth-window round has durable Prompt B PASS; historical 33/protected state remains frozen/unopened; eligibility satisfied before requests using canonical latest timestamp 2026-09-23T12:09:31.642Z, later Asia/Taipei date, >=12h; pre-live Node24 gate PASS; exactly one bounded sixth live window only 1102/1104/1216 fresh-runner max-parallel1; <=6 requests one listing + at most one detail each and 20–60s cooldown; official APIs only; no legacy/backfill/Wave A/C/scheduler/broad universe; original 30 snapshots byte-identical; frozen delta cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00, cross-day 9dbee14b300980fb46ea7251b5707429071a80bf, fourth longitudinal 31c13856af41fee4f277103807b081873dd780e1, fifth longitudinal d3ae72fea05ace0815b9c7d22931a19a7fb32fdd; new snapshots append-only canonical validation historical_back_imputation_allowed=false; observation exactly 36 valid / 0 invalid / 0 conflict, same stocks 6 listing + 6 detail each, 36 immutable IDs and actual raw hash uniqueness; sixth evidence date/spacing only no interpretation/outcomes; final Node24 read-only PASS tested SHA and byte regeneration; bounded diff only authorized plus classified unrelated, no protected paths. Fix bounded defects/restart. On PASS record evidence, promote only justified next paired round, end Prompt B closeout: PASS, stop without executing promoted Prompt A.
+```
