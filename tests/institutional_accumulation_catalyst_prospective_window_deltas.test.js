@@ -143,6 +143,17 @@ test('fourth window preserves the already-closed first-two-window delta', () => 
   assert.deepEqual(after, before);
 });
 
+test('fifth window preserves the already-closed first-two-window delta', () => {
+  const repo = tmpRepo();
+  buildTwoWindows(repo);
+  const before = run(repo);
+  appendWindow(repo, 3, '11');
+  appendWindow(repo, 4, '12');
+  appendWindow(repo, 5, '13');
+  const after = run(repo);
+  assert.deepEqual(after, before);
+});
+
 test('timestamp tie fails closed', () => {
   const repo = tmpRepo();
   buildTwoWindows(repo, ({ snapshot, window, stock, sourceInterface }) => {
