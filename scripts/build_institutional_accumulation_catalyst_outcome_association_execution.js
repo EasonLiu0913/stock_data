@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { getClose } = require('./lib/stock_price_provider');
 
 const ROOT = path.resolve(__dirname, '..');
 const PROTOCOL_PATH = path.join(ROOT, 'data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json');
@@ -67,6 +68,170 @@ function latestBenchmarkDate() {
 }
 function existsRel(rel) { return fs.existsSync(path.join(ROOT, rel)); }
 
+function parseNumeric(value) {
+  if (value == null) return null;
+  const n = Number(String(value).replaceAll(',', '').trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function benchmarkMap() {
+  const payload = readJson(BENCHMARK_PATH);
+  return new Map((payload.data || []).map(row => [compactDate(row.date), Number(row.close)]));
+}
+
+function tradingIndex(tradingDays, date) {
+  return tradingDays.indexOf(date);
+}
+
+function horizonDate(tradingDays, eventSession, horizonCount) {
+  const idx = tradingIndex(tradingDays, eventSession);
+  if (idx < 0) return null;
+  return tradingDays[idx + horizonCount - 1] || null;
+}
+
+function previousEligibleDate(tradingDays, eventSession) {
+  const idx = tradingIndex(tradingDays, eventSession);
+  return idx > 0 ? tradingDays[idx - 1] : null;
+}
+
+function pctReturn(start, end) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0) return null;
+  return 100 * (end / start - 1);
+}
+
+function materializeReturn(stock, eventSession, horizonCount, tradingDays, bench) {
+  if (!eventSession) return { status:'missing', value_pct:null, benchmark_pct:null, relative_pct:null, reason:'event_session_unresolved' };
+  const baselineDate = previousEligibleDate(tradingDays, eventSession);
+  const targetDate = horizonDate(tradingDays, eventSession, horizonCount);
+  if (!baselineDate || !targetDate) {
+    return { status:'missing', value_pct:null, benchmark_pct:null, relative_pct:null, baseline_date:baselineDate, target_date:targetDate, reason:'immature_trading_horizon' };
+  }
+  const baselineClose = getClose(stock, baselineDate, { root: ROOT });
+  const targetClose = getClose(stock, targetDate, { root: ROOT });
+  const benchmarkBaseline = bench.get(baselineDate) ?? null;
+  const benchmarkTarget = bench.get(targetDate) ?? null;
+  if (![baselineClose,targetClose,benchmarkBaseline,benchmarkTarget].every(Number.isFinite)) {
+    return { status:'missing', value_pct:null, benchmark_pct:null, relative_pct:null, baseline_date:baselineDate, target_date:targetDate, reason:'required_close_missing' };
+  }
+  const valuePct = pctReturn(baselineClose,targetClose);
+  const benchmarkPct = pctReturn(benchmarkBaseline,benchmarkTarget);
+  return {
+    status:'materialized',
+    baseline_date:baselineDate,
+    target_date:targetDate,
+    baseline_close:baselineClose,
+    target_close:targetClose,
+    benchmark_baseline_close:benchmarkBaseline,
+    benchmark_target_close:benchmarkTarget,
+    value_pct:valuePct,
+    benchmark_pct:benchmarkPct,
+    relative_pct:valuePct - benchmarkPct
+  };
+}
+
+function findFieldIndex(fields, predicates) {
+  return fields.findIndex(field => predicates.some(p => p(field)));
+}
+
+function loadInstitutionalRow(stock, date) {
+  const file = path.join(ROOT, 'data_twse_institutional_investors', `${date}_twse_institutional_investors.json`);
+  if (!fs.existsSync(file)) return null;
+  const payload = readJson(file);
+  const fields = payload.fields || [];
+  const rows = payload.data || [];
+  const codeIdx = fields.indexOf('證券代號');
+  const row = rows.find(r => String(r?.[codeIdx] || '').trim() === String(stock));
+  if (!row) return null;
+  const foreignIdx = findFieldIndex(fields, [f => f.includes('外陸資買賣超股數')]);
+  const trustIdx = findFieldIndex(fields, [f => f.includes('投信買賣超股數')]);
+  const dealerIdx = findFieldIndex(fields, [f => f === '自營商買賣超股數']);
+  const totalIdx = findFieldIndex(fields, [f => f.includes('三大法人買賣超股數')]);
+  return {
+    date,
+    foreign_net: foreignIdx >= 0 ? parseNumeric(row[foreignIdx]) : null,
+    investment_trust_net: trustIdx >= 0 ? parseNumeric(row[trustIdx]) : null,
+    dealer_net: dealerIdx >= 0 ? parseNumeric(row[dealerIdx]) : null,
+    three_institutions_net: totalIdx >= 0 ? parseNumeric(row[totalIdx]) : null
+  };
+}
+
+function sumInstitutionalWindow(stock, dates) {
+  if (!dates || !dates.length) return { status:'missing', reason:'window_dates_unavailable' };
+  const rows = dates.map(date => loadInstitutionalRow(stock,date));
+  const missingDates = dates.filter((_,i) => !rows[i]);
+  if (missingDates.length) return { status:'missing', dates, missing_dates:missingDates, reason:'institutional_source_missing' };
+  const metrics = ['foreign_net','investment_trust_net','dealer_net','three_institutions_net'];
+  const sums = {};
+  for (const m of metrics) {
+    if (rows.some(r => !Number.isFinite(r[m]))) sums[m] = null;
+    else sums[m] = rows.reduce((a,r)=>a+r[m],0);
+  }
+  return { status:'materialized', dates, ...sums };
+}
+
+function windowBefore(tradingDays,eventSession,count) {
+  const idx=tradingIndex(tradingDays,eventSession);
+  return idx >= count ? tradingDays.slice(idx-count,idx) : null;
+}
+function windowFrom(tradingDays,eventSession,count) {
+  const idx=tradingIndex(tradingDays,eventSession);
+  if (idx < 0 || idx+count > tradingDays.length) return null;
+  return tradingDays.slice(idx,idx+count);
+}
+
+function parseCsvLine(line) {
+  const out=[]; let cur=''; let quoted=false;
+  for (let i=0;i<line.length;i++) {
+    const ch=line[i];
+    if (ch === '"') quoted=!quoted;
+    else if (ch === ',' && !quoted) { out.push(cur); cur=''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+function loadMarginRow(stock,date) {
+  const file=path.join(ROOT,'data_twse_margin_balance',`${date}_twse_margin_balance.csv`);
+  if (!fs.existsSync(file)) return null;
+  const lines=fs.readFileSync(file,'utf8').trim().split(/\r?\n/);
+  if (!lines.length) return null;
+  const header=parseCsvLine(lines[0]);
+  const codeIdx=header.indexOf('股票代號');
+  const finIdx=header.indexOf('融資今日餘額');
+  const shortIdx=header.indexOf('融券今日餘額');
+  for (const line of lines.slice(1)) {
+    const row=parseCsvLine(line);
+    if (String(row[codeIdx]||'').trim() !== String(stock)) continue;
+    return { date, financing_balance:parseNumeric(row[finIdx]), short_balance:parseNumeric(row[shortIdx]) };
+  }
+  return null;
+}
+
+function materializeMargin(stock,eventSession,tradingDays) {
+  if (!eventSession) return { status:'missing', reason:'event_session_unresolved' };
+  const baselineDate=previousEligibleDate(tradingDays,eventSession);
+  const baseline=baselineDate ? loadMarginRow(stock,baselineDate) : null;
+  const event=loadMarginRow(stock,eventSession);
+  const eventWindow = baseline && event && Number.isFinite(baseline.financing_balance) && Number.isFinite(event.financing_balance)
+    ? {
+        status:'materialized',
+        baseline_date:baselineDate,
+        event_date:eventSession,
+        financing_balance_change:event.financing_balance-baseline.financing_balance,
+        short_balance_change:Number.isFinite(baseline.short_balance)&&Number.isFinite(event.short_balance) ? event.short_balance-baseline.short_balance : null,
+        baseline,
+        event
+      }
+    : { status:'missing', baseline_date:baselineDate, event_date:eventSession, reason:'margin_baseline_or_event_missing' };
+  return {
+    status:eventWindow.status === 'materialized' ? 'partial' : 'missing',
+    event_window:eventWindow,
+    D3:{ status:'missing', reason:horizonDate(tradingDays,eventSession,3)?'not_materialized':'immature_trading_horizon' },
+    D5:{ status:'missing', reason:horizonDate(tradingDays,eventSession,5)?'not_materialized':'immature_trading_horizon' }
+  };
+}
+
 function buildResult() {
   const protocolBytes = fs.readFileSync(PROTOCOL_PATH);
   const eventBytes = fs.readFileSync(EVENT_PATH);
@@ -84,8 +249,14 @@ function buildResult() {
 
   const tradingDays = loadTradingDays();
   const calendarLatest = tradingDays.at(-1) || null;
+  const bench = benchmarkMap();
   const primaryEvents = protocol.cohort.primary_events.map(row => {
     const alignment = resolveEventSession(row.first_seen_at, tradingDays);
+    const eventSession = alignment.event_session;
+    const preDates = eventSession ? windowBefore(tradingDays,eventSession,5) : null;
+    const eventDates = eventSession ? [eventSession] : null;
+    const post3Dates = eventSession ? windowFrom(tradingDays,eventSession,3) : null;
+    const post5Dates = eventSession ? windowFrom(tradingDays,eventSession,5) : null;
     return {
       event_identity: row.event_identity,
       stock: row.stock,
@@ -94,16 +265,22 @@ function buildResult() {
       first_listing_taxonomy: row.first_listing_taxonomy,
       first_listing_features: row.first_listing_features,
       alignment,
-      stock_session_cluster_id: alignment.event_session ? `${row.stock}|${alignment.event_session}` : null,
+      stock_session_cluster_id: eventSession ? `${row.stock}|${eventSession}` : null,
       returns: {
-        D1: { status: 'missing', value_pct: null, benchmark_pct: null, relative_pct: null, reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' },
-        D3: { status: 'missing', value_pct: null, benchmark_pct: null, relative_pct: null, reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' },
-        D5: { status: 'missing', value_pct: null, benchmark_pct: null, relative_pct: null, reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' }
+        D1: materializeReturn(row.stock,eventSession,1,tradingDays,bench),
+        D3: materializeReturn(row.stock,eventSession,3,tradingDays,bench),
+        D5: materializeReturn(row.stock,eventSession,5,tradingDays,bench)
       },
-      institutional_flow: { status: 'missing', reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' },
-      broker_flow: { status: 'missing', reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' },
-      margin_financing: { status: 'missing', reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' },
-      tdcc_ownership: { status: 'missing', reason: alignment.event_session ? 'not_materialized_in_this_fail_closed_snapshot' : 'event_session_unresolved' }
+      institutional_flow: eventSession ? {
+        status:'partial',
+        pre_T5_T1: sumInstitutionalWindow(row.stock,preDates),
+        event_T0: sumInstitutionalWindow(row.stock,eventDates),
+        post_T0_T2: post3Dates ? sumInstitutionalWindow(row.stock,post3Dates) : {status:'missing',reason:'immature_trading_horizon'},
+        post_T0_T4: post5Dates ? sumInstitutionalWindow(row.stock,post5Dates) : {status:'missing',reason:'immature_trading_horizon'}
+      } : { status:'missing', reason:'event_session_unresolved' },
+      broker_flow: { status: 'missing', reason: eventSession ? 'preregistered_histock_stock_root_unavailable' : 'event_session_unresolved' },
+      margin_financing: materializeMargin(row.stock,eventSession,tradingDays),
+      tdcc_ownership: { status: 'missing', reason: eventSession ? 'pit_safe_archived_snapshot_join_not_available' : 'event_session_unresolved' }
     };
   });
 
@@ -176,16 +353,18 @@ function buildResult() {
       primary_events: 11,
       event_session_resolved: resolved,
       event_session_unresolved: unresolved,
-      numeric_return_horizons_materialized: 0,
-      institutional_windows_materialized: 0,
+      numeric_return_horizons_materialized: primaryEvents.reduce((n,e)=>n+['D1','D3','D5'].filter(h=>e.returns[h].status==='materialized').length,0),
+      institutional_windows_materialized: primaryEvents.reduce((n,e)=>n+(['pre_T5_T1','event_T0','post_T0_T2','post_T0_T4'].filter(k=>e.institutional_flow?.[k]?.status==='materialized').length),0),
       broker_windows_materialized: 0,
-      margin_windows_materialized: 0,
+      margin_windows_materialized: primaryEvents.reduce((n,e)=>n+(e.margin_financing?.event_window?.status==='materialized'?1:0),0),
       ownership_windows_materialized: 0
     },
     primary_events: primaryEvents,
     descriptive_summary: {
-      status: unresolved === 11 ? 'blocked_by_preregistered_trading_calendar_freshness' : 'partial',
-      interpretation: 'Fail-closed snapshot. The preregistered trading calendar does not contain an eligible session for the primary cohort, so no event session or downstream outcome is inferred from alternate sources.',
+      status: resolved > 0 ? 'partial_materialization' : 'blocked_by_preregistered_trading_calendar_freshness',
+      interpretation: resolved > 0
+        ? 'Canonical trading-calendar freshness is restored through the latest durable session. Mature preregistered windows are materialized; later horizons remain explicit missing.'
+        : 'Fail-closed snapshot. The preregistered trading calendar does not contain an eligible session for the primary cohort, so no event session or downstream outcome is inferred from alternate sources.',
       sample_warning: protocol.sample_warning
     },
     prohibited_outputs: protocol.rules.analysis_scope.prohibited
