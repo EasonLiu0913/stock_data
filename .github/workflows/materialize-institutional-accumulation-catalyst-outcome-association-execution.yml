@@ -1,0 +1,64 @@
+name: "[Research] Materialize Accumulation Outcome Association Execution"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js'
+      - 'tests/institutional_accumulation_catalyst_outcome_association_execution.test.js'
+      - '.github/workflows/materialize-institutional-accumulation-catalyst-outcome-association-execution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-outcome-association-execution-writer-v1
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Materialize against latest main with bounded push retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B main origin/main
+
+            node --test tests/institutional_accumulation_catalyst_outcome_association_execution.test.js
+            node scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js --write
+
+            git add data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json
+            if git diff --cached --quiet; then
+              echo "Canonical execution artifact already current on remote main."
+              exit 0
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "research: materialize accumulation outcome association execution"
+
+            if git push origin HEAD:main; then
+              echo "Durable outcome-association execution artifact pushed."
+              exit 0
+            fi
+
+            echo "Push race on attempt ${attempt}; recomputing from current origin/main."
+            sleep 10
+          done
+
+          echo "Failed to checkpoint after 3 bounded attempts." >&2
+          exit 1
