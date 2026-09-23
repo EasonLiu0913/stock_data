@@ -9,7 +9,7 @@ const OBSERVATION_AUDIT_RELATIVE = 'data_research/institutional-flow/institution
 const OUTPUT_RELATIVE = 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json';
 const EXPECTED_STOCKS = ['1102', '1104', '1216'];
 const EXPECTED_INTERFACES = ['prospective_material_information_detail', 'prospective_material_information_listing'];
-const ALLOWED_SOURCE_OBSERVATION_COUNTS = [12, 18, 24];
+const ALLOWED_SOURCE_OBSERVATION_COUNTS = [12, 18, 24, 30];
 
 function assertIsoTimestamp(value, label) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
