@@ -1,0 +1,82 @@
+name: "research: checkpoint five-window catalyst event intelligence"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/checkpoint-institutional-accumulation-catalyst-event-intelligence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-catalyst-event-intelligence-writer-v1
+  cancel-in-progress: false
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main event intelligence inputs
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/build_institutional_accumulation_catalyst_five_window_event_intelligence.js
+            /tests/institutional_accumulation_catalyst_five_window_event_intelligence.test.js
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
+            /data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Run zero-network event intelligence regressions
+        run: node --test tests/institutional_accumulation_catalyst_five_window_event_intelligence.test.js
+      - name: Generate and race-safe checkpoint canonical artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=data_research/institutional-flow/institutional-accumulation-catalyst-five-window-event-intelligence-v1.json
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            node scripts/build_institutional_accumulation_catalyst_five_window_event_intelligence.js --write
+            git add --sparse "$output"
+            if git diff --cached --quiet; then
+              echo 'canonical event intelligence artifact already durable'
+              pushed=1
+              break
+            fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "research: checkpoint five-window catalyst event intelligence"
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+          done
+          test "$pushed" -eq 1
+      - name: Verify durable remote artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:data_research/institutional-flow/institutional-accumulation-catalyst-five-window-event-intelligence-v1.json > /tmp/remote.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/remote.json','utf8'));
+          if(a.artifact_id!=='institutional-accumulation-catalyst-five-window-event-intelligence-v1') throw new Error('artifact id mismatch');
+          if(a.source_observation_audit.git_blob_sha!=='e713de686951dbb7eba1bb9cd4e8a96ba62cfe68') throw new Error('source observation identity mismatch');
+          if(a.network_collection_used!==false||a.outcomes_read!==false) throw new Error('boundary mismatch');
+          console.log('durable remote event intelligence artifact: PASS');
+          NODE
