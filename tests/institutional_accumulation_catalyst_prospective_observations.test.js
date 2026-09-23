@@ -100,6 +100,23 @@ test('deterministic audit accepts exactly four complete repeated windows', () =>
   });
 });
 
+test('deterministic audit accepts exactly five complete repeated windows', () => {
+  const repo = tempRepo();
+  writeWindow(repo, 10, '-window-1');
+  writeWindow(repo, 20, '-window-2');
+  writeWindow(repo, 30, '-window-3');
+  writeWindow(repo, 40, '-window-4');
+  writeWindow(repo, 50, '-window-5');
+  const audit = auditObservations(repo);
+  assert.equal(audit.valid_observation_count, 30);
+  assert.equal(audit.unique_immutable_snapshot_count, 30);
+  for (const stock of ['1102', '1104', '1216']) assert.deepEqual(audit.stocks[stock], { total: 10, listing: 5, detail: 5 });
+  assert.deepEqual(audit.source_interface_counts, {
+    prospective_material_information_detail: 15,
+    prospective_material_information_listing: 15,
+  });
+});
+
 test('repeated official content may share response hash while immutable observations remain unique', () => {
   const repo = tempRepo();
   const stocks = ['1102', '1104', '1216'];
