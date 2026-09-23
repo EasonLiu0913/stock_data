@@ -489,12 +489,14 @@ Closeout boundary:
 Round: `institutional-accumulation-catalyst-outcome-association-execution-v1`
 
 Status:
-- Prompt A: **PREREGISTERED / BLOCKED — OWNER AUTHORIZATION REQUIRED**
-- Prompt B: **PREREGISTERED / BLOCKED — OWNER AUTHORIZATION REQUIRED**
-- outcome values read: **false**
-- execution authorized: **false**
+- Prompt A: **COMPLETE**
+- Prompt B: **PREREGISTERED / PENDING**
+- outcome values read after durable owner authorization: **true**
+- execution authorized: **true**
+- protected 2454 / holdout / Withdrawal outcomes authorized: **false**
+- score / rank / threshold optimization / model / production promotion authorized: **false**
 
-This round is deliberately **not active**. Do not promote or execute it through bare `promptA` until the repository owner explicitly authorizes opening outcome values.
+The repository owner authorization checkpoint below preceded the first outcome-source read. The round remained bounded to the preregistered descriptive association protocol.
 
 ### Owner authorization checkpoint
 
@@ -563,3 +565,82 @@ Independently verify:
 
 Fix only bounded defects. On PASS record durable closeout evidence and preregister the next research pair without automatically executing it. End: Prompt B closeout: PASS.
 ```
+
+
+## Prompt A implementation and evidence — outcome-association execution
+
+Round: `institutional-accumulation-catalyst-outcome-association-execution-v1`
+
+Authorization ordering:
+- durable owner-authorization commit: `dbfbb5d2c84d955e92c6db363ba98532588636fd`;
+- authorization was recorded before the first price / institutional / broker / margin / ownership outcome-source read;
+- protected 2454, holdout and Withdrawal outcomes remained unopened;
+- no score/rank/threshold optimization/model/production authorization was granted.
+
+Implementation:
+- initial deterministic fail-closed builder: `302dad2c1125fa032240b161e880181eef63cd2a`;
+- bounded source-inventory refinement: `ff583b7ad8438d294366213f15107290bc984af2`;
+- protocol Git-blob identity refinement: `1901a1b3e6517da354233a708b5fca454e2c5bc7`;
+- regression suite: `7c46889e0a6a6f4e7089f58afd0cbed3e34fa6b2`;
+- builder:
+  `scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js`;
+- regression suite:
+  `tests/institutional_accumulation_catalyst_outcome_association_execution.test.js`;
+- canonical result:
+  `data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json`;
+- result checkpoint commit: `2b6f16d03b39249c280c7f6165e6d38539e44da4`;
+- canonical result git blob: `3bc69bb34f55af603c1268b567b706e3ea505baf`.
+
+Workflow evidence:
+- bounded materializer:
+  `.github/workflows/materialize-institutional-accumulation-catalyst-outcome-association-execution.yml`;
+- bounded read-only verifier:
+  `.github/workflows/verify-institutional-accumulation-catalyst-outcome-association-execution.yml`;
+- sparse verifier/concurrency checkpoint: `5643198cc0168bcdf51567825fe5c281433e812c`;
+- Node24 verify run: `35879302391`;
+- verify job: `107243295906`;
+- regression result: **8 pass / 0 fail**;
+- deterministic result regeneration: **byte-match PASS**;
+- bounded authorization + frozen cohort + fail-closed coverage assertions: **PASS**.
+
+Frozen identities remained unchanged:
+- Event Intelligence blob: `ee34b995148886ed4f4b27940c6a854fff26f3bb`;
+- Event Intelligence methodology SHA256:
+  `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96`;
+- protocol blob: `379179cf069503df5a4afba4d749869516547283`;
+- protocol methodology SHA256:
+  `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be`;
+- primary cohort: exactly **11**;
+- excluded left-censored events: exactly **169**;
+- captured-detail context remains **3** and was not promoted into the primary cohort.
+
+Observed source coverage after authorization:
+- preregistered trading calendar
+  `data_history_sma/trading_days.json`
+  ends at **2026-08-04**;
+- benchmark
+  `data_twse_market_chart/market_chart.json`
+  ends at **2026-09-22**;
+- `data_twse_mi_index/20260923_twse_mi_index.json` exists;
+- `data_twse_institutional_investors/20260923_twse_institutional_investors.json` exists;
+- `data_twse_margin_balance/20260923_twse_margin_balance.csv` exists;
+- `data_tdcc_shareholding/latest.json` exists;
+- preregistered HiStock roots for 1102 and 1216 are absent.
+
+Fail-closed research result:
+- primary events: **11**;
+- protocol-valid event session resolved: **0**;
+- unresolved because preregistered trading calendar has no eligible date at/after the events: **11**;
+- numeric D1/D3/D5 returns materialized: **0**;
+- institutional windows materialized: **0**;
+- broker windows materialized: **0**;
+- margin windows materialized: **0**;
+- TDCC ownership windows materialized: **0**;
+- no alternate trading-calendar fallback was introduced after outcome access;
+- no missing source was imputed to zero;
+- no source-reported timestamp was used to backdate availability.
+
+Interpretation:
+The owner-authorized round successfully opened the preregistered evidence class and exposed a prerequisite freshness defect: the canonical trading calendar is stale before every primary event. Under the preregistered rules, replacing that calendar after seeing outcome-source data or inferring sessions from another source would be a post-hoc methodology change. The canonical execution snapshot therefore correctly remains fail-closed rather than manufacturing D1/D3/D5 or flow associations.
+
+**Prompt A complete — ready for Prompt B.**
