@@ -28,11 +28,11 @@ const FEATURE_KEYS = [
 ];
 
 const TAXONOMY_RULES = [
-  ['investor_conference', /法人說明會|法說/iu],
+  ['investor_conference', /法人說明會|法說|投資人說明會/iu],
   ['financial_report', /財務報告|財報/iu],
   ['dividend_distribution', /盈餘分派|股利|除息|配息/iu],
   ['capital_financing', /公司債|增資|減資|發行新股|私募/iu],
-  ['asset_transaction', /取得不動產|購置土地|購置.*資產|取得.*資產|出售.*資產|處分.*資產/iu],
+  ['asset_transaction', /(取得|處分|購置|出售).*(不動產|土地|建築物|資產|有價證券|理財產品)/iu],
   ['management_governance', /董事|總經理|董事長|委員會|股東會|公司治理/iu],
   ['operations_safety', /停工|停產|復工|職業災害|工安|生產調度/iu],
   ['legal_regulatory', /裁罰|訴訟|違反|主管機關|行政處分/iu],
@@ -107,7 +107,7 @@ function textFeatures(text) {
     mentions_price_or_asp:/售價|價格|ASP/iu.test(value),
     mentions_guidance_or_outlook:/展望|預估|預期|財測|guidance/iu.test(value),
     mentions_suspension_or_shutdown:/停工|停產|復工/iu.test(value),
-    mentions_acquisition_or_disposal:/取得|處分|購置|出售|收購|併購/iu.test(value),
+    mentions_acquisition_or_disposal:/(取得|處分|購置|出售|收購|併購).*(不動產|土地|建築物|資產|有價證券|理財產品)/iu.test(value),
     text_length:[...value].length,
   };
 }
