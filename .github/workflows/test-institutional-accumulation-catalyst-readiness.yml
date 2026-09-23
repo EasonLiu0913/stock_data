@@ -1,5 +1,5 @@
 name: "test: institutional accumulation catalyst readiness"
-# final-fourth-window-gate:v1
+# fifth-window-compatible-gate:v1
 
 on:
   push:
@@ -10,14 +10,17 @@ on:
       - "scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.js"
+      - "scripts/audit_institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.js"
       - "tests/institutional_accumulation_catalyst_prospective_observations.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.test.js"
+      - "tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json"
   workflow_dispatch:
 
 permissions:
@@ -45,6 +48,7 @@ jobs:
             /tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js
             /tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js
             /tests/institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.test.js
+            /tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
@@ -53,6 +57,7 @@ jobs:
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json
             /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
             /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
             /data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/
@@ -71,6 +76,9 @@ jobs:
           if test -f data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json; then
             cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json /tmp/fourth-before.json
           fi
+          if test -f data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json; then
+            cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json /tmp/fifth-before.json
+          fi
 
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
@@ -80,6 +88,7 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js
 
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
           cmp -s /tmp/observation-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
@@ -97,6 +106,11 @@ jobs:
             node scripts/audit_institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.js --write
             cmp -s /tmp/fourth-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
             echo 'fourth-window longitudinal audit byte-match: PASS'
+          fi
+          if test -f /tmp/fifth-before.json; then
+            node scripts/audit_institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.js --write
+            cmp -s /tmp/fifth-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json
+            echo 'fifth-window longitudinal audit byte-match: PASS'
           fi
 
           node - <<'NODE'
@@ -146,6 +160,20 @@ jobs:
             assert.equal(fourth.fourth_window_gate.latest_third_collected_at, '2026-09-11T14:10:45.797Z');
             assert.equal(fourth.fourth_window_gate.later_asia_taipei_date, true);
             assert.equal(fourth.fourth_window_gate.minimum_elapsed_satisfied, true);
+          } else if (audit.valid_observation_count === 30) {
+            assert.equal(audit.unique_immutable_snapshot_count, 30);
+            for (const stock of ['1102','1104','1216']) assert.deepEqual(audit.stocks[stock], {total:10, listing:5, detail:5});
+            assert.equal(audit.source_interface_counts.prospective_material_information_listing, 15);
+            assert.equal(audit.source_interface_counts.prospective_material_information_detail, 15);
+            const fourth = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json'));
+            const fifth = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json'));
+            assert.equal(fourth.observation_count, 24);
+            assert.equal(fourth.chain_count, 6);
+            assert.equal(fifth.observation_count, 30);
+            assert.equal(fifth.chain_count, 6);
+            assert.equal(fifth.fifth_window_gate.latest_fourth_collected_at, '2026-09-22T11:14:18.342Z');
+            assert.equal(fifth.fifth_window_gate.later_asia_taipei_date, true);
+            assert.equal(fifth.fifth_window_gate.minimum_elapsed_satisfied, true);
           } else {
             throw new Error(`unexpected canonical observation count ${audit.valid_observation_count}`);
           }
