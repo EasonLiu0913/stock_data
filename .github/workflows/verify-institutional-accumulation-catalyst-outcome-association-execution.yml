@@ -1,0 +1,53 @@
+name: "[Research] Verify Accumulation Outcome Association Execution"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js'
+      - 'tests/institutional_accumulation_catalyst_outcome_association_execution.test.js'
+      - 'data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json'
+      - '.github/workflows/verify-institutional-accumulation-catalyst-outcome-association-execution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: institutional-accumulation-outcome-association-execution-verify-v1
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout checked-in execution snapshot
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Run execution regressions
+        run: node --test tests/institutional_accumulation_catalyst_outcome_association_execution.test.js
+
+      - name: Verify deterministic byte regeneration
+        run: node scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js
+
+      - name: Verify bounded result contract
+        run: |
+          node - <<'NODE'
+          const r = require('./data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json');
+          if (r.authorization.owner_authorized !== true) throw new Error('owner authorization missing');
+          if (r.authorization.protected_2454_holdout_withdrawal_authorized !== false) throw new Error('protected outcomes opened');
+          if (r.protocol_integrity.cohort_primary_count !== 11) throw new Error('primary cohort drift');
+          if (r.protocol_integrity.left_censored_excluded_count !== 169) throw new Error('left-censored drift');
+          if (r.protocol_integrity.fallback_alignment_added !== false) throw new Error('post-hoc alignment fallback introduced');
+          if (r.protocol_integrity.imputation_used !== false) throw new Error('imputation introduced');
+          if (r.coverage.numeric_return_horizons_materialized !== 0) throw new Error('unexpected return materialization');
+          if (r.descriptive_summary.status !== 'blocked_by_preregistered_trading_calendar_freshness') throw new Error('unexpected snapshot status');
+          console.log('bounded authorization + frozen cohort + fail-closed coverage assertions: PASS');
+          NODE
