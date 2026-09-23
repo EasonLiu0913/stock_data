@@ -170,6 +170,17 @@ jobs:
           echo "- SMA 狀態：目標日期已就緒，開始爬取。" >> "$GITHUB_STEP_SUMMARY"
           node scripts/crawl_sma_data.js --date "$target_date"
 
+      - name: Sync canonical trading calendar from validated SMA checkpoint
+        if: steps.crawl.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/sync_trading_calendar_from_daily_sma.test.js
+          node scripts/sync_trading_calendar_from_daily_sma.js \
+            --start "${{ steps.crawl.outputs.target_date }}" \
+            --end "${{ steps.crawl.outputs.target_date }}" \
+            --require-latest "${{ steps.crawl.outputs.target_date }}"
+
       - name: Generate SMA files.json only
         if: steps.crawl.outputs.ready == 'true'
         run: node scripts/generate_file_lists.js --only data_fubon
@@ -180,11 +191,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data_fubon/
+          git add data_fubon/ data_history_sma/trading_days.json
 
           if git diff --staged --quiet; then
             if [ -n "$(git status --porcelain)" ]; then
-              echo "Unexpected uncommitted changes remain even though there are no SMA changes:"
+              echo "Unexpected uncommitted changes remain even though there are no SMA/calendar changes:"
               git status --short
               exit 1
             fi
