@@ -31,8 +31,10 @@ function compactToSlash(date) {
 }
 
 function isWeekendCompact(date) {
-  const d = new Date(`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}T00:00:00+08:00`);
-  const day = d.getUTCDay();
+  const year = Number(date.slice(0,4));
+  const month = Number(date.slice(4,6));
+  const dayOfMonth = Number(date.slice(6,8));
+  const day = new Date(Date.UTC(year, month - 1, dayOfMonth)).getUTCDay();
   return day === 0 || day === 6;
 }
 
