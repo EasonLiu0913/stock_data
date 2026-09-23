@@ -19,7 +19,6 @@ const EXPECTED_PROTOCOL_METHOD = '5e57653500ae88d263915f1d74e3020e986736098c70e5
 const AUTH_TEXT = '我授權開啟 outcome values，執行下一輪 Prompt A';
 
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-function sha256(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }
 function gitBlobSha1(buf) {
   const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
   return crypto.createHash('sha1').update(Buffer.from(`blob ${b.length}\0`)).update(b).digest('hex');
@@ -119,7 +118,7 @@ function buildResult() {
     parent_protocol: {
       path: path.relative(ROOT, PROTOCOL_PATH).replaceAll(path.sep, '/'),
       methodology_sha256: protocol.methodology.sha256,
-      file_sha256: sha256(protocolBytes)
+      git_blob_sha1: gitBlobSha1(protocolBytes)
     },
     frozen_event_intelligence: {
       path: path.relative(ROOT, EVENT_PATH).replaceAll(path.sep, '/'),
