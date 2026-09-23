@@ -677,12 +677,13 @@ The execution round is methodologically clean but cannot materialize association
 Round: `institutional-accumulation-catalyst-trading-calendar-freshness-remediation-v1`
 
 Status:
-- Prompt A: **PREREGISTERED / READY**
-- Prompt B: **PREREGISTERED / READY**
+- Prompt A: **COMPLETE**
+- Prompt B: **PREREGISTERED / PENDING**
 - frozen Event Intelligence identity: unchanged;
 - frozen outcome-association protocol identity: unchanged;
-- methodology changes: forbidden;
-- objective: restore canonical calendar freshness, then replay the already-authorized descriptive association execution under the exact frozen protocol.
+- methodology changes: none;
+- canonical calendar freshness repaired through production data plumbing;
+- outcome replay completed under the exact frozen protocol.
 
 ### Prompt A — trading-calendar freshness remediation and outcome replay
 
@@ -733,3 +734,128 @@ Independently verify:
 
 Fix only bounded defects. On PASS record Prompt B closeout: PASS and preregister the next research pair without automatically executing it.
 ```
+
+
+## Prompt A implementation and evidence — trading-calendar freshness remediation
+
+Round: `institutional-accumulation-catalyst-trading-calendar-freshness-remediation-v1`
+
+Root cause:
+- canonical `data_history_sma/trading_days.json` was only advanced by the historical SMA crawler;
+- daily production `.github/workflows/crawl-sma.yml` durably generated validated `data_fubon/fubon_YYYYMMDD_sma.json` checkpoints but did not synchronize those successful trading dates back into the canonical calendar;
+- after historical SMA backfill stopped, the canonical calendar therefore froze at **2026-08-04** even though durable daily SMA checkpoints continued through **2026-09-23**.
+
+Canonical plumbing repair:
+- calendar sync script commit:
+  `f3615396c330613e1d909cddafab926cad1806e4`;
+- script:
+  `scripts/sync_trading_calendar_from_daily_sma.js`;
+- validation policy:
+  durable daily SMA checkpoint, matching embedded date, at least 100 valid Price/SMA5 rows, reject weekends, reject canonical non-trading days, no inferred research-only fallback;
+- regression commit:
+  `99efbc57cf786e1b0b53d3977966ec4b6781dfc4`;
+- regression:
+  `tests/sync_trading_calendar_from_daily_sma.test.js`;
+- production daily SMA integration:
+  `9c603d14fd455699dd327d255bdca2325346bc0d`;
+- `.github/workflows/crawl-sma.yml` now synchronizes the validated target-date SMA checkpoint into the canonical calendar and commits `data_history_sma/trading_days.json` together with the daily SMA state.
+
+Bounded repair workflow:
+- workflow commit:
+  `5b4148770094fe8b53602b73b1e87ee49f5fe1e9`;
+- workflow:
+  `.github/workflows/repair-trading-calendar-freshness.yml`;
+- initial run `35935476653`, job `107431424956`, exposed a bounded weekend-date helper defect;
+- defect: timezone conversion caused a Saturday calendar date to be evaluated as the previous UTC weekday;
+- bounded fix commit:
+  `3da5078bc855de2210ad6483403373bf92e1d8df`;
+- no research methodology or event alignment rule changed.
+
+Successful canonical calendar repair:
+- Node24 repair run:
+  `35935517285`;
+- repair job:
+  `107431553387`;
+- calendar regressions: **4 pass / 0 fail**;
+- repair step: **PASS**;
+- durable calendar commit:
+  `193eb4dadd2cc799a30fe53ddeb13e1b50f7eb19`;
+- canonical calendar blob:
+  `c81a320df61c1bd61797ddbc81a084e8c0e4330c`;
+- canonical latest eligible trading date after repair:
+  **2026-09-23**.
+
+Frozen identities after repair:
+- Event Intelligence blob:
+  `ee34b995148886ed4f4b27940c6a854fff26f3bb`;
+- Event Intelligence methodology SHA256:
+  `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96`;
+- outcome protocol blob:
+  `379179cf069503df5a4afba4d749869516547283`;
+- outcome protocol methodology SHA256:
+  `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be`;
+- primary cohort remains exactly **11**;
+- left-censored excluded remains exactly **169**;
+- no alternate calendar, imputation or source-reported-time backdating introduced.
+
+Outcome replay:
+- replay builder commit:
+  `22be1d16712a0922556e46efba04f709b6f68628`;
+- builder continues to use the frozen first_seen availability clock and frozen T0/D1/D3/D5 semantics;
+- stock prices use canonical `scripts/lib/stock_price_provider.js`;
+- benchmark uses `data_twse_market_chart/market_chart.json`;
+- institutional joins use preregistered TWSE institutional files;
+- margin joins use preregistered TWSE margin files;
+- absent HiStock roots remain explicit broker missing;
+- PIT-safe archived TDCC post-snapshot join remains explicit ownership missing;
+- immature horizons remain missing rather than forward-filled.
+
+Replay regression/workflow checkpoints:
+- replay regression commit:
+  `fa2bb35152e07d50be85ef2e8193b9601f707678`;
+- materializer workflow checkpoint:
+  `d15d848f85e72a99a85a9e20500eb09ef855b6a6`;
+- verifier workflow checkpoint:
+  `3b1b3ffbe04483878e710c0e8ef204484bb83c9e`;
+- successful materializer run:
+  `35935736606`;
+- materializer job:
+  `107432267717`;
+- canonical replay artifact commit:
+  `5f944930eab50c3bf91e1a7265350e11aaacde0f`;
+- fresh verifier checkpoint:
+  `b5c5dc3e7048f62e043d457792772254955098fc`;
+- final read-only verifier run:
+  `35935816831`;
+- final verifier job:
+  `107432487280`;
+- execution regressions: **PASS**;
+- deterministic byte regeneration: **PASS**;
+- bounded result contract: **PASS**.
+
+Final canonical execution artifact:
+- path:
+  `data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json`;
+- blob:
+  `9fcd3fc20b04941dce50035d7e16d0106ee53dc1`;
+- primary events: **11**;
+- protocol-valid event sessions resolved: **9**;
+- unresolved: **2**;
+- all 9 resolved events align to **2026-09-23** under the frozen after-close rule;
+- D1 stock + benchmark-relative horizons materialized: **9**;
+- D3/D5 remain explicit missing because later eligible sessions are not yet durably available in the canonical calendar;
+- institutional windows materialized: **18** (pre T-5..T-1 plus event T0 for the 9 resolved events);
+- broker windows materialized: **0**, because preregistered HiStock roots for 1102/1216 are absent;
+- margin event windows materialized: **9**;
+- ownership windows materialized: **0**, because the preregistered PIT-safe archived snapshot join is not available;
+- artifact state: `partial_materialization`.
+
+Protected boundaries:
+- protected 2454 / holdout / Withdrawal outcomes remain unopened;
+- no threshold optimization;
+- no score or rank;
+- no predictive model;
+- no production strategy promotion;
+- no statistical-significance claim.
+
+**Prompt A complete — ready for Prompt B.**
