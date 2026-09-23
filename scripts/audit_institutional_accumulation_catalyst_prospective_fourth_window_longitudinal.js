@@ -24,28 +24,28 @@ function taipeiDate(ms) {
 function buildFourthWindowLongitudinalAudit(repoRoot, options = {}) {
   const observationOptions = options.rootRelative ? { rootRelative: options.rootRelative } : {};
   const source = auditObservations(repoRoot, observationOptions);
-  if (source.valid_observation_count !== 24 || source.invalid_observation_count !== 0 || source.conflict_count !== 0) {
+  if (![24, 30].includes(source.valid_observation_count) || source.invalid_observation_count !== 0 || source.conflict_count !== 0) {
     throw new Error(`unexpected_observation_shape:${source.valid_observation_count}/${source.invalid_observation_count}/${source.conflict_count}`);
   }
-  if (source.unique_immutable_snapshot_count !== 24 || source.stock_count !== 3) throw new Error('unexpected_observation_identity_count');
+  if (![24, 30].includes(source.unique_immutable_snapshot_count) || source.stock_count !== 3) throw new Error('unexpected_observation_identity_count');
 
   const chains = [];
   let latestThirdMs = -Infinity;
   let earliestFourthMs = Infinity;
   for (const stock of EXPECTED_STOCKS) {
     const bucket = source.stocks[stock];
-    if (!bucket || bucket.total !== 8 || bucket.listing !== 4 || bucket.detail !== 4) throw new Error(`unexpected_stock_window_shape:${stock}`);
+    if (!bucket || ![8, 10].includes(bucket.total) || ![4, 5].includes(bucket.listing) || ![4, 5].includes(bucket.detail) || bucket.listing !== bucket.detail) throw new Error(`unexpected_stock_window_shape:${stock}`);
     for (const sourceInterface of EXPECTED_INTERFACES) {
       const occurrences = source.observations
         .filter(x => x.stock === stock && x.source_interface === sourceInterface)
         .map(x => ({ ...x, collected_ms: parseUtc(x.collected_at, `${stock}:${sourceInterface}`) }))
         .sort((a, b) => a.collected_ms - b.collected_ms || a.source_path.localeCompare(b.source_path));
-      if (occurrences.length !== 4) throw new Error(`occurrence_count:${stock}:${sourceInterface}:${occurrences.length}`);
+      if (![4, 5].includes(occurrences.length)) throw new Error(`occurrence_count:${stock}:${sourceInterface}:${occurrences.length}`);
       if (new Set(occurrences.map(x => x.source_request_key)).size !== 1) throw new Error(`source_request_key_mismatch:${stock}:${sourceInterface}`);
       for (let i = 1; i < occurrences.length; i += 1) {
         if (occurrences[i - 1].collected_ms >= occurrences[i].collected_ms) throw new Error(`collection_order_invalid:${stock}:${sourceInterface}`);
       }
-      const [w1, w2, w3, w4] = occurrences;
+      const [w1, w2, w3, w4] = occurrences.slice(0, 4);
       latestThirdMs = Math.max(latestThirdMs, w3.collected_ms);
       earliestFourthMs = Math.min(earliestFourthMs, w4.collected_ms);
       chains.push({
@@ -81,8 +81,11 @@ function buildFourthWindowLongitudinalAudit(repoRoot, options = {}) {
     chain_count: 6,
     stock_count: 3,
     unique_immutable_snapshot_count: source.unique_immutable_snapshot_count,
-    unique_response_sha256_count: source.unique_response_sha256_count,
-    collection_time_range: source.collection_time_range,
+    unique_response_sha256_count: new Set(chains.flatMap(chain => chain.windows.map(x => x.response_sha256))).size,
+    collection_time_range: {
+      first: chains.flatMap(chain => chain.windows.map(x => x.collected_at)).sort()[0],
+      last: chains.flatMap(chain => chain.windows.map(x => x.collected_at)).sort().at(-1),
+    },
     fourth_window_gate: {
       latest_third_collected_at: new Date(latestThirdMs).toISOString(),
       latest_third_asia_taipei_date: latestThirdDate,
