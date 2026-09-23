@@ -450,4 +450,98 @@ Completion evidence:
 
 **Prompt A complete — ready for Prompt B.**
 
-The preregistered Prompt B above remains unchanged and has not been executed.
+The preregistered Prompt B above was independently executed and closed below.
+
+
+## Prompt B closeout — outcome-association protocol
+
+Round: `institutional-accumulation-catalyst-outcome-association-protocol-v1`
+
+Independent closeout verification:
+- sole active routing remains `institutional-accumulation-event-intelligence` and points to this canonical handoff — PASS;
+- frozen Event Intelligence artifact remains git blob `ee34b995148886ed4f4b27940c6a854fff26f3bb` — PASS;
+- frozen Event Intelligence methodology SHA256 remains `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96` — PASS;
+- primary cohort remains exactly **11** prospectively first-seen identities and excludes all **169** left-censored events — PASS;
+- captured-detail context remains exactly **3** events and is kept separate from listing-level primary analysis — PASS;
+- protocol methodology id remains `institutional-accumulation-catalyst-outcome-association-protocol-methodology-v1`;
+- protocol methodology SHA256 remains `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be` — PASS;
+- canonical protocol artifact remains `data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json`;
+- T0/trading-session, D1/D3/D5, benchmark-relative, institutional, broker, margin, optional ownership, missing-data, non-trading-day, duplicate/same-day event and clustering rules were frozen before outcome access — PASS;
+- exact repository/provider entry points are frozen in the canonical protocol — PASS;
+- no score, rank, optimized threshold, predictive model, strategy promotion, statistical-significance claim, or production behavior was introduced — PASS;
+- `outcome_values_read=false` — PASS;
+- `outcome_association_execution_authorized=false` — PASS;
+- all protected-state flags remain false — PASS;
+- Node24 read-only deterministic workflow run `35873823675`, verify job `107224467351`, tested implementation SHA `7b6cb1a8acbc52c298b6b75ac62a867f80707617` completed SUCCESS — PASS;
+- zero-outcome regression result remains **8 pass / 0 fail** — PASS;
+- deterministic protocol regeneration remains byte-identical — PASS;
+- concurrent commits observed after Prompt A completion were unrelated data/docs changes and did not alter the frozen Event Intelligence blob, protocol artifact, protocol workflow, or active routing — PASS.
+
+Closeout boundary:
+- this closeout did **not** read any actual outcome, price, institutional, broker, margin, ownership, protected 2454, holdout, or Withdrawal outcome values;
+- this closeout does **not** authorize outcome-association execution;
+- opening outcome values requires a separate explicit repository-owner authorization after this closeout.
+
+**Prompt B closeout: PASS**
+
+## Next preregistered round — outcome-association execution
+
+Round: `institutional-accumulation-catalyst-outcome-association-execution-v1`
+
+Status:
+- Prompt A: **PREREGISTERED / BLOCKED — OWNER AUTHORIZATION REQUIRED**
+- Prompt B: **PREREGISTERED / BLOCKED — OWNER AUTHORIZATION REQUIRED**
+- outcome values read: **false**
+- execution authorized: **false**
+
+This round is deliberately **not active**. Do not promote or execute it through bare `promptA` until the repository owner explicitly authorizes opening outcome values.
+
+### Prompt A — outcome-association execution
+
+```text
+Execute institutional-accumulation-catalyst-outcome-association-execution-v1 only after the repository owner explicitly authorizes opening outcome values after reviewing the completed protocol closeout.
+
+Before any outcome access, fetch current remote main; read AGENTS.md, docs/project-philosophy.md, docs/roadmap/current-phase.md, docs/agent-prompts/task-routing.json, this handoff, the frozen Event Intelligence artifact, and the canonical outcome-association protocol artifact.
+
+Fail closed unless all of the following remain unchanged:
+- active project routing still points to this handoff;
+- frozen Event Intelligence blob is ee34b995148886ed4f4b27940c6a854fff26f3bb;
+- Event Intelligence methodology SHA256 is 27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96;
+- protocol methodology SHA256 is 5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be;
+- primary cohort is exactly the preregistered 11 events;
+- all 169 left-censored events remain excluded from primary analysis;
+- owner authorization is durably recorded before first outcome read.
+
+After authorization, implement only the preregistered descriptive association analysis:
+1. use the exact frozen T0 and trading-session alignment rules;
+2. calculate only preregistered D1/D3/D5 stock and benchmark-relative returns;
+3. join only preregistered institutional, broker, margin and optional PIT-safe ownership windows;
+4. preserve listing-level primary analysis and 3-event detail context as separate outputs;
+5. fail closed on missing or ambiguous alignment rather than silently backfilling;
+6. produce per-event joined records and descriptive summaries only;
+7. do not optimize thresholds, create scores/ranks, train predictive models, claim statistical significance from n=11, or promote any production strategy;
+8. add deterministic tests and a bounded read-only verification workflow for the checked-in result artifact;
+9. record exact commits, runs, jobs, methodology/result artifact hashes and any missing-data exclusions in this handoff.
+
+Prompt A completes only when the owner-authorized, preregistered analysis is durable and deterministic, with no scope expansion beyond the frozen protocol. Stop with: Prompt A complete — ready for Prompt B.
+```
+
+### Prompt B — outcome-association execution closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-outcome-association-execution-v1 only after explicit owner authorization was durably recorded and its Prompt A completed.
+
+Independently verify:
+- authorization existed before the first outcome read;
+- frozen Event Intelligence and protocol identities/hashes remained unchanged;
+- cohort is exactly the preregistered 11-event primary set, with 169 left-censored events excluded;
+- all T0, D1/D3/D5, benchmark and flow alignments exactly match the frozen protocol;
+- missing-data handling and same-day/cluster handling follow the preregistered rules;
+- detail-context analysis remains separate from listing-level primary analysis;
+- outputs are descriptive only and contain no optimized threshold, score, rank, predictive model, strategy promotion or statistical-significance claim;
+- no protected 2454, holdout or Withdrawal outcomes were used outside the explicitly authorized protocol scope;
+- deterministic tests and checked-in-state verification pass;
+- all result and methodology hashes, runs/jobs and bounded changed files are durably recorded.
+
+Fix only bounded defects. On PASS record durable closeout evidence and preregister the next research pair without automatically executing it. End: Prompt B closeout: PASS.
+```
