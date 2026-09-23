@@ -496,6 +496,24 @@ Status:
 
 This round is deliberately **not active**. Do not promote or execute it through bare `promptA` until the repository owner explicitly authorizes opening outcome values.
 
+### Owner authorization checkpoint
+
+Repository owner explicitly authorized opening outcome values and execution of this preregistered Prompt A in chat on **2026-09-23 (Asia/Taipei)** with the exact instruction:
+
+`我授權開啟 outcome values，執行下一輪 Prompt A`
+
+Authorization scope is limited to `institutional-accumulation-catalyst-outcome-association-execution-v1` exactly as preregistered below.
+
+Durable gate state after this checkpoint:
+- owner authorization recorded before first outcome read: **true**;
+- round promoted for execution: **true**;
+- Prompt A: **ACTIVE / AUTHORIZED**;
+- Prompt B: **PREREGISTERED / PENDING**;
+- outcome values read at authorization checkpoint: **false**;
+- protected 2454 / holdout / Withdrawal outcomes remain unauthorized;
+- score / rank / threshold optimization / model / production promotion remain forbidden.
+
+
 ### Prompt A — outcome-association execution
 
 ```text
