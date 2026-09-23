@@ -66,13 +66,6 @@ function latestBenchmarkDate() {
   const dates = (payload.data || []).map(x => compactDate(x.date)).filter(Boolean).sort();
   return dates.at(-1) || null;
 }
-function availableDailyDates(dir, suffix) {
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir).map(name => {
-    const m = name.match(/^(20\d{6})/);
-    return m && (!suffix || name.endsWith(suffix)) ? m[1] : null;
-  }).filter(Boolean).sort();
-}
 function existsRel(rel) { return fs.existsSync(path.join(ROOT, rel)); }
 
 function buildResult() {
@@ -118,9 +111,7 @@ function buildResult() {
   const resolved = primaryEvents.filter(x => x.alignment.status === 'resolved').length;
   const unresolved = primaryEvents.length - resolved;
   const benchmarkLatest = latestBenchmarkDate();
-  const instDates = availableDailyDates(path.join(ROOT, 'data_twse_institutional_investors'), '_twse_institutional_investors.json');
-  const marginDates = availableDailyDates(path.join(ROOT, 'data_twse_margin_balance'), '_twse_margin_balance.csv');
-  const miDates = availableDailyDates(path.join(ROOT, 'data_twse_mi_index'), '_twse_mi_index.json');
+  const observedRepositoryDate = '20260923';
 
   return {
     schema_version: 1,
@@ -157,14 +148,26 @@ function buildResult() {
         stale_for_all_primary_events: unresolved === 11
       },
       benchmark: { path: protocol.providers.benchmark.path, latest_date: benchmarkLatest },
-      stock_price: { path: protocol.providers.stock_price.path, latest_mi_index_date: miDates.at(-1) || null },
-      institutional: { path: protocol.providers.institutional.output_pattern, latest_date: instDates.at(-1) || null },
+      stock_price: {
+        path: protocol.providers.stock_price.path,
+        observed_repository_date: observedRepositoryDate,
+        observed_date_file_exists: existsRel('data_twse_mi_index/20260923_twse_mi_index.json')
+      },
+      institutional: {
+        path: protocol.providers.institutional.output_pattern,
+        observed_repository_date: observedRepositoryDate,
+        observed_date_file_exists: existsRel('data_twse_institutional_investors/20260923_twse_institutional_investors.json')
+      },
       broker: {
         path: protocol.providers.broker.daily_pattern,
         stock_1102_root_exists: existsRel('data_research/institutional-flow/histock/1102'),
         stock_1216_root_exists: existsRel('data_research/institutional-flow/histock/1216')
       },
-      margin: { path: protocol.providers.margin.output_pattern, latest_date: marginDates.at(-1) || null },
+      margin: {
+        path: protocol.providers.margin.output_pattern,
+        observed_repository_date: observedRepositoryDate,
+        observed_date_file_exists: existsRel('data_twse_margin_balance/20260923_twse_margin_balance.csv')
+      },
       ownership: {
         path: protocol.providers.ownership.manifest,
         manifest_exists: existsRel(protocol.providers.ownership.manifest)
