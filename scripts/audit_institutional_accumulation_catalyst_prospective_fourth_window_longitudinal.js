@@ -80,7 +80,7 @@ function buildFourthWindowLongitudinalAudit(repoRoot, options = {}) {
     observation_count: 24,
     chain_count: 6,
     stock_count: 3,
-    unique_immutable_snapshot_count: source.unique_immutable_snapshot_count,
+    unique_immutable_snapshot_count: new Set(chains.flatMap(chain => chain.windows.map(x => x.immutable_snapshot_id))).size,
     unique_response_sha256_count: new Set(chains.flatMap(chain => chain.windows.map(x => x.response_sha256))).size,
     collection_time_range: {
       first: chains.flatMap(chain => chain.windows.map(x => x.collected_at)).sort()[0],
