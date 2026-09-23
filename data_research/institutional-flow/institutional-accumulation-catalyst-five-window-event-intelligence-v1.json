@@ -2,7 +2,7 @@
   "schema_version": 1,
   "artifact_id": "institutional-accumulation-catalyst-five-window-event-intelligence-v1",
   "methodology_identity": "institutional-accumulation-catalyst-five-window-event-intelligence-methodology-v1",
-  "methodology_sha256": "12cc66d260c8af362c2415b0c7f983f30889bdc7ffbb1c1aa84cac353b122898",
+  "methodology_sha256": "27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96",
   "methodology": {
     "input_scope": "first_five_canonical_prospective_pit_windows_only",
     "canonical_event_identity": "companyId|marketKind|enterDate|serialNumber",
@@ -27,6 +27,48 @@
       "investment_mna",
       "revenue_business_outlook"
     ],
+    "taxonomy_rule_patterns": {
+      "investor_conference": {
+        "source": "法人說明會|法說|投資人說明會",
+        "flags": "iu"
+      },
+      "financial_report": {
+        "source": "財務報告|財報",
+        "flags": "iu"
+      },
+      "dividend_distribution": {
+        "source": "盈餘分派|股利|除息|配息",
+        "flags": "iu"
+      },
+      "capital_financing": {
+        "source": "公司債|增資|減資|發行新股|私募",
+        "flags": "iu"
+      },
+      "asset_transaction": {
+        "source": "(取得|處分|購置|出售).*(不動產|土地|建築物|資產|有價證券|理財產品)",
+        "flags": "iu"
+      },
+      "management_governance": {
+        "source": "董事|總經理|董事長|委員會|股東會|公司治理",
+        "flags": "iu"
+      },
+      "operations_safety": {
+        "source": "停工|停產|復工|職業災害|工安|生產調度",
+        "flags": "iu"
+      },
+      "legal_regulatory": {
+        "source": "裁罰|訴訟|違反|主管機關|行政處分",
+        "flags": "iu"
+      },
+      "investment_mna": {
+        "source": "併購|收購|股份交換|投資事業|組織架構調整",
+        "flags": "iu"
+      },
+      "revenue_business_outlook": {
+        "source": "營收|收入|展望|訂單|客戶|產能|稼動率|量產|ASP|售價|財測",
+        "flags": "iu"
+      }
+    },
     "feature_keys": [
       "has_numeric_content",
       "has_percentage",
@@ -42,6 +84,56 @@
       "mentions_acquisition_or_disposal",
       "text_length"
     ],
+    "feature_rule_patterns": {
+      "has_numeric_content": {
+        "source": "\\d",
+        "flags": "u"
+      },
+      "has_percentage": {
+        "source": "[%％]",
+        "flags": "u"
+      },
+      "has_currency": {
+        "source": "新台幣|美元|人民幣|港幣|日圓|元|千元|百萬元|億元",
+        "flags": "iu"
+      },
+      "has_yoy_or_qoq_language": {
+        "source": "年增|月增|季增|年減|月減|季減|YoY|QoQ|同比|環比",
+        "flags": "iu"
+      },
+      "mentions_revenue": {
+        "source": "營收|收入",
+        "flags": "iu"
+      },
+      "mentions_profit_or_eps": {
+        "source": "獲利|淨利|盈餘|EPS|每股盈餘",
+        "flags": "iu"
+      },
+      "mentions_capacity_or_production": {
+        "source": "產能|產量|生產|稼動率|量產",
+        "flags": "iu"
+      },
+      "mentions_order_or_customer": {
+        "source": "訂單|客戶|接單",
+        "flags": "iu"
+      },
+      "mentions_price_or_asp": {
+        "source": "售價|價格|ASP",
+        "flags": "iu"
+      },
+      "mentions_guidance_or_outlook": {
+        "source": "展望|預估|預期|財測|guidance",
+        "flags": "iu"
+      },
+      "mentions_suspension_or_shutdown": {
+        "source": "停工|停產|復工",
+        "flags": "iu"
+      },
+      "mentions_acquisition_or_disposal": {
+        "source": "(取得|處分|購置|出售|收購|併購).*(不動產|土地|建築物|資產|有價證券|理財產品)",
+        "flags": "iu"
+      }
+    },
     "outcomes_authorized": false,
     "network_authorized": false
   },
