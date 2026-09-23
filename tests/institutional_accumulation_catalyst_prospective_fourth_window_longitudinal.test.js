@@ -47,6 +47,18 @@ test('accepts exactly four complete windows with fourth-window cross-day spacing
   assert.equal(audit.fourth_window_gate.earliest_fourth_asia_taipei_date, '2026-09-22');
 });
 
+test('fifth window preserves frozen fourth-window evidence', () => {
+  const root = repo();
+  addWindow(root, 10, 13, 'w1');
+  addWindow(root, 10, 14, 'w2');
+  addWindow(root, 11, 14, 'w3');
+  addWindow(root, 22, 14, 'w4');
+  const before = buildFourthWindowLongitudinalAudit(root, { rootRelative: ROOT });
+  addWindow(root, 23, 14, 'w5');
+  const after = buildFourthWindowLongitudinalAudit(root, { rootRelative: ROOT });
+  assert.deepEqual(after, before);
+});
+
 test('three windows are not enough for fourth-window evidence', () => {
   const root = repo();
   addWindow(root, 10, 13, 'w1');
