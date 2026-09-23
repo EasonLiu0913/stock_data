@@ -27,6 +27,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js
+            scripts/lib/stock_price_provider.js
             tests/institutional_accumulation_catalyst_outcome_association_execution.test.js
             data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-protocol-v1.json
             data_research/institutional-flow/institutional-accumulation-catalyst-five-window-event-intelligence-v1.json
@@ -34,8 +35,17 @@ jobs:
             data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json
             data_history_sma/trading_days.json
             data_twse_market_chart/market_chart.json
+            data_twse_mi_index/20260922_twse_mi_index.json
             data_twse_mi_index/20260923_twse_mi_index.json
+            data_fubon/fubon_20260922_sma.json
+            data_fubon/fubon_20260923_sma.json
+            data_twse_institutional_investors/20260916_twse_institutional_investors.json
+            data_twse_institutional_investors/20260917_twse_institutional_investors.json
+            data_twse_institutional_investors/20260918_twse_institutional_investors.json
+            data_twse_institutional_investors/20260921_twse_institutional_investors.json
+            data_twse_institutional_investors/20260922_twse_institutional_investors.json
             data_twse_institutional_investors/20260923_twse_institutional_investors.json
+            data_twse_margin_balance/20260922_twse_margin_balance.csv
             data_twse_margin_balance/20260923_twse_margin_balance.csv
             data_tdcc_shareholding/latest.json
           sparse-checkout-cone-mode: false
@@ -61,7 +71,7 @@ jobs:
           if (r.protocol_integrity.left_censored_excluded_count !== 169) throw new Error('left-censored drift');
           if (r.protocol_integrity.fallback_alignment_added !== false) throw new Error('post-hoc alignment fallback introduced');
           if (r.protocol_integrity.imputation_used !== false) throw new Error('imputation introduced');
-          if (r.coverage.numeric_return_horizons_materialized !== 0) throw new Error('unexpected return materialization');
-          if (r.descriptive_summary.status !== 'blocked_by_preregistered_trading_calendar_freshness') throw new Error('unexpected snapshot status');
+          if (r.coverage.numeric_return_horizons_materialized !== 9) throw new Error('expected 9 mature D1 materializations');
+          if (r.descriptive_summary.status !== 'partial_materialization') throw new Error('unexpected snapshot status');
           console.log('bounded authorization + frozen cohort + fail-closed coverage assertions: PASS');
           NODE
