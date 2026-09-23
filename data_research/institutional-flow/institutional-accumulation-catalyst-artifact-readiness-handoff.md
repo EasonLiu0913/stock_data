@@ -513,3 +513,120 @@ Completion contract: eligibility PASS before requests; pre-live zero-network gat
 ```text
 Perform mandatory closeout for `institutional-accumulation-catalyst-prospective-fifth-window-repeat-capture-canary-v1` only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history. Independently verify: sole active routing still points to this handoff; the fourth-window round has durable Prompt B PASS; historical 33/protected state remains frozen and unopened; eligibility was satisfied before source requests using canonical latest accepted timestamp `2026-09-22T11:14:18.342Z`, a later Asia/Taipei date, and >=12 elapsed hours; pre-live Node24 zero-network gate passed; exactly one bounded fifth live window ran for only 1102/1104/1216 through independent fresh-runner jobs with max-parallel 1; total repository-controlled requests <=6 with one listing and at most one detail per stock and 20-60 second cooldown; only official t05st01/t05st01_detail APIs were used; no legacy endpoint, historical backfill, Wave A/Wave C, scheduler, or broad-universe rollout occurred; all original 24 snapshots remain byte-identical and durable; frozen two-window delta blob remains `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`; frozen three-window cross-day blob remains `9dbee14b300980fb46ea7251b5707429071a80bf`; frozen fourth-window longitudinal blob remains `31c13856af41fee4f277103807b081873dd780e1`; every new snapshot is append-only and passes canonical raw/hash/PIT/path validation with historical_back_imputation_allowed=false; successful observation audit reports exactly 30 valid / 0 invalid / 0 conflict, same three stocks with 5 listing + 5 detail each and 30 unique immutable IDs while only reporting actual raw-hash uniqueness; deterministic fifth-window evidence records UTC/Asia-Taipei date and spacing without catalyst interpretation or outcome access; final Node24 read-only workflow passes at recorded tested SHA with byte-identical regeneration; bounded diff contains only authorized auditor/test/workflow/audit/snapshot/handoff changes plus classified unrelated concurrent changes and no protected paths. Fix only bounded defects and restart verification. On PASS record exact durable evidence, promote only a justified next paired round, end `Prompt B closeout: PASS`, and stop without executing the promoted Prompt A.
 ```
+
+
+## Prompt A implementation and evidence — fifth-window repeat-capture canary
+
+Round:
+`institutional-accumulation-catalyst-prospective-fifth-window-repeat-capture-canary-v1`
+
+Status:
+- Prompt A: **COMPLETE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Pre-Prompt-A durable baseline:
+- `20e222d6ea64c03704c8240e84dd06e3891a9f1c`.
+- Same-day commits present before this round were classified as unrelated market/data refreshes and are outside the round-owned diff.
+
+Eligibility gate:
+- canonical pre-live observation audit blob remained `9684e2be280111faf701b39bb24b85446e0e4f92`;
+- latest accepted prior observation remained exactly `2026-09-22T11:14:18.342Z`;
+- fifth-window earliest accepted observation became `2026-09-23T12:05:25.823Z`;
+- Asia/Taipei date advanced from 2026-09-22 to 2026-09-23;
+- elapsed from canonical latest fourth observation to earliest fifth observation is `89467481` ms, above the required `43200000` ms;
+- eligibility therefore passed before any fifth-window source request.
+
+Bounded zero-network evolution before live requests:
+- `e45a664db021d98f10ce05d26f7aec7be907787f` — observation auditor permits exactly five complete windows.
+- `77311fad44fdd535d9473fdf6bd144f47927d5e0` — regression covers 30 observations / five complete windows.
+- `701ccb99b1ad8d10b8bbd56f256e72dad9f042a7` and `5c96a1ba3c94a5f43fe867d0eba35265097cd144` — fourth-window auditor remains bound to the earliest four windows and preserves its frozen identity/count semantics when a fifth window exists.
+- `b6c1e631d9fa3aab2ad75f3fda69c5f92680bd33` — regression proves the fifth window leaves fourth-window evidence unchanged.
+- `5b6be40d03a02a5d0768447c30c6228290a528a3` — deterministic fifth-window longitudinal auditor.
+- `583f4dbe435160d40acf717d5a430b54fe24499d` — fifth-window longitudinal regression.
+- `eba1bdd81e91b5fd7b7fb02531cc4704c85a788d` — readiness workflow gains fifth-window pre-live/post-live support.
+- `29bdce7e55ef4562d71443793af62c797398e021` — bounded fifth-window evidence checkpoint workflow.
+- Pre-live Node24 zero-network run `35858153046`, regression job `107171542316`, completed SUCCESS at tested SHA `5c96a1ba3c94a5f43fe867d0eba35265097cd144` before any fifth-window source request.
+
+Live fifth window:
+- trigger commit `c6a4b730cfcc0c8339fff2fd67e300ef2a49cb8e`;
+- live run `35858213811`;
+- exactly three independent fresh-runner matrix jobs with `max-parallel:1`:
+  - 1102 job `107171736507` — SUCCESS, 2 requests / 2 snapshots, durable checkpoint `30ef34c2482892ccd89119b0ae313d8160e31366`;
+  - 1104 job `107171735995` — SUCCESS, 2 requests / 2 snapshots, durable checkpoint `16e0c0b6c110118a3a1faddd9f9dc51f54298032`;
+  - 1216 job `107171737328` — SUCCESS, 2 requests / 2 snapshots, durable checkpoint `7c47701a4678e4fbeb1431eafee671ffe155d82d`;
+- total repository-controlled source requests = exactly 6;
+- total newly accepted snapshots = exactly 6;
+- randomized collector-enforced 20-60 second cooldown remained active;
+- historical backfill remained prohibited and no second live fifth-window capture was run.
+
+New append-only snapshot paths:
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1102_115_all/20260923T120525823Z--07926df6cf34676932a77afb18c7e00bc8addd9b46f2f55bbdd375e4f2aacc18.json`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1102_1150115_1_sii/20260923T120553200Z--fd3c7a778bb8382f51e41c044f88344902bb0b8f74e4629d946ab2f0c6f1cdf0.json`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1104_115_all/20260923T120642381Z--9c8b30055eeda70003f9fecb67a9507e2aea54500d6dda53426db1badfff0f78.json`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1104_1150113_1_sii/20260923T120735526Z--0587e21d5ba6cb9e6614787c4635eb6e75017394bf711917c3b4a92b3d1c30e6.json`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_listing/1216_115_all/20260923T120835933Z--d51f99e40a225733d5342a817812ee59cffbc22b476c77f149157fae2a221396.json`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/prospective_material_information_detail/1216_1150109_1_sii/20260923T120931642Z--7804ba185e35028e724aa85d407f1b11e2c1483ec9d416c697c9ff73922d0981.json`
+
+Closed-artifact preservation repair:
+- first post-live checkpoint run `35858800419`, job `107173639315`, failed before persistence because the already-closed two-window delta auditor still rejected a 30-observation source shape;
+- no live source request was retried;
+- `1a1256826c74794be5e3e1c0c4bc859b31452afc` and `26265c87b3e60ecf789a3c93aedd7ecea549a213` extend/test the closed delta auditor to accept a 30-observation canonical source while still selecting only the earliest two windows;
+- `475a407be1a9ad801c0711adfa352c286e0df203` and `95576dc937cde72757a7d35ef05fd04b396095c5` extend/test the closed cross-day auditor to accept five occurrences while still selecting only the earliest three;
+- rerun checkpoint trigger `6f65192dda3ae149e90cc3aef581fe6e504ee3f0`;
+- checkpoint run `35858959089`, job `107174161830`, completed SUCCESS;
+- durable evidence checkpoint: `4483f4880588e1403ab714146db1dbba2c5dc9e2`.
+
+Canonical deterministic evidence after checkpoint:
+- observation audit path: `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`;
+- observation audit blob: `e713de686951dbb7eba1bb9cd4e8a96ba62cfe68`;
+- exactly 30 valid / 0 invalid / 0 conflict;
+- each of 1102/1104/1216 = 10 total / 5 listing / 5 detail;
+- interfaces = 15 listing + 15 detail;
+- 30 unique immutable snapshot IDs;
+- collection range `2026-09-10T13:12:36.863Z` through `2026-09-23T12:09:31.642Z`.
+- fifth-window longitudinal path: `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json`;
+- fifth-window longitudinal blob: `d3ae72fea05ace0815b9c7d22931a19a7fb32fdd`;
+- 30 observations / 6 chains;
+- exact latest-fourth timestamp `2026-09-22T11:14:18.342Z`;
+- exact earliest-fifth timestamp `2026-09-23T12:05:25.823Z`;
+- elapsed `89467481` ms and later Asia/Taipei date gate both PASS;
+- artifact records timing/identity only and does not interpret catalyst significance or open outcomes.
+
+Frozen artifacts remain byte-identical:
+- closed two-window delta blob = `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+- closed three-window cross-day blob = `9dbee14b300980fb46ea7251b5707429071a80bf`;
+- closed fourth-window longitudinal blob = `31c13856af41fee4f277103807b081873dd780e1`;
+- historical PIT provenance blob = `7ccafbe36206770d93f454feefdca81a082d4cd0`, still 33 identities / 0 PIT-ready / 33 not-PIT-ready.
+
+Final read-only deterministic gate:
+- explicit final gate trigger commit `ad31dae7295e560d1fa92a26dc28208f28387721`;
+- run `35859084861`;
+- regression job `107174573118`;
+- tested SHA `ad31dae7295e560d1fa92a26dc28208f28387721`;
+- SUCCESS.
+- observed suites all PASS with zero failures: readiness 1, historical PIT 1, prospective PIT contract 5, canary 6, observation 12, closed delta 10, cross-day 6, fourth-window longitudinal 5, fifth-window longitudinal 4;
+- observation audit byte-match: PASS;
+- closed two-window delta byte-match: PASS;
+- closed three-window cross-day byte-match: PASS;
+- closed fourth-window longitudinal byte-match: PASS;
+- fifth-window longitudinal audit byte-match: PASS;
+- durable/regenerated PIT semantics + bounded longitudinal assertions: PASS.
+
+Bounded diff:
+- baseline `20e222d6ea64c03704c8240e84dd06e3891a9f1c` to final tested SHA `ad31dae7295e560d1fa92a26dc28208f28387721` is 21 commits and contains only:
+  - the bounded fifth-window checkpoint/readiness workflows;
+  - observation/delta/cross-day/fourth/fifth auditors and their regressions;
+  - the fifth-window trigger;
+  - the canonical observation and fifth-window audit artifacts;
+  - exactly six newly added prospective snapshot files.
+- no protected Phase 2, development outcome, protected 2454 outcome, holdout, catalyst/outcome association, Withdrawal, model, strategy, production, scheduler, broad-universe, generic-news, or historical Wave A/Wave C path appears in that diff.
+- current routing still has `institutional-accumulation` as the sole active task.
+
+Prompt A limitation:
+- evidence is still only five forward prospective windows for three preregistered stocks;
+- this does not establish catalyst significance, outcome relationship, broad-universe quality, scheduler readiness, historical PIT upgrade, model/strategy value, or production behavior;
+- raw response identity/content change remains transport/source evidence only.
+
+Prompt A completion boundary reached. The preregistered fifth-window Prompt B above remains unchanged and pending.
+
+**Prompt A complete — ready for Prompt B.**
