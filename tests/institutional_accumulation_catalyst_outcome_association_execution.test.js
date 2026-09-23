@@ -51,19 +51,26 @@ test('no alternate alignment, imputation, or post-hoc rule change is introduced'
   assert.equal(r.protocol_integrity.imputation_used, false);
 });
 
-test('current snapshot does not materialize numeric outcomes without a protocol-valid event session', () => {
+test('repaired calendar materializes only mature preregistered windows', () => {
   const r = buildResult();
   assert.equal(r.coverage.primary_events, 11);
-  assert.equal(r.coverage.event_session_resolved, 0);
-  assert.equal(r.coverage.event_session_unresolved, 11);
-  assert.equal(r.coverage.numeric_return_horizons_materialized, 0);
-  for (const row of r.primary_events) {
-    assert.equal(row.alignment.status, 'missing');
-    for (const h of ['D1','D3','D5']) {
-      assert.equal(row.returns[h].value_pct, null);
-      assert.equal(row.returns[h].benchmark_pct, null);
-      assert.equal(row.returns[h].relative_pct, null);
-    }
+  assert.equal(r.coverage.event_session_resolved, 9);
+  assert.equal(r.coverage.event_session_unresolved, 2);
+  assert.equal(r.coverage.numeric_return_horizons_materialized, 9);
+  assert.equal(r.coverage.margin_windows_materialized, 9);
+  const resolved = r.primary_events.filter(x => x.alignment.status === 'resolved');
+  const unresolved = r.primary_events.filter(x => x.alignment.status === 'missing');
+  assert.equal(resolved.length, 9);
+  assert.equal(unresolved.length, 2);
+  for (const row of resolved) {
+    assert.equal(row.alignment.event_session, '20260923');
+    assert.equal(row.returns.D1.status, 'materialized');
+    assert.equal(row.returns.D3.status, 'missing');
+    assert.equal(row.returns.D5.status, 'missing');
+    assert.equal(row.margin_financing.event_window.status, 'materialized');
+  }
+  for (const row of unresolved) {
+    assert.equal(row.returns.D1.status, 'missing');
   }
 });
 
