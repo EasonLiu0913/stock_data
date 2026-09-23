@@ -40,6 +40,21 @@ const TAXONOMY_RULES = [
   ['revenue_business_outlook', /營收|收入|展望|訂單|客戶|產能|稼動率|量產|ASP|售價|財測/iu],
 ];
 
+const FEATURE_RULES = {
+  has_numeric_content: /\d/u,
+  has_percentage: /[%％]/u,
+  has_currency: /新台幣|美元|人民幣|港幣|日圓|元|千元|百萬元|億元/iu,
+  has_yoy_or_qoq_language: /年增|月增|季增|年減|月減|季減|YoY|QoQ|同比|環比/iu,
+  mentions_revenue: /營收|收入/iu,
+  mentions_profit_or_eps: /獲利|淨利|盈餘|EPS|每股盈餘/iu,
+  mentions_capacity_or_production: /產能|產量|生產|稼動率|量產/iu,
+  mentions_order_or_customer: /訂單|客戶|接單/iu,
+  mentions_price_or_asp: /售價|價格|ASP/iu,
+  mentions_guidance_or_outlook: /展望|預估|預期|財測|guidance/iu,
+  mentions_suspension_or_shutdown: /停工|停產|復工/iu,
+  mentions_acquisition_or_disposal: /(取得|處分|購置|出售|收購|併購).*(不動產|土地|建築物|資產|有價證券|理財產品)/iu,
+};
+
 const METHODOLOGY_SPEC = {
   input_scope: 'first_five_canonical_prospective_pit_windows_only',
   canonical_event_identity: 'companyId|marketKind|enterDate|serialNumber',
@@ -53,7 +68,9 @@ const METHODOLOGY_SPEC = {
     first_detail_features: 'earliest_captured_detail_version_at_its_own_collection_time',
   },
   taxonomy_order: TAXONOMY_RULES.map(([name]) => name),
+  taxonomy_rule_patterns: Object.fromEntries(TAXONOMY_RULES.map(([name,re]) => [name, {source: re.source, flags: re.flags}])),
   feature_keys: FEATURE_KEYS,
+  feature_rule_patterns: Object.fromEntries(Object.entries(FEATURE_RULES).map(([name,re]) => [name, {source: re.source, flags: re.flags}])),
   outcomes_authorized: false,
   network_authorized: false,
 };
@@ -96,18 +113,18 @@ function detailIdentityFromRequestKey(key) {
 function textFeatures(text) {
   const value=normalizeText(text);
   return {
-    has_numeric_content:/\d/u.test(value),
-    has_percentage:/[%％]/u.test(value),
-    has_currency:/新台幣|美元|人民幣|港幣|日圓|元|千元|百萬元|億元/iu.test(value),
-    has_yoy_or_qoq_language:/年增|月增|季增|年減|月減|季減|YoY|QoQ|同比|環比/iu.test(value),
-    mentions_revenue:/營收|收入/iu.test(value),
-    mentions_profit_or_eps:/獲利|淨利|盈餘|EPS|每股盈餘/iu.test(value),
-    mentions_capacity_or_production:/產能|產量|生產|稼動率|量產/iu.test(value),
-    mentions_order_or_customer:/訂單|客戶|接單/iu.test(value),
-    mentions_price_or_asp:/售價|價格|ASP/iu.test(value),
-    mentions_guidance_or_outlook:/展望|預估|預期|財測|guidance/iu.test(value),
-    mentions_suspension_or_shutdown:/停工|停產|復工/iu.test(value),
-    mentions_acquisition_or_disposal:/(取得|處分|購置|出售|收購|併購).*(不動產|土地|建築物|資產|有價證券|理財產品)/iu.test(value),
+    has_numeric_content: FEATURE_RULES.has_numeric_content.test(value),
+    has_percentage: FEATURE_RULES.has_percentage.test(value),
+    has_currency: FEATURE_RULES.has_currency.test(value),
+    has_yoy_or_qoq_language: FEATURE_RULES.has_yoy_or_qoq_language.test(value),
+    mentions_revenue: FEATURE_RULES.mentions_revenue.test(value),
+    mentions_profit_or_eps: FEATURE_RULES.mentions_profit_or_eps.test(value),
+    mentions_capacity_or_production: FEATURE_RULES.mentions_capacity_or_production.test(value),
+    mentions_order_or_customer: FEATURE_RULES.mentions_order_or_customer.test(value),
+    mentions_price_or_asp: FEATURE_RULES.mentions_price_or_asp.test(value),
+    mentions_guidance_or_outlook: FEATURE_RULES.mentions_guidance_or_outlook.test(value),
+    mentions_suspension_or_shutdown: FEATURE_RULES.mentions_suspension_or_shutdown.test(value),
+    mentions_acquisition_or_disposal: FEATURE_RULES.mentions_acquisition_or_disposal.test(value),
     text_length:[...value].length,
   };
 }
@@ -195,4 +212,4 @@ function buildArtifact(repoRoot) {
 function serializeArtifact(a){return `${JSON.stringify(a,null,2)}\n`;}
 function main(){const a=buildArtifact(process.cwd()),s=serializeArtifact(a);if(process.argv.includes('--write')){fs.writeFileSync(path.join(process.cwd(),...OUTPUT_PATH.split('/')),s);process.stdout.write(`${OUTPUT_PATH}\n`);}else process.stdout.write(s);}
 if(require.main===module){try{main();}catch(error){console.error(error.stack||error.message);process.exitCode=1;}}
-module.exports={ARTIFACT_ID,METHODOLOGY_ID,METHODOLOGY_SPEC,FEATURE_KEYS,TAXONOMY_RULES,normalizeText,sha256,gitBlobSha,parseRocDateTime,canonicalEventIdentity,eventIdentityFromListingRow,detailIdentityFromRequestKey,textFeatures,classifyTaxonomy,decodeSnapshot,parseListingPayload,parseDetailPayload,summarizeVersions,buildArtifact,serializeArtifact};
+module.exports={ARTIFACT_ID,METHODOLOGY_ID,METHODOLOGY_SPEC,FEATURE_KEYS,TAXONOMY_RULES,FEATURE_RULES,normalizeText,sha256,gitBlobSha,parseRocDateTime,canonicalEventIdentity,eventIdentityFromListingRow,detailIdentityFromRequestKey,textFeatures,classifyTaxonomy,decodeSnapshot,parseListingPayload,parseDetailPayload,summarizeVersions,buildArtifact,serializeArtifact};
