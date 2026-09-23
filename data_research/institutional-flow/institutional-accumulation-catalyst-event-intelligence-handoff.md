@@ -644,3 +644,92 @@ Interpretation:
 The owner-authorized round successfully opened the preregistered evidence class and exposed a prerequisite freshness defect: the canonical trading calendar is stale before every primary event. Under the preregistered rules, replacing that calendar after seeing outcome-source data or inferring sessions from another source would be a post-hoc methodology change. The canonical execution snapshot therefore correctly remains fail-closed rather than manufacturing D1/D3/D5 or flow associations.
 
 **Prompt A complete — ready for Prompt B.**
+
+
+## Prompt B closeout — outcome-association execution
+
+Round: `institutional-accumulation-catalyst-outcome-association-execution-v1`
+
+Independent closeout:
+- owner authorization commit `dbfbb5d2c84d955e92c6db363ba98532588636fd` predates first outcome-source read — PASS;
+- Event Intelligence blob `ee34b995148886ed4f4b27940c6a854fff26f3bb` unchanged — PASS;
+- Event Intelligence methodology SHA256 unchanged — PASS;
+- protocol blob `379179cf069503df5a4afba4d749869516547283` unchanged — PASS;
+- protocol methodology SHA256 `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be` unchanged — PASS;
+- primary cohort remains exactly **11** and **169** left-censored events remain excluded — PASS;
+- captured-detail context remains separate and does not enter primary analysis — PASS;
+- protected 2454 / holdout / Withdrawal outcomes remained unopened — PASS;
+- no optimized threshold, score, rank, predictive model, production promotion or statistical-significance claim was introduced — PASS;
+- no imputation and no post-hoc trading-calendar fallback was introduced — PASS;
+- canonical execution artifact remains fail-closed with **0/11** protocol-valid event sessions because `data_history_sma/trading_days.json` still ends at **2026-08-04** — PASS;
+- concurrent benchmark refresh advanced `data_twse_market_chart/market_chart.json` from 2026-09-22 to **2026-09-23**; bounded freshness-only artifact refresh commit `f872016a7f812f0c89015af513fd67b50dea8426` updated that evidence without changing methodology or research conclusion — PASS;
+- refreshed canonical result blob: `b7eaf860d26125ea0084167b745fccb098568180`;
+- Node24 verification run `35886179132`, job `107266783212` — SUCCESS;
+- execution regressions, deterministic byte regeneration and bounded result contract all completed successfully — PASS.
+
+Closeout conclusion:
+The execution round is methodologically clean but cannot materialize association outcomes until the preregistered canonical trading calendar is fresh enough to resolve the cohort. The next round must repair that prerequisite without changing the frozen T0/D1/D3/D5 alignment semantics.
+
+**Prompt B closeout: PASS**
+
+## Next preregistered round — trading-calendar freshness remediation and outcome replay
+
+Round: `institutional-accumulation-catalyst-trading-calendar-freshness-remediation-v1`
+
+Status:
+- Prompt A: **PREREGISTERED / READY**
+- Prompt B: **PREREGISTERED / READY**
+- frozen Event Intelligence identity: unchanged;
+- frozen outcome-association protocol identity: unchanged;
+- methodology changes: forbidden;
+- objective: restore canonical calendar freshness, then replay the already-authorized descriptive association execution under the exact frozen protocol.
+
+### Prompt A — trading-calendar freshness remediation and outcome replay
+
+```text
+Execute institutional-accumulation-catalyst-trading-calendar-freshness-remediation-v1.
+
+Fetch current remote main and read AGENTS.md, docs/project-philosophy.md, docs/roadmap/current-phase.md, docs/agent-prompts/task-routing.json, this handoff, the frozen Event Intelligence artifact, the outcome-association protocol artifact, and the current execution artifact.
+
+Keep these identities frozen:
+- Event Intelligence blob ee34b995148886ed4f4b27940c6a854fff26f3bb;
+- Event Intelligence methodology SHA256 27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96;
+- protocol blob 379179cf069503df5a4afba4d749869516547283;
+- protocol methodology SHA256 5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be;
+- primary cohort exactly 11; 169 left-censored events excluded;
+- T0/D1/D3/D5 definitions, first_seen availability clock, no-imputation rule and source hierarchy unchanged.
+
+Goal:
+1. determine why data_history_sma/trading_days.json stops at 2026-08-04;
+2. repair only the canonical trading-calendar freshness plumbing needed to extend eligible sessions through the current required cohort horizon;
+3. do not infer trading days from observed price rows inside the research builder and do not add a research-only fallback calendar;
+4. add/refresh deterministic calendar freshness regression coverage;
+5. once the canonical calendar is durably refreshed, rerun scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js against current main;
+6. materialize only protocol-valid D1/D3/D5 and preregistered flow windows whose required dates/data are actually available; immature horizons remain explicit missing;
+7. keep protected 2454, holdout and Withdrawal outcomes unopened;
+8. do not create thresholds, scores, ranks, predictive models, production strategy changes or significance claims;
+9. run bounded Node24 verification and record exact commits, runs/jobs, artifact blob and coverage changes in this handoff.
+
+Prompt A is complete only when the canonical calendar freshness defect is durably repaired or a concrete fail-closed root cause is proven, and the outcome execution artifact has been deterministically replayed against that repaired canonical state. Stop with: Prompt A complete — ready for Prompt B.
+```
+
+### Prompt B — trading-calendar freshness remediation closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-trading-calendar-freshness-remediation-v1.
+
+Independently verify:
+- no Event Intelligence or frozen protocol identity/methodology changed;
+- canonical data_history_sma/trading_days.json freshness was repaired through a legitimate repository data path, not a research-only fallback;
+- calendar regression tests prove correct eligible-session behavior and do not silently mark holidays/weekends as trading days;
+- outcome replay uses the exact frozen T0/D1/D3/D5 semantics and first_seen availability clock;
+- the primary cohort remains exactly 11 with 169 left-censored events excluded;
+- immature D3/D5 or source windows remain explicit missing rather than imputed;
+- protected 2454, holdout and Withdrawal outcomes remain unopened;
+- no score/rank/threshold optimization/model/production/significance claim was added;
+- deterministic builder regeneration and bounded Node24 verification pass on current main;
+- all concurrent relevant data changes are classified and any stale source-coverage evidence is refreshed before PASS;
+- exact result blob, tested SHA, runs/jobs and changed files are recorded.
+
+Fix only bounded defects. On PASS record Prompt B closeout: PASS and preregister the next research pair without automatically executing it.
+```
