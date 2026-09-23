@@ -84,3 +84,13 @@ test('fourth window preserves the closed earliest-three-window cross-day evidenc
   const after = buildCrossDayAudit(root, { rootRelative: ROOT });
   assert.deepEqual(after, before);
 });
+
+test('fifth window preserves the closed earliest-three-window cross-day evidence', () => {
+  const root = repo();
+  buildThree(root);
+  const before = buildCrossDayAudit(root, { rootRelative: ROOT });
+  addWindow(root, 12, 14, 'w4');
+  addWindow(root, 13, 14, 'w5');
+  const after = buildCrossDayAudit(root, { rootRelative: ROOT });
+  assert.deepEqual(after, before);
+});
