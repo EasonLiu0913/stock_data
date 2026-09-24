@@ -302,6 +302,13 @@ function buildRules() {
       ]),
     exactRule('crawl-twse-margin-balance.yml', 'market_date',
       (c) => [`data_twse_margin_balance/${c.target_trade_date}_twse_margin_balance.csv`]),
+    exactRule('crawl-tpex-daily-market-data.yml', 'market_date',
+      (c) => [
+        `data_tpex_daily_quotes/${c.target_trade_date}_tpex_daily_quotes.json`,
+        `data_tpex_margin_balance/${c.target_trade_date}_tpex_margin_balance.json`,
+        'data_tpex_daily_quotes/compact-history.json',
+      ],
+      'Scheduled TPEx collection must persist same-trade-date quotes and margin balance; compact history is the durable frontend pointer.'),
     exactRule('crawl-twse-mi-index.yml', 'market_date',
       (c) => [`data_twse_mi_index/${c.target_trade_date}_twse_mi_index.json`]),
     {

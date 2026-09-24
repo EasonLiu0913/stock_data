@@ -1,0 +1,42 @@
+name: "[CI] Scheduled Workflow Registry Contract"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "scripts/audit_scheduled_workflow_outputs.js"
+      - "tests/audit_scheduled_workflow_outputs.test.js"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "scripts/audit_scheduled_workflow_outputs.js"
+      - "tests/audit_scheduled_workflow_outputs.test.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-workflow-registry-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate scheduled workflow registry contract
+        run: |
+          set -euo pipefail
+          node --check scripts/audit_scheduled_workflow_outputs.js
+          node --test tests/audit_scheduled_workflow_outputs.test.js

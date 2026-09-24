@@ -61,13 +61,14 @@ test('audit registry covers every known scheduled workflow from the completed in
   const rules = buildRules();
   const names = rules.map((rule) => rule.workflow);
   assert.equal(new Set(names).size, names.length);
-  assert.equal(names.length, 40);
+  assert.equal(names.length, 41);
   for (const expected of [
     'crawl-cnn-fear-and-greed.yml',
     'crawl-eia-crude-spot.yml',
     'crawl-rankings.yml',
     'crawl-refined-product-tightness.yml',
     'crawl-tdcc-shareholding-snapshot.yml',
+    'crawl-tpex-daily-market-data.yml',
     'crawl-twse-quarterly-financial-quality.yml',
     'crawl-vix-index.yml',
     'refresh-finmind-quarterly-financial-quality-due.yml',
