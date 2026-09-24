@@ -967,3 +967,67 @@ Independently verify:
 
 Fix only bounded defects. On PASS record Prompt B closeout: PASS and preregister the next paired round without automatically executing it.
 ```
+
+
+## Prompt A implementation and evidence — outcome maturity refresh
+
+Round: `institutional-accumulation-catalyst-outcome-maturity-refresh-v1`
+
+Maturity-gate observation on current remote main:
+- canonical `data_history_sma/trading_days.json` latest eligible session remains **2026-09-23**;
+- no validated durable `data_fubon/fubon_20260924_sma.json` checkpoint exists;
+- `data_twse_market_chart/market_chart.json` still ends at **2026-09-23**;
+- `data_twse_institutional_investors/20260924_twse_institutional_investors.json` does not exist;
+- `data_twse_margin_balance/20260924_twse_margin_balance.csv` does not exist;
+- `data_twse_mi_index/20260924_twse_mi_index.json` does not exist.
+
+Therefore no new canonical eligible session or protocol-valid outcome horizon has matured. Under the preregistered fail-closed rule:
+- the two 2026-09-23-after-close events remain unresolved;
+- the previously materialized 9 D1 horizons remain unchanged;
+- D3/D5 remain explicit `immature_trading_horizon`;
+- no institutional/margin/broker/ownership window was fabricated or advanced;
+- no alternate calendar, forward-fill, imputation, or source-reported-time backdating was introduced.
+
+Verification checkpoint:
+- verification-trigger commit: `a14a787e8d7a4d4e3dc8bc64e9b9806c439bcc4f`;
+- this commit only added a bounded workflow comment to trigger current-state verification; no methodology, cohort, calendar, source data, or result artifact changed;
+- Node24 verifier run: `35945659895`;
+- verifier job: `107462888687`;
+- regression step: **PASS**;
+- deterministic byte regeneration: **PASS**;
+- bounded result contract: **PASS**;
+- checked-in result remains byte-identical and unchanged.
+
+Frozen identities remain unchanged:
+- Event Intelligence blob: `ee34b995148886ed4f4b27940c6a854fff26f3bb`;
+- Event Intelligence methodology SHA256:
+  `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96`;
+- protocol blob: `379179cf069503df5a4afba4d749869516547283`;
+- protocol methodology SHA256:
+  `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be`;
+- canonical outcome artifact blob remains:
+  `9fcd3fc20b04941dce50035d7e16d0106ee53dc1`;
+- primary cohort remains exactly **11**, with **169** left-censored events excluded.
+
+Coverage remains:
+- primary events: **11**;
+- event sessions resolved: **9**;
+- unresolved: **2**;
+- numeric return horizons materialized: **9**;
+- institutional windows materialized: **18**;
+- broker windows materialized: **0**;
+- margin windows materialized: **9**;
+- ownership windows materialized: **0**.
+
+Protected boundaries remain intact:
+- protected 2454 / holdout / Withdrawal outcomes unopened;
+- no optimized threshold;
+- no score or rank;
+- no predictive model;
+- no production strategy promotion;
+- no statistical-significance claim.
+
+Prompt A completion basis:
+The preregistered round explicitly permits completion when a **no-new-maturity gate is durably proven**. That gate is now proven against current remote main and independently verified without changing the canonical outcome artifact.
+
+**Prompt A complete — ready for Prompt B.**
