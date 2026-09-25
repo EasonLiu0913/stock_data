@@ -1208,3 +1208,124 @@ Protected boundaries:
 - no statistical-significance claim.
 
 **Prompt A complete — ready for Prompt B.**
+
+
+## Prompt B closeout — outcome maturity refresh v2
+
+Round: `institutional-accumulation-catalyst-outcome-maturity-refresh-v2`
+
+Independent verification:
+- frozen Event Intelligence blob `ee34b995148886ed4f4b27940c6a854fff26f3bb` unchanged — PASS;
+- frozen Event Intelligence methodology SHA256 `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96` unchanged — PASS;
+- frozen protocol blob `379179cf069503df5a4afba4d749869516547283` unchanged — PASS;
+- frozen protocol methodology SHA256 `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be` unchanged — PASS;
+- cohort remains exactly **11** primary / **169** left-censored excluded — PASS;
+- canonical calendar latest eligible date is **2026-09-24** — PASS;
+- calendar advancement commit `d7dcdfc8056df5eea95f10b63fb4bcc4528766ff` updated the validated daily SMA checkpoint and canonical calendar together — PASS;
+- current production SMA workflow still runs `tests/sync_trading_calendar_from_daily_sma.test.js`, then `scripts/sync_trading_calendar_from_daily_sma.js`, and stages `data_fubon/` plus `data_history_sma/trading_days.json` together — PASS;
+- no 2026-09-25 SMA / institutional / margin / MI_INDEX durable source exists on current main — PASS;
+- the two formerly unresolved 2026-09-23-after-close events now resolve only to legitimate next eligible session **2026-09-24** — PASS;
+- 9 earlier events remain aligned to **2026-09-23** under frozen first_seen/after-close semantics — PASS;
+- D1 materialization count is **11** and uses durable stock + benchmark observations — PASS;
+- D3/D5 remain explicit `immature_trading_horizon` because later eligible sessions are not durably available — PASS;
+- institutional windows materialized **22** and margin windows **11** under preregistered date windows — PASS;
+- broker remains **0** because preregistered HiStock roots are absent — PASS;
+- ownership remains **0** because PIT-safe archived ownership join is unavailable — PASS;
+- no immature horizon was forward-filled or imputed — PASS;
+- protected 2454 / holdout / Withdrawal outcomes remain unopened — PASS;
+- no score, rank, optimized threshold, predictive model, production promotion, or statistical-significance claim was introduced — PASS;
+- materializer run `36140464709`, job `108088835510` completed successfully — PASS;
+- durable artifact commit `44df8adc48fe7efa874778c2ab40a26cbe4a74e4` exists on main — PASS;
+- canonical execution artifact blob is `aecf9e84a5c1026c278a374e4b23757ae56a515e` — PASS;
+- final post-materialization verifier run `36140590601`, job `108089173407` completed successfully — PASS;
+- regression, deterministic byte regeneration, and bounded result contract all passed on the durable post-materialization state — PASS.
+
+Race classification:
+- verifier run `36140469975` failed deterministic byte-match because it began before the writer had checkpointed the refreshed artifact;
+- this is a workflow timing race, not a methodology/result defect;
+- it is superseded by successful post-materialization verifier run `36140590601` against the durable refreshed snapshot.
+
+Bounded changed files for this round:
+- `scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js`;
+- `tests/institutional_accumulation_catalyst_outcome_association_execution.test.js`;
+- `.github/workflows/materialize-institutional-accumulation-catalyst-outcome-association-execution.yml`;
+- `.github/workflows/verify-institutional-accumulation-catalyst-outcome-association-execution.yml`;
+- `data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json`;
+- this canonical handoff.
+
+Concurrent-change classification:
+- current remote main at closeout start remained `a6c041ae941e15dd29dd7cac9210c4afd364847e`, the Prompt A completion commit;
+- no later concurrent commit changed routing, frozen identities, calendar, builder, workflow, artifact, or source maturity before closeout;
+- current routing still has `institutional-accumulation-event-intelligence` as the sole active project.
+
+**Prompt B closeout: PASS**
+
+## Next preregistered round — outcome maturity refresh v3
+
+Round: `institutional-accumulation-catalyst-outcome-maturity-refresh-v3`
+
+Status:
+- Prompt A: **PREREGISTERED / DATA-MATURITY-GATED**
+- Prompt B: **PREREGISTERED / DATA-MATURITY-GATED**
+- no methodology change authorized;
+- no new evidence class authorized.
+
+### Prompt A — outcome maturity refresh v3
+
+```text
+Execute institutional-accumulation-catalyst-outcome-maturity-refresh-v3 against current remote main.
+
+Read AGENTS.md, docs/project-philosophy.md, docs/roadmap/current-phase.md, docs/agent-prompts/task-routing.json, this canonical handoff, data_history_sma/trading_days.json, scripts/sync_trading_calendar_from_daily_sma.js, the frozen Event Intelligence artifact, the frozen outcome-association protocol, scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js, and data_research/institutional-flow/institutional-accumulation-catalyst-outcome-association-execution-v1.json.
+
+Frozen identities and rules:
+- Event Intelligence blob ee34b995148886ed4f4b27940c6a854fff26f3bb;
+- Event Intelligence methodology SHA256 27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96;
+- protocol blob 379179cf069503df5a4afba4d749869516547283;
+- protocol methodology SHA256 5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be;
+- cohort exactly 11 / 169 left-censored excluded;
+- first_seen availability clock unchanged;
+- T0/D1/D3/D5 trading-session semantics unchanged;
+- no alternate calendar, forward-fill, imputation, or source-time backdating.
+
+Execution:
+1. determine whether canonical trading calendar has advanced beyond 2026-09-24;
+2. permit advancement only through validated durable daily SMA checkpoints and canonical sync plumbing;
+3. verify benchmark, stock-price, institutional, and margin source maturity for each newly eligible target date;
+4. rerun scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js only after canonical calendar state is current;
+5. keep all 11 event-session alignments frozen by first_seen semantics; do not reclassify already resolved sessions;
+6. materialize D3 and/or D5 only when the exact frozen target trading session exists and both stock and benchmark observations are durable;
+7. refresh institutional and margin windows only for preregistered valid dates;
+8. keep broker and PIT-safe ownership explicit missing unless their exact preregistered source appears;
+9. keep protected 2454 / holdout / Withdrawal unopened;
+10. do not create thresholds, scores, ranks, predictive models, production promotion, or significance claims;
+11. run Node24 regressions, deterministic byte regeneration and bounded contract verification;
+12. record exact coverage delta, artifact blob, tested SHA, run/job IDs, changed files, and remaining immature windows in this handoff.
+
+If no new eligible session or D3/D5 horizon has matured, durably prove the no-new-maturity gate and complete without changing the canonical artifact.
+
+Stop with: Prompt A complete — ready for Prompt B.
+```
+
+### Prompt B — outcome maturity refresh v3 closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-outcome-maturity-refresh-v3.
+
+Independently verify:
+- frozen Event Intelligence/protocol identities and 11/169 cohort remain unchanged;
+- any calendar advancement came only from validated durable daily SMA checkpoints through canonical sync plumbing;
+- no weekend or declared non-trading day was promoted;
+- all 11 event-session alignments remain consistent with frozen first_seen semantics;
+- D1/D3/D5 use exact frozen trading-session targets and durable stock/benchmark observations only;
+- institutional/margin windows follow preregistered dates;
+- broker/ownership remain explicit missing unless exact preregistered sources exist;
+- immature horizons are never imputed or forward-filled;
+- protected 2454 / holdout / Withdrawal remain unopened;
+- no score/rank/threshold/model/production/significance output appears;
+- deterministic regressions, byte regeneration and bounded Node24 verifier pass on current main;
+- workflow timing races, if any, are classified and superseded by a final verifier on durable post-materialization state;
+- relevant concurrent changes are classified before PASS;
+- exact coverage, blob, tested SHA, run/job IDs and changed files are recorded.
+
+Fix only bounded defects. On PASS record Prompt B closeout: PASS and preregister the next paired round without auto-running it.
+```
