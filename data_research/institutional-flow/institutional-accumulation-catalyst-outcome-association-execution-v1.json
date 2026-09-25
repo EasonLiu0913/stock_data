@@ -29,21 +29,21 @@
   "source_coverage": {
     "trading_calendar": {
       "path": "data_history_sma/trading_days.json",
-      "latest_eligible_date": "20260923",
+      "latest_eligible_date": "20260924",
       "stale_for_all_primary_events": false
     },
     "benchmark": {
       "path": "data_twse_market_chart/market_chart.json",
-      "latest_date": "20260923"
+      "latest_date": "20260924"
     },
     "stock_price": {
       "path": "scripts/lib/stock_price_provider.js",
-      "observed_repository_date": "20260923",
+      "observed_repository_date": "20260924",
       "observed_date_file_exists": true
     },
     "institutional": {
       "path": "data_twse_institutional_investors/YYYYMMDD_twse_institutional_investors.json",
-      "observed_repository_date": "20260923",
+      "observed_repository_date": "20260924",
       "observed_date_file_exists": true
     },
     "broker": {
@@ -53,7 +53,7 @@
     },
     "margin": {
       "path": "data_twse_margin_balance/YYYYMMDD_twse_margin_balance.csv",
-      "observed_repository_date": "20260923",
+      "observed_repository_date": "20260924",
       "observed_date_file_exists": true
     },
     "ownership": {
@@ -63,12 +63,12 @@
   },
   "coverage": {
     "primary_events": 11,
-    "event_session_resolved": 9,
-    "event_session_unresolved": 2,
-    "numeric_return_horizons_materialized": 9,
-    "institutional_windows_materialized": 18,
+    "event_session_resolved": 11,
+    "event_session_unresolved": 0,
+    "numeric_return_horizons_materialized": 11,
+    "institutional_windows_materialized": 22,
     "broker_windows_materialized": 0,
-    "margin_windows_materialized": 9,
+    "margin_windows_materialized": 11,
     "ownership_windows_materialized": 0
   },
   "primary_events": [
@@ -1306,51 +1306,114 @@
         "text_length": 26
       },
       "alignment": {
-        "status": "missing",
+        "status": "resolved",
         "local_first_seen_date": "20260923",
         "classification": "after_regular_close",
-        "event_session": null,
-        "reason": "trading_calendar_has_no_eligible_session_at_or_after_event"
+        "event_session": "20260924"
       },
-      "stock_session_cluster_id": null,
+      "stock_session_cluster_id": "1216|20260924",
       "returns": {
         "D1": {
-          "status": "missing",
-          "value_pct": null,
-          "benchmark_pct": null,
-          "relative_pct": null,
-          "reason": "event_session_unresolved"
+          "status": "materialized",
+          "baseline_date": "20260923",
+          "target_date": "20260924",
+          "baseline_close": 75.4,
+          "target_close": 74.5,
+          "benchmark_baseline_close": 48157.29,
+          "benchmark_target_close": 48024.6,
+          "value_pct": -1.1936339522546469,
+          "benchmark_pct": -0.2755346075329457,
+          "relative_pct": -0.9180993447217012
         },
         "D3": {
           "status": "missing",
           "value_pct": null,
           "benchmark_pct": null,
           "relative_pct": null,
-          "reason": "event_session_unresolved"
+          "baseline_date": "20260923",
+          "target_date": null,
+          "reason": "immature_trading_horizon"
         },
         "D5": {
           "status": "missing",
           "value_pct": null,
           "benchmark_pct": null,
           "relative_pct": null,
-          "reason": "event_session_unresolved"
+          "baseline_date": "20260923",
+          "target_date": null,
+          "reason": "immature_trading_horizon"
         }
       },
       "institutional_flow": {
-        "status": "missing",
-        "reason": "event_session_unresolved"
+        "status": "partial",
+        "pre_T5_T1": {
+          "status": "materialized",
+          "dates": [
+            "20260917",
+            "20260918",
+            "20260921",
+            "20260922",
+            "20260923"
+          ],
+          "foreign_net": 4110067,
+          "investment_trust_net": -587461,
+          "dealer_net": 846920,
+          "three_institutions_net": 4369526
+        },
+        "event_T0": {
+          "status": "materialized",
+          "dates": [
+            "20260924"
+          ],
+          "foreign_net": -2559976,
+          "investment_trust_net": 103000,
+          "dealer_net": 262906,
+          "three_institutions_net": -2194070
+        },
+        "post_T0_T2": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        },
+        "post_T0_T4": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        }
       },
       "broker_flow": {
         "status": "missing",
-        "reason": "event_session_unresolved"
+        "reason": "preregistered_histock_stock_root_unavailable"
       },
       "margin_financing": {
-        "status": "missing",
-        "reason": "event_session_unresolved"
+        "status": "partial",
+        "event_window": {
+          "status": "materialized",
+          "baseline_date": "20260923",
+          "event_date": "20260924",
+          "financing_balance_change": 47,
+          "short_balance_change": 0,
+          "baseline": {
+            "date": "20260923",
+            "financing_balance": 792,
+            "short_balance": 1
+          },
+          "event": {
+            "date": "20260924",
+            "financing_balance": 839,
+            "short_balance": 1
+          }
+        },
+        "D3": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        },
+        "D5": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        }
       },
       "tdcc_ownership": {
         "status": "missing",
-        "reason": "event_session_unresolved"
+        "reason": "pit_safe_archived_snapshot_join_not_available"
       }
     },
     {
@@ -1377,51 +1440,114 @@
         "text_length": 26
       },
       "alignment": {
-        "status": "missing",
+        "status": "resolved",
         "local_first_seen_date": "20260923",
         "classification": "after_regular_close",
-        "event_session": null,
-        "reason": "trading_calendar_has_no_eligible_session_at_or_after_event"
+        "event_session": "20260924"
       },
-      "stock_session_cluster_id": null,
+      "stock_session_cluster_id": "1216|20260924",
       "returns": {
         "D1": {
-          "status": "missing",
-          "value_pct": null,
-          "benchmark_pct": null,
-          "relative_pct": null,
-          "reason": "event_session_unresolved"
+          "status": "materialized",
+          "baseline_date": "20260923",
+          "target_date": "20260924",
+          "baseline_close": 75.4,
+          "target_close": 74.5,
+          "benchmark_baseline_close": 48157.29,
+          "benchmark_target_close": 48024.6,
+          "value_pct": -1.1936339522546469,
+          "benchmark_pct": -0.2755346075329457,
+          "relative_pct": -0.9180993447217012
         },
         "D3": {
           "status": "missing",
           "value_pct": null,
           "benchmark_pct": null,
           "relative_pct": null,
-          "reason": "event_session_unresolved"
+          "baseline_date": "20260923",
+          "target_date": null,
+          "reason": "immature_trading_horizon"
         },
         "D5": {
           "status": "missing",
           "value_pct": null,
           "benchmark_pct": null,
           "relative_pct": null,
-          "reason": "event_session_unresolved"
+          "baseline_date": "20260923",
+          "target_date": null,
+          "reason": "immature_trading_horizon"
         }
       },
       "institutional_flow": {
-        "status": "missing",
-        "reason": "event_session_unresolved"
+        "status": "partial",
+        "pre_T5_T1": {
+          "status": "materialized",
+          "dates": [
+            "20260917",
+            "20260918",
+            "20260921",
+            "20260922",
+            "20260923"
+          ],
+          "foreign_net": 4110067,
+          "investment_trust_net": -587461,
+          "dealer_net": 846920,
+          "three_institutions_net": 4369526
+        },
+        "event_T0": {
+          "status": "materialized",
+          "dates": [
+            "20260924"
+          ],
+          "foreign_net": -2559976,
+          "investment_trust_net": 103000,
+          "dealer_net": 262906,
+          "three_institutions_net": -2194070
+        },
+        "post_T0_T2": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        },
+        "post_T0_T4": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        }
       },
       "broker_flow": {
         "status": "missing",
-        "reason": "event_session_unresolved"
+        "reason": "preregistered_histock_stock_root_unavailable"
       },
       "margin_financing": {
-        "status": "missing",
-        "reason": "event_session_unresolved"
+        "status": "partial",
+        "event_window": {
+          "status": "materialized",
+          "baseline_date": "20260923",
+          "event_date": "20260924",
+          "financing_balance_change": 47,
+          "short_balance_change": 0,
+          "baseline": {
+            "date": "20260923",
+            "financing_balance": 792,
+            "short_balance": 1
+          },
+          "event": {
+            "date": "20260924",
+            "financing_balance": 839,
+            "short_balance": 1
+          }
+        },
+        "D3": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        },
+        "D5": {
+          "status": "missing",
+          "reason": "immature_trading_horizon"
+        }
       },
       "tdcc_ownership": {
         "status": "missing",
-        "reason": "event_session_unresolved"
+        "reason": "pit_safe_archived_snapshot_join_not_available"
       }
     }
   ],
