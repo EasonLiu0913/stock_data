@@ -1131,3 +1131,80 @@ Independently verify:
 
 Fix only bounded defects. On PASS record Prompt B closeout: PASS and preregister the next paired round without auto-running it.
 ```
+
+
+## Prompt A implementation and evidence — outcome maturity refresh v2
+
+Round: `institutional-accumulation-catalyst-outcome-maturity-refresh-v2`
+
+Maturity advancement:
+- canonical `data_history_sma/trading_days.json` advanced legitimately to **2026-09-24**;
+- canonical calendar blob at round start: `17b21f0d0c34e233ed73febba3ead203b6e4321d`;
+- durable `data_fubon/fubon_20260924_sma.json` exists;
+- benchmark `data_twse_market_chart/market_chart.json` ends at **2026-09-24**;
+- durable 2026-09-24 institutional, margin, and MI_INDEX files exist;
+- no validated durable 2026-09-25 SMA / institutional / margin / MI_INDEX files were available during this round, so later horizons remain maturity-gated.
+
+Bounded plumbing repair:
+- builder freshness commit: `5bfc817290ff6620098734882ed102749065ce9b`;
+- `scripts/build_institutional_accumulation_catalyst_outcome_association_execution.js` now derives `source_coverage.observed_repository_date` from the latest canonical eligible session instead of hard-coding 20260923;
+- no alignment, first_seen, T0/D1/D3/D5, imputation, cohort, or protected-scope rule changed;
+- regression expectation commit: `32282869291e624418bb6a9751549d755dd6c27d`;
+- materializer sparse-checkout commit: `b31fedf6b2573d3528edb3868ba32db14ee5ebfb`;
+- verifier sparse-checkout / bounded-contract commit: `598ccd10cfae130f3fd5494841dbd9eef0a0182e`;
+- both workflows now include the exact 2026-09-24 preregistered source files.
+
+Materialization:
+- writer run: `36140464709`;
+- writer job: `108088835510`;
+- result: **SUCCESS**;
+- durable artifact commit: `44df8adc48fe7efa874778c2ab40a26cbe4a74e4`;
+- canonical execution artifact blob:
+  `aecf9e84a5c1026c278a374e4b23757ae56a515e`.
+
+Coverage after legitimate 2026-09-24 maturity:
+- primary events: **11**;
+- event sessions resolved: **11**;
+- event sessions unresolved: **0**;
+- 9 events remain aligned to **2026-09-23** under the frozen after-close rule;
+- the 2 events first seen after the 2026-09-23 close now legitimately align to **2026-09-24**;
+- numeric return horizons materialized: **11** (all D1);
+- institutional windows materialized: **22**;
+- broker windows materialized: **0**;
+- margin windows materialized: **11**;
+- ownership windows materialized: **0**;
+- D3/D5 remain explicit `immature_trading_horizon` because the required later eligible sessions are not yet durably present.
+
+Verification:
+- an earlier verifier run `36140469975` raced before the writer checkpoint and failed deterministic byte-match against the old artifact; this is classified as a workflow timing race, not a research/result defect;
+- post-materialization verification trigger commit:
+  `7e9f3429b7ceb35154bfdbb599b69ceca4143cd7`;
+- final Node24 verifier run: `36140590601`;
+- final verifier job: `108089173407`;
+- execution regressions: **PASS**;
+- deterministic byte regeneration: **PASS**;
+- bounded result contract: **PASS**.
+
+Frozen identities remain unchanged:
+- Event Intelligence blob:
+  `ee34b995148886ed4f4b27940c6a854fff26f3bb`;
+- Event Intelligence methodology SHA256:
+  `27e31156c9ba2f5a5d321784b5512074ed9a74217dbe7119249e2f31ac342a96`;
+- protocol blob:
+  `379179cf069503df5a4afba4d749869516547283`;
+- protocol methodology SHA256:
+  `5e57653500ae88d263915f1d74e3020e986736098c70e56cac114d16a1e315be`;
+- cohort remains exactly **11**, with **169** left-censored events excluded.
+
+Protected boundaries:
+- protected 2454 / holdout / Withdrawal outcomes remain unopened;
+- no alternate calendar;
+- no forward-fill or imputation;
+- no source-reported-time backdating;
+- no optimized threshold;
+- no score or rank;
+- no predictive model;
+- no production strategy promotion;
+- no statistical-significance claim.
+
+**Prompt A complete — ready for Prompt B.**
