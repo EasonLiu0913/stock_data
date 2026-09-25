@@ -287,7 +287,7 @@ function buildResult() {
   const resolved = primaryEvents.filter(x => x.alignment.status === 'resolved').length;
   const unresolved = primaryEvents.length - resolved;
   const benchmarkLatest = latestBenchmarkDate();
-  const observedRepositoryDate = '20260923';
+  const observedRepositoryDate = calendarLatest || '20260923';
 
   return {
     schema_version: 1,
@@ -327,12 +327,12 @@ function buildResult() {
       stock_price: {
         path: protocol.providers.stock_price.path,
         observed_repository_date: observedRepositoryDate,
-        observed_date_file_exists: existsRel('data_twse_mi_index/20260923_twse_mi_index.json')
+        observed_date_file_exists: existsRel(`data_twse_mi_index/${observedRepositoryDate}_twse_mi_index.json`)
       },
       institutional: {
         path: protocol.providers.institutional.output_pattern,
         observed_repository_date: observedRepositoryDate,
-        observed_date_file_exists: existsRel('data_twse_institutional_investors/20260923_twse_institutional_investors.json')
+        observed_date_file_exists: existsRel(`data_twse_institutional_investors/${observedRepositoryDate}_twse_institutional_investors.json`)
       },
       broker: {
         path: protocol.providers.broker.daily_pattern,
@@ -342,7 +342,7 @@ function buildResult() {
       margin: {
         path: protocol.providers.margin.output_pattern,
         observed_repository_date: observedRepositoryDate,
-        observed_date_file_exists: existsRel('data_twse_margin_balance/20260923_twse_margin_balance.csv')
+        observed_date_file_exists: existsRel(`data_twse_margin_balance/${observedRepositoryDate}_twse_margin_balance.csv`)
       },
       ownership: {
         path: protocol.providers.ownership.manifest,
