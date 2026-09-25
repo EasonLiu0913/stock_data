@@ -54,16 +54,20 @@ test('no alternate alignment, imputation, or post-hoc rule change is introduced'
 test('repaired calendar materializes only mature preregistered windows', () => {
   const r = buildResult();
   assert.equal(r.coverage.primary_events, 11);
-  assert.equal(r.coverage.event_session_resolved, 9);
-  assert.equal(r.coverage.event_session_unresolved, 2);
-  assert.equal(r.coverage.numeric_return_horizons_materialized, 9);
-  assert.equal(r.coverage.margin_windows_materialized, 9);
+  assert.equal(r.coverage.event_session_resolved, 11);
+  assert.equal(r.coverage.event_session_unresolved, 0);
+  assert.equal(r.coverage.numeric_return_horizons_materialized, 11);
+  assert.equal(r.coverage.margin_windows_materialized, 11);
   const resolved = r.primary_events.filter(x => x.alignment.status === 'resolved');
   const unresolved = r.primary_events.filter(x => x.alignment.status === 'missing');
-  assert.equal(resolved.length, 9);
-  assert.equal(unresolved.length, 2);
+  assert.equal(resolved.length, 11);
+  assert.equal(unresolved.length, 0);
+  const bySession = resolved.reduce((m,row) => {
+    m[row.alignment.event_session] = (m[row.alignment.event_session] || 0) + 1;
+    return m;
+  }, {});
+  assert.deepEqual(bySession, { '20260923': 9, '20260924': 2 });
   for (const row of resolved) {
-    assert.equal(row.alignment.event_session, '20260923');
     assert.equal(row.returns.D1.status, 'materialized');
     assert.equal(row.returns.D3.status, 'missing');
     assert.equal(row.returns.D5.status, 'missing');
