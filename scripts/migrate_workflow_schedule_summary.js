@@ -34,12 +34,12 @@ const JOB = `
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }}
+          ref: \${{ github.sha }}
           fetch-depth: 1
       - name: Write schedule timing summary
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
 `;
 
@@ -49,7 +49,7 @@ const STEP = `
         if: always() && github.event_name == 'schedule'
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js`;
 
 function normalizeTrailingWhitespace(text) {
