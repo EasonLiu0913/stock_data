@@ -1,0 +1,427 @@
+{
+  "analysis_version": "1.1.0",
+  "generated_at": "2026-09-29T09:12:01.489Z",
+  "prediction_date": "2026-09-29",
+  "actual_trade_date": "2026-09-29",
+  "definition": {
+    "factor_name": "20日成交量比",
+    "formula": "結果日成交量 / 結果日前20個交易日平均成交量",
+    "selected_low_volume_threshold": 0,
+    "low_volume_condition": "volume_ratio_20d <= 0",
+    "use_note": "低量只作覆盤敏感度分析，不會直接改寫原預測或正式覆盤資格。V1/V2 僅使用兩版皆有20日量比且可覆盤的共同股票。",
+    "sample_policy": "V1/V2 使用相同的共同成交量樣本、相同結果日報酬與相同方向判分規則。",
+    "common_sample_count": 1013
+  },
+  "source_files": {
+    "v1_replay": "data_predictions/20260929/replay.json",
+    "v2_replay": "data_predictions_v2/20260929/replay-v2.json"
+  },
+  "sample_universe": {
+    "normalized_v1_count": 1013,
+    "normalized_v2_count": 1013,
+    "common_sample_count": 1013,
+    "v1_only_count": 0,
+    "v2_only_count": 0
+  },
+  "models": {
+    "v1": {
+      "volume_covered_count": 1013,
+      "selected_threshold": 0,
+      "baseline": {
+        "sample_count": 1013,
+        "hit_count": 499,
+        "miss_count": 422,
+        "neutral_count": 92,
+        "all_sample_hit_rate": 49.26,
+        "classified_accuracy": 54.18,
+        "average_actual_return": 0.08
+      },
+      "after_excluding_low_volume": {
+        "sample_count": 1013,
+        "hit_count": 499,
+        "miss_count": 422,
+        "neutral_count": 92,
+        "all_sample_hit_rate": 49.26,
+        "classified_accuracy": 54.18,
+        "average_actual_return": 0.08
+      },
+      "impact": {
+        "removed_count": 0,
+        "retained_count": 1013,
+        "retained_coverage_rate": 100,
+        "removed_hit_count": 0,
+        "removed_miss_count": 0,
+        "removed_neutral_count": 0,
+        "net_removed_errors": 0,
+        "all_sample_hit_rate_delta": 0,
+        "classified_accuracy_delta": 0,
+        "interpretation": "排除低量後命中率沒有改變。"
+      },
+      "low_volume_lists": {
+        "accurate": [],
+        "inaccurate": [],
+        "neutral": []
+      },
+      "sensitivity": [
+        {
+          "threshold": 0,
+          "low_volume_condition": "volume_ratio_20d <= 0",
+          "removed_count": 0,
+          "retained_count": 1013,
+          "retained_coverage_rate": 100,
+          "removed_hit_count": 0,
+          "removed_miss_count": 0,
+          "removed_neutral_count": 0,
+          "net_removed_errors": 0,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 499,
+            "miss_count": 422,
+            "neutral_count": 92,
+            "all_sample_hit_rate": 49.26,
+            "classified_accuracy": 54.18,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 1013,
+            "hit_count": 499,
+            "miss_count": 422,
+            "neutral_count": 92,
+            "all_sample_hit_rate": 49.26,
+            "classified_accuracy": 54.18,
+            "average_actual_return": 0.08
+          },
+          "all_sample_hit_rate_delta": 0,
+          "classified_accuracy_delta": 0
+        },
+        {
+          "threshold": 0.5,
+          "low_volume_condition": "volume_ratio_20d <= 0.5",
+          "removed_count": 264,
+          "retained_count": 749,
+          "retained_coverage_rate": 73.94,
+          "removed_hit_count": 111,
+          "removed_miss_count": 116,
+          "removed_neutral_count": 37,
+          "net_removed_errors": 5,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 499,
+            "miss_count": 422,
+            "neutral_count": 92,
+            "all_sample_hit_rate": 49.26,
+            "classified_accuracy": 54.18,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 749,
+            "hit_count": 388,
+            "miss_count": 306,
+            "neutral_count": 55,
+            "all_sample_hit_rate": 51.8,
+            "classified_accuracy": 55.91,
+            "average_actual_return": 0.15
+          },
+          "all_sample_hit_rate_delta": 2.54,
+          "classified_accuracy_delta": 1.73
+        },
+        {
+          "threshold": 0.75,
+          "low_volume_condition": "volume_ratio_20d <= 0.75",
+          "removed_count": 525,
+          "retained_count": 488,
+          "retained_coverage_rate": 48.17,
+          "removed_hit_count": 246,
+          "removed_miss_count": 220,
+          "removed_neutral_count": 59,
+          "net_removed_errors": -26,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 499,
+            "miss_count": 422,
+            "neutral_count": 92,
+            "all_sample_hit_rate": 49.26,
+            "classified_accuracy": 54.18,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 488,
+            "hit_count": 253,
+            "miss_count": 202,
+            "neutral_count": 33,
+            "all_sample_hit_rate": 51.84,
+            "classified_accuracy": 55.6,
+            "average_actual_return": 0.42
+          },
+          "all_sample_hit_rate_delta": 2.58,
+          "classified_accuracy_delta": 1.42
+        },
+        {
+          "threshold": 1,
+          "low_volume_condition": "volume_ratio_20d <= 1",
+          "removed_count": 705,
+          "retained_count": 308,
+          "retained_coverage_rate": 30.4,
+          "removed_hit_count": 334,
+          "removed_miss_count": 289,
+          "removed_neutral_count": 82,
+          "net_removed_errors": -45,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 499,
+            "miss_count": 422,
+            "neutral_count": 92,
+            "all_sample_hit_rate": 49.26,
+            "classified_accuracy": 54.18,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 308,
+            "hit_count": 165,
+            "miss_count": 133,
+            "neutral_count": 10,
+            "all_sample_hit_rate": 53.57,
+            "classified_accuracy": 55.37,
+            "average_actual_return": 0.76
+          },
+          "all_sample_hit_rate_delta": 4.31,
+          "classified_accuracy_delta": 1.19
+        },
+        {
+          "threshold": 1.2,
+          "low_volume_condition": "volume_ratio_20d <= 1.2",
+          "removed_count": 791,
+          "retained_count": 222,
+          "retained_coverage_rate": 21.92,
+          "removed_hit_count": 373,
+          "removed_miss_count": 329,
+          "removed_neutral_count": 89,
+          "net_removed_errors": -44,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 499,
+            "miss_count": 422,
+            "neutral_count": 92,
+            "all_sample_hit_rate": 49.26,
+            "classified_accuracy": 54.18,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 222,
+            "hit_count": 126,
+            "miss_count": 93,
+            "neutral_count": 3,
+            "all_sample_hit_rate": 56.76,
+            "classified_accuracy": 57.53,
+            "average_actual_return": 1.2
+          },
+          "all_sample_hit_rate_delta": 7.5,
+          "classified_accuracy_delta": 3.35
+        }
+      ],
+      "by_industry": []
+    },
+    "v2": {
+      "volume_covered_count": 1013,
+      "selected_threshold": 0,
+      "baseline": {
+        "sample_count": 1013,
+        "hit_count": 472,
+        "miss_count": 457,
+        "neutral_count": 84,
+        "all_sample_hit_rate": 46.59,
+        "classified_accuracy": 50.81,
+        "average_actual_return": 0.08
+      },
+      "after_excluding_low_volume": {
+        "sample_count": 1013,
+        "hit_count": 472,
+        "miss_count": 457,
+        "neutral_count": 84,
+        "all_sample_hit_rate": 46.59,
+        "classified_accuracy": 50.81,
+        "average_actual_return": 0.08
+      },
+      "impact": {
+        "removed_count": 0,
+        "retained_count": 1013,
+        "retained_coverage_rate": 100,
+        "removed_hit_count": 0,
+        "removed_miss_count": 0,
+        "removed_neutral_count": 0,
+        "net_removed_errors": 0,
+        "all_sample_hit_rate_delta": 0,
+        "classified_accuracy_delta": 0,
+        "interpretation": "排除低量後命中率沒有改變。"
+      },
+      "low_volume_lists": {
+        "accurate": [],
+        "inaccurate": [],
+        "neutral": []
+      },
+      "sensitivity": [
+        {
+          "threshold": 0,
+          "low_volume_condition": "volume_ratio_20d <= 0",
+          "removed_count": 0,
+          "retained_count": 1013,
+          "retained_coverage_rate": 100,
+          "removed_hit_count": 0,
+          "removed_miss_count": 0,
+          "removed_neutral_count": 0,
+          "net_removed_errors": 0,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 472,
+            "miss_count": 457,
+            "neutral_count": 84,
+            "all_sample_hit_rate": 46.59,
+            "classified_accuracy": 50.81,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 1013,
+            "hit_count": 472,
+            "miss_count": 457,
+            "neutral_count": 84,
+            "all_sample_hit_rate": 46.59,
+            "classified_accuracy": 50.81,
+            "average_actual_return": 0.08
+          },
+          "all_sample_hit_rate_delta": 0,
+          "classified_accuracy_delta": 0
+        },
+        {
+          "threshold": 0.5,
+          "low_volume_condition": "volume_ratio_20d <= 0.5",
+          "removed_count": 264,
+          "retained_count": 749,
+          "retained_coverage_rate": 73.94,
+          "removed_hit_count": 112,
+          "removed_miss_count": 120,
+          "removed_neutral_count": 32,
+          "net_removed_errors": 8,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 472,
+            "miss_count": 457,
+            "neutral_count": 84,
+            "all_sample_hit_rate": 46.59,
+            "classified_accuracy": 50.81,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 749,
+            "hit_count": 360,
+            "miss_count": 337,
+            "neutral_count": 52,
+            "all_sample_hit_rate": 48.06,
+            "classified_accuracy": 51.65,
+            "average_actual_return": 0.15
+          },
+          "all_sample_hit_rate_delta": 1.47,
+          "classified_accuracy_delta": 0.84
+        },
+        {
+          "threshold": 0.75,
+          "low_volume_condition": "volume_ratio_20d <= 0.75",
+          "removed_count": 525,
+          "retained_count": 488,
+          "retained_coverage_rate": 48.17,
+          "removed_hit_count": 238,
+          "removed_miss_count": 233,
+          "removed_neutral_count": 54,
+          "net_removed_errors": -5,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 472,
+            "miss_count": 457,
+            "neutral_count": 84,
+            "all_sample_hit_rate": 46.59,
+            "classified_accuracy": 50.81,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 488,
+            "hit_count": 234,
+            "miss_count": 224,
+            "neutral_count": 30,
+            "all_sample_hit_rate": 47.95,
+            "classified_accuracy": 51.09,
+            "average_actual_return": 0.42
+          },
+          "all_sample_hit_rate_delta": 1.36,
+          "classified_accuracy_delta": 0.28
+        },
+        {
+          "threshold": 1,
+          "low_volume_condition": "volume_ratio_20d <= 1",
+          "removed_count": 705,
+          "retained_count": 308,
+          "retained_coverage_rate": 30.4,
+          "removed_hit_count": 321,
+          "removed_miss_count": 310,
+          "removed_neutral_count": 74,
+          "net_removed_errors": -11,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 472,
+            "miss_count": 457,
+            "neutral_count": 84,
+            "all_sample_hit_rate": 46.59,
+            "classified_accuracy": 50.81,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 308,
+            "hit_count": 151,
+            "miss_count": 147,
+            "neutral_count": 10,
+            "all_sample_hit_rate": 49.03,
+            "classified_accuracy": 50.67,
+            "average_actual_return": 0.76
+          },
+          "all_sample_hit_rate_delta": 2.44,
+          "classified_accuracy_delta": -0.14
+        },
+        {
+          "threshold": 1.2,
+          "low_volume_condition": "volume_ratio_20d <= 1.2",
+          "removed_count": 791,
+          "retained_count": 222,
+          "retained_coverage_rate": 21.92,
+          "removed_hit_count": 358,
+          "removed_miss_count": 352,
+          "removed_neutral_count": 81,
+          "net_removed_errors": -6,
+          "before": {
+            "sample_count": 1013,
+            "hit_count": 472,
+            "miss_count": 457,
+            "neutral_count": 84,
+            "all_sample_hit_rate": 46.59,
+            "classified_accuracy": 50.81,
+            "average_actual_return": 0.08
+          },
+          "after": {
+            "sample_count": 222,
+            "hit_count": 114,
+            "miss_count": 105,
+            "neutral_count": 3,
+            "all_sample_hit_rate": 51.35,
+            "classified_accuracy": 52.05,
+            "average_actual_return": 1.2
+          },
+          "all_sample_hit_rate_delta": 4.76,
+          "classified_accuracy_delta": 1.24
+        }
+      ],
+      "by_industry": []
+    }
+  },
+  "limitations": [
+    "成交量是結果日資料，本分析只用來檢查是否應把預測日前的量能條件加入未來模型；不可倒灌成原預測已知資訊。",
+    "V1/V2 已固定使用共同樣本，但單一交易日的準確率差異仍可能受大盤與產業影響，不能直接視為因果。",
+    "若要正式排除低量股票，應累積多個覆盤日並做樣本外驗證，同時觀察覆蓋率與犧牲的正確預測數。"
+  ]
+}
