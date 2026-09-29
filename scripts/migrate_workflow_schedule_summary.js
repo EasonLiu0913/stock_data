@@ -9,6 +9,10 @@ const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
 const JOB_MARKER = '# schedule-timing-summary:v1';
 const STEP_MARKER = '# schedule-timing-summary:v2';
 
+const LEGACY_UNMARKED_EXCEPTIONS = new Set([
+  'crawl-tpex-daily-market-data.yml',
+]);
+
 const EMBEDDED_TARGETS = new Map([
   ['calculate-twse-margin-maintenance.yml', 'calculate'],
   ['crawl-twse-institutional-investors.yml', 'crawl-twse-institutional-investors'],
@@ -111,6 +115,7 @@ function migrateFile(file) {
   if (!/^jobs:\s*$/m.test(original)) return false;
 
   const name = path.basename(file);
+  if (LEGACY_UNMARKED_EXCEPTIONS.has(name)) return false;
   const targetJob = EMBEDDED_TARGETS.get(name);
   const updated = targetJob
     ? migrateEmbedded(original, targetJob)
@@ -138,6 +143,10 @@ function selfTest() {
   if (!migrated.includes(STEP_MARKER)) throw new Error('Embedded workflow missing v2 marker');
   if (!migrated.includes("if: always() && github.event_name == 'schedule'")) throw new Error('Embedded workflow missing schedule-only always condition');
   if (migrateFile(embedded)) throw new Error('Canonical embedded step must be idempotent');
+
+  const legacyException = path.join(tempDir, 'crawl-tpex-daily-market-data.yml');
+  fs.writeFileSync(legacyException, 'name: sample\n\njobs:\n  crawl:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n\n  schedule-timing-summary:\n    name: 排程時間摘要\n', 'utf8');
+  if (migrateFile(legacyException)) throw new Error('Frozen Round 2 legacy exception must remain untouched in Round 1');
 
   fs.rmSync(tempDir, { recursive: true, force: true });
   console.log('migrate_workflow_schedule_summary self-test passed');
@@ -171,6 +180,7 @@ module.exports = {
   JOB_MARKER,
   STEP_MARKER,
   EMBEDDED_TARGETS,
+  LEGACY_UNMARKED_EXCEPTIONS,
   normalizeTrailingWhitespace,
   migrateEmbedded,
   migrateStandalone,
