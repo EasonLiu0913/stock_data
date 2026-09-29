@@ -233,26 +233,15 @@ jobs:
             --add-path "$FLOW_FILE" \
             --max-attempts 5 \
             --output-key pages_changed
-
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
   deploy-pages:
     name: 發布更新後分析到 GitHub Pages
     needs: crawl-twse-margin-balance
     if: needs.crawl-twse-margin-balance.result == 'success' && needs.crawl-twse-margin-balance.outputs.pages_changed == 'true'
     uses: ./.github/workflows/deploy-pages.yml
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js

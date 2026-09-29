@@ -138,21 +138,10 @@ jobs:
 
           echo "Failed to push TWSE institutional investors data after 5 attempts."
           exit 1
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
+      # schedule-timing-summary:v2
       - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
-

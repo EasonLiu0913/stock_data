@@ -169,23 +169,41 @@ The External Market workflow snapshots the validated external-market JSON under 
 
 ## Mandatory workflow schedule summary normalization
 
-Every newly created `.github/workflows/*.yml` or `.yaml` file that contains a `jobs:` section must include the repository's canonical repository-pinned schedule summary job **at creation time**.
+Every workflow with a `jobs:` section remains under repository-managed schedule-summary normalization, but the managed shape is now deliberately staged.
 
-Do not wait for the repository-wide audit to discover and repair the omission after the workflow has already been committed.
+Round 1 introduces the embedded managed step:
 
-The required managed marker is:
+```text
+# schedule-timing-summary:v2
+```
+
+For workflows explicitly listed in `scripts/migrate_workflow_schedule_summary.js` under `EMBEDDED_TARGETS`, the schedule timing summary must run inside an existing functional job that already checks out the repository. The managed step is:
+
+```yaml
+# schedule-timing-summary:v2
+- name: Write schedule timing summary
+  if: always() && github.event_name == 'schedule'
+  shell: bash
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: node scripts/write_workflow_schedule_summary.js
+```
+
+This avoids a second runner and a second checkout merely to execute the shared summary renderer. Do not add another checkout for the embedded step.
+
+Workflows not yet migrated continue to use the legacy managed standalone job marker:
 
 ```text
 # schedule-timing-summary:v1
 ```
 
-The canonical implementation is defined by:
+The mixed v1/v2 state is intentional during the bounded migration. The canonical implementation and allowlist are defined by:
 
 ```text
 scripts/migrate_workflow_schedule_summary.js
 ```
 
-The repository-wide enforcement workflow is:
+The repository-wide enforcement workflow remains:
 
 ```text
 .github/workflows/ensure-workflow-schedule-summary.yml
@@ -193,25 +211,16 @@ The repository-wide enforcement workflow is:
 
 Required authoring rules:
 
-- Do not hand-roll a divergent `schedule-timing-summary` job when the canonical migration script already defines the exact managed block.
-- When creating a new workflow, include the canonical managed job in the same change that creates the workflow.
-- When modifying an existing workflow, preserve the managed marker and canonical job contents unless the canonical migration script itself is intentionally being changed.
-- After adding or modifying a workflow, run or otherwise verify `node scripts/migrate_workflow_schedule_summary.js` produces no diff for that workflow.
-- If normalization would still modify the workflow, the workflow change is **not complete** and must not be treated as ready for closeout.
+- Do not hand-roll a divergent summary implementation when the canonical migration script already defines the managed shape.
+- A v2 workflow must execute the shared `scripts/write_workflow_schedule_summary.js`; do not inline or duplicate its algorithm.
+- A v2 step is schedule-only and uses `always()` so it still runs after failed earlier steps in the same job.
+- Only migrate a workflow after confirming the selected job already checks out the repository and editing that workflow YAML cannot self-trigger the production workflow.
+- Workflows with self-trigger risk or ambiguous multi-job/skip semantics stay on v1 until their own migration round.
+- After adding or modifying a workflow, run `node scripts/migrate_workflow_schedule_summary.js` and require zero normalization diff for the authored workflow.
 
-Expected invariant after workflow authoring:
+The legacy v1 job checks out the exact `github.sha`. The v2 step reuses the primary job's existing checkout. Neither shape may fetch the summary implementation from mutable `raw.githubusercontent.com/.../main`.
 
-```text
-create / modify workflow
-  -> canonical schedule-timing-summary:v1 already present
-  -> run normalization check
-  -> changed_count = 0 for the authored workflow
-  -> workflow change may proceed to normal validation / closeout
-```
-
-The canonical summary job checks out the exact `github.sha` for the run and executes `scripts/write_workflow_schedule_summary.js` locally. It must not fetch the summary implementation from `raw.githubusercontent.com/.../main`, because that makes the summary depend on mutable remote state and adds an unnecessary network failure point.
-
-This rule exists because repository-wide normalization intentionally fails when any workflow drifts from the managed summary contract. A workflow that relies on the audit to repair itself later is incomplete by construction.
+This staged rule follows the project philosophy: remove demonstrated duplicate runner/checkout cost first, without prematurely introducing a reusable workflow, event listener, or new abstraction.
 
 ## Before editing a workflow
 

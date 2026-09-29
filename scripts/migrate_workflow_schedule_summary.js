@@ -6,12 +6,27 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WORKFLOW_DIR = path.join(ROOT, '.github', 'workflows');
-const MARKER = '# schedule-timing-summary:v1';
+const JOB_MARKER = '# schedule-timing-summary:v1';
+const STEP_MARKER = '# schedule-timing-summary:v2';
+
+const EMBEDDED_TARGETS = new Map([
+  ['calculate-twse-margin-maintenance.yml', 'calculate'],
+  ['crawl-twse-institutional-investors.yml', 'crawl-twse-institutional-investors'],
+  ['crawl-twse-margin-balance.yml', 'crawl-twse-margin-balance'],
+  ['crawl-twse-quarterly-financial-quality.yml', 'crawl'],
+  ['retry-institutional.yml', 'retry-institutional'],
+  ['crawl-rankings.yml', 'crawl-rankings'],
+  ['crawl-market-news.yml', 'crawl'],
+  ['crawl-fubon-brokers-trade.yml', 'crawl'],
+  ['crawl-twse-institutional-summaries.yml', 'crawl'],
+  ['crawl-cnn-fear-and-greed.yml', 'crawl'],
+  ['crawl-taifex-major-institutional-traders-futures-options.yml', 'crawl-taifex-futures-options'],
+]);
 
 const JOB = `
 
   schedule-timing-summary:
-    ${MARKER}
+    ${JOB_MARKER}
     name: 排程時間摘要
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
@@ -19,62 +34,112 @@ const JOB = `
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Write schedule timing summary
         shell: bash
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
 `;
 
-function managedJobForFile() {
-  return JOB;
-}
+const STEP = `
+      ${STEP_MARKER}
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js`;
 
 function normalizeTrailingWhitespace(text) {
   return `${String(text).replace(/\s+$/, '')}\n`;
+}
+
+function removeManagedJob(text) {
+  const jobStart = text.indexOf('\n  schedule-timing-summary:\n');
+  if (jobStart < 0) return text.replace(/\s+$/, '');
+  if (!text.slice(jobStart).includes(JOB_MARKER)) {
+    throw new Error('schedule-timing-summary exists without managed marker');
+  }
+  return text.slice(0, jobStart).replace(/\s+$/, '');
+}
+
+function jobRange(text, jobName) {
+  const start = text.indexOf(`\n  ${jobName}:\n`);
+  if (start < 0) throw new Error(`Target job not found: ${jobName}`);
+  const next = [...text.matchAll(/\n  ([A-Za-z0-9_-]+):\n/g)]
+    .map((match) => ({ index: match.index, name: match[1] }))
+    .filter((entry) => entry.index > start)
+    .sort((a, b) => a.index - b.index)[0];
+  return { start, end: next ? next.index : text.length };
+}
+
+function removeManagedStepFromBlock(block) {
+  if (!block.includes(STEP_MARKER)) return block.replace(/\s+$/, '');
+  const markerIndex = block.indexOf(`      ${STEP_MARKER}\n`);
+  if (markerIndex < 0) throw new Error('Managed schedule summary step has unexpected indentation');
+  const before = block.slice(0, markerIndex).replace(/\s+$/, '');
+  return before;
+}
+
+function migrateEmbedded(original, jobName) {
+  let base = removeManagedJob(original);
+  const range = jobRange(base, jobName);
+  let block = base.slice(range.start, range.end);
+  if (!/^\s{4}steps:\s*$/m.test(block)) throw new Error(`Target job has no steps: ${jobName}`);
+  block = removeManagedStepFromBlock(block);
+  const updatedBlock = `${block}${STEP}\n`;
+  return `${base.slice(0, range.start)}${updatedBlock}${base.slice(range.end).replace(/^\n/, '')}`
+    .replace(/\s+$/, '') + '\n';
+}
+
+function migrateStandalone(original) {
+  const jobStart = original.indexOf('\n  schedule-timing-summary:\n');
+  let base = original.replace(/\s+$/, '');
+  if (jobStart >= 0) {
+    if (!original.slice(jobStart).includes(JOB_MARKER)) {
+      throw new Error('schedule-timing-summary exists without managed marker');
+    }
+    base = original.slice(0, jobStart).replace(/\s+$/, '');
+  }
+  return `${base}${JOB}\n`;
 }
 
 function migrateFile(file) {
   const original = fs.readFileSync(file, 'utf8');
   if (!/^jobs:\s*$/m.test(original)) return false;
 
-  const managedJob = managedJobForFile(file);
-  const jobStart = original.indexOf('\n  schedule-timing-summary:\n');
-  let base = original.replace(/\s+$/, '');
-  if (jobStart >= 0) {
-    if (!original.slice(jobStart).includes(MARKER)) {
-      throw new Error(`schedule-timing-summary exists without managed marker: ${file}`);
-    }
-    const afterManagedJob = original.slice(jobStart).replace(/^\n/, '');
-    if (!afterManagedJob.startsWith('  schedule-timing-summary:')) {
-      throw new Error(`Unexpected managed summary location: ${file}`);
-    }
-    base = original.slice(0, jobStart).replace(/\s+$/, '');
-  }
+  const name = path.basename(file);
+  const targetJob = EMBEDDED_TARGETS.get(name);
+  const updated = targetJob
+    ? migrateEmbedded(original, targetJob)
+    : migrateStandalone(original);
 
-  const updated = `${base}${managedJob}\n`;
-  // A one-vs-two newline difference at EOF is not a workflow normalization issue.
-  // Keep the audit focused on the managed job content and structure.
   if (normalizeTrailingWhitespace(updated) === normalizeTrailingWhitespace(original)) return false;
   fs.writeFileSync(file, updated, 'utf8');
   return true;
 }
 
 function selfTest() {
-  const tempDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'workflow-summary-migrate-'));
-  const file = path.join(tempDir, 'sample.yml');
-  const base = 'name: sample\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n';
-  fs.writeFileSync(file, `${base.replace(/\s+$/, '')}${JOB}`, 'utf8');
-  if (migrateFile(file)) throw new Error('EOF newline-only difference must not trigger migration');
+  const os = require('node:os');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-summary-migrate-'));
 
-  const broken = fs.readFileSync(file, 'utf8').replace('name: 排程時間摘要', 'name: wrong');
-  fs.writeFileSync(file, broken, 'utf8');
-  if (!migrateFile(file)) throw new Error('Managed job content drift must trigger migration');
-  if (!fs.readFileSync(file, 'utf8').includes('name: 排程時間摘要')) throw new Error('Managed job was not restored');
+  const standalone = path.join(tempDir, 'legacy.yml');
+  fs.writeFileSync(standalone, `name: sample\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n${JOB}`, 'utf8');
+  if (migrateFile(standalone)) throw new Error('Canonical standalone job must be stable');
 
+  const embeddedName = 'crawl-cnn-fear-and-greed.yml';
+  const embedded = path.join(tempDir, embeddedName);
+  fs.writeFileSync(embedded, `name: sample\n\njobs:\n  crawl:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - run: echo ok\n${JOB}`, 'utf8');
+  if (!migrateFile(embedded)) throw new Error('Round 1 workflow must migrate to embedded step');
+  const migrated = fs.readFileSync(embedded, 'utf8');
+  if (migrated.includes('  schedule-timing-summary:')) throw new Error('Embedded workflow retained standalone summary job');
+  if (!migrated.includes(STEP_MARKER)) throw new Error('Embedded workflow missing v2 marker');
+  if (!migrated.includes("if: always() && github.event_name == 'schedule'")) throw new Error('Embedded workflow missing schedule-only always condition');
+  if (migrateFile(embedded)) throw new Error('Canonical embedded step must be idempotent');
 
+  fs.rmSync(tempDir, { recursive: true, force: true });
   console.log('migrate_workflow_schedule_summary self-test passed');
 }
 
@@ -101,4 +166,12 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { migrateFile, MARKER, normalizeTrailingWhitespace, managedJobForFile };
+module.exports = {
+  migrateFile,
+  JOB_MARKER,
+  STEP_MARKER,
+  EMBEDDED_TARGETS,
+  normalizeTrailingWhitespace,
+  migrateEmbedded,
+  migrateStandalone,
+};
