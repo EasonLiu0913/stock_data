@@ -51,28 +51,55 @@ test('no alternate alignment, imputation, or post-hoc rule change is introduced'
   assert.equal(r.protocol_integrity.imputation_used, false);
 });
 
-test('repaired calendar materializes only mature preregistered windows', () => {
+test('repaired calendar materializes only eligible preregistered windows', () => {
   const r = buildResult();
   assert.equal(r.coverage.primary_events, 11);
   assert.equal(r.coverage.event_session_resolved, 11);
   assert.equal(r.coverage.event_session_unresolved, 0);
-  assert.equal(r.coverage.numeric_return_horizons_materialized, 11);
   assert.equal(r.coverage.margin_windows_materialized, 11);
+
   const resolved = r.primary_events.filter(x => x.alignment.status === 'resolved');
   const unresolved = r.primary_events.filter(x => x.alignment.status === 'missing');
   assert.equal(resolved.length, 11);
   assert.equal(unresolved.length, 0);
+
   const bySession = resolved.reduce((m,row) => {
     m[row.alignment.event_session] = (m[row.alignment.event_session] || 0) + 1;
     return m;
   }, {});
   assert.deepEqual(bySession, { '20260923': 9, '20260924': 2 });
+
+  let materializedReturnCount = 0;
   for (const row of resolved) {
     assert.equal(row.returns.D1.status, 'materialized');
-    assert.equal(row.returns.D3.status, 'missing');
-    assert.equal(row.returns.D5.status, 'missing');
     assert.equal(row.margin_financing.event_window.status, 'materialized');
+
+    for (const horizon of ['D1', 'D3', 'D5']) {
+      const outcome = row.returns[horizon];
+      assert.ok(['materialized', 'missing'].includes(outcome.status));
+
+      if (outcome.status === 'materialized') {
+        materializedReturnCount += 1;
+        assert.match(outcome.baseline_date, /^20\d{6}$/);
+        assert.match(outcome.target_date, /^20\d{6}$/);
+        assert.ok(Number.isFinite(outcome.value_pct));
+        assert.ok(Number.isFinite(outcome.benchmark_pct));
+        assert.ok(Number.isFinite(outcome.relative_pct));
+      } else {
+        assert.ok(
+          ['immature_trading_horizon', 'required_close_missing'].includes(outcome.reason),
+          `unexpected missing reason for ${row.event_identity} ${horizon}: ${outcome.reason}`
+        );
+      }
+    }
   }
+
+  assert.equal(r.coverage.numeric_return_horizons_materialized, materializedReturnCount);
+  assert.ok(
+    materializedReturnCount >= 11 && materializedReturnCount <= 33,
+    `materialized return horizons must stay within preregistered bounds, got ${materializedReturnCount}`
+  );
+
   for (const row of unresolved) {
     assert.equal(row.returns.D1.status, 'missing');
   }
