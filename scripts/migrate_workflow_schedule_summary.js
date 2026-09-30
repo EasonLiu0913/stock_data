@@ -10,7 +10,15 @@ const JOB_MARKER = '# schedule-timing-summary:v1';
 const STEP_MARKER = '# schedule-timing-summary:v2';
 
 const LEGACY_UNMARKED_EXCEPTIONS = new Set([
+  // Frozen Round 2 / self-trigger or self-auditing workflows. Round 1 must not
+  // normalize these YAML files because editing them can launch their own
+  // production/research/CI workflow or expand the bounded migration scope.
   'crawl-tpex-daily-market-data.yml',
+  'materialize-institutional-accumulation-catalyst-outcome-association-execution.yml',
+  'repair-trading-calendar-freshness.yml',
+  'test-institutional-accumulation-catalyst-outcome-association-protocol.yml',
+  'test-scheduled-workflow-registry.yml',
+  'verify-institutional-accumulation-catalyst-outcome-association-execution.yml',
 ]);
 
 const EMBEDDED_TARGETS = new Map([
