@@ -4,7 +4,7 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-Round 1 implementation and durable closeout. Round 2 has **not** begun.
+**Round 1 is CLOSED with independent Prompt B PASS.** Round 2 is preregistered but has **not** begun.
 
 Remote-main baseline was re-fetched repeatedly during the round because normal data workflows continued to advance `main`. The implementation commit already present on remote main is:
 
@@ -372,6 +372,174 @@ Critically, none of the 11 migrated production workflows launched from the YAML 
   - `node scripts/write_workflow_schedule_summary.js` is present.
 - Normal data/prediction workflows continued to advance `main` after the closeout commit. Those later commits did not modify the Round 1 migration files during final verification.
 
+## Round 1 Prompt B independent closeout — PASS
+
+Independent verification was performed from current remote `main` without assuming the Prompt A completion report was correct.
+
+### Prompt B live inventory
+
+- Re-scanned all `177` current `.github/workflows/*.yml|yaml` files for:
+  - `schedule-timing-summary`
+  - `排程時間摘要`
+  - `Checkout repository for schedule summary`
+  - `write_workflow_schedule_summary.js`
+- Live result:
+  - `172` marker/script-bearing workflows.
+  - `5` frozen-unmarked workflows.
+  - exactly `11` workflows with `# schedule-timing-summary:v2`.
+- The 11 live v2 workflows exactly match the Round 1 preregistered `EMBEDDED_TARGETS`; no silent extra migration and no missing target was found.
+- The five frozen-unmarked workflows remain unmodified and explicitly deferred.
+
+### Prompt B per-workflow v2 verification
+
+For every Round 1 workflow on current remote `main`:
+
+- no standalone `schedule-timing-summary` job remains;
+- no `Checkout repository for schedule summary` step remains;
+- exactly one repository checkout remains;
+- the v2 step is inside the preregistered functional job;
+- that functional job already checked out the repository before the v2 step;
+- the step uses `if: always() && github.event_name == 'schedule'`;
+- the step calls the shared `node scripts/write_workflow_schedule_summary.js`.
+
+The verified functional jobs are:
+
+- `calculate-twse-margin-maintenance.yml` → `calculate`
+- `crawl-twse-institutional-investors.yml` → `crawl-twse-institutional-investors`
+- `crawl-twse-margin-balance.yml` → `crawl-twse-margin-balance`
+- `crawl-twse-quarterly-financial-quality.yml` → `crawl`
+- `retry-institutional.yml` → `retry-institutional`
+- `crawl-rankings.yml` → `crawl-rankings`
+- `crawl-market-news.yml` → `crawl`
+- `crawl-fubon-brokers-trade.yml` → `crawl`
+- `crawl-twse-institutional-summaries.yml` → `crawl`
+- `crawl-cnn-fear-and-greed.yml` → `crawl`
+- `crawl-taifex-major-institutional-traders-futures-options.yml` → `crawl-taifex-futures-options`
+
+### Prompt B behavior-diff verification
+
+The implementation commit `529650d366084000e43644d34c66b09e9e66c564` was independently re-inspected.
+
+Its workflow diff is limited to removing the legacy standalone summary job and embedding the shared v2 summary step. The two workflows with downstream deploy jobs retain the same deploy job contents (`needs`, `if`, and `uses: ./.github/workflows/deploy-pages.yml`); their apparent movement in the diff is only the consequence of removing the intervening summary job.
+
+No Round 1 workflow diff changed:
+
+- cron expressions;
+- `workflow_dispatch` inputs;
+- push triggers;
+- target-date resolution;
+- crawler commands;
+- retry/jitter/cooldown behavior;
+- physical batching;
+- repository write paths;
+- commit/push behavior;
+- deployment calls;
+- permissions;
+- concurrency behavior.
+
+### Prompt B summary contract verification
+
+Current `scripts/write_workflow_schedule_summary.js` was re-read directly from remote main.
+
+It still emits:
+
+- `原定排程時間`
+- `實際開始時間`
+- `GitHub 排程延遲`
+
+Its runtime inputs remain GitHub Actions metadata and Node built-ins:
+
+- `GITHUB_EVENT_PATH`
+- `GITHUB_REPOSITORY`
+- `GITHUB_RUN_ID`
+- `GITHUB_TOKEN`
+- `GITHUB_STEP_SUMMARY`
+- GitHub Actions run API metadata
+- Node `fs`, `https`, and `child_process`
+
+No stock, research, public artifact, or repository-history dataset dependency was introduced.
+
+The exact closeout audit run `36689695276` was independently inspected and confirms:
+
+- `node scripts/write_workflow_schedule_summary.js --self-test` executed;
+- `write_workflow_schedule_summary self-test passed`;
+- workflow normalization scanned `177` files;
+- `changed_count: 0`;
+- the audit job concluded `success`.
+
+### Prompt B workflow-registry / syntax verification
+
+Run `36601784775` (`[CI] Scheduled Workflow Registry Contract`) was independently inspected:
+
+- `node --check scripts/audit_scheduled_workflow_outputs.js` executed;
+- `node --test tests/audit_scheduled_workflow_outputs.test.js` executed;
+- `8` tests passed;
+- `0` failed;
+- the registry test explicitly confirmed every current scheduled workflow has a registry rule.
+
+The registry workflow, registry audit script/test, summary renderer, deployment-race audit script, and canonical `deploy-pages.yml` have not changed since the tested Round 1 implementation state.
+
+### Prompt B deployment/write-layer audit
+
+A fresh current-main scan of all `177` workflow YAML files applied the repository's deployment-race invariants and found:
+
+- `workflow_run`: `0`
+- `repository_dispatch` workaround: `0`
+- repository/data writer with `cancel-in-progress: true`: `0`
+- all local Pages callers continue to reference `./.github/workflows/deploy-pages.yml`.
+
+Current `.github/workflows/deploy-pages.yml` was independently rechecked:
+
+- exposes `workflow_call`;
+- concurrency group is exactly `github-pages`;
+- uses `cancel-in-progress: true`;
+- checks out `ref: main`;
+- does not have `contents: write`;
+- does not run `git commit` or `git push`;
+- contains no `workflow_run`;
+- contains no `repository_dispatch`.
+
+The current `scripts/audit_workflow_deployment_races.js` self-test implementation was re-read and its expected invariants remain unchanged. The prior exact-script self-test evidence recorded in this handoff remains applicable because that script has not changed since the tested closeout state.
+
+### Prompt B GitHub Actions side-effect verification
+
+The workflow-YAML migration commit `529650d...` created exactly seven push-triggered CI/maintenance runs:
+
+- `36601784835` — Audit GitHub Actions Node 24 — success
+- `36601784922` — Public Page Registry CI — success
+- `36601784942` — Scheduled Collection Date Regression — success
+- `36601784766` — Race-safe Main Publish Regression — success
+- `36601784775` — Scheduled Workflow Registry Contract — success
+- `36601784696` — Ensure Workflow Schedule Summary — initial failure later corrected by `c25a862...`
+- `36601784712` — Node Regression Suite — cancelled as a later script commit superseded it
+
+None of the 11 migrated production workflows launched because of the YAML migration commit. No production data-write cascade was caused by the Round 1 migration.
+
+The later closeout commit `a73285d...` produced only CI/maintenance validation runs; all three finished successfully:
+
+- `36689695276` — Ensure Workflow Schedule Summary
+- `36689695319` — Public Page Registry CI
+- `36689695102` — Node Regression Suite
+
+### Prompt B durable remote-state verification
+
+Round 1 implementation and closeout commits are durable ancestors of current remote main.
+
+After the prior closeout commit, subsequent commits changed only data/prediction artifacts. Prompt B re-compared the previous closeout state against current remote main and found no changes under:
+
+- `.github/workflows/**`
+- `scripts/**`
+- `docs/architecture/github-actions.md`
+- `docs/handoffs/workflow-schedule-summary-lightweight-migration.md`
+
+before this Prompt B handoff update.
+
+### Round 1 PASS decision
+
+All ten preregistered PASS conditions are satisfied.
+
+**Round 1 is closed. Do not reopen it unless new contradictory repository evidence appears.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -413,16 +581,25 @@ The migration source of truth is:
 
 ## Next round
 
-Round 2 must remain a separate, owner-invoked round.
+Round 2 is preregistered but must remain a separate, owner-invoked round. **Do not start it during Round 1 Prompt B.**
 
-Ordered work:
+Round 2 first focus is the self-trigger-risk cohort, beginning with these known candidates:
 
-1. Re-fetch remote main and re-run the full inventory.
-2. Start with self-trigger scheduled production workflows; design how to change YAML without turning the migration commit into a production collection run.
-3. Separately decide multi-job placement for workflows such as `crawl-fubon-broker-details.yml`, `crawl-sma.yml`, prediction/replay workflows, and FinMind refresh.
-4. Revisit the five frozen unmarked workflows and decide whether they actually need schedule-summary normalization at all; most have no schedule trigger.
-5. Consider narrowing the normalizer contract so non-scheduled workflows do not carry unreachable schedule-only jobs. Treat that as a separate evidence-driven cleanup, not an implicit Round 2 side effect.
-6. Preserve the renderer contract and all frozen production behavior.
+1. `.github/workflows/crawl-tpex-daily-market-data.yml`
+2. `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml`
+3. `.github/workflows/publish-daily-gainers-ai-analysis.yml`
+
+For each of those workflows, the **first required design decision** is whether its own YAML path should remain in `push.paths`.
+
+Do not modify the workflow until that decision is evidence-based and documented. If the own-YAML push trigger remains, the migration mechanism must prevent the migration commit itself from launching the production collector.
+
+After the initial self-trigger cohort:
+
+4. Evaluate other self-trigger scheduled workflows already listed in the inventory.
+5. Separately decide multi-job placement for workflows such as `crawl-fubon-broker-details.yml`, `crawl-sma.yml`, prediction/replay workflows, and FinMind refresh.
+6. Revisit the five frozen unmarked workflows and decide whether they actually need schedule-summary normalization at all; most have no schedule trigger.
+7. Consider narrowing the normalizer contract so non-scheduled workflows do not carry unreachable schedule-only jobs. Treat that as a separate evidence-driven cleanup, not an implicit side effect.
+8. Preserve the renderer contract and all frozen production behavior.
 
 ## Safety / stop conditions
 
@@ -443,8 +620,13 @@ Before work:
 5. Re-verify the current workflow inventory; do not rely on the Round 1 list if main changed.
 
 Objective:
-- Design and implement the next bounded migration cohort, focusing first on scheduled workflows that remain v1.
-- Do not blindly edit self-trigger workflows. For every candidate whose own YAML is in `push.paths`, first choose a safe migration mechanism that cannot cause the migration commit itself to run the production collector.
+- Design and implement the next bounded migration cohort, focusing first on these self-trigger-risk workflows:
+  1. `.github/workflows/crawl-tpex-daily-market-data.yml`
+  2. `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml`
+  3. `.github/workflows/publish-daily-gainers-ai-analysis.yml`
+- For **each** workflow above, first decide and document whether its own YAML path should remain in `push.paths`.
+- Do not edit the workflow YAML until that trigger decision is resolved.
+- If own-YAML remains in `push.paths`, choose a migration mechanism that cannot make the migration commit itself launch the production collector.
 - Resolve multi-job placement only where an existing job can preserve `always() && github.event_name == 'schedule'` semantics without adding a separate runner.
 
 Frozen:
