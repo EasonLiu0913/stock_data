@@ -348,6 +348,30 @@ Critically, none of the 11 migrated production workflows launched from the YAML 
 - All 11 v2 targets on current remote main have no standalone `Checkout repository for schedule summary` job and retain `node scripts/write_workflow_schedule_summary.js` inside the selected functional job.
 - v2 preserves the three output labels because the shared renderer is unchanged.
 
+### Final Round 1 closeout evidence
+
+- Closeout commit: `a73285d4a8b617d7859592f8f67c604977af0366` — adds this canonical handoff and freezes the five newly discovered self-trigger/self-auditing normalizer gaps without editing their workflow YAML.
+- Closeout Actions for `a73285d...`:
+  - `36689695276` — Ensure Workflow Schedule Summary — **success**.
+  - `36689695319` — Public Page Registry CI — **success**.
+  - `36689695102` — Node Regression Suite — **success**.
+- Ensure Workflow Schedule Summary closeout log confirms:
+  - `write_workflow_schedule_summary self-test passed`;
+  - workflow normalization scanned `177` files;
+  - `changed_count: 0`;
+  - `unchanged_count: 177`.
+- `scripts/audit_workflow_deployment_races.js --self-test` was executed from the current remote-main script content in an isolated Node workspace and passed: `audit_workflow_deployment_races layered self-test passed`.
+- Full deployment-layer invariants were also re-checked against current remote-main workflow structure during inventory: the canonical Pages workflow retains `group: github-pages`, `cancel-in-progress: true`, `workflow_call`, and `checkout ref: main`; no Round 1 change introduced `workflow_run` or changed write-layer cancellation.
+- The Round 1 implementation commit `529650d...` launched only CI/maintenance workflows; none of the 11 migrated production collectors launched because of the YAML changes.
+- Latest remote verification of all 11 Round 1 targets confirmed, for every target:
+  - no standalone `schedule-timing-summary` job;
+  - no `Checkout repository for schedule summary`;
+  - exactly one existing repository checkout remains;
+  - `# schedule-timing-summary:v2` is present;
+  - `if: always() && github.event_name == 'schedule'` is present;
+  - `node scripts/write_workflow_schedule_summary.js` is present.
+- Normal data/prediction workflows continued to advance `main` after the closeout commit. Those later commits did not modify the Round 1 migration files during final verification.
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
