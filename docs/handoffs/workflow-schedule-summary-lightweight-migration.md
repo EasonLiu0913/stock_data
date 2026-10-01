@@ -4,9 +4,13 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 1 closed — Prompt B PASS.** Round 2 is preregistered but has **not** started.
+**Round 2 Prompt A COMPLETE — Prompt B pending.**
 
-Independent Prompt B closeout was performed against current remote `main`, without assuming the Prompt A report was correct. The verification re-scanned all workflow YAML files, re-checked the Round 1 implementation diff and Actions side effects, re-verified current remote state for every Round 1 target, and re-confirmed the known Round 2 self-trigger candidates.
+Round 2 migrated the first self-trigger-risk cohort only after first removing each workflow's own YAML path from production push triggers. No Round 3 implementation has started.
+
+Active project routing:
+- task id: `workflow-schedule-summary-lightweight-migration`
+- canonical handoff: `docs/handoffs/workflow-schedule-summary-lightweight-migration.md`
 
 ## Objective
 
@@ -589,6 +593,102 @@ Prompt B independently verified the Round 1 closeout against remote `main`.
 
 **Prompt B verdict: PASS. Round 1 is closed.**
 
+## Round 2 Prompt A implementation evidence
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-2`
+
+Status:
+- Prompt A: **COMPLETE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+### Routing activation
+
+- `49ebe2a603691bb04c92891ce8648c5ae87b90fd` — activated `workflow-schedule-summary-lightweight-migration` as the sole active task in `docs/agent-prompts/task-routing.json`.
+- `institutional-accumulation-event-intelligence` was demoted to `pending` without changing its internal round state.
+
+### Trigger decisions
+
+The three preregistered self-trigger-risk workflows were reviewed before any summary migration.
+
+Decision: each workflow's own YAML path should **not** remain a production `push.paths` trigger.
+
+Reason:
+- editing a workflow file is maintenance/configuration activity, not production data maturity;
+- allowing the workflow file itself to trigger a repository-writing production workflow makes maintenance commits capable of launching production work;
+- each workflow retains its real execution sources:
+  - `crawl-tpex-daily-market-data.yml`: schedule + workflow_dispatch;
+  - `analyze-daily-gainers-margin-flow-2200.yml`: schedule + workflow_dispatch + actual source-data/script push paths;
+  - `publish-daily-gainers-ai-analysis.yml`: schedule + workflow_dispatch + pending-AI/contract/script push paths.
+
+Trigger-hardening commit:
+- `f2312e7ecde0fbbcb5dfe922d4345f1439edc668` — removed only the own-YAML production push trigger from:
+  - `.github/workflows/crawl-tpex-daily-market-data.yml`;
+  - `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml`;
+  - `.github/workflows/publish-daily-gainers-ai-analysis.yml`.
+- TPEx's `push` block existed only for workflow-edit bootstrap, so that block was removed entirely.
+- The other two workflows retained all real data/script push paths unchanged.
+- Cron expressions, workflow_dispatch inputs, crawler commands, date logic, retry logic, batching, repository writes, deploy calls, permissions, and concurrency were unchanged.
+
+Actions created by `f2312e7...` included only CI/maintenance workflows. None of the three production workflows launched because of the workflow-file change.
+
+### v2 migration
+
+Implementation commit:
+- `d8f824c782b8150c559d022c273a972fb1051135` — migrated the bounded Round 2 cohort to embedded v2 schedule summary and updated the migrator.
+
+Migrated placements:
+- `.github/workflows/crawl-tpex-daily-market-data.yml` → job `crawl`;
+- `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml` → job `prepare-ai-facts`;
+- `.github/workflows/publish-daily-gainers-ai-analysis.yml` → job `validate-and-publish`.
+
+For all three current remote workflows:
+- `# schedule-timing-summary:v2` is present;
+- standalone `schedule-timing-summary` job is absent;
+- `Checkout repository for schedule summary` is absent;
+- exactly one pre-existing repository checkout remains;
+- the embedded step uses `if: always() && github.event_name == 'schedule'`;
+- the shared `node scripts/write_workflow_schedule_summary.js` renderer is used;
+- write-layer `cancel-in-progress: true` was not introduced.
+
+Migrator updates:
+- added the three Round 2 targets to `EMBEDDED_TARGETS`;
+- removed TPEx from `LEGACY_UNMARKED_EXCEPTIONS`;
+- replaced the old TPEx frozen-exception self-test with Round 2 embedded-target idempotence coverage.
+
+### Validation / Actions
+
+Implementation SHA `d8f824c...` did **not** launch any of the three production workflows.
+
+Relevant runs:
+- `36821114484` — Ensure Workflow Schedule Summary — **SUCCESS**
+  - executes `node scripts/write_workflow_schedule_summary.js --self-test`;
+  - syntax-checks the migrator;
+  - executes `node scripts/audit_workflow_deployment_races.js --self-test`;
+  - executes full `node scripts/audit_workflow_deployment_races.js`;
+  - runs the repository workflow normalizer and fails if any workflow diff remains.
+- `36821114500` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36821114512` — Node Regression Suite — **SUCCESS**.
+  - `npm test` passed;
+  - tracked-tree cleanliness check passed.
+- `36821114517` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36821114632` — Public Page Registry CI — **SUCCESS**.
+- `36821114508` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36821114587` — 5% AI Contract consistency check — **SUCCESS**.
+
+The long delay observed in several runs was in the GitHub checkout step; once checkout completed, the registered tests passed. No bounded migration defect was found.
+
+### Prompt A completion boundary
+
+All Round 2 Prompt A completion conditions are satisfied:
+- bounded commits are durable on remote main;
+- each intended workflow is remotely verified;
+- migration/audit/regression gates pass;
+- Actions inspection shows no unexpected production workflow launch;
+- no Round 3 work has started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -630,25 +730,17 @@ The migration source of truth is:
 
 ## Next round
 
-Round 2 is preregistered but must remain a separate, owner-invoked round. **Do not start it during Round 1 Prompt B.**
+The next authorized action for this project is **Round 2 Prompt B closeout / verification**.
 
-Round 2 first focus is the self-trigger-risk cohort, beginning with these known candidates:
+Do not start Round 3 implementation before Round 2 Prompt B independently verifies:
+1. exact trigger-hardening and v2 migration diffs;
+2. no production self-trigger from either Round 2 commit;
+3. current remote placement of all three embedded summary steps;
+4. trigger semantics after own-YAML removal;
+5. deployment/write-layer safety and registry/regression results;
+6. durable current-main state and active routing.
 
-1. `.github/workflows/crawl-tpex-daily-market-data.yml`
-2. `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml`
-3. `.github/workflows/publish-daily-gainers-ai-analysis.yml`
-
-For each of those workflows, the **first required design decision** is whether its own YAML path should remain in `push.paths`.
-
-Do not modify the workflow until that decision is evidence-based and documented. If the own-YAML push trigger remains, the migration mechanism must prevent the migration commit itself from launching the production collector.
-
-After the initial self-trigger cohort:
-
-4. Evaluate other self-trigger scheduled workflows already listed in the inventory.
-5. Separately decide multi-job placement for workflows such as `crawl-fubon-broker-details.yml`, `crawl-sma.yml`, prediction/replay workflows, and FinMind refresh.
-6. Revisit the five frozen unmarked workflows and decide whether they actually need schedule-summary normalization at all; most have no schedule trigger.
-7. Consider narrowing the normalizer contract so non-scheduled workflows do not carry unreachable schedule-only jobs. Treat that as a separate evidence-driven cleanup, not an implicit side effect.
-8. Preserve the renderer contract and all frozen production behavior.
+Round 3 has **not** been promoted or executed.
 
 ## Safety / stop conditions
 
