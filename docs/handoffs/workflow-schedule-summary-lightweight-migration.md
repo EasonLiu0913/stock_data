@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 4 Prompt B closeout: PASS. Round 4 is closed.**
+**Round 5 Prompt B closeout: PASS. Round 5 is closed.**
 
-Round 5 is preregistered / promoted inside this project but **Prompt A has not started**.
+Round 6 is preregistered / promoted inside this project but **Prompt A has not started**.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -1260,6 +1260,93 @@ Round 5 Prompt A completion conditions are satisfied:
 
 **Prompt A complete — ready for Prompt B.**
 
+## Round 5 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-5`
+
+Prompt B was recovered verbatim from the pre-Prompt-A durable handoff at commit
+`636b79e75159ac444de27342b20bb414568e310d`.
+
+### Exact commit / diff verification
+
+Implementation commit:
+- `66ff214a9d838c070729193d7dfef20ec202487e`
+- changed only:
+  - `.github/workflows/crawl-pocket-00981a.yml`
+  - `.github/workflows/crawl-refined-product-tightness.yml`
+  - `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml`
+  - `scripts/migrate_workflow_schedule_summary.js`
+- workflow changes are limited to removing each v1 standalone schedule-summary job and embedding the shared v2 step in the preregistered existing functional job;
+- migrator changes add only the three Round 5 `EMBEDDED_TARGETS`;
+- no cron, date-resolution, crawler, schema, publication, retry, batching, permissions, or concurrency changes are present.
+
+Prompt A checkpoint:
+- `cc5ae46210b904f04d511aec1a428db34bf2e756`
+- changes only this canonical handoff.
+
+### Current remote workflow verification
+
+All three Round 5 workflows were independently re-read from current remote main.
+
+Each currently has:
+- no production `push` trigger;
+- exactly one existing repository checkout;
+- exactly one `# schedule-timing-summary:v2`;
+- no `# schedule-timing-summary:v1`;
+- no standalone `schedule-timing-summary` job;
+- no summary-only checkout;
+- `if: always() && github.event_name == 'schedule'`;
+- shared `node scripts/write_workflow_schedule_summary.js`;
+- unchanged `cancel-in-progress: false`;
+- no `workflow_run` or `repository_dispatch` workaround.
+
+The migrator still contains all three Round 5 targets.
+
+### Validation / audit evidence
+
+Implementation SHA `66ff214a9d838c070729193d7dfef20ec202487e`:
+- `36849681571` — Ensure Workflow Schedule Summary — **SUCCESS**.
+- `36849681660` — Public Page Registry CI — **SUCCESS**.
+- `36849681620` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36849681575` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36849681580` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36849681570` — Node Regression Suite — **CANCELLED**, not failed, because a later main commit superseded it while still in checkout.
+
+Replacement validation:
+- `36849959023` — Node Regression Suite on descendant main `537311e3c168e6fa72fa0e781252b8e75722a7d4` — **SUCCESS**;
+- full Node regression suite — SUCCESS;
+- tracked-tree cleanliness — SUCCESS.
+- `36849958768` — Public Page Registry CI on the same descendant main — **SUCCESS**.
+
+Because no Round 5 workflow/migrator file changed between the implementation SHA and the replacement-regression SHA, the replacement run is valid durable-state evidence for the cancelled implementation-sha regression.
+
+### Actions side-effect verification
+
+For implementation SHA `66ff214a9d838c070729193d7dfef20ec202487e`:
+- only CI/maintenance workflows launched;
+- no Pocket 00981A production collector launched;
+- no Refined Product Tightness production collector launched;
+- no TAIFEX Futures Contracts production collector launched.
+
+Therefore the migration introduced no unexpected production self-trigger.
+
+### Concurrent-main classification / durability
+
+At independent closeout start, remote main had advanced beyond the Prompt A checkpoint to
+`51c8b5abeee69add43f09ffc4f29d342d3f1cd43`.
+
+Changes after the Round 5 implementation consist of:
+- normal TAIFEX/TWSE/TWT49U data outputs;
+- unrelated `scripts/apply_pages_size_budget.js`;
+- the Round 5 Prompt A handoff checkpoint.
+
+No Round 5 workflow, migrator target, renderer, routing, or schedule-summary behavior drifted.
+
+Routing still names `workflow-schedule-summary-lightweight-migration` as the unique active task.
+
+**Prompt B closeout: PASS. Round 5 is closed.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1301,27 +1388,27 @@ The migration source of truth is:
 
 ## Next round
 
-### Round 5 — ordinary single-functional-job cohort
+### Round 6 — ordinary single-functional-job cohort
 
 Round:
-`workflow-schedule-summary-lightweight-migration-round-5`
+`workflow-schedule-summary-lightweight-migration-round-6`
 
 Status:
-- Prompt A: **COMPLETE / READY FOR PROMPT B**
-- Prompt B: **PREREGISTERED / PENDING**
+- Prompt A: **PREREGISTERED / NOT STARTED**
+- Prompt B: **PREREGISTERED / NOT STARTED**
 
-Round 5 Prompt A is complete. Prompt B has not been executed.
+Round 6 is promoted only as the next runnable round. It has not been executed.
 
 Initial bounded cohort:
-1. `.github/workflows/crawl-pocket-00981a.yml` → candidate job `crawl-pocket-00981a`
-2. `.github/workflows/crawl-refined-product-tightness.yml` → candidate job `collect`
-3. `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml` → candidate job `crawl-taifex-futures-contracts`
+1. `.github/workflows/crawl-twse-mi-index.yml` → candidate job `crawl-twse-mi-index`
+2. `.github/workflows/crawl-twse-twt49u.yml` → candidate job `crawl`
+3. `.github/workflows/crawl-vix-index.yml` → candidate job `crawl`
 
 Preregistered evidence:
 - all three currently have schedule triggers and v1 standalone summaries;
 - none currently has a production `push` trigger;
 - all three use `cancel-in-progress: false`;
-- each existing functional path already includes a repository checkout, so a second summary-only checkout is unnecessary;
+- each existing functional path already has a repository checkout;
 - no Pages-topology change is intended.
 
 Deferred:
@@ -1580,6 +1667,72 @@ Perform independent closeout for `workflow-schedule-summary-lightweight-migratio
 1. Fetch current remote main, read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, and this handoff; verify this project is still the unique active task.
 2. Recover this exact Round 5 Prompt B from the pre-Prompt-A durable handoff.
 3. Verify every Round 5 commit and reject unrelated cron/date-resolution/crawler/schema/publication/retry/batching/permissions/concurrency changes.
+4. For every migrated workflow verify:
+   - no production self-trigger was introduced or retained unexpectedly;
+   - no standalone summary runner/summary-only checkout remains;
+   - exactly one embedded v2 summary exists;
+   - embedded summary is schedule-only with `always()`;
+   - selected functional job already has the repository checkout;
+   - shared renderer is used;
+   - write-layer concurrency is unchanged.
+5. Inspect Actions for every workflow-YAML commit; any unexpected production collector launch caused by the migration is a closeout failure.
+6. Verify renderer self-test, migrator normalization/idempotence, deployment-race audit, scheduled-workflow registry tests, YAML acceptance, and applicable Node regression.
+7. Re-fetch remote main; classify concurrent changes and verify durable state.
+8. On PASS, record exact commits/run IDs/tests/current-main evidence in this handoff and preregister the next bounded Prompt A + Prompt B pair without executing it.
+9. On failure, fix only the bounded defect and repeat this same Prompt B from criterion 1.
+
+End with: `Prompt B closeout: PASS`.
+
+
+## Prompt A — Round 6 implementation prompt
+
+Continue the workflow schedule-summary lightweight migration in repository `EasonLiu0913/stock_data`.
+
+Before work:
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`.
+3. Read `docs/agent-prompts/task-routing.json`; proceed only if this project remains the unique active task.
+4. Read this canonical handoff.
+5. Read `docs/architecture/github-actions.md`, `docs/decisions/ADR-004-workflow-orchestration.md`, `scripts/write_workflow_schedule_summary.js`, and `scripts/migrate_workflow_schedule_summary.js`.
+6. Re-read current YAML for all three Round 6 workflows before editing.
+
+Objective:
+- migrate this bounded Round 6 cohort from v1 standalone summary to v2 embedded summary:
+  1. `.github/workflows/crawl-twse-mi-index.yml` → `crawl-twse-mi-index`
+  2. `.github/workflows/crawl-twse-twt49u.yml` → `crawl`
+  3. `.github/workflows/crawl-vix-index.yml` → `crawl`
+- first re-confirm none has gained a production self-trigger via `push` / `push.paths`;
+- add only verified targets to `EMBEDDED_TARGETS`;
+- reuse the existing repository checkout in each functional job;
+- preserve `if: always() && github.event_name == 'schedule'`.
+
+Frozen:
+- no cron/date-resolution/crawler/schema/publication/retry/physical-batch changes;
+- no production manual dispatch for validation;
+- no `workflow_run`, `repository_dispatch`, or event-listener workaround;
+- no new reusable abstraction;
+- no write-layer cancellation change;
+- preserve shared renderer and all three summary labels.
+
+Completion:
+- bounded implementation commit(s) durable on remote main;
+- current YAML remote verification for all three workflows;
+- Ensure Workflow Schedule Summary PASS;
+- deployment-race/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression PASS when triggered/applicable;
+- Actions inspection proves no unexpected production launch;
+- canonical handoff updated with Round 6 Prompt A evidence;
+- stop with `Prompt A complete — ready for Prompt B`;
+- do not execute Round 6 Prompt B automatically.
+
+## Prompt B — Round 6 closeout / verification prompt
+
+Perform independent closeout for `workflow-schedule-summary-lightweight-migration-round-6`.
+
+1. Fetch current remote main, read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, and this handoff; verify this project is still the unique active task.
+2. Recover this exact Round 6 Prompt B from the pre-Prompt-A durable handoff.
+3. Verify every Round 6 commit and reject unrelated cron/date-resolution/crawler/schema/publication/retry/batching/permissions/concurrency changes.
 4. For every migrated workflow verify:
    - no production self-trigger was introduced or retained unexpectedly;
    - no standalone summary runner/summary-only checkout remains;
