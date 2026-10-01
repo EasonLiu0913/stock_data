@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 7 Prompt B closeout: PASS. Round 7 is closed.**
+**Round 8 Prompt A: COMPLETE. Prompt B is pending.**
 
-Round 8 is preregistered / promoted inside this project but **Prompt A has not started**.
+Round 7 remains closed with Prompt B PASS. Round 8 implementation and required Prompt A validation are durable on remote `main`; do not execute Round 8 Prompt B automatically.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -1640,6 +1640,65 @@ Routing still names `workflow-schedule-summary-lightweight-migration` as the sol
 
 **Prompt B closeout: PASS. Round 7 is closed.**
 
+## Round 8 Prompt A implementation evidence
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-8`
+
+Bounded implementation commits:
+- `16106ad7e5c7c5553b260710335bfeaad4745a91` — embed v2 summary in `.github/workflows/update-official-market-constraints.yml`.
+- `9920aa14a5736b07c6cc9eada5bd65723772bbb2` — embed v2 summary in `.github/workflows/warrant-scraper.yml`.
+- `3b303ce5bb0ebdce4ab3f5658c005e28888e9a35` — register the two Round 8 `EMBEDDED_TARGETS` in `scripts/migrate_workflow_schedule_summary.js`.
+
+Exact diff verification:
+- each workflow change only removes the v1 standalone `schedule-timing-summary` job and embeds one `# schedule-timing-summary:v2` step in the preregistered existing functional job;
+- both embedded steps use `if: always() && github.event_name == 'schedule'` and the shared `node scripts/write_workflow_schedule_summary.js`;
+- neither workflow has a production `push` trigger;
+- both retain `cancel-in-progress: false`;
+- no cron, target-date/date-resolution, crawler, schema, publication, retry, batching, permissions, Pages topology, or write-layer concurrency behavior changed;
+- `update-official-market-constraints.yml` finalization-phase selection, prediction-context immutability messaging/behavior, and bounded write scope are unchanged;
+- `warrant-scraper.yml` Playwright cache/install/smoke-test topology, source-date contract validation, and `data_twse/` write scope are unchanged.
+
+Validation / audit evidence:
+- `36891092336` — Ensure Workflow Schedule Summary — **SUCCESS**.
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed;
+  - migrator normalization/idempotence left no workflow diff.
+- `36891092315` — Public Page Registry CI — **SUCCESS**.
+- `36891084187` — Scheduled Workflow Registry Contract — **SUCCESS**; 8 tests passed.
+- `36891084203` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36891084262` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36891092206` — Node Regression Suite — **SUCCESS**; 909 tests passed and tracked-tree cleanliness gate passed.
+
+Actions side-effect verification:
+- workflow-YAML commits `16106ad...` and `9920aa...` launched only CI/maintenance validation workflows through `push`;
+- no `正式處置股與台指期夜盤定稿` or `Warrant Data Scraper` production workflow was launched by the migration commits;
+- no production manual dispatch was used for validation.
+
+Concurrent-main classification:
+- after `3b303ce...`, remote `main` advanced to `44bb6b29c0a92f384af7048cdd0b0ab827e06e88` through one scheduled TWSE quarterly-financial-quality data commit;
+- that descendant changed only `data_twse_quarterly_financial_quality/2026Q2/2059-latest.json` and `data_twse_quarterly_financial_quality/2026Q2/income-statement-general.json`;
+- no Round 8 workflow, migrator, renderer, routing, or schedule-summary state drifted.
+
+### Prompt A completion boundary
+
+Round 8 Prompt A completion conditions are satisfied:
+- bounded implementation is durable on remote main;
+- both current workflow YAML files contain exactly one v2 embedded summary and no v1 standalone summary;
+- Ensure Workflow Schedule Summary PASS;
+- deployment/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node 24 audit PASS;
+- Scheduled Collection Date Regression PASS;
+- Node Regression PASS;
+- tracked-tree cleanliness PASS;
+- no unexpected production self-trigger;
+- routing still points to `workflow-schedule-summary-lightweight-migration`;
+- Round 8 Prompt B has not started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1687,10 +1746,10 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-8`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE / READY FOR PROMPT B**
 - Prompt B: **PREREGISTERED / NOT STARTED**
 
-Round 8 is promoted only as the next runnable round. It has not been executed.
+Round 8 implementation is complete. Prompt B remains the only legal next action for this round.
 
 Bounded cohort:
 1. `.github/workflows/update-official-market-constraints.yml` → candidate job `update`
