@@ -63,32 +63,85 @@ jobs:
       - name: Commit and push changes
         if: steps.check_holdings.outputs.should_run == 'true'
         run: |
+          set -euo pipefail
+
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git add data_pocket/
 
-          if git diff --staged --quiet; then
-            echo "No Pocket 00981A changes to commit"
-            exit 0
-          fi
+          TMP_DIR=$(mktemp -d)
+          trap 'rm -rf "$TMP_DIR"' EXIT
 
-          CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
-          git commit -m "chore: update Pocket 00981A data ${CURRENT_DATE}"
+          # Preserve this runner's validated Pocket outputs before rebasing onto
+          # a newer remote main. Only data_pocket is replayed.
+          cp -a data_pocket "$TMP_DIR/data_pocket"
 
-          success=false
+          pocket_remote_equivalent() {
+            git show origin/main:data_pocket/00981A_holdings_latest.json > "$TMP_DIR/remote_holdings.json" 2>/dev/null || return 1
+            git show origin/main:data_pocket/00981A_industry_distribution_latest.json > "$TMP_DIR/remote_industry.json" 2>/dev/null || return 1
+
+            node - "$TMP_DIR/data_pocket/00981A_holdings_latest.json" "$TMP_DIR/remote_holdings.json" "$TMP_DIR/data_pocket/00981A_industry_distribution_latest.json" "$TMP_DIR/remote_industry.json" <<'NODE'
+          const fs = require('fs');
+
+          function read(file) {
+            return JSON.parse(fs.readFileSync(file, 'utf8'));
+          }
+
+          function equivalent(localFile, remoteFile) {
+            const local = read(localFile);
+            const remote = read(remoteFile);
+            return local.summary?.date === remote.summary?.date &&
+              JSON.stringify(local.fields) === JSON.stringify(remote.fields) &&
+              JSON.stringify(local.rawData) === JSON.stringify(remote.rawData);
+          }
+
+          const ok =
+            equivalent(process.argv[2], process.argv[3]) &&
+            equivalent(process.argv[4], process.argv[5]);
+
+          process.exit(ok ? 0 : 1);
+          NODE
+          }
+
           for i in 1 2 3; do
-            if git pull --rebase origin main && git push origin main; then
-              success=true
-              break
+            git fetch origin main
+
+            if pocket_remote_equivalent; then
+              echo "Remote main already contains equivalent Pocket 00981A data; treating this run as successfully superseded."
+              exit 0
             fi
-            echo "Push failed, retry $i..."
+
+            # Start each retry from a clean current origin/main. This avoids
+            # leaving the runner stuck in an unresolved rebase after a race.
+            git reset --hard origin/main
+            rm -rf data_pocket
+            cp -a "$TMP_DIR/data_pocket" data_pocket
+            git add data_pocket/
+
+            if git diff --staged --quiet; then
+              echo "No Pocket 00981A changes remain after refreshing main"
+              exit 0
+            fi
+
+            CURRENT_DATE=$(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S')
+            git commit -m "chore: update Pocket 00981A data ${CURRENT_DATE}"
+
+            if git push origin HEAD:main; then
+              echo "Pocket 00981A changes pushed successfully"
+              exit 0
+            fi
+
+            echo "Push race detected, refreshing latest main before retry $i..."
             sleep 5
           done
 
-          if [ "$success" != "true" ]; then
-            echo "Failed to push Pocket 00981A changes"
-            exit 1
+          git fetch origin main
+          if pocket_remote_equivalent; then
+            echo "Remote main received equivalent Pocket 00981A data during retries; treating as success."
+            exit 0
           fi
+
+          echo "Failed to push Pocket 00981A changes after race-safe retries"
+          exit 1
       # schedule-timing-summary:v2
       - name: Write schedule timing summary
         if: always() && github.event_name == 'schedule'
