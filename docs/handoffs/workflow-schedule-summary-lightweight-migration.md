@@ -826,6 +826,78 @@ Remaining confirmed own-YAML production-push-risk candidates include:
 
 **Prompt B closeout: PASS. Round 2 is closed.**
 
+## Round 3 Prompt A implementation — COMPLETE
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-3`
+
+Implementation commits:
+- trigger hardening: `a6a940494a5eb3b3d47626b7d22d246f95d7adb9`
+- v2 migration: `d2b81ce98973185603f392a6c798e46031714944`
+
+### Trigger decisions
+
+- `.github/workflows/crawl-eia-crude-spot.yml`
+  - removed only its own workflow YAML from `push.paths`;
+  - retained real script/test push triggers.
+- `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
+  - removed only its own workflow YAML from `push.paths`;
+  - retained real script/test push triggers;
+  - preserved the pre-existing conditional concurrency rule exactly:
+    `cancel-in-progress: ${{ github.event_name == 'push' }}`.
+- `.github/workflows/update-twse-industry.yml`
+  - removed the obsolete workflow-file-only push trigger that was explicitly documented as temporary incident recovery after the 2026-08-20 repair run;
+  - retained schedule and workflow_dispatch triggers.
+
+Trigger-hardening diff is bounded to those three workflow files only. It changes no cron, collection logic, schema, retry, batching, permissions, or concurrency behavior.
+
+### v2 placement
+
+Added the Round 3 workflows to `scripts/migrate_workflow_schedule_summary.js` `EMBEDDED_TARGETS`:
+- `crawl-eia-crude-spot.yml` → `collect`
+- `crawl-tdcc-shareholding-snapshot.yml` → `archive`
+- `update-twse-industry.yml` → `update-twse-industry`
+
+Each current remote workflow now has:
+- exactly one existing repository checkout;
+- no standalone `schedule-timing-summary` job;
+- no summary-only checkout;
+- exactly one `# schedule-timing-summary:v2` marker;
+- `if: always() && github.event_name == 'schedule'`;
+- shared `node scripts/write_workflow_schedule_summary.js`;
+- no own-YAML production push path.
+
+### Validation evidence
+
+Actions on implementation SHA `d2b81ce98973185603f392a6c798e46031714944`:
+- `36825401277` — Ensure Workflow Schedule Summary — **SUCCESS**
+  - shared summary tooling validation PASS;
+  - repository-pinned summary verification PASS;
+  - migrator normalization/idempotence and deployment-race audit are covered by this workflow contract.
+- `36825401259` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36825401279` — Node Regression Suite — **SUCCESS**.
+- `36825401331` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36825401188` — Public Page Registry CI — **SUCCESS**.
+
+Actions side-effect inspection:
+- trigger-hardening SHA `a6a9404...` produced no unexpected production run;
+- migration SHA `d2b81ce...` launched only CI/maintenance workflows;
+- none of EIA crude spot, TDCC shareholding snapshot, or Update TWSE Industry launched because of the workflow YAML changes.
+
+### Prompt A completion boundary
+
+Round 3 Prompt A completion conditions are satisfied:
+- bounded implementation commits are durable on remote main;
+- current YAML is remotely verified for all three workflows;
+- schedule-summary ensure/audit PASS;
+- scheduled-workflow registry PASS;
+- Node regression PASS;
+- Node 24 audit PASS;
+- no unexpected production launch;
+- no Round 3 Prompt B work has started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -873,10 +945,10 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-3`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT STARTED**
-- Prompt B: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE / READY FOR PROMPT B**
+- Prompt B: **PREREGISTERED / PENDING**
 
-Round 3 is promoted only as the next runnable round. It has not been executed.
+Round 3 Prompt A is complete. Prompt B has not been executed.
 
 Initial bounded cohort:
 1. `.github/workflows/crawl-eia-crude-spot.yml`
