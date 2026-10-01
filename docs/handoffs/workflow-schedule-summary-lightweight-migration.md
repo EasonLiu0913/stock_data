@@ -1186,6 +1186,80 @@ At independent closeout start:
 
 **Prompt B closeout: PASS. Round 4 is closed.**
 
+## Round 5 Prompt A implementation — COMPLETE
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-5`
+
+Implementation commit:
+- `66ff214a9d838c070729193d7dfef20ec202487e`
+
+### Bounded implementation
+
+Migrated:
+- `.github/workflows/crawl-pocket-00981a.yml` → `crawl-pocket-00981a`
+- `.github/workflows/crawl-refined-product-tightness.yml` → `collect`
+- `.github/workflows/crawl-taifex-major-institutional-traders-futures-contracts.yml` → `crawl-taifex-futures-contracts`
+
+Updated:
+- `scripts/migrate_workflow_schedule_summary.js`
+  - added exactly the three Round 5 workflows to `EMBEDDED_TARGETS`.
+
+At implementation time, none of the three workflows had a production `push` trigger, so the workflow-YAML commit could not self-trigger the three production collectors.
+
+Each migrated workflow now has:
+- exactly one existing repository checkout;
+- exactly one `# schedule-timing-summary:v2`;
+- no `# schedule-timing-summary:v1`;
+- no standalone `schedule-timing-summary` job;
+- no summary-only checkout;
+- `if: always() && github.event_name == 'schedule'`;
+- shared `node scripts/write_workflow_schedule_summary.js`;
+- unchanged `cancel-in-progress: false`.
+
+### Validation evidence
+
+Actions on implementation SHA `66ff214a9d838c070729193d7dfef20ec202487e`:
+- `36849681571` — Ensure Workflow Schedule Summary — **SUCCESS**.
+- `36849681660` — Public Page Registry CI — **SUCCESS**.
+- `36849681620` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36849681575` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36849681580` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36849681570` — Node Regression Suite — **CANCELLED**, not failed.
+  - it was superseded by a later unrelated main commit while still in checkout.
+
+Concurrent main advancement after the implementation SHA:
+- current main advanced by exactly one commit to `537311e3c168e6fa72fa0e781252b8e75722a7d4`;
+- the only changed path between the implementation SHA and that main was:
+  `scripts/apply_pages_size_budget.js`;
+- no Round 5 workflow, migrator, renderer, routing, or schedule-summary state changed.
+
+Replacement Node regression on current durable main:
+- `36849959023` — Node Regression Suite — **SUCCESS**;
+- full Node regression suite PASS;
+- tracked-tree cleanliness PASS.
+
+Actions side-effect inspection:
+- the Round 5 migration commit launched only CI/maintenance workflows;
+- none of Pocket 00981A, Refined Product Tightness, or TAIFEX Futures Contracts production collectors launched because of the workflow YAML change.
+
+### Prompt A completion boundary
+
+Round 5 Prompt A completion conditions are satisfied:
+- bounded implementation commit is durable and remains an ancestor of current remote main;
+- current main differs only by an unrelated `scripts/apply_pages_size_budget.js` commit;
+- current YAML state for all three workflows remains the migrated v2 state;
+- Ensure Workflow Schedule Summary PASS;
+- deployment/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node 24 audit PASS;
+- Scheduled Collection Date Regression PASS;
+- replacement Node Regression PASS on current durable main;
+- no unexpected production launch;
+- no Round 5 Prompt B work has started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1233,10 +1307,10 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-5`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT STARTED**
-- Prompt B: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE / READY FOR PROMPT B**
+- Prompt B: **PREREGISTERED / PENDING**
 
-Round 5 is promoted only as the next runnable round. It has not been executed.
+Round 5 Prompt A is complete. Prompt B has not been executed.
 
 Initial bounded cohort:
 1. `.github/workflows/crawl-pocket-00981a.yml` → candidate job `crawl-pocket-00981a`
