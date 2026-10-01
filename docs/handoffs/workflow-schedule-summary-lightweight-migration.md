@@ -1009,6 +1009,80 @@ At independent closeout start:
 
 **Prompt B closeout: PASS. Round 3 is closed.**
 
+## Round 4 Prompt A implementation — COMPLETE
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-4`
+
+Implementation commit:
+- `f4117bd5f10cd27c85ac60c2e7be997ba2499d9c`
+
+### Bounded implementation
+
+Migrated:
+- `.github/workflows/crawl-external-market-indicators.yml` → `crawl`
+- `.github/workflows/crawl-institutional.yml` → `crawl-institutional`
+- `.github/workflows/crawl-mops-monthly-revenue.yml` → `crawl`
+
+Updated:
+- `scripts/migrate_workflow_schedule_summary.js`
+  - added exactly the three Round 4 workflows to `EMBEDDED_TARGETS`.
+
+No workflow in this cohort has a production `push` trigger on current main, so the workflow-YAML commit cannot self-trigger the three production collectors.
+
+Each migrated workflow now has:
+- exactly one existing repository checkout;
+- exactly one `# schedule-timing-summary:v2`;
+- no `# schedule-timing-summary:v1`;
+- no standalone `schedule-timing-summary` job;
+- no summary-only checkout;
+- `if: always() && github.event_name == 'schedule'`;
+- shared `node scripts/write_workflow_schedule_summary.js`;
+- unchanged write-layer `cancel-in-progress: false`.
+
+### Institutional Pages topology
+
+`.github/workflows/crawl-institutional.yml` still retains exactly:
+- job `deploy-pages`;
+- `needs: crawl-institutional`;
+- existing publish-ready/trading-day conditional gate;
+- `uses: ./.github/workflows/deploy-pages.yml`.
+
+Only the standalone summary job was removed and its shared v2 step embedded into `crawl-institutional`; downstream Pages orchestration is unchanged.
+
+### Validation evidence
+
+Actions on implementation SHA `f4117bd5f10cd27c85ac60c2e7be997ba2499d9c`:
+- `36829327850` — Ensure Workflow Schedule Summary — **SUCCESS**.
+- `36829327849` — Public Page Registry CI — **SUCCESS**.
+- `36829327899` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36829327917` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36829327959` — Race-safe Main Publish Regression — **SUCCESS**.
+- `36829327902` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36829327912` — Node Regression Suite — **SUCCESS**.
+  - full Node regression suite PASS;
+  - tracked-tree cleanliness PASS.
+
+Actions side-effect inspection:
+- only CI/maintenance workflows launched from the migration SHA;
+- none of External Market, Institutional, or MOPS production workflows launched.
+
+### Prompt A completion boundary
+
+Round 4 Prompt A completion conditions are satisfied:
+- bounded implementation commit is durable on remote main;
+- current YAML is remotely verified for all three workflows;
+- Ensure Workflow Schedule Summary PASS;
+- deployment/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression PASS;
+- race-safe publish regression PASS;
+- no unexpected production launch;
+- Institutional Pages topology preserved;
+- no Round 4 Prompt B work has started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1056,10 +1130,10 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-4`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT STARTED**
-- Prompt B: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE / READY FOR PROMPT B**
+- Prompt B: **PREREGISTERED / PENDING**
 
-Round 4 is promoted only as the next runnable round. It has not been executed.
+Round 4 Prompt A is complete. Prompt B has not been executed.
 
 Initial bounded cohort:
 1. `.github/workflows/crawl-external-market-indicators.yml` → candidate job `crawl`
