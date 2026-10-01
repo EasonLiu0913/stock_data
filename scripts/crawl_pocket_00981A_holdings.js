@@ -119,22 +119,77 @@ function assertCompactDate(date, label) {
     }
 }
 
-async function fetchPocketData(url) {
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            accept: 'application/json, text/plain, */*',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-        }
-    });
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-    if (!response.ok) {
-        throw new Error(`Pocket request failed: ${response.status} ${response.statusText}`);
+function bodyPreview(text, maxLength = 1200) {
+    const compact = String(text || '').replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim();
+    return compact.length <= maxLength ? compact : compact.slice(0, maxLength) + '… [truncated]';
+}
+
+async function fetchPocketData(url, label) {
+    const retryDelaysMs = [0, 3000, 10000];
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= retryDelaysMs.length; attempt++) {
+        const delayMs = retryDelaysMs[attempt - 1];
+        if (delayMs > 0) {
+            console.warn('[' + label + '] retry wait ' + delayMs + 'ms before attempt ' + attempt + '/' + retryDelaysMs.length);
+            await sleep(delayMs);
+        }
+
+        let response = null;
+        let rawText = '';
+        try {
+            console.log('[' + label + '] request attempt ' + attempt + '/' + retryDelaysMs.length);
+            console.log('[' + label + '] request url: ' + url);
+
+            response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    accept: 'application/json, text/plain, */*',
+                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                }
+            });
+
+            rawText = await response.text();
+            const contentType = response.headers.get('content-type') || '(missing)';
+            const contentLengthHeader = response.headers.get('content-length') || '(missing)';
+            console.log('[' + label + '] response status=' + response.status + ' ' + response.statusText + '; content-type=' + contentType + '; content-length-header=' + contentLengthHeader + '; body-bytes=' + Buffer.byteLength(rawText, 'utf8') + '; final-url=' + (response.url || url));
+
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ' ' + response.statusText + '; body-preview=' + bodyPreview(rawText));
+            }
+
+            let payload;
+            try {
+                payload = JSON.parse(rawText);
+            } catch (jsonError) {
+                throw new Error('invalid JSON: ' + jsonError.message + '; body-preview=' + bodyPreview(rawText));
+            }
+
+            const keys = payload && typeof payload === 'object' && !Array.isArray(payload) ? Object.keys(payload) : [];
+            const titleCount = Array.isArray(payload && payload.Title) ? payload.Title.length : '(missing)';
+            const dataCount = Array.isArray(payload && payload.Data) ? payload.Data.length : '(missing)';
+            console.log('[' + label + '] payload keys=' + (keys.length ? keys.join(',') : '(none)') + '; Title.length=' + titleCount + '; Data.length=' + dataCount);
+
+            try {
+                validatePayload(payload);
+            } catch (validationError) {
+                throw new Error(validationError.message + '; body-preview=' + bodyPreview(rawText));
+            }
+
+            console.log('[' + label + '] payload validation passed on attempt ' + attempt + '/' + retryDelaysMs.length);
+            return payload;
+        } catch (error) {
+            lastError = error;
+            const statusSuffix = response ? ' status=' + response.status + ' ' + response.statusText : '';
+            console.error('[' + label + '] attempt ' + attempt + '/' + retryDelaysMs.length + ' failed:' + statusSuffix + ' ' + error.message);
+        }
     }
 
-    const payload = await response.json();
-    validatePayload(payload);
-    return payload;
+    throw new Error('[' + label + '] all ' + retryDelaysMs.length + ' attempts failed. Last error: ' + (lastError ? lastError.message : 'unknown error'));
 }
 
 function refreshFilesJson() {
@@ -164,8 +219,8 @@ function refreshFilesJson() {
 
 (async () => {
     try {
-        const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL);
-        const industryPayload = await fetchPocketData(INDUSTRY_API_URL);
+        const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL, 'holdings');
+        const industryPayload = await fetchPocketData(INDUSTRY_API_URL, 'industry');
 
         const holdings = holdingsPayload.Data.map(normalizeHolding);
         const holdingsSummary = summarize(holdings);
