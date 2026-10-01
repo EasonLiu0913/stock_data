@@ -1347,6 +1347,83 @@ Routing still names `workflow-schedule-summary-lightweight-migration` as the uni
 
 **Prompt B closeout: PASS. Round 5 is closed.**
 
+## Round 6 Prompt A implementation — COMPLETE
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-6`
+
+Implementation commit:
+- `415365d9625d7146fed575a850775cced989e08f`
+
+### Bounded implementation
+
+Migrated:
+- `.github/workflows/crawl-twse-mi-index.yml` → `crawl-twse-mi-index`
+- `.github/workflows/crawl-twse-twt49u.yml` → `crawl`
+- `.github/workflows/crawl-vix-index.yml` → `crawl`
+
+Updated:
+- `scripts/migrate_workflow_schedule_summary.js`
+  - added exactly the three Round 6 workflows to `EMBEDDED_TARGETS`.
+
+At implementation time, none of the three workflows had a production `push` trigger.
+
+Each migrated workflow now has:
+- exactly one existing repository checkout;
+- exactly one `# schedule-timing-summary:v2`;
+- no `# schedule-timing-summary:v1`;
+- no standalone `schedule-timing-summary` job;
+- no summary-only checkout;
+- `if: always() && github.event_name == 'schedule'`;
+- shared `node scripts/write_workflow_schedule_summary.js`;
+- unchanged `cancel-in-progress: false`.
+
+VIX's pre-existing `node-version: '20'` was intentionally left unchanged because Node runtime migration is outside this bounded round.
+
+### Validation evidence
+
+Actions on implementation SHA `415365d9625d7146fed575a850775cced989e08f`:
+- `36855552367` — Ensure Workflow Schedule Summary — **SUCCESS**.
+- `36855552317` — Public Page Registry CI — **SUCCESS**.
+- `36855552419` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36855552472` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36855553547` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36855552437` — Node Regression Suite — **SUCCESS**.
+  - full Node regression suite PASS;
+  - tracked-tree cleanliness PASS.
+
+Actions side-effect inspection:
+- the migration push itself launched only CI/maintenance workflows;
+- a later `crawl-twse-institutional-summaries.yml` run with the same head SHA was a normal `schedule` event, not caused by the migration push;
+- none of TWSE MI Index, TWT49U, or VIX production workflows launched because of the workflow YAML change.
+
+### Concurrent main advancement
+
+Before handoff checkpoint, remote main advanced by one normal scheduled data commit to
+`53cc8c9630d2ef1f65a0911cc0282b69d0db0936`.
+
+That descendant changed only:
+- `data_twse_dealers/*`;
+- `data_twse_foreign_investors/*`;
+- `data_twse_investment_trust/*`.
+
+No Round 6 workflow, migrator, renderer, routing, or schedule-summary state changed.
+
+### Prompt A completion boundary
+
+Round 6 Prompt A completion conditions are satisfied:
+- bounded implementation commit remains a direct ancestor of current remote main;
+- current YAML state for all three workflows remains the migrated v2 state;
+- Ensure Workflow Schedule Summary PASS;
+- deployment/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression PASS;
+- tracked-tree cleanliness PASS;
+- no unexpected production self-trigger;
+- no Round 6 Prompt B work has started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1394,10 +1471,10 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-6`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT STARTED**
-- Prompt B: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE / READY FOR PROMPT B**
+- Prompt B: **PREREGISTERED / PENDING**
 
-Round 6 is promoted only as the next runnable round. It has not been executed.
+Round 6 Prompt A is complete. Prompt B has not been executed.
 
 Initial bounded cohort:
 1. `.github/workflows/crawl-twse-mi-index.yml` → candidate job `crawl-twse-mi-index`
