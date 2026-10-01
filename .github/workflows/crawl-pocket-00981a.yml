@@ -79,27 +79,11 @@ jobs:
             git show origin/main:data_pocket/00981A_holdings_latest.json > "$TMP_DIR/remote_holdings.json" 2>/dev/null || return 1
             git show origin/main:data_pocket/00981A_industry_distribution_latest.json > "$TMP_DIR/remote_industry.json" 2>/dev/null || return 1
 
-            node - "$TMP_DIR/data_pocket/00981A_holdings_latest.json" "$TMP_DIR/remote_holdings.json" "$TMP_DIR/data_pocket/00981A_industry_distribution_latest.json" "$TMP_DIR/remote_industry.json" <<'NODE'
-          const fs = require('fs');
-
-          function read(file) {
-            return JSON.parse(fs.readFileSync(file, 'utf8'));
-          }
-
-          function equivalent(localFile, remoteFile) {
-            const local = read(localFile);
-            const remote = read(remoteFile);
-            return local.summary?.date === remote.summary?.date &&
-              JSON.stringify(local.fields) === JSON.stringify(remote.fields) &&
-              JSON.stringify(local.rawData) === JSON.stringify(remote.rawData);
-          }
-
-          const ok =
-            equivalent(process.argv[2], process.argv[3]) &&
-            equivalent(process.argv[4], process.argv[5]);
-
-          process.exit(ok ? 0 : 1);
-          NODE
+            node -e 'const fs=require("fs"); const read=f=>JSON.parse(fs.readFileSync(f,"utf8")); const eq=(a,b)=>{a=read(a);b=read(b);return a.summary?.date===b.summary?.date&&JSON.stringify(a.fields)===JSON.stringify(b.fields)&&JSON.stringify(a.rawData)===JSON.stringify(b.rawData)}; process.exit(eq(process.argv[1],process.argv[2])&&eq(process.argv[3],process.argv[4])?0:1)' \
+              "$TMP_DIR/data_pocket/00981A_holdings_latest.json" \
+              "$TMP_DIR/remote_holdings.json" \
+              "$TMP_DIR/data_pocket/00981A_industry_distribution_latest.json" \
+              "$TMP_DIR/remote_industry.json"
           }
 
           for i in 1 2 3; do
