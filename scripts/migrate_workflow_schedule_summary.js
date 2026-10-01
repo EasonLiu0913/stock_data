@@ -41,6 +41,9 @@ const EMBEDDED_TARGETS = new Map([
   ['crawl-external-market-indicators.yml', 'crawl'],
   ['crawl-institutional.yml', 'crawl-institutional'],
   ['crawl-mops-monthly-revenue.yml', 'crawl'],
+  ['crawl-pocket-00981a.yml', 'crawl-pocket-00981a'],
+  ['crawl-refined-product-tightness.yml', 'collect'],
+  ['crawl-taifex-major-institutional-traders-futures-contracts.yml', 'crawl-taifex-futures-contracts'],
 ]);
 
 const JOB = `
