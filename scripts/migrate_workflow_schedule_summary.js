@@ -13,7 +13,6 @@ const LEGACY_UNMARKED_EXCEPTIONS = new Set([
   // Frozen Round 2 / self-trigger or self-auditing workflows. Round 1 must not
   // normalize these YAML files because editing them can launch their own
   // production/research/CI workflow or expand the bounded migration scope.
-  'crawl-tpex-daily-market-data.yml',
   'materialize-institutional-accumulation-catalyst-outcome-association-execution.yml',
   'repair-trading-calendar-freshness.yml',
   'test-institutional-accumulation-catalyst-outcome-association-protocol.yml',
@@ -33,6 +32,9 @@ const EMBEDDED_TARGETS = new Map([
   ['crawl-twse-institutional-summaries.yml', 'crawl'],
   ['crawl-cnn-fear-and-greed.yml', 'crawl'],
   ['crawl-taifex-major-institutional-traders-futures-options.yml', 'crawl-taifex-futures-options'],
+  ['crawl-tpex-daily-market-data.yml', 'crawl'],
+  ['analyze-daily-gainers-margin-flow-2200.yml', 'prepare-ai-facts'],
+  ['publish-daily-gainers-ai-analysis.yml', 'validate-and-publish'],
 ]);
 
 const JOB = `
@@ -152,9 +154,10 @@ function selfTest() {
   if (!migrated.includes("if: always() && github.event_name == 'schedule'")) throw new Error('Embedded workflow missing schedule-only always condition');
   if (migrateFile(embedded)) throw new Error('Canonical embedded step must be idempotent');
 
-  const legacyException = path.join(tempDir, 'crawl-tpex-daily-market-data.yml');
-  fs.writeFileSync(legacyException, 'name: sample\n\njobs:\n  crawl:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo ok\n\n  schedule-timing-summary:\n    name: 排程時間摘要\n', 'utf8');
-  if (migrateFile(legacyException)) throw new Error('Frozen Round 2 legacy exception must remain untouched in Round 1');
+  const round2Name = 'crawl-tpex-daily-market-data.yml';
+  const round2 = path.join(tempDir, round2Name);
+  fs.writeFileSync(round2, `name: sample\n\njobs:\n  crawl:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - run: echo ok\n      ${STEP_MARKER}\n      - name: Write schedule timing summary\n        if: always() && github.event_name == 'schedule'\n        shell: bash\n        env:\n          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}\n        run: node scripts/write_workflow_schedule_summary.js\n`, 'utf8');
+  if (migrateFile(round2)) throw new Error('Canonical Round 2 embedded target must be idempotent');
 
   fs.rmSync(tempDir, { recursive: true, force: true });
   console.log('migrate_workflow_schedule_summary self-test passed');

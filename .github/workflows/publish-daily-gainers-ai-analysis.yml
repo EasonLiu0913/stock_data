@@ -347,28 +347,16 @@ jobs:
           done
           echo "Failed to publish validated AI/unified/summary after 5 attempts" >&2
           exit 1
-
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
   deploy-pages:
     name: 發布 5% AI 研究到 GitHub Pages
     needs: validate-and-publish
     if: needs.validate-and-publish.result == 'success' && needs.validate-and-publish.outputs.publish_ready == 'true' && needs.validate-and-publish.outputs.target_date != ''
     uses: ./.github/workflows/deploy-pages.yml
     # Research dates are not prediction dates; deploy the latest complete prediction site.
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
-

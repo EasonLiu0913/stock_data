@@ -216,18 +216,10 @@ jobs:
             echo "- 前端 compact：`data_tpex_daily_quotes/compact-history.json`"
             echo "- Repository 更新：`${{ steps.publish.outputs.pages_changed || 'unknown' }}`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  schedule-timing-summary:
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
+      # schedule-timing-summary:v2
       - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
