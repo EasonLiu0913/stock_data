@@ -124,7 +124,7 @@ function sleep(ms) {
 }
 
 function bodyPreview(text, maxLength = 1200) {
-    const compact = String(text || '').replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim();
+    const compact = String(text || '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
     return compact.length <= maxLength ? compact : compact.slice(0, maxLength) + '… [truncated]';
 }
 
