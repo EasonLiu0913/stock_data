@@ -188,6 +188,16 @@ function applySecondaryResearchCuts(siteRoot) {
   return candidates.map((relative) => removePath(siteRoot, relative)).filter(Boolean);
 }
 
+function applyEmergencyPublicationWindows(siteRoot) {
+  // This is a final publication-only capacity fallback. Repository history is
+  // untouched; only the generated _site artifact is narrowed further.
+  return [
+    trimDataset(siteRoot, 'data_normalized', 1),
+    trimPredictionAnalysisDates(siteRoot, 3),
+    trimStrategySnapshots(siteRoot, 3),
+  ];
+}
+
 function runSelfTest() {
   const os = require('node:os');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pages-budget-'));
@@ -258,6 +268,7 @@ function main(argv = process.argv.slice(2)) {
     aggressive_window_results: [],
     secondary_research_removals: [],
     strategy_snapshot_trim: null,
+    emergency_publication_windows: [],
   };
 
   if (beforeBytes <= triggerMiB * MIB) {
@@ -283,6 +294,12 @@ function main(argv = process.argv.slice(2)) {
     currentBytes = directoryBytes(siteRoot);
   }
 
+  if (currentBytes > targetMiB * MIB) {
+    summary.stage = 4;
+    summary.emergency_publication_windows = applyEmergencyPublicationWindows(siteRoot);
+    currentBytes = directoryBytes(siteRoot);
+  }
+
   summary.after_mebibytes = mib(currentBytes);
   summary.reclaimed_mebibytes = mib(beforeBytes - currentBytes);
   summary.target_met = currentBytes <= targetMiB * MIB;
@@ -304,6 +321,7 @@ if (require.main === module) {
 module.exports = {
   applyAggressiveWindows,
   applySecondaryResearchCuts,
+  applyEmergencyPublicationWindows,
   trimPredictionAnalysisDates,
   trimStrategySnapshots,
 };
