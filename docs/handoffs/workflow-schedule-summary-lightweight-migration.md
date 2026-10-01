@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 6 Prompt B closeout: PASS. Round 6 is closed.**
+**Round 7 Prompt A: COMPLETE. Prompt B is pending.**
 
-Round 7 is preregistered / promoted inside this project but **Prompt A has not started**.
+Round 6 remains closed with Prompt B PASS. Round 7 implementation and required Prompt A validation are durable on remote `main`; do not execute Round 7 Prompt B automatically.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -1505,6 +1505,60 @@ Routing still names `workflow-schedule-summary-lightweight-migration` as the uni
 
 **Prompt B closeout: PASS. Round 6 is closed.**
 
+## Round 7 Prompt A implementation evidence
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-7`
+
+Bounded implementation commits:
+- `ec819ca806398880337ed95aba4a60c2b8340b0f` — embed v2 summary in `.github/workflows/prepare-market-environment.yml`.
+- `34a9ed28301b202934a73322433a81d09e5192d7` — embed v2 summary in `.github/workflows/retry-sma.yml`.
+- `5cce71611094b1b024a49fa85ebdecdf183f636f` — embed v2 summary in `.github/workflows/update-non-trading-days.yml`.
+- `86db7619b1c78d858ce27bbfce445410515cfa3f` — register the three Round 7 `EMBEDDED_TARGETS` in `scripts/migrate_workflow_schedule_summary.js`.
+
+Exact diff verification:
+- each workflow change only removes the v1 standalone `schedule-timing-summary` job and embeds one `# schedule-timing-summary:v2` step in the preregistered existing functional job;
+- all three embedded steps use `if: always() && github.event_name == 'schedule'` and the shared `node scripts/write_workflow_schedule_summary.js`;
+- none of the three workflows has a production `push` trigger;
+- `prepare-market-environment.yml` and `retry-sma.yml` retain `cancel-in-progress: false`;
+- `update-non-trading-days.yml` still has no explicit concurrency/cancellation rule;
+- no cron, date-resolution, crawler, schema, publication, retry, batching, permissions, Pages topology, or concurrency behavior changed.
+
+Validation / audit evidence:
+- `36870909804` — Ensure Workflow Schedule Summary — **SUCCESS**.
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed across 177 workflow files;
+  - migrator normalization reported all workflows pinned with no diff.
+- `36870858160` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36870909830` — Node Regression Suite — **SUCCESS**.
+- `36870909840` — Public Page Registry CI — **SUCCESS**.
+
+Actions side-effect verification:
+- workflow-YAML commits `ec819ca...`, `34a9ed...`, and `5cce716...` launched only CI/maintenance validation workflows through `push`; none launched the Round 7 production collectors;
+- on implementation SHA `86db761...`, a concurrent ETF Market Regime run was an independent `schedule` event, not a migration push side effect;
+- no `Prepare Market Environment`, `Retry SMA Failed`, or `Update Non-Trading Days` production run was launched by the migration commits.
+
+Concurrent-main classification:
+- after `86db761...`, remote `main` advanced to `0d6f902625ccc34595e9c52e3558568fa8a208e8` through one scheduled data commit;
+- that descendant changed only `public/data/etf-market-regime-analysis/data.json`;
+- no Round 7 workflow, migrator, renderer, routing, or schedule-summary state drifted.
+
+### Prompt A completion boundary
+
+Round 7 Prompt A completion conditions are satisfied:
+- bounded implementation is durable on remote main;
+- all three current workflow YAML files contain exactly one v2 embedded summary and no v1 standalone summary;
+- Ensure Workflow Schedule Summary PASS;
+- deployment/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression PASS;
+- no unexpected production self-trigger;
+- routing still points to `workflow-schedule-summary-lightweight-migration`;
+- Round 7 Prompt B has not started.
+
+**Prompt A complete — ready for Prompt B.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1552,10 +1606,10 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-7`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT STARTED**
+- Prompt A: **COMPLETE / READY FOR PROMPT B**
 - Prompt B: **PREREGISTERED / NOT STARTED**
 
-Round 7 is promoted only as the next runnable round. It has not been executed.
+Round 7 implementation is complete. Prompt B remains the only legal next action for this round.
 
 Initial bounded cohort:
 1. `.github/workflows/prepare-market-environment.yml` → candidate job `prepare`
