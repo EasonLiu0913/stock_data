@@ -4,7 +4,7 @@ const path = require('path');
 const ETF_ID = '00981A';
 const HOLDINGS_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtnoData.ashx?action=getdtnodata&DtNo=59449513&ParamStr=AssignID%3D00981A%3BMTPeriod%3D0%3BDTMode%3D0%3BDTRange%3D1%3BDTOrder%3D1%3BMajorTable%3DM722%3B&FilterNo=0';
 const INDUSTRY_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtnoData.ashx?action=getdtnodata&DtNo=61495191&ParamStr=AssignID%3D98642180%3BMTPeriod%3D0%3BDTMode%3D0%3BDTRange%3D1%3BDTOrder%3D1%3BMajorTable%3DM066%3B&FilterNo=0';
-const ANONYMOUS_TOKEN_URL = 'https://www.pocket.tw/cm/identity/token';
+const ANONYMOUS_TOKEN_URL = 'https://www.pocket.tw/api/cm/identity/token';
 const POCKET_CLIENT_ID = 'cm-etf-web';
 // Verification trigger: Pocket guest-token flow
 const OUTPUT_DIR = path.join(__dirname, '../data_pocket');
