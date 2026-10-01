@@ -4,13 +4,12 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 2 Prompt A COMPLETE — Prompt B pending.**
+**Round 2 Prompt B closeout: PASS. Round 2 is closed.**
 
-Round 2 migrated the first self-trigger-risk cohort only after first removing each workflow's own YAML path from production push triggers. No Round 3 implementation has started.
+Round 3 is preregistered / promoted inside this project but **Prompt A has not started**.
 
-Active project routing:
-- task id: `workflow-schedule-summary-lightweight-migration`
-- canonical handoff: `docs/handoffs/workflow-schedule-summary-lightweight-migration.md`
+Global active task remains:
+- `workflow-schedule-summary-lightweight-migration`
 
 ## Objective
 
@@ -689,6 +688,144 @@ All Round 2 Prompt A completion conditions are satisfied:
 
 **Prompt A complete — ready for Prompt B.**
 
+## Round 2 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-2`
+
+Prompt B was recovered from the pre-Prompt-A durable handoff at activation commit
+`49ebe2a603691bb04c92891ce8648c5ae87b90fd` and matched the current preserved Round 2 closeout contract.
+
+### Exact commit / diff verification
+
+Trigger-hardening commit:
+- `f2312e7ecde0fbbcb5dfe922d4345f1439edc668`
+- changed only:
+  - `.github/workflows/crawl-tpex-daily-market-data.yml`
+  - `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml`
+  - `.github/workflows/publish-daily-gainers-ai-analysis.yml`
+- exact semantic change:
+  - removed TPEx's workflow-edit-only `push` trigger;
+  - removed each of the other two workflow YAML paths from their existing `push.paths`;
+  - retained all real data/script push triggers;
+  - retained all cron schedules and workflow_dispatch inputs.
+
+v2 migration commit:
+- `d8f824c782b8150c559d022c273a972fb1051135`
+- changed only the same three workflow files plus:
+  - `scripts/migrate_workflow_schedule_summary.js`
+- workflow YAML changes are limited to:
+  - removing the v1 standalone `schedule-timing-summary` job;
+  - removing the summary-only checkout;
+  - adding the v2 embedded summary step to the preregistered existing functional job.
+- no unrelated cron/date/crawler/schema/publication/retry/batching/permissions/concurrency behavior changed.
+
+### Current remote workflow verification
+
+Current remote main was independently re-read after Prompt A.
+
+All three Round 2 workflows still satisfy:
+- `# schedule-timing-summary:v2` present;
+- no standalone `schedule-timing-summary` job;
+- no `Checkout repository for schedule summary`;
+- exactly one existing repository checkout;
+- `if: always() && github.event_name == 'schedule'`;
+- shared `node scripts/write_workflow_schedule_summary.js`;
+- own workflow YAML no longer appears in production `push.paths`;
+- no `workflow_run`;
+- no `repository_dispatch`;
+- no `cancel-in-progress: true` introduced.
+
+Verified placements:
+- `.github/workflows/crawl-tpex-daily-market-data.yml` → `crawl`;
+- `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml` → `prepare-ai-facts`;
+- `.github/workflows/publish-daily-gainers-ai-analysis.yml` → `validate-and-publish`.
+
+The publish workflow still calls the canonical:
+`./.github/workflows/deploy-pages.yml`
+with its existing downstream topology unchanged.
+
+### Summary renderer / migration / deployment audit
+
+Current `scripts/write_workflow_schedule_summary.js` still contains:
+- `原定排程時間`;
+- `實際開始時間`;
+- `GitHub 排程延遲`.
+
+No stock/research/public dataset dependency was introduced.
+
+Run `36821114484` — Ensure Workflow Schedule Summary — **SUCCESS**.
+Its checked-in workflow contract executes:
+- `node --check scripts/write_workflow_schedule_summary.js`;
+- `node scripts/write_workflow_schedule_summary.js --self-test`;
+- `node --check scripts/migrate_workflow_schedule_summary.js`;
+- `node scripts/audit_workflow_deployment_races.js --self-test`;
+- `node scripts/audit_workflow_deployment_races.js`;
+- normalizer execution followed by a required clean `git diff` over `.github/workflows`.
+
+The run's audit job and both relevant steps completed successfully, proving:
+- renderer self-test PASS;
+- deployment-race self-test PASS;
+- full deployment-race audit PASS;
+- migrator normalization/idempotence against checked-in workflow state PASS.
+
+Current canonical `.github/workflows/deploy-pages.yml` was independently rechecked:
+- exposes `workflow_call`;
+- concurrency group is exactly `github-pages`;
+- Pages-only `cancel-in-progress: true` remains;
+- checks out `ref: main`;
+- is not a repository writer.
+
+### Registry / regression / YAML acceptance
+
+- `36821114500` — Scheduled Workflow Registry Contract — **SUCCESS**.
+- `36821114512` — Node Regression Suite — **SUCCESS**.
+  - `npm test` PASS;
+  - tracked-tree cleanliness PASS.
+- `36821114517` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36821114632` — Public Page Registry CI — **SUCCESS**.
+- `36821114508` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36821114587` — 5% AI Contract consistency check — **SUCCESS**.
+
+The changed workflow YAML was accepted by GitHub Actions and the workflow-registry contract passed on the implementation SHA; no YAML parse/registration defect was observed.
+
+### Actions side-effect verification
+
+For `f2312e7...`:
+- only CI/maintenance workflows were created;
+- no TPEx collector, late Facts production run, or 5% AI publish production run launched because of the workflow-file changes;
+- two maintenance runs were superseded/cancelled by the immediately following implementation commit, while their replacement runs on `d8f824c...` completed successfully.
+
+For `d8f824c...`:
+- only CI/maintenance workflows were created;
+- none of the three migrated production workflows launched.
+
+Therefore the Round 2 self-trigger safety objective is satisfied.
+
+### Durable-state / freshness verification
+
+At independent closeout:
+- current remote main before this closeout checkpoint was
+  `e6451ea2d233e17d58787490e17170cb48efba65`;
+- implementation SHA `d8f824c...` is its direct implementation ancestor;
+- the only file changed between `d8f824c...` and `e6451ea...` is this canonical handoff;
+- no workflow, renderer, migrator, deployment audit, or routing drift occurred after the tested implementation state;
+- `docs/agent-prompts/task-routing.json` still routes the unique active task to this project.
+
+### Inventory correction discovered during closeout
+
+A fresh live check of remaining candidates corrected one stale Round 1 classification:
+- `.github/workflows/build-etf-market-regime-analysis.yml` currently contains its own YAML path only under `pull_request.paths`, not under production `push.paths`.
+- It is therefore **not currently a production self-trigger-risk workflow**, although it still has a standalone v1 schedule summary.
+
+Remaining confirmed own-YAML production-push-risk candidates include:
+- `.github/workflows/crawl-eia-crude-spot.yml`;
+- `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`;
+- `.github/workflows/momentum-history-replay.yml`;
+- `.github/workflows/update-twse-industry.yml`.
+
+**Prompt B closeout: PASS. Round 2 is closed.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -730,17 +867,31 @@ The migration source of truth is:
 
 ## Next round
 
-The next authorized action for this project is **Round 2 Prompt B closeout / verification**.
+### Round 3 — remaining self-trigger-risk cohort
 
-Do not start Round 3 implementation before Round 2 Prompt B independently verifies:
-1. exact trigger-hardening and v2 migration diffs;
-2. no production self-trigger from either Round 2 commit;
-3. current remote placement of all three embedded summary steps;
-4. trigger semantics after own-YAML removal;
-5. deployment/write-layer safety and registry/regression results;
-6. durable current-main state and active routing.
+Round:
+`workflow-schedule-summary-lightweight-migration-round-3`
 
-Round 3 has **not** been promoted or executed.
+Status:
+- Prompt A: **PREREGISTERED / NOT STARTED**
+- Prompt B: **PREREGISTERED / NOT STARTED**
+
+Round 3 is promoted only as the next runnable round. It has not been executed.
+
+Initial bounded cohort:
+1. `.github/workflows/crawl-eia-crude-spot.yml`
+2. `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
+3. `.github/workflows/update-twse-industry.yml`
+
+Deferred from this cohort:
+- `.github/workflows/momentum-history-replay.yml` — retain for a later/more complex placement review because it has broader push/deploy/replay topology.
+- `.github/workflows/build-etf-market-regime-analysis.yml` — no longer classified as production self-trigger risk because its own YAML is not in `push.paths`; treat it as an ordinary v1 candidate in a later cohort.
+
+For each Round 3 workflow, first decide whether its own YAML should remain in production `push.paths`.
+Special attention:
+- TDCC currently has conditional `cancel-in-progress: ${{ github.event_name == 'push' }}`; do not broaden or weaken write-layer safety. Any trigger cleanup must be reviewed together with this pre-existing concurrency expression.
+- Update TWSE Industry still labels its own-YAML push as a temporary 2026-08-20 incident-recovery trigger; verify whether that trigger is now obsolete before migration.
+- EIA retains real script/test push triggers; only the own-YAML path should be considered for removal.
 
 ## Safety / stop conditions
 
@@ -803,3 +954,75 @@ Perform an independent Round 2 closeout for the workflow schedule-summary lightw
 6. Re-fetch remote main and verify durable state after any concurrent data commits.
 7. Update and commit the canonical handoff only after the above passes.
 8. If any important failure remains, fix only the bounded defect and repeat Prompt B; do not promote another round.
+
+
+## Prompt A — Round 3 implementation prompt
+
+Continue the workflow schedule-summary lightweight migration in repository `EasonLiu0913/stock_data`.
+
+Before work:
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`.
+3. Read `docs/agent-prompts/task-routing.json`; proceed only if this project remains the unique active task.
+4. Read this canonical handoff.
+5. Read `docs/architecture/github-actions.md`, `docs/decisions/ADR-004-workflow-orchestration.md`, `scripts/write_workflow_schedule_summary.js`, and `scripts/migrate_workflow_schedule_summary.js`.
+6. Re-scan current workflow triggers before relying on this preregistration.
+
+Objective:
+- bounded Round 3 cohort:
+  1. `.github/workflows/crawl-eia-crude-spot.yml`
+  2. `.github/workflows/crawl-tdcc-shareholding-snapshot.yml`
+  3. `.github/workflows/update-twse-industry.yml`
+- for each workflow, decide and document whether its own YAML belongs in production `push.paths` before editing summary placement;
+- remove only obsolete/self-triggering workflow-file push paths when evidence supports removal;
+- then migrate to v2 embedded schedule summary only where an existing checked-out functional job preserves `always() && github.event_name == 'schedule'` without adding a runner.
+
+Frozen:
+- no cron/date/crawler/schema/publication/retry/physical-batch changes;
+- no production manual dispatch for validation;
+- no `workflow_run`, `repository_dispatch`, or event-listener workaround;
+- no new reusable abstraction;
+- no write-layer cancellation weakening;
+- preserve shared renderer and the three summary labels;
+- preserve all real data/script push triggers unless this round explicitly proves a trigger obsolete.
+
+Special gates:
+- TDCC's pre-existing conditional `cancel-in-progress: ${{ github.event_name == 'push' }}` must be independently classified before any edit; do not silently convert it to a different concurrency policy.
+- Update TWSE Industry's temporary workflow-file push trigger must be checked against current repository history/intent before removal.
+- Any migration commit that launches one of the production workflows solely because its YAML matched `push.paths` is a stop-condition failure.
+
+Completion:
+- bounded implementation commits durable on remote main;
+- current YAML remote verification for every migrated workflow;
+- schedule-summary ensure/audit PASS;
+- deployment-race audit PASS;
+- scheduled-workflow registry PASS;
+- Node regression PASS when triggered/applicable;
+- Actions inspection proves no unexpected production launch;
+- canonical handoff updated with Prompt A evidence;
+- stop with `Prompt A complete — ready for Prompt B`;
+- do not execute Round 3 Prompt B automatically.
+
+## Prompt B — Round 3 closeout / verification prompt
+
+Perform independent closeout for `workflow-schedule-summary-lightweight-migration-round-3`.
+
+1. Fetch current remote main, read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, and this handoff; verify this project is still the unique active task.
+2. Recover this exact Round 3 Prompt B from the pre-Prompt-A durable handoff.
+3. Verify every Round 3 commit and reject unrelated cron/date/crawler/schema/publication/retry/batching/permissions/concurrency changes.
+4. For each migrated workflow verify:
+   - own-YAML production trigger decision matches the documented evidence;
+   - all real data/script triggers intended to remain are unchanged;
+   - no standalone summary runner/summary-only checkout remains;
+   - embedded summary is schedule-only with `always()`;
+   - selected functional job already checks out the repository;
+   - shared renderer is used;
+   - write-layer and Pages topology are unchanged.
+5. For TDCC, independently verify the pre-existing conditional concurrency rule was not accidentally broadened or weakened.
+6. Inspect Actions for every workflow-YAML commit. A production workflow launched only because its own YAML matched `push.paths` is a closeout failure.
+7. Verify renderer self-test, migrator normalization/idempotence, deployment-race audit, scheduled-workflow registry tests, YAML acceptance, and applicable Node regression.
+8. Re-fetch remote main; classify concurrent changes and verify durable state.
+9. On PASS, record exact commits/run IDs/tests/current-main evidence in this handoff and preregister the next bounded pair without executing it.
+10. On failure, fix only the bounded defect and repeat this same Prompt B from criterion 1.
+
+End with: `Prompt B closeout: PASS`.
