@@ -220,11 +220,16 @@ function refreshFilesJson() {
 (async () => {
     try {
         const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL, 'holdings');
-        const industryPayload = await fetchPocketData(INDUSTRY_API_URL, 'industry');
-
         const holdings = holdingsPayload.Data.map(normalizeHolding);
         const holdingsSummary = summarize(holdings);
         assertCompactDate(holdingsSummary.date, 'Pocket holdings response');
+        console.log(
+            '[holdings] accepted data date=' + holdingsSummary.date +
+            '; rows=' + holdingsSummary.totalRows +
+            '; equityRows=' + holdingsSummary.equityRows +
+            '; cashRows=' + holdingsSummary.cashRows +
+            '; totalWeightPercent=' + holdingsSummary.totalWeightPercent
+        );
 
         const holdingsOutput = {
             source: 'Pocket 口袋證券',
@@ -238,9 +243,16 @@ function refreshFilesJson() {
             holdings
         };
 
+        const industryPayload = await fetchPocketData(INDUSTRY_API_URL, 'industry');
         const industryDistribution = normalizeIndustryDistribution(industryPayload);
         const industrySummary = summarizeIndustry(industryDistribution);
         assertCompactDate(industrySummary.date, 'Pocket industry response');
+        console.log(
+            '[industry] accepted data date=' + industrySummary.date +
+            '; rows=' + industrySummary.totalRows +
+            '; positiveRows=' + industrySummary.positiveRows +
+            '; totalWeightPercent=' + industrySummary.totalWeightPercent
+        );
 
         const industryOutput = {
             source: 'Pocket 口袋證券',
