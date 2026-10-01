@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 8 Prompt A: COMPLETE. Prompt B is pending.**
+**Round 8 Prompt B closeout: PASS. Round 8 is closed.**
 
-Round 7 remains closed with Prompt B PASS. Round 8 implementation and required Prompt A validation are durable on remote `main`; do not execute Round 8 Prompt B automatically.
+Round 9 is preregistered / promoted as a residual-topology classification round. **Prompt A has not started.**
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -1699,6 +1699,110 @@ Round 8 Prompt A completion conditions are satisfied:
 
 **Prompt A complete — ready for Prompt B.**
 
+## Round 8 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-8`
+
+The exact Round 8 Prompt B was recovered from the pre-Prompt-A durable handoff at
+`7a33d3dfc96e5dce8d895d390ab1649e45992c73`.
+
+### Commit / scope verification
+
+Round 8 implementation commits:
+- `16106ad7e5c7c5553b260710335bfeaad4745a91` — `.github/workflows/update-official-market-constraints.yml`;
+- `9920aa14a5736b07c6cc9eada5bd65723772bbb2` — `.github/workflows/warrant-scraper.yml`;
+- `3b303ce5bb0ebdce4ab3f5658c005e28888e9a35` — add both targets to `EMBEDDED_TARGETS`.
+
+Independent diff review confirms the two workflow commits only:
+- remove the v1 standalone `schedule-timing-summary` job and its summary-only checkout;
+- add one embedded `# schedule-timing-summary:v2` step in the preregistered functional job;
+- use `if: always() && github.event_name == 'schedule'`;
+- keep `node scripts/write_workflow_schedule_summary.js`.
+
+No cron, target-date/date-resolution, crawler, schema, publication, retry, batching, permissions, Pages topology, or write-layer concurrency changes were introduced.
+
+### Current remote workflow verification
+
+Both current remote-main workflows independently satisfy:
+- no production `push` trigger;
+- no v1 marker;
+- no standalone summary job;
+- exactly one v2 marker;
+- schedule-only `always()` condition;
+- existing functional checkout is present;
+- shared renderer is used;
+- `cancel-in-progress: false` remains unchanged.
+
+A normalized functional-content comparison against pre-Round-8 base
+`59b6e02d2f21b8237af845de536a852bd1903baa` shows:
+- `update-official-market-constraints.yml`: functional content unchanged;
+- `warrant-scraper.yml`: functional content unchanged.
+
+### Special invariant verification
+
+`update-official-market-constraints.yml`:
+- manual/default `official_final` and scheduled `realtime_close` phase selection are unchanged;
+- source prediction-context existence gate is unchanged;
+- realtime and official-final branches are unchanged;
+- write scope remains `data_market_constraints data_prediction_context`;
+- workflow summary still states the original prediction market snapshot remains immutable / is not rewritten.
+
+`warrant-scraper.yml`:
+- Playwright browser cache topology is unchanged;
+- source-date contract still runs `node --test tests/extract_warrant_data.test.js`;
+- conditional Chromium install, runtime smoke-test, fallback system dependency install, and second smoke-test are unchanged;
+- write scope remains `git add data_twse/`.
+
+### Actions side-effect verification
+
+For workflow-YAML SHAs `16106ad...` and `9920aa...`:
+- all push-triggered runs were CI / maintenance workflows only;
+- neither production workflow launched because its YAML changed.
+
+On `3b303ce...`, the concurrent TWSE quarterly-financial-quality workflow run was `event: schedule`, not a migration push side effect.
+
+Therefore no unexpected production collector launch was caused by Round 8.
+
+### Validation evidence
+
+- `36891092336` — Ensure Workflow Schedule Summary — **SUCCESS**:
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed;
+  - migrator normalization/idempotence reported all workflows pinned.
+- `36891092315` — Public Page Registry CI — **SUCCESS**; deployment layering audit passed.
+- `36891084187` — Scheduled Workflow Registry Contract — **SUCCESS**; 8 tests passed.
+- `36891084203` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `36891084262` — Scheduled Collection Date Regression — **SUCCESS**.
+- `36891092206` — Node Regression Suite — **SUCCESS**; 909 tests passed and the tracked-tree cleanliness gate passed.
+
+### Concurrent-main / durability classification
+
+After Prompt A checkpoint `eeb70f0526263fbbe6f7d493923e27acacced2b0`, remote main advanced through normal analysis/data commits to
+`9624bc1ba78678f7a8a1623968da05c30b202209`.
+
+The descendant changes are limited to:
+- `data_daily_gain_over_5/analysis-facts/20261001.json`;
+- `data_daily_gain_over_5/analysis-flow/20261001.json`.
+
+They do not modify either Round 8 workflow, the migrator, the renderer, routing, or this handoff before closeout.
+
+Routing still names `workflow-schedule-summary-lightweight-migration` as the sole active task.
+
+### Residual migration decision
+
+Round 8 exhausts the currently preregistered ordinary single-functional-job cohort.
+
+Do **not** promote another direct migration cohort from the stale Round 1 inventory. Remaining runtime-relevant v1 cases include known multi-job / branch-topology / self-trigger / deployment-coupled workflows such as:
+- `.github/workflows/crawl-fubon-broker-details.yml` — mutually exclusive branches with no one existing terminal functional job;
+- `.github/workflows/momentum-history-replay.yml` — broader replay / deploy / push topology;
+- other historical multi-job scheduled workflows whose earlier classification may now be stale.
+
+The next round is therefore classification-only: re-inventory current remote main, classify residual scheduled v1 workflows by topology and trigger risk, and preregister a later bounded migration cohort only if evidence identifies one that is safe without changing functional topology.
+
+**Prompt B closeout: PASS. Round 8 is closed.**
+
 ## Current repository state
 
 Round 1 implementation is already durable on remote main. Normal data workflows continued advancing `main` after the implementation commits; future agents must fetch current main rather than treating any data commit SHA in this handoff as the branch head.
@@ -1740,34 +1844,45 @@ The migration source of truth is:
 
 ## Next round
 
-### Round 8 — remaining ordinary single-functional-job cohort
+### Round 9 — residual schedule-summary topology classification
 
 Round:
-`workflow-schedule-summary-lightweight-migration-round-8`
+`workflow-schedule-summary-lightweight-migration-round-9`
 
 Status:
-- Prompt A: **COMPLETE / READY FOR PROMPT B**
+- Prompt A: **PREREGISTERED / NOT STARTED**
 - Prompt B: **PREREGISTERED / NOT STARTED**
 
-Round 8 implementation is complete. Prompt B remains the only legal next action for this round.
+Round 9 is classification-only. It must not edit production workflow YAML or migrate any additional workflow.
 
-Bounded cohort:
-1. `.github/workflows/update-official-market-constraints.yml` → candidate job `update`
-2. `.github/workflows/warrant-scraper.yml` → candidate job `scrape-warrant`
+Objective:
+- re-inventory all current scheduled workflows on remote main that still use v1 standalone schedule summary or otherwise remain outside `EMBEDDED_TARGETS`;
+- classify each residual runtime-relevant workflow into:
+  1. safe single-functional-job candidate;
+  2. multi-job / branch-topology placement problem;
+  3. own-YAML production self-trigger risk;
+  4. deployment-coupled / terminal-job topology requiring dedicated review;
+  5. intentionally unreachable/non-scheduled legacy summary;
+  6. explicit frozen exception / no managed summary;
+- identify whether any **new** bounded safe migration cohort exists without changing cron, triggers, functional job topology, write-layer concurrency, deployment topology, or production logic;
+- if a safe cohort exists, preregister Round 10 Prompt A + Prompt B for that exact cohort;
+- if none exists, record that the lightweight migration has reached its safe stopping boundary.
 
-Preregistered evidence from current remote main:
-- both have schedule triggers and v1 standalone summaries;
-- neither has a production `push` trigger;
-- each existing functional job already has a repository checkout;
-- both currently use `cancel-in-progress: false`;
-- neither has a Pages/deployment topology to change;
-- both are repository writers, so write-layer concurrency must remain non-cancelable.
+Known entry points:
+- `scripts/migrate_workflow_schedule_summary.js`;
+- `scripts/write_workflow_schedule_summary.js`;
+- `.github/workflows/crawl-fubon-broker-details.yml`;
+- `.github/workflows/momentum-history-replay.yml`;
+- `docs/architecture/github-actions.md`;
+- `docs/decisions/ADR-004-workflow-orchestration.md`;
+- this canonical handoff.
 
-After Round 8, do not assume all remaining scheduled v1 workflows are safe to embed. Re-inventory the residual set and classify multi-job, branch-topology, self-trigger, and deployment-coupled cases before promoting another migration cohort.
-
-Deferred:
-- `.github/workflows/momentum-history-replay.yml` remains out of scope pending dedicated review of its broader replay/deploy/push topology;
-- multi-branch workflows without one guaranteed functional placement remain v1.
+Frozen:
+- no production workflow YAML edits in Round 9;
+- no trigger hardening in the same classification round;
+- no cron/date-resolution/crawler/retry/publication changes;
+- no new final runner, reusable workflow, `workflow_run`, `repository_dispatch`, or event-listener workaround;
+- do not treat the historical Round 1 inventory as current evidence; current remote main is authoritative.
 
 ## Safety / stop conditions
 
@@ -2238,5 +2353,70 @@ Perform independent closeout for `workflow-schedule-summary-lightweight-migratio
 9. Re-fetch remote main; classify concurrent changes and verify durable state.
 10. On PASS, record exact commits/run IDs/tests/current-main evidence in this handoff and either preregister the next bounded pair or record that residual workflows require topology classification before further migration; do not execute another Prompt A automatically.
 11. On failure, fix only the bounded defect and repeat this same Prompt B from criterion 1.
+
+End with: `Prompt B closeout: PASS`.
+
+
+
+## Prompt A — Round 9 residual topology classification prompt
+
+Continue the workflow schedule-summary lightweight migration in repository `EasonLiu0913/stock_data`.
+
+Before work:
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`.
+3. Read `docs/agent-prompts/task-routing.json`; proceed only if this project remains the unique active task.
+4. Read this canonical handoff.
+5. Read `docs/architecture/github-actions.md`, `docs/decisions/ADR-004-workflow-orchestration.md`, `scripts/write_workflow_schedule_summary.js`, and `scripts/migrate_workflow_schedule_summary.js`.
+6. Re-inventory the current `.github/workflows/*.yml|yaml` set from remote main.
+
+Objective:
+- perform a classification-only audit of residual runtime-relevant schedule-summary workflows after Round 8;
+- do not modify production workflow YAML;
+- for every current scheduled workflow still outside v2 embedded handling, determine its live summary state, schedule trigger, production `push` / own-YAML `push.paths` risk, job topology, existing checkout placement, repository-write behavior, concurrency behavior, and Pages/deployment coupling;
+- classify residuals into safe single-job candidate, multi-job/branch topology, self-trigger risk, deployment-coupled topology, unreachable/non-scheduled legacy, or explicit frozen exception;
+- independently re-check at least `.github/workflows/crawl-fubon-broker-details.yml` and `.github/workflows/momentum-history-replay.yml`;
+- produce a durable residual inventory in this handoff;
+- if current evidence identifies a bounded safe cohort that can migrate by summary placement only, preregister Round 10 Prompt A + Prompt B for that exact cohort;
+- otherwise record the safe stopping boundary and do not invent more migration work.
+
+Frozen:
+- no production workflow YAML edits;
+- no `EMBEDDED_TARGETS` edits;
+- no trigger removal/hardening;
+- no cron/date-resolution/crawler/schema/publication/retry/batching/permissions/concurrency changes;
+- no production manual dispatch;
+- no new reusable abstraction or terminal runner.
+
+Completion:
+- current-main residual inventory is durable in this handoff;
+- classifications are supported by current YAML evidence, not stale historical labels;
+- known topology-risk workflows are explicitly accounted for;
+- next action is either an exact preregistered Round 10 pair or a documented migration stopping boundary;
+- canonical handoff committed and re-fetched from current main;
+- stop with `Prompt A complete — ready for Prompt B`;
+- do not execute Round 9 Prompt B automatically.
+
+## Prompt B — Round 9 residual topology closeout prompt
+
+Perform independent closeout for `workflow-schedule-summary-lightweight-migration-round-9`.
+
+1. Fetch current remote main, read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, and this handoff; verify this project is still the unique active task.
+2. Recover this exact Round 9 Prompt B from the pre-Prompt-A durable handoff.
+3. Verify Round 9 made no production workflow YAML, trigger, cron, concurrency, migrator-target, crawler, schema, retry, publication, or deployment-topology change.
+4. Independently reconstruct the current residual scheduled-workflow inventory and compare it to Prompt A's durable classification.
+5. For every residual classified as a safe single-job candidate, independently verify:
+   - no own-YAML production self-trigger;
+   - one suitable existing functional job with checkout;
+   - no required functional-topology change;
+   - write-layer concurrency remains safe;
+   - no deployment coupling invalidates embedding.
+6. For every residual classified as multi-job, branch-topology, self-trigger, deployment-coupled, unreachable legacy, or frozen exception, verify the concrete current-YAML evidence supporting that classification.
+7. Independently re-check `.github/workflows/crawl-fubon-broker-details.yml` and `.github/workflows/momentum-history-replay.yml`.
+8. Re-fetch remote main and classify concurrent changes.
+9. On PASS:
+   - if a Round 10 pair was preregistered, verify its cohort is exactly supported by the residual evidence and promote it without executing Prompt A;
+   - otherwise record the safe stopping boundary and close this migration project phase without inventing more work.
+10. On failure, fix only the bounded documentation/classification defect and repeat this same Prompt B from criterion 1.
 
 End with: `Prompt B closeout: PASS`.
