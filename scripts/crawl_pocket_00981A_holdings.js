@@ -4,6 +4,8 @@ const path = require('path');
 const ETF_ID = '00981A';
 const HOLDINGS_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtnoData.ashx?action=getdtnodata&DtNo=59449513&ParamStr=AssignID%3D00981A%3BMTPeriod%3D0%3BDTMode%3D0%3BDTRange%3D1%3BDTOrder%3D1%3BMajorTable%3DM722%3B&FilterNo=0';
 const INDUSTRY_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtnoData.ashx?action=getdtnodata&DtNo=61495191&ParamStr=AssignID%3D98642180%3BMTPeriod%3D0%3BDTMode%3D0%3BDTRange%3D1%3BDTOrder%3D1%3BMajorTable%3DM066%3B&FilterNo=0';
+const ANONYMOUS_TOKEN_URL = 'https://www.pocket.tw/cm/identity/token';
+const POCKET_CLIENT_ID = 'cm-etf-web';
 const OUTPUT_DIR = path.join(__dirname, '../data_pocket');
 const HOLDINGS_LATEST_FILE = `${ETF_ID}_holdings_latest.json`;
 const INDUSTRY_LATEST_FILE = `${ETF_ID}_industry_distribution_latest.json`;
@@ -128,7 +130,64 @@ function bodyPreview(text, maxLength = 1200) {
     return compact.length <= maxLength ? compact : compact.slice(0, maxLength) + '… [truncated]';
 }
 
-async function fetchPocketData(url, label) {
+async function fetchAnonymousToken() {
+    const body = new URLSearchParams({
+        grant_type: 'guest',
+        client_id: POCKET_CLIENT_ID
+    });
+
+    console.log('[auth] requesting anonymous guest token');
+
+    const response = await fetch(ANONYMOUS_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+            accept: 'application/json, text/plain, */*',
+            'content-type': 'application/x-www-form-urlencoded',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        },
+        body
+    });
+
+    const rawText = await response.text();
+    console.log(
+        '[auth] response status=' + response.status + ' ' + response.statusText +
+        '; content-type=' + (response.headers.get('content-type') || '(missing)') +
+        '; body-bytes=' + Buffer.byteLength(rawText, 'utf8')
+    );
+
+    if (!response.ok) {
+        throw new Error('[auth] anonymous token request failed: HTTP ' + response.status + ' ' + response.statusText + '; body-preview=' + bodyPreview(rawText));
+    }
+
+    let payload;
+    try {
+        payload = JSON.parse(rawText);
+    } catch (error) {
+        throw new Error('[auth] anonymous token response is invalid JSON: ' + error.message + '; body-preview=' + bodyPreview(rawText));
+    }
+
+    if (!payload || typeof payload.access_token !== 'string' || !payload.access_token) {
+        throw new Error('[auth] anonymous token response missing access_token; keys=' + Object.keys(payload || {}).join(',') + '; body-preview=' + bodyPreview(rawText));
+    }
+
+    let exp = null;
+    try {
+        const parts = payload.access_token.split('.');
+        if (parts.length >= 2) {
+            const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+            const claims = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+            exp = claims.exp || null;
+        }
+    } catch (error) {
+        console.warn('[auth] token received but exp could not be decoded: ' + error.message);
+    }
+
+    console.log('[auth] anonymous access token received' + (exp ? '; exp=' + exp : ''));
+    return payload.access_token;
+}
+
+async function fetchPocketData(url, label, accessToken) {
     const retryDelaysMs = [0, 3000, 10000];
     let lastError = null;
 
@@ -149,7 +208,8 @@ async function fetchPocketData(url, label) {
                 method: 'GET',
                 headers: {
                     accept: 'application/json, text/plain, */*',
-                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    authorization: 'Bearer ' + accessToken
                 }
             });
 
@@ -219,7 +279,8 @@ function refreshFilesJson() {
 
 (async () => {
     try {
-        const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL, 'holdings');
+        const accessToken = await fetchAnonymousToken();
+        const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL, 'holdings', accessToken);
         const holdings = holdingsPayload.Data.map(normalizeHolding);
         const holdingsSummary = summarize(holdings);
         assertCompactDate(holdingsSummary.date, 'Pocket holdings response');
@@ -243,7 +304,7 @@ function refreshFilesJson() {
             holdings
         };
 
-        const industryPayload = await fetchPocketData(INDUSTRY_API_URL, 'industry');
+        const industryPayload = await fetchPocketData(INDUSTRY_API_URL, 'industry', accessToken);
         const industryDistribution = normalizeIndustryDistribution(industryPayload);
         const industrySummary = summarizeIndustry(industryDistribution);
         assertCompactDate(industrySummary.date, 'Pocket industry response');
