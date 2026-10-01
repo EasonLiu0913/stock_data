@@ -6,7 +6,6 @@ const HOLDINGS_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtn
 const INDUSTRY_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtnoData.ashx?action=getdtnodata&DtNo=61495191&ParamStr=AssignID%3D98642180%3BMTPeriod%3D0%3BDTMode%3D0%3BDTRange%3D1%3BDTOrder%3D1%3BMajorTable%3DM066%3B&FilterNo=0';
 const ANONYMOUS_TOKEN_URL = 'https://www.pocket.tw/api/cm/identity/token';
 const POCKET_CLIENT_ID = 'cm-etf-web';
-// Verification trigger: Pocket guest-token flow v2
 const OUTPUT_DIR = path.join(__dirname, '../data_pocket');
 const HOLDINGS_LATEST_FILE = `${ETF_ID}_holdings_latest.json`;
 const INDUSTRY_LATEST_FILE = `${ETF_ID}_industry_distribution_latest.json`;
