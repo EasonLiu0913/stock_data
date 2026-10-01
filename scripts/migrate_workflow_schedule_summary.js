@@ -35,6 +35,9 @@ const EMBEDDED_TARGETS = new Map([
   ['crawl-tpex-daily-market-data.yml', 'crawl'],
   ['analyze-daily-gainers-margin-flow-2200.yml', 'prepare-ai-facts'],
   ['publish-daily-gainers-ai-analysis.yml', 'validate-and-publish'],
+  ['crawl-eia-crude-spot.yml', 'collect'],
+  ['crawl-tdcc-shareholding-snapshot.yml', 'archive'],
+  ['update-twse-industry.yml', 'update-twse-industry'],
 ]);
 
 const JOB = `
