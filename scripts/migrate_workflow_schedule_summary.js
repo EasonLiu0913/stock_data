@@ -38,6 +38,9 @@ const EMBEDDED_TARGETS = new Map([
   ['crawl-eia-crude-spot.yml', 'collect'],
   ['crawl-tdcc-shareholding-snapshot.yml', 'archive'],
   ['update-twse-industry.yml', 'update-twse-industry'],
+  ['crawl-external-market-indicators.yml', 'crawl'],
+  ['crawl-institutional.yml', 'crawl-institutional'],
+  ['crawl-mops-monthly-revenue.yml', 'crawl'],
 ]);
 
 const JOB = `
