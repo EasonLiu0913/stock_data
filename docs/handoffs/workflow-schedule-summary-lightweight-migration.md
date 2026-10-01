@@ -4,15 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 1 is CLOSED with independent Prompt B PASS.** Round 2 is preregistered but has **not** begun.
+**Round 1 closed — Prompt B PASS.** Round 2 is preregistered but has **not** started.
 
-Remote-main baseline was re-fetched repeatedly during the round because normal data workflows continued to advance `main`. The implementation commit already present on remote main is:
-
-- `529650d366084000e43644d34c66b09e9e66c564` — `perf: inline schedule summaries in safe workflows`
-- `c25a8621d12868eb5410e37ed14728f2e1b2cc99` — fixes escaped GitHub expressions in the migrator
-- `30d3e735fc7aa91ec2c19c8cc1935cb047ffdf95` — freezes TPEx as a Round 2 legacy exception
-
-This handoff commit records the complete Round 1 state and freezes additional newly discovered self-trigger/self-auditing exceptions so the repository-wide normalizer does not force Round 1 to edit them.
+Independent Prompt B closeout was performed against current remote `main`, without assuming the Prompt A report was correct. The verification re-scanned all workflow YAML files, re-checked the Round 1 implementation diff and Actions side effects, re-verified current remote state for every Round 1 target, and re-confirmed the known Round 2 self-trigger candidates.
 
 ## Objective
 
@@ -539,6 +533,61 @@ before this Prompt B handoff update.
 All ten preregistered PASS conditions are satisfied.
 
 **Round 1 is closed. Do not reopen it unless new contradictory repository evidence appears.**
+
+### Independent Prompt B — final Round 1 PASS evidence
+
+Prompt B independently verified the Round 1 closeout against remote `main`.
+
+- Full live inventory: all `177` files under `.github/workflows/*.yml|*.yaml` were re-scanned for:
+  - `schedule-timing-summary`
+  - `排程時間摘要`
+  - `Checkout repository for schedule summary`
+  - `write_workflow_schedule_summary.js`
+- Live result remains exactly:
+  - `172` marker-bearing workflows;
+  - `5` explicit unmarked/frozen exceptions;
+  - exactly `11` v2 embedded Round 1 targets.
+- No additional v2 workflow was discovered and no Round 1 target reverted.
+- The actual `529650d366084000e43644d34c66b09e9e66c564` diff was independently inspected. For the 11 workflow YAML files, the semantic change is limited to removing the standalone summary job/checkout and inserting the shared v2 summary step into the already checked-out functional job. Cron, dispatch inputs, push triggers, crawler commands, target-date logic, retry/jitter, batching, permissions, concurrency, write paths, commit/push commands, and deployment calls were not changed.
+- Current remote verification for all 11 Round 1 targets confirms:
+  - `# schedule-timing-summary:v2` present;
+  - no standalone `schedule-timing-summary` job;
+  - no `Checkout repository for schedule summary`;
+  - exactly one existing checkout;
+  - `if: always() && github.event_name == 'schedule'`;
+  - shared `node scripts/write_workflow_schedule_summary.js`.
+- `scripts/write_workflow_schedule_summary.js` was independently re-read from current main:
+  - required labels remain `原定排程時間`, `實際開始時間`, `GitHub 排程延遲`;
+  - inputs remain GitHub Actions/runtime metadata plus GitHub run metadata;
+  - no stock/research/public dataset dependency was introduced.
+- GitHub run `36689695276` on closeout SHA `a73285d4a8b617d7859592f8f67c604977af0366` passed the repository's actual schedule-summary enforcement. Its log records `write_workflow_schedule_summary self-test passed` and normalization `workflow_count: 177`, `changed_count: 0`, `unchanged_count: 177`.
+- GitHub run `36601784775` passed the scheduled-workflow registry contract on the Round 1 implementation head.
+- GitHub run `36689695102` passed the Node regression suite after the bounded closeout fix.
+- The initial normalizer syntax defect in `529650d...` was not ignored; it was corrected by `c25a8621d12868eb5410e37ed14728f2e1b2cc99`, and later normalization is green.
+- Deployment/write-layer safety was independently re-scanned over the current 177 workflow files:
+  - no `workflow_run`;
+  - no `repository_dispatch` workaround;
+  - no repository/data writer with `cancel-in-progress: true`;
+  - canonical `.github/workflows/deploy-pages.yml` still has `group: github-pages`, Pages-only `cancel-in-progress: true`, `workflow_call`, `checkout ref: main`, and is not a repository writer.
+- The current `scripts/audit_workflow_deployment_races.js` self-test contract was independently inspected and the same invariants were applied to current remote YAML. The chat container could not clone GitHub due DNS isolation, so the literal repo-wide local command could not be executed in this environment; no failed byte-transfer attempt was counted as evidence. Durable GitHub CI plus the independent 177-file live audit provide the closeout evidence instead.
+- Actions side-effect check for implementation SHA `529650d...` found exactly seven push-triggered CI/maintenance runs:
+  - `36601784835` — Audit GitHub Actions Node 24 — success
+  - `36601784922` — Public Page Registry CI — success
+  - `36601784942` — Scheduled Collection Date Regression — success
+  - `36601784766` — Race-safe Main Publish Regression — success
+  - `36601784775` — Scheduled Workflow Registry Contract — success
+  - `36601784696` — Ensure Workflow Schedule Summary — initial bounded failure later fixed by `c25a862...`
+  - `36601784712` — Node Regression Suite — cancelled by a subsequent script commit, later superseded by successful run `36689695102`
+- None of the 11 migrated production workflows launched because of the Round 1 workflow-YAML commit. There was no production Action fan-out.
+- Durable ancestry was independently checked: implementation SHA `529650d...` and closeout SHA `a4694cb99f79000165d6d949251d3c36eca0812e` are ancestors of current remote main.
+- All changes after `a4694cb...` were re-compared against migration-sensitive paths; no `.github/workflows/**`, schedule-summary script/migrator/audit, architecture doc, or canonical handoff drift was found before this PASS checkpoint.
+- Known Round 2 candidates remain explicitly deferred and unchanged:
+  - `.github/workflows/crawl-tpex-daily-market-data.yml`
+  - `.github/workflows/analyze-daily-gainers-margin-flow-2200.yml`
+  - `.github/workflows/publish-daily-gainers-ai-analysis.yml`
+  Each still has a push trigger and references its own YAML, so Round 2 must first decide whether that own-YAML `push.paths` entry should remain before editing the workflow.
+
+**Prompt B verdict: PASS. Round 1 is closed.**
 
 ## Current repository state
 
