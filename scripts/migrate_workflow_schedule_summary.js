@@ -47,6 +47,9 @@ const EMBEDDED_TARGETS = new Map([
   ['crawl-twse-mi-index.yml', 'crawl-twse-mi-index'],
   ['crawl-twse-twt49u.yml', 'crawl'],
   ['crawl-vix-index.yml', 'crawl'],
+  ['update-non-trading-days.yml', 'update-non-trading-days'],
+  ['retry-sma.yml', 'retry-sma'],
+  ['prepare-market-environment.yml', 'prepare'],
 ]);
 
 const JOB = `
