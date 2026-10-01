@@ -50,6 +50,8 @@ const EMBEDDED_TARGETS = new Map([
   ['update-non-trading-days.yml', 'update-non-trading-days'],
   ['retry-sma.yml', 'retry-sma'],
   ['prepare-market-environment.yml', 'prepare'],
+  ['warrant-scraper.yml', 'scrape-warrant'],
+  ['update-official-market-constraints.yml', 'update'],
 ]);
 
 const JOB = `
