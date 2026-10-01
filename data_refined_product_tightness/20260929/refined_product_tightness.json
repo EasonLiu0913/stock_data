@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "methodology_version": "refined_product_tightness_v1",
+  "generated_at": "2026-10-01T02:15:25.292Z",
+  "requested_date": "20260930",
+  "observation_date": "20260929",
+  "role": "research_market_context_only",
+  "interpretation_warning": "This factor describes refined-product market tightness. It is not a production strategy gate and does not isolate demand from refinery outages, geopolitics, seasonality, or other supply effects.",
+  "methodology": {
+    "jet_crack": "US Gulf Coast jet spot USD/gal * 42 - Brent spot USD/bbl",
+    "diesel_crack": "US Gulf Coast ULSD spot USD/gal * 42 - Brent spot USD/bbl",
+    "history_window": "approximately trailing 5 years of aligned EIA daily observations",
+    "score": "70% average crack level percentile + 30% average 20-trading-day crack-change percentile",
+    "state_bands": {
+      "very_loose": "<20",
+      "loose": "20-39.9",
+      "balanced": "40-59.9",
+      "tight": "60-79.9",
+      "very_tight": ">=80"
+    }
+  },
+  "sources": {
+    "provider": "U.S. Energy Information Administration Open Data API",
+    "series": {
+      "jet": {
+        "id": "PET.EER_EPJK_PF4_RGC_DPG.D",
+        "name": "U.S. Gulf Coast Kerosene-Type Jet Fuel Spot Price FOB",
+        "unit": "usd_per_gallon"
+      },
+      "diesel": {
+        "id": "PET.EER_EPD2DXL0_PF4_RGC_DPG.D",
+        "name": "U.S. Gulf Coast Ultra-Low Sulfur No. 2 Diesel Spot Price",
+        "unit": "usd_per_gallon"
+      },
+      "brent": {
+        "id": "PET.RBRTE.D",
+        "name": "Europe Brent Spot Price FOB",
+        "unit": "usd_per_barrel"
+      }
+    }
+  },
+  "series_alignment": [
+    {
+      "key": "jet",
+      "id": "PET.EER_EPJK_PF4_RGC_DPG.D",
+      "name": "U.S. Gulf Coast Kerosene-Type Jet Fuel Spot Price FOB",
+      "latest_observation_date": "20260929",
+      "aligned_observation_date": "20260929",
+      "aligned_lag_days": 0
+    },
+    {
+      "key": "diesel",
+      "id": "PET.EER_EPD2DXL0_PF4_RGC_DPG.D",
+      "name": "U.S. Gulf Coast Ultra-Low Sulfur No. 2 Diesel Spot Price",
+      "latest_observation_date": "20260929",
+      "aligned_observation_date": "20260929",
+      "aligned_lag_days": 0
+    },
+    {
+      "key": "brent",
+      "id": "PET.RBRTE.D",
+      "name": "Europe Brent Spot Price FOB",
+      "latest_observation_date": "20260929",
+      "aligned_observation_date": "20260929",
+      "aligned_lag_days": 0
+    }
+  ],
+  "factor": {
+    "observation_date": "20260929",
+    "score": 81.6,
+    "state": {
+      "code": "very_tight",
+      "label": "非常緊張"
+    },
+    "level_score": 99.4,
+    "momentum_score": 39.8,
+    "confirmation": "mixed_20d",
+    "jet": {
+      "spot_usd_per_gallon": 4.399,
+      "crack_usd_per_barrel": 70.8,
+      "percentile_5y": 99.4,
+      "change_5d_usd_per_barrel": 2.82,
+      "change_20d_usd_per_barrel": 0.74,
+      "change_60d_usd_per_barrel": 25.38,
+      "momentum_20d_percentile_5y": 56.6
+    },
+    "diesel": {
+      "spot_usd_per_gallon": 4.866,
+      "crack_usd_per_barrel": 90.41,
+      "percentile_5y": 99.5,
+      "change_5d_usd_per_barrel": -4.36,
+      "change_20d_usd_per_barrel": -2.37,
+      "change_60d_usd_per_barrel": 24.37,
+      "momentum_20d_percentile_5y": 23.1
+    },
+    "brent": {
+      "spot_usd_per_barrel": 113.96
+    }
+  },
+  "aligned_observation_count": 4929
+}
