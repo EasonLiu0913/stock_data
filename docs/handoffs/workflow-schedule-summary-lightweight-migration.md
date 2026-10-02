@@ -6,7 +6,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 **Round 12 Prompt B closeout: PASS. Round 12 is closed.**
 
-A separate Round 13 momentum production-trigger hardening pair is preregistered below but **not promoted / not started**. Round 13 must harden the production `push.paths` self-trigger risk before any later schedule-summary embedding is considered.
+**Round 13 momentum production-trigger hardening is promoted. Prompt A has not started.**
+
+Round 13 must harden the production `push.paths` self-trigger risk before any later schedule-summary embedding is considered. Promotion only makes Round 13 the next runnable round; it does not execute Prompt A.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -523,7 +525,7 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-13`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT PROMOTED / NOT STARTED**
+- Prompt A: **PROMOTED / NOT STARTED**
 - Prompt B: **PREREGISTERED / NOT STARTED**
 
 Scope:
