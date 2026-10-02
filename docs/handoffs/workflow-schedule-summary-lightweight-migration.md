@@ -6,7 +6,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 **Round 10 Prompt B closeout: PASS. Round 10 is closed.**
 
-The simple placement-only workflow schedule-summary migration boundary is now closed. No Round 11 cohort is preregistered or promoted; the remaining residual workflows require topology-specific or trigger-hardening work rather than another simple placement migration.
+**Round 11 residual topology / trigger-hardening design audit is preregistered and promoted. Prompt A has not started.**
+
+The simple placement-only boundary remains closed. Round 11 is a design/audit round for the nine remaining residual workflows; it does not authorize production workflow changes.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -2592,6 +2594,112 @@ Routing remains valid with exactly one active task: `workflow-schedule-summary-l
 No additional safe simple-placement cohort is preregistered. The remaining residual workflows require topology-specific or trigger-hardening work, so this migration phase stops here rather than inventing Round 11 work.
 
 **Prompt B closeout: PASS**
+
+## Round 11 — residual topology / trigger-hardening design audit
+
+Round identity:
+`workflow-schedule-summary-lightweight-migration-round-11`
+
+Purpose:
+- re-evaluate the nine remaining v1 residual workflows using current YAML rather than the earlier simple-placement assumptions;
+- distinguish workflows that can safely reuse an already-guaranteed checkout-owning functional job from workflows that truly require topology changes;
+- separately determine whether `.github/workflows/momentum-history-replay.yml` can safely remove its own YAML from production `push.paths` without weakening intended production behavior;
+- produce evidence-backed, bounded implementation cohorts for later rounds only when justified.
+
+Current residual scope:
+1. `.github/workflows/backfill-oversold-rebound-coverage.yml`
+2. `.github/workflows/build-twse-market-chart.yml`
+3. `.github/workflows/crawl-fubon-broker-details.yml`
+4. `.github/workflows/crawl-sma.yml`
+5. `.github/workflows/daily-gainers-over-5.yml`
+6. `.github/workflows/daily-prediction-replay.yml`
+7. `.github/workflows/daily-stock-prediction.yml`
+8. `.github/workflows/momentum-history-replay.yml`
+9. `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`
+
+Round 11 is classification/design only. It must not modify production workflow YAML, trigger paths, cron expressions, concurrency, the shared renderer, `EMBEDDED_TARGETS`, crawler/data logic, publication behavior, or Pages topology.
+
+### Prompt A — Round 11 topology / trigger-hardening design audit
+
+Continue the workflow schedule-summary lightweight migration in repository `EasonLiu0913/stock_data` as a residual topology / trigger-hardening design audit.
+
+Startup:
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`.
+3. Read `docs/agent-prompts/task-routing.json`; proceed only if `workflow-schedule-summary-lightweight-migration` remains the unique active task.
+4. Read this canonical handoff, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, `docs/architecture/github-actions.md`, and applicable workflow-orchestration ADRs.
+5. Re-read all nine residual workflow YAML files from current remote main.
+6. Re-read `scripts/write_workflow_schedule_summary.js`, `scripts/migrate_workflow_schedule_summary.js`, `.github/workflows/ensure-workflow-schedule-summary.yml`, and the scheduled-workflow registry/audit entry points.
+
+Audit objective:
+For each of the nine residual workflows, reconstruct the actual scheduled-run control flow and answer all of the following from current YAML evidence:
+- Which jobs are guaranteed to start on every scheduled invocation before any branch-specific work?
+- Which of those guaranteed jobs already perform repository checkout?
+- Can the v2 summary step be placed in one of those existing jobs with `if: always() && github.event_name == 'schedule'` without changing job dependencies, branch behavior, write behavior, failure behavior, publication behavior, or runner count outside removal of the standalone summary job?
+- Does the workflow expose `workflow_call`, reusable-workflow jobs, conditional terminal jobs, or Pages deployment that changes placement safety?
+- Does any candidate placement lose schedule summary output when an earlier step in the chosen job fails?
+- Does any workflow require a new checkout, a new terminal job, changed `needs`, changed `if`, changed outputs, or other functional-topology change? If yes, classify it as topology-specific rather than simple embedding.
+- Does any workflow have own-YAML production self-trigger risk?
+
+Special trigger-hardening audit for `.github/workflows/momentum-history-replay.yml`:
+- identify exactly why its own YAML is currently listed under production `push.paths`;
+- inspect repository history / adjacent workflow conventions as needed to determine whether own-YAML production push triggering is intentional behavior or accidental coupling;
+- determine whether removing only `.github/workflows/momentum-history-replay.yml` from production `push.paths` while retaining PR/manual/schedule coverage would preserve intended production behavior;
+- do not change the trigger in Round 11; produce a concrete evidence-backed recommendation and exact later-round safety checks.
+
+Required classification output:
+For every residual, assign exactly one current category:
+- `safe_existing_job_embedding` — one existing job is guaranteed on scheduled runs, already has checkout, and embedding needs no functional-topology/trigger change;
+- `trigger_hardening_then_embedding` — embedding would otherwise be safe but own-YAML production trigger must first be hardened;
+- `topology_specific_embedding` — requires a job/dependency/checkout/output/condition/topology change;
+- `retain_v1` — no bounded change is justified from current evidence.
+
+For any `safe_existing_job_embedding` cohort, record the exact workflow → job mapping and why the job is guaranteed for schedules.
+For any `trigger_hardening_then_embedding` cohort, record the exact trigger line/path to change and the exact invariants to preserve.
+For any `topology_specific_embedding` item, record the smallest concrete topology change that would be required, but do not implement it.
+
+Frozen constraints:
+- no production workflow YAML edits;
+- no trigger edits;
+- no cron/date-resolution changes;
+- no `EMBEDDED_TARGETS` edits;
+- no crawler, retry, batching, schema, prediction, research, publication, or Pages behavior changes;
+- no production manual dispatches;
+- no `workflow_run`, `repository_dispatch`, or new event listener;
+- no new reusable abstraction;
+- writer workflows must remain `cancel-in-progress: false`;
+- preserve the shared renderer and the labels `原定排程時間`, `實際開始時間`, `GitHub 排程延遲`.
+
+Completion contract:
+- update this canonical handoff with a nine-workflow evidence matrix and exact classifications;
+- explicitly state whether the earlier assumption that a summary placement must represent every completion path is actually required by the renderer/contract;
+- explicitly re-check `crawl-fubon-broker-details.yml`, `daily-stock-prediction.yml`, and `momentum-history-replay.yml`;
+- if evidence supports one or more bounded future implementation cohorts, preregister the next round's Prompt A + Prompt B with exact workflow → job mappings and frozen constraints, but do not execute it;
+- if no bounded cohort is supported, record the stopping boundary instead of inventing work;
+- commit only documentation/audit evidence in Round 11;
+- fetch current remote main again and verify no concurrent workflow/migrator/routing drift invalidates the classification;
+- end exactly with `Prompt A complete — ready for Prompt B`.
+
+### Prompt B — Round 11 topology / trigger-hardening closeout
+
+Perform independent closeout for `workflow-schedule-summary-lightweight-migration-round-11`.
+
+1. Fetch current remote main, read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, this handoff, and recover this exact Prompt B from the pre-Prompt-A durable checkpoint.
+2. Verify Round 11 changed documentation/audit state only: no production workflow YAML, trigger, cron, concurrency, renderer, migrator target, crawler/data logic, publication, or Pages topology change.
+3. Independently re-read all nine residual current YAMLs and reconstruct scheduled-run control flow without relying on Prompt A's matrix.
+4. For each `safe_existing_job_embedding` classification, verify the selected job:
+   - is guaranteed to start on every scheduled invocation;
+   - already has checkout;
+   - can host `if: always() && github.event_name == 'schedule'` without dependency/output/branch/write/publication changes;
+   - does not have own-YAML production self-trigger risk.
+5. For each `trigger_hardening_then_embedding` classification, independently verify the own-YAML trigger evidence, intended trigger semantics, and whether the proposed hardening is narrowly behavior-preserving.
+6. For each `topology_specific_embedding` or `retain_v1` classification, verify the concrete current-YAML reason and that Prompt A did not overlook an already-guaranteed checkout-owning job.
+7. Independently re-check `crawl-fubon-broker-details.yml`, `daily-stock-prediction.yml`, and `momentum-history-replay.yml`.
+8. Verify any preregistered next-round cohort is exactly supported by the evidence and does not mix simple embedding, trigger hardening, and topology redesign without explicit bounded staging.
+9. Re-fetch current main and classify concurrent changes.
+10. On PASS, record durable closeout evidence and promote only the already-preregistered next round, without executing Prompt A. On failure, fix only the bounded documentation/classification defect and repeat this Prompt B from criterion 1.
+
+End exactly with: `Prompt B closeout: PASS`.
 
 ## Prompt A — Round 10 ETF single-job migration prompt
 
