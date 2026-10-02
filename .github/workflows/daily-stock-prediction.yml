@@ -298,7 +298,13 @@ jobs:
       - name: Mark V1 generation failure
         if: steps.dates.outputs.run == 'true' && steps.generate.outputs.exit_code != '0'
         run: exit 1
-
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
   generate_v2:
     name: 2. 產生或沿用 V2 預測
     needs: generate_v1
@@ -429,21 +435,3 @@ jobs:
       date: ${{ needs.generate_v1.outputs.target_date }}
       evaluation_mode: live_snapshot
       data_as_of: ''
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
-
