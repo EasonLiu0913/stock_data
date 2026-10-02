@@ -4,11 +4,11 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 13 Prompt B closeout: PASS. Round 13 is closed.**
+**Round 14 Prompt A: COMPLETE. Prompt B is pending.**
 
-**Round 14 momentum v1→v2 schedule-summary embedding is promoted. Prompt A has not started.**
+Round 13 remains closed with Prompt B PASS. Round 14 momentum v1→v2 schedule-summary embedding and required Prompt A validation are durable on remote `main`.
 
-Round 13 removed the production own-YAML self-trigger risk. Round 14 may now embed the schedule summary into the existing `validate` job without changing production triggers, topology, write behavior, or Pages behavior. Promotion only makes Round 14 runnable; it does not execute Prompt A.
+Do not execute Round 14 Prompt B automatically.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -845,6 +845,111 @@ Perform independent closeout for `workflow-schedule-summary-lightweight-migratio
 13. On failure, fix only the bounded Round 14 defect and repeat this same Prompt B from criterion 1.
 
 End exactly with: `Prompt B closeout: PASS`.
+
+## Round 14 Prompt A implementation evidence
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-14`
+
+### Bounded implementation commits
+
+- `7bc62acaf62f74339e7a32d7252907d0a2a5f7e8` — embed the schedule-summary step in `.github/workflows/momentum-history-replay.yml` job `validate` and remove the v1 standalone summary job.
+- `41829082abbf7072043f3060fb242e97520a1b75` — add exactly `['momentum-history-replay.yml', 'validate']` to `EMBEDDED_TARGETS`.
+- `85ac473cea6ebedd42083d5f527f92ceaf07877e` — normalize the embedded step to the migrator's exact canonical whitespace; semantic behavior is unchanged.
+
+Final workflow semantics:
+- v1 marker count = 0;
+- v2 marker count = 1;
+- standalone `schedule-timing-summary` job absent;
+- v2 step is inside existing job `validate`;
+- existing `actions/checkout@v7` in `validate` is reused;
+- v2 condition is `if: always() && github.event_name == 'schedule'`;
+- shared renderer remains `node scripts/write_workflow_schedule_summary.js`.
+
+### Frozen-behavior verification
+
+Round 14 did not edit triggers or production topology:
+- production own-YAML `push.paths` self-trigger remains absent;
+- all remaining production push paths are unchanged from post-Round-13 state;
+- `pull_request.paths` still includes `.github/workflows/momentum-history-replay.yml`;
+- schedule cron is unchanged;
+- workflow_dispatch inputs are unchanged;
+- permissions are unchanged;
+- repository-writer concurrency remains `cancel-in-progress: false`;
+- `validate → generate → deploy_pages` topology remains unchanged;
+- replay/research generation logic, repository-write scope, and canonical Pages reusable deployment remain unchanged.
+
+`scripts/migrate_workflow_schedule_summary.js` gained exactly one Round 14 mapping:
+- `['momentum-history-replay.yml', 'validate']`.
+
+### Canonical-normalization defect and bounded repair
+
+The first semantic embedding commit plus migrator registration produced a final-state audit failure because the embedded step had one extra blank line compared with the migrator's canonical string.
+
+Evidence:
+- `37035129164` — Ensure Workflow Schedule Summary — failure on the pre-registration staged state.
+- `37035151760` — Ensure Workflow Schedule Summary — failure after registration with:
+  - `changed_count: 1`;
+  - changed workflow: `momentum-history-replay.yml`.
+
+The defect was formatting-only. Commit `85ac473c...` removed one blank line after the managed v2 step so authored YAML exactly matches `migrateEmbedded(...)` output. No trigger, job, condition, or functional behavior changed.
+
+Final audit:
+- `37035299046` — Ensure Workflow Schedule Summary — **SUCCESS**
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed;
+  - focused summary tests: 12 passed / 0 failed;
+  - migrator normalization: `changed_count: 0`, `unchanged_count: 177`;
+  - `All workflows use the repository-pinned schedule timing summary`.
+
+### Validation evidence
+
+- `37035299181` — Public Page Registry CI — **SUCCESS**.
+- `37035299192` — Scheduled Workflow Registry Contract — **SUCCESS**; 8 passed / 0 failed.
+- `37035151738` — Node Regression Suite — **SUCCESS**; 909 passed / 0 failed and tracked-tree cleanliness passed.
+- `37035299187` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- deployment-race/concurrency audit passed inside `37035299046`.
+
+### Actions side-effect verification
+
+Actions were inspected for workflow implementation SHAs `7bc62aca...` and `85ac473c...`.
+
+No run used `.github/workflows/momentum-history-replay.yml` as its workflow path with event `push`.
+
+Therefore Round 14 workflow-file commits did not unexpectedly launch momentum production. The Round 13 trigger hardening remains effective.
+
+No production manual dispatch was used for validation.
+
+### Concurrent-main / durability classification
+
+After final implementation SHA `85ac473cea6ebedd42083d5f527f92ceaf07877e`, remote main advanced to
+`ab1f6ed4fcd85b1df67e653007048d6c91663ec5` via:
+- `data: update MOPS monthly revenue 202609`.
+
+The descendant changes are limited to:
+- `data_mops_monthly_revenue/202609/monthly_revenue.json`;
+- `data_mops_monthly_revenue/202609/snapshots/20261003_004109.json`;
+- `data_mops_monthly_revenue/manifest.json`.
+
+They do not touch the momentum workflow, migrator, renderer, routing, handoff, or Round 14 protected behavior.
+
+### Prompt A completion boundary
+
+Round 14 Prompt A completion conditions are satisfied:
+- bounded workflow + migrator commits are durable on remote main;
+- current YAML has exactly one canonical v2 step in `validate`, no v1 standalone job, and no summary-only checkout;
+- production own-YAML self-trigger remains absent;
+- Ensure Workflow Schedule Summary PASS;
+- deployment-race/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression 909/909 PASS with tracked-tree cleanliness;
+- Node 24 audit PASS;
+- no momentum production self-launch occurred;
+- concurrent main change is unrelated MOPS data only;
+- Round 14 Prompt B remains pending and preserved.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Objective
 
