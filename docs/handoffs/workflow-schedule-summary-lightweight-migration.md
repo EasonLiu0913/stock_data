@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 9 Prompt A residual-topology classification: COMPLETE. Prompt B is pending.**
+**Round 9 Prompt B closeout: PASS. Round 9 is closed.**
 
-Round 8 remains closed. Round 9 found no evidence-supported safe single-job migration cohort, so no Round 10 implementation round is promoted before independent Prompt B closeout.
+Round 10 is preregistered / promoted for the single verified safe residual: `.github/workflows/build-etf-market-regime-analysis.yml` → `build`. **Round 10 Prompt A has not started.**
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -2490,6 +2490,74 @@ Perform independent closeout for `workflow-schedule-summary-lightweight-migratio
 9. On failure, fix only the bounded defect and repeat this same Prompt B from criterion 1.
 
 End with: `Prompt B closeout: PASS`.
+
+## Round 9 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-9`
+
+Preregistered Prompt B was recovered from pre-Prompt-A durable main at `bf8acdf540e04f8e5b16fa8f8c7e356f6751d16a` and matched the preserved Round 9 closeout contract.
+
+### Scope / mutation verification
+
+- Round 9 Prompt A checkpoint: `fee2209b6910c669f5d0493cdac7000164c53125`.
+- Prompt B bounded classification repair: `8ecdeae58e7cd84f4f5aa88dc9f806326dc0eaa4`.
+- From pre-Prompt-A baseline through the repaired closeout baseline, no `.github/workflows/**` file and no `scripts/migrate_workflow_schedule_summary.js` file changed.
+- Round 9 therefore made no production workflow YAML, trigger, cron, concurrency, migrator-target, crawler, schema, retry, publication, or deployment-topology change.
+
+### Independent current residual reconstruction
+
+Current main contains `177` workflow YAML files. The runtime-relevant scheduled inventory remains `41` because no workflow YAML changed after the durable prior inventory. Current `EMBEDDED_TARGETS` contains `31` workflows, leaving exactly `10` scheduled residuals outside v2.
+
+Independent current-YAML verification confirms:
+- safe single-job candidate: `.github/workflows/build-etf-market-regime-analysis.yml` → existing `build` job;
+- multi-job / branch topology: `.github/workflows/backfill-oversold-rebound-coverage.yml`, `.github/workflows/crawl-fubon-broker-details.yml`, `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml`;
+- multi-job and/or downstream publication topology without one suitable guaranteed checkout-owning placement: `.github/workflows/build-twse-market-chart.yml`, `.github/workflows/crawl-sma.yml`, `.github/workflows/daily-gainers-over-5.yml`, `.github/workflows/daily-prediction-replay.yml`, `.github/workflows/daily-stock-prediction.yml`;
+- self-trigger risk plus publication coupling: `.github/workflows/momentum-history-replay.yml`.
+
+All ten remain v1 standalone on current main and all write-layer workflows retain non-cancelling concurrency (`cancel-in-progress: false`).
+
+### Required explicit re-checks
+
+`.github/workflows/crawl-fubon-broker-details.yml`:
+- schedule + workflow_dispatch only; no production `push`;
+- jobs remain `validate-inputs`, `plan-range`, `crawl-range`, `crawl-single`, plus standalone schedule summary;
+- range/single paths are branch-dependent and there is no one pre-existing terminal functional job guaranteed across both paths;
+- classification remains multi-job / branch topology.
+
+`.github/workflows/momentum-history-replay.yml`:
+- production `push.paths` still includes `.github/workflows/momentum-history-replay.yml`;
+- editing its own YAML can launch the production/research workflow;
+- topology remains `validate → generate → deploy_pages`, repository-writer concurrency remains `cancel-in-progress: false`;
+- classification remains self-trigger risk + deployment coupling.
+
+### Prompt A classification defect found and repaired
+
+Prompt A incorrectly treated downstream Pages coupling by itself as sufficient to exclude `.github/workflows/build-etf-market-regime-analysis.yml`.
+
+Independent verification shows:
+- its own YAML is absent from production `push.paths` and appears only under `pull_request.paths`;
+- `build` is the single functional writer job and already checks out the repository;
+- a v2 step appended inside `build` with `always() && schedule` requires no functional job-topology change;
+- downstream `deploy_pages` remains `needs: build` and uses the canonical reusable Pages workflow;
+- this is materially the same placement pattern already accepted for `.github/workflows/crawl-institutional.yml`.
+
+The handoff classification was corrected in `8ecdeae58e7cd84f4f5aa88dc9f806326dc0eaa4`, and Round 10 Prompt A + Prompt B were preregistered for exactly this one ETF workflow before promotion.
+
+### Concurrent-change / freshness verification
+
+After the Prompt A checkpoint, remote main advanced through scheduled bot data commits affecting market-risk, prediction-context, strategy-snapshot, and prediction output files. None touched workflows, the migrator, routing, or the schedule-summary architecture. These are unrelated data-only changes and do not stale the Round 9 classification.
+
+Routing remains valid with exactly one active project: `workflow-schedule-summary-lightweight-migration`.
+
+### Promotion
+
+Round 10 is promoted for exactly:
+- `.github/workflows/build-etf-market-regime-analysis.yml` → `build`.
+
+No other residual is promoted. Round 10 Prompt A must not execute until the repository owner explicitly invokes `Prompt A`.
+
+**Prompt B closeout: PASS**
 
 ## Prompt A — Round 9 residual topology classification prompt
 
