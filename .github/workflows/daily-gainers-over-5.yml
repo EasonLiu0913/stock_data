@@ -230,7 +230,13 @@ jobs:
             sleep 5
           done
           exit 1
-
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
   validate-analysis-coverage:
     name: 檢查既有原因分析 coverage
     needs: generate
@@ -337,21 +343,3 @@ jobs:
     # not necessarily a prediction date, so do not force deploy-pages to validate
     # data_predictions/<daily-gainers-date>/manifest.json.
     uses: ./.github/workflows/deploy-pages.yml
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
-
