@@ -21,6 +21,7 @@ const LEGACY_UNMARKED_EXCEPTIONS = new Set([
 ]);
 
 const EMBEDDED_TARGETS = new Map([
+  ['momentum-history-replay.yml', 'validate'],
   ['backfill-oversold-rebound-coverage.yml', 'plan'],
   ['build-twse-market-chart.yml', 'route-and-daily-refresh'],
   ['crawl-fubon-broker-details.yml', 'validate-inputs'],
