@@ -2377,7 +2377,7 @@ Round 9 is classification-only. No production workflow YAML, trigger, cron, perm
 | Workflow | Current live state | Production self-trigger risk | Topology / checkout evidence | Classification |
 | --- | --- | --- | --- | --- |
 | `.github/workflows/backfill-oversold-rebound-coverage.yml` | v1 standalone | no production `push` | `plan → backfill → refresh`; checkout exists in `plan` and `backfill`, but there is no one existing functional job that represents every completion path | multi-job / branch topology |
-| `.github/workflows/build-etf-market-regime-analysis.yml` | v1 standalone | no own-YAML production self-trigger; own YAML appears only under `pull_request.paths` | `build → deploy_pages`; `build` has checkout and workflow is a repository writer with Pages publication | deployment-coupled topology |
+| `.github/workflows/build-etf-market-regime-analysis.yml` | v1 standalone | no own-YAML production self-trigger; own YAML appears only under `pull_request.paths` | `build → deploy_pages`; `build` is the single functional writer job, already has checkout, and downstream Pages does not prevent an embedded schedule-only step | **safe single-job candidate** |
 | `.github/workflows/build-twse-market-chart.yml` | v1 standalone | no production `push` | `route-and-daily-refresh → physical-month-batches → gates/refreshers → deploy_pages`; multiple conditional paths, repository writes, Pages publication | multi-job + deployment-coupled topology |
 | `.github/workflows/crawl-fubon-broker-details.yml` | v1 standalone | no production `push` | `validate-inputs → plan-range/crawl-range OR crawl-single`; all functional branches have checkout, but no one existing terminal functional job is guaranteed across range/single modes | multi-job / branch topology |
 | `.github/workflows/crawl-sma.yml` | v1 standalone | no production `push` | `crawl-sma → daily-gainers → final-summary`; repository writer with downstream publication coupling; only `crawl-sma` owns checkout | multi-job + deployment-coupled topology |
@@ -2407,18 +2407,89 @@ Round 9 is classification-only. No production workflow YAML, trigger, cron, perm
 - production `push.paths` does **not** include its own workflow YAML;
 - its own YAML is present only under `pull_request.paths`;
 - it is not a current own-YAML production self-trigger risk;
-- nevertheless `build → deploy_pages` is deployment-coupled, so it is not promoted as a clean single-job Round 10 target by this classification-only audit.
+- `build` is the one functional writer job, already checks out the repository, and always starts for scheduled runs;
+- appending `if: always() && github.event_name == 'schedule'` inside `build` preserves the summary even when an earlier build step fails;
+- downstream `deploy_pages` remains a separate `needs: build` reusable Pages job and does not require any topology change;
+- this matches the already-accepted placement pattern used by `.github/workflows/crawl-institutional.yml` (`crawl-institutional → deploy-pages`), so Pages coupling alone is not a disqualifier;
+- therefore this workflow is the one bounded safe single-job candidate for Round 10.
 
 ### Round 9 conclusion / stopping boundary
 
-No residual is a clean, evidence-supported safe single-job candidate that can be migrated by summary placement only without changing functional topology or crossing a self-trigger/deployment-coupling boundary.
+Independent Prompt B review found one bounded classification correction: `.github/workflows/build-etf-market-regime-analysis.yml` is a safe single-job candidate. The other nine residuals remain outside simple placement-only migration because of multi-job/branch topology or production self-trigger risk.
 
 Therefore:
-- no Round 10 Prompt A implementation cohort is preregistered or promoted by Prompt A;
-- the safe boundary is to keep these 10 workflows on v1 until a future task explicitly authorizes topology-specific redesign or trigger hardening with its own paired Prompt A/Prompt B;
-- Round 9 Prompt B must independently reconstruct this residual set and verify these classifications before the migration phase can be closed.
+- preregister Round 10 for exactly `.github/workflows/build-etf-market-regime-analysis.yml` → `build`;
+- keep the other nine workflows on v1 until a future topology-specific or trigger-hardening round is explicitly justified;
+- Round 9 Prompt B must re-run from criterion 1 against this corrected durable classification before it may PASS.
 
 **Prompt A complete — ready for Prompt B.**
+
+## Prompt B bounded repair during Round 9 closeout
+
+Independent closeout identified one classification defect in the Prompt A checkpoint: downstream Pages coupling by itself does not invalidate embedding when there is one existing functional writer job that always starts and already has checkout. `.github/workflows/build-etf-market-regime-analysis.yml` satisfies that pattern and is therefore the sole safe residual candidate.
+
+This repair changes documentation/classification only. No production workflow YAML or `EMBEDDED_TARGETS` entry is changed during Round 9 Prompt B.
+
+## Prompt A — Round 10 ETF single-job migration prompt
+
+Continue the workflow schedule-summary lightweight migration in repository `EasonLiu0913/stock_data`.
+
+Before work:
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`.
+3. Read `docs/agent-prompts/task-routing.json`; proceed only if this project remains the unique active task.
+4. Read this canonical handoff.
+5. Read `docs/architecture/github-actions.md`, `docs/decisions/ADR-004-workflow-orchestration.md`, `scripts/write_workflow_schedule_summary.js`, and `scripts/migrate_workflow_schedule_summary.js`.
+6. Re-read current `.github/workflows/build-etf-market-regime-analysis.yml` before editing.
+
+Objective:
+- migrate exactly `.github/workflows/build-etf-market-regime-analysis.yml` from v1 standalone summary to v2 embedded summary in existing job `build`;
+- re-confirm its own YAML is not present in production `push.paths` (it may remain in `pull_request.paths`);
+- add only this verified target to `EMBEDDED_TARGETS`;
+- reuse `build`'s existing repository checkout;
+- preserve `if: always() && github.event_name == 'schedule'`.
+
+Frozen:
+- do not change cron schedules, production push paths, pull-request paths, date resolution, ETF generation/corporate-action/index logic, tests, write scope, permissions, retry/publish behavior, or Pages topology;
+- preserve `build → deploy_pages` and `uses: ./.github/workflows/deploy-pages.yml` exactly;
+- preserve `cancel-in-progress: false`;
+- no production manual dispatch for validation;
+- no `workflow_run`, `repository_dispatch`, event-listener workaround, new reusable abstraction, or new terminal runner;
+- preserve the shared renderer and all three summary labels.
+
+Completion:
+- bounded implementation commit(s) durable on remote main;
+- current remote YAML verifies no standalone summary runner/summary-only checkout remains and exactly one embedded v2 step exists in `build`;
+- Ensure Workflow Schedule Summary PASS;
+- deployment-race/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression PASS when triggered/applicable;
+- Actions inspection proves the workflow-YAML commit did not unexpectedly launch the ETF production workflow;
+- canonical handoff updated with Round 10 Prompt A evidence;
+- stop with `Prompt A complete — ready for Prompt B`;
+- do not execute Round 10 Prompt B automatically.
+
+## Prompt B — Round 10 ETF single-job closeout prompt
+
+Perform independent closeout for `workflow-schedule-summary-lightweight-migration-round-10`.
+
+1. Fetch current remote main, read `AGENTS.md`, `docs/agent-prompts/task-routing.json`, and this handoff; verify this project remains the unique active task.
+2. Recover this exact Round 10 Prompt B from the pre-Prompt-A durable handoff.
+3. Verify every Round 10 commit and reject unrelated trigger/cron/date-resolution/ETF generation/corporate-action/index/test/write-scope/permissions/concurrency/publication/Pages-topology changes.
+4. Verify `.github/workflows/build-etf-market-regime-analysis.yml`:
+   - own YAML is absent from production `push.paths`;
+   - existing `build` checkout is reused;
+   - no standalone v1 summary job or summary-only checkout remains;
+   - exactly one v2 embedded step exists in `build`;
+   - step is `if: always() && github.event_name == 'schedule'` and uses the shared renderer;
+   - `build → deploy_pages`, reusable Pages call, permissions, write scope, and `cancel-in-progress: false` are unchanged.
+5. Inspect Actions for the workflow-YAML commit; an unexpected ETF production launch is a closeout failure.
+6. Verify renderer self-test, migrator normalization/idempotence, deployment-race audit, scheduled-workflow registry tests, YAML acceptance, and applicable Node regression.
+7. Re-fetch remote main, classify concurrent changes, and verify durable state.
+8. On PASS, record exact commits/run IDs/tests/current-main evidence in this handoff and close the simple placement-only migration boundary unless new evidence independently supports another preregistered cohort.
+9. On failure, fix only the bounded defect and repeat this same Prompt B from criterion 1.
+
+End with: `Prompt B closeout: PASS`.
 
 ## Prompt A — Round 9 residual topology classification prompt
 
