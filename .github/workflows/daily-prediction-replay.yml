@@ -104,7 +104,13 @@ jobs:
           echo "- 核心覆盤結果（replay.json）：$([ -s "$replay_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
           echo "- 覆盤 Dashboard 資料（replay-dashboard.json）：$([ -s "$dashboard_file" ] && echo '已存在' || echo '尚未產生')" >> "$GITHUB_STEP_SUMMARY"
           echo "- 本次需要執行覆盤：$should_run" >> "$GITHUB_STEP_SUMMARY"
-
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
   replay_and_compare:
     name: 產生 V1／V2 覆盤、環境驗證與比較
     needs: preflight
@@ -272,21 +278,3 @@ jobs:
             sleep 5
           done
           exit 1
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
-
