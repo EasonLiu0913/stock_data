@@ -6,9 +6,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 **Round 13 Prompt B closeout: PASS. Round 13 is closed.**
 
-A separate Round 14 momentum v1→v2 schedule-summary embedding pair is preregistered below but **not promoted / not started**.
+**Round 14 momentum v1→v2 schedule-summary embedding is promoted. Prompt A has not started.**
 
-Round 13 removed the production own-YAML self-trigger risk. Round 14, if later promoted, may embed the schedule summary into the existing `validate` job without changing production triggers, topology, write behavior, or Pages behavior.
+Round 13 removed the production own-YAML self-trigger risk. Round 14 may now embed the schedule summary into the existing `validate` job without changing production triggers, topology, write behavior, or Pages behavior. Promotion only makes Round 14 runnable; it does not execute Prompt A.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -779,7 +779,7 @@ Round:
 `workflow-schedule-summary-lightweight-migration-round-14`
 
 Status:
-- Prompt A: **PREREGISTERED / NOT PROMOTED / NOT STARTED**
+- Prompt A: **PROMOTED / NOT STARTED**
 - Prompt B: **PREREGISTERED / NOT STARTED**
 
 Scope:
