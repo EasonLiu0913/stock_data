@@ -222,7 +222,13 @@ jobs:
             echo
             echo "總批次：${total_batches}；將以 max-parallel=1 自動依序執行。"
           } >> "$GITHUB_STEP_SUMMARY"
-
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
   backfill:
     needs: plan
     if: github.event_name != 'pull_request' && needs.plan.outputs.has_work == 'true'
@@ -470,21 +476,3 @@ jobs:
             --ref main \
             -f dry_run=false
           echo '已派送完整研究與 Dashboard 重建。'
-
-  schedule-timing-summary:
-    # schedule-timing-summary:v1
-    name: 排程時間摘要
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository for schedule summary
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
-      - name: Write schedule timing summary
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/write_workflow_schedule_summary.js
-
