@@ -4,16 +4,13 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 12 Prompt A: COMPLETE. Prompt B is pending.**
+**Round 12 Prompt B closeout: PASS. Round 12 is closed.**
 
-Round 11 remains closed with Prompt B PASS. Round 12 eight-workflow safe existing-job embedding and required Prompt A validation are durable on remote `main`.
-
-`.github/workflows/momentum-history-replay.yml` remains deferred as `trigger_hardening_then_embedding` and was not modified in Round 12.
-
-Do not execute Round 12 Prompt B automatically.
+A separate Round 13 momentum production-trigger hardening pair is preregistered below but **not promoted / not started**. Round 13 must harden the production `push.paths` self-trigger risk before any later schedule-summary embedding is considered.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
+
 
 ## Round 11 Prompt B independent closeout — PASS
 
@@ -420,6 +417,177 @@ Round 12 Prompt A completion conditions are satisfied:
 - Round 12 Prompt B remains pending and preserved.
 
 **Prompt A complete — ready for Prompt B.**
+
+## Round 12 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-12`
+
+The exact Round 12 Prompt B was recovered from the pre-Prompt-A durable handoff at
+`e05eb24b3ba26564803059dce8f070109a677ba4`.
+
+### Independent scope verification
+
+Round 12 implementation commits:
+- `6fe33e8299d729951ef87df2db7557ed9335d4ad` — `.github/workflows/backfill-oversold-rebound-coverage.yml` → `plan`
+- `555e6da721b45ab46f5bd33ea0407dce2383941d` — `.github/workflows/build-twse-market-chart.yml` → `route-and-daily-refresh`
+- `31d448dacd10c7fe4dd75384f618f9389528492f` — `.github/workflows/crawl-fubon-broker-details.yml` → `validate-inputs`
+- `ec84b3b9eda8f4208a37439f8870e192b38ee1c3` — `.github/workflows/crawl-sma.yml` → `crawl-sma`
+- `2b65d42e08febf23ed9c03a8a5b38b0249f79ccc` — `.github/workflows/daily-gainers-over-5.yml` → `generate`
+- `28bcdfbe4526c30345b285f951224519e2191a68` — `.github/workflows/daily-prediction-replay.yml` → `preflight`
+- `c04a24440d263b536ee0ae576a5c4f48934da643` — `.github/workflows/daily-stock-prediction.yml` → `generate_v1`
+- `4db0ea7addd10a15fa5d9eaf1fd5a19863fb6dbc` — `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` → `plan`
+- `1e6797213157cf3cab28b47ce9f25200e12407ed` — register exactly those eight mappings in `scripts/migrate_workflow_schedule_summary.js`.
+
+Independent re-fetch of every commit diff confirms the workflow commits contain only the established summary-placement change:
+- add one v2 timing-summary step in the preregistered existing job;
+- remove the v1 standalone summary job and summary-only checkout;
+- no trigger, cron, date resolution, `needs`, job-level `if`, outputs, reusable call, permissions, concurrency, crawler/research/prediction logic, write scope, publication, or Pages topology change.
+
+The migrator commit adds exactly the eight preregistered `EMBEDDED_TARGETS` mappings and no residual workflow.
+
+### Independent current-main placement verification
+
+All eight current workflow YAMLs independently verify:
+- scheduled trigger still exists;
+- selected preregistered job exists and already owns `actions/checkout@v7`;
+- exactly one `schedule-timing-summary:v2` marker exists inside that job;
+- v1 marker count is zero;
+- standalone `schedule-timing-summary` job is absent;
+- no production `push` trigger exists for any of the eight targets.
+
+The first workflow contains its YAML path only in non-production trigger context; because it has no production `push` trigger, it cannot self-trigger from a workflow-file commit.
+
+Downstream branching/reusable/Pages topology is unchanged, including:
+- `build-twse-market-chart.yml`;
+- `crawl-sma.yml`;
+- `daily-gainers-over-5.yml`;
+- `daily-stock-prediction.yml`.
+
+### Deferred momentum invariant
+
+`.github/workflows/momentum-history-replay.yml` is byte-for-byte unchanged between the pre-Round-12 checkpoint and current main:
+- pre-Round-12 blob SHA: `74ebe0a547d433fd2f9097f0a32fd34d4e295b64`;
+- current blob SHA: `74ebe0a547d433fd2f9097f0a32fd34d4e295b64`.
+
+Its production `push.paths` still includes `.github/workflows/momentum-history-replay.yml`, so the self-trigger risk remains intentionally outside Round 12. Its schedule-summary remains v1 until a later embedding round.
+
+### Independent validation evidence
+
+- `37030939567` — Ensure Workflow Schedule Summary — **SUCCESS**
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed;
+  - migrator normalization `changed_count: 0`, `unchanged_count: 177`;
+  - all workflows use the repository-pinned schedule timing summary.
+- `37030939680` — Public Page Registry CI — **SUCCESS**.
+- `37030907802` — Scheduled Workflow Registry Contract — **SUCCESS**; 8 passed / 0 failed.
+- `37030907757` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `37030939575` — Node Regression Suite — **SUCCESS**; 909 passed / 0 failed and tracked-tree cleanliness passed.
+
+Intermediate Ensure Workflow Summary failures during the staged eight-file edit are not final defects: before the final migrator registration, the normalizer correctly reported pending changes. The final complete SHA `1e679721...` is clean and PASS.
+
+### Actions side-effect verification
+
+Actions were independently re-queried for all eight workflow-YAML implementation SHAs.
+
+Result:
+- no run used any of the eight migrated workflow paths;
+- therefore no migrated production workflow was unexpectedly launched by its own workflow-file migration commit.
+
+Other push-triggered CI, contract, or canonical Pages runs are outside the migrated production workflow paths and do not violate the Round 12 self-trigger criterion.
+
+### Freshness / concurrent-main verification
+
+Prompt A checkpoint is:
+- `b3cee5b7c6de08afefbb53b281e79c4da13a1466` — `docs: checkpoint workflow schedule summary round 12 prompt A`.
+
+At independent closeout start, this remained current remote `main`; no post-checkpoint concurrent commit had to be reconciled.
+
+Routing still names `workflow-schedule-summary-lightweight-migration` as the sole active task.
+
+### Round 13 decision
+
+A separate trigger-hardening round is justified for `.github/workflows/momentum-history-replay.yml` because:
+- its scheduled `validate` job already has checkout and is a later embedding candidate;
+- production `push.paths` currently includes the workflow YAML itself;
+- historical evidence shows push bootstrap for momentum scripts/tests/snapshots is intentional, but workflow-YAML-only maintenance does not need to regenerate momentum research data.
+
+Round 13 is therefore preregistered as a **trigger-hardening-only** round. It is not promoted or executed by this closeout. Schedule-summary embedding remains out of Round 13.
+
+**Prompt B closeout: PASS. Round 12 is closed.**
+
+## Round 13 preregistration — momentum production trigger hardening only
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-13`
+
+Status:
+- Prompt A: **PREREGISTERED / NOT PROMOTED / NOT STARTED**
+- Prompt B: **PREREGISTERED / NOT STARTED**
+
+Scope:
+- only `.github/workflows/momentum-history-replay.yml`;
+- remove only `.github/workflows/momentum-history-replay.yml` from production `on.push.paths`;
+- preserve all other production push paths, including momentum scripts, tests, public/dashboard inputs, config, and strategy-snapshot paths;
+- preserve the workflow YAML path in `pull_request.paths`;
+- do not migrate the v1 schedule summary or edit `EMBEDDED_TARGETS` in Round 13.
+
+### Prompt A — Round 13 momentum production trigger hardening
+
+Continue the workflow schedule-summary lightweight migration in repository `EasonLiu0913/stock_data`.
+
+Before work:
+1. Fetch current remote `main`.
+2. Read repository-root `AGENTS.md`.
+3. Read `docs/agent-prompts/task-routing.json`; proceed only if this project remains the unique active task and Round 13 has been explicitly promoted.
+4. Read this canonical handoff and recover this preregistered Round 13 pair.
+5. Re-read `docs/architecture/github-actions.md`, `docs/decisions/ADR-004-workflow-orchestration.md`, and current `.github/workflows/momentum-history-replay.yml`.
+6. Reconfirm historical intent from commit `ea4de30266a676b16d179a67beba5aa87c00fc96` if needed.
+
+Objective:
+- harden only the production push trigger for `.github/workflows/momentum-history-replay.yml`;
+- remove exactly the workflow's own YAML path from `on.push.paths`;
+- preserve every other production push path;
+- preserve the workflow YAML path under `pull_request.paths`;
+- preserve schedule and workflow_dispatch triggers;
+- preserve `validate → generate → deploy_pages`, all job conditions, outputs, permissions, write behavior, Pages behavior, and `cancel-in-progress: false`.
+
+Frozen:
+- no v1→v2 schedule-summary migration in Round 13;
+- no `EMBEDDED_TARGETS` edit;
+- no cron/date-resolution/replay/research/prediction/write-scope/publication change;
+- no production manual dispatch for validation;
+- no reusable-workflow or topology redesign.
+
+Completion:
+- bounded workflow commit durable on remote main;
+- exact diff proves only the production own-YAML `push.paths` entry was removed;
+- PR workflow-file validation remains;
+- YAML/Node/deployment-race/scheduled-registry validation PASS as applicable;
+- Actions inspection proves the hardening commit did not unexpectedly launch the momentum production workflow;
+- canonical handoff updated with exact evidence;
+- stop with `Prompt A complete — ready for Prompt B`;
+- do not embed the schedule summary and do not execute Prompt B automatically.
+
+### Prompt B — Round 13 momentum trigger-hardening closeout
+
+Perform independent closeout for `workflow-schedule-summary-lightweight-migration-round-13`.
+
+1. Fetch current remote main, read `AGENTS.md`, routing, and this handoff; verify this project remains the unique active task.
+2. Recover this exact Round 13 Prompt B from the pre-Prompt-A durable handoff.
+3. Verify the implementation changed only `.github/workflows/momentum-history-replay.yml`.
+4. Verify the only semantic change is removal of `.github/workflows/momentum-history-replay.yml` from production `on.push.paths`.
+5. Verify all other production push paths remain byte-for-byte equivalent, including scripts/tests/public/config/strategy-snapshot inputs.
+6. Verify `pull_request.paths` still includes the workflow YAML and all prior PR inputs.
+7. Verify schedule, workflow_dispatch, permissions, concurrency, `validate → generate → deploy_pages`, replay/research logic, write scope, and Pages behavior are unchanged.
+8. Verify v1 standalone schedule summary remains unchanged and `EMBEDDED_TARGETS` was not modified in Round 13.
+9. Verify relevant CI/audits and inspect Actions for the hardening commit; an unexpected momentum production launch caused by the workflow-file-only commit is a failure.
+10. Re-fetch current main and classify concurrent changes.
+11. On PASS, record durable closeout evidence and decide whether a separate later momentum v1→v2 embedding round is now safe to preregister; do not execute it automatically.
+12. On failure, fix only the bounded trigger-hardening defect and repeat this same Prompt B from criterion 1.
+
+End exactly with: `Prompt B closeout: PASS`.
 
 ## Objective
 
