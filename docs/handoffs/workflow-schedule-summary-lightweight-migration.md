@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 9 Prompt B closeout: PASS. Round 9 is closed.**
+**Round 10 Prompt A implementation is in progress; verification is not yet complete.**
 
-Round 10 is preregistered / promoted for the single verified safe residual: `.github/workflows/build-etf-market-regime-analysis.yml` → `build`. **Round 10 Prompt A has not started.**
+Round 9 remains closed. Round 10 has implemented the ETF migration, but required CI gates are still in progress; Prompt B is not yet authorized.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -2429,6 +2429,34 @@ Therefore:
 Independent closeout identified one classification defect in the Prompt A checkpoint: downstream Pages coupling by itself does not invalidate embedding when there is one existing functional writer job that always starts and already has checkout. `.github/workflows/build-etf-market-regime-analysis.yml` satisfies that pattern and is therefore the sole safe residual candidate.
 
 This repair changes documentation/classification only. No production workflow YAML or `EMBEDDED_TARGETS` entry is changed during Round 9 Prompt B.
+
+## Round 10 Prompt A intermediate checkpoint — NOT COMPLETE
+
+Implementation commits:
+- `a2801cc96eb7d20b21140293a1e4f0d4d65a82fe` — atomically adds `.github/workflows/build-etf-market-regime-analysis.yml` → `build` to `EMBEDDED_TARGETS` and migrates the workflow from v1 standalone to v2 embedded.
+- `f3b2e2b4ec0b73e0ea525bfc71492eb179c60b65` — removes one extra blank line so the workflow exactly matches canonical migrator normalization.
+
+Current remote YAML verification:
+- no `# schedule-timing-summary:v1`;
+- exactly one `# schedule-timing-summary:v2` in existing `build` job;
+- no summary-only checkout;
+- `if: always() && github.event_name == 'schedule'` preserved;
+- shared `node scripts/write_workflow_schedule_summary.js` preserved;
+- own workflow YAML remains absent from production `push.paths` and present only in `pull_request.paths`;
+- `build → deploy_pages`, canonical reusable Pages call, permissions, write scope, and `cancel-in-progress: false` unchanged.
+
+Validation evidence so far:
+- `36959721563` — Ensure Workflow Schedule Summary — **SUCCESS** on normalization-fix SHA `f3b2e2b...`.
+- `36959721615` — Public Page Registry CI — **SUCCESS** on `f3b2e2b...`.
+- initial Ensure run `36959661790` on `a2801cc...` failed only because of the extra blank-line normalization diff; bounded formatting repair committed in `f3b2e2b...`.
+- no ETF production workflow run appeared among Actions triggered by either implementation commit.
+
+Still required before Prompt A completion:
+- `36959721539` — Scheduled Workflow Registry Contract — currently in progress / checkout.
+- `36959721527` — Audit GitHub Actions Node 24 — currently in progress / checkout.
+- `36959661630` — Node Regression Suite — triggered by the migrator-changing implementation SHA and currently in progress / checkout.
+
+This is an intermediate gate only. **Prompt A is not complete and Prompt B must not run yet.**
 
 ## Prompt A — Round 10 ETF single-job migration prompt
 
