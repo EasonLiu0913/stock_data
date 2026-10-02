@@ -21,6 +21,14 @@ const LEGACY_UNMARKED_EXCEPTIONS = new Set([
 ]);
 
 const EMBEDDED_TARGETS = new Map([
+  ['backfill-oversold-rebound-coverage.yml', 'plan'],
+  ['build-twse-market-chart.yml', 'route-and-daily-refresh'],
+  ['crawl-fubon-broker-details.yml', 'validate-inputs'],
+  ['crawl-sma.yml', 'crawl-sma'],
+  ['daily-gainers-over-5.yml', 'generate'],
+  ['daily-prediction-replay.yml', 'preflight'],
+  ['daily-stock-prediction.yml', 'generate_v1'],
+  ['refresh-finmind-quarterly-financial-quality-due.yml', 'plan'],
   ['calculate-twse-margin-maintenance.yml', 'calculate'],
   ['crawl-twse-institutional-investors.yml', 'crawl-twse-institutional-investors'],
   ['crawl-twse-margin-balance.yml', 'crawl-twse-margin-balance'],
