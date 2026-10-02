@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 8 Prompt B closeout: PASS. Round 8 is closed.**
+**Round 9 Prompt A residual-topology classification: COMPLETE. Prompt B is pending.**
 
-Round 9 is preregistered / promoted as a residual-topology classification round. **Prompt A has not started.**
+Round 8 remains closed. Round 9 found no evidence-supported safe single-job migration cohort, so no Round 10 implementation round is promoted before independent Prompt B closeout.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -2357,6 +2357,68 @@ Perform independent closeout for `workflow-schedule-summary-lightweight-migratio
 End with: `Prompt B closeout: PASS`.
 
 
+
+## Round 9 Prompt A residual topology classification — COMPLETE
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-9`
+
+Baseline:
+- current remote main at audit start: `bf8acdf540e04f8e5b16fa8f8c7e356f6751d16a`;
+- current workflow inventory: `177` `.github/workflows/*.yml|yaml` files;
+- runtime-relevant scheduled inventory remains `41` workflows;
+- current `EMBEDDED_TARGETS` count is `31`;
+- therefore exactly `10` scheduled workflows remain outside v2 embedded handling.
+
+Round 9 is classification-only. No production workflow YAML, trigger, cron, permissions, concurrency, crawler, schema, retry, batching, publication, deployment topology, or `EMBEDDED_TARGETS` entry was changed.
+
+### Current residual scheduled-workflow inventory
+
+| Workflow | Current live state | Production self-trigger risk | Topology / checkout evidence | Classification |
+| --- | --- | --- | --- | --- |
+| `.github/workflows/backfill-oversold-rebound-coverage.yml` | v1 standalone | no production `push` | `plan → backfill → refresh`; checkout exists in `plan` and `backfill`, but there is no one existing functional job that represents every completion path | multi-job / branch topology |
+| `.github/workflows/build-etf-market-regime-analysis.yml` | v1 standalone | no own-YAML production self-trigger; own YAML appears only under `pull_request.paths` | `build → deploy_pages`; `build` has checkout and workflow is a repository writer with Pages publication | deployment-coupled topology |
+| `.github/workflows/build-twse-market-chart.yml` | v1 standalone | no production `push` | `route-and-daily-refresh → physical-month-batches → gates/refreshers → deploy_pages`; multiple conditional paths, repository writes, Pages publication | multi-job + deployment-coupled topology |
+| `.github/workflows/crawl-fubon-broker-details.yml` | v1 standalone | no production `push` | `validate-inputs → plan-range/crawl-range OR crawl-single`; all functional branches have checkout, but no one existing terminal functional job is guaranteed across range/single modes | multi-job / branch topology |
+| `.github/workflows/crawl-sma.yml` | v1 standalone | no production `push` | `crawl-sma → daily-gainers → final-summary`; repository writer with downstream publication coupling; only `crawl-sma` owns checkout | multi-job + deployment-coupled topology |
+| `.github/workflows/daily-gainers-over-5.yml` | v1 standalone | no production `push` | `generate → validate-analysis-coverage → deploy`; also exposes `workflow_call`; repository writer and Pages deployment are coupled | multi-job + deployment-coupled topology |
+| `.github/workflows/daily-prediction-replay.yml` | v1 standalone | no production `push` | `preflight → replay_and_compare`; both functional jobs checkout; repository write / Pages coupling remains | multi-job + deployment-coupled topology |
+| `.github/workflows/daily-stock-prediction.yml` | v1 standalone | no production `push` | parallel `generate_v1` / `generate_v2` feed `apply_strategy_registry`; repository write / Pages coupling and no single existing terminal checkout job | multi-job + deployment-coupled topology |
+| `.github/workflows/momentum-history-replay.yml` | v1 standalone | **yes**: production `push.paths` includes `.github/workflows/momentum-history-replay.yml` | `validate → generate → deploy_pages`; repository writer with Pages publication | self-trigger risk + deployment-coupled topology |
+| `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` | v1 standalone | no production `push` | `plan → refresh → rebuild-master` with alternate `no-op` branch; multiple checkout-owning jobs and branch-dependent completion | multi-job / branch topology |
+
+### Explicit re-checks required by Round 9
+
+`.github/workflows/crawl-fubon-broker-details.yml`
+- current main still has schedule + workflow_dispatch only;
+- no production `push` trigger;
+- range and single execution remain mutually exclusive branch paths;
+- `validate-inputs`, `plan-range`, `crawl-range`, and `crawl-single` have repository checkouts;
+- there is still no one pre-existing terminal functional job guaranteed to run after both range and single paths;
+- therefore embedding would require functional topology change or a new terminal runner, both forbidden in this round.
+
+`.github/workflows/momentum-history-replay.yml`
+- current main still has a production `push` trigger whose `paths` explicitly includes `.github/workflows/momentum-history-replay.yml`;
+- workflow is a repository writer with `cancel-in-progress: false`;
+- topology remains `validate → generate → deploy_pages`;
+- editing this YAML can therefore launch the production/research workflow, so it remains a self-trigger-risk residual.
+
+`.github/workflows/build-etf-market-regime-analysis.yml`
+- production `push.paths` does **not** include its own workflow YAML;
+- its own YAML is present only under `pull_request.paths`;
+- it is not a current own-YAML production self-trigger risk;
+- nevertheless `build → deploy_pages` is deployment-coupled, so it is not promoted as a clean single-job Round 10 target by this classification-only audit.
+
+### Round 9 conclusion / stopping boundary
+
+No residual is a clean, evidence-supported safe single-job candidate that can be migrated by summary placement only without changing functional topology or crossing a self-trigger/deployment-coupling boundary.
+
+Therefore:
+- no Round 10 Prompt A implementation cohort is preregistered or promoted by Prompt A;
+- the safe boundary is to keep these 10 workflows on v1 until a future task explicitly authorizes topology-specific redesign or trigger hardening with its own paired Prompt A/Prompt B;
+- Round 9 Prompt B must independently reconstruct this residual set and verify these classifications before the migration phase can be closed.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Prompt A — Round 9 residual topology classification prompt
 
