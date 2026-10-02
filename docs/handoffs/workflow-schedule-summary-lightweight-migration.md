@@ -4,9 +4,9 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 10 Prompt A implementation: COMPLETE. Prompt B is pending.**
+**Round 10 Prompt B closeout: PASS. Round 10 is closed.**
 
-Round 9 remains closed. Round 10 migrated the single verified ETF residual to v2 embedded summary and completed all required validation gates.
+The simple placement-only workflow schedule-summary migration boundary is now closed. No Round 11 cohort is preregistered or promoted; the remaining residual workflows require topology-specific or trigger-hardening work rather than another simple placement migration.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -2495,6 +2495,103 @@ All Round 10 Prompt A completion conditions are satisfied:
 - canonical handoff updated with Round 10 Prompt A evidence.
 
 **Prompt A complete — ready for Prompt B.**
+
+## Round 10 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-10`
+
+Preregistered Prompt B was recovered from pre-Prompt-A durable main at `fb3beecbb3e4d839e2245e93f5b4776129b760f3` and matched the preserved Round 10 closeout contract exactly.
+
+### Commit / scope verification
+
+Round 10 commits from pre-Prompt-A baseline through Prompt A checkpoint:
+- `a2801cc96eb7d20b21140293a1e4f0d4d65a82fe` — workflow + migrator implementation;
+- `f3b2e2b4ec0b73e0ea525bfc71492eb179c60b65` — bounded canonical-normalization repair;
+- `590163bfe0bd27c8f26719378bfa9c9e8199a7ff` — intermediate handoff checkpoint;
+- `5252b0d6ea2bef50e5b27898e3ccdbb7212342b3` — Prompt A completion checkpoint.
+
+Independent compare from `fb3beec...` to `5252b0d...` shows only:
+- `.github/workflows/build-etf-market-regime-analysis.yml`;
+- `scripts/migrate_workflow_schedule_summary.js`;
+- this canonical handoff.
+
+No unrelated trigger, cron, date-resolution, ETF generation, corporate-action, index-update, test, write-scope, permissions, concurrency, publication, or Pages-topology change occurred.
+
+### Current workflow verification
+
+`.github/workflows/build-etf-market-regime-analysis.yml` on current main:
+- production `push.paths` does **not** include its own workflow YAML;
+- its own YAML remains present only under `pull_request.paths`;
+- existing `build` checkout is reused;
+- standalone `schedule-timing-summary` job is absent;
+- summary-only checkout is absent;
+- `# schedule-timing-summary:v1` count = 0;
+- `# schedule-timing-summary:v2` count = 1;
+- the v2 step is inside `build` and uses `if: always() && github.event_name == 'schedule'`;
+- the step calls `node scripts/write_workflow_schedule_summary.js`;
+- `deploy_pages` still has `needs: build` and `uses: ./.github/workflows/deploy-pages.yml`;
+- permissions remain `contents: write`, `pages: write`, `id-token: write`;
+- write-layer concurrency remains `cancel-in-progress: false`.
+
+`scripts/migrate_workflow_schedule_summary.js` contains exactly one ETF embedded target:
+`['build-etf-market-regime-analysis.yml', 'build']`.
+
+Shared renderer still contains all required labels:
+- `原定排程時間`;
+- `實際開始時間`;
+- `GitHub 排程延遲`.
+
+### Actions side-effect verification
+
+For implementation SHA `a2801cc96eb7d20b21140293a1e4f0d4d65a82fe`, Actions contained only CI/maintenance workflows:
+- Node Regression Suite;
+- Ensure Workflow Schedule Summary;
+- Public Page Registry CI;
+- Scheduled Workflow Registry Contract;
+- Audit GitHub Actions Node 24.
+
+For normalization SHA `f3b2e2b4ec0b73e0ea525bfc71492eb179c60b65`, Actions likewise contained only CI/maintenance workflows.
+
+No `[07 研究] ETF 持有與市場情境比較` production workflow run was launched by either workflow-YAML commit.
+
+### Independent validation evidence
+
+`36959721563` — Ensure Workflow Schedule Summary — **SUCCESS**:
+- `write_workflow_schedule_summary` self-test passed;
+- deployment-race layered self-test passed;
+- repository workflow deployment layering audit passed;
+- repository-pinned schedule timing summary verification passed;
+- canonical normalization/idempotence check passed.
+
+`36959721539` — Scheduled Workflow Registry Contract — **SUCCESS**:
+- registry contract tests: `8` pass, `0` fail;
+- every current scheduled workflow has a registry rule.
+
+`36959661630` — Node Regression Suite — **SUCCESS**:
+- `909` tests;
+- `909` pass;
+- `0` fail;
+- tracked-tree cleanliness step passed.
+
+Additional acceptance evidence:
+- `36959721527` — Audit GitHub Actions Node 24 — **SUCCESS**;
+- `36959721615` — Public Page Registry CI — **SUCCESS**;
+- implementation-SHA Public Page Registry run `36959661708` — **SUCCESS**.
+
+The initial Ensure run `36959661790` failed only because the authored workflow had one extra blank line relative to canonical migrator normalization. The bounded formatting-only repair `f3b2e2b...` resolved this, and the full Ensure gate then passed.
+
+### Freshness / concurrent-change verification
+
+Current main at closeout start and before this PASS checkpoint was `5252b0d6ea2bef50e5b27898e3ccdbb7212342b3`. From the normalization SHA `f3b2e2b...` to that current main, the only changed file was this handoff document. No workflow, migrator, renderer, routing, trigger, cron, permissions, concurrency, ETF logic, or Pages topology drift occurred.
+
+Routing remains valid with exactly one active task: `workflow-schedule-summary-lightweight-migration`.
+
+### Boundary close
+
+No additional safe simple-placement cohort is preregistered. The remaining residual workflows require topology-specific or trigger-hardening work, so this migration phase stops here rather than inventing Round 11 work.
+
+**Prompt B closeout: PASS**
 
 ## Prompt A — Round 10 ETF single-job migration prompt
 
