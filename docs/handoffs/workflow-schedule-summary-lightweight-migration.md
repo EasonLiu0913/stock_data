@@ -4,18 +4,160 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 10 Prompt B closeout: PASS. Round 10 is closed.**
+**Round 11 Prompt B closeout: PASS. Round 11 is closed.**
 
-**Round 11 residual topology / trigger-hardening design audit — Prompt A COMPLETE. Prompt B is PREREGISTERED / PENDING.**
+**Round 12 eight-workflow safe existing-job embedding is preregistered and promoted. Prompt A has not started.**
 
-Round 11 is documentation/audit-only. No production workflow YAML, trigger, cron, concurrency, renderer, migrator target, crawler/data logic, publication, or Pages topology was changed.
+Round 12 is limited to the eight `safe_existing_job_embedding` workflows and their migrator registrations. It must not change triggers, topology, job dependencies, outputs, write behavior, or publication behavior.
 
-A bounded Round 12 implementation pair is now preregistered for the eight residuals classified `safe_existing_job_embedding`. It is **not promoted** until Round 11 Prompt B independently passes.
-
-`.github/workflows/momentum-history-replay.yml` remains deferred as `trigger_hardening_then_embedding`; its trigger change is not part of Round 12.
+`.github/workflows/momentum-history-replay.yml` remains deferred as `trigger_hardening_then_embedding`; its production trigger is outside Round 12.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
+
+## Round 11 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-11`
+
+Preregistered Prompt B was recovered from the pre-Prompt-A durable checkpoint at `d1a2f7a2649171c8b8274d3e3aa3ef1e27c67a33` and matches the Round 11 closeout contract preserved in the handoff.
+
+### Scope / mutation verification
+
+Round 11 Prompt A checkpoint:
+- `76fbee71b23bb4d1e783a1910b0bccf6c697ae67` — `docs: checkpoint schedule summary round 11 audit`.
+
+Independent commit inspection confirms this commit changed exactly one file:
+- `docs/handoffs/workflow-schedule-summary-lightweight-migration.md`.
+
+No `.github/workflows/**`, trigger, cron, concurrency, renderer, migrator target, crawler/data logic, publication, reusable-workflow call, or Pages topology changed in Round 11.
+
+### Independent nine-workflow reconstruction
+
+All nine residual workflow YAMLs were re-read from current remote main independently of Prompt A's matrix.
+
+Verified `safe_existing_job_embedding` mappings:
+
+- `.github/workflows/backfill-oversold-rebound-coverage.yml` → `plan`
+  - `plan` has no job-level condition and starts every scheduled invocation;
+  - it already checks out the repository;
+  - downstream `backfill` / `refresh` conditions do not affect timing-summary placement;
+  - no production `push` trigger exists.
+
+- `.github/workflows/build-twse-market-chart.yml` → `route-and-daily-refresh`
+  - guaranteed first job;
+  - existing checkout;
+  - downstream physical batches, gate, reusable dashboard/event workflows, and Pages deployment remain independent of the summary placement;
+  - no production `push` trigger exists.
+
+- `.github/workflows/crawl-fubon-broker-details.yml` → `validate-inputs`
+  - guaranteed first job;
+  - existing checkout;
+  - downstream `plan-range`, `crawl-range`, and `crawl-single` are branch-specific;
+  - no terminal-path coverage is required by the renderer;
+  - no production `push` trigger exists.
+
+- `.github/workflows/crawl-sma.yml` → `crawl-sma`
+  - guaranteed first job with checkout;
+  - downstream reusable `daily-gainers` and `final-summary` remain unchanged;
+  - no production `push` trigger exists.
+
+- `.github/workflows/daily-gainers-over-5.yml` → `generate`
+  - guaranteed for direct scheduled invocations;
+  - existing checkout;
+  - `workflow_call`, conditional validation, and Pages deployment do not require moving the timing summary downstream;
+  - no production `push` trigger exists.
+
+- `.github/workflows/daily-prediction-replay.yml` → `preflight`
+  - guaranteed first job with checkout;
+  - `replay_and_compare` remains conditional on `should_run`;
+  - no production `push` trigger exists.
+
+- `.github/workflows/daily-stock-prediction.yml` → `generate_v1`
+  - guaranteed first job with checkout;
+  - `generate_v2` and reusable `apply_strategy_registry` remain downstream;
+  - no production `push` trigger exists.
+
+- `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` → `plan`
+  - guaranteed first job with checkout;
+  - `refresh`, `rebuild-master`, and `no-op` remain conditional branches;
+  - no production `push` trigger exists.
+
+For all eight mappings, adding the established v2 step with `if: always() && github.event_name == 'schedule'` inside the selected existing job requires no `needs`, job-level `if`, outputs, branch routing, write behavior, publication behavior, or extra checkout change. Removing the v1 standalone summary job is the only runner-count change authorized.
+
+### Renderer contract / terminal-path assumption
+
+Independent review confirms the earlier “must represent every completion path” assumption is not required.
+
+The renderer reports scheduled-run timing from GitHub runtime/event/run metadata and does not summarize terminal workflow state or consume downstream job outputs. Therefore a guaranteed checkout-owning first functional job is a valid placement.
+
+The known limitation remains: if that job's checkout itself fails, the script cannot execute. Adding a second checkout or new terminal runner solely to cover that case would violate the lightweight migration objective.
+
+### Momentum trigger-hardening verification
+
+`.github/workflows/momentum-history-replay.yml` is correctly classified `trigger_hardening_then_embedding`.
+
+Current YAML independently confirms:
+- production `push.paths` includes `.github/workflows/momentum-history-replay.yml`;
+- scheduled runs always start `validate`, which already has checkout;
+- downstream topology is `validate → generate → deploy_pages`;
+- repository-writer concurrency remains `cancel-in-progress: false`.
+
+Historical commit `ea4de30266a676b16d179a67beba5aa87c00fc96` (`fix: merge 後自動 bootstrap 動能歷史`) introduced:
+- production `push` coverage for the two momentum scripts, the test, and the workflow YAML;
+- push-event logic that bootstraps the latest two prediction dates.
+
+This proves push-after-merge bootstrap was intentional. It does not require workflow-YAML-only maintenance commits to regenerate research data.
+
+The proposed later hardening is narrowly bounded:
+- remove only `.github/workflows/momentum-history-replay.yml` from production `push.paths`;
+- preserve production push coverage for:
+  - `scripts/momentum_history_replay.js`
+  - `scripts/run_momentum_history_replay.js`
+  - `tests/momentum_history_replay.test.js`
+- preserve schedule, workflow_dispatch, pull_request, `validate → generate → deploy_pages`, repository writes, Pages behavior, and `cancel-in-progress: false`.
+
+No momentum trigger change is part of Round 12.
+
+### Explicit required re-checks
+
+`crawl-fubon-broker-details.yml`:
+- PASS — `validate-inputs` is guaranteed on schedules and already has checkout; range/single branch topology is not a blocker.
+
+`daily-stock-prediction.yml`:
+- PASS — `generate_v1` is guaranteed and already has checkout; `generate_v2` and `apply_strategy_registry` require no topology change.
+
+`momentum-history-replay.yml`:
+- PASS — embedding is placement-safe in `validate`, but own-YAML production self-trigger risk requires a separate hardening stage first.
+
+### Round 12 cohort verification / promotion
+
+The preregistered Round 12 cohort is exactly the eight independently verified `safe_existing_job_embedding` workflows:
+
+- `.github/workflows/backfill-oversold-rebound-coverage.yml` → `plan`
+- `.github/workflows/build-twse-market-chart.yml` → `route-and-daily-refresh`
+- `.github/workflows/crawl-fubon-broker-details.yml` → `validate-inputs`
+- `.github/workflows/crawl-sma.yml` → `crawl-sma`
+- `.github/workflows/daily-gainers-over-5.yml` → `generate`
+- `.github/workflows/daily-prediction-replay.yml` → `preflight`
+- `.github/workflows/daily-stock-prediction.yml` → `generate_v1`
+- `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` → `plan`
+
+The cohort does not mix trigger hardening or topology redesign. `momentum-history-replay.yml` is excluded.
+
+Round 12 is therefore promoted. Its preregistered Prompt A and Prompt B remain unchanged and must not execute until the repository owner invokes `Prompt A`.
+
+### Freshness / routing
+
+Immediately before this closeout write, remote `main` remained exactly:
+`76fbee71b23bb4d1e783a1910b0bccf6c697ae67`.
+
+No concurrent workflow, migrator, renderer, routing, or topology drift occurred after the Round 11 Prompt A checkpoint.
+
+`docs/agent-prompts/task-routing.json` still has exactly one active task:
+`workflow-schedule-summary-lightweight-migration`.
+
+**Prompt B closeout: PASS**
 
 ## Round 11 Prompt A — topology / trigger-hardening design audit
 
