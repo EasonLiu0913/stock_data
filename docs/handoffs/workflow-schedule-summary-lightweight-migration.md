@@ -4,13 +4,13 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 11 Prompt B closeout: PASS. Round 11 is closed.**
+**Round 12 Prompt A: COMPLETE. Prompt B is pending.**
 
-**Round 12 eight-workflow safe existing-job embedding is preregistered and promoted. Prompt A has not started.**
+Round 11 remains closed with Prompt B PASS. Round 12 eight-workflow safe existing-job embedding and required Prompt A validation are durable on remote `main`.
 
-Round 12 is limited to the eight `safe_existing_job_embedding` workflows and their migrator registrations. It must not change triggers, topology, job dependencies, outputs, write behavior, or publication behavior.
+`.github/workflows/momentum-history-replay.yml` remains deferred as `trigger_hardening_then_embedding` and was not modified in Round 12.
 
-`.github/workflows/momentum-history-replay.yml` remains deferred as `trigger_hardening_then_embedding`; its production trigger is outside Round 12.
+Do not execute Round 12 Prompt B automatically.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -321,6 +321,105 @@ Perform independent closeout for `workflow-schedule-summary-lightweight-migratio
 12. On failure, fix only the bounded Round 12 defect and repeat this same Prompt B from criterion 1.
 
 End exactly with: `Prompt B closeout: PASS`.
+
+## Round 12 Prompt A implementation evidence
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-12`
+
+### Bounded implementation commits
+
+Exact workflow → job placements:
+- `6fe33e8299d729951ef87df2db7557ed9335d4ad` — `.github/workflows/backfill-oversold-rebound-coverage.yml` → `plan`
+- `555e6da721b45ab46f5bd33ea0407dce2383941d` — `.github/workflows/build-twse-market-chart.yml` → `route-and-daily-refresh`
+- `31d448dacd10c7fe4dd75384f618f9389528492f` — `.github/workflows/crawl-fubon-broker-details.yml` → `validate-inputs`
+- `ec84b3b9eda8f4208a37439f8870e192b38ee1c3` — `.github/workflows/crawl-sma.yml` → `crawl-sma`
+- `2b65d42e08febf23ed9c03a8a5b38b0249f79ccc` — `.github/workflows/daily-gainers-over-5.yml` → `generate`
+- `28bcdfbe4526c30345b285f951224519e2191a68` — `.github/workflows/daily-prediction-replay.yml` → `preflight`
+- `c04a24440d263b536ee0ae576a5c4f48934da643` — `.github/workflows/daily-stock-prediction.yml` → `generate_v1`
+- `4db0ea7addd10a15fa5d9eaf1fd5a19863fb6dbc` — `.github/workflows/refresh-finmind-quarterly-financial-quality-due.yml` → `plan`
+- `1e6797213157cf3cab28b47ce9f25200e12407ed` — add exactly those eight mappings to `EMBEDDED_TARGETS`.
+
+Each workflow commit only:
+- removes the v1 standalone `schedule-timing-summary` job and summary-only checkout;
+- inserts exactly one `# schedule-timing-summary:v2` step into the preregistered existing checkout-owning job;
+- preserves `if: always() && github.event_name == 'schedule'`;
+- reuses `node scripts/write_workflow_schedule_summary.js`.
+
+No trigger, cron, target-date/date-resolution, `needs`, job-level `if`, outputs, `workflow_call`, reusable-workflow call, permissions, concurrency, crawler/research/prediction logic, repository-write scope, publication, or Pages topology was changed by the bounded diffs.
+
+### Current remote YAML verification
+
+All eight current remote-main targets independently verify:
+- v1 marker count = 0;
+- v2 marker count = 1;
+- standalone `schedule-timing-summary` job absent;
+- v2 marker is inside the exact preregistered job;
+- selected job already contains `actions/checkout@v7`;
+- no production `push` trigger exists for any of the eight workflows.
+
+`.github/workflows/momentum-history-replay.yml` is byte-for-byte unchanged from pre-Round-12 base `7aacad2e4296e02f8ed53c23ae073d9562996a30`:
+- old/new blob SHA: `74ebe0a547d433fd2f9097f0a32fd34d4e295b64`;
+- its own-YAML production trigger remains outside Round 12.
+
+The reusable/deployment topology in `build-twse-market-chart.yml`, `crawl-sma.yml`, `daily-gainers-over-5.yml`, and `daily-stock-prediction.yml` was untouched; their implementation commit diffs contain only the established summary-placement change.
+
+### Validation evidence
+
+Final complete migration state:
+- `37030939567` — Ensure Workflow Schedule Summary — **SUCCESS**
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed;
+  - focused summary tests: 12 passed / 0 failed;
+  - migrator normalization: `changed_count: 0`, `unchanged_count: 177`;
+  - `All workflows use the repository-pinned schedule timing summary`.
+- `37030939680` — Public Page Registry CI — **SUCCESS**.
+- `37030907802` — Scheduled Workflow Registry Contract — **SUCCESS**; 8 passed / 0 failed.
+- `37030907757` — Audit GitHub Actions Node 24 — **SUCCESS**.
+- `37030939575` — Node Regression Suite — **SUCCESS**; 909 passed / 0 failed; tracked-tree cleanliness gate passed.
+- `37030860588` — Scheduled Collection Date Regression — **SUCCESS**.
+
+Intermediate staged-state note:
+- `37030865265` and `37030907878` — Ensure Workflow Schedule Summary — failed before the final migrator registration commit because the normalizer still reported pending Round 12 migrations (for example `changed_count: 4` at the earlier staged SHA).
+- This was an expected transient state while workflow YAML commits preceded `1e679721...`; the final complete state at `1e679721...` passes with `changed_count: 0`.
+
+### Actions side-effect verification
+
+Across all eight workflow-YAML implementation SHAs:
+- no Actions run used any of the eight migrated workflow paths;
+- therefore none of the eight production workflows was unexpectedly launched by its own migration commit.
+- Non-target push-triggered validation/publication runs did occur, including canonical `deploy-pages.yml` on the TWSE market-chart workflow-file change and the 5% AI contract checker on the daily-gainers workflow-file change; these are outside the eight migrated production workflow paths and do not alter their production topology.
+
+No production manual dispatch was used for validation.
+
+### Concurrent-main / durability classification
+
+After final implementation SHA `1e6797213157cf3cab28b47ce9f25200e12407ed`, remote main advanced to `1a0664401ff2dce91100979b9cb703e62d14095f` via:
+- `analysis: refresh 5% AI facts 20261002`
+
+The concurrent descendant changes only:
+- `data_daily_gain_over_5/analysis-facts/20261002.json`.
+
+It does not touch any Round 12 workflow, the migrator, renderer, routing, handoff, or deferred momentum workflow. Current remote target verification therefore remains fresh.
+
+### Prompt A completion boundary
+
+Round 12 Prompt A completion conditions are satisfied:
+- bounded implementation commits are durable on remote main;
+- all eight current YAMLs have exactly one v2 embedded summary in the preregistered job and no v1 standalone summary;
+- `EMBEDDED_TARGETS` gained exactly the eight preregistered mappings;
+- Ensure Workflow Schedule Summary PASS;
+- deployment-race/concurrency audit PASS;
+- Scheduled Workflow Registry Contract PASS;
+- Node Regression 909/909 PASS with tracked-tree cleanliness;
+- Node 24 audit PASS;
+- no migrated production workflow self-launched;
+- reusable/deployment topology remains unchanged;
+- momentum trigger/workflow remains byte-for-byte outside Round 12;
+- Round 12 Prompt B remains pending and preserved.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Objective
 
