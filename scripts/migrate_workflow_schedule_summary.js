@@ -52,6 +52,7 @@ const EMBEDDED_TARGETS = new Map([
   ['prepare-market-environment.yml', 'prepare'],
   ['warrant-scraper.yml', 'scrape-warrant'],
   ['update-official-market-constraints.yml', 'update'],
+  ['build-etf-market-regime-analysis.yml', 'build'],
 ]);
 
 const JOB = `
