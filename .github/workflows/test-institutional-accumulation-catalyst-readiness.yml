@@ -3,6 +3,7 @@ name: "test: institutional accumulation catalyst readiness"
 # final-fifth-window-gate:v1
 # sixth-window-compatible-gate:v1
 # final-sixth-window-gate:v1
+# six-window-sufficiency-gate:v1
 
 on:
   push:
@@ -15,6 +16,7 @@ on:
       - "scripts/audit_institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.js"
       - "scripts/audit_institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.js"
+      - "scripts/audit_institutional_accumulation_catalyst_prospective_six_window_sufficiency.js"
       - "tests/institutional_accumulation_catalyst_prospective_observations.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_window_deltas.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_cross_day_window.test.js"
@@ -22,12 +24,14 @@ on:
       - "tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_sixth_window_closed_artifacts.test.js"
+      - "tests/institutional_accumulation_catalyst_prospective_six_window_sufficiency.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json"
   workflow_dispatch:
 
 permissions:
@@ -58,6 +62,7 @@ jobs:
             /tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js
             /tests/institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.test.js
             /tests/institutional_accumulation_catalyst_prospective_sixth_window_closed_artifacts.test.js
+            /tests/institutional_accumulation_catalyst_prospective_six_window_sufficiency.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
@@ -68,6 +73,9 @@ jobs:
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md
+            /.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml
             /data_research/institutional-flow/official-disclosure-raw/mops-monthly-revenue/202607/source-meta.json
             /data_research/institutional-flow/official-disclosure-raw/mops-material-information/listings/115/
             /data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/
@@ -92,6 +100,7 @@ jobs:
           if test -f data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json; then
             cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json /tmp/sixth-before.json
           fi
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json /tmp/sufficiency-before.json
 
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
@@ -104,6 +113,7 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_sixth_window_closed_artifacts.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_six_window_sufficiency.test.js
 
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
           cmp -s /tmp/observation-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
@@ -132,6 +142,10 @@ jobs:
             cmp -s /tmp/sixth-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json
             echo 'sixth-window longitudinal audit byte-match: PASS'
           fi
+
+          node scripts/audit_institutional_accumulation_catalyst_prospective_six_window_sufficiency.js --write
+          cmp -s /tmp/sufficiency-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json
+          echo 'six-window sufficiency audit byte-match: PASS'
 
           node - <<'NODE'
           const assert = require('node:assert/strict');
