@@ -49,9 +49,15 @@ function trimDataset(siteRoot, dataset, maxDates) {
   if (!fs.existsSync(filesJson)) throw new Error(`${dataset}/files.json is required for windowed Pages publishing`);
 
   const original = readJson(filesJson);
-  if (!Array.isArray(original)) throw new Error(`${dataset}/files.json must be an array`);
+  const manifestObject = !Array.isArray(original) && original && typeof original === 'object' && Array.isArray(original.files)
+    ? original
+    : null;
+  const originalList = Array.isArray(original) ? original : manifestObject?.files;
+  if (!Array.isArray(originalList)) {
+    throw new Error(`${dataset}/files.json must be an array or an object with a files array`);
+  }
 
-  const listed = original.map(normalizeListedFile);
+  const listed = originalList.map(normalizeListedFile);
   const dated = listed.map(file => ({ file, date: extractDate(file) })).filter(item => item.date);
   const dates = [...new Set(dated.map(item => item.date))].sort();
   const keepDates = new Set(dates.slice(-maxDates));
@@ -88,8 +94,16 @@ function trimDataset(siteRoot, dataset, maxDates) {
   }
 
   const published = kept.filter(file => file !== 'files.json' && fs.existsSync(path.join(datasetDir, file)));
-  const outputList = original.includes('files.json') ? ['files.json', ...published] : published;
-  fs.writeFileSync(filesJson, `${JSON.stringify(outputList, null, 2)}\n`, 'utf8');
+  const outputList = originalList.includes('files.json') ? ['files.json', ...published] : published;
+  if (manifestObject) {
+    manifestObject.files = outputList.filter(file => file !== 'files.json');
+    if (Object.prototype.hasOwnProperty.call(manifestObject, 'latest_date')) {
+      manifestObject.latest_date = [...keepDates].sort().at(-1) || null;
+    }
+    fs.writeFileSync(filesJson, `${JSON.stringify(manifestObject, null, 2)}\n`, 'utf8');
+  } else {
+    fs.writeFileSync(filesJson, `${JSON.stringify(outputList, null, 2)}\n`, 'utf8');
+  }
 
   return {
     dataset,
@@ -367,6 +381,22 @@ function runSelfTest() {
   if (fs.existsSync(path.join(dataset, 'nested/sample_20260102_a.json'))) throw new Error('self-test retained nested expired file');
   if (!fs.existsSync(path.join(dataset, 'nested/sample_20260104_a.json'))) throw new Error('self-test dropped latest nested file');
 
+  const objectDataset = path.join(root, 'data_object_manifest');
+  fs.mkdirSync(objectDataset);
+  for (const date of ['20260102', '20260103', '20260104']) {
+    fs.writeFileSync(path.join(objectDataset, `${date}.json`), date);
+  }
+  fs.writeFileSync(path.join(objectDataset, 'files.json'), JSON.stringify({
+    schema_version: 1,
+    latest_date: '20260104',
+    files: ['20260104.json', '20260103.json', '20260102.json'],
+  }));
+  const objectResult = trimDataset(root, 'data_object_manifest', 2);
+  const objectManifest = readJson(path.join(objectDataset, 'files.json'));
+  if (objectResult.published_dates !== 2) throw new Error('object-manifest self-test expected two published dates');
+  if (objectManifest.files.includes('20260102.json')) throw new Error('object-manifest self-test retained an expired date');
+  if (objectManifest.latest_date !== '20260104') throw new Error('object-manifest self-test changed latest_date unexpectedly');
+
   const predictions = path.join(root, 'data_predictions');
   fs.mkdirSync(predictions);
   for (const date of ['20260102', '20260103', '20260104', '20260105']) {
@@ -426,6 +456,9 @@ function main(argv = process.argv.slice(2)) {
     ['data_twse_institutional_investors', 10],
     ['data_twse_dealers', 10],
     ['data_twse_foreign_investors', 10],
+    ['data_market_news', 10],
+    ['data_twse_margin_balance', 10],
+    ['data_daily_gain_over_5', 10],
     ['data_normalized', 4],
   ];
   const results = policies.map(([dataset, maxDates]) => trimDataset(siteRoot, dataset, maxDates));
