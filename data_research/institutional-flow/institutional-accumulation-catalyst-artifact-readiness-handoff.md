@@ -675,7 +675,7 @@ Closeout limitations:
 `institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -721,6 +721,82 @@ Frozen rules: no scheduler, no broad-universe expansion, no historical PIT upgra
 
 Completion contract: eligibility PASS before requests; pre-live zero-network gate PASS; exactly one <=6-request live window; original 30 snapshots and all frozen closed artifacts unchanged; new snapshots durable append-only; canonical observation audit records exact six-window counts with zero conflicts; new deterministic sixth-window evidence records spacing only; final read-only Node24 gate PASS at recorded tested SHA; handoff records exact commits/runs/jobs/request counts/checkpoints/blob identities/counts/limitations and preserves the preregistered Prompt B below; stop with Prompt A complete — ready for Prompt B.
 ```
+
+## Prompt A implementation and evidence — sixth-window repeat-capture canary
+
+Round:
+`institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1`
+
+Pre-Prompt-A durable baseline:
+- `bc07a07e095e805d2f20b7659c5ec698ad4f8a7c`.
+
+Eligibility / pre-live zero-network gate:
+- canonical latest accepted fifth-window observation remained `2026-09-23T12:09:31.642Z`;
+- `b64c438bb36ae934a2c495bcf0007675eaf2ef31` added only bounded six-window observation/auditor/test/readiness support;
+- pre-live Node24 readiness run `37148199672`, regression job `111276373112`, completed SUCCESS before any sixth-window source request.
+
+Live sixth window:
+- trigger commit `e217205ba110abe3e0568fae9690abfb303bb120`;
+- live run `37148240451`;
+- exactly three independent fresh-runner matrix jobs with `max-parallel:1`:
+  - 1102 job `111276490980` — SUCCESS, 2 requests / 2 snapshots, durable checkpoint `490a2d38846f4dd5a5fc7058438521f2a32ab71d`;
+  - 1104 job `111276491116` — SUCCESS, 2 requests / 2 snapshots, durable checkpoint `901bbdfbeedefc6b476bd4943e092f6d363cae9b`;
+  - 1216 job `111276491500` — SUCCESS, 2 requests / 2 snapshots, durable checkpoint `963823d609ba1c5bc3f6853af13f1e3a5a4a0a91`;
+- total repository-controlled source requests = exactly 6;
+- total newly accepted snapshots = exactly 6;
+- collector-enforced randomized 20–60 second cooldown remained active;
+- only the preregistered official listing/detail APIs were used; no legacy endpoint, historical backfill, Wave A/Wave C, scheduler, broad-universe expansion, or second sixth-window live capture occurred.
+
+Sixth-window timing evidence:
+- earliest sixth accepted observation: `2026-10-03T19:32:54.781Z`;
+- Asia/Taipei date advanced from 2026-09-23 to 2026-10-04;
+- elapsed from canonical latest fifth observation to earliest sixth observation: `890603139` ms;
+- required minimum: `43200000` ms;
+- later-date and minimum-elapsed gates both PASS.
+
+Closed-artifact preservation / checkpoint:
+- `bfd5e1b69a94b657f47c83b5896b1151749f1e13` extended prior closed auditors to accept the six-window source shape while remaining bound to their original earliest-window evidence;
+- first sixth checkpoint run `37148623489`, job `111277620642`, failed before persistence because fifth-window metadata still reflected all 36 observations; writer steps were skipped and no live source request was retried;
+- `a7200203a46cbc96bd7aed303841bd61939a4285` fixed only that bounded metadata leak by deriving fifth-window metadata from its selected first five windows;
+- rerun sixth checkpoint `37148670506`, job `111277758037`, completed SUCCESS;
+- durable sixth evidence checkpoint: `b59f3aa9c504a875f7fcc7f4127959f133a37b15`;
+- concurrent bounded commit `b0930d7dd58490d4a70cadfd16361e33a77cd9b2` added explicit six-window closed-artifact preservation regression and remained within this round's authorized scope.
+
+Canonical deterministic evidence:
+- observation audit blob: `cf58c2f469507d7d10e15ec259e1e1e6f02ce848`;
+- exactly 36 valid / 0 invalid / 0 conflict;
+- each of 1102/1104/1216 = 12 total / 6 listing / 6 detail;
+- interfaces = 18 listing + 18 detail;
+- 36 unique immutable snapshot IDs; observed response SHA-256 uniqueness = 36;
+- sixth-window longitudinal blob: `79e395a6a4fffe7727e7863b2936678c07f3b5f3`;
+- sixth artifact = 36 observations / 6 chains and records timing/identity only.
+
+Frozen artifacts remain byte-identical:
+- closed two-window delta blob = `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+- closed three-window cross-day blob = `9dbee14b300980fb46ea7251b5707429071a80bf`;
+- closed fourth-window longitudinal blob = `31c13856af41fee4f277103807b081873dd780e1`;
+- closed fifth-window longitudinal blob = `d3ae72fea05ace0815b9c7d22931a19a7fb32fdd`;
+- historical PIT provenance remains frozen/unopened.
+
+Final read-only deterministic gate:
+- trigger commit `190da8ae60ce7a33574f2b017014cd169665d766`;
+- run `37148733034`, regression job `111277938793`, SUCCESS;
+- readiness 1/1, historical PIT 1/1, prospective PIT contract 5/5, canary 6/6, observation 12/12, closed delta 10/10, cross-day 6/6, fourth-window 5/5, fifth-window 4/4, sixth-window 4/4, sixth-window closed-artifact preservation 1/1 all PASS;
+- observation, delta, cross-day, fourth, fifth, and sixth deterministic artifacts all byte-regenerated successfully;
+- durable/regenerated PIT semantics and protected-state assertions PASS.
+
+Bounded diff:
+- baseline `bc07a07e095e805d2f20b7659c5ec698ad4f8a7c` to final tested SHA `190da8ae60ce7a33574f2b017014cd169665d766` contains only authorized six-window workflow/auditor/test/trigger/audit changes plus exactly six newly added prospective snapshot files;
+- no protected Phase 2, development outcome, protected 2454 outcome, holdout, catalyst/outcome association, Withdrawal, model, strategy, production, scheduler, broad-universe, generic-news, or historical Wave A/Wave C path appears in that diff.
+
+Prompt A limitation:
+- evidence is still only six forward prospective windows for the same three preregistered stocks;
+- this does not establish catalyst significance, outcome relationship, scheduler readiness, broad-universe quality, historical PIT upgrade, model/strategy value, or production behavior;
+- raw response/content differences remain transport/source evidence only.
+
+Prompt A completion boundary reached. The preregistered sixth-window Prompt B below remains unchanged and pending.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Prompt B — sixth-window repeat-capture canary closeout
 
