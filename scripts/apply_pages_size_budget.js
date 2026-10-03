@@ -39,6 +39,52 @@ function removePath(siteRoot, relative) {
   };
 }
 
+function trimPredictionUiDates(siteRoot, maxDates) {
+  const root = path.join(siteRoot, 'data_prediction_ui');
+  const manifestFile = path.join(root, 'manifest.json');
+  if (!fs.existsSync(root)) return { dataset: 'data_prediction_ui', skipped: true, reason: 'dataset_missing' };
+  if (!fs.existsSync(manifestFile)) throw new Error('data_prediction_ui/manifest.json is required');
+
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
+  const manifestDates = Array.isArray(manifest.available_dates)
+    ? manifest.available_dates.map(String).filter((date) => /^20\d{6}$/.test(date)).sort()
+    : [];
+  const fileDates = fs.readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^(20\d{6})\.json$/.test(entry.name))
+    .map((entry) => entry.name.slice(0, 8))
+    .sort();
+  const allDates = [...new Set([...manifestDates, ...fileDates])].sort();
+  const keepDates = new Set(allDates.slice(-maxDates));
+
+  let removedFiles = 0;
+  let removedBytes = 0;
+  for (const date of fileDates) {
+    if (keepDates.has(date)) continue;
+    const absolute = path.join(root, `${date}.json`);
+    removedBytes += directoryBytes(absolute);
+    fs.rmSync(absolute, { force: true });
+    removedFiles += 1;
+  }
+
+  const publishedDates = [...keepDates].filter((date) => fs.existsSync(path.join(root, `${date}.json`))).sort();
+  manifest.available_dates = publishedDates;
+  manifest.latest_date = publishedDates.at(-1) || null;
+  if (manifest.latest_date) manifest.latest_data = `data_prediction_ui/${manifest.latest_date}.json`;
+  fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+  return {
+    dataset: 'data_prediction_ui',
+    max_dates: maxDates,
+    original_dates: allDates.length,
+    published_dates: publishedDates.length,
+    removed_files: removedFiles,
+    removed_bytes: removedBytes,
+    removed_mebibytes: mib(removedBytes),
+    first_published_date: publishedDates[0] || null,
+    last_published_date: publishedDates.at(-1) || null,
+  };
+}
+
 function trimPredictionAnalysisDates(siteRoot, maxDates) {
   const root = path.join(siteRoot, 'data_prediction_analysis');
   if (!fs.existsSync(root)) {
@@ -177,6 +223,7 @@ function applyAggressiveWindows(siteRoot) {
     results.push(trimDataset(siteRoot, dataset, maxDates));
   }
   results.push(trimPredictionDates(siteRoot, 1));
+  results.push(trimPredictionUiDates(siteRoot, 5));
   results.push(trimPredictionAnalysisDates(siteRoot, 5));
   return results;
 }
@@ -220,6 +267,23 @@ function runSelfTest() {
   if (fs.existsSync(path.join(analysis, '20260103'))) throw new Error('budget self-test retained expired analysis date');
   const manifest = JSON.parse(fs.readFileSync(path.join(analysis, 'manifest.json'), 'utf8'));
   if (manifest.available_volume_filter_dates.length !== 3) throw new Error('budget self-test did not trim manifest dates');
+
+  const uiRoot = path.join(root, 'data_prediction_ui');
+  fs.mkdirSync(uiRoot, { recursive: true });
+  const uiDates = ['20260101', '20260102', '20260103', '20260104', '20260105', '20260106'];
+  for (const date of uiDates) fs.writeFileSync(path.join(uiRoot, `${date}.json`), date);
+  fs.writeFileSync(path.join(uiRoot, 'manifest.json'), JSON.stringify({
+    schema_version: 1,
+    latest_date: '20260106',
+    available_dates: uiDates,
+    latest_data: 'data_prediction_ui/20260106.json',
+  }));
+  const uiResult = trimPredictionUiDates(root, 2);
+  if (uiResult.published_dates !== 2) throw new Error('budget self-test expected two prediction UI dates');
+  if (fs.existsSync(path.join(uiRoot, '20260104.json'))) throw new Error('budget self-test retained expired prediction UI date');
+  const uiManifest = JSON.parse(fs.readFileSync(path.join(uiRoot, 'manifest.json'), 'utf8'));
+  if (uiManifest.available_dates.join(',') !== '20260105,20260106') throw new Error('budget self-test did not trim prediction UI manifest dates');
+  if (uiManifest.latest_data !== 'data_prediction_ui/20260106.json') throw new Error('budget self-test broke prediction UI latest_data');
 
   const snapshotRoot = path.join(analysis, 'strategy-snapshots');
   fs.mkdirSync(path.join(snapshotRoot, 'historical_recalculation'), { recursive: true });
@@ -325,6 +389,7 @@ module.exports = {
   applyAggressiveWindows,
   applySecondaryResearchCuts,
   applyEmergencyPublicationWindows,
+  trimPredictionUiDates,
   trimPredictionAnalysisDates,
   trimStrategySnapshots,
 };
