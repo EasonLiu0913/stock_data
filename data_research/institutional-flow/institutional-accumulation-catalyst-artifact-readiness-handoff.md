@@ -676,7 +676,7 @@ Closeout limitations:
 
 Status:
 - Prompt A: **COMPLETE**
-- Prompt B: **PREREGISTERED / PENDING**
+- **Prompt B closeout: PASS**
 
 Promotion does not execute Prompt A automatically.
 
@@ -803,3 +803,118 @@ Prompt A completion boundary reached. The preregistered sixth-window Prompt B be
 ```text
 Perform mandatory closeout for institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history. Independently verify: sole active routing still points to this handoff; fifth-window round has durable Prompt B PASS; historical 33/protected state remains frozen/unopened; eligibility satisfied before requests using canonical latest timestamp 2026-09-23T12:09:31.642Z, later Asia/Taipei date, >=12h; pre-live Node24 gate PASS; exactly one bounded sixth live window only 1102/1104/1216 fresh-runner max-parallel1; <=6 requests one listing + at most one detail each and 20–60s cooldown; official APIs only; no legacy/backfill/Wave A/C/scheduler/broad universe; original 30 snapshots byte-identical; frozen delta cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00, cross-day 9dbee14b300980fb46ea7251b5707429071a80bf, fourth longitudinal 31c13856af41fee4f277103807b081873dd780e1, fifth longitudinal d3ae72fea05ace0815b9c7d22931a19a7fb32fdd; new snapshots append-only canonical validation historical_back_imputation_allowed=false; observation exactly 36 valid / 0 invalid / 0 conflict, same stocks 6 listing + 6 detail each, 36 immutable IDs and actual raw hash uniqueness; sixth evidence date/spacing only no interpretation/outcomes; final Node24 read-only PASS tested SHA and byte regeneration; bounded diff only authorized plus classified unrelated, no protected paths. Fix bounded defects/restart. On PASS record evidence, promote only justified next paired round, end Prompt B closeout: PASS, stop without executing promoted Prompt A.
 ```
+
+## Prompt B independent closeout verification — sixth-window repeat-capture canary
+
+Round:
+`institutional-accumulation-catalyst-prospective-sixth-window-repeat-capture-canary-v1`
+
+The exact Prompt B above was recovered from durable pre-Prompt-A handoff state at
+`bc07a07e095e805d2f20b7659c5ec698ad4f8a7c`.
+
+Independent verification:
+
+1. Current routing still has exactly one active task, `institutional-accumulation`, pointing to this canonical handoff — PASS.
+2. The fifth-window round already has durable `Prompt B closeout: PASS` evidence — PASS.
+3. Historical PIT provenance remains blob `7ccafbe36206770d93f454feefdca81a082d4cd0`, with 33 identities / 0 PIT-ready / 33 not-PIT-ready, outcome-blind, zero historical network, and protected 2454/development outcome/holdout/association flags unopened — PASS.
+4. Eligibility was satisfied before requests: canonical latest fifth observation `2026-09-23T12:09:31.642Z`; earliest sixth observation `2026-10-03T19:32:54.781Z`; Asia/Taipei date advanced to 2026-10-04; elapsed `890603139` ms >= `43200000` ms — PASS.
+5. Pre-live zero-network Node24 run `37148199672` completed SUCCESS at tested SHA `b64c438bb36ae934a2c495bcf0007675eaf2ef31` before any sixth-window source request — PASS.
+6. Live run `37148240451` contains exactly three successful independent matrix jobs with `max-parallel:1`: 1102 job `111276490980`, 1104 job `111276491116`, 1216 job `111276491500`. Each produced exactly 2 requests / 2 snapshots; total requests = 6 and total new snapshots = 6; logs confirm randomized 20–60 second cooldown and historical backfill prohibited — PASS.
+7. Current collector still uses only official `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail`; no legacy endpoint is present. No Wave A/Wave C, scheduler, broad-universe rollout, or second sixth-window capture occurred — PASS.
+8. Baseline `bc07a07e095e805d2f20b7659c5ec698ad4f8a7c` to final tested SHA `190da8ae60ce7a33574f2b017014cd169665d766` contains exactly six added prospective raw snapshot files and no modified/deleted pre-existing prospective snapshot. The original 30 snapshots therefore remain byte-identical — PASS.
+9. Each of the six new snapshots is durable and canonical: `pit_known_at === collected_at`, `historical_back_imputation_allowed=false`, methodology identity is `institutional-accumulation-catalyst-prospective-live-capture-canary-v1`, and immutable/hash identity fields are present — PASS.
+10. Frozen closed artifact blobs remain exactly:
+   - two-window delta `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+   - three-window cross-day `9dbee14b300980fb46ea7251b5707429071a80bf`;
+   - fourth-window longitudinal `31c13856af41fee4f277103807b081873dd780e1`;
+   - fifth-window longitudinal `d3ae72fea05ace0815b9c7d22931a19a7fb32fdd` — PASS.
+11. Canonical observation audit blob `cf58c2f469507d7d10e15ec259e1e1e6f02ce848` reports exactly 36 valid / 0 invalid / 0 conflict, each stock 12 total / 6 listing / 6 detail, 18 listing + 18 detail, 36 immutable IDs, and 36 observed response hashes — PASS.
+12. Sixth-window longitudinal blob `79e395a6a4fffe7727e7863b2936678c07f3b5f3` contains 36 observations / 6 chains and records only timing/identity; it does not interpret catalyst significance or open outcomes — PASS.
+13. Final read-only Node24 run `37148733034`, regression job `111277938793`, tested SHA `190da8ae60ce7a33574f2b017014cd169665d766`, completed SUCCESS. All relevant suites had zero failures; observation, delta, cross-day, fourth-, fifth-, and sixth-window artifacts regenerated byte-identically; explicit six-window closed-artifact preservation test PASSed; durable/regenerated PIT assertions PASSed — PASS.
+14. The bounded diff contains no protected Phase 2, development outcome, protected 2454 outcome, holdout, catalyst/outcome association, Withdrawal, model, strategy, production, scheduler, broad-universe, generic-news, historical Wave A, or historical Wave C path — PASS.
+15. Current main after Prompt A adds only the canonical handoff checkpoint beyond the final tested SHA; no concurrent implementation/data change stale the acceptance evidence — PASS.
+
+Closeout limitations:
+- six forward prospective windows cover only the same three preregistered stocks and do not establish broad-universe quality;
+- the evidence spans multiple forward dates and demonstrates durable capture mechanics, but still does not establish catalyst significance or catalyst/outcome value;
+- scheduler readiness has not been evaluated as a separate evidence question and remains unauthorized;
+- raw response/content differences remain source/transport evidence only.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+## Next round objective
+
+Perform a zero-network sufficiency audit over the six completed prospective windows to decide whether the evidence is sufficient to justify a separately preregistered scheduler-readiness round, or whether another bounded manual canary is still required. This round does not authorize a scheduler, broad-universe rollout, catalyst/outcome analysis, or any new source request.
+
+Exact entry points:
+- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json`
+- `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`
+- `docs/agent-prompts/task-routing.json`
+
+Proposed new deterministic entry points:
+- `scripts/audit_institutional_accumulation_catalyst_prospective_six_window_sufficiency.js`
+- `tests/institutional_accumulation_catalyst_prospective_six_window_sufficiency.test.js`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json`
+
+## Prompt A — six-window prospective sufficiency audit
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning project only if docs/agent-prompts/task-routing.json still routes the sole active task to data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md and round institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1 remains Prompt A NOT STARTED / ACTIVE.
+
+Before work: fetch current remote main; read AGENTS.md, project philosophy/roadmap, routing, this handoff, current 36-observation audit, all closed two/three/four/five/six-window evidence, historical PIT provenance, collector/workflow definitions, and durable run/job evidence from the six-window capture lifecycle. Recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history.
+
+This round is zero-network. Make no MOPS/source requests and do not trigger the prospective canary workflow.
+
+Objective: produce one deterministic, outcome-blind sufficiency audit answering only whether the six-window prospective capture evidence is operationally sufficient to justify preregistering a separate scheduler-readiness round, or whether another bounded manual canary is needed first.
+
+Required audit dimensions:
+1. canonical evidence shape: exactly 36 valid / 0 invalid / 0 conflict, three stocks, six listing + six detail observations each, six complete windows;
+2. temporal duration: record the exact first/last collection timestamps, distinct Asia/Taipei observation dates, and fifth-to-sixth spacing without interpreting market outcomes;
+3. capture reliability: summarize the six-window lifecycle's successful bounded runs, request caps, append-only checkpoints, and the bounded deterministic-plumbing failures that occurred without causing source re-fetch;
+4. source/API stability: verify the current collector remains limited to official t05st01/t05st01_detail, legacy retry count remains frozen, and no historical backfill path is admitted;
+5. reproducibility: all closed two/three/four/five artifacts and current six-window artifact regenerate byte-identically under Node24;
+6. protected-state safety: historical PIT 33-state, 2454, outcomes, holdouts, association, Withdrawal, scheduler, broad-universe, model/strategy/production state remain unopened;
+7. explicitly separate operational capture sufficiency from catalyst significance or predictive usefulness.
+
+Decision must be one of:
+- scheduler_readiness_preregistration_justified
+- another_manual_canary_required
+- insufficient_or_conflicted_evidence
+
+A decision of scheduler_readiness_preregistration_justified authorizes only creating a later paired preregistration/readiness round; it does not authorize enabling a schedule, expanding the stock universe, or changing production behavior.
+
+Implement only the minimum deterministic auditor, regression test, artifact, and bounded read-only workflow validation needed. Do not mutate existing closed artifacts. Final checked-in audit must regenerate byte-identically, and the canonical handoff must record Prompt A complete / Prompt B pending while preserving the preregistered Prompt B below.
+
+Stop with Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — six-window prospective sufficiency audit closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify: sole active routing still points to this handoff; sixth-window canary has durable Prompt B PASS; this round made zero source requests and did not trigger the live canary workflow; canonical observation evidence remains exactly 36 valid / 0 invalid / 0 conflict for only 1102/1104/1216 with six listing + six detail observations each; all closed two/three/four/five/six artifacts remain byte-identical and reproducible; historical PIT/protected outcomes/holdouts/2454/association/Withdrawal remain unopened; current collector/API constraints and zero legacy retries remain intact; sufficiency audit records exact temporal coverage and operational evidence without catalyst-significance or predictive interpretation; its decision is exactly one allowed enum and is supported by deterministic evidence; if the decision is scheduler_readiness_preregistration_justified, confirm it authorizes only a future preregistration/readiness round and does not enable scheduling or broaden the universe; final Node24 read-only gate passes at a recorded tested SHA and the audit artifact regenerates byte-identically; bounded diff contains only authorized auditor/test/artifact/workflow/handoff changes plus classified unrelated concurrent changes and no protected paths.
+
+Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff, preregister/promote only the next round justified by the audit decision, do not execute it, end Prompt B closeout: PASS, and stop.
+```
+
+
