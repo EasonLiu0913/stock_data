@@ -20,6 +20,7 @@ on:
       - "tests/institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js"
       - "tests/institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.test.js"
+      - "tests/institutional_accumulation_catalyst_prospective_sixth_window_closed_artifacts.test.js"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json"
       - "data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json"
@@ -55,6 +56,7 @@ jobs:
             /tests/institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.test.js
             /tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js
             /tests/institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.test.js
+            /tests/institutional_accumulation_catalyst_prospective_sixth_window_closed_artifacts.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
@@ -100,6 +102,7 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.test.js
+          node --test tests/institutional_accumulation_catalyst_prospective_sixth_window_closed_artifacts.test.js
 
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
           cmp -s /tmp/observation-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
@@ -197,14 +200,19 @@ jobs:
             assert.equal(audit.source_interface_counts.prospective_material_information_detail, 18);
             const fourth = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json'));
             const fifth = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json'));
-            const sixth = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json'));
             assert.equal(fourth.observation_count, 24);
             assert.equal(fifth.observation_count, 30);
-            assert.equal(sixth.observation_count, 36);
-            assert.equal(sixth.chain_count, 6);
-            assert.equal(sixth.sixth_window_gate.latest_fifth_collected_at, '2026-09-23T12:09:31.642Z');
-            assert.equal(sixth.sixth_window_gate.later_asia_taipei_date, true);
-            assert.equal(sixth.sixth_window_gate.minimum_elapsed_satisfied, true);
+            const sixthPath = 'data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json';
+            if (fs.existsSync(sixthPath)) {
+              const sixth = JSON.parse(fs.readFileSync(sixthPath));
+              assert.equal(sixth.observation_count, 36);
+              assert.equal(sixth.chain_count, 6);
+              assert.equal(sixth.sixth_window_gate.latest_fifth_collected_at, '2026-09-23T12:09:31.642Z');
+              assert.equal(sixth.sixth_window_gate.later_asia_taipei_date, true);
+              assert.equal(sixth.sixth_window_gate.minimum_elapsed_satisfied, true);
+            } else {
+              console.log('sixth-window artifact not checkpointed yet: compatibility gate only');
+            }
           } else {
             throw new Error(`unexpected canonical observation count ${audit.valid_observation_count}`);
           }
