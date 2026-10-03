@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "audit_id": "institutional-accumulation-catalyst-prospective-scheduler-readiness-v1",
+  "network_collection_used": false,
+  "upstream_gate": {
+    "sufficiency_artifact_git_blob_sha1": "1a84a4edb38a73fc687428fd29f7fbc8dfb474cb",
+    "sufficiency_decision": "scheduler_readiness_preregistration_justified",
+    "byte_identity_required": true,
+    "passed": true
+  },
+  "frozen_universe": {
+    "stocks": [
+      "1102",
+      "1104",
+      "1216"
+    ],
+    "stock_count": 3,
+    "discovery_authorized": false,
+    "broad_universe_authorized": false,
+    "passed": true
+  },
+  "request_budget": {
+    "max_listing_requests_per_stock": 1,
+    "max_detail_requests_per_stock": 1,
+    "max_requests_per_stock": 2,
+    "max_requests_per_occurrence": 6,
+    "passed": true
+  },
+  "runner_topology": {
+    "fresh_runner_matrix_required": true,
+    "max_parallel": 1,
+    "write_layer_cancel_in_progress": false,
+    "long_running_loop_substitute_authorized": false,
+    "passed": true
+  },
+  "pacing": {
+    "randomized_pre_request_cooldown_seconds": [
+      20,
+      60
+    ],
+    "passed": true
+  },
+  "source_contract": {
+    "listing_endpoint": "https://mops.twse.com.tw/mops/api/t05st01",
+    "detail_endpoint": "https://mops.twse.com.tw/mops/api/t05st01_detail",
+    "legacy_retries_authorized": 0,
+    "historical_range_or_backfill_authorized": false,
+    "wave_a_or_wave_c_authorized": false,
+    "passed": true
+  },
+  "pit_write_safety": {
+    "append_only_immutable_snapshots": true,
+    "canonical_snapshot_validation_required": true,
+    "historical_back_imputation_allowed": false,
+    "race_safe_checkpoint_required": true,
+    "completed_remote_files_win_after_push_race": true,
+    "passed": true
+  },
+  "future_recurrence_guard": {
+    "required_before_any_scheduled_occurrence": true,
+    "source_of_latest_timestamp": "canonical validated prospective observations",
+    "require_later_asia_taipei_calendar_date": true,
+    "minimum_elapsed_milliseconds": 43200000,
+    "ineligible_behavior": "zero_source_requests_fail_closed",
+    "guard_implemented_as_enabled_schedule_in_this_round": false,
+    "preregistered_requirement_only": true
+  },
+  "failure_semantics": {
+    "source_schema_identity_ambiguity": "fail_closed",
+    "tight_retry_authorized": false,
+    "scope_broadening_on_failure_authorized": false,
+    "passed": true
+  },
+  "trigger_safety": {
+    "on_schedule_present": false,
+    "repository_dispatch_present": false,
+    "workflow_run_present": false,
+    "production_trigger_enabled": false,
+    "passed": true
+  },
+  "separation": {
+    "scheduler_authorized": false,
+    "scheduler_enabled": false,
+    "production_rollout_authorized": false,
+    "catalyst_significance_evaluated": false,
+    "predictive_usefulness_evaluated": false,
+    "strategy_or_model_promotion_authorized": false,
+    "broad_universe_authorized": false
+  },
+  "decision": "bounded_scheduled_canary_preregistration_justified",
+  "decision_scope": {
+    "authorizes_future_bounded_scheduled_canary_preregistration_only": true,
+    "enabled_schedule_authorized": false,
+    "live_source_request_authorized_in_this_round": false,
+    "production_behavior_change_authorized": false
+  }
+}
