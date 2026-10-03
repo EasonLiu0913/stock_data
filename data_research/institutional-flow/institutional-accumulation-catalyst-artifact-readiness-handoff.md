@@ -848,7 +848,7 @@ Closeout limitations:
 
 Status:
 - Prompt A: **COMPLETE**
-- Prompt B: **PREREGISTERED / PENDING**
+- **Prompt B closeout: PASS**
 
 Promotion does not execute Prompt A automatically.
 
@@ -1009,5 +1009,123 @@ Independently verify: sole active routing still points to this handoff; sixth-wi
 
 Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff, preregister/promote only the next round justified by the audit decision, do not execute it, end Prompt B closeout: PASS, and stop.
 ```
+
+## Prompt B independent closeout verification — six-window prospective sufficiency audit
+
+Round:
+`institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1`
+
+The exact Prompt B above was recovered from durable pre-Prompt-A handoff state at
+`d46b49a3c1c45d217b3d356770f244b4954323e0`.
+
+Independent verification:
+1. Current routing still has exactly one active task, `institutional-accumulation`, pointing to this canonical handoff — PASS.
+2. The sixth-window canary already has durable `Prompt B closeout: PASS` evidence — PASS.
+3. This round made zero MOPS/source requests and did not trigger the live prospective canary workflow. The tested SHA has no canary check, and the bounded diff contains no raw prospective snapshot or collector change — PASS.
+4. Canonical observation evidence remains exactly 36 valid / 0 invalid / 0 conflict for only 1102/1104/1216, each 6 listing + 6 detail, 18 listing + 18 detail, 36 immutable IDs — PASS.
+5. Frozen blobs remain exact:
+   - historical PIT provenance `7ccafbe36206770d93f454feefdca81a082d4cd0`;
+   - two-window delta `cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00`;
+   - three-window cross-day `9dbee14b300980fb46ea7251b5707429071a80bf`;
+   - fourth-window longitudinal `31c13856af41fee4f277103807b081873dd780e1`;
+   - fifth-window longitudinal `d3ae72fea05ace0815b9c7d22931a19a7fb32fdd`;
+   - sixth-window longitudinal `79e395a6a4fffe7727e7863b2936678c07f3b5f3` — PASS.
+6. Historical PIT remains 33 identities / 0 PIT-ready / 33 not-PIT-ready, outcome-blind, with protected 2454/development outcomes/holdouts/association unopened; Withdrawal remains outside Accumulation inputs — PASS.
+7. Current collector still contains only official `/mops/api/t05st01` and `/mops/api/t05st01_detail`; no legacy endpoint is present. The historical legacy attempt count remains frozen at 2. Canary safety remains max-parallel 1, randomized 20–60 second cooldown, and historical-backfill prohibition — PASS.
+8. Sufficiency artifact blob `1a84a4edb38a73fc687428fd29f7fbc8dfb474cb` records exact temporal coverage:
+   - first `2026-09-10T13:12:36.863Z`;
+   - last `2026-10-03T19:36:28.226Z`;
+   - span `2010231363` ms;
+   - five distinct Asia/Taipei dates: 2026-09-10, 2026-09-11, 2026-09-22, 2026-09-23, 2026-10-04;
+   - fifth-to-sixth elapsed `890603139` ms — PASS.
+9. The deterministic decision is exactly `scheduler_readiness_preregistration_justified`, one of the preregistered allowed enums. Code enforces minimum 6 windows, minimum 4 distinct Taipei dates, minimum 7-day span, and fail-closed handling for conflict/reproducibility/source-safety/protected-state defects — PASS.
+10. The decision is explicitly operational-only: catalyst significance and predictive usefulness remain unevaluated; it authorizes only a future scheduler-readiness preregistration round; `scheduler_authorized=false`, `scheduler_enabled=false`, `broad_universe_authorized=false`, `outcome_analysis_authorized=false`, and no production behavior change is authorized — PASS.
+11. Final read-only Node24 run `37149453911`, regression job `111280017669`, tested SHA `43d3a5e43026d3d6e7afce66b802c4720791787f`, completed SUCCESS. Logs show zero test failures, `six-window sufficiency audit byte-match: PASS`, and `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS` — PASS.
+12. Baseline `d46b49a3c1c45d217b3d356770f244b4954323e0` to current main changes only the authorized auditor, regression test, sufficiency artifact, read-only readiness workflow, and handoff. No protected path or raw snapshot changed — PASS.
+13. The only post-tested-SHA change is the Prompt A handoff checkpoint `1aa1b80afe2ac47280a5a4ec2567f204ed4428c1`; it does not stale implementation or acceptance evidence — PASS.
+
+Closeout interpretation:
+- six-window prospective capture is operationally sufficient to justify the next **scheduler-readiness preregistration** round;
+- this is not scheduler approval and does not authorize cron creation, live scheduling, broad-universe rollout, outcome inspection, strategy/model changes, or production behavior.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-prospective-scheduler-readiness-preregistration-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+## Next round objective
+
+Define and deterministically audit the minimum scheduler-readiness contract for the already-proven three-stock prospective canary path, while keeping the round completely zero-network and non-production. The round may preregister a future bounded scheduled canary experiment only if every safety invariant is explicit and fail-closed. It must not add or enable a cron schedule, trigger a live source request, expand the stock universe, or change production behavior.
+
+Exact entry points:
+- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json`
+- `scripts/audit_institutional_accumulation_catalyst_prospective_six_window_sufficiency.js`
+- `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`
+- `scripts/institutional_accumulation_catalyst_prospective_checkpoint.js`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`
+- `docs/agent-prompts/task-routing.json`
+
+Proposed deterministic entry points:
+- `scripts/audit_institutional_accumulation_catalyst_prospective_scheduler_readiness.js`
+- `tests/institutional_accumulation_catalyst_prospective_scheduler_readiness.test.js`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-scheduler-readiness-v1.json`
+
+## Prompt A — scheduler-readiness preregistration
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning project only if docs/agent-prompts/task-routing.json still routes the sole active task to data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md and round institutional-accumulation-catalyst-prospective-scheduler-readiness-preregistration-v1 remains Prompt A NOT STARTED / ACTIVE.
+
+Before work: fetch current remote main; read AGENTS.md, project philosophy/roadmap, routing, this handoff, the six-window sufficiency artifact/auditor, prospective PIT capture contract, collector, live canary workflow, checkpoint writer, observation audit, and read-only readiness workflow. Recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history and classify concurrent changes.
+
+This round is zero-network and non-production. Do not call MOPS, do not trigger the live canary workflow, do not add or enable any schedule/cron, and do not expand beyond 1102/1104/1216.
+
+Objective: define one deterministic scheduler-readiness audit that answers whether a future bounded scheduled-canary experiment can be preregistered safely without enabling it.
+
+Required readiness invariants:
+1. upstream evidence gate: six-window sufficiency decision must remain scheduler_readiness_preregistration_justified and its artifact must regenerate byte-identically;
+2. universe freeze: exactly 1102/1104/1216, no discovery or broad-universe input;
+3. request budget: at most one listing plus at most one verified detail per stock, total <=6 source requests per scheduled occurrence;
+4. runner topology: fresh-runner matrix, max-parallel:1, write-layer non-canceling, no long-running loop substituting for physical jobs;
+5. pacing: randomized 20–60 second pre-request cooldown remains enforced;
+6. source contract: only official POST /mops/api/t05st01 and POST /mops/api/t05st01_detail, zero legacy retries, no historical range/backfill or Wave A/Wave C;
+7. PIT/write safety: append-only immutable snapshots, canonical validation, historical_back_imputation_allowed=false, race-safe checkpoint behavior, completed remote files win after push races;
+8. recurrence safety: any future scheduled-canary design must include an eligibility guard derived from canonical latest accepted observation, require a later Asia/Taipei calendar date and >=12 elapsed hours, and fail with zero source requests when ineligible;
+9. failure semantics: source/schema/identity ambiguity must fail closed; a failed scheduled occurrence must not silently broaden scope or retry tightly;
+10. separation: scheduler-readiness is not scheduler authorization, production rollout, catalyst significance, predictive usefulness, strategy/model promotion, or broad-universe approval.
+
+Decision enum:
+- bounded_scheduled_canary_preregistration_justified
+- scheduler_readiness_not_yet_sufficient
+- insufficient_or_conflicted_evidence
+
+If the decision is bounded_scheduled_canary_preregistration_justified, it authorizes only preregistering a future bounded scheduled-canary experiment in a later paired round. It must not create on.schedule, cron, repository_dispatch chaining, workflow_run chaining, or any enabled production trigger in this round.
+
+Implement only the minimum deterministic auditor, regression test, artifact, and bounded read-only workflow validation needed. Preserve all existing frozen artifacts byte-identically. Final artifact must regenerate byte-identically under Node24. Update the canonical handoff with exact tested SHA/run/job/blob evidence and preserve the preregistered Prompt B below.
+
+Stop with Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — scheduler-readiness preregistration closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-prospective-scheduler-readiness-preregistration-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify: sole active routing still points to this handoff; six-window sufficiency round has durable Prompt B PASS; this round made zero source requests, triggered no live canary, and added/enabled no schedule or cron; six-window sufficiency artifact remains byte-identical with decision scheduler_readiness_preregistration_justified; scheduler-readiness audit enforces exactly the frozen three-stock universe, <=6-request occurrence budget, fresh-runner max-parallel1 topology, 20–60s pacing, official APIs only, zero legacy retries, no historical backfill/Wave A/C, append-only PIT identity, race-safe checkpoint semantics, later-Asia/Taipei-date plus >=12h eligibility with zero-request fail-closed behavior, and fail-closed ambiguity handling; no workflow_run/repository_dispatch scheduler chaining is introduced; all protected artifacts/outcomes/holdouts/2454/association/Withdrawal/model/strategy/production/broad-universe state remains unopened; decision is exactly one preregistered enum and if bounded_scheduled_canary_preregistration_justified it authorizes only a future paired experiment preregistration, not schedule enablement; final Node24 read-only gate passes at recorded tested SHA and all relevant artifacts regenerate byte-identically; bounded diff contains only authorized auditor/test/artifact/read-only workflow/handoff changes plus classified unrelated changes and no protected production trigger.
+
+Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff and promote only the next round justified by the scheduler-readiness decision. Do not execute it. End Prompt B closeout: PASS and stop.
+```
+
+
 
 
