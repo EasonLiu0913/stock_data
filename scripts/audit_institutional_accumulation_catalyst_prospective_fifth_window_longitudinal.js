@@ -69,9 +69,12 @@ function buildFifthWindowLongitudinalAudit(repoRoot, options = {}) {
     observation_count:30,
     chain_count:6,
     stock_count:3,
-    unique_immutable_snapshot_count:source.unique_immutable_snapshot_count,
-    unique_response_sha256_count:source.unique_response_sha256_count,
-    collection_time_range:source.collection_time_range,
+    unique_immutable_snapshot_count:new Set(chains.flatMap(chain => chain.windows.map(x => x.immutable_snapshot_id))).size,
+    unique_response_sha256_count:new Set(chains.flatMap(chain => chain.windows.map(x => x.response_sha256))).size,
+    collection_time_range:{
+      first:chains.flatMap(chain => chain.windows.map(x => x.collected_at)).sort()[0],
+      last:chains.flatMap(chain => chain.windows.map(x => x.collected_at)).sort().at(-1),
+    },
     fifth_window_gate:{
       latest_fourth_collected_at:new Date(latestFourthMs).toISOString(),
       latest_fourth_asia_taipei_date:latestFourthDate,
