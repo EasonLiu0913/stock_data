@@ -167,6 +167,9 @@ function applyAggressiveWindows(siteRoot) {
     ['data_twse_institutional_investors', 6],
     ['data_twse_dealers', 6],
     ['data_twse_foreign_investors', 6],
+    ['data_market_news', 6],
+    ['data_twse_margin_balance', 6],
+    ['data_daily_gain_over_5', 6],
     ['data_normalized', 2],
   ];
   const results = [];
