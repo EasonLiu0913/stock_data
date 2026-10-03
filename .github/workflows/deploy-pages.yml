@@ -17,6 +17,7 @@ on:
       - "scripts/scan_pages_dependencies.js"
       - "scripts/trim_pages_artifact.js"
       - "scripts/apply_pages_size_budget.js"
+      - "scripts/validate_pages_fubon_freshness.js"
       - ".github/workflows/build-twse-market-chart.yml"
       - ".github/workflows/deploy-pages.yml"
   workflow_call:
@@ -49,7 +50,6 @@ concurrency:
 jobs:
   deploy:
     name: Deploy selective repository-root compatible site
-    if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, '🏦 Update Institutional data - ') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -90,11 +90,13 @@ jobs:
           node --check scripts/scan_pages_dependencies.js
           node --check scripts/trim_pages_artifact.js
           node --check scripts/apply_pages_size_budget.js
+          node --check scripts/validate_pages_fubon_freshness.js
           node --check scripts/prepare_eps_valuation_pages_payload.js
           bash scripts/prepare_pages_site.sh --self-test
           node scripts/scan_pages_dependencies.js --self-test
           node scripts/trim_pages_artifact.js --self-test
           node scripts/apply_pages_size_budget.js --self-test
+          node scripts/validate_pages_fubon_freshness.js --self-test
           node scripts/prepare_eps_valuation_pages_payload.js --self-test
 
           node scripts/scan_pages_dependencies.js . \
@@ -215,6 +217,7 @@ jobs:
 
           test -f _site/data_fubon/files.json
           test -f _site/data_twse_mi_index/files.json
+          node scripts/validate_pages_fubon_freshness.js --source . --site _site | tee /tmp/pages-fubon-freshness.json
           node - <<'NODE'
           const fs=require('node:fs');
           for(const dataset of ['data_fubon','data_twse_mi_index']){
@@ -264,8 +267,8 @@ jobs:
           echo "- Target date: ${TARGET_DATE:-latest prediction date}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact size after staged trimming: $artifact_size" >> "$GITHUB_STEP_SUMMARY"
           echo "- Pages operating target / Stage 2 trigger / hard cap: 800 / 850 / 950 MiB" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Stage 1 windows: fubon 10, TWSE index 8, institutional/dealer/foreign 10, normalized 4, predictions 1" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Stage 2 windows when needed: fubon 6, TWSE index 5, institutional/dealer/foreign 6, normalized 2, prediction-analysis dates 5" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 1 windows: fubon 10, TWSE index 8, institutional/dealer/foreign 10, market-news 10, margin-balance 10, daily-gain-over-5 10, normalized 4, predictions 1" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stage 2 windows when needed: fubon 6, TWSE index 5, institutional/dealer/foreign 6, market-news 6, margin-balance 6, daily-gain-over-5 6, normalized 2, prediction-analysis dates 5" >> "$GITHUB_STEP_SUMMARY"
           echo "- Stage 2 secondary research cuts when still above target: momentum history/replay/research and tag-strategy recalculation" >> "$GITHUB_STEP_SUMMARY"
           echo "- Stage 3 when still above target: strategy snapshots are limited to the latest 5 manifest dates" >> "$GITHUB_STEP_SUMMARY"
           echo "- EPS valuation core summaries and strategy snapshot manifest are protected and revalidated after trimming" >> "$GITHUB_STEP_SUMMARY"
