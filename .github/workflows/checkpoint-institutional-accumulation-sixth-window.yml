@@ -1,0 +1,126 @@
+name: "research: checkpoint sixth prospective catalyst evidence"
+# bounded-writer-sixth-window:v1
+# trigger-after-live:v1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/checkpoint-institutional-accumulation-sixth-window.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: institutional-accumulation-sixth-window-checkpoint-v1
+  cancel-in-progress: false
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout current main bounded sixth-window evidence
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json
+            /data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Generate bounded sixth-window deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          delta_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json
+          cross_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json
+          fourth_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json
+          fifth_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fifth-window-longitudinal-audit-v1.json
+          observation_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+          sixth_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json
+
+          test "$(git hash-object "$delta_path")" = "cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00"
+          test "$(git hash-object "$cross_path")" = "9dbee14b300980fb46ea7251b5707429071a80bf"
+          test "$(git hash-object "$fourth_path")" = "31c13856af41fee4f277103807b081873dd780e1"
+          test "$(git hash-object "$fifth_path")" = "d3ae72fea05ace0815b9c7d22931a19a7fb32fdd"
+
+          node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
+          node scripts/audit_institutional_accumulation_catalyst_prospective_sixth_window_longitudinal.js --write
+          node scripts/audit_institutional_accumulation_catalyst_prospective_window_deltas.js > /tmp/delta-regenerated.json
+          node scripts/audit_institutional_accumulation_catalyst_prospective_cross_day_window.js > /tmp/cross-regenerated.json
+          node scripts/audit_institutional_accumulation_catalyst_prospective_fourth_window_longitudinal.js > /tmp/fourth-regenerated.json
+          node scripts/audit_institutional_accumulation_catalyst_prospective_fifth_window_longitudinal.js > /tmp/fifth-regenerated.json
+          cmp -s "$delta_path" /tmp/delta-regenerated.json
+          cmp -s "$cross_path" /tmp/cross-regenerated.json
+          cmp -s "$fourth_path" /tmp/fourth-regenerated.json
+          cmp -s "$fifth_path" /tmp/fifth-regenerated.json
+
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const obs=JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json'));
+          const sixth=JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json'));
+          if(obs.valid_observation_count!==36||obs.invalid_observation_count!==0||obs.conflict_count!==0||obs.unique_immutable_snapshot_count!==36) throw new Error('canonical observation counts mismatch');
+          for(const stock of ['1102','1104','1216']){const s=obs.stocks[stock];if(!s||s.total!==12||s.listing!==6||s.detail!==6) throw new Error('stock shape mismatch '+stock);}
+          if(obs.source_interface_counts.prospective_material_information_listing!==18||obs.source_interface_counts.prospective_material_information_detail!==18) throw new Error('interface counts mismatch');
+          if(sixth.observation_count!==36||sixth.chain_count!==6||sixth.unique_immutable_snapshot_count!==36) throw new Error('sixth audit counts mismatch');
+          if(sixth.sixth_window_gate.latest_fifth_collected_at!=='2026-09-23T12:09:31.642Z') throw new Error('latest fifth identity mismatch');
+          if(!sixth.sixth_window_gate.later_asia_taipei_date||!sixth.sixth_window_gate.minimum_elapsed_satisfied) throw new Error('sixth eligibility mismatch');
+          if(sixth.interpretation.outcome_association_opened!==false||sixth.interpretation.scheduler_authorized!==false||sixth.interpretation.broad_universe_authorized!==false) throw new Error('protected interpretation changed');
+          NODE
+
+          test "$(git hash-object "$delta_path")" = "cc5683ce3e33cb9b9c6ae74c42eb5c3a26f0ed00"
+          test "$(git hash-object "$cross_path")" = "9dbee14b300980fb46ea7251b5707429071a80bf"
+          test "$(git hash-object "$fourth_path")" = "31c13856af41fee4f277103807b081873dd780e1"
+          test "$(git hash-object "$fifth_path")" = "d3ae72fea05ace0815b9c7d22931a19a7fb32fdd"
+      - name: Race-safe checkpoint only bounded sixth-window artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          observation_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+          sixth_path=data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json
+          cp "$observation_path" /tmp/observation-final.json
+          cp "$sixth_path" /tmp/sixth-final.json
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/observation-final.json "$observation_path"
+            mkdir -p "$(dirname "$sixth_path")"
+            cp /tmp/sixth-final.json "$sixth_path"
+            git add --sparse "$observation_path" "$sixth_path"
+            if git diff --cached --quiet; then pushed=1; break; fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "research: checkpoint sixth prospective catalyst evidence"
+            if git push origin HEAD:main; then pushed=1; break; fi
+          done
+          test "$pushed" -eq 1
+      - name: Verify durable remote bounded evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          for p in \
+            data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json \
+            data_research/institutional-flow/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json; do
+            git show "origin/main:$p" > "/tmp/$(basename "$p")"
+          done
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const obs=JSON.parse(fs.readFileSync('/tmp/institutional-accumulation-catalyst-prospective-observation-audit-v1.json'));
+          const sixth=JSON.parse(fs.readFileSync('/tmp/institutional-accumulation-catalyst-prospective-sixth-window-longitudinal-audit-v1.json'));
+          if(obs.valid_observation_count!==36||obs.invalid_observation_count!==0||obs.conflict_count!==0) throw new Error('remote observation audit not durable');
+          if(sixth.observation_count!==36||sixth.chain_count!==6) throw new Error('remote sixth audit not durable');
+          NODE

@@ -21,26 +21,26 @@ function taipeiDate(ms) { return new Date(ms + 8 * 60 * 60 * 1000).toISOString()
 function buildFifthWindowLongitudinalAudit(repoRoot, options = {}) {
   const observationOptions = options.rootRelative ? { rootRelative: options.rootRelative } : {};
   const source = auditObservations(repoRoot, observationOptions);
-  if (source.valid_observation_count !== 30 || source.invalid_observation_count !== 0 || source.conflict_count !== 0) {
+  if (![30, 36].includes(source.valid_observation_count) || source.invalid_observation_count !== 0 || source.conflict_count !== 0) {
     throw new Error(`unexpected_observation_shape:${source.valid_observation_count}/${source.invalid_observation_count}/${source.conflict_count}`);
   }
-  if (source.unique_immutable_snapshot_count !== 30 || source.stock_count !== 3) throw new Error('unexpected_observation_identity_count');
+  if (![30, 36].includes(source.unique_immutable_snapshot_count) || source.stock_count !== 3) throw new Error('unexpected_observation_identity_count');
 
   const chains = [];
   let latestFourthMs = -Infinity;
   let earliestFifthMs = Infinity;
   for (const stock of EXPECTED_STOCKS) {
     const bucket = source.stocks[stock];
-    if (!bucket || bucket.total !== 10 || bucket.listing !== 5 || bucket.detail !== 5) throw new Error(`unexpected_stock_window_shape:${stock}`);
+    if (!bucket || ![10, 12].includes(bucket.total) || ![5, 6].includes(bucket.listing) || bucket.listing !== bucket.detail) throw new Error(`unexpected_stock_window_shape:${stock}`);
     for (const sourceInterface of EXPECTED_INTERFACES) {
       const occurrences = source.observations
         .filter(x => x.stock === stock && x.source_interface === sourceInterface)
         .map(x => ({ ...x, collected_ms: parseUtc(x.collected_at, `${stock}:${sourceInterface}`) }))
         .sort((a, b) => a.collected_ms - b.collected_ms || a.source_path.localeCompare(b.source_path));
-      if (occurrences.length !== 5) throw new Error(`occurrence_count:${stock}:${sourceInterface}:${occurrences.length}`);
+      if (![5, 6].includes(occurrences.length)) throw new Error(`occurrence_count:${stock}:${sourceInterface}:${occurrences.length}`);
       if (new Set(occurrences.map(x => x.source_request_key)).size !== 1) throw new Error(`source_request_key_mismatch:${stock}:${sourceInterface}`);
       for (let i = 1; i < occurrences.length; i += 1) if (occurrences[i - 1].collected_ms >= occurrences[i].collected_ms) throw new Error(`collection_order_invalid:${stock}:${sourceInterface}`);
-      const [w1,w2,w3,w4,w5] = occurrences;
+      const [w1,w2,w3,w4,w5] = occurrences.slice(0, 5);
       latestFourthMs = Math.max(latestFourthMs, w4.collected_ms);
       earliestFifthMs = Math.min(earliestFifthMs, w5.collected_ms);
       chains.push({
