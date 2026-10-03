@@ -4,11 +4,11 @@ Canonical handoff: docs/handoffs/workflow-schedule-summary-lightweight-migration
 
 ## Current phase
 
-**Round 14 Prompt A: COMPLETE. Prompt B is pending.**
+**Round 14 Prompt B closeout: PASS. Round 14 is closed.**
 
-Round 13 remains closed with Prompt B PASS. Round 14 momentum v1→v2 schedule-summary embedding and required Prompt A validation are durable on remote `main`.
+The workflow schedule-summary lightweight migration has reached its current safe stopping boundary.
 
-Do not execute Round 14 Prompt B automatically.
+No Round 15 is preregistered. The Round 11 residual runtime-relevant cohort has been fully resolved by Rounds 12–14, and repository-wide normalization is clean. Do not invent additional migration work without a new durable audit or owner request.
 
 Global active task remains:
 - `workflow-schedule-summary-lightweight-migration`
@@ -950,6 +950,101 @@ Round 14 Prompt A completion conditions are satisfied:
 - Round 14 Prompt B remains pending and preserved.
 
 **Prompt A complete — ready for Prompt B.**
+
+## Round 14 Prompt B independent closeout — PASS
+
+Round:
+`workflow-schedule-summary-lightweight-migration-round-14`
+
+The exact Round 14 Prompt B was recovered from the pre-Prompt-A durable handoff at
+`e3cf72e5c33d7c7b609c440a8662170114469c5a`.
+
+### Independent implementation verification
+
+Round 14 implementation commits:
+- `7bc62acaf62f74339e7a32d7252907d0a2a5f7e8` — add one v2 schedule-summary step to `validate` and remove the v1 standalone summary job.
+- `41829082abbf7072043f3060fb242e97520a1b75` — add exactly `['momentum-history-replay.yml', 'validate']` to `EMBEDDED_TARGETS`.
+- `85ac473cea6ebedd42083d5f527f92ceaf07877e` — remove one extra blank line so authored YAML is byte-for-byte canonical under the migrator.
+
+Independent commit-diff inspection confirms:
+- the workflow semantic change is limited to removing the v1 standalone summary job / summary-only checkout and adding one v2 step in existing job `validate`;
+- the canonicalization commit is whitespace-only;
+- the migrator change adds exactly one mapping and no unrelated target.
+
+Current remote workflow verifies:
+- v1 marker count = 0;
+- v2 marker count = 1;
+- standalone `schedule-timing-summary` job absent;
+- `validate` still owns its preexisting `actions/checkout@v7`;
+- the v2 step uses `if: always() && github.event_name == 'schedule'`;
+- production own-YAML self-trigger remains absent;
+- `pull_request.paths` still includes `.github/workflows/momentum-history-replay.yml`;
+- `cancel-in-progress: false` remains unchanged.
+
+The Round 13 post-hardening workflow and current workflow differ only by the managed schedule-summary migration plus the canonical blank-line normalization. No trigger, cron, workflow_dispatch, pull_request, permissions, concurrency, job dependency, replay/research logic, repository-write scope, or Pages behavior changed in Round 14.
+
+### Independent validation evidence
+
+Final complete state:
+- `37035299046` — Ensure Workflow Schedule Summary — **SUCCESS**
+  - renderer self-test passed;
+  - deployment-race layered self-test passed;
+  - repository-wide deployment layering audit passed;
+  - focused summary tests passed;
+  - migrator normalization `changed_count: 0`, `unchanged_count: 177`;
+  - all workflows use the repository-pinned schedule timing summary.
+- `37035299181` — Public Page Registry CI — **SUCCESS**.
+- `37035299192` — Scheduled Workflow Registry Contract — **SUCCESS**; 8 passed / 0 failed.
+- `37035151738` — Node Regression Suite — **SUCCESS**; 909 passed / 0 failed; tracked-tree cleanliness passed.
+- `37035299187` — Audit GitHub Actions Node 24 — **SUCCESS**.
+
+The earlier Ensure Workflow Summary failures on `7bc62aca...` / `41829082...` were independently rechecked. The final failure cause was canonical formatting only: the normalizer reported `changed_count: 1` for `momentum-history-replay.yml`. Commit `85ac473c...` corrected that exact bounded defect, after which normalization became zero-diff.
+
+### Actions side-effect verification
+
+Actions were independently queried for the workflow implementation SHAs.
+
+No run used `.github/workflows/momentum-history-replay.yml` with event `push`.
+
+Therefore Round 14 did not unexpectedly launch momentum production, and the Round 13 self-trigger hardening remains effective.
+
+### Freshness / concurrent-main verification
+
+Prompt A checkpoint:
+- `760885e85a55ad71a2ad65fae4986c122f72b695` — `docs: checkpoint workflow schedule summary round 14 prompt A`.
+
+At Prompt B closeout, current remote main is:
+- `78595fc27e4679deba8b7c75e9c5d767cf620e0e`.
+
+There are 23 descendant commits after the Prompt A checkpoint. Independent compare shows none changed:
+- any `.github/workflows/**` file;
+- `scripts/migrate_workflow_schedule_summary.js`;
+- `scripts/write_workflow_schedule_summary.js`;
+- `docs/agent-prompts/task-routing.json`;
+- this canonical handoff.
+
+Those descendants are unrelated data/content refreshes and do not stale Round 14 acceptance evidence.
+
+Routing still names `workflow-schedule-summary-lightweight-migration` as the sole active task.
+
+### Safe stopping boundary
+
+Round 11 independently identified exactly nine remaining runtime-relevant workflows requiring resolution:
+- eight `safe_existing_job_embedding` workflows;
+- one `trigger_hardening_then_embedding` workflow, `momentum-history-replay.yml`.
+
+Those residuals are now fully resolved:
+- Round 12 migrated all eight safe-existing-job targets;
+- Round 13 removed momentum's production own-YAML self-trigger;
+- Round 14 migrated momentum to the canonical v2 embedded summary.
+
+Repository-wide normalization now reports `changed_count: 0` across all 177 workflows.
+
+Remaining legacy v1 markers, if any, are outside the runtime-relevant bounded migration objective already classified by the durable inventory (for example unreachable non-scheduled legacy summaries or frozen exceptions). No new runtime-relevant safe target remains from the Round 11 residual audit.
+
+Therefore the schedule-summary lightweight migration has reached its safe stopping boundary. No Round 15 is preregistered or implied.
+
+**Prompt B closeout: PASS. Round 14 is closed.**
 
 ## Objective
 
