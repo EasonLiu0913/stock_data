@@ -28,9 +28,9 @@ test('same Taipei date fails closed with zero source requests', () => {
 
 test('later Taipei date but under 12h fails closed', () => {
   const state = JSON.parse(JSON.stringify(canonical));
-  state.collection_time_range.last = '2026-10-03T23:45:00.000Z';
-  state.observations = state.observations.slice(0,-1).concat([{...state.observations.at(-1), collected_at:'2026-10-03T23:45:00.000Z'}]);
-  const r = evaluateEligibility(state, '2026-10-04T11:30:00+08:00');
+  state.collection_time_range.last = '2026-10-04T15:00:00.000Z';
+  state.observations = state.observations.slice(0,-1).concat([{...state.observations.at(-1), collected_at:'2026-10-04T15:00:00.000Z'}]);
+  const r = evaluateEligibility(state, '2026-10-05T00:30:00+08:00');
   assert.equal(r.result, INELIGIBLE_ELAPSED);
   assert.equal(r.source_requests_authorized, 0);
 });
