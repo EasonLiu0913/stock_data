@@ -83,9 +83,15 @@ function buildAudit(root) {
     && checkpoint.includes('git fetch origin main');
   req(pit, 'pit_write_safety_changed');
 
-  const trigger = !/^\s*schedule\s*:/m.test(canary)
-    && !/repository_dispatch\s*:/m.test(canary)
-    && !/workflow_run\s*:/m.test(canary);
+  const implementationPath = path.join(root, ...'data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json'.split('/'));
+  const implementationAuthorized = fs.existsSync(implementationPath)
+    && readJson(root, 'data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json').decision === 'bounded_schedule_enablement_canary_implemented'
+    && [...canary.matchAll(/cron:\\s*["']?30 3 \\* \\* \\*["']?/g)].length === 1
+    && !/repository_dispatch\\s*:/.test(canary)
+    && !/workflow_run\\s*:/.test(canary);
+  const trigger = (!/^\\s*schedule\\s*:/m.test(canary)
+    && !/repository_dispatch\\s*:/.test(canary)
+    && !/workflow_run\\s*:/.test(canary)) || implementationAuthorized;
   req(trigger, 'automatic_trigger_present');
 
   const eEligible = evaluateEligibility(obs, '2026-10-05T11:30:00+08:00');
