@@ -1,6 +1,8 @@
 name: "[研究] Institutional Accumulation Prospective Catalyst Canary"
 
 on:
+  schedule:
+    - cron: "30 3 * * *"
   push:
     branches:
       - main
@@ -19,7 +21,74 @@ env:
   SNAPSHOT_ROOT: data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit
 
 jobs:
+  schedule_gate:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      collect: ${{ steps.prepare.outputs.collect }}
+      terminal_reason: ${{ steps.prepare.outputs.terminal_reason }}
+      trigger_identity: ${{ steps.prepare.outputs.trigger_identity }}
+      candidate_timestamp: ${{ steps.prepare.outputs.candidate_timestamp }}
+    steps:
+      - name: Checkout current main scheduled gate inputs
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
+            data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Evaluate and durably checkpoint scheduled eligibility before source requests
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_timestamp="$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')"
+          trigger_identity="schedule:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+          state_path="data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json"
+          pushed=0
+          plan_json=''
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            plan_json="$(node scripts/manage_institutional_accumulation_catalyst_scheduled_canary_state.js prepare "$candidate_timestamp" "$trigger_identity")"
+            git add "$state_path"
+            if git diff --cached --quiet; then
+              pushed=1
+              break
+            fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "research: checkpoint scheduled catalyst preflight"
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+            echo "push race on schedule gate attempt $attempt; refetching and reevaluating"
+          done
+          test "$pushed" -eq 1
+          collect="$(node -e "const r=JSON.parse(process.argv[1]);process.stdout.write(String(r.should_collect))" "$plan_json")"
+          terminal_reason="$(node -e "const r=JSON.parse(process.argv[1]);process.stdout.write(String(r.terminal_reason))" "$plan_json")"
+          echo "collect=$collect" >> "$GITHUB_OUTPUT"
+          echo "terminal_reason=$terminal_reason" >> "$GITHUB_OUTPUT"
+          echo "trigger_identity=$trigger_identity" >> "$GITHUB_OUTPUT"
+          echo "candidate_timestamp=$candidate_timestamp" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Scheduled catalyst preflight"
+            echo "- trigger: $trigger_identity"
+            echo "- candidate: $candidate_timestamp"
+            echo "- collect: $collect"
+            echo "- terminal reason: $terminal_reason"
+          } >> "$GITHUB_STEP_SUMMARY"
   canary:
+    needs: schedule_gate
+    if: ${{ always() && (github.event_name != 'schedule' || needs.schedule_gate.outputs.collect == 'true') }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -37,7 +106,9 @@ jobs:
             scripts
             data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json
             data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
+            data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json
             data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit
+            data_research/institutional-flow/scheduled-catalyst-canary-observability
       - name: Setup Node 24
         uses: actions/setup-node@v7
         with:
@@ -55,6 +126,12 @@ jobs:
           const pit = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json', 'utf8'));
           if (pit.identity_count !== 33 || pit.pit_ready_identity_count !== 0 || pit.not_pit_ready_identity_count !== 33) throw new Error('historical PIT freeze changed');
           if (pit.outcome_blind !== true || pit.network_collection_used !== false) throw new Error('historical PIT protected state changed');
+          if (process.env.GITHUB_EVENT_NAME === 'schedule') {
+            const state = JSON.parse(fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json', 'utf8'));
+            const expected = 'schedule:' + process.env.GITHUB_RUN_ID + ':' + process.env.GITHUB_RUN_ATTEMPT;
+            if (state.pending_occurrence?.trigger_identity !== expected) throw new Error('scheduled preflight is not durably pending for this run');
+            if (state.accepted_eligible_scheduled_occurrence_count >= state.target_accepted_eligible_scheduled_occurrences) throw new Error('scheduled target already reached');
+          }
           NODE
       - name: Collect one bounded prospective stock canary
         id: collect
@@ -78,6 +155,37 @@ jobs:
           echo "snapshot_count=$snapshots" >> "$GITHUB_OUTPUT"
           echo "New snapshot paths:"
           cat /tmp/canary-paths.txt
+      - name: Build scheduled occurrence stock observability
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          set -euo pipefail
+          result_path="data_research/institutional-flow/scheduled-catalyst-canary-observability/${GITHUB_RUN_ID}/${{ matrix.stock }}.json"
+          mkdir -p "$(dirname "$result_path")"
+          node - "$result_path" '${{ matrix.stock }}' /tmp/canary-result.json /tmp/canary-paths.txt <<'NODE'
+          const fs = require('node:fs');
+          const [resultPath, stock, resultJson, pathsFile] = process.argv.slice(2);
+          const result = JSON.parse(fs.readFileSync(resultJson, 'utf8'));
+          const paths = fs.readFileSync(pathsFile, 'utf8').split(/\r?\n/).filter(Boolean);
+          const snapshots = paths.map(p => JSON.parse(fs.readFileSync(p, 'utf8')));
+          const endpoints = [...new Set(snapshots.map(s => s.source_interface === 'prospective_material_information_listing'
+            ? 'https://mops.twse.com.tw/mops/api/t05st01'
+            : 'https://mops.twse.com.tw/mops/api/t05st01_detail'))].sort();
+          const payload = {
+            schema_version: 1,
+            trigger_identity: 'schedule:' + process.env.GITHUB_RUN_ID + ':' + process.env.GITHUB_RUN_ATTEMPT,
+            stock,
+            request_count: result.request_count,
+            snapshot_count: result.snapshot_count,
+            source_endpoints_used: endpoints,
+            accepted_snapshot_paths: paths,
+            accepted_snapshot_ids: snapshots.map(s => s.immutable_snapshot_id).sort(),
+            latest_collected_at: snapshots.map(s => s.collected_at).sort().at(-1),
+          };
+          fs.writeFileSync(resultPath, JSON.stringify(payload, null, 2) + '\n');
+          fs.writeFileSync('/tmp/scheduled-result-path.txt', resultPath + '\n');
+          NODE
+          cp "$result_path" /tmp/scheduled-stock-result.json
       - name: Save bounded candidate snapshots outside checkout
         shell: bash
         run: |
@@ -117,6 +225,20 @@ jobs:
               test -n "$p"
               git add "$p"
             done < /tmp/canary-paths.txt
+            if test "$GITHUB_EVENT_NAME" = "schedule"; then
+              result_path="$(cat /tmp/scheduled-result-path.txt)"
+              if git show "origin/main:$result_path" > /tmp/remote-scheduled-result 2>/dev/null; then
+                if ! cmp -s /tmp/scheduled-stock-result.json /tmp/remote-scheduled-result; then
+                  echo "scheduled observability conflict: $result_path" >&2
+                  conflict=1
+                fi
+              else
+                mkdir -p "$(dirname "$result_path")"
+                cp /tmp/scheduled-stock-result.json "$result_path"
+              fi
+              test "$conflict" -eq 0
+              git add --sparse "$result_path"
+            fi
             if git diff --cached --quiet; then
               echo 'all bounded snapshots already durable on remote main'
               pushed=1
@@ -165,6 +287,59 @@ jobs:
             echo "- historical backfill: prohibited"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  finalize_scheduled_occurrence:
+    needs: [schedule_gate, canary]
+    if: ${{ always() && github.event_name == 'schedule' && needs.schedule_gate.outputs.collect == 'true' && needs.canary.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout latest scheduled state and stock observability
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json
+            data_research/institutional-flow/scheduled-catalyst-canary-observability
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Finalize accepted eligible scheduled occurrence
+        shell: bash
+        run: |
+          set -euo pipefail
+          trigger_identity="schedule:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+          state_path="data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json"
+          results_dir="data_research/institutional-flow/scheduled-catalyst-canary-observability/${GITHUB_RUN_ID}"
+          pushed=0
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            node - "$results_dir" > /tmp/scheduled-results.json <<'NODE'
+          const fs = require('node:fs');
+          const dir = process.argv[2];
+          const results = ['1102','1104','1216'].map(stock => JSON.parse(fs.readFileSync(dir + '/' + stock + '.json', 'utf8')));
+          process.stdout.write(JSON.stringify(results));
+          NODE
+            node scripts/manage_institutional_accumulation_catalyst_scheduled_canary_state.js finalize unused "$trigger_identity" /tmp/scheduled-results.json > /tmp/finalize-result.json
+            git add "$state_path"
+            if git diff --cached --quiet; then
+              pushed=1
+              break
+            fi
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "research: finalize scheduled catalyst occurrence"
+            if git push origin HEAD:main; then
+              pushed=1
+              break
+            fi
+            echo "push race on scheduled finalize attempt $attempt; refetching and replaying"
+          done
+          test "$pushed" -eq 1
+          cat /tmp/finalize-result.json >> "$GITHUB_STEP_SUMMARY"
   schedule-timing-summary:
     # schedule-timing-summary:v1
     name: 排程時間摘要
