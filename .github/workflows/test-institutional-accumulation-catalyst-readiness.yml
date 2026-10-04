@@ -39,6 +39,11 @@ on:
       - "data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json"
       - "scripts/audit_institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.js"
       - "tests/institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.test.js"
+      - "tests/institutional_accumulation_catalyst_scheduled_canary_eligibility.test.js"
+      - "tests/institutional_accumulation_catalyst_schedule_enablement_readiness.test.js"
+      - "scripts/evaluate_institutional_accumulation_catalyst_scheduled_canary_eligibility.js"
+      - "scripts/audit_institutional_accumulation_catalyst_schedule_enablement_readiness.js"
+      - "data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json"
   workflow_dispatch:
 
 permissions:
@@ -72,6 +77,8 @@ jobs:
             /tests/institutional_accumulation_catalyst_prospective_six_window_sufficiency.test.js
             /tests/institutional_accumulation_catalyst_prospective_scheduler_readiness.test.js
             /tests/institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.test.js
+            /tests/institutional_accumulation_catalyst_scheduled_canary_eligibility.test.js
+            /tests/institutional_accumulation_catalyst_schedule_enablement_readiness.test.js
             /data_research/institutional-flow/institutional-accumulation-official-disclosure-artifact-reconstruction-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-reconstruction-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-pit-provenance-resolution-v1.json
@@ -85,6 +92,7 @@ jobs:
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-prospective-scheduler-readiness-v1.json
             /data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json
+            /data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json
             /.github/workflows/checkpoint-institutional-accumulation-sixth-window.yml
             /data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md
             /.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml
@@ -115,6 +123,7 @@ jobs:
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-six-window-sufficiency-audit-v1.json /tmp/sufficiency-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-prospective-scheduler-readiness-v1.json /tmp/scheduler-readiness-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json /tmp/bounded-scheduled-canary-before.json
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json /tmp/schedule-enablement-readiness-before.json
 
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
@@ -130,6 +139,8 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_prospective_six_window_sufficiency.test.js
           node --test tests/institutional_accumulation_catalyst_prospective_scheduler_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.test.js
+          node --test tests/institutional_accumulation_catalyst_scheduled_canary_eligibility.test.js
+          node --test tests/institutional_accumulation_catalyst_schedule_enablement_readiness.test.js
 
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
           cmp -s /tmp/observation-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
@@ -170,6 +181,10 @@ jobs:
           node scripts/audit_institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.js --write
           cmp -s /tmp/bounded-scheduled-canary-before.json data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json
           echo 'bounded scheduled-canary preregistration audit byte-match: PASS'
+
+          node scripts/audit_institutional_accumulation_catalyst_schedule_enablement_readiness.js --write
+          cmp -s /tmp/schedule-enablement-readiness-before.json data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json
+          echo 'schedule enablement-readiness audit byte-match: PASS'
 
           node - <<'NODE'
           const assert = require('node:assert/strict');
