@@ -1259,7 +1259,7 @@ Closeout interpretation:
 `institutional-accumulation-catalyst-prospective-bounded-scheduled-canary-preregistration-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -1330,3 +1330,80 @@ Independently verify: sole active routing still points to this handoff; schedule
 
 Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff and promote only the next round justified by the preregistration decision. Do not execute it. End Prompt B closeout: PASS and stop.
 ```
+
+
+## Prompt A implementation and evidence — bounded scheduled-canary preregistration
+
+Round:
+`institutional-accumulation-catalyst-prospective-bounded-scheduled-canary-preregistration-v1`
+
+Pre-Prompt-A durable baseline:
+- `bb177df088e0eaa4bbe736c75056e366ea8f362d`.
+
+Zero-network / non-production implementation:
+- `92a7eefe9ef696347608312b29599ac9813de2b7` — added deterministic preregistration auditor:
+  `scripts/audit_institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.js`;
+- `c5cfca009d22d34234936d54815e8279c37d682c` — added regression:
+  `tests/institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.test.js`;
+- `4f84eb7e9d880b0c125a352ac5e6eb4e9988143c` — added durable artifact:
+  `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json`;
+- `5c9abb683f9f2b6e23f60f89cfaffe587036f5e8` — wired the preregistration regression and byte-match into the existing read-only readiness workflow;
+- `fae89854aaeae2b3aef78c1bbf69e7a26142b13d` — bounded workflow-format repair after the first patch wrote literal `\n` sequences; no live canary/source request occurred before or during the repair.
+
+Preregistered experiment contract:
+- frozen universe = exactly 1102 / 1104 / 1216;
+- candidate recurrence = one daily candidate window at 11:30 Asia/Taipei;
+- the candidate recurrence is **not enabled** and does not add `on.schedule`, cron, `repository_dispatch`, or `workflow_run`;
+- eligibility is evaluated before any source request from the canonical latest accepted prospective observation;
+- eligibility requires a later Asia/Taipei calendar date and at least `43200000` ms / 12 elapsed hours;
+- ineligible/uncertain eligibility = zero source requests, fail closed;
+- request budget = at most one listing + one verified detail per stock, <=2 per stock and <=6 per eligible occurrence;
+- only official POST `/mops/api/t05st01` and POST `/mops/api/t05st01_detail` are admitted;
+- legacy retries = 0; historical range/backfill and Wave A/Wave C remain unauthorized;
+- execution topology remains independent fresh-runner matrix, `max-parallel:1`, randomized 20–60 second pre-request cooldown;
+- PIT/write contract remains append-only immutable, canonical-validated, `historical_back_imputation_allowed=false`, non-canceling writer, refetch/reapply after push races, identical remote files win, conflicts fail closed;
+- failure/abort contract covers source/schema/identity ambiguity, eligibility uncertainty, request-count violation, immutable conflict, and protected-state drift with no tight retry or scope broadening;
+- future occurrence observability must durably record eligibility inputs/result, request/snapshot counts by stock, source endpoints, accepted snapshot paths/IDs, and terminal reason;
+- initial experiment boundary = exactly 3 eligible occurrences before mandatory closeout; indefinite scheduling is unauthorized.
+
+Deterministic artifact:
+- blob `1fd1c72f7ff2a032beb3eaf29227cd01653bf0e1`;
+- decision = `bounded_scheduled_canary_experiment_preregistered`;
+- decision scope authorizes only a later separately paired implementation/enablement review;
+- `enables_schedule_now=false`;
+- `live_source_request_authorized_in_this_round=false`;
+- `production_behavior_change_authorized=false`;
+- catalyst significance, predictive usefulness, broad-universe rollout, strategy/model promotion, and production behavior remain unevaluated/unauthorized.
+
+Final read-only Node24 gate:
+- workflow run `37191406498`;
+- regression job `111404186423`;
+- tested SHA `fae89854aaeae2b3aef78c1bbf69e7a26142b13d`;
+- SUCCESS;
+- new preregistration regression: 4 tests / 4 pass / 0 fail;
+- `observation audit byte-match: PASS`;
+- `closed two-window delta byte-match: PASS`;
+- `cross-day audit byte-match: PASS`;
+- fourth/fifth/sixth longitudinal byte-match: PASS;
+- `six-window sufficiency audit byte-match: PASS`;
+- `scheduler-readiness audit byte-match: PASS`;
+- `bounded scheduled-canary preregistration audit byte-match: PASS`;
+- `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS`;
+- schedule timing summary job in this read-only workflow was skipped because the event was a push, as expected.
+
+Bounded diff / concurrent change classification:
+- baseline `bb177df088e0eaa4bbe736c75056e366ea8f362d` -> tested SHA `fae89854aaeae2b3aef78c1bbf69e7a26142b13d` contains the three new preregistration files plus the existing read-only readiness workflow;
+- concurrent commit `253c975b5187b8ab2152c5b466970839969c1237` only refreshed CNN Fear & Greed data and does not stale this evidence;
+- no prospective raw snapshot, collector, live canary workflow, protected Phase 2/outcomes/holdouts/2454/association/Withdrawal/model/strategy/production/broad-universe state changed;
+- repository-wide Workflow Summary audit run `37191406480`, job `111404186441`, failed because existing `.github/workflows/checkpoint-institutional-accumulation-sixth-window.yml` is still listed for schedule-summary normalization. That path pre-existed this round and was not modified by the preregistration implementation; fixing it would broaden this Prompt A beyond its authorized zero-network preregistration scope.
+
+Prompt A limitation:
+- this round preregisters the bounded experiment only;
+- no scheduler/cron is enabled;
+- no live source request is authorized or made;
+- no production scheduling safety has yet been proven under actual recurring execution;
+- any later implementation/enablement requires Prompt B PASS for this round and a separately preregistered paired round.
+
+Prompt A completion boundary reached. The preregistered Prompt B above remains unchanged and pending.
+
+**Prompt A complete — ready for Prompt B.**
