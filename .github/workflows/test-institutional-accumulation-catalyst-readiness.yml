@@ -212,6 +212,13 @@ jobs:
           cmp -s /tmp/bounded-schedule-enablement-preregistration-before.json data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1.json
           echo 'bounded schedule-enablement canary preregistration audit byte-match: PASS'
 
+          cmp -s /tmp/bounded-scheduled-canary-state-before.json data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json
+          echo 'bounded scheduled-canary initial state byte-match: PASS'
+
+          node scripts/audit_institutional_accumulation_catalyst_bounded_schedule_enablement_canary_implementation.js --write
+          cmp -s /tmp/bounded-schedule-implementation-before.json data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json
+          echo 'bounded schedule-enablement implementation audit byte-match: PASS'
+
           node - <<'NODE'
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
