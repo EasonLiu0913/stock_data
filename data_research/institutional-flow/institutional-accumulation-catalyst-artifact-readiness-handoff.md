@@ -1458,7 +1458,7 @@ Closeout interpretation:
 `institutional-accumulation-catalyst-bounded-scheduled-canary-implementation-enablement-readiness-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -1536,3 +1536,107 @@ Independently verify: sole active routing still points to this handoff; bounded 
 
 Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff and promote only the next round justified by the readiness decision. Do not execute it. End Prompt B closeout: PASS and stop.
 ```
+
+
+## Prompt A implementation and evidence — bounded scheduled-canary implementation / enablement readiness
+
+Round:
+`institutional-accumulation-catalyst-bounded-scheduled-canary-implementation-enablement-readiness-v1`
+
+Pre-Prompt-A durable baseline:
+- `cb104ce783e5527d835e8918534aaeb2e4e9cca3`.
+
+Zero-network / non-production implementation:
+- `3a15b4ea7d78882d6b981615ed166a28dfa68fb0` — added deterministic side-effect-free eligibility/observability helper:
+  `scripts/evaluate_institutional_accumulation_catalyst_scheduled_canary_eligibility.js`;
+- `c40fabbf05f303302b66f0df0fe104534c43d9ae` — added eligibility regression:
+  `tests/institutional_accumulation_catalyst_scheduled_canary_eligibility.test.js`;
+- `e7bf0d6723d7874b98041373c241238f3e8d2dab` — added schedule-enablement-readiness auditor:
+  `scripts/audit_institutional_accumulation_catalyst_schedule_enablement_readiness.js`;
+- `f107ac6bca3cef8230873d0e50582b9f40ed099d` — added readiness regression:
+  `tests/institutional_accumulation_catalyst_schedule_enablement_readiness.test.js`;
+- `917f7da8917be382dcbd138bd7f2338cf1b905f2` — added deterministic readiness artifact:
+  `data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json`;
+- `23436e56e2139b72bb1b5cb27111fcca2d07c0a1` — wired evaluator/readiness tests and readiness artifact byte-match into the existing read-only Node24 workflow.
+
+Bounded fixture repairs:
+- `0e3d65a2f51de897ffdae069a95f2168e9a6e3fe` and `b72264a0c33fc6cfd0e4d288fcff9f61468be264` corrected the under-12-hour fixture so it actually crosses a Taipei calendar boundary while remaining <12h;
+- initial read-only gate run `37192563715`, job `111407655344`, then exposed that the nominal eligible example `2026-10-04 11:30 Asia/Taipei` is correctly ineligible because the latest canonical observation `2026-10-03T19:36:28.226Z` is already `2026-10-04 03:36:28.226 Asia/Taipei`;
+- `ebe47227743ca3bd01e6310e468f1dde0d378c2f` and `9174e675038071d8b1092d7d9a530e7a79d017e9` corrected the eligible fixture to the first later candidate window, `2026-10-05 11:30 Asia/Taipei`;
+- these were test/audit fixture repairs only; no live canary, MOPS request, schedule trigger, or production behavior occurred.
+
+Eligibility control plane:
+- accepted canonical state requires positive valid observations, exactly 0 invalid, exactly 0 conflict, exactly frozen stocks 1102/1104/1216, and collection_time_range.last matching the maximum observation timestamp;
+- deterministic result enum:
+  - `eligible`;
+  - `ineligible_same_or_earlier_taipei_date`;
+  - `ineligible_elapsed_under_12h`;
+  - `invalid_or_conflicted_state`;
+- candidate must be on a later Asia/Taipei calendar date **and** at least `43200000` ms after the latest canonical accepted observation;
+- all ineligible/invalid results authorize exactly 0 source requests;
+- only an eligible result represents the already-preregistered future <=6-request occurrence budget;
+- helper performs no network access, file writes, workflow dispatch, or source collection.
+
+Observability control plane:
+- future candidate contract remains `11:30 Asia/Taipei`, `enabled=false`;
+- request counts initialize to 0 for each of 1102/1104/1216;
+- snapshot counts initialize to 0 for each frozen stock;
+- source endpoints used initialize empty;
+- accepted snapshot paths/IDs initialize empty;
+- admitted endpoints are only official t05st01 / t05st01_detail;
+- deterministic terminal reason is emitted for eligible-not-executed and every fail-closed skip result.
+
+Schedule-enablement-readiness artifact:
+- blob `32d221aca8e0d2d4575071ca9bef9092b0a8da27`;
+- upstream preregistration blob remains `1fd1c72f7ff2a032beb3eaf29227cd01653bf0e1`;
+- canonical observation state remains 36 valid / 0 invalid / 0 conflict;
+- frozen universe remains exactly 1102/1104/1216;
+- future request budget remains <=2 per stock / <=6 per eligible occurrence;
+- initial eligible occurrence target remains exactly 3;
+- official API/source, zero legacy retries, no backfill/Wave A/Wave C, max-parallel1, 20–60s pacing, append-only PIT, race-safe non-canceling checkpoint invariants remain intact;
+- live canary workflow still has no `on.schedule`, `repository_dispatch`, or `workflow_run`;
+- protected outcomes/holdouts/2454/association/Withdrawal/model/strategy/production state remains unopened;
+- decision = `bounded_schedule_enablement_preregistration_justified`;
+- decision scope authorizes only a later paired schedule-enablement-canary preregistration;
+- `enables_schedule_now=false`;
+- `live_source_request_authorized_in_this_round=false`;
+- `production_behavior_change_authorized=false`.
+
+Final read-only Node24 gate:
+- workflow run `37192614538`;
+- regression job `111407807140`;
+- tested SHA `9174e675038071d8b1092d7d9a530e7a79d017e9`;
+- SUCCESS;
+- eligibility regression: 6 tests / 6 pass / 0 fail;
+- schedule-enablement-readiness regression: 4 tests / 4 pass / 0 fail;
+- all prior observation/delta/cross-day/fourth/fifth/sixth/sufficiency/scheduler-readiness/bounded-preregistration regressions passed;
+- `observation audit byte-match: PASS`;
+- `closed two-window delta byte-match: PASS`;
+- `cross-day audit byte-match: PASS`;
+- fourth/fifth/sixth longitudinal byte-match: PASS;
+- `six-window sufficiency audit byte-match: PASS`;
+- `scheduler-readiness audit byte-match: PASS`;
+- `bounded scheduled-canary preregistration audit byte-match: PASS`;
+- `schedule enablement-readiness audit byte-match: PASS`;
+- `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS`.
+
+Bounded diff:
+- baseline `cb104ce783e5527d835e8918534aaeb2e4e9cca3` -> tested SHA `9174e675038071d8b1092d7d9a530e7a79d017e9` changes exactly six authorized paths:
+  - evaluator;
+  - evaluator regression;
+  - readiness auditor;
+  - readiness regression;
+  - readiness artifact;
+  - existing read-only readiness workflow;
+- no raw prospective snapshot, collector, live canary workflow, enabled production trigger, routing, protected Phase 2/outcome/holdout/2454/association/Withdrawal/model/strategy/production/broad-universe path changed.
+
+Prompt A limitation:
+- this round implements and validates only the zero-network control plane and enablement-readiness evidence;
+- no scheduler/cron/automatic source-fetch trigger is enabled;
+- no live source request or live scheduled occurrence has run;
+- decision `bounded_schedule_enablement_preregistration_justified` does **not** itself authorize schedule enablement;
+- any real schedule-enablement canary requires Prompt B PASS for this round and a separately preregistered paired round.
+
+Prompt A completion boundary reached. The preregistered Prompt B above remains unchanged and pending.
+
+**Prompt A complete — ready for Prompt B.**
