@@ -2025,3 +2025,114 @@ Independently verify: sole active routing still points to this handoff; preregis
 
 Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff. Do not manually trigger the scheduled canary. Promote only the next round justified by durable evidence; if no natural eligible scheduled occurrence has happened yet, the next round must be an observation/wait-for-natural-occurrence round rather than widening scope. End Prompt B closeout: PASS and stop.
 ```
+
+
+## Prompt B independent closeout verification — bounded schedule-enablement canary implementation
+
+Round:
+`institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1`
+
+The exact Prompt B above was recovered from durable pre-Prompt-A handoff state at
+`f5f6db8d172d49aaee06a003dc1bdd448ed0fda2`.
+
+Independent verification:
+1. Current routing still has exactly one active task, `institutional-accumulation`, routed to this canonical handoff — PASS.
+2. The immediately preceding bounded schedule-enablement preregistration round has durable `Prompt B closeout: PASS` evidence — PASS.
+3. Upstream preregistration artifact remains byte-identical at blob `1e5f59b6597af3c783893438f96de011c093c44c`, decision `bounded_schedule_enablement_canary_preregistered` — PASS.
+4. Current implementation artifact remains blob `44d2fd328f59d9f6671ff30ffbe503cc145650e0`, decision `bounded_schedule_enablement_canary_implemented`, with validation network false and manual-dispatch validation unauthorized — PASS.
+5. Current live canary workflow blob remains `568983c12b3f596f078eef2291c32032e0a57728`; it contains exactly one automatic cron, `30 3 * * *`, representing 11:30 Asia/Taipei — PASS.
+6. No `repository_dispatch` or `workflow_run` trigger exists and there is no duplicate automatic source-fetch schedule — PASS.
+7. GitHub Actions history from the pre-Prompt-A checkpoint through closeout contains zero runs of `[研究] Institutional Accumulation Prospective Catalyst Canary`. Therefore implementation/push validation caused zero live MOPS/source requests and no manual canary dispatch — PASS.
+8. The schedule-only `schedule_gate` is ordered before the collector and the matrix collector is gated by `needs.schedule_gate.outputs.collect == 'true'` — PASS.
+9. Existing deterministic eligibility still enforces Asia/Taipei later-date plus >=12h and zero-request fail-closed handling; durable scheduled latest timestamp support does not reopen the frozen 36-observation research artifacts — PASS.
+10. Duplicate trigger identity, unresolved pending occurrence, invalid/conflicted canonical state, accepted-count ambiguity, and target-already-reached state all prevent source collection — PASS.
+11. Frozen universe remains exactly 1102/1104/1216; collector request cap remains <=2 per stock and <=6 per eligible occurrence; official t05st01/t05st01_detail only; legacy ajax retry remains absent; no historical backfill/Wave A/Wave C was added — PASS.
+12. Execution topology remains fresh-runner matrix with `max-parallel:1`; collector 20–60 second pacing remains; write concurrency remains non-canceling — PASS.
+13. PIT/checkpoint behavior remains append-only immutable, canonical, race-safe refetch/reapply, identical remote wins, conflict fail-closed — PASS.
+14. Durable scheduled-canary state remains blob `e2691fba78016b6b0a10a30f5c94c8629f18ff05`: accepted count `0`, target `3`, pending `null`, occurrence history empty, latest accepted scheduled timestamp `null` — PASS.
+15. Skipped/ineligible cron firings do not consume the target; post-target collection is zero-request fail-closed pending mandatory closeout — PASS.
+16. Scheduled observability contract includes trigger identity, eligibility/candidate state, accepted-count state, per-stock request/snapshot counts, official endpoints, accepted snapshot paths/IDs, latest collected timestamp, and terminal reason — PASS.
+17. Protected state remains unopened: canonical research observation state remains 36 valid / 0 invalid / 0 conflict; outcomes/holdouts/protected-2454/association unopened; Withdrawal is not an Accumulation input; no model/strategy/production/broad-universe behavior was opened — PASS.
+18. Final zero-network Node24 gate run `37194406612`, regression job `111413154663`, tested SHA `48ea781823f9e015f6803c9def3cdac62726f7b7`, completed SUCCESS — PASS.
+19. Final gate evidence includes scheduled-state regression 8/8, implementation regression 4/4, all prior relevant catalyst regressions PASS, all protected deterministic artifacts byte-identical, `bounded scheduled-canary initial state byte-match: PASS`, `bounded schedule-enablement implementation audit byte-match: PASS`, and `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS` — PASS.
+20. Pre-Prompt-A baseline `f5f6db8d172d49aaee06a003dc1bdd448ed0fda2` -> current main contains only authorized schedule-control/test/audit/state/handoff changes for this round plus classified unrelated data updates in market-news, market-risk, CNN Fear & Greed, rankings, and MOPS monthly revenue. Those concurrent data-only changes do not affect routing, schedule control, protected research evidence, or the tested implementation — PASS.
+21. Repository-wide schedule-summary audit still has the pre-existing `checkpoint-institutional-accumulation-sixth-window.yml` normalization defect; the newly scheduled canary workflow itself is normalized and is no longer reported. This unrelated pre-existing defect does not invalidate this round — classified unrelated.
+22. No natural scheduled occurrence has happened yet, so there is no live scheduled evidence to interpret. The next justified round is observation/wait-for-natural-occurrence only; widening scope is forbidden — PASS.
+
+Closeout interpretation:
+- the exact finite automatic schedule control plane is durably implemented and independently verified;
+- implementation did not itself execute a live source request;
+- current experiment state remains 0/3;
+- the next evidence must come from the first natural scheduled firing, not from manual dispatch;
+- no catalyst significance, predictive usefulness, strategy/model promotion, or universe expansion is authorized.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-bounded-scheduled-canary-first-natural-occurrence-observation-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE — WAITING FOR NATURAL SCHEDULE EVIDENCE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+## Next round objective — first natural scheduled occurrence observation
+
+Observe and verify the first natural `30 3 * * *` scheduled firing after the bounded schedule implementation closeout. This round must not manually dispatch the live canary, must not change the schedule, must not widen the universe, and must not open outcomes or strategy state. Its purpose is to determine whether the natural schedule correctly follows the preregistered control plane and whether the first firing is either a durable zero-request skip or one fully accepted eligible scheduled occurrence.
+
+Exact existing entry points:
+- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md`
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json`
+- `scripts/manage_institutional_accumulation_catalyst_scheduled_canary_state.js`
+- `scripts/evaluate_institutional_accumulation_catalyst_scheduled_canary_eligibility.js`
+- `data_research/institutional-flow/scheduled-catalyst-canary-observability/`
+- `data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit/`
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`
+- `docs/agent-prompts/task-routing.json`
+
+## Prompt A — first natural scheduled occurrence observation
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning project only if docs/agent-prompts/task-routing.json still has exactly one active task, institutional-accumulation, routed to data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md, and round institutional-accumulation-catalyst-bounded-scheduled-canary-first-natural-occurrence-observation-v1 remains Prompt A NOT STARTED / ACTIVE — WAITING FOR NATURAL SCHEDULE EVIDENCE.
+
+Before work: fetch current remote main; read AGENTS.md, project philosophy/roadmap, routing, this handoff, the implementation artifact, scheduled state, eligibility evaluator, state manager, collector, live workflow, scheduled observability path, PIT contract, and read-only readiness workflow. Recover this exact paired Prompt A + Prompt B from durable pre-Prompt-A history and classify concurrent changes.
+
+Do not manually dispatch, rerun, or otherwise force the live canary. Do not alter the cron. Do not broaden stocks beyond 1102/1104/1216. Do not open outcomes/holdouts/protected-2454/association/Withdrawal/model/strategy/production/broad-universe state.
+
+First determine whether a natural schedule event has occurred after the implementation closeout checkpoint.
+
+If no natural schedule run exists yet:
+- make no implementation change;
+- do not mark Prompt A complete;
+- report that this round remains WAITING FOR NATURAL SCHEDULE EVIDENCE and stop.
+
+If a natural schedule run exists, verify only that first natural firing:
+1. event must be schedule and workflow must be the existing prospective catalyst canary;
+2. pre-request schedule_gate must execute first and must durably record trigger identity, candidate timestamp, eligibility state, accepted count before, and terminal reason;
+3. if ineligible/skipped, all source request jobs must be skipped, accepted count must remain unchanged, the durable occurrence record must show zero requests, and the round may close only as a verified natural zero-request skip;
+4. if eligible, exactly three frozen stock jobs may run serially under max-parallel1, with <=2 requests per stock / <=6 total, official t05st01/t05st01_detail only, 20–60s pacing, no legacy retry/backfill/Wave A/Wave C;
+5. each eligible stock must durably checkpoint immutable snapshots and per-stock observability; accepted paths/IDs/endpoints/counts must match durable remote main;
+6. finalize must require all three frozen stock results and increment accepted_eligible_scheduled_occurrence_count exactly once from 0 to 1; pending occurrence must clear; latest accepted scheduled timestamp must equal the latest accepted snapshot timestamp;
+7. any partial stock failure, missing observability, request-budget/source/schema/identity ambiguity, checkpoint conflict, duplicate trigger, or finalize ambiguity is fail-closed and must not be counted as accepted;
+8. protected 36-observation research artifacts and all earlier closed artifacts must remain byte-identical; the scheduled observation layer must remain separate;
+9. no manual dispatch/rerun may be used to manufacture acceptance;
+10. run the minimum zero-network/read-only validation needed after the natural firing and record run/job/tested SHA plus exact live run/job/checkpoint evidence in this handoff.
+
+If the first natural firing is a valid zero-request skip, Prompt A may complete with that evidence and preregister Prompt B unchanged. If it is one fully accepted eligible occurrence, Prompt A may complete with accepted count exactly 1/3. Do not wait for occurrences 2 or 3 in this round and do not broaden scope.
+
+Stop with Prompt A complete — ready for Prompt B only after one natural firing has been durably verified.
+```
+
+## Prompt B — first natural scheduled occurrence observation closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-bounded-scheduled-canary-first-natural-occurrence-observation-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify: sole active routing still points to this handoff; implementation round has durable Prompt B PASS; no manual dispatch/rerun was used to manufacture the observed occurrence; the observed workflow run is the first natural schedule event after implementation closeout; schedule_gate ran before any possible source request and its durable trigger/candidate/eligibility/count/terminal state matches the run; if the firing was skipped, source request count is exactly zero and accepted count is unchanged; if eligible, exactly 1102/1104/1216 ran serially with <=2 requests each / <=6 total, official endpoints only, immutable snapshots and per-stock observability are durable, finalize incremented accepted count exactly once to 1/3, pending cleared, and latest accepted timestamp matches durable snapshots; any failed/partial/ambiguous occurrence was not counted; no legacy retry/backfill/Wave A/Wave C or scope widening occurred; protected research/outcome/holdout/2454/association/Withdrawal/model/strategy/production/broad-universe state remains unopened; final zero-network/read-only validation passes and protected artifacts remain byte-identical; bounded diff contains only authorized natural-occurrence outputs/observability/state/handoff changes plus classified unrelated concurrent changes.
+
+Fix only bounded observation/control-plane defects and restart verification if needed. On PASS, update/commit the handoff. Promote only the next observation round justified by the actual accepted count; do not manually trigger another occurrence and do not widen scope. End Prompt B closeout: PASS and stop.
+```
