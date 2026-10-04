@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "audit_id": "institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1",
+  "network_collection_used": false,
+  "upstream_gate": {
+    "scheduler_readiness_git_blob_sha1": "983e87c2b32525b523aed3f312855f83f53a1285",
+    "scheduler_readiness_decision": "bounded_scheduled_canary_preregistration_justified",
+    "byte_identity_required": true,
+    "passed": true
+  },
+  "frozen_universe": {
+    "stocks": [
+      "1102",
+      "1104",
+      "1216"
+    ],
+    "stock_count": 3,
+    "discovery_authorized": false,
+    "broad_universe_authorized": false,
+    "passed": true
+  },
+  "candidate_recurrence": {
+    "enabled": false,
+    "cadence": "daily_candidate_window",
+    "local_time": "11:30",
+    "timezone": "Asia/Taipei",
+    "automatic_trigger_authorized": false,
+    "on_schedule_authorized": false,
+    "repository_dispatch_authorized": false,
+    "workflow_run_authorized": false,
+    "exactly_one_candidate_contract": true
+  },
+  "eligibility_guard": {
+    "source_of_latest_timestamp": "canonical validated prospective observations",
+    "require_later_asia_taipei_calendar_date": true,
+    "minimum_elapsed_milliseconds": 43200000,
+    "ineligible_behavior": "zero_source_requests_fail_closed",
+    "evaluated_before_any_source_request": true,
+    "passed": true
+  },
+  "request_budget": {
+    "max_listing_requests_per_stock": 1,
+    "max_detail_requests_per_stock": 1,
+    "max_requests_per_stock": 2,
+    "max_requests_per_eligible_occurrence": 6,
+    "passed": true
+  },
+  "source_contract": {
+    "listing_endpoint": "https://mops.twse.com.tw/mops/api/t05st01",
+    "detail_endpoint": "https://mops.twse.com.tw/mops/api/t05st01_detail",
+    "legacy_retries_authorized": 0,
+    "historical_range_or_backfill_authorized": false,
+    "wave_a_or_wave_c_authorized": false,
+    "passed": true
+  },
+  "execution_topology": {
+    "fresh_runner_matrix_required": true,
+    "max_parallel": 1,
+    "long_running_loop_substitute_authorized": false,
+    "randomized_pre_request_cooldown_seconds": [
+      20,
+      60
+    ],
+    "passed": true
+  },
+  "pit_write_safety": {
+    "append_only_immutable_snapshots": true,
+    "canonical_validation_required": true,
+    "historical_back_imputation_allowed": false,
+    "write_layer_cancel_in_progress": false,
+    "refetch_reapply_on_push_race": true,
+    "identical_remote_files_win": true,
+    "immutable_conflict_behavior": "fail_closed",
+    "passed": true
+  },
+  "failure_abort_semantics": {
+    "source_schema_identity_ambiguity": "abort_fail_closed",
+    "eligibility_uncertainty": "abort_zero_requests",
+    "unexpected_request_count": "abort",
+    "immutable_snapshot_conflict": "abort_fail_closed",
+    "protected_state_drift": "abort_fail_closed",
+    "tight_retry_authorized": false,
+    "scope_broadening_authorized": false,
+    "passed": true
+  },
+  "observability_contract": {
+    "durable_fields_required": [
+      "eligibility_latest_accepted_timestamp",
+      "eligibility_asia_taipei_date",
+      "eligibility_elapsed_milliseconds",
+      "eligibility_result",
+      "request_count_per_stock",
+      "snapshot_count_per_stock",
+      "source_endpoints_used",
+      "accepted_snapshot_paths",
+      "accepted_snapshot_ids",
+      "terminal_reason"
+    ],
+    "passed": true
+  },
+  "experiment_boundary": {
+    "finite_initial_eligible_occurrence_target": 3,
+    "indefinite_scheduling_authorized": false,
+    "closeout_required_before_extension": true,
+    "passed": true
+  },
+  "protected_state": {
+    "canonical_observation_count": 36,
+    "invalid_observation_count": 0,
+    "conflict_count": 0,
+    "outcomes_or_holdouts_opened": false,
+    "protected_2454_outcome_opened": false,
+    "catalyst_outcome_association_opened": false,
+    "withdrawal_used_as_accumulation_input": false,
+    "scheduler_enabled": false,
+    "broad_universe_enabled": false,
+    "model_strategy_or_production_behavior_enabled": false,
+    "passed": true
+  },
+  "separation": {
+    "schedule_enablement_authorized": false,
+    "catalyst_significance_evaluated": false,
+    "predictive_usefulness_evaluated": false,
+    "broad_universe_authorized": false,
+    "strategy_or_model_promotion_authorized": false,
+    "production_behavior_change_authorized": false
+  },
+  "decision": "bounded_scheduled_canary_experiment_preregistered",
+  "decision_scope": {
+    "authorizes_later_separately_paired_implementation_enablement_review_only": true,
+    "enables_schedule_now": false,
+    "live_source_request_authorized_in_this_round": false,
+    "production_behavior_change_authorized": false
+  }
+}
