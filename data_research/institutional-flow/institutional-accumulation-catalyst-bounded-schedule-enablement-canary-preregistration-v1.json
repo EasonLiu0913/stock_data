@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "audit_id": "institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1",
+  "network_collection_used": false,
+  "live_canary_triggered": false,
+  "upstream_gate": {
+    "schedule_enablement_readiness_git_blob_sha1": "32d221aca8e0d2d4575071ca9bef9092b0a8da27",
+    "schedule_enablement_readiness_decision": "bounded_schedule_enablement_preregistration_justified",
+    "byte_identity_required": true,
+    "passed": true
+  },
+  "schedule_contract": {
+    "enabled": false,
+    "candidate_local_time": "11:30",
+    "timezone": "Asia/Taipei",
+    "utc_offset": "+08:00",
+    "dst_observed": false,
+    "github_actions_utc_cron": "30 3 * * *",
+    "automatic_trigger_authorized_in_this_round": false,
+    "current_live_workflow_has_schedule_trigger": false,
+    "passed": true
+  },
+  "eligibility_before_request": {
+    "uses_existing_deterministic_evaluator": true,
+    "require_later_asia_taipei_calendar_date": true,
+    "minimum_elapsed_milliseconds": 43200000,
+    "same_or_earlier_date_behavior": "zero_source_requests_fail_closed",
+    "elapsed_under_12h_behavior": "zero_source_requests_fail_closed",
+    "invalid_or_conflicted_behavior": "zero_source_requests_fail_closed",
+    "missing_or_evaluator_error_behavior": "zero_source_requests_fail_closed",
+    "durable_terminal_reason_required": true,
+    "evaluated_before_any_source_request": true,
+    "passed": true
+  },
+  "frozen_bounds": {
+    "stocks": ["1102", "1104", "1216"],
+    "max_listing_requests_per_stock": 1,
+    "max_detail_requests_per_stock": 1,
+    "max_requests_per_stock": 2,
+    "max_requests_per_eligible_occurrence": 6,
+    "discovery_authorized": false,
+    "broad_universe_authorized": false,
+    "passed": true
+  },
+  "source_contract": {
+    "listing_endpoint": "https://mops.twse.com.tw/mops/api/t05st01",
+    "detail_endpoint": "https://mops.twse.com.tw/mops/api/t05st01_detail",
+    "legacy_retries_authorized": 0,
+    "historical_backfill_authorized": false,
+    "wave_a_or_wave_c_authorized": false,
+    "passed": true
+  },
+  "execution_topology": {
+    "fresh_runner_matrix_required": true,
+    "max_parallel": 1,
+    "randomized_pre_request_cooldown_seconds": [20, 60],
+    "long_running_polling_loop_authorized": false,
+    "passed": true
+  },
+  "observability_and_checkpoint": {
+    "pre_request_eligibility_record_required": true,
+    "request_count_per_stock_required": true,
+    "snapshot_count_per_stock_required": true,
+    "source_endpoints_used_required": true,
+    "accepted_snapshot_paths_required": true,
+    "accepted_snapshot_ids_required": true,
+    "terminal_reason_required": true,
+    "append_only_immutable_snapshots": true,
+    "canonical_validation_required": true,
+    "historical_back_imputation_allowed": false,
+    "write_layer_cancel_in_progress": false,
+    "refetch_reapply_on_push_race": true,
+    "identical_remote_files_win": true,
+    "immutable_conflict_behavior": "fail_closed",
+    "passed": true
+  },
+  "finite_experiment_gate": {
+    "target_accepted_eligible_scheduled_occurrences": 3,
+    "counter_unit": "accepted_eligible_scheduled_occurrence",
+    "skipped_or_ineligible_cron_firings_consume_target": false,
+    "after_target_behavior": "zero_source_requests_fail_closed_pending_mandatory_closeout",
+    "closeout_required_before_extension": true,
+    "indefinite_scheduling_authorized": false,
+    "passed": true
+  },
+  "implementation_stop_semantics": {
+    "accepted_eligible_count_unprovable": "prevent_source_collection",
+    "protected_state_drift": "prevent_source_collection",
+    "trigger_duplication": "prevent_source_collection",
+    "request_budget_breach": "prevent_source_collection",
+    "source_schema_identity_ambiguity": "prevent_source_collection",
+    "checkpoint_conflict": "prevent_source_collection",
+    "tight_retry_authorized": false,
+    "scope_broadening_authorized": false,
+    "passed": true
+  },
+  "protected_state": {
+    "canonical_observation_count": 36,
+    "invalid_observation_count": 0,
+    "conflict_count": 0,
+    "outcomes_opened": false,
+    "holdouts_opened": false,
+    "protected_2454_outcome_opened": false,
+    "catalyst_outcome_association_opened": false,
+    "withdrawal_used_as_accumulation_input": false,
+    "model_strategy_or_production_behavior_enabled": false,
+    "broad_universe_enabled": false,
+    "passed": true
+  },
+  "decision": "bounded_schedule_enablement_canary_preregistered",
+  "decision_scope": {
+    "authorizes_later_separately_paired_implementation_round_only": true,
+    "enables_schedule_now": false,
+    "live_source_request_authorized_in_this_round": false,
+    "production_behavior_change_authorized": false
+  }
+}
