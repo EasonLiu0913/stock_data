@@ -34,6 +34,16 @@ function validateState(state) {
 function prepareScheduledOccurrence({ state, observations, candidateTimestamp, triggerIdentity }) {
   validateState(state);
   if (!triggerIdentity || typeof triggerIdentity !== 'string') throw new Error('trigger_identity_required');
+  const existing = state.occurrences.find(o => o.trigger_identity === triggerIdentity);
+  if (existing) {
+    return {
+      state,
+      should_collect: false,
+      terminal_reason: 'trigger_identity_already_recorded',
+      accepted_count_before: state.accepted_eligible_scheduled_occurrence_count,
+      accepted_count_after: state.accepted_eligible_scheduled_occurrence_count,
+    };
+  }
   if (state.pending_occurrence) {
     return {
       state,
@@ -133,7 +143,12 @@ function finalizeScheduledOccurrence({ state, triggerIdentity, stockResults }) {
     totalRequests += r.request_count;
     requestCountPerStock[stock] = r.request_count;
     snapshotCountPerStock[stock] = r.snapshot_count;
-    for (const e of r.source_endpoints_used || []) sourceEndpoints.add(e);
+    for (const e of r.source_endpoints_used || []) {
+      if (!['https://mops.twse.com.tw/mops/api/t05st01','https://mops.twse.com.tw/mops/api/t05st01_detail'].includes(e)) {
+        throw new Error('scheduled_canary_source_endpoint_invalid');
+      }
+      sourceEndpoints.add(e);
+    }
     acceptedPaths.push(...(r.accepted_snapshot_paths || []));
     acceptedIds.push(...(r.accepted_snapshot_ids || []));
   }
