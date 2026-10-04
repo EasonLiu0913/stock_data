@@ -26,6 +26,8 @@ function validateState(state) {
       || state.accepted_eligible_scheduled_occurrence_count < 0
       || state.accepted_eligible_scheduled_occurrence_count > TARGET) throw new Error('scheduled_canary_count_invalid');
   if (!Array.isArray(state.occurrences)) throw new Error('scheduled_canary_occurrences_invalid');
+  if (state.latest_accepted_observation_timestamp !== null
+      && Number.isNaN(Date.parse(state.latest_accepted_observation_timestamp))) throw new Error('scheduled_canary_latest_timestamp_invalid');
   if (state.closed !== false) throw new Error('scheduled_canary_state_closed');
   if (state.pending_occurrence !== null && typeof state.pending_occurrence !== 'object') throw new Error('scheduled_canary_pending_invalid');
   return true;
@@ -54,7 +56,9 @@ function prepareScheduledOccurrence({ state, observations, candidateTimestamp, t
     };
   }
   if (state.accepted_eligible_scheduled_occurrence_count >= TARGET) {
-    const evaluation = evaluateEligibility(observations, candidateTimestamp);
+    const evaluation = evaluateEligibility(observations, candidateTimestamp, {
+      latestAcceptedTimestampOverride: state.latest_accepted_observation_timestamp,
+    });
     const record = {
       trigger_identity: triggerIdentity,
       candidate_timestamp: candidateTimestamp,
@@ -78,7 +82,9 @@ function prepareScheduledOccurrence({ state, observations, candidateTimestamp, t
     };
   }
 
-  const evaluation = evaluateEligibility(observations, candidateTimestamp);
+  const evaluation = evaluateEligibility(observations, candidateTimestamp, {
+    latestAcceptedTimestampOverride: state.latest_accepted_observation_timestamp,
+  });
   const base = buildObservabilityRecord(evaluation);
   const record = {
     trigger_identity: triggerIdentity,
@@ -136,6 +142,7 @@ function finalizeScheduledOccurrence({ state, triggerIdentity, stockResults }) {
   const sourceEndpoints = new Set();
   const acceptedPaths = [];
   const acceptedIds = [];
+  let latestAcceptedMs = state.latest_accepted_observation_timestamp ? Date.parse(state.latest_accepted_observation_timestamp) : -Infinity;
   for (const stock of FROZEN_STOCKS) {
     const r = byStock[stock];
     if (!Number.isInteger(r.request_count) || r.request_count < 1 || r.request_count > 2) throw new Error('scheduled_canary_request_budget_invalid');
@@ -151,6 +158,8 @@ function finalizeScheduledOccurrence({ state, triggerIdentity, stockResults }) {
     }
     acceptedPaths.push(...(r.accepted_snapshot_paths || []));
     acceptedIds.push(...(r.accepted_snapshot_ids || []));
+    if (!r.latest_collected_at || Number.isNaN(Date.parse(r.latest_collected_at))) throw new Error('scheduled_canary_latest_collected_at_invalid');
+    latestAcceptedMs = Math.max(latestAcceptedMs, Date.parse(r.latest_collected_at));
   }
   if (totalRequests > 6) throw new Error('scheduled_canary_total_request_budget_invalid');
 
@@ -176,6 +185,7 @@ function finalizeScheduledOccurrence({ state, triggerIdentity, stockResults }) {
     ...state,
     accepted_eligible_scheduled_occurrence_count: nextCount,
     pending_occurrence: null,
+    latest_accepted_observation_timestamp: new Date(latestAcceptedMs).toISOString(),
     occurrences,
   };
 }
