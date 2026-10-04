@@ -112,12 +112,12 @@ function buildPreregistrationAudit(root) {
   const implementationPath = path.join(root, ...'data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json'.split('/'));
   const implementationAuthorized = fs.existsSync(implementationPath)
     && readJson(root, 'data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json').decision === 'bounded_schedule_enablement_canary_implemented'
-    && [...canary.matchAll(/cron:\\s*["']?30 3 \\* \\* \\*["']?/g)].length === 1
-    && !/repository_dispatch\\s*:/.test(canary)
-    && !/workflow_run\\s*:/.test(canary);
-  const triggerSafe = (!/^\\s*schedule\\s*:/m.test(canary)
-    && !/repository_dispatch\\s*:/.test(canary)
-    && !/workflow_run\\s*:/.test(canary)) || implementationAuthorized;
+    && [...canary.matchAll(/cron:\s*["']?30 3 \* \* \*["']?/g)].length === 1
+    && !/repository_dispatch\s*:/.test(canary)
+    && !/workflow_run\s*:/.test(canary);
+  const triggerSafe = (!/^\s*schedule\s*:/m.test(canary)
+    && !/repository_dispatch\s*:/.test(canary)
+    && !/workflow_run\s*:/.test(canary)) || implementationAuthorized;
   requireTrue(triggerSafe, 'automatic_scheduler_trigger_detected');
 
   const cadenceExplicit = CANDIDATE_LOCAL_TIME === '11:30' && CANDIDATE_TIMEZONE === 'Asia/Taipei';
