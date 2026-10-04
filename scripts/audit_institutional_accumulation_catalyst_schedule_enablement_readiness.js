@@ -91,9 +91,9 @@ function buildAudit(root) {
   const eEligible = evaluateEligibility(obs, '2026-10-04T11:30:00+08:00');
   const eSameDate = evaluateEligibility(obs, '2026-10-04T01:00:00+08:00');
   const shortState = JSON.parse(JSON.stringify(obs));
-  shortState.collection_time_range.last = '2026-10-03T23:45:00.000Z';
-  shortState.observations = shortState.observations.slice(0,-1).concat([{...shortState.observations.at(-1),collected_at:'2026-10-03T23:45:00.000Z'}]);
-  const eShort = evaluateEligibility(shortState, '2026-10-04T11:30:00+08:00');
+  shortState.collection_time_range.last = '2026-10-04T15:00:00.000Z';
+  shortState.observations = shortState.observations.slice(0,-1).concat([{...shortState.observations.at(-1),collected_at:'2026-10-04T15:00:00.000Z'}]);
+  const eShort = evaluateEligibility(shortState, '2026-10-05T00:30:00+08:00');
   const badState = JSON.parse(JSON.stringify(obs)); badState.conflict_count = 1;
   const eBad = evaluateEligibility(badState, '2026-10-05T11:30:00+08:00');
 
