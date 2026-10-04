@@ -1877,7 +1877,7 @@ Closeout interpretation:
 `institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -1926,6 +1926,95 @@ Mandatory invariants:
 
 Stop with Prompt A complete — ready for Prompt B. Do not execute the first live scheduled occurrence manually and do not execute Prompt B automatically.
 ```
+
+## Prompt A implementation and evidence — bounded schedule-enablement canary implementation
+
+Round:
+`institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1`
+
+Pre-Prompt-A durable baseline:
+- `f5f6db8d172d49aaee06a003dc1bdd448ed0fda2`
+
+Implementation summary:
+- added exactly one automatic schedule to `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`: UTC cron `30 3 * * *` = 11:30 Asia/Taipei;
+- retained the frozen 1102/1104/1216 matrix, `max-parallel:1`, <=2 requests per stock / <=6 per eligible occurrence, official APIs only, 20–60 second pacing, append-only immutable PIT, and non-canceling race-safe checkpoint behavior;
+- added a schedule-only `schedule_gate` that durably checkpoints eligibility state **before** any collector job may run;
+- scheduled canary matrix runs only when `needs.schedule_gate.outputs.collect == 'true'`;
+- same/earlier Taipei date, <12h, invalid/conflicted canonical state, duplicate trigger identity, unresolved pending occurrence, or target already reached all fail closed with zero source requests;
+- no `repository_dispatch` or `workflow_run` trigger was added;
+- implementation commits did not dispatch or manually trigger the live canary.
+
+Durable finite state:
+- path: `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json`
+- blob: `e2691fba78016b6b0a10a30f5c94c8629f18ff05`
+- target accepted eligible scheduled occurrences: `3`
+- accepted count: `0`
+- pending occurrence: `null`
+- occurrence history: empty
+- latest accepted scheduled observation timestamp: `null`
+- skipped/ineligible firings do not consume the target.
+- finalized scheduled occurrences advance a durable latest accepted timestamp from actual accepted snapshot metadata, allowing the existing deterministic evaluator to use a later durable observation without reopening the closed 36-observation research artifacts.
+
+Scheduled occurrence observability:
+- each scheduled stock job writes a durable per-stock result under `data_research/institutional-flow/scheduled-catalyst-canary-observability/<run_id>/<stock>.json`;
+- records trigger identity, request/snapshot counts, official endpoints used, accepted snapshot paths/IDs, and latest collected timestamp;
+- finalize requires all three frozen stock results, validates request caps and official endpoints, increments the accepted count exactly once, clears the pending occurrence, and records terminal state;
+- duplicate trigger identity and pending ambiguity fail closed;
+- after target 3 is reached, later scheduled firings are zero-request fail-closed pending mandatory closeout.
+
+New implementation entry points:
+- `scripts/manage_institutional_accumulation_catalyst_scheduled_canary_state.js`
+- `tests/institutional_accumulation_catalyst_scheduled_canary_state.test.js`
+- `scripts/audit_institutional_accumulation_catalyst_bounded_schedule_enablement_canary_implementation.js`
+- `tests/institutional_accumulation_catalyst_bounded_schedule_enablement_canary_implementation.test.js`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json`
+
+Implementation artifact:
+- blob `44d2fd328f59d9f6671ff30ffbe503cc145650e0`
+- decision `bounded_schedule_enablement_canary_implemented`
+- `validation_network_used=false`
+- first live occurrence must be a natural schedule;
+- manual dispatch for validation is unauthorized;
+- widening scope is unauthorized.
+
+Closed-auditor lifecycle compatibility:
+- the already-closed scheduler-readiness / bounded-preregistration auditors were minimally adjusted so they continue regenerating their historical artifacts byte-identically after the separately authorized implementation exists;
+- they allow the current schedule only when the implementation artifact exists with decision `bounded_schedule_enablement_canary_implemented`, the current workflow has exactly one `30 3 * * *` cron, and no repository_dispatch/workflow_run trigger;
+- historical artifacts themselves remain byte-identical and still describe the earlier rounds as non-enabled at those earlier phase boundaries.
+
+Final zero-network Node24 gate:
+- workflow run `37194406612`;
+- regression job `111413154663`;
+- tested SHA `48ea781823f9e015f6803c9def3cdac62726f7b7`;
+- SUCCESS;
+- scheduled state regression: 8 tests / 8 pass / 0 fail;
+- implementation regression: 4 tests / 4 pass / 0 fail;
+- all preceding catalyst readiness/preregistration regressions passed;
+- observation/delta/cross-day/fourth/fifth/sixth/sufficiency/scheduler-readiness/bounded-preregistration/schedule-enablement-readiness/preregistration artifacts all regenerated byte-identically;
+- `bounded scheduled-canary initial state byte-match: PASS`;
+- `bounded schedule-enablement implementation audit byte-match: PASS`;
+- `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS`.
+
+Implementation workflow identity:
+- current live canary workflow blob: `568983c12b3f596f078eef2291c32032e0a57728`;
+- implementation validation observed **no** run of `[研究] Institutional Accumulation Prospective Catalyst Canary` after the implementation commits;
+- therefore no MOPS/source request was caused by implementation/push validation.
+
+Concurrent / unrelated changes:
+- baseline `f5f6db8d...` -> final tested SHA includes concurrent `data_market_news/20261004/market_news.json`, `data_market_news/manifest.json`, `data_market_risk/20261004/market_risk_snapshot.json`, and `data_market_risk/manifest.json` updates; these are classified unrelated data-only changes and do not affect this round's routing, implementation, protected research state, or test evidence.
+- repository-wide `Ensure Workflow Schedule Summary` still reports the pre-existing `.github/workflows/checkpoint-institutional-accumulation-sixth-window.yml` normalization defect. The newly scheduled canary workflow itself was normalized and is no longer reported by that audit. The pre-existing checkpoint workflow was not modified because it is outside this round's authorized scope.
+- no protected outcomes/holdouts/2454/association/Withdrawal/model/strategy/production/broad-universe state was opened.
+
+Prompt A limitation:
+- the schedule is now enabled, but **no natural scheduled occurrence has happened yet**;
+- this round proves only the zero-network implementation/control plane, not live scheduled execution;
+- the first live occurrence must come from the natural `30 3 * * *` schedule and remain subject to the durable gate;
+- no manual live canary dispatch is authorized for validation;
+- Prompt B below remains the preregistered closeout contract and is pending.
+
+Prompt A completion boundary reached.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Prompt B — bounded schedule-enablement canary implementation closeout
 
