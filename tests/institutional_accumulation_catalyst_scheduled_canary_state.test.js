@@ -21,6 +21,7 @@ function makeState(overrides = {}) {
     target_accepted_eligible_scheduled_occurrences: 3,
     accepted_eligible_scheduled_occurrence_count: 0,
     pending_occurrence: null,
+    latest_accepted_observation_timestamp: null,
     occurrences: [],
     closed: false,
     ...overrides,
@@ -112,6 +113,7 @@ test('finalize requires all three stocks and increments once', () => {
     ],
     accepted_snapshot_paths: [`p/${stock}/a`, `p/${stock}/b`],
     accepted_snapshot_ids: [`${stock}a`, `${stock}b`],
+    latest_collected_at: '2026-10-05T03:35:00.000Z',
   }));
   const next = finalizeScheduledOccurrence({
     state: prepared,
@@ -120,6 +122,39 @@ test('finalize requires all three stocks and increments once', () => {
   });
   assert.equal(next.accepted_eligible_scheduled_occurrence_count, 1);
   assert.equal(next.pending_occurrence, null);
+  assert.equal(next.latest_accepted_observation_timestamp, '2026-10-05T03:35:00.000Z');
   assert.equal(next.occurrences.at(-1).status, 'accepted');
   assert.deepEqual(next.occurrences.at(-1).request_count_per_stock, {1102: 2, 1104: 2, 1216: 2});
+});
+
+
+test('duplicate trigger identity fails closed without consuming another occurrence', () => {
+  const base = makeState({
+    occurrences: [{
+      trigger_identity: 'schedule:dup:1',
+      status: 'skipped',
+      terminal_reason: 'ineligible_same_or_earlier_taipei_date',
+    }],
+  });
+  const r = prepareScheduledOccurrence({
+    state: base,
+    observations,
+    candidateTimestamp: '2026-10-06T03:30:00.000Z',
+    triggerIdentity: 'schedule:dup:1',
+  });
+  assert.equal(r.should_collect, false);
+  assert.equal(r.terminal_reason, 'trigger_identity_already_recorded');
+  assert.equal(r.state.occurrences.length, 1);
+});
+
+test('durable scheduled latest timestamp controls subsequent eligibility', () => {
+  const r = prepareScheduledOccurrence({
+    state: makeState({latest_accepted_observation_timestamp: '2026-10-05T03:35:00.000Z'}),
+    observations,
+    candidateTimestamp: '2026-10-05T15:00:00.000Z',
+    triggerIdentity: 'schedule:latest:1',
+  });
+  assert.equal(r.should_collect, false);
+  assert.equal(r.state.occurrences.at(-1).eligibility.result, 'ineligible_same_or_earlier_taipei_date');
+  assert.equal(r.state.occurrences.at(-1).eligibility.latest_accepted_timestamp, '2026-10-05T03:35:00.000Z');
 });
