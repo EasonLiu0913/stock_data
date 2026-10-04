@@ -141,6 +141,8 @@ jobs:
           cp data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json /tmp/bounded-scheduled-canary-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json /tmp/schedule-enablement-readiness-before.json
           cp data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1.json /tmp/bounded-schedule-enablement-preregistration-before.json
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json /tmp/bounded-scheduled-canary-state-before.json
+          cp data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json /tmp/bounded-schedule-implementation-before.json
 
           node --test tests/institutional_accumulation_catalyst_artifact_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_pit_provenance.test.js
@@ -159,6 +161,8 @@ jobs:
           node --test tests/institutional_accumulation_catalyst_scheduled_canary_eligibility.test.js
           node --test tests/institutional_accumulation_catalyst_schedule_enablement_readiness.test.js
           node --test tests/institutional_accumulation_catalyst_bounded_schedule_enablement_canary_preregistration.test.js
+          node --test tests/institutional_accumulation_catalyst_scheduled_canary_state.test.js
+          node --test tests/institutional_accumulation_catalyst_bounded_schedule_enablement_canary_implementation.test.js
 
           node scripts/audit_institutional_accumulation_catalyst_prospective_observations.js --write
           cmp -s /tmp/observation-before.json data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json
