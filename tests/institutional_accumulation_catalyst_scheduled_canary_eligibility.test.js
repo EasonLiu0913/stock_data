@@ -14,7 +14,7 @@ test('canonical observation state is accepted', () => {
 });
 
 test('later Taipei date and >=12h is eligible', () => {
-  const r = evaluateEligibility(canonical, '2026-10-04T11:30:00+08:00');
+  const r = evaluateEligibility(canonical, '2026-10-05T11:30:00+08:00');
   assert.equal(r.result, ELIGIBLE);
   assert.equal(r.source_requests_authorized, 6);
   assert.ok(r.elapsed_milliseconds >= 43200000);
@@ -44,7 +44,7 @@ test('invalid/conflicted state fails closed', () => {
 });
 
 test('observability record is deterministic and zero-count before execution', () => {
-  const e = evaluateEligibility(canonical, '2026-10-04T11:30:00+08:00');
+  const e = evaluateEligibility(canonical, '2026-10-05T11:30:00+08:00');
   const a = buildObservabilityRecord(e);
   const b = buildObservabilityRecord(e);
   assert.deepEqual(a,b);
