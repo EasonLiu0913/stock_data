@@ -40,7 +40,7 @@ function validateCanonicalObservationState(state) {
   return true;
 }
 
-function evaluateEligibility(state, candidateTimestamp) {
+function evaluateEligibility(state, candidateTimestamp, options = {}) {
   if (!validateCanonicalObservationState(state)) {
     return {
       result: INVALID,
@@ -54,7 +54,20 @@ function evaluateEligibility(state, candidateTimestamp) {
   }
 
   const candidateMs = Date.parse(candidateTimestamp);
-  const latest = state.collection_time_range.last;
+  const canonicalLatest = state.collection_time_range.last;
+  const override = options.latestAcceptedTimestampOverride ?? null;
+  if (override !== null && (Number.isNaN(Date.parse(override)) || Date.parse(override) < Date.parse(canonicalLatest))) {
+    return {
+      result: INVALID,
+      source_requests_authorized: 0,
+      latest_accepted_timestamp: canonicalLatest,
+      candidate_timestamp: candidateTimestamp ?? null,
+      latest_asia_taipei_date: taipeiDate(canonicalLatest),
+      candidate_asia_taipei_date: taipeiDate(candidateTimestamp),
+      elapsed_milliseconds: null,
+    };
+  }
+  const latest = override || canonicalLatest;
   const latestMs = Date.parse(latest);
   const latestDate = taipeiDate(latest);
   const candidateDate = taipeiDate(candidateTimestamp);
