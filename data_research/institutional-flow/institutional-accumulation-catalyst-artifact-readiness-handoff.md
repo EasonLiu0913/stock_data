@@ -1684,7 +1684,7 @@ Closeout interpretation:
 `institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -1745,6 +1745,83 @@ Implement only the minimum deterministic preregistration artifact, auditor, regr
 
 Stop with Prompt A complete — ready for Prompt B.
 ```
+
+## Prompt A implementation and evidence — bounded schedule-enablement canary preregistration
+
+Round:
+`institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1`
+
+Pre-Prompt-A durable baseline:
+- `fcfcb7cb873434ce47eeaf4cce893946e84b7e32`
+
+Authorized zero-network changes:
+- `4b2011cb383eac546af4598f2de14099386ad8fd` — added deterministic preregistration artifact.
+- `ae488ce9033de49dcd46d08171ac505f9d16cea0` — added deterministic preregistration auditor.
+- `b6294a1df2d3f57ed6d01b79b076055e709ee6b5` — added bounded regression test.
+- `8fc206783ac897b99db4beda67d62b8a2cc7ff67` — wired the new artifact/auditor/test into the existing read-only Node24 readiness workflow only.
+- `e1911fd7fbacbcb1e40cb471066e18d3a4d8fc9a` — normalized artifact JSON formatting to the canonical deterministic serializer after the first gate exposed a byte-only formatting mismatch.
+
+Deterministic preregistration artifact:
+- path: `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1.json`
+- blob: `1e5f59b6597af3c783893438f96de011c093c44c`
+- decision: `bounded_schedule_enablement_canary_preregistered`
+- network collection used: false
+- live canary triggered: false
+- schedule enabled: false
+- exact future candidate contract: `11:30 Asia/Taipei` = GitHub Actions UTC cron `30 3 * * *`
+- timezone contract records UTC+08:00 and no DST for this bounded contract.
+- current live canary workflow still has no `on.schedule`, `repository_dispatch`, or `workflow_run`.
+
+Frozen safety contract:
+- eligibility runs before any source request using the existing deterministic evaluator;
+- later Asia/Taipei calendar date and >= `43200000` ms are both mandatory;
+- same/earlier date, <12h, invalid/conflicted, missing, or evaluator-error state is zero-request fail-closed with a durable terminal reason;
+- universe remains exactly 1102/1104/1216;
+- request budget remains <=2 per stock / <=6 per eligible occurrence;
+- official `t05st01` / `t05st01_detail` only; zero legacy retries; no historical backfill or Wave A/Wave C;
+- topology remains fresh-runner matrix, `max-parallel: 1`, randomized 20–60 second pacing, no long-running polling loop;
+- append-only immutable PIT, canonical validation, non-canceling write layer, refetch/reapply after push race, identical remote wins, immutable conflict fail-closed remain required;
+- finite target is exactly 3 **accepted eligible scheduled occurrences**; skipped/ineligible cron firings do not consume the target;
+- after the third accepted eligible scheduled occurrence, further automatic source collection must fail closed pending mandatory closeout;
+- count ambiguity, protected-state drift, trigger duplication, request-budget breach, source/schema/identity ambiguity, or checkpoint conflict prevents collection;
+- outcomes/holdouts/protected-2454/association/Withdrawal/model/strategy/production/broad-universe state remains unopened.
+
+Read-only Node24 validation:
+- first run `37193251833`, job `111409691589`, tested SHA `8fc206783ac897b99db4beda67d62b8a2cc7ff67`: FAILED only because the committed JSON used semantically identical compact arrays while the deterministic serializer expands arrays. All preceding/new semantic tests passed; no live source behavior occurred.
+- bounded formatting-only repair: `e1911fd7fbacbcb1e40cb471066e18d3a4d8fc9a`.
+- final run `37193287375`, regression job `111409799543`, tested SHA `e1911fd7fbacbcb1e40cb471066e18d3a4d8fc9a`: SUCCESS.
+- new preregistration regression: 4 tests / 4 pass / 0 fail.
+- all prior relevant accumulation catalyst readiness regressions passed.
+- `observation audit byte-match: PASS`
+- `closed two-window delta byte-match: PASS`
+- `cross-day audit byte-match: PASS`
+- fourth/fifth/sixth longitudinal byte-match: PASS
+- `six-window sufficiency audit byte-match: PASS`
+- `scheduler-readiness audit byte-match: PASS`
+- `bounded scheduled-canary preregistration audit byte-match: PASS`
+- `schedule enablement-readiness audit byte-match: PASS`
+- `bounded schedule-enablement canary preregistration audit byte-match: PASS`
+- `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS`
+
+Bounded diff:
+- baseline `fcfcb7cb873434ce47eeaf4cce893946e84b7e32` -> tested SHA `e1911fd7fbacbcb1e40cb471066e18d3a4d8fc9a` changes exactly four authorized paths:
+  - preregistration artifact;
+  - preregistration auditor;
+  - preregistration regression test;
+  - existing read-only readiness workflow.
+- live canary workflow blob remains `29a926e47bfb5941713e6a70fd0ce7608ee3673c` and contains no automatic schedule/repository_dispatch/workflow_run trigger.
+- no raw prospective snapshot, collector, routing, protected outcome/holdout/2454/association/Withdrawal/model/strategy/production/broad-universe path changed.
+
+Prompt A limitation:
+- this round preregisters the exact later bounded schedule-enablement canary contract only;
+- no automatic schedule is enabled;
+- no MOPS/source request ran;
+- decision `bounded_schedule_enablement_canary_preregistered` authorizes only a later separately paired implementation round after this round's Prompt B PASS;
+- Prompt B below remains the exact preregistered closeout contract and is still pending.
+
+Prompt A completion boundary reached.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Prompt B — bounded schedule-enablement canary preregistration closeout
 
