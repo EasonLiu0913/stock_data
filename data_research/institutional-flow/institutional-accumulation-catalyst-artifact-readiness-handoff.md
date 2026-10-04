@@ -1217,5 +1217,116 @@ Fix only bounded defects and restart verification if needed. On PASS, update/com
 ```
 
 
+## Prompt B independent closeout verification — scheduler-readiness preregistration
 
+Round:
+`institutional-accumulation-catalyst-prospective-scheduler-readiness-preregistration-v1`
 
+The exact Prompt B above was recovered from durable pre-Prompt-A state at
+`be89923edf8542713e3ab18b127501e72bdf1ab6`.
+
+Independent verification:
+1. Current routing has exactly one active task, `institutional-accumulation`, and it still points to this canonical handoff — PASS.
+2. The six-window sufficiency round has durable `Prompt B closeout: PASS` evidence and its artifact remains blob `1a84a4edb38a73fc687428fd29f7fbc8dfb474cb` with decision `scheduler_readiness_preregistration_justified` — PASS.
+3. Prompt A implementation commit `d2c6640a36f69a583903c5edbe277c3388ad6654` is exactly one commit ahead of baseline `be89923edf8542713e3ab18b127501e72bdf1ab6` and changes exactly four authorized files:
+   - `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`;
+   - `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-scheduler-readiness-v1.json`;
+   - `scripts/audit_institutional_accumulation_catalyst_prospective_scheduler_readiness.js`;
+   - `tests/institutional_accumulation_catalyst_prospective_scheduler_readiness.test.js`.
+   No raw prospective snapshot, collector, live canary workflow, protected research artifact, strategy/model/production path, or enabled production trigger changed — PASS.
+4. The scheduler-readiness artifact remains blob `983e87c2b32525b523aed3f312855f83f53a1285` and explicitly records `network_collection_used=false`, `production_trigger_enabled=false`, `scheduler_authorized=false`, and `scheduler_enabled=false` — PASS.
+5. Frozen universe is exactly `1102/1104/1216`; discovery and broad-universe use are false — PASS.
+6. Future occurrence request budget is bounded to at most one listing plus one verified detail per stock, two requests per stock and six total per occurrence — PASS.
+7. Existing canary topology remains independent matrix runners with `max-parallel: 1`; writer concurrency remains `cancel-in-progress: false`; randomized pre-request pacing remains 20–60 seconds — PASS.
+8. Source contract remains only official `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail`; legacy retries are zero; historical range/backfill and Wave A/Wave C remain unauthorized — PASS.
+9. PIT/write safety remains append-only and immutable with canonical validation, `historical_back_imputation_allowed=false`, race-safe refetch/reapply behavior, and fail-closed immutable conflicts — PASS.
+10. Future recurrence guard is preregistered only: derive latest accepted timestamp from canonical validated prospective observations, require a later Asia/Taipei calendar date and at least `43200000` ms elapsed, and make zero source requests when ineligible. No enabled scheduler was added in this round — PASS.
+11. Ambiguous source/schema/company/detail identity failures remain fail-closed; tight retry and scope broadening are unauthorized — PASS.
+12. No `on.schedule`, cron, `repository_dispatch`, or `workflow_run` scheduler chaining was added to the prospective canary path — PASS.
+13. Protected Phase 2/outcome/holdout/protected-2454/association/Withdrawal/model/strategy/production/broad-universe state remained unopened. Comparison from tested SHA to closeout-start main contains only this handoff plus unrelated CNN Fear & Greed / market-news / market-risk data updates — PASS.
+14. Final Node24 read-only gate run `37150053026`, regression job `111281819612`, tested SHA `d2c6640a36f69a583903c5edbe277c3388ad6654` completed SUCCESS. Logs show zero failures, `six-window sufficiency audit byte-match: PASS`, `scheduler-readiness audit byte-match: PASS`, and `durable/regenerated PIT semantics + bounded longitudinal assertions: PASS` — PASS.
+15. Deterministic decision is exactly `bounded_scheduled_canary_preregistration_justified`, one of the preregistered enum values. Its scope authorizes only a future paired bounded scheduled-canary experiment preregistration; it does not authorize enabling a schedule, making a live request in this round, or changing production behavior — PASS.
+
+Closeout interpretation:
+- operational evidence is sufficient to define a bounded scheduled-canary experiment contract;
+- scheduler enablement is still **not authorized**;
+- the next round must remain zero-network/non-production and preregister the experiment before any later round may consider enabling a schedule.
+
+**Prompt B closeout: PASS**
+
+## Current active round
+
+`institutional-accumulation-catalyst-prospective-bounded-scheduled-canary-preregistration-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+## Next round objective — bounded scheduled-canary preregistration
+
+Preregister one exact bounded scheduled-canary experiment for the already-frozen 1102/1104/1216 prospective path. This round is still zero-network and non-production: it may define the candidate cadence, eligibility guard, request budget, job topology, failure semantics, checkpoint behavior, observability, abort criteria, and later enablement gate, but it must not add or enable `on.schedule`, cron, `repository_dispatch`, `workflow_run`, or any other automatic production trigger.
+
+Exact existing entry points:
+- `data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-scheduler-readiness-v1.json`
+- `scripts/audit_institutional_accumulation_catalyst_prospective_scheduler_readiness.js`
+- `tests/institutional_accumulation_catalyst_prospective_scheduler_readiness.test.js`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-pit-capture-contract-v1.json`
+- `data_research/institutional-flow/institutional-accumulation-catalyst-prospective-observation-audit-v1.json`
+- `scripts/collect_institutional_accumulation_catalyst_prospective_canary.js`
+- `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
+- `.github/workflows/checkpoint-institutional-accumulation-sixth-window.yml`
+- `.github/workflows/test-institutional-accumulation-catalyst-readiness.yml`
+- `docs/agent-prompts/task-routing.json`
+
+Proposed new deterministic entry points:
+- `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json`
+- `scripts/audit_institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.js`
+- `tests/institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration.test.js`
+
+## Prompt A — bounded scheduled-canary preregistration
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning project only if docs/agent-prompts/task-routing.json still has exactly one active task, institutional-accumulation, routed to data_research/institutional-flow/institutional-accumulation-catalyst-artifact-readiness-handoff.md, and round institutional-accumulation-catalyst-prospective-bounded-scheduled-canary-preregistration-v1 remains Prompt A NOT STARTED / ACTIVE.
+
+Before work: fetch current remote main; read AGENTS.md, docs/project-philosophy.md, docs/roadmap/current-phase.md, routing, this canonical handoff, the scheduler-readiness artifact/auditor/test, the prospective PIT capture contract, observation audit, collector, live canary workflow, checkpoint workflow, and read-only readiness workflow. Recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history and classify concurrent changes.
+
+This round is zero-network and non-production. Do not call MOPS, do not trigger the live canary, do not add or enable on.schedule/cron/repository_dispatch/workflow_run, do not expand beyond 1102/1104/1216, and do not open protected outcomes/holdouts/2454/association/Withdrawal/model/strategy/production state.
+
+Objective: create one deterministic preregistration artifact for a future bounded scheduled-canary experiment. The preregistration must specify and machine-check at minimum:
+1. upstream gate: scheduler-readiness artifact blob remains 983e87c2b32525b523aed3f312855f83f53a1285 and decision remains bounded_scheduled_canary_preregistration_justified;
+2. frozen universe: exactly 1102/1104/1216, no discovery or broad universe;
+3. candidate recurrence contract: one explicitly documented candidate cadence/time window only, without enabling it;
+4. eligibility guard before any future source request: canonical latest accepted observation, later Asia/Taipei calendar date, >=12 elapsed hours, and zero-request fail-closed behavior when ineligible;
+5. request budget: <=2 requests per stock and <=6 per eligible occurrence;
+6. source contract: official POST /mops/api/t05st01 plus verified POST /mops/api/t05st01_detail only, zero legacy retries, no historical range/backfill/Wave A/Wave C;
+7. execution topology: independent fresh-runner matrix, max-parallel:1, no long-running loop substitute, randomized 20-60s pre-request cooldown;
+8. write safety: append-only immutable snapshots, canonical validation, historical_back_imputation_allowed=false, cancel-in-progress:false, refetch/reapply on push race, remote identical files win, conflict fails closed;
+9. failure/abort semantics: source/schema/identity ambiguity, eligibility uncertainty, unexpected request count, snapshot conflict, or protected-state drift aborts the occurrence with no scope broadening or tight retry;
+10. observability: future occurrence must durably record eligibility inputs/result, request/snapshot counts per stock, source endpoints used, accepted snapshot paths/IDs, and terminal reason when skipped/failed;
+11. experiment boundary: define a finite initial scheduled-canary observation target or explicit later closeout gate; do not authorize indefinite production scheduling;
+12. separation: preregistration is not schedule enablement, catalyst significance, predictive usefulness, broad-universe rollout, model/strategy promotion, or production behavior.
+
+Decision enum for this preregistration audit:
+- bounded_scheduled_canary_experiment_preregistered
+- preregistration_incomplete
+- insufficient_or_conflicted_evidence
+
+If and only if every invariant is explicit and current protected evidence remains intact, produce bounded_scheduled_canary_experiment_preregistered. That decision authorizes only a later separately paired implementation/enablement review; it must not itself enable or trigger scheduling.
+
+Implement only the minimum deterministic preregistration artifact, auditor, regression test, and read-only validation needed. Preserve all existing frozen artifacts byte-identically. Final preregistration artifact must regenerate byte-identically under Node24. Update this handoff with exact tested SHA/run/job/blob evidence and preserve the Prompt B below unchanged.
+
+Stop with Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — bounded scheduled-canary preregistration closeout
+
+```text
+Perform mandatory closeout for institutional-accumulation-catalyst-prospective-bounded-scheduled-canary-preregistration-v1 only after its Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify: sole active routing still points to this handoff; scheduler-readiness round has durable Prompt B PASS; this round made zero source requests, triggered no live canary, and added/enabled no schedule/cron/repository_dispatch/workflow_run trigger; upstream scheduler-readiness artifact remains byte-identical at blob 983e87c2b32525b523aed3f312855f83f53a1285; preregistration freezes only 1102/1104/1216 and defines exactly one candidate recurrence contract without enabling it; future eligibility is derived from canonical latest accepted observation and requires later Asia/Taipei date plus >=12h with zero-request fail-closed skip; request budget remains <=2 per stock / <=6 per eligible occurrence; only official t05st01/t05st01_detail APIs are admitted with zero legacy retries and no historical backfill/Wave A/Wave C; fresh-runner max-parallel1 topology, 20-60s pacing, append-only PIT validation, non-canceling race-safe checkpoint semantics and fail-closed conflicts remain explicit; failure/abort semantics prevent tight retry or scope broadening; observability and a finite initial experiment boundary are explicitly preregistered; protected outcomes/holdouts/2454/association/Withdrawal/model/strategy/production/broad-universe state remains unopened; deterministic decision is one preregistered enum and bounded_scheduled_canary_experiment_preregistered authorizes only a later separately paired implementation/enablement review, not schedule enablement; final Node24 read-only gate passes at recorded tested SHA and preregistration artifact regenerates byte-identically; bounded diff contains only authorized preregistration auditor/test/artifact/read-only workflow/handoff changes plus classified unrelated concurrent changes and no protected trigger.
+
+Fix only bounded defects and restart verification if needed. On PASS, update/commit the handoff and promote only the next round justified by the preregistration decision. Do not execute it. End Prompt B closeout: PASS and stop.
+```
