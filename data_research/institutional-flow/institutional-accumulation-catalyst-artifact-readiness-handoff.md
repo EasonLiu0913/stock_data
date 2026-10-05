@@ -2230,6 +2230,27 @@ Closeout interpretation:
 
 **Prompt B closeout: PASS**
 
+## Owner-authorized schedule amendment — second natural occurrence round
+
+Reason:
+- the first natural scheduled run was configured for 2026-10-05 11:30 Asia/Taipei but actually began at 18:40:46, about 430 minutes late;
+- the owner explicitly authorized adjusting the automatic schedule to reduce exposure to crowded scheduler minutes.
+
+Durable change:
+- workflow: `.github/workflows/collect-institutional-accumulation-catalyst-prospective-canary.yml`
+- previous cron: `30 3 * * *` = 11:30 Asia/Taipei
+- revised cron: `17 4 * * *` = 12:17 Asia/Taipei
+- workflow commit: `f563723b6379bc2aa009c626318bbcaf0f6acf24`
+- workflow blob after change: `e9db9804eb792d014cde46d8a6fb1cf3a87a7703`
+
+Interpretation:
+- this amendment occurred before any second natural scheduled occurrence existed;
+- accepted experiment state remains exactly `1/3`;
+- no source request, manual dispatch, rerun, universe widening, outcome opening, or strategy/model change was performed;
+- the second-natural-occurrence round remains the active round, but its preregistered schedule identity is now the revised `17 4 * * *` cron;
+- historical first-occurrence evidence remains tied to the original `30 3 * * *` schedule and is not rewritten;
+- future verification must accept only a natural `schedule` event after this amendment and must not treat a manual dispatch/rerun as schedule evidence.
+
 ## Current active round
 
 `institutional-accumulation-catalyst-bounded-scheduled-canary-second-natural-occurrence-observation-v1`
@@ -2242,7 +2263,7 @@ Promotion does not execute Prompt A automatically.
 
 ## Next round objective — second natural scheduled occurrence observation
 
-Observe and verify only the next natural `30 3 * * *` scheduled firing after accepted occurrence `schedule:37298104341:1`. Do not manually dispatch or rerun the live canary, do not alter the cron, do not widen beyond 1102/1104/1216, and do not open outcomes/strategy state.
+Observe and verify only the next natural `17 4 * * *` scheduled firing after accepted occurrence `schedule:37298104341:1`. Do not manually dispatch or rerun the live canary, do not alter the cron, do not widen beyond 1102/1104/1216, and do not open outcomes/strategy state.
 
 ### Prompt A — second natural scheduled occurrence observation
 
