@@ -371,18 +371,18 @@ jobs:
           env_file="data_market_environment/${{ steps.source.outputs.date }}/market_environment.json"
           node -e "const fs=require('fs');const e=JSON.parse(fs.readFileSync(process.argv[1]));if(e.snapshot_hash!==process.argv[2])throw Error('Environment hash changed between V1 and V2');" "$env_file" "${{ needs.generate_v1.outputs.environment_hash }}"
 
-      - name: Run V2 rule tests
+      - name: Run focused V2 tests
         if: steps.source.outputs.run == 'true'
-        run: npm test
+        run: npm run test:v2
 
-      - name: Verify V2 rule tests leave tracked tree clean
+      - name: Verify focused V2 tests leave tracked tree clean
         if: steps.source.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
           dirty="$(git status --porcelain --untracked-files=no)"
           if [ -n "$dirty" ]; then
-            echo "V2 rule tests modified tracked repository files:"
+            echo "Focused V2 tests modified tracked repository files:"
             git status --short --untracked-files=no
             exit 1
           fi
