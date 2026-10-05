@@ -2073,7 +2073,7 @@ Closeout interpretation:
 `institutional-accumulation-catalyst-bounded-scheduled-canary-first-natural-occurrence-observation-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE — WAITING FOR NATURAL SCHEDULE EVIDENCE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -2126,6 +2126,70 @@ If the first natural firing is a valid zero-request skip, Prompt A may complete 
 
 Stop with Prompt A complete — ready for Prompt B only after one natural firing has been durably verified.
 ```
+
+## Prompt A execution evidence — first natural scheduled occurrence observation
+
+The first natural scheduled firing after implementation closeout was durably observed and verified without any manual dispatch or rerun.
+
+Live workflow identity:
+- workflow: `[研究] Institutional Accumulation Prospective Catalyst Canary`
+- run: `37298104341`
+- event: `schedule`
+- run attempt: `1`
+- initial tested/head SHA: `fc926c23ddc9d7b9592eb1a1e7d668524f12060e`
+- created: `2026-10-05T10:40:46Z`
+- completed: SUCCESS at `2026-10-05T10:47:03Z`
+- no manual dispatch or rerun was used.
+
+Pre-request schedule gate:
+- job `111724075894` — SUCCESS.
+- Node `v24.21.0`.
+- durable trigger identity: `schedule:37298104341:1`.
+- candidate timestamp: `2026-10-05T10:40:55.000Z`.
+- eligibility result: `eligible`.
+- accepted count before: `0`.
+- latest previously accepted observation timestamp: `2026-10-03T19:36:28.226Z`.
+- Asia/Taipei date advanced from `2026-10-04` to `2026-10-05`.
+- elapsed time: `140666774` ms, above the frozen 12-hour minimum.
+- schedule gate checkpoint commit: `30e81314` (`research: checkpoint scheduled catalyst preflight`).
+- source jobs were gated behind the successful durable preflight.
+
+Frozen live jobs:
+- 1102 job `111724158139` — SUCCESS; 2 requests / 2 snapshots; checkpoint commit `3287c269`.
+- 1104 job `111724158228` — SUCCESS; 2 requests / 2 snapshots.
+- 1216 job `111724158077` — SUCCESS; 2 requests / 2 snapshots; final stock checkpoint before finalize was `afe5a962`.
+- total repository-controlled source requests: exactly `6`.
+- total accepted snapshots: exactly `6`.
+- only official `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail` endpoints are recorded.
+- per-request pacing remained collector-enforced randomized 20–60 seconds.
+- execution remained the frozen three-stock matrix with `max-parallel: 1`.
+- no legacy ajax retry, historical backfill, Wave A/Wave C refetch/rewrite, universe widening, or outcome/model/strategy opening occurred.
+
+Durable scheduled observability:
+- directory: `data_research/institutional-flow/scheduled-catalyst-canary-observability/37298104341/`
+- exact files: `1102.json`, `1104.json`, `1216.json`.
+- each stock observability file is durable on remote main and records 2 requests / 2 snapshots plus accepted paths/IDs and official endpoint identities.
+- immutable snapshot paths recorded in scheduled state match the six durable files under `official-disclosure-raw/prospective-catalyst-pit/`.
+
+Finalize:
+- job `111726146501` — SUCCESS.
+- Node `v24.21.0`.
+- finalize checkpoint commit: `4af663de` (`research: finalize scheduled catalyst occurrence`).
+- accepted eligible scheduled occurrence count advanced exactly once from `0` to `1` of target `3`.
+- `pending_occurrence` is `null`.
+- terminal status/reason is `accepted`.
+- latest accepted scheduled observation timestamp is `2026-10-05T10:46:45.343Z`, matching the latest durable accepted snapshot timestamp.
+
+Minimum zero-network / read-only validation after capture:
+- each stock job's `Verify durable remote prospective snapshots` step re-fetched remote main and validated the durable snapshot contract, methodology identity, `pit_known_at == collected_at`, SHA identities, and `historical_back_imputation_allowed=false` without issuing an additional source request.
+- protected canonical research observation audit remains blob `cf58c2f469507d7d10e15ec259e1e1e6f02ce848`, still exactly 36 valid / 0 invalid / 0 conflict and remains separate from the scheduled observation layer.
+- historical PIT artifact remains blob `7ccafbe36206770d93f454feefdca81a082d4cd0`, still 33 / 0 / 33 / 0 manual review, network false and outcome-blind.
+- schedule-enablement implementation artifact remains blob `44d2fd328f59d9f6671ff30ffbe503cc145650e0`.
+- therefore the first natural scheduled occurrence is a fully accepted eligible occurrence with durable count exactly `1/3`; this round does not wait for occurrence 2 or 3.
+
+Prompt A completion boundary reached.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Prompt B — first natural scheduled occurrence observation closeout
 
