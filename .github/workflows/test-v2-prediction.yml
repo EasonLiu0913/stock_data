@@ -1,0 +1,51 @@
+name: "[CI] V2 Prediction Contract"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/generate_all_stock_predictions_v2.js"
+      - "scripts/generate_prediction_version_ui.js"
+      - "tests/generate_all_stock_predictions_v2.test.js"
+      - "tests/v2_prediction_contract.test.js"
+      - "tests/generate_prediction_version_ui.test.js"
+      - "package.json"
+      - ".github/workflows/daily-stock-prediction.yml"
+      - ".github/workflows/test-v2-prediction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  v2-contract:
+    name: Focused V2 tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run focused V2 tests
+        run: npm run test:v2
+
+      - name: Verify focused V2 tests leave tracked tree clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          dirty="$(git status --porcelain --untracked-files=no)"
+          if [ -n "$dirty" ]; then
+            echo "Focused V2 tests modified tracked repository files:"
+            git status --short --untracked-files=no
+            exit 1
+          fi
