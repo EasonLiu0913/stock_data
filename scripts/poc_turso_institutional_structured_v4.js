@@ -14,7 +14,7 @@ const mappings={
   foreign_buy:/^外陸資買進股數/,
   foreign_sell:/^外陸資賣出股數/,
   foreign_net:/^外陸資買賣超股數/,
-  foreign_dealer_net:/^外資自營商買賣超股數/
+  foreign_dealer_net:/^外資自營商買賣超股數/,
   trust_buy:/^投信買進股數/,
   trust_sell:/^投信賣出股數/,
   trust_net:/^投信買賣超股數/,
