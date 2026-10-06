@@ -19,8 +19,15 @@ jobs:
       TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
       TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
       POC_DAYS: '20'
+      NODE_PATH: /tmp/turso-poc-deps/node_modules
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/poc_turso_institutional.js
+            data_twse_institutional_investors
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -28,7 +35,11 @@ jobs:
         run: |
           test -n "$TURSO_DATABASE_URL" || { echo "::error::Missing TURSO_DATABASE_URL"; exit 1; }
           test -n "$TURSO_AUTH_TOKEN" || { echo "::error::Missing TURSO_AUTH_TOKEN"; exit 1; }
-      - name: Install libSQL client without changing project manifests
-        run: npm install --no-save --package-lock=false --ignore-scripts @libsql/client
+      - name: Install isolated libSQL client
+        run: |
+          mkdir -p /tmp/turso-poc-deps
+          cd /tmp/turso-poc-deps
+          npm init -y >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund @libsql/client
       - name: Run isolated POC
         run: node scripts/poc_turso_institutional.js
