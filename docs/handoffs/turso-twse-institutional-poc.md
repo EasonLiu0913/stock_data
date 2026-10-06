@@ -1047,3 +1047,32 @@ Do not begin a live 20-consecutive-trading-day shadow accumulation, production w
 ```
 
 Activation of Phase 10 does not execute Prompt A automatically.
+
+
+## Phase 10 Prompt B closeout — PASS
+
+The exact Phase 10 Prompt B was independently recovered from durable pre-Prompt-A checkpoint `77f37c200e2e50fd4865cb8a5cbd07128eb71a30`; the current handoff copy matched it exactly before closeout.
+
+Independent verification:
+1. **Phase 9 prerequisite / owner authorization — PASS.** Phase 9 has durable Prompt B PASS. Owner authorization for a bounded shadow-only experiment is durably recorded. No production-migration authorization exists.
+2. **Canonical source-of-truth / no refetch — PASS.** Phase 10 reads only existing `data_twse_institutional_investors` canonical JSON files. The shadow writer contains no independent TWSE fetch path. Evidence records `canonical_source_of_truth=true` and `independent_twse_refetch=false`.
+3. **Fresh/versioned shadow tables / closed-table isolation — PASS.** Phase 10 uses `turso_shadow_twse_institutional_v1` and `turso_shadow_twse_institutional_sources_v1`. Closed v3 script remains blob `84d833a1afd1d95f014bae70911a60d3332805cb`; closed Phase 7 script remains blob `278c55c397e4e6473bf0089265a4ac02700875a2`. No delete, ALTER, or repurpose operation targets closed tables.
+4. **Bounded parity / source identity / replay — PASS.** The experiment remains exactly 20 dates / 21,475 rows / 1,088 unique IDs. Source metadata retains per-date `source_sha256`, row hashes, and eligible row counts. Shadow write/replay both contain 21,475 rows. Independent read-contract verification contains 21,475 rows, 0 null values, 20,403 negative values, and SHA-256 `401045e819a3f909a515896a2dffedc4658bde49bcd765c191c86e8156a5768f`. Replay row count is 21,475 -> 21,475 and deterministic hashes remain stable.
+5. **Instrument-type classification — PASS.** Authoritative Phase 6 category method is preserved: stock 1,053 unique IDs, innovation_board 31, TDR 4, unmatched 0, ambiguous 0. No common-stock-only inference from four-digit code shape is introduced.
+6. **Database-unavailable fallback — PASS.** Bounded injected failure is classified `database_unavailable` / `shadow_degraded`; fallback is `repository_files`; `production_failure=false`; canonical source hashes are unchanged; canonical files remain readable; `mutation_performed=false`. No real production outage or canonical rollback was manufactured.
+7. **Default-off / secrecy / POC-only isolation — PASS.** Evidence records shadow-write=false, shadow-read=false, primary-read=false by default and POC-only scope. Independent artifact scan found zero occurrences of `libsql://`, `TURSO_AUTH_TOKEN`, `TURSO_DATABASE_URL`, `Bearer `, or `Authorization:`. PR #52 remains draft/open/unmerged. Changed files remain POC/design/shadow-only; production consumers, canonical data, schedules, deployment, Pages, prediction, dashboards, secrets, and config behavior remain untouched.
+8. **Concurrent-main freshness — PASS.** Current remote main is `006f7d66b8fd652470734352f5b1ed03f0bb215b`. The single commit since Phase 10 startup main `dc0af60cc29073361acb5f31813ead36ee20dcf0` contains no canonical T86 source, category/extractor, production consumer, normalized-path, or production workflow changes relevant to this evidence.
+
+Authoritative evidence:
+- workflow run/job: `37477530674` / `112316756625`;
+- tested SHA: `86ccceb477fdcd8cb41bb823225cbc3bc32de401`;
+- artifact: `11420630645`;
+- artifact digest: `sha256:629bce9a34a460c34d5ae58570d644981c34103717d04b4660a01bf25ebce8e1`.
+
+Decision:
+- Phase 10 shadow-only experiment v1 is complete and independently verified.
+- The live 20-consecutive-eligible-trading-day shadow accumulation has **not** started and is **not** promoted by this closeout.
+- No production workflow integration, primary-read switch, merge, migration, or additional credential/config change is authorized.
+- Any live accumulation or production-shadow integration requires a separately preregistered round and any additional owner authorization required by the migration design.
+
+**Prompt B closeout: PASS**
