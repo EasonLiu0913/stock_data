@@ -7,7 +7,7 @@ Phase 3 full-row Turso parity / replay / latency validation: **Prompt B CLOSEOUT
 
 Phase 4 remote storage-accounting / free-tier feasibility evidence: **Prompt B CLOSEOUT PASS (2026-10-06)**.
 
-Phase 5 security-master classification / schema-coverage readiness is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
+Phase 5 security-master classification / schema-coverage readiness: **Prompt A COMPLETE (2026-10-06), Prompt B PENDING**.
 
 ## Objective
 Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily institutional flows from `data_twse_institutional_investors`.
@@ -170,6 +170,36 @@ Fetch current remote `main` and the POC branch; read `AGENTS.md` and this handof
 
 If any criterion fails, repair only the bounded POC defect and rerun verification from criterion 1. If all pass, record Phase 5 Prompt B closeout PASS and preregister the next bounded pair before any further phase. Do not merge PR #52 or migrate production.
 
+## Phase 5 Prompt A implementation evidence (2026-10-06)
+- Implementation commits:
+  - `f46308576996bb9ff8c4bb48fd0dc18575e9efaa` — add `scripts/poc_turso_phase5_semantics.js`.
+  - `54793dafe3af147802f17fecb980913eb69518f2` — wire Phase 5 semantics audit and classification inputs into the isolated POC workflow.
+- Authoritative workflow run `37445363651`, job `112208744280`, completed **SUCCESS** on head `54793dafe3af147802f17fecb980913eb69518f2`.
+- Evidence artifact `turso-poc-validation-evidence`: artifact ID `11402519626`, digest `sha256:6172828ec1b441dcd795fa05cba96bf66c943e993f2abb4debaab8cebf2f1f1b`. It contains `turso-phase5-semantics.json`, `turso-v4-validation.json`, and `turso-v3-sizing.json`.
+- Phase 3/4 regression gates remained green in the same run: exact 21,475-row parity passed twice; replay remained 21,475 -> 21,475; table-family storage remained 1,937,408 bytes and replay-stable.
+- Verified repository classification inputs:
+  - `data_twse/twse_industry.csv` — 1,370 records; includes listed equity names/industry and also non-common-stock entries such as TDR/REIT-like records, so it is **not** treated as a pure common-stock master.
+  - `data_twse/twse_industry_ETF.csv` — 241 ETF/fund-like records.
+  - `data_twse/twse_industry_Warrants.csv` — 35,767 warrant records.
+- Frozen population classification is reproducible from those exact files:
+  - total frozen eligible rows: **21,475**;
+  - unique four-digit instruments: **1,088**;
+  - `twse_stock_list_non_dr`: **21,414 rows / 1,084 unique IDs**;
+  - explicit `-DR` TDRs: **61 rows / 4 unique IDs** — 9103 美德醫療-DR, 9105 泰金寶-DR, 9110 越南控-DR, 9136 巨騰-DR;
+  - ETF: **0**; warrant: **0**; unclassified: **0** within the frozen four-digit population.
+- Trust boundary: Phase 5 deliberately does **not** relabel the 1,084 non-DR stock-list IDs as `common_stock`, because the repository list has no verified security-type field proving that semantic for every member. The production-readiness artifact therefore records `common_stock_claim_supported: false`.
+- Raw T86 schema was identical across all 20 frozen dates: one schema variant with **19 source fields**.
+- All 19 source fields are explicitly audited:
+  - identity/dimension: 證券代號, 證券名稱;
+  - current structured schema: exactly **8 metrics** — foreign buy/sell/net excluding foreign dealer, trust buy/sell/net, dealer net, combined institutional net;
+  - omitted but non-derivable additional metrics: foreign-dealer buy/sell/net plus dealer proprietary and hedge component buy/sell/net fields.
+- Production-readiness gaps are now explicit:
+  1. if production requires `common-stock-only` semantics, an authoritative instrument-type field/master is still required;
+  2. production consumers must decide whether foreign-dealer and dealer component/gross metrics are required before freezing the database schema.
+- No production crawler, prediction, dashboard, deployment, schedule, or tracked canonical JSON was modified. PR #52 remains draft/open/unmerged.
+- Freshness check: current `main` at completion is `2665e688c5eb1b92a77840f84d682ebf3676a87c`; concurrent changes do not touch the POC files, the three classification inputs, or frozen T86 source files used by Phase 5.
+- Global task routing was not changed; `institutional-accumulation` remains the repository-wide default active task. This Turso POC was executed only because the owner explicitly named it in the Prompt A command.
+
 ## Important caveats
 - TWSE T86 is listed-market data only: it is NOT the entire TWSE+TPEx equity universe.
 - The v3 structured schema covers 8 metrics: foreign buy/sell/net, trust buy/sell/net, dealer net, combined institutional net. Some other raw source columns are not yet imported.
@@ -186,16 +216,18 @@ If any criterion fails, repair only the bounded POC defect and rerun verificatio
 - `scripts/poc_turso_institutional_structured.js`: structured SQL v3 importer + Phase 3 V4 exact validation.
 - `scripts/poc_turso_capacity_compare.py`: local SQLite same-row comparison.
 - `.github/workflows/poc-turso-institutional.yml`: isolated PR/manual POC workflow.
+- `scripts/poc_turso_phase5_semantics.js`: frozen-population security classification + all-column T86 schema audit.
+- Classification inputs: `data_twse/twse_industry.csv`, `data_twse/twse_industry_ETF.csv`, `data_twse/twse_industry_Warrants.csv`.
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Completed round: Phase 4 remote SQLite object accounting and free-tier feasibility boundaries.
+- Active round: Phase 5 security-master classification and schema-coverage readiness.
 - Prompt A: **COMPLETE**.
-- Prompt B closeout: **PASS**.
-- Authoritative run/job: `37443792571` / `112203610605`.
-- Tested implementation SHA: `9c5eef6359a3e606305160a4e58f4cbbadeb1da0`.
-- Closeout checkpoint branch head will be the commit containing this handoff update.
-- Next round: Phase 5 security-master classification and schema-coverage readiness, internally promoted but not started.
+- Prompt B closeout: **PENDING**.
+- Authoritative run/job: `37445363651` / `112208744280`.
+- Tested implementation SHA: `54793dafe3af147802f17fecb980913eb69518f2`.
+- Evidence artifact: `11402519626`, digest `sha256:6172828ec1b441dcd795fa05cba96bf66c943e993f2abb4debaab8cebf2f1f1b`.
+- Prompt B below remains the preregistered Phase 5 closeout contract and must be executed independently before any further phase.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
