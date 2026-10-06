@@ -763,6 +763,54 @@ Prompt A completion contract:
 - stop with Prompt A complete — ready for Prompt B.
 ```
 
+## Phase 9 Prompt A completion evidence
+
+Status:
+- Phase 9 Prompt A: **COMPLETE**
+- Phase 9 Prompt B: **PREREGISTERED / PENDING**
+
+Design artifact:
+- created `docs/handoffs/turso-twse-institutional-migration-design.md`;
+- design commit: `3b5888501041e81f31b0c15e1838fcb5c807b006`;
+- design blob: `408c5133e4fe1c0920616af8a676ac3d96a206f3`;
+- design is explicitly marked design-only / no production migration authorized.
+
+Verified current-main production entry points:
+- canonical TWSE T86 writer workflow: `.github/workflows/crawl-twse-institutional-investors.yml`;
+- canonical crawler: `scripts/crawl_twse_institutional_investors.js`;
+- canonical raw source-of-truth path: `data_twse_institutional_investors/<YYYYMMDD>_twse_institutional_investors.json`;
+- canonical file index writer: `scripts/generate_file_lists.js` -> `data_twse_institutional_investors/files.json`;
+- normalized institutional workflow: `.github/workflows/backfill-normalized-data.yml`;
+- normalizer: `scripts/backfill_normalized_data.js`;
+- normalized output: `data_normalized/institutional_investors/<YYYYMMDD>.json`;
+- prediction/readiness seams verified in `scripts/generate_all_stock_predictions.js`, `scripts/prepare_and_verify_forecast_inputs.js`, `scripts/verify_prediction_data_readiness.js`, and `scripts/check_forecast_required_files.js`;
+- Pages publication seam verified in `.github/workflows/deploy-pages.yml`, with raw institutional files remaining published repository dependencies.
+
+Consumer inventory carried forward from the authoritative Phase 6 audit:
+- 18 direct raw-T86 runtime consumers;
+- 4 normalized institutional consumers;
+- proven required current-consumer stored metrics remain `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, and `dealer_net`.
+
+Design decisions:
+- canonical repository JSON remains source of truth through all shadow phases;
+- any future Turso shadow writer must consume the already-written canonical file rather than refetch TWSE;
+- shadow-write/read flags are proposed default-off only and are not implemented in Phase 9;
+- production Pages and prediction/readiness remain file-backed during any initial shadow experiment;
+- rollback disables shadow/primary-read flags and returns entirely to the existing canonical file path; database rows are retained read-only for forensic comparison rather than deleted;
+- database outage/auth/quota/parity failures must never fail or roll back a successful canonical file write;
+- proposed minimum cutover-evidence window is 20 consecutive eligible live trading dates plus explicit idempotency and database-unavailable fallback evidence;
+- provider quota/billing assumptions remain separate from measured SQLite logical bytes and bounded POC timings;
+- owner gates are explicit: design approval -> separately authorized shadow experiment -> independent shadow closeout -> separate production-migration authorization.
+
+Isolation / freshness:
+- no production script, workflow, schedule, secret/config, data, dashboard, prediction, or deployment file was modified by Phase 9;
+- PR #52 remains draft/open/unmerged;
+- PR changed-file scope remains POC/design-only and now includes only the new migration design in addition to the existing POC files;
+- current remote main at completion remains `3738cb509122a865541bca61b92b1e2d664e9267`, identical to the Phase 9 startup baseline, so the verified integration seams are not stale;
+- `turso-twse-institutional-poc` remains the sole active routed task.
+
+Prompt A completion contract is satisfied. Preserve the preregistered Phase 9 Prompt B below unchanged.
+
 ## Prompt B — Phase 9 migration-design readiness closeout (preregistered)
 
 ```text
