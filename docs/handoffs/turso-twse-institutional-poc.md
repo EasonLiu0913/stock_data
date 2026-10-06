@@ -1076,3 +1076,113 @@ Decision:
 - Any live accumulation or production-shadow integration requires a separately preregistered round and any additional owner authorization required by the migration design.
 
 **Prompt B closeout: PASS**
+
+
+## Owner authorization — Phase 11 live 20-day shadow accumulation
+
+Owner authorization received on 2026-10-06 (Asia/Taipei): **authorized to begin the Turso live 20-consecutive-eligible-trading-day shadow accumulation**.
+
+This authorization permits a bounded live evidence-accumulation phase only. It does **not** authorize:
+- production primary-read cutover;
+- making Turso the source of truth;
+- deleting or replacing canonical repository files;
+- merging PR #52;
+- changing Pages/prediction consumers to require Turso;
+- destructive schema migration;
+- production migration;
+- expanding beyond the TWSE T86 institutional dataset;
+- weakening the canonical file path or fallback guarantees.
+
+## Current active round
+
+Phase 11 — Turso live 20-day shadow accumulation v1.
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Purpose: establish durable machinery for collecting live shadow evidence across 20 consecutive eligible TWSE trading dates while canonical repository files remain authoritative and while every live date is independently parity-checked.
+
+### Phase 11 bounded objectives
+
+1. Add POC/shadow-only accumulation state and verifier logic that records only eligible live trading dates after owner authorization.
+2. Reuse the proven Phase 10 shadow table family or create a clearly versioned live-evidence table family without deleting/altering closed tables.
+3. For each accepted live date, require canonical source presence first, then shadow write/read exact parity against the canonical T86 JSON.
+4. Record per-date source SHA-256, row count, contract hash, instrument classification summary, shadow outcome, and failure classification.
+5. Maintain a durable 20-date accumulation ledger that is append-only for accepted dates and fail-closed for mismatches.
+6. Do not backfill pre-authorization dates to manufacture the 20-day live window.
+7. Do not count weekends/holidays/missing-canonical-file dates as accepted live evidence.
+8. Keep production readers, schedules, deployment, Pages, prediction, canonical source-of-truth ownership, and primary-read behavior unchanged.
+
+## Prompt A — Phase 11 live 20-day shadow accumulation setup (preregistered)
+
+```text
+Continue the Turso TWSE Institutional POC in repository EasonLiu0913/stock_data, only on branch poc/turso-institutional-20261006 / PR #52.
+
+Owner authorization for a live 20-consecutive-eligible-trading-day shadow accumulation is durable in docs/handoffs/turso-twse-institutional-poc.md. This is not production-migration authorization.
+
+Before work:
+1. Fetch current remote main and the POC branch.
+2. Read AGENTS.md, docs/handoffs/turso-twse-institutional-poc.md, and docs/handoffs/turso-twse-institutional-migration-design.md.
+3. Verify Phase 10 Prompt B is durably PASS and recover this exact Phase 11 pair.
+4. Re-check the current canonical TWSE T86 writer/output path, trading-day/date-resolution behavior, and current consumer/readiness seams from main.
+5. Verify PR #52 remains draft/unmerged and turso-twse-institutional-poc remains the sole active task.
+
+Implement only the live-shadow accumulation machinery. Do not claim the 20-day window is complete in this Prompt A unless 20 eligible post-authorization trading dates truly exist and have been observed.
+
+Preferred POC/shadow-only additions:
+- scripts/poc_turso_phase11_live_shadow_collect.js
+- scripts/poc_turso_phase11_live_shadow_status.js
+- a durable POC ledger under docs/handoffs or another clearly non-production path
+- .github/workflows/poc-turso-institutional.yml only as needed for bounded manual/POC verification
+- a separate isolated scheduled/manual POC workflow only if necessary, with no production consumer integration
+- docs/handoffs/turso-twse-institutional-poc.md
+
+Requirements:
+- canonical repository JSON under data_twse_institutional_investors remains authoritative;
+- never independently refetch TWSE for the shadow path;
+- accepted live evidence dates must be on or after the owner-authorization date and must correspond to actual eligible TWSE trading dates with canonical source files present;
+- do not count historical/pre-authorization dates toward the live 20-day target;
+- do not count a date until exact shadow write/read parity and required current-consumer metrics pass;
+- preserve per-date source_sha256, row_count, deterministic contract hash, required-metric parity result, signed-number handling, and instrument-type coverage;
+- accepted-date ledger updates must be append-only/idempotent and duplicate-safe;
+- a repeated run for the same accepted date must not increment the accepted-date count;
+- failures must be classified and retained without advancing the accepted-date count;
+- database-unavailable behavior must preserve canonical-file usability and must not advance the accepted-date count;
+- feature/config flags remain default-off for production and scoped to the POC/live-shadow workflow;
+- secrets remain GitHub Actions secrets only and never appear in committed state, logs, artifacts, or summaries;
+- PR #52 remains draft/unmerged;
+- no production reader, schedule, canonical data path, deployment, Pages, prediction, dashboard, or primary-read behavior changes.
+
+Prompt A completion contract:
+- live accumulation machinery is durable and runnable;
+- a status artifact/report shows accepted live dates, pending count to 20, duplicate handling, and failure classifications;
+- if at least one eligible post-authorization canonical date is already available, collect it and prove exact parity; otherwise record zero accepted dates with a clear waiting state;
+- no pre-authorization date is counted;
+- no production behavior changes;
+- handoff records implementation commit(s), tested run(s), current accepted-date count, and the exact rule for reaching 20;
+- preserve the Phase 11 Prompt B below unchanged;
+- stop with “Prompt A complete — ready for Prompt B”.
+```
+
+## Prompt B — Phase 11 live 20-day shadow accumulation setup closeout (preregistered)
+
+```text
+After Phase 11 Prompt A completes, fetch current remote main and the POC branch, read AGENTS.md and both Turso handoffs, and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify:
+1. Phase 10 Prompt B is durably PASS and owner authorization for live 20-day accumulation is durable;
+2. live evidence can only begin on/after authorization and no historical/pre-authorization date is counted;
+3. canonical repository T86 files remain source of truth and the live shadow path performs no independent TWSE refetch;
+4. accepted-date ledger is append-only/idempotent/duplicate-safe and does not advance on parity failure, missing canonical file, non-trading day, or database-unavailable classification;
+5. any accepted live date has exact required-metric parity, deterministic hashes, source SHA identity, signed-number handling, and explicit instrument-type coverage;
+6. current accepted-date count and remaining dates to 20 are reported truthfully, without treating setup success as completion of the 20-day evidence window;
+7. flags/config remain production-default-off, secrets are absent from artifacts/logs, PR #52 remains draft/unmerged, and production consumers/data/schedules/deployment/Pages/prediction behavior are untouched;
+8. concurrent main changes do not stale canonical source, trading-day eligibility, category, consumer, or live-shadow evidence.
+
+If any criterion fails, repair only the bounded Phase 11 setup defect and restart verification from criterion 1. On PASS, record Phase 11 Prompt B closeout PASS and leave the live accumulation in WAITING/ACTIVE-EVIDENCE state until 20 genuine eligible post-authorization dates are accumulated.
+
+Do not promote a primary-read switch, production migration, merge, or cutover merely because the accumulation machinery is installed.
+```
+
+Activation of Phase 11 does not execute Prompt A automatically.
