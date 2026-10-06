@@ -1165,6 +1165,69 @@ Prompt A completion contract:
 - stop with “Prompt A complete — ready for Prompt B”.
 ```
 
+## Phase 11 Prompt A completion evidence
+
+Status:
+- Phase 11 Prompt A: **COMPLETE**
+- Phase 11 Prompt B: **PREREGISTERED / PENDING**
+- live accumulation state: **WAITING_ACTIVE_EVIDENCE**
+- accepted live dates: **1 / 20**
+- remaining: **19**
+
+Implementation:
+- added `scripts/poc_turso_phase11_live_shadow_collect.js` (commit `c6faa314ecaf587413ffde300cfa12b4f6ea243c`);
+- added `scripts/poc_turso_phase11_live_shadow_status.js` (commit `c280568464f7609bae75e3b8efef1d717311a281`);
+- updated isolated POC workflow to checkout current `main` canonical live inputs separately, run the collector twice for duplicate-safety proof, report status, and retain artifacts (implementation head `cc85f37913049bfcc27ebbee7b21f0761c24bd52`);
+- added durable human-readable ledger `docs/handoffs/turso-twse-institutional-live-shadow-ledger.md` (commit `5fe5334b3e13287eca25def8afddf22ee46caa63`);
+- machine ledger: `turso_live_shadow_evidence_v1`;
+- live data table: `turso_live_shadow_twse_institutional_v1`;
+- event/failure table: `turso_live_shadow_events_v1`.
+
+Authoritative setup run:
+- workflow run/job: `37482832144` / `112335159710`;
+- tested implementation SHA: `cc85f37913049bfcc27ebbee7b21f0761c24bd52`;
+- event/conclusion: pull_request / SUCCESS;
+- artifact: `11422217604`;
+- artifact digest: `sha256:aa7e9a8b98b58ca9a49dbdcd8783417e334444210c1a34dda3164a28e82f6bb9`;
+- artifact contains ten non-secret POC evidence files including `turso-phase11-live-shadow-collect.json` and `turso-phase11-live-shadow-status.json`;
+- independent artifact secret scan found zero occurrences of `libsql://`, `TURSO_AUTH_TOKEN`, `TURSO_DATABASE_URL`, `Bearer `, or `Authorization:`.
+
+Accepted live date #1:
+- trade date: `20261006`;
+- authorization rule: date is on/after authorization date `20261006`;
+- TWSE trading-day result: `isTradingDay=true`, reason `TRADING_DAY`, calendar covered;
+- canonical input is current-main `data_twse_institutional_investors/20261006_twse_institutional_investors.json`;
+- independent TWSE refetch: false;
+- source SHA-256: `5d339a98f21de4afddfdd5ddac32f4388857c1cf8724d5f3f4746b059c18efcf`;
+- eligible rows: 1,078;
+- exact write/read parity: PASS;
+- contract hash: `45e19b2ff46fa27a4b1d6e9222ecacdd14daf012a0a06e66b7cbb51cf9d81908`;
+- instrument coverage: stock 1,044 / innovation_board 31 / TDR 3 / unmatched 0 / ambiguous 0;
+- first collection: accepted=1, remaining=19, duplicate=false;
+- immediate repeated collection: accepted remains 1, remaining=19, duplicate=true;
+- status: `WAITING_ACTIVE_EVIDENCE`.
+
+Accumulation rules now durably implemented:
+- pre-authorization dates never count;
+- non-trading dates do not count;
+- missing canonical source does not count;
+- parity failure does not count;
+- database-unavailable classification does not count;
+- accepted-date insert is duplicate-safe/idempotent;
+- canonical repository file remains source of truth;
+- no historical dates are backfilled to manufacture the live count;
+- completion requires 20 genuine accepted eligible post-authorization trading dates.
+
+Isolation / freshness:
+- PR #52 remains draft/open/unmerged;
+- production readers, canonical data path, schedules, deployment, Pages, prediction/dashboard behavior, primary-read behavior, and production defaults remain unchanged;
+- Phase 11 workflow reads canonical live input from a separate checkout of current `main`;
+- current remote main at completion is `72e18d6f7f11423290327a94186b2ba7031d7053`;
+- the single concurrent commit since startup main `006f7d66b8fd652470734352f5b1ed03f0bb215b` contains no canonical T86 source, trading-calendar, category/extractor, production consumer/readiness, or relevant workflow changes, so Day 1 evidence is not stale;
+- `turso-twse-institutional-poc` remains the sole active routed task.
+
+Prompt A completion contract is satisfied. The 20-day evidence window is **not complete**; current state is 1/20 and waiting for future genuine eligible trading dates. Preserve the preregistered Phase 11 Prompt B below unchanged.
+
 ## Prompt B — Phase 11 live 20-day shadow accumulation setup closeout (preregistered)
 
 ```text
