@@ -685,3 +685,98 @@ Independently verify:
 
 If any criterion fails, repair only the bounded Phase 8 POC defect and restart verification from criterion 1. On PASS, record Phase 8 Prompt B closeout PASS and make an evidence-based decision whether the POC has enough compatibility evidence for a separate owner-authorized migration-design task. Do not merge PR #52 or modify production.
 ```
+
+
+## Phase 8 Prompt B closeout — PASS
+
+The exact Phase 8 Prompt B was independently recovered from durable pre-Prompt-A checkpoint `5309a3686b7c74227b231cc93be11558c8919145`; the current handoff copy matched it exactly before closeout.
+
+Independent verification:
+1. **Phase 7 prerequisite / closed-table isolation — PASS.** Phase 7 has durable Prompt B PASS. Closed v3 script remains blob `84d833a1afd1d95f014bae70911a60d3332805cb`, identical to the Phase 6 tested state. Phase 8 is read-only and targets existing Phase 7 tables `turso_poc_equity_structured_v4_phase7` / `turso_poc_equity_structured_sources_v4_phase7`; it performs no table mutation or deletion.
+2. **Frozen identity — PASS.** Authoritative Phase 8 artifact records exactly 20 dates / 21,475 rows / 1,088 unique IDs.
+3. **Exact compatibility — PASS.** Every frozen row is compared on `trade_date`, `stock_id`, `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, and `dealer_net`. Stored-column mapping is `foreign_net`, `foreign_dealer_net`, `trust_net`, `dealer_net`. Both passes contain 21,475 rows, 0 null values, and 20,403 negative values.
+4. **Repeated-read stability — PASS.** PASS1 and PASS2 both produce SHA-256 `401045e819a3f909a515896a2dffedc4658bde49bcd765c191c86e8156a5768f`; all 20 per-date hashes are stable.
+5. **Instrument-type coverage — PASS.** Explicit category evidence reports stock 1,053 IDs, innovation_board 31, tdr 4, unmatched 0, ambiguous 0. The artifact explicitly states that four-digit code shape is not common-stock proof.
+6. **Read-query interpretation — PASS.** Representative query timings are explicitly labeled bounded GitHub-hosted POC observations and not production SLA/performance evidence.
+7. **Artifact secrecy / POC-only isolation — PASS.** Authoritative run `37471298950`, job `112295184571`, tested SHA `8ac55ed927dd67457b4eab6b6fd8b96b14bede5e`, completed SUCCESS. Artifact `11417167846`, digest `sha256:85cdb95c3fc20b8d92f99206295609318b8a281f89835344f02c1753535e6912`, contains six POC evidence files. Independent scan found zero occurrences of `libsql://`, `TURSO_AUTH_TOKEN`, `TURSO_DATABASE_URL`, `Bearer `, or `Authorization:`. PR #52 remains draft/open/unmerged. Changed files remain limited to POC workflow/routing/handoff and POC scripts/audits; no production consumer/data/schedule/deployment behavior is modified.
+8. **Concurrent-main freshness — PASS.** Current remote main is still `3738cb509122a865541bca61b92b1e2d664e9267`, identical to the Prompt A completion baseline. No source, normalization, category, or consumer compatibility evidence is stale.
+
+Evidence-based decision:
+- The POC now has enough compatibility evidence to justify a **separate owner-authorized migration-design task**.
+- This is not authorization to migrate production, change production consumers, merge PR #52, or switch production storage.
+- Any migration-design work must remain design-only until the owner explicitly authorizes it.
+
+**Prompt B closeout: PASS**
+
+## Promoted next round
+
+Phase 9 — migration-design readiness package (design-only, no production change).
+
+Purpose: convert the proven Phase 3–8 evidence into a concrete, reversible migration design for owner review, without changing production code, data paths, schedules, or deployment.
+
+### Phase 9 bounded objectives
+1. Map the current production institutional data write/read path and identify exact integration seams for a future Turso-backed option.
+2. Define a reversible migration architecture with shadow-write/shadow-read, parity gates, rollback, feature flagging, and source-of-truth rules.
+3. Quantify known constraints using only measured POC evidence; clearly separate unknowns that still require owner/provider validation.
+4. Produce a design document and preregistered rollout/rollback acceptance gates.
+5. Do not implement production writes, reads, schedules, secrets, deployment changes, or merge PR #52.
+
+## Prompt A — Phase 9 migration-design readiness package (preregistered)
+
+```text
+Continue the Turso TWSE Institutional POC in repository EasonLiu0913/stock_data, only on branch poc/turso-institutional-20261006 / PR #52.
+
+Before work:
+1. Fetch current remote main and the POC branch.
+2. Read AGENTS.md and docs/handoffs/turso-twse-institutional-poc.md.
+3. Verify Phase 8 Prompt B is durably PASS and recover this exact Phase 9 pair.
+4. Re-check current production institutional writer/reader entry points, normalization flow, deployment/schedule boundaries, and existing secret/config patterns without changing them.
+
+Implement only a design/readiness package.
+
+Required outputs:
+- create docs/handoffs/turso-twse-institutional-migration-design.md as a design-only artifact;
+- update docs/handoffs/turso-twse-institutional-poc.md with Phase 9 evidence/status only;
+- do not modify production scripts, workflows, schedules, deployment, secrets, data, dashboards, prediction, or consumers.
+
+The design must include:
+- exact current production write/read entry points and source-of-truth flow;
+- proposed Turso schema/table ownership and versioning based on the proven Phase 7 schema;
+- shadow-write design that preserves canonical file output during evaluation;
+- shadow-read or dual-read validation plan against existing production outputs;
+- deterministic parity gates and minimum evidence window before any cutover proposal;
+- feature-flag/config design with default-off behavior;
+- rollback criteria and procedure that restores current canonical path without data loss;
+- secret handling and least-privilege expectations without adding or exposing credentials;
+- failure modes, rate/network limits, provider outage behavior, and local/file fallback;
+- storage/read/write quota assumptions clearly separated from measured SQLite logical evidence;
+- explicit non-goals and unresolved questions;
+- staged owner-approval gates: design approval -> optional shadow experiment -> independent closeout -> only then a separate production-migration authorization.
+
+Prompt A completion contract:
+- design document is durable on the POC branch;
+- all exact production entry points cited in the design are verified against current main;
+- every migration step is reversible and default-off before owner authorization;
+- no production file/code/config/schedule/deployment change occurs;
+- handoff records the design commit and evidence;
+- preserve the Phase 9 Prompt B below unchanged;
+- stop with Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — Phase 9 migration-design readiness closeout (preregistered)
+
+```text
+After Phase 9 Prompt A completes, fetch current remote main and the POC branch, read AGENTS.md and both Turso handoffs, and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify:
+1. Phase 8 Prompt B is durably PASS;
+2. the migration design accurately names current production writer/reader/normalization/schedule/deployment entry points from current main;
+3. the design preserves the current canonical file path as source of truth during any proposed shadow phase and does not imply automatic production cutover;
+4. shadow-write/read, deterministic parity gates, feature-flag default-off behavior, rollback, outage/fallback, and secret-handling plans are concrete and reversible;
+5. measured POC evidence is kept distinct from provider quota assumptions and production performance claims;
+6. staged owner-approval gates are explicit and no production migration is authorized by the document itself;
+7. PR #52 remains draft/unmerged, changed-file scope remains design/POC-only, and no production code/data/config/schedule/deployment behavior changed;
+8. concurrent main changes do not stale the mapped integration seams.
+
+If any criterion fails, repair only the bounded design defect and restart verification from criterion 1. On PASS, record Phase 9 Prompt B closeout PASS. Do not begin a shadow experiment, production migration, merge, or secret/config change without separate owner authorization.
+```
