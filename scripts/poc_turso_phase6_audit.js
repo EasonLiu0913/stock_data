@@ -3,8 +3,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
-
 const ROOT = path.resolve(__dirname, '..');
 const FROZEN_DATES = [
   '20260904','20260907','20260908','20260909','20260910','20260911','20260914','20260915','20260916','20260917',
@@ -54,20 +52,25 @@ function csvRecords(file) {
   return rows;
 }
 
-function gitText(file) {
-  return execFileSync('git', ['show', 'HEAD:' + file], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024
-  });
-}
-
-function gitPaths() {
-  return execFileSync('git', ['ls-tree', '-r', '--name-only', 'HEAD'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024
-  }).split(/\r?\n/).filter(Boolean);
+function listRuntimeScriptFiles() {
+  const base = path.join(ROOT, 'scripts');
+  const out = [];
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'fixtures') continue;
+        walk(full);
+        continue;
+      }
+      if (!/\.(?:js|cjs|mjs|ts|tsx|py|sh)$/.test(entry.name)) continue;
+      const rel = path.relative(ROOT, full).replaceAll('\\', '/');
+      if (rel.startsWith('scripts/poc_turso_')) continue;
+      out.push(rel);
+    }
+  }
+  walk(base);
+  return out.sort();
 }
 
 function sourceFileFor(date) {
@@ -163,28 +166,15 @@ function sourceFieldRoles(fields) {
   return roles;
 }
 
-function relevantRuntimePath(file) {
-  if (file.startsWith('scripts/poc_turso_')) return false;
-  if (file === 'docs/handoffs/turso-twse-institutional-poc.md') return false;
-  if (file.startsWith('docs/')) return false;
-  if (file.startsWith('data_') || file.startsWith('node_modules/')) return false;
-  return (
-    file.startsWith('scripts/') ||
-    file.startsWith('public/') ||
-    file.startsWith('.github/workflows/') ||
-    file.startsWith('tests/')
-  ) && /\.(?:js|cjs|mjs|ts|tsx|py|sh|html|yml|yaml)$/.test(file);
-}
-
 function auditConsumers(fields) {
-  const paths = gitPaths().filter(relevantRuntimePath);
+  const paths = listRuntimeScriptFiles();
   const directConsumers = [];
   const normalizedConsumers = [];
   const readable = [];
 
   for (const file of paths) {
     let text;
-    try { text = gitText(file); }
+    try { text = fs.readFileSync(path.join(ROOT, file), 'utf8'); }
     catch { continue; }
     readable.push({ file, text });
     if (text.includes('data_twse_institutional_investors')) directConsumers.push({ file, text });
@@ -229,6 +219,7 @@ function auditConsumers(fields) {
 
   return {
     scanned_runtime_files: readable.length,
+    scan_scope: 'all non-POC runtime source files under scripts/; fixtures excluded',
     direct_t86_runtime_consumers: directPaths,
     normalized_institutional_runtime_consumers: normalizedPaths,
     field_audit: fieldAudit,
