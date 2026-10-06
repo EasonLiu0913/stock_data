@@ -8,6 +8,7 @@ on:
       - 'scripts/poc_turso_institutional_structured.js'
       - 'scripts/poc_turso_capacity_compare.py'
       - 'scripts/poc_turso_phase5_semantics.js'
+      - 'scripts/poc_turso_phase6_audit.js'
 permissions:
   contents: read
 concurrency:
@@ -30,9 +31,16 @@ jobs:
             scripts/poc_turso_institutional_structured.js
             scripts/poc_turso_capacity_compare.py
             scripts/poc_turso_phase5_semantics.js
+            scripts/poc_turso_phase6_audit.js
             data_twse_institutional_investors
             data_twse/twse_industry.csv
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_TDR.csv
             data_twse/twse_industry_ETF.csv
+            data_twse/twse_industry_ETN.csv
+            data_twse/twse_industry_PreferredStock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_REITs.csv
             data_twse/twse_industry_Warrants.csv
           sparse-checkout-cone-mode: false
           persist-credentials: false
@@ -55,6 +63,8 @@ jobs:
         run: python3 scripts/poc_turso_capacity_compare.py
       - name: Audit frozen T86 security classification and schema coverage
         run: node scripts/poc_turso_phase5_semantics.js
+      - name: Audit authoritative security categories and current consumers
+        run: node scripts/poc_turso_phase6_audit.js
       - name: Upload non-secret capacity report
         uses: actions/upload-artifact@v4
         with:
@@ -63,4 +73,5 @@ jobs:
             /tmp/turso-v3-sizing.json
             /tmp/turso-v4-validation.json
             /tmp/turso-phase5-semantics.json
+            /tmp/turso-phase6-audit.json
           retention-days: 14
