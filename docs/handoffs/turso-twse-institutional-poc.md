@@ -1249,3 +1249,34 @@ Do not promote a primary-read switch, production migration, merge, or cutover me
 ```
 
 Activation of Phase 11 does not execute Prompt A automatically.
+
+
+## Phase 11 Prompt B closeout — PASS
+
+The exact Phase 11 Prompt B was independently recovered from durable pre-Prompt-A checkpoint `f02d838a7fbe38d467fde8cc697313f437bc1abb`; the current handoff copy matched it exactly before closeout.
+
+Independent verification:
+1. **Phase 10 prerequisite / owner authorization — PASS.** Phase 10 has durable Prompt B PASS. Owner authorization for live 20-consecutive-eligible-trading-day accumulation is durably recorded.
+2. **Authorization boundary — PASS.** Collector hard-codes authorization date `20261006`, rejects pre-authorization dates, and the machine/status ledger contains only `20261006`. No historical/pre-authorization date is counted.
+3. **Canonical source-of-truth / no refetch — PASS.** The live collector reads canonical files from the separately checked-out current `main` tree under `data_twse_institutional_investors`, requires the canonical file to exist, and contains no independent TWSE fetch path. Canonical repository files remain authoritative.
+4. **Append-only/idempotent/duplicate-safe ledger — PASS.** Accepted-date insert uses `ON CONFLICT(trade_date) DO NOTHING`. The first 2026-10-06 collection advanced accepted count to 1; the immediate second collection reported `duplicate=true` and accepted count remained 1. Status rules explicitly do not count preauthorization dates, missing canonical files, non-trading days, parity failures, or database-unavailable classifications.
+5. **Accepted live-date evidence — PASS.** 2026-10-06 is calendar-covered and classified `TRADING_DAY`; canonical source SHA-256 is `5d339a98f21de4afddfdd5ddac32f4388857c1cf8724d5f3f4746b059c18efcf`; eligible rows 1,078; exact required/nine-metric shadow write/read parity passes; deterministic contract hash is `45e19b2ff46fa27a4b1d6e9222ecacdd14daf012a0a06e66b7cbb51cf9d81908`; instrument coverage is stock 1,044 / innovation_board 31 / TDR 3 / unmatched 0 / ambiguous 0. Signed-number parsing remains fail-closed and exact.
+6. **Truthful progress state — PASS.** Machine status artifact reports `accepted_count=1`, `remaining_to_20=19`, `complete=false`, state `WAITING_ACTIVE_EVIDENCE`, accepted dates `[20261006]`. Setup success is not treated as completion of the 20-day evidence window.
+7. **Default-off / secrecy / POC-only isolation — PASS.** Independent artifact scan found 10 files and zero occurrences of `libsql://`, `TURSO_AUTH_TOKEN`, `TURSO_DATABASE_URL`, `Bearer `, or `Authorization:`. PR #52 remains draft/open/unmerged. Changed files remain POC/design/shadow/ledger-only; production consumers, canonical data path, schedules, deployment, Pages, prediction/dashboard behavior, primary-read behavior, and production defaults remain untouched.
+8. **Concurrent-main freshness — PASS.** Current remote main is `f4d7175b166a1a485d5c4ec69c69b3ea749ba6e5`. The three commits since the Phase 11 Prompt A completion baseline `72e18d6f7f11423290327a94186b2ba7031d7053` contain no relevant canonical T86 source, trading-calendar, category/extractor, production consumer/readiness, or live-shadow integration changes, so Day 1 evidence is not stale.
+
+Authoritative evidence:
+- workflow run/job: `37482832144` / `112335159710`;
+- tested implementation SHA: `cc85f37913049bfcc27ebbee7b21f0761c24bd52`;
+- artifact: `11422217604`;
+- artifact digest: `sha256:aa7e9a8b98b58ca9a49dbdcd8783417e334444210c1a34dda3164a28e82f6bb9`;
+- durable ledger: `docs/handoffs/turso-twse-institutional-live-shadow-ledger.md`.
+
+Decision:
+- Phase 11 setup closeout is PASS.
+- Live accumulation remains **WAITING_ACTIVE_EVIDENCE** at **1 / 20 accepted dates**.
+- The 20-day evidence window is not complete.
+- Do not promote primary-read switch, production migration, merge, or cutover based on setup success.
+- Future genuine eligible post-authorization trading dates may continue to accumulate under the established ledger rules.
+
+**Prompt B closeout: PASS**
