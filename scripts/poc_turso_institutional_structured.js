@@ -24,6 +24,17 @@ const keys=Object.keys(mappings);
 const cols=['trade_date','stock_id',...keys];
 const table='turso_poc_equity_structured_v3';
 const sourceTable='turso_poc_equity_structured_sources_v3';
+const providerQuotaEvidence={
+ source:'https://turso.tech/pricing',
+ observed_date:'2026-10-06',
+ plan:'Free',
+ storage_bytes:5*1000*1000*1000,
+ monthly_rows_read:500000000,
+ monthly_rows_written:10000000,
+ monthly_sync_bytes:3*1000*1000*1000,
+ databases:100,
+ note:'Provider plan limits are quota facts, not SQLite dbstat/page_count measurements. Decimal GB follows provider-facing plan labels.'
+};
 const fail=(msg)=>{throw Error(msg)};
 const verify=(x,msg)=>{if(!x)fail(msg)};
 const number=(value)=>{
@@ -91,13 +102,75 @@ async function storageSnapshot(){
  }
  if(out.page_count!=null&&out.page_size!=null)out.database_logical_bytes=out.page_count*out.page_size;
  try{
-  const r=await db.execute({sql:'SELECT name, SUM(pgsize) AS bytes FROM dbstat WHERE name IN (?,?) GROUP BY name ORDER BY name',args:[table,sourceTable]});
-  out.dbstat=Object.fromEntries(r.rows.map(row=>[String(row.name),Number(row.bytes)]));
+  const schema=await db.execute({
+   sql:`SELECT type,name,tbl_name,sql FROM sqlite_master
+        WHERE tbl_name IN (?,?) OR name IN (?,?)
+        ORDER BY tbl_name,type,name`,
+   args:[table,sourceTable,table,sourceTable]
+  });
+  const objects=schema.rows.map(row=>({
+   type:String(row.type),
+   name:String(row.name),
+   tbl_name:String(row.tbl_name),
+   autoindex:row.sql===null,
+   sql_present:row.sql!==null
+  }));
+  const names=[...new Set(objects.map(x=>x.name))];
+  verify(names.includes(table)&&names.includes(sourceTable),'sqlite_master did not expose both POC tables');
+  const placeholders=names.map(()=>'?').join(',');
+  const stats=await db.execute({
+   sql:'SELECT name, SUM(pgsize) AS bytes, COUNT(*) AS pages FROM dbstat WHERE name IN ('+placeholders+') GROUP BY name ORDER BY name',
+   args:names
+  });
+  const byName=Object.fromEntries(stats.rows.map(row=>[String(row.name),{bytes:Number(row.bytes),pages:Number(row.pages)}]));
+  out.table_family={
+   objects:objects.map(obj=>({...obj,bytes:byName[obj.name]?.bytes??0,pages:byName[obj.name]?.pages??0})),
+   total_bytes:objects.reduce((sum,obj)=>sum+(byName[obj.name]?.bytes??0),0),
+   total_pages:objects.reduce((sum,obj)=>sum+(byName[obj.name]?.pages??0),0),
+   missing_dbstat_objects:objects.filter(obj=>!byName[obj.name]).map(obj=>obj.name)
+  };
+  verify(out.table_family.missing_dbstat_objects.length===0,'dbstat missing POC objects: '+out.table_family.missing_dbstat_objects.join(','));
  }catch(e){
-  out.dbstat=null;
-  out.dbstat_error=e.message;
+  out.table_family=null;
+  out.table_family_error=e.message;
  }
  return out;
+}
+
+function feasibility(storage){
+ const familyBytes=storage?.table_family?.total_bytes;
+ if(!Number.isFinite(familyBytes)||familyBytes<=0)return {available:false,reason:'table-family dbstat bytes unavailable'};
+ const observedRows=expectedRows;
+ const bytesPerObservedRow=familyBytes/observedRows;
+ const assumedTradingDaysPerYear=250;
+ const assumedTradingDaysPerMonth=22;
+ const rowsPerTradingDay=observedRows/frozenDates.length;
+ const projectedRowsPerYear=Math.round(rowsPerTradingDay*assumedTradingDaysPerYear);
+ const projectedRowsWrittenPerMonth=Math.round(rowsPerTradingDay*assumedTradingDaysPerMonth+assumedTradingDaysPerMonth);
+ const projectedLogicalBytesPerYear=Math.round(bytesPerObservedRow*projectedRowsPerYear);
+ return {
+  available:true,
+  scope:'frozen TWSE T86 four-digit structured dataset only',
+  assumptions:{
+   observed_dates:frozenDates.length,
+   observed_rows:observedRows,
+   assumed_trading_days_per_year:assumedTradingDaysPerYear,
+   assumed_trading_days_per_month:assumedTradingDaysPerMonth,
+   rows_per_trading_day:Math.round(rowsPerTradingDay*100)/100,
+   no_additional_dates_imported_in_this_phase:true,
+   excludes_provider_overhead:true,
+   excludes_other_repository_datasets:true,
+   excludes_replay_and_backfill_write_amplification:true
+  },
+  measured_table_family_logical_bytes:familyBytes,
+  logical_bytes_per_observed_row:Math.round(bytesPerObservedRow*100)/100,
+  projected_rows_per_year:projectedRowsPerYear,
+  projected_table_family_logical_bytes_per_year:projectedLogicalBytesPerYear,
+  projected_rows_written_per_month:projectedRowsWrittenPerMonth,
+  free_tier_storage_fraction_per_projected_year:projectedLogicalBytesPerYear/providerQuotaEvidence.storage_bytes,
+  free_tier_monthly_write_fraction:projectedRowsWrittenPerMonth/providerQuotaEvidence.monthly_rows_written,
+  read_quota_note:'No general monthly read fraction is claimed; row-read usage depends on actual query frequency and provider accounting semantics.'
+ };
 }
 async function upsertAll(source,label){
  const stmt='INSERT INTO '+table+'('+cols.join(',')+') VALUES('+cols.map(()=>'?').join(',')+') ON CONFLICT(trade_date,stock_id) DO UPDATE SET '+keys.map(k=>k+'=excluded.'+k).join(',');
@@ -180,6 +253,7 @@ async function main(){
  const count1=await scalar('SELECT COUNT(*) FROM '+table+' WHERE trade_date>=? AND trade_date<=?',[frozenDates[0],frozenDates.at(-1)]);
  verify(count1===expectedRows,'Pass1 total row count mismatch '+count1);
 
+ const beforeReplay=await storageSnapshot();
  const pass2=await upsertAll(source,'PASS2_REPLAY');
  const parity2=await verifyAll(source,'PASS2_REPLAY');
  const count2=await scalar('SELECT COUNT(*) FROM '+table+' WHERE trade_date>=? AND trade_date<=?',[frozenDates[0],frozenDates.at(-1)]);
@@ -195,9 +269,13 @@ async function main(){
  verify(queries.stock_2330_history.rows===20,'2330 frozen history should contain 20 rows');
  verify(queries.latest_foreign_top20.rows===20,'Top-20 query should return 20 rows');
 
- const after=await storageSnapshot();
+ const afterReplay=await storageSnapshot();
+ verify(beforeReplay.table_family&&afterReplay.table_family,'Complete table-family dbstat accounting unavailable');
+ verify(beforeReplay.table_family.total_bytes===afterReplay.table_family.total_bytes,'Replay changed table-family logical bytes '+beforeReplay.table_family.total_bytes+' -> '+afterReplay.table_family.total_bytes);
+ console.log('[TURSO-V5] STORAGE_REPLAY_STABLE table_family_bytes='+afterReplay.table_family.total_bytes+' objects='+afterReplay.table_family.objects.length);
+ const feasibilityEvidence=feasibility(afterReplay);
  const report={
-  schema:'structured_v3_validation_v4',
+  schema:'structured_v3_validation_v5_phase4',
   frozen_dates:frozenDates,
   expected_rows:expectedRows,
   columns:keys,
@@ -208,11 +286,13 @@ async function main(){
   pass2_parity:{rows:parity2.rows,null_values:parity2.null_values,negative_values:parity2.negative_values,ms:parity2.ms},
   idempotent_counts:{before_replay:count1,after_replay:count2},
   queries,
-  storage:{before,after,warning:'PRAGMA page_count/page_size are whole-database logical measures. dbstat is table-specific only when the provider exposes it. Neither value is provider billing.'},
+  storage:{before_initial_write:before,before_replay:beforeReplay,after_replay:afterReplay,warning:'PRAGMA page_count/page_size are whole-database logical measures. table_family dbstat totals are SQLite logical page accounting for exposed POC objects. Neither is provider billing/quota usage.'},
+  provider_quota_evidence:providerQuotaEvidence,
+  feasibility:feasibilityEvidence,
   source_hashes:parity2.day_hashes,
   selected_ndjson_bytes:Buffer.byteLength(ndjson)
  };
  fs.writeFileSync('/tmp/turso-v4-validation.json',JSON.stringify(report,null,2));
- console.log('[TURSO-V4] V4_SUCCESS '+JSON.stringify({days:frozenDates.length,rows:expectedRows,pass1_write_ms:pass1.ms,pass2_write_ms:pass2.ms,parity1_ms:parity1.ms,parity2_ms:parity2.ms,dbstat_available:after.dbstat!==null}));
+ console.log('[TURSO-V5] PHASE4_SUCCESS '+JSON.stringify({days:frozenDates.length,rows:expectedRows,pass1_write_ms:pass1.ms,pass2_write_ms:pass2.ms,parity1_ms:parity1.ms,parity2_ms:parity2.ms,table_family_bytes:afterReplay.table_family.total_bytes,storage_replay_stable:beforeReplay.table_family.total_bytes===afterReplay.table_family.total_bytes,provider_quota_plan:providerQuotaEvidence.plan}));
 }
 main().catch(e=>{console.error('[TURSO-V4] FAILED '+e.stack);process.exitCode=1}).finally(()=>db.close());
