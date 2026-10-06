@@ -5,7 +5,9 @@ Canonical handoff: `docs/handoffs/turso-twse-institutional-poc.md`
 ## Current phase
 Phase 3 full-row Turso parity / replay / latency validation: **Prompt B CLOSEOUT PASS (2026-10-06)**.
 
-Phase 4 remote storage-accounting / free-tier feasibility evidence: **Prompt A COMPLETE (2026-10-06), Prompt B PENDING**.
+Phase 4 remote storage-accounting / free-tier feasibility evidence: **Prompt B CLOSEOUT PASS (2026-10-06)**.
+
+Phase 5 security-master classification / schema-coverage readiness is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
 
 ## Objective
 Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily institutional flows from `data_twse_institutional_investors`.
@@ -97,6 +99,77 @@ Independent closeout re-established evidence from current remote state instead o
 - Freshness PASS: current `main` advanced 9 commits from the PR base, but comparison found no concurrent changes touching the five POC files or `data_twse_institutional_investors/`; Phase 3 evidence is therefore not stale.
 - No repair/rerun was required during Prompt B. The earlier Prompt A plumbing failure in run `37441775430` remains documented and superseded by the authoritative successful rerun.
 
+## Phase 4 Prompt B closeout — PASS (2026-10-06)
+Independent closeout re-established the Phase 4 contract and evidence from durable repository state rather than accepting the Prompt A summary.
+
+- Preregistered Prompt B identity was recovered from pre-Prompt-A branch checkpoint `7115e271c2eb029904e7c7d307b6addf4d0d851a`; it matches the current Phase 4 closeout contract exactly.
+- Authoritative run `37443792571`, job `112203610605`, completed successfully against tested implementation SHA `9c5eef6359a3e606305160a4e58f4cbbadeb1da0`.
+- Evidence artifact `turso-poc-validation-evidence` (artifact `11403060483`, digest `sha256:d3d6e5a2cf9b0fba75e724007c4275d16b24fb4cfdd6745872e4c9a9d4660aa6`) was independently inspected. It contains `turso-v3-sizing.json` and `turso-v4-validation.json` with schema `structured_v3_validation_v5_phase4`.
+- Phase 3 parity/replay guarantees were preserved: the frozen 20 dates and 21,475 rows are unchanged; both parity passes compare every selected row and all eight numeric fields; replay remains 21,475 -> 21,475 with identical per-date canonical hashes. The implementation still exercises 31,198 negative values per parity pass and retains NULL handling.
+- Remote object accounting PASS: `sqlite_master` enumerates both POC tables and every exposed related index object; `dbstat` reports all five exposed objects with no missing object. The summed table-family total is 1,937,408 bytes / 473 pages, with no double counting.
+- Replay storage-stability PASS: table-family logical bytes remain 1,937,408 before and after full replay; whole-database PRAGMA logical size remains 46,645,248 bytes.
+- Measurement labels PASS: local SQLite same-row sizing, remote whole-DB PRAGMA bytes, remote table-family `dbstat` logical bytes, and Turso provider quota facts are explicitly separate and are not presented as equivalent billing measures.
+- Current Turso Free-plan facts were independently rechecked against the authoritative pricing page on 2026-10-06: 100 databases, 5 GB storage, 500 million monthly rows read, 10 million monthly rows written, and 3 GB monthly sync.
+- Feasibility calculation PASS: it is explicitly scoped to the frozen four-digit TWSE T86 structured dataset, states 250 trading days/year and 22/month assumptions, excludes provider overhead, other repository datasets, and replay/backfill write amplification, and does not claim a generic monthly read-quota fraction.
+- Secret handling PASS: workflow logs show `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` redacted as `***`; no credential value appears in the inspected artifact.
+- Production isolation PASS: PR #52 remains draft/open/unmerged, and its changed-file set remains exactly five POC-only files: `.github/workflows/poc-turso-institutional.yml`, this handoff, `scripts/poc_turso_capacity_compare.py`, `scripts/poc_turso_institutional.js`, and `scripts/poc_turso_institutional_structured.js`.
+- Freshness PASS: current `main` at closeout is `2665e688c5eb1b92a77840f84d682ebf3676a87c`, 11 commits ahead of the PR base. The concurrent changes do not touch the five POC files or any frozen `data_twse_institutional_investors` source file, so the Phase 4 evidence is not stale.
+- No repair or rerun was required during Prompt B.
+
+## Promoted next round
+Phase 5 — security-master classification and schema-coverage readiness.
+
+Purpose: close the remaining data-semantics gap before any production recommendation. This phase remains POC-only and must not migrate production.
+
+### Phase 5 bounded objectives
+1. Determine whether the repository already contains an authoritative or sufficiently reliable TWSE security-master / instrument-classification source. The exact path is not yet verified; locate and record it before implementation.
+2. Classify the frozen 21,475 four-digit records by security type using that source when available, and quantify how many are common stocks versus other 4-digit instruments.
+3. Audit the raw T86 source columns against the current eight-field structured schema and explicitly classify omitted columns as required, optional, derivable, or intentionally out-of-scope.
+4. Produce a production-readiness gap summary limited to classification/schema semantics. Do not implement production migration, additional historical import, or a new generalized data platform.
+5. Keep all work on `poc/turso-institutional-20261006` / PR #52 and preserve all Phase 3/4 parity, replay, and storage evidence.
+
+## Prompt A — Phase 5 implementation (preregistered)
+Continue the Turso TWSE Institutional POC in repository `EasonLiu0913/stock_data`, only on branch `poc/turso-institutional-20261006` / PR #52.
+
+Before doing any work:
+1. Fetch current remote `main` and the POC branch.
+2. Read repository-root `AGENTS.md`.
+3. Read canonical handoff `docs/handoffs/turso-twse-institutional-poc.md`.
+4. Verify Phase 4 Prompt B is durably PASS and recover this exact Phase 5 pair.
+5. Re-check concurrent changes for the POC entry points and frozen T86 source files.
+
+Implement only bounded Phase 5 evidence work. Start by locating and verifying the exact repository path of any existing TWSE security-master/instrument-classification source; if none is authoritative enough, record that gap rather than inventing a classifier.
+
+Requirements:
+- keep the frozen 20 dates / 21,475-row population unchanged;
+- preserve the existing exact parity/replay/storage gates;
+- classify the frozen four-digit instruments by security type only from a verified repository source or other authoritative evidence;
+- report counts and representative classifications, including non-common-stock four-digit instruments when present;
+- audit all raw T86 columns against the current eight structured fields and record why each omitted field is required, optional, derivable, or intentionally excluded;
+- keep all evidence non-secret and POC-only;
+- do not import additional dates, delete old POC tables, touch production crawler/prediction/dashboard/deployment code, merge PR #52, or recommend production migration as complete.
+
+Prompt A completion contract:
+- classification source/path and trust boundary are documented;
+- frozen-population classification counts are reproducible;
+- raw-column-to-structured-schema coverage audit is complete;
+- Phase 3/4 validation remains green or unchanged by construction;
+- this handoff records implementation/evidence SHA(s);
+- preserve the Phase 5 Prompt B below unchanged;
+- stop and report “Prompt A complete — ready for Prompt B”.
+
+## Prompt B — Phase 5 independent closeout (preregistered)
+Fetch current remote `main` and the POC branch; read `AGENTS.md` and this handoff; recover this Phase 5 Prompt B from the pre-Prompt-A checkpoint. Independently verify:
+1. the classification source is authoritative enough for the claims made and its exact repo/source identity is recorded;
+2. frozen 20-date / 21,475-row population identity was not changed;
+3. common-stock versus other-instrument classification counts are reproducible and no four-digit-pattern assumption is being mislabeled as authoritative classification;
+4. the raw T86 column audit covers every source column and the eight-field structured schema without silent omissions;
+5. Phase 3/4 parity, replay, storage-accounting, quota-labeling, and secret-handling guarantees were not weakened;
+6. changed files remain POC-only and production files/data/deployments remain untouched;
+7. concurrent `main` changes do not stale the evidence.
+
+If any criterion fails, repair only the bounded POC defect and rerun verification from criterion 1. If all pass, record Phase 5 Prompt B closeout PASS and preregister the next bounded pair before any further phase. Do not merge PR #52 or migrate production.
+
 ## Important caveats
 - TWSE T86 is listed-market data only: it is NOT the entire TWSE+TPEx equity universe.
 - The v3 structured schema covers 8 metrics: foreign buy/sell/net, trust buy/sell/net, dealer net, combined institutional net. Some other raw source columns are not yet imported.
@@ -116,18 +189,13 @@ Independent closeout re-established evidence from current remote state instead o
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Active round: Phase 4 complete remote SQLite object accounting and free-tier feasibility boundaries.
+- Completed round: Phase 4 remote SQLite object accounting and free-tier feasibility boundaries.
 - Prompt A: **COMPLETE**.
-- Prompt B closeout: **PENDING**.
+- Prompt B closeout: **PASS**.
 - Authoritative run/job: `37443792571` / `112203610605`.
 - Tested implementation SHA: `9c5eef6359a3e606305160a4e58f4cbbadeb1da0`.
-- Evidence artifact: `11403060483`, digest `sha256:d3d6e5a2cf9b0fba75e724007c4275d16b24fb4cfdd6745872e4c9a9d4660aa6`.
-- Prompt B below remains the preregistered Phase 4 closeout contract and must be executed independently before any next phase is promoted.
-
-## Active round
-Phase 4 — complete remote SQLite object accounting and free-tier feasibility boundaries.
-
-This phase remains POC-only. Its purpose is to close the remaining capacity-evidence gap, not to migrate production.
+- Closeout checkpoint branch head will be the commit containing this handoff update.
+- Next round: Phase 5 security-master classification and schema-coverage readiness, internally promoted but not started.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
