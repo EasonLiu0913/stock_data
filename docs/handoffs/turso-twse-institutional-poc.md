@@ -9,7 +9,9 @@ Phase 4 remote storage-accounting / free-tier feasibility evidence: **Prompt B C
 
 Phase 5 security-master classification / schema-coverage readiness: **Prompt B CLOSEOUT PASS (2026-10-06)**.
 
-Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
+Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit: **Prompt B CLOSEOUT PASS (2026-10-06)**.
+
+Phase 7 consumer-complete 9-metric structured-schema POC is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
 
 ## Objective
 Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily institutional flows from `data_twse_institutional_investors`.
@@ -320,6 +322,98 @@ Regression / isolation:
 
 Prompt A completion contract is satisfied. Do not start another phase until the preregistered Phase 6 Prompt B is executed and passes.
 
+
+## Phase 6 Prompt B closeout — PASS (2026-10-06)
+
+The exact Phase 6 Prompt B was independently recovered from the durable pre-Prompt-A checkpoint `75e952f6f8032c2150a886468682e40ee6421b0e` (`docs: close out Turso Phase 5`), not from conversation history or the Prompt A completion summary.
+
+Independent verification:
+1. **Authoritative instrument-type source — PASS.** The repository extractor `scripts/extract_twse_industry.js` reads the official TWSE ISIN page `https://isin.twse.com.tw/isin/C_public.jsp?strMode=2`, maps explicit upstream category headings into separate category CSVs, and is refreshed by `.github/workflows/update-twse-industry.yml`. Classification therefore uses explicit source categories rather than code length, name suffix, industry membership, or exclusion heuristics.
+2. **Frozen population identity — PASS.** The authoritative run preserves exactly the preregistered 20 T86 dates, 21,475 selected rows, and 1,088 unique four-digit IDs.
+3. **Classification reproducibility / fail-closed behavior — PASS.** `scripts/poc_turso_phase6_audit.js` requires every frozen ID to match exactly one authoritative category and fails on unmatched or ambiguous IDs. Result: `stock` 20,816 rows / 1,053 IDs; `innovation_board` 598 rows / 31 IDs; `tdr` 61 rows / 4 IDs; unmatched 0; ambiguous 0.
+4. **Consumer audit — PASS, with explicit bounded scope.** The deterministic audit scans non-POC runtime source under `scripts/` with fixtures excluded, identifies 18 direct raw-T86 consumers and 4 normalized institutional consumers, and maps every one of the 19 frozen T86 source columns. Proven current stored net requirements are `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, and `dealer_net`; `total_net` is derivable/validation state. Gross buy/sell and dealer proprietary/hedge components remain optional/unproven for this scanned runtime-consumer scope. No speculative field was promoted to required.
+5. **Schema recommendation separation — PASS.** The recommendation distinguishes fact key (`trade_date`, `stock_code`), four required stored net metrics, derivable `total_net`, derivable `stock_name` dimension, and optional future metrics. It explicitly records that the current eight-metric POC schema is not consumer-complete because `foreign_dealer_net` is missing.
+6. **Phase 3/4/5 guarantees preserved — PASS.** Authoritative run `37448313360`, job `112218402677`, tested SHA `d320790dc6b6a1b9e5791d28237a87943f2c496d`, completed SUCCESS. Both exact parity passes remain 21,475 rows with 31,198 negative values each, replay remains 21,475 -> 21,475, table-family logical storage remains 1,937,408 bytes / 473 pages and replay-stable, provider-quota labeling remains separate from SQLite page accounting, and Turso secrets remain redacted.
+7. **POC-only changed-file scope — PASS.** PR #52 remains draft/open/unmerged. Its seven changed files are exactly `.github/workflows/poc-turso-institutional.yml`, this handoff, `scripts/poc_turso_capacity_compare.py`, `scripts/poc_turso_institutional.js`, `scripts/poc_turso_institutional_structured.js`, `scripts/poc_turso_phase5_semantics.js`, and `scripts/poc_turso_phase6_audit.js`. No production crawler, canonical source JSON, prediction, dashboard, schedule, or deployment file is modified by the PR.
+8. **Concurrent-main freshness — PASS.** Current remote `main` at closeout is `9d1bd6dd846a0c10729f2295fa8bfdb7e6e81e71`. The 12 commits since the PR base are unrelated data/research outputs and do not touch POC entry points, frozen T86 inputs, or the authoritative TWSE category source. The eight category CSV blobs, `scripts/extract_twse_industry.js`, and `.github/workflows/update-twse-industry.yml` are byte-identical between tested SHA and current `main`.
+
+Authoritative Phase 6 evidence:
+- run/job: `37448313360` / `112218402677`;
+- tested implementation SHA: `d320790dc6b6a1b9e5791d28237a87943f2c496d`;
+- artifact: `11403768325`;
+- artifact digest: `sha256:5f72ee7689cd720cce75374f1f42b94362ab465d6550eb864d1682a844ba2abd`;
+- Prompt A handoff checkpoint: `57033153c702e7696b3e736528c9543ef71ac143`.
+
+No repair or rerun was required during Phase 6 Prompt B.
+
+**Prompt B closeout: PASS**
+
+## Promoted next round
+Phase 7 — consumer-complete 9-metric structured-schema POC.
+
+Purpose: close the single proven schema gap from Phase 6 by adding `foreign_dealer_net` to an isolated next-version POC schema, while preserving the old v3 evidence and all production isolation.
+
+### Phase 7 bounded objectives
+1. Create a new isolated consumer-complete structured POC version for the same frozen 20 dates / 21,475 rows. Preserve existing v3 tables and evidence; do not mutate or delete them.
+2. Store exactly the four proven required current-consumer net metrics plus the existing gross metrics needed by the current POC validation contract, resulting in nine stored T86 metrics by adding `foreign_dealer_net` to the existing eight-metric projection.
+3. Perform exact two-pass full-row parity and replay validation across all nine stored metrics, including signed values and deterministic per-date hashes.
+4. Measure the new table-family SQLite logical bytes separately and compare only against the prior v3 table-family measurement using the same frozen population. Keep provider billing/quota claims separate.
+5. Re-run the Phase 6 category and consumer audits unchanged or stronger so the new schema can be shown to satisfy the proven runtime-consumer minimum without claiming full production readiness.
+6. Keep PR #52 draft/unmerged and POC-only. Do not modify production consumers, canonical T86 files, schedules, deployment, prediction, dashboard behavior, or import additional dates.
+
+## Prompt A — Phase 7 implementation (preregistered)
+Continue the Turso TWSE Institutional POC in repository `EasonLiu0913/stock_data`, only on branch `poc/turso-institutional-20261006` / PR #52.
+
+Before doing any work:
+1. Fetch current remote `main` and the POC branch.
+2. Read repository-root `AGENTS.md`.
+3. Read canonical handoff `docs/handoffs/turso-twse-institutional-poc.md`.
+4. Verify Phase 6 Prompt B is durably PASS and recover this exact Phase 7 pair.
+5. Re-check concurrent changes for POC entry points, frozen T86 sources, category inputs/extractor, and proven institutional consumers.
+
+Implement only bounded Phase 7 POC work.
+
+Preferred implementation boundary:
+- add a new POC script `scripts/poc_turso_institutional_structured_v4.js` rather than rewriting the closed v3 evidence path;
+- update `.github/workflows/poc-turso-institutional.yml` only as needed to execute and retain the Phase 7 evidence;
+- update `docs/handoffs/turso-twse-institutional-poc.md`;
+- keep `scripts/poc_turso_phase6_audit.js` unchanged unless a strictly stronger deterministic audit is required.
+
+Requirements:
+- keep exactly the frozen 20 dates / 21,475 rows / 1,088 IDs;
+- create new prefixed POC table names for the Phase 7 schema; never delete or silently migrate the existing v3 tables;
+- add `foreign_dealer_net` as the ninth stored metric and derive it from the explicit frozen T86 source column, not from arithmetic or heuristics;
+- retain exact full-row parity, second full replay, row-count idempotency, per-date canonical hashes, signed-number handling, and fail-closed parsing;
+- prove all nine stored metrics match source values for every frozen row in both parity passes;
+- enumerate every exposed table/index/autoindex object for the new Phase 7 table family and report the table-family logical-byte total before/after replay;
+- compare new-vs-v3 storage only as SQLite logical page evidence for the same frozen population; do not relabel it as Turso billing usage;
+- re-run Phase 6 authoritative category/consumer audit and prove the new schema contains every metric listed in `required_stored_metrics_for_proven_current_consumers`;
+- retain secret redaction and non-secret evidence artifact upload;
+- do not change production data/code/consumers/schedules/deployment, widen dates/universe, merge PR #52, delete old POC tables, or claim production readiness.
+
+Prompt A completion contract:
+- authoritative Phase 7 workflow run is green;
+- nine-metric exact parity passes twice across exactly 21,475 rows;
+- replay remains idempotent and table-family logical storage is replay-stable;
+- Phase 6 audit proves no required current-consumer metric is missing from the Phase 7 schema;
+- old v3 evidence/tables remain preserved;
+- handoff records run/job/tested SHA/artifact and storage evidence;
+- preserve the Phase 7 Prompt B below unchanged;
+- stop with “Prompt A complete — ready for Prompt B”.
+
+## Prompt B — Phase 7 independent closeout (preregistered)
+Fetch current remote `main` and the POC branch; read `AGENTS.md` and this handoff; recover this exact Phase 7 Prompt B from the pre-Prompt-A checkpoint. Independently verify:
+1. Phase 6 Prompt B is durably PASS and the Phase 7 implementation is isolated to new POC schema/table identities rather than silently mutating closed v3 evidence;
+2. frozen 20-date / 21,475-row / 1,088-ID identity is unchanged;
+3. `foreign_dealer_net` comes from the explicit T86 source column and every frozen row passes exact nine-metric source parity twice;
+4. full replay remains 21,475 -> 21,475 with deterministic hashes and signed-number handling intact;
+5. Phase 7 table-family storage accounting includes every exposed table/index/autoindex object, is replay-stable, and any comparison to v3 is labeled SQLite logical evidence rather than provider billing;
+6. the unchanged-or-stronger Phase 6 consumer audit proves every current required stored metric is present, while optional/derivable fields remain correctly classified;
+7. secrets remain redacted, the evidence artifact is non-secret, PR changed files remain POC-only, and no production data/code/consumer/schedule/deployment behavior is modified;
+8. concurrent `main` changes do not stale the source, consumer, classification, or validation evidence.
+
+If any criterion fails, repair only the bounded POC defect and restart verification from criterion 1. If all pass, record Phase 7 Prompt B closeout PASS and decide from evidence whether another POC phase is justified. Do not merge PR #52 or migrate production.
+
 ## Important caveats
 - TWSE T86 is listed-market data only: it is NOT the entire TWSE+TPEx equity universe.
 - The v3 structured schema covers 8 metrics: foreign buy/sell/net, trust buy/sell/net, dealer net, combined institutional net. Some other raw source columns are not yet imported.
@@ -341,13 +435,14 @@ Prompt A completion contract is satisfied. Do not start another phase until the 
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Current round: Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit.
+- Completed round: Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit.
 - Prompt A: **COMPLETE**.
-- Prompt B closeout: **PENDING**.
+- Prompt B closeout: **PASS**.
 - Authoritative run/job: `37448313360` / `112218402677`.
 - Tested implementation SHA: `d320790dc6b6a1b9e5791d28237a87943f2c496d`.
 - Evidence artifact: `11403768325`, digest `sha256:5f72ee7689cd720cce75374f1f42b94362ab465d6550eb864d1682a844ba2abd`.
-- Stop condition: execute the preregistered Phase 6 Prompt B next; do not start Phase 7 before closeout PASS.
+- Closeout checkpoint: the branch commit containing this handoff update.
+- Next round: Phase 7 consumer-complete 9-metric structured-schema POC, internally promoted but not started.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
