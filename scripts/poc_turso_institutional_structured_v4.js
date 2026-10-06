@@ -92,7 +92,7 @@ async function scalar(sql,args=[]){
  const row=r.rows[0];
  return row?Number(Object.values(row)[0]):0;
 }
-async function storageSnapshot(){
+async function storageSnapshot(dataTable=table,metadataTable=sourceTable){
  const out={};
  for(const [name,sql] of Object.entries({
   page_count:'PRAGMA page_count',
@@ -107,7 +107,7 @@ async function storageSnapshot(){
    sql:`SELECT type,name,tbl_name,sql FROM sqlite_master
         WHERE tbl_name IN (?,?) OR name IN (?,?)
         ORDER BY tbl_name,type,name`,
-   args:[table,sourceTable,table,sourceTable]
+   args:[dataTable,metadataTable,dataTable,metadataTable]
   });
   const objects=schema.rows.map(row=>({
    type:String(row.type),
@@ -117,7 +117,7 @@ async function storageSnapshot(){
    sql_present:row.sql!==null
   }));
   const names=[...new Set(objects.map(x=>x.name))];
-  verify(names.includes(table)&&names.includes(sourceTable),'sqlite_master did not expose both POC tables');
+  verify(names.includes(dataTable)&&names.includes(metadataTable),'sqlite_master did not expose both POC tables');
   const placeholders=names.map(()=>'?').join(',');
   const stats=await db.execute({
    sql:'SELECT name, SUM(pgsize) AS bytes, COUNT(*) AS pages FROM dbstat WHERE name IN ('+placeholders+') GROUP BY name ORDER BY name',
@@ -238,13 +238,13 @@ async function main(){
  verify(process.env.TURSO_DATABASE_URL&&process.env.TURSO_AUTH_TOKEN,'Missing secrets');
  const source=loadSource();
  const ndjson=source.flatMap(item=>item.rows).map(row=>JSON.stringify(row)).join('\n')+'\n';
- fs.writeFileSync('/tmp/turso-v3.ndjson',ndjson);
+ fs.writeFileSync('/tmp/turso-phase7.ndjson',ndjson);
  const connectStart=performance.now();
  const connected=await db.execute('SELECT 1 AS ok');
  verify(Number(connected.rows[0].ok)===1,'Connectivity failed');
  const connectMs=ms(connectStart);
  console.log('[TURSO-PHASE7] CONNECT_SUCCESS ms='+connectMs);
- await db.execute('CREATE TABLE IF NOT EXISTS '+table+' (trade_date TEXT NOT NULL,stock_id TEXT NOT NULL,foreign_buy INTEGER,foreign_sell INTEGER,foreign_net INTEGER,trust_buy INTEGER,trust_sell INTEGER,trust_net INTEGER,dealer_net INTEGER,total_net INTEGER,PRIMARY KEY(trade_date,stock_id))');
+ await db.execute('CREATE TABLE IF NOT EXISTS '+table+' (trade_date TEXT NOT NULL,stock_id TEXT NOT NULL,foreign_buy INTEGER,foreign_sell INTEGER,foreign_net INTEGER,foreign_dealer_net INTEGER,trust_buy INTEGER,trust_sell INTEGER,trust_net INTEGER,dealer_net INTEGER,total_net INTEGER,PRIMARY KEY(trade_date,stock_id))');
  await db.execute('CREATE INDEX IF NOT EXISTS '+table+'_stock_date ON '+table+'(stock_id,trade_date)');
  await db.execute('CREATE TABLE IF NOT EXISTS '+sourceTable+' (trade_date TEXT PRIMARY KEY,columns_mapping TEXT NOT NULL,source_bytes INTEGER NOT NULL,eligible_rows INTEGER NOT NULL)');
  const before=await storageSnapshot();
@@ -272,11 +272,22 @@ async function main(){
 
  const afterReplay=await storageSnapshot();
  verify(beforeReplay.table_family&&afterReplay.table_family,'Complete table-family dbstat accounting unavailable');
+ const priorV3Storage=await storageSnapshot('turso_poc_equity_structured_v3','turso_poc_equity_structured_sources_v3');
+ verify(priorV3Storage.table_family,'Prior v3 table-family dbstat accounting unavailable');
+ const requiredConsumerMetricColumns={
+  foreign_ex_dealer_net:'foreign_net',
+  foreign_dealer_net:'foreign_dealer_net',
+  trust_net:'trust_net',
+  dealer_net:'dealer_net'
+ };
+ for(const [logical,column] of Object.entries(requiredConsumerMetricColumns)){
+  verify(keys.includes(column),'Required consumer metric '+logical+' missing stored column '+column);
+ }
  verify(beforeReplay.table_family.total_bytes===afterReplay.table_family.total_bytes,'Replay changed table-family logical bytes '+beforeReplay.table_family.total_bytes+' -> '+afterReplay.table_family.total_bytes);
- console.log('[TURSO-V5] STORAGE_REPLAY_STABLE table_family_bytes='+afterReplay.table_family.total_bytes+' objects='+afterReplay.table_family.objects.length);
+ console.log('[TURSO-PHASE7] STORAGE_REPLAY_STABLE table_family_bytes='+afterReplay.table_family.total_bytes+' objects='+afterReplay.table_family.objects.length);
  const feasibilityEvidence=feasibility(afterReplay);
  const report={
-  schema:'structured_v3_validation_v5_phase4',
+  schema:'turso_phase7_nine_metric_structured_v4_validation_v1',
   frozen_dates:frozenDates,
   expected_rows:expectedRows,
   columns:keys,
@@ -287,13 +298,14 @@ async function main(){
   pass2_parity:{rows:parity2.rows,null_values:parity2.null_values,negative_values:parity2.negative_values,ms:parity2.ms},
   idempotent_counts:{before_replay:count1,after_replay:count2},
   queries,
-  storage:{before_initial_write:before,before_replay:beforeReplay,after_replay:afterReplay,warning:'PRAGMA page_count/page_size are whole-database logical measures. table_family dbstat totals are SQLite logical page accounting for exposed POC objects. Neither is provider billing/quota usage.'},
+  storage:{before_initial_write:before,before_replay:beforeReplay,after_replay:afterReplay,prior_v3:priorV3Storage,comparison:{v3_table_family_logical_bytes:priorV3Storage.table_family.total_bytes,v4_table_family_logical_bytes:afterReplay.table_family.total_bytes,delta_bytes:afterReplay.table_family.total_bytes-priorV3Storage.table_family.total_bytes,label:'SQLite logical page evidence for the same frozen population; not Turso billing usage'},warning:'PRAGMA page_count/page_size are whole-database logical measures. table_family dbstat totals are SQLite logical page accounting for exposed POC objects. Neither is provider billing/quota usage.'},
+  consumer_metric_coverage:{required_stored_metrics_for_proven_current_consumers:Object.keys(requiredConsumerMetricColumns),stored_column_mapping:requiredConsumerMetricColumns,all_required_present:true},
   provider_quota_evidence:providerQuotaEvidence,
   feasibility:feasibilityEvidence,
   source_hashes:parity2.day_hashes,
   selected_ndjson_bytes:Buffer.byteLength(ndjson)
  };
  fs.writeFileSync('/tmp/turso-phase7-validation.json',JSON.stringify(report,null,2));
- console.log('[TURSO-V5] PHASE4_SUCCESS '+JSON.stringify({days:frozenDates.length,rows:expectedRows,pass1_write_ms:pass1.ms,pass2_write_ms:pass2.ms,parity1_ms:parity1.ms,parity2_ms:parity2.ms,table_family_bytes:afterReplay.table_family.total_bytes,storage_replay_stable:beforeReplay.table_family.total_bytes===afterReplay.table_family.total_bytes,provider_quota_plan:providerQuotaEvidence.plan}));
+ console.log('[TURSO-PHASE7] SUCCESS '+JSON.stringify({days:frozenDates.length,rows:expectedRows,pass1_write_ms:pass1.ms,pass2_write_ms:pass2.ms,parity1_ms:parity1.ms,parity2_ms:parity2.ms,table_family_bytes:afterReplay.table_family.total_bytes,storage_replay_stable:beforeReplay.table_family.total_bytes===afterReplay.table_family.total_bytes,provider_quota_plan:providerQuotaEvidence.plan}));
 }
 main().catch(e=>{console.error('[TURSO-PHASE7] FAILED '+e.stack);process.exitCode=1}).finally(()=>db.close());
