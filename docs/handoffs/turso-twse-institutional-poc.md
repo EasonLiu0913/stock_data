@@ -401,6 +401,51 @@ Prompt A completion contract:
 - preserve the Phase 7 Prompt B below unchanged;
 - stop with “Prompt A complete — ready for Prompt B”.
 
+
+## Phase 7 Prompt A completion evidence
+
+Implementation and repair history:
+- `scripts/poc_turso_institutional_structured_v4.js` was added as a new isolated Phase 7 path; closed v3 script/table identities were preserved.
+- Initial commit `cca4d8c749edb70459b5b731a23c41dbce6a88ed` added the nine-metric script. Commit `aa47a1e3bdda2de87df6659117caefb4c2ed2615` fixed a missing mapping comma.
+- Workflow commits `45287c0dcac76ea7064175e74e76d20f87ffc2a5` and `5f8fb0e8fed65641a0adca797cb047c2525ce847` added the Phase 7 execution step, PR path filter, and evidence artifact retention.
+- Run `37459412434` exposed a real fail-closed defect: the first attempted v4 table had been created without the new column. It failed with `table turso_poc_equity_structured_v4 has no column named foreign_dealer_net`. No deletion or silent ALTER was used.
+- Commit `dd87a08f7bf8bba781c22224d40ee87922adae27` completed the nine-metric table schema, required-consumer coverage evidence, and v3/v4 SQLite logical-storage comparison.
+- Commit `396adeec9050d2cb8b37b2fced9dcf1a94358084` moved Phase 7 to fresh table identities `turso_poc_equity_structured_v4_phase7` and `turso_poc_equity_structured_sources_v4_phase7`, preserving the failed earlier v4 table as historical POC state instead of deleting or mutating it.
+
+Authoritative evidence:
+- workflow run/job: `37459722120` / `112255976475`;
+- tested implementation SHA: `396adeec9050d2cb8b37b2fced9dcf1a94358084`;
+- run event: pull_request; conclusion: SUCCESS;
+- evidence artifact: `11412875561`;
+- artifact digest: `sha256:794a86efef5ea8b4e0f9c84d9e716342e730633c34925ef9ff707438c56edd05`;
+- artifact uploaded five non-secret files including `/tmp/turso-phase7-validation.json`, `/tmp/turso-phase6-audit.json`, and `/tmp/turso-phase5-semantics.json`.
+
+Phase 7 validation:
+- frozen population remains exactly 20 dates / 21,475 rows / 1,088 unique four-digit IDs;
+- stored Phase 7 metric columns are exactly nine: `foreign_buy`, `foreign_sell`, `foreign_net`, `foreign_dealer_net`, `trust_buy`, `trust_sell`, `trust_net`, `dealer_net`, `total_net`;
+- `foreign_dealer_net` is sourced directly from the explicit frozen T86 field matching `/^外資自營商買賣超股數/`, not arithmetic or heuristics;
+- pass 1 exact parity: 21,475 rows, 0 null values, 31,198 negative values;
+- pass 2 replay exact parity: 21,475 rows, 0 null values, 31,198 negative values;
+- replay row count is idempotent at 21,475 -> 21,475 and canonical per-date hashes are identical across passes;
+- Phase 6 audit reran unchanged and again reported 21,475 rows / 1,088 IDs, 18 direct consumers, 4 normalized consumers, and required metrics `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, `dealer_net`;
+- Phase 7 evidence maps those four logical requirements to stored columns `foreign_net`, `foreign_dealer_net`, `trust_net`, `dealer_net` respectively and records `all_required_present=true`.
+
+Storage evidence:
+- Phase 7 table family enumerates every exposed table/index/autoindex object with no missing dbstat objects;
+- v4 Phase 7 table-family logical size: 1,982,464 bytes / 484 pages;
+- prior v3 table-family logical size for the same frozen population: 1,937,408 bytes / 473 pages;
+- delta: +45,056 bytes;
+- Phase 7 before-replay and after-replay table-family totals are identical at 1,982,464 bytes, so replay storage is stable;
+- the comparison is explicitly labeled SQLite logical page evidence for the same frozen population, not Turso provider billing usage.
+
+Isolation and freshness:
+- PR #52 remains draft/open/unmerged and changed files remain POC-only: the isolated workflow, routing/handoff, POC scripts, and POC audit/comparison files only;
+- no production crawler, canonical frozen source JSON, consumer, schedule, deployment, prediction, or dashboard file was modified by Phase 7;
+- current remote main at completion is `59be6cd2dbcbd3f854b30a4609cbd902002e2c4f`;
+- concurrent main changes since the Phase 6 baseline add current-day data/research outputs only. The only T86 changes are the new 2026-10-06 data file plus its files index; none of the frozen 20 source files, category extractor/files, or proven consumer code used by this round changed.
+
+Prompt A completion contract is satisfied. Preserve the preregistered Phase 7 Prompt B below unchanged.
+
 ## Prompt B — Phase 7 independent closeout (preregistered)
 Fetch current remote `main` and the POC branch; read `AGENTS.md` and this handoff; recover this exact Phase 7 Prompt B from the pre-Prompt-A checkpoint. Independently verify:
 1. Phase 6 Prompt B is durably PASS and the Phase 7 implementation is isolated to new POC schema/table identities rather than silently mutating closed v3 evidence;
@@ -442,7 +487,7 @@ If any criterion fails, repair only the bounded POC defect and restart verificat
 - Tested implementation SHA: `d320790dc6b6a1b9e5791d28237a87943f2c496d`.
 - Evidence artifact: `11403768325`, digest `sha256:5f72ee7689cd720cce75374f1f42b94362ab465d6550eb864d1682a844ba2abd`.
 - Closeout checkpoint: the branch commit containing this handoff update.
-- Current round: Phase 7 consumer-complete 9-metric structured-schema POC, Prompt A IN PROGRESS / NOT COMPLETE; Prompt B remains preregistered / pending. New v4 script commits: `cca4d8c749edb70459b5b731a23c41dbce6a88ed` (initial) and `aa47a1e3bdda2de87df6659117caefb4c2ed2615` (mapping syntax fix). Baseline run/job `37458110811` / `112250609982` passed existing v3/Phase5/Phase6 checks but did not execute v4, so it is not authoritative Phase 7 evidence.
+- Current round: Phase 7 consumer-complete 9-metric structured-schema POC. Prompt A: **COMPLETE**. Prompt B: **PREREGISTERED / PENDING**. Authoritative run/job: `37459722120` / `112255976475`; tested SHA: `396adeec9050d2cb8b37b2fced9dcf1a94358084`; artifact: `11412875561`, digest `sha256:794a86efef5ea8b4e0f9c84d9e716342e730633c34925ef9ff707438c56edd05`.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
