@@ -3,9 +3,9 @@
 Canonical handoff: `docs/handoffs/turso-twse-institutional-poc.md`
 
 ## Current phase
-Phase 3 full-row Turso parity / replay / latency validation: **Prompt A COMPLETE (2026-10-06), Prompt B PENDING**.
+Phase 3 full-row Turso parity / replay / latency validation: **Prompt B CLOSEOUT PASS (2026-10-06)**.
 
-Do not start a later implementation phase until the preregistered Prompt B below independently closes this round.
+Phase 4 remote storage-accounting / free-tier feasibility evidence is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
 
 ## Objective
 Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily institutional flows from `data_twse_institutional_investors`.
@@ -56,6 +56,22 @@ Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily
 15. Authoritative run artifact `turso-poc-validation-evidence`, artifact ID `11401497844`, SHA-256 digest `9784e7a97e99ad86db1f10c24a10c22c9f9352fed72139e7a1a39faea09d5ab4`, contains `turso-v3-sizing.json` and `turso-v4-validation.json`.
 16. Phase 3 local same-row SQLite sizing rerun: JSON model 2,334,720 bytes (108.7 B/row), structured model 1,892,352 bytes (88.1 B/row), structured/json ratio 0.8105. This remains a local SQLite model, not provider billing.
 
+## Phase 3 Prompt B closeout — PASS (2026-10-06)
+Independent closeout re-established evidence from current remote state instead of accepting the Prompt A summary.
+
+- Preregistered Prompt B identity was recovered from pre-Prompt-A branch commit `1ac0685a2db2755d75f829fac7f2d48818edfcbb`; it matches the current-round closeout contract.
+- Authoritative validation run `37442074755`, job `112197987844`, completed successfully on tested head `3fc2252ef1488c6879a2e39f416933facab4bab9`.
+- The run artifact `turso-poc-validation-evidence` (artifact `11401497844`, digest `sha256:9784e7a97e99ad86db1f10c24a10c22c9f9352fed72139e7a1a39faea09d5ab4`) was independently inspected. Its JSON records exactly 20 frozen dates, 21,475 rows, the eight projected fields, two 21,475-row parity passes, replay counts 21,475 -> 21,475, per-date source hashes, query samples, and storage caveats.
+- Source-code review confirms parity is not sampling: each frozen date is read back in ordered pages, every returned row is compared with the projected source row, and every one of the eight numeric fields is checked for strict equality. A per-date SHA-256 is also recomputed and checked.
+- Replay verification performs a second complete 21,475-row upsert wave and a second complete parity pass; row count and per-date hashes must remain unchanged.
+- Signed-number parsing accepts explicit plus/minus integer strings after comma removal and rejects unsafe/non-integer values. This frozen sample exercised 31,198 negative values per parity pass. NULL handling is implemented, although this sample contained zero NULL projected values.
+- Query timing is defensible as run-local evidence only: five measurements per query are recorded with min/median/max; no SLA claim is made.
+- Storage claims remain bounded: local SQLite sizing compares the same 21,475 rows and the same stock/date index; remote PRAGMA is labeled whole-database logical size; remote `dbstat` is labeled incomplete because the query does not yet include all related indexes/autoindexes; none is described as Turso billing usage.
+- Secret handling PASS: the workflow consumes repository secrets only; log inspection shows `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` redacted as `***`; no credential value appeared in inspected logs or artifacts.
+- Production isolation PASS: PR #52 remains draft/open; changed-file set is limited to `.github/workflows/poc-turso-institutional.yml`, this handoff, `scripts/poc_turso_capacity_compare.py`, `scripts/poc_turso_institutional.js`, and `scripts/poc_turso_institutional_structured.js`. No production crawler, prediction, dashboard, schedule, deployment, or tracked source JSON file is changed.
+- Freshness PASS: current `main` advanced 9 commits from the PR base, but comparison found no concurrent changes touching the five POC files or `data_twse_institutional_investors/`; Phase 3 evidence is therefore not stale.
+- No repair/rerun was required during Prompt B. The earlier Prompt A plumbing failure in run `37441775430` remains documented and superseded by the authoritative successful rerun.
+
 ## Important caveats
 - TWSE T86 is listed-market data only: it is NOT the entire TWSE+TPEx equity universe.
 - The v3 structured schema covers 8 metrics: foreign buy/sell/net, trust buy/sell/net, dealer net, combined institutional net. Some other raw source columns are not yet imported.
@@ -75,16 +91,71 @@ Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Round: Phase 3 full-row parity / replay / latency validation.
+- Completed round: Phase 3 full-row parity / replay / latency validation.
 - Prompt A: **COMPLETE**.
-- Prompt B: **PREREGISTERED / PENDING**.
-- Do not run another Prompt A until this exact Prompt B passes.
+- Prompt B closeout: **PASS**.
+- Closeout tested run/job: `37442074755` / `112197987844`.
+- Tested SHA: `3fc2252ef1488c6879a2e39f416933facab4bab9`.
+- Closeout checkpoint branch head will be the commit containing this handoff update.
 
-## Next round
-Run the preregistered Prompt B below as an independent closeout. It must verify the authoritative run and code rather than relying on this completion summary. If Prompt B passes, it may then checkpoint the next bounded POC phase and preregister its paired prompts.
+## Promoted next round
+Phase 4 — complete remote SQLite object accounting and free-tier feasibility boundaries.
 
-## Prompt A — current round implementation (completed)
-Fetch current remote main and POC branch; read `AGENTS.md` and this handoff. Improve only the isolated v3 Turso POC to validate all 21,475 rows against source projections, compare repeat-run idempotency, examine remote storage/quotas safely, and collect query latency metrics. Do not touch production, original JSON, or unrelated workflows. Do not delete prior experimental tables. Commit evidence and provide the exact run IDs.
+This phase remains POC-only. Its purpose is to close the remaining capacity-evidence gap, not to migrate production.
 
-## Prompt B — current round independent closeout (preregistered before Prompt A)
-Fetch current remote main and PR branch; read `AGENTS.md` and this preregistered handoff. Verify actual GitHub Actions run/logs and source-code logic, exact counts and values for all 20 trading dates, unchanged production files, safe secret handling, idempotency under replay, defensible storage comparison, and query measurement. If any gate fails, repair only within POC and rerun bounded verification; otherwise record PASS and preserve next-round paired prompts in this handoff. Do not merge PR or change production deployments.
+### Phase 4 bounded objectives
+1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
+2. Record a table-family total separately from whole-database PRAGMA size.
+3. Test whether repeated replay changes any table-family page totals after the database stabilizes; do not infer provider billing from page counts.
+4. Document Turso free-tier limits using authoritative provider documentation/account-visible evidence if accessible without exposing credentials. Keep provider quota facts separate from measured SQLite logical bytes.
+5. Produce a narrow feasibility calculation for this one TWSE T86 structured dataset only. Do not extrapolate it to the whole repository or recommend production migration yet.
+6. Keep the same frozen 20 dates / 21,475 rows unless a storage-accounting check inherently needs no additional data. No new historical import wave.
+
+## Prompt A — Phase 4 implementation (preregistered)
+Continue the Turso TWSE Institutional POC in repository `EasonLiu0913/stock_data`, only on branch `poc/turso-institutional-20261006` / PR #52.
+
+Before doing any work:
+1. Fetch current remote `main` and the POC branch.
+2. Read repository-root `AGENTS.md`.
+3. Read canonical handoff `docs/handoffs/turso-twse-institutional-poc.md`.
+4. Verify Phase 3 Prompt B is durably PASS and recover this exact Phase 4 pair.
+5. Re-check concurrent changes for the exact POC entry points.
+
+Implement only bounded Phase 4 evidence work in:
+- `scripts/poc_turso_institutional_structured.js`
+- `scripts/poc_turso_capacity_compare.py` only if the same-row local comparator needs a matching explanatory field
+- `.github/workflows/poc-turso-institutional.yml`
+- `docs/handoffs/turso-twse-institutional-poc.md`
+
+Requirements:
+- retain the frozen 20 dates / 21,475 rows and existing exact parity/replay gates;
+- query remote `dbstat` or equivalent read-only SQLite metadata to enumerate all storage objects belonging to `turso_poc_equity_structured_v3` and `turso_poc_equity_structured_sources_v3`, including explicit and auto indexes when exposed;
+- preserve object-by-object bytes plus a clearly labeled table-family total;
+- capture before/after full replay and verify row/hash parity still passes;
+- distinguish table-family SQLite logical bytes, whole-database logical bytes, local SQLite sizing, and provider quota/billing units;
+- use authoritative Turso documentation/account-visible evidence for current free-tier quota facts when available, and record source/date; never log tokens or sensitive account details;
+- calculate feasibility only for this one structured T86 dataset using explicitly stated assumptions;
+- do not delete old POC tables, import additional dates, touch production code/data, merge PR #52, or change deployment/schedules.
+
+Prompt A completion contract:
+- authoritative workflow run is green;
+- exact parity/replay remains PASS;
+- remote object accounting is durable in a non-secret artifact;
+- all storage/quota labels are defensible;
+- this handoff records run/job/SHA/artifact evidence;
+- preserve the Phase 4 Prompt B below unchanged;
+- stop and report “Prompt A complete — ready for Prompt B”.
+
+## Prompt B — Phase 4 independent closeout (preregistered)
+Fetch current remote `main` and POC branch; read `AGENTS.md` and this handoff; recover this Phase 4 Prompt B from the pre-Prompt-A checkpoint. Independently verify:
+1. the authoritative workflow run/job/tested SHA and artifact;
+2. Phase 3 exact 21,475-row parity and full replay guarantees were not weakened;
+3. remote storage accounting includes every exposed object belonging to both POC table families, with explicit/auto indexes classified and summed without double-counting;
+4. whole-DB PRAGMA, table-family SQLite logical bytes, local SQLite comparison, and Turso provider quota/billing facts are kept distinct;
+5. any free-tier limits are supported by authoritative, current evidence and no credential/account secret is exposed;
+6. the feasibility calculation is limited to the frozen T86 structured dataset and its assumptions are explicit;
+7. PR changed files remain POC-only and production files/data/deployments are untouched;
+8. concurrent `main` changes do not stale the evidence.
+
+If any criterion fails, repair only the bounded POC defect and rerun verification from criterion 1. If all pass, record Phase 4 Prompt B closeout PASS and preregister the next bounded pair before any further phase. Do not merge PR #52 or migrate production.
+
