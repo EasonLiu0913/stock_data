@@ -2253,13 +2253,13 @@ Interpretation:
 - historical first-occurrence evidence remains tied to the original `30 3 * * *` schedule and is not rewritten;
 - future verification must accept only a natural `schedule` event after this amendment and must not treat a manual dispatch/rerun as schedule evidence.
 
-## Current active round
+## Closed round — second natural scheduled occurrence observation
 
 `institutional-accumulation-catalyst-bounded-scheduled-canary-second-natural-occurrence-observation-v1`
 
 Status:
 - Prompt A: **COMPLETE**
-- Prompt B: **PREREGISTERED / PENDING**
+- Prompt B closeout: **PASS**
 
 Promotion does not execute Prompt A automatically.
 
@@ -2361,3 +2361,19 @@ Protected and bounded-state verification:
 Prompt A completion boundary reached after exactly one later natural firing. This round does not wait for the third accepted occurrence and does not widen scope.
 
 **Prompt A complete — ready for Prompt B.**
+
+
+## Prompt B durable closeout evidence — second natural scheduled occurrence observation
+
+- Preregistered Prompt B recovered from durable pre-Prompt-A commit `4cac94d44fa23b1e059c2baf184df8a246c3e464`.
+- Natural scheduled run `37434295221`, attempt 1, completed SUCCESS.
+- schedule_gate job `112172204414` was eligible with accepted count before = 1.
+- 1102 / 1104 / 1216 jobs each completed with 2 requests and 2 snapshots; total requests = 6; official MOPS endpoints only.
+- finalize job `112174150514` checkpointed `9b3209b4191151b2c2f10a87c75a8af834fc9781`.
+- Durable scheduled-state blob `be49f701562c30087e249572f07b9c7ddc89d42b` records accepted count exactly 2/3, pending occurrence null, and latest accepted timestamp `2026-10-06T08:15:15.249Z`.
+- All six accepted snapshots were independently re-read from current remote main and satisfy the frozen prospective PIT contract.
+- Protected research audit remains blob `cf58c2f469507d7d10e15ec259e1e1e6f02ce848` at 36 valid / 0 invalid / 0 conflict.
+- Historical PIT remains blob `7ccafbe36206770d93f454feefdca81a082d4cd0` at 33 identities / 0 PIT-ready / 33 not-PIT-ready, outcome-blind and zero-network.
+- Protected outcome, holdout, association, Withdrawal, model, strategy, production, and broad-universe state remains unopened.
+
+**Prompt B closeout: PASS**
