@@ -828,3 +828,31 @@ Independently verify:
 
 If any criterion fails, repair only the bounded design defect and restart verification from criterion 1. On PASS, record Phase 9 Prompt B closeout PASS. Do not begin a shadow experiment, production migration, merge, or secret/config change without separate owner authorization.
 ```
+
+
+## Phase 9 Prompt B closeout — PASS
+
+The exact Phase 9 Prompt B was independently recovered from durable pre-Prompt-A checkpoint `b8f966e77e35c7092ec1c8140cabb817f252dee2`; the current handoff copy matched it exactly before closeout.
+
+Independent verification:
+1. **Phase 8 prerequisite — PASS.** Phase 8 has durable Prompt B PASS.
+2. **Current production integration map — PASS.** Current remote main `3738cb509122a865541bca61b92b1e2d664e9267` independently confirms the design's exact entry points: `.github/workflows/crawl-twse-institutional-investors.yml`, `scripts/crawl_twse_institutional_investors.js`, `scripts/generate_file_lists.js`, `.github/workflows/backfill-normalized-data.yml`, `scripts/backfill_normalized_data.js`, `scripts/generate_all_stock_predictions.js`, `scripts/prepare_and_verify_forecast_inputs.js`, `scripts/verify_prediction_data_readiness.js`, `scripts/check_forecast_required_files.js`, and `.github/workflows/deploy-pages.yml`.
+3. **Canonical source-of-truth / no automatic cutover — PASS.** The migration design explicitly preserves committed `data_twse_institutional_investors/<YYYYMMDD>_twse_institutional_investors.json` as source of truth throughout shadow phases. Turso remains a secondary shadow sink/read candidate and no automatic primary-read cutover is implied.
+4. **Reversibility and controls — PASS.** The design contains concrete shadow-write/read ordering, deterministic parity gates, default-off feature flags, rollback criteria/procedure, database-outage/file fallback behavior, bounded retry semantics, and least-privilege secret handling. Rollback never depends on reconstructing canonical files from Turso.
+5. **Measured evidence vs assumptions — PASS.** SQLite logical-byte measurements and bounded GitHub-hosted query timings remain explicitly separated from Turso provider quota/billing/SLA assumptions and production-performance claims.
+6. **Owner approval gates — PASS.** The design requires staged approvals: design approval -> separately authorized optional shadow experiment -> independent shadow closeout -> separate production-migration authorization. The document explicitly does not authorize production migration, primary-read switch, secret/config changes, or PR merge.
+7. **POC/design-only scope — PASS.** PR #52 remains draft/open/unmerged. Changed files are limited to the POC workflow, routing/handoffs, migration design, and POC scripts/audits. No production code, data, config, schedule, deployment, prediction, dashboard, or secret behavior changed.
+8. **Concurrent-main freshness — PASS.** Remote main remains exactly `3738cb509122a865541bca61b92b1e2d664e9267`, identical to the Phase 9 Prompt A completion baseline. The mapped integration seams are not stale.
+
+Design artifact:
+- `docs/handoffs/turso-twse-institutional-migration-design.md`
+- design commit: `3b5888501041e81f31b0c15e1838fcb5c807b006`
+- design blob: `408c5133e4fe1c0920616af8a676ac3d96a206f3`
+
+Decision:
+- Phase 9 design readiness is complete.
+- No shadow experiment is started by this closeout.
+- A shadow-only experiment requires separate explicit owner authorization.
+- No production migration, merge, secret/config change, schedule change, or primary-read switch is authorized.
+
+**Prompt B closeout: PASS**
