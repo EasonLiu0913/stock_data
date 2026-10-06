@@ -856,3 +856,117 @@ Decision:
 - No production migration, merge, secret/config change, schedule change, or primary-read switch is authorized.
 
 **Prompt B closeout: PASS**
+
+
+## Owner authorization — Phase 10 shadow-only experiment
+
+Owner authorization received on 2026-10-06 (Asia/Taipei): **authorized to begin the Turso shadow-only experiment**.
+
+This authorization permits a bounded, default-off shadow experiment only. It does **not** authorize:
+- production primary-read cutover;
+- making Turso the source of truth;
+- deleting or replacing canonical repository files;
+- merging PR #52;
+- changing Pages/prediction consumers to require Turso;
+- widening beyond TWSE T86;
+- destructive schema migration;
+- unbounded retries or silent fallback;
+- any production migration beyond the preregistered shadow scope below.
+
+## Current active round
+
+Phase 10 — Turso institutional shadow-only experiment v1.
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Purpose: execute the smallest reversible shadow-only experiment justified by the Phase 9 design while preserving the canonical repository-file path as source of truth.
+
+### Phase 10 bounded objectives
+
+1. Implement a new shadow writer/verifier on the POC branch that consumes the already-written canonical TWSE T86 JSON; it must not refetch TWSE.
+2. Use a new versioned shadow table family distinct from all POC Phase 3–8 tables and from any future production-primary namespace.
+3. Keep all feature/config switches default-off and scoped to the isolated POC/shadow workflow.
+4. Run only against canonical repository data already present on current main; do not alter canonical files or production workflows.
+5. Produce deterministic write/read parity evidence for the proven current-consumer contract and preserve explicit instrument-type coverage.
+6. Prove idempotent replay and a bounded database-unavailable fallback path in which canonical files remain fully usable and the shadow failure is explicitly classified.
+7. Retain non-secret evidence artifacts and preserve PR #52 as draft/unmerged.
+8. Do not change production readers, schedules, deployment, Pages, prediction behavior, or canonical source-of-truth ownership.
+
+## Prompt A — Phase 10 shadow-only experiment v1 (preregistered)
+
+```text
+Continue the Turso TWSE Institutional POC in repository EasonLiu0913/stock_data, only on branch poc/turso-institutional-20261006 / PR #52.
+
+Owner authorization for the shadow-only experiment is durable in docs/handoffs/turso-twse-institutional-poc.md. This is not production-migration authorization.
+
+Before work:
+1. Fetch current remote main and the POC branch.
+2. Read AGENTS.md, docs/handoffs/turso-twse-institutional-poc.md, and docs/handoffs/turso-twse-institutional-migration-design.md.
+3. Verify Phase 9 Prompt B is durably PASS and recover this exact Phase 10 pair.
+4. Re-check current canonical TWSE T86 writer/output paths and current consumer/readiness seams from main.
+5. Verify PR #52 remains draft/unmerged and turso-twse-institutional-poc remains the sole active task.
+
+Implement only a bounded shadow-only experiment.
+
+Preferred new POC-only entry points:
+- scripts/poc_turso_phase10_shadow_write.js
+- scripts/poc_turso_phase10_shadow_verify.js
+- .github/workflows/poc-turso-institutional.yml only as needed to execute and retain Phase 10 evidence
+- docs/handoffs/turso-twse-institutional-poc.md
+
+Requirements:
+- canonical repository JSON remains authoritative;
+- shadow input must come from already-present canonical files under data_twse_institutional_investors; do not fetch TWSE independently;
+- use a fresh versioned shadow table family, for example turso_shadow_twse_institutional_v1 and turso_shadow_twse_institutional_sources_v1; do not delete, ALTER, or repurpose closed POC tables;
+- keep exact source hashes/date identity durable in shadow metadata;
+- store at least the proven consumer-complete metric contract from Phase 7/8 and preserve the nine-metric projection when practical;
+- perform exact write/read parity for every row in the bounded experiment set, with deterministic hashes and signed-number handling;
+- replay the same bounded input and prove row-count/hash idempotency;
+- explicitly classify instrument types using the authoritative Phase 6 category method; never infer common stock from four-digit code shape;
+- include a bounded simulated database-unavailable path that proves canonical files/readiness remain usable and that the shadow failure is classified without mutating canonical state;
+- feature/config toggles must remain default-off and scoped to the POC/shadow workflow; do not alter production defaults;
+- secrets must remain GitHub Actions secrets only and must never appear in committed files, artifacts, logs, or summaries;
+- produce a non-secret /tmp/turso-phase10-shadow-evidence.json artifact;
+- do not modify production consumer code, canonical source JSON, schedules, deployment, prediction/dashboard behavior, Pages behavior, or merge PR #52.
+
+Bounded experiment set:
+- use the same frozen 20-date / 21,475-row / 1,088-ID population first, unless current durable evidence justifies a smaller fail-closed diagnostic subset;
+- do not widen to additional dates merely to increase sample size during this Prompt A;
+- live-consecutive-date accumulation remains a later evidence window and is not manufactured by backfilling future dates.
+
+Prompt A completion contract:
+- authoritative Phase 10 workflow run is green;
+- shadow write/read parity passes exactly for the bounded population and required metrics;
+- replay is idempotent by row count and deterministic hashes;
+- simulated database-unavailable fallback proves canonical file/readiness behavior is unaffected and failure classification is durable;
+- instrument-type coverage remains explicit;
+- artifact is retained and non-secret;
+- PR scope remains POC/shadow-only and production behavior is unchanged;
+- handoff records run/job/tested SHA/artifact/table identity/fallback evidence;
+- preserve the Phase 10 Prompt B below unchanged;
+- stop with “Prompt A complete — ready for Prompt B”.
+```
+
+## Prompt B — Phase 10 shadow-only experiment v1 closeout (preregistered)
+
+```text
+After Phase 10 Prompt A completes, fetch current remote main and the POC branch, read AGENTS.md and both Turso handoffs, and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify:
+1. Phase 9 Prompt B is durably PASS and owner authorization for a shadow-only experiment is durable;
+2. canonical repository TWSE T86 files remain source of truth and Phase 10 performs no independent TWSE refetch;
+3. the Phase 10 shadow table family is new/versioned and does not mutate/delete v3, Phase 7, or other closed POC tables;
+4. bounded population identity, source hashes, required metrics, signed values, exact write/read parity, deterministic hashes, and replay idempotency all pass;
+5. authoritative Phase 6 instrument-type classification remains explicit and no common-stock-only inference is introduced;
+6. database-unavailable fallback is demonstrated in a bounded simulation: canonical files/readiness remain usable, shadow failure is explicitly classified, and no canonical state is mutated or rolled back;
+7. flags/config remain default-off, secrets are absent from artifacts/logs, PR #52 remains draft/unmerged, changed-file scope remains POC/shadow-only, and production consumers/data/schedules/deployment/Pages/prediction behavior are untouched;
+8. concurrent main changes do not stale canonical source, consumer, category, or shadow-parity evidence.
+
+If any criterion fails, repair only the bounded Phase 10 shadow defect and restart verification from criterion 1. On PASS, record Phase 10 Prompt B closeout PASS.
+
+Do not begin a live 20-consecutive-trading-day shadow accumulation, production workflow integration, primary-read switch, merge, or migration without a separately preregistered round and any additional owner authorization required by the migration design.
+```
+
+Activation of Phase 10 does not execute Prompt A automatically.
