@@ -7,6 +7,7 @@ on:
       - 'scripts/poc_turso_institutional.js'
       - 'scripts/poc_turso_institutional_structured.js'
       - 'scripts/poc_turso_capacity_compare.py'
+      - 'scripts/poc_turso_phase5_semantics.js'
 permissions:
   contents: read
 concurrency:
@@ -28,7 +29,11 @@ jobs:
           sparse-checkout: |
             scripts/poc_turso_institutional_structured.js
             scripts/poc_turso_capacity_compare.py
+            scripts/poc_turso_phase5_semantics.js
             data_twse_institutional_investors
+            data_twse/twse_industry.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse/twse_industry_Warrants.csv
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -48,6 +53,8 @@ jobs:
         run: node scripts/poc_turso_institutional_structured.js
       - name: Compare same-row local SQLite storage
         run: python3 scripts/poc_turso_capacity_compare.py
+      - name: Audit frozen T86 security classification and schema coverage
+        run: node scripts/poc_turso_phase5_semantics.js
       - name: Upload non-secret capacity report
         uses: actions/upload-artifact@v4
         with:
@@ -55,4 +62,5 @@ jobs:
           path: |
             /tmp/turso-v3-sizing.json
             /tmp/turso-v4-validation.json
+            /tmp/turso-phase5-semantics.json
           retention-days: 14
