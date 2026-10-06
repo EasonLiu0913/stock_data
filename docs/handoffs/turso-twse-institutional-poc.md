@@ -5,7 +5,7 @@ Canonical handoff: `docs/handoffs/turso-twse-institutional-poc.md`
 ## Current phase
 Phase 3 full-row Turso parity / replay / latency validation: **Prompt B CLOSEOUT PASS (2026-10-06)**.
 
-Phase 4 remote storage-accounting / free-tier feasibility evidence is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
+Phase 4 remote storage-accounting / free-tier feasibility evidence: **Prompt A COMPLETE (2026-10-06), Prompt B PENDING**.
 
 ## Objective
 Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily institutional flows from `data_twse_institutional_investors`.
@@ -56,6 +56,31 @@ Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily
 15. Authoritative run artifact `turso-poc-validation-evidence`, artifact ID `11401497844`, SHA-256 digest `9784e7a97e99ad86db1f10c24a10c22c9f9352fed72139e7a1a39faea09d5ab4`, contains `turso-v3-sizing.json` and `turso-v4-validation.json`.
 16. Phase 3 local same-row SQLite sizing rerun: JSON model 2,334,720 bytes (108.7 B/row), structured model 1,892,352 bytes (88.1 B/row), structured/json ratio 0.8105. This remains a local SQLite model, not provider billing.
 
+17. Phase 4 implementation commit `9c5eef6359a3e606305160a4e58f4cbbadeb1da0` adds complete remote SQLite object accounting, replay storage-stability gating, provider quota evidence labels, and a bounded feasibility calculation without expanding the frozen population.
+18. Phase 4 authoritative workflow run `37443792571`, job `112203610605`, completed **SUCCESS** on head `9c5eef6359a3e606305160a4e58f4cbbadeb1da0`.
+19. Phase 4 preserved the frozen 20 dates / 21,475 rows and both exact parity passes:
+   - Pass 1: 21,475 rows; 31,198 negative values; 0 NULL projected values.
+   - Pass 2 full replay: 21,475 rows; 31,198 negative values; 0 NULL projected values.
+   - Replay row count remained 21,475 -> 21,475 and canonical per-date hashes remained identical.
+20. Remote `sqlite_master` + `dbstat` accounting exposed exactly five objects for the two POC table families, with no missing `dbstat` objects:
+   - `turso_poc_equity_structured_v3` table: 909,312 bytes / 222 pages.
+   - `sqlite_autoindex_turso_poc_equity_structured_v3_1`: 507,904 bytes / 124 pages.
+   - `turso_poc_equity_structured_v3_stock_date`: 503,808 bytes / 123 pages.
+   - `turso_poc_equity_structured_sources_v3` table: 12,288 bytes / 3 pages.
+   - `sqlite_autoindex_turso_poc_equity_structured_sources_v3_1`: 4,096 bytes / 1 page.
+   - Complete exposed table-family total: **1,937,408 bytes / 473 pages**.
+21. Full replay storage stability PASS: table-family total was 1,937,408 bytes before replay and 1,937,408 bytes after replay. Whole-database logical size also remained 46,645,248 bytes. These are SQLite logical page measures, not Turso provider billing usage.
+22. Current authoritative Turso Free-plan quota facts were recorded separately from SQLite measurements, sourced from `https://turso.tech/pricing` and observed 2026-10-06: 5 GB storage, 500 million monthly rows read, 10 million monthly rows written, 3 GB monthly sync, 100 databases.
+23. Narrow T86 feasibility arithmetic from the measured table-family total:
+   - observed logical density: 90.22 bytes per frozen row;
+   - assuming 250 trading days/year: ~268,438 rows/year and ~24,217,645 logical bytes/year;
+   - this is ~0.484% of the Free plan's 5 GB storage quota per projected year under the stated assumptions;
+   - assuming 22 trading days/month: ~23,645 row writes/month, ~0.236% of the 10 million monthly write quota;
+   - no generic monthly read-quota fraction is claimed because row-read usage depends on query frequency/provider accounting semantics.
+24. Phase 4 evidence artifact `turso-poc-validation-evidence`: artifact ID `11403060483`, digest `sha256:d3d6e5a2cf9b0fba75e724007c4275d16b24fb4cfdd6745872e4c9a9d4660aa6`. It contains `turso-v4-validation.json` (schema `structured_v3_validation_v5_phase4`) and `turso-v3-sizing.json`.
+25. Secret handling remained clean in the authoritative run: `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` were redacted as `***`; the uploaded artifact contains no credential values.
+26. Concurrent-main freshness check after the run: current `main` is nine commits ahead of the PR base; none of those concurrent files touch the five POC files or any frozen `data_twse_institutional_investors` source file, so Phase 4 evidence is not stale.
+
 ## Phase 3 Prompt B closeout — PASS (2026-10-06)
 Independent closeout re-established evidence from current remote state instead of accepting the Prompt A summary.
 
@@ -91,14 +116,15 @@ Independent closeout re-established evidence from current remote state instead o
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Completed round: Phase 3 full-row parity / replay / latency validation.
+- Active round: Phase 4 complete remote SQLite object accounting and free-tier feasibility boundaries.
 - Prompt A: **COMPLETE**.
-- Prompt B closeout: **PASS**.
-- Closeout tested run/job: `37442074755` / `112197987844`.
-- Tested SHA: `3fc2252ef1488c6879a2e39f416933facab4bab9`.
-- Closeout checkpoint branch head will be the commit containing this handoff update.
+- Prompt B closeout: **PENDING**.
+- Authoritative run/job: `37443792571` / `112203610605`.
+- Tested implementation SHA: `9c5eef6359a3e606305160a4e58f4cbbadeb1da0`.
+- Evidence artifact: `11403060483`, digest `sha256:d3d6e5a2cf9b0fba75e724007c4275d16b24fb4cfdd6745872e4c9a9d4660aa6`.
+- Prompt B below remains the preregistered Phase 4 closeout contract and must be executed independently before any next phase is promoted.
 
-## Promoted next round
+## Active round
 Phase 4 — complete remote SQLite object accounting and free-tier feasibility boundaries.
 
 This phase remains POC-only. Its purpose is to close the remaining capacity-evidence gap, not to migrate production.
