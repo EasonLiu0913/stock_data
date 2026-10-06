@@ -545,3 +545,91 @@ Fetch current remote `main` and POC branch; read `AGENTS.md` and this handoff; r
 
 If any criterion fails, repair only the bounded POC defect and rerun verification from criterion 1. If all pass, record Phase 4 Prompt B closeout PASS and preregister the next bounded pair before any further phase. Do not merge PR #52 or migrate production.
 
+
+
+## Phase 7 Prompt B closeout — PASS
+
+The exact Phase 7 Prompt B was independently recovered from pre-Prompt-A durable checkpoint `b829ec510104b82a124e2f905cd7a85117b71266`. The current handoff copy was byte-for-byte identical before closeout.
+
+Independent verification:
+1. **Phase 6 prerequisite / v3 isolation — PASS.** Phase 6 has durable Prompt B PASS. Closed v3 script `scripts/poc_turso_institutional_structured.js` has blob `84d833a1afd1d95f014bae70911a60d3332805cb` both at Phase 6 tested SHA `d320790dc6b6a1b9e5791d28237a87943f2c496d` and current POC branch. Phase 7 uses fresh table identities `turso_poc_equity_structured_v4_phase7` / `turso_poc_equity_structured_sources_v4_phase7`.
+2. **Frozen identity — PASS.** Authoritative artifact records exactly 20 frozen dates / 21,475 rows. The unchanged Phase 6 audit reran in the same authoritative workflow and records exactly 1,088 unique IDs.
+3. **Ninth metric source / exact parity — PASS.** `foreign_dealer_net` is mapped directly from the explicit frozen T86 source field using `/^外資自營商買賣超股數/`. Phase 7 columns are exactly nine stored metrics. Pass 1 and pass 2 each compare all 21,475 rows exactly, with 0 null values and 31,198 signed negative values.
+4. **Replay / deterministic hashes — PASS.** Full replay remains 21,475 -> 21,475. The script compares per-date canonical hashes across passes and the artifact contains 20 source hashes.
+5. **Storage accounting — PASS.** Phase 7 dbstat accounting exposes and sums all five objects: data table, explicit stock/date index, data-table PRIMARY KEY autoindex, source-metadata table, and source-table autoindex. No dbstat objects are missing. Before/after replay both equal 1,982,464 bytes / 484 pages. Prior v3 family is 1,937,408 bytes / 473 pages, delta +45,056 bytes. Artifact labels this only as SQLite logical page evidence for the same frozen population, not Turso billing usage.
+6. **Consumer coverage — PASS.** Unchanged `scripts/poc_turso_phase6_audit.js` blob `1e4bad3c0ae68a908269b9d05fb5723240de0005` reran and again proves required current-consumer metrics `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, `dealer_net`. Phase 7 artifact maps them to stored columns `foreign_net`, `foreign_dealer_net`, `trust_net`, `dealer_net` and records `all_required_present=true`. Optional and derivable fields remain separately classified.
+7. **Secret redaction / POC-only scope — PASS.** Authoritative run `37459722120`, job `112255976475`, tested SHA `396adeec9050d2cb8b37b2fced9dcf1a94358084`, completed SUCCESS. Artifact `11412875561`, digest `sha256:794a86efef5ea8b4e0f9c84d9e716342e730633c34925ef9ff707438c56edd05`, contains five non-secret evidence files; independent content scan found no Turso URL/token/credential strings. PR #52 remains draft/open/unmerged. Changed files are limited to POC workflow/routing/handoff and POC scripts/audits; no production data, consumer, schedule, deployment, prediction, or dashboard file is modified.
+8. **Concurrent-main freshness — PASS.** Current remote main at closeout is `80940a94f7235a2eff6c55e9d9347b74d9652344`. The three commits since Prompt A completion baseline `59be6cd2dbcbd3f854b30a4609cbd902002e2c4f` contain no frozen T86 source, TWSE category/extractor, consumer, or POC entry-point changes. Evidence remains fresh.
+
+**Prompt B closeout: PASS**
+
+## Promoted next round
+
+Phase 8 — read-contract compatibility POC.
+
+Purpose: prove whether the isolated Phase 7 Turso schema can reconstruct the institutional read shape required by proven current consumers for the same frozen population, without changing any production consumer or migration state.
+
+### Phase 8 bounded objectives
+1. Add a new POC-only read-contract verifier that reads the Phase 7 Turso tables and reconstructs the proven current-consumer institutional shape for the frozen 20 dates.
+2. Compare the Turso-derived read shape against the frozen source/normalization semantics for exactly the required current-consumer metrics and identity keys.
+3. Preserve instrument-type/category findings from Phase 6; do not silently treat every four-digit T86 ID as common stock.
+4. Measure only bounded read-query behavior needed for compatibility evidence; do not claim production latency/SLA from GitHub-hosted samples.
+5. Keep PR #52 draft/unmerged and production consumers/configuration untouched.
+6. Stop at a compatibility decision gate. Do not migrate production even if compatibility passes.
+
+## Prompt A — Phase 8 read-contract compatibility implementation (preregistered)
+
+```text
+Continue the Turso TWSE Institutional POC in repository EasonLiu0913/stock_data, only on branch poc/turso-institutional-20261006 / PR #52.
+
+Before work:
+1. Fetch current remote main and the POC branch.
+2. Read AGENTS.md and docs/handoffs/turso-twse-institutional-poc.md.
+3. Verify Phase 7 Prompt B is durably PASS and recover this exact Phase 8 pair.
+4. Re-check current production consumer/read-shape entry points and frozen T86 source semantics without changing them.
+
+Implement only bounded Phase 8 POC evidence.
+
+Preferred new entry point:
+- scripts/poc_turso_phase8_read_contract.js
+- update .github/workflows/poc-turso-institutional.yml only as needed to execute/upload Phase 8 evidence
+- update docs/handoffs/turso-twse-institutional-poc.md
+
+Requirements:
+- use the existing Phase 7 tables turso_poc_equity_structured_v4_phase7 and turso_poc_equity_structured_sources_v4_phase7; do not rewrite or delete them;
+- keep the exact frozen 20 dates / 21,475 rows / 1,088-ID identity;
+- reconstruct the proven current-consumer metric contract: foreign_ex_dealer_net, foreign_dealer_net, trust_net, dealer_net, plus trade_date/security identity;
+- compare every frozen row against the canonical frozen T86 source semantics or the current normalization contract with deterministic hashes and fail closed on any mismatch;
+- preserve category/type evidence from scripts/poc_turso_phase6_audit.js and explicitly report stock/innovation_board/tdr coverage rather than assuming all four-digit IDs are common stocks;
+- include representative read queries required by current consumers and record row counts/query timings only as bounded POC observations, not production SLA claims;
+- produce a non-secret /tmp/turso-phase8-read-contract.json artifact;
+- do not modify production consumers, canonical T86 data, schedules, deployment, prediction/dashboard behavior, or merge PR #52.
+
+Prompt A completion contract:
+- authoritative Phase 8 workflow run is green;
+- exact read-contract parity passes for all frozen rows and required metrics;
+- deterministic hashes/row counts are stable on a repeated read pass;
+- instrument-type coverage is explicit;
+- evidence artifact is retained and non-secret;
+- handoff records run/job/tested SHA/artifact evidence;
+- preserve the Phase 8 Prompt B below unchanged;
+- stop with Prompt A complete — ready for Prompt B.
+```
+
+## Prompt B — Phase 8 read-contract compatibility closeout (preregistered)
+
+```text
+After Phase 8 Prompt A completes, fetch current remote main and the POC branch, read AGENTS.md and the canonical handoff, and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify:
+1. Phase 7 Prompt B is durably PASS and Phase 8 did not mutate/delete closed Phase 7 or v3 tables/evidence;
+2. frozen 20-date / 21,475-row / 1,088-ID identity is unchanged;
+3. every frozen row passes exact compatibility for trade_date/security identity and required current-consumer metrics foreign_ex_dealer_net, foreign_dealer_net, trust_net, dealer_net;
+4. repeated read-contract validation has stable deterministic hashes and row counts;
+5. instrument-type coverage remains explicit for stock/innovation_board/tdr and no common-stock-only claim is inferred from four-digit code shape;
+6. read-query observations are labeled bounded POC evidence rather than production SLA/performance claims;
+7. artifact is non-secret, PR scope remains POC-only, production consumer/data/schedule/deployment behavior is untouched, and PR #52 remains draft/unmerged;
+8. concurrent main changes do not stale source, normalization, category, or consumer compatibility evidence.
+
+If any criterion fails, repair only the bounded Phase 8 POC defect and restart verification from criterion 1. On PASS, record Phase 8 Prompt B closeout PASS and make an evidence-based decision whether the POC has enough compatibility evidence for a separate owner-authorized migration-design task. Do not merge PR #52 or modify production.
+```
