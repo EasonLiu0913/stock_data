@@ -163,6 +163,8 @@ async function timedQuery(name,sql,args){
 async function main(){
  verify(process.env.TURSO_DATABASE_URL&&process.env.TURSO_AUTH_TOKEN,'Missing secrets');
  const source=loadSource();
+ const ndjson=source.flatMap(item=>item.rows).map(row=>JSON.stringify(row)).join('\n')+'\n';
+ fs.writeFileSync('/tmp/turso-v3.ndjson',ndjson);
  const connectStart=performance.now();
  const connected=await db.execute('SELECT 1 AS ok');
  verify(Number(connected.rows[0].ok)===1,'Connectivity failed');
@@ -207,7 +209,8 @@ async function main(){
   idempotent_counts:{before_replay:count1,after_replay:count2},
   queries,
   storage:{before,after,warning:'PRAGMA page_count/page_size are whole-database logical measures. dbstat is table-specific only when the provider exposes it. Neither value is provider billing.'},
-  source_hashes:parity2.day_hashes
+  source_hashes:parity2.day_hashes,
+  selected_ndjson_bytes:Buffer.byteLength(ndjson)
  };
  fs.writeFileSync('/tmp/turso-v4-validation.json',JSON.stringify(report,null,2));
  console.log('[TURSO-V4] V4_SUCCESS '+JSON.stringify({days:frozenDates.length,rows:expectedRows,pass1_write_ms:pass1.ms,pass2_write_ms:pass2.ms,parity1_ms:parity1.ms,parity2_ms:parity2.ms,dbstat_available:after.dbstat!==null}));
