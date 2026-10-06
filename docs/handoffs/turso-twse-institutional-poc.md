@@ -282,6 +282,44 @@ Fetch current remote `main` and the POC branch; read `AGENTS.md` and this handof
 
 If any criterion fails, repair only the bounded POC defect and restart verification from criterion 1. If all pass, record Phase 6 Prompt B closeout PASS and preregister the next bounded pair only if evidence justifies another POC phase. Do not merge PR #52 or migrate production.
 
+## Phase 6 Prompt A completion — COMPLETE (2026-10-06)
+
+Phase 6 implementation is complete on the isolated POC branch and is ready for the preregistered Phase 6 Prompt B closeout.
+
+Authoritative implementation/evidence:
+- tested branch SHA: `d320790dc6b6a1b9e5791d28237a87943f2c496d`;
+- workflow run/job: `37448313360` / `112218402677`, conclusion SUCCESS;
+- evidence artifact: `11403768325`;
+- artifact digest: `sha256:5f72ee7689cd720cce75374f1f42b94362ab465d6550eb864d1682a844ba2abd`;
+- current remote `main` at Prompt A completion check: `9d1bd6dd846a0c10729f2295fa8bfdb7e6e81e71`.
+
+Instrument-type resolution:
+- verified official upstream: `https://isin.twse.com.tw/isin/C_public.jsp?strMode=2`;
+- repository extractor: `scripts/extract_twse_industry.js`;
+- refresh workflow: `.github/workflows/update-twse-industry.yml`;
+- classification uses explicit TWSE ISIN category files, not code length/name/exclusion heuristics.
+- frozen population remained exactly 20 dates / 21,475 rows / 1,088 unique IDs.
+- authoritative category result: `stock` 20,816 rows / 1,053 IDs; `innovation_board` 598 rows / 31 IDs; `tdr` 61 rows / 4 IDs; unmatched 0; ambiguous 0.
+
+Consumer/schema audit:
+- deterministic audit implementation: `scripts/poc_turso_phase6_audit.js`;
+- scan scope is non-POC runtime source under `scripts/`, fixtures excluded;
+- direct raw T86 runtime consumers found: 18; normalized institutional runtime consumers: 4;
+- proven current stored net metrics: `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, `dealer_net`;
+- `total_net` is derivable/validation rather than required stored state;
+- gross buy/sell and dealer proprietary/hedge component fields remain optional/unproven for current scanned runtime consumers;
+- the current eight-metric POC schema is not sufficient for production consumers because it omits `foreign_dealer_net`. No production schema was changed.
+
+Regression / isolation:
+- Phase 3/4 parity still passes twice at exactly 21,475 rows, with 31,198 negative values each pass;
+- replay remains idempotent at 21,475 -> 21,475;
+- table-family storage remains 1,937,408 bytes and replay-stable;
+- Phase 5 still reports the same 19 raw fields / 8 mapped POC fields;
+- PR #52 remains draft/open/unmerged and changed-file scope remains POC-only (7 files);
+- no production crawler, production data, schedules, deployments, dashboards, or canonical T86 source files were modified.
+
+Prompt A completion contract is satisfied. Do not start another phase until the preregistered Phase 6 Prompt B is executed and passes.
+
 ## Important caveats
 - TWSE T86 is listed-market data only: it is NOT the entire TWSE+TPEx equity universe.
 - The v3 structured schema covers 8 metrics: foreign buy/sell/net, trust buy/sell/net, dealer net, combined institutional net. Some other raw source columns are not yet imported.
@@ -303,13 +341,13 @@ If any criterion fails, repair only the bounded POC defect and restart verificat
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Completed round: Phase 5 security-master classification and schema-coverage readiness.
+- Current round: Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit.
 - Prompt A: **COMPLETE**.
-- Prompt B closeout: **PASS**.
-- Authoritative run/job: `37445363651` / `112208744280`.
-- Tested implementation SHA: `54793dafe3af147802f17fecb980913eb69518f2`.
-- Evidence artifact: `11402519626`, digest `sha256:6172828ec1b441dcd795fa05cba96bf66c943e993f2abb4debaab8cebf2f1f1b`.
-- Next round: Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit, internally promoted but not started.
+- Prompt B closeout: **PENDING**.
+- Authoritative run/job: `37448313360` / `112218402677`.
+- Tested implementation SHA: `d320790dc6b6a1b9e5791d28237a87943f2c496d`.
+- Evidence artifact: `11403768325`, digest `sha256:5f72ee7689cd720cce75374f1f42b94362ab465d6550eb864d1682a844ba2abd`.
+- Stop condition: execute the preregistered Phase 6 Prompt B next; do not start Phase 7 before closeout PASS.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
