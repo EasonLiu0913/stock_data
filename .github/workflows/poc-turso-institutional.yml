@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/poc-turso-institutional.yml'
       - 'scripts/poc_turso_institutional.js'
+      - 'scripts/poc_turso_institutional_structured.js'
+      - 'scripts/poc_turso_capacity_compare.py'
 permissions:
   contents: read
 concurrency:
@@ -14,7 +16,7 @@ jobs:
   poc:
     name: Turso connectivity, JSON import and round-trip
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
       TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
       TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
@@ -24,7 +26,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            scripts/poc_turso_institutional.js
+            scripts/poc_turso_institutional_structured.js
+            scripts/poc_turso_capacity_compare.py
             data_twse_institutional_investors
           sparse-checkout-cone-mode: false
           persist-credentials: false
@@ -41,5 +44,13 @@ jobs:
           cd /tmp/turso-poc-deps
           npm init -y >/dev/null
           npm install --ignore-scripts --no-audit --no-fund @libsql/client
-      - name: Run isolated POC
-        run: node scripts/poc_turso_institutional.js
+      - name: Run typed institutional SQL POC
+        run: node scripts/poc_turso_institutional_structured.js
+      - name: Compare same-row local SQLite storage
+        run: python3 scripts/poc_turso_capacity_compare.py
+      - name: Upload non-secret capacity report
+        uses: actions/upload-artifact@v4
+        with:
+          name: turso-poc-structured-sizing
+          path: /tmp/turso-v3-sizing.json
+          retention-days: 14
