@@ -949,6 +949,83 @@ Prompt A completion contract:
 - stop with “Prompt A complete — ready for Prompt B”.
 ```
 
+## Phase 10 Prompt A completion evidence
+
+Status:
+- Phase 10 Prompt A: **COMPLETE**
+- Phase 10 Prompt B: **PREREGISTERED / PENDING**
+
+Implementation:
+- added `scripts/poc_turso_phase10_shadow_write.js`;
+- added `scripts/poc_turso_phase10_shadow_verify.js`;
+- updated only the isolated POC workflow `.github/workflows/poc-turso-institutional.yml` to execute the two Phase 10 steps and retain their non-secret evidence;
+- no production workflow, consumer, canonical data, schedule, deployment, Pages, prediction, secret/config, or source-of-truth behavior was changed.
+
+Authoritative Phase 10 evidence:
+- workflow run/job: `37477530674` / `112316756625`;
+- tested implementation SHA: `86ccceb477fdcd8cb41bb823225cbc3bc32de401`;
+- event/conclusion: pull_request / SUCCESS;
+- evidence artifact: `11420630645`;
+- artifact digest: `sha256:629bce9a34a460c34d5ae58570d644981c34103717d04b4660a01bf25ebce8e1`;
+- artifact contains eight non-secret POC evidence files including `turso-phase10-shadow-write.json` and `turso-phase10-shadow-evidence.json`.
+
+Shadow table identity:
+- data table: `turso_shadow_twse_institutional_v1`;
+- source metadata table: `turso_shadow_twse_institutional_sources_v1`;
+- fresh versioned identities distinct from v3, Phase 7, and all prior closed POC table families;
+- no delete/ALTER/repurpose operation is used.
+
+Canonical source identity:
+- shadow input comes only from the already-present canonical files under `data_twse_institutional_investors`;
+- independent TWSE refetch: false;
+- canonical repository JSON remains source of truth;
+- source metadata contains 20 exact `source_sha256` identities plus per-date row hashes and eligible row counts;
+- bounded population remains exactly 20 dates / 21,475 rows / 1,088 unique IDs.
+
+Write/read parity and replay:
+- shadow writer PASS: 20 dates / 21,475 rows;
+- pass 1 exact nine-metric parity: 21,475 rows;
+- replay pass exact nine-metric parity: 21,475 rows;
+- row count is idempotent at 21,475 -> 21,475;
+- per-date deterministic row hashes remain unchanged across replay;
+- independent shadow verifier exact current-consumer read-contract parity: 21,475 rows, 0 null values, 20,403 negative values;
+- read-contract SHA-256: `401045e819a3f909a515896a2dffedc4658bde49bcd765c191c86e8156a5768f`, matching the Phase 8 canonical compatibility hash.
+
+Instrument-type evidence:
+- stock: 1,053 unique IDs;
+- innovation_board: 31 unique IDs;
+- tdr: 4 unique IDs;
+- unmatched: 0;
+- ambiguous: 0;
+- classification uses the authoritative Phase 6 category-file method and does not infer common-stock status from four-digit code shape.
+
+Database-unavailable fallback simulation:
+- injected classification: `database_unavailable`;
+- status: `shadow_degraded`;
+- canonical fallback: `repository_files`;
+- production failure: false;
+- all canonical source hashes unchanged before/after simulation;
+- all canonical files remain readable;
+- canonical mutation performed: false;
+- no real TWSE refetch, production outage, or production workflow mutation was used to manufacture this evidence.
+
+Feature/config and secrecy:
+- shadow-write default: false;
+- shadow-read default: false;
+- primary-read default: false;
+- scope: isolated POC workflow only;
+- artifact scan found zero occurrences of `libsql://`, `TURSO_AUTH_TOKEN`, `TURSO_DATABASE_URL`, `Bearer `, or `Authorization:`;
+- live consecutive-date accumulation has not started.
+
+Isolation / freshness:
+- PR #52 remains draft/open/unmerged;
+- PR changed-file scope remains POC/design/shadow-only and adds only the two Phase 10 scripts to the existing POC set;
+- current remote main remains `dc0af60cc29073361acb5f31813ead36ee20dcf0`, identical to Phase 10 startup main;
+- no concurrent change stales canonical source, consumer, category, or parity evidence;
+- `turso-twse-institutional-poc` remains the sole active routed task.
+
+Prompt A completion contract is satisfied. Preserve the preregistered Phase 10 Prompt B below unchanged.
+
 ## Prompt B — Phase 10 shadow-only experiment v1 closeout (preregistered)
 
 ```text
