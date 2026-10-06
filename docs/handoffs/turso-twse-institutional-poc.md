@@ -7,7 +7,9 @@ Phase 3 full-row Turso parity / replay / latency validation: **Prompt B CLOSEOUT
 
 Phase 4 remote storage-accounting / free-tier feasibility evidence: **Prompt B CLOSEOUT PASS (2026-10-06)**.
 
-Phase 5 security-master classification / schema-coverage readiness: **Prompt A COMPLETE (2026-10-06), Prompt B PENDING**.
+Phase 5 security-master classification / schema-coverage readiness: **Prompt B CLOSEOUT PASS (2026-10-06)**.
+
+Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit is **internally promoted but not started**. Do not execute its Prompt A unless the owner explicitly asks to continue this Turso POC.
 
 ## Objective
 Evidence-based feasibility test of a zero-cost Turso database for TWSE T86 daily institutional flows from `data_twse_institutional_investors`.
@@ -200,6 +202,86 @@ If any criterion fails, repair only the bounded POC defect and rerun verificatio
 - Freshness check: current `main` at completion is `2665e688c5eb1b92a77840f84d682ebf3676a87c`; concurrent changes do not touch the POC files, the three classification inputs, or frozen T86 source files used by Phase 5.
 - Global task routing was not changed; `institutional-accumulation` remains the repository-wide default active task. This Turso POC was executed only because the owner explicitly named it in the Prompt A command.
 
+## Phase 5 Prompt B closeout — PASS (2026-10-06)
+The exact Phase 5 Prompt B was independently recovered from the pre-Prompt-A checkpoint `cdd8ec994510188d60f4372472408dd0207b030e`, not from conversation history or the Prompt A completion summary.
+
+Independent verification:
+1. Classification-source trust boundary — PASS. The exact repository inputs are `data_twse/twse_industry.csv`, `data_twse/twse_industry_ETF.csv`, and `data_twse/twse_industry_Warrants.csv`. The claims are intentionally bounded: these files support reproducible stock-list / ETF / warrant partitioning and explicit `-DR` detection, but `twse_industry.csv` is not asserted to be an authoritative pure common-stock master. The Phase 5 artifact explicitly records `common_stock_claim_supported: false`.
+2. Frozen population identity — PASS. Artifact `11402519626` records the exact 20 preregistered dates and exactly 21,475 selected rows, unchanged from Phases 3/4.
+3. Classification reproducibility / no four-digit overclaim — PASS. The artifact records 1,088 unique four-digit IDs: 1,084 `twse_stock_list_non_dr` IDs covering 21,414 rows and four explicit TDR IDs covering 61 rows (9103, 9105, 9110, 9136). No ETF, warrant, or unclassified rows occur in the frozen selected population. The implementation never relabels the 1,084 residual IDs as authoritative `common_stock`.
+4. Raw-column schema coverage — PASS. The frozen source has one stable 19-field schema variant. Every field has an explicit audit classification: 2 identity/dimension fields, exactly 8 mapped structured metrics, and 9 omitted non-derivable additional metrics (foreign-dealer buy/sell/net plus dealer proprietary and hedge buy/sell/net). There are zero silently unclassified source fields.
+5. Phase 3/4 guarantees — PASS. Authoritative run `37445363651`, job `112208744280`, head `54793dafe3af147802f17fecb980913eb69518f2`, completed SUCCESS. The same artifact preserves two exact 21,475-row parity passes across all eight stored metrics, 31,198 negative values per pass, replay 21,475 -> 21,475, complete five-object table-family accounting at 1,937,408 bytes / 473 pages, replay-stable storage, separated provider-quota labeling, and the existing bounded feasibility assumptions. Workflow logs redact both Turso secrets; independent artifact inspection found no credential/token-like values.
+6. POC-only changed-file scope — PASS. PR #52 remains draft/open/unmerged. Its six changed files are exactly: `.github/workflows/poc-turso-institutional.yml`, this handoff, `scripts/poc_turso_capacity_compare.py`, `scripts/poc_turso_institutional.js`, `scripts/poc_turso_institutional_structured.js`, and `scripts/poc_turso_phase5_semantics.js`. No production crawler, prediction, dashboard, deployment, schedule, or canonical source-data file is modified by the PR.
+7. Concurrent-main freshness — PASS. Current remote `main` at closeout is `9d1bd6dd846a0c10729f2295fa8bfdb7e6e81e71`, 12 commits ahead of the PR base. None of the 55 concurrent changed files touches a POC entry point, `data_twse_institutional_investors/`, or any of the three Phase 5 classification inputs. The three classification-input blobs are also byte-identical between tested SHA `54793dafe3af147802f17fecb980913eb69518f2` and current main: stock `98a08652569bcc5dbc1c460efd589a2f919239e7`, ETF `6a0a8b92c44ccebe47bc1da038cb4b38cd1be20b`, warrant `34c4eb7a7611319d128a5db3bc85ac8efa77dd86`.
+
+Authoritative Phase 5 evidence:
+- run/job: `37445363651` / `112208744280`;
+- tested implementation SHA: `54793dafe3af147802f17fecb980913eb69518f2`;
+- artifact: `11402519626`;
+- artifact digest: `sha256:6172828ec1b441dcd795fa05cba96bf66c943e993f2abb4debaab8cebf2f1f1b`;
+- implementation commits: `f46308576996bb9ff8c4bb48fd0dc18575e9efaa`, `54793dafe3af147802f17fecb980913eb69518f2`.
+
+No repair or rerun was required during Phase 5 Prompt B.
+
+**Prompt B closeout: PASS**
+
+## Promoted next round
+Phase 6 — authoritative instrument-type source resolution and omitted-metric consumer audit.
+
+Purpose: resolve the two semantic gaps left explicit by Phase 5 before any production recommendation. This remains POC-only and must not migrate production.
+
+### Phase 6 bounded objectives
+1. Locate and verify an authoritative instrument-type source for TWSE listed securities, preferring an existing repository-captured official TWSE source when available. Record exact source identity, fields, update mechanism, and trust boundary. If no sufficiently authoritative source is already available, record the gap rather than inventing one.
+2. Reclassify only the existing frozen 1,088 unique / 21,475-row population when an authoritative type field is available, without importing additional T86 dates.
+3. Audit existing repository consumers of TWSE institutional data to determine whether the nine omitted additional T86 metrics are actually required by current consumers. This is a static/read-only consumer-usage audit, not schema expansion.
+4. Produce a bounded schema recommendation: minimum required fact columns for current proven consumers, optional future fields, and any unresolved classification dependency.
+5. Preserve all Phase 3/4/5 parity, replay, storage, quota, security, and frozen-population guarantees. Do not touch production behavior or merge PR #52.
+
+## Prompt A — Phase 6 implementation (preregistered)
+Continue the Turso TWSE Institutional POC in repository `EasonLiu0913/stock_data`, only on branch `poc/turso-institutional-20261006` / PR #52.
+
+Before doing any work:
+1. Fetch current remote `main` and the POC branch.
+2. Read repository-root `AGENTS.md`.
+3. Read canonical handoff `docs/handoffs/turso-twse-institutional-poc.md`.
+4. Verify Phase 5 Prompt B is durably PASS and recover this exact Phase 6 pair.
+5. Re-check concurrent changes for POC entry points, frozen T86 sources, classification inputs, and any discovered instrument-master source.
+
+Implement only bounded Phase 6 evidence work.
+
+Requirements:
+- do not import any additional T86 date or alter the frozen 20 dates / 21,475 rows;
+- first search the repository for an existing official TWSE-derived security/instrument master with an explicit type/category field; document exact repo path, upstream identity, field semantics, and freshness;
+- if no authoritative source is present, record that result and do not infer common-stock status from code shape, name suffix absence, industry membership, or exclusion from ETF/warrant lists;
+- if an authoritative type field is present, classify only the frozen 1,088 IDs and report exact row/unique counts by type with unmatched IDs fail-closed;
+- statically audit current repository code/queries/reports that consume `data_twse_institutional_investors` or its normalized equivalents, and map their actual field dependencies to all 19 T86 source columns;
+- distinguish proven-current-consumer requirements from speculative future usefulness;
+- produce a non-secret Phase 6 evidence artifact and, if practical, deterministic zero-network tests for the classification/consumer audit;
+- preserve existing Phase 3/4/5 validation steps unchanged or stronger;
+- do not add production columns/tables, migrate consumers, change schedules/deployments, widen the universe, delete old POC tables, merge PR #52, or claim production readiness.
+
+Prompt A completion contract:
+- authoritative instrument-type source status is resolved as either verified-present or explicitly absent/insufficient;
+- any type counts are reproducible and fail-closed;
+- current-consumer field-dependency audit is complete enough to justify a bounded schema recommendation;
+- Phase 3/4/5 guarantees remain green or unchanged by construction;
+- handoff records implementation/run/job/SHA/artifact evidence;
+- preserve the Phase 6 Prompt B below unchanged;
+- stop with “Prompt A complete — ready for Prompt B”.
+
+## Prompt B — Phase 6 independent closeout (preregistered)
+Fetch current remote `main` and the POC branch; read `AGENTS.md` and this handoff; recover this exact Phase 6 Prompt B from the pre-Prompt-A checkpoint. Independently verify:
+1. any claimed authoritative instrument-type source really contains a defensible explicit type/category semantic and its exact repository/upstream identity and freshness are recorded; if the result is “insufficient source”, verify the implementation did not substitute heuristics;
+2. the frozen 20-date / 21,475-row and 1,088-ID populations were not expanded or silently changed;
+3. any classification counts are reproducible, unmatched IDs fail closed, and no four-digit/name/exclusion heuristic is promoted to authoritative common-stock classification;
+4. the consumer audit is based on actual repository consumers and maps their proven field dependencies against all 19 T86 columns without silently treating speculative fields as required;
+5. the schema recommendation clearly separates current required fields, optional fields, derivable dimensions, and unresolved dependencies;
+6. Phase 3/4/5 parity, replay, storage-accounting, quota-labeling, secret-handling, and production-isolation guarantees were not weakened;
+7. PR changed files remain POC-only and no production data/code/deployment is modified;
+8. concurrent `main` changes do not stale the evidence.
+
+If any criterion fails, repair only the bounded POC defect and restart verification from criterion 1. If all pass, record Phase 6 Prompt B closeout PASS and preregister the next bounded pair only if evidence justifies another POC phase. Do not merge PR #52 or migrate production.
+
 ## Important caveats
 - TWSE T86 is listed-market data only: it is NOT the entire TWSE+TPEx equity universe.
 - The v3 structured schema covers 8 metrics: foreign buy/sell/net, trust buy/sell/net, dealer net, combined institutional net. Some other raw source columns are not yet imported.
@@ -221,13 +303,13 @@ If any criterion fails, repair only the bounded POC defect and rerun verificatio
 - Source: `scripts/crawl_twse_institutional_investors.js`, `data_twse_institutional_investors/*.json`.
 
 ## Current round status
-- Active round: Phase 5 security-master classification and schema-coverage readiness.
+- Completed round: Phase 5 security-master classification and schema-coverage readiness.
 - Prompt A: **COMPLETE**.
-- Prompt B closeout: **PENDING**.
+- Prompt B closeout: **PASS**.
 - Authoritative run/job: `37445363651` / `112208744280`.
 - Tested implementation SHA: `54793dafe3af147802f17fecb980913eb69518f2`.
 - Evidence artifact: `11402519626`, digest `sha256:6172828ec1b441dcd795fa05cba96bf66c943e993f2abb4debaab8cebf2f1f1b`.
-- Prompt B below remains the preregistered Phase 5 closeout contract and must be executed independently before any further phase.
+- Next round: Phase 6 authoritative instrument-type source resolution / omitted-metric consumer audit, internally promoted but not started.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
