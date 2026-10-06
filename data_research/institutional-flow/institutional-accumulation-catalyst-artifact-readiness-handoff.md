@@ -2258,7 +2258,7 @@ Interpretation:
 `institutional-accumulation-catalyst-bounded-scheduled-canary-second-natural-occurrence-observation-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE — WAITING FOR NATURAL SCHEDULE EVIDENCE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -2298,3 +2298,66 @@ Independently verify: sole active routing still points to this handoff; first-na
 
 Fix only bounded observation/control-plane defects and restart verification if needed. On PASS, update/commit the handoff. Promote only the next observation round justified by durable accepted count; do not manually trigger another occurrence and do not widen scope. End Prompt B closeout: PASS and stop.
 ```
+
+
+## Prompt A execution evidence — second natural scheduled occurrence observation
+
+The first natural scheduled firing after accepted occurrence `schedule:37298104341:1` and after the owner-corrected `47 1 * * *` cron was durably observed and verified without manual dispatch or rerun.
+
+Live workflow identity:
+- workflow: `[研究] Institutional Accumulation Prospective Catalyst Canary`
+- run: `37434295221`
+- event: `schedule`
+- run attempt: `1`
+- workflow head SHA: `0a77e67050d9a81c11a8efa20c45532e37897be7`
+- created / started: `2026-10-06T08:09:59Z` (2026-10-06 16:09:59 Asia/Taipei)
+- conclusion: SUCCESS
+- no manual dispatch or rerun was used.
+
+Pre-request schedule gate:
+- job `112172204414` — SUCCESS.
+- trigger identity: `schedule:37434295221:1`.
+- candidate timestamp: `2026-10-06T08:10:07.000Z`.
+- eligibility: `eligible`.
+- accepted count before: `1`.
+- latest previously accepted observation timestamp: `2026-10-05T10:46:45.343Z`.
+- Asia/Taipei date advanced from `2026-10-05` to `2026-10-06`.
+- elapsed time: `77001657` ms, above the frozen 12-hour minimum.
+- durable schedule-gate checkpoint: `d6708f49ff4b458095870796574894526cd9c932`.
+- source jobs remained gated behind the successful durable preflight.
+
+Frozen live jobs:
+- 1102 job `112172288140` — SUCCESS; exactly 2 requests / 2 snapshots; checkpoint `71265ab369e5a278fbebdb34fe489ca1d5aa227c`.
+- 1104 job `112172288173` — SUCCESS; exactly 2 requests / 2 snapshots; checkpoint `90b2ab9c59ea21d865ab7faf7582c6b363c6c9a9`.
+- 1216 job `112172288251` — SUCCESS; exactly 2 requests / 2 snapshots; checkpoint `dd484e790ee1e232b037c0d81e58383d9adfb872`.
+- total repository-controlled source requests: exactly `6`.
+- total newly accepted snapshots: exactly `6`.
+- only official `POST /mops/api/t05st01` and `POST /mops/api/t05st01_detail` endpoints were used.
+- execution remained the frozen three-stock matrix with `max-parallel: 1` and collector-enforced randomized 20–60 second per-request pacing.
+- no legacy ajax retry, historical backfill, Wave A/Wave C refetch/rewrite, universe widening, outcome/model/strategy opening, or production behavior change occurred.
+
+Durable scheduled observability:
+- directory: `data_research/institutional-flow/scheduled-catalyst-canary-observability/37434295221/`.
+- files: `1102.json`, `1104.json`, `1216.json`.
+- blobs: `0467a7dd24a46744495e40a7877599f753a8326d`, `7b31bb23f85d137a5560d4f51a3d7c7727b1f5d3`, `cf66f6c2c9fa14bacb4b0d81ba1fc43d940f3ecc`.
+- each records exactly 2 requests / 2 snapshots, trigger `schedule:37434295221:1`, official endpoint identities, accepted immutable paths/IDs, and the stock-local latest collected timestamp.
+- all six immutable snapshot paths recorded in scheduled state are durable on remote main and were individually re-read by each stock job's zero-network remote verification step.
+
+Finalize:
+- job `112174150514` — SUCCESS.
+- finalize checkpoint: `9b3209b4191151b2c2f10a87c75a8af834fc9781`.
+- scheduled state blob after finalize: `be49f701562c30087e249572f07b9c7ddc89d42b`.
+- accepted eligible scheduled occurrence count advanced exactly once from `1` to `2` of target `3`.
+- `pending_occurrence` is `null`.
+- occurrence status / terminal reason is `accepted`.
+- latest accepted observation timestamp is `2026-10-06T08:15:15.249Z`, matching the latest durable 1216 snapshot.
+
+Protected and bounded-state verification:
+- canonical research observation audit remains byte-identical at blob `cf58c2f469507d7d10e15ec259e1e1e6f02ce848`, still exactly 36 valid / 0 invalid / 0 conflict and separate from the scheduled layer.
+- historical PIT artifact remains byte-identical at blob `7ccafbe36206770d93f454feefdca81a082d4cd0`, still 33 identities / 0 PIT-ready / 33 not-PIT-ready / 0 manual review, zero historical network, outcome-blind, protected state unopened.
+- comparison `0a77e67050d9a81c11a8efa20c45532e37897be7 -> 9b3209b4191151b2c2f10a87c75a8af834fc9781` contains the authorized scheduled-state mutation, exactly six append-only prospective snapshots, exactly three scheduled-observability files, plus unrelated concurrent CNN Fear & Greed data updates. No protected research/outcome/holdout/2454/association/Withdrawal/model/strategy/production/broad-universe artifact is in the bounded diff.
+- current durable experiment state is exactly `2/3`.
+
+Prompt A completion boundary reached after exactly one later natural firing. This round does not wait for the third accepted occurrence and does not widen scope.
+
+**Prompt A complete — ready for Prompt B.**
