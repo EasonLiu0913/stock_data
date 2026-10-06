@@ -2377,3 +2377,44 @@ Prompt A completion boundary reached after exactly one later natural firing. Thi
 - Protected outcome, holdout, association, Withdrawal, model, strategy, production, and broad-universe state remains unopened.
 
 **Prompt B closeout: PASS**
+
+
+## Current active round — third natural scheduled occurrence observation
+
+`institutional-accumulation-catalyst-bounded-scheduled-canary-third-natural-occurrence-observation-v1`
+
+Status:
+- Prompt A: **NOT STARTED / ACTIVE — WAITING FOR NATURAL SCHEDULE EVIDENCE**
+- Prompt B: **PREREGISTERED / PENDING**
+
+Promotion does not execute Prompt A automatically.
+
+### Prompt A — third natural scheduled occurrence observation
+
+```text
+Continue only if institutional-accumulation remains the sole active task and this round remains active.
+
+Fetch current remote main and read AGENTS.md, routing, this handoff, the prospective canary workflow, scheduled state manager/state, scheduled observability, prospective PIT contract, canonical observation audit, and historical PIT artifact.
+
+Observe only the first natural scheduled firing after schedule:37434295221:1. Do not manually dispatch or rerun, change the cron, widen beyond 1102/1104/1216, or open protected outcome/holdout/2454/association/Withdrawal/model/strategy/production/broad-universe state.
+
+If no later natural schedule run exists, make no implementation change, keep Prompt A incomplete, report WAITING FOR NATURAL SCHEDULE EVIDENCE, and stop.
+
+If the next natural firing exists, verify only that firing. schedule_gate must precede all source requests and use durable accepted count 2 as pre-state. A valid skip must issue zero source requests and preserve 2/3. An eligible firing may run only 1102/1104/1216 serially under max-parallel 1 with at most 2 requests per stock / 6 total, official t05st01/t05st01_detail only, immutable append-only checkpoints, and per-stock observability. Finalize must advance accepted count exactly once from 2 to 3/3, clear pending state, and set latest accepted timestamp to the latest durable snapshot. Any partial or ambiguous occurrence must fail closed and must not be counted.
+
+Protected 36-observation research artifacts and earlier closed artifacts must remain byte-identical and separate from the scheduled layer. Record exact run/job/checkpoint/blob evidence in this handoff.
+
+Complete after exactly one later natural firing is durably verified. Do not begin catalyst-significance interpretation or widen scope.
+
+Stop with Prompt A complete — ready for Prompt B.
+```
+
+### Prompt B — third natural scheduled occurrence observation closeout
+
+```text
+Perform mandatory closeout only after the third-natural-occurrence Prompt A completes. Fetch current remote main and recover this exact Prompt B from durable pre-Prompt-A history.
+
+Independently verify: routing still points to this handoff; second-natural-occurrence round has durable Prompt B PASS; the observed firing is the first natural schedule event after schedule:37434295221:1 and was not manufactured by manual dispatch/rerun; schedule_gate ran first with accepted count 2; if skipped, source request count is zero and state remains 2/3; if eligible, exactly 1102/1104/1216 ran serially with at most 2 requests each / 6 total, official endpoints only, immutable snapshots and observability are durable, finalize advanced exactly once from 2 to 3/3, pending cleared, and latest timestamp matches durable snapshots; partial/ambiguous occurrences were not counted; no legacy retry/backfill/Wave A/Wave C or scope widening occurred; protected research/outcome/holdout/2454/association/Withdrawal/model/strategy/production/broad-universe state remains unopened; final read-only verification passes and protected artifacts remain byte-identical; bounded diff contains only authorized occurrence outputs/state/handoff plus classified unrelated concurrent changes.
+
+On PASS, update/commit the handoff. Do not automatically open outcomes, interpret catalyst significance, promote a model/strategy, or widen the universe merely because 3/3 collection is complete. Preregister the smallest evidence-driven post-collection closeout round. End Prompt B closeout: PASS and stop.
+```
