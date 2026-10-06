@@ -442,7 +442,7 @@ If any criterion fails, repair only the bounded POC defect and restart verificat
 - Tested implementation SHA: `d320790dc6b6a1b9e5791d28237a87943f2c496d`.
 - Evidence artifact: `11403768325`, digest `sha256:5f72ee7689cd720cce75374f1f42b94362ab465d6550eb864d1682a844ba2abd`.
 - Closeout checkpoint: the branch commit containing this handoff update.
-- Next round: Phase 7 consumer-complete 9-metric structured-schema POC, internally promoted but not started.
+- Current round: Phase 7 consumer-complete 9-metric structured-schema POC, Prompt A IN PROGRESS / NOT COMPLETE; Prompt B remains preregistered / pending. New v4 script commits: `cca4d8c749edb70459b5b731a23c41dbce6a88ed` (initial) and `aa47a1e3bdda2de87df6659117caefb4c2ed2615` (mapping syntax fix). Baseline run/job `37458110811` / `112250609982` passed existing v3/Phase5/Phase6 checks but did not execute v4, so it is not authoritative Phase 7 evidence.
 
 ### Phase 4 bounded objectives
 1. Extend remote storage accounting so `dbstat` captures the data table, explicit `stock_date` index, PRIMARY KEY autoindex, source-metadata table, and its autoindex/object pages where exposed.
