@@ -616,6 +616,58 @@ Prompt A completion contract:
 - stop with Prompt A complete — ready for Prompt B.
 ```
 
+## Phase 8 Prompt A completion evidence
+
+Status:
+- Phase 8 Prompt A: **COMPLETE**
+- Phase 8 Prompt B: **PREREGISTERED / PENDING**
+
+Implementation:
+- Added `scripts/poc_turso_phase8_read_contract.js` as a read-only compatibility verifier over the existing Phase 7 tables `turso_poc_equity_structured_v4_phase7` and `turso_poc_equity_structured_sources_v4_phase7`.
+- Updated `.github/workflows/poc-turso-institutional.yml` only to trigger on the new POC script, execute the Phase 8 verifier, and retain `/tmp/turso-phase8-read-contract.json` in the existing non-secret evidence artifact.
+- No Phase 7/v3 table deletion, ALTER, migration, or production consumer change was performed.
+
+Authoritative Phase 8 evidence:
+- workflow run/job: `37471298950` / `112295184571`;
+- tested implementation SHA: `8ac55ed927dd67457b4eab6b6fd8b96b14bede5e`;
+- event/conclusion: pull_request / SUCCESS;
+- evidence artifact: `11417167846`;
+- artifact digest: `sha256:85cdb95c3fc20b8d92f99206295609318b8a281f89835344f02c1753535e6912`;
+- artifact contains six non-secret evidence files including `turso-phase8-read-contract.json`.
+
+Read-contract validation:
+- frozen identity remains exactly 20 dates / 21,475 rows / 1,088 unique IDs;
+- contract identity is `trade_date` + `stock_id`;
+- required current-consumer metrics are `foreign_ex_dealer_net`, `foreign_dealer_net`, `trust_net`, `dealer_net`;
+- Turso stored-column mapping is `foreign_net`, `foreign_dealer_net`, `trust_net`, `dealer_net` respectively;
+- PASS1 exact parity: 21,475 rows, 0 null values, 20,403 negative values, hash `401045e819a3f909a515896a2dffedc4658bde49bcd765c191c86e8156a5768f`;
+- PASS2 repeated-read exact parity: 21,475 rows, 0 null values, 20,403 negative values, same hash `401045e819a3f909a515896a2dffedc4658bde49bcd765c191c86e8156a5768f`;
+- all 20 per-date deterministic hashes match the frozen source semantics and are stable across repeated reads;
+- no database mutation is performed by the Phase 8 verifier.
+
+Instrument-type coverage:
+- stock: 1,053 unique IDs;
+- innovation_board: 31 unique IDs;
+- tdr: 4 unique IDs;
+- unmatched: 0;
+- ambiguous: 0;
+- evidence explicitly states that four-digit code shape is not common-stock proof.
+
+Representative read observations:
+- 2330 20-date required-metric history: 20 rows, median about 135 ms;
+- latest-date top foreign-ex-dealer query: 20 rows, median about 128 ms;
+- latest-date full required-metric rows: 1,080 rows, median about 140 ms;
+- all timings are explicitly labeled bounded GitHub-hosted POC observations and not production latency/SLA evidence.
+
+Isolation / secrecy / freshness:
+- independent artifact scan found no `libsql://`, `TURSO_AUTH_TOKEN`, `TURSO_DATABASE_URL`, or bearer credential strings;
+- PR #52 remains draft/open/unmerged and changed-file scope remains POC-only;
+- production consumers, canonical T86 data, schedules, deployment, prediction, and dashboard behavior remain untouched;
+- current remote main at completion is `3738cb509122a865541bca61b92b1e2d664e9267`;
+- the four concurrent main commits since Phase 7 closeout baseline `80940a94f7235a2eff6c55e9d9347b74d9652344` contain no frozen T86 source, category/extractor, consumer-script, or POC entry-point changes, so the Phase 8 evidence is not stale.
+
+Prompt A completion contract is satisfied. Preserve the preregistered Phase 8 Prompt B below unchanged.
+
 ## Prompt B — Phase 8 read-contract compatibility closeout (preregistered)
 
 ```text
