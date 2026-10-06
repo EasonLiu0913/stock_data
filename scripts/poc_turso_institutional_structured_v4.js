@@ -23,8 +23,8 @@ const mappings={
 };
 const keys=Object.keys(mappings);
 const cols=['trade_date','stock_id',...keys];
-const table='turso_poc_equity_structured_v4';
-const sourceTable='turso_poc_equity_structured_sources_v4';
+const table='turso_poc_equity_structured_v4_phase7';
+const sourceTable='turso_poc_equity_structured_sources_v4_phase7';
 const providerQuotaEvidence={
  source:'https://turso.tech/pricing',
  observed_date:'2026-10-06',
