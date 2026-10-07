@@ -1,0 +1,141 @@
+name: "[08 影片] Generate & Upload Daily 5% Video"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "影片日期 YYYYMMDD；留空時取最新 video job"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths:
+      - "video_jobs/daily-gainers/*.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-gainers-video-${{ github.event.inputs.date || 'queued' }}
+  cancel-in-progress: false
+
+jobs:
+  render-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install media dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          python -m pip install --upgrade pip
+          python -m pip install edge-tts gTTS
+
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          if [ -z "$date" ]; then
+            date="$(find video_jobs/daily-gainers -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          for file in             "data_daily_gain_over_5/${date}.json"             "data_daily_gain_over_5/analysis-ai/${date}.json"             "data_daily_gain_over_5/market-summary/${date}.json"; do
+            [ -s "$file" ] || { echo "Missing required file: $file" >&2; exit 1; }
+          done
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Build video content package
+        run: node scripts/build_daily_gainers_video_package.js "${{ steps.date.outputs.date }}"
+
+      - name: Synthesize Chinese narration
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-HsiaoChenNeural
+        run: |
+          python scripts/synthesize_daily_gainers_tts.py             "output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json"
+
+      - name: Render MP4
+        run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
+
+      - name: Video QA
+        id: qa
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          video="output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"
+          qa="output/daily-gainers-video/${date}/qa.json"
+          test -s "$video"
+          test -s "$qa"
+          duration="$(jq -r '.duration_seconds' "$qa")"
+          minutes="$(jq -r '.duration_minutes' "$qa")"
+          scenes="$(jq -r '.scene_count' "$qa")"
+          size="$(jq -r '.file_size_mib' "$qa")"
+          awk -v d="$duration" 'BEGIN { if (d < 300 || d > 660) exit 1 }'
+          echo "Video QA PASS: ${minutes} min, ${scenes} scenes, ${size} MiB"
+          echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
+          echo "scenes=$scenes" >> "$GITHUB_OUTPUT"
+          echo "size_mib=$size" >> "$GITHUB_OUTPUT"
+
+      - name: Upload private video to YouTube
+        id: youtube
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          node scripts/upload_youtube.js             "output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"             "output/daily-gainers-video/${date}/metadata.json"
+
+      - name: Upload rendered package artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "daily-gainers-video-${{ steps.date.outputs.date }}"
+          path: |
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/metadata.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Job summary
+        if: success()
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## Daily 5% video upload PASS
+
+          - Date: ${{ steps.date.outputs.date }}
+          - Duration: ${{ steps.qa.outputs.minutes }} minutes
+          - Scenes: ${{ steps.qa.outputs.scenes }}
+          - Size: ${{ steps.qa.outputs.size_mib }} MiB
+          - YouTube video ID: \`${{ steps.youtube.outputs.video_id }}\`
+          - Privacy: private
+          - Watch: ${{ steps.youtube.outputs.watch_url }}
+          - Studio: ${{ steps.youtube.outputs.studio_url }}
+          EOF
