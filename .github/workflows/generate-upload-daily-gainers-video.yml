@@ -45,11 +45,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          command -v ffmpeg
-          command -v ffprobe
-          if ! command -v rsvg-convert >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
-            sudo apt-get install -y --no-install-recommends librsvg2-bin fonts-noto-cjk espeak-ng
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! command -v rsvg-convert >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
           fi
+          ffmpeg -version | head -1
+          rsvg-convert --version
           python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS
 
       - name: Resolve target date
