@@ -32,6 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          sparse-checkout: |
+            scripts/poc_turso_phase12_schedule_gate.js
+            scripts/resolve_scheduled_collection_date.js
+            scripts/resolve_forecast_dates.js
+            scripts/lib/twse_trading_day.js
+            config/twse_non_trading_days.json
+            tests/poc_turso_phase12_schedule_gate.test.js
+          sparse-checkout-cone-mode: false
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
