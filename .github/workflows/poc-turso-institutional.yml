@@ -31,7 +31,7 @@ jobs:
       POC_DAYS: '20'
       NODE_PATH: /tmp/turso-poc-deps/node_modules
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             scripts
@@ -48,7 +48,7 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Checkout current main canonical live inputs
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           path: canonical-main
@@ -65,7 +65,7 @@ jobs:
             config/twse_non_trading_days.json
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Confirm secrets configured
@@ -105,7 +105,7 @@ jobs:
       - name: Report Phase 11 live shadow status
         run: node scripts/poc_turso_phase11_live_shadow_status.js
       - name: Upload non-secret capacity report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: turso-poc-validation-evidence
           path: |
