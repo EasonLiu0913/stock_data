@@ -27,7 +27,32 @@ Turn the already-published daily gainers research package into a 5-10 minute nar
 - `.github/workflows/generate-upload-daily-gainers-video.yml` performs full render, QA, private upload, and artifact retention.
 
 ## Evidence / validation
-Pending first natural/manual trigger for `20261007`.
+The 20261007 render proof is now complete; YouTube upload is blocked only by the GitHub-stored OAuth client secret.
+
+Concrete evidence:
+- Full render run #7: `37669067644`
+  - 14 scenes
+  - duration: 581.514667 seconds / 9.69 minutes
+  - MP4 size: 22.03 MiB
+  - TTS: PASS
+  - Render: PASS
+  - Video QA: PASS
+  - YouTube OAuth refresh: FAIL `HTTP 401 unauthorized_client`
+- Full render run #8: `37669849128`
+  - Render and QA: PASS
+  - retained artifact: `daily-gainers-video-20261007`
+  - artifact ID: `11503919731`
+  - OAuth diagnostic from GitHub runner:
+    - client ID prefix: `810401864826`
+    - client ID length: 72
+    - client secret length: 35
+    - refresh token length: 103
+  - OAuth refresh still returns `unauthorized_client`
+- Upload-only run #1: `37670359664`
+  - successfully downloaded the QA-passed 9.69-minute artifact
+  - failed only at OAuth refresh with the same `unauthorized_client`
+
+The repository owner independently proved the same OAuth flow locally with HTTP 200, access token PASS, and YouTube channel lookup PASS. Therefore the remaining mismatch is the GitHub-stored OAuth credential value, most likely `YOUTUBE_CLIENT_SECRET`, rather than the uploader implementation or refresh-token flow.
 
 Expected inputs are already final and complete:
 - `data_daily_gain_over_5/20261007.json`
@@ -35,7 +60,12 @@ Expected inputs are already final and complete:
 - `data_daily_gain_over_5/market-summary/20261007.json`
 
 ## Current repository state
-The video pipeline is isolated from production daily-gainers publication. It runs only on `workflow_dispatch` or a file under `video_jobs/daily-gainers/*.json`.
+The video pipeline is isolated from production daily-gainers publication.
+- Full generation: `.github/workflows/generate-upload-daily-gainers-video.yml`
+- Upload-only retry from retained QA artifact: `.github/workflows/retry-upload-daily-gainers-video.yml`
+- Full proof trigger: `video_jobs/daily-gainers/20261007.json`
+- Upload-only trigger: `video_upload_jobs/daily-gainers/20261007.json`
+- YouTube secrets are normalized for whitespace, optional `KEY=` prefixes, and wrapping quotes before token exchange.
 
 ## Known problems / rejected approaches
 - Do not upload public videos in this phase.
@@ -48,14 +78,17 @@ The video pipeline is isolated from production daily-gainers publication. It run
 - `scripts/render_daily_gainers_video.js` — MP4 rendering and QA artifact
 - `scripts/upload_youtube.js` — private YouTube upload
 - `.github/workflows/generate-upload-daily-gainers-video.yml` — end-to-end runner
+- `.github/workflows/retry-upload-daily-gainers-video.yml` — upload-only retry from retained artifact
 - `video_jobs/daily-gainers/20261007.json` — first proof trigger
+- `video_upload_jobs/daily-gainers/20261007.json` — upload-only retry trigger
 
 ## Next round
-1. Trigger `20261007`.
-2. Inspect the workflow job and logs.
-3. If render/TTS/upload fails, repair only the bounded video pipeline and retrigger.
-4. Close only when YouTube returns a video ID and the workflow summary reports PASS.
-5. After proof, decide whether to connect video jobs to the normal daily schedule.
+1. Replace GitHub repository secret `YOUTUBE_CLIENT_SECRET` with the exact client secret from the local `.env` combination that already produced HTTP 200 from `https://oauth2.googleapis.com/token`.
+2. Do not rerender the video.
+3. Update `video_upload_jobs/daily-gainers/20261007.json` to retrigger the upload-only workflow from source run `37669849128`.
+4. Verify OAuth refresh PASS, resumable upload PASS, and a real YouTube video ID.
+5. Record the successful upload-only run ID and video ID here.
+6. Only after that proof, decide whether to connect video jobs to the normal daily schedule.
 
 ## Safety / stop conditions
 - Never print OAuth secret values.
