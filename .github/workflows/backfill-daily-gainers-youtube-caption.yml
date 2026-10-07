@@ -39,10 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! command -v ffprobe >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng
-          fi
+          command -v ffprobe
           python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS
 
       - name: Resolve caption job
