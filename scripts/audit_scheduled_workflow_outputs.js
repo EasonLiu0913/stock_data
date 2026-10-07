@@ -399,6 +399,9 @@ function buildRules() {
         };
       },
     },
+    exactRule('poc-turso-live-shadow-daily.yml', 'repository_versioned_snapshot',
+      () => ['docs/handoffs/turso-twse-institutional-phase13-deployment.md'],
+      'Shadow-only database evidence lives in Turso and ephemeral Actions reports; registry verifies only immutable Phase 13 deployment handoff, not a daily production file.'),
     exactRule('prepare-market-environment.yml', 'forecast_date',
       (c) => [`data_market_environment/${c.target_trade_date}/market_environment.json`]),
     exactRule('refresh-finmind-quarterly-financial-quality-due.yml', 'repository_versioned_snapshot',
