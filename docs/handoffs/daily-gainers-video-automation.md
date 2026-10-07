@@ -3,7 +3,7 @@
 Canonical handoff: `docs/handoffs/daily-gainers-video-automation.md`
 
 ## Current phase
-First end-to-end proof: render and privately upload the 2026-10-07 daily 5% gainers video.
+First end-to-end proof completed: rendered and privately uploaded the 2026-10-07 daily 5% gainers video.
 
 ## Objective
 Turn the already-published daily gainers research package into a 5-10 minute narrated video and upload it to the authorized YouTube channel as a private video.
@@ -27,7 +27,7 @@ Turn the already-published daily gainers research package into a 5-10 minute nar
 - `.github/workflows/generate-upload-daily-gainers-video.yml` performs full render, QA, private upload, and artifact retention.
 
 ## Evidence / validation
-The 20261007 render proof is now complete; YouTube upload is blocked only by the GitHub-stored OAuth client secret.
+The 20261007 end-to-end render and private YouTube upload proof is complete.
 
 Concrete evidence:
 - Full render run #7: `37669067644`
@@ -53,6 +53,16 @@ Concrete evidence:
   - failed only at OAuth refresh with the same `unauthorized_client`
 
 The repository owner independently proved the same OAuth flow locally with HTTP 200, access token PASS, and YouTube channel lookup PASS. Therefore the remaining mismatch is the GitHub-stored OAuth credential value, most likely `YOUTUBE_CLIENT_SECRET`, rather than the uploader implementation or refresh-token flow.
+
+Successful upload-only run:
+- Run ID: `37672107825`
+- Video ID: `xWRk5WSf5Zk`
+- Privacy: `private`
+- OAuth access token: PASS
+- Resumable session: PASS
+- YouTube upload: PASS
+- Client secret fingerprint: `42e28f1a248770dd` (matches local)
+- Refresh token fingerprint: `460831bd502ea9ae` (matches local)
 
 Expected inputs are already final and complete:
 - `data_daily_gain_over_5/20261007.json`
@@ -83,12 +93,10 @@ The video pipeline is isolated from production daily-gainers publication.
 - `video_upload_jobs/daily-gainers/20261007.json` — upload-only retry trigger
 
 ## Next round
-1. Replace GitHub repository secret `YOUTUBE_CLIENT_SECRET` with the exact client secret from the local `.env` combination that already produced HTTP 200 from `https://oauth2.googleapis.com/token`.
-2. Do not rerender the video.
-3. Update `video_upload_jobs/daily-gainers/20261007.json` to retrigger the upload-only workflow from source run `37669849128`.
-4. Verify OAuth refresh PASS, resumable upload PASS, and a real YouTube video ID.
-5. Record the successful upload-only run ID and video ID here.
-6. Only after that proof, decide whether to connect video jobs to the normal daily schedule.
+1. Keep the current upload as private.
+2. Review the generated 20261007 video in YouTube Studio for narration quality, slide readability, pacing, and factual presentation.
+3. If accepted, connect video-job creation to the normal daily-gainers final-synthesis completion path without changing existing research or Pages behavior.
+4. Preserve private-by-default upload until explicit publication policy is approved.
 
 ## Safety / stop conditions
 - Never print OAuth secret values.
