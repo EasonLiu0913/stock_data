@@ -44,7 +44,7 @@ Prompt B closeout: PASS
 institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1
 
 Status:
-- Prompt A: NOT STARTED / ACTIVE
+- Prompt A: COMPLETE
 - Prompt B: PREREGISTERED / PENDING
 
 ## Objective
@@ -83,6 +83,22 @@ Using durable repository evidence only, verify:
 7. no claim is made about catalyst significance, predictive value, outcome association, production suitability, or broad-universe generalization.
 
 Require deterministic byte-identical regeneration, zero source network, protected blobs unchanged, and a bounded diff limited to the audit artifact plus minimal audit code/test and this handoff. Commit to remote main, record exact evidence here, mark Prompt A COMPLETE / Prompt B pending, then stop: Prompt A complete — ready for Prompt B.
+
+### Prompt A completion evidence — post-collection freeze audit
+
+- Deterministic freeze artifact committed on remote main at `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1.json`.
+- Artifact commit: `51d8bc545a9f9d9bdbd2e229a12b90dcb52ab7b3`; durable artifact blob: `079679bed50a048ef49f0983f8da6219d8bcdb89`.
+- Durable scheduled state remained exactly `3/3`, `pending_occurrence: null`, with accepted triggers in order: `schedule:37298104341:1`, `schedule:37434295221:1`, `schedule:37589122480:1`.
+- All nine scheduled-observability records were re-read from current main. Every stock/run record has exactly `2` requests, `2` snapshots, and only official `t05st01` / `t05st01_detail` endpoints.
+- All 18 referenced immutable snapshot paths were independently fetched from current main. Every path exists; filename immutable id equals `immutable_snapshot_id`; `pit_known_at == collected_at`; `historical_back_imputation_allowed == false`; methodology/parser identities remain frozen.
+- Latest durable snapshot is `2026-10-07T07:49:03.529Z`, exactly matching scheduled-state `latest_accepted_observation_timestamp`.
+- Repository evaluator/manager were executed read-only from blobs `e0fbbd53c1adffd9bfdc7f13a51719e7036cfd9a` and `91feb8854515484ae4b92b7199ab9b57496034eb` against the current 3/3 state. Probe result: `should_collect=false`, terminal reason `accepted_eligible_target_reached`, accepted count `3 -> 3`, zero requests, zero snapshots, zero endpoints, no state persistence.
+- Deterministic serialization/regeneration was executed twice and compared byte-for-byte before commit; outputs were identical.
+- Frozen live workflow remains blob `f6aec20c048802cac41ba2dd37c98d08a000e8ed`; scheduled state remains blob `240928292cdf5d7afb5c2eda350ce4932b2ea5f6`; protected 36-observation audit remains `cf58c2f469507d7d10e15ec259e1e1e6f02ce848`; historical PIT remains `7ccafbe36206770d93f454feefdca81a082d4cd0`; PIT capture contract remains `e6d3fe617c848c2e002382ce53e533e858aed0ae`.
+- No live canary dispatch/rerun, source-network request, fourth occurrence, cron/workflow change, outcome/holdout/2454/association/Withdrawal/model/strategy/production opening, catalyst-significance interpretation, or universe widening occurred.
+- Routing still has `institutional-accumulation` as the sole active project and points to this handoff.
+
+**Prompt A complete — ready for Prompt B.**
 
 ## Prompt B — post-collection freeze audit closeout
 
