@@ -79,6 +79,11 @@ jobs:
         run: |
           python scripts/synthesize_daily_gainers_tts.py             "output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json"
 
+      - name: Build Traditional Chinese subtitles
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          node scripts/build_daily_gainers_srt.js "output/daily-gainers-video/${date}/plan.json"
+
       - name: Render MP4
         run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
 
@@ -112,6 +117,19 @@ jobs:
           date="${{ steps.date.outputs.date }}"
           node scripts/upload_youtube.js             "output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"             "output/daily-gainers-video/${date}/metadata.json"
 
+      - name: Upload Traditional Chinese captions
+        id: captions
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          node scripts/upload_youtube_caption.js \
+            "${{ steps.youtube.outputs.video_id }}" \
+            "output/daily-gainers-video/${date}/daily-gainers-${date}.zh-TW.srt" \
+            "zh-TW" "繁體中文"
+
       - name: Upload rendered package artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -122,6 +140,8 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/metadata.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
           if-no-files-found: warn
           retention-days: 7
@@ -139,6 +159,7 @@ jobs:
           - Size: ${{ steps.qa.outputs.size_mib }} MiB
           - YouTube video ID: \`${{ steps.youtube.outputs.video_id }}\`
           - Privacy: private
+          - Captions: zh-TW `繁體中文` (${{ steps.captions.outputs.already_exists == 'true' && 'already existed' || 'uploaded' }})
           - Watch: ${{ steps.youtube.outputs.watch_url }}
           - Studio: ${{ steps.youtube.outputs.studio_url }}
           EOF
