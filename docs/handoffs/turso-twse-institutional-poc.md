@@ -1325,3 +1325,22 @@ Verify:
 
 On PASS record durable Phase 12 Prompt B closeout and leave 20-day live accumulation waiting/active-evidence. On defects, repair only the bounded Phase 12 scope and re-verify from criterion 1. Do not start a new round, merge, or migrate to primary-read without separately approved authorization.
 ```
+
+
+## Phase 12 implementation checkpoint — schedule staged, not enabled
+
+- Owner authorized design/build of a separate daily shadow scheduler on 2026-10-07 Taipei time. This does not merge draft PR #52 or authorize production primary-read/migration.
+- Preregistered Phase 12 Prompt A/B pair is above; keep preregistered Prompt B unchanged.
+- Phase 12 Prompt A implementation staged on `poc/turso-institutional-20261006`:
+  - `scripts/poc_turso_phase12_schedule_gate.js` — deterministic event/date and canonical-readiness gate;
+  - `tests/poc_turso_phase12_schedule_gate.test.js` — 12 deterministic tests for ordinary/delayed/holiday/missing/manual/preauth/unknown schedule;
+  - `.github/workflows/poc-turso-live-shadow-daily.yml` — isolated daily shadow workflow, PR-only tests, explicit scheduled/manual collector;
+  - `scripts/audit_scheduled_workflow_outputs.js` and `tests/audit_scheduled_workflow_outputs.test.js` — register exactly the new POC workflow with `repository_versioned_snapshot` semantics (checks the POC ledger exists, not a production market-date file).
+- Implementation commits: `deb0a514602df4156f1bea594467491917e2457e`, `de6fe141d10e848117eb456f472f05e084c8160f`, `38f482fefb9e56f8b6ec01d40a2d56f397e45dcd`, `df9281f9047bc47647d10a45d4f2ef22676a7298`, `3b3d4d337e217523d77439da764e6ed9fff2abb1`.
+- Proposed cron slots: Monday–Friday 11:47 and 13:17 UTC = 19:47 and 21:17 Asia/Taipei, **after canonical T86 writer's 18:21 Taipei last slot**.
+- The workflow on PR runs only date-gate tests without secrets. On schedule/manual events, it checks out main, resolves only the corresponding scheduled/current Taipei date, checks covered official TWSE trading calendar and exact canonical JSON, and SKIPs with an artifact if date is a holiday, delayed beyond eight hours, pre-authorization, or canonical file missing. It does not refetch TWSE. Only READY runs the existing Phase 11 writer/parity/status using existing Actions Turso secrets.
+- Manual workflow_dispatch accepts **current Taipei date only**; it cannot turn old historical dates into new live observations.
+- GitHub schedule runs only from repository default branch. This workflow currently exists ONLY on POC branch / draft PR #52, so **cron is STAGED, NOT LIVE; no daily schedule is enabled**.
+- Do not mark Phase 12 Prompt A COMPLETE before the authoritative latest-head PR test and scheduled-workflow contract evidence is examined; do not mark auto accumulation live without separate authorized default-branch deployment.
+- Latest implementation SHA at checkpoint: `3b3d4d337e217523d77439da764e6ed9fff2abb1`.
+- Candidate PR evidence runs for this SHA: new POC gate workflow `37555776455`, Node regression `37555776480`, scheduled-workflow contract `37555776571`. These were pending/in progress at checkpoint and are NOT PASS evidence.
