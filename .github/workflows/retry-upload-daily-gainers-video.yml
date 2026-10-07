@@ -78,6 +78,7 @@ jobs:
           test -s "$dir/daily-gainers-$date.mp4"
           test -s "$dir/metadata.json"
           test -s "$dir/qa.json"
+          test -s "$dir/daily-gainers-$date.zh-TW.srt"
           duration="$(jq -r '.duration_seconds' "$dir/qa.json")"
           awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
           echo "Reusing QA-passed artifact: $(jq -r '.duration_minutes' "$dir/qa.json") min"
@@ -92,6 +93,19 @@ jobs:
           date="${{ steps.job.outputs.date }}"
           node scripts/upload_youtube.js             "output/daily-gainers-video/$date/daily-gainers-$date.mp4"             "output/daily-gainers-video/$date/metadata.json"
 
+      - name: Upload Traditional Chinese captions
+        id: captions
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          date="${{ steps.job.outputs.date }}"
+          node scripts/upload_youtube_caption.js \
+            "${{ steps.youtube.outputs.video_id }}" \
+            "output/daily-gainers-video/$date/daily-gainers-$date.zh-TW.srt" \
+            "zh-TW" "繁體中文"
+
       - name: Job summary
         if: success()
         shell: bash
@@ -102,6 +116,7 @@ jobs:
           - Source render run: ${{ steps.job.outputs.run_id }}
           - YouTube video ID: `${{ steps.youtube.outputs.video_id }}`
           - Privacy: private
+          - Captions: zh-TW `繁體中文`
           - Watch: ${{ steps.youtube.outputs.watch_url }}
           - Studio: ${{ steps.youtube.outputs.studio_url }}
           EOF
