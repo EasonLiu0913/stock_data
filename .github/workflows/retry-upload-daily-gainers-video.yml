@@ -1,0 +1,107 @@
+name: "[08 影片] Retry Daily 5% YouTube Upload"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "影片日期 YYYYMMDD"
+        required: true
+        default: "20261007"
+      source_run_id:
+        description: "含已通過 QA MP4 artifact 的 workflow run ID"
+        required: true
+        default: "37669849128"
+  push:
+    branches: [main]
+    paths:
+      - "video_upload_jobs/daily-gainers/*.json"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  upload-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout uploader only
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            video_upload_jobs
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Resolve upload job
+        id: job
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+          INPUT_RUN_ID: ${{ github.event.inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          run_id="${INPUT_RUN_ID:-}"
+          if [ -z "$date" ]; then
+            job="$(find video_upload_jobs/daily-gainers -maxdepth 1 -type f -name '20??????.json' | sort | tail -1)"
+            test -n "$job"
+            date="$(jq -r '.target_date' "$job")"
+            run_id="$(jq -r '.source_run_id' "$job")"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]]
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download QA-passed rendered artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: daily-gainers-video-${{ steps.job.outputs.date }}
+          path: output/daily-gainers-video/${{ steps.job.outputs.date }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: EasonLiu0913/stock_data
+          run-id: ${{ steps.job.outputs.run_id }}
+
+      - name: Verify downloaded video package
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.job.outputs.date }}"
+          dir="output/daily-gainers-video/$date"
+          test -s "$dir/daily-gainers-$date.mp4"
+          test -s "$dir/metadata.json"
+          test -s "$dir/qa.json"
+          duration="$(jq -r '.duration_seconds' "$dir/qa.json")"
+          awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
+          echo "Reusing QA-passed artifact: $(jq -r '.duration_minutes' "$dir/qa.json") min"
+
+      - name: Upload private video to YouTube
+        id: youtube
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          date="${{ steps.job.outputs.date }}"
+          node scripts/upload_youtube.js             "output/daily-gainers-video/$date/daily-gainers-$date.mp4"             "output/daily-gainers-video/$date/metadata.json"
+
+      - name: Job summary
+        if: success()
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## Daily 5% YouTube upload PASS
+          - Date: ${{ steps.job.outputs.date }}
+          - Source render run: ${{ steps.job.outputs.run_id }}
+          - YouTube video ID: `${{ steps.youtube.outputs.video_id }}`
+          - Privacy: private
+          - Watch: ${{ steps.youtube.outputs.watch_url }}
+          - Studio: ${{ steps.youtube.outputs.studio_url }}
+          EOF
