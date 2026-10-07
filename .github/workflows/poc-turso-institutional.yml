@@ -1,0 +1,122 @@
+name: 'POC: Turso institutional JSON import'
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/poc-turso-institutional.yml'
+      - 'scripts/poc_turso_institutional.js'
+      - 'scripts/poc_turso_institutional_structured.js'
+      - 'scripts/poc_turso_institutional_structured_v4.js'
+      - 'scripts/poc_turso_capacity_compare.py'
+      - 'scripts/poc_turso_phase5_semantics.js'
+      - 'scripts/poc_turso_phase6_audit.js'
+      - 'scripts/poc_turso_phase8_read_contract.js'
+      - 'scripts/poc_turso_phase10_shadow_verify.js'
+      - 'scripts/poc_turso_phase11_live_shadow_status.js'
+      - 'scripts/poc_turso_phase11_live_shadow_collect.js'
+      - 'scripts/poc_turso_phase10_shadow_write.js'
+permissions:
+  contents: read
+concurrency:
+  group: turso-institutional-poc-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  poc:
+    name: Turso connectivity, JSON import and round-trip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+      TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+      POC_DAYS: '20'
+      NODE_PATH: /tmp/turso-poc-deps/node_modules
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts
+            data_twse_institutional_investors
+            data_twse/twse_industry.csv
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse/twse_industry_ETN.csv
+            data_twse/twse_industry_PreferredStock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_REITs.csv
+            data_twse/twse_industry_Warrants.csv
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Checkout current main canonical live inputs
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: canonical-main
+          sparse-checkout: |
+            data_twse_institutional_investors
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse/twse_industry_ETN.csv
+            data_twse/twse_industry_PreferredStock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_REITs.csv
+            data_twse/twse_industry_Warrants.csv
+            config/twse_non_trading_days.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Confirm secrets configured
+        run: |
+          test -n "$TURSO_DATABASE_URL" || { echo "::error::Missing TURSO_DATABASE_URL"; exit 1; }
+          test -n "$TURSO_AUTH_TOKEN" || { echo "::error::Missing TURSO_AUTH_TOKEN"; exit 1; }
+      - name: Install isolated libSQL client
+        run: |
+          mkdir -p /tmp/turso-poc-deps
+          cd /tmp/turso-poc-deps
+          npm init -y >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund @libsql/client
+      - name: Run typed institutional SQL POC
+        run: node scripts/poc_turso_institutional_structured.js
+      - name: Run Phase 7 nine-metric institutional SQL POC
+        run: node scripts/poc_turso_institutional_structured_v4.js
+      - name: Compare same-row local SQLite storage
+        run: python3 scripts/poc_turso_capacity_compare.py
+      - name: Audit frozen T86 security classification and schema coverage
+        run: node scripts/poc_turso_phase5_semantics.js
+      - name: Audit authoritative security categories and current consumers
+        run: node scripts/poc_turso_phase6_audit.js
+      - name: Verify Phase 8 Turso read contract
+        run: node scripts/poc_turso_phase8_read_contract.js
+      - name: Run Phase 10 shadow writer
+        run: node scripts/poc_turso_phase10_shadow_write.js
+      - name: Verify Phase 10 shadow-only experiment
+        run: node scripts/poc_turso_phase10_shadow_verify.js
+      - name: Collect Phase 11 live shadow evidence
+        env:
+          CANONICAL_ROOT: ${{ github.workspace }}/canonical-main
+        run: node scripts/poc_turso_phase11_live_shadow_collect.js
+      - name: Re-run Phase 11 collector to prove duplicate safety
+        env:
+          CANONICAL_ROOT: ${{ github.workspace }}/canonical-main
+        run: node scripts/poc_turso_phase11_live_shadow_collect.js
+      - name: Report Phase 11 live shadow status
+        run: node scripts/poc_turso_phase11_live_shadow_status.js
+      - name: Upload non-secret capacity report
+        uses: actions/upload-artifact@v7
+        with:
+          name: turso-poc-validation-evidence
+          path: |
+            /tmp/turso-v3-sizing.json
+            /tmp/turso-v4-validation.json
+            /tmp/turso-phase7-validation.json
+            /tmp/turso-phase8-read-contract.json
+            /tmp/turso-phase10-shadow-evidence.json
+            /tmp/turso-phase11-live-shadow-status.json
+            /tmp/turso-phase11-live-shadow-collect.json
+            /tmp/turso-phase10-shadow-write.json
+            /tmp/turso-phase5-semantics.json
+            /tmp/turso-phase6-audit.json
+          retention-days: 14
