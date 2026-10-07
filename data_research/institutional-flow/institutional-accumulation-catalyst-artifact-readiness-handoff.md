@@ -2379,15 +2379,15 @@ Prompt A completion boundary reached after exactly one later natural firing. Thi
 **Prompt B closeout: PASS**
 
 
-## Current pending round — third natural scheduled occurrence observation
+## Current active round — third natural scheduled occurrence observation
 
 `institutional-accumulation-catalyst-bounded-scheduled-canary-third-natural-occurrence-observation-v1`
 
 Status:
-- Prompt A: **NOT STARTED / PENDING — WAITING FOR NATURAL SCHEDULE EVIDENCE**
+- Prompt A: **NOT STARTED / ACTIVE**
 - Prompt B: **PREREGISTERED / PENDING**
 
-This round is intentionally pending and must not be selected by bare `promptA` until it is explicitly reactivated/promoted. The project-level routing remains unchanged.
+This round has been explicitly reactivated/promoted by the repository owner after the natural scheduled workflow completed. It is now eligible for bare `promptA` selection. The project-level routing remains unchanged with `institutional-accumulation` as the sole active task.
 
 ### Prompt A — third natural scheduled occurrence observation
 
