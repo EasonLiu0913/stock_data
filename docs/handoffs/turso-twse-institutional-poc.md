@@ -1288,9 +1288,9 @@ Owner request (2026-10-07 Asia/Taipei): **Design and build Phase 12 daily Turso 
 
 Important activation boundary: GitHub `schedule` events execute workflows **only on the default branch**. Phase 12 must be built/tested on POC branch `poc/turso-institutional-20261006` and PR #52 must remain draft/unmerged. Therefore an authored `schedule:` in that branch is **staged / NOT LIVE**, and cannot be represented as active daily automation. No default-branch deployment/merge is authorized by this instruction alone.
 
-Phase 12 current round:
-- Prompt A: **ACTIVE / NOT STARTED**
-- Prompt B: **PREREGISTERED / PENDING**
+Phase 12 current round (latest durable closeout):
+- Prompt A: **COMPLETE — POC-ONLY STAGED IMPLEMENTATION**
+- Prompt B: **STAGED-SCOPE PASS — AUTO SCHEDULE NOT LIVE**
 - Phase 11 Prompt B: **PASS**
 - Live evidence count at Phase 12 registration: **1/20** on `20261006` (not proof of a continuously running daily schedule).
 
