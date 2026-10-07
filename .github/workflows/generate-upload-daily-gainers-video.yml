@@ -75,6 +75,7 @@ jobs:
       - name: Synthesize Chinese narration
         env:
           YOUTUBE_TTS_VOICE: zh-TW-HsiaoChenNeural
+          YOUTUBE_TTS_RATE: "+30%"
         run: |
           python scripts/synthesize_daily_gainers_tts.py             "output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json"
 
@@ -95,7 +96,7 @@ jobs:
           minutes="$(jq -r '.duration_minutes' "$qa")"
           scenes="$(jq -r '.scene_count' "$qa")"
           size="$(jq -r '.file_size_mib' "$qa")"
-          awk -v d="$duration" 'BEGIN { if (d < 300 || d > 660) exit 1 }'
+          awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
           echo "Video QA PASS: ${minutes} min, ${scenes} scenes, ${size} MiB"
           echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
           echo "scenes=$scenes" >> "$GITHUB_OUTPUT"
