@@ -28,8 +28,10 @@ function canonicalizeAnalysis(value) {
 function canonicalizeSummary(value) {
   const copy = JSON.parse(JSON.stringify(value));
   delete copy.generated_at;
-  if (copy.source_lineage?.analysis) {
-    delete copy.source_lineage.analysis.sha256;
+  if (copy.source_lineage && typeof copy.source_lineage === 'object') {
+    for (const source of Object.values(copy.source_lineage)) {
+      if (source && typeof source === 'object') delete source.sha256;
+    }
   }
   return copy;
 }
@@ -105,7 +107,7 @@ function main() {
     ignored_volatile_fields: [
       'analysis.generated_at',
       'market-summary.generated_at',
-      'market-summary.source_lineage.analysis.sha256',
+      'market-summary.source_lineage.*.sha256',
     ],
     action: semanticEqual ? 'restored_head_outputs_no_promotion' : 'keep_generated_outputs_for_promotion',
   }, null, 2));
