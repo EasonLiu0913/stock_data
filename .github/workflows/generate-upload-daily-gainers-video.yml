@@ -49,10 +49,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
-          python -m pip install --upgrade pip
-          python -m pip install edge-tts gTTS
+          command -v ffmpeg
+          command -v ffprobe
+          if ! command -v rsvg-convert >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends librsvg2-bin fonts-noto-cjk espeak-ng
+          fi
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS
 
       - name: Resolve target date
         id: date
