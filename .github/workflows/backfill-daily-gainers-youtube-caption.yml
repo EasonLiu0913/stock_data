@@ -39,8 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          command -v ffprobe
-          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS mutagen
 
       - name: Resolve caption job
         id: job
@@ -83,7 +82,7 @@ jobs:
       - name: Build Traditional Chinese subtitles
         run: |
           date="${{ steps.job.outputs.date }}"
-          node scripts/build_daily_gainers_srt.js "output/daily-gainers-video/${date}/plan.json"
+          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
           test -s "output/daily-gainers-video/${date}/daily-gainers-${date}.zh-TW.srt"
 
       - name: Upload captions to existing YouTube video
