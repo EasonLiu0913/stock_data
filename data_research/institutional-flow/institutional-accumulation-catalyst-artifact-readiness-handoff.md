@@ -439,7 +439,7 @@ Closeout limitations:
 `institutional-accumulation-catalyst-prospective-fifth-window-repeat-capture-canary-v1`
 
 Status:
-- Prompt A: **COMPLETE**
+- Prompt A: **NOT STARTED / ACTIVE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -2384,7 +2384,7 @@ Prompt A completion boundary reached after exactly one later natural firing. Thi
 `institutional-accumulation-catalyst-bounded-scheduled-canary-third-natural-occurrence-observation-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 This round was explicitly reactivated/promoted by the repository owner after the natural scheduled workflow completed. Prompt A has now durably verified exactly one later natural firing and is complete. The project-level routing remains unchanged with `institutional-accumulation` as the sole active task. Bare `promptA` must not select a future round while this Prompt B remains pending.
