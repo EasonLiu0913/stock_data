@@ -11,10 +11,11 @@ plan = json.loads(plan_path.read_text(encoding="utf-8"))
 out_dir = plan_path.parent / "audio"
 out_dir.mkdir(parents=True, exist_ok=True)
 voice = os.environ.get("YOUTUBE_TTS_VOICE", "zh-TW-HsiaoChenNeural")
+rate = os.environ.get("YOUTUBE_TTS_RATE", "+30%")
 
 async def edge_tts_save(text, out_path):
     import edge_tts
-    communicate = edge_tts.Communicate(text=text, voice=voice, rate="+0%")
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
     await communicate.save(str(out_path))
 
 def gtts_save(text, out_path):
@@ -28,7 +29,7 @@ def espeak_save(text, out_path):
     wav.unlink(missing_ok=True)
 
 async def main():
-    manifest = {"voice": voice, "engine": None, "scenes": []}
+    manifest = {"voice": voice, "rate": rate, "engine": None, "scenes": []}
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         out_path = out_dir / f"{sid:02d}.mp3"
