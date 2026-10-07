@@ -108,6 +108,42 @@ Prompt A completion contract is satisfied for deployment. Independent Prompt B m
 ## Current Phase 13 state
 
 Prompt A: **COMPLETE — READY FOR PROMPT B**.
-Prompt B: **PREREGISTERED / PENDING**.
+Prompt B: **PASS FOR DEPLOYMENT — LIVE RUN EVIDENCE PENDING**.
 Automatic scheduler: **ENABLED ON DEFAULT MAIN; FIRST NATURAL OCCURRENCE NOT YET OBSERVED AT CLOSEOUT**.
 Production-reader change authorization: **NONE**.
+
+
+## Phase 13 Prompt B independent closeout — PASS
+
+The exact preregistered Phase 13 Prompt B was independently recovered from pre-Prompt-A commit `86c155a179d333b623ce2f8946a18ea1f41f45eb` and matched the current handoff text before closeout.
+
+Independent verification result:
+
+1. **Authorization / scope — PASS.** Owner explicitly authorized main-only deployment of the standalone Turso shadow scheduler, without merging PR #52 and without modifying production readers. PR #52 remains draft/open/unmerged at head `9dfb112ebd676c1a997f064d35bf501f6469a29e`.
+2. **Independent deployment — PASS.** Required Phase 11/12 collector, status, gate and focused tests were copied independently onto main. No merge of PR #52 occurred. Canonical production T86 workflow blob remains `0cd843396634aef98fe96b0d8fe2b5f604239be3`.
+3. **Actual default-main scheduler — PASS.** `.github/workflows/poc-turso-live-shadow-daily.yml` on main contains exactly the authorized weekday UTC schedules `47 11 * * 1-5` and `17 13 * * 1-5` (Taipei 19:47 / 21:17), retains manual `workflow_dispatch`, uses `contents: read`, `cancel-in-progress: false`, bounded 10-minute daily-shadow runtime, official Actions @v7, and repository-required standalone schedule timing summary.
+4. **Canonical-date / trading-day gate — PASS.** The deployed gate uses only current-main canonical T86 JSON and the covered TWSE calendar. Preauthorization, non-trading/holiday, missing canonical, uncovered calendar, historical/future manual target and >480-minute delayed schedule all fail closed. There is no older-file fallback and no independent TWSE refetch.
+5. **Shadow contract / immutability — PASS.** The deployed collector retains exact nine-metric write/read parity and deterministic contract hash checks, signed-number handling, explicit `PHASE11_TARGET_DATE`, typed instrument classification and duplicate-safe accepted ledger. Phase 13 adds `ACCEPTED_SOURCE_IDENTITY_CHANGED` and `CANONICAL_CHANGED_DURING_SHADOW` guards so an already accepted date cannot silently change source identity and canonical bytes must remain stable through acceptance. `ON CONFLICT(trade_date) DO NOTHING` preserves duplicate idempotence.
+6. **Twenty-day semantics — PASS.** Status completion now evaluates `longest_consecutive` eligible TWSE trading-day streak through `nextEligibleTradingDate`; it does not mark complete merely because 20 accepted rows exist.
+7. **Secrets / failure isolation — PASS for deployed code.** `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are referenced only by READY-path DB steps. Gate SKIP paths never invoke Turso. Workflow has read-only repository permission and no production checkout credentials or TWSE network fetch. Non-secret evidence artifacts remain bounded.
+8. **Focused CI — PASS.** Main deployment SHA `f1d426cc48d0a767f0e01994fe9fed74a65c9e90`, workflow push run `37568302976`, gate-tests job `112620982208`: **16 tests / 16 pass / 0 fail**. This covers the 12 deterministic Phase 12 date/readiness cases plus four Phase 13 deployment/source-integrity contracts. The push event correctly skipped DB-writing and schedule-summary jobs.
+9. **Node 24 — PASS.** Run `37568303056` completed successfully for the deployed workflow.
+10. **Scheduled registry — Turso scope PASS, repository-global check still fails elsewhere.** Run `37568303034` failed only because existing current-main workflow `collect-institutional-accumulation-catalyst-prospective-canary.yml` is unregistered. The failure contains no `poc-turso-live-shadow-daily.yml` gap; the Turso scheduler itself is registered with `repository_versioned_snapshot` semantics.
+11. **Schedule-summary normalization — Turso scope PASS, repository-global check still fails elsewhere.** Run `37568302914` still reports pre-existing unrelated `checkpoint-institutional-accumulation-sixth-window.yml` and `test-v2-prediction.yml`. After Phase 13 repair, the Turso workflow is no longer present in the normalization-required diff.
+12. **Concurrent main / routing — PASS within scope.** Global active task remains `institutional-accumulation`; Phase 13 did not change routing. Concurrent prediction/data commits visible during the deployment window are unrelated main activity and are not Phase 13 modifications.
+13. **Live online evidence — NOT YET OBSERVED, correctly not claimed.** At Prompt B inspection there is no natural `schedule` event for `POC: Turso live institutional shadow daily` after deployment. Current Taipei time is still before the first configured 19:47 slot. No connected GitHub action is available here to create a manual workflow dispatch. Therefore no new Turso acceptance is claimed. The last proven accepted live evidence remains `20261006` = Day 1/20 until a future scheduled/manual run artifact proves a newer date.
+
+**Phase 13 Prompt B decision: PASS FOR DEPLOYMENT / LIVE RUN EVIDENCE PENDING.**
+
+This PASS means:
+- the standalone shadow scheduler is correctly deployed and enabled on default main;
+- Phase 13 deployment/safety contracts are independently verified;
+- PR #52 remains unmerged and production readers remain unchanged.
+
+This PASS does **not** mean:
+- the first natural schedule has already fired;
+- 2026-10-07 or any later date has been accepted into Turso;
+- 20-day live evidence is complete;
+- production primary-read cutover is authorized.
+
+Live accumulation remains `WAITING_ACTIVE_EVIDENCE` with the last proven count **1/20**, pending the first verified natural scheduled run.
