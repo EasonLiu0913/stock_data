@@ -52,6 +52,7 @@ jobs:
             config/twse_non_trading_days.json
             tests/poc_turso_phase12_schedule_gate.test.js
             tests/poc_turso_phase13_deployment_contract.test.js
+            .github/workflows/poc-turso-live-shadow-daily.yml
             scripts/poc_turso_phase11_live_shadow_collect.js
             scripts/poc_turso_phase11_live_shadow_status.js
           sparse-checkout-cone-mode: false
@@ -128,6 +129,13 @@ jobs:
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           NODE_PATH: /tmp/turso-live-shadow-deps/node_modules
         run: node scripts/poc_turso_phase11_live_shadow_status.js
+      # schedule-timing-summary:v2
+      - name: Write schedule timing summary
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
       - name: Retain non-secret decision/evidence artifacts
         if: always()
         uses: actions/upload-artifact@v7
