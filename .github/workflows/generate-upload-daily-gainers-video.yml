@@ -50,7 +50,7 @@ jobs:
           fi
           ffmpeg -version | head -1
           rsvg-convert --version
-          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS mutagen
 
       - name: Resolve target date
         id: date
@@ -82,7 +82,7 @@ jobs:
       - name: Build Traditional Chinese subtitles
         run: |
           date="${{ steps.date.outputs.date }}"
-          node scripts/build_daily_gainers_srt.js "output/daily-gainers-video/${date}/plan.json"
+          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
 
       - name: Render MP4
         run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
