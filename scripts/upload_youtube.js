@@ -2,11 +2,23 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const {
-  YOUTUBE_CLIENT_ID,
-  YOUTUBE_CLIENT_SECRET,
-  YOUTUBE_REFRESH_TOKEN,
-} = process.env;
+function normalizeSecret(name, raw) {
+  let value = String(raw ?? '').trim();
+  const prefix = `${name}=`;
+  if (value.startsWith(prefix)) value = value.slice(prefix.length).trim();
+  if (
+    value.length >= 2 &&
+    ((value.startsWith('"') && value.endsWith('"')) ||
+     (value.startsWith("'") && value.endsWith("'")))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+  return value.replace(/\\r|\\n/g, '').trim();
+}
+
+const YOUTUBE_CLIENT_ID = normalizeSecret('YOUTUBE_CLIENT_ID', process.env.YOUTUBE_CLIENT_ID);
+const YOUTUBE_CLIENT_SECRET = normalizeSecret('YOUTUBE_CLIENT_SECRET', process.env.YOUTUBE_CLIENT_SECRET);
+const YOUTUBE_REFRESH_TOKEN = normalizeSecret('YOUTUBE_REFRESH_TOKEN', process.env.YOUTUBE_REFRESH_TOKEN);
 
 for (const [name, value] of Object.entries({YOUTUBE_CLIENT_ID,YOUTUBE_CLIENT_SECRET,YOUTUBE_REFRESH_TOKEN})) {
   if (!value) {
@@ -14,6 +26,16 @@ for (const [name, value] of Object.entries({YOUTUBE_CLIENT_ID,YOUTUBE_CLIENT_SEC
     process.exit(1);
   }
 }
+
+console.log(
+  'OAuth input diagnostics:',
+  JSON.stringify({
+    client_id_prefix: YOUTUBE_CLIENT_ID.slice(0, 12),
+    client_id_length: YOUTUBE_CLIENT_ID.length,
+    client_secret_length: YOUTUBE_CLIENT_SECRET.length,
+    refresh_token_length: YOUTUBE_REFRESH_TOKEN.length,
+  })
+);
 
 const videoArg = process.argv[2];
 const metadataArg = process.argv[3];
