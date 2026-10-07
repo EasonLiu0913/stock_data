@@ -61,7 +61,7 @@ test('audit registry covers every known scheduled workflow from the completed in
   const rules = buildRules();
   const names = rules.map((rule) => rule.workflow);
   assert.equal(new Set(names).size, names.length);
-  assert.equal(names.length, 41);
+  assert.equal(names.length, 42);
   for (const expected of [
     'crawl-cnn-fear-and-greed.yml',
     'crawl-eia-crude-spot.yml',
@@ -73,6 +73,7 @@ test('audit registry covers every known scheduled workflow from the completed in
     'crawl-vix-index.yml',
     'refresh-finmind-quarterly-financial-quality-due.yml',
     'update-official-market-constraints.yml',
+    'poc-turso-live-shadow-daily.yml',
   ]) {
     assert.ok(names.includes(expected), `missing registry entry: ${expected}`);
   }
