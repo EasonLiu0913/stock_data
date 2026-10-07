@@ -1,0 +1,141 @@
+name: 'POC: Turso live institutional shadow daily'
+# Phase 13: owner-authorized standalone shadow schedule on default main.
+# Source of truth remains canonical T86 JSON; no production readers changed.
+on:
+  schedule:
+    # Taipei weekdays 19:47 / 21:17, AFTER the T86 writer's final 18:21 slot.
+    - cron: '47 11 * * 1-5'
+    - cron: '17 13 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Optional TODAY in Taipei as YYYYMMDD; no historical backfill'
+        required: false
+        default: ''
+  pull_request:
+    paths:
+      - '.github/workflows/poc-turso-live-shadow-daily.yml'
+      - 'scripts/poc_turso_phase12_schedule_gate.js'
+      - 'tests/poc_turso_phase12_schedule_gate.test.js'
+      - 'tests/poc_turso_phase13_deployment_contract.test.js'
+      - 'scripts/poc_turso_phase11_live_shadow_collect.js'
+      - 'scripts/poc_turso_phase11_live_shadow_status.js'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/poc-turso-live-shadow-daily.yml'
+      - 'scripts/poc_turso_phase12_schedule_gate.js'
+      - 'scripts/poc_turso_phase11_live_shadow_collect.js'
+      - 'scripts/poc_turso_phase11_live_shadow_status.js'
+      - 'tests/poc_turso_phase12_schedule_gate.test.js'
+      - 'tests/poc_turso_phase13_deployment_contract.test.js'
+
+permissions:
+  contents: read
+concurrency:
+  group: turso-live-shadow-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.event_name == 'push' && 'tests' || 'collector' }}
+  cancel-in-progress: false
+
+jobs:
+  gate-tests:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/poc_turso_phase12_schedule_gate.js
+            scripts/resolve_scheduled_collection_date.js
+            scripts/resolve_forecast_dates.js
+            scripts/lib/twse_trading_day.js
+            config/twse_non_trading_days.json
+            tests/poc_turso_phase12_schedule_gate.test.js
+            tests/poc_turso_phase13_deployment_contract.test.js
+            scripts/poc_turso_phase11_live_shadow_collect.js
+            scripts/poc_turso_phase11_live_shadow_status.js
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test bounded schedule and canonical readiness rules
+        run: node --test tests/poc_turso_phase12_schedule_gate.test.js tests/poc_turso_phase13_deployment_contract.test.js
+
+  daily-shadow:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CANONICAL_ROOT: ${{ github.workspace }}
+    steps:
+      - name: Checkout authoritative current main JSON and POC scripts
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts
+            config/twse_non_trading_days.json
+            data_twse_institutional_investors
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse/twse_industry_ETN.csv
+            data_twse/twse_industry_PreferredStock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_REITs.csv
+            data_twse/twse_industry_Warrants.csv
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve scheduled occurrence and canonical readiness
+        id: gate
+        env:
+          GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+          PHASE12_INPUT_DATE: ${{ inputs.date || '' }}
+        run: node scripts/poc_turso_phase12_schedule_gate.js
+      - name: Verify scoped Turso secrets are configured
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        shell: bash
+        run: |
+          test -n "$TURSO_DATABASE_URL" || { echo "::error::Turso URL secret missing"; exit 1; }
+          test -n "$TURSO_AUTH_TOKEN" || { echo "::error::Turso token secret missing"; exit 1; }
+      - name: Install isolated libSQL client
+        if: steps.gate.outputs.ready == 'true'
+        shell: bash
+        run: |
+          mkdir -p /tmp/turso-live-shadow-deps
+          cd /tmp/turso-live-shadow-deps
+          npm init -y >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund @libsql/client
+      - name: Shadow write and exact read-back parity
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          NODE_PATH: /tmp/turso-live-shadow-deps/node_modules
+          PHASE11_TARGET_DATE: ${{ steps.gate.outputs.target_date }}
+        run: node scripts/poc_turso_phase11_live_shadow_collect.js
+      - name: Report accepted live dates and failure events
+        if: steps.gate.outputs.ready == 'true' && success()
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          NODE_PATH: /tmp/turso-live-shadow-deps/node_modules
+        run: node scripts/poc_turso_phase11_live_shadow_status.js
+      - name: Retain non-secret decision/evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: turso-live-shadow-daily-${{ github.run_id }}
+          path: |
+            /tmp/turso-phase12-schedule-gate.json
+            /tmp/turso-phase11-live-shadow-collect.json
+            /tmp/turso-phase11-live-shadow-status.json
+          retention-days: 14
+          if-no-files-found: warn
