@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 function normalizeSecret(name, raw) {
   let value = String(raw ?? '').trim();
@@ -27,13 +28,19 @@ for (const [name, value] of Object.entries({YOUTUBE_CLIENT_ID,YOUTUBE_CLIENT_SEC
   }
 }
 
+function fingerprint(value) {
+  return crypto.createHmac('sha256', 'daily-gainers-youtube-oauth-v1').update(value).digest('hex').slice(0, 16);
+}
+
 console.log(
   'OAuth input diagnostics:',
   JSON.stringify({
-    client_id_prefix: YOUTUBE_CLIENT_ID.slice(0, 12),
+    client_id: YOUTUBE_CLIENT_ID,
     client_id_length: YOUTUBE_CLIENT_ID.length,
     client_secret_length: YOUTUBE_CLIENT_SECRET.length,
     refresh_token_length: YOUTUBE_REFRESH_TOKEN.length,
+    client_secret_fingerprint: fingerprint(YOUTUBE_CLIENT_SECRET),
+    refresh_token_fingerprint: fingerprint(YOUTUBE_REFRESH_TOKEN),
   })
 );
 
