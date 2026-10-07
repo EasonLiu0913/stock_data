@@ -399,9 +399,6 @@ function buildRules() {
         };
       },
     },
-    exactRule('poc-turso-live-shadow-daily.yml', 'repository_versioned_snapshot',
-      () => ['docs/handoffs/turso-twse-institutional-live-shadow-ledger.md'],
-      'Isolated draft-PR Turso shadow workflow: only the durable POC setup ledger is checked here; daily accepted evidence lives in Turso and GitHub Actions artifacts, not production market-date files. Cron does not run before default-branch installation.'),
     exactRule('prepare-market-environment.yml', 'forecast_date',
       (c) => [`data_market_environment/${c.target_trade_date}/market_environment.json`]),
     exactRule('refresh-finmind-quarterly-financial-quality-due.yml', 'repository_versioned_snapshot',
