@@ -439,7 +439,7 @@ Closeout limitations:
 `institutional-accumulation-catalyst-prospective-fifth-window-repeat-capture-canary-v1`
 
 Status:
-- Prompt A: **NOT STARTED / ACTIVE**
+- Prompt A: **COMPLETE**
 - Prompt B: **PREREGISTERED / PENDING**
 
 Promotion does not execute Prompt A automatically.
@@ -2379,7 +2379,7 @@ Prompt A completion boundary reached after exactly one later natural firing. Thi
 **Prompt B closeout: PASS**
 
 
-## Current active round — third natural scheduled occurrence observation
+## Current round awaiting Prompt B — third natural scheduled occurrence observation
 
 `institutional-accumulation-catalyst-bounded-scheduled-canary-third-natural-occurrence-observation-v1`
 
@@ -2387,7 +2387,7 @@ Status:
 - Prompt A: **NOT STARTED / ACTIVE**
 - Prompt B: **PREREGISTERED / PENDING**
 
-This round has been explicitly reactivated/promoted by the repository owner after the natural scheduled workflow completed. It is now eligible for bare `promptA` selection. The project-level routing remains unchanged with `institutional-accumulation` as the sole active task.
+This round was explicitly reactivated/promoted by the repository owner after the natural scheduled workflow completed. Prompt A has now durably verified exactly one later natural firing and is complete. The project-level routing remains unchanged with `institutional-accumulation` as the sole active task. Bare `promptA` must not select a future round while this Prompt B remains pending.
 
 ### Prompt A — third natural scheduled occurrence observation
 
@@ -2408,6 +2408,24 @@ Complete after exactly one later natural firing is durably verified. Do not begi
 
 Stop with Prompt A complete — ready for Prompt B.
 ```
+
+### Prompt A completion evidence — third natural scheduled occurrence observation
+
+- Observed workflow: `[研究] Institutional Accumulation Prospective Catalyst Canary`.
+- Natural scheduled run: `37589122480`, attempt `1`, event `schedule`, conclusion `success`; run started at `2026-10-07T07:43:43Z`.
+- This is the first accepted natural occurrence after `schedule:37434295221:1` represented by the durable state sequence; no manual dispatch or rerun was used for this observation round.
+- `schedule_gate` job `112686114413`: SUCCESS; durable preflight commit `8411e9149a39b65b75bc33165196fa8ee18e3725`; accepted count before = `2`; candidate timestamp `2026-10-07T07:43:51.000Z`; eligible for exactly six bounded source requests.
+- 1102 job `112686184806`: SUCCESS; checkpoint commit `6ebb53b5141bd48b6c3077da4586330744ca8527`; `2` requests / `2` snapshots; observability blob `23f2fe44cfdebf6db3f719c985595ad3e63943a4`.
+- 1104 job `112686184693`: SUCCESS; checkpoint commit `c076555317f657a4ec9376bf71aa1abad63f552d`; `2` requests / `2` snapshots; observability blob `1d362c5a8e34e0fe856c6bc4e5698184cfd310ac`.
+- 1216 job `112686184929`: SUCCESS; checkpoint commit `37d4de41bdc64694db7923417edfb8cda5053c67`; `2` requests / `2` snapshots; observability blob `1b4cf125765d9f639e79a0d76decfd882355dd73`.
+- All three observability records use only official `t05st01` / `t05st01_detail` endpoints and record the exact six immutable accepted snapshot paths/IDs for the occurrence.
+- `finalize_scheduled_occurrence` job `112687965586`: SUCCESS; finalize commit `9e2b11b7e3bc74e9250ab3a01d2e24f9d1f28f3b`.
+- Durable scheduled state now records accepted count exactly `3/3`, `pending_occurrence: null`, third occurrence status `accepted`, terminal reason `accepted_target_reached_closeout_required`, and latest accepted timestamp `2026-10-07T07:49:03.529Z` matching the latest durable 1216 snapshot.
+- Frozen prospective observation audit remains unchanged with 36 valid / 0 invalid / 0 conflict and protected state unopened.
+- Historical PIT artifact remains blob `7ccafbe36206770d93f454feefdca81a082d4cd0`: 33 identities / 0 PIT-ready / 33 not-PIT-ready, outcome-blind, zero-network.
+- No catalyst-significance interpretation, outcome opening, model/strategy promotion, production change, universe widening, legacy retry, historical backfill, Wave A, or Wave C work was performed by this Prompt A.
+
+**Prompt A complete — ready for Prompt B**
 
 ### Prompt B — third natural scheduled occurrence observation closeout
 
