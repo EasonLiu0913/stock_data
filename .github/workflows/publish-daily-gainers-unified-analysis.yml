@@ -75,6 +75,8 @@ jobs:
           node scripts/daily_gainers_ai_contract_cli.js assert-published "data_daily_gain_over_5/analysis/${date}.json"
           node scripts/build_daily_gainers_market_summary.js --date "$date"
           node scripts/validate_daily_gainers_market_summary.js --date "$date"
+          node --check scripts/daily_gainers_semantic_equality_gate.js
+          node scripts/daily_gainers_semantic_equality_gate.js "$date"
           node - "$date" <<'NODE'
           const fs = require('node:fs');
           const d = process.argv[2];
