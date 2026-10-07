@@ -286,6 +286,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/write_workflow_schedule_summary.js
+  prepare-daily-gainers-facts:
+    name: 觸發當日 5% 漲幅 Facts
+    needs: crawl-twse-margin-balance
+    if: needs.crawl-twse-margin-balance.result == 'success'
+    uses: ./.github/workflows/analyze-daily-gainers-margin-flow-2200.yml
+    with:
+      date: ${{ needs.crawl-twse-margin-balance.outputs.target_date }}
+
   deploy-pages:
     name: 發布更新後分析到 GitHub Pages
     needs: crawl-twse-margin-balance
