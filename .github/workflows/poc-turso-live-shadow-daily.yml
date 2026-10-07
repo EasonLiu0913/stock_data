@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             scripts/poc_turso_phase12_schedule_gate.js
@@ -41,7 +41,7 @@ jobs:
             tests/poc_turso_phase12_schedule_gate.test.js
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Test bounded schedule and canonical readiness rules
@@ -55,7 +55,7 @@ jobs:
       CANONICAL_ROOT: ${{ github.workspace }}
     steps:
       - name: Checkout authoritative current main JSON and POC scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           sparse-checkout: |
@@ -72,7 +72,7 @@ jobs:
             data_twse/twse_industry_Warrants.csv
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Resolve scheduled occurrence and canonical readiness
@@ -115,7 +115,7 @@ jobs:
         run: node scripts/poc_turso_phase11_live_shadow_status.js
       - name: Retain non-secret decision/evidence artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: turso-live-shadow-daily-${{ github.run_id }}
           path: |
