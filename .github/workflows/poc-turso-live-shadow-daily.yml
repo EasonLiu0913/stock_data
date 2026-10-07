@@ -1,11 +1,14 @@
 name: 'POC: Turso live institutional shadow daily'
 # Phase 12: staged in draft PR #52; schedule executes only after a
 # separately authorized installation of this workflow on default main.
+# PREPARED CRON (NOT ENABLED): owner-authorized main deployment is required.
+# Taipei weekdays 19:47 / 21:17; production T86 last slot is 18:21.
+# schedule:
+#   - cron: '47 11 * * 1-5'
+#   - cron: '17 13 * * 1-5'
+# Do not uncomment on draft POC branch: other preregistered researchers have
+# fail-closed guards against ANY active schedule in the repo, even on PR branches.
 on:
-  schedule:
-    # Taipei weekdays 19:47 / 21:17; production T86 last slot is 18:21.
-    - cron: '47 11 * * 1-5'
-    - cron: '17 13 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
