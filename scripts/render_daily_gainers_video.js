@@ -51,9 +51,9 @@ for (const scene of plan.scenes) {
 
   run('ffmpeg', [
     '-y','-loglevel','error',
-    '-loop','1','-framerate','30','-i',png,
+    '-loop','1','-framerate','24','-i',png,
     '-i',mp3,
-    '-c:v','libx264','-preset','veryfast','-tune','stillimage',
+    '-c:v','libx264','-preset','ultrafast','-tune','stillimage',
     '-c:a','aac','-b:a','160k','-pix_fmt','yuv420p',
     '-vf','scale=1920:1080,format=yuv420p',
     '-t',String(duration + 0.15),
@@ -87,11 +87,11 @@ const qa = {
   duration_minutes: Number((finalDuration / 60).toFixed(2)),
   file_size_bytes: stat.size,
   file_size_mib: Number((stat.size / 1024 / 1024).toFixed(2)),
-  duration_pass: finalDuration >= 300 && finalDuration <= 660,
+  duration_pass: finalDuration >= 300 && finalDuration <= 600,
   size_pass: stat.size >= 1024 * 1024
 };
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
 console.log(JSON.stringify(qa, null, 2));
 
-if (!qa.duration_pass) throw new Error(`Video duration ${qa.duration_minutes} min is outside required 5-11 minute validation window`);
+if (!qa.duration_pass) throw new Error(`Video duration ${qa.duration_minutes} min is outside required 5-10 minute validation window`);
 if (!qa.size_pass) throw new Error('Rendered video is unexpectedly small');
