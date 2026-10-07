@@ -1280,3 +1280,48 @@ Decision:
 - Future genuine eligible post-authorization trading dates may continue to accumulate under the established ledger rules.
 
 **Prompt B closeout: PASS**
+
+
+## Phase 12 — Isolated daily shadow schedule authorization and preregistration
+
+Owner request (2026-10-07 Asia/Taipei): **Design and build Phase 12 daily Turso live-shadow scheduling.** This is owner authorization for a bounded *isolated shadow-only scheduling implementation*, not for merging PR #52, changing production T86 collection, or Turso primary-read migration.
+
+Important activation boundary: GitHub `schedule` events execute workflows **only on the default branch**. Phase 12 must be built/tested on POC branch `poc/turso-institutional-20261006` and PR #52 must remain draft/unmerged. Therefore an authored `schedule:` in that branch is **staged / NOT LIVE**, and cannot be represented as active daily automation. No default-branch deployment/merge is authorized by this instruction alone.
+
+Phase 12 current round:
+- Prompt A: **ACTIVE / NOT STARTED**
+- Prompt B: **PREREGISTERED / PENDING**
+- Phase 11 Prompt B: **PASS**
+- Live evidence count at Phase 12 registration: **1/20** on `20261006` (not proof of a continuously running daily schedule).
+
+### Prompt A — Phase 12 isolated daily shadow schedule implementation (preregistered)
+
+```text
+Repository EasonLiu0913/stock_data; use only poc/turso-institutional-20261006 / draft PR #52. Fetch latest main and PR, read AGENTS.md, Phase 9 migration design, Phase 11 closeout and this exact Phase 12 pair.
+
+Implement a standalone GitHub Actions daily Turso live-shadow scheduling workflow plus a small deterministic date/availability gate. Do not modify the production T86 crawler, normalized readers, Pages, predictions or primary-read behavior. Do not merge PR #52 or add/rotate secrets. Use existing Turso POC Actions secrets only.
+
+Schedule after the production T86 writer's last 18:21 Taipei attempt. Choose off-round minute weekday UTC cron slots with bounded late fallback, not a high-frequency hourly poll. Provide manual workflow_dispatch for a safe target date. Use explicit scheduled occurrence resolution and Asia/Taipei TWSE calendar, not blind latest-file scanning that could accept an older trading date. Follow current main canonical JSON only, no TWSE refetch. SKIP with visible classification on holiday/non-trading day or missing canonical current target; no DB mutation or accepted count advance on SKIP. If ready, run the existing Phase 11 nine-metric write/read parity collector with PHASE11_TARGET_DATE set explicitly. Keep database errors shadow-only, classified and visible; never let them affect production T86 workflow.
+
+Keep least permissions, no production checkout credentials, no unnecessary POC full-history replay per daily run, concurrency guard for scheduled/manual collector, no unbounded waits/retries. Artifacts should include a non-secret gate report and post-collection status; respect secrets and immutable source hashes. Confirm that the existing ledger remains 1/20 until actual new accepted evidence exists. Verify date-selection logic with deterministic tests for weekday, TWSE holiday, delayed schedule, missing canonical, explicit manual target and invalid/preauthorization date. Preserve existing accepted-date identity; do not count a repeated date twice.
+
+Test the implementation using PR CI / runnable local tests and available non-production evidence; record exact tested SHA/runs/artifacts. Explicitly state whether the cron is staged on POC branch vs enabled on default main. Preserve Phase 12 Prompt B below byte-for-byte. End Prompt A ready for Prompt B, without claiming automatic daily execution is live if PR remains unmerged.
+```
+
+### Prompt B — Phase 12 independent daily shadow schedule closeout (preregistered)
+
+```text
+Independently recover this exact Phase 12 Prompt B from the preregistration commit prior to Prompt A. Fetch latest main and POC branch, read AGENTS.md, migration design, Phase 11 closeout and routing.
+
+Verify:
+1. Phase 11 setup is durably PASS and Phase 12 owner authorization is recorded.
+2. The standalone schedule is after T86 production writer 18:21 Taipei final slot; UTC/Taipei conversion, weekday gating and late/missed-date safeguards are deterministic.
+3. The gate uses the current-main canonical JSON and covered official TWSE calendar; holiday/missing-canonical/preauthorization do not write DB or advance accepted count.
+4. Ready path passes explicit date to the established Phase 11 collector, and preserves exact nine-metric read/write parity, source SHA, category coverage, duplicate idempotency, 20-date ledger integrity and failure classification.
+5. Secrets, minimum permissions, concurrency, bounded runtime, evidence artifacts and isolation are demonstrated; no production workflow, schedules, consumers, Pages, predictions, or primary-read behavior changes.
+6. Test evidence covers scheduled regular and late cases, manual explicit-date handling, missing canonical, TWSE holiday, duplicate, and guard behavior. Report any untested online scenario instead of assuming it passed.
+7. PR #52 remains draft/unmerged; GitHub schedule **does not run from a non-default branch**. Staged cron must not be misrepresented as enabled or accumulating automatically. No deployment/merge is authorized.
+8. Current main changes do not stale category, canonical path, calendar, or consumer evidence.
+
+On PASS record durable Phase 12 Prompt B closeout and leave 20-day live accumulation waiting/active-evidence. On defects, repair only the bounded Phase 12 scope and re-verify from criterion 1. Do not start a new round, merge, or migrate to primary-read without separately approved authorization.
+```
