@@ -11,6 +11,13 @@ on:
         description: '分析日期 YYYYMMDD；留空時使用最新已有 5% 清單日期'
         required: false
         default: ''
+  workflow_call:
+    inputs:
+      date:
+        description: '分析日期 YYYYMMDD；由上游 late-data workflow 明確傳入'
+        required: false
+        type: string
+        default: ''
   push:
     branches: [main]
     paths:
@@ -25,6 +32,7 @@ on:
       - 'scripts/daily_gainers_ai_contract_cli.js'
       - 'scripts/build_daily_gainers_ai_facts.js'
       - 'scripts/annotate_daily_gainers_facts_completeness.js'
+      - '.github/workflows/analyze-daily-gainers-margin-flow-2200.yml'
 
 permissions:
   contents: write
@@ -50,7 +58,7 @@ jobs:
         id: input
         shell: bash
         env:
-          INPUT_DATE: ${{ github.event.inputs.date }}
+          INPUT_DATE: ${{ inputs.date || github.event.inputs.date || '' }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
