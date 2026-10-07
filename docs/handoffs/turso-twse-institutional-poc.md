@@ -1344,3 +1344,34 @@ On PASS record durable Phase 12 Prompt B closeout and leave 20-day live accumula
 - Do not mark Phase 12 Prompt A COMPLETE before the authoritative latest-head PR test and scheduled-workflow contract evidence is examined; do not mark auto accumulation live without separate authorized default-branch deployment.
 - Latest implementation SHA at checkpoint: `3b3d4d337e217523d77439da764e6ed9fff2abb1`.
 - Candidate PR evidence runs for this SHA: new POC gate workflow `37555776455`, Node regression `37555776480`, scheduled-workflow contract `37555776571`. These were pending/in progress at checkpoint and are NOT PASS evidence.
+
+
+## Phase 12 Prompt B independent verification — CONDITIONAL / NOT CLOSED
+
+This is an independently checked **intermediate** Phase 12 Prompt B result; it is **not** a fabricated PASS closeout. The exact preregistered Prompt B was recovered from pre-Prompt-A commit `f98701b7960e6c82a2142f3c375b14ac693d31f4` and matched current handoff text.
+
+Prerequisites and scope:
+- Phase 11 Prompt B closeout PASS remains durable.
+- Phase 12 scheduling owner authorization is durable.
+- Sole active routed task: `turso-twse-institutional-poc`.
+- Draft PR #52 remains open/unmerged.
+- Production canonical T86 workflows, readers, Pages, predictions, and default-main schedule remain unchanged.
+- GitHub Actions cron exists **only on the POC branch**, so **daily automatic execution is not enabled**.
+
+Verified Phase 12 changes:
+- `.github/workflows/poc-turso-live-shadow-daily.yml`: two weekday slots `47 11 * * 1-5` and `17 13 * * 1-5` UTC (19:47 and 21:17 Taipei), after canonical writer's final 18:21 Taipei slot; separate checkout/read of current main, no TWSE refetch, contents:read, concurrency and bounded timeout.
+- `scripts/poc_turso_phase12_schedule_gate.js`: authorization boundary, calendar-covered trading-day guard, explicit schedule occurrence date and delay, exact-current-target canonical JSON, fail-closed WAITING_CANONICAL / NON_TRADING_DAY / PRE_AUTHORIZATION_DATE / SCHEDULE_DELAY_EXCEEDED / MANUAL_DATE_NOT_CURRENT classifications.
+- READY passes explicit `PHASE11_TARGET_DATE` to established `scripts/poc_turso_phase11_live_shadow_collect.js`; SKIP never invokes Turso, collector or secrets.
+- Phase 11 signed nine-metric parity, source SHA, instrument category, idempotent ledger remain unchanged.
+- `tests/poc_turso_phase12_schedule_gate.test.js`: 12/12 PASS in run `37559632721`, gate-tests job `112593769432`, tested SHA `58de6cb812ed88d205bb98df20836e11efeacd13`; daily-shadow job SKIPPED on PR by design.
+- Node 24 action majors fixed in both `.github/workflows/poc-turso-live-shadow-daily.yml` and `.github/workflows/poc-turso-institutional.yml` using official `@v7` variants, commits `b59935789a9aa976b99102b84f54cc941a52ccfa` and `58de6cb812ed88d205bb98df20836e11efeacd13`.
+- Scheduled workflow registry includes `poc-turso-live-shadow-daily.yml` with `repository_versioned_snapshot` semantics, not an erroneous daily production file contract.
+- Current main at latest independent freshness check: `32011383ebd7db5641cc9c0a49924b9c36836b15`, with no relevant canonical T86, TWSE holiday/category or prediction-consumer changes since Phase 12 baseline `74335f6b8267a509f8c15dd462fb7a443b179a07`.
+
+Outstanding verification, not represented as PASS:
+- Latest-head full Node 24 workflow audit run `37559632655`, scheduled workflow registry run `37559632666`, and Node regression run `37559632756` had not reached terminal conclusions at inspection; all three were in checkout/in-progress states.
+- The preceding SHA `784e14331d1015c82bd4474aa20c8f9c3f5a9641` had **three failing checks**: Node 24 audit found `@v4` action usages in Turso POC workflows (subsequently fixed); the scheduled-registry test reported the **other project's** unregistered `collect-institutional-accumulation-catalyst-prospective-canary.yml`; Node Regression included that global registry gap and a preexisting `workflow_schedule_summary_v2.test.js` self-reference assertion failure. These are not retroactive PASS results.
+- A real GitHub `schedule` or `workflow_dispatch` daily-shadow job has **not** run, because workflow is not installed on default main; credentials, live parity/write, artifact behavior under real scheduled event remain untested online in Phase 12.
+- The only proven accepted live day remains `20261006` (1/20) from Phase 11; do not infer later-day acceptance from staged cron or PR gate tests.
+
+**Phase 12 Prompt B: NOT CLOSED / NO PASS.** Closeout requires final latest-head CI classification and a deliberate decision whether this staged-only verification meets the preregistered criteria; do not start a new round, merge PR, or enable default-branch cron implicitly.
