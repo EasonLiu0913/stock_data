@@ -75,53 +75,61 @@ async function getAccessToken() {
 }
 
 async function uploadCaption(accessToken) {
-  const boundary = `daily-gainers-caption-${crypto.randomBytes(12).toString('hex')}`;
-  const metadata = JSON.stringify({
-    snippet: {
-      videoId,
-      language,
-      name: trackName,
-      isDraft: false,
-    },
-  });
-  const head =
-    `--${boundary}\r\n` +
-    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-    metadata + '\r\n' +
-    `--${boundary}\r\n` +
-    'Content-Type: application/octet-stream\r\n' +
-    `Content-Disposition: attachment; filename="${path.basename(subtitlePath)}"\r\n\r\n`;
-  const tail = `\r\n--${boundary}--\r\n`;
-  const body = Buffer.concat([
-    Buffer.from(head, 'utf8'),
-    Buffer.from(subtitle, 'utf8'),
-    Buffer.from(tail, 'utf8'),
-  ]);
-
-  const response = await fetch(
-    'https://www.googleapis.com/upload/youtube/v3/captions?part=snippet&uploadType=multipart',
+  const media = Buffer.from(subtitle, 'utf8');
+  const initResponse = await fetch(
+    'https://www.googleapis.com/upload/youtube/v3/captions?part=snippet&uploadType=resumable',
     {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': String(body.length),
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': 'application/octet-stream',
+        'X-Upload-Content-Length': String(media.length),
       },
-      body,
+      body: JSON.stringify({
+        snippet: {
+          videoId,
+          language,
+          name: trackName,
+          isDraft: false,
+        },
+      }),
     }
   );
-  const text = await response.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = {raw:text}; }
-
-  if (response.status === 409 && JSON.stringify(data).includes('captionExists')) {
+  const initText = await initResponse.text();
+  if (initResponse.status === 409 && initText.includes('captionExists')) {
+    let data;
+    try { data = JSON.parse(initText); } catch { data = {raw:initText}; }
     return { already_exists: true, response: data };
   }
-  if (!response.ok) {
-    const hint = response.status === 403
+  if (!initResponse.ok) {
+    const hint = initResponse.status === 403
       ? ' The refresh token must include https://www.googleapis.com/auth/youtube.force-ssl.'
       : '';
-    throw new Error(`Caption upload failed: HTTP ${response.status} ${text}.${hint}`);
+    throw new Error(`Caption upload init failed: HTTP ${initResponse.status} ${initText}.${hint}`);
+  }
+  const location = initResponse.headers.get('location');
+  if (!location) throw new Error('YouTube did not return a resumable caption upload URL');
+
+  const uploadResponse = await fetch(location, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': String(media.length),
+    },
+    body: media,
+  });
+  const uploadText = await uploadResponse.text();
+  let data;
+  try { data = JSON.parse(uploadText); } catch { data = {raw:uploadText}; }
+  if (uploadResponse.status === 409 && JSON.stringify(data).includes('captionExists')) {
+    return { already_exists: true, response: data };
+  }
+  if (!uploadResponse.ok) {
+    const hint = uploadResponse.status === 403
+      ? ' The refresh token must include https://www.googleapis.com/auth/youtube.force-ssl.'
+      : '';
+    throw new Error(`Caption upload failed: HTTP ${uploadResponse.status} ${uploadText}.${hint}`);
   }
   return { already_exists: false, response: data };
 }
