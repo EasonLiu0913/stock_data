@@ -37,6 +37,7 @@ const scenes = videoScript.scenes.map((s, i) => ({
   subtitle: s.subtitle,
   bullets: s.bullets,
   narration: normalizeNarrationRepetition(s.narration),
+  stock_codes: Array.isArray(s.stock_codes) ? s.stock_codes.map(String) : [],
   footer: s.footer || ''
 }));
 const outDir = path.join(root, 'output', 'daily-gainers-video', date);
