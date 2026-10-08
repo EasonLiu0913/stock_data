@@ -88,13 +88,13 @@ function renderVtuberScene(png, mp3, mp4, duration, sceneId) {
   const filter = [
     '[0:v]scale=1920:1080,format=rgba[base]',
     '[2:v]scale=390:-1,format=rgba[closed]',
-    '[base][closed]overlay=W-w-18:H-h-113:format=auto[v0]',
+    '[base][closed]overlay=W-w-18:H-h-235:format=auto[v0]',
     '[3:v]scale=390:-1,format=rgba[small]',
-    `[v0][small]overlay=W-w-18:H-h-113:enable='${smallEnable}':format=auto[v1]`,
+    `[v0][small]overlay=W-w-18:H-h-235:enable='${smallEnable}':format=auto[v1]`,
     '[4:v]scale=390:-1,format=rgba[wide]',
-    `[v1][wide]overlay=W-w-18:H-h-113:enable='${wideEnable}':format=auto[v2]`,
+    `[v1][wide]overlay=W-w-18:H-h-235:enable='${wideEnable}':format=auto[v2]`,
     '[5:v]scale=390:-1,format=rgba[o]',
-    `[v2][o]overlay=W-w-18:H-h-113:enable='${oEnable}':format=auto,format=yuv420p[v]`,
+    `[v2][o]overlay=W-w-18:H-h-235:enable='${oEnable}':format=auto,format=yuv420p[v]`,
   ].join(';');
 
   run('ffmpeg', [
@@ -171,14 +171,14 @@ function writeProgressOverlay(timing, sceneIndex) {
     const x = 290 + i * segWidth, w = segWidth - 8;
     const color = i < index ? '#0ea5e9' : i === index ? '#facc15' : '#334155';
     const titleColor = i === index ? '#ffffff' : i < index ? '#bae6fd' : '#94a3b8';
-    return `<text x="${x+w/2}" y="1010" font-size="19" text-anchor="middle" fill="${titleColor}">${escapeSvg(seg.title)}</text>
-      <rect x="${x}" y="1021" width="${w}" height="12" rx="5" fill="${color}"/>`;
+    return `<text x="${x+w/2}" y="858" font-size="19" text-anchor="middle" fill="${titleColor}">${escapeSvg(seg.title)}</text>
+      <rect x="${x}" y="869" width="${w}" height="12" rx="5" fill="${color}"/>`;
   }).join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
-    <rect x="0" y="967" width="1920" height="113" fill="#020617" fill-opacity=".96"/>
-    <text x="24" y="995" fill="#f8fafc" font-size="25" font-family="Noto Sans CJK TC,sans-serif" font-weight="bold">${escapeSvg(activeDefs[index].title)}</text>
-    <text x="24" y="1034" fill="#38bdf8" font-size="25" font-family="Noto Sans CJK TC,sans-serif">第 ${index+1} / ${segmentCount} 段</text>
-    <text x="1460" y="1035" fill="#f8fafc" font-size="23" font-family="Noto Sans CJK TC,sans-serif">總長 ${mmss(fullDuration)}</text>
+    <rect x="0" y="815" width="1920" height="113" fill="#020617" fill-opacity=".96"/>
+    <text x="24" y="843" fill="#f8fafc" font-size="25" font-family="Noto Sans CJK TC,sans-serif" font-weight="bold">${escapeSvg(activeDefs[index].title)}</text>
+    <text x="24" y="882" fill="#38bdf8" font-size="25" font-family="Noto Sans CJK TC,sans-serif">第 ${index+1} / ${segmentCount} 段</text>
+    <text x="1460" y="883" fill="#f8fafc" font-size="23" font-family="Noto Sans CJK TC,sans-serif">總長 ${mmss(fullDuration)}</text>
     ${rects}
   </svg>`;
   const overlaySvg = path.join(renderDir,`progress-${String(timing.scene.id).padStart(2,'0')}.svg`);
@@ -204,7 +204,7 @@ PlayResX: 1920
 PlayResY: 1080
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Timer,Noto Sans CJK TC,23,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,3,0,22,34,1
+Style: Timer,Noto Sans CJK TC,23,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,3,0,22,186,1
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `;
@@ -229,6 +229,7 @@ for (const [sceneIndex, timing] of timings.entries()) {
   const duration = timing.duration;
   const progressPng = writeProgressOverlay(timing, sceneIndex);
   const remainingAss = writeRemainingAss(timing);
+  // Keep the entire lower-third UI above a 152px YouTube two-line caption safe area.
   // Composite the information bar into the slide before the existing four-state
   // lip-sync render. This preserves all presenter mouth intervals.
   const composed = path.join(renderDir, `${sid}-progress.png`);
@@ -288,7 +289,7 @@ const qa = {
   vtuber_presenter: vtuberEnabled ? 'assets/daily-gainers-vtuber-sprite.webp' : null,
   segment_count: segmentCount,
   segment_titles: segments.map(s=>s.title),
-  progress_bar: 'segmented-eight-section-v1',
+  progress_bar: 'segmented-caption-safe-v2',
   total_duration_label: mmss(finalDuration)
 };
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
