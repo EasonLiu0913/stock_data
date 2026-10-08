@@ -28,6 +28,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             scripts
+            assets/vtuber/daily-gainers
             data_daily_gain_over_5
             video_jobs
 
@@ -84,7 +85,9 @@ jobs:
           date="${{ steps.date.outputs.date }}"
           python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
 
-      - name: Render MP4
+      - name: Render MP4 with VTuber lip sync
+        env:
+          YOUTUBE_VTUBER_ENABLED: "1"
         run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
 
       - name: Video QA
