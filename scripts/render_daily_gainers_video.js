@@ -88,13 +88,13 @@ function renderVtuberScene(png, mp3, mp4, duration, sceneId) {
   const filter = [
     '[0:v]scale=1920:1080,format=rgba[base]',
     '[2:v]scale=390:-1,format=rgba[closed]',
-    '[base][closed]overlay=W-w-18:H-h:format=auto[v0]',
+    '[base][closed]overlay=W-w-18:H-h-113:format=auto[v0]',
     '[3:v]scale=390:-1,format=rgba[small]',
-    `[v0][small]overlay=W-w-18:H-h:enable='${smallEnable}':format=auto[v1]`,
+    `[v0][small]overlay=W-w-18:H-h-113:enable='${smallEnable}':format=auto[v1]`,
     '[4:v]scale=390:-1,format=rgba[wide]',
-    `[v1][wide]overlay=W-w-18:H-h:enable='${wideEnable}':format=auto[v2]`,
+    `[v1][wide]overlay=W-w-18:H-h-113:enable='${wideEnable}':format=auto[v2]`,
     '[5:v]scale=390:-1,format=rgba[o]',
-    `[v2][o]overlay=W-w-18:H-h:enable='${oEnable}':format=auto,format=yuv420p[v]`,
+    `[v2][o]overlay=W-w-18:H-h-113:enable='${oEnable}':format=auto,format=yuv420p[v]`,
   ].join(';');
 
   run('ffmpeg', [
@@ -132,11 +132,14 @@ for (const timing of timings) {
   timing.start = fullDuration;
   fullDuration += timing.duration + 0.15;
 }
+const specialStart = plan.scenes.findIndex(s => s.title === '其他優先觀察股');
+if (specialStart < 2) throw new Error('Video plan is missing featured stock sections');
+const midpoint = 2 + Math.ceil((specialStart - 2) / 2);
 const segmentDefs = [
   { title: '開場', match: (_, i) => i === 0 },
   { title: '市場總覽', match: (_, i) => i === 1 },
-  { title: '代表股 A', match: (_, i) => i >= 2 && i <= 5 },
-  { title: '代表股 B', match: (_, i) => i >= 6 && i <= 9 },
+  { title: '代表股 A', match: (_, i) => i >= 2 && i < midpoint },
+  { title: '代表股 B', match: (_, i) => i >= midpoint && i < specialStart },
   { title: '其他觀察', match: (s) => s.title === '其他優先觀察股' },
   { title: '籌碼風險', match: (s) => s.title === '籌碼與風險' },
   { title: '明日觀察', match: (s) => s.title === '明日觀察重點' },
