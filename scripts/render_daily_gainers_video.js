@@ -273,6 +273,26 @@ run('ffmpeg', [
 const finalDuration = Number(capture('ffprobe', [
   '-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',finalPath
 ]));
+// Subtitle offsets must use measured rendered MP4 scene lengths, not MP3
+// estimates plus a fixed padding. A small per-scene error accumulates.
+let measuredCursor = 0;
+const renderedScenes = timings.map(timing => {
+  const sid = String(timing.scene.id).padStart(2,'0');
+  const segmentPath = path.join(renderDir, sid + '.mp4');
+  const duration = Number(capture('ffprobe', [
+    '-v','error','-show_entries','format=duration',
+    '-of','default=noprint_wrappers=1:nokey=1',segmentPath
+  ]));
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error('Invalid rendered segment: '+sid);
+  const record = {id:Number(timing.scene.id),start_seconds:measuredCursor,duration_seconds:duration};
+  measuredCursor += duration;
+  return record;
+});
+if (Math.abs(measuredCursor-finalDuration) > 0.30) {
+  throw new Error('Rendered scene/MP4 timeline divergence: '+measuredCursor+' vs '+finalDuration);
+}
+fs.writeFileSync(path.join(outDir,'render-timings.json'),
+  JSON.stringify({source:'measured-rendered-mp4-segments',duration_seconds:finalDuration,scenes:renderedScenes},null,2)+'\\n');
 const stat = fs.statSync(finalPath);
 const qa = {
   target_date: date,
