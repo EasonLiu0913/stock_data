@@ -167,6 +167,13 @@ function textBlock(x, y, text, size, weight='400', lineHeight=1.35, opacity=1) {
   const lines = wrap(text);
   return `<text x="${x}" y="${y}" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="${size}" font-weight="${weight}" fill="#f8fafc" opacity="${opacity}">${lines.map((l,i)=>`<tspan x="${x}" dy="${i===0?0:size*lineHeight}">${escapeXml(l)}</tspan>`).join('')}</text>`;
 }
+function singleLineTextBlock(x, y, text, baseSize, weight='400', opacity=1, maxWidth=1580) {
+  const value = String(text ?? '');
+  const glyphCount = Math.max(1, [...value].length);
+  const estimatedWidth = glyphCount * baseSize;
+  const size = Math.max(24, Math.min(baseSize, Math.floor(baseSize * maxWidth / estimatedWidth)));
+  return `<text x="${x}" y="${y}" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="${size}" font-weight="${weight}" fill="#f8fafc" opacity="${opacity}" textLength="${Math.min(maxWidth, Math.max(1, estimatedWidth * size / baseSize))}" lengthAdjust="spacingAndGlyphs">${escapeXml(value)}</text>`;
+}
 function renderSvg(scene) {
   let y = 330;
   const bulletSvg = scene.bullets.map((b, idx) => {
@@ -182,7 +189,7 @@ function renderSvg(scene) {
   <rect x="0" y="0" width="1920" height="18" fill="#38bdf8"/>
   <rect x="118" y="95" width="14" height="150" rx="7" fill="#38bdf8"/>
   ${textBlock(165, 150, scene.title, 70, '700')}
-  ${textBlock(165, 252, scene.subtitle, 34, '500', 1.25, 0.82)}
+  ${singleLineTextBlock(165, 252, scene.subtitle, 34, '500', 0.82)}
   ${bulletSvg}
   <text x="165" y="1010" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="26" fill="#94a3b8">${escapeXml(scene.footer || 'TAIWANSTOCK｜每日 5% 強勢股研究')}</text>
   <text x="1755" y="1010" font-family="Noto Sans CJK TC, sans-serif" font-size="24" fill="#64748b">${scene.id}/${scenes.length}</text>
