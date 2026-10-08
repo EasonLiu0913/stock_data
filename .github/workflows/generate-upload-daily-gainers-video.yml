@@ -92,11 +92,6 @@ jobs:
         run: |
           python scripts/synthesize_daily_gainers_tts.py             "output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json"
 
-      - name: Build Traditional Chinese subtitles
-        run: |
-          date="${{ steps.date.outputs.date }}"
-          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
-
       - name: Build text-aware VTuber lip sync
         run: |
           date="${{ steps.date.outputs.date }}"
@@ -106,6 +101,11 @@ jobs:
         env:
           YOUTUBE_VTUBER_ENABLED: "1"
         run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
+
+      - name: Build Traditional Chinese subtitles
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
 
       - name: Video QA
         id: qa
@@ -183,6 +183,7 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/render-timings.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
