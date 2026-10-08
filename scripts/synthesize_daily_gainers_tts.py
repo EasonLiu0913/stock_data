@@ -16,7 +16,7 @@ rate = os.environ.get("YOUTUBE_TTS_RATE", "+30%")
 
 async def edge_tts_save(text, out_path):
     import edge_tts
-    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate, boundary='WordBoundary')
     boundaries = []
     with out_path.open('wb') as audio:
         async for chunk in communicate.stream():
@@ -24,6 +24,8 @@ async def edge_tts_save(text, out_path):
                 audio.write(chunk['data'])
             elif chunk['type'] == 'WordBoundary':
                 boundaries.append({key: chunk[key] for key in ('text', 'offset', 'duration')})
+    if not boundaries:
+        raise RuntimeError('Edge TTS returned zero WordBoundary events; check boundary=WordBoundary and service metadata')
     return boundaries
 
 def gtts_save(text, out_path):
@@ -49,14 +51,7 @@ async def main():
             boundaries = await edge_tts_save(text, out_path)
             engine = "edge-tts"
         except Exception as e:
-            errors.append(f"edge-tts: {e}")
-            try:
-                gtts_save(text, out_path)
-                engine = "gTTS"
-            except Exception as e2:
-                errors.append(f"gTTS: {e2}")
-                espeak_save(text, out_path)
-                engine = "espeak-ng"
+            raise RuntimeError(f"Scene {sid}: Edge TTS with WordBoundary failed; will not generate unsynchronized captions: {e}") from e
         if not out_path.exists() or out_path.stat().st_size < 1000:
             raise RuntimeError(f"TTS output invalid for scene {sid}: {out_path}")
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
