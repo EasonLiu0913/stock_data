@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import asyncio, json, os, subprocess, sys
+import asyncio, json, os, subprocess, sys, random
 from pathlib import Path
 from daily_gainers_spoken_text import normalize_spoken_text
 
@@ -47,11 +47,30 @@ async def main():
         engine = None
         errors = []
         boundaries = []
-        try:
-            boundaries = await edge_tts_save(text, out_path)
-            engine = "edge-tts"
-        except Exception as e:
-            raise RuntimeError(f"Scene {sid}: Edge TTS with WordBoundary failed; will not generate unsynchronized captions: {e}") from e
+        max_attempts = 4
+        for attempt in range(1, max_attempts + 1):
+            out_path.unlink(missing_ok=True)
+            try:
+                boundaries = await edge_tts_save(text, out_path)
+                if not out_path.exists() or out_path.stat().st_size < 1000:
+                    raise RuntimeError("empty or truncated Edge TTS audio")
+                engine = "edge-tts"
+                if attempt > 1:
+                    print(f"scene {sid:02d}: Edge TTS recovered on attempt {attempt}/{max_attempts}", flush=True)
+                break
+            except Exception as e:
+                errors.append(f"attempt {attempt}: {type(e).__name__}: {e}")
+                out_path.unlink(missing_ok=True)
+                if attempt == max_attempts:
+                    raise RuntimeError(
+                        f"Scene {sid}: Edge TTS failed after {max_attempts} attempts; "
+                        f"WordBoundary-required subtitles preserved; no unsynchronized fallback. "
+                        f"Last error: {type(e).__name__}: {e}"
+                    ) from e
+                delay = min(20, 2 ** attempt + random.uniform(0, 1.5))
+                print(f"scene {sid:02d}: transient Edge TTS failure attempt {attempt}/{max_attempts} "
+                      f"({type(e).__name__}: {e}); retry in {delay:.1f}s", flush=True)
+                await asyncio.sleep(delay)
         if not out_path.exists() or out_path.stat().st_size < 1000:
             raise RuntimeError(f"TTS output invalid for scene {sid}: {out_path}")
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
