@@ -129,7 +129,7 @@ for scene in plan.get("scenes", []):
 
     for chunk, (start, end) in zip(chunks, cue_intervals):
         blocks.append(
-            f"{cue_no}\\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\\n{chunk}\\n"
+            f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{chunk}\n"
         )
         cue_no += 1
 
