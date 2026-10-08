@@ -4,6 +4,7 @@ from pathlib import Path
 
 from mutagen.mp3 import MP3
 from pypinyin import Style, pinyin
+from daily_gainers_spoken_text import normalize_spoken_dates
 
 if len(sys.argv) < 2:
     print("Usage: python scripts/build_daily_gainers_lipsync.py <plan.json>", file=sys.stderr)
@@ -61,7 +62,7 @@ for scene in plan.get("scenes", []):
     if duration <= 0:
         raise RuntimeError(f"Invalid audio duration: {audio_path}")
 
-    text = str(scene.get("narration") or "")
+    text = normalize_spoken_dates(scene.get("narration"))
     units = []
     for ch in text:
         shape, weight = classify_char(ch)
