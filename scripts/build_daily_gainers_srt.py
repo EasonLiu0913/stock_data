@@ -103,6 +103,7 @@ cursor = 0.0
 cue_no = 1
 blocks = []
 scene_timing = []
+cue_audit = []
 
 for scene in plan.get("scenes", []):
     sid = int(scene["id"])
@@ -131,6 +132,9 @@ for scene in plan.get("scenes", []):
         blocks.append(
             f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{chunk}\n"
         )
+        cue_audit.append({"cue": cue_no, "scene_id": sid, "scene_title": scene.get("title"),
+                          "start_seconds": round(cursor+start, 3),
+                          "end_seconds": round(cursor+end, 3), "text": chunk})
         cue_no += 1
 
     scene_timing.append({
@@ -152,6 +156,7 @@ manifest = {
     "duration_seconds": round(cursor, 3),
     "subtitle_file": out_path.name,
     "scenes": scene_timing,
+    "cues": cue_audit,
 }
 (plan_path.parent / "subtitle-manifest.json").write_text(
     json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
