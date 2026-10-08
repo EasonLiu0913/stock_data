@@ -104,6 +104,11 @@ cue_no = 1
 blocks = []
 scene_timing = []
 cue_audit = []
+render_timing_path = plan_path.parent / "render-timings.json"
+if not render_timing_path.exists():
+    raise FileNotFoundError(f"Missing rendered-scene timing manifest: {render_timing_path}")
+render_timing = json.loads(render_timing_path.read_text(encoding="utf-8"))
+render_scenes = {int(item["id"]): item for item in render_timing["scenes"]}
 
 for scene in plan.get("scenes", []):
     sid = int(scene["id"])
@@ -111,12 +116,19 @@ for scene in plan.get("scenes", []):
     if not audio_path.exists():
         raise FileNotFoundError(f"Missing audio: {audio_path}")
     duration = float(MP3(audio_path).info.length)
+    rendered_scene = render_scenes.get(sid)
+    if not rendered_scene:
+        raise RuntimeError(f"No final render timing for scene {sid}")
+    rendered_start = float(rendered_scene["start_seconds"])
+    rendered_duration = float(rendered_scene["duration_seconds"])
+    if abs(cursor - rendered_start) > 0.015:
+        raise RuntimeError(f"Scene {sid}: unexpected render cursor {cursor} vs {rendered_start}")
     if duration <= 0:
         raise RuntimeError(f"Invalid audio duration: {audio_path}")
 
     chunks = split_text(scene.get("narration"))
     if not chunks:
-        cursor += duration + 0.15
+        cursor += rendered_duration
         continue
 
     tts_scene = tts_scenes.get(sid)
@@ -129,6 +141,9 @@ for scene in plan.get("scenes", []):
         raise RuntimeError(f"Scene {sid} ({scene.get('title')}): subtitle alignment failed: {exc}") from exc
 
     for chunk, (start, end) in zip(chunks, cue_intervals):
+        end = min(end, rendered_duration)
+        if end <= start:
+            raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
         blocks.append(
             f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{chunk}\n"
         )
@@ -140,10 +155,11 @@ for scene in plan.get("scenes", []):
     scene_timing.append({
         "id": sid,
         "start_seconds": round(cursor, 3),
-        "duration_seconds": round(duration, 3),
+        "duration_seconds": round(rendered_duration, 3),
+        "audio_duration_seconds": round(duration, 3),
         "cue_count": len(chunks),
     })
-    cursor += duration + 0.15
+    cursor += rendered_duration
 
 out_path.write_text("\n".join(blocks) + "\n", encoding="utf-8")
 manifest = {
@@ -151,7 +167,7 @@ manifest = {
     "target_date": plan["target_date"],
     "language": "zh-TW",
     "source": "Edge TTS actual WordBoundary offsets + synthesized MP3 durations",
-    "alignment_method": "word-boundary-v1",
+    "alignment_method": "word-boundary-with-rendered-scene-offsets-v2",
     "cue_count": cue_no - 1,
     "duration_seconds": round(cursor, 3),
     "subtitle_file": out_path.name,
