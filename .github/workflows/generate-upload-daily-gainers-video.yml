@@ -143,17 +143,6 @@ jobs:
           date="${{ steps.date.outputs.date }}"
           node scripts/upload_youtube.js             "output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"             "output/daily-gainers-video/${date}/metadata.json"
 
-      - name: Upload custom YouTube thumbnail
-        env:
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: |
-          date="${{ steps.date.outputs.date }}"
-          node scripts/upload_youtube_thumbnail.js \
-            "${{ steps.youtube.outputs.video_id }}" \
-            "output/daily-gainers-video/${date}/thumbnail.jpg"
-
       - name: Upload Traditional Chinese captions
         id: captions
         env:
@@ -166,6 +155,19 @@ jobs:
             "${{ steps.youtube.outputs.video_id }}" \
             "output/daily-gainers-video/${date}/daily-gainers-${date}.zh-TW.srt" \
             "zh-TW" "繁體中文"
+
+      - name: Upload custom YouTube thumbnail
+        id: thumbnail
+        continue-on-error: true
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          node scripts/upload_youtube_thumbnail.js \
+            "${{ steps.youtube.outputs.video_id }}" \
+            "output/daily-gainers-video/${date}/thumbnail.jpg"
 
       - name: Upload rendered package artifact
         if: always()
@@ -201,7 +203,7 @@ jobs:
           - YouTube video ID: \`${{ steps.youtube.outputs.video_id }}\`
           - Privacy: private
           - Captions: zh-TW `繁體中文` (${{ steps.captions.outputs.already_exists == 'true' && 'already existed' || 'uploaded' }})
-          - Thumbnail: 1280x720 branded JPEG uploaded to YouTube
+          - Thumbnail: ${{ steps.thumbnail.outcome == 'success' && 'uploaded' || 'UPLOAD FAILED — check channel feature eligibility and OAuth' }}
           - VTuber: YunJhe + text-aware 4-state lip sync
           - Watch: ${{ steps.youtube.outputs.watch_url }}
           - Studio: ${{ steps.youtube.outputs.studio_url }}
