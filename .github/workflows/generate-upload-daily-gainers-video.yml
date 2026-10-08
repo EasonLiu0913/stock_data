@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             scripts
-            assets/vtuber/daily-gainers
+            assets/video/vtuber
             data_daily_gain_over_5
             video_jobs
 
@@ -51,7 +51,7 @@ jobs:
           fi
           ffmpeg -version | head -1
           rsvg-convert --version
-          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS mutagen
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS mutagen pypinyin
 
       - name: Resolve target date
         id: date
@@ -84,6 +84,11 @@ jobs:
         run: |
           date="${{ steps.date.outputs.date }}"
           python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
+
+      - name: Build text-aware VTuber lip sync
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          python scripts/build_daily_gainers_lipsync.py "output/daily-gainers-video/${date}/plan.json"
 
       - name: Render MP4 with VTuber lip sync
         env:
@@ -144,6 +149,7 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
           if-no-files-found: warn
@@ -163,6 +169,7 @@ jobs:
           - YouTube video ID: \`${{ steps.youtube.outputs.video_id }}\`
           - Privacy: private
           - Captions: zh-TW `繁體中文` (${{ steps.captions.outputs.already_exists == 'true' && 'already existed' || 'uploaded' }})
+          - VTuber: YunJhe + text-aware 4-state lip sync
           - Watch: ${{ steps.youtube.outputs.watch_url }}
           - Studio: ${{ steps.youtube.outputs.studio_url }}
           EOF
