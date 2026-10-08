@@ -36,10 +36,10 @@ function captureBuffer(cmd, args) {
 
 const vtuberDir = path.join(root, 'assets', 'vtuber', 'daily-gainers');
 const vtuberAssets = {
-  closed: path.join(vtuberDir, 'closed.png'),
-  small: path.join(vtuberDir, 'small.png'),
-  o: path.join(vtuberDir, 'o.png'),
-  wide: path.join(vtuberDir, 'wide.png'),
+  closed: path.join(vtuberDir, 'closed.webp'),
+  small: path.join(vtuberDir, 'small.webp'),
+  o: path.join(vtuberDir, 'o.webp'),
+  wide: path.join(vtuberDir, 'wide.webp'),
 };
 const vtuberEnabled = process.env.YOUTUBE_VTUBER_ENABLED !== '0'
   && Object.values(vtuberAssets).every(p => fs.existsSync(p));
