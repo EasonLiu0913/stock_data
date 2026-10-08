@@ -17,26 +17,73 @@ out_path = plan_path.parent / f"daily-gainers-{plan['target_date']}.zh-TW.srt"
 
 PUNCT = set("，。！？、；：,.!?;:")
 
-def split_text(text, max_chars=24):
+def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
+    sentence = sentence.strip()
+    if len(sentence) <= max_chars:
+        return [sentence]
+
+    parts = []
+    remaining = sentence
+    while len(remaining) > max_chars:
+        floor = max(min_fragment_chars, int(max_chars * 0.55))
+        ceiling = min(len(remaining) - min_fragment_chars, max_chars)
+        cut = None
+
+        for i in range(ceiling, floor - 1, -1):
+            if remaining[i - 1] in "，、：,: ":
+                cut = i
+                break
+
+        if cut is None:
+            # No natural punctuation point: split evenly enough that the
+            # next cue never contains only a few orphaned characters.
+            pieces_left = max(2, (len(remaining) + max_chars - 1) // max_chars)
+            cut = max(min_fragment_chars, round(len(remaining) / pieces_left))
+            cut = min(cut, max_chars)
+
+        parts.append(remaining[:cut].strip())
+        remaining = remaining[cut:].strip()
+
+    if remaining:
+        if parts and len(remaining) < min_fragment_chars:
+            parts[-1] = f"{parts[-1]}{remaining}"
+        else:
+            parts.append(remaining)
+
+    return [p for p in parts if p]
+
+
+def split_text(text, max_chars=38):
     normalized = re.sub(r"\s+", " ", str(text or "")).strip()
     if not normalized:
         return []
-    sentences = re.findall(r"[^。！？!?；;]+[。！？!?；;]?", normalized) or [normalized]
+
+    # Preserve sentence boundaries first. Each subtitle cue should contain
+    # one complete sentence, or at most two adjacent short sentences.
+    sentences = [
+        s.strip()
+        for s in re.findall(r"[^。！？!?；;]+[。！？!?；;]?", normalized)
+        if s.strip()
+    ] or [normalized]
+
+    units = []
+    for sentence in sentences:
+        units.extend(split_long_sentence(sentence, max_chars=max_chars))
+
     chunks = []
-    for raw in sentences:
-        sentence = raw.strip()
-        while len(sentence) > max_chars:
-            cut = min(max_chars, len(sentence))
-            floor = max(8, int(max_chars * 0.55))
-            for i in range(cut, floor - 1, -1):
-                if sentence[i - 1] in "，、：,: ":
-                    cut = i
-                    break
-            chunks.append(sentence[:cut].strip())
-            sentence = sentence[cut:].strip()
-        if sentence:
-            chunks.append(sentence)
-    return [c for c in chunks if c]
+    i = 0
+    while i < len(units):
+        current = units[i]
+        if i + 1 < len(units):
+            combined = f"{current}{units[i + 1]}"
+            if len(combined) <= max_chars:
+                chunks.append(combined)
+                i += 2
+                continue
+        chunks.append(current)
+        i += 1
+
+    return chunks
 
 def fmt_srt(seconds):
     ms = max(0, round(seconds * 1000))
