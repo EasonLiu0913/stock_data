@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const { normalizeNarrationRepetition } = require('./daily_gainers_text_cleanup');
 
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) {
@@ -74,7 +75,7 @@ function addScene(title, subtitle, bullets, narration, footer = '') {
     title,
     subtitle,
     bullets: bullets.filter(Boolean).slice(0, 5),
-    narration,
+    narration: normalizeNarrationRepetition(narration),
     footer
   });
 }
