@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: daily-gainers-video
+  cancel-in-progress: true
+
 jobs:
   render-upload:
     runs-on: ubuntu-latest
@@ -47,11 +51,11 @@ jobs:
         run: |
           set -euo pipefail
           if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! command -v rsvg-convert >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
-            sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+            timeout 180s sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
           fi
           ffmpeg -version | head -1
           rsvg-convert --version
-          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts gTTS mutagen pypinyin
+          timeout 180s python -m pip install --disable-pip-version-check --no-cache-dir --retries 4 --timeout 30 edge-tts gTTS mutagen pypinyin
 
       - name: Resolve target date
         id: date
