@@ -1,0 +1,102 @@
+name: "[08 影片] Recover YouTube Captions and Thumbnail"
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_id:
+        description: "Existing private YouTube video ID"
+        required: true
+      source_run_id:
+        description: "GitHub Actions run holding rendered video artifact"
+        required: true
+      date:
+        description: "Video date YYYYMMDD"
+        required: true
+  push:
+    branches: [main]
+    paths:
+      - "ops/video-thumbnail-retry/*.json"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout upload scripts
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: scripts
+
+      - name: Read recovery target
+        id: target
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VIDEO: ${{ inputs.video_id }}
+          INPUT_RUN: ${{ inputs.source_run_id }}
+          INPUT_DATE: ${{ inputs.date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "push" ]; then
+            file="ops/video-thumbnail-retry/20261007.json"
+            # This single-use kickoff has fixed, non-sensitive identifiers.
+            video_id="aUVgK7IKzsI"
+            run_id="37749547388"
+            date="20261007"
+          else
+            video_id="$INPUT_VIDEO"; run_id="$INPUT_RUN"; date="$INPUT_DATE"
+          fi
+          [[ "$video_id" =~ ^[A-Za-z0-9_-]{8,20}$ ]]
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          [[ "$date" =~ ^20[0-9]{6}$ ]]
+          echo "video_id=$video_id" >> "$GITHUB_OUTPUT"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Download original rendered artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: daily-gainers-video-${{ steps.target.outputs.date }}
+          run-id: ${{ steps.target.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: recovered
+
+      - name: Validate original caption and thumbnail
+        id: files
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.target.outputs.date }}"
+          image="$(find recovered -name thumbnail.jpg -type f -print -quit)"
+          caption="$(find recovered -name "daily-gainers-${date}.zh-TW.srt" -type f -print -quit)"
+          test -n "$image" && test -s "$image"
+          test -n "$caption" && test -s "$caption"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "caption=$caption" >> "$GITHUB_OUTPUT"
+
+      - name: Upload existing Traditional Chinese captions
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          node scripts/upload_youtube_caption.js             "${{ steps.target.outputs.video_id }}"             "${{ steps.files.outputs.caption }}"             "zh-TW" "繁體中文"
+
+      - name: Upload existing custom thumbnail
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          node scripts/upload_youtube_thumbnail.js             "${{ steps.target.outputs.video_id }}"             "${{ steps.files.outputs.image }}"
+
+      - name: Recovery summary
+        if: success()
+        run: |
+          echo "### YouTube captions and thumbnail: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Video: https://www.youtube.com/watch?v=${{ steps.target.outputs.video_id }}" >> "$GITHUB_STEP_SUMMARY"
