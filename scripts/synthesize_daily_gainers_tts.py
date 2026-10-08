@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio, json, os, subprocess, sys
 from pathlib import Path
+from daily_gainers_spoken_text import normalize_spoken_dates
 
 if len(sys.argv) < 2:
     print("Usage: python scripts/synthesize_daily_gainers_tts.py <plan.json>", file=sys.stderr)
@@ -33,7 +34,7 @@ async def main():
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         out_path = out_dir / f"{sid:02d}.mp3"
-        text = scene["narration"]
+        text = normalize_spoken_dates(scene["narration"])
         engine = None
         errors = []
         try:
@@ -52,7 +53,7 @@ async def main():
             raise RuntimeError(f"TTS output invalid for scene {sid}: {out_path}")
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
         manifest["engine"] = manifest["engine"] or engine
-        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors})
+        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text})
     (plan_path.parent / "tts-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 asyncio.run(main())
