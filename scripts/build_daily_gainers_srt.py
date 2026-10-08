@@ -2,6 +2,8 @@
 import json, re, sys
 from pathlib import Path
 from mutagen.mp3 import MP3
+from daily_gainers_spoken_text import normalize_spoken_text
+from daily_gainers_subtitle_alignment import align_cues
 
 if len(sys.argv) < 2:
     print("Usage: python scripts/build_daily_gainers_srt.py <plan.json>", file=sys.stderr)
@@ -15,7 +17,12 @@ plan = json.loads(plan_path.read_text(encoding="utf-8"))
 audio_dir = plan_path.parent / "audio"
 out_path = plan_path.parent / f"daily-gainers-{plan['target_date']}.zh-TW.srt"
 
-PUNCT = set("，。！？、；：,.!?;:")
+tts_manifest_path = plan_path.parent / "tts-manifest.json"
+if not tts_manifest_path.exists():
+    raise FileNotFoundError(f"Missing TTS timing manifest: {tts_manifest_path}")
+tts_manifest = json.loads(tts_manifest_path.read_text(encoding="utf-8"))
+tts_scenes = {int(item["id"]): item for item in tts_manifest["scenes"]}
+
 
 def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
     sentence = sentence.strip()
@@ -111,29 +118,20 @@ for scene in plan.get("scenes", []):
         cursor += duration + 0.15
         continue
 
-    weights = [
-        max(1, sum(1 for ch in chunk if (not ch.isspace() and ch not in PUNCT)))
-        for chunk in chunks
-    ]
-    total_weight = sum(weights)
-    local = cursor
+    tts_scene = tts_scenes.get(sid)
+    if not tts_scene or tts_scene.get("engine") != "edge-tts":
+        raise RuntimeError(f"Scene {sid}: word-level subtitle timing requires edge-tts")
+    try:
+        cue_intervals = align_cues(chunks, normalize_spoken_text,
+                                   tts_scene.get("word_boundaries", []), duration)
+    except ValueError as exc:
+        raise RuntimeError(f"Scene {sid} ({scene.get('title')}): subtitle alignment failed: {exc}") from exc
 
-    for i, chunk in enumerate(chunks):
-        remaining_duration = cursor + duration - local
-        remaining_cues = len(chunks) - i
-        allocated = duration * (weights[i] / total_weight)
-        min_duration = min(1.2, remaining_duration / remaining_cues)
-        allocated = max(min_duration, allocated)
-        if i == len(chunks) - 1 or local + allocated > cursor + duration:
-            allocated = cursor + duration - local
-
-        start = local
-        end = max(start + 0.25, local + allocated)
+    for chunk, (start, end) in zip(chunks, cue_intervals):
         blocks.append(
-            f"{cue_no}\n{fmt_srt(start)} --> {fmt_srt(end)}\n{chunk}\n"
+            f"{cue_no}\\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\\n{chunk}\\n"
         )
         cue_no += 1
-        local = end
 
     scene_timing.append({
         "id": sid,
@@ -148,7 +146,8 @@ manifest = {
     "schema_version": 1,
     "target_date": plan["target_date"],
     "language": "zh-TW",
-    "source": "scene narration + exact synthesized MP3 durations",
+    "source": "Edge TTS actual WordBoundary offsets + synthesized MP3 durations",
+    "alignment_method": "word-boundary-v1",
     "cue_count": cue_no - 1,
     "duration_seconds": round(cursor, 3),
     "subtitle_file": out_path.name,
