@@ -88,7 +88,7 @@ addScene(
     `公開催化覆蓋：${summary.catalyst_coverage?.public_catalyst_coverage_pct ?? '—'}%`,
     `法人偏多：${summary.funding_summary?.institutional_support_count ?? '—'} / ${raw.stock_count} 檔`
   ],
-  `歡迎來到 TAIWANSTOCK。今天要用五到十分鐘，快速拆解 ${fmtDate} 台股漲幅超過百分之五的強勢股。今天一共有 ${raw.stock_count} 檔入選，比前一個交易日增加 ${summary.breadth?.stock_count_change ?? 0} 檔。重點不是把三十六檔逐一念完，而是找出真正有題材、籌碼與量價共振的主線，以及哪些股票雖然大漲，但公開催化仍然不足。以下內容依據當日收盤資料、新聞、法人、融資與分點資訊整理，僅供研究，不構成投資建議。`
+  `歡迎來到 TAIWANSTOCK。今天要用五到十分鐘，快速拆解 ${fmtDate} 台股漲幅超過百分之五的強勢股。今天一共有 ${raw.stock_count} 檔入選，比前一個交易日增加 ${summary.breadth?.stock_count_change ?? 0} 檔。重點不是把三十六檔逐一念完，而是找出真正有題材、籌碼與量價共振的主線，以及哪些股票雖然大漲，但公開催化仍然不足。以下內容依據當日收盤資料、新聞、法人、融資與分點資訊整理，僅供研究，不構成投資建議。我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉`
 );
 
 addScene(
