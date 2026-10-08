@@ -132,31 +132,27 @@ for (const timing of timings) {
   timing.start = fullDuration;
   fullDuration += timing.duration + 0.15;
 }
-const specialStart = plan.scenes.findIndex(s => s.title === '其他優先觀察股');
-if (specialStart < 2) throw new Error('Video plan is missing featured stock sections');
-const midpoint = 2 + Math.ceil((specialStart - 2) / 2);
-const segmentDefs = [
-  { title: '開場', match: (_, i) => i === 0 },
-  { title: '市場總覽', match: (_, i) => i === 1 },
-  { title: '代表股 A', match: (_, i) => i >= 2 && i < midpoint },
-  { title: '代表股 B', match: (_, i) => i >= midpoint && i < specialStart },
-  { title: '其他觀察', match: (s) => s.title === '其他優先觀察股' },
-  { title: '籌碼風險', match: (s) => s.title === '籌碼與風險' },
-  { title: '明日觀察', match: (s) => s.title === '明日觀察重點' },
-  { title: '結論', match: (s) => s.title === 'TAIWANSTOCK' }
-];
-const activeDefs = segmentDefs.filter(def => timings.some((t,i) => def.match(t.scene,i)));
-function findSegment(scene, i) {
-  const found = activeDefs.findIndex(def => def.match(scene,i));
-  if (found < 0) throw new Error(`No segment for scene ${scene.id}: ${scene.title}`);
-  return found;
+// ChatGPT-authored scripts choose scene titles and counts freely.
+// Use every actual scene as a progress segment; never assume legacy fixed headings.
+if (!Array.isArray(plan.scenes) || plan.scenes.length < 1) {
+  throw new Error('Video plan has no scenes');
 }
-const segmentCount = activeDefs.length;
-const segments = activeDefs.map((def,index) => {
-  const items = timings.filter((t,i) => findSegment(t.scene,i) === index);
-  return { index:index + 1, title:def.title, start:items[0].start,
-    end:items[items.length - 1].start + items[items.length - 1].duration + 0.15 };
-});
+const segments = timings.map((timing, index) => ({
+  index: index + 1,
+  title: String(timing.scene.title || `第 ${index + 1} 段`),
+  start: timing.start,
+  end: timing.start + timing.duration + 0.15
+}));
+const segmentCount = segments.length;
+const activeDefs = segments.map(seg => ({
+  title: [...seg.title].slice(0, 9).join('')
+}));
+function findSegment(scene, index) {
+  if (!Number.isInteger(index) || index < 0 || index >= segmentCount) {
+    throw new Error(`Invalid scene segment index: ${index}`);
+  }
+  return index;
+}
 function mmss(seconds) {
   const n = Math.max(0,Math.ceil(seconds));
   return `${String(Math.floor(n / 60)).padStart(2,'0')}:${String(n % 60).padStart(2,'0')}`;
