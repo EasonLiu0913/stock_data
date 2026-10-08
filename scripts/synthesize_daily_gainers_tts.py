@@ -17,7 +17,14 @@ rate = os.environ.get("YOUTUBE_TTS_RATE", "+30%")
 async def edge_tts_save(text, out_path):
     import edge_tts
     communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
-    await communicate.save(str(out_path))
+    boundaries = []
+    with out_path.open('wb') as audio:
+        async for chunk in communicate.stream():
+            if chunk['type'] == 'audio':
+                audio.write(chunk['data'])
+            elif chunk['type'] == 'WordBoundary':
+                boundaries.append({key: chunk[key] for key in ('text', 'offset', 'duration')})
+    return boundaries
 
 def gtts_save(text, out_path):
     from gtts import gTTS
@@ -37,8 +44,9 @@ async def main():
         text = normalize_spoken_text(scene["narration"])
         engine = None
         errors = []
+        boundaries = []
         try:
-            await edge_tts_save(text, out_path)
+            boundaries = await edge_tts_save(text, out_path)
             engine = "edge-tts"
         except Exception as e:
             errors.append(f"edge-tts: {e}")
@@ -53,7 +61,7 @@ async def main():
             raise RuntimeError(f"TTS output invalid for scene {sid}: {out_path}")
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
         manifest["engine"] = manifest["engine"] or engine
-        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text})
+        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text, "word_boundaries": boundaries})
     (plan_path.parent / "tts-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 asyncio.run(main())
