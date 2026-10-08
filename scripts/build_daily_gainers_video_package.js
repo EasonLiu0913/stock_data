@@ -192,6 +192,7 @@ function renderSvg(scene) {
   ${singleLineTextBlock(165, 252, scene.subtitle, 34, '500', 0.82)}
   ${bulletSvg}
   <text x="165" y="1010" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="26" fill="#94a3b8">${escapeXml(scene.footer || 'TAIWANSTOCK｜每日 5% 強勢股研究')}</text>
+  <text x="1390" y="1010" text-anchor="middle" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="22" font-weight="400" fill="#94a3b8" opacity="0.68">歡迎打開 CC中文字幕觀賞</text>
   <text x="1755" y="1010" font-family="Noto Sans CJK TC, sans-serif" font-size="24" fill="#64748b">${scene.id}/${scenes.length}</text>
 </svg>`;
 }
