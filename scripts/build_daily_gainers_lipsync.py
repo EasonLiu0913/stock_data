@@ -94,7 +94,7 @@ manifest = {
     "methodology": "text-pinyin-final-v1",
     "target_date": plan["target_date"],
     "mouth_shapes": ["closed", "small", "wide", "o"],
-    "presenter_asset": "assets/video/vtuber/daily-gainers-presenter.webp",
+    "presenter_asset": "assets/daily-gainers-vtuber-sprite.webp",
     "mouth_patch_origin": {"x": 150, "y": 120, "source_width": 330, "source_height": 440},
     "scenes": scenes,
 }
