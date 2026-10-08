@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize spoken dates without altering captions or slide display text."""
+"""Normalize TTS narration without altering captions or slide display text."""
 import re
 from datetime import date
 
@@ -36,3 +36,21 @@ def normalize_spoken_dates(text):
         return f"{prefix}{_spoken_number(month)}月{_spoken_number(day)}日"
 
     return _DATE.sub(replace, str(text or ""))
+
+
+# A slash joining two Chinese concepts means a spoken conjunction, not punctuation.
+# Do not rewrite slashes in dates, ratios, stock codes, URLs, or identifiers.
+_HAN_SLASH = re.compile(r"(?<=[\\u3400-\\u9fff])\\s*/\\s*(?=[\\u3400-\\u9fff])")
+_SPOKEN_PHRASES = {
+    "法人/分點": "法人與分點",
+    "PCB / CPO": "PCB 與 CPO",
+    "PCB/CPO": "PCB 與 CPO",
+}
+
+
+def normalize_spoken_text(text):
+    """Prepare spoken narration; keep plan narration unchanged for captions."""
+    spoken = normalize_spoken_dates(text)
+    for source, replacement in _SPOKEN_PHRASES.items():
+        spoken = spoken.replace(source, replacement)
+    return _HAN_SLASH.sub("與", spoken)
