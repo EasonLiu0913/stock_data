@@ -292,7 +292,7 @@ if (Math.abs(measuredCursor-finalDuration) > 0.30) {
   throw new Error('Rendered scene/MP4 timeline divergence: '+measuredCursor+' vs '+finalDuration);
 }
 fs.writeFileSync(path.join(outDir,'render-timings.json'),
-  JSON.stringify({source:'measured-rendered-mp4-segments',duration_seconds:finalDuration,scenes:renderedScenes},null,2)+'\\n');
+  JSON.stringify({source:'measured-rendered-mp4-segments',duration_seconds:finalDuration,scenes:renderedScenes},null,2)+'\n');
 const stat = fs.statSync(finalPath);
 const qa = {
   target_date: date,
