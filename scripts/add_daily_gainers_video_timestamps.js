@@ -11,7 +11,8 @@ function timestamp(seconds) {
     : `${m}:${String(s).padStart(2,'0')}`;
 }
 
-function buildStockIndex(scenes, durations) {
+function buildStockIndex(scenes, durations, stocks = []) {
+  const stockNames = new Map(stocks.map(stock => [String(stock.code), String(stock.name)]));
   if (durations.length !== scenes.length) throw new Error('Scene/audio count mismatch');
   const entries = [];
   let elapsed = 0;
@@ -20,6 +21,11 @@ function buildStockIndex(scenes, durations) {
     if (!Number.isFinite(duration) || duration <= 0) throw new Error(`Invalid duration at scene ${i+1}`);
     const match = String(scenes[i].title || '').match(/^(.+?)（([0-9]{4,6})）$/);
     if (match) entries.push(`${match[1]}(${match[2]}) ${timestamp(elapsed)}`);
+    else for (const code of [...new Set(scenes[i].stock_codes || [])]) {
+      const name = stockNames.get(String(code));
+      if (!name) throw new Error(`Unknown stock code in video scene ${i + 1}: ${code}`);
+      entries.push(`${name}(${code}) ${timestamp(elapsed)}`);
+    }
     elapsed += duration + 0.15; // same audio padding as render_daily_gainers_video.js
   }
   return entries;
@@ -44,7 +50,8 @@ function main(date, root = process.cwd()) {
   const metaPath = path.join(folder,'metadata.json');
   const metadata = JSON.parse(fs.readFileSync(metaPath,'utf8'));
   const durations = plan.scenes.map(scene=>audioDuration(path.join(folder,'audio',String(scene.id).padStart(2,'0')+'.mp3')));
-  const entries = buildStockIndex(plan.scenes, durations);
+  const raw = JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5',date+'.json'),'utf8'));
+  const entries = buildStockIndex(plan.scenes, durations, raw.stocks);
   if (!entries.length) throw new Error('No named stock scenes found; refusing to upload a missing index');
   metadata.description = appendStockIndex(metadata.description,entries);
   fs.writeFileSync(metaPath,JSON.stringify(metadata,null,2)+'\n');
