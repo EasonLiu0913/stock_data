@@ -33,6 +33,7 @@ jobs:
           sparse-checkout: |
             scripts
             tests/test_daily_gainers_spoken_text.py
+            tests/test_daily_gainers_subtitle_alignment.py
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
             video_jobs
@@ -80,6 +81,9 @@ jobs:
 
       - name: Validate spoken date normalization
         run: python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
+
+      - name: Validate subtitle speech synchronization
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py'
 
       - name: Synthesize Chinese narration
         env:
