@@ -123,6 +123,9 @@ jobs:
           echo "scenes=$scenes" >> "$GITHUB_OUTPUT"
           echo "size_mib=$size" >> "$GITHUB_OUTPUT"
 
+      - name: Add stock timestamps to YouTube description
+        run: node scripts/add_daily_gainers_video_timestamps.js "${{ steps.date.outputs.date }}"
+
       - name: Upload private video to YouTube
         id: youtube
         env:
