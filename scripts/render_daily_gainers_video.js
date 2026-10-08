@@ -30,24 +30,38 @@ function capture(cmd, args) {
   return r.stdout.trim();
 }
 
-const vtuberDir = path.join(root, 'assets', 'vtuber', 'daily-gainers');
-const sourceAssets = {
-  closed: path.join(vtuberDir, 'closed.webp'),
-  small: path.join(vtuberDir, 'small.webp'),
-  wide: path.join(vtuberDir, 'wide.webp'),
-  o: path.join(vtuberDir, 'o.webp'),
-};
+const vtuberSprite = path.join(root, 'assets', 'daily-gainers-vtuber-sprite.webp');
 const vtuberEnabled = process.env.YOUTUBE_VTUBER_ENABLED !== '0'
   && fs.existsSync(lipSyncPath)
-  && Object.values(sourceAssets).every(p => fs.existsSync(p));
+  && fs.existsSync(vtuberSprite);
 
 let lipSync = null;
 const vtuberAssets = {};
 if (vtuberEnabled) {
   lipSync = JSON.parse(fs.readFileSync(lipSyncPath, 'utf8'));
-  for (const [name, source] of Object.entries(sourceAssets)) {
+
+  // The sprite contains four identical presenter poses with only the mouth
+  // changed. Cell order: closed, small, o, wide.
+  const spriteMeta = JSON.parse(capture('ffprobe', [
+    '-v','error','-select_streams','v:0',
+    '-show_entries','stream=width,height',
+    '-of','json',vtuberSprite
+  ]));
+  const stream = spriteMeta.streams?.[0];
+  const spriteWidth = Number(stream?.width);
+  const spriteHeight = Number(stream?.height);
+  if (!Number.isInteger(spriteWidth) || !Number.isInteger(spriteHeight) || spriteWidth % 4 !== 0) {
+    throw new Error(`Invalid VTuber sprite dimensions: ${spriteWidth}x${spriteHeight}`);
+  }
+  const cellWidth = spriteWidth / 4;
+  const cells = { closed: 0, small: 1, o: 2, wide: 3 };
+  for (const [name, index] of Object.entries(cells)) {
     const png = path.join(renderDir, `vtuber-${name}.png`);
-    run('ffmpeg', ['-y','-loglevel','error','-i',source,png]);
+    run('ffmpeg', [
+      '-y','-loglevel','error','-i',vtuberSprite,
+      '-vf',`crop=${cellWidth}:${spriteHeight}:${index * cellWidth}:0`,
+      '-frames:v','1',png
+    ]);
     vtuberAssets[name] = png;
   }
 }
@@ -164,7 +178,7 @@ const qa = {
   size_pass: stat.size >= 1024 * 1024,
   vtuber_enabled: vtuberEnabled,
   vtuber_lipsync: vtuberEnabled ? (lipSync.methodology || 'text-aware') : 'disabled',
-  vtuber_presenter: vtuberEnabled ? 'assets/vtuber/daily-gainers/closed.webp' : null
+  vtuber_presenter: vtuberEnabled ? 'assets/daily-gainers-vtuber-sprite.webp' : null
 };
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
 console.log(JSON.stringify(qa, null, 2));
