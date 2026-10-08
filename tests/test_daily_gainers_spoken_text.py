@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from daily_gainers_spoken_text import normalize_spoken_dates
+from daily_gainers_spoken_text import normalize_spoken_dates, normalize_spoken_text
 
 
 class SpokenDatesTest(unittest.TestCase):
@@ -17,6 +17,12 @@ class SpokenDatesTest(unittest.TestCase):
     def test_non_dates_preserved(self):
         self.assertEqual(normalize_spoken_dates("股票 2330/10/7，日期 13/40"), "股票 2330/10/7，日期 13/40")
         self.assertEqual(normalize_spoken_dates("2026/02/30 資料"), "2026/02/30 資料")
+
+    def test_conversational_slash_and_protected_values(self):
+        self.assertEqual(normalize_spoken_text("法人/分點"), "法人與分點")
+        self.assertEqual(normalize_spoken_text("法人 / 分點、資金/籌碼"), "法人與分點、資金與籌碼")
+        self.assertEqual(normalize_spoken_text("PCB/CPO，10/7 收盤"), "PCB 與 CPO，十月七日 收盤")
+        self.assertEqual(normalize_spoken_text("13/40，股票 2330/10/7"), "13/40，股票 2330/10/7")
 
     def test_original_caption_source_unchanged(self):
         caption = "10/7 強勢股；2026/10/07 收盤。"
