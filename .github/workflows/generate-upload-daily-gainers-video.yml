@@ -32,6 +32,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             scripts
+            tests/test_daily_gainers_spoken_text.py
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
             video_jobs
@@ -76,6 +77,9 @@ jobs:
 
       - name: Build video content package
         run: node scripts/build_daily_gainers_video_package.js "${{ steps.date.outputs.date }}"
+
+      - name: Validate spoken date normalization
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
 
       - name: Synthesize Chinese narration
         env:
