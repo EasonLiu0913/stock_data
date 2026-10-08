@@ -30,12 +30,12 @@ function capture(cmd, args) {
   return r.stdout.trim();
 }
 
-const vtuberDir = path.join(root, 'assets', 'video', 'vtuber');
+const vtuberDir = path.join(root, 'assets', 'vtuber', 'daily-gainers');
 const sourceAssets = {
-  presenter: path.join(vtuberDir, 'daily-gainers-presenter.webp'),
-  small: path.join(vtuberDir, 'mouth-small.webp'),
-  wide: path.join(vtuberDir, 'mouth-wide.webp'),
-  o: path.join(vtuberDir, 'mouth-o.webp'),
+  closed: path.join(vtuberDir, 'closed.webp'),
+  small: path.join(vtuberDir, 'small.webp'),
+  wide: path.join(vtuberDir, 'wide.webp'),
+  o: path.join(vtuberDir, 'o.webp'),
 };
 const vtuberEnabled = process.env.YOUTUBE_VTUBER_ENABLED !== '0'
   && fs.existsSync(lipSyncPath)
@@ -64,39 +64,30 @@ function renderVtuberScene(png, mp3, mp4, duration, sceneId) {
   const sceneLipSync = (lipSync.scenes || []).find(x => Number(x.id) === Number(sceneId));
   if (!sceneLipSync) throw new Error(`Missing VTuber lip sync data for scene ${sceneId}`);
 
-  // Source presenter is 330x440. Mouth patches use the same source coordinate
-  // system and are cropped from x=150,y=120 with size 95x75.
-  const avatarWidth = 390;
-  const avatarHeight = 520;
-  const scale = avatarWidth / 330;
-  const avatarX = 1920 - avatarWidth - 18;
-  const avatarY = 1080 - avatarHeight;
-  const mouthX = Math.round(avatarX + 150 * scale);
-  const mouthY = Math.round(avatarY + 120 * scale);
-  const mouthWidth = Math.round(95 * scale);
-  const mouthHeight = Math.round(75 * scale);
-
   const smallEnable = enableExpression(sceneLipSync, 'small');
   const wideEnable = enableExpression(sceneLipSync, 'wide');
   const oEnable = enableExpression(sceneLipSync, 'o');
 
+  // Keep the closed-mouth presenter visible at all times. Overlay the other
+  // complete presenter states only during their text-derived mouth intervals.
+  // This avoids the invalid 16-byte PNG placeholders and avoids concat demuxing.
   const filter = [
     '[0:v]scale=1920:1080,format=rgba[base]',
-    `[2:v]scale=${avatarWidth}:${avatarHeight},format=rgba[avatar]`,
-    `[base][avatar]overlay=${avatarX}:${avatarY}:format=auto[v0]`,
-    `[3:v]scale=${mouthWidth}:${mouthHeight},format=rgba[small]`,
-    `[v0][small]overlay=${mouthX}:${mouthY}:enable='${smallEnable}':format=auto[v1]`,
-    `[4:v]scale=${mouthWidth}:${mouthHeight},format=rgba[wide]`,
-    `[v1][wide]overlay=${mouthX}:${mouthY}:enable='${wideEnable}':format=auto[v2]`,
-    `[5:v]scale=${mouthWidth}:${mouthHeight},format=rgba[o]`,
-    `[v2][o]overlay=${mouthX}:${mouthY}:enable='${oEnable}':format=auto,format=yuv420p[v]`,
+    '[2:v]scale=390:-1,format=rgba[closed]',
+    '[base][closed]overlay=W-w-18:H-h:format=auto[v0]',
+    '[3:v]scale=390:-1,format=rgba[small]',
+    `[v0][small]overlay=W-w-18:H-h:enable='${smallEnable}':format=auto[v1]`,
+    '[4:v]scale=390:-1,format=rgba[wide]',
+    `[v1][wide]overlay=W-w-18:H-h:enable='${wideEnable}':format=auto[v2]`,
+    '[5:v]scale=390:-1,format=rgba[o]',
+    `[v2][o]overlay=W-w-18:H-h:enable='${oEnable}':format=auto,format=yuv420p[v]`,
   ].join(';');
 
   run('ffmpeg', [
     '-y','-loglevel','error',
     '-loop','1','-framerate','24','-i',png,
     '-i',mp3,
-    '-loop','1','-framerate','24','-i',vtuberAssets.presenter,
+    '-loop','1','-framerate','24','-i',vtuberAssets.closed,
     '-loop','1','-framerate','24','-i',vtuberAssets.small,
     '-loop','1','-framerate','24','-i',vtuberAssets.wide,
     '-loop','1','-framerate','24','-i',vtuberAssets.o,
@@ -173,7 +164,7 @@ const qa = {
   size_pass: stat.size >= 1024 * 1024,
   vtuber_enabled: vtuberEnabled,
   vtuber_lipsync: vtuberEnabled ? (lipSync.methodology || 'text-aware') : 'disabled',
-  vtuber_presenter: vtuberEnabled ? 'daily-gainers-presenter.webp' : null
+  vtuber_presenter: vtuberEnabled ? 'assets/vtuber/daily-gainers/closed.webp' : null
 };
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
 console.log(JSON.stringify(qa, null, 2));
