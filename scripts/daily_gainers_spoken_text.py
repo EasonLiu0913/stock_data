@@ -40,7 +40,7 @@ def normalize_spoken_dates(text):
 
 # A slash joining two Chinese concepts means a spoken conjunction, not punctuation.
 # Do not rewrite slashes in dates, ratios, stock codes, URLs, or identifiers.
-_HAN_SLASH = re.compile(r"(?<=[\\u3400-\\u9fff])\\s*/\\s*(?=[\\u3400-\\u9fff])")
+_HAN_SLASH = re.compile(r"(?<=[\u3400-\u9fff])\s*/\s*(?=[\u3400-\u9fff])")
 _SPOKEN_PHRASES = {
     "法人/分點": "法人與分點",
     "PCB / CPO": "PCB 與 CPO",
