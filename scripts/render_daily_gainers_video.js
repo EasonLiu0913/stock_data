@@ -114,8 +114,104 @@ function renderVtuberScene(png, mp3, mp4, duration, sceneId) {
   ]);
 }
 
+// Preflight narration durations before rendering, so the progress UI reflects
+// the final timeline instead of assuming each slide is the same length.
+const timings = plan.scenes.map(scene => {
+  const sid = String(scene.id).padStart(2, '0');
+  const mp3 = path.join(audioDir, `${sid}.mp3`);
+  if (!fs.existsSync(mp3)) throw new Error(`Missing audio: ${mp3}`);
+  const duration = Number(capture('ffprobe', [
+    '-v','error','-show_entries','format=duration',
+    '-of','default=noprint_wrappers=1:nokey=1',mp3
+  ]));
+  if (!Number.isFinite(duration) || duration < 1) throw new Error(`Invalid audio duration for ${mp3}`);
+  return { scene, duration, start: 0 };
+});
+let fullDuration = 0;
+for (const timing of timings) {
+  timing.start = fullDuration;
+  fullDuration += timing.duration + 0.15;
+}
+const segmentDefs = [
+  { title: '開場', match: (_, i) => i === 0 },
+  { title: '市場總覽', match: (_, i) => i === 1 },
+  { title: '代表股 A', match: (_, i) => i >= 2 && i <= 5 },
+  { title: '代表股 B', match: (_, i) => i >= 6 && i <= 9 },
+  { title: '其他觀察', match: (s) => s.title === '其他優先觀察股' },
+  { title: '籌碼風險', match: (s) => s.title === '籌碼與風險' },
+  { title: '明日觀察', match: (s) => s.title === '明日觀察重點' },
+  { title: '結論', match: (s) => s.title === 'TAIWANSTOCK' }
+];
+const activeDefs = segmentDefs.filter(def => timings.some((t,i) => def.match(t.scene,i)));
+function findSegment(scene, i) {
+  const found = activeDefs.findIndex(def => def.match(scene,i));
+  if (found < 0) throw new Error(`No segment for scene ${scene.id}: ${scene.title}`);
+  return found;
+}
+const segmentCount = activeDefs.length;
+const segments = activeDefs.map((def,index) => {
+  const items = timings.filter((t,i) => findSegment(t.scene,i) === index);
+  return { index:index + 1, title:def.title, start:items[0].start,
+    end:items[items.length - 1].start + items[items.length - 1].duration + 0.15 };
+});
+function mmss(seconds) {
+  const n = Math.max(0,Math.ceil(seconds));
+  return `${String(Math.floor(n / 60)).padStart(2,'0')}:${String(n % 60).padStart(2,'0')}`;
+}
+function escapeSvg(value) {
+  return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+}
+function writeProgressOverlay(timing, sceneIndex) {
+  const index = findSegment(timing.scene, sceneIndex);
+  const segWidth = 1110 / segmentCount;
+  const rects = segments.map((seg,i) => {
+    const x = 290 + i * segWidth, w = segWidth - 8;
+    const color = i < index ? '#0ea5e9' : i === index ? '#facc15' : '#334155';
+    const titleColor = i === index ? '#ffffff' : i < index ? '#bae6fd' : '#94a3b8';
+    return `<text x="${x+w/2}" y="1010" font-size="19" text-anchor="middle" fill="${titleColor}">${escapeSvg(seg.title)}</text>
+      <rect x="${x}" y="1021" width="${w}" height="12" rx="5" fill="${color}"/>`;
+  }).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+    <rect x="0" y="967" width="1920" height="113" fill="#020617" fill-opacity=".96"/>
+    <text x="24" y="995" fill="#f8fafc" font-size="25" font-family="Noto Sans CJK TC,sans-serif" font-weight="bold">${escapeSvg(activeDefs[index].title)}</text>
+    <text x="24" y="1034" fill="#38bdf8" font-size="25" font-family="Noto Sans CJK TC,sans-serif">第 ${index+1} / ${segmentCount} 段</text>
+    <text x="1460" y="1035" fill="#f8fafc" font-size="23" font-family="Noto Sans CJK TC,sans-serif">總長 ${mmss(fullDuration)}</text>
+    ${rects}
+  </svg>`;
+  const overlaySvg = path.join(renderDir,`progress-${String(timing.scene.id).padStart(2,'0')}.svg`);
+  const overlayPng = overlaySvg.replace(/\.svg$/,'.png');
+  fs.writeFileSync(overlaySvg,svg);
+  run('rsvg-convert',['-w','1920','-h','1080','-o',overlayPng,overlaySvg]);
+  return overlayPng;
+}
+function writeRemainingAss(timing) {
+  const assPath = path.join(renderDir,`remaining-${String(timing.scene.id).padStart(2,'0')}.ass`);
+  const duration = timing.duration + 0.15;
+  const assTime = n => {
+    const c = Math.max(0,Math.round(n*100));
+    return `${Math.floor(c/360000)}:${String(Math.floor(c/6000)%60).padStart(2,'0')}:${String(Math.floor(c/100)%60).padStart(2,'0')}.${String(c%100).padStart(2,'0')}`;
+  };
+  const events = [];
+  for(let t=0;t<duration;t+=1) {
+    events.push(`Dialogue: 0,${assTime(t)},${assTime(Math.min(duration,t+1))},Timer,,0,0,0,,剩餘 ${mmss(fullDuration-timing.start-t)}`);
+  }
+  const header = `[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Timer,Noto Sans CJK TC,23,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,3,0,22,34,1
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+`;
+  fs.writeFileSync(assPath,header+events.join('\n')+'\n');
+  return assPath;
+}
+
 const concatLines = [];
-for (const scene of plan.scenes) {
+for (const [sceneIndex, timing] of timings.entries()) {
+  const scene = timing.scene;
   const sid = String(scene.id).padStart(2,'0');
   const svg = path.join(slidesDir, `${sid}.svg`);
   const png = path.join(renderDir, `${sid}.png`);
@@ -127,21 +223,29 @@ for (const scene of plan.scenes) {
 
   run('rsvg-convert', ['-w','1920','-h','1080','-o',png,svg]);
 
-  const duration = Number(capture('ffprobe', [
-    '-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',mp3
-  ]));
-  if (!Number.isFinite(duration) || duration < 1) throw new Error(`Invalid audio duration for ${mp3}`);
-
+  const duration = timing.duration;
+  const progressPng = writeProgressOverlay(timing, sceneIndex);
+  const remainingAss = writeRemainingAss(timing);
+  // Composite the information bar into the slide before the existing four-state
+  // lip-sync render. This preserves all presenter mouth intervals.
+  const composed = path.join(renderDir, `${sid}-progress.png`);
+  run('ffmpeg',['-y','-loglevel','error','-i',png,'-i',progressPng,
+    '-filter_complex','[0:v][1:v]overlay=0:0:format=auto','-frames:v','1',composed]);
+  // Burn a second-accurate remaining-time ticker into each scene via libass.
+  // FFmpeg subtitle escaping is safe because generated paths contain no colons.
   if (vtuberEnabled) {
-    renderVtuberScene(png, mp3, mp4, duration, scene.id);
+    const intermediate = path.join(renderDir, `${sid}-lip.mp4`);
+    renderVtuberScene(composed, mp3, intermediate, duration, scene.id);
+    run('ffmpeg',['-y','-loglevel','error','-i',intermediate,'-vf',`subtitles=${remainingAss}`,
+      '-c:v','libx264','-preset','ultrafast','-c:a','copy',mp4]);
   } else {
     run('ffmpeg', [
       '-y','-loglevel','error',
-      '-loop','1','-framerate','24','-i',png,
+      '-loop','1','-framerate','24','-i',composed,
       '-i',mp3,
       '-c:v','libx264','-preset','ultrafast','-tune','stillimage',
       '-c:a','aac','-b:a','160k','-pix_fmt','yuv420p',
-      '-vf','scale=1920:1080,format=yuv420p',
+      '-vf',`scale=1920:1080,subtitles=${remainingAss},format=yuv420p`,
       '-t',String(duration + 0.15),
       '-shortest',mp4
     ]);
@@ -178,7 +282,11 @@ const qa = {
   size_pass: stat.size >= 1024 * 1024,
   vtuber_enabled: vtuberEnabled,
   vtuber_lipsync: vtuberEnabled ? (lipSync.methodology || 'text-aware') : 'disabled',
-  vtuber_presenter: vtuberEnabled ? 'assets/daily-gainers-vtuber-sprite.webp' : null
+  vtuber_presenter: vtuberEnabled ? 'assets/daily-gainers-vtuber-sprite.webp' : null,
+  segment_count: segmentCount,
+  segment_titles: segments.map(s=>s.title),
+  progress_bar: 'segmented-eight-section-v1',
+  total_duration_label: mmss(finalDuration)
 };
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
 console.log(JSON.stringify(qa, null, 2));
