@@ -12,6 +12,7 @@ if (!/^20\d{6}$/.test(date || '')) {
 const root = process.cwd();
 const outDir = path.join(root, 'output', 'daily-gainers-video', date);
 const planPath = path.join(outDir, 'plan.json');
+const lipSyncPath = path.join(outDir, 'lipsync.json');
 const slidesDir = path.join(outDir, 'slides');
 const audioDir = path.join(outDir, 'audio');
 const renderDir = path.join(outDir, 'render');
@@ -28,65 +29,87 @@ function capture(cmd, args) {
   if (r.status !== 0) throw new Error(`${cmd} failed: ${r.stderr}`);
   return r.stdout.trim();
 }
-function captureBuffer(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: null, maxBuffer: 64 * 1024 * 1024 });
-  if (r.status !== 0) throw new Error(`${cmd} failed: ${String(r.stderr || '')}`);
-  return r.stdout;
-}
 
-const vtuberDir = path.join(root, 'assets', 'vtuber', 'daily-gainers');
-const vtuberAssets = {
-  closed: path.join(vtuberDir, 'closed.webp'),
-  small: path.join(vtuberDir, 'small.webp'),
-  o: path.join(vtuberDir, 'o.webp'),
-  wide: path.join(vtuberDir, 'wide.webp'),
+const vtuberDir = path.join(root, 'assets', 'video', 'vtuber');
+const sourceAssets = {
+  presenter: path.join(vtuberDir, 'daily-gainers-presenter.webp'),
+  small: path.join(vtuberDir, 'mouth-small.webp'),
+  wide: path.join(vtuberDir, 'mouth-wide.webp'),
+  o: path.join(vtuberDir, 'mouth-o.webp'),
 };
 const vtuberEnabled = process.env.YOUTUBE_VTUBER_ENABLED !== '0'
-  && Object.values(vtuberAssets).every(p => fs.existsSync(p));
+  && fs.existsSync(lipSyncPath)
+  && Object.values(sourceAssets).every(p => fs.existsSync(p));
 
-function buildLipSyncConcat(mp3, sid) {
-  const sampleRate = 8000;
-  const stepSeconds = 0.10;
-  const samplesPerStep = Math.round(sampleRate * stepSeconds);
-  const pcm = captureBuffer('ffmpeg', [
-    '-v','error','-i',mp3,'-ac','1','-ar',String(sampleRate),'-f','s16le','pipe:1'
-  ]);
-  const sampleCount = Math.floor(pcm.length / 2);
-  const rms = [];
-  for (let start = 0; start < sampleCount; start += samplesPerStep) {
-    const end = Math.min(sampleCount, start + samplesPerStep);
-    let sumSq = 0;
-    for (let i = start; i < end; i++) {
-      const v = pcm.readInt16LE(i * 2) / 32768;
-      sumSq += v * v;
-    }
-    rms.push(Math.sqrt(sumSq / Math.max(1, end - start)));
+let lipSync = null;
+const vtuberAssets = {};
+if (vtuberEnabled) {
+  lipSync = JSON.parse(fs.readFileSync(lipSyncPath, 'utf8'));
+  for (const [name, source] of Object.entries(sourceAssets)) {
+    const png = path.join(renderDir, `vtuber-${name}.png`);
+    run('ffmpeg', ['-y','-loglevel','error','-i',source,png]);
+    vtuberAssets[name] = png;
   }
-  const voiced = rms.filter(v => v > 0.003).sort((a,b) => a-b);
-  const p90 = voiced.length ? voiced[Math.floor((voiced.length - 1) * 0.90)] : 0.02;
-  const reference = Math.max(0.012, p90);
-  const choose = (v, index) => {
-    const n = v / reference;
-    if (n < 0.10) return 'closed';
-    if (n < 0.32) return 'small';
-    if (n < 0.62) return index % 2 === 0 ? 'o' : 'small';
-    return index % 3 === 0 ? 'o' : 'wide';
-  };
-  const lines = [];
-  let last = 'closed';
-  rms.forEach((v, i) => {
-    last = choose(v, i);
-    lines.push(`file '${vtuberAssets[last].replace(/'/g, "'\\''")}'`);
-    lines.push(`duration ${stepSeconds.toFixed(2)}`);
-  });
-  lines.push(`file '${vtuberAssets[last].replace(/'/g, "'\\''")}'`);
-  const listPath = path.join(renderDir, `vtuber-${sid}.txt`);
-  fs.writeFileSync(listPath, lines.join('\n') + '\n');
-  return listPath;
+}
+
+function enableExpression(sceneLipSync, shape) {
+  const intervals = (sceneLipSync?.intervals || []).filter(x => x.shape === shape);
+  if (!intervals.length) return '0';
+  return intervals
+    .map(x => `between(t,${Number(x.start).toFixed(3)},${Number(x.end).toFixed(3)})`)
+    .join('+');
+}
+
+function renderVtuberScene(png, mp3, mp4, duration, sceneId) {
+  const sceneLipSync = (lipSync.scenes || []).find(x => Number(x.id) === Number(sceneId));
+  if (!sceneLipSync) throw new Error(`Missing VTuber lip sync data for scene ${sceneId}`);
+
+  // Source presenter is 330x440. Mouth patches use the same source coordinate
+  // system and are cropped from x=150,y=120 with size 95x75.
+  const avatarWidth = 390;
+  const avatarHeight = 520;
+  const scale = avatarWidth / 330;
+  const avatarX = 1920 - avatarWidth - 18;
+  const avatarY = 1080 - avatarHeight;
+  const mouthX = Math.round(avatarX + 150 * scale);
+  const mouthY = Math.round(avatarY + 120 * scale);
+  const mouthWidth = Math.round(95 * scale);
+  const mouthHeight = Math.round(75 * scale);
+
+  const smallEnable = enableExpression(sceneLipSync, 'small');
+  const wideEnable = enableExpression(sceneLipSync, 'wide');
+  const oEnable = enableExpression(sceneLipSync, 'o');
+
+  const filter = [
+    '[0:v]scale=1920:1080,format=rgba[base]',
+    `[2:v]scale=${avatarWidth}:${avatarHeight},format=rgba[avatar]`,
+    `[base][avatar]overlay=${avatarX}:${avatarY}:format=auto[v0]`,
+    `[3:v]scale=${mouthWidth}:${mouthHeight},format=rgba[small]`,
+    `[v0][small]overlay=${mouthX}:${mouthY}:enable='${smallEnable}':format=auto[v1]`,
+    `[4:v]scale=${mouthWidth}:${mouthHeight},format=rgba[wide]`,
+    `[v1][wide]overlay=${mouthX}:${mouthY}:enable='${wideEnable}':format=auto[v2]`,
+    `[5:v]scale=${mouthWidth}:${mouthHeight},format=rgba[o]`,
+    `[v2][o]overlay=${mouthX}:${mouthY}:enable='${oEnable}':format=auto,format=yuv420p[v]`,
+  ].join(';');
+
+  run('ffmpeg', [
+    '-y','-loglevel','error',
+    '-loop','1','-framerate','24','-i',png,
+    '-i',mp3,
+    '-loop','1','-framerate','24','-i',vtuberAssets.presenter,
+    '-loop','1','-framerate','24','-i',vtuberAssets.small,
+    '-loop','1','-framerate','24','-i',vtuberAssets.wide,
+    '-loop','1','-framerate','24','-i',vtuberAssets.o,
+    '-filter_complex',filter,
+    '-map','[v]','-map','1:a',
+    '-c:v','libx264','-preset','ultrafast','-tune','stillimage',
+    '-c:a','aac','-b:a','160k','-pix_fmt','yuv420p',
+    '-t',String(duration + 0.15),
+    '-shortest',mp4
+  ]);
 }
 
 const concatLines = [];
-const durations = [];
 for (const scene of plan.scenes) {
   const sid = String(scene.id).padStart(2,'0');
   const svg = path.join(slidesDir, `${sid}.svg`);
@@ -103,23 +126,9 @@ for (const scene of plan.scenes) {
     '-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',mp3
   ]));
   if (!Number.isFinite(duration) || duration < 1) throw new Error(`Invalid audio duration for ${mp3}`);
-  durations.push(duration);
 
   if (vtuberEnabled) {
-    const lipSyncList = buildLipSyncConcat(mp3, sid);
-    run('ffmpeg', [
-      '-y','-loglevel','error',
-      '-loop','1','-framerate','24','-i',png,
-      '-f','concat','-safe','0','-i',lipSyncList,
-      '-i',mp3,
-      '-filter_complex',
-      '[0:v]scale=1920:1080[base];[1:v]fps=24,scale=430:-1[avatar];[base][avatar]overlay=W-w-24:H-h+42:format=auto,format=yuv420p[v]',
-      '-map','[v]','-map','2:a',
-      '-c:v','libx264','-preset','ultrafast','-tune','stillimage',
-      '-c:a','aac','-b:a','160k','-pix_fmt','yuv420p',
-      '-t',String(duration + 0.15),
-      '-shortest',mp4
-    ]);
+    renderVtuberScene(png, mp3, mp4, duration, scene.id);
   } else {
     run('ffmpeg', [
       '-y','-loglevel','error',
@@ -163,7 +172,8 @@ const qa = {
   duration_pass: finalDuration >= 300 && finalDuration <= 600,
   size_pass: stat.size >= 1024 * 1024,
   vtuber_enabled: vtuberEnabled,
-  vtuber_lipsync: vtuberEnabled ? 'audio-rms-100ms-4-state' : 'disabled'
+  vtuber_lipsync: vtuberEnabled ? (lipSync.methodology || 'text-aware') : 'disabled',
+  vtuber_presenter: vtuberEnabled ? 'daily-gainers-presenter.webp' : null
 };
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
 console.log(JSON.stringify(qa, null, 2));
