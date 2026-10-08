@@ -130,6 +130,9 @@ jobs:
       - name: Add stock timestamps to YouTube description
         run: node scripts/add_daily_gainers_video_timestamps.js "${{ steps.date.outputs.date }}"
 
+      - name: Generate branded YouTube thumbnail
+        run: node scripts/build_daily_gainers_thumbnail.js "${{ steps.date.outputs.date }}"
+
       - name: Upload private video to YouTube
         id: youtube
         env:
@@ -139,6 +142,17 @@ jobs:
         run: |
           date="${{ steps.date.outputs.date }}"
           node scripts/upload_youtube.js             "output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"             "output/daily-gainers-video/${date}/metadata.json"
+
+      - name: Upload custom YouTube thumbnail
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          node scripts/upload_youtube_thumbnail.js \
+            "${{ steps.youtube.outputs.video_id }}" \
+            "output/daily-gainers-video/${date}/thumbnail.jpg"
 
       - name: Upload Traditional Chinese captions
         id: captions
@@ -161,6 +175,9 @@ jobs:
           path: |
             output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/metadata.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail.jpg
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail-background.svg
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail-prompt.txt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
@@ -184,6 +201,7 @@ jobs:
           - YouTube video ID: \`${{ steps.youtube.outputs.video_id }}\`
           - Privacy: private
           - Captions: zh-TW `繁體中文` (${{ steps.captions.outputs.already_exists == 'true' && 'already existed' || 'uploaded' }})
+          - Thumbnail: 1280x720 branded JPEG uploaded to YouTube
           - VTuber: YunJhe + text-aware 4-state lip sync
           - Watch: ${{ steps.youtube.outputs.watch_url }}
           - Studio: ${{ steps.youtube.outputs.studio_url }}
