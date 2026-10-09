@@ -1,0 +1,85 @@
+name: "[08 影片] Daily 5% Video Upload Orchestrator"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYYMMDD; blank uses latest available ChatGPT script"
+        required: false
+        default: ""
+  schedule:
+    # 23:47 Taipei = 15:47 UTC, Monday-Friday; no weekend duplicate.
+    - cron: "47 15 * * 1-5"
+  push:
+    branches: [main]
+    paths:
+      - "video_scripts/daily-gainers/*.json"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: daily-gainers-video-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout scripts and daily research
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts
+            tests
+            data_daily_gain_over_5
+            video_scripts
+
+      - name: Resolve latest complete-date script
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          if [ -z "$date" ]; then
+            date="$(find video_scripts/daily-gainers -maxdepth 1 -name '20??????.json' -type f -printf '%f\n' | sed 's/\.json$//' | sort | tail -1)"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "No valid ChatGPT video script" >&2; exit 1; }
+          test -s "video_scripts/daily-gainers/$date.json"
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate approved script and target-day sources
+        run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
+
+      - name: Decide upload-only or full rendering
+        id: decision
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/decide_daily_gainers_video_upload.sh "${{ steps.date.outputs.date }}"
+
+      - name: Dispatch upload-only retry
+        if: steps.decision.outputs.decision == 'retry'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run retry-upload-daily-gainers-video.yml --ref main -f date="${{ steps.date.outputs.date }}" -f source_run_id="${{ steps.decision.outputs.source_run_id }}"
+
+      - name: Dispatch complete render
+        if: steps.decision.outputs.decision == 'render'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run generate-upload-daily-gainers-video.yml --ref main -f date="${{ steps.date.outputs.date }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Video upload routing" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target date: ${{ steps.date.outputs.date }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Decision: ${{ steps.decision.outputs.decision }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Reusable source run: ${{ steps.decision.outputs.source_run_id }}" >> "$GITHUB_STEP_SUMMARY"
