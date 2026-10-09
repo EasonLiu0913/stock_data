@@ -21,6 +21,27 @@ Effective: 2026-10-09. Applies to ALL tasks registered in `docs/agent-prompts/ta
 4. Apply all older AGENTS.md research/safety, freshness, paired-prompt, durable artifacts and concurrency safeguards; v3 adds to, does not waive, them.
 5. Reject a routing/phase ambiguity instead of selecting the most recent handoff.
 
+## State-aware routing, recovery and owner guidance (v3)
+
+`promptA` and `promptB` are **stateless owner commands with stateful durable routing**. Each invocation retrieves fresh remote main, unique Active project, original charter/roadmap/pair and current durable evidence. The runner diagnoses state **before** acting; user never has to supply phase ID, restart instructions, elapsed time, or the pending workflow ID.
+
+Decision order (fail closed for ambiguity):
+
+| Durable active-phase state | `promptA` outcome | `promptB` outcome | Guidance |
+| --- | --- | --- | --- |
+| A not started or resumably interrupted | Run/resume original A | Do not run A implicitly | `promptA` |
+| A BLOCKED / WAITING on external condition | Recheck condition; resume if cleared and authorized; otherwise checkpoint precise obstacle | Not eligible: do not start B | `promptA` after named trigger, or owner action |
+| A COMPLETE with original B not PASS | No duplicate A | Run original preregistered B | `promptB` |
+| B verification in progress or failed | No new A | Reverify/fix inside frozen B safety bounds, or stop on true external gate | `promptB` |
+| B PASS / next phase promoted | Run only next promoted phase A on a subsequent owner call | Do not rerun previous B | `promptA` |
+| all phases accepted; ultimate finish evidence verified | Do not auto-run | Do not auto-run | project `completed`; owner chooses next task |
+
+When explicit A/B command is not eligible, **explain which command is eligible** and why, with source evidence; do not silently reinterpret A as B or vice versa. `WAITING_WORKFLOW` requires workflow file, run/job URL and observed status when possible; `WAITING_SCHEDULE` requires named schedule and time zone (never invent a run completion time); `WAITING_SOURCE`, `WAITING_OWNER`, `WAITING_PERMISSION` name exact missing proof/action. Unknown cannot be called PASS. A missing workflow run should be reported, not treated as green. A failed workflow gets bounded diagnosis/rerun if allowed; do not create duplicate expensive workflows/artifacts when durable outputs can be reused.
+
+Recheck all completed gates against remote artifacts, workflow identity and hashes to avoid wasted recomputation, and preserve no-duplicate video upload or other production idempotence. If the blocking external condition remains, record same-phase checkpoint only when facts changed and report a concrete next owner action. Do not pretend to wait in a background process, automatically schedule monitoring, or claim future completion without actual automation. Existing GitHub scheduled jobs may provide future evidence, but a later `promptA`/`promptB` invocation or configured automation is required to reassess the handoff.
+
+All prior preregistered Prompt B acceptance criteria, immutable phase IDs, Research PASS rules and owner-controlled scope remain authoritative. Resume cannot skip B, alter original acceptance, promote while waiting, purchase licensed data, bypass credentials, or activate another task. Only charter-authorized bounded repairs are automatic; owner-controlled decisions require explicit owner approval. Every response reports active project/goal version, ultimate progress, completed/remaining phases, current round A/B state, exact blockers/dependencies, recommended next command and trigger, next phase ID and `Plan changed?`. A project stays active until owner switches or its proven ultimate acceptance is recorded complete.
+
 ## Lifecycle and closeout
 - Project-level `pending|active|completed` is distinct from internal phase `pending|active|complete|blocked|superseded`. Test PASS, artifact PASS, phase PASS, and ultimate-project COMPLETE are four different claims.
 - On A completion: durable implementation evidence, ORIGINAL B still intact, A complete/B pending; STOP. On B PASS: verify durable remote outputs, evidence identity, charter alignment, and authorized scope; mark phase complete, promote exactly one preregistered next phase (or preregister bounded next pair before its first A); STOP.
