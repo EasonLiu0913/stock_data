@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) throw Error('Expected YYYYMMDD');
 const root = 'data_daily_gain_over_5';
@@ -26,7 +27,9 @@ for (const [i,s] of script.scenes.entries()) {
   check(Array.isArray(s.bullets) && s.bullets.length <= 5 && s.bullets.every(b=>typeof b === 'string' && b.length <= 220), 'invalid bullets ' + i);
   check(typeof s.narration === 'string' && s.narration.length >= 75 && s.narration.length <= 1800, 'invalid narration ' + i);
   check(!s.stock_codes || (Array.isArray(s.stock_codes) && s.stock_codes.every(c => codes.has(String(c)))), 'invalid stock code ' + i);
-  chars += [...s.narration].length;
+  const effectiveNarration = i === 0 ? addOpening(s.narration) : s.narration;
+  if (i === 0) assertOpening(effectiveNarration);
+  chars += [...effectiveNarration].length;
 }
 check(chars >= 1100 && chars <= 5500, 'narration length outside video bounds: ' + chars);
 check(script.privacy_status === 'private', 'video must be private');
