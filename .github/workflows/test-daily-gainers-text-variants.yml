@@ -1,0 +1,21 @@
+name: "[08 影片] Text Variants V2 Contract Test"
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/daily_gainers_text_variants.js"
+      - "tests/daily_gainers_text_variants.test.js"
+      - "video_scripts/daily-gainers/rules/**"
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify separate display caption and spoken text formats
+        run: node tests/daily_gainers_text_variants.test.js
