@@ -55,6 +55,14 @@ Three independent, versioned text output artifacts for display, caption, speech,
 - No verified CI green result yet. No full nine-scene v2 master, TTS, SRT, MP4, or upload; next agent must not skip those stages or reinterpret audit-test PASS as production-readiness PASS.
 - Next focus: author all nine scenes into verified typed cue tokens, correct 9103 visuals only after checking original editorial/source facts, validate full equivalence, then render a non-uploaded MP3/SRT/MP4 sample and independently examine timing and pronunciation.
 
+## Phase 5 checkpoint: complete 20261008 typed Master (2026-10-09)
+- All nine authentic legacy scene narrations converted into a 56-cue tokenized Master under `video_scripts/daily-gainers/v2/20261008/master.json` (commit `698e50dcd6927c663214b4462c5fcde713972310`). Source-full-reconstruction check passed at generation, except deliberate verified substitutions of spoken code-only stock references with company names and removal of redundant `台塑，代號一三零一`.
+- Source-derived stock labels now included in v2 preview `plan.json`; erroneous legacy scene-3 title is overridden with verified `美德醫療-DR（9103）與防疫概念` (commit `56c00e81ab7e5a3cc836d973e5ba2abaf1755176`). Production SVG renderer does not yet consume these labels; this remains a rollout blocker.
+- New full nine-scene regression `tests/daily_gainers_v2_full_20261008.test.js` checks every reconstructed scene and all caption/speech cue concatenations and stock label regression (commits `5e39237f4437114fc5aedaf6d8b562707dc97525` and `092bc5fa1e5702eee2aaf675ac439c4d61139d69`), wired to test workflow commit `3d9eef5f4d9f0661b8ad990b3af5a228079f99e5`.
+- Added `month` and reviewed `numeric_phrase` token rendering for provenance-preserving original speech, while displaying Arabic numeric equivalents (commit `1d32c55a0201ad80932464abe6b7b67de573845f`).
+- Source was fetched from live remote; no independently confirmed GitHub Actions green run. Local git clone failed due unavailable DNS. Distinguish generated Master and test-written from verified PASS.
+- Still pending: run actual full-scene CI and inspect output for ALL numeric forms (especially idioms such as `三成七`), add semantic validation for typed numeric phrases, perform actual MP3/WordBoundary/SRT/MP4 dry-run, update production SVG and upload-compatibility checks. Do not promote production while any of these fail.
+
 ## Next round
 1. Implement a deterministic shared representation of semantic utterances and verified stock identities.
 2. Emit separately persisted `display.json`, `captions.json`, `speech.json`, plus equivalence/alignment provenance manifest and source/rules hashes.
