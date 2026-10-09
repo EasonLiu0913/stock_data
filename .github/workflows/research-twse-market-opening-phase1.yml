@@ -10,6 +10,13 @@ on:
     paths:
       - "scripts/inspect_twse_mi_index_breadth.js"
       - "tests/inspect_twse_mi_index_breadth.test.js"
+      - "scripts/build_twse_common_stock_breadth.js"
+      - "tests/build_twse_common_stock_breadth.test.js"
+      - "scripts/normalize_twse_security_master.js"
+      - "tests/normalize_twse_security_master.test.js"
+      - "scripts/run_twse_common_stock_breadth.js"
+      - "scripts/validate_daily_gainers_market_opening.js"
+      - "tests/daily_gainers_market_opening.test.js"
       - ".github/workflows/research-twse-market-opening-phase1.yml"
 permissions:
   contents: read
@@ -38,6 +45,13 @@ jobs:
             exit 1
           fi
           node scripts/inspect_twse_mi_index_breadth.js "$TARGET_DATE" "$file"
+      - name: Record inspect and test status in step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## TWSE-only Phase 1 Evidence" >> "$GITHUB_STEP_SUMMARY"
+          echo "Date: $TARGET_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow only inspects MI_INDEX. Historical security-classification evidence is still required for full breadth PASS." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload inspection evidence
         if: always()
         uses: actions/upload-artifact@v4
