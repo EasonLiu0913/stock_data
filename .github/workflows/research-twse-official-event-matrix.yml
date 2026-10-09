@@ -17,6 +17,8 @@ jobs:
           node-version: "24"
       - name: Run isolated 20-code matrix integrity tests
         run: node --test tests/report_twse_market_opening_official_event_matrix.test.js
+      - name: Verify TWSE effective-date semantics research guards
+        run: node --test tests/twse_security_identity_effective_date_evidence.test.js
       - name: Build fail-closed research report
         if: always()
         shell: bash
