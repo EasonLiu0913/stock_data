@@ -43,6 +43,10 @@ The documentation is a living project handoff. Do not rely only on prior chat hi
 
 When a major architecture decision, research conclusion, rejected approach, or active development phase changes, update the corresponding document in the same development cycle.
 
+## Goal-Anchored Handoff v3 (mandatory for every registered project)
+
+Read `docs/agent-prompts/goal-anchored-handoff-v3.md` before any project Prompt A/B. Every globally routed project must preserve an owner-governed ultimate goal (Project Charter), ordered small-goal Phase Roadmap, and preregistered immutable paired A/B verification. The canonical routing registry is `docs/agent-prompts/task-routing.json`; the legacy navigation index is `docs/agent-prompts/goal-anchored-legacy-index-v3.json`. This v3 governance applies to ALL existing projects now, without rewriting historic closeout claims or reopening completed projects. Unreconstructed legacy goals block speculative new implementation until verified from original canonical handoff. Every closeout must trace results to ultimate goal, report remaining phases and explicitly preserve stop conditions. Scope or acceptance changes require owner-approved versioned CHANGE_PROPOSAL; a failed Prompt B may never be retroactively weakened. One active global project, no automatic Prompt A on activation. Existing paired-prompt and research safeguards continue unchanged.
+
 ## Repository short commands: `promptA` / `promptB`
 
 The repository owner may invoke the paired-prompt lifecycle with the short commands `promptA` or `promptB` instead of pasting the full generic runner instructions into chat.
