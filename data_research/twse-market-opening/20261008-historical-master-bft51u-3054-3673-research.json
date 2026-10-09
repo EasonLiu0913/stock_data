@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "active_task": "daily-gainers-market-opening-end-to-end",
+  "asof_target": "2026-10-08",
+  "research_status": "PROGRESS",
+  "m1_status": "BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE",
+  "prompt_b_eligible": false,
+  "historical_master_search": {
+    "direct_twse_isin_20261008_snapshot_found": false,
+    "original_acquisition_time_verified": false,
+    "complete_1085_ordinary_share_roster_verified": false,
+    "notes": "No genuine as-of-2026-10-08 dated full ISIN strMode=2 source acquired; strMode=11 index list timestamp cannot substitute.",
+    "candidate_sources": [
+      {
+        "name": "BFT51U 當日個股基本資料表",
+        "url": "https://eshop.twse.com.tw/zh/product/detail/bc9bd889165844a9849d190fd1c69066",
+        "issuer": "TWSE",
+        "type": "historic daily traded stock code and shares source",
+        "frequency": "daily; around 14:40 Taiwan time",
+        "columns": [
+          "成交日期",
+          "股票代號",
+          "停止融資碼",
+          "停止融券碼",
+          "參考價",
+          "收盤價",
+          "發行張數",
+          "上市股數",
+          "當日無成交之調整參考價"
+        ],
+        "available_since": "2004-02-19 (zh listing)",
+        "acquired_20261008_file": false,
+        "has_isin": false,
+        "has_cfi": false,
+        "has_full_market_board_history": false,
+        "coverage_of_suspended_nontrading_and_special_security_classes_unverified": true,
+        "possible_paid_order": true,
+        "verdict": "POTENTIAL_DATED_CODE_CROSSCHECK_NOT_FULL_IDENTITY_PROOF"
+      },
+      {
+        "name": "ISIN strMode=2",
+        "url": "https://isin.twse.com.tw/isin/e_C_public.jsp?strMode=2",
+        "current_value_3673": "ESVTFR",
+        "asof_20261008_update_stamp_verified": false,
+        "verdict": "CURRENT_OR_SEARCH_CACHED_PAGE_NOT_ASOF_SNAPSHOT"
+      },
+      {
+        "name": "ISIN strMode=11",
+        "url": "https://isin.twse.com.tw/isin/e_C_public.jsp?strMode=11",
+        "observed_updated_date": "2026-10-08",
+        "security_class": "Index",
+        "verdict": "WRONG_SECURITY_CATEGORY_NOT_COMMON_SHARES"
+      }
+    ]
+  },
+  "priority_research": [
+    {
+      "code": "3054",
+      "event": "official company industry recategorization",
+      "existing_effective_date": "2026-09-01",
+      "official_regulation": "https://twse-regulation.twse.com.tw/TW/law/DAT0201_print.aspx?FLCODE=FL007104",
+      "verified": "TWSE regulatory classification process governs subsequent industry reclassification and initial classification separately",
+      "original_code_specific_notice_newly_authenticated": false,
+      "asof_identity_date_proof": false,
+      "verdict": "SUPPORTING_CONTEXT_ONLY"
+    },
+    {
+      "code": "3673",
+      "security": "TPK-KY",
+      "observed_cfi": "ESVTFR",
+      "isin_url": "https://isin.twse.com.tw/isin/e_C_public.jsp?strMode=2",
+      "classification_standard": "https://www.iso.org/standard/81140.html",
+      "verified": "Current official ISIN strMode2 uses ESVTFR; ISO 10962 allows CFI reclassification upon instrument ownership/voting rights change",
+      "asof_20261008_original_cfi_snapshot_verified": false,
+      "code_specific_original_change_notice_verified": false,
+      "verdict": "OFFICIAL_CURRENT_CFI_NOT_DATED_ASOF"
+    }
+  ],
+  "next_research_direction": "Obtain original 2026-10-08 BFT51U official dated file if accessible and its legal usage/provenance; independently obtain contemporary dated ISIN strMode=2 full security-type/board/CFI snapshot or certified identity change ledger; seek code-specific 3054 industry notice and 3673 historical CFI proof.",
+  "stop_or_pivot": "If only current snapshots, index-category list, paid-file specification or undated documents exist, never infer 20261008 master completeness. Preserve M1 BLOCKED; no actions or production changes."
+}
