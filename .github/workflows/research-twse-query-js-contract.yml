@@ -1,0 +1,30 @@
+name: "[研究] TWSE Query JS Contract Pilot"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  js-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Capture officially linked JavaScript files only
+        run: node scripts/research_twse_query_js_contract_pilot.js output/twse-query-js-contract
+      - name: State evidence boundary
+        if: always()
+        run: |
+          echo '## TWSE official JavaScript-only research' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Only the four JS URLs observed in Source Pilot #1 HTML are fetched and hashed.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No result API request, pagination, or effective-date issuer coverage is verified.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'M1 is BLOCKED and no production use is authorized.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twse-query-js-contract-research-only
+          path: output/twse-query-js-contract/
+          if-no-files-found: warn
+          retention-days: 14
