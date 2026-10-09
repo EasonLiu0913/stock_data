@@ -6,6 +6,10 @@ This file defines the repository-level execution protocol for the short owner co
 
 It is a **closeout runner protocol**, not the phase-specific acceptance contract. The actual Prompt B must come from durable repository history and must have been preregistered before the corresponding Prompt A began.
 
+## V3 goal-anchored closeout (mandatory)
+
+Before closeout read `docs/agent-prompts/goal-anchored-handoff-v3.md` and `docs/agent-prompts/goal-anchored-legacy-index-v3.json`, recover the active project's original Project Charter version/Phase Roadmap and phase-specific preregistered Prompt B. Verify not only the local CI outcome but the current small goal's deliverable and contribution to the original end-to-end objective. Preserve historic phase acceptance and never mark the whole project complete before its ultimate acceptance gate. Report `Ultimate goal progress / Completed versus remaining phases / Blockers / Next phase ID / Plan changed?`. Unapproved changes to scope or acceptance require a blocked CHANGE_PROPOSAL rather than rewritten PASS. Future phases never run automatically.
+
 ## Global task routing
 
 Canonical routing registry:
