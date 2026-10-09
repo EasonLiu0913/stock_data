@@ -7,13 +7,10 @@ on:
         description: "影片日期 YYYYMMDD；留空時取最新已完成 ChatGPT 講稿"
         required: false
         default: ""
-  push:
-    branches: [main]
-    paths:
-      - "video_scripts/daily-gainers/*.json"
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 concurrency:
   group: daily-gainers-video
@@ -200,7 +197,24 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 30
+
+      - name: Record completed YouTube upload
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VIDEO_ID: ${{ steps.youtube.outputs.video_id }}
+          DATE: ${{ steps.date.outputs.date }}
+        run: |
+          set -euo pipefail
+          [ -n "$VIDEO_ID" ]
+          dest="video_upload_receipts/daily-gainers/$DATE.json"
+          json="$(jq -n --arg date "$DATE" --arg id "$VIDEO_ID" --arg run "$GITHUB_RUN_ID" '{target_date:$date,youtube_video_id:$id,source_run_id:$run,upload_status:"complete",privacy:"private"}')"
+          if gh api "repos/$GITHUB_REPOSITORY/contents/$dest?ref=main" >/dev/null 2>&1; then
+            echo "Existing upload receipt: $dest"
+          else
+            gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/$dest" -f message="video: record YouTube upload $DATE" -f content="$(printf '%s' "$json" | base64 -w0)" -f branch=main >/dev/null
+          fi
 
       - name: Job summary
         if: success()
