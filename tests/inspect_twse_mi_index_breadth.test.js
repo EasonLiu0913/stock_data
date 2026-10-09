@@ -18,5 +18,6 @@ test('official five-category table must use distinct stock and whole-market colu
  assert.ok(t);
  assert.deepEqual(t.fields,['類型','整體市場','股票']);
  assert.equal(t.rows,5);
+ assert.deepEqual(profile.official_stock_aggregate.rows.map(r=>r.stock),['425','540','109','3','5']);
  assert.equal(profile.stock_candidates.length,1);
 });
