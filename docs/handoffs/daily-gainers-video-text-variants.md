@@ -3,7 +3,7 @@
 Canonical handoff: `docs/handoffs/daily-gainers-video-text-variants.md`
 
 ## Current phase
-Phase 2: initial typed three-variant generator and gated v2 speech/caption consumers committed; full producer-to-consumer integration and production validation pending. **Do not claim v2 is production-enabled.**
+Phase 3: v2 cue-paired generator and side-effect-free plan preview integrated, regression CI wired; no production activation or full MP4/WordBoundary verification yet. **Do not claim v2 is production-enabled.**
 
 ## Objective
 Three independent, versioned text output artifacts for display, caption, speech, backed by one validated semantic source. Captions must show EVERY uttered word and number: Arabic digits (including codes when genuinely spoken), dates M/D, percent symbols. Speech must use natural Taiwan Mandarin pronunciation and primarily verified stock NAME, not stock code. Display must use verified stock name plus code. No summarization or dropped content. Reject semantic mismatches.
@@ -34,6 +34,14 @@ Three independent, versioned text output artifacts for display, caption, speech,
 - Python SRT now expects explicit `caption_cues` pairs, verifies concatenated captions/spoken cues equal respective full texts, aligns spoken cues against WordBoundary, and displays caption cues (commit `ae349cac8af71ff804921ed50f31b3c6a3bcea87`).
 - No natural workflow validation or runtime proof yet. Do not mark Prompt B PASS or promote production. No existing video was reuploaded.
 - Important gap: the current v2 typed generator emits scene text in separate files but does not yet produce complete per-cue pairs or integrate those files into a schema-v2 `plan.json`; the main package builder still emits v1. Implement and independently test these before rollout.
+
+## Phase 3 checkpoint (2026-10-09)
+- `scripts/daily_gainers_text_variants.js`: one token stream per cue now creates display/caption/speech and full `cue_pairs`, rejecting untyped ambiguous numbers; source hash includes verified stock code+name mappings and output hashes include cue pairs.
+- `scripts/build_daily_gainers_v2_preview.js`: standalone side-effect-free v2 `plan.json` and three-text JSON preview using manually authored typed Master `video_scripts/daily-gainers/v2/YYYYMMDD/master.json` plus validated daily raw and matching visual scene metadata. This is NOT automatically generated for existing v1 scripts and does not replace the production package builder.
+- `tests/daily_gainers_text_variants.test.js` adapted to cue tokens; `tests/daily_gainers_v2_preview.test.js` adds temporary-fixture integration assertions; `.github/workflows/test-daily-gainers-text-variants.yml` runs both Node tests.
+- Commits: `2175a01fba4d8c8cb4ccc60ce8ec710469747deb`, `d1f40fabd9ac51cc546e612dcb83440e7afa956d`, `e628d00e7aef20dcf22dcfdf5b04d36a4b7e4d4c`, `4447661b4933ac9aad1f07d3a5e49ea05704eb90`, `e8a244f8d6a2ade0f2ad9b63d680c5e7eae4e756`, `700507c44f781f156075f0f0d98b57da0e91ef0c`.
+- No verified green CI run, no complete 20261008 master, no audio waveform or rendered sample yet. Never mark Prompt B PASS from these commits alone.
+- Remaining gaps: typed Master authoring strategy for entire daily video; display text integration with SVG and stock-name rendering; real Edge WordBoundary alignment test with all full cues; strict v2 package consistency checks, artifact/upload hash-aware routing; regression with 20261008 actual data. Keep production v1 untouched until complete.
 
 ## Next round
 1. Implement a deterministic shared representation of semantic utterances and verified stock identities.
