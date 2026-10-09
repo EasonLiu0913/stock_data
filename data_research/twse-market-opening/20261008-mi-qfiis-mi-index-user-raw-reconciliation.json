@@ -1,0 +1,130 @@
+{
+  "schema_version": 2,
+  "task": "daily-gainers-market-opening-end-to-end",
+  "asof_target": "2026-10-08",
+  "research_date": "2026-10-10",
+  "progress": "PROGRESS",
+  "m1": "BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE",
+  "prompt_b_eligible": false,
+  "source_files": [
+    {
+      "id": "MI_QFIIS",
+      "requested_url": "https://www.twse.com.tw/rwd/zh/fund/MI_QFIIS?date=20261008&response=json&selectType=ALLBUT0999",
+      "source": "user-supplied unmodified original JSON text",
+      "date": "20261008",
+      "stat": "OK",
+      "selectType": "ALLBUT0999",
+      "bytes": 185664,
+      "sha256": "c8e858b9aee437b556bc688ef79bd43af689fc2257ab3cf6306608e44e6a8801",
+      "total_field": 1362,
+      "rows": 1362,
+      "unique_security_codes": 1362,
+      "regex_four_digit_codes": 1097,
+      "unique_isin": 1362,
+      "missing_isin": 0,
+      "fields": [
+        "證券代號",
+        "證券名稱",
+        "國際證券編碼",
+        "發行股數",
+        "外資及陸資尚可投資股數",
+        "全體外資及陸資持有股數",
+        "外資及陸資尚可投資比率",
+        "全體外資及陸資持股比率",
+        "外資及陸資共用法令投資上限比率",
+        "陸資法令投資上限比率",
+        "與前日異動原因(註)",
+        "最近一次上市公司申報外資及陸資持股異動日期"
+      ],
+      "priority_code_isin": {
+        "3054": "TW0003054003",
+        "3673": "KYG898431096",
+        "3717": "TW0003717005",
+        "5292": "TW0005292007",
+        "7780": "TW0007780009"
+      },
+      "is_cfi_provided": false,
+      "board_history_provided": false,
+      "full_ordinary_stock_membership_certified": false
+    },
+    {
+      "id": "MI_INDEX",
+      "requested_url": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20261008&type=ALLBUT0999&response=json",
+      "source": "user-supplied unmodified original JSON text",
+      "date": "20261008",
+      "stat": "OK",
+      "type": "ALLBUT0999",
+      "bytes": 266365,
+      "sha256": "864391d1d5b12f716f1057e597a5c84f5c50356b235f4d719072c5265c12e53d",
+      "table_count": 10,
+      "quote_table_rows": 1380,
+      "unique_quote_codes": 1380,
+      "regex_four_digit_quote_codes": 1094,
+      "quote_table_columns": 16,
+      "isin_field_present": false,
+      "zero_volume_quotes_present": true,
+      "examples_zero_volume_four_digit": [
+        "5906",
+        "8488"
+      ],
+      "complete_untraded_and_halt_coverage_certified": false,
+      "innovative_board_identifiable_by_name_markers_only": true,
+      "innovative_board_full_listing_coverage_certified": false
+    }
+  ],
+  "intersection": {
+    "same_code_count": 1359,
+    "only_mi_qfiis_count": 3,
+    "only_mi_qfiis": [
+      {
+        "code": "1589",
+        "name": "永冠-KY"
+      },
+      {
+        "code": "2323",
+        "name": "中環"
+      },
+      {
+        "code": "4155",
+        "name": "訊映"
+      }
+    ],
+    "only_mi_index_count": 21,
+    "only_mi_index_codes": [
+      "01001T",
+      "01002T",
+      "01004T",
+      "01007T",
+      "01009T",
+      "01010T",
+      "020000",
+      "020011",
+      "020012",
+      "02001L",
+      "020020",
+      "020028",
+      "020029",
+      "020030",
+      "020031",
+      "020032",
+      "020034",
+      "020036",
+      "020037",
+      "020038",
+      "020039"
+    ],
+    "note": "MI_INDEX-only instruments largely REIT/ETN products; MI_QFIIS-only ordinary-code presence shows daily quotes are not exhaustive even on the same date"
+  },
+  "identity_limitations": [
+    "Four digit code regex is not an official legal ordinary-share classification; 1097 and 1094 are not validated 1085 common-share memberships",
+    "Foreign holdings report includes many ETF/other securities and 4-digit codes need external ISIN/CFI/board eligibility classification",
+    "No CFI or board source-status data for any row; innovation board stock name marker is not validated identity category",
+    "No immutable source-original first acquisition timestamp beyond user attachment in this conversation, and no independently certified all-class listing/delisting/membership ledger",
+    "User pasted JSON source hashes prove current local bytes, not original exchange file creation timestamps"
+  ],
+  "difference_from_previous": "Both official date-scoped original user-supplied JSON now acquired; exact bytes, hashes, 1362/1380 rows, unique ISIN and exact 3-versus-21 cross-source discrepancy computed",
+  "current_blocker": "As-of 20261008 complete 1085 stock security identity source/CFI/board evidence and provenance still not established",
+  "planned_research": "Compare 1097 four-digit MI_QFIIS codes to the same-date ISIN stock class/ordinary board eligibility; investigate 1589,2323,4155 missing daily quotes against official trade suspension/resumption status, and 12-code difference to target 1085. Keep exclusion rules official and as-of dated.",
+  "stop_pivot": "Never declare 1097 equals 1085 or use MI_INDEX quote list as exhaustive all-stock identity. M1 frozen BLOCKED; no Actions, purchases or production edits.",
+  "next_command": "Prompt A: investigate 12 extra four-digit MI_QFIIS code identities compared with 1085 and 1589/2323/4155 suspension status via official dated sources, then update handoff without changing M1 acceptance."
+}
