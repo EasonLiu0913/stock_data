@@ -21,3 +21,19 @@ test('official five-category table must use distinct stock and whole-market colu
  assert.deepEqual(profile.official_stock_aggregate.rows.map(r=>r.stock),['425','540','109','3','5']);
  assert.equal(profile.stock_candidates.length,1);
 });
+
+test('archived 20261008 official stock column has the exact five observed counts',()=>{
+ const fs=require('node:fs');
+ const path=require('node:path');
+ const file=path.join(__dirname,'../data_twse_mi_index/20261008_twse_mi_index.json');
+ const actual=JSON.parse(fs.readFileSync(file,'utf8'));
+ const p=inspect(actual,'20261008');
+ assert.equal(p.table_count,10);
+ assert.deepEqual(p.official_stock_aggregate?.rows,[
+  {category:'上漲(漲停)',whole_market:'5,285(78)',stock:'425(14)'},
+  {category:'下跌(跌停)',whole_market:'9,634(83)',stock:'540(2)'},
+  {category:'持平',whole_market:'1,031',stock:'109'},
+  {category:'未成交',whole_market:'17,406',stock:'3'},
+  {category:'無比價',whole_market:'3,343',stock:'5'}
+ ]);
+});
