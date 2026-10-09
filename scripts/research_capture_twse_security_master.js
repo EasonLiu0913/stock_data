@@ -67,7 +67,7 @@ async function collect({date,dir,fetcher=fetch,now=()=>new Date().toISOString()}
 }
 async function main(args=process.argv.slice(2)){
  const [date,out]=args;if(!date||!out)throw Error('Usage: node scripts/research_capture_twse_security_master.js YYYYMMDD OUTPUT_DIR');
- const report=await collect({date,dir:out});console.log(JSON.stringify({decision:report.decision,target_date:date,sources:report.sources.map(x=>({name:x.source,state:x.evidence_status,issues:x.issues}))}));
+ const report=await collect({date,dir:out});console.log(JSON.stringify({decision:report.decision,target_date:date,sources:report.sources.map(x=>({name:x.source,state:x.evidence_status,issues:x.issues,error:x.error||null,http_status:x.http_status??null,publisher_updated_date:x.publisher_updated_date??null,sha256:x.sha256||null}))}));
  if(report.sources.some(x=>x.evidence_status==='BLOCKED'||x.issues?.length))process.exitCode=1;
 }
 if(require.main===module)main().catch(e=>{console.error('RESEARCH_CAPTURE_FAILED:'+e.message);process.exitCode=1;});
