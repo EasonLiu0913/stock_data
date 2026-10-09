@@ -92,6 +92,24 @@ def split_text(text, max_chars=38):
 
     return chunks
 
+def wrap_caption_for_screen(text, max_columns=18):
+    """Wrap SRT display text without altering cue timing or its content."""
+    import unicodedata
+    lines = []
+    line = ""
+    width = 0
+    for char in str(text).replace("\n", ""):
+        char_width = 1 if unicodedata.east_asian_width(char) in ("F", "W") else 0.55
+        if line and width + char_width > max_columns:
+            lines.append(line)
+            line, width = "", 0
+        line += char
+        width += char_width
+    if line:
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def fmt_srt(seconds):
     ms = max(0, round(seconds * 1000))
     h, rem = divmod(ms, 3_600_000)
@@ -159,7 +177,7 @@ for scene in plan.get("scenes", []):
         if end <= start:
             raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
         blocks.append(
-            f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{chunk}\n"
+            f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{wrap_caption_for_screen(chunk)}\n"
         )
         cue_audit.append({"cue": cue_no, "scene_id": sid, "scene_title": scene.get("title"),
                           "start_seconds": round(cursor+start, 3),
