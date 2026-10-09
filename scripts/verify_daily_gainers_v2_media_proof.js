@@ -40,6 +40,6 @@ for(const scene of plan.scenes){
 const srt=fs.readFileSync(path.join(dir,'daily-gainers-'+date+'.zh-TW.srt'),'utf8');
 const blocks=srt.trim().split(/\r?\n\s*\r?\n/);
 assert.equal(blocks.length,expected.length,'SRT block count mismatch');
-blocks.forEach((block,i)=>assert.equal(block.split(/\r?\n/).slice(2).join('\n'),expected[i].text,'SRT content drift at '+(i+1)));
+blocks.forEach((block,i)=>assert.equal(block.split(/\r?\n/).slice(2).join(''),expected[i].text,'SRT content drift at '+(i+1)));
 assert.ok(fs.statSync(path.join(dir,'daily-gainers-'+date+'.mp4')).size>1024);
 console.log(JSON.stringify({status:'PASS',target_date:date,scenes:plan.scenes.length,cues:expected.length,media_artifact:true,lexical_zero:false}));
