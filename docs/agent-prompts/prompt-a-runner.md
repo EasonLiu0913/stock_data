@@ -45,6 +45,10 @@ When the repository owner sends exactly `promptA` (case-insensitive after trimmi
 8. Recover that round's phase-specific Prompt A from the canonical handoff and, when identity is ambiguous, from durable repository history.
 9. Verify the paired Prompt B for the same round was preregistered before Prompt A begins. If no phase-specific paired Prompt B exists, do not start implementation; repair the handoff/pairing first if repository rules authorize that documentation-only repair.
 
+## Last-section next-action rendering
+
+Every result ends with the active project, current phase, blocker, and exact eligible next action. Use a truly supported client control if available; otherwise provide copyable `promptA` or `promptB` in a next-action section. A plain `[繼續 Prompt A]` string is NOT a clickable button and must not be presented as one. If waiting for outside evidence or authorization, put that prerequisite first and avoid unnecessary rerun suggestions.
+
 ## Automatic phase diagnosis and blocked-resume procedure
 
 Never require the owner to specify `resume`, M1/M2, a workflow number, or a blocker name. Resolve the original round on latest remote `main` and determine A eligibility independently. Prefer durable phase status, original prompt pair and primary workflow/artifact evidence over text labels that may be stale.
