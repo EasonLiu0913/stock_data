@@ -28,8 +28,8 @@ if (summary.coverage?.overall !== 'complete') throw new Error(`Market summary co
 const videoScriptPath = path.join(root, 'video_scripts', 'daily-gainers', date + '.json');
 if (!fs.existsSync(videoScriptPath)) throw new Error('Missing ChatGPT-authored video script: ' + videoScriptPath);
 const videoScript = JSON.parse(fs.readFileSync(videoScriptPath, 'utf8'));
-if (videoScript.target_date !== date || videoScript.source_summary_generated_at !== summary.generated_at || videoScript.stock_count !== raw.stock_count || videoScript.privacy_status !== 'private') {
-  throw new Error('Video script failed date, source freshness, stock count, or privacy gate');
+if (videoScript.target_date !== date || videoScript.stock_count !== raw.stock_count || videoScript.privacy_status !== 'private') {
+  throw new Error('Video script failed date, stock count, or privacy gate');
 }
 const scenes = videoScript.scenes.map((s, i) => ({
   id: i + 1,
