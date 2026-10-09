@@ -16,25 +16,25 @@ def split_phrases(value):
     return [piece for piece in re.findall(r"[^，。！？；、：,!?;:]*[，。！？；、：,!?;:]?|[^，。！？；、：,!?;:]+", value) if piece]
 
 
-def _split_long(caption, speech):
-    if len(caption) <= MAX_CHARS:
+def _split_long(caption, speech, max_chars=MAX_CHARS):
+    if len(caption) <= max_chars:
         return [(caption, speech)]
     if caption == speech:
-        return [(caption[i:i+MAX_CHARS], speech[i:i+MAX_CHARS])
-                for i in range(0, len(caption), MAX_CHARS)]
+        return [(caption[i:i+max_chars], speech[i:i+max_chars])
+                for i in range(0, len(caption), max_chars)]
     # Map an internal caption offset to the equivalent speech position by
     # matching unchanged text. Numbers can expand in the spoken version.
     matcher = SequenceMatcher(None, caption, speech, autojunk=False)
     matches = matcher.get_matching_blocks()
     points = [(0, 0)]
     for block in matches:
-        points.extend([(block.a, block.b), (block.a + block.size, block.b + block.size)])
+        points.extend((block.a + offset, block.b + offset) for offset in range(block.size + 1))
     points.append((len(caption), len(speech)))
     points = sorted(set(points))
     result = []
     cap_offset = speech_offset = 0
-    while len(caption) - cap_offset > MAX_CHARS:
-        target = cap_offset + MAX_CHARS
+    while len(caption) - cap_offset > max_chars:
+        target = cap_offset + max_chars
         # Select a corresponding boundary from equal runs, preventing a cut
         # through numbers that are pronounced differently from their caption.
         options = [(a, b) for a, b in points if cap_offset < a <= target and b > speech_offset]
@@ -59,7 +59,7 @@ def segment_pairs(pairs, max_chars=MAX_CHARS, max_phrases=MAX_PHRASES):
                 raise ValueError("Empty paired phrase")
             if c[-1] in PUNCT and (not s or s[-1] != c[-1]):
                 raise ValueError("Caption/speech punctuation mismatch")
-            units.extend(_split_long(c, s) if len(c) > max_chars else [(c, s)])
+            units.extend(_split_long(c, s, max_chars) if len(c) > max_chars else [(c, s)])
     out = []
     current_c = current_s = ""
     count = 0
