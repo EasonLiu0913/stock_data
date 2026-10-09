@@ -43,7 +43,7 @@ async def main():
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         out_path = out_dir / f"{sid:02d}.mp3"
-        text = normalize_spoken_text(scene["narration"])
+        text = normalize_spoken_text(scene["speech_text"] if plan.get("schema_version") == 2 else scene["narration"])
         engine = None
         errors = []
         boundaries = []
