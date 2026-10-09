@@ -126,7 +126,21 @@ for scene in plan.get("scenes", []):
     if duration <= 0:
         raise RuntimeError(f"Invalid audio duration: {audio_path}")
 
-    chunks = split_text(scene.get("narration"))
+    if plan.get("schema_version") == 2:
+        pairs = scene.get("caption_cues")
+        if not isinstance(pairs, list) or not pairs:
+            raise RuntimeError(f"Scene {sid}: v2 requires complete caption_cues")
+        if any(not isinstance(p, dict) or not p.get("caption") or not p.get("speech") for p in pairs):
+            raise RuntimeError(f"Scene {sid}: invalid caption/speech pairs")
+        chunks = [p["caption"] for p in pairs]
+        spoken_chunks = [p["speech"] for p in pairs]
+        if "".join(spoken_chunks) != scene.get("speech_text"):
+            raise RuntimeError(f"Scene {sid}: spoken cues omit or add words")
+        if "".join(chunks) != scene.get("caption_text"):
+            raise RuntimeError(f"Scene {sid}: caption cues omit or add text")
+    else:
+        chunks = split_text(scene.get("narration"))
+        spoken_chunks = chunks
     if not chunks:
         cursor += rendered_duration
         continue
@@ -135,7 +149,7 @@ for scene in plan.get("scenes", []):
     if not tts_scene or tts_scene.get("engine") != "edge-tts":
         raise RuntimeError(f"Scene {sid}: word-level subtitle timing requires edge-tts")
     try:
-        cue_intervals = align_cues(chunks, normalize_spoken_text,
+        cue_intervals = align_cues(spoken_chunks, normalize_spoken_text,
                                    tts_scene.get("word_boundaries", []), duration)
     except ValueError as exc:
         raise RuntimeError(f"Scene {sid} ({scene.get('title')}): subtitle alignment failed: {exc}") from exc
