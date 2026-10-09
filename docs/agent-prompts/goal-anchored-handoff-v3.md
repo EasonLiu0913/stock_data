@@ -21,6 +21,10 @@ Effective: 2026-10-09. Applies to ALL tasks registered in `docs/agent-prompts/ta
 4. Apply all older AGENTS.md research/safety, freshness, paired-prompt, durable artifacts and concurrency safeguards; v3 adds to, does not waive, them.
 5. Reject a routing/phase ambiguity instead of selecting the most recent handoff.
 
+## Next-action UI availability and honest fallback
+
+Client capability determines interactivity, not repository instructions. Never output bracketed text masquerading as a button. Render one genuine native action only if the running client exposes a supported clickable control that sends a new owner turn. Otherwise display `下一步操作：promptA` / `下一步操作：promptB` as copyable text, clearly noting that a real click-to-send button cannot be rendered here. For `BLOCKED` with no new prerequisite fulfilled, the next step is the named prerequisite, not an endless retry loop. Do not imply repository changes can modify the ChatGPT app UI, and do not invoke undocumented client APIs. After A completes, ask for B; after B passes, ask for A; never auto-chain.
+
 ## Handoff response action card
 
 Every Prompt A/B handoff reply must end with an operational next-step card: Active project, phase, A/B state, blocker, and next action. In clients supporting user-triggered controls, provide a functional clickable `繼續 Prompt A` or `執行 Prompt B` button only when that command is eligible; clicking sends that short command as a new user request and requires fresh-state checks. For waiting, permissions, or missing historical evidence, show the exact prerequisite instead of a misleading success/execute control. If clickable controls are unavailable, use a text-only card with the exact manual command. Never auto-activate buttons, bypass Prompt B, or claim background execution. After final project completion no A/B button is appropriate.
