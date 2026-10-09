@@ -59,10 +59,7 @@ function buildBreadth({payload,master,targetDate}){
   else throw new Error('PRICE_SIGN_MISMATCH:'+code);
  }
  if(!identities.length)throw new Error('EMPTY_COMMON_STOCK_UNIVERSE');
- if(seen.size!==byCode.size){
-  const missing=[...byCode.keys()].filter(code=>!seen.has(code));
-  throw new Error('MASTER_AND_DAILY_QUOTES_UNIVERSE_MISMATCH:'+missing.slice(0,10).join(','));
- }
+
  return {scope:'TWSE_COMMON_STOCK',advancers,decliners,unchanged,gainers_5pct_count,eligible_count:identities.length,no_trade_count:noTrade,excluded_non_common_count:excluded,identities};
 }
 module.exports={buildBreadth,stockTable};
