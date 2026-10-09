@@ -77,3 +77,9 @@ The Handoff Control UI website/MCP server/ChatKit/Vercel deployment experiment i
 
 Native button behavior is client-controlled; if no supported native action exists, never use Markdown pseudo-buttons. Show a brief status/action panel with copyable `promptA` or `promptB` only when appropriate. If the phase is BLOCKED and its prerequisite has not changed, give the exact missing evidence and the next authorized evidence-gathering task or owner action; no circular “run promptA again” loops. On each user-invoked A/B: fetch fresh remote main, identify unique Active task, compare actual evidence with last checkpoint, make bounded progress when possible, record reproducible result once, and preserve original acceptance and gate separation. Do not create a new Active project for UI work.
 
+
+## Research-direction visibility and anti-loop progress
+
+Each active task records machine-readable progress in `docs/handoffs/state/<task-id>.json`. Required fields: task_id, phase, a_status, b_status, current_blocker, planned_research, prior_attempt, anti_loop and evidence. `planned_research` names the investigative question, method, expected evidence, success criterion and fallback. `anti_loop` indicates whether the proposal repeats a previous method with unchanged input and identifies a genuinely different next step. Canonical handoff and verified source records, not this status index, determine acceptance.
+
+Every Handoff final action card must include **目前阻礙**, **預計研究方向**, **與上次差異**, **停止／轉向條件** and a genuinely eligible next action. With no distinct executable next step and no new evidence, report WAITING_SOURCE and the specific dependency; do not repeatedly suggest the same promptA. No new deployment or external UI is authorized.
