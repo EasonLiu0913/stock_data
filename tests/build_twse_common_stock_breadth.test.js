@@ -36,7 +36,7 @@ test('refuse old market date',()=>{
  assert.throws(()=>buildBreadth(f),/TWSE_SOURCE_DATE_MISMATCH/);
 });
 test('refuse price sign mismatch',()=>{
- const f=fixture();f.payload.tables[0].data[0][3]='-';
+ const f=fixture();f.payload.tables[0].data[0][3]=' ';
  assert.throws(()=>buildBreadth(f),/PRICE_SIGN_MISMATCH/);
 });
 test('refuse duplicate security code',()=>{
