@@ -36,6 +36,7 @@ function buildBreadth({payload,master,targetDate}){
   byCode.set(sec.code,sec);
  }
  const table=stockTable(payload), i=Object.fromEntries(table.fields.map((f,i)=>[f,i]));
+ if(!master.source || master.source.as_of_date!==targetDate || master.source.digest_verified!==true)throw new Error('UNATTESTED_SECURITY_MASTER');
  const signIndex=table.fields.findIndex(f => /^漲跌(?:\(\+\/-\)|\(\+\/−\))$/.test(f));
  if(signIndex<0)throw new Error('MISSING_PRICE_SIGN_COLUMN');
  let advancers=0,decliners=0,unchanged=0,gainers_5pct_count=0,excluded=0,noTrade=0;
@@ -58,6 +59,10 @@ function buildBreadth({payload,master,targetDate}){
   else throw new Error('PRICE_SIGN_MISMATCH:'+code);
  }
  if(!identities.length)throw new Error('EMPTY_COMMON_STOCK_UNIVERSE');
+ if(seen.size!==byCode.size){
+  const missing=[...byCode.keys()].filter(code=>!seen.has(code));
+  throw new Error('MASTER_AND_DAILY_QUOTES_UNIVERSE_MISMATCH:'+missing.slice(0,10).join(','));
+ }
  return {scope:'TWSE_COMMON_STOCK',advancers,decliners,unchanged,gainers_5pct_count,eligible_count:identities.length,no_trade_count:noTrade,excluded_non_common_count:excluded,identities};
 }
 module.exports={buildBreadth,stockTable};
