@@ -6,7 +6,7 @@ test('ROC dates cannot be mistaken for source acquisition timestamps',()=>{
  assert.equal(sha(Buffer.from('a')).length,64);
 });
 test('Big5-HTML parser only selects explicit Stocks section',()=>{
- const html='Date Stock Updated:2026/10/10<table><tr><td colspan="7">Stocks</td></tr><tr><td>1101　TCC</td><td>TW0001101004</td><td>1962/02/09</td><td>TWSE LISTED</td><td>Cement</td><td>ESVUFR</td><td></td></tr><tr><td colspan="7">ETF</td></tr><tr><td>0050　ETF</td><td>TW0000050004</td><td>2020/01/01</td><td>TWSE LISTED</td><td>ETF</td><td>CEOGEU</td><td></td></tr></table>';
+ const html='Date Stock Updated:2026/10/10<table><tr><td colspan="7">Stocks</td></tr><tr><td>1101 TCC</td><td>TW0001101004</td><td>1962/02/09</td><td>TWSE LISTED</td><td>Cement</td><td>ESVUFR</td><td></td></tr><tr><td colspan="7">ETF</td></tr><tr><td>0050 ETF</td><td>TW0000050004</td><td>2020/01/01</td><td>TWSE LISTED</td><td>ETF</td><td>CEOGEU</td><td></td></tr></table>';
  const parsed=parseIsin(Buffer.from(html));assert.equal(parsed.updated,'20261010');assert.equal(parsed.bySection.Stocks.length,1);assert.equal(parsed.bySection.ETF.length,1);
 });
 test('issuer report TDR extra and post-target ISIN must remain blocked',()=>{
