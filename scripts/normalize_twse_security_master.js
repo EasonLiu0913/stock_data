@@ -11,7 +11,18 @@
  */
 const fs=require('node:fs');
 const crypto=require('node:crypto');
-function ymd(v){return /^20\d{6}$/.test(String(v||''))&&!Number.isNaN(Date.parse(v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8)+'T00:00:00Z'));}
+function ymd(v) {
+ if(typeof v!=='string'||!/^20[0-9]{6}$/.test(v))return false;
+ const iso=v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8);
+ const d=new Date(iso+'T00:00:00Z');
+ return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===iso;
+}
+function verifyArchiveDigest(input,archiveBytes) {
+ if(!Buffer.isBuffer(archiveBytes)||archiveBytes.length===0)throw Error('MISSING_ARCHIVED_SOURCE_BYTES');
+ const observed=crypto.createHash('sha256').update(archiveBytes).digest('hex');
+ if(observed!==input?.source?.archive_sha256)throw Error('ARCHIVED_SOURCE_DIGEST_MISMATCH');
+ return observed;
+}
 function normalizeArchive(input,date){
  if(!ymd(date))throw Error('INVALID_DATE');
  const s=input?.source;
