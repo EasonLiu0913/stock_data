@@ -51,6 +51,25 @@ jobs:
         run: python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261008/plan.json
       - name: Verify complete speech and subtitle QA
         run: node scripts/verify_daily_gainers_v2_media_proof.js 20261008
+      - name: Create private YouTube proof metadata
+        run: |
+          node -e 'const fs=require("fs");fs.writeFileSync("output/daily-gainers-video/20261008/metadata.json",JSON.stringify({title:"【測試】2026/10/08 每日5%強勢股 V2字幕對齊驗收",description:"九場景字幕與語音對齊測試；請開啟 CC 中文字幕。",tags:["台股","字幕驗收"],categoryId:"25"}))'
+      - name: Upload private proof to YouTube
+        id: youtube
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/upload_youtube.js output/daily-gainers-video/20261008/daily-gainers-20261008.mp4 output/daily-gainers-video/20261008/metadata.json
+      - name: Upload Traditional Chinese caption track
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/upload_youtube_caption.js "${{ steps.youtube.outputs.video_id }}" output/daily-gainers-video/20261008/daily-gainers-20261008.zh-TW.srt zh-TW 繁體中文
+      - name: Link to YouTube proof
+        if: success()
+        run: echo "Private test video ${{ steps.youtube.outputs.watch_url }}" >> "$GITHUB_STEP_SUMMARY"
       - name: Include browser preview dashboard
         if: always()
         run: |
