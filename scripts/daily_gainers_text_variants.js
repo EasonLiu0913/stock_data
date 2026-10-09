@@ -3,6 +3,7 @@
 // Free prose cannot be independently rewritten in caption and speech branches.
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const { OPENING_LINES, OPENING_TEXT } = require('./daily_gainers_brand_opening');
 
 const digits = '零一二三四五六七八九';
 const units = ['', '十', '百', '千'];
@@ -119,7 +120,15 @@ function buildVariants(doc, raw, rules) {
     // from the very same semantic tokens; no independent summarization.
     if (!Array.isArray(scene.cues) || !scene.cues.length)
       throw new Error('Missing semantic cues for scene ' + i);
-    const cues = scene.cues.map((tokens, j) => {
+    // Inject the same immutable sentences into both speech and caption tokens.
+    // Do not mutate the date-specific master JSON.
+    const firstText = scene.cues[0]?.[0]?.type === 'text' ? scene.cues[0][0].value : '';
+    if (i === 0 && /^(大家好|歡迎來到|追蹤資金|錢在哪)/.test(firstText) && !firstText.startsWith(OPENING_TEXT))
+      throw new Error('V2 first-scene opening conflicts with immutable brand opening');
+    const sceneCues = i === 0 && !firstText.startsWith(OPENING_TEXT)
+      ? [...OPENING_LINES.map(value => [{type:'text', value}]), ...scene.cues]
+      : scene.cues;
+    const cues = sceneCues.map((tokens, j) => {
       if (!Array.isArray(tokens) || !tokens.length)
         throw new Error('Empty semantic cue ' + i + ':' + j);
       for (let k=0;k<tokens.length;k++) {
