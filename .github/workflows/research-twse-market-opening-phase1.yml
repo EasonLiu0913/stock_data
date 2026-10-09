@@ -16,6 +16,8 @@ on:
       - "tests/normalize_twse_security_master.test.js"
       - "scripts/run_twse_common_stock_breadth.js"
       - "scripts/validate_daily_gainers_market_opening.js"
+      - "scripts/merge_daily_gainers_market_opening_breadth.js"
+      - "tests/merge_daily_gainers_market_opening_breadth.test.js"
       - "tests/daily_gainers_market_opening.test.js"
       - ".github/workflows/research-twse-market-opening-phase1.yml"
 permissions:
@@ -33,7 +35,7 @@ jobs:
           node-version: "24"
       - name: Run focused MI_INDEX + market opening tests
         run: |
-          node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js
+          node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js
       - name: Inspect full archived MI_INDEX file within checkout
         shell: bash
         run: |
