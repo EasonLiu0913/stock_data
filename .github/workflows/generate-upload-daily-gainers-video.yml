@@ -35,6 +35,7 @@ jobs:
             tests/test_daily_gainers_spoken_text.py
             tests/test_daily_gainers_subtitle_alignment.py
             tests/daily_gainers_video_timestamps.test.js
+            tests/daily_gainers_video_date_gate.test.js
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
             video_scripts
@@ -77,6 +78,9 @@ jobs:
           done
           [ -s "video_scripts/daily-gainers/${date}.json" ] || { echo "Missing ChatGPT video script for ${date}" >&2; exit 1; }
           echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate historical video date-gate regression
+        run: node tests/daily_gainers_video_date_gate.test.js
 
       - name: Validate ChatGPT script against final analysis
         run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
