@@ -11,11 +11,12 @@ function num(value) {
 }
 function text(value){return String(value??'').replace(/<[^>]*>/g,'').trim();}
 function direction(value) {
-  const s=String(value??'');
-  if(/(?:color\s*:\s*red|color\s*:\s*#f00|漲)/i.test(s)||text(s)==='+')return 1;
-  if(/(?:color\s*:\s*green|跌)/i.test(s)||text(s)==='-')return -1;
-  if(/^(?:\s*|<[^>]*>)*$/.test(s)||text(s)==='X')return 0;
-  throw new Error('UNRECOGNIZED_PRICE_SIGN:'+s);
+  const raw=String(value??'');
+  const clean=text(raw).replace(/&nbsp;/gi,'').trim();
+  if(clean==='+' || clean==='＋' || /漲/.test(clean)) return 1;
+  if(clean==='-' || clean==='－' || /跌/.test(clean)) return -1;
+  if(clean==='' || clean==='X') return 0;
+  throw new Error('UNRECOGNIZED_PRICE_SIGN:'+raw);
 }
 function stockTable(payload){
  if(payload?.stat!=='OK')throw new Error('TWSE_RESPONSE_NOT_OK');
@@ -35,7 +36,7 @@ function buildBreadth({payload,master,targetDate}){
   byCode.set(sec.code,sec);
  }
  const table=stockTable(payload), i=Object.fromEntries(table.fields.map((f,i)=>[f,i]));
- const signIndex=table.fields.indexOf('漲跌(+/-)');
+ const signIndex=table.fields.findIndex(f => /^漲跌(?:\(\+\/-\)|\(\+\/−\))$/.test(f));
  if(signIndex<0)throw new Error('MISSING_PRICE_SIGN_COLUMN');
  let advancers=0,decliners=0,unchanged=0,gainers_5pct_count=0,excluded=0,noTrade=0;
  const identities=[],seen=new Set();
