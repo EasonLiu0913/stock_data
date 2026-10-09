@@ -19,3 +19,20 @@ test('absence of external evidence cannot become effective-date verification',()
  assert.equal(require('../scripts/report_twse_historical_roster_coverage').KNOWN['2323'].status,'SUSPENDED');
  assert.equal(require('../scripts/audit_twse_isin_category_snapshot').SNAPSHOT_COMMIT,'797628c405a1');
 });
+
+test('quote join rejects archive whose bytes do not match pinned source',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mi-quote-invalid-'));
+ try{
+  const filename=path.join(dir,'quote.json');fs.writeFileSync(filename,'{}');
+  assert.throws(()=>require('../scripts/report_twse_historical_roster_coverage').quoteCodes(filename),/QUOTE_ARCHIVE_DIGEST_MISMATCH/);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('quote join rejects mismatched date even when digest matches supplied test digest',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mi-quote-date-'));
+ try{
+  const filename=path.join(dir,'quote.json'),bytes=Buffer.from(JSON.stringify({date:'20261007',stat:'OK',tables:[]}));
+  fs.writeFileSync(filename,bytes);
+  const digest=require('node:crypto').createHash('sha256').update(bytes).digest('hex');
+  assert.throws(()=>require('../scripts/report_twse_historical_roster_coverage').quoteCodes(filename,digest),/QUOTE_ARCHIVE_DATE_MISMATCH/);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
