@@ -24,6 +24,7 @@ function inspect(payload,targetDate){
   return {index,title:String(t?.title||''),field_count:fields.length,fields,rows:rows.length,
    stock_table_candidate:candidate,sample:candidate?sample:[]};
  });
+ if(!tables.some(t=>t.stock_table_candidate))throw new Error('NO_STOCK_TABLE_CANDIDATE');
  return {target_date:targetDate,stat:'OK',table_count:tables.length,table_profiles:tables,
   stock_candidates:tables.filter(t=>t.stock_table_candidate).map(t=>({index:t.index,rows:t.rows})),
   note:'INSPECTION_ONLY; no verified security identities; cannot publish breadth'};
