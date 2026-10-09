@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "source_run": 37986812253,
+  "artifact_id": 11643746772,
+  "review": "RAW_ZIP_JS_SHA256_VERIFIED",
+  "scripts": [
+    {
+      "file": "script-1.raw.js",
+      "url": "https://dsp.twse.com.tw/rsrc/js/report.js?d=0626",
+      "bytes": 6081,
+      "sha256": "f15bb7ebe358b16a605bab9e92f8f5b55f241cc6b38137d5ad828004d1daca50",
+      "findings": [
+        "form.main.ajax submit hook delegates click to search button",
+        "does not itself reveal all HTTP request assembly"
+      ]
+    },
+    {
+      "file": "script-2.raw.js",
+      "url": "https://dsp.twse.com.tw/rsrc/js/pages.js?d=0626",
+      "bytes": 2839,
+      "sha256": "1496cb132065de4558f1090c1b0211d639e608567d30f16b445a256356660bee",
+      "findings": [
+        "no independently proven result endpoint or complete pagination contract from this file"
+      ]
+    },
+    {
+      "file": "script-3.raw.js",
+      "url": "https://www.twse.com.tw/res/js/web-report.js",
+      "bytes": 19650,
+      "sha256": "fb42365f6eb8a1516408e7604f502c134c5e54de0c4f6449c6e10c2915685058",
+      "findings": [
+        "$.getJSON(url,params,callback) for report fetch",
+        "url constructed cfg.apiHost.rwd + '/' + cfg.lan + form data-api",
+        "backend paging params paging and offset",
+        "response accepts stat/state/status equal ok and data or tables",
+        "total field used to display record count when present",
+        "pagination plugin renders page controls; response totals not yet independently verified"
+      ]
+    },
+    {
+      "file": "script-4.raw.js",
+      "url": "https://www.twse.com.tw/res/js/web.js",
+      "bytes": 16563,
+      "sha256": "9c1dbb81dd7d16d6b95a7e45fcbc5f561e3a1f764ff526f7936320b22c5ce993",
+      "findings": [
+        "client-side generic pagination component",
+        "no exhaustive historical event query independently proven"
+      ]
+    }
+  ],
+  "query_contract": {
+    "twse_form_paths_from_previous_pilot": [
+      "/announcement/LT185",
+      "/announcement/announcement"
+    ],
+    "twse_getjson_method_in_js": "VERIFIED_IN_STATIC_CODE",
+    "twse_query_root_expression": "cfg.apiHost.rwd + '/' + cfg.lan + $form.data('api')",
+    "twse_backend_paging_fields": [
+      "paging",
+      "offset"
+    ],
+    "twse_result_total_field": "total",
+    "total_applies_to_every_dataset": "NOT_VERIFIED",
+    "dsp_html_form_method": "POST",
+    "dsp_form_target": "/official/result",
+    "dsp_effective_date_full_coverage": "NOT_VERIFIED",
+    "event_queries_executed": false,
+    "actual_query_results_archived": false,
+    "all_pages_reconciled": false,
+    "full_window_event_coverage_verified": false
+  },
+  "decision": "BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE",
+  "production_authorized": false,
+  "prompt_b_eligible": false,
+  "next_research": "Confirm cfg.apiHost.rwd and locale configuration from primary TWSE scripts, then design bounded read-only date-filtered result pilot with explicit pagination/total and effective-date guards; separately validate DSP result logic and synchronizer token handling without storing tokens."
+}
