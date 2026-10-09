@@ -60,3 +60,26 @@ test('exclude untraded ordinary shares from advancers and preserve denominator',
 });
 
 test('rejects unverified historical classification even if each security claims verified',()=>{const f=fixture();f.master.source.digest_verified=false;assert.throws(()=>buildBreadth(f),/UNATTESTED_SECURITY_MASTER/);});
+
+test('TWSE no-comparison X is distinct from untraded and unchanged',()=>{
+ const f=fixture();
+ f.payload.tables[0].data[2][3]='X';
+ f.payload.tables[0].data[2][4]='--';
+ const result=buildBreadth(f);
+ assert.equal(result.no_comparison_count,1);
+ assert.equal(result.no_trade_count,0);
+ assert.equal(result.unchanged,0);
+ assert.equal(result.eligible_count,3);
+ assert.equal(result.advancers+result.decliners+result.unchanged+result.no_trade_count+result.no_comparison_count,result.eligible_count);
+});
+test('ordinary-share five-category total is preserved with untraded and no-comparison rows',()=>{
+ const f=fixture();
+ f.master.securities.splice(3,0,{code:'4444',market:'TWSE',security_type:'COMMON_STOCK',classification_verified:true});
+ f.payload.tables[0].data.splice(3,0,['4444','丁','--',' ','--']);
+ f.payload.tables[0].data[2][3]='X';
+ const result=buildBreadth(f);
+ assert.equal(result.eligible_count,4);
+ assert.equal(result.no_trade_count,1);
+ assert.equal(result.no_comparison_count,1);
+ assert.equal(result.unchanged,0);
+});
