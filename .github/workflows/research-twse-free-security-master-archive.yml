@@ -1,0 +1,65 @@
+name: "[研究] TWSE Free Security Master Manual Pilot"
+on:
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Research date YYYYMMDD (never claim a late capture is a historical snapshot)"
+        required: true
+        default: "20261008"
+permissions:
+  contents: read
+concurrency:
+  group: twse-free-security-master-${{ github.event.inputs.target_date }}
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Run isolated unit tests
+        shell: bash
+        run: node --test tests/research_capture_twse_security_master.test.js
+      - name: Capture free TWSE originals and research verdict
+        id: capture
+        continue-on-error: true
+        shell: bash
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_DATE" =~ ^20[0-9]{6}$ ]] || exit 1
+          node scripts/research_capture_twse_security_master.js "$TARGET_DATE" "output/research-twse-free-security-master/$TARGET_DATE"
+      - name: Write explicit evidence status
+        if: always()
+        shell: bash
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+          CAPTURE_STATUS: ${{ steps.capture.outcome }}
+        run: |
+          echo "## Research-only TWSE free master pilot" >> "$GITHUB_STEP_SUMMARY"
+          echo "Capture outcome: $CAPTURE_STATUS" >> "$GITHUB_STEP_SUMMARY"
+          echo "Requested date: $TARGET_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "This is NOT a verified 20261008 security master, no production publication is authorized." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload research raw evidence and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-twse-free-security-master-${{ inputs.target_date }}
+          path: output/research-twse-free-security-master/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce manual pilot integrity
+        if: always()
+        env:
+          CAPTURE_STATUS: ${{ steps.capture.outcome }}
+        shell: bash
+        run: |
+          if [ "$CAPTURE_STATUS" != success ]; then
+            echo "::error::Manual research evidence is incomplete/stale or fetch failed. Review artifact."
+            exit 1
+          fi
+          echo "Capture completed for inspection only; date-effective ordinary-share classification is still unverified."
