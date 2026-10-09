@@ -21,7 +21,7 @@ for(const cue of actual){
  assert.ok(cue.start_seconds>=previousEnd-0.005,'subtitle cues overlap');
  assert.ok(cue.end_seconds>cue.start_seconds,'subtitle cue has no duration');
  assert.ok([...cue.text].length<=30,'subtitle exceeds 30 characters');
- assert.ok(!/[\\r\\n]/.test(cue.text),'subtitle must remain single-line');
+ assert.ok(!/[\r\n]/.test(cue.text),'subtitle must remain single-line');
  grouped.set(cue.scene_id,(grouped.get(cue.scene_id)||'')+cue.text);
  previousEnd=cue.end_seconds;
 }
@@ -42,10 +42,10 @@ for(const scene of plan.scenes){
  assert.equal(audio.spoken_text,scene.speech_text,'TTS actual submitted text diverges from v2 speech');
 }
 const srt=fs.readFileSync(path.join(dir,'daily-gainers-'+date+'.zh-TW.srt'),'utf8');
-const blocks=srt.trim().split(/\\r?\\n\\s*\\r?\\n/);
+const blocks=srt.trim().split(/\r?\n\s*\r?\n/);
 assert.equal(blocks.length,actual.length,'SRT block count mismatch');
 blocks.forEach((block,i)=>{
- const lines=block.split(/\\r?\\n/);
+ const lines=block.split(/\r?\n/);
  assert.equal(lines.length,3,'SRT caption must be one line');
  assert.equal(lines[2],actual[i].text,'SRT content drift at '+(i+1));
 });
