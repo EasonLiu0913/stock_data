@@ -85,3 +85,10 @@ Fetch latest remote main and this preregistered Prompt B. Check exact rule-hash/
 - V2 media-proof workflow push-only self trigger added in `039bd0d7cd05c04c778c6b7184054f5cbde15ea3`; Master changes trigger added in `7d9d3357bed3e63d6b21564ed6f597d56fe6df13`.
 - Verified two live GitHub Actions run IDs: `37878551084` (older workflow commit) and `37878597628` (new workflow commit). On last inspection, run `37878597628` was `in_progress`, and checkout step was active. No success conclusion, media artifact or synchronized subtitle evidence yet. Only status verified, not a PASS.
 - When run ends, inspect job failures/artifacts, fix safely and rerun. Do not upload to YouTube or enable automatic production v2 on the basis of a queued/in-progress run.
+
+## Phase 8 lexical-number gate (2026-10-09)
+- Actual prior Media Proof `37878597628` ended success, with media artifact `11593214090`; semantic review of subtitle audit found scene 9 `零星個股` incorrectly rendered as `0星個股`. Thus pipeline green is not semantic-content PASS.
+- Fixed `video_scripts/daily-gainers/v2/20261008/master.json` so scene 9 preserves lexical `零星`, not a numeric zero; commit `46ffedf2d7fca6ceea7adafc4978d7fd2ddb10f9`.
+- Added explicit regression that scene 9 caption/speech retain `零星個股`, reject `0星個股`, and scene 3 numeric context `缺值當作0` is retained; commit `a141fbf5b83fc1f2f65f7eebe048dc809d22fab3`.
+- New isolated full Media Proof `37880158759` auto-triggered from corrected Master and was `in_progress` on last inspection. Must inspect actual completion and subtitle manifest before claiming final PASS. No YouTube actions added.
+- Next: confirm successful nine-scene artifact; add reusable lexical contextualization gate for daily input rather than relying only on fixture regression; independently audit captions including numerical-unit/speech equivalence before production promotion.
