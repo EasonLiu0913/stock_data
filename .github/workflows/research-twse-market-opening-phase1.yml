@@ -1,0 +1,48 @@
+name: "[研究] TWSE Market Opening Phase 1 Evidence"
+on:
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Trading date YYYYMMDD (checkout historical MI_INDEX, no fresh crawl)"
+        required: true
+        default: "20261008"
+  push:
+    paths:
+      - "scripts/inspect_twse_mi_index_breadth.js"
+      - "tests/inspect_twse_mi_index_breadth.test.js"
+      - ".github/workflows/research-twse-market-opening-phase1.yml"
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TARGET_DATE: ${{ github.event.inputs.target_date || '20261008' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Run focused MI_INDEX + market opening tests
+        run: |
+          node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js
+      - name: Inspect full archived MI_INDEX file within checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_DATE" =~ ^20[0-9]{6}$ ]] || { echo "INVALID_TARGET_DATE"; exit 1; }
+          file="data_twse_mi_index/${TARGET_DATE}_twse_mi_index.json"
+          if [ ! -s "$file" ]; then
+            echo "::error::Missing or empty MI_INDEX archive: $file"
+            exit 1
+          fi
+          node scripts/inspect_twse_mi_index_breadth.js "$TARGET_DATE" "$file"
+      - name: Upload inspection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twse-market-opening-evidence-${{ env.TARGET_DATE }}
+          path: output/twse-market-opening-inspection/
+          if-no-files-found: warn
+          retention-days: 14
