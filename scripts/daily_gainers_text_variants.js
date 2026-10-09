@@ -122,7 +122,12 @@ function buildVariants(doc, raw, rules) {
     const cues = scene.cues.map((tokens, j) => {
       if (!Array.isArray(tokens) || !tokens.length)
         throw new Error('Empty semantic cue ' + i + ':' + j);
-      for (const token of tokens) {
+      for (let k=0;k<tokens.length;k++) {
+        const token=tokens[k];
+        const following=tokens[k+1];
+        if (token.type==='numeric_phrase' && token.speech==='零' &&
+            following?.type==='text' && /^(星|散|件|碎|售)/.test(following.value))
+          throw new Error('Lexical zero misclassified as numeric token: 零'+following.value.slice(0,1));
         if (token.type === 'text' && (/[0-9０-９]/.test(token.value) ||
             /[零一二三四五六七八九十百千萬億兆兩点點]{2,}/.test(token.value)))
           throw new Error('Ambiguous numbers in free-text token: ' + token.value);
