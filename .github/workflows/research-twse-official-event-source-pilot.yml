@@ -1,0 +1,33 @@
+name: "[研究] TWSE Official Event Source Pilot"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Research-only bounded pilot tests
+        run: node --test tests/research_twse_official_event_source_pilot.test.js
+      - name: Acquire official page originals and hashes
+        continue-on-error: true
+        run: node scripts/research_twse_official_event_source_pilot.js output/twse-official-event-source-pilot
+      - name: Explain blocked historical completeness
+        if: always()
+        run: |
+          echo '## TWSE bounded source-only research' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Probe downloads at most three allowlisted public form pages, capped at 1 MiB and 15 seconds each.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'It does not call undocumented search APIs, enumerate results or verify an exhaustive issuer-event ledger.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'M1 always remains BLOCKED; download errors must be inspected in research-report.json.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twse-official-event-source-pilot-research-only
+          path: output/twse-official-event-source-pilot/
+          if-no-files-found: warn
+          retention-days: 14
