@@ -119,6 +119,29 @@ def wrap_caption_for_screen(text, max_columns=18):
         raise RuntimeError('Subtitle visual wrapping changed text or overflowed')
     return chr(10).join(lines)
 
+def detect_silence_centers(audio_path):
+    """Non-AI pause hints from ffmpeg; WordBoundary remains authoritative."""
+    import subprocess
+    proc = subprocess.run(
+        ['ffmpeg', '-hide_banner', '-nostats', '-i', str(audio_path),
+         '-af', 'silencedetect=noise=-38dB:d=0.14', '-f', 'null', '-'],
+        capture_output=True, text=True, check=False)
+    if proc.returncode:
+        raise RuntimeError('Waveform silence analysis failed: ' + proc.stderr[-400:])
+    starts = []
+    centers = []
+    for line in proc.stderr.splitlines():
+        found_start = re.search(r'silence_start:\s*([0-9.]+)', line)
+        found_end = re.search(r'silence_end:\s*([0-9.]+)', line)
+        if found_start:
+            starts.append(float(found_start.group(1)))
+        if found_end and starts:
+            start = starts.pop(0)
+            end = float(found_end.group(1))
+            if end > start:
+                centers.append((start + end) / 2)
+    return centers
+
 def fmt_srt(seconds):
     ms = max(0, round(seconds * 1000))
     h, rem = divmod(ms, 3_600_000)
@@ -180,6 +203,19 @@ for scene in plan.get("scenes", []):
                                    tts_scene.get("word_boundaries", []), duration)
     except ValueError as exc:
         raise RuntimeError(f"Scene {sid} ({scene.get('title')}): subtitle alignment failed: {exc}") from exc
+
+    # Compare word-aligned cue boundaries with actual quiet intervals.
+    # A mismatch is diagnostic only: waveform energy cannot identify words.
+    silence_centers = detect_silence_centers(audio_path)
+    for boundary_index in range(1, len(cue_intervals)):
+        expected = cue_intervals[boundary_index][0]
+        distance = min((abs(expected - p) for p in silence_centers), default=None)
+        cue_audit.append({'scene_id': sid, 'kind': 'pause_boundary_check',
+                          'boundary_index': boundary_index,
+                          'word_boundary_seconds': round(expected, 3),
+                          'nearest_pause_distance_seconds':
+                          round(distance, 3) if distance is not None else None,
+                          'pause_nearby': distance is not None and distance <= 0.20})
 
     for chunk, (start, end) in zip(chunks, cue_intervals):
         end = min(end, rendered_duration)
