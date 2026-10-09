@@ -12,3 +12,18 @@ test('reject OTC',()=>{const x=sample();x.securities[0].market='TPEX';assert.thr
 test('reject missing instrument type',()=>{const x=sample();delete x.securities[0].security_type;assert.throws(()=>normalizeArchive(x,'20261008'),/INVALID_SECURITY_ROW/);});
 test('reject duplicate',()=>{const x=sample();x.securities.push(x.securities[0]);assert.throws(()=>normalizeArchive(x,'20261008'),/INVALID_SECURITY_ROW/);});
 test('reject future listings',()=>{const x=sample();x.securities[0].listing_date='20261009';assert.throws(()=>normalizeArchive(x,'20261008'),/INVALID_LISTING_WINDOW/);});
+
+test('validates source-archive digest against actual archived bytes',()=>{
+ const crypto=require('node:crypto');
+ const {verifyArchiveDigest}=require('../scripts/normalize_twse_security_master');
+ const bytes=Buffer.from('TWSE historical security archive fixture');
+ const data=sample();
+ data.source.archive_sha256=crypto.createHash('sha256').update(bytes).digest('hex');
+ assert.equal(verifyArchiveDigest(data,bytes),data.source.archive_sha256);
+ assert.throws(()=>verifyArchiveDigest(data,Buffer.from('different archive')),/ARCHIVED_SOURCE_DIGEST_MISMATCH/);
+});
+test('rejects impossible Gregorian calendar date',()=>{
+ const {ymd}=require('../scripts/normalize_twse_security_master');
+ assert.equal(ymd('20260230'),false);
+ assert.equal(ymd('20261008'),true);
+});
