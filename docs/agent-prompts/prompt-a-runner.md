@@ -45,6 +45,19 @@ When the repository owner sends exactly `promptA` (case-insensitive after trimmi
 8. Recover that round's phase-specific Prompt A from the canonical handoff and, when identity is ambiguous, from durable repository history.
 9. Verify the paired Prompt B for the same round was preregistered before Prompt A begins. If no phase-specific paired Prompt B exists, do not start implementation; repair the handoff/pairing first if repository rules authorize that documentation-only repair.
 
+## Automatic phase diagnosis and blocked-resume procedure
+
+Never require the owner to specify `resume`, M1/M2, a workflow number, or a blocker name. Resolve the original round on latest remote `main` and determine A eligibility independently. Prefer durable phase status, original prompt pair and primary workflow/artifact evidence over text labels that may be stale.
+
+1. Check whether A has durable completion and its paired B is still pending. If yes, **do not redo A**: report `NEXT_COMMAND: promptB`, reason and exact pending gate; stop.
+2. Check whether current phase is `BLOCKED`, `WAITING_WORKFLOW`, `WAITING_SCHEDULE`, `WAITING_SOURCE`, `WAITING_OWNER`, `WAITING_PERMISSION` or an interrupted A. These are **not** A COMPLETE. Re-read the original A/B, blocker checkpoint, workflow and source evidence, and last successful durable output.
+3. If an external condition is resolved, continue the **same original A** only for missing permitted stages; retain the immutable B and protect idempotent render/upload and paid/expensive operations. If still blocked, no false green: specify exactly what source/permission/run/evidence is needed, what event to recheck, and the next owner command/action. Avoid commits that only repeat unchanged blocker state.
+4. If a workflow is in progress, check its actual run/job state and identify run URL, expected evidence, and named schedule/timezone when known. Do not fabricate an ETA or claim the agent will keep running asynchronously. If failed/canceled, identify allowed bounded retry and avoid rerunning completed artifacts.
+5. If scope/criteria/paid access is needed, stop for owner approval and produce a versioned CHANGE_PROPOSAL only for genuine charter change; never relax B to bypass blocker.
+6. If B already PASS and a next phase is promoted, execute only next eligible A. If final project is complete, stop; do not reactivate another project.
+
+Every outcome: report `Current phase`, `A/B status`, `Ultimate goal progress`, `Completed vs remaining phases`, `Blocking evidence`, `NEXT_COMMAND` (or exact owner action + trigger), `Next phase ID`, `Plan changed?`. A rerun command is not evidence that missing data materialized.
+
 ## Prompt A selection rules
 
 Project selection and round selection are separate.
