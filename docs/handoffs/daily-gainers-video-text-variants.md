@@ -92,3 +92,10 @@ Fetch latest remote main and this preregistered Prompt B. Check exact rule-hash/
 - Added explicit regression that scene 9 caption/speech retain `零星個股`, reject `0星個股`, and scene 3 numeric context `缺值當作0` is retained; commit `a141fbf5b83fc1f2f65f7eebe048dc809d22fab3`.
 - New isolated full Media Proof `37880158759` auto-triggered from corrected Master and was `in_progress` on last inspection. Must inspect actual completion and subtitle manifest before claiming final PASS. No YouTube actions added.
 - Next: confirm successful nine-scene artifact; add reusable lexical contextualization gate for daily input rather than relying only on fixture regression; independently audit captions including numerical-unit/speech equivalence before production promotion.
+
+## Phase 9 strict subtitle coverage checkpoint (2026-10-09)
+- Media Proof runs `37880230200` and `37880158759` completed SUCCESS; most recent produced artifact ID `11595105628` (49,216,248 bytes). Job log for latest had correct `零星個股` and no `0星個股`.
+- Technical proof passes full Edge TTS, lip sync, MP4, subtitle construction. This does not mean future narration/format semantics fully audited.
+- Added `scripts/verify_daily_gainers_v2_media_proof.js` in `879bb5ce6bcde910f2f2ddf5bee64f4a025c554c`: asserts scene and caption count, exact cue-to-SRT content, cue chronology, v2 plan caption+speech complete concatenation, Edge WordBoundary presence and spoken text identity, MP4 existence, no `0星個股`.
+- Integrated strict QA as mandatory step before artifact upload in standalone proof workflow (`3dc0f0094e7c36c7189ebe36392937d2b9ffc7b6`), which auto-triggered new run `37886021496` (queued on last check). Wait for concrete result; if failed, inspect logs and fix boundedly. No YouTube uploads and production v1 unchanged.
+- Before promotion: review actual subtitle readability (some cues exceed comfortable length), implement audited numeric_phrase equivalence rules, source authenticity/date gates, rule hash-aware upload-orchestrator, and independent Prompt B.
