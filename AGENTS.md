@@ -645,3 +645,7 @@ Every Handoff v3 phase status and final next-action card MUST state both **目�
 ## Explicit next-step instruction
 
 The final Handoff status card must show **下一步指令** after 目前阻礙 and 預計研究方向. Recommend exactly one of `promptA`, `promptB`, or a precise prerequisite action such as 查看 Workflow、提供歷史資料、授權權限、等待新證據. Only recommend A/B if genuinely eligible and useful. For unchanged BLOCKED state with no distinct work, do not suggest circular promptA retries. No faux clickable buttons.
+
+## Handoff mandatory research progress verdict
+
+Every Prompt A/B response reports **研究進度判定**: `PROGRESS` (new verifiable material evidence this round), `NO_PROGRESS` (no meaningful new evidence), or `BLOCKED` (external prerequisite stops authorized advancement). Report round progress separately from phase lifecycle status: a round can be PROGRESS while M1 remains BLOCKED. Include the supporting commit/run/source, 目前阻礙, 預計研究方向, 與上次差異, 停止／轉向條件, and 下一步指令. Machine-readable keys: `research_progress_status`, `research_progress_evidence`, `research_progress_reason`, `phase_status`, `next_action`. No duplicate-effort PASS claims, gate bypass, or Handoff UI deployment.
