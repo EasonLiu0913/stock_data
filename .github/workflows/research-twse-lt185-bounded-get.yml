@@ -1,0 +1,30 @@
+name: "[研究] TWSE LT185 Bounded GET Result"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bounded-get:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify research-only response interpretation
+        run: node --test tests/research_twse_lt185_bounded_get.test.js
+      - name: Query the source-derived official LT185 endpoint once
+        run: node scripts/research_twse_lt185_bounded_get.js output/twse-lt185-bounded-get
+      - name: Explain non-completeness of first response
+        if: always()
+        run: |
+          echo 'Only one read-only GET JSON request; no date-effective or full pagination proof.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'M1 remains BLOCKED and production, cron, Pages and YouTube are unchanged.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twse-lt185-bounded-get-research-only
+          path: output/twse-lt185-bounded-get/
+          if-no-files-found: warn
+          retention-days: 14
