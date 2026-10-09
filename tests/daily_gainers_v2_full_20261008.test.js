@@ -45,4 +45,9 @@ assert.ok(out.plan.scenes[2].stock_labels.includes('美德醫療-DR（9103）'))
 assert.equal(out.plan.scenes[2].title,'美德醫療-DR（9103）與防疫概念');
 assert.ok(out.plan.scenes[3].speech_text.includes('騰輝電子-KY'));
 assert.ok(out.plan.scenes[4].speech_text.includes('全友'));
+assert.ok(out.plan.scenes[8].caption_text.includes('零星個股'));
+assert.ok(!out.plan.scenes[8].caption_text.includes('0星個股'));
+assert.ok(out.plan.scenes[8].speech_text.includes('零星個股'));
+assert.ok(out.plan.scenes[2].caption_text.includes('缺值當作0'));
+
 console.log('20261008 full nine-scene typed Master + preview contract PASS; NO MP3/MP4 or upload');
