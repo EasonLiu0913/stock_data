@@ -15,6 +15,8 @@ on:
       - "tests/reconcile_twse_stock_breadth.test.js"
       - "tests/build_twse_common_stock_breadth.test.js"
       - "scripts/audit_twse_isin_category_snapshot.js"
+      - "scripts/report_twse_historical_roster_coverage.js"
+      - "tests/report_twse_historical_roster_coverage.test.js"
       - "tests/audit_twse_isin_category_snapshot.test.js"
       - "scripts/normalize_twse_security_master.js"
       - "tests/normalize_twse_security_master.test.js"
@@ -46,7 +48,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p output/twse-market-opening-inspection
-          node --test tests/audit_twse_isin_category_snapshot.test.js tests/reconcile_twse_stock_breadth.test.js tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js tests/daily_gainers_market_opening_real_snapshot.test.js 2>&1 | tee output/twse-market-opening-inspection/test-results.log
+          node --test tests/report_twse_historical_roster_coverage.test.js tests/audit_twse_isin_category_snapshot.test.js tests/reconcile_twse_stock_breadth.test.js tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js tests/daily_gainers_market_opening_real_snapshot.test.js 2>&1 | tee output/twse-market-opening-inspection/test-results.log
       - name: Audit pinned 20261008 ISIN files from historical commit
         id: historical_isin
         continue-on-error: true
@@ -59,6 +61,8 @@ jobs:
             git show "797628c405a1d4dc91b71db1efe90199899c0388:data_twse/twse_industry_${category}.csv" > "output/twse-market-opening-inspection/historical-isin/twse_industry_${category}.csv"
           done
           node -e "const a=require('./scripts/audit_twse_isin_category_snapshot');const r=a.inspect({root:'output/twse-market-opening-inspection/historical-isin'});if(!r.source_integrity_verified||r.publication_authorized)process.exit(1);console.log(JSON.stringify(r,null,2))" | tee output/twse-market-opening-inspection/historical-isin-audit.json
+          node -e "const c=require('./scripts/report_twse_historical_roster_coverage');const r=c.report({root:'output/twse-market-opening-inspection/historical-isin'});if(r.historical_master_complete||r.publication_authorized)process.exit(1);console.log(JSON.stringify(r,null,2))" > output/twse-market-opening-inspection/historical-roster-coverage.json
+          node -e "const r=require('./output/twse-market-opening-inspection/historical-roster-coverage.json');console.log('COVERAGE: roster='+r.roster_count+', documented_exceptions='+r.documented_exception_count+', unresolved='+r.unresolved_history_count)"
       - name: Inspect full archived MI_INDEX file within checkout
         id: inspect
         if: always()
