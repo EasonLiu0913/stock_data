@@ -21,6 +21,10 @@ Effective: 2026-10-09. Applies to ALL tasks registered in `docs/agent-prompts/ta
 4. Apply all older AGENTS.md research/safety, freshness, paired-prompt, durable artifacts and concurrency safeguards; v3 adds to, does not waive, them.
 5. Reject a routing/phase ambiguity instead of selecting the most recent handoff.
 
+## Handoff response action card
+
+Every Prompt A/B handoff reply must end with an operational next-step card: Active project, phase, A/B state, blocker, and next action. In clients supporting user-triggered controls, provide a functional clickable `繼續 Prompt A` or `執行 Prompt B` button only when that command is eligible; clicking sends that short command as a new user request and requires fresh-state checks. For waiting, permissions, or missing historical evidence, show the exact prerequisite instead of a misleading success/execute control. If clickable controls are unavailable, use a text-only card with the exact manual command. Never auto-activate buttons, bypass Prompt B, or claim background execution. After final project completion no A/B button is appropriate.
+
 ## State-aware routing, recovery and owner guidance (v3)
 
 `promptA` and `promptB` are **stateless owner commands with stateful durable routing**. Each invocation retrieves fresh remote main, unique Active project, original charter/roadmap/pair and current durable evidence. The runner diagnoses state **before** acting; user never has to supply phase ID, restart instructions, elapsed time, or the pending workflow ID.
