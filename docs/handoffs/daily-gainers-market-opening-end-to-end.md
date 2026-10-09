@@ -3,7 +3,7 @@
 Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
-Plan version: `goal-v1`, authored 2026-10-09.
+Plan version: `goal-v2`, owner-approved M1 scope amendment 2026-10-10; see section CJ. Original goal-v1 M1 A/B preserved as superseded historical contracts.
 Ultimate goal status: **NOT COMPLETE**. Round 0 evidence inspection **PASS**; all subsequent rounds **PENDING**.
 
 ## A. Immutable Project Charter — WHY
@@ -35,7 +35,7 @@ The following plan is **preapproved for sequencing and analysis only**. Each pha
 | Phase | Small goal | Acceptance/exit | State |
 |---|---|---|---|
 | M0 | Existing MI_INDEX full-file inspection and test gate | [Evidence #12](https://github.com/EasonLiu0913/stock_data/actions/runs/37909179708) passes 41/41 tests and MI_INDEX inspection | COMPLETE (gate only) |
-| M1 | Historically evidenced TWSE ordinary-share roster and actual breadth for 20261008 | Real point-in-time provenance, explicitly classified eligible/excluded rows, price-sign validation, reproducible counts; no guessed roster | PENDING — **NEXT** |
+| M1-v2 | TWSE official stock-column market breadth for 20261008 | Same-date official MI_INDEX 5-bucket source and hash, exact reported scope, no inference of individual 1085-identity or 5%-gainers; independent Prompt B | ACTIVE — **owner-approved scope change; independent closeout pending** |
 | M2 | Finish market-opening financial facts | Official TWSE institution TWD totals, sector turnover/mapping, 5-day history, breadth; date/unit/scope evidence and snapshot validation | PENDING |
 | M3 | Research and validate market-regime phrasing | Transparent, conservative criteria with test cases, evidence/uncertainty and no unsupported flows | PENDING |
 | M4 | Produce spoken market-opening script and single-source captions contract | Brand 3 lines exact; all facts cited internally; spoken/screen/SRT parity; defensible 70/30 voice | PENDING |
@@ -50,10 +50,10 @@ Do not mark M1 complete merely because the source JSON contained 36,699 rows; th
 Global task state is from `docs/agent-prompts/task-routing.json`. Global invariant: **one** active task at most. This project is currently **active**, as verified in the routing registry on 2026-10-09; future changes must follow the registry. Activation alone never executes work.
 
 Within this project, follow phase identity and paired-prompt state:
-- Current phase: M1 **ACTIVE / PROMOTED; Prompt A BLOCKED on historical master provenance**. A previous `promptA` performed bounded source investigation and checkpointed the blocker; it did NOT meet the A completion contract.
+- Current phase: M1-v2 **ACTIVE / PROMOTED; original historical-master blocker owner-de-scoped for market breadth, independent new gate still pending**. A previous `promptA` performed bounded source investigation and checkpointed the blocker; it did NOT meet the A completion contract.
 - M0: COMPLETE, accepted evidence only for tests and raw MI_INDEX inspection, NOT overall Phase 1 completion.
-- M1 Prompt A: PREREGISTERED, STARTED, BLOCKED; eligible for **same-round source-evidence recheck and bounded resumption** on bare `promptA`, not for completion claims.
-- M1 Prompt B: PREREGISTERED, NOT ELIGIBLE until A is durably COMPLETE; bare `promptB` must explain the blocker and recommend `promptA` or owner action, not execute B.
+- M1-v2 Prompt A: PREREGISTERED under section CJ, implementation checkpoint present; isolated tests passed, real source / remote evidence verification pending before durable COMPLETE.
+- M1-v2 Prompt B: PREREGISTERED under section CJ, NOT ELIGIBLE until M1-v2 A is durably COMPLETE. Original M1 goal-v1 A/B in G/H are superseded, not retroactively passed.
 - Later phases: PENDING ROADMAP ONLY, no implied permission to execute early.
 - Project status COMPLETE only after M7 closeout; any intermediate green CI is NOT sufficient.
 
