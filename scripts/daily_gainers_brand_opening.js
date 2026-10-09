@@ -10,6 +10,10 @@ function addOpening(narration) {
   if (typeof narration !== 'string' || !narration.trim()) throw new Error('Missing first-scene narration');
   const trimmed = narration.trim();
   if (trimmed.startsWith(OPENING_TEXT)) return trimmed;
+  // Accept human-authored line breaks between the three exact sentences.
+  const multiline = OPENING_LINES.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\  if (trimmed.startsWith(OPENING_TEXT)) return trimmed;')).join('\\s*');
+  const match = new RegExp('^' + multiline).exec(trimmed);
+  if (match) return OPENING_TEXT + trimmed.slice(match[0].length);
   if (/^(大家好|歡迎來到|追蹤資金|錢在哪)/.test(trimmed)) {
     throw new Error('First-scene opening conflicts with immutable TAIWAN STOCK brand opening');
   }
