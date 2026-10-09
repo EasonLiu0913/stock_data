@@ -41,6 +41,8 @@ assert.equal(out.plan.scene_count,9);
 assert.ok(out.plan.scenes.every(s=>s.caption_cues.map(x=>x.caption).join('')===s.caption_text));
 assert.ok(out.plan.scenes.every(s=>s.caption_cues.map(x=>x.speech).join('')===s.speech_text));
 assert.ok(out.plan.scenes[2].speech_text.includes('美德醫療-DR'));
+assert.ok(out.plan.scenes[2].stock_labels.includes('美德醫療-DR（9103）'));
+assert.equal(out.plan.scenes[2].title,'美德醫療-DR（9103）與防疫概念');
 assert.ok(out.plan.scenes[3].speech_text.includes('騰輝電子-KY'));
 assert.ok(out.plan.scenes[4].speech_text.includes('全友'));
 console.log('20261008 full nine-scene typed Master + preview contract PASS; NO MP3/MP4 or upload');
