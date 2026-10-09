@@ -39,7 +39,7 @@ function buildBreadth({payload,master,targetDate}){
  if(!master.source || master.source.as_of_date!==targetDate || master.source.digest_verified!==true)throw new Error('UNATTESTED_SECURITY_MASTER');
  const signIndex=table.fields.findIndex(f => /^漲跌(?:\(\+\/-\)|\(\+\/−\))$/.test(f));
  if(signIndex<0)throw new Error('MISSING_PRICE_SIGN_COLUMN');
- let advancers=0,decliners=0,unchanged=0,gainers_5pct_count=0,excluded=0,noTrade=0;
+ let advancers=0,decliners=0,unchanged=0,gainers_5pct_count=0,excluded=0,noTrade=0,noComparison=0;
  const identities=[],seen=new Set();
  for(const row of table.data){
   const code=text(row[i['證券代號']]);
@@ -51,6 +51,9 @@ function buildBreadth({payload,master,targetDate}){
   if(sec.security_type!=='COMMON_STOCK'){excluded++;continue;}
   identities.push({code,market:'TWSE',security_type:'COMMON_STOCK',classification_verified:true});
   const close=num(row[i['收盤價']]),delta=num(row[i['漲跌價差']]);
+  const rawSign=text(row[signIndex]).replace(/&nbsp;/gi,'').trim();
+  // TWSE 'X' means no comparison price, not a flat session or an untraded stock.
+  if(rawSign==='X') {noComparison++;continue;}
   if(close===null||delta===null){noTrade++;continue;}
   const sign=direction(row[signIndex]);
   if(sign>0&&delta>0){advancers++; const prev=close-delta;if(prev<=0)throw new Error('INVALID_PREVIOUS_CLOSE:'+code);if(delta/prev*100>=5-1e-9)gainers_5pct_count++;}
@@ -59,7 +62,8 @@ function buildBreadth({payload,master,targetDate}){
   else throw new Error('PRICE_SIGN_MISMATCH:'+code);
  }
  if(!identities.length)throw new Error('EMPTY_COMMON_STOCK_UNIVERSE');
+ if(advancers+decliners+unchanged+noTrade+noComparison!==identities.length)throw new Error('FIVE_BUCKET_DENOMINATOR_MISMATCH');
 
- return {scope:'TWSE_COMMON_STOCK',advancers,decliners,unchanged,gainers_5pct_count,eligible_count:identities.length,no_trade_count:noTrade,excluded_non_common_count:excluded,identities};
+ return {scope:'TWSE_COMMON_STOCK',advancers,decliners,unchanged,gainers_5pct_count,eligible_count:identities.length,no_trade_count:noTrade,no_comparison_count:noComparison,excluded_non_common_count:excluded,identities};
 }
 module.exports={buildBreadth,stockTable};
