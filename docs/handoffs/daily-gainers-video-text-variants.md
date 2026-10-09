@@ -79,3 +79,9 @@ Fetch latest remote main; read AGENTS.md and this handoff. Implement v2 distinct
 
 ## Prompt B — independent closeout
 Fetch latest remote main and this preregistered Prompt B. Check exact rule-hash/provenance, 20261008 fixture, spoken TTS/readable caption date/numbers, stock names and codes, exhaustive no-omission equivalence, WordBoundary coverage, lipsync/audio coherence, upload-router no duplicate, legacy v1 and date gate regression. Inspect actual generated artifact and run evidence; do not mark PASS on CI-only success. If any gate fails, fix boundedly and repeat verification. Only after verified durable PASS promote as authorized; preregister the next prompt pair and commit handoff.
+
+## Phase 7 media proof run evidence (2026-10-09)
+- Fixed erroneous caption `0` from three unit-only `億` typed tokens in full 20261008 Master: commit `70918a1d58c9e4a715ed9d382965d8eaffa80adc`.
+- V2 media-proof workflow push-only self trigger added in `039bd0d7cd05c04c778c6b7184054f5cbde15ea3`; Master changes trigger added in `7d9d3357bed3e63d6b21564ed6f597d56fe6df13`.
+- Verified two live GitHub Actions run IDs: `37878551084` (older workflow commit) and `37878597628` (new workflow commit). On last inspection, run `37878597628` was `in_progress`, and checkout step was active. No success conclusion, media artifact or synchronized subtitle evidence yet. Only status verified, not a PASS.
+- When run ends, inspect job failures/artifacts, fix safely and rerun. Do not upload to YouTube or enable automatic production v2 on the basis of a queued/in-progress run.
