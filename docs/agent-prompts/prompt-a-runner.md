@@ -158,3 +158,10 @@ Do **not**:
 - execute a future Prompt A merely because it has been preregistered;
 - replace durable repository evidence with a conversation summary;
 - activate a pending project implicitly because its handoff looks newer or more actionable.
+
+## Chat-only implementation boundary (owner-approved)
+
+Never deploy a separate website, MCP server, plugin-UI host, ChatKit app, Vercel project, or tunnel for Handoff Control UI without a new explicit owner request. This cancelled UI track is not part of Prompt A's implicit continuation. Continue in this ChatGPT conversation and the approved GitHub repository. Existing stock_data deployment jobs are unrelated and remain subject to their own owner permissions.
+
+Before suggesting a retry, compare fresh evidence to the prior checkpoint. For unchanged BLOCKED gates, attempt only safe bounded investigation with an actionable result; otherwise report the precise prerequisite instead of spinning. Close with the literal manual next command only if genuinely useful; never promise an unsupported native chat button.
+
