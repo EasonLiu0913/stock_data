@@ -4,7 +4,7 @@ Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
 Plan version: `goal-v2`, owner-approved M1 scope amendment 2026-10-10; see section CJ. Original goal-v1 M1 A/B preserved as superseded historical contracts.
-Ultimate goal status: **NOT COMPLETE**. Round 0 evidence inspection **PASS**; all subsequent rounds **PENDING**.
+Ultimate goal status: **NOT COMPLETE**. M0 and M1-v2 **COMPLETE**; M2 promoted for explicit Prompt A; M3–M7 PENDING.
 
 ## A. Immutable Project Charter — WHY
 
@@ -35,8 +35,8 @@ The following plan is **preapproved for sequencing and analysis only**. Each pha
 | Phase | Small goal | Acceptance/exit | State |
 |---|---|---|---|
 | M0 | Existing MI_INDEX full-file inspection and test gate | [Evidence #12](https://github.com/EasonLiu0913/stock_data/actions/runs/37909179708) passes 41/41 tests and MI_INDEX inspection | COMPLETE (gate only) |
-| M1-v2 | TWSE official stock-column market breadth for 20261008 | Same-date official MI_INDEX 5-bucket source and hash, exact reported scope, no inference of individual 1085-identity or 5%-gainers; independent Prompt B | ACTIVE — **owner-approved scope change; independent closeout pending** |
-| M2 | Finish market-opening financial facts | Official TWSE institution TWD totals, sector turnover/mapping, 5-day history, breadth; date/unit/scope evidence and snapshot validation | PENDING |
+| M1-v2 | TWSE official stock-column market breadth for 20261008 | Same-date official MI_INDEX 5-bucket source and hash, exact reported scope, no inference of individual 1085-identity or 5%-gainers; independent Prompt B | COMPLETE — **independent Prompt B PASS; official aggregate only** |
+| M2 | Finish market-opening financial facts | Official TWSE institution TWD totals, sector turnover/mapping, 5-day history, breadth; date/unit/scope evidence and snapshot validation | ACTIVE / PROMOTED — Prompt A ELIGIBLE (not run) |
 | M3 | Research and validate market-regime phrasing | Transparent, conservative criteria with test cases, evidence/uncertainty and no unsupported flows | PENDING |
 | M4 | Produce spoken market-opening script and single-source captions contract | Brand 3 lines exact; all facts cited internally; spoken/screen/SRT parity; defensible 70/30 voice | PENDING |
 | M5 | Real 60–90s TTS and video preview proof | Timed TTS incl. brand, segment UI, presenter, 1080p presentation, subtitles not blocking UI; actual artifact comparison | PENDING |
@@ -50,10 +50,10 @@ Do not mark M1 complete merely because the source JSON contained 36,699 rows; th
 Global task state is from `docs/agent-prompts/task-routing.json`. Global invariant: **one** active task at most. This project is currently **active**, as verified in the routing registry on 2026-10-09; future changes must follow the registry. Activation alone never executes work.
 
 Within this project, follow phase identity and paired-prompt state:
-- Current phase: M1-v2 **ACTIVE / PROMOTED; original historical-master blocker owner-de-scoped for market breadth, independent new gate still pending**. A previous `promptA` performed bounded source investigation and checkpointed the blocker; it did NOT meet the A completion contract.
+- Current phase: M2 ACTIVE / PROMOTED; M1-v2 COMPLETE after independent Prompt B PASS (see section CL). A previous `promptA` performed bounded source investigation and checkpointed the blocker; it did NOT meet the A completion contract.
 - M0: COMPLETE, accepted evidence only for tests and raw MI_INDEX inspection, NOT overall Phase 1 completion.
 - M1-v2 Prompt A: **COMPLETE** (source extraction, remote evidence checkpoint and six local isolated tests; see CK).
-- M1-v2 Prompt B: PREREGISTERED under section CJ, **ELIGIBLE on explicit user Prompt B**; not executed or passed. Original M1 goal-v1 A/B in G/H are superseded, not retroactively passed.
+- M1-v2 Prompt B: **PASS / COMPLETE**, section CL. Original goal-v1 acceptance remains superseded, never retroactively passed. Original M1 goal-v1 A/B in G/H are superseded, not retroactively passed.
 - Later phases: PENDING ROADMAP ONLY, no implied permission to execute early.
 - Project status COMPLETE only after M7 closeout; any intermediate green CI is NOT sufficient.
 
@@ -753,3 +753,22 @@ Reviewed exact remote-main `scripts/verify_daily_gainers_official_market_breadth
 Checkpoint machine-readable evidence at `data_research/twse-market-opening/20261008-m1v2-prompt-a-official-market-breadth-evidence.json` commit `eb1b7db109587e5fcc1cc66391571640d9b3a6cb`. This **fulfills owner-approved scoped M1-v2 Prompt A work**, enables independent Prompt B; it does **not** pass full M1, publish a market-opening `complete` artifact, run M2, or trigger video/YouTube/deploy/cron. Old as-of-1085 historical legal master remains nonblocking backlog.
 
 **Diff:** previous M1-v2 source/test preflight now independently parsed actual official archived table and verified six bounded tests; remote research evidence durable. **Remaining Prompt B blockers/risks:** independently recompute original raw-byte digest in fresh checkout, rerun focused tests and verify exact old/new strict guard invariants; no observed current-version CI PASS, so B must not assume. **Next command:** owner invokes **Prompt B** for M1-v2 independent closeout, then on genuine PASS promote/pre-register M2 paired A/B without executing M2.
+
+
+## CL. M1-v2 independent Prompt B closeout — 2026-10-10
+
+**PASS. M1-v2 COMPLETE; M2 Prompt A ELIGIBLE but not executed. Research: PROGRESS.** Independent B checked remote main `54208c435bcee4e997c870d7af6430afe18e1bdf`, unique Active `daily-gainers-market-opening-end-to-end`, and owner-approved `goal-v2` supersession for official aggregate only. Original goal-v1 M1 contracts are preserved as superseded, not retroactively passed.
+
+**Authentic source recheck:** GitHub blob `2666ad48ea4948c410c6421b4a9cba7067376767` for `data_twse_mi_index/20261008_twse_mi_index.json` read and independently UTF-8 encoded: **12,096,498 bytes**. Independently calculated SHA-256 **`c93be0a5fae5a9aa4ee9a02c83e7a7354fb1a3e715a09cc0f2d3cfe7e76709a5`** MATCH. JSON `stat=OK`, `date=20261008`, `tables[7].title=漲跌證券數合計`, `fields=[類型,整體市場,股票]`. Official **股票 column**: rising 425 (limit-up 14), falling 540 (limit-down 2), unchanged 109, no-trade 3, no-comparison 5; sum **1082**. This is NOT an authenticated legal historical 1085 roster and NOT an individually verified >=5% securities list.
+
+**Independent tests:** fetched exact remote verifier blob `808e8214ddb17e9b94f21e734ee87e36d074d71a` and test blob `dd11181f86b9441a628bb1d4a659ff50a812b7cc`; copied to isolated local Node environment and executed `node --test`: **6 PASS / 0 FAIL / 0 SKIP**. Explicitly an equivalent isolated execution, NOT clean checkout or GitHub Actions CI. Guards on date, TWSE exact stock scope, SHA formatting, all five integer nonnegative buckets verified, with `legal_identity_master_certified:false` and `individual_stock_gainers_5pct_verified:false`. Existing strict sources unchanged on remote main: `scripts/validate_daily_gainers_market_opening.js` `a81b072d2f8eb7e3dfa39b80b6a5189ec6e9dfa6`; `scripts/build_twse_common_stock_breadth.js` `1f0d1eae30b284763957f520286a1bc9549c783f`; `scripts/reconcile_twse_stock_breadth.js` `035586502270a88d30c2c300750b3512d2b3d049`. Per-stock 5%-gainers strict verification remains mandatory, not relaxed. No workflow, production, V1/V2, Pages, video, YouTube or cron changes.
+
+**Decision:** M1-v2 narrowly scoped official TWSE aggregate PASS; M1-v2 COMPLETE. M2 promoted, without executing it. M0/M1-v2 complete, M2–M7 remain; ultimate project NOT COMPLETE. No new charter/scope change (plan changed: NO). Historical identity research remains optional non-blocking for aggregate and mandatory where ordinary-common-stock per-security claims are made.
+
+### Preregistered immutable M2 A/B pair — before execution
+
+**Prompt A (research/implementation):** independently source and implement a research-only dated facts snapshot for (1) TWSE three institutional groups' exact buy/sell/net **TWD** and verifiable date/unit, (2) official defensible industry turnover and industry classification provenance, explicitly **not** institutional net inflow, (3) exact five distinct trading-day history with date/cutoff/units, no fabricated or prior-day silent substitution, and (4) clear separation of the official stock-column 1082 aggregate from per-security >=5% gainers list requiring its own complete verified identities. Fail closed to `partial` and list missing critical data instead of claiming publishable `complete`. Add source manifests and strict focused positive/negative tests for stale/incorrect dates, TWD/share mismatch, sector scope, missing five-day windows, missing per-security identity and snapshot quality. Keep strictly limited to research scripts/tests/docs; do NOT change V1/V2, protected workflows, video/YouTube/Pages/deployment/cron. Report immutable evidence and tests; mark A COMPLETE only with reproducible evidence, otherwise BLOCKED with exact source dependency.
+
+**Prompt B (independent, eligible only after A COMPLETE):** fetch newest remote main, same immutable M2 contract, and A artifacts; independently recompute institution amounts/units, sector scope/turnover and historical five trading days from real archival files, rerun relevant tests in fresh checkout or stated comparable isolation, verify all fail-closed semantics and strict individual-stock 5% boundary unchanged, and check no protected workstreams changed. PASS only with all mandatory source dates, units, coverage and reproducible tests; otherwise BLOCKED with bounded repair, without loosening acceptance. On PASS record durable M2 COMPLETE, preregister M3 A/B, then STOP without auto-running M3.
+
+**Next action:** owner `promptA` for M2. **Automatic continuation:** NO. **Current M2 blocker:** none to begin; financial source facts remain to be researched.
