@@ -47,6 +47,18 @@ jobs:
           set -o pipefail
           mkdir -p output/twse-market-opening-inspection
           node --test tests/audit_twse_isin_category_snapshot.test.js tests/reconcile_twse_stock_breadth.test.js tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js tests/daily_gainers_market_opening_real_snapshot.test.js 2>&1 | tee output/twse-market-opening-inspection/test-results.log
+      - name: Audit pinned 20261008 ISIN files from historical commit
+        id: historical_isin
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/twse-market-opening-inspection/historical-isin
+          git fetch --no-tags --depth=1 origin 797628c405a1d4dc91b71db1efe90199899c0388
+          for category in Stock InnovationBoard TDR ETF; do
+            git show "797628c405a1d4dc91b71db1efe90199899c0388:data_twse/twse_industry_${category}.csv" > "output/twse-market-opening-inspection/historical-isin/twse_industry_${category}.csv"
+          done
+          node -e "const a=require('./scripts/audit_twse_isin_category_snapshot');const r=a.inspect({root:'output/twse-market-opening-inspection/historical-isin'});if(!r.source_integrity_verified||r.publication_authorized)process.exit(1);console.log(JSON.stringify(r,null,2))" | tee output/twse-market-opening-inspection/historical-isin-audit.json
       - name: Inspect full archived MI_INDEX file within checkout
         id: inspect
         if: always()
@@ -74,7 +86,8 @@ jobs:
           echo "## TWSE-only Phase 1 Evidence" >> "$GITHUB_STEP_SUMMARY"
           echo "Date: $TARGET_DATE" >> "$GITHUB_STEP_SUMMARY"
           echo "Tests outcome: ${{ steps.tests.outcome }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Inspection outcome: ${{ steps.inspect.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inspection outcome: ${{ steps.inspect.outcome }}"
+          echo "Historical ISIN audit outcome: ${{ steps.historical_isin.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow only inspects MI_INDEX. Historical security-classification evidence is still required for full breadth PASS." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload inspection evidence
         if: always()
@@ -89,9 +102,10 @@ jobs:
         env:
           TEST_RESULT: ${{ steps.tests.outcome }}
           INSPECT_RESULT: ${{ steps.inspect.outcome }}
+          ISIN_RESULT: ${{ steps.historical_isin.outcome }}
         run: |
-          if [ "$TEST_RESULT" != "success" ] || [ "$INSPECT_RESULT" != "success" ]; then
-            echo "::error::Phase 1 Evidence FAILED (tests=$TEST_RESULT, inspect=$INSPECT_RESULT). Download evidence artifact for logs."
+          if [ "$TEST_RESULT" != "success" ] || [ "$INSPECT_RESULT" != "success" ] || [ "$ISIN_RESULT" != "success" ]; then
+            echo "::error::Phase 1 Evidence FAILED (tests=$TEST_RESULT, inspect=$INSPECT_RESULT, historical_isin=$ISIN_RESULT). Download evidence artifact for logs."
             exit 1
           fi
           echo "Phase 1 inspector and unit tests PASS; historical security classification and full-market breadth are NOT yet verified."
