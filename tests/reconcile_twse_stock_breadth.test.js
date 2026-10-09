@@ -1,0 +1,14 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {reconcile}=require('../scripts/reconcile_twse_stock_breadth');
+const date='20261008';
+const counts={date,advancers:425,decliners:540,unchanged:109,no_trade_count:3,no_comparison_count:5};
+const ok=()=>({date,official:{...counts},computed:{...counts,eligible_count:1082},classificationVerified:true,scopeVerified:true});
+test('five TWSE buckets reconcile only with dated proof and never authorize publishing',()=>{const v=reconcile(ok());assert.equal(v.verified,true);assert.equal(v.official_total,1082);assert.equal(v.publication_authorized,false);});
+test('do not merge no-comparison and no-trade',()=>{const f=ok();f.computed.no_trade_count=8;f.computed.no_comparison_count=0;assert.equal(reconcile(f).verified,false);});
+test('fail closed without certified historical classification',()=>{const f=ok();f.classificationVerified=false;assert.throws(()=>reconcile(f),/HISTORICAL_CLASSIFICATION_REQUIRED/);});
+test('fail closed without official category scope verification',()=>{const f=ok();f.scopeVerified=false;assert.throws(()=>reconcile(f),/OFFICIAL_STOCK_SCOPE_NOT_VERIFIED/);});
+test('reject missing fifth category',()=>{const f=ok();delete f.computed.no_comparison_count;assert.throws(()=>reconcile(f),/MISSING_OR_INVALID_no_comparison_count/);});
+test('reject mismatched dates',()=>{const f=ok();f.official.date='20261007';assert.throws(()=>reconcile(f),/OFFICIAL_DATE_MISMATCH/);});
+test('reject eligible denominator mismatch',()=>{const f=ok();f.computed.eligible_count=1081;assert.throws(()=>reconcile(f),/ELIGIBLE_COUNT_NOT_RECONCILED/);});
