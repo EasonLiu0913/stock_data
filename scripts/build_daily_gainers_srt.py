@@ -249,7 +249,7 @@ if abs(cursor - final_video_duration) > 0.30:
     raise RuntimeError(f"Subtitles vs final MP4 duration mismatch: {cursor:.3f}s vs {final_video_duration:.3f}s")
 if cue_audit and cue_audit[-1]["end_seconds"] > final_video_duration + 0.1:
     raise RuntimeError("Last subtitle extends beyond the final MP4")
-out_path.write_text("\n".join(blocks) + "\n", encoding="utf-8")
+out_path.write_text("\n\n".join(block.rstrip("\n") for block in blocks) + "\n", encoding="utf-8")
 manifest = {
     "schema_version": 1,
     "target_date": plan["target_date"],
