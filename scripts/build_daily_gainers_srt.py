@@ -4,6 +4,7 @@ from pathlib import Path
 from mutagen.mp3 import MP3
 from daily_gainers_spoken_text import normalize_spoken_text
 from daily_gainers_subtitle_alignment import align_cues
+from daily_gainers_caption_segments import segment_pairs
 
 if len(sys.argv) < 2:
     print("Usage: python scripts/build_daily_gainers_srt.py <plan.json>", file=sys.stderr)
@@ -192,6 +193,10 @@ for scene in plan.get("scenes", []):
     else:
         chunks = split_text(scene.get("narration"))
         spoken_chunks = chunks
+    if plan.get("schema_version") == 2:
+        timed_pairs = segment_pairs(pairs)
+        chunks = [item["caption"] for item in timed_pairs]
+        spoken_chunks = [item["speech"] for item in timed_pairs]
     if not chunks:
         cursor += rendered_duration
         continue
@@ -223,7 +228,7 @@ for scene in plan.get("scenes", []):
         if end <= start:
             raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
         blocks.append(
-            f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{wrap_caption_for_screen(chunk)}\n"
+            f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{chunk}\n"
         )
         cue_audit.append({"cue": cue_no, "scene_id": sid, "scene_title": scene.get("title"),
                           "start_seconds": round(cursor+start, 3),
