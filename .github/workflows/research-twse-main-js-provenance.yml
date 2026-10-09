@@ -1,0 +1,30 @@
+name: "[研究] TWSE Main JS Provenance"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Validate static extraction guards
+        run: node --test tests/research_twse_main_js_provenance.test.js
+      - name: Fetch and fingerprint official linked main.js
+        run: node scripts/research_twse_main_js_provenance.js output/twse-main-js-provenance
+      - name: State evidence boundary
+        if: always()
+        run: |
+          echo 'Only source-linked main.js is downloaded; runtime configuration and event query results are not proven.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'M1 remains BLOCKED. No production, cron or other workflows run.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twse-main-js-provenance-research-only
+          path: output/twse-main-js-provenance/
+          if-no-files-found: warn
+          retention-days: 14
