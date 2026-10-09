@@ -32,6 +32,8 @@ jobs:
         run: |
           node tests/daily_gainers_text_variants.test.js
           node tests/daily_gainers_v2_full_20261008.test.js
+      - name: Verify punctuation subtitle segmentation
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py'
       - name: Generate v2 plan
         run: |
           node scripts/build_daily_gainers_v2_preview.js 20261008
