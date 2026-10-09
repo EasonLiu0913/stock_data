@@ -1,0 +1,30 @@
+name: "[研究] TWSE Bounded Result Preflight"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify host provenance fail-closed guards
+        run: node --test tests/research_twse_bounded_result_preflight.test.js
+      - name: Capture official configuration page without querying events
+        run: node scripts/research_twse_bounded_result_preflight.js output/twse-bounded-result-preflight
+      - name: Explain bounded research evidence
+        if: always()
+        run: |
+          echo 'Source-bound query configuration is NOT proven; no result API calls are made.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Original M1 is BLOCKED and production is not authorized.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twse-bounded-result-preflight-research-only
+          path: output/twse-bounded-result-preflight/
+          if-no-files-found: warn
+          retention-days: 14
