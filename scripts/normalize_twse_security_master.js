@@ -10,6 +10,7 @@
  * today's roster alone.
  */
 const fs=require('node:fs');
+const crypto=require('node:crypto');
 function ymd(v){return /^20\d{6}$/.test(String(v||''))&&!Number.isNaN(Date.parse(v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8)+'T00:00:00Z'));}
 function normalizeArchive(input,date){
  if(!ymd(date))throw Error('INVALID_DATE');
@@ -27,13 +28,16 @@ function normalizeArchive(input,date){
  return {date,market:'TWSE',source:{publisher:s.publisher,reference:s.reference,as_of_date:date,archive_sha256:s.archive_sha256,archive_record_count:securities.length},securities};
 }
 function main(argv=process.argv.slice(2)){
- const [date,inputPath,outputPath]=argv;
- if(!date||!inputPath||!outputPath)throw Error('Usage: node scripts/normalize_twse_security_master.js YYYYMMDD verified-archive.json output.json');
+ const [date,inputPath,outputPath,archivePath]=argv;
+ if(!date||!inputPath||!outputPath||!archivePath)throw Error('Usage: node scripts/normalize_twse_security_master.js YYYYMMDD verified-manifest.json output.json source-archive.bin');
  const input=JSON.parse(fs.readFileSync(inputPath,'utf8'));
  // SHA-256 must refer to the externally archived ORIGINAL source, not this manifest.
  // Cross-file provenance verification belongs to the acquisition workflow.
+ const digest=verifyArchiveDigest(input,fs.readFileSync(archivePath));
  const result=normalizeArchive(input,date);
+ result.source.digest_verified=true;
+ result.source.archive_sha256=digest;
  fs.writeFileSync(outputPath,JSON.stringify(result,null,2)+'\n');
 }
 if(require.main===module){try{main();}catch(error){console.error(error.message);process.exitCode=1;}}
-module.exports={normalizeArchive};
+module.exports={normalizeArchive,verifyArchiveDigest,ymd};
