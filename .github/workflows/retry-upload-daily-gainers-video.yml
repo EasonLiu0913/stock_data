@@ -17,7 +17,7 @@ on:
       - "video_upload_jobs/daily-gainers/*.json"
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -105,6 +105,24 @@ jobs:
             "${{ steps.youtube.outputs.video_id }}" \
             "output/daily-gainers-video/$date/daily-gainers-$date.zh-TW.srt" \
             "zh-TW" "繁體中文"
+
+      - name: Record completed YouTube upload
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VIDEO_ID: ${{ steps.youtube.outputs.video_id }}
+          DATE: ${{ steps.job.outputs.date }}
+          SOURCE_RUN: ${{ steps.job.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          [ -n "$VIDEO_ID" ]
+          dest="video_upload_receipts/daily-gainers/$DATE.json"
+          json="$(jq -n --arg date "$DATE" --arg id "$VIDEO_ID" --arg run "$SOURCE_RUN" '{target_date:$date,youtube_video_id:$id,source_run_id:$run,upload_status:"complete",privacy:"private"}')"
+          if gh api "repos/$GITHUB_REPOSITORY/contents/$dest?ref=main" >/dev/null 2>&1; then
+            echo "Existing upload receipt: $dest"
+          else
+            gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/$dest" -f message="video: record YouTube upload $DATE" -f content="$(printf '%s' "$json" | base64 -w0)" -f branch=main >/dev/null
+          fi
 
       - name: Job summary
         if: success()
