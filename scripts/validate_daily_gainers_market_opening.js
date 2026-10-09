@@ -34,7 +34,8 @@ function validateOpeningSnapshot(snapshot) {
   if (!b || b.scope!=='TWSE_COMMON_STOCK') throw new Error('BREADTH_SCOPE');
   assertNum(b,['advancers','decliners','unchanged','eligible_count','gainers_5pct_count'],'breadth');
   for(const k of ['advancers','decliners','unchanged','eligible_count','gainers_5pct_count']) if (!Number.isInteger(b[k]) || b[k]<0) throw new Error('BREADTH_COUNT');
-  if (b.advancers+b.decliners+b.unchanged>b.eligible_count || b.gainers_5pct_count>b.advancers) throw new Error('BREADTH_INCONSISTENT');
+  if (!Number.isInteger(b.no_trade_count) || b.no_trade_count<0) throw new Error('BREADTH_NO_TRADE_COUNT');
+  if (b.advancers+b.decliners+b.unchanged+b.no_trade_count!==b.eligible_count || b.gainers_5pct_count>b.advancers) throw new Error('BREADTH_INCONSISTENT');
   if (!Array.isArray(b.identities) || b.identities.length!==b.eligible_count) throw new Error('MISSING_CLASSIFIED_UNIVERSE');
   const seen = new Set();
   for(const item of b.identities) {
