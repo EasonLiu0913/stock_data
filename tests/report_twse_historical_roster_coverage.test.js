@@ -36,3 +36,25 @@ test('quote join rejects mismatched date even when digest matches supplied test 
   assert.throws(()=>require('../scripts/report_twse_historical_roster_coverage').quoteCodes(filename,digest),/QUOTE_ARCHIVE_DATE_MISMATCH/);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('quote join reads actual code column regardless of column position',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mi-quote-positive-'));
+ try{
+  const filename=path.join(dir,'quote.json');
+  const payload={date:'20261008',stat:'OK',tables:[{fields:['收盤價','證券代號','漲跌價差'],data:[['10','<span>2330</span>','1'],['20','2237','2']]}]};
+  const bytes=Buffer.from(JSON.stringify(payload));fs.writeFileSync(filename,bytes);
+  const digest=require('node:crypto').createHash('sha256').update(bytes).digest('hex');
+  const result=require('../scripts/report_twse_historical_roster_coverage').quoteCodes(filename,digest);
+  assert.equal(result.rows,2);assert.deepEqual([...result.codes],['2330','2237']);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('quote join fails on duplicate quote identifiers rather than silently deduplicating',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mi-quote-duplicate-'));
+ try{
+  const filename=path.join(dir,'quote.json');
+  const payload={date:'20261008',stat:'OK',tables:[{fields:['證券代號','收盤價','漲跌價差'],data:[['2330','10','1'],['<b>2330</b>','10','1']]}]};
+  const bytes=Buffer.from(JSON.stringify(payload));fs.writeFileSync(filename,bytes);
+  const digest=require('node:crypto').createHash('sha256').update(bytes).digest('hex');
+  assert.throws(()=>require('../scripts/report_twse_historical_roster_coverage').quoteCodes(filename,digest),/DUPLICATE_QUOTE_CODE:2330/);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
