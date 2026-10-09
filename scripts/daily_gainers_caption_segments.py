@@ -19,6 +19,9 @@ def split_phrases(value):
 def _split_long(caption, speech):
     if len(caption) <= MAX_CHARS:
         return [(caption, speech)]
+    if caption == speech:
+        return [(caption[i:i+MAX_CHARS], speech[i:i+MAX_CHARS])
+                for i in range(0, len(caption), MAX_CHARS)]
     # Map an internal caption offset to the equivalent speech position by
     # matching unchanged text. Numbers can expand in the spoken version.
     matcher = SequenceMatcher(None, caption, speech, autojunk=False)
