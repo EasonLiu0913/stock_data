@@ -156,3 +156,17 @@ On any failure: keep M1 blocked, repair only the bounded fault and rerun full cl
 - On `promptA`, re-read the official-source evidence and J blocker, perform only bounded original M1 work, reuse already accepted M0 inspection, and stop with exact source/permission action if no verifiable dated archive can be obtained without owner-approved access. Do **not** force a paid order or falsely accept today's ISIN list as historical.
 - On `promptB` before A COMPLETE, report `B_NOT_ELIGIBLE; NEXT_COMMAND: promptA`, the source-specific blocker, and owner action if necessary; no fake B failure/PASS.
 - Awaiting official data is not background work. A later `promptA` or owner-authorized automation checks the condition again. The paired acceptance in H and Goal `goal-v1` remain unchanged; M2–M7 stay pending. `Plan changed? no`.
+
+## L. M1 resumed Prompt A: free-source cross-check — 2026-10-09
+
+**Status remains BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE.** Current main and unique active routing rechecked. The original M1 Prompt A/B and goal-v1 acceptance remain unchanged; no M2 work authorized.
+
+Additional official open-data candidates investigated:
+
+- https://data.gov.tw/dataset/18419 — 上市公司基本資料 (TWSE listed company profile): free, updated monthly, includes issuer code, listing date, ordinary share par value. No authenticated 20261008 historical file/snapshot or complete security instrument coverage established. A current listing is not an as-of target-date classification master.
+- https://data.gov.tw/dataset/11425 — 證券基本資料 (TDCC): free, updated daily, security code, name, market and security state/update date. No authenticated 20261008 original file or proven ordinary-share type classification established. Current state is not historical archive.
+- https://eshop.twse.com.tw/zh/product/detail/000000006f6a5e3401702de5988d004b — official TRANISIN dated security-classification XLS; official site advertises internal use NT$5,000/month with terms. Purchasing/access needs owner authorization; **no purchase attempted**, no credential or licensed bytes available.
+
+These are source-description findings, **not** archival acquisition evidence or validated breadth. No historical master was acquired, so the normalizer/breadth/merge pipeline must not be run with unverified data; previous M0 inspection remains durable, and published market-opening result must remain partial. Missing proof is still an authenticated, effective-dated 20261008 TWSE security-type archive including classification/coverage for MI_INDEX quote rows and suspension cases.
+
+**NEXT ACTION:** Either provide a legally usable 20261008 original TRANISIN or equivalent archive with acquisition/date proof (owner decision for fee/license), or supply an independently archived dated official free file. A later bare `promptA` automatically rechecks such new evidence and resumes M1; `promptB` is not yet eligible. No waiting workflow or known future automatic date can resolve the absent historical file. Ultimate progress M0 complete, M1 blocked, M2–M7 pending; plan changed? **No**.
