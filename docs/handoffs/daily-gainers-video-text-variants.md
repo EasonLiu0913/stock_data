@@ -49,6 +49,12 @@ Three independent, versioned text output artifacts for display, caption, speech,
 - No full `v2/20261008/master.json` has been authored: do not claim this test is real 20261008 full narration or voice verification. Actual CI conclusion and MP3/MP4 artifact still unverified.
 - Gate before next promotion: produce complete fact-checked tokenized 20261008 Master, run all tests, actual Edge TTS WordBoundary synchronization and rendered MP4 without uploading; examine failures; ensure v2 picture draws display text and router enforces variant hash provenance.
 
+## Phase 4 evidence checkpoint — 20261008 genuine legacy script audit
+- Reviewed all nine original narration scenes, plus raw stock universe name mapping; real 9103 name is `美德醫療-DR`, while scene 3 title currently says `南染與防疫概念` (blocker). Other narration still contains code-only spoken references, long Chinese numeric literals, and dates. Do not claim those legacy narratives have been converted.
+- Added `scripts/audit_daily_gainers_video_v2_readiness.js` (commit `696eac801c56ac4d019eaea250d1c0b22959f2e8`) and its regression `tests/daily_gainers_v2_readiness_audit.test.js` (commit `c5f36133514e0585b6b95441a7c18659325fdcb2`), included in isolated CI (commit `43b3bd746d422639b0d7cc1dc058e6f3aa2bacd1`). Expected audit result for 20261008 is BLOCKED, not success, until factual inconsistencies and typed numeric narration are repaired.
+- No verified CI green result yet. No full nine-scene v2 master, TTS, SRT, MP4, or upload; next agent must not skip those stages or reinterpret audit-test PASS as production-readiness PASS.
+- Next focus: author all nine scenes into verified typed cue tokens, correct 9103 visuals only after checking original editorial/source facts, validate full equivalence, then render a non-uploaded MP3/SRT/MP4 sample and independently examine timing and pronunciation.
+
 ## Next round
 1. Implement a deterministic shared representation of semantic utterances and verified stock identities.
 2. Emit separately persisted `display.json`, `captions.json`, `speech.json`, plus equivalence/alignment provenance manifest and source/rules hashes.
