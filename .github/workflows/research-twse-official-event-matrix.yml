@@ -1,0 +1,42 @@
+name: "[研究] TWSE Official Event Evidence Matrix"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: twse-official-event-matrix-manual
+  cancel-in-progress: false
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Run isolated 20-code matrix integrity tests
+        run: node --test tests/report_twse_market_opening_official_event_matrix.test.js
+      - name: Build fail-closed research report
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/report_twse_market_opening_official_event_matrix.js             data_research/twse-market-opening/official-event-evidence-matrix-20261008.csv             output/twse-official-event-matrix/report.json
+          cp data_research/twse-market-opening/official-event-evidence-matrix-20261008.csv             output/twse-official-event-matrix/official-event-evidence-matrix.csv
+      - name: Summarize verification boundary
+        if: always()
+        shell: bash
+        run: |
+          echo "## TWSE official event research-only" >> "$GITHUB_STEP_SUMMARY"
+          echo "This job checks a committed 20-code evidence matrix and produces a machine-readable JSON report." >> "$GITHUB_STEP_SUMMARY"
+          echo "It does NOT fetch the original date-effective 20261008 issuer master, nor verify all external official pages afresh." >> "$GITHUB_STEP_SUMMARY"
+          echo "Original M1 acceptance remains BLOCKED; no production reader, schedule or publication changes." >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve matrix and per-code JSON research artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twse-official-event-matrix-research-only
+          path: output/twse-official-event-matrix/
+          if-no-files-found: error
+          retention-days: 14
