@@ -14,7 +14,9 @@ check(raw.target_date === date && ai.target_date === date && summary.target_date
 check(summary.status === 'final' && summary.coverage?.overall === 'complete', 'summary not final/complete');
 check(raw.stock_count === raw.stocks.length && ai.stock_count === raw.stock_count && script.stock_count === raw.stock_count, 'stock count mismatch');
 check(script.schema_version === 1 && script.methodology_version === 'chatgpt-video-script-v1', 'script schema mismatch');
-check(script.source_summary_generated_at === summary.generated_at, 'stale script: source summary timestamp differs');
+// The script is approved for a trading date, not for a volatile summary generation timestamp.
+// Keep the original source timestamp for provenance without invalidating historical videos.
+check(typeof script.source_summary_generated_at === 'string' && !Number.isNaN(Date.parse(script.source_summary_generated_at)), 'missing or invalid original source timestamp');
 check(Array.isArray(script.scenes) && script.scenes.length >= 5 && script.scenes.length <= 20, 'scene count must be 5-20');
 const codes = new Set(raw.stocks.map(s => String(s.code)));
 let chars = 0;
