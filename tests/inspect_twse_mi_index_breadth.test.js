@@ -10,3 +10,13 @@ test('compact MI_INDEX profile identifies the stock table without classifying ty
 });
 test('stale trading day is rejected',()=>assert.throws(()=>inspect(data,'20261007'),/INVALID_OR_STALE_MI_INDEX/));
 test('missing data tables is rejected',()=>assert.throws(()=>inspect({stat:'OK',date:'20261008'},'20261008'),/INVALID_OR_STALE_MI_INDEX/));
+
+test('official five-category table must use distinct stock and whole-market columns',()=>{
+ const fixture={...data,tables:[...data.tables,{title:'漲跌證券數合計',fields:['類型','整體市場','股票'],data:[['上漲','999','425'],['下跌','999','540'],['持平','999','109'],['未成交','999','3'],['無比價','999','5']]}]};
+ const profile=inspect(fixture,'20261008');
+ const t=profile.table_profiles.find(t=>t.title==='漲跌證券數合計');
+ assert.ok(t);
+ assert.deepEqual(t.fields,['類型','整體市場','股票']);
+ assert.equal(t.rows,5);
+ assert.equal(profile.stock_candidates.length,1);
+});
