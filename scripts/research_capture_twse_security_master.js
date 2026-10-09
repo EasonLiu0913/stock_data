@@ -45,7 +45,7 @@ async function collect({date,dir,fetcher=fetch,now=()=>new Date().toISOString()}
  for(const [name,spec] of Object.entries(SOURCES)){
   let response,bytes=null,status=0,type='',acquiredAt=now();
   try{
-   response=await fetcher(spec.url,{headers:{Accept:spec.kind==='json'?'application/json':'text/html'},signal:AbortSignal.timeout(12000)});
+   response=await fetcher(spec.url,{headers:{Accept:spec.kind==='json'?'application/json':'text/html'},signal:AbortSignal.timeout(name==='isin_listed'?30000:12000)});
    status=response.status;type=response.headers.get('content-type')||'';
    const len=Number(response.headers.get('content-length')||0);
    if(len>8_000_000)throw Error('SOURCE_OVERSIZE');
