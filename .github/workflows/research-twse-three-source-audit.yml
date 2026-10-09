@@ -1,0 +1,48 @@
+name: "[研究] TWSE Three-Source Offline Audit"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install RTF converter for offline owner-file audits
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends unrtf
+      - name: Run focused synthetic research tests
+        run: node --test tests/research_reconcile_twse_owner_sources.test.js
+      - name: Package owner-supplied previous offline 20-code differences
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/twse-three-source-audit
+          cp data_research/twse-market-opening/owner-three-source-20261008-exceptions.csv output/twse-three-source-audit/per-code-differences.csv
+          python3 - <<'PY'
+          import csv,json,pathlib
+          p=pathlib.Path("output/twse-three-source-audit/per-code-differences.csv")
+          rows=list(csv.DictReader(p.open(encoding="utf-8-sig")))
+          expected={"1303","1337","1340","1449","2465","2482","2486","2491","3054","3673","3717","4934","5292","6133","6757","6794","6869","6873","6902","7780"}
+          assert len(rows)==20 and {r['code'] for r in rows}==expected
+          assert all(r['difference_reason'] for r in rows)
+          report={"research_only":True,"source":"previous owner-uploaded local cross-check (not fetched/recomputed in CI)","target_date":"20261008","isin_snapshot_date":"20261010","exception_count":len(rows),"rows":rows,"historical_master_complete":False,"publication_authorized":False,"verification":"FIXTURE_INTEGRITY_ONLY","m1_gate":"BLOCKED"}
+          pathlib.Path("output/twse-three-source-audit/research-report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
+          PY
+      - name: Explain source-data boundary
+        shell: bash
+        run: |
+          echo "## TWSE three-source research CI" >> "$GITHUB_STEP_SUMMARY"
+          echo "Unit tests validate parsing and fail-closed logic using synthetic samples." >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact includes the 20 previously owner-audited exceptions; it was NOT recomputed from three full originals in this run." >> "$GITHUB_STEP_SUMMARY"
+          echo "M1 original acceptance remains BLOCKED; no publication or cron." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twse-three-source-audit-research-only
+          path: output/twse-three-source-audit/
+          retention-days: 14
+          if-no-files-found: warn
