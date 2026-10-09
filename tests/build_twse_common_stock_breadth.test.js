@@ -43,3 +43,18 @@ test('refuse duplicate security code',()=>{
  const f=fixture();f.payload.tables[0].data.push(f.payload.tables[0].data[0]);
  assert.throws(()=>buildBreadth(f),/DUPLICATE_TWSE_CODE/);
 });
+
+test('TWSE HTML price sign is parsed from its glyph, not CSS color',()=>{
+ const f=fixture();
+ f.payload.tables[0].data[0][3]='<p style="color:green">+</p>';
+ assert.equal(buildBreadth(f).advancers,1);
+});
+test('rejects unrecognized price sign rather than silently guessing',()=>{
+ const f=fixture();f.payload.tables[0].data[0][3]='unknown';
+ assert.throws(()=>buildBreadth(f),/UNRECOGNIZED_PRICE_SIGN/);
+});
+test('exclude untraded ordinary shares from advancers and preserve denominator',()=>{
+ const f=fixture();f.payload.tables[0].data[2][2]='--';f.payload.tables[0].data[2][4]='--';
+ const result=buildBreadth(f);
+ assert.equal(result.no_trade_count,1);assert.equal(result.eligible_count,3);assert.equal(result.unchanged,0);
+});
