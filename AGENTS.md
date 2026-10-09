@@ -65,6 +65,10 @@ Show a button ONLY for an actually eligible or resumable next step. For `WAITING
 
 This requirement is **presentation**, not a change to any charter, immutable paired acceptance, automatic background execution, or promotion rule. The repository cannot force all third-party Agent UIs to support clickable controls: in plain-text clients provide an equivalent clearly delimited final next-action panel with the exact command and honest statement that it must be entered manually. All actions must be direct user clicks, not programmatic self-triggered turns. Keep the detailed verification evidence in the response above the card; the card is only the concise operational summary.
 
+## Next-action UI capability contract
+
+At the end of each Prompt A/B response, check whether this chat client actually exposes a supported user-clickable action control. If it does, show exactly one real action for the eligible next command and require a fresh user-triggered turn. **Never print pseudo-buttons** such as `[繼續 Prompt A]` or `[執行 Prompt B]` when no interactive control is available: bracketed labels are not buttons. If unsupported, show a clear, compact **下一步操作** section with a copyable literal `promptA` or `promptB` and explicitly say this client cannot render a real send-command button. Do not invent an API such as `GenUI.issueNewTurn`; use it only if genuinely available in the executing client. If blocked on owner action, source, workflow, or permission, name the blocker and avoid a misleading repeat-action recommendation. Repository markdown cannot add native ChatGPT UI controls. Preserve all existing A/B gates and owner-trigger requirements.
+
 ## Repository short commands: `promptA` / `promptB`
 
 The repository owner may invoke the paired-prompt lifecycle with the short commands `promptA` or `promptB` instead of pasting the full generic runner instructions into chat.
