@@ -62,7 +62,7 @@ for scene in plan.get("scenes", []):
     if duration <= 0:
         raise RuntimeError(f"Invalid audio duration: {audio_path}")
 
-    text = normalize_spoken_text(scene.get("narration"))
+    text = normalize_spoken_text(scene.get("speech_text") if plan.get("schema_version") == 2 else scene.get("narration"))
     units = []
     for ch in text:
         shape, weight = classify_char(ch)
