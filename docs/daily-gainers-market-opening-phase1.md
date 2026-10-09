@@ -65,3 +65,13 @@
 - 解析一個實際交易日各原始資料的日期、欄位、單位和證券市場範圍，製作真實 sample JSON。
 - 針對同日性、資料缺口、金額股數混用、上櫃混入、重複法人分組建立自動測試。
 - Phase 1 PASS 後才進行 60–90 秒市場開場與語音／字幕同步驗收。
+
+## 2026-10-10 Owner-approved M1 scope amendment — official market breadth (goal-v2)
+
+**Acceptance change owner-approved**: daily opening market breadth uses the date-matched official TWSE MI_INDEX `漲跌證券數合計` **股票** column (not `整體市場`) with all five separate buckets `上漲 / 下跌 / 持平 / 未成交 / 無比價`. These figures are narrated as **「證交所官方股票欄位統計」**, not as independently audited `TWSE_COMMON_STOCK` or a computed 1,085-member securities master. Preserve exact date, official field/scope, raw archive digest, units, and source manifest. Keep `無比價` distinct from `未成交`, no reclassification or invented per-stock breakdown. When source unavailable or date/scope verification fails, omit the assertion or mark the segment partial; do not fabricate.
+
+For the Oct08 verified archived MI_INDEX `tables[7]` official stock column, counts are up 425, down 540, unchanged 109, no trade 3, no comparison 5 (**1,082** aggregate stock rows under the exchange's published grouping). This aggregate **must not** be equated to 1,085 identity items. Source historical identity completeness work remains retained under a **non-blocking research backlog**; its 2026-10-08 legal/board/CFI roster is not certified.
+
+**Separation of guarantees:** `scripts/verify_daily_gainers_official_market_breadth.js` is a *narrow*, research-only official-aggregate validator; it never certifies individual securities nor publication of a full market-opening snapshot. The strict `scripts/validate_daily_gainers_market_opening.js`, `scripts/build_twse_common_stock_breadth.js`, `scripts/reconcile_twse_stock_breadth.js` remain unchanged as guards for security-by-security evidence. The daily >=5% stock list MUST use actual same-day TWSE common stock classification, individual moves, exclusions, and required data-quality gates, without resort to code length, aggregate shortcuts or post-dated evidence. Retain factual financial analysis, brand lines, spoken/caption/SRT parity, and no prior-day fallback. Never treat aggregate breadth verification as 5%-gainers or end-to-end video PASS.
+
+**Phased transition:** Original M1 goal-v1 Prompt A/B are historical contracts preserved, but **owner-superseded for market breadth only**; new M1-v2 requires the separate official five-bucket validation on archived authentic MI_INDEX and independent test/review before declaring M1 PASS. M2 can be preregistered and scheduled only after its own Prompt B eligibility and independent closeout. No production/caption/video/YouTube/deployment/cron changes are approved here.
