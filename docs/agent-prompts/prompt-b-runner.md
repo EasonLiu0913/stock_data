@@ -194,3 +194,7 @@ Do **not** execute the promoted Prompt A automatically.
 
 Handoff Control UI standalone-site/MCP/Vercel/ChatKit deployment is stopped until a new explicit user request. Do not deploy or restart it through Prompt B or call it a required acceptance step; this does not affect independently authorized stock_data publishing. Perform all Handoff B gate checks through this ChatGPT conversation and repository evidence. Preserve the preregistered original B acceptance; require verified A COMPLETE, never self-advance. In the final card use a copyable command only when eligible and never simulate an unavailable interactive button.
 
+
+## Mandatory research progress verdict
+
+After each Prompt B call, select exactly one `research_progress_status`: `PROGRESS` if newly verified material evidence advances work, `NO_PROGRESS` if none does, or `BLOCKED` if an unmet external dependency prevents advancement. Also report independent `phase_status`, verifiable `research_progress_evidence`, `research_progress_reason`, and `next_action`. A round may be PROGRESS while the phase is BLOCKED. Final summary must contain 研究進度判定、目前阻礙、預計研究方向、與上次差異、停止／轉向條件、下一步指令. No fake buttons, automatic phase promotion, or separate deployment.
