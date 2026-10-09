@@ -87,3 +87,12 @@ Every Handoff final action card must include **目前阻礙**, **預計研究方
 ## Exact next command
 
 Every response ends with **下一步指令**. Select exactly one actionable command: `promptA` when A can do distinct authorized work; `promptB` only after A COMPLETE and B eligible; or an explicit non-command action such as `查看 GitHub Workflow`, `提供歷史來源`, `等待新證據`, or `授權必要權限`. Do not recommend `promptA` repeatedly if nothing changed and no distinct research is possible. Show the reason and the prerequisite. Never print a fake clickable button.
+
+## Research progress verdict (mandatory)
+
+Every Handoff Prompt A/B round MUST include a **研究進度判定** with exactly one enum value: `PROGRESS`, `NO_PROGRESS`, or `BLOCKED`. Determine it from evidence acquired in this round, not optimistic narration:
+- `PROGRESS`: newly verified, durable source, code, tests, or validation evidence materially advances the active phase. Cite the concrete artifact/commit/run and explain the change.
+- `NO_PROGRESS`: no material new verified evidence despite work; explain what was tried, why it did not advance, and what materially different approach could be attempted. Never count rereading the same file or repeating unchanged tests as progress.
+- `BLOCKED`: a required external prerequisite (historical source, permission, CI proof, owner decision) prevents further eligible phase advancement; identify exactly what proof/action clears the block. A round may produce useful work while the **phase** remains blocked: report `PROGRESS` for the round and separately `phase_status: BLOCKED`.
+
+For machine-readable state, use `research_progress_status` (enum), `research_progress_evidence` (array of verifiable refs), `research_progress_reason` (string), `phase_status` (separate lifecycle status), and `next_action`. Update the canonical handoff or existing progress record with these fields; if a JSON state file exists, keep it synchronized, never invent acceptance or test PASS. The final card must show **研究進度判定**, **目前阻礙**, **預計研究方向**, **與上次差異**, **停止／轉向條件**, and **下一步指令**. This policy applies to both A and B, preserves original frozen gates, and never authorizes UI deployments.
