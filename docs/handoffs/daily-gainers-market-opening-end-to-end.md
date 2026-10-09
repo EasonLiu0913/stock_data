@@ -47,13 +47,13 @@ Do not mark M1 complete merely because the source JSON contained 36,699 rows; th
 
 ## D. Execution state, single routing source
 
-Global task state is from `docs/agent-prompts/task-routing.json`. Global invariant: **one** active task at most. This project's entry is **pending** until owner explicitly selects/activates it; activating it requires demoting the prior active task to pending with all progress preserved. Changing status does not execute work.
+Global task state is from `docs/agent-prompts/task-routing.json`. Global invariant: **one** active task at most. This project is currently **active**, as verified in the routing registry on 2026-10-09; future changes must follow the registry. Activation alone never executes work.
 
 Within this project, follow phase identity and paired-prompt state:
-- Current phase: M1 **ACTIVE / PROMOTED (Prompt A not started)**, owner-authorized global activation; do not run until owner invokes `promptA`.
+- Current phase: M1 **ACTIVE / PROMOTED; Prompt A BLOCKED on historical master provenance**. A previous `promptA` performed bounded source investigation and checkpointed the blocker; it did NOT meet the A completion contract.
 - M0: COMPLETE, accepted evidence only for tests and raw MI_INDEX inspection, NOT overall Phase 1 completion.
-- M1 Prompt A: PREREGISTERED, NOT STARTED; ELIGIBLE ON OWNER `promptA`.
-- M1 Prompt B: PREREGISTERED, PENDING; must be recovered from a durable pre-Prompt-A checkpoint.
+- M1 Prompt A: PREREGISTERED, STARTED, BLOCKED; eligible for **same-round source-evidence recheck and bounded resumption** on bare `promptA`, not for completion claims.
+- M1 Prompt B: PREREGISTERED, NOT ELIGIBLE until A is durably COMPLETE; bare `promptB` must explain the blocker and recommend `promptA` or owner action, not execute B.
 - Later phases: PENDING ROADMAP ONLY, no implied permission to execute early.
 - Project status COMPLETE only after M7 closeout; any intermediate green CI is NOT sufficient.
 
@@ -149,3 +149,10 @@ On any failure: keep M1 blocked, repair only the bounded fault and rerun full cl
 - Current blocking evidence: missing independently authenticated 20261008 official instrument classification archive.
 - Next phase ID: M1 (resume evidence acquisition); M2 is not promoted.
 - Plan changed? **No**; investigation checkpoint only, no relaxation to preregistered Prompt B.
+
+## K. State-aware v3 handoff guidance — 2026-10-09
+
+- This project remains the unique globally Active task unless the owner switches it. **NEXT_COMMAND: `promptA`**, after checking for a newly available authentic as-of 20261008 classification archive; bare command suffices, no `resume M1` suffix required.
+- On `promptA`, re-read the official-source evidence and J blocker, perform only bounded original M1 work, reuse already accepted M0 inspection, and stop with exact source/permission action if no verifiable dated archive can be obtained without owner-approved access. Do **not** force a paid order or falsely accept today's ISIN list as historical.
+- On `promptB` before A COMPLETE, report `B_NOT_ELIGIBLE; NEXT_COMMAND: promptA`, the source-specific blocker, and owner action if necessary; no fake B failure/PASS.
+- Awaiting official data is not background work. A later `promptA` or owner-authorized automation checks the condition again. The paired acceptance in H and Goal `goal-v1` remain unchanged; M2–M7 stay pending. `Plan changed? no`.
