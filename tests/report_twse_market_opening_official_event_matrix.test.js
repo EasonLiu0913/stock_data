@@ -15,3 +15,11 @@ test('csv matrix never silently accepts unlisted or missing issue codes',()=>{
  assert.equal(parseCsv('code,reason\n3054,DATE')[0].code,'3054');
  assert.equal(inspect(file).rows.length,20);
 });
+
+test('historical five-code first-party corroboration does not silently resolve date semantics',()=>{
+ const report=inspect(file);
+ const five=['1303','2465','2482','2486','2491'];
+ assert.equal(report.source_comparison_only_count,0);
+ for(const code of five){const item=report.rows.find(r=>r.code===code);assert.ok(item.evidence_verdict.startsWith('OFFICIAL_'));assert.match(item.effective_date,/^20[0-9]{6}$|^19[0-9]{6}$/);assert.ok(item.remaining_gap); }
+ assert.equal(report.decision,'BLOCKED');assert.equal(report.full_original_historical_archive_verified,false);
+});
