@@ -154,6 +154,7 @@ cue_no = 1
 blocks = []
 scene_timing = []
 cue_audit = []
+pause_audit = []
 render_timing_path = plan_path.parent / "render-timings.json"
 if not render_timing_path.exists():
     raise FileNotFoundError(f"Missing rendered-scene timing manifest: {render_timing_path}")
@@ -210,7 +211,7 @@ for scene in plan.get("scenes", []):
     for boundary_index in range(1, len(cue_intervals)):
         expected = cue_intervals[boundary_index][0]
         distance = min((abs(expected - p) for p in silence_centers), default=None)
-        cue_audit.append({'scene_id': sid, 'kind': 'pause_boundary_check',
+        pause_audit.append({'scene_id': sid, 'kind': 'pause_boundary_check',
                           'boundary_index': boundary_index,
                           'word_boundary_seconds': round(expected, 3),
                           'nearest_pause_distance_seconds':
@@ -255,6 +256,7 @@ manifest = {
     "subtitle_file": out_path.name,
     "scenes": scene_timing,
     "cues": cue_audit,
+    "pause_checks": pause_audit,
 }
 (plan_path.parent / "subtitle-manifest.json").write_text(
     json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
