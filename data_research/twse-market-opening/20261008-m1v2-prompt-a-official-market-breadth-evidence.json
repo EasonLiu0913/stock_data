@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "goal_contract_version": "goal-v2",
+  "phase": "M1-v2",
+  "prompt": "A",
+  "status": "COMPLETE",
+  "prompt_b_eligible": true,
+  "target_date": "20261008",
+  "source": {
+    "repository_path": "data_twse_mi_index/20261008_twse_mi_index.json",
+    "git_blob_sha": "2666ad48ea4948c410c6421b4a9cba7067376767",
+    "archived_full_original_sha256_from_prior_provenance": "c93be0a5fae5a9aa4ee9a02c83e7a7354fb1a3e715a09cc0f2d3cfe7e76709a5",
+    "fetched_and_parsed_blob_this_turn": true,
+    "observed_stat": "OK",
+    "observed_date": "20261008",
+    "official_aggregate_table_index": 7,
+    "official_title": "漲跌證券數合計",
+    "official_fields": [
+      "類型",
+      "整體市場",
+      "股票"
+    ],
+    "actual_rows": [
+      [
+        "上漲(漲停)",
+        "5,285(78)",
+        "425(14)"
+      ],
+      [
+        "下跌(跌停)",
+        "9,634(83)",
+        "540(2)"
+      ],
+      [
+        "持平",
+        "1,031",
+        "109"
+      ],
+      [
+        "未成交",
+        "17,406",
+        "3"
+      ],
+      [
+        "無比價",
+        "3,343",
+        "5"
+      ]
+    ],
+    "stock_counts": {
+      "advancers": 425,
+      "decliners": 540,
+      "unchanged": 109,
+      "no_trade_count": 3,
+      "no_comparison_count": 5
+    },
+    "stock_column_total": 1082,
+    "interpretation": "TWSE official stock-column counts, NOT legal 1085 ordinary common share master"
+  },
+  "checks": {
+    "official_date_ok": true,
+    "official_field_scope_ok": true,
+    "five_buckets_distinct": true,
+    "verified_archival_sha_referenced": true,
+    "live_recompute_digest_from_full_original_bytes_this_turn": false,
+    "source_authenticated_as_git_blob": true
+  },
+  "test": {
+    "command": "node --test /mnt/data/m1v2check/tests/verify_daily_gainers_official_market_breadth.test.js",
+    "environment": "isolated Node 22 container using exact remote-main fetched verifier and test contents",
+    "pass": 6,
+    "fail": 0,
+    "skipped": 0,
+    "github_actions_current_commit_ci_confirmed": false,
+    "clean_checkout": false
+  },
+  "unchanged_strict_guard": {
+    "path": "scripts/validate_daily_gainers_market_opening.js",
+    "current_blob_sha": "a81b072d2f8eb7e3dfa39b80b6a5189ec6e9dfa6",
+    "fields": [
+      "TWSE-only",
+      "source date",
+      "ordinary individual securities",
+      "no ETF",
+      "institution amounts TWD",
+      "complete per-stock identities"
+    ],
+    "not_modified": true,
+    "real_daily_5pct_list_certified_by_this_work": false
+  },
+  "nonblocking_historical_identity_backlog": true,
+  "limitations": [
+    "Prompt B must independently verify original file digest against raw bytes in fresh checkout",
+    "No CI claim, no M2 promotion, and no full market-opening video publication",
+    "Only market breadth M1-v2 A complete, not overall M1 PASS"
+  ],
+  "next_command": "Prompt B: independently revalidate M1-v2 against clean checkout and source file hash, run relevant tests, confirm individual stock guards, and if PASS mark M1-v2 COMPLETE and preregister M2 without executing it."
+}
