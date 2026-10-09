@@ -15,7 +15,7 @@ function main(args=process.argv.slice(2)){
  if(!/^20\d{6}$/.test(date||'')||!mi||!masterFile)throw new Error('Usage: node scripts/run_twse_common_stock_breadth.js YYYYMMDD --mi-index file.json --security-master file.json');
  const payload=JSON.parse(fs.readFileSync(path.resolve(mi),'utf8'));
  const master=JSON.parse(fs.readFileSync(path.resolve(masterFile),'utf8'));
- if(!master.source || !master.source.as_of_date || master.source.as_of_date!==date || !master.source.reference)throw new Error('UNPROVEN_HISTORICAL_SECURITY_MASTER');
+ if(!master.source || master.source.as_of_date!==date || !/^https:\/\//.test(master.source.reference||'') || master.source.publisher!=='TWSE' || master.source.digest_verified!==true || !/^[a-f0-9]{64}$/.test(master.source.archive_sha256||''))throw new Error('UNPROVEN_HISTORICAL_SECURITY_MASTER');
  const result=buildBreadth({payload,master,targetDate:date});
  const root=path.resolve(__dirname,'..'),out=path.join(root,'data_daily_gain_over_5/market-opening',date+'.breadth.json');
  const output={schema_version:1,target_date:date,market:'TWSE',status:'verified_breadth_only',breadth:result,
