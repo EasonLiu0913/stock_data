@@ -630,3 +630,10 @@ node scripts/audit_workflow_deployment_races.js
 ```
 
 It scans every `.yml` / `.yaml` file in `.github/workflows`, not only currently known Pages callers.
+
+## Chat-only Handoff v3 UI and no-deployment boundary (owner decision 2026-10-09)
+
+The owner explicitly cancelled the **Handoff Control UI / MCP Apps / standalone website deployment track**. Stop that work completely; do NOT deploy or prepare deployment of a website, Vercel project, MCP server, ChatKit frontend, tunnel, or third-party interface for Handoff, and do not suggest resuming it unless the owner explicitly asks. Previously generated prototype archives are inactive reference artifacts only, not an active phase. This restriction is specific to the Handoff-control UI track and must **not** inadvertently disable the stock_data project's independently authorized existing GitHub Pages/video publishing workflows.
+
+All Handoff control and A/B interaction stays inside the current ChatGPT conversation, using the existing connected GitHub tools to inspect/update actual remote state. A text-only chat cannot invent a native click-to-send button: when unavailable, end with an honest, compact copyable command (e.g. `promptA`, `promptB`) and never render bracketed faux-buttons. Avoid repeated blocked retries: diagnose whether evidence, CI status, owner action, or permission really changed and perform useful bounded eligible work; if no progress is possible, state the single concrete external dependency instead of encouraging repeated identical commands. The one-Active rule, paired A/B gate, original immutable acceptance, and fresh-main checks remain mandatory.
+
