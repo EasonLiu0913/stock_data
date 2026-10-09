@@ -98,7 +98,7 @@ function buildVariants(doc, raw, rules) {
   if (doc.target_date !== raw.target_date) throw new Error('Date mismatch');
   if (rules.version !== 'daily-gainers-text-presentation-v1') throw new Error('Unsupported rules version');
   const stocks = stockIndex(raw);
-  const sources = JSON.stringify({doc,raw_stock_ids:[...stocks],rules});
+  const sources = JSON.stringify({doc,raw_stock_identities:[...stocks.entries()],rules});
   const manifest = {schema_version:2,target_date:doc.target_date,rules_version:rules.version,
     source_sha256:crypto.createHash('sha256').update(sources).digest('hex')};
   const output = {display:[],captions:[],speech:[],manifest};
@@ -131,7 +131,7 @@ function buildVariants(doc, raw, rules) {
     output.cue_pairs.push({id:i+1, caption_cues:cues.map(c=>({caption:c.caption,speech:c.speech}))});
     manifest.scene_count = i+1;
   });
-  for (const mode of ['display','captions','speech'])
+  for (const mode of ['display','captions','speech','cue_pairs'])
     manifest[mode+'_sha256']=crypto.createHash('sha256').update(JSON.stringify(output[mode])).digest('hex');
   return output;
 }
