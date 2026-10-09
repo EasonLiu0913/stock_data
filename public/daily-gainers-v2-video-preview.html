@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>V2 Video Preview Dashboard · TAIWANSTOCK</title>
+<style>
+:root{color-scheme:dark;--bg:#070d19;--panel:#111e30;--edge:#293c53;--txt:#eaf4ff;--muted:#96adc6;--accent:#53c1ec}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;line-height:1.6}
+main{max-width:1240px;margin:auto;padding:24px 18px 80px}header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:24px}
+.eyebrow{color:var(--accent);font-size:13px;letter-spacing:2px;font-weight:700}h1{font-size:clamp(25px,4vw,39px);margin:4px 0}h2{font-size:20px;margin:0 0 14px}.muted,.hint{color:var(--muted);font-size:14px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:20px;margin-bottom:18px}
+.layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:18px}video{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;display:block}
+label{font-weight:650;font-size:14px;display:block;margin-bottom:6px}input,button{border:1px solid #35506b;background:#0b1728;color:var(--txt);border-radius:9px;padding:10px;max-width:100%;font:inherit}
+input[type=file]{width:100%}button{cursor:pointer}button:hover,button:focus-visible{border-color:var(--accent);background:#1a334e}
+.filegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}
+.metric{padding:12px;background:#0b1728;border-radius:10px;border:1px solid var(--edge)}.metric strong{display:block;font-size:21px}.metric span{font-size:12px;color:var(--muted)}
+#chapters{display:flex;flex-direction:column;gap:8px;max-height:520px;overflow:auto}
+.chapter{text-align:left;width:100%;font-size:14px;padding:12px;border:1px solid var(--edge);border-radius:10px;background:#0b1728}
+.chapter.active{border-color:var(--accent);background:#123b55}.chapter small{display:block;color:var(--muted);font-size:12px}
+#checks{white-space:pre-line;font-size:14px}a{color:#9adfff}#status{color:#a6ddff;min-height:24px}.warn{color:#ffce89!important}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.filegrid{grid-template-columns:1fr}.card{padding:15px}.meta{grid-template-columns:repeat(3,1fr)}}
+</style></head>
+<body><main>
+<header><div><div class="eyebrow">TAIWANSTOCK / VIDEO LAB</div><h1>V2 Video Preview Dashboard</h1><div class="muted">每日 5% 強勢股 · 本地安全預覽與字幕驗收</div></div><span class="hint">不會自動上傳影片，也不會將所選檔案傳送到網站伺服器</span></header>
+<section class="card"><h2>載入測試影片素材</h2><p class="hint">從 GitHub Actions 下載並解壓 Artifact，再選取 MP4、SRT 與 JSON。影片只在目前瀏覽器播放；這個公開頁面不儲存私人影片。</p>
+<div class="filegrid">
+<div><label for="videoFile">影片 MP4</label><input id="videoFile" type="file" accept="video/mp4"></div>
+<div><label for="subtitleFile">繁體中文字幕 SRT</label><input id="subtitleFile" type="file" accept=".srt,text/plain"></div>
+<div><label for="planFile">plan.json（場景標題）</label><input id="planFile" type="file" accept=".json,application/json"></div>
+<div><label for="qaFile">subtitle-manifest.json（時間軸）</label><input id="qaFile" type="file" accept=".json,application/json"></div>
+</div><p id="status" role="status" aria-live="polite">尚未載入影片。可單獨選取 MP4，或加入字幕與時間軸資訊。</p>
+</section>
+<div class="layout">
+<div>
+<section class="card"><video id="player" controls playsinline preload="metadata" aria-label="V2 每日 5% 強勢股測試影片"></video>
+<div class="meta"><div class="metric"><strong id="duration">—</strong><span>影片長度</span></div><div class="metric"><strong id="sceneCount">—</strong><span>場景數</span></div><div class="metric"><strong id="cueCount">—</strong><span>字幕片段</span></div></div>
+<div class="hint">字幕預設關閉。載入 SRT 後，請使用播放器的 CC 選單開啟「繁體中文」。</div></section>
+<section class="card"><h2>字幕與 QA 檢查</h2><div id="checks" class="muted">載入字幕與場景資料後顯示驗收摘要；此頁的檢查不能取代 GitHub Actions 嚴格 QA。</div></section>
+</div>
+<aside><section class="card"><h2>場景快速跳轉</h2><div id="chapters" class="muted">讀取 plan.json 及 subtitle-manifest.json 後顯示場景。</div></section>
+<section class="card"><h2>測試紀錄</h2><div class="hint">建議以 Actions Media Proof 綠燈、字幕 QA 綠燈及實際觀看三項一起驗收。</div><p><a href="https://github.com/EasonLiu0913/stock_data/actions/workflows/daily-gainers-v2-media-proof.yml" target="_blank" rel="noopener noreferrer">開啟 Media Proof 工作流程 ↗</a></p></section></aside>
+</div>
+</main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);let videoURL=null,subtitleURL=null,subtitleTrack=null,plan=null,manifest=null,cues=[];
+const player=$('player');
+const safeText=(el,val)=>{el.textContent=String(val);};
+const format=s=>{if(!Number.isFinite(s))return '—';return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');};
+function resetURL(kind){if(kind==='video'&&videoURL){URL.revokeObjectURL(videoURL);videoURL=null;}if(kind==='subtitle'&&subtitleURL){URL.revokeObjectURL(subtitleURL);subtitleURL=null;}}
+function timestamp(s){const match=String(s).trim().match(/^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/);return match?Number(match[1])*3600+Number(match[2])*60+Number(match[3])+Number(match[4])/1000:NaN;}
+function parseSRT(s){return s.replace(/\r/g,'').trim().split(/\n\s*\n/).map(block=>{const lines=block.split('\n'),idx=lines.findIndex(l=>l.includes(' --> '));if(idx<0)return null;const [a,b]=lines[idx].split(' --> ');return{start:timestamp(a),end:timestamp(b),text:lines.slice(idx+1).join('\n')}}).filter(Boolean);}
+function vtt(s){return 'WEBVTT\n\n'+s.replace(/\r/g,'').replace(/^(\d+)\n(?=\d{2}:)/gm,'').replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g,'$1.$2')+'\n';}
+function update(){
+safeText($('duration'),format(player.duration));
+safeText($('sceneCount'),plan?.scenes?.length??'—');
+safeText($('cueCount'),cues.length||'—');
+const errors=[];if(cues.length){if(cues.some(x=>!Number.isFinite(x.start)||!Number.isFinite(x.end)||x.end<=x.start))errors.push('字幕時間格式或長度異常');if(cues.some(x=>/0星個股/.test(x.text)))errors.push('偵測到 0星個股 誤轉換');}
+if(plan&&cues.length&&Array.isArray(plan.scenes)){const expected=plan.scenes.flatMap(s=>(s.caption_cues||[]).map(x=>x.caption));if(expected.length!==cues.length||expected.some((x,i)=>x!==cues[i].text))errors.push('字幕內容與 plan.json 有差異');}
+const state=errors.length?'需修正：'+errors.join('；'):cues.length?'已載入字幕，未發現上述結構問題；仍需人工觀看驗收':'尚未載入字幕';
+safeText($('checks'),state);$('checks').classList.toggle('warn',errors.length>0);
+const group=$('chapters');group.replaceChildren();if(!plan?.scenes){safeText(group,'尚未載入場景資料');return;}
+plan.scenes.forEach((s,i)=>{const btn=document.createElement('button');btn.className='chapter';let t=manifest?.scenes?.find(x=>Number(x.id)===Number(s.id));const start=Number(t?.start_seconds);const line=document.createElement('small');safeText(btn,(Number.isFinite(start)?format(start):'場景 '+(i+1))+' · '+(s.stock_labels||[]).slice(0,2).join('、'));btn.append(document.createTextNode((i+1)+'. '+String(s.title||'未命名場景')),line);if(Number.isFinite(start))btn.addEventListener('click',()=>{player.currentTime=start;player.play().catch(()=>{});});else btn.disabled=true;group.append(btn);});
+}
+function loadJSON(file,kind){if(!file)return;file.text().then(text=>{const doc=JSON.parse(text);if(kind==='plan'){if(!Array.isArray(doc.scenes))throw Error('plan.json 缺少 scenes');plan=doc;}else{if(!Array.isArray(doc.scenes))throw Error('subtitle-manifest.json 缺少 scenes');manifest=doc;}update();safeText($('status'),kind+' 已載入');}).catch(e=>{safeText($('status'),'JSON 載入失敗：'+e.message);$('status').classList.add('warn');});}
+$('videoFile').addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;resetURL('video');videoURL=URL.createObjectURL(file);player.src=videoURL;player.load();safeText($('status'),'影片已載入：'+file.name);});
+$('subtitleFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const s=await file.text();cues=parseSRT(s);resetURL('subtitle');if(subtitleTrack)subtitleTrack.remove();subtitleURL=URL.createObjectURL(new Blob([vtt(s)],{type:'text/vtt'}));subtitleTrack=document.createElement('track');subtitleTrack.kind='subtitles';subtitleTrack.label='繁體中文';subtitleTrack.srclang='zh-TW';subtitleTrack.src=subtitleURL;player.appendChild(subtitleTrack);update();safeText($('status'),'字幕已載入：'+file.name);});
+$('planFile').addEventListener('change',e=>loadJSON(e.target.files?.[0],'plan'));$('qaFile').addEventListener('change',e=>loadJSON(e.target.files?.[0],'manifest'));
+player.addEventListener('loadedmetadata',update);
+window.addEventListener('pagehide',()=>{resetURL('video');resetURL('subtitle');});
+})();
+</script></body></html>
