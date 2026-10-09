@@ -165,3 +165,7 @@ Never deploy a separate website, MCP server, plugin-UI host, ChatKit app, Vercel
 
 Before suggesting a retry, compare fresh evidence to the prior checkpoint. For unchanged BLOCKED gates, attempt only safe bounded investigation with an actionable result; otherwise report the precise prerequisite instead of spinning. Close with the literal manual next command only if genuinely useful; never promise an unsupported native chat button.
 
+
+## Mandatory research progress verdict
+
+After each Prompt A call, select exactly one `research_progress_status`: `PROGRESS` if newly verified material evidence advances work, `NO_PROGRESS` if none does, or `BLOCKED` if an unmet external dependency prevents advancement. Also report independent `phase_status`, verifiable `research_progress_evidence`, `research_progress_reason`, and `next_action`. A round may be PROGRESS while the phase is BLOCKED. Final summary must contain 研究進度判定、目前阻礙、預計研究方向、與上次差異、停止／轉向條件、下一步指令. No fake buttons, automatic phase promotion, or separate deployment.
