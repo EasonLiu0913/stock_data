@@ -44,6 +44,17 @@ When the repository owner sends exactly `promptB` (case-insensitive after trimmi
 7. Find the most recent round inside that handoff whose Prompt A is complete but whose corresponding Prompt B closeout does not yet have durable PASS evidence.
 8. Recover the Prompt B that was preregistered for **that same round before Prompt A began**.
 
+## Readiness diagnosis and correct-command guidance
+
+The user does not need to know the phase ID or whether A or B should run. Before closeout, inspect current remote charter/roadmap, canonical handoff, pre-A original B, and actual artifact/workflow evidence:
+
+- A **not complete** / `BLOCKED` / `WAITING_*`: **do not run B** and do not silently invoke A. Identify A's checkpoint and blocker, check whether its external dependency has changed, then report `NEXT_COMMAND: promptA` if resumable, or a concrete owner action/verified workflow trigger if not. Do not claim this is a failed B closeout, because B is not yet eligible.
+- A **durably complete**, B not PASS: execute this round's preregistered B and verify every unchanged criterion against current remote main. If waiting for a workflow, name verified run/job/status and expected artifact; if a bounded defect can be fixed under original B, rerun complete verification. If a permission/owner decision is needed, stop with specific instructions.
+- B already PASS and next phase promoted: do not repeat B; report `NEXT_COMMAND: promptA` and next phase identity. If overall ultimate goal is durably complete, report complete without new execution.
+- If A/B state is contradictory or pre-A immutable B cannot be reconstructed, stop for evidence recovery; never infer PASS or promote from chat history.
+
+All outputs must state `Active project`, `goal ID/version`, `Ultimate goal progress`, `Completed vs remaining phases`, `Current A/B eligibility`, `Blocking evidence`, `NEXT_COMMAND`, `Next phase ID`, `Plan changed?`. Future checks require a later owner invocation, independently operating scheduled GitHub workflow, or explicitly installed automation; never promise passive monitoring from a single assistant turn.
+
 ## Prompt B selection rules
 
 Project selection and round selection are separate.
