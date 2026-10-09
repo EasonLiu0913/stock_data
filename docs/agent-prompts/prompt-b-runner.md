@@ -44,6 +44,10 @@ When the repository owner sends exactly `promptB` (case-insensitive after trimmi
 7. Find the most recent round inside that handoff whose Prompt A is complete but whose corresponding Prompt B closeout does not yet have durable PASS evidence.
 8. Recover the Prompt B that was preregistered for **that same round before Prompt A began**.
 
+## Last-section next-action rendering
+
+Every result ends with the active project, current phase, blocker, and exact eligible next action. Render a clickable next-command button only through a real supported user-triggered client control; otherwise output a copyable command as text and do not print a simulated `[執行 Prompt B]` button. If B is not eligible, explain the missing A prerequisite and avoid implying that B was executed.
+
 ## Readiness diagnosis and correct-command guidance
 
 The user does not need to know the phase ID or whether A or B should run. Before closeout, inspect current remote charter/roadmap, canonical handoff, pre-A original B, and actual artifact/workflow evidence:
