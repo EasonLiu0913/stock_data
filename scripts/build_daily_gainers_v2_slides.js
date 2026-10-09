@@ -14,8 +14,8 @@ for(const scene of plan.scenes){
   const points=scene.visual_summary_points || scene.bullets || [];
   if(!Array.isArray(points) || points.length<2 || points.length>5)
     throw Error('Scene '+scene.id+': require 2-5 verified visual summary points');
-  if(points.some(x=>typeof x!=='string' || !x.trim() || [...x].length>42))
-    throw Error('Scene '+scene.id+': summary point must be nonempty and at most 42 characters');
+  if(points.some(x=>typeof x!=='string' || !x.trim() || [...x].length>28))
+    throw Error('Scene '+scene.id+': summary point must be nonempty and at most 28 characters');
   const pageType=scene.id===1?'overview':scene.id===plan.scenes.length?'checklist':
     scene.stock_codes?.length?'stock':'topic';
   const maxX=1180;
@@ -24,7 +24,7 @@ for(const scene of plan.scenes){
   const startY=292;
   const rows=points.map((item,i)=>{
     const y=startY+i*(cardHeight+spacing);
-    const font=[...item].length>30?31:36;
+    const font=[...item].length>24?31:36;
     const number=pageType==='checklist'?String(i+1).padStart(2,'0'):String(i+1).padStart(2,'0');
     return '<rect x="130" y="'+y+'" width="'+maxX+'" height="'+cardHeight+'" rx="18" fill="#12263d" stroke="#29465e" stroke-width="2"/>'+
       '<rect x="150" y="'+(y+20)+'" width="55" height="'+(cardHeight-40)+'" rx="12" fill="#164e63"/>'+
