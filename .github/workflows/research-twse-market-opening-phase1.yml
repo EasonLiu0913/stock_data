@@ -37,22 +37,30 @@ jobs:
         run: |
           node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js
       - name: Inspect full archived MI_INDEX file within checkout
+        id: inspect
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$TARGET_DATE" =~ ^20[0-9]{6}$ ]] || { echo "INVALID_TARGET_DATE"; exit 1; }
+          mkdir -p output/twse-market-opening-inspection
+          report="output/twse-market-opening-inspection/${TARGET_DATE}.status.txt"
+          trap 'result=$?; if [ "$result" -ne 0 ]; then echo "FAILED exit_code=$result" >> "$report"; fi' EXIT
+          [[ "$TARGET_DATE" =~ ^20[0-9]{6}$ ]] || { echo "INVALID_TARGET_DATE" | tee "$report"; exit 1; }
           file="data_twse_mi_index/${TARGET_DATE}_twse_mi_index.json"
           if [ ! -s "$file" ]; then
+            echo "BLOCKED MISSING_OR_EMPTY_MI_INDEX $file" | tee "$report"
             echo "::error::Missing or empty MI_INDEX archive: $file"
             exit 1
           fi
-          node scripts/inspect_twse_mi_index_breadth.js "$TARGET_DATE" "$file"
+          echo "SOURCE_PRESENT bytes=$(wc -c < "$file")" | tee "$report"
+          node scripts/inspect_twse_mi_index_breadth.js "$TARGET_DATE" "$file" 2>&1 | tee -a "$report"
+          echo "INSPECTION_PASS" | tee -a "$report"
       - name: Record inspect and test status in step summary
         if: always()
         shell: bash
         run: |
           echo "## TWSE-only Phase 1 Evidence" >> "$GITHUB_STEP_SUMMARY"
           echo "Date: $TARGET_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inspection outcome: ${{ steps.inspect.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow only inspects MI_INDEX. Historical security-classification evidence is still required for full breadth PASS." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload inspection evidence
         if: always()
