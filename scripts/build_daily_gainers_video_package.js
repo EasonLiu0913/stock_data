@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { normalizeNarrationRepetition } = require('./daily_gainers_text_cleanup');
+const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
 
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) {
@@ -36,10 +37,11 @@ const scenes = videoScript.scenes.map((s, i) => ({
   title: s.title,
   subtitle: s.subtitle,
   bullets: s.bullets,
-  narration: normalizeNarrationRepetition(s.narration),
+  narration: normalizeNarrationRepetition(i === 0 ? addOpening(s.narration) : s.narration),
   stock_codes: Array.isArray(s.stock_codes) ? s.stock_codes.map(String) : [],
   footer: s.footer || ''
 }));
+assertOpening(scenes[0].narration);
 const outDir = path.join(root, 'output', 'daily-gainers-video', date);
 const slidesDir = path.join(outDir, 'slides');
 fs.mkdirSync(slidesDir, { recursive: true });
