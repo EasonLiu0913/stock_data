@@ -12,7 +12,7 @@
 const fs=require('node:fs');
 const crypto=require('node:crypto');
 function ymd(v) {
- if(typeof v!=='string'||!/^20[0-9]{6}$/.test(v))return false;
+ if(typeof v!=='string'||!/^(?:19|20)[0-9]{6}$/.test(v))return false;
  const iso=v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8);
  const d=new Date(iso+'T00:00:00Z');
  return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===iso;
