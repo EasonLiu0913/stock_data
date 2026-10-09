@@ -103,11 +103,32 @@ function buildVariants(doc, raw, rules) {
     source_sha256:crypto.createHash('sha256').update(sources).digest('hex')};
   const output = {display:[],captions:[],speech:[],manifest};
   doc.scenes.forEach((scene, i) => {
-    if (!Array.isArray(scene.tokens) || !scene.tokens.length) throw new Error('Missing semantic tokens for scene '+i);
-    const render = mode => scene.tokens.map(t=>renderToken(t,mode,stocks)).join('');
-    for (const mode of ['display','captions','speech'])
-      output[mode].push({id:i+1,text:render(mode)});
-    // Semantic equivalence is structural: each branch consumes the exact same tokens.
+    // A cue is the indivisible alignment unit. Both formats are rendered
+    // from the very same semantic tokens; no independent summarization.
+    if (!Array.isArray(scene.cues) || !scene.cues.length)
+      throw new Error('Missing semantic cues for scene ' + i);
+    const cues = scene.cues.map((tokens, j) => {
+      if (!Array.isArray(tokens) || !tokens.length)
+        throw new Error('Empty semantic cue ' + i + ':' + j);
+      for (const token of tokens) {
+        if (token.type === 'text' && (/[0-9０-９]/.test(token.value) ||
+            /[零一二三四五六七八九十百千萬億兆兩点點]{2,}/.test(token.value)))
+          throw new Error('Ambiguous numbers in free-text token: ' + token.value);
+      }
+      return {
+        display: tokens.map(t => renderToken(t, 'display', stocks)).join(''),
+        caption: tokens.map(t => renderToken(t, 'captions', stocks)).join(''),
+        speech: tokens.map(t => renderToken(t, 'speech', stocks)).join('')
+      };
+    });
+    for (const mode of ['display','captions','speech']) {
+      const key = mode === 'captions' ? 'caption' : mode;
+      output[mode].push({id:i+1,text:cues.map(c=>c[key]).join('')});
+    }
+    if (cues.some(c => !c.caption || !c.speech))
+      throw new Error('Empty rendered caption/speech cue');
+    output.cue_pairs ??= [];
+    output.cue_pairs.push({id:i+1, caption_cues:cues.map(c=>({caption:c.caption,speech:c.speech}))});
     manifest.scene_count = i+1;
   });
   for (const mode of ['display','captions','speech'])
@@ -121,7 +142,7 @@ if (require.main===module) {
   const parsed = [masterFile,rawFile,rulesFile].map(f=>JSON.parse(fs.readFileSync(f,'utf8')));
   const output=buildVariants(...parsed);
   fs.mkdirSync(outDir,{recursive:true});
-  for(const name of ['display','captions','speech','manifest'])
+  for(const name of ['display','captions','speech','cue_pairs','manifest'])
     fs.writeFileSync(require('node:path').join(outDir,name+'.json'),JSON.stringify(output[name],null,2)+'\n');
   console.log(JSON.stringify({date:output.manifest.target_date,rules:output.manifest.rules_version,scenes:output.manifest.scene_count,status:'PASS'}));
 }
