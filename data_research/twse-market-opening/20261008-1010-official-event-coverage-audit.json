@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "target_date": "20261008",
+  "window": {
+    "start": "20261008",
+    "end": "20261010",
+    "includes_non_trading_days": true
+  },
+  "purpose": "M1_OFFICIAL_EVENT_COVERAGE_AUDIT",
+  "scope": "RESEARCH_ONLY",
+  "research_progress": "PROGRESS",
+  "sources": [
+    {
+      "id": "official_circulars",
+      "url": "https://dsp.twse.com.tw/official/search",
+      "publisher": "TWSE",
+      "earliest_declared": "202010",
+      "supported_filters": [
+        "date",
+        "keyword",
+        "recipient",
+        "listed_securities",
+        "delisting",
+        "trading_halt"
+      ],
+      "pagination": {
+        "supports_pagination": "NOT_VERIFIED",
+        "all_pages_enumerated": false,
+        "total_count_reconciled": false
+      },
+      "effective_date_field": "NOT_VERIFIED",
+      "raw_response_captured": false,
+      "coverage_status": "PARTIAL_UNPROVEN"
+    },
+    {
+      "id": "share_count_change",
+      "url": "https://www.twse.com.tw/zh/focus/lt185-dtr.html",
+      "publisher": "TWSE",
+      "earliest_declared": "200309",
+      "supported_filters": [
+        "announcement_date_range",
+        "effective_date_range",
+        "issuer_code",
+        "filing_type"
+      ],
+      "download": "CSV",
+      "pagination": {
+        "supports_pagination": "NOT_VERIFIED",
+        "all_pages_enumerated": false,
+        "total_count_reconciled": false
+      },
+      "effective_date_field": "EXPLICIT_SHARE_COUNT_EFFECTIVE_DATE",
+      "raw_response_captured": false,
+      "coverage_status": "SHARE_CAPITAL_CHANGES_ONLY"
+    },
+    {
+      "id": "listed_delisting",
+      "url": "https://www.twse.com.tw/zh/listed/suspend-listing.html",
+      "publisher": "TWSE",
+      "supported_filters": [
+        "year"
+      ],
+      "download": "CSV",
+      "pagination": {
+        "supports_pagination": "NOT_VERIFIED",
+        "all_pages_enumerated": false,
+        "total_count_reconciled": false
+      },
+      "effective_date_field": "DELISTING_DATE",
+      "raw_response_captured": false,
+      "coverage_status": "DELISTING_ONLY"
+    },
+    {
+      "id": "public_notices",
+      "url": "https://www.twse.com.tw/zh/announcement/announcement/list.html",
+      "publisher": "TWSE",
+      "supported_filters": [
+        "issue_date_range",
+        "subject_or_notice_number"
+      ],
+      "pagination": {
+        "supports_pagination": "NOT_VERIFIED",
+        "all_pages_enumerated": false,
+        "total_count_reconciled": false
+      },
+      "effective_date_field": "MUST_EXTRACT_FROM_NOTICE_BODY",
+      "raw_response_captured": false,
+      "coverage_status": "PUBLIC_ANNOUNCEMENTS_WITHOUT_EXHAUSTIVENESS_CONTRACT"
+    },
+    {
+      "id": "trading_halt",
+      "url": "https://www.twse.com.tw/zh/trading/historical/twtawu.html",
+      "publisher": "TWSE",
+      "earliest_declared": "20111003",
+      "supported_filters": [
+        "period",
+        "code",
+        "security_class"
+      ],
+      "download": "CSV",
+      "pagination": {
+        "supports_pagination": "YES_UI_PAGE_SIZE",
+        "all_pages_enumerated": false,
+        "total_count_reconciled": false
+      },
+      "effective_date_field": "SUSPEND_AND_RESUME_DATES",
+      "raw_response_captured": false,
+      "coverage_status": "TRADING_STATUS_NOT_SECURITY_IDENTITY"
+    }
+  ],
+  "categories_required": [
+    "initial_listing",
+    "new_listing",
+    "delisting",
+    "board_transfer",
+    "security_class_change",
+    "share_reissuance_or_replacement",
+    "name_or_code_change"
+  ],
+  "closure_gates": {
+    "all_sources_query_executed": false,
+    "full_result_pages_captured": false,
+    "stable_query_params_and_raw_response_hashes": false,
+    "announcement_date_before_window_with_effective_date_in_window_covered": false,
+    "all_event_categories_authoritatively_covered": false,
+    "identity_before_after_reconciled_for_1085": false,
+    "independent_exchange_as_of_snapshot_verified": false,
+    "conclusion": "COVERAGE_NOT_PROVEN"
+  },
+  "known_event_example": {
+    "code": "1589",
+    "announcement_date": "20261008",
+    "effective_date": "20261118",
+    "classification": "FUTURE_DELISTING_NOT_EFFECTIVE_DURING_TARGET_WINDOW",
+    "official_url": "https://www.twse.com.tw/zh/announcement/announcement/list.html"
+  },
+  "missing_evidence": [
+    "Official endpoint or export query contract with known total and pagination",
+    "Full query raw captures and checksums for each relevant category",
+    "Prior issued notices effective within window",
+    "Complete board/class/identity dated transitions and comparison against 1085 source list"
+  ],
+  "m1_decision": "BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE",
+  "prompt_b_eligible": false,
+  "production_authorized": false,
+  "cron_enabled": false,
+  "next_research_direction": "Prove end-to-end coverage via query contracts, complete paginated date-filtered raw captures, and effective-date reconciliation; otherwise locate original exchange historical daily identity master."
+}
