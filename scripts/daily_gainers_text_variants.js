@@ -85,6 +85,18 @@ function renderToken(token, mode, stocks) {
       const spoken = decimalSpoken(value);
       return mode === 'speech' ? '百分之' + spoken : value + '%';
     }
+    case 'month': {
+      const month=Number(token.value);
+      if(!Number.isInteger(month)||month<1||month>12) throw new Error('Invalid month token');
+      return mode==='speech' ? integerSpoken(month)+'月' : month+'月';
+    }
+    case 'numeric_phrase': {
+      const caption=String(token.caption||'');
+      const speech=String(token.speech||'');
+      if(!/^\d[\d,]*(?:\.\d+)?(?:%|億|萬|張|元|檔|季|日)?$/.test(caption) || !/[零一二三四五六七八九十百千萬億兆兩]/.test(speech))
+        throw new Error('Invalid explicit numeric phrase');
+      return mode==='speech'?speech:caption;
+    }
     case 'stock_code': {
       const code = String(token.code);
       if (!stocks.has(code)) throw new Error('Unknown stock code');
