@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "task": "daily-gainers-market-opening-end-to-end",
+  "target_trade_date": "2026-10-08",
+  "research_date": "2026-10-10",
+  "research_progress": "PROGRESS",
+  "m1": "BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE",
+  "prompt_b_eligible": false,
+  "approach": "read-only web official page retrieval attempted; no Actions and no paid data",
+  "sources": [
+    {
+      "id": "MI_INDEX",
+      "requested_url": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20261008&type=ALLBUT0999&response=json",
+      "official_page": "https://www.twse.com.tw/zh/trading/historical/mi-index.html",
+      "source_date_in_official_page": "2026-10-08",
+      "official_html_page_observed": true,
+      "raw_json_acquired": false,
+      "raw_sha256": null,
+      "http_status": null,
+      "stock_code_count": null,
+      "isin_field_confirmed": false,
+      "ordinary_total_membership_proven": false,
+      "aggregate_market_classes": [
+        "一般股票",
+        "變更交易股票",
+        "創新板股票",
+        "創新板-變更交易方法股票",
+        "台灣存託憑證"
+      ],
+      "aggregate_ordinary_price_change_counts": {
+        "rise": 425,
+        "decline": 540,
+        "flat": 109,
+        "no_trade": 3,
+        "no_comparison": 5
+      },
+      "count_note": "Official summary counts are price-change categories, not independently unique all-listed-security roster; adding categories must not be treated as identity membership count",
+      "supports_no_trade_class": true,
+      "enumerates_no_trade_identity_codes": false,
+      "innovative_board_separate_aggregate": true,
+      "innovative_board_full_identity_roster_verified": false,
+      "verdict": "OFFICIAL_DATE_AGGREGATE_ONLY_ORIGINAL_JSON_NOT_ACQUIRED"
+    },
+    {
+      "id": "MI_QFIIS",
+      "requested_url": "https://www.twse.com.tw/rwd/zh/fund/MI_QFIIS?date=20261008&response=json&selectType=ALLBUT0999",
+      "official_page": "https://www.twse.com.tw/zh/fund/MI_QFIIS.html",
+      "raw_json_acquired": false,
+      "raw_sha256": null,
+      "http_status": null,
+      "response_report_date_verified": false,
+      "stock_code_count": null,
+      "isin_field_supported_by_earlier_20260814_report": true,
+      "isin_field_20261008_verified": false,
+      "nontrading_stock_coverage_verified": false,
+      "innovative_board_coverage_verified": false,
+      "full_1085_identity_roster_proven": false,
+      "verdict": "CANDIDATE_ENDPOINT_NOT_RETRIEVABLE_THIS_TURN"
+    }
+  ],
+  "acquisition": {
+    "method": "web open returned inaccessible for both JSON URLs; container HTTPS DNS resolution failed",
+    "current_original_response_sha256_available": false,
+    "sha256_claim_policy": "null means not fetched; no fabricated SHA256",
+    "source_retrieval_date": "2026-10-10"
+  },
+  "difference_from_previous": "Confirmed date-anchored official MI_INDEX aggregate summary specifically reports three no-trade stocks and distinct innovation-board trading class; tried actual requested raw JSON and recorded inaccessible retrieval. Previous step listed sources only.",
+  "current_blockers": [
+    "Official raw original October 08 JSON bodies not acquired; HTTP status, SHA256 and code row counts cannot be certified",
+    "MI_INDEX summary category counts do not resolve which securities did not trade or prove complete 1085 member universe",
+    "MI_QFIIS 20261008 ISIN availability and complete coverage remain unverified",
+    "No complete dated CFI/board historical master or certified all-status-event ledger"
+  ],
+  "planned_research": "User may open exact two date-scoped URLs manually and upload raw JSON as with LT185, including Network request URLs; on receipt calculate original SHA256, parse each report's dates and table fields, count unique four-digit ordinary securities and zero-volume classes, compare category/board coverage with original 1085 universe; continue M1 blocked pending all-category as-of provenance.",
+  "stop_pivot": "If either source only reports transactions or foreign ownership with missing special/zero-trade identity, retain supporting-only, not historical membership proof; do not promote Prompt B or change frozen acceptance.",
+  "next_command": "Prompt A: analyze user-furnished official raw 20261008 MI_QFIIS and MI_INDEX JSON and row completeness without any Actions, purchases or production modifications."
+}
