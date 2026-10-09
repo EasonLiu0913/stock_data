@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/daily-gainers-v2-media-proof.yml'
       - 'video_scripts/daily-gainers/v2/20261008/master.json'
+      - 'scripts/daily_gainers_text_variants.js'
+      - 'tests/daily_gainers_text_variants.test.js'
 permissions:
   contents: read
 jobs:
@@ -26,7 +28,9 @@ jobs:
           sudo apt-get install -y ffmpeg librsvg2-bin fonts-noto-cjk
           pip install edge-tts mutagen pypinyin
       - name: Validate full nine-scene input
-        run: node tests/daily_gainers_v2_full_20261008.test.js
+        run: |
+          node tests/daily_gainers_text_variants.test.js
+          node tests/daily_gainers_v2_full_20261008.test.js
       - name: Generate v2 plan
         run: |
           node scripts/build_daily_gainers_v2_preview.js 20261008
