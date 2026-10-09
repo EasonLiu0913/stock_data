@@ -43,6 +43,12 @@ Three independent, versioned text output artifacts for display, caption, speech,
 - No verified green CI run, no complete 20261008 master, no audio waveform or rendered sample yet. Never mark Prompt B PASS from these commits alone.
 - Remaining gaps: typed Master authoring strategy for entire daily video; display text integration with SVG and stock-name rendering; real Edge WordBoundary alignment test with all full cues; strict v2 package consistency checks, artifact/upload hash-aware routing; regression with 20261008 actual data. Keep production v1 untouched until complete.
 
+## Phase 3 real-data regression checkpoint
+- Added `tests/daily_gainers_v2_real_data.test.js`: reads actual `data_daily_gain_over_5/20261008.json`, authenticates 35-stock universe and stock mapping for 9103/6672/2305/1301, and verifies full three-way formatting with explicitly labeled synthetic numbers. Commit `009763d383375f73ca0361901f342bb41585d1fe`.
+- CI invokes this regression via `.github/workflows/test-daily-gainers-text-variants.yml` commit `588832159055ddda8ad738d732d7b12978efa7a9`.
+- No full `v2/20261008/master.json` has been authored: do not claim this test is real 20261008 full narration or voice verification. Actual CI conclusion and MP3/MP4 artifact still unverified.
+- Gate before next promotion: produce complete fact-checked tokenized 20261008 Master, run all tests, actual Edge TTS WordBoundary synchronization and rendered MP4 without uploading; examine failures; ensure v2 picture draws display text and router enforces variant hash provenance.
+
 ## Next round
 1. Implement a deterministic shared representation of semantic utterances and verified stock identities.
 2. Emit separately persisted `display.json`, `captions.json`, `speech.json`, plus equivalence/alignment provenance manifest and source/rules hashes.
