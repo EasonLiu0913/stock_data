@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {audit}=require('../scripts/audit_daily_gainers_video_v2_readiness');
+const root=path.resolve(__dirname,'..');
+const raw=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/20261008.json'),'utf8'));
+const script=JSON.parse(fs.readFileSync(path.join(root,'video_scripts/daily-gainers/20261008.json'),'utf8'));
+const result=audit(raw,script);
+assert.equal(result.date,'20261008');
+assert.equal(result.scene_count,9);
+assert.equal(result.status,'BLOCKED');
+assert.ok(result.errors.some(e=>e.code==='9103' && e.reason.includes('headline')));
+assert.ok(result.warnings.some(e=>e.code==='6672' && e.name==='騰輝電子-KY'));
+assert.ok(result.warnings.some(e=>e.reason.includes('tokenized numbers')));
+console.log('real 20261008 readiness audit PASS: preexisting script correctly BLOCKED until repaired');
