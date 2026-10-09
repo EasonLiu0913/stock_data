@@ -11,6 +11,8 @@ on:
       - "scripts/inspect_twse_mi_index_breadth.js"
       - "tests/inspect_twse_mi_index_breadth.test.js"
       - "scripts/build_twse_common_stock_breadth.js"
+      - "scripts/reconcile_twse_stock_breadth.js"
+      - "tests/reconcile_twse_stock_breadth.test.js"
       - "tests/build_twse_common_stock_breadth.test.js"
       - "scripts/normalize_twse_security_master.js"
       - "tests/normalize_twse_security_master.test.js"
@@ -42,7 +44,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p output/twse-market-opening-inspection
-          node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js tests/daily_gainers_market_opening_real_snapshot.test.js 2>&1 | tee output/twse-market-opening-inspection/test-results.log
+          node --test tests/reconcile_twse_stock_breadth.test.js tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js tests/daily_gainers_market_opening_real_snapshot.test.js 2>&1 | tee output/twse-market-opening-inspection/test-results.log
       - name: Inspect full archived MI_INDEX file within checkout
         id: inspect
         if: always()
