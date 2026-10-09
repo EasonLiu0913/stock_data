@@ -83,3 +83,7 @@ Native button behavior is client-controlled; if no supported native action exist
 Each active task records machine-readable progress in `docs/handoffs/state/<task-id>.json`. Required fields: task_id, phase, a_status, b_status, current_blocker, planned_research, prior_attempt, anti_loop and evidence. `planned_research` names the investigative question, method, expected evidence, success criterion and fallback. `anti_loop` indicates whether the proposal repeats a previous method with unchanged input and identifies a genuinely different next step. Canonical handoff and verified source records, not this status index, determine acceptance.
 
 Every Handoff final action card must include **目前阻礙**, **預計研究方向**, **與上次差異**, **停止／轉向條件** and a genuinely eligible next action. With no distinct executable next step and no new evidence, report WAITING_SOURCE and the specific dependency; do not repeatedly suggest the same promptA. No new deployment or external UI is authorized.
+
+## Exact next command
+
+Every response ends with **下一步指令**. Select exactly one actionable command: `promptA` when A can do distinct authorized work; `promptB` only after A COMPLETE and B eligible; or an explicit non-command action such as `查看 GitHub Workflow`, `提供歷史來源`, `等待新證據`, or `授權必要權限`. Do not recommend `promptA` repeatedly if nothing changed and no distinct research is possible. Show the reason and the prerequisite. Never print a fake clickable button.
