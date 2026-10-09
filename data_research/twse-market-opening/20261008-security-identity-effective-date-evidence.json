@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "project": "daily-gainers-market-opening-end-to-end",
+  "milestone": "M1",
+  "research_only": true,
+  "target_date": "20261008",
+  "snapshot_date": "20261010",
+  "source_snapshot_provenance": {
+    "isin_snapshot": "user-uploaded e_C_public.html, publisher 20261010",
+    "company_report": "user-uploaded t187ap03_L.json, 出表日期 1151008",
+    "recent_listing": "user-uploaded RTF rendering of TWSE recent-listing API",
+    "isin_stock_candidates": 1085,
+    "twse_listed": 1054,
+    "innovation_board": 31,
+    "company_records": 1095,
+    "company_extra_tdr": 10,
+    "full_target_dated_isin_original_snapshot_available": false
+  },
+  "date_semantics": [
+    {
+      "field": "ISIN.Date Listed",
+      "source": "https://isin.twse.com.tw/isin/e_C_public.jsp?strMode=2",
+      "meaning": "ISIN webpage Date Listed; official page states listing date subject to official announcement",
+      "represents_full_snapshot_effective_date": false,
+      "semantic_equality_with_company_listing_date": "NOT_PROVEN"
+    },
+    {
+      "field": "t187ap03_L.上市日期",
+      "source": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+      "meaning": "Company-level reported 上市日期, not independent per-security security-type master",
+      "represents_full_snapshot_effective_date": false
+    },
+    {
+      "field": "newlisting.股票上市買賣日期",
+      "source": "https://www.twse.com.tw/rwd/zh/company/newlisting?response=html",
+      "meaning": "TWSE recent-listing actual trading date for recorded event",
+      "represents_full_snapshot_effective_date": false
+    },
+    {
+      "field": "TWSE.公告日期",
+      "source": "https://wwwc.twse.com.tw/IIH2/zh/announce/",
+      "meaning": "Notice issued date; must not equal status-change effective date by assumption",
+      "represents_full_snapshot_effective_date": false
+    },
+    {
+      "field": "TWSE.終止上市生效日期",
+      "source": "https://wwwc.twse.com.tw/IIH2/zh/announce/",
+      "meaning": "Effective delisting date stated by official notice; assess relative to target date",
+      "represents_full_snapshot_effective_date": false
+    }
+  ],
+  "trading_calendar": [
+    {
+      "date": "20261008",
+      "classification": "LAST_TRADING_DAY_BEFORE_HOLIDAY",
+      "source": "https://www.twse.com.tw/zh/trading/holiday.html"
+    },
+    {
+      "date": "20261009",
+      "classification": "MARKET_HOLIDAY_NATIONAL_DAY_SUBSTITUTE",
+      "source": "https://www.twse.com.tw/zh/trading/holiday.html"
+    },
+    {
+      "date": "20261010",
+      "classification": "MARKET_HOLIDAY_NATIONAL_DAY",
+      "source": "https://www.twse.com.tw/zh/trading/holiday.html"
+    }
+  ],
+  "observed_notices": [
+    {
+      "code": "1589",
+      "issuer": "永冠能源科技集團有限公司",
+      "notice_date": "20261008",
+      "notice_id": "臺證上二字第1151702936號",
+      "event_type": "DELISTING",
+      "effective_date": "20261118",
+      "is_effective_on_target": false,
+      "observation": "TWSE announced future delisting; does not change listing status on 20261008 from this event alone",
+      "source": "https://wwwc.twse.com.tw/IIH2/zh/announce/",
+      "source_grade": "OFFICIAL_PUBLISHED_SUMMARY"
+    },
+    {
+      "code": "020039",
+      "notice_date": "20261006",
+      "event_type": "ETN_DELISTING",
+      "effective_date": "20261016",
+      "is_effective_on_target": false,
+      "excluded_product_class": "ETN",
+      "source": "https://wwwc.twse.com.tw/IIH2/zh/announce/",
+      "source_grade": "OFFICIAL_PUBLISHED_SUMMARY"
+    },
+    {
+      "code": "7812",
+      "event_type": "NEW_LISTING",
+      "effective_date": "20260922",
+      "is_effective_on_target": true,
+      "source": "https://www.twse.com.tw/rwd/zh/company/newlisting?response=html",
+      "source_grade": "OFFICIAL_RECENT_LISTING_TABLE"
+    }
+  ],
+  "event_exhaustiveness": {
+    "window_start": "20261008",
+    "window_end": "20261010",
+    "trading_calendar_checked": true,
+    "official_public_announcement_index_reviewed": true,
+    "complete_security_type_event_register_for_window_verified": false,
+    "all_1085_code_membership_effective_on_target_verified": false,
+    "all_new_listings_delistings_board_transfers_and_security_type_changes_exhaustively_reconciled": false,
+    "absence_of_event_proved": false
+  },
+  "unknowns": [
+    "No original TWSE 20261008 daily security-level common-stock snapshot",
+    "No independently verified comprehensive 20261008-to-20261010 event ledger including non-trading-day identity mutations",
+    "3673 ESVTFR official semantic interpretation remains unresolved",
+    "20 exception date mappings are not all resolved to precise event types",
+    "Trading suspension, trading inactivity and delisting are different concepts"
+  ],
+  "classification": {
+    "research_progress": "PROGRESS",
+    "m1_decision": "BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE",
+    "historical_master_complete": false,
+    "publication_authorized": false,
+    "prompt_b_eligible": false,
+    "m2_eligible": false
+  },
+  "next_research": [
+    "Find exchange original as-of-20261008 security identity master or complete source-authenticated dated full member list",
+    "Get exhaustive signed/dated official securities status event ledger through 20261010, not just public search snippets",
+    "Determine exchange-defined CFI ESVTFR taxonomy for 3673 and independently classify ordinary stock",
+    "Reconcile 1085 per-code security states and quote-absent 1589,2323,4155 without conflating delisting with trading suspension"
+  ]
+}
