@@ -2,7 +2,7 @@
 
 Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
-Project routing status at creation: **PENDING**; do not preempt `institutional-accumulation`.
+Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
 Plan version: `goal-v1`, authored 2026-10-09.
 Ultimate goal status: **NOT COMPLETE**. Round 0 evidence inspection **PASS**; all subsequent rounds **PENDING**.
 
@@ -50,14 +50,14 @@ Do not mark M1 complete merely because the source JSON contained 36,699 rows; th
 Global task state is from `docs/agent-prompts/task-routing.json`. Global invariant: **one** active task at most. This project's entry is **pending** until owner explicitly selects/activates it; activating it requires demoting the prior active task to pending with all progress preserved. Changing status does not execute work.
 
 Within this project, follow phase identity and paired-prompt state:
-- Current phase: M1 **PENDING (not started)**, awaiting global activation.
+- Current phase: M1 **ACTIVE / PROMOTED (Prompt A not started)**, owner-authorized global activation; do not run until owner invokes `promptA`.
 - M0: COMPLETE, accepted evidence only for tests and raw MI_INDEX inspection, NOT overall Phase 1 completion.
-- M1 Prompt A: PREREGISTERED, NOT STARTED.
+- M1 Prompt A: PREREGISTERED, NOT STARTED; ELIGIBLE ON OWNER `promptA`.
 - M1 Prompt B: PREREGISTERED, PENDING; must be recovered from a durable pre-Prompt-A checkpoint.
 - Later phases: PENDING ROADMAP ONLY, no implied permission to execute early.
 - Project status COMPLETE only after M7 closeout; any intermediate green CI is NOT sufficient.
 
-Once the project is activated: bare `promptA` picks only the earliest promoted phase whose Prompt A is not complete and previous Prompt B passed; bare `promptB` verifies the same phase whose Prompt A has durable completion but Prompt B is pending. Keep pairing immutable after A starts. If blocked, record BLOCKED and the precise missing evidence instead of pretending COMPLETE or jumping ahead.
+Now that the project is active: bare `promptA` picks only the earliest promoted phase whose Prompt A is not complete and previous Prompt B passed; bare `promptB` verifies the same phase whose Prompt A has durable completion but Prompt B is pending. Keep pairing immutable after A starts. If blocked, record BLOCKED and the precise missing evidence instead of pretending COMPLETE or jumping ahead.
 
 ## E. Observed evidence and existing entry points
 
@@ -115,4 +115,5 @@ On any failure: keep M1 blocked, repair only the bounded fault and rerun full cl
 
 ## I. Decision log
 
-- 2026-10-09, `goal-v1`: established explicit immutable ultimate video outcome, whole-project milestones, and phase pairing. Global task intentionally PENDING pending explicit owner activation. Existing global `promptA/promptB` semantics are not overridden; proposed global enhancements require separate owner approval.
+- 2026-10-09, `goal-v1`: established explicit immutable ultimate video outcome, whole-project milestones, and phase pairing. Initially registered PENDING, then **owner-authorized ACTIVE** under repository-wide Goal-Anchored Handoff v3. No Prompt A execution occurred during migration.
+- 2026-10-09, Goal-Anchored v3 rollout: `AGENTS.md`, canonical Prompt A/B runner protocols, `docs/agent-prompts/goal-anchored-handoff-v3.md`, and task routing registry upgraded; internal M1 is promoted for the NEXT owner-issued `promptA`. All other incomplete projects retain their checkpoint state.
