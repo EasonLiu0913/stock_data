@@ -189,3 +189,8 @@ Only when all criteria pass:
 Then stop.
 
 Do **not** execute the promoted Prompt A automatically.
+
+## Chat-only implementation boundary (owner-approved)
+
+Handoff Control UI standalone-site/MCP/Vercel/ChatKit deployment is stopped until a new explicit user request. Do not deploy or restart it through Prompt B or call it a required acceptance step; this does not affect independently authorized stock_data publishing. Perform all Handoff B gate checks through this ChatGPT conversation and repository evidence. Preserve the preregistered original B acceptance; require verified A COMPLETE, never self-advance. In the final card use a copyable command only when eligible and never simulate an unavailable interactive button.
+
