@@ -93,22 +93,31 @@ def split_text(text, max_chars=38):
     return chunks
 
 def wrap_caption_for_screen(text, max_columns=18):
-    """Wrap SRT display text without altering cue timing or its content."""
+    """Punctuation-first visual wrapping; preserve every character and cue timing."""
     import unicodedata
+    def width(value):
+        return sum(1 if unicodedata.east_asian_width(c) in ('F', 'W') else 0.55 for c in value)
+    source = str(text).replace(chr(10), '')
+    rest = source
     lines = []
-    line = ""
-    width = 0
-    for char in str(text).replace("\n", ""):
-        char_width = 1 if unicodedata.east_asian_width(char) in ("F", "W") else 0.55
-        if line and width + char_width > max_columns:
-            lines.append(line)
-            line, width = "", 0
-        line += char
-        width += char_width
-    if line:
-        lines.append(line)
-    return "\n".join(lines)
-
+    while width(rest) > max_columns:
+        cuts = [i + 1 for i, c in enumerate(rest) if c in '。！？；，、：,;:!?' and width(rest[:i+1]) <= max_columns]
+        preferred = [i for i in cuts if width(rest[:i]) >= max_columns * 0.45]
+        if preferred:
+            cut = preferred[-1]
+        elif cuts:
+            cut = cuts[-1]
+        else:
+            cut = 1
+            while cut < len(rest) and width(rest[:cut+1]) <= max_columns:
+                cut += 1
+        lines.append(rest[:cut])
+        rest = rest[cut:]
+    if rest:
+        lines.append(rest)
+    if ''.join(lines) != source or any(width(line) > max_columns for line in lines):
+        raise RuntimeError('Subtitle visual wrapping changed text or overflowed')
+    return chr(10).join(lines)
 
 def fmt_srt(seconds):
     ms = max(0, round(seconds * 1000))
