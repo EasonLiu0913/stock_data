@@ -117,3 +117,35 @@ On any failure: keep M1 blocked, repair only the bounded fault and rerun full cl
 
 - 2026-10-09, `goal-v1`: established explicit immutable ultimate video outcome, whole-project milestones, and phase pairing. Initially registered PENDING, then **owner-authorized ACTIVE** under repository-wide Goal-Anchored Handoff v3. No Prompt A execution occurred during migration.
 - 2026-10-09, Goal-Anchored v3 rollout: `AGENTS.md`, canonical Prompt A/B runner protocols, `docs/agent-prompts/goal-anchored-handoff-v3.md`, and task routing registry upgraded; internal M1 is promoted for the NEXT owner-issued `promptA`. All other incomplete projects retain their checkpoint state.
+
+## J. M1 Prompt A provenance investigation checkpoint — 2026-10-09
+
+**M1 status: BLOCKED_ON_HISTORICAL_MASTER_PROVENANCE. This is NOT Prompt A success, NOT Prompt B eligibility, and NOT M1 PASS.** The originally preregistered M1 Prompt A and M1 Prompt B in sections G/H remain unchanged; no subsequent phase is promoted.
+
+### Verified candidate official sources
+
+1. TWSE Data E-Shop **每日證券市場概況資訊 / TRANISIN**: `https://eshop.twse.com.tw/zh/product/detail/000000006f6a5e3401702de5988d004b`. Official listing documents daily production (07:00), XLS, market, security code, security type, security name, ISIN, listing date, industrial group, etc.; historical ordering is offered and subject to subscription/usage restrictions. This is the strongest identified candidate for point-in-time 20261008 classification, but the actual dated archive has NOT been obtained or independently authenticated. Subscribing/ordering is NOT authorized by this checkpoint.
+2. TWSE Data E-Shop **證券主檔 / BFI85U**: `https://eshop.twse.com.tw/zh/product/detail/000000006f6a5e34017033452c8d0070`. Official daily security master (produced 22:00 for next day's reference) includes security category code and trade information. Temporal applicability to 20261008 requires rigorous production/effective-day reconciliation. No dated original file obtained.
+3. TWSE public **ISIN list**: `https://isin.twse.com.tw/isin/e_C_public.jsp?strMode=4`. Page displays a current update timestamp/listing dates, not a provable archived as-of 20261008 full historical master. It cannot independently verify historical presence/delisting on target date. No historical snapshot claimed.
+4. TWSE public **暫停交易證券**: `https://www.twse.com.tw/zh/trading/historical/twtawu.html`. Historical suspension evidence could supplement coverage, but cannot independently provide full ordinary-stock roster and instrument type for target day.
+
+### Code and artifact scope reviewed
+
+- `scripts/normalize_twse_security_master.js` verifies declared archive digest against supplied bytes and listing windows, but does not attest original acquisition provenance; a self-generated archive + digest is insufficient.
+- `scripts/run_twse_common_stock_breadth.js` intentionally fails without a date-specific digest-verified master; `scripts/build_twse_common_stock_breadth.js` fails on unknown instruments, so do not substitute current ISIN or four-digit codes.
+- Prior MI_INDEX inspection run `37909179708` (41/41 test gate) gives 36,699 mixed-instrument rows, not ordinary common stock identities. No breadth counts or certified 5%-gainers are recorded here.
+- `data_daily_gain_over_5/market-opening/20261008.json` remains `partial`; no new certified breadth artifact or publication authorization.
+
+### Blocking evidence and bounded next action
+
+**Missing:** authentic 20261008 effective-dated TWSE ordinary share classification file / independently verifiable archival provenance, original bytes/hash, acquisition time, coverage and effective-date semantics. Until present, fail closed: no guessed roster, no `complete`, no M2/video/upload/Prompt B.
+
+**Next source-verification options (owner decision required if purchase or licensed data use is necessary):** obtain licensed 20261008 TRANISIN original XLS with lawful permitted use and dated delivery proof; alternatively identify and independently validate a freely available official dated archived master with identical coverage. Cross-check BFI85U temporal semantics and suspension history before claiming the market universe complete. Document file hashes and acquisition chain, reconcile every MI_INDEX quote security, then run the existing normalization, breadth, validator, merge and focused tests. Preserve original M1 Prompt B; this checkpoint does not alter acceptance or the Goal `goal-v1` charter.
+
+### Goal v3 roll-up
+
+- Ultimate goal progress: M0 inspection gate complete; M1 historical security coverage blocked; no real video acceptance yet.
+- Completed versus remaining phases: M0 complete; M1 blocked; M2–M7 pending.
+- Current blocking evidence: missing independently authenticated 20261008 official instrument classification archive.
+- Next phase ID: M1 (resume evidence acquisition); M2 is not promoted.
+- Plan changed? **No**; investigation checkpoint only, no relaxation to preregistered Prompt B.
