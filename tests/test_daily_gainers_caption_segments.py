@@ -19,6 +19,14 @@ class SegmentationTest(unittest.TestCase):
         self.assertEqual("".join(x["caption"] for x in result), pairs[0]["caption"])
         self.assertEqual("".join(x["speech"] for x in result), pairs[0]["speech"])
 
+    def test_punctuation_mismatch_between_speech_and_caption(self):
+        pairs = [{"caption": "首先，5%個股增加。其次，量能觀察。",
+                  "speech": "首先百分之五個股增加。其次量能觀察。"}]
+        cues = segment_pairs(pairs)
+        self.assertEqual("".join(c["caption"] for c in cues), pairs[0]["caption"])
+        self.assertEqual("".join(c["speech"] for c in cues), pairs[0]["speech"])
+        self.assertTrue(all(c["caption"] and c["speech"] for c in cues))
+
     def test_three_sentence_cap(self):
         pairs = [{"caption": "甲，乙，丙，丁。", "speech": "甲，乙，丙，丁。"}]
         result = segment_pairs(pairs)
