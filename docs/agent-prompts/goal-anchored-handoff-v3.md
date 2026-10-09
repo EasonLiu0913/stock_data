@@ -70,3 +70,10 @@ All prior preregistered Prompt B acceptance criteria, immutable phase IDs, Resea
 
 ## Acceptance of v3 migration
 Routing unique, all preexisting project IDs represented, no historical completed project reopened, canonical handoffs preserved, original Prompt A/B runners intact and augmented, active project specified by owner, no Prompt A run from migration commit.
+
+## Owner-mandated chat-only operating mode (2026-10-09)
+
+The Handoff Control UI website/MCP server/ChatKit/Vercel deployment experiment is **STOPPED**. Do not deploy, configure, maintain, or resume a separate service/app/website on behalf of this handoff; do not propose deployment again without a new, explicit owner request. This does not cancel independently authorized stock_data Pages workflows. All work stays in this ChatGPT conversation plus approved GitHub repository reads/writes.
+
+Native button behavior is client-controlled; if no supported native action exists, never use Markdown pseudo-buttons. Show a brief status/action panel with copyable `promptA` or `promptB` only when appropriate. If the phase is BLOCKED and its prerequisite has not changed, give the exact missing evidence and the next authorized evidence-gathering task or owner action; no circular “run promptA again” loops. On each user-invoked A/B: fetch fresh remote main, identify unique Active task, compare actual evidence with last checkpoint, make bounded progress when possible, record reproducible result once, and preserve original acceptance and gate separation. Do not create a new Active project for UI work.
+
