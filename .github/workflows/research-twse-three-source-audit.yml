@@ -17,6 +17,7 @@ jobs:
       - name: Run focused synthetic research tests
         run: node --test tests/research_reconcile_twse_owner_sources.test.js
       - name: Package owner-supplied previous offline 20-code differences
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -33,6 +34,7 @@ jobs:
           pathlib.Path("output/twse-three-source-audit/research-report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
           PY
       - name: Explain source-data boundary
+        if: always()
         shell: bash
         run: |
           echo "## TWSE three-source research CI" >> "$GITHUB_STEP_SUMMARY"
