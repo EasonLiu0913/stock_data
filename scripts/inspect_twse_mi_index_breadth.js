@@ -25,7 +25,11 @@ function inspect(payload,targetDate){
    stock_table_candidate:candidate,sample:candidate?sample:[]};
  });
  if(!tables.some(t=>t.stock_table_candidate))throw new Error('NO_STOCK_TABLE_CANDIDATE');
- return {target_date:targetDate,stat:'OK',table_count:tables.length,table_profiles:tables,
+ const summary=payload.tables.find(t=>t?.title==='漲跌證券數合計');
+ const official_stock_aggregate=summary&&JSON.stringify(summary.fields)==='["類型","整體市場","股票"]'&&Array.isArray(summary.data)
+  ? {title:summary.title,fields:summary.fields,rows:summary.data.map(row=>({category:String(row[0]??''),whole_market:String(row[1]??''),stock:String(row[2]??'')}))}
+  : null;
+ return {target_date:targetDate,stat:'OK',table_count:tables.length,table_profiles:tables,official_stock_aggregate,
   stock_candidates:tables.filter(t=>t.stock_table_candidate).map(t=>({index:t.index,rows:t.rows})),
   note:'INSPECTION_ONLY; no verified security identities; cannot publish breadth'};
 }
