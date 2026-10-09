@@ -21,4 +21,5 @@ assert.equal(r.cue_pairs[0].caption_cues[0].speech,r.speech[0].text);
 assert.throws(()=>buildVariants({...doc,scenes:[{cues:[[{type:'text',value:'股票漲10%'}]]}]},raw,rules),/Ambiguous numbers/);
 assert.throws(()=>buildVariants(doc,{...raw,stocks:[]},rules),/not in verified/);
 assert.throws(()=>buildVariants({...doc,target_date:'20261008'},raw,rules),/Date mismatch/);
+assert.throws(()=>buildVariants({...doc,scenes:[{cues:[[{type:'numeric_phrase',caption:'0',speech:'零'},{type:'text',value:'星個股'}]]}]},raw,rules),/Lexical zero/);
 console.log('daily gainers text variants v2 tests PASS');
