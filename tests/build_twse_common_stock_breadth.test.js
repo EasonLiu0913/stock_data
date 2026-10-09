@@ -6,7 +6,7 @@ function fixture(){
  const date='20261008';
  return {
   targetDate:date,
-  master:{date,market:'TWSE',securities:[
+  master:{date,market:'TWSE',source:{as_of_date:date,digest_verified:true},securities:[
    {code:'1111',market:'TWSE',security_type:'COMMON_STOCK',classification_verified:true},
    {code:'2222',market:'TWSE',security_type:'COMMON_STOCK',classification_verified:true},
    {code:'3333',market:'TWSE',security_type:'COMMON_STOCK',classification_verified:true},
@@ -58,3 +58,5 @@ test('exclude untraded ordinary shares from advancers and preserve denominator',
  const result=buildBreadth(f);
  assert.equal(result.no_trade_count,1);assert.equal(result.eligible_count,3);assert.equal(result.unchanged,0);
 });
+
+test('rejects unverified historical classification even if each security claims verified',()=>{const f=fixture();f.master.source.digest_verified=false;assert.throws(()=>buildBreadth(f),/UNATTESTED_SECURITY_MASTER/);});
