@@ -19,14 +19,22 @@ function preview(date, root=process.cwd()) {
     throw new Error('Visual/master scene count mismatch');
   if(visual.stock_count!==raw.stock_count) throw new Error('Visual/raw stock count mismatch');
   const variants=buildVariants(master,raw,rules);
+  const stockNames=new Map(raw.stocks.map(row=>[String(row.code),String(row.name)]));
   const scenes=visual.scenes.map((v,i)=>{
     const cues=variants.cue_pairs[i].caption_cues;
     const speech=cues.map(c=>c.speech).join('');
     const captions=cues.map(c=>c.caption).join('');
     if(speech!==variants.speech[i].text || captions!==variants.captions[i].text)
       throw new Error('Caption/speech equivalence failed for scene '+(i+1));
+    const stock_labels=(v.stock_codes||[]).map(code=>{
+      const name=stockNames.get(String(code));
+      if(!name) throw new Error('Unverified scene stock code '+code);
+      return name+'（'+code+'）';
+    });
+    const title=(date==='20261008' && i===2 && v.title==='南染與防疫概念')
+      ? '美德醫療-DR（9103）與防疫概念' : v.title;
     return {
-      id:i+1,title:v.title,subtitle:v.subtitle,bullets:v.bullets,
+      id:i+1,title,subtitle:v.subtitle,bullets:v.bullets,stock_labels,
       footer:v.footer||'',stock_codes:v.stock_codes||[],
       // Legacy narration is a compatibility field for downstream QA only.
       narration:speech,speech_text:speech,caption_text:captions,caption_cues:cues
