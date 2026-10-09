@@ -641,3 +641,7 @@ All Handoff control and A/B interaction stays inside the current ChatGPT convers
 
 Every Handoff v3 phase status and final next-action card MUST state both **目前阻礙** (current blocker, with missing evidence) and **預計研究方向** (specific, falsifiable next investigation). Also report what differs from the previous attempt and a stop/pivot rule. Store machine-readable progress at `docs/handoffs/state/<active-task-id>.json` with `phase`, `a_status`, `b_status`, `current_blocker`, `planned_research`, `prior_attempt`, `anti_loop`, and `evidence`. Treat this JSON as a progress *index*, not proof of acceptance: canonical handoff plus independent verified source/test evidence remain authoritative. Never mark tests PASS based on JSON claims. If proposed research repeats an attempt without new input, report STALLED/WAITING_SOURCE and a changed method or exact owner dependency, rather than recycling the same Prompt A. No external service or deployment is authorized by this addition.
 
+
+## Explicit next-step instruction
+
+The final Handoff status card must show **下一步指令** after 目前阻礙 and 預計研究方向. Recommend exactly one of `promptA`, `promptB`, or a precise prerequisite action such as 查看 Workflow、提供歷史資料、授權權限、等待新證據. Only recommend A/B if genuinely eligible and useful. For unchanged BLOCKED state with no distinct work, do not suggest circular promptA retries. No faux clickable buttons.
