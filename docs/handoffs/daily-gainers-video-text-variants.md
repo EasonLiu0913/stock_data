@@ -3,7 +3,7 @@
 Canonical handoff: `docs/handoffs/daily-gainers-video-text-variants.md`
 
 ## Current phase
-Phase 1: rules frozen; implementation of versioned rendering and alignment pending. **Do not claim v2 is production-enabled.**
+Phase 2: initial typed three-variant generator and gated v2 speech/caption consumers committed; full producer-to-consumer integration and production validation pending. **Do not claim v2 is production-enabled.**
 
 ## Objective
 Three independent, versioned text output artifacts for display, caption, speech, backed by one validated semantic source. Captions must show EVERY uttered word and number: Arabic digits (including codes when genuinely spoken), dates M/D, percent symbols. Speech must use natural Taiwan Mandarin pronunciation and primarily verified stock NAME, not stock code. Display must use verified stock name plus code. No summarization or dropped content. Reject semantic mismatches.
@@ -26,6 +26,14 @@ Three independent, versioned text output artifacts for display, caption, speech,
 - `.github/workflows/generate-upload-daily-gainers-video.yml` builds package, TTS, VTuber, render, SRT, thumbnail, upload.
 - `.github/workflows/daily-gainers-video-upload-orchestrator.yml` dispatches render/retry based on artifacts; `scripts/decide_daily_gainers_video_upload.sh` currently lacks rule/version hash compatibility.
 - 20261008 script has `代號九一零三` without company name; raw file maps `9103` to `美德醫療-DR`. A display title `南染與防疫概念` is not a reliable source of stock identity.
+
+## Implementation checkpoint 2026-10-09
+- Versioned rules registry, typed generator, isolated tests and CI workflow committed in preceding phase.
+- TTS now reads explicit `speech_text` when `plan.schema_version == 2` (commit `eded55d5f1a089db22483f0da4234f1877d50545`).
+- VTuber lipsync now reads explicit `speech_text` when `plan.schema_version == 2` (commit `eab54dcd7b9413d17c7249f6c0b7e57c2f718ed0`).
+- Python SRT now expects explicit `caption_cues` pairs, verifies concatenated captions/spoken cues equal respective full texts, aligns spoken cues against WordBoundary, and displays caption cues (commit `ae349cac8af71ff804921ed50f31b3c6a3bcea87`).
+- No natural workflow validation or runtime proof yet. Do not mark Prompt B PASS or promote production. No existing video was reuploaded.
+- Important gap: the current v2 typed generator emits scene text in separate files but does not yet produce complete per-cue pairs or integrate those files into a schema-v2 `plan.json`; the main package builder still emits v1. Implement and independently test these before rollout.
 
 ## Next round
 1. Implement a deterministic shared representation of semantic utterances and verified stock identities.
