@@ -1,0 +1,10 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {verifyOfficialMarketBreadth}=require('../scripts/verify_daily_gainers_official_market_breadth');
+const base=()=>({target_date:'20261008',source_date:'20261008',market:'TWSE',source_name:'TWSE_MI_INDEX',source_scope:'TWSE_OFFICIAL_STOCK_COLUMN',source_sha256:'c93be0a5fae5a9aa4ee9a02c83e7a7354fb1a3e715a09cc0f2d3cfe7e76709a5',stock_counts:{advancers:425,decliners:540,unchanged:109,no_trade_count:3,no_comparison_count:5}});
+test('official five-way aggregate accepted for narration but not identity or 5% stock list',()=>{const x=verifyOfficialMarketBreadth(base());assert.equal(x.total,1082);assert.equal(x.legal_identity_master_certified,false);assert.equal(x.individual_stock_gainers_5pct_verified,false)});
+test('reject stale date',()=>{const x=base();x.source_date='20261007';assert.throws(()=>verifyOfficialMarketBreadth(x),/DATE_MISMATCH/)});
+test('reject non-TWSE scope',()=>{const x=base();x.source_scope='ALL_MARKET';assert.throws(()=>verifyOfficialMarketBreadth(x),/SCOPE_MISMATCH/)});
+test('reject missing fifth official class',()=>{const x=base();delete x.stock_counts.no_comparison_count;assert.throws(()=>verifyOfficialMarketBreadth(x),/INVALID_no_comparison_count/)});
+test('reject missing archive SHA',()=>{const x=base();x.source_sha256='';assert.throws(()=>verifyOfficialMarketBreadth(x),/SHA_REQUIRED/)});
+test('reject fabricated negative count',()=>{const x=base();x.stock_counts.advancers=-1;assert.throws(()=>verifyOfficialMarketBreadth(x),/INVALID_advancers/)});
