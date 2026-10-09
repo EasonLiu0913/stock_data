@@ -48,66 +48,59 @@ def _split_long(caption, speech, max_chars=MAX_CHARS):
 
 
 def _paired_phrases(caption, speech):
-    """Find caption punctuation cuts against spoken text, without requiring
-    identical punctuation counts (speech normalization may differ)."""
+    """Split on caption punctuation only where spoken text has a safe boundary.
+
+    An unmatched boundary is deferred into the next phrase rather than
+    producing an empty spoken segment or guessing audio timing.
+    """
     if caption == speech:
         return [(part, part) for part in split_phrases(caption)]
-    # Compare strings without punctuation for stable correspondences; source
-    # punctuation remains attached to the caption and speech independently.
-    import unicodedata
-    def normalize_char(ch):
-        return ch not in PUNCT and not ch.isspace()
-    cplain = "".join(ch for ch in caption if normalize_char(ch))
-    splain = "".join(ch for ch in speech if normalize_char(ch))
-    # Only use exact common regions for boundaries; never split the expansion
-    # of a numerical token (e.g. 5% -> 百分之五).
+    keep = lambda ch: ch not in PUNCT and not ch.isspace()
+    cplain = "".join(ch for ch in caption if keep(ch))
+    splain = "".join(ch for ch in speech if keep(ch))
     matcher = SequenceMatcher(None, cplain, splain, autojunk=False)
-    mapping = {0: 0, len(cplain): len(splain)}
+    mapping = {}
     for block in matcher.get_matching_blocks():
         for offset in range(block.size + 1):
             mapping[block.a + offset] = block.b + offset
-    caption_parts = split_phrases(caption)
-    result = []
-    cpos = spos = 0
-    for idx, part in enumerate(caption_parts):
-        cnext = cpos + len(part)
-        if idx == len(caption_parts) - 1:
-            snext = len(speech)
-        else:
-            plain_cut = sum(normalize_char(ch) for ch in caption[:cnext])
-            if plain_cut not in mapping:
-                # A punctuation split inside transformed speech cannot be
-                # reliably aligned; retain it with the following phrase.
-                result.append((part, ""))
-                cpos = cnext
-                continue
-            spoken_plain_cut = mapping[plain_cut]
-            snext = 0
-            visible = 0
-            for j, ch in enumerate(speech):
-                if normalize_char(ch):
-                    visible += 1
-                if visible >= spoken_plain_cut:
-                    snext = j + 1
-                    break
-            while snext < len(speech) and speech[snext] in PUNCT:
-                snext += 1
-            snext = max(spos, snext)
-        result.append((part, speech[spos:snext]))
-        cpos, spos = cnext, snext
-    # Merge punctuation fragments whose speech split is unresolvable.
-    merged = []
-    for c, spoken in result:
-        if not spoken and merged:
-            merged[-1] = (merged[-1][0] + c, merged[-1][1])
-        else:
-            merged.append((c, spoken))
-    if not merged or any(not c or not sp for c, sp in merged):
-        raise ValueError("Unalignable speech/caption semantic phrase")
-    if "".join(c for c, _ in merged) != caption or "".join(sp for _, sp in merged) != speech:
-        raise ValueError("Paired phrase content mismatch")
-    return merged
 
+    def raw_speech_offset(plain_offset):
+        if plain_offset == len(splain):
+            return len(speech)
+        count = 0
+        for pos, ch in enumerate(speech):
+            if keep(ch):
+                count += 1
+            if count >= plain_offset:
+                end = pos + 1
+                while end < len(speech) and speech[end] in PUNCT:
+                    end += 1
+                return end
+        return len(speech)
+
+    result = []
+    cap_start = speech_start = 0
+    cap_end = 0
+    parts = split_phrases(caption)
+    for index, part in enumerate(parts):
+        cap_end += len(part)
+        if index == len(parts) - 1:
+            spoken_end = len(speech)
+        else:
+            plain_cut = sum(keep(ch) for ch in caption[:cap_end])
+            if plain_cut not in mapping:
+                continue
+            spoken_end = raw_speech_offset(mapping[plain_cut])
+            if spoken_end <= speech_start or spoken_end >= len(speech):
+                continue
+        result.append((caption[cap_start:cap_end], speech[speech_start:spoken_end]))
+        cap_start, speech_start = cap_end, spoken_end
+
+    if not result or any(not c or not spoken for c, spoken in result):
+        raise ValueError("No valid paired semantic phrase boundaries")
+    if "".join(c for c, _ in result) != caption or "".join(sp for _, sp in result) != speech:
+        raise ValueError("Paired phrase content mismatch")
+    return result
 
 def segment_pairs(pairs, max_chars=MAX_CHARS, max_phrases=MAX_PHRASES):
     units = []
