@@ -34,10 +34,17 @@ jobs:
         with:
           node-version: "24"
       - name: Run focused MI_INDEX + market opening tests
+        id: tests
+        continue-on-error: true
+        shell: bash
         run: |
-          node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js
+          set -o pipefail
+          mkdir -p output/twse-market-opening-inspection
+          node --test tests/inspect_twse_mi_index_breadth.test.js tests/build_twse_common_stock_breadth.test.js tests/normalize_twse_security_master.test.js tests/daily_gainers_market_opening.test.js tests/merge_daily_gainers_market_opening_breadth.test.js 2>&1 | tee output/twse-market-opening-inspection/test-results.log
       - name: Inspect full archived MI_INDEX file within checkout
         id: inspect
+        if: always()
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -60,6 +67,7 @@ jobs:
         run: |
           echo "## TWSE-only Phase 1 Evidence" >> "$GITHUB_STEP_SUMMARY"
           echo "Date: $TARGET_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tests outcome: ${{ steps.tests.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Inspection outcome: ${{ steps.inspect.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow only inspects MI_INDEX. Historical security-classification evidence is still required for full breadth PASS." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload inspection evidence
@@ -70,3 +78,15 @@ jobs:
           path: output/twse-market-opening-inspection/
           if-no-files-found: warn
           retention-days: 14
+      - name: Enforce evidence gate
+        if: always()
+        env:
+          TEST_RESULT: ${{ steps.tests.outcome }}
+          INSPECT_RESULT: ${{ steps.inspect.outcome }}
+        run: |
+          if [ "$TEST_RESULT" != "success" ] || [ "$INSPECT_RESULT" != "success" ]; then
+            echo "::error::Phase 1 Evidence FAILED (tests=$TEST_RESULT, inspect=$INSPECT_RESULT). Download evidence artifact for logs."
+            exit 1
+          fi
+          echo "Phase 1 inspector and unit tests PASS; historical security classification and full-market breadth are NOT yet verified."
+
