@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "goal_contract_version": "goal-v2",
+  "project_id": "daily-gainers-market-opening-end-to-end",
+  "phase": "M2",
+  "prompt": "A",
+  "phase_status": "IN_PROGRESS",
+  "research_progress_status": "PROGRESS",
+  "target_date": "20261008",
+  "baseline_main": "b22fe6d20a21cb1372cbda4f64d73800f94516a1",
+  "source_findings": [
+    {
+      "path": "data_twse_institutional_investors/20261008_twse_institutional_investors.json",
+      "git_blob_sha": "4ff1b5ebd0b71c72517479f051daec00f8b37186",
+      "reported_date": "20261008",
+      "reported_title": "115年10月08日 三大法人買賣超日報",
+      "reported_hints": "單位：股",
+      "unit": "SHARES",
+      "sample_fields": [
+        "外陸資買進股數(不含外資自營商)",
+        "投信買進股數",
+        "自營商買進股數(自行買賣)",
+        "自營商買進股數(避險)"
+      ],
+      "use_for_institutional_twd": false,
+      "reason": "Per-security share-count archive cannot substantiate aggregate buy/sell/net TWD."
+    },
+    {
+      "path": "scripts/build_twse_market_chart.js",
+      "observed_function": "getForeignAmounts",
+      "reported_endpoint": "BFI82U",
+      "observed_fields": [
+        "單位名稱",
+        "買進金額",
+        "賣出金額",
+        "買賣差額"
+      ],
+      "scope_note": "Existing function selects foreign-excluding-proprietary row; not proof of all three groups' dated archived TWD."
+    },
+    {
+      "path": "scripts/validate_daily_gainers_market_opening.js",
+      "git_blob_sha": "a81b072d2f8eb7e3dfa39b80b6a5189ec6e9dfa6",
+      "observed_strict_guards": [
+        "target date and market TWSE",
+        "institutional buy_twd/sell_twd/net_twd with unit TWD",
+        "classified per-security identities"
+      ],
+      "modified": false
+    }
+  ],
+  "verified_and_not_verified": {
+    "verified": "Exact 20261008 per-security institutional archive is share-based, not cash amount.",
+    "not_verified": [
+      "20261008 BFI82U complete group amounts and source raw SHA",
+      "official industry turnover with industry taxonomy and TWSE-only security scope",
+      "five exact distinct dated trading-day turnover records with cutoff",
+      "full verified individual 5pct list classification"
+    ],
+    "safe_result": "partial",
+    "video_publishable": false
+  },
+  "planned_research": {
+    "question": "Can the same-day official BFI82U archive establish all three non-overlapping institutional TWD groups, paired with defensible industry turnover and exactly five dated trading sessions?",
+    "method": "Inspect dated original BFI82U and MI_INDEX/FMTQIK table data with field-level scope and unit checks; build research-only fail-closed parser/tests after source schema is verified.",
+    "success_criterion": "All required dates, group meanings, exact TWD units, sector turnover taxonomy and five sessions verified; positive/negative tests pass; individual 5pct strict gate unchanged.",
+    "fallback": "Keep partial with explicit missing fields and source provenance; never infer cash from share counts."
+  },
+  "anti_loop": {
+    "same_unchanged_retry": false,
+    "next_distinct_step": "Original dated BFI82U row/field audit, then five-day FMTQIK source audit."
+  },
+  "protected_changes": "No production, V1/V2, Actions, cron, Pages, video, YouTube or publishing changes.",
+  "prompt_b_eligible": false,
+  "next_action": "promptA"
+}
