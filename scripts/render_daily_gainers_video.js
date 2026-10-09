@@ -167,7 +167,14 @@ function writeProgressOverlay(timing, sceneIndex) {
     const x = 290 + i * segWidth, w = segWidth - 8;
     const color = i < index ? '#0ea5e9' : i === index ? '#facc15' : '#334155';
     const titleColor = i === index ? '#ffffff' : i < index ? '#bae6fd' : '#94a3b8';
-    return `<text x="${x+w/2}" y="858" font-size="19" text-anchor="middle" fill="${titleColor}">${escapeSvg(seg.title)}</text>
+    // Reserve horizontal padding for every chapter label. Long titles are
+    // abbreviated only in the visual timeline; full titles remain in metadata.
+    const maxChars = Math.max(2, Math.floor((w - 12) / 19));
+    const chars = [...seg.title];
+    const label = chars.length > maxChars
+      ? chars.slice(0, Math.max(1, maxChars - 1)).join('') + '…'
+      : seg.title;
+    return `<text x="${x+w/2}" y="858" font-size="17" font-family="Noto Sans CJK TC,sans-serif" text-anchor="middle" fill="${titleColor}">${escapeSvg(label)}</text>
       <rect x="${x}" y="869" width="${w}" height="12" rx="5" fill="${color}"/>`;
   }).join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
