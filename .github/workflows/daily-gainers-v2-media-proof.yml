@@ -51,6 +51,11 @@ jobs:
         run: python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261008/plan.json
       - name: Verify complete speech and subtitle QA
         run: node scripts/verify_daily_gainers_v2_media_proof.js 20261008
+      - name: Include browser preview dashboard
+        if: always()
+        run: |
+          mkdir -p output/daily-gainers-video/20261008
+          cp public/daily-gainers-v2-video-preview.html output/daily-gainers-video/20261008/video-preview.html
       - uses: actions/upload-artifact@v4
         if: always()
         with:
