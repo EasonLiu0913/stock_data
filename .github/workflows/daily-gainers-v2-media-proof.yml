@@ -9,6 +9,7 @@ on:
       - 'scripts/daily_gainers_text_variants.js'
       - 'tests/daily_gainers_text_variants.test.js'
       - 'scripts/verify_daily_gainers_v2_media_proof.js'
+      - 'scripts/build_daily_gainers_v2_slides.js'
 permissions:
   contents: read
 jobs:
@@ -40,6 +41,9 @@ jobs:
           mkdir -p output/daily-gainers-video/20261008
           cp output/daily-gainers-v2-preview/20261008/*.json output/daily-gainers-video/20261008/
           node scripts/build_daily_gainers_v2_slides.js 20261008
+      - name: Validate presentation cards
+        run: |
+          node -e 'const fs=require("fs");const p="output/daily-gainers-video/20261008/slide-manifest.json";const m=JSON.parse(fs.readFileSync(p));if(m.slides.length!==9||m.slides[0].type!=="overview"||m.slides[8].type!=="checklist"||m.slides.some(x=>x.points<2))process.exit(1);console.log("SLIDE_QA_PASS")'
       - name: Generate speech
         env:
           YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
