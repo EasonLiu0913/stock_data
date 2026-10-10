@@ -1,0 +1,29 @@
+name: "[Research M3] Market-regime assertion ledger Node24"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-m3-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check conservative phrasing and actual source-backed assertion ledger
+        run: |
+          set -euo pipefail
+          node --test tests/build_daily_gainers_m3_regime_assertions.test.js
+          node scripts/build_daily_gainers_m3_regime_assertions.js > "${RUNNER_TEMP}/m3-regime-assertions.json"
+          node -e 'const v=require(process.argv[1]);if(v.date!=="20261008"||v.publication_authorized!==false||v.prompt_b_eligible!==false||v.evidence.length!==6)process.exit(2)' "${RUNNER_TEMP}/m3-regime-assertions.json"
+      - name: Upload private M3 research evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-regime-research-${{ github.run_id }}
+          path: ${{ runner.temp }}/m3-regime-assertions.json
+          if-no-files-found: error
+          retention-days: 14
