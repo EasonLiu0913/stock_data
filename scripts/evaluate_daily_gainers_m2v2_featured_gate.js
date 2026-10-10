@@ -1,5 +1,6 @@
 'use strict';
 const fs=require('node:fs');
+const {checkPerSecurityFivePercent}=require('./verify_daily_gainers_m2_per_security_boundary');
 function evaluate(preflight,risk){
  if(preflight?.date!=='20261008'||risk?.date!==preflight.date)throw Error('DATE_MISMATCH');
  if(!Array.isArray(preflight.candidates)||!Array.isArray(risk.findings))throw Error('BAD_SCHEMA');
@@ -9,6 +10,15 @@ function evaluate(preflight,risk){
   const events=risk.findings.filter(e=>e.code===c.code&&e.date===preflight.date);
   const activeDisposition=events.some(e=>e.event==='DISPOSITION_ACTIVE');
   const checks={identity:c.asof_common_stock_identity_verified===true,disposition:c.disposition_verified===true&&!activeDisposition,suspension:c.suspension_verified===true,strictFivePercent:c.original_strict_checker_executed===true&&Number.isFinite(c.gain_percent)&&c.gain_percent>=5,archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true,classification:c.isin_stock_category_matched===true};
+  // A positive marker alone cannot certify a featured stock: run the original immutable boundary.
+  let originalBoundaryPassed=false;
+  if(Object.values(checks).every(Boolean)){
+   try{
+    const proof=checkPerSecurityFivePercent(c.per_security_proof);
+    originalBoundaryPassed=proof.stock_code===c.code&&proof.date===preflight.date;
+   }catch(_){originalBoundaryPassed=false;}
+  }
+  checks.originalBoundary=originalBoundaryPassed;
   const eligible=Object.values(checks).every(Boolean);
   return {code:c.code,checks,active_disposition:activeDisposition,eligible,reasons:Object.keys(checks).filter(k=>!checks[k])};
  });
