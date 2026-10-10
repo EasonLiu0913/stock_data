@@ -1,0 +1,52 @@
+name: "[Research M5] WordBoundary content timeline"
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Freeze source
+        run: |
+          node scripts/build_daily_gainers_m5_private_plan.js
+          python -m py_compile scripts/audit_daily_gainers_m5_wordboundary_content_timeline.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-private-tts-20261008-38062405623
+          run-id: 38062405623
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/first-five
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-scene06-stitch-research-38076491234
+          run-id: 38076491234
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/six
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-scene07-original-research-38078900356
+          run-id: 38078900356
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/seven
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-final-pcm-scene-caption-38080997983
+          run-id: 38080997983
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/pcm
+      - name: Audit saved timing metadata
+        run: python scripts/audit_daily_gainers_m5_wordboundary_content_timeline.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/first-five" "${RUNNER_TEMP}/six" "${RUNNER_TEMP}/seven" "${RUNNER_TEMP}/pcm" "${RUNNER_TEMP}/wordboundary-content.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-wordboundary-content-timeline-${{ github.run_id }}
+          path: ${{ runner.temp }}/wordboundary-content.json
+          if-no-files-found: warn
+          retention-days: 14
