@@ -1,0 +1,12 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {build}=require('../scripts/build_daily_gainers_m2v2_verified_facts');
+const {verifyArchive}=require('../scripts/verify_daily_gainers_m2_primary_archive');
+const ROOT=path.resolve(__dirname,'..'),dir=path.join(ROOT,'data_research/twse-market-opening/primary-archive/20261008');
+const inputs=()=>({verified:verifyArchive(dir),raw:Object.fromEntries(['bfi82u','fmtqik','bfiamu'].map(k=>[k,JSON.parse(fs.readFileSync(path.join(dir,'20261008-'+k+'.json')))])),recall:JSON.parse(fs.readFileSync(path.join(ROOT,'data_research/twse-market-opening/20261008-m2v2-daily-five-percent-recall.json'))),opening:JSON.parse(fs.readFileSync(path.join(ROOT,'data_daily_gain_over_5/market-opening/20261008.json')))});
+test('real archived sources build internally reconciled partial facts',()=>{const v=build(inputs());assert.equal(v.market_trading.turnover_twd,924509097873);assert.equal(v.market_trading.prior_five_mean_twd,1007158931238.4);assert.equal(v.institutional.total.net_twd,-91574625081);assert.equal(v.industry.reported_categories,34);assert.equal(v.observed_gainers.matching_mi_index,35);assert.equal(v.publication_authorized,false);});
+test('source date mismatch rejected',()=>{const x=inputs();x.raw.bfi82u.date='20261007';assert.throws(()=>build(x));});
+test('market turnover mismatch rejected',()=>{const x=inputs();x.opening.market_trading.turnover_twd=1;assert.throws(()=>build(x));});
+test('altered institutional net rejected',()=>{const x=inputs();x.raw.bfi82u.data[5][3]='0';assert.throws(()=>build(x));});
+test('unverified source bytes rejected',()=>{const x=inputs();x.verified.raw_bytes_verified=false;assert.throws(()=>build(x));});
+test('candidate recall discrepancy rejected',()=>{const x=inputs();x.recall.match.candidate_code_recall_within_these_two_sources='34/35';assert.throws(()=>build(x));});
