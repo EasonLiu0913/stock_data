@@ -27,7 +27,8 @@ jobs:
         run: |
           set -euo pipefail
           node --version
-          node --test             tests/verify_daily_gainers_m2_source_checkpoint.test.js             tests/verify_daily_gainers_m2_five_day_turnover.test.js             tests/capture_twse_m2_primary_source.test.js             tests/verify_daily_gainers_m2_user_supplied_extract.test.js             tests/build_daily_gainers_m2_research_snapshot.test.js
+          node --test             tests/verify_daily_gainers_m2_source_checkpoint.test.js             tests/verify_daily_gainers_m2_five_day_turnover.test.js             tests/capture_twse_m2_primary_source.test.js             tests/verify_daily_gainers_m2_user_supplied_extract.test.js             tests/build_daily_gainers_m2_research_snapshot.test.js             tests/verify_daily_gainers_m2_primary_archive.test.js
+          node scripts/verify_daily_gainers_m2_primary_archive.js > "${RUNNER_TEMP}/m2-primary-verification.json"
           node scripts/build_daily_gainers_m2_research_snapshot.js > "${RUNNER_TEMP}/m2-partial-snapshot.json"
           node -e 'const v=require(process.argv[1]);if(v.status!=="partial"||v.publication_authorized!==false||v.source_provenance.original_http_bytes!==false)process.exit(2)' "${RUNNER_TEMP}/m2-partial-snapshot.json"
       - name: Capture original date-pinned TWSE HTTP responses (fail closed)
@@ -53,5 +54,6 @@ jobs:
           path: |
             ${{ runner.temp }}/m2-official-raw/
             ${{ runner.temp }}/m2-partial-snapshot.json
+            ${{ runner.temp }}/m2-primary-verification.json
           if-no-files-found: warn
           retention-days: 14
