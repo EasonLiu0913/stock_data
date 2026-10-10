@@ -29,6 +29,8 @@ jobs:
           YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
           YOUTUBE_TTS_RATE: "+15%"
         run: python scripts/synthesize_daily_gainers_tts.py output/m5-private-preview/20261008/plan.json
+      - name: Measure real audio against frozen M4 text and 60-90 seconds
+        run: node scripts/measure_daily_gainers_m5_tts.js output/m5-private-preview/20261008
       - name: Keep audio proof without uploading or publishing
         if: always()
         uses: actions/upload-artifact@v4
@@ -38,5 +40,6 @@ jobs:
             output/m5-private-preview/20261008/plan.json
             output/m5-private-preview/20261008/audio/
             output/m5-private-preview/20261008/tts-manifest.json
+            output/m5-private-preview/20261008/tts-duration-proof.json
           if-no-files-found: warn
           retention-days: 14
