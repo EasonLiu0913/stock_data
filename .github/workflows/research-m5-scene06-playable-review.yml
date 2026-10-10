@@ -1,0 +1,44 @@
+name: "[Research M5] Scene06 playable review"
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Frozen source and audio preflight
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
+          python -m py_compile scripts/audit_daily_gainers_m5_scene06_artifact.py scripts/build_daily_gainers_m5_scene06_review_package.py
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-scene06-stitch-research-38076491234
+          run-id: 38076491234
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/scene06-origin
+      - name: Verify original Artifact and source
+        run: python scripts/audit_daily_gainers_m5_scene06_artifact.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/scene06-origin"
+      - name: Prepare playable original audio and estimated caption preview
+        run: python scripts/build_daily_gainers_m5_scene06_review_package.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/scene06-origin" "${RUNNER_TEMP}/scene06-review"
+      - name: Retain private review files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-scene06-playable-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/scene06-review/
+          if-no-files-found: warn
+          retention-days: 14
