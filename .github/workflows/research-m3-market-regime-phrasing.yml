@@ -17,9 +17,10 @@ jobs:
       - name: Check conservative phrasing and actual source-backed assertion ledger
         run: |
           set -euo pipefail
-          node --test tests/build_daily_gainers_m3_regime_assertions.test.js tests/validate_daily_gainers_m3_claims.test.js tests/replay_daily_gainers_m1_breadth_for_m3.test.js
+          node --test tests/build_daily_gainers_m3_regime_assertions.test.js tests/validate_daily_gainers_m3_claims.test.js tests/replay_daily_gainers_m1_breadth_for_m3.test.js tests/build_daily_gainers_m3_bound_claims.test.js
           node scripts/replay_daily_gainers_m1_breadth_for_m3.js > "${RUNNER_TEMP}/m3-m1-breadth-replay.json"
           node scripts/build_daily_gainers_m3_regime_assertions.js > "${RUNNER_TEMP}/m3-regime-assertions.json"
+          node scripts/build_daily_gainers_m3_bound_claims.js > "${RUNNER_TEMP}/m3-bound-claims.json"
           node -e 'const v=require(process.argv[1]);if(v.date!=="20261008"||v.publication_authorized!==false||v.prompt_b_eligible!==false||v.evidence.length!==6)process.exit(2)' "${RUNNER_TEMP}/m3-regime-assertions.json"
       - name: Upload private M3 research evidence
         uses: actions/upload-artifact@v4
@@ -28,5 +29,6 @@ jobs:
           path: |
             ${{ runner.temp }}/m3-regime-assertions.json
             ${{ runner.temp }}/m3-m1-breadth-replay.json
+            ${{ runner.temp }}/m3-bound-claims.json
           if-no-files-found: error
           retention-days: 14
