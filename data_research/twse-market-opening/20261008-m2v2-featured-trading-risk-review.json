@@ -14,13 +14,19 @@
   "sources": [
     {
       "type": "TWSE_DISPOSITION",
-      "url": "https://www.twse.com.tw/announcement/punish?response=html",
-      "caveat": "Query defaults/history may change; verify date filtering and archive rows before certifying."
+      "url": "https://www.twse.com.tw/zh/announcement/punish.html",
+      "date_range_observed": "20261009-20261012",
+      "source_scope_note": "This published list contains entries effective on Oct08 but the publication-date filter is not exhaustive for earlier announcements; negative matches alone are not certification."
+    },
+    {
+      "type": "TWSE_HALT",
+      "url": "https://www.twse.com.tw/zh/trading/historical/twtawu.html",
+      "status": "DATE_SCOPED_COMPLETE_RESULTS_NOT_RETRIEVED"
     },
     {
       "type": "TWSE_ATTENTION",
-      "url": "https://www.twse.com.tw/announcement/notice?response=html",
-      "caveat": "Attention is not equivalent to disposition."
+      "url": "https://www.twse.com.tw/zh/announcement/notice.html",
+      "status": "PRIOR_REPORTED_2340_AND_6672_REQUIRES_DATE_SCOPED_RECHECK"
     }
   ],
   "findings": [
@@ -37,7 +43,8 @@
       "second_end": "20261016",
       "source": "TWSE_DISPOSITION",
       "featured_eligible": false,
-      "reason": "Disposition treatment on the target trading date; must be rejected or risk-gated under frozen video eligibility."
+      "reason": "Disposition treatment on the target trading date; must be rejected or risk-gated under frozen video eligibility.",
+      "source_url": "https://www.twse.com.tw/zh/announcement/punish.html"
     },
     {
       "code": "2340",
@@ -59,12 +66,31 @@
     }
   ],
   "remaining": [
-    "Independently query complete date-scoped 20261008 disposition and halt lists for each of 5 candidates",
-    "Verify archived ordinary-stock effective identity of each selected security",
-    "Execute original unchanged per-security strict >=5 percent validator and all negative tests",
-    "Record a reproducible final eligible shortlist and review material omissions"
+    "Obtain independently date-scoped and complete 20261008 disposition and trading halt records for all 5 codes",
+    "Validate official dated listed ordinary-stock identity, original unmodified per-stock threshold and exclusion gate",
+    "Run Node24 research test suite with actual archived fixtures, verify artifacts",
+    "Do not certify candidates or authorize publication until complete"
   ],
   "publication_authorized": false,
   "prompt_a_complete": false,
-  "prompt_b_eligible": false
+  "prompt_b_eligible": false,
+  "scope_check": {
+    "source": "TWSE_DISPOSITION_PUBLISHED_LIST",
+    "inspected_codes": [
+      "1301",
+      "3653",
+      "2340",
+      "6834",
+      "6672"
+    ],
+    "not_listed_in_inspected_publication_window": [
+      "1301",
+      "3653",
+      "2340",
+      "6834"
+    ],
+    "negative_assertion_certified": false,
+    "halt_negative_assertion_certified": false,
+    "reason": "Historical date-specific independent completeness and halt results are not yet proven; absence in an inspected result is not authoritative none."
+  }
 }
