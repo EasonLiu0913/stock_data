@@ -9,7 +9,12 @@ function evaluate(preflight,risk){
   if(seen.has(c.code))throw Error('DUPLICATE_CODE:'+c.code);seen.add(c.code);
   const events=risk.findings.filter(e=>e.code===c.code&&e.date===preflight.date);
   const activeDisposition=events.some(e=>e.event==='DISPOSITION_ACTIVE');
-  const checks={identity:c.asof_common_stock_identity_verified===true,disposition:c.disposition_verified===true&&!activeDisposition,suspension:c.suspension_verified===true,strictFivePercent:c.original_strict_checker_executed===true&&Number.isFinite(c.gain_percent)&&c.gain_percent>=5,archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true,classification:c.isin_stock_category_matched===true};
+  // Independently recompute the candidate's percentage from its archived-price preflight fields.
+  const priceNumbers=[c.close,c.change,c.previous_close,c.gain_percent];
+  const priceArithmeticValid=priceNumbers.every(Number.isFinite)&&c.close>0&&c.previous_close>0&&c.change>=0
+   &&Math.abs((c.close-c.change)-c.previous_close)<1e-7
+   &&Math.abs(100*c.change/c.previous_close-c.gain_percent)<0.000011;
+  const checks={priceArithmetic:priceArithmeticValid,identity:c.asof_common_stock_identity_verified===true,disposition:c.disposition_verified===true&&!activeDisposition,suspension:c.suspension_verified===true,strictFivePercent:c.original_strict_checker_executed===true&&Number.isFinite(c.gain_percent)&&c.gain_percent>=5,archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true,classification:c.isin_stock_category_matched===true};
   // A positive marker alone cannot certify a featured stock: run the original immutable boundary.
   let originalBoundaryPassed=false;
   if(Object.values(checks).every(Boolean)){
