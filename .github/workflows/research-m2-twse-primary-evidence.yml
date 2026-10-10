@@ -27,7 +27,8 @@ jobs:
         run: |
           set -euo pipefail
           node --version
-          node --test             tests/verify_daily_gainers_m2_source_checkpoint.test.js             tests/verify_daily_gainers_m2_five_day_turnover.test.js             tests/capture_twse_m2_primary_source.test.js             tests/verify_daily_gainers_m2_user_supplied_extract.test.js             tests/build_daily_gainers_m2_research_snapshot.test.js             tests/verify_daily_gainers_m2_primary_archive.test.js             tests/verify_daily_gainers_m2_per_security_boundary.test.js             tests/audit_daily_gainers_m2v2_observed_candidates.test.js             tests/build_daily_gainers_m2v2_verified_facts.test.js             tests/evaluate_daily_gainers_m2v2_featured_gate.test.js             tests/capture_daily_gainers_m2v2_risk_sources.test.js
+          node --test             tests/verify_daily_gainers_m2_source_checkpoint.test.js             tests/verify_daily_gainers_m2_five_day_turnover.test.js             tests/capture_twse_m2_primary_source.test.js             tests/verify_daily_gainers_m2_user_supplied_extract.test.js             tests/build_daily_gainers_m2_research_snapshot.test.js             tests/verify_daily_gainers_m2_primary_archive.test.js             tests/verify_daily_gainers_m2_per_security_boundary.test.js             tests/audit_daily_gainers_m2v2_observed_candidates.test.js             tests/build_daily_gainers_m2v2_verified_facts.test.js             tests/evaluate_daily_gainers_m2v2_featured_gate.test.js             tests/audit_daily_gainers_m2v2_core_evidence.test.js             tests/capture_daily_gainers_m2v2_risk_sources.test.js
+          node scripts/audit_daily_gainers_m2v2_core_evidence.js > "${RUNNER_TEMP}/m2v2-core-evidence-audit.json"
           node scripts/evaluate_daily_gainers_m2v2_featured_gate.js > "${RUNNER_TEMP}/m2v2-featured-gate.json"
           node -e 'const fs=require("node:fs");const v=JSON.parse(fs.readFileSync(process.argv[1]));if(v.publication_authorized!==false||v.eligible_count!==0||v.candidates.length!==5||!v.candidates.find(c=>c.code==="6672"&&c.active_disposition===true&&c.eligible===false))process.exit(2)' "${RUNNER_TEMP}/m2v2-featured-gate.json"
           node scripts/audit_daily_gainers_m2v2_observed_candidates.js > "${RUNNER_TEMP}/m2v2-observed-candidate-audit.json"
@@ -65,6 +66,7 @@ jobs:
             ${{ runner.temp }}/m2-partial-snapshot.json
             ${{ runner.temp }}/m2-primary-verification.json
             ${{ runner.temp }}/m2v2-featured-gate.json
+            ${{ runner.temp }}/m2v2-core-evidence-audit.json
             ${{ runner.temp }}/m2v2-observed-candidate-audit.json
             ${{ runner.temp }}/m2v2-verified-finance-facts.json
           if-no-files-found: warn
