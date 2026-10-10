@@ -3,8 +3,8 @@
 Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
-Plan version: `goal-v2`, owner-approved M1 scope amendment 2026-10-10; see section CJ. Original goal-v1 M1 A/B preserved as superseded historical contracts.
-Ultimate goal status: **NOT COMPLETE**. M0 and M1-v2 **COMPLETE**; M2 promoted for explicit Prompt A; M3–M7 PENDING.
+Plan version: `goal-v3`, owner-approved M2-v2 candidate-coverage amendment 2026-10-10; see sections DJ/DK. Earlier goal-v2 M1 completion remains valid, and original goal-v2 M2 A/B are superseded without PASS.
+Ultimate goal status: **NOT COMPLETE**. M0 and M1-v2 **COMPLETE**; owner-approved M2-v2 successor Prompt A promoted/eligible but not executed; M3–M7 PENDING.
 
 ## A. Immutable Project Charter — WHY
 
