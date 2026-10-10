@@ -1,0 +1,12 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const {verifyFiveDayTurnover}=require('../scripts/verify_daily_gainers_m2_five_day_turnover');
+const chart=JSON.parse(fs.readFileSync(path.join(__dirname,'../data_twse_market_chart/market_chart.json'),'utf8'));
+const cp=JSON.parse(fs.readFileSync(path.join(__dirname,'../data_research/twse-market-opening/20261008-m2-official-institution-industry-source-checkpoint.json'),'utf8'));
+const clone=o=>JSON.parse(JSON.stringify(o));
+test('archived chart exactly matches all five days and average',()=>{const r=verifyFiveDayTurnover(chart,cp);assert.deepEqual(r.dates,['20261001','20261002','20261005','20261006','20261007']);assert.equal(r.mean_turnover_twd,1007158931238.4);assert.equal(r.publication_authorized,false);});
+test('reject wrong target date',()=>{const x=clone(chart);x.endDate='20261007';assert.throws(()=>verifyFiveDayTurnover(x,cp),/target date/);});
+test('reject shares as money',()=>{const x=clone(chart);x.units.turnover='shares';assert.throws(()=>verifyFiveDayTurnover(x,cp),/unit/);});
+test('reject missing historical session',()=>{const x=clone(chart);x.data=x.data.filter(r=>r.date!=='20261006');assert.throws(()=>verifyFiveDayTurnover(x,cp),/sequence/);});
+test('reject changed source turnover',()=>{const x=clone(chart);x.data.find(r=>r.date==='20261001').turnover+=1;assert.throws(()=>verifyFiveDayTurnover(x,cp),/average/);});
+test('reject duplicated historical row',()=>{const x=clone(chart);x.data.push({...x.data.find(r=>r.date==='20261006')});assert.throws(()=>verifyFiveDayTurnover(x,cp),/duplicate/);});
