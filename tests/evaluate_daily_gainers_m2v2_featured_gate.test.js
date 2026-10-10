@@ -1,0 +1,8 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),{evaluate}=require('../scripts/evaluate_daily_gainers_m2v2_featured_gate');
+const c={code:'1301',gain_percent:7,asof_common_stock_identity_verified:false,disposition_verified:false,suspension_verified:false,original_strict_checker_executed:false,mi_index_row_matched:true,daily_5pct_row_matched:true,isin_stock_category_matched:true};
+const p={date:'20261008',candidates:[c]};const r={date:'20261008',findings:[]};
+test('real preflight-style unverified candidate stays ineligible',()=>{assert.equal(evaluate(p,r).candidates[0].eligible,false)});
+test('active disposition always excludes even with all proofs',()=>{const all={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};const x=evaluate({...p,candidates:[all]},{...r,findings:[{code:'1301',date:'20261008',event:'DISPOSITION_ACTIVE'}]});assert.equal(x.candidates[0].eligible,false)});
+test('only complete positive evidence can make candidate research-eligible',()=>{const all={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};assert.equal(evaluate({...p,candidates:[all]},r).candidates[0].eligible,true);assert.equal(evaluate({...p,candidates:[all]},r).publication_authorized,false)});
+test('reject stale dates and duplicate codes',()=>{assert.throws(()=>evaluate({...p,date:'20261007'},r));assert.throws(()=>evaluate({...p,candidates:[c,c]},r))});
