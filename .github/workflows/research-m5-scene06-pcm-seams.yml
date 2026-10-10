@@ -1,0 +1,46 @@
+name: "[Research M5] Scene06 PCM seams"
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Source tests and audio prerequisites
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
+          python -m py_compile scripts/audit_daily_gainers_m5_scene06_artifact.py scripts/audit_daily_gainers_m5_scene06_pcm_seams.py
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-scene06-stitch-research-38076491234
+          run-id: 38076491234
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/scene06-origin
+      - name: Recheck original independent integrity
+        run: python scripts/audit_daily_gainers_m5_scene06_artifact.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/scene06-origin"
+      - name: Measure PCM seams with no new TTS
+        run: |
+          set -o pipefail
+          python scripts/audit_daily_gainers_m5_scene06_pcm_seams.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/scene06-origin" | tee "${RUNNER_TEMP}/scene06-seams.json"
+      - name: Save research JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-scene06-pcm-seams-${{ github.run_id }}
+          path: ${{ runner.temp }}/scene06-seams.json
+          if-no-files-found: warn
+          retention-days: 14
