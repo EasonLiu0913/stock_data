@@ -1,0 +1,15 @@
+'use strict';
+const test=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'),path=require('node:path');
+const {verify}=require('../scripts/verify_daily_gainers_m2_user_supplied_extract');
+const original=JSON.parse(fs.readFileSync(path.join(__dirname,'../data_research/twse-market-opening/20261008-m2-user-supplied-official-json-extract.json'),'utf8'));
+const copy=()=>structuredClone(original);
+test('provided official response transcription internally reconciles',()=>{const x=verify(copy());assert.equal(x.institutional_net_twd,-91574625081);assert.equal(x.industry_categories,34);assert.equal(x.publication_authorized,false);});
+test('reject wrong date',()=>{const x=copy();x.date='20261007';assert.throws(()=>verify(x),/source date/);});
+test('reject unsupported raw source certification',()=>{const x=copy();x.provenance.original_http_bytes=true;assert.throws(()=>verify(x),/provenance/);});
+test('reject institutional shares',()=>{const x=copy();x.institutional.unit='SHARES';assert.throws(()=>verify(x),/unit/);});
+test('reject institution total drift',()=>{const x=copy();x.institutional.rows[5][3]++;assert.throws(()=>verify(x),/arithmetic|total/);});
+test('reject missing prior session',()=>{const x=copy();x.fmtqik.rows.pop();assert.throws(()=>verify(x),/coverage/);});
+test('reject electronic parent double-count mismatch',()=>{const x=copy();x.industry.rows.find(r=>r[0]==='半導體')[1]++;assert.throws(()=>verify(x),/overlap/);});
+test('reject chemical parent double-count mismatch',()=>{const x=copy();x.industry.rows.find(r=>r[0]==='化學')[1]++;assert.throws(()=>verify(x),/overlap/);});
+test('reject missing industry',()=>{const x=copy();x.industry.rows.pop();assert.throws(()=>verify(x),/industry coverage/);});
+test('reject premature publication',()=>{const x=copy();x.status='complete';assert.throws(()=>verify(x),/promotion/);});
