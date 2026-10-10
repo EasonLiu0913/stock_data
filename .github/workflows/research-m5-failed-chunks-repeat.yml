@@ -1,0 +1,38 @@
+name: "[Research M5] Failed chunks repeat"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate frozen plan and diagnostic
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          python -m py_compile scripts/diagnose_daily_gainers_m5_failed_chunks_repeat.py
+          node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
+      - name: Pin tested engine
+        run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Repeat the three failing original chunks with controls
+        run: |
+          set -o pipefail
+          python scripts/diagnose_daily_gainers_m5_failed_chunks_repeat.py output/m5-private-preview/20261008/plan.json | tee "${RUNNER_TEMP}/m5-failed-chunks-repeat.json"
+      - name: Preserve JSON diagnostics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-failed-chunks-repeat-${{ github.run_id }}
+          path: ${{ runner.temp }}/m5-failed-chunks-repeat.json
+          if-no-files-found: error
+          retention-days: 14
