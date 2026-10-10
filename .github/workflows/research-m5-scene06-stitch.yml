@@ -1,0 +1,36 @@
+name: "[Research M5] Same-run scene06 stitch proof"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Freeze source and validate research script
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          python -m py_compile scripts/research_daily_gainers_m5_scene06_stitch.py
+          node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
+      - name: Pin diagnostic engine
+        run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Create source-identical same-run scene06 research proof
+        run: python scripts/research_daily_gainers_m5_scene06_stitch.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/m5-scene06-research"
+      - name: Preserve private research proof, even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-scene06-stitch-research-${{ github.run_id }}
+          path: ${{ runner.temp }}/m5-scene06-research/
+          if-no-files-found: warn
+          retention-days: 14
