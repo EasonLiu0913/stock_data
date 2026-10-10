@@ -16,6 +16,11 @@ jobs:
           python-version: '3.12'
       - name: Install same TTS dependency as failure run
         run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Audit exact voice availability
+        continue-on-error: true
+        run: |
+          python scripts/audit_daily_gainers_m5_voice_catalog.py > "${RUNNER_TEMP}/m5-voice-catalog.json"
+          cat "${RUNNER_TEMP}/m5-voice-catalog.json"
       - name: Compare bounded authentic WordBoundary probes
         run: |
           set -o pipefail
@@ -25,6 +30,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: m5-edge-tts-diagnostic-${{ github.run_id }}
-          path: ${{ runner.temp }}/m5-edge-tts-diagnostic.json
+          path: |
+            ${{ runner.temp }}/m5-edge-tts-diagnostic.json
+            ${{ runner.temp }}/m5-voice-catalog.json
           if-no-files-found: warn
           retention-days: 14
