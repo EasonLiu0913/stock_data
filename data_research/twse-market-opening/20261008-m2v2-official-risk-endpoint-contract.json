@@ -1,0 +1,41 @@
+{
+  "date": "20261008",
+  "phase": "M2-v2",
+  "purpose": "Discovered TWSE historical disposition/halt request contracts, NOT dated risk clearance",
+  "sources": [
+    {
+      "type": "TWSE_DISPOSITION",
+      "method": "GET",
+      "url": "https://www.twse.com.tw/rwd/zh/announcement/punish?response=json&startDate=20261008&endDate=20261008&querytype=3&proceType=&remarkType=",
+      "reference": "https://github.com/SeanChenR/Web_Route",
+      "querytype": "3=all",
+      "http_response_verified": false,
+      "date_scoped_complete": false
+    },
+    {
+      "type": "TWSE_TEMPORARY_HALT",
+      "method": "GET",
+      "url": "https://www.twse.com.tw/rwd/zh/afterTrading/TWTAWU?response=json&startDate=20261008&endDate=20261008&querytype=3",
+      "reference": "https://github.com/SeanChenR/Web_Route",
+      "querytype": "3=all listed securities",
+      "http_response_verified": false,
+      "date_scoped_complete": false
+    }
+  ],
+  "selected_codes": [
+    "1301",
+    "3653",
+    "2340",
+    "6834"
+  ],
+  "cautions": [
+    "Endpoints derived from public TWSE website-route documentation and remain unconfirmed against original 20261008 response bytes",
+    "An all-codes disposition date window may miss earlier announcements with later effective disposal periods; inspect effective dates and extend lookback",
+    "Do not interpret empty/unavailable remote response as verified absence",
+    "Keep 6672 active disposition excluded"
+  ],
+  "verified_clearance_codes": [],
+  "publication_authorized": false,
+  "prompt_a_complete": false,
+  "prompt_b_eligible": false
+}
