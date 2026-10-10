@@ -49,7 +49,7 @@ function evaluate(preflight,risk){
    disclosures:[dispositionStatus!=='VERIFIED_NONE'?'處置：'+dispositionStatus:null,
     suspensionStatus!=='VERIFIED_NONE'?'暫停交易：'+suspensionStatus:null].filter(Boolean)};
  });
- return {date:preflight.date,phase:'M2-v2',contract:'M2-v2-RISK-DISCLOSURE-v1',
+ return {date:preflight.date,phase:'M2-v2',contract:'M2-v2-PRACTICAL-IDENTITY-v1',
   status:'partial',source:'RESEARCH_ONLY_CORE_AND_RISK_DISCLOSURE',
   eligible_count:candidates.filter(c=>c.core_eligible).length,candidates,
   publication_authorized:false,prompt_a_complete:false,prompt_b_eligible:false};
@@ -59,4 +59,26 @@ if(require.main===module){
  const r=JSON.parse(fs.readFileSync(process.argv[3]||'data_research/twse-market-opening/20261008-m2v2-featured-trading-risk-review.json'));
  console.log(JSON.stringify(evaluate(p,r),null,2));
 }
-module.exports={evaluate,verifyCore,riskStatus};
+module.exports={evaluate,verifyCore,riskStatus};  const identity=c.classification_evidence;
+  const quote=c.official_quote_evidence;
+  const trustedClassification=identity?.source==='TWSE_OFFICIAL_STOCK_CATEGORY'
+    &&identity?.stock_code===c.code&&identity?.stock_name===c.name
+    &&typeof identity?.source_sha==='string'&&/^[a-f0-9]{40,64}$/.test(identity.source_sha)
+    &&identity?.stock_category_present===true
+    &&Array.isArray(identity.competing_categories)
+    &&identity.competing_categories.length===0;
+  const authenticQuote=quote?.source==='TWSE_MI_INDEX_SECURITY_ROW'
+    &&quote?.date===date&&quote?.stock_code===c.code&&quote?.stock_name===c.name
+    &&quote?.close===c.close&&quote?.change===c.change
+    &&typeof quote?.source_sha==='string'&&/^[a-f0-9]{40,64}$/.test(quote.source_sha);
+  const checks={
+   priceArithmetic,
+   archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true&&authenticQuote,
+   classification:c.isin_stock_category_matched===true&&trustedClassification,
+   ordinaryStock:trustedClassification&&authenticQuote,
+   strictFivePercent:Number.isFinite(c.gain_percent)&&c.gain_percent>=5
+      &&quote?.previous_close===c.previous_close
+      &&Math.abs(100*quote.change/quote.previous_close-c.gain_percent)<0.000011,
+   quoteTradable:c.actual_nontrading_or_halted_quote_anomaly!==true
+  };
+
