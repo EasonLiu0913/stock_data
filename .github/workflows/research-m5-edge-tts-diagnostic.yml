@@ -1,0 +1,30 @@
+name: "[Research M5] Diagnose Edge TTS first scene"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install same TTS dependency as failure run
+        run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Compare bounded authentic WordBoundary probes
+        run: |
+          set -o pipefail
+          python scripts/diagnose_daily_gainers_m5_edge_tts.py | tee "${RUNNER_TEMP}/m5-edge-tts-diagnostic.json"
+      - name: Keep research diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-edge-tts-diagnostic-${{ github.run_id }}
+          path: ${{ runner.temp }}/m5-edge-tts-diagnostic.json
+          if-no-files-found: warn
+          retention-days: 14
