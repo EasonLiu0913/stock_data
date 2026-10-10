@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   private-tts:
     runs-on: ubuntu-latest
@@ -23,13 +24,26 @@ jobs:
           node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
           python -m py_compile scripts/synthesize_daily_gainers_tts.py scripts/daily_gainers_spoken_text.py
           node --check scripts/measure_daily_gainers_m5_tts.js
+          python -m py_compile scripts/import_daily_gainers_m5_verified_partial.py
           node scripts/build_daily_gainers_m5_private_plan.js > /dev/null
       - name: Install actual voice dependencies
         run: python -m pip install --disable-pip-version-check edge-tts mutagen
+      - name: Restore one identified partial Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: m5-private-tts-20261008-38062405623
+          run-id: 38062405623
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/m5-verified-partial
+      - name: Verify five seed scenes and frozen source
+        run: |
+          mkdir -p output/m5-private-preview/20261008/audio
+          python scripts/import_daily_gainers_m5_verified_partial.py "${RUNNER_TEMP}/m5-verified-partial" output/m5-private-preview/20261008
       - name: Produce real TTS with WordBoundary timing
         env:
           YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
           YOUTUBE_TTS_RATE: "+15%"
+          M5_VERIFIED_PARTIAL_RESUME: "1"
         run: python scripts/synthesize_daily_gainers_tts.py output/m5-private-preview/20261008/plan.json
       - name: Measure real audio against frozen M4 text and 60-90 seconds
         run: node scripts/measure_daily_gainers_m5_tts.js output/m5-private-preview/20261008
@@ -43,5 +57,6 @@ jobs:
             output/m5-private-preview/20261008/audio/
             output/m5-private-preview/20261008/tts-manifest.json
             output/m5-private-preview/20261008/tts-duration-proof.json
+            output/m5-private-preview/20261008/m5-verified-resume.json
           if-no-files-found: warn
           retention-days: 14
