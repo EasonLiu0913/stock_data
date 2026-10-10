@@ -34,5 +34,5 @@ function verifyM2SourceCheckpoint(input, targetDate='20261008') {
 module.exports={verifyM2SourceCheckpoint};
 if (require.main===module) {
  const file=process.argv[2]||path.join(__dirname,'../data_research/twse-market-opening/20261008-m2-official-institution-industry-source-checkpoint.json');
- console.log(JSON.stringify(verifyM2SourceCheckpoint(JSON.parse(fs.readFileSync(file,'utf8'))),process.argv[3]||'20261008'),null,2));
+ console.log(JSON.stringify(verifyM2SourceCheckpoint(JSON.parse(fs.readFileSync(file,'utf8')),process.argv[3]||'20261008'),null,2));
 }
