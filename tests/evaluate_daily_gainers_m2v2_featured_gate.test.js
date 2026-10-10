@@ -1,51 +1,50 @@
 'use strict';
-const test=require('node:test'),assert=require('node:assert/strict'),{evaluate}=require('../scripts/evaluate_daily_gainers_m2v2_featured_gate');
-const c={code:'1301',close:107,change:7,previous_close:100,gain_percent:7,asof_common_stock_identity_verified:false,disposition_verified:false,suspension_verified:false,original_strict_checker_executed:false,mi_index_row_matched:true,daily_5pct_row_matched:true,isin_stock_category_matched:true};
-const p={date:'20261008',candidates:[c]};const r={date:'20261008',findings:[]};
-test('real preflight-style unverified candidate stays ineligible',()=>{assert.equal(evaluate(p,r).candidates[0].eligible,false)});
-test('active disposition never bypasses incomplete core proof',()=>{const all={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};const x=evaluate({...p,candidates:[all]},{...r,findings:[{code:'1301',date:'20261008',event:'DISPOSITION_ACTIVE'}]});assert.equal(x.candidates[0].eligible,false)});
-test('only complete positive evidence can make candidate research-eligible',()=>{const all={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};assert.equal(evaluate({...p,candidates:[all]},r).candidates[0].eligible,false);const proven={...all,per_security_proof:{source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',identity_verified:true,is_etf:false,is_warrant:false,is_suspended:false,is_disposition:false,strict_price_rule_verified:true,gain_percent:7}};assert.equal(evaluate({...p,candidates:[proven]},r).candidates[0].eligible,true);assert.equal(evaluate({...p,candidates:[all]},r).publication_authorized,false)});
-test('reject stale dates and duplicate codes',()=>{assert.throws(()=>evaluate({...p,date:'20261007'},r));assert.throws(()=>evaluate({...p,candidates:[c,c]},r))});
-
-test('reject proof percent that disagrees with the same candidate',()=>{const qualified={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true,per_security_proof:{source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',identity_verified:true,is_etf:false,is_warrant:false,is_suspended:false,is_disposition:false,strict_price_rule_verified:true,gain_percent:7.5}};assert.equal(evaluate({...p,candidates:[qualified]},r).candidates[0].eligible,false)});
-
-test('reject mismatched archived close/change arithmetic even when positive proof flags are set',()=>{const bad={...c,close:108,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};const out=evaluate({...p,candidates:[bad]},r).candidates[0];assert.equal(out.checks.priceArithmetic,false);assert.equal(out.eligible,false)});
-
-test('active disposition is disclosed but does not exclude core-proven narrative candidate',()=>{
- const proof={source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',
-  identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',identity_verified:true,
-  is_etf:false,is_warrant:false,strict_price_rule_verified:true,gain_percent:7};
- const all={...c,asof_common_stock_identity_verified:true,original_strict_checker_executed:true,per_security_proof:proof};
- const x=evaluate({...p,candidates:[all]},{...r,findings:[{code:'1301',date:'20261008',event:'DISPOSITION_ACTIVE'}]}).candidates[0];
- assert.equal(x.core_eligible,true);
- assert.equal(x.narrative_consideration_eligible,true);
- assert.equal(x.risk.disposition,'KNOWN_ACTIVE');
- assert.equal(x.risk_disclosure_required,true);
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {evaluate}=require('../scripts/evaluate_daily_gainers_m2v2_featured_gate');
+const sha='a'.repeat(40);
+const c={code:'1301',name:'台塑',close:107,change:7,previous_close:100,gain_percent:7,
+ mi_index_row_matched:true,daily_5pct_row_matched:true,isin_stock_category_matched:true};
+const p={date:'20261008',candidates:[c]},risk={date:'20261008',findings:[]};
+const proof={
+ classification_evidence:{source:'TWSE_OFFICIAL_STOCK_CATEGORY',stock_code:'1301',stock_name:'台塑',source_sha:sha,stock_category_present:true,competing_categories:[]},
+ official_quote_evidence:{source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',stock_name:'台塑',close:107,change:7,previous_close:100,source_sha:sha}
+};
+const run=(item,findings=[])=>evaluate({...p,candidates:[item]},{...risk,findings}).candidates[0];
+test('existing source-unpinned research preflight remains fail closed',()=>assert.equal(run(c).core_eligible,false));
+test('date-pinned official quote plus independently classified ordinary stock passes without historical exact-day master',()=>{
+ const a=run({...c,...proof});assert.equal(a.core_eligible,true);assert.equal(a.risk.disposition,'UNKNOWN');assert.equal(a.risk_disclosure_required,true);
 });
-test('unknown risk remains explicitly unknown, not a core rejection',()=>{
- const all={...c,asof_common_stock_identity_verified:true,original_strict_checker_executed:true,
- per_security_proof:{source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',
- identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',
- identity_verified:true,is_etf:false,is_warrant:false,strict_price_rule_verified:true,gain_percent:7}};
- const x=evaluate({...p,candidates:[all]},r).candidates[0];
- assert.equal(x.core_eligible,true);
- assert.equal(x.risk.disposition,'UNKNOWN');
- assert.equal(x.risk.suspension,'UNKNOWN');
- assert.equal(x.risk_disclosure_required,true);
+test('known disposition is disclosed rather than blanket exclusion',()=>{
+ const a=run({...c,...proof},[{code:'1301',date:'20261008',event:'DISPOSITION_ACTIVE'}]);assert.equal(a.core_eligible,true);assert.equal(a.risk.disposition,'KNOWN_ACTIVE');
 });
-test('source-proven actual nontrading or halt quote anomaly blocks core regardless of risk wording',()=>{
- const all={...c,actual_nontrading_or_halted_quote_anomaly:true};
- const x=evaluate({...p,candidates:[all]},r).candidates[0];
- assert.equal(x.checks.quoteTradable,false);
- assert.equal(x.core_eligible,false);
+test('competing ETF TDR or innovation category rejects ordinary-stock claim',()=>{
+ for(const type of ['ETF','TDR','InnovationBoard','Warrants','PreferredStock','ETN'])assert.equal(run({...c,...proof,classification_evidence:{...proof.classification_evidence,competing_categories:[type]}}).core_eligible,false);
 });
-test('proof for ETF or warrant cannot pass ordinary-stock identity',()=>{
- const base={...c,asof_common_stock_identity_verified:true,original_strict_checker_executed:true};
- for(const key of ['is_etf','is_warrant']){
-  const proof={source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',
-  identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',
-  identity_verified:true,is_etf:false,is_warrant:false,strict_price_rule_verified:true,gain_percent:7};
-  proof[key]=true;
-  assert.equal(evaluate({...p,candidates:[{...base,per_security_proof:proof}]},r).candidates[0].core_eligible,false);
- }
+test('unknown or source-unpinned classification rejects',()=>{
+ assert.equal(run({...c,...proof,classification_evidence:{...proof.classification_evidence,source_sha:''}}).core_eligible,false);
+ assert.equal(run({...c,...proof,classification_evidence:{...proof.classification_evidence,stock_category_present:false}}).core_eligible,false);
+});
+test('mismatched ticker or stock name rejects',()=>{
+ assert.equal(run({...c,...proof,official_quote_evidence:{...proof.official_quote_evidence,stock_name:'其他'}}).core_eligible,false);
+ assert.equal(run({...c,...proof,classification_evidence:{...proof.classification_evidence,stock_code:'9999'}}).core_eligible,false);
+});
+test('stale date rejects and duplicate codes rejected',()=>{
+ assert.equal(run({...c,...proof,official_quote_evidence:{...proof.official_quote_evidence,date:'20261007'}}).core_eligible,false);
+ assert.throws(()=>evaluate({...p,date:'20261007'},risk));
+ assert.throws(()=>evaluate({...p,candidates:[c,c]},risk));
+});
+test('below five percent, tampered price and invalid zero denominator reject',()=>{
+ assert.equal(run({...c,...proof,gain_percent:4.99}).core_eligible,false);
+ assert.equal(run({...c,...proof,close:108}).core_eligible,false);
+ assert.equal(run({...c,...proof,previous_close:0}).core_eligible,false);
+});
+test('proof gain and date must match the actually quoted candidate',()=>{
+ assert.equal(run({...c,...proof,official_quote_evidence:{...proof.official_quote_evidence,previous_close:99}}).core_eligible,false);
+});
+test('genuine nontrading quote anomaly fails even with status disclosure',()=>{
+ assert.equal(run({...c,...proof,actual_nontrading_or_halted_quote_anomaly:true}).core_eligible,false);
+});
+test('research never publishes',()=>{
+ const v=evaluate({...p,candidates:[{...c,...proof}]},risk);assert.equal(v.publication_authorized,false);assert.equal(v.prompt_b_eligible,false);
 });
