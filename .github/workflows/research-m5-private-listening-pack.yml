@@ -1,0 +1,40 @@
+name: "[Research M5] Private listening evidence pack"
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Frozen source verification
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node scripts/build_daily_gainers_m5_private_plan.js
+          python -m py_compile scripts/m5_private_listening_review_pack.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-seven-scene-private-1080p-38080522689
+          run-id: 38080522689
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/render
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-final-pcm-scene-caption-38080997983
+          run-id: 38080997983
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/pcm
+      - name: Prepare research-only listening materials
+        run: python scripts/m5_private_listening_review_pack.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/render" "${RUNNER_TEMP}/pcm" "${RUNNER_TEMP}/review"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-private-listening-pack-${{ github.run_id }}
+          path: ${{ runner.temp }}/review/
+          if-no-files-found: warn
+          retention-days: 14
