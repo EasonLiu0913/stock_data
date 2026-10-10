@@ -1,0 +1,23 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {verifyM2SourceCheckpoint}=require('../scripts/verify_daily_gainers_m2_source_checkpoint');
+const original=JSON.parse(fs.readFileSync(path.join(__dirname,'../data_research/twse-market-opening/20261008-m2-official-institution-industry-source-checkpoint.json'),'utf8'));
+const clone=()=>JSON.parse(JSON.stringify(original));
+test('pinned partial M2 source checkpoint arithmetic and fail-closed',()=>{
+ const x=verifyM2SourceCheckpoint(clone());
+ assert.equal(x.total.net,-91574625081);
+ assert.equal(x.publication_authorized,false);
+});
+test('reject stale source date',()=>{const x=clone();x.date='20261007';assert.throws(()=>verifyM2SourceCheckpoint(x),/date/);});
+test('reject shares mislabeled as money',()=>{const x=clone();x.institutional.units='SHARES';assert.throws(()=>verifyM2SourceCheckpoint(x),/TWD/);});
+test('reject dealer double count or foreign dealer insertion',()=>{const x=clone();x.institutional.rows.push({...x.institutional.rows[0],name:'foreign_dealer'});assert.throws(()=>verifyM2SourceCheckpoint(x),/categories/);});
+test('reject monetary subtotal mismatch',()=>{const x=clone();x.institutional.reported_total.net+=1;assert.throws(()=>verifyM2SourceCheckpoint(x),/total mismatch/);});
+test('reject group row arithmetic mismatch',()=>{const x=clone();x.institutional.rows[0].net+=1;assert.throws(()=>verifyM2SourceCheckpoint(x),/arithmetic/);});
+test('reject industry wrong date or unit',()=>{const x=clone();x.industry.units='shares';assert.throws(()=>verifyM2SourceCheckpoint(x),/sector/);});
+test('reject missing trading date',()=>{const x=clone();x.previous_five.dates.pop();assert.throws(()=>verifyM2SourceCheckpoint(x),/five trading days/);});
+test('reject duplicate trading date',()=>{const x=clone();x.previous_five.dates[1]=x.previous_five.dates[0];assert.throws(()=>verifyM2SourceCheckpoint(x),/uniqueness/);});
+test('reject unsupported publication promotion',()=>{const x=clone();x.status='complete';assert.throws(()=>verifyM2SourceCheckpoint(x),/publication/);});
+test('reject unsupported raw archive claim',()=>{const x=clone();x.industry.raw_archive_verified=true;assert.throws(()=>verifyM2SourceCheckpoint(x),/archive/);});
