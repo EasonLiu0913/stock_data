@@ -17,7 +17,7 @@ jobs:
       - name: Check conservative phrasing and actual source-backed assertion ledger
         run: |
           set -euo pipefail
-          node --test tests/build_daily_gainers_m3_regime_assertions.test.js
+          node --test tests/build_daily_gainers_m3_regime_assertions.test.js tests/validate_daily_gainers_m3_claims.test.js
           node scripts/build_daily_gainers_m3_regime_assertions.js > "${RUNNER_TEMP}/m3-regime-assertions.json"
           node -e 'const v=require(process.argv[1]);if(v.date!=="20261008"||v.publication_authorized!==false||v.prompt_b_eligible!==false||v.evidence.length!==6)process.exit(2)' "${RUNNER_TEMP}/m3-regime-assertions.json"
       - name: Upload private M3 research evidence
