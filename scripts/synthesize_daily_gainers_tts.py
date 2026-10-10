@@ -43,10 +43,26 @@ async def main():
     # M5 research retains a per-scene checkpoint on failure; legacy production remains unchanged.
     checkpoint = plan.get("schema_version") == 2
     manifest_path = plan_path.parent / "tts-manifest.json"
+    resume = os.environ.get("M5_VERIFIED_PARTIAL_RESUME") == "1"
+    if resume:
+        marker = json.loads((plan_path.parent / "m5-verified-resume.json").read_text(encoding="utf-8"))
+        if not checkpoint or marker.get("source_run") != 38062405623 or marker.get("source_artifact_id") != 11674007334 or marker.get("scene_count") != 5 or marker.get("publication_authorized") is not False:
+            raise RuntimeError("M5_RESUME_MARKER_INVALID")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (manifest.get("voice"), manifest.get("rate"), manifest.get("engine")) != (voice, rate, "edge-tts") or len(manifest.get("scenes", [])) != 5:
+            raise RuntimeError("M5_RESUME_MANIFEST_INVALID")
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         out_path = out_dir / f"{sid:02d}.mp3"
         text = normalize_spoken_text(scene["speech_text"] if plan.get("schema_version") == 2 else scene["narration"])
+        if resume and sid <= 5:
+            record = manifest["scenes"][sid-1]
+            import hashlib
+            expected_hash = marker["files"][f"audio/{sid:02d}.mp3"]
+            if record["id"] != sid or record["spoken_text"] != text or record["engine"] != "edge-tts" or not record["word_boundaries"] or not out_path.is_file() or hashlib.sha256(out_path.read_bytes()).hexdigest() != expected_hash:
+                raise RuntimeError(f"M5_RESUME_SCENE_DRIFT_{sid}")
+            print(f"scene {sid:02d}: verified reusable original audio", flush=True)
+            continue
         engine = None
         errors = []
         boundaries = []
