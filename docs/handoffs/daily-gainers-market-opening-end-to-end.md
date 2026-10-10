@@ -998,3 +998,8 @@ Parsed authentic 20261008 archived MI_INDEX table (36,699 mixed rows) and reposi
 5. Confirm zero production/video/YouTube/Pages/cron/deployment changes, provenance and no unapproved user-facing claims. Explicit B PASS only when all clauses are evidenced, then mark M2-v2 COMPLETE and promote **M3 A only after preregistering M3 A/B**; stop, do not execute M3. Otherwise B FAIL/BLOCKED with bounded repair under same criteria. No retroactive B relaxation.
 
 **Research progress:** PROGRESS (new owner-approved governance and exact pairing now durable), phase_status M2-v2 A ELIGIBLE; B NOT ELIGIBLE. **Compared with DJ:** preregistered immutable successor pair and goal-v3 version, removed exhaustive historical-master gate only for *candidate discovery*, retained per-featured-stock hard checks. **Remaining:** implement/run M2-v2 A, independent B, then M3–M7. **Blocker:** no new M2-v2 program/tests/Node24 evidence yet. **Next command: promptA** to execute the newly preregistered M2-v2 A only. **Automatic continuation: NO. Plan changed: YES (owner approved).**
+
+
+## DL. M2-v2 candidate audit kickoff — 2026-10-10
+
+Progress: PROGRESS; phase: IN_PROGRESS; A incomplete; B ineligible. New research-only audit script: scripts/audit_daily_gainers_m2v2_observed_candidates.js (da874b47). Eight regression cases added: tests/audit_daily_gainers_m2v2_observed_candidates.test.js (fefe25f9). Tests NOT YET EXECUTED; no Node24 PASS claim. Candidates remain unverified and cannot be published. Still missing Node24 run, material omissions review, independently verified selected-stock identity, and final finance facts. Next: promptA. Plan unchanged; no production or Prompt B.
