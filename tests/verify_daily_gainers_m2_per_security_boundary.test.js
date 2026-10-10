@@ -1,0 +1,11 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {checkPerSecurityFivePercent}=require('../scripts/verify_daily_gainers_m2_per_security_boundary');
+const good=()=>({source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'2330',identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',identity_verified:true,is_etf:false,is_warrant:false,is_suspended:false,is_disposition:false,strict_price_rule_verified:true,gain_percent:5});
+test('research contract accepts explicitly independently verified stock only',()=>assert.equal(checkPerSecurityFivePercent(good()).independent_security_5pct_verified,true));
+test('reject market aggregate masquerading as security row',()=>{const x=good();x.source='TWSE_FMTQIK';assert.throws(()=>checkPerSecurityFivePercent(x),/market aggregates/);});
+test('reject ETF or warrants',()=>{for(const kind of ['is_etf','is_warrant']){const x=good();x[kind]=true;assert.throws(()=>checkPerSecurityFivePercent(x));}});
+test('reject mismatched identity date',()=>{const x=good();x.identity_date='20261007';assert.throws(()=>checkPerSecurityFivePercent(x),/identity date/);});
+test('reject unverified ordinary stock legal identity',()=>{const x=good();x.identity_verified=false;assert.throws(()=>checkPerSecurityFivePercent(x),/identity/);});
+test('reject absent original strict price checker',()=>{const x=good();x.strict_price_rule_verified=false;assert.throws(()=>checkPerSecurityFivePercent(x),/strict 5%/);});
+test('reject below threshold',()=>{const x=good();x.gain_percent=4.999;assert.throws(()=>checkPerSecurityFivePercent(x),/below strict/);});
