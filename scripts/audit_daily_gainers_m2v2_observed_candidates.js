@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const BASE=path.resolve(__dirname,'..'),DATE='20261008';
-function readCSV(file){const text=fs.readFileSync(path.join(BASE,'data_twse',file),'utf8').trim().split(/\r?\n/);if(text[0]!=='Code,Name,Industry')throw Error('INVALID_CLASSIFICATION_SCHEMA:'+file);const map=new Map();for(const line of text.slice(1)){const [code,name,...industry]=line.split(',');if(!code||!name||map.has(code))throw Error('INVALID_CLASSIFICATION_ENTRY:'+file+':'+code);map.set(code,{name,industry:industry.join(',')});}return map;}
+function readCSV(file){const raw=fs.readFileSync(path.join(BASE,'data_twse',file),'utf8');const text=raw.trim()?raw.trim().split(/\r?\n/):['Code,Name,Industry'];if(text[0]!=='Code,Name,Industry')throw Error('INVALID_CLASSIFICATION_SCHEMA:'+file);const map=new Map();for(const line of text.slice(1)){const [code,name,...industry]=line.split(',');if(!code||!name||map.has(code))throw Error('INVALID_CLASSIFICATION_ENTRY:'+file+':'+code);map.set(code,{name,industry:industry.join(',')});}return map;}
 function decimal(s){if(typeof s!=='string'&&typeof s!=='number')return NaN;const v=Number(String(s).replace(/,/g,''));return Number.isFinite(v)?v:NaN;}
 function audit(input,classification){
  if(input?.date!==DATE||input?.stat!=='OK')throw Error('SOURCE_DATE_OR_STATUS');
