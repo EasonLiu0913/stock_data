@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),{evaluate}=require('../scripts/evaluate_daily_gainers_m2v2_featured_gate');
-const c={code:'1301',gain_percent:7,asof_common_stock_identity_verified:false,disposition_verified:false,suspension_verified:false,original_strict_checker_executed:false,mi_index_row_matched:true,daily_5pct_row_matched:true,isin_stock_category_matched:true};
+const c={code:'1301',close:107,change:7,previous_close:100,gain_percent:7,asof_common_stock_identity_verified:false,disposition_verified:false,suspension_verified:false,original_strict_checker_executed:false,mi_index_row_matched:true,daily_5pct_row_matched:true,isin_stock_category_matched:true};
 const p={date:'20261008',candidates:[c]};const r={date:'20261008',findings:[]};
 test('real preflight-style unverified candidate stays ineligible',()=>{assert.equal(evaluate(p,r).candidates[0].eligible,false)});
 test('active disposition always excludes even with all proofs',()=>{const all={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};const x=evaluate({...p,candidates:[all]},{...r,findings:[{code:'1301',date:'20261008',event:'DISPOSITION_ACTIVE'}]});assert.equal(x.candidates[0].eligible,false)});
@@ -8,3 +8,5 @@ test('only complete positive evidence can make candidate research-eligible',()=>
 test('reject stale dates and duplicate codes',()=>{assert.throws(()=>evaluate({...p,date:'20261007'},r));assert.throws(()=>evaluate({...p,candidates:[c,c]},r))});
 
 test('reject proof percent that disagrees with the same candidate',()=>{const qualified={...c,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true,per_security_proof:{source:'TWSE_MI_INDEX_SECURITY_ROW',date:'20261008',stock_code:'1301',identity_source:'OFFICIAL_DATED_ORDINARY_STOCK_MASTER',identity_date:'20261008',identity_verified:true,is_etf:false,is_warrant:false,is_suspended:false,is_disposition:false,strict_price_rule_verified:true,gain_percent:7.5}};assert.equal(evaluate({...p,candidates:[qualified]},r).candidates[0].eligible,false)});
+
+test('reject mismatched archived close/change arithmetic even when positive proof flags are set',()=>{const bad={...c,close:108,asof_common_stock_identity_verified:true,disposition_verified:true,suspension_verified:true,original_strict_checker_executed:true};const out=evaluate({...p,candidates:[bad]},r).candidates[0];assert.equal(out.checks.priceArithmetic,false);assert.equal(out.eligible,false)});
