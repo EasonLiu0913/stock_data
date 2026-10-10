@@ -1,0 +1,29 @@
+name: "[Research M4] Spoken draft source parity Node24"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify upstream real research and M4 draft parity
+        run: |
+          set -euo pipefail
+          node --test tests/replay_daily_gainers_m1_breadth_for_m3.test.js tests/build_daily_gainers_m3_regime_assertions.test.js tests/build_daily_gainers_m3_bound_claims.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node scripts/build_daily_gainers_m4_spoken_draft.js > "${RUNNER_TEMP}/m4-spoken-draft.json"
+          node -e 'const d=require(process.argv[1]);if(d.scenes.length!==7||d.publication_authorized!==false||d.actual_tts_duration_seconds!==null)process.exit(2)' "${RUNNER_TEMP}/m4-spoken-draft.json"
+      - name: Upload private draft research
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-draft-research-${{ github.run_id }}
+          path: ${{ runner.temp }}/m4-spoken-draft.json
+          if-no-files-found: error
+          retention-days: 14
