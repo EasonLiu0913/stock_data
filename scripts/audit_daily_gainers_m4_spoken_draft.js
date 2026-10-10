@@ -18,7 +18,11 @@ function audit(d=createDraft(),l=build()){
  if(!scenes.market.spoken.includes('四百九十二點九三')||!scenes.turnover.spoken.includes('九千二百四十五')||!scenes.institutions.spoken.includes('九百一十六'))throw Error('M4_SPOKEN_AMOUNT_MISMATCH');
  const counts=d.scenes.map(x=>({id:x.id,role:x.role,characters:[...x.spoken].length}));
  const total=counts.reduce((n,x)=>n+x.characters,0);
- return {date:d.date,source_verified:true,scene_count:d.scenes.length,spoken_characters:total,by_role:{anchor:counts.filter(x=>x.role==='anchor').reduce((n,x)=>n+x.characters,0),analyst:counts.filter(x=>x.role==='analyst').reduce((n,x)=>n+x.characters,0)},note:'Character counts are editorial feasibility only; NOT measured TTS duration or a verified 70/30 delivery ratio',publication_authorized:false,actual_tts_duration_seconds:null};
+ const anchorChars=counts.filter(x=>x.role==='anchor').reduce((n,x)=>n+x.characters,0);
+ const analystChars=counts.filter(x=>x.role==='analyst').reduce((n,x)=>n+x.characters,0);
+ const anchorShare=anchorChars/total;
+ if(anchorShare<0.65||anchorShare>0.75)throw Error('M4_EDITORIAL_CHARACTER_BALANCE_OUT_OF_RANGE');
+ return {date:d.date,source_verified:true,scene_count:d.scenes.length,spoken_characters:total,by_role:{anchor:anchorChars,analyst:analystChars},editorial_character_share:{anchor:anchorShare,analyst:analystChars/total,target_anchor:0.70,tolerance:0.05},note:'Character counts are editorial feasibility only; NOT measured TTS duration or a verified 70/30 delivery ratio',publication_authorized:false,actual_tts_duration_seconds:null};
 }
 if(require.main===module)console.log(JSON.stringify(audit(),null,2));
 module.exports={audit};
