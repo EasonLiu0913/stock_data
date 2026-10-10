@@ -9,21 +9,29 @@ function verifyCore(c,date){
  const priceArithmetic=price.every(Number.isFinite)&&c.close>0&&c.previous_close>0&&c.change>=0
    &&Math.abs(c.close-c.change-c.previous_close)<1e-7
    &&Math.abs(100*c.change/c.previous_close-c.gain_percent)<0.000011;
- const checks={
-  priceArithmetic,
-  archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true,
-  classification:c.isin_stock_category_matched===true,
-  asofOrdinaryStock:c.asof_common_stock_identity_verified===true
-    &&proof?.source==='TWSE_MI_INDEX_SECURITY_ROW'&&proof?.stock_code===c.code
-    &&proof?.date===date&&proof?.identity_source==='OFFICIAL_DATED_ORDINARY_STOCK_MASTER'
-    &&proof?.identity_date===date&&proof?.identity_verified===true
-    &&proof?.is_etf===false&&proof?.is_warrant===false,
-  strictFivePercent:c.original_strict_checker_executed===true
-    &&Number.isFinite(c.gain_percent)&&c.gain_percent>=5&&proof?.strict_price_rule_verified===true
-    &&proof?.gain_percent===c.gain_percent,
-  quoteTradable:c.actual_nontrading_or_halted_quote_anomaly!==true
- };
- return {checks,coreEligible:Object.values(checks).every(Boolean)};
+const identity=c.classification_evidence;
+  const quote=c.official_quote_evidence;
+  const trustedClassification=identity?.source==='TWSE_OFFICIAL_STOCK_CATEGORY'
+    &&identity?.stock_code===c.code&&identity?.stock_name===c.name
+    &&typeof identity?.source_sha==='string'&&/^[a-f0-9]{40,64}$/.test(identity.source_sha)
+    &&identity?.stock_category_present===true
+    &&Array.isArray(identity.competing_categories)
+    &&identity.competing_categories.length===0;
+  const authenticQuote=quote?.source==='TWSE_MI_INDEX_SECURITY_ROW'
+    &&quote?.date===date&&quote?.stock_code===c.code&&quote?.stock_name===c.name
+    &&quote?.close===c.close&&quote?.change===c.change
+    &&typeof quote?.source_sha==='string'&&/^[a-f0-9]{40,64}$/.test(quote.source_sha);
+  const checks={
+   priceArithmetic,
+   archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true&&authenticQuote,
+   classification:c.isin_stock_category_matched===true&&trustedClassification,
+   ordinaryStock:trustedClassification&&authenticQuote,
+   strictFivePercent:Number.isFinite(c.gain_percent)&&c.gain_percent>=5
+      &&quote?.previous_close===c.previous_close
+      &&Math.abs(100*quote.change/quote.previous_close-c.gain_percent)<0.000011,
+   quoteTradable:c.actual_nontrading_or_halted_quote_anomaly!==true
+  };
+  return {checks,coreEligible:Object.values(checks).every(Boolean)};
 }
 function evaluate(preflight,risk){
  if(preflight?.date!=='20261008'||risk?.date!==preflight.date)throw Error('DATE_MISMATCH');
@@ -59,26 +67,4 @@ if(require.main===module){
  const r=JSON.parse(fs.readFileSync(process.argv[3]||'data_research/twse-market-opening/20261008-m2v2-featured-trading-risk-review.json'));
  console.log(JSON.stringify(evaluate(p,r),null,2));
 }
-module.exports={evaluate,verifyCore,riskStatus};  const identity=c.classification_evidence;
-  const quote=c.official_quote_evidence;
-  const trustedClassification=identity?.source==='TWSE_OFFICIAL_STOCK_CATEGORY'
-    &&identity?.stock_code===c.code&&identity?.stock_name===c.name
-    &&typeof identity?.source_sha==='string'&&/^[a-f0-9]{40,64}$/.test(identity.source_sha)
-    &&identity?.stock_category_present===true
-    &&Array.isArray(identity.competing_categories)
-    &&identity.competing_categories.length===0;
-  const authenticQuote=quote?.source==='TWSE_MI_INDEX_SECURITY_ROW'
-    &&quote?.date===date&&quote?.stock_code===c.code&&quote?.stock_name===c.name
-    &&quote?.close===c.close&&quote?.change===c.change
-    &&typeof quote?.source_sha==='string'&&/^[a-f0-9]{40,64}$/.test(quote.source_sha);
-  const checks={
-   priceArithmetic,
-   archiveRow:c.mi_index_row_matched===true&&c.daily_5pct_row_matched===true&&authenticQuote,
-   classification:c.isin_stock_category_matched===true&&trustedClassification,
-   ordinaryStock:trustedClassification&&authenticQuote,
-   strictFivePercent:Number.isFinite(c.gain_percent)&&c.gain_percent>=5
-      &&quote?.previous_close===c.previous_close
-      &&Math.abs(100*quote.change/quote.previous_close-c.gain_percent)<0.000011,
-   quoteTradable:c.actual_nontrading_or_halted_quote_anomaly!==true
-  };
-
+module.exports={evaluate,verifyCore,riskStatus};
