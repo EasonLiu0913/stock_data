@@ -5,11 +5,17 @@ const {createDraft,validate}=require('./build_daily_gainers_m4_spoken_draft');
 function measure(dir){
  const draft=createDraft();validate(draft);
  const manifest=JSON.parse(fs.readFileSync(path.join(dir,'tts-manifest.json'),'utf8'));
+ const plan=JSON.parse(fs.readFileSync(path.join(dir,'plan.json'),'utf8'));
+ if(plan.schema_version!==2||plan.target_date!=='20261008'||plan.scenes?.length!==7||plan.publication_authorized!==false)throw Error('M5_SOURCE_PLAN_DRIFT');
+ const normalized=spawnSync('python',['-c',"import json,sys;sys.path.insert(0,'scripts');from daily_gainers_spoken_text import normalize_spoken_text;print(json.dumps([normalize_spoken_text(s['speech_text']) for s in json.load(sys.stdin)['scenes']],ensure_ascii=False))"],{input:JSON.stringify(plan),encoding:'utf8'});
+ if(normalized.status!==0)throw Error('M5_NORMALIZATION_FAILED');
+ const expected=JSON.parse(normalized.stdout);
+ if(manifest.voice!=='zh-TW-YunJheNeural'||manifest.rate!=='+15%')throw Error('M5_VOICE_RATE_DRIFT');
  if(manifest.engine!=='edge-tts'||manifest.scenes.length!==7)throw Error('M5_INCOMPLETE_EDGE_TTS');
  let total=0;const scenes=[];
  for(let i=0;i<7;i++){
   const record=manifest.scenes[i],file=path.join(dir,'audio',String(i+1).padStart(2,'0')+'.mp3');
-  if(record.id!==i+1||record.spoken_text!==draft.scenes[i].spoken||!record.word_boundaries?.length)throw Error('M5_TTS_TEXT_OR_BOUNDARY_DRIFT');
+  if(plan.scenes[i].speech_text!==draft.scenes[i].spoken||record.id!==i+1||record.spoken_text!==expected[i]||!record.word_boundaries?.length)throw Error('M5_TTS_TEXT_OR_BOUNDARY_DRIFT');
   const p=spawnSync('ffprobe',['-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',file],{encoding:'utf8'});
   if(p.status!==0)throw Error('M5_UNREADABLE_AUDIO');const duration=Number(p.stdout.trim());
   if(!(duration>0))throw Error('M5_BAD_DURATION');
