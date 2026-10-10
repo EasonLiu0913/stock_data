@@ -1,0 +1,14 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {audit}=require('../scripts/audit_daily_gainers_m2v2_observed_candidates');
+const row=(code,name,close,delta,sign='+',turnover='1,000,000')=>[code,name,'100','10',turnover,'10','11','9',String(close),sign,String(delta),'','','','',''];
+const fixture=(rows)=>({date:'20261008',stat:'OK',tables:[{title:'115年10月08日 每日收盤行情(全部)',fields:['證券代號','證券名稱','','','','','','','收盤價'],data:rows}]});
+const categories=()=>({Stock:new Map([['1301',{}]]),InnovationBoard:new Map([['6645',{}]]),TDR:new Map([['9103',{}]]),ETF:new Map([['0050',{}]])});
+test('actual-style market quote yields observed but NEVER certified',()=>{const result=audit(fixture([row('1301','台塑',81.3,5.9),row('6645','金萬林-創',45,4),row('9103','美德-DR',22,2)]),categories());assert.equal(result.candidate_count,3);assert.equal(result.count_by_category.TDR,1);assert.equal(result.count_by_category.InnovationBoard,1);assert.equal(result.publication_authorized,false);assert(result.candidates.every(x=>!x.featured_eligible&&!x.strict_five_percent_verified));});
+test('stale market date fails closed',()=>assert.throws(()=>audit({...fixture([]),date:'20261007'},categories()),/SOURCE_DATE_OR_STATUS/));
+test('duplicate security fails',()=>assert.throws(()=>audit(fixture([row('1301','台塑',81.3,5.9),row('1301','台塑',81.3,5.9)]),categories()),/DUPLICATE_QUOTE/));
+test('category conflicts fail closed',()=>{const c=categories();c.ETF.set('1301',{});assert.throws(()=>audit(fixture([row('1301','台塑',81.3,5.9)]),c),/CONFLICTING_CLASSIFICATION/);});
+test('unknown security remains uncertain and not publishable',()=>{const v=audit(fixture([row('9998','未知',20,2)]),categories());assert.equal(v.unknown.length,1);assert.equal(v.quality.date_effective_security_identity,false);});
+test('zero denominator and negative price rejected',()=>{const v=audit(fixture([row('1301','台塑',0,2)]),categories());assert.equal(v.candidate_count,0);assert.equal(v.exceptions_count,1);});
+test('below 5 percent never becomes candidate',()=>{const v=audit(fixture([row('1301','台塑',104,4)]),categories());assert.equal(v.candidate_count,0);});
+test('unavailable external recall evidence blocks complete claim',()=>{const v=audit(fixture([row('1301','台塑',81.3,5.9)]),categories());assert.equal(v.materiality.unresolved,true);assert.equal(v.prompt_a_complete,false);assert.equal(v.prompt_b_eligible,false);});
