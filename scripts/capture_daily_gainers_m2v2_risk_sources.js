@@ -25,7 +25,15 @@ async function capture(fetchImpl=fetch,outDir=process.argv[2]||'./m2-risk-raw'){
     manifest.data_rows=Array.isArray(obj.data)?obj.data.length:null;
     manifest.field_names=Array.isArray(obj.fields)?obj.fields:null;
     manifest.http_response_verified=response.ok&&Array.isArray(obj.data);
-    if(!manifest.http_response_verified)manifest.error='UNVERIFIED_RESPONSE_SCHEMA_OR_HTTP_STATUS';
+    const title=typeof obj.title==='string'?obj.title:'';
+    const noMatch=src.type==='TWSE_TEMPORARY_HALT'&&response.ok
+      &&obj.stat==='很抱歉，沒有符合條件的資料!'
+      &&!Array.isArray(obj.data)
+      &&title.includes('115/10/08')&&title.includes('全部上市證券');
+    manifest.official_no_match_schema_recognized=noMatch;
+    manifest.response_title=title;
+    // Schema recognition is NOT date-complete source attestation or issuer clearance.
+    if(!manifest.http_response_verified&&!noMatch)manifest.error='UNVERIFIED_RESPONSE_SCHEMA_OR_HTTP_STATUS';
    }
   }catch(e){manifest.error=String(e&&e.message||e);}
   fs.writeFileSync(path.join(outDir,name+'.manifest.json'),JSON.stringify(manifest,null,2)+'\n');
