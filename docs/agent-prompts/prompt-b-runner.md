@@ -6,6 +6,10 @@ This file defines the repository-level execution protocol for the short owner co
 
 It is a **closeout runner protocol**, not the phase-specific acceptance contract. The actual Prompt B must come from durable repository history and must have been preregistered before the corresponding Prompt A began.
 
+## Active daily-gainers M2 risk amendment routing (owner approved 2026-10-10)
+
+For current Active `daily-gainers-market-opening-end-to-end` M2-v2, close out **only** the new EO paired B contract `M2-v2-RISK-DISCLOSURE-v1` after its A is durably complete; DK is superseded, not PASS. Audit preservation of hard official ordinary-stock identity, dated strict >=5% calculation, and separate KNOWN_ACTIVE/VERIFIED_NONE/UNKNOWN disposition/halt risk disclosure; risk UNKNOWN alone does not reject a core-proven narrative candidate and never means risk absent. Never auto-execute Prompt B or video on approval.
+
 ## V3 goal-anchored closeout (mandatory)
 
 Before closeout read `docs/agent-prompts/goal-anchored-handoff-v3.md` and `docs/agent-prompts/goal-anchored-legacy-index-v3.json`, recover the active project's original Project Charter version/Phase Roadmap and phase-specific preregistered Prompt B. Verify not only the local CI outcome but the current small goal's deliverable and contribution to the original end-to-end objective. Preserve historic phase acceptance and never mark the whole project complete before its ultimate acceptance gate. Report `Ultimate goal progress / Completed versus remaining phases / Blockers / Next phase ID / Plan changed?`. Unapproved changes to scope or acceptance require a blocked CHANGE_PROPOSAL rather than rewritten PASS. Future phases never run automatically.
