@@ -21,6 +21,8 @@ jobs:
         run: |
           set -euo pipefail
           node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          python -m py_compile scripts/synthesize_daily_gainers_tts.py scripts/daily_gainers_spoken_text.py
+          node --check scripts/measure_daily_gainers_m5_tts.js
           node scripts/build_daily_gainers_m5_private_plan.js > /dev/null
       - name: Install actual voice dependencies
         run: python -m pip install --disable-pip-version-check edge-tts mutagen
