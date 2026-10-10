@@ -17,13 +17,16 @@ jobs:
       - name: Verify upstream real research and M4 draft parity
         run: |
           set -euo pipefail
-          node --test tests/replay_daily_gainers_m1_breadth_for_m3.test.js tests/build_daily_gainers_m3_regime_assertions.test.js tests/build_daily_gainers_m3_bound_claims.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node --test tests/replay_daily_gainers_m1_breadth_for_m3.test.js tests/build_daily_gainers_m3_regime_assertions.test.js tests/build_daily_gainers_m3_bound_claims.test.js tests/build_daily_gainers_m4_spoken_draft.test.js tests/audit_daily_gainers_m4_spoken_draft.test.js
           node scripts/build_daily_gainers_m4_spoken_draft.js > "${RUNNER_TEMP}/m4-spoken-draft.json"
+          node scripts/audit_daily_gainers_m4_spoken_draft.js > "${RUNNER_TEMP}/m4-spoken-audit.json"
           node -e 'const d=require(process.argv[1]);if(d.scenes.length!==7||d.publication_authorized!==false||d.actual_tts_duration_seconds!==null)process.exit(2)' "${RUNNER_TEMP}/m4-spoken-draft.json"
       - name: Upload private draft research
         uses: actions/upload-artifact@v4
         with:
           name: m4-draft-research-${{ github.run_id }}
-          path: ${{ runner.temp }}/m4-spoken-draft.json
+          path: |
+            ${{ runner.temp }}/m4-spoken-draft.json
+            ${{ runner.temp }}/m4-spoken-audit.json
           if-no-files-found: error
           retention-days: 14
