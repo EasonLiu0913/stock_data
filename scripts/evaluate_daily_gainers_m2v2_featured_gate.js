@@ -15,7 +15,7 @@ function evaluate(preflight,risk){
   if(Object.values(checks).every(Boolean)){
    try{
     const proof=checkPerSecurityFivePercent(c.per_security_proof);
-    originalBoundaryPassed=proof.stock_code===c.code&&proof.date===preflight.date;
+    originalBoundaryPassed=proof.stock_code===c.code&&proof.date===preflight.date&&c.per_security_proof.gain_percent===c.gain_percent;
    }catch(_){originalBoundaryPassed=false;}
   }
   checks.originalBoundary=originalBoundaryPassed;
