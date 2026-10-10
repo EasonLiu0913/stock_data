@@ -40,6 +40,9 @@ def espeak_save(text, out_path):
 
 async def main():
     manifest = {"voice": voice, "rate": rate, "engine": None, "scenes": []}
+    # M5 research retains a per-scene checkpoint on failure; legacy production remains unchanged.
+    checkpoint = plan.get("schema_version") == 2
+    manifest_path = plan_path.parent / "tts-manifest.json"
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         out_path = out_dir / f"{sid:02d}.mp3"
@@ -76,6 +79,8 @@ async def main():
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
         manifest["engine"] = manifest["engine"] or engine
         manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text, "word_boundaries": boundaries})
-    (plan_path.parent / "tts-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if checkpoint:
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 asyncio.run(main())
