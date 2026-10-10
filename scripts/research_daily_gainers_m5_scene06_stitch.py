@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """M5 research only: same-run exact-source scene06 chunk audio and timing feasibility."""
-import asyncio, hashlib, json, re, subprocess, sys, tempfile
+import asyncio, hashlib, json, re, subprocess, sys, tempfile, shutil
 from pathlib import Path
 import edge_tts
 from daily_gainers_spoken_text import normalize_spoken_text
@@ -31,6 +31,8 @@ async def synthesize(value,path):
  duration(path)
  return events
 async def main():
+ for required in ('ffmpeg', 'ffprobe'):
+  if shutil.which(required) is None: raise RuntimeError(f'M5_RESEARCH_ENV_MISSING_{required.upper()}')
  records=[]
  try:
   for i,value in enumerate(pieces,1):
