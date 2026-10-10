@@ -1,0 +1,38 @@
+name: "[Research M5] Scene 06 verbatim fragments"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check frozen source and research syntax
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          python -m py_compile scripts/diagnose_daily_gainers_m5_scene06_fragments.py
+          node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
+      - name: Pin historically tested synthesis version
+        run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Run original-voice long-control and verbatim fragment diagnosis
+        run: |
+          set -o pipefail
+          python scripts/diagnose_daily_gainers_m5_scene06_fragments.py output/m5-private-preview/20261008/plan.json | tee "${RUNNER_TEMP}/scene06-fragments.json"
+      - name: Preserve research JSON only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-scene06-fragments-${{ github.run_id }}
+          path: ${{ runner.temp }}/scene06-fragments.json
+          if-no-files-found: error
+          retention-days: 14
