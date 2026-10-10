@@ -1,0 +1,57 @@
+name: "[Research M2] TWSE primary archive and Node24 verification"
+run-name: "M2 primary evidence • ${{ github.ref_name }} • ${{ github.run_number }}"
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: twse-m2-research-manual-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-m2-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact remote main snapshot
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify research-only suite against complete repository fixtures
+        run: |
+          set -euo pipefail
+          node --version
+          node --test             tests/verify_daily_gainers_m2_source_checkpoint.test.js             tests/verify_daily_gainers_m2_five_day_turnover.test.js             tests/capture_twse_m2_primary_source.test.js             tests/verify_daily_gainers_m2_user_supplied_extract.test.js             tests/build_daily_gainers_m2_research_snapshot.test.js
+          node scripts/build_daily_gainers_m2_research_snapshot.js > "${RUNNER_TEMP}/m2-partial-snapshot.json"
+          node -e 'const v=require(process.argv[1]);if(v.status!=="partial"||v.publication_authorized!==false||v.source_provenance.original_http_bytes!==false)process.exit(2)' "${RUNNER_TEMP}/m2-partial-snapshot.json"
+      - name: Capture original date-pinned TWSE HTTP responses (fail closed)
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/m2-official-raw"
+          for source in bfi82u fmtqik bfiamu; do
+            node scripts/capture_twse_m2_primary_source.js "$source" "${RUNNER_TEMP}/m2-official-raw"
+          done
+          for source in bfi82u fmtqik bfiamu; do
+            SRC="${RUNNER_TEMP}/m2-official-raw/20261008-$source"
+            node -e '
+              const fs=require("node:fs"),c=require("node:crypto");
+              const raw=fs.readFileSync(process.argv[1]+".json"),m=JSON.parse(fs.readFileSync(process.argv[1]+".manifest.json"));
+              if(m.sha256!==c.createHash("sha256").update(raw).digest("hex")||m.dateVerified!==true||m.httpStatus!==200||m.scopeVerified!==false||m.publicationAuthorized!==false)process.exit(2);
+            ' "$SRC"
+          done
+      - name: Upload private research proof artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twse-m2-raw-research-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/m2-official-raw/
+            ${{ runner.temp }}/m2-partial-snapshot.json
+          if-no-files-found: warn
+          retention-days: 14
