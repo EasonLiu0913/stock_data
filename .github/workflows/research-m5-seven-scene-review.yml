@@ -1,0 +1,53 @@
+name: "[Research M5] Seven-scene private audio and SRT review"
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Freeze original script and prerequisites
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
+          python -m py_compile scripts/build_daily_gainers_m5_seven_scene_review.py
+          if ! command -v ffprobe >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-private-tts-20261008-38062405623
+          run-id: 38062405623
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/first-five
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-scene06-stitch-research-38076491234
+          run-id: 38076491234
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/six
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-scene07-original-research-38078900356
+          run-id: 38078900356
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/seven
+      - name: Build source-exact audio and caption review
+        run: |
+          python scripts/build_daily_gainers_m5_seven_scene_review.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/first-five" "${RUNNER_TEMP}/six" "${RUNNER_TEMP}/seven" "${RUNNER_TEMP}/seven-review"
+          node scripts/verify_daily_gainers_m5_timed_srt.js "${RUNNER_TEMP}/seven-review/seven-scenes-research.zh-TW.srt"
+      - name: Save private review package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-seven-scene-private-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/seven-review/
+          if-no-files-found: warn
+          retention-days: 14
