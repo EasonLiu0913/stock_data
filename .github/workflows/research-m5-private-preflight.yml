@@ -17,12 +17,15 @@ jobs:
       - name: Source parity and media negative tests
         run: |
           set -euo pipefail
-          node --test tests/build_daily_gainers_m4_spoken_draft.test.js tests/audit_daily_gainers_m4_spoken_draft.test.js tests/preflight_daily_gainers_m5_private_preview.test.js tests/inspect_daily_gainers_m5_private_media.test.js
+          node --test tests/build_daily_gainers_m4_spoken_draft.test.js tests/audit_daily_gainers_m4_spoken_draft.test.js tests/preflight_daily_gainers_m5_private_preview.test.js tests/inspect_daily_gainers_m5_private_media.test.js tests/build_daily_gainers_m5_private_plan.test.js
           node scripts/preflight_daily_gainers_m5_private_preview.js > "${RUNNER_TEMP}/m5-preflight.json"
+          node scripts/build_daily_gainers_m5_private_plan.js > "${RUNNER_TEMP}/m5-source-plan.json"
       - name: Keep private preflight evidence
         uses: actions/upload-artifact@v4
         with:
           name: m5-preflight-${{ github.run_id }}
-          path: ${{ runner.temp }}/m5-preflight.json
+          path: |
+            ${{ runner.temp }}/m5-preflight.json
+            ${{ runner.temp }}/m5-source-plan.json
           if-no-files-found: error
           retention-days: 14
