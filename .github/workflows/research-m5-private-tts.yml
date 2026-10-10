@@ -1,0 +1,42 @@
+name: "[Research M5] Private TTS evidence 20261008"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-tts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Create immutable source-derived plan
+        run: |
+          set -euo pipefail
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          node scripts/build_daily_gainers_m5_private_plan.js > /dev/null
+      - name: Install actual voice dependencies
+        run: python -m pip install --disable-pip-version-check edge-tts mutagen
+      - name: Produce real TTS with WordBoundary timing
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: "+15%"
+        run: python scripts/synthesize_daily_gainers_tts.py output/m5-private-preview/20261008/plan.json
+      - name: Keep audio proof without uploading or publishing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-private-tts-20261008-${{ github.run_id }}
+          path: |
+            output/m5-private-preview/20261008/plan.json
+            output/m5-private-preview/20261008/audio/
+            output/m5-private-preview/20261008/tts-manifest.json
+          if-no-files-found: warn
+          retention-days: 14
