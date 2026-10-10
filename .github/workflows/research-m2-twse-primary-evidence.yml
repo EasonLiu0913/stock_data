@@ -50,6 +50,10 @@ jobs:
               if(m.sha256!==c.createHash("sha256").update(raw).digest("hex")||m.dateVerified!==true||m.httpStatus!==200||m.scopeVerified!==false||m.publicationAuthorized!==false)process.exit(2);
             ' "$SRC"
           done
+      - name: Capture TWSE date-scoped risk sources (research only, fail closed)
+        run: |
+          mkdir -p "${RUNNER_TEMP}/m2-risk-raw"
+          node scripts/capture_daily_gainers_m2v2_risk_sources.js "${RUNNER_TEMP}/m2-risk-raw"
       - name: Upload private research proof artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,6 +61,7 @@ jobs:
           name: twse-m2-raw-research-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/m2-official-raw/
+            ${{ runner.temp }}/m2-risk-raw/
             ${{ runner.temp }}/m2-partial-snapshot.json
             ${{ runner.temp }}/m2-primary-verification.json
             ${{ runner.temp }}/m2v2-featured-gate.json
