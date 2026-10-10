@@ -6,6 +6,10 @@ This file defines the repository-level execution protocol for the short owner co
 
 It is a **runner protocol**, not the phase-specific implementation prompt. The actual work contract must come from the current canonical handoff on durable remote `main`.
 
+## Active daily-gainers M2 risk amendment routing (owner approved 2026-10-10)
+
+When Active is `daily-gainers-market-opening-end-to-end` and phase M2-v2, use the **EO successor M2-v2-RISK-DISCLOSURE-v1 paired contract** in its canonical Handoff, not the superseded DK disposition/suspension blanket-exclusion criterion. Keep core ordinary-stock identity, immutable official date/price, strict >=5% and materiality hard-gated; report disposition/halt as KNOWN_ACTIVE/VERIFIED_NONE/UNKNOWN, disclose active/unknown risk without claiming it is absent. Previous DK remains historical and is not PASS. Prompt B/video/scheduled/production actions remain forbidden until the successor A is complete.
+
 ## V3 project goal startup (mandatory)
 
 Read `docs/agent-prompts/goal-anchored-handoff-v3.md` and `docs/agent-prompts/goal-anchored-legacy-index-v3.json` before selecting a round. After selecting the unique active task, resolve and report its immutable Project Charter goal ID/version, ultimate end-to-end acceptance, current roadmap phase and remaining gates. For an indexed legacy task missing a verified project/phase charter, recover it from its canonical handoff and durable prior evidence, checkpoint the plan without inventing achievements, THEN perform the same preregistered round; don't silently redefine project purpose. Verify current Prompt A is authorized by the current small goal and its original paired Prompt B. Report `Ultimate goal progress / Completed versus remaining phases / Blockers / Next phase ID / Plan changed?`. Task activation does not execute Prompt A.
