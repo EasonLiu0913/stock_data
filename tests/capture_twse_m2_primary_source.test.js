@@ -1,0 +1,10 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {validatePayload,SOURCES}=require('../scripts/capture_twse_m2_primary_source');
+const json=o=>Buffer.from(JSON.stringify(o),'utf8');
+test('dated official-shape payload is date recognized but scope unverified',()=>{const v=validatePayload(json({stat:'OK',date:'20261008',data:[]}), 'fmtqik','20261008');assert.equal(v.dateVerified,true);assert.equal(v.requiresIndependentScopeValidation,true);});
+test('missing date cannot authenticate from query parameter',()=>{const v=validatePayload(json({stat:'OK',data:[]}), 'bfi82u','20261008');assert.equal(v.dateVerified,false);});
+test('wrong date is not certified',()=>{const v=validatePayload(json({date:'20261007',data:[]}), 'fmtqik','20261008');assert.equal(v.dateVerified,false);});
+test('reject response stat error',()=>assert.throws(()=>validatePayload(json({stat:'查無資料',data:[]}), 'bfiamu','20261008'),/TWSE stat/));
+test('reject HTML error page',()=>assert.throws(()=>validatePayload(Buffer.from('<html>Error</html>'),'bfi82u','20261008'),/not JSON/));
+test('all fixed source URLs point to TWSE',()=>assert.ok(Object.values(SOURCES).every(x=>new URL(x.url).hostname==='www.twse.com.tw')));
