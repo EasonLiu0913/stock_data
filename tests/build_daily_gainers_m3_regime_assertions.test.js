@@ -22,3 +22,14 @@ test('contradictory index direction must not be blindly labelled broad bearish',
  const x=build({...o,taiex:{...o.taiex,change_points:100,change_pct:1}},r,verifyArchive());
  assert.equal(x.regime,'INDEX_BREADTH_DIVERGENCE_OR_MIXED');assert.equal(x.publication_authorized,false);
 });
+
+test('actual BFI82U groups reconcile with independent TWD totals and no sector flow claim',()=>{
+ const a=build();const i=a.evidence.find(x=>x.id==='institutional');
+ assert.equal(i.unit,'TWD');assert.equal(i.value.total.net_twd,-91574625081);
+ assert.equal(i.value.groups.foreign.net_twd,-75852293490);
+ assert.equal(i.value.groups.trust.net_twd,3008930013);
+ assert.equal(i.value.groups.dealers.net_twd,-18731261604);
+ const sector=a.evidence.find(x=>x.id==='sector');assert.equal(sector.value.category_count,34);
+ assert.equal(sector.value.turnover_not_institutional_net,true);
+ assert.equal(a.publication_authorized,false);
+});
