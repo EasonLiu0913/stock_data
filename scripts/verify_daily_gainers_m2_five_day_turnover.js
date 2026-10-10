@@ -6,7 +6,10 @@ function verifyFiveDayTurnover(chart,checkpoint,target='20261008'){
  if(chart.units?.turnover!=='TWD' && chart.units?.turnover!=='元')throw Error('turnover unit must be TWD');
  const rows=chart.data;
  if(!Array.isArray(rows))throw Error('missing chart rows');
- const dates=rows.filter(r=>r.date<target).map(r=>r.date).sort().slice(-5);
+ const allPriorDates=rows.filter(r=>r.date<target).map(r=>r.date).sort();
+ const priorFiveUnique=[...new Set(allPriorDates)].slice(-5);
+ for(const d of priorFiveUnique){if(allPriorDates.filter(x=>x===d).length!==1)throw Error('duplicate trading day '+d);}
+ const dates=allPriorDates.slice(-5);
  if(dates.length!==5 || new Set(dates).size!==5 || JSON.stringify(dates)!==JSON.stringify(checkpoint.previous_five.dates))throw Error('five trading-day cutoff or sequence mismatch');
  const amounts=dates.map(d=>{
   const matches=rows.filter(r=>r.date===d);
