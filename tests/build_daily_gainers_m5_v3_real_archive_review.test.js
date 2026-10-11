@@ -72,3 +72,17 @@ test('scene seven next observation is conditional, not a hardcoded weakness fore
  assert.doesNotMatch(r.scenes[6].speech,/是否改善/);
  assert.equal(r.publication_authorized,false);
 });
+
+test('expanded commentary retains original scope boundaries and adds no new numeric claims',()=>{
+ const r=build(),e=inspect().evidence;
+ assert.match(r.scenes[3].speech,/上市普通股統計.*不同口徑/);
+ assert.match(r.scenes[4].speech,/前五個實際交易日.*不把休市日/);
+ assert.match(r.scenes[5].speech,/金額淨額.*不代表當天市場所有交易都是法人/);
+ assert.match(r.scenes[6].speech,/同時對照市場廣度、成交量能與不同法人方向/);
+ assert.deepEqual(r.scenes.slice(0,3).map(s=>s.speech),OPENING_LINES);
+ for(const scene of r.scenes){assert.equal(scene.speech,scene.caption);assert.equal(scene.speech,scene.display);}
+ assert.deepEqual(r.source_sha256,e.source_sha256);
+ assert.equal(r.publication_authorized,false);
+ assert.equal(r.tts_authorized,false);
+ assert.equal(r.video_authorized,false);
+});
