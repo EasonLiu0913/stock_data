@@ -24,6 +24,13 @@ test('genuine archive seven-scene V3 review is exact, traceable and release lock
  assert.match(r.scenes[4].speech,/前五個交易日平均/);
  assert.match(r.scenes[5].speech,/三大法人合計.*外資.*投信.*自營商/);
  assert.match(r.scenes[5].speech,/淨額相當於.*整體市場成交金額/);
+ const zh=require('../scripts/daily_gainers_spoken_zh_tw');
+ for(const [label,key] of [['外資','foreign'],['投信','trust'],['自營商','dealers']]){
+  const v=e.groups[key];
+  const wording=v<0?'賣超':v>0?'買超':'買賣超持平';
+  const claim=label+wording+(v===0?'':'約'+zh.toYi(Math.abs(v))+'億元');
+  assert.ok(r.scenes[5].speech.includes(claim),label+' individual amount/direction missing');
+ }
  assert.match(r.scenes[6].speech,/後續觀察/);
  assert.equal(r.derived.institutional_net_twd,e.net_twd);
  assert.equal(r.derived.market_turnover_twd,e.turnover_twd);
