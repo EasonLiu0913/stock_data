@@ -33,7 +33,10 @@ def main():
     if len(samples)<5:samples.append({"field_count":len(fields),"first_token":fields[0] if fields else None})
     formats["tab" if "\t" in line else "whitespace"]+=1
     if len(fields)<2:raise ValueError("dictionary contains entry without pronunciation")
-    lex[fields[0]]+=1;parsed+=1;field_shapes[len(fields)]+=1\n    # MFA dictionary entries may have optional pronunciation weights: retain raw fields rather than infer phone columns.\n    if len(word_phones[fields[0]])<8:word_phones[fields[0]].append(fields[1:])\n    for v in fields[1:]:phone_tokens[v]+=1
+    lex[fields[0]]+=1;parsed+=1;field_shapes[len(fields)]+=1
+    # Retain raw pronunciation fields; do not guess where optional weights end.
+    if len(word_phones[fields[0]])<8:word_phones[fields[0]].append(fields[1:])
+    for v in fields[1:]:phone_tokens[v]+=1
   if parsed<1000:raise ValueError("dictionary parsing unexpectedly sparse")
   p["dictionary_parser"]={"delimiter":"unicode_whitespace","entry_count":parsed,"distinct_headwords":len(lex),"line_formats":dict(formats),"field_count_distribution":dict(field_shapes),"sample_structure":samples,"raw_post_headword_token_inventory_size":len(phone_tokens),"raw_post_headword_token_inventory":sorted(phone_tokens),"phone_inventory_verified":False,"optional_weight_columns_verified":False}
   cc=OpenCC("t2s")
