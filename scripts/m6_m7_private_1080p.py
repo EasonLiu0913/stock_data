@@ -18,7 +18,7 @@ def chapter_timeline(audio, config):
  assert scenes==list(range(1,8)), 'Unexpected original audio scene ordering'
  flattened=[s for ch in chapters for s in ch['scenes']]
  assert flattened==scenes and all(ch['scenes'] and isinstance(ch['title'],str) and ch['title'] for ch in chapters), 'Chapters must partition seven audio scenes exactly once in order'
- assert chapters[0]['scenes']==[1,2,3] and chapters[0]['id']=='opening', 'Fixed opening cannot jump chapter after first or second sentence'
+ assert len(chapters)==1 and chapters[0]['scenes']==scenes and chapters[0]['id']=='market-opening', 'All seven audios must remain the sole market opening chapter'
  offsets={}; t=0.0
  for r in audio:
   offsets[int(r['scene'])]=t
@@ -31,6 +31,42 @@ def chapter_timeline(audio, config):
   assert end>start and (not timeline or abs(start-timeline[-1]['end_seconds'])<0.00001)
   timeline.append(dict(id=ch['id'],title=ch['title'],scenes=ch['scenes'],ordinal=index+1,total=len(chapters),start_seconds=round(start,3),end_seconds=round(end,3)))
  return timeline
+
+def visual_plan(config):
+ assert config['schema']=='M7-VISUAL-SCENES-v1' and config['publication_authorized'] is False
+ scenes=config['visual_scenes']
+ assert len(scenes)==3 and [s['id'] for s in scenes]==['brand_opening','market_cards','flow_summary']
+ assert [s['audio_scenes'] for s in scenes]==[[1,2,3],[4,5],[6,7]]
+ assert [n for scene in scenes for n in scene['audio_scenes']]==list(range(1,8))
+ return {n:scene for scene in scenes for n in scene['audio_scenes']}
+
+def draw_cards(d,items):
+ for i,(label,value) in enumerate(items):
+  x=112+(i%2)*495;y=332+(i//2)*145
+  d.rounded_rectangle((x,y,x+466,y+126),radius=18,fill='#20344e')
+  d.text((x+22,y+13),label,font=font(25),fill='#aebfd4')
+  d.text((x+22,y+51),value,font=font(36),fill='#f8fafc')
+
+def paint_scene(base,scene_id):
+ d=ImageDraw.Draw(base)
+ d.rounded_rectangle((74,55,1846,170),25,fill='#1a304b')
+ d.text((110,79),'TAIWAN STOCK',font=font(49),fill='#f8fafc')
+ if scene_id=='brand_opening':
+  d.text((170,340),'TAIWAN STOCK',font=font(84),fill='#ffcf73')
+  d.text((170,468),'每日 5% 強勢股研究',font=font(55),fill='#f8fafc')
+  d.text((174,567),'追蹤資金 · 解讀行情',font=font(35),fill='#aebfd4')
+ elif scene_id=='market_cards':
+  d.text((113,216),'10/08 今日市場速覽',font=font(55),fill='#ffcf73')
+  draw_cards(d,[('加權指數漲跌','-492.93 點'),('上市普通股漲／跌','425／540 家'),('市場成交金額','9,245.09 億元'),('相對前五交易日','量能低於平均')])
+ elif scene_id=='flow_summary':
+  d.text((113,216),'法人資金與市場觀察',font=font(55),fill='#ffcf73')
+  draw_cards(d,[('三大法人合計','-915.75 億元'),('外資','-758.52 億元'),('投信','+30.09 億元'),('自營商','-187.31 億元')])
+  d.text((130,645),'市場偏弱  ·  量能低於前五日平均',font=font(33),fill='#ffcf73')
+  d.text((130,716),'留意市場廣度、量能與法人方向',font=font(29),fill='#dbeafe')
+ else:raise AssertionError('Unknown visual scene')
+ d.text((1510,937),'CC 字幕可開啟',font=font(19),fill='#cbd5e1')
+ d.text((110,1016),'PRIVATE PREVIEW | TIMING ESTIMATED - NOT SYNC VERIFIED',font=font(23),fill='#facc15')
+ return base
 
 def progress_state(t, timeline):
  total=timeline[-1]['end_seconds']
@@ -62,13 +98,14 @@ def progress_overlay(global_t,timeline):
  return overlay
 
 def main():
- p=argparse.ArgumentParser();p.add_argument('--handoff',type=pathlib.Path,required=True);p.add_argument('--sprite',type=pathlib.Path,required=True);p.add_argument('--source',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True);p.add_argument('--chapters',type=pathlib.Path,default=pathlib.Path('data_research/m5/m7-research-chapters.json'));a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--handoff',type=pathlib.Path,required=True);p.add_argument('--sprite',type=pathlib.Path,required=True);p.add_argument('--source',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True);p.add_argument('--chapters',type=pathlib.Path,default=pathlib.Path('data_research/m5/m7-research-chapters.json'));p.add_argument('--visual-plan',type=pathlib.Path,default=pathlib.Path('data_research/m5/m7-visual-scenes.json'));a=p.parse_args()
  m=json.loads((a.handoff/'manifest.json').read_text());source=json.loads((a.source/'source.json').read_text())
  assert m['schema']=='M5-PRIVATE-PREVIEW-HANDOFF-v1' and m['timing_status']=='TIMING_ESTIMATED_NOT_SYNC_VERIFIED' and m['release_gate']=='BLOCKED' and all(v is False for v in m['locks'].values())
  assert len(m['audio'])==len(source['scenes'])==7 and m['blocks']==14 and m['duration_seconds']==79.416 and digest(a.handoff/'candidate.srt')==EXPECTED
  chapter_config=json.loads(a.chapters.read_text())
  timeline=chapter_timeline(m['audio'],chapter_config)
  chapter_for_scene={s:ch for ch in timeline for s in ch['scenes']}
+ visual_config=json.loads(a.visual_plan.read_text());visual_for_scene=visual_plan(visual_config)
  sprite=Image.open(a.sprite).convert('RGBA');sw,sh=sprite.size;assert sw%4==0 and sw//4>=300 and sh>=300,(sw,sh)
  states=[sprite.crop((j*sw//4,0,(j+1)*sw//4,sh)) for j in range(4)]
  a.output.mkdir(parents=True,exist_ok=True);pieces=[];begin=0.
@@ -78,23 +115,8 @@ def main():
    mp3=a.handoff/'audio'/('%02d.mp3'%r['scene']);assert digest(mp3)==r['sha256']
    assert scene['scene']==r['scene'] and scene['speech_text']==scene['caption_text']==scene['display_text']
    duration=r['duration_seconds'];chapter=chapter_for_scene[int(r['scene'])];title=chapter['title']
-   base=Image.new('RGB',(1920,1080),'#101c2d');d=ImageDraw.Draw(base)
-   d.rounded_rectangle((74,55,1846,170),25,fill='#1a304b')
-   d.text((110,79),'TAIWAN STOCK',font=font(49),fill='#f8fafc')
-   d.text((113,215),title,font=font(64),fill='#ffcf73')
-   # Copy text verbatim; never pretend it is acoustic evidence.
-   raw=scene['display_text'];line='';lines=[];body_font=font(37)
-   for ch in raw:
-    proposal=line+ch
-    if line and d.textbbox((0,0),proposal,font=body_font)[2]>1050:
-     lines.append(line);line=ch
-    else:line=proposal
-   if line:lines.append(line)
-   # Never clip or silently omit narration: copy full text to subtitle sidecar; slides show overview.
-   for j,line in enumerate(lines[:7]):d.text((116,325+j*66),line,font=body_font,fill='#ffffff')
-   if len(lines)>7:d.text((116,808),'完整內容請開啟 CC 字幕',font=font(27),fill='#cbd5e1')
-   d.text((1500,937),'CC 字幕可選擇開啟',font=font(21),fill='#cbd5e1')
-   d.text((110,1016),'PRIVATE PREVIEW | TIMING ESTIMATED - NOT SYNC VERIFIED',font=font(23),fill='#facc15')
+   visual=visual_for_scene[int(r['scene'])]
+   base=paint_scene(Image.new('RGB',(1920,1080),'#101c2d'),visual['id'])
    frame=root/f'slide-{ix}.png';base.save(frame)
    # Visual lip animation only: repeating shapes; NOT phoneme-aligned.
    crops=[]
@@ -123,9 +145,10 @@ def main():
   cmd(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(raw),'-c','copy','-movflags','+faststart',str(movie)])
   info=json.loads(cmd(['ffprobe','-v','error','-show_entries','format=duration:stream=codec_name,width,height','-of','json',str(movie)]))
   v=next(s for s in info['streams'] if s['codec_name']=='h264');dur=float(info['format']['duration']);assert (v['width'],v['height'])==(1920,1080) and abs(dur-79.416)<1.5
+  (a.output/'visual-scene-manifest.json').write_text(json.dumps(visual_config,ensure_ascii=False,indent=2)+'\n')
   (a.output/'chapter-manifest.json').write_text(json.dumps({'schema':'M7-CHAPTER-TIMELINE-v1','timeline':timeline,'timing_basis':chapter_config['timing_basis'],'subtitle_timing':'TIMING_ESTIMATED_NOT_SYNC_VERIFIED','publication_authorized':False},ensure_ascii=False,indent=2)+'\n')
-  proof={'schema':'M6-M7-PRIVATE-REVIEW-v1','resolution':'1920x1080','duration_seconds':dur,'source_duration_seconds':79.416,'audio_count':7,'progress_mode':'frame-driven 24fps cumulative source-audio chapter clock','chapter_count':len(timeline),'chapter_manifest_sha256':digest(a.output/'chapter-manifest.json'),'subtitle_count':14,'srt_sha256':EXPECTED,'mp4_sha256':digest(movie),'estimated_timing_not_verified':True,'subtitles_delivery':'separate optional SRT, not burnt into MP4','cjk_font':'Noto Sans CJK required','vtuber':'repository four-state sprite; visual timing only; not phoneme synchronized','release_gate':'BLOCKED','publication_authorized':False,'prompt_b_eligible':False,'real_acoustic_boundaries':'0/15'}
+  proof={'schema':'M6-M7-PRIVATE-REVIEW-v1','resolution':'1920x1080','duration_seconds':dur,'source_duration_seconds':79.416,'audio_count':7,'visual_scene_count':len(visual_config['visual_scenes']),'visual_scene_manifest_sha256':digest(a.output/'visual-scene-manifest.json'),'progress_mode':'frame-driven 24fps cumulative source-audio chapter clock','chapter_count':len(timeline),'chapter_manifest_sha256':digest(a.output/'chapter-manifest.json'),'subtitle_count':14,'srt_sha256':EXPECTED,'mp4_sha256':digest(movie),'estimated_timing_not_verified':True,'subtitles_delivery':'separate optional SRT, not burnt into MP4','cjk_font':'Noto Sans CJK required','vtuber':'repository four-state sprite; visual timing only; not phoneme synchronized','release_gate':'BLOCKED','publication_authorized':False,'prompt_b_eligible':False,'real_acoustic_boundaries':'0/15'}
   (a.output/'review-proof.json').write_text(json.dumps(proof,ensure_ascii=False,indent=2)+'\n')
   (a.output/'candidate.srt').write_bytes((a.handoff/'candidate.srt').read_bytes())
-  print('M6_M7_PRIVATE_1080P_PASS duration=%.3f scenes=7 chapters=%d subtitles=14 acoustic=0/15 release=BLOCKED'%(dur,len(timeline)))
+  print('M6_M7_PRIVATE_1080P_PASS duration=%.3f audio_scenes=7 visual_scenes=3 chapters=%d subtitles=14 acoustic=0/15 release=BLOCKED'%(dur,len(timeline)))
 if __name__=='__main__':main()
