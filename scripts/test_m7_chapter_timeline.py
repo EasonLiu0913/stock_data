@@ -14,7 +14,7 @@ assert all(timeline[0]['ordinal']==1 for s in (1,2,3))
 assert timeline[1]['start_seconds']==12 and timeline[-1]['end_seconds']==79.416
 assert all(x['total']==5 for x in timeline)
 assert all(a['end_seconds']==b['start_seconds'] for a,b in zip(timeline,timeline[1:]))
-assert sum(x['end_seconds']-x['start_seconds'] for x in timeline)==79.416
+assert round(sum(x['end_seconds']-x['start_seconds'] for x in timeline),3)==79.416
 assert config['publication_authorized'] is False
 bad=deepcopy(config);bad['chapters'][0]['scenes']=[1,2]
 try: mod.chapter_timeline(audio,bad)
