@@ -42,3 +42,8 @@
 - CI extracts 7 audio-midpoint frames (audio-01 .. audio-07), as well as 3 scene representatives and progress samples; inspect actual frames for shared backgrounds, text placement, and VTuber occlusion before visual acceptance.
 - Safety: original 7 MP3 hashes and source text unchanged; 14 SRT blocks retained with TIMING_ESTIMATED_NOT_SYNC_VERIFIED. TTS/Prompt B/production/cron/Pages/YouTube prohibited. release BLOCKED, acoustic 0/15.
 - Next action: manual workflow_dispatch on research/m5-r-weight-evidence-20261011 from GitHub UI (current connector lacks dispatch), inspect resulting run logs and artifact, fix any failing research-only rendering.
+
+## Run 38156332562 failure and bounded repair
+- Run on commit 5231198 FAILED before M6/M7 rendering. The test incorrectly searched the whole renderer main() for scene['display_text']; that reference is essential to the locked speech/caption/display equality check, not slide painting. No regenerated 1080p MP4 in this run (the uploaded private review artifact is not a successful render).
+- Research-only fix commit 9ae7b9267d2f3f9c63a318089c06577e3373a840 limits the no-verbatim-slide check to paint_scene(), and explicitly preserves the original narration integrity guard in main(). No source/MP3/SRT edits.
+- Current status PROGRESS; repeat research workflow on latest branch and inspect M7_SLIDE_CONTENT_PASS, M7_OPENING_STRUCTURE_PASS, new review proof and seven midpoint frames. Release BLOCKED; no publication.
