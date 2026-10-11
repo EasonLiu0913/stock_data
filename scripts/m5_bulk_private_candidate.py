@@ -51,13 +51,15 @@ def run(files,out):
  assert round(pos,3)==79.416 and entries[0][2]=="大家好，歡迎來到 TAIWAN STOCK！"
  assert "".join(x[2] for x in entries)=="".join(x["speech_text"] for x in src["scenes"])
  srt="\n\n".join(f"{i}\n{stamp(a)} --> {stamp(b)}\n{t}" for i,(a,b,t) in enumerate(entries,1))+"\n"
- report={"schema":"M5-BULK-CANDIDATE-v1","audio_original_artifact_id":ARTIFACT_ID,"audio_zip_sha256":ZIP_SHA,"source_json_sha256":sha(files["source.json"]),"scenes":audits,"scene_count":7,"duration_seconds":79.416,"srt_blocks":len(entries),"srt_sha256":sha(srt.encode()),"text_exact_match":True,"fixed_opening_unsplit":True,"candidate_method":"20ms RMS local minima guided by sentence text lengths; hypothesis, NOT acoustic verification","verified_internal_boundaries":"0/15","model_weights_downloaded":False,"model_inference_executed":False,"pronunciation_approved":False,"forced_alignment_executed":False,"acoustic_sentence_boundary_verified":False,"publication_authorized":False,"prompt_b_eligible":False,"release_gate":"BLOCKED"}
+ report={"schema":"M5-BULK-CANDIDATE-v1","audio_original_artifact_id":ARTIFACT_ID,"original_artifact_zip_sha256_expected":ZIP_SHA,"zip_container_rehash_performed":bool(files.get("_zip_verified")),"file_hashes_individually_verified":True,"source_json_sha256":sha(files["source.json"]),"scenes":audits,"scene_count":7,"duration_seconds":79.416,"srt_blocks":len(entries),"srt_sha256":sha(srt.encode()),"text_exact_match":True,"fixed_opening_unsplit":True,"candidate_method":"20ms RMS local minima guided by sentence text lengths; hypothesis, NOT acoustic verification","verified_internal_boundaries":"0/15","model_weights_downloaded":False,"model_inference_executed":False,"pronunciation_approved":False,"forced_alignment_executed":False,"acoustic_sentence_boundary_verified":False,"publication_authorized":False,"prompt_b_eligible":False,"release_gate":"BLOCKED"}
  out.mkdir(parents=True,exist_ok=True);(out/"candidate.srt").write_text(srt);(out/"proof.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
  print(f"M5_BULK_PRIVATE_CANDIDATE_PASS scenes=7 duration=79.416 blocks={len(entries)} exact_text=true opening_unsplit=true verified_boundaries=0/15 release=BLOCKED")
 def main():
- p=argparse.ArgumentParser();p.add_argument("--input-zip");p.add_argument("--github-token");p.add_argument("--output",required=True);a=p.parse_args()
- if a.input_zip:
-  b=pathlib.Path(a.input_zip).read_bytes();assert sha(b)==ZIP_SHA;z=zipfile.ZipFile(io.BytesIO(b));files={k:z.read(k) for k in ["source.json","audio/audio-proof.json"]+["audio/%02d.mp3"%i for i in range(1,8)]}
+ p=argparse.ArgumentParser();p.add_argument("--input-zip");p.add_argument("--input-directory");p.add_argument("--github-token");p.add_argument("--output",required=True);a=p.parse_args()
+ if a.input_directory:
+  root=pathlib.Path(a.input_directory);paths=["source.json","audio/audio-proof.json"]+["audio/%02d.mp3"%i for i in range(1,8)];files={k:(root/k).read_bytes() for k in paths}
+ elif a.input_zip:
+  b=pathlib.Path(a.input_zip).read_bytes();assert sha(b)==ZIP_SHA;z=zipfile.ZipFile(io.BytesIO(b));files={k:z.read(k) for k in ["source.json","audio/audio-proof.json"]+["audio/%02d.mp3"%i for i in range(1,8)]};files["_zip_verified"]=True
  else:
   assert a.github_token;files=fetch(a.github_token)
  run(files,pathlib.Path(a.output))
