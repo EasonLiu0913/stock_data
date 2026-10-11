@@ -4,7 +4,7 @@ const {inspect}=require('./inspect_daily_gainers_editorial_real_archive');
 const {OPENING_LINES}=require('./daily_gainers_brand_opening');
 const zh=require('./daily_gainers_spoken_zh_tw');
 function spokenDate(date){
- if(!/^\\d{8}$/.test(date))throw Error('REVIEW_DATE_INVALID');
+ if(!/^\d{8}$/.test(date))throw Error('REVIEW_DATE_INVALID');
  const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
  const d=new Date(Date.UTC(year,month-1,day));
  if(d.getUTCFullYear()!==year||d.getUTCMonth()+1!==month||d.getUTCDate()!==day)throw Error('REVIEW_DATE_INVALID');
