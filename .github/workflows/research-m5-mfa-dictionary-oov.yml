@@ -54,6 +54,9 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check opencc-python-reimplemented==0.1.7
           python scripts/research_m5_mfa_dictionary_oov.py --model-root "$MFA_ROOT_DIR" --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --ledger data_research/m5/mfa-oov-source-occurrences.json --output "$RUNNER_TEMP/m5-oov-evidence"
+      - name: Preregister seven-scene immutable corpus without alignment
+        run: |
+          python scripts/research_m5_mfa_alignment_preregister.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/alignment-preregistration.json"
       - name: Upload private research report only
         if: always()
         uses: actions/upload-artifact@v4
