@@ -13,4 +13,6 @@ class Check(unittest.TestCase):
   p=pathlib.Path(__file__).resolve().parents[1]/"scripts/build_daily_gainers_m5_v3_private_srt.py"
   s=p.read_text()
   self.assertIn('"acoustic_sentence_boundary_verified":False',s)
+  self.assertIn('r"[^。！？!?；;]+[。！？!?；;]?|[。！？!?；;]"',s)
+  self.assertNotIn('r"[^。！？!?；;，,]+',s)
 if __name__=="__main__":unittest.main()
