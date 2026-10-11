@@ -40,7 +40,7 @@ jobs:
         shell: bash -el {0}
         run: |
           set -euo pipefail
-          conda install -y -c conda-forge 'montreal-forced-aligner=3.3.9'
+          conda install -y -c conda-forge 'montreal-forced-aligner=3.3.9' 'ffmpeg'
           mfa version | tee "$RUNNER_TEMP/m5-oov-evidence/mfa-version.txt"
           grep -qx '3.3.9' "$RUNNER_TEMP/m5-oov-evidence/mfa-version.txt"
           mfa model download acoustic mandarin_mfa
@@ -73,7 +73,7 @@ jobs:
       - name: Observe immutable scene-one waveform without transcription or alignment
         run: |
           set -euo pipefail
-          python scripts/research_m5_scene1_signal_observation.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/scene1-signal-observation.json"
+          command -v ffmpeg\n          ffmpeg -version | head -n 1\n          python scripts/research_m5_scene1_signal_observation.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/scene1-signal-observation.json"
       - name: Upload private research report only
         if: always()
         uses: actions/upload-artifact@v4
