@@ -22,7 +22,7 @@ with zipfile.ZipFile(archive) as z:
 def segments(t):
  # Every character preserved; punctuation stays with its sentence.
  out=[]
- for piece in re.findall(r"[^。！？!?；;，,]+[。！？!?；;，,]?|[。！？!?；;，,]",t):
+ for piece in re.findall(r"[^。！？!?；;]+[。！？!?；;]?|[。！？!?；;]",t):
   if not piece:continue
   if len(piece)<=30:out.append(piece);continue
   while len(piece)>30:
