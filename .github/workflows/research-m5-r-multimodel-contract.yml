@@ -72,13 +72,31 @@ jobs:
             m5-r3-small-text-proof/small-text.sha256
           if-no-files-found: warn
           retention-days: 14
+      - name: Resolve exact original private audio artifact source run
+        id: original_audio
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/EasonLiu0913/stock_data/actions/artifacts/11697447563 --jq '.workflow_run.id' > m5-original-run-id.txt
+          run_id="$(cat m5-original-run-id.txt)"
+          case "$run_id" in ''|*[!0-9]*) echo "Invalid source artifact run" >&2; exit 1;; esac
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download exact original artifact with official action
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11697447563
+          github-token: ${{ github.token }}
+          repository: EasonLiu0913/stock_data
+          run-id: ${{ steps.original_audio.outputs.run_id }}
+          path: m5-original-audio
       - name: Single-pass original-audio seven-scene private candidate
         id: m5_bulk_candidate
         run: |
           set -euo pipefail
           python -m py_compile scripts/m5_bulk_private_candidate.py
           for attempt in 1 2 3; do
-            if python scripts/m5_bulk_private_candidate.py --github-token "$GH_TOKEN" --output m5-bulk-private-proof | tee m5-bulk-private-result.txt; then
+            if python scripts/m5_bulk_private_candidate.py --input-directory m5-original-audio --output m5-bulk-private-proof | tee m5-bulk-private-result.txt; then
               break
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -87,8 +105,6 @@ jobs:
             fi
             sleep "$((attempt * 5))"
           done
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Upload private candidate proof even on failure
         if: always()
         uses: actions/upload-artifact@v4
@@ -101,6 +117,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: Upload research contract proof only
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m5-r-contract-only-${{ github.run_id }}
