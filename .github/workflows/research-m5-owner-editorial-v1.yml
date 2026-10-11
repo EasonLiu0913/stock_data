@@ -1,0 +1,14 @@
+name: "[Research M5] Editorial v1 checks"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test tests/build_daily_gainers_editorial_v1_research.test.js tests/build_daily_gainers_m4_spoken_draft.test.js tests/build_daily_gainers_m5_private_plan.test.js
