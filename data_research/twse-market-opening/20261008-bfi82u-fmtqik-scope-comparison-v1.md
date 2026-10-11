@@ -1,0 +1,11 @@
+# 2026-10-08 BFI82U / FMTQIK official scope comparison — research evidence v1
+
+Purpose: support the owner-approved **net-flow-to-whole-market-turnover reference ratio**, not an institutional gross trading share, and not publication authorization.
+
+Official TWSE BFI82U source: https://www.twse.com.tw/zh/trading/foreign/bfi82u.html and dated https://www.twse.com.tw/fund/BFI82U?dayDate=20261008&response=html&type=day . Its footnotes specify ordinary session, odd-lot, after-hours fixed-price and block trades included; auction/tender excluded; foreign-currency conversion per 15:30 TWSE rate. The foreign proprietary dealer row is ALREADY counted in dealer statistics and is NOT added to the total again. Official 20261008 net total: -91,574,625,081 TWD.
+
+Official TWSE FMTQIK source: https://www.twse.com.tw/zh/trading/historical/fmtqik.html and https://www.twse.com.tw/exchangeReport/FMTQIK?date=20261008&response=html . Footnotes specify whole-market session, odd-lot, after-hours fixed-price, block trades included; auction/tender excluded; 15:30 foreign currency conversion. 20261008 value: 924,509,097,873 TWD. It is NOT ordinary common-stock-only value.
+
+**Consequence:** matching date, exchange, transaction modes, TWD valuation and exclusions make the dimensionless ratio abs(BFI82U total net) / FMTQIK total market turnover a defensible **contextual net-flow scale comparison**. It does NOT measure institutions' fraction of all transactions, sell-order share, causal price impact, counterparties, or a comparable numerator/denominator security universe: BFI82U is by participant category; FMTQIK encompasses all reported exchange instruments. Hence do not present as precisely matched security-universe institutional market share. Dynamic equation from raw archive: abs(-91574625081) / 924509097873 * 100 ≈ 9.91%; these numbers are historical evidence, NOT daily code constants.
+
+Archived manifest scopeVerified=false and publicationAuthorized=false are unchanged; the source notes and this research comparison do not retroactively certify publication rights or historical frozen M4/M5. Revalidate daily official report notes, date, digest and source category coverage before using the ratio. If provenance or scopes change, fail closed and repair before any video production.
