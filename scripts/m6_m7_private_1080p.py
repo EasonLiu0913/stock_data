@@ -9,11 +9,35 @@ def font(size):
  for p in ['/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc']:
   if pathlib.Path(p).exists():return ImageFont.truetype(p,size)
  raise RuntimeError('M7_FONT_MISSING: Noto Sans CJK must be installed; do not render missing glyph boxes')
+def chapter_timeline(audio, config):
+ chapters=config['chapters']
+ assert config['schema']=='M7-CHAPTER-MAP-v1' and config['publication_authorized'] is False
+ scenes=[int(r['scene']) for r in audio]
+ assert scenes==list(range(1,8)), 'Unexpected original audio scene ordering'
+ flattened=[s for ch in chapters for s in ch['scenes']]
+ assert flattened==scenes and all(ch['scenes'] and isinstance(ch['title'],str) and ch['title'] for ch in chapters), 'Chapters must partition seven audio scenes exactly once in order'
+ assert chapters[0]['scenes']==[1,2,3] and chapters[0]['id']=='opening', 'Fixed opening cannot jump chapter after first or second sentence'
+ offsets={}; t=0.0
+ for r in audio:
+  offsets[int(r['scene'])]=t
+  t+=float(r['duration_seconds'])
+ assert round(t,3)==79.416, 'Source audio duration changed'
+ timeline=[]; pointer=0
+ for index,ch in enumerate(chapters):
+  start=offsets[ch['scenes'][0]]
+  end=t if index==len(chapters)-1 else offsets[chapters[index+1]['scenes'][0]]
+  assert end>start and (not timeline or abs(start-timeline[-1]['end_seconds'])<0.00001)
+  timeline.append(dict(id=ch['id'],title=ch['title'],scenes=ch['scenes'],ordinal=index+1,total=len(chapters),start_seconds=round(start,3),end_seconds=round(end,3)))
+ return timeline
+
 def main():
- p=argparse.ArgumentParser();p.add_argument('--handoff',type=pathlib.Path,required=True);p.add_argument('--sprite',type=pathlib.Path,required=True);p.add_argument('--source',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--handoff',type=pathlib.Path,required=True);p.add_argument('--sprite',type=pathlib.Path,required=True);p.add_argument('--source',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True);p.add_argument('--chapters',type=pathlib.Path,default=pathlib.Path('data_research/m5/m7-research-chapters.json'));a=p.parse_args()
  m=json.loads((a.handoff/'manifest.json').read_text());source=json.loads((a.source/'source.json').read_text())
  assert m['schema']=='M5-PRIVATE-PREVIEW-HANDOFF-v1' and m['timing_status']=='TIMING_ESTIMATED_NOT_SYNC_VERIFIED' and m['release_gate']=='BLOCKED' and all(v is False for v in m['locks'].values())
  assert len(m['audio'])==len(source['scenes'])==7 and m['blocks']==14 and m['duration_seconds']==79.416 and digest(a.handoff/'candidate.srt')==EXPECTED
+ chapter_config=json.loads(a.chapters.read_text())
+ timeline=chapter_timeline(m['audio'],chapter_config)
+ chapter_for_scene={s:ch for ch in timeline for s in ch['scenes']}
  sprite=Image.open(a.sprite).convert('RGBA');sw,sh=sprite.size;assert sw%4==0 and sw//4>=300 and sh>=300,(sw,sh)
  states=[sprite.crop((j*sw//4,0,(j+1)*sw//4,sh)) for j in range(4)]
  a.output.mkdir(parents=True,exist_ok=True);pieces=[];begin=0.
@@ -22,7 +46,7 @@ def main():
   for ix,(r,scene) in enumerate(zip(m['audio'],source['scenes'])):
    mp3=a.handoff/'audio'/('%02d.mp3'%r['scene']);assert digest(mp3)==r['sha256']
    assert scene['scene']==r['scene'] and scene['speech_text']==scene['caption_text']==scene['display_text']
-   duration=r['duration_seconds'];title=['節目開場','市場觀察','市場重點','資金與行情','個股研究','籌碼與風險','重點整理'][ix]
+   duration=r['duration_seconds'];chapter=chapter_for_scene[int(r['scene'])];title=chapter['title']
    base=Image.new('RGB',(1920,1080),'#101c2d');d=ImageDraw.Draw(base)
    d.rounded_rectangle((74,55,1846,170),25,fill='#1a304b')
    d.text((110,79),'TAIWAN STOCK',font=font(49),fill='#f8fafc')
@@ -38,9 +62,10 @@ def main():
    # Never clip or silently omit narration: copy full text to subtitle sidecar; slides show overview.
    for j,line in enumerate(lines[:7]):d.text((116,325+j*66),line,font=body_font,fill='#ffffff')
    if len(lines)>7:d.text((116,808),'完整內容請開啟 CC 字幕',font=font(27),fill='#cbd5e1')
-   for j in range(7):
-    x=110+j*205;d.rounded_rectangle((x,888,x+188,906),7,fill='#ffcf73' if j==ix else '#3c536b')
-   d.text((110,932),f'{ix+1}/7   {title}',font=font(31),fill='#dbeafe')
+   for j in range(len(timeline)):
+    width=1430/len(timeline);x=110+j*width
+    d.rounded_rectangle((int(x),888,int(x+width-16),906),7,fill='#ffcf73' if j+1==chapter['ordinal'] else '#3c536b')
+   d.text((110,932),f"{chapter['ordinal']}/{chapter['total']}   {title}",font=font(31),fill='#dbeafe')
    d.text((830,937),'歡迎打開 CC中文字幕觀賞',font=font(25),fill='#cbd5e1')
    d.text((110,1016),'PRIVATE PREVIEW | TIMING ESTIMATED - NOT SYNC VERIFIED',font=font(23),fill='#facc15')
    frame=root/f'slide-{ix}.png';base.save(frame)
@@ -66,8 +91,9 @@ def main():
   cmd(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(raw),'-c','copy','-movflags','+faststart',str(movie)])
   info=json.loads(cmd(['ffprobe','-v','error','-show_entries','format=duration:stream=codec_name,width,height','-of','json',str(movie)]))
   v=next(s for s in info['streams'] if s['codec_name']=='h264');dur=float(info['format']['duration']);assert (v['width'],v['height'])==(1920,1080) and abs(dur-79.416)<1.5
-  proof={'schema':'M6-M7-PRIVATE-REVIEW-v1','resolution':'1920x1080','duration_seconds':dur,'source_duration_seconds':79.416,'audio_count':7,'subtitle_count':14,'srt_sha256':EXPECTED,'mp4_sha256':digest(movie),'estimated_timing_not_verified':True,'subtitles_delivery':'separate optional SRT, not burnt into MP4','cjk_font':'Noto Sans CJK required','vtuber':'repository four-state sprite; visual timing only; not phoneme synchronized','release_gate':'BLOCKED','publication_authorized':False,'prompt_b_eligible':False,'real_acoustic_boundaries':'0/15'}
+  (a.output/'chapter-manifest.json').write_text(json.dumps({'schema':'M7-CHAPTER-TIMELINE-v1','timeline':timeline,'timing_basis':chapter_config['timing_basis'],'subtitle_timing':'TIMING_ESTIMATED_NOT_SYNC_VERIFIED','publication_authorized':False},ensure_ascii=False,indent=2)+'\n')
+  proof={'schema':'M6-M7-PRIVATE-REVIEW-v1','resolution':'1920x1080','duration_seconds':dur,'source_duration_seconds':79.416,'audio_count':7,'chapter_count':len(timeline),'chapter_manifest_sha256':digest(a.output/'chapter-manifest.json'),'subtitle_count':14,'srt_sha256':EXPECTED,'mp4_sha256':digest(movie),'estimated_timing_not_verified':True,'subtitles_delivery':'separate optional SRT, not burnt into MP4','cjk_font':'Noto Sans CJK required','vtuber':'repository four-state sprite; visual timing only; not phoneme synchronized','release_gate':'BLOCKED','publication_authorized':False,'prompt_b_eligible':False,'real_acoustic_boundaries':'0/15'}
   (a.output/'review-proof.json').write_text(json.dumps(proof,ensure_ascii=False,indent=2)+'\n')
   (a.output/'candidate.srt').write_bytes((a.handoff/'candidate.srt').read_bytes())
-  print('M6_M7_PRIVATE_1080P_PASS duration=%.3f scenes=7 subtitles=14 acoustic=0/15 release=BLOCKED'%dur)
+  print('M6_M7_PRIVATE_1080P_PASS duration=%.3f scenes=7 chapters=%d subtitles=14 acoustic=0/15 release=BLOCKED'%(dur,len(timeline)))
 if __name__=='__main__':main()
