@@ -221,10 +221,19 @@ jobs:
           visuals=json.loads((d/'visual-scene-manifest.json').read_text())['visual_scenes']
           assert len(chapter)==1 and chapter[0]['scenes']==list(range(1,8))
           assert [v['audio_scenes'] for v in visuals]==[[1,2,3],[4,5],[6,7]]
+          durations=[2.88,2.76,2.496,16.944,13.2,23.4,17.736]
+          elapsed=0.0
+          for i,seconds in enumerate(durations,1):
+              t=elapsed+seconds/2
+              label='audio-%02d'%i
+              dest=d/'visual-frames'/('scene-'+label+'.png')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(t),'-i',str(d/'m6-m7-private-1080p.mp4'),'-frames:v','1',str(dest)],check=True)
+              elapsed+=seconds
+          assert round(elapsed,3)==79.416
           for label,t in [('brand',4),('market',29),('flow',49)]:
               dest=d/'visual-frames'/('scene-'+label+'.png')
               subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(t),'-i',str(d/'m6-m7-private-1080p.mp4'),'-frames:v','1',str(dest)],check=True)
-          print('M7_VISUAL_SCENE_PROOF_PASS chapters=1 audio_scenes=7 visual_scenes=3')
+          print('M7_VISUAL_SCENE_PROOF_PASS chapters=1 audio_scenes=7 visual_scenes=3 sampled_audio_midpoints=7')
           PY
           for t in 2 36 70; do
             ffmpeg -hide_banner -loglevel error -y -ss "$t" -i m6-m7-private-review/m6-m7-private-1080p.mp4 -frames:v 1 "m6-m7-private-review/visual-frames/frame-$t.png"
