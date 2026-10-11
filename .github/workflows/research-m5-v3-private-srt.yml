@@ -1,0 +1,39 @@
+name: Research M5 V3 private SRT from retained audio
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  srt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download immutable prior authentic audio Artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/m5-srt
+          curl --fail --location --retry 3 --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/11697447563/zip" \
+            -o /tmp/m5-srt/retained-audio.zip
+          echo "b29ab56784279c000a73e5174736c9d3d4eea7f2b330ce7d69f1919cdaee7a2a  /tmp/m5-srt/retained-audio.zip" | sha256sum -c -
+      - name: Build and validate research-only estimated sentence SRT
+        run: |
+          python scripts/build_daily_gainers_m5_v3_private_srt.py /tmp/m5-srt/retained-audio.zip /tmp/m5-srt/output
+          python -m unittest discover -s tests -p test_build_daily_gainers_m5_v3_private_srt.py -v
+      - name: Private research evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-v3-private-estimated-srt-${{ github.run_id }}
+          path: /tmp/m5-srt/output/
+          if-no-files-found: warn
+          retention-days: 14
