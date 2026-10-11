@@ -1,0 +1,32 @@
+name: Research M5-R3 Official Metadata Only
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata-only:
+    if: github.ref == 'refs/heads/research/m5-r-weight-evidence-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: scripts
+          sparse-checkout-cone-mode: true
+      - name: Capture pinned official API metadata and runner resources only
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/capture_m5_r3_official_metadata.py
+          python scripts/capture_m5_r3_official_metadata.py | tee m5-r3-metadata-result.txt
+      - name: Archive metadata-only research proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-r3-metadata-only-${{ github.run_id }}
+          path: |
+            m5-r3-metadata-result.txt
+            m5-r3-metadata-proof/metadata.json
+            m5-r3-metadata-proof/metadata.sha256
+          if-no-files-found: warn
+          retention-days: 14
