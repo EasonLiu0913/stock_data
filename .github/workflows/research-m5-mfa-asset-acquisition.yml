@@ -1,0 +1,76 @@
+name: Research M5 isolated Mandarin MFA asset acquisition
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: research-m5-mfa-assets
+  cancel-in-progress: false
+jobs:
+  acquire:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MFA_ROOT_DIR: ${{ runner.temp }}/m5-mfa-root
+      PYTHONNOUSERSITE: '1'
+    steps:
+      - name: Prepare isolated evidence directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/m5-mfa-evidence" "$MFA_ROOT_DIR"
+          printf '%s\n' 'publication_authorized=false' 'acoustic_sentence_boundary_verified=false' 'forced_alignment_executed=false' > "$RUNNER_TEMP/m5-mfa-evidence/release-lock.txt"
+      - name: Install isolated MFA environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: m5-research
+          auto-activate-base: false
+          channels: conda-forge
+          channel-priority: strict
+          python-version: '3.11'
+      - name: Install compatible legacy MFA
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          conda install -y -c conda-forge 'montreal-forced-aligner=3.3.9'
+          mfa version | tee "$RUNNER_TEMP/m5-mfa-evidence/mfa-version.txt"
+          conda list --explicit > "$RUNNER_TEMP/m5-mfa-evidence/conda-explicit.txt"
+      - name: Download Mandarin assets, inspect and hash actual bytes
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          mfa model download acoustic mandarin_mfa
+          mfa model download dictionary mandarin_china_mfa
+          mfa model download g2p mandarin_china_mfa
+          for spec in 'acoustic mandarin_mfa' 'dictionary mandarin_china_mfa' 'g2p mandarin_china_mfa'; do
+            read -r kind name <<< "$spec"
+            mfa model inspect "$kind" "$name" > "$RUNNER_TEMP/m5-mfa-evidence/inspect-${kind}.txt"
+          done
+          python - <<'PY'
+          import os,pathlib,hashlib,json,sys
+          root=pathlib.Path(os.environ['MFA_ROOT_DIR'])
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'m5-mfa-evidence'
+          targets={'acoustic':'mandarin_mfa','dictionary':'mandarin_china_mfa','g2p':'mandarin_china_mfa'}
+          assets=[]
+          for kind,name in targets.items():
+              # Require exactly one archive with model name under the corresponding model category.
+              matches=[p for p in root.rglob('*') if p.is_file() and p.suffix.lower()=='.zip'
+                       and p.stem==name and kind in p.parts]
+              if len(matches)!=1: raise SystemExit(f'BLOCKED: expected exactly one {kind}/{name} archive, found {len(matches)}')
+              p=matches[0]
+              if p.stat().st_size==0:raise SystemExit(f'BLOCKED: empty {p}')
+              assets.append({'type':kind,'name':name,'path':str(p.relative_to(root)),
+                             'size_bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+                             'provenance_reviewed':False})
+          (out/'asset-manifest.json').write_text(json.dumps({'assets':assets,'forced_alignment_executed':False,
+             'acoustic_sentence_boundary_verified':False,'publication_authorized':False},indent=2)+'\n')
+          print('THREE_ACTUAL_MODEL_ARCHIVES_HASHED')
+          PY
+      - name: Upload private research evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-mfa-acquisition-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/m5-mfa-evidence/
+          if-no-files-found: error
+          retention-days: 14
