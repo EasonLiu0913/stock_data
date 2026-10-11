@@ -54,8 +54,10 @@ jobs:
           assets=[]
           for kind,name in targets.items():
               # Require exactly one archive with model name under the corresponding model category.
-              matches=[p for p in root.rglob('*') if p.is_file() and p.suffix.lower()=='.zip'
-                       and p.stem==name and kind in p.parts]
+              matches=[p for p in root.rglob('*') if p.is_file() and p.stem==name
+                       and p.suffix.lower() in ({'.dict'} if kind=='dictionary' else {'.zip'})
+                       and any(x in p.parts for x in ({'dictionary','dictionaries'} if kind=='dictionary' else {kind}))]
+              (out/f'candidate-{kind}.txt').write_text('\n'.join(str(p.relative_to(root)) for p in matches)+'\n')
               if len(matches)!=1: raise SystemExit(f'BLOCKED: expected exactly one {kind}/{name} archive, found {len(matches)}')
               p=matches[0]
               if p.stat().st_size==0:raise SystemExit(f'BLOCKED: empty {p}')
