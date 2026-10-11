@@ -1,0 +1,27 @@
+name: Research M5-R Multimodel Acoustic Contract
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preregistration-only:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate locked M5-R contract without installing or running models
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/verify_m5_r_research_contract.py
+          python scripts/verify_m5_r_research_contract.py | tee m5-r-contract-result.txt
+      - name: Upload research contract proof only
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-r-contract-only-${{ github.run_id }}
+          path: |
+            m5-r-contract-result.txt
+            data_research/m5/m5-r-model-inventory.json
+            data_research/m5/m5-r-multimodel-acoustic-contract.md
+          if-no-files-found: error
+          retention-days: 14
