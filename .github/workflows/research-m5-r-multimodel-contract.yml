@@ -31,6 +31,11 @@ jobs:
           set -euo pipefail
           python -m py_compile scripts/verify_m5_r3_provenance_gate.py
           python scripts/verify_m5_r3_provenance_gate.py | tee m5-r3-provenance-result.txt
+      - name: Validate pinned source ledger without fetching model bytes
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/verify_m5_r3_immutable_ledger.py
+          python scripts/verify_m5_r3_immutable_ledger.py | tee m5-r3-ledger-result.txt
       - name: Official pinned metadata capture only (no weight endpoints)
         continue-on-error: true
         run: |
@@ -56,6 +61,9 @@ jobs:
             m5-r-contract-result.txt
             m5-r2-weight-audit-result.txt
             m5-r3-provenance-result.txt
+            m5-r3-ledger-result.txt
+            data_research/m5/m5-r3-immutable-evidence-ledger.json
+            scripts/verify_m5_r3_immutable_ledger.py
             data_research/m5/m5-r3-provenance-gate.json
             scripts/verify_m5_r3_provenance_gate.py
             data_research/m5/m5-r2-weight-audit.json
