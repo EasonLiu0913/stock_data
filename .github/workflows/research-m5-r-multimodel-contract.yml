@@ -198,6 +198,20 @@ jobs:
           print('M7_CJK_PREFLIGHT_PASS required_glyphs=12')
           PY
           mkdir -p m6-m7-private-review/visual-frames
+          python - <<'PY'
+          import json,subprocess,pathlib
+          d=pathlib.Path('m6-m7-private-review')
+          chapters=json.loads((d/'chapter-manifest.json').read_text())['timeline']
+          samples=[]
+          for ch in chapters:
+              a,b=ch['start_seconds'],ch['end_seconds']
+              samples.extend((ch['id']+'-'+str(p),a+(b-a)*p) for p in (.25,.5,.75))
+              if ch['ordinal']>1:samples.extend(((ch['id']+'-boundary-before',max(0,a-.08)),(ch['id']+'-boundary-after',a+.08)))
+          for name,t in samples:
+              p=d/'visual-frames'/(name+'.png')
+              subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(t),'-i',str(d/'m6-m7-private-1080p.mp4'),'-frames:v','1',str(p)],check=True)
+          print('M7_PROGRESS_FRAME_SAMPLES_PASS count='+str(len(samples)))
+          PY
           for t in 2 36 70; do
             ffmpeg -hide_banner -loglevel error -y -ss "$t" -i m6-m7-private-review/m6-m7-private-1080p.mp4 -frames:v 1 "m6-m7-private-review/visual-frames/frame-$t.png"
           done
