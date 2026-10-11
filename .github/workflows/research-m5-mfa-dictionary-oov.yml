@@ -1,0 +1,63 @@
+name: Research M5 Mandarin dictionary OOV audit
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  dictionary-audit:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MFA_ROOT_DIR: /tmp/m5-mfa-root
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize locked evidence
+        run: |
+          mkdir -p "$RUNNER_TEMP/m5-oov-evidence" "$MFA_ROOT_DIR" "$RUNNER_TEMP/m5-authentic"
+          printf '%s\n' 'publication_authorized=false' 'acoustic_sentence_boundary_verified=false' 'forced_alignment_executed=false' > "$RUNNER_TEMP/m5-oov-evidence/release-lock.txt"
+      - name: Download immutable original seven-audio ZIP for transcript only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/11697447563/zip" -o "$RUNNER_TEMP/m5-authentic/audio.zip"
+          echo "b29ab56784279c000a73e5174736c9d3d4eea7f2b330ce7d69f1919cdaee7a2a  $RUNNER_TEMP/m5-authentic/audio.zip" | sha256sum -c -
+      - name: Isolated MFA installation
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: m5-research
+          auto-activate-base: false
+          channels: conda-forge
+          channel-priority: strict
+          python-version: '3.11'
+      - name: Acquire actual MFA 3.3.9 Mandarin files and record version
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          conda install -y -c conda-forge 'montreal-forced-aligner=3.3.9'
+          mfa version | tee "$RUNNER_TEMP/m5-oov-evidence/mfa-version.txt"
+          grep -qx '3.3.9' "$RUNNER_TEMP/m5-oov-evidence/mfa-version.txt"
+          mfa model download acoustic mandarin_mfa
+          mfa model download dictionary mandarin_china_mfa
+          mfa model download g2p mandarin_china_mfa
+          for typ in acoustic dictionary g2p; do
+            name=mandarin_china_mfa
+            if [ "$typ" = acoustic ]; then name=mandarin_mfa; fi
+            mfa model inspect "$typ" "$name" > "$RUNNER_TEMP/m5-oov-evidence/inspect-$typ.txt"
+          done
+      - name: Audit genuine hashes and original transcript offsets against literal dictionary
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/research_m5_mfa_dictionary_oov.py --model-root "$MFA_ROOT_DIR" --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --ledger data_research/m5/mfa-oov-source-occurrences.json --output "$RUNNER_TEMP/m5-oov-evidence"
+      - name: Upload private research report only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-mfa-dictionary-oov-research-${{ github.run_id }}
+          path: ${{ runner.temp }}/m5-oov-evidence/
+          if-no-files-found: error
+          retention-days: 14
