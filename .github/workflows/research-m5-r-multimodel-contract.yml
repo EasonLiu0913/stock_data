@@ -48,6 +48,12 @@ jobs:
           set -euo pipefail
           python -m py_compile scripts/capture_m5_r3_tree_crosscheck.py
           python scripts/capture_m5_r3_tree_crosscheck.py | tee m5-r3-tree-result.txt
+      - name: Hash allowlisted immutable small non-weight README and LICENSE text only
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/capture_m5_r3_small_nonweight_text.py
+          python scripts/capture_m5_r3_small_nonweight_text.py | tee m5-r3-small-text-result.txt
       - name: Upload metadata-only proof separately
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +66,9 @@ jobs:
             m5-r3-tree-result.txt
             m5-r3-tree-proof/tree-proof.json
             m5-r3-tree-proof/tree-proof.sha256
+            m5-r3-small-text-result.txt
+            m5-r3-small-text-proof/small-text.json
+            m5-r3-small-text-proof/small-text.sha256
           if-no-files-found: warn
           retention-days: 14
       - name: Upload research contract proof only
@@ -71,6 +80,7 @@ jobs:
             m5-r2-weight-audit-result.txt
             m5-r3-provenance-result.txt
             m5-r3-ledger-result.txt
+            data_research/m5/m5-r3-license-resource-risk.json
             data_research/m5/m5-r3-immutable-evidence-ledger.json
             scripts/verify_m5_r3_immutable_ledger.py
             data_research/m5/m5-r3-provenance-gate.json
