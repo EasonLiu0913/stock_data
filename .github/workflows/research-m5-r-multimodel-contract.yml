@@ -42,6 +42,12 @@ jobs:
           set -euo pipefail
           python -m py_compile scripts/capture_m5_r3_official_metadata.py
           python scripts/capture_m5_r3_official_metadata.py | tee m5-r3-metadata-result.txt
+      - name: Compare four pinned official tree and sibling manifests metadata-only
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/capture_m5_r3_tree_crosscheck.py
+          python scripts/capture_m5_r3_tree_crosscheck.py | tee m5-r3-tree-result.txt
       - name: Upload metadata-only proof separately
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,6 +57,9 @@ jobs:
             m5-r3-metadata-result.txt
             m5-r3-metadata-proof/metadata.json
             m5-r3-metadata-proof/metadata.sha256
+            m5-r3-tree-result.txt
+            m5-r3-tree-proof/tree-proof.json
+            m5-r3-tree-proof/tree-proof.sha256
           if-no-files-found: warn
           retention-days: 14
       - name: Upload research contract proof only
