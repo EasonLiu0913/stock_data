@@ -175,6 +175,11 @@ jobs:
           test -s /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
           test -s assets/daily-gainers-vtuber-sprite.webp
           ffmpeg -hide_banner -filters > m6-m7-ffmpeg-filters.txt\n          grep -q subtitles m6-m7-ffmpeg-filters.txt
+      - name: M7 semantic chapter boundary and audio integrity regressions
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/m6_m7_private_1080p.py scripts/test_m7_chapter_timeline.py
+          python scripts/test_m7_chapter_timeline.py | tee m7-chapter-test-result.txt
       - name: Render M6-M7 1080p visual preview; never publish
         run: |
           set -euo pipefail
@@ -209,6 +214,7 @@ jobs:
           name: m6-m7-private-review-${{ github.run_id }}
           path: |
             m6-m7-result.txt
+            m7-chapter-test-result.txt
             m6-m7-private-review/
           if-no-files-found: warn
           retention-days: 7
