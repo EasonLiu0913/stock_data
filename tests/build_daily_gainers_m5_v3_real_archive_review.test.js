@@ -47,3 +47,20 @@ test('spoken date is derived from validated source date, not a fixed historical 
  for(const bad of ['20261301','20260230','2026108','2026-10-08'])assert.throws(()=>spokenDate(bad),/REVIEW_DATE_INVALID/);
  const r=build();assert.ok(r.scenes[3].speech.startsWith(spokenDate(r.date)+'，'));
 });
+
+test('review carries exact per-claim source evidence without upgrading publication or rights',()=>{
+ const r=build(),e=inspect().evidence,m=r.claim_evidence;
+ assert.equal(m.market_date.date,r.date);
+ assert.equal(m.breadth.advancers,e.breadth.advancers);
+ assert.equal(m.breadth.decliners,e.breadth.decliners);
+ assert.equal(m.market_turnover.turnover_twd,e.turnover_twd);
+ assert.equal(m.market_turnover.prior_five_mean_twd,e.ma5_twd);
+ assert.deepEqual(m.institutional.groups,e.groups);
+ assert.equal(m.institutional.total_net_twd,e.net_twd);
+ assert.equal(m.context_ratio.percent,Math.abs(e.net_twd)/e.turnover_twd*100);
+ assert.equal(m.context_ratio.not_market_share,true);
+ assert.deepEqual(m.source_sha256,r.source_sha256);
+ assert.equal(m.scope_verified_for_publication,false);
+ assert.equal(m.rights_verified_for_publication,false);
+ assert.equal(r.publication_authorized,false);
+});
