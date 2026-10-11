@@ -11,7 +11,7 @@ function make(){
  const f={date:e.date,source_date:e.date,source_integrity_verified:true,scope_verified:true,
  source_ids:[e.source_sha256.bfi82u,e.source_sha256.fmtqik,e.source_sha256.bfiamu],
  breadth:{advance:e.breadth.advancers,decline:e.breadth.decliners,unchanged:e.breadth.unchanged},
- index_change_points:-492.93,
+ index_change_points:e.index_change_points,
  market:{turnover_twd:e.turnover_twd,prior_five_average_twd:e.ma5_twd,unit:'TWD',scope:'TWSE_WHOLE_MARKET'},
  institutional:{groups:e.groups,total_net_twd:e.net_twd,unit:'TWD',scope_compatible_with_turnover:true}};
  const p=build(f);
