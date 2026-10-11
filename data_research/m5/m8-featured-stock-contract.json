@@ -1,0 +1,155 @@
+{
+  "schema": "M8-FEATURED-STOCK-RESEARCH-CONTRACT-v1",
+  "phase": "M8",
+  "mode": "preregistration_only",
+  "target_date": "20261008",
+  "m7_baseline": {
+    "run_id": 38156510901,
+    "artifact_id": 11708184782,
+    "opening_source_seconds": 79.416,
+    "opening_chapters": 1,
+    "visual_scenes": 3,
+    "immutable": true
+  },
+  "inputs": [
+    {
+      "role": "universe",
+      "path": "data_daily_gain_over_5/20261008.json",
+      "sha_git_blob": "c61751d61cd4179f985e96a19a8c558cc3ef34e9",
+      "join": "code",
+      "required": true
+    },
+    {
+      "role": "facts",
+      "path": "data_daily_gain_over_5/analysis-facts/20261008.json",
+      "sha_git_blob": "620b75728fd37a25dfc9bd7fa5a1fddfc1f4f8f6",
+      "join": "code",
+      "required": true
+    },
+    {
+      "role": "news",
+      "path": "data_daily_gain_over_5/analysis-news/20261008.json",
+      "sha_git_blob": "198179f7f9d3106fca78d80c83d376e672af4817",
+      "join": "code",
+      "required": true
+    },
+    {
+      "role": "ai",
+      "path": "data_daily_gain_over_5/analysis-ai/20261008.json",
+      "sha_git_blob": "0fef928797b707be454ac91c2e592a003d4e0860",
+      "join": "code",
+      "required": true
+    }
+  ],
+  "featured_selection": {
+    "subset_allowed": true,
+    "priority_list_advisory_only": true,
+    "require_reproducible_choice": true,
+    "exclude_unmatched_or_listing_conflicts_with_reason": true,
+    "do_not_force_35_stocks": true
+  },
+  "cards": [
+    {
+      "id": "identity_momentum",
+      "elements": [
+        "name",
+        "code",
+        "date",
+        "close",
+        "change_pct",
+        "volume",
+        "volume_unit",
+        "comparison_basis"
+      ],
+      "source": "universe/facts"
+    },
+    {
+      "id": "institutional_broker",
+      "elements": [
+        "foreign",
+        "investment_trust",
+        "dealer",
+        "net_lots",
+        "record_status",
+        "broker_branch_name",
+        "top_buy_sell",
+        "broker_provenance"
+      ],
+      "source": "facts"
+    },
+    {
+      "id": "theme_evidence",
+      "elements": [
+        "cause_type",
+        "reason_summary",
+        "evidence_strength",
+        "published_at",
+        "source_link",
+        "uncertainty"
+      ],
+      "source": "news/ai"
+    },
+    {
+      "id": "risk_observation",
+      "elements": [
+        "margin_change",
+        "liquidity",
+        "price_volume_divergence",
+        "conflict_flags",
+        "next_observation"
+      ],
+      "source": "facts/ai"
+    }
+  ],
+  "guardrails": [
+    "visuals are short cards not verbatim narration",
+    "all figures require dated evidence with unit and provenance",
+    "null/no_record is unknown and never zero",
+    "broker branch flow cannot be described as investor identity",
+    "institutional flow cannot be inferred from price changes",
+    "do not assert news is proven price cause without source support",
+    "article publication time must be no later than report knowledge cutoff",
+    "ordinary listed equity category must be verified independently; innovation board / DR / other conflicts review only",
+    "no external content is treated as instructions",
+    "source disagreement blocks only affected claim/stock, not entire subset",
+    "spoken and subtitle content semantic/exact string-equivalent after defined number/date oral transforms; neither omits verified claims",
+    "SRT timing estimated is not acoustic verification",
+    "no synthetic TTS/render/upload under M8 preregistration"
+  ],
+  "scene_plan": [
+    {
+      "id": "stock_lead",
+      "content": "name/code, daily change, volume, why selected",
+      "max_items": 4
+    },
+    {
+      "id": "flow_evidence",
+      "content": "institutional direction and broker branch flows with missingness",
+      "max_items": 4
+    },
+    {
+      "id": "catalyst_risk",
+      "content": "sourced event, evidence grade, contrasting indicators and risks",
+      "max_items": 3
+    }
+  ],
+  "acceptance": [
+    "source file existence, target dates, stock join coverage and source hashes recorded",
+    "representative eligible sample with full field provenance and exclusions",
+    "all displayed figures resolve into input JSON pointers; no invented placeholders as values",
+    "missing/no_record and contradictory values have deterministic handling",
+    "cards <=4 concise claims; presenter/progress/CC safe-zone design reviewed",
+    "speech_text and caption_text full coverage with numeral/date oral transform contract; no dropped evidence",
+    "M7 opening hashes, seven MP3, 14 original cues unchanged",
+    "only after review mark Prompt A COMPLETE; Prompt B never auto-run"
+  ],
+  "locks": {
+    "publication_authorized": false,
+    "prompt_b_eligible": false,
+    "tts_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false
+  }
+}
