@@ -13,7 +13,7 @@ function inspect(root=path.resolve(__dirname,'..')){
  const b=replay(),f=finance({verified:v,raw,recall,opening});
  if(v.date!==opening.target_date||b.date!==v.date||f.date!==v.date)throw Error('EDITORIAL_ARCHIVE_DATE_MISMATCH');
  if(!v.raw_bytes_verified||!f.source_provenance.archive_bytes_verified)throw Error('EDITORIAL_ARCHIVE_UNVERIFIED');
- const evidence={date:v.date,source_sha256:v.original_http_sha256,market_scope:v.market_scope,institutional_scope:v.institutional_scope,breadth:b.counts,turnover_twd:f.market_trading.turnover_twd,ma5_twd:f.market_trading.prior_five_mean_twd,groups:Object.fromEntries(['foreign','trust','dealers'].map(k=>[k,f.institutional.groups[k].net_twd])),net_twd:f.institutional.total.net_twd,scope_verified_for_publication:v.scope_verified_for_publication&&f.source_provenance.scope_verified_for_publication};
+ const evidence={date:v.date,source_sha256:v.original_http_sha256,market_scope:v.market_scope,institutional_scope:v.institutional_scope,breadth:b.counts,index_change_points:opening.taiex.change_points,turnover_twd:f.market_trading.turnover_twd,ma5_twd:f.market_trading.prior_five_mean_twd,groups:Object.fromEntries(['foreign','trust','dealers'].map(k=>[k,f.institutional.groups[k].net_twd])),net_twd:f.institutional.total.net_twd,scope_verified_for_publication:v.scope_verified_for_publication&&f.source_provenance.scope_verified_for_publication};
  if(evidence.scope_verified_for_publication!==false)throw Error('EDITORIAL_RESEARCH_SCOPE_DRIFT');
  return {status:'REAL_ARCHIVE_INTEGRITY_PASS_PUBLICATION_SCOPE_BLOCKED',evidence,publication_authorized:false,tts_authorized:false,video_authorized:false};
 }
