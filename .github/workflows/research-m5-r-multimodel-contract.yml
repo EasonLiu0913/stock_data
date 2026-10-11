@@ -169,6 +169,10 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check --no-cache-dir Pillow==11.3.0
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends fonts-noto-cjk
+          fc-cache -f
+          test -s /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
           test -s assets/daily-gainers-vtuber-sprite.webp
           ffmpeg -hide_banner -filters > m6-m7-ffmpeg-filters.txt\n          grep -q subtitles m6-m7-ffmpeg-filters.txt
       - name: Render M6-M7 1080p visual preview; never publish
