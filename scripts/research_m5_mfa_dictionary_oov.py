@@ -25,7 +25,7 @@ def main():
   if source.get("publication_authorized") is not False:raise ValueError("publication lock altered")
   scenes=source["scenes"];ledger=json.loads(pathlib.Path(a.ledger).read_text())["items"]
   if len(scenes)!=7 or len(ledger)!=22:raise ValueError("scene/ledger count mismatch")
-  lex=collections.Counter();formats=collections.Counter();samples=[];parsed=0
+  lex=collections.Counter();formats=collections.Counter();samples=[];parsed=0;field_shapes=collections.Counter();phone_tokens=collections.Counter();word_phones=collections.defaultdict(list)
   with open(root/ASSETS["dictionary"][0],encoding="utf-8-sig") as f:
    for line in f:
     if not line.strip():continue
@@ -33,9 +33,9 @@ def main():
     if len(samples)<5:samples.append({"field_count":len(fields),"first_token":fields[0] if fields else None})
     formats["tab" if "\t" in line else "whitespace"]+=1
     if len(fields)<2:raise ValueError("dictionary contains entry without pronunciation")
-    lex[fields[0]]+=1;parsed+=1
+    lex[fields[0]]+=1;parsed+=1;field_shapes[len(fields)]+=1\n    # MFA dictionary entries may have optional pronunciation weights: retain raw fields rather than infer phone columns.\n    if len(word_phones[fields[0]])<8:word_phones[fields[0]].append(fields[1:])\n    for v in fields[1:]:phone_tokens[v]+=1
   if parsed<1000:raise ValueError("dictionary parsing unexpectedly sparse")
-  p["dictionary_parser"]={"delimiter":"unicode_whitespace","entry_count":parsed,"distinct_headwords":len(lex),"line_formats":dict(formats),"sample_structure":samples}
+  p["dictionary_parser"]={"delimiter":"unicode_whitespace","entry_count":parsed,"distinct_headwords":len(lex),"line_formats":dict(formats),"field_count_distribution":dict(field_shapes),"sample_structure":samples,"raw_post_headword_token_inventory_size":len(phone_tokens),"raw_post_headword_token_inventory":sorted(phone_tokens),"phone_inventory_verified":False,"optional_weight_columns_verified":False}
   cc=OpenCC("t2s")
   for i,item in enumerate(ledger):
    scene=scenes[item["scene"]-1];token=item["source_span"]
@@ -51,9 +51,9 @@ def main():
     part=max(hits,key=len) if hits else normalized[pos]
     parts.append({"text":part,"normalized_offset":[pos,pos+len(part)],"dictionary_entries":lex.get(part,0)})
     pos+=len(part)
-   p["items"].append({"index":i,"scene":item["scene"],"source_span":token,"original_offset":[item["source_start"],item["source_end"]],"literal_dictionary_entries":lex.get(token,0),"literal_dictionary_status":"PRESENT" if token in lex else "ABSENT_LITERAL_ONLY","normalized_span":normalized,"normalization":"OpenCC t2s","one_to_one_character_mapping":one_to_one,"original_character_map":charmap,"normalized_dictionary_entries":lex.get(normalized,0),"exploratory_maximum_matches":parts,"true_oov_confirmed":False,"pronunciation":None,"human_reviewed":False,"status":"PENDING_REVIEW"})
+   p["items"].append({"index":i,"scene":item["scene"],"source_span":token,"original_offset":[item["source_start"],item["source_end"]],"literal_dictionary_entries":lex.get(token,0),"literal_dictionary_status":"PRESENT" if token in lex else "ABSENT_LITERAL_ONLY","normalized_span":normalized,"normalization":"OpenCC t2s","one_to_one_character_mapping":one_to_one,"original_character_map":charmap,"normalized_dictionary_entries":lex.get(normalized,0),"normalized_raw_dictionary_fields":word_phones.get(normalized,[]),"exploratory_match_raw_fields":[{"text":part["text"],"raw_fields":word_phones.get(part["text"],[])} for part in parts],"exploratory_maximum_matches":parts,"true_oov_confirmed":False,"pronunciation":None,"human_reviewed":False,"status":"PENDING_REVIEW"})
 
-  p["blockers"]=["Literal/normalized absence and exploratory matching are not certified tokenization or true OOV","Traditional/Simplified reversible mapping, TAIWAN STOCK spoken reading, pronunciations and phone inventory require independent approval"]
+  p["blockers"]=["Literal/normalized absence and exploratory matching are not certified tokenization or true OOV","Raw dictionary fields and token inventory are observed; phone-versus-optional-weight interpretation requires MFA schema verification","TAIWAN STOCK spoken reading and composition of finance terms require independent approval"]
  except Exception as e:p["blockers"].append("BLOCKED: "+str(e))
  finally:(out/"dictionary-oov-proof.json").write_text(json.dumps(p,ensure_ascii=False,indent=2)+"\n")
  if not p["model_assets_verified"] or len(p["items"])!=22:raise SystemExit(2)
