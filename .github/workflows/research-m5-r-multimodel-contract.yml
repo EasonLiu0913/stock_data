@@ -15,12 +15,19 @@ jobs:
           set -euo pipefail
           python -m py_compile scripts/verify_m5_r_research_contract.py
           python scripts/verify_m5_r_research_contract.py | tee m5-r-contract-result.txt
+      - name: M5-R2 static weight audit only, no model downloads
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/verify_m5_r2_weight_audit.py
+          python scripts/verify_m5_r2_weight_audit.py | tee m5-r2-weight-audit-result.txt
       - name: Upload research contract proof only
         uses: actions/upload-artifact@v4
         with:
           name: m5-r-contract-only-${{ github.run_id }}
           path: |
             m5-r-contract-result.txt
+            m5-r2-weight-audit-result.txt
+            data_research/m5/m5-r2-weight-audit.json
             data_research/m5/m5-r-model-inventory.json
             data_research/m5/m5-r-multimodel-acoustic-contract.md
           if-no-files-found: error
