@@ -58,11 +58,14 @@ def paint_scene(base,scene_id):
  elif scene_id=='market_cards':
   d.text((113,216),'10/08 今日市場速覽',font=font(55),fill='#ffcf73')
   draw_cards(d,[('加權指數漲跌','-492.93 點'),('上市普通股漲／跌','425／540 家'),('市場成交金額','9,245.09 億元'),('相對前五交易日','量能低於平均')])
+  d.rounded_rectangle((117,660,485,719),radius=18,fill='#6c3c35')
+  d.text((139,669),'市場狀態：偏弱',font=font(31),fill='#fff1d6')
  elif scene_id=='flow_summary':
   d.text((113,216),'法人資金與市場觀察',font=font(55),fill='#ffcf73')
   draw_cards(d,[('三大法人合計','-915.75 億元'),('外資','-758.52 億元'),('投信','+30.09 億元'),('自營商','-187.31 億元')])
-  d.text((130,645),'市場偏弱  ·  量能低於前五日平均',font=font(33),fill='#ffcf73')
-  d.text((130,716),'留意市場廣度、量能與法人方向',font=font(29),fill='#dbeafe')
+  d.text((113,640),'法人淨額／成交額參考比率：9.91%',font=font(29),fill='#ffcf73')
+  for i,point in enumerate(('市場偏弱','量能低於前 5 個交易日平均','後續觀察法人方向與市場廣度')):
+   d.text((133,690+i*43),'• '+point,font=font(26),fill='#dbeafe')
  else:raise AssertionError('Unknown visual scene')
  d.text((1510,937),'CC 字幕可開啟',font=font(19),fill='#cbd5e1')
  d.text((110,1016),'PRIVATE PREVIEW | TIMING ESTIMATED - NOT SYNC VERIFIED',font=font(23),fill='#facc15')
