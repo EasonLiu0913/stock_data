@@ -73,7 +73,9 @@ jobs:
       - name: Observe immutable scene-one waveform without transcription or alignment
         run: |
           set -euo pipefail
-          command -v ffmpeg\n          ffmpeg -version | head -n 1\n          python scripts/research_m5_scene1_signal_observation.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/scene1-signal-observation.json"
+          command -v ffmpeg
+          ffmpeg -version | sed -n '1p'
+          python scripts/research_m5_scene1_signal_observation.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/scene1-signal-observation.json"
       - name: Upload private research report only
         if: always()
         uses: actions/upload-artifact@v4
