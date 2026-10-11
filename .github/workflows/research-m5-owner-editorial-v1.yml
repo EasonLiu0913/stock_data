@@ -15,10 +15,11 @@ jobs:
         run: |
           mkdir -p /tmp/m5-v3-owner-review
           node scripts/build_daily_gainers_m5_v3_real_archive_review.js > /tmp/m5-v3-owner-review/seven-scene-review.json
+          node scripts/build_daily_gainers_m5_v3_private_media_input.js > /tmp/m5-v3-owner-review/private-media-semantic-input.json
           node -e 'const fs=require("node:fs");const r=JSON.parse(fs.readFileSync("/tmp/m5-v3-owner-review/seven-scene-review.json","utf8"));fs.writeFileSync("/tmp/m5-v3-owner-review/REVIEW.md","# M5 V3 real archive — private owner text review\n\nDate: "+r.date+"\nStatus: "+r.status+"\nPublication/TTS/video authorized: false\n\n"+r.scenes.map(s=>"## Scene "+s.scene+"\n"+s.speech).join("\n\n")+"\n\nOriginal archive source SHA-256: "+JSON.stringify(r.source_sha256)+"\n\nScope certification is not complete. This is not final approved text, synced subtitles or rendered media.\n")'
           node -e 'const fs=require("node:fs");const p="/tmp/m5-v3-owner-review/REVIEW.md";const s=fs.readFileSync(p,"utf8");if(!s.includes("\n## Scene 1\n")||!s.includes("\n## Scene 7\n")||s.includes(String.raw`\n`))throw Error("PRIVATE_OWNER_REVIEW_FORMAT_INVALID");const j=JSON.parse(fs.readFileSync("/tmp/m5-v3-owner-review/seven-scene-review.json","utf8"));if(j.scenes.length!==7||j.publication_authorized!==false)throw Error("PRIVATE_OWNER_REVIEW_CONTENT_INVALID");'
       - name: Verify V3 review and retained source/editorial contracts
-        run: node --test tests/build_daily_gainers_m5_v3_real_archive_review.test.js tests/inspect_daily_gainers_editorial_real_archive.test.js tests/build_daily_gainers_editorial_v1_research.test.js tests/build_daily_gainers_m4_spoken_draft.test.js tests/build_daily_gainers_m5_private_plan.test.js
+        run: node --test tests/build_daily_gainers_m5_v3_private_media_input.test.js tests/build_daily_gainers_m5_v3_real_archive_review.test.js tests/inspect_daily_gainers_editorial_real_archive.test.js tests/build_daily_gainers_editorial_v1_research.test.js tests/build_daily_gainers_m4_spoken_draft.test.js tests/build_daily_gainers_m5_private_plan.test.js
       - name: Upload private owner-review evidence
         if: always()
         uses: actions/upload-artifact@v4
