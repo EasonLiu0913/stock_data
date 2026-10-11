@@ -16,6 +16,7 @@ jobs:
           sparse-checkout: |
             scripts
             data_research/m5
+            assets/daily-gainers-vtuber-sprite.webp
           sparse-checkout-cone-mode: true
       - name: Validate locked M5-R contract without installing or running models
         run: |
@@ -162,6 +163,27 @@ jobs:
             m5-offline-render-result.txt
             m5-offline-preview/private-preview.mp4
             m5-offline-preview/render-proof.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Prepare private M6-M7 visual dependencies only
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-cache-dir Pillow==11.3.0
+          test -s assets/daily-gainers-vtuber-sprite.webp
+          ffmpeg -hide_banner -filters | grep -q subtitles
+      - name: Render M6-M7 1080p visual preview; never publish
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/m6_m7_private_1080p.py
+          python scripts/m6_m7_private_1080p.py --handoff m5-private-preview-handoff --source m5-original-audio/m5-v3-audio-proof-38126384964 --sprite assets/daily-gainers-vtuber-sprite.webp --output m6-m7-private-review | tee m6-m7-result.txt
+      - name: Upload 1080p private review and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m6-m7-private-review-${{ github.run_id }}
+          path: |
+            m6-m7-result.txt
+            m6-m7-private-review/
           if-no-files-found: warn
           retention-days: 7
       - name: Upload research contract proof only
