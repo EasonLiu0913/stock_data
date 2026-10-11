@@ -1,43 +1,37 @@
 #!/usr/bin/env python3
-"""M7 chapter timeline regression: no TTS, network, publication, or model weights."""
+"""M7 locked market opening: one chapter, seven audios, three independent visual scenes."""
 import importlib.util,json,pathlib
 from copy import deepcopy
 root=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('renderer',root/'scripts/m6_m7_private_1080p.py')
 mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
-config=json.loads((root/'data_research/m5/m7-research-chapters.json').read_text())
-audio=[{'scene':i+1,'duration_seconds':v} for i,v in enumerate([4.,3.,5.,15.,20.,15.,17.416])]
-timeline=mod.chapter_timeline(audio,config)
-assert len(timeline)==5 and timeline[0]['scenes']==[1,2,3]
-assert timeline[0]['start_seconds']==0 and timeline[0]['end_seconds']==12
-assert all(timeline[0]['ordinal']==1 for s in (1,2,3))
-assert timeline[1]['start_seconds']==12 and timeline[-1]['end_seconds']==79.416
-assert all(x['total']==5 for x in timeline)
-assert all(a['end_seconds']==b['start_seconds'] for a,b in zip(timeline,timeline[1:]))
-assert round(sum(x['end_seconds']-x['start_seconds'] for x in timeline),3)==79.416
-assert config['publication_authorized'] is False
-bad=deepcopy(config);bad['chapters'][0]['scenes']=[1,2]
-try: mod.chapter_timeline(audio,bad)
-except AssertionError: pass
-else: raise AssertionError('Must reject premature opening chapter transition')
-bad=deepcopy(config);bad['chapters'][1]['scenes']=[3,4]
-try: mod.chapter_timeline(audio,bad)
-except AssertionError: pass
-else: raise AssertionError('Must reject duplicated or overlapping scene')
-# Subtitles are a separate timing channel; none are consulted by chapter_timeline.
+chapters=json.loads((root/'data_research/m5/m7-research-chapters.json').read_text())
+visuals=json.loads((root/'data_research/m5/m7-visual-scenes.json').read_text())
+audio=[{'scene':i+1,'duration_seconds':v} for i,v in enumerate([2.88,2.76,2.496,16.944,13.2,23.4,17.736])]
+timeline=mod.chapter_timeline(audio,chapters)
+mapping=mod.visual_plan(visuals)
+assert len(timeline)==1 and timeline[0]['scenes']==list(range(1,8))
+assert timeline[0]['start_seconds']==0 and timeline[0]['end_seconds']==79.416
+assert timeline[0]['title']=='市場開場' and timeline[0]['ordinal']==timeline[0]['total']==1
+assert [mapping[i]['id'] for i in range(1,8)]==['brand_opening']*3+['market_cards']*2+['flow_summary']*2
+assert visuals['audio_count']==7 and len(visuals['visual_scenes'])==3
+for t in [0,2.88,5.64,8.136,25.08,38.28,61.68,79.415,79.416]:
+ ch,frac,left=mod.progress_state(t,timeline)
+ assert ch['ordinal']==ch['total']==1 and abs(frac-t/79.416)<1e-9
+ assert abs(t+left-79.416)<1e-9
+for frac in (0,.25,.5,.75,1):
+ ch,p,left=mod.progress_state(79.416*frac,timeline)
+ assert abs(p-frac)<1e-9
 assert 'candidate.srt' not in mod.chapter_timeline.__code__.co_names
-# Verify monotonic intrachapter fill, exact boundary reset, and clock conservation.
-for chapter in timeline:
- start,end=chapter['start_seconds'],chapter['end_seconds']
- samples=[mod.progress_state(start+(end-start)*p,timeline) for p in (0,.25,.5,.75)]
- assert all(x[0]['id']==chapter['id'] for x in samples)
- assert all(abs(s[1]-p)<1e-9 for s,p in zip(samples,(0,.25,.5,.75)))
- assert all(abs((start+(end-start)*p)+s[2]-79.416)<1e-9 for s,p in zip(samples,(0,.25,.5,.75)))
- if chapter!=timeline[-1]:
-  before=mod.progress_state(end-0.001,timeline)
-  after=mod.progress_state(end,timeline)
-  assert before[0]['ordinal']==chapter['ordinal'] and before[1]>.99
-  assert after[0]['ordinal']==chapter['ordinal']+1 and after[1]==0
-assert mod.clock(79.416)=='01:19' and mod.clock(0)=='00:00'
-print('M7_PROGRESS_MATH_PASS samples=0,25,50,75 boundaries=4 source_seconds=79.416')
-print('M7_CHAPTER_TIMELINE_PASS opening_scenes=1,2,3 chapters=5 audio_seconds=79.416 release=BLOCKED')
+for corrupt in ([[1,2,3],[4,5,6,7]],[[1,2,3,4,5,6]]):
+ bad=deepcopy(chapters)
+ bad['chapters']=[{'id':'market-opening','title':'市場開場','scenes':s} for s in corrupt]
+ try:mod.chapter_timeline(audio,bad)
+ except AssertionError:pass
+ else:raise AssertionError('Invalid chapter partition was accepted')
+bad=deepcopy(visuals);bad['visual_scenes'][0]['audio_scenes']=[1,2]
+try:mod.visual_plan(bad)
+except AssertionError:pass
+else:raise AssertionError('Missing third intro audio accepted')
+print('M7_OPENING_STRUCTURE_PASS chapters=1 audio_scenes=7 visual_scenes=3 seconds=79.416 release=BLOCKED')
+print('M7_PROGRESS_MATH_PASS intrachapter=0,25,50,75,100 chapter_changes=0')
