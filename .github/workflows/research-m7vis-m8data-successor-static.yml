@@ -1,0 +1,37 @@
+name: "[Research] M7VIS M8DATA Successor Static"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-static-only:
+    if: github.ref_name == 'research/m5-r-weight-evidence-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python version
+        run: python3 --version
+      - name: Exact checked-out successor verifier
+        run: python3 scripts/verify_m7_m8_successor_pair_draft.py
+      - name: Read-only original Charter and route invariants
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('.')
+          pair=json.loads((root/'data_research/m5/change-proposals/M7-M8-SUCCESSOR-PAIR-v1.json').read_text())
+          route=json.loads((root/'docs/agent-prompts/task-routing.json').read_text())
+          charter=(root/'docs/handoffs/daily-gainers-market-opening-end-to-end.md').read_text()
+          active=next(t for t in route['tasks'] if t['id']==route['active_task'])
+          assert active['id']=='daily-gainers-market-opening-end-to-end'
+          assert active['goal_contract_version']=='goal-v3/M5-PRIVATE-TTS-VIDEO-PREVIEW-v2'
+          assert 'M7 | Final project closeout' in charter
+          assert pair['original_charter_roadmap']['preserved'] is True
+          assert pair['historical']['original_m7_prompt_b_pass']=='NOT_ESTABLISHED'
+          assert pair['preregistration']['main_preregistered'] is False
+          assert all(v is False for v in pair['locks'].values())
+          print('SUCCESSOR_CHARTER_ROUTE_STATIC_PASS main_m5=true original_m7_final=true successor_pending=true release=BLOCKED')
+          PY
