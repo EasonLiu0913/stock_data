@@ -33,5 +33,14 @@ bad=deepcopy(visuals);bad['visual_scenes'][0]['audio_scenes']=[1,2]
 try:mod.visual_plan(bad)
 except AssertionError:pass
 else:raise AssertionError('Missing third intro audio accepted')
+import inspect
+renderer=inspect.getsource(mod.paint_scene)
+for required in ('市場狀態：偏弱','9.91%','市場偏弱','量能低於前 5 個交易日平均','後續觀察法人方向與市場廣度'):
+ assert required in renderer, 'Required factual slide element missing: '+required
+assert "scene['display_text']" not in inspect.getsource(mod.main), 'Narration must not become slide text'
+assert all(mapping[i]['id']==mapping[1]['id'] for i in (1,2,3))
+assert all(mapping[i]['id']==mapping[4]['id'] for i in (4,5))
+assert all(mapping[i]['id']==mapping[6]['id'] for i in (6,7))
+print('M7_SLIDE_CONTENT_PASS market_weakness=true institutional_reference=9.91 takeaways=3 no_verbatim_slides=true')
 print('M7_OPENING_STRUCTURE_PASS chapters=1 audio_scenes=7 visual_scenes=3 seconds=79.416 release=BLOCKED')
 print('M7_PROGRESS_MATH_PASS intrachapter=0,25,50,75,100 chapter_changes=0')
