@@ -21,7 +21,7 @@ function build(f){
  const index=f.index_change_points<0?'下跌':f.index_change_points>0?'上漲':'持平';
  const market='當天上漲家數'+number(n[0])+'家，下跌則有'+number(n[1])+'家，市場'+breadth+'。';
  const volume='整體市場成交金額約'+billions(turnover_twd)+'億元，'+(turnover_twd>prior_five_average_twd?'高於':turnover_twd<prior_five_average_twd?'低於':'等於')+'前五個交易日平均。';
- const institutional='三大法人合計'+direction(net)+(net===0?'': '約'+billions(net)+'億元')+'，淨額相當於當天整體市場成交金額約百分之'+number(ratio)+'。外資'+direction(groups.foreign)+'，投信'+direction(groups.trust)+'，自營商'+direction(groups.dealers)+'。';
+ const institutional='三大法人合計'+direction(net)+(net===0?'': '約'+billions(net)+'億元')+'，淨額相當於當天整體市場成交金額約百分之'+spoken.decimal(Math.round(ratio*100)/100)+'。外資'+direction(groups.foreign)+'，投信'+direction(groups.trust)+'，自營商'+direction(groups.dealers)+'。';
  const synthesis='綜合今天盤面，漲跌家數顯示市場'+breadth+'，量能'+(turnover_twd>prior_five_average_twd?'高於':turnover_twd<prior_five_average_twd?'低於':'接近')+'近期平均，三大法人整體'+direction(net)+'。接下來觀察漲跌家數、量能與法人方向是否持續改善。';
  const scenes=[...OPENING_LINES,'加權指數'+index+(index==='持平'?'':spoken.decimal(Math.abs(f.index_change_points))+'點')+'。'+market,volume,institutional,synthesis];
  if(scenes.length!==7)throw Error('V3_SEVEN_SCENES');
