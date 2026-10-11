@@ -10,7 +10,7 @@ assert x['m7_baseline']['opening_source_seconds']==79.416 and x['m7_baseline']['
 assert len(x['inputs'])==4 and {i['role'] for i in x['inputs']}=={'universe','facts','news','ai'}
 assert all(i['required'] and i['path'].startswith('data_daily_gain_over_5/') and i['join']=='code' for i in x['inputs'])
 assert len(x['cards'])==4 and len(x['scene_plan'])==3
-assert x['featured_selection']['subset_allowed'] and not x['featured_selection']['do_not_force_35_stocks'] is False
+assert x['featured_selection']['subset_allowed'] is True and x['featured_selection']['do_not_force_35_stocks'] is True
 assert all(v is False for v in x['locks'].values())
 for phrase in ('null/no_record','source disagreement','verbatim narration','SRT timing estimated'):
  assert any(phrase in s for s in x['guardrails']),phrase
