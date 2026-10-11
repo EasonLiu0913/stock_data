@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """M6/M7 1080p local-private research render. No network, upload, TTS, or acoustic claims."""
 import argparse,hashlib,json,pathlib,subprocess,tempfile,math
+from functools import lru_cache
 from PIL import Image,ImageDraw,ImageFont
 EXPECTED='1daf7a269c0a39ab8c9bab59048c6c36293ce5ee5a9e878bb8971f689126271f'
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def cmd(args):return subprocess.run(args,check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE).stdout
+@lru_cache(maxsize=16)
 def font(size):
  for p in ['/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc']:
   if pathlib.Path(p).exists():return ImageFont.truetype(p,size)
