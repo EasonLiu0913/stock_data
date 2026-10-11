@@ -26,3 +26,11 @@
 - CI captures 15 intrachapter progress frames and eight boundary-before/after frames, plus prior three baseline frames. Inspect actual rendered pixels before declaring full visual PASS.
 - Original 7 MP3, fixed source narration, 14-cue estimated SRT and sha lock unchanged. Acoustic evidence 0/15, release BLOCKED, no TTS, Prompt B, production, cron, Pages or YouTube.
 - Next: dispatch research workflow and inspect new Run logs and artifact. A green compile or mathematical regression alone is NOT proof of full visual acceptance.
+
+
+## M7 market-opening visual restructure (latest active Prompt A)
+- PROGRESS / CI PENDING. Research branch committed renderer and contracts; no new successful run or regenerated artifact claimed yet.
+- Seven immutable original MP3 files and 14-cue estimated SRT remain untouched; all scenes 1–7 share sole chapter `市場開場`, with 79.416-second source clock.
+- Independent visual plan: brand_opening = audios 1–3, market_cards = audios 4–5, flow_summary = audios 6–7. No verbatim narration as slide body; external CC retains full text. Market figures are fixed to values crosschecked against locked 20261008 narration, not dynamic fabricated data.
+- Regression is fail-closed on chapters=1, audio_scenes=7, visual_scenes=3; progress math remains one continuous chapter. CI captures one frame from each visual type and archives both chapter-manifest and visual-scene-manifest plus review-proof.
+- Current blocker: dispatch research workflow; inspect CI and actual 1080p MP4 for card typography, presenter overlap and progress before any full visual PASS. Original production locks retained, acoustic 0/15, no TTS or publication.
