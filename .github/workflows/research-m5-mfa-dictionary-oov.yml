@@ -19,7 +19,7 @@ jobs:
           printf '%s\n' 'publication_authorized=false' 'acoustic_sentence_boundary_verified=false' 'forced_alignment_executed=false' > "$RUNNER_TEMP/m5-oov-evidence/release-lock.txt"
       - name: Preflight Python research scripts before model downloads
         run: |
-          python -m py_compile scripts/research_m5_mfa_dictionary_oov.py scripts/research_m5_mfa_alignment_preregister.py scripts/research_m5_mfa_phone_schema.py scripts/research_m5_mfa_transcript_draft.py scripts/research_m5_scene1_signal_observation.py
+          python -m py_compile scripts/research_m5_mfa_dictionary_oov.py scripts/research_m5_mfa_alignment_preregister.py scripts/research_m5_mfa_phone_schema.py scripts/research_m5_mfa_transcript_draft.py scripts/research_m5_scene1_signal_observation.py scripts/research_m5_independent_audio_review_packet.py
       - name: Download immutable original seven-audio ZIP for transcript only
         env:
           GH_TOKEN: ${{ github.token }}
@@ -77,6 +77,11 @@ jobs:
           command -v ffmpeg
           ffmpeg -version | sed -n '1p'
           python scripts/research_m5_scene1_signal_observation.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/scene1-signal-observation.json"
+      - name: Package original scene-one audio and unapproved dictionary candidate review
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/research_m5_independent_audio_review_packet.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --dictionary "$MFA_ROOT_DIR/pretrained_models/dictionary/mandarin_china_mfa.dict" --draft "$RUNNER_TEMP/m5-oov-evidence/transcript-draft.json" --phone-proof "$RUNNER_TEMP/m5-oov-evidence/phone-schema-proof.json" --output "$RUNNER_TEMP/m5-oov-evidence"
       - name: Upload private research report only
         if: always()
         uses: actions/upload-artifact@v4
