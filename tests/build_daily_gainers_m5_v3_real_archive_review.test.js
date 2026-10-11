@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {build}=require('../scripts/build_daily_gainers_m5_v3_real_archive_review');
+const {build,spokenDate}=require('../scripts/build_daily_gainers_m5_v3_real_archive_review');
 const {inspect}=require('../scripts/inspect_daily_gainers_editorial_real_archive');
 const {OPENING_LINES}=require('../scripts/daily_gainers_brand_opening');
 
@@ -39,4 +39,11 @@ test('genuine archive seven-scene V3 review is exact, traceable and release lock
  assert.equal(e.scope_verified_for_publication,false);
  for(const key of ['publication_authorized','tts_authorized','video_authorized'])assert.equal(r[key],false);
  assert.ok(r.limitations.some(x=>/scopeVerified=false/.test(x)));
+});
+
+test('spoken date is derived from validated source date, not a fixed historical string',()=>{
+ assert.equal(spokenDate('20261008'),'十月八日');
+ assert.equal(spokenDate('20261112'),'十一月十二日');
+ for(const bad of ['20261301','20260230','2026108','2026-10-08'])assert.throws(()=>spokenDate(bad),/REVIEW_DATE_INVALID/);
+ const r=build();assert.ok(r.scenes[3].speech.startsWith(spokenDate(r.date)+'，'));
 });
