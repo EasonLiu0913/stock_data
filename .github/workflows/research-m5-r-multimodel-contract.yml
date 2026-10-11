@@ -148,6 +148,22 @@ jobs:
             m5-private-preview-handoff/
           if-no-files-found: warn
           retention-days: 7
+      - name: Render research-only private MP4 with visible estimated subtitle warning
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/m5_render_offline_private_preview.py
+          python scripts/m5_render_offline_private_preview.py --handoff m5-private-preview-handoff --output m5-offline-preview/private-preview.mp4 | tee m5-offline-render-result.txt
+      - name: Archive offline MP4 (not for publication)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-offline-private-mp4-${{ github.run_id }}
+          path: |
+            m5-offline-render-result.txt
+            m5-offline-preview/private-preview.mp4
+            m5-offline-preview/render-proof.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload research contract proof only
         if: always()
         uses: actions/upload-artifact@v4
