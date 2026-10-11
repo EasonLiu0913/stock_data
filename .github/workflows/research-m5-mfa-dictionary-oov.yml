@@ -19,7 +19,7 @@ jobs:
           printf '%s\n' 'publication_authorized=false' 'acoustic_sentence_boundary_verified=false' 'forced_alignment_executed=false' > "$RUNNER_TEMP/m5-oov-evidence/release-lock.txt"
       - name: Preflight Python research scripts before model downloads
         run: |
-          python -m py_compile scripts/research_m5_mfa_dictionary_oov.py scripts/research_m5_mfa_alignment_preregister.py
+          python -m py_compile scripts/research_m5_mfa_dictionary_oov.py scripts/research_m5_mfa_alignment_preregister.py scripts/research_m5_mfa_phone_schema.py
       - name: Download immutable original seven-audio ZIP for transcript only
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,6 +57,11 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check opencc-python-reimplemented==0.1.7
           python scripts/research_m5_mfa_dictionary_oov.py --model-root "$MFA_ROOT_DIR" --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --ledger data_research/m5/mfa-oov-source-occurrences.json --output "$RUNNER_TEMP/m5-oov-evidence"
+      - name: Audit authentic dictionary probability columns and acoustic model phone sources
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/research_m5_mfa_phone_schema.py --root "$MFA_ROOT_DIR" --output "$RUNNER_TEMP/m5-oov-evidence/phone-schema-proof.json"
       - name: Preregister seven-scene immutable corpus without alignment
         run: |
           python scripts/research_m5_mfa_alignment_preregister.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --output "$RUNNER_TEMP/m5-oov-evidence/alignment-preregistration.json"
