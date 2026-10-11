@@ -26,4 +26,18 @@ except AssertionError: pass
 else: raise AssertionError('Must reject duplicated or overlapping scene')
 # Subtitles are a separate timing channel; none are consulted by chapter_timeline.
 assert 'candidate.srt' not in mod.chapter_timeline.__code__.co_names
+# Verify monotonic intrachapter fill, exact boundary reset, and clock conservation.
+for chapter in timeline:
+ start,end=chapter['start_seconds'],chapter['end_seconds']
+ samples=[mod.progress_state(start+(end-start)*p,timeline) for p in (0,.25,.5,.75)]
+ assert all(x[0]['id']==chapter['id'] for x in samples)
+ assert all(abs(s[1]-p)<1e-9 for s,p in zip(samples,(0,.25,.5,.75)))
+ assert all(abs((start+(end-start)*p)+s[2]-79.416)<1e-9 for s,p in zip(samples,(0,.25,.5,.75)))
+ if chapter!=timeline[-1]:
+  before=mod.progress_state(end-0.001,timeline)
+  after=mod.progress_state(end,timeline)
+  assert before[0]['ordinal']==chapter['ordinal'] and before[1]>.99
+  assert after[0]['ordinal']==chapter['ordinal']+1 and after[1]==0
+assert mod.clock(79.416)=='01:19' and mod.clock(0)=='00:00'
+print('M7_PROGRESS_MATH_PASS samples=0,25,50,75 boundaries=4 source_seconds=79.416')
 print('M7_CHAPTER_TIMELINE_PASS opening_scenes=1,2,3 chapters=5 audio_seconds=79.416 release=BLOCKED')
