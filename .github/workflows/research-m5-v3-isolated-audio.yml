@@ -27,6 +27,7 @@ jobs:
           python -m unittest discover -s tests -p test_research_m5_v3_private_tts_proof.py -v
           mkdir -p /tmp/m5-v3-audio
           node scripts/build_daily_gainers_m5_v3_private_media_input.js > /tmp/m5-v3-audio/source.json
+          python scripts/research_m5_v3_edge_tts_diagnostic.py /tmp/m5-v3-audio/source.json /tmp/m5-v3-audio/diagnostic
           python scripts/research_m5_v3_private_tts_proof.py /tmp/m5-v3-audio/source.json /tmp/m5-v3-audio/audio
       - name: Retain private evidence
         if: always()
