@@ -1,0 +1,33 @@
+name: "[Research M5] Offline listening review UI"
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify original research script
+        run: |
+          node --test tests/build_daily_gainers_m5_private_plan.test.js tests/build_daily_gainers_m4_spoken_draft.test.js
+          python -m py_compile scripts/m5_private_listening_review_ui.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: m5-private-listening-pack-38081973803
+          run-id: 38081973803
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/source
+      - name: Build local private listening review
+        run: python scripts/m5_private_listening_review_ui.py "${RUNNER_TEMP}/source" "${RUNNER_TEMP}/review"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-offline-listening-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/review/
+          if-no-files-found: warn
+          retention-days: 14
