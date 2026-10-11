@@ -125,6 +125,29 @@ jobs:
             m5-bulk-private-proof/proof.json
           if-no-files-found: warn
           retention-days: 7
+      - name: Download accepted estimated subtitle candidate (private)
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 11707176177
+          github-token: ${{ github.token }}
+          repository: EasonLiu0913/stock_data
+          run-id: 38151900627
+          path: m5-accepted-candidate
+      - name: Prepare locked offline private preview handoff without rendering or publishing
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/m5_private_preview_handoff.py
+          python scripts/m5_private_preview_handoff.py --original m5-original-audio/m5-v3-audio-proof-38126384964 --candidate m5-accepted-candidate/m5-bulk-private-candidate-38151900627/m5-bulk-private-proof --out m5-private-preview-handoff | tee m5-preview-result.txt
+      - name: Archive offline private preview handoff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-private-preview-handoff-${{ github.run_id }}
+          path: |
+            m5-preview-result.txt
+            m5-private-preview-handoff/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload research contract proof only
         if: always()
         uses: actions/upload-artifact@v4
