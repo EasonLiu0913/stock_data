@@ -1,0 +1,35 @@
+name: Research M5 V3 isolated audio check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Dependencies
+        run: |
+          python -m pip install edge-tts==7.2.7
+          ffprobe -version
+      - name: Offline checks and private audio
+        run: |
+          python -m unittest discover -s tests -p test_research_m5_v3_private_tts_proof.py -v
+          mkdir -p /tmp/m5-v3-audio
+          node scripts/build_daily_gainers_m5_v3_private_media_input.js > /tmp/m5-v3-audio/source.json
+          python scripts/research_m5_v3_private_tts_proof.py /tmp/m5-v3-audio/source.json /tmp/m5-v3-audio/audio
+      - name: Retain private evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-v3-audio-proof-${{ github.run_id }}
+          path: /tmp/m5-v3-audio/
+          if-no-files-found: warn
+          retention-days: 14
