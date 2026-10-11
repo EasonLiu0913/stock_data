@@ -37,6 +37,10 @@ Before introducing a major feature or abstraction, answer:
 
 See `docs/project-philosophy.md` and `docs/decisions/ADR-000-project-philosophy.md` for the canonical rationale.
 
+## Mandatory daily 5% video owner policy
+
+When working on `daily-gainers-market-opening-end-to-end`, daily 5% video facts, script, narration, subtitles, generation, repair, uploads or scheduling, read and obey `docs/policies/daily-gainers-video-editorial-verification-delivery-v1.md` **before** changing code or declaring PASS. Its figures are illustrative, never fixed daily data. Validation failure triggers truthful diagnosis/repair and continuation to verified daily delivery, not bypassing tests or inventing figures. This policy is owner-approved editorial/delivery intent; it does not override frozen phase A/B gates or authorize production/publishing by itself.
+
 ## Mandatory documentation handoff
 
 The documentation is a living project handoff. Do not rely only on prior chat history when the repository documents contain the current decision or roadmap.
