@@ -20,3 +20,15 @@ Do NOT try to resolve blocked original `scopeVerified=false` by editing archived
 ## Next concrete owner-review boundary
 
 Review current private candidate Artifact 11691058780 for final editorial wording. Independently verify intended TWSE data reuse/publication terms and select an authorized pathway for per-day source scope. Neither an official website with a query button nor a green research test can substitute for those decisions. Do not invoke B, TTS/video publication, production, cron, Pages or YouTube merely because this decision register exists.
+
+
+## Official terms/FAQ verification (2026-10-11) — public-video rights remain UNKNOWN
+
+The prior placeholder https://www.twse.com.tw/zh/terms.html did not resolve as a verified terms document in this check. Exact separately retrieved official pages:
+- Website terms, https://www.twse.com.tw/zh/terms/use.html , section 8: TWSE/other rightholder's rights over site content, with written-consent restriction on enumerated reuse/publishing actions, stated government-open-data exception, and source-attribution/integrity conditions for quotation/reposting. Do not assume that any given original BFI82U/FMTQIK endpoint has been separately licensed through the exception.
+- Official information-services FAQ, https://www.twse.com.tw/zh/products/information/qa.html , Q2: added-value trading information supplied for transmission, dissemination or third-party use requires TWSE agreement and a written contract. Public availability / free browsing is not blanket dissemination permission.
+- Official information-service terms, https://www.twse.com.tw/zh/products/information/use.html : applicants are directed to trading-information usage rules, relevant contracts and applicable fees. Exact applicable category/contract for the intended original-source-derived, narrated YouTube post-close program has NOT been determined.
+
+Research conclusion: intended redistribution/public video scope requires confirmation from the rights source of exact use category, whether narrated historical aggregates/facts versus source display/transmission are treated differently, attribution language, channel monetization and whether a separate agreement/license or open-data release applies. This does not assert the user's actual authorization status and is not legal advice. Require dated/documented permission or other applicable authoritative exception before flipping any publication release flag. An accurate private draft may continue only inside existing frozen M5 scope; no automatic B/YouTube/deploy/cron.
+
+Remaining technical evidence separately: report/date-digest and daily BFI82U/FMTQIK/MI_INDEX universe/units/footnotes; mutually distinguish semantic scope verification, intellectual-property permission, exact owner script approval, and final acoustic TTS/SRT/designed media acceptance. Keep original archive manifests immutable and scopeVerified=false/publicationAuthorized=false.
