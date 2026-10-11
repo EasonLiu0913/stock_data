@@ -21,7 +21,7 @@ for name,rev in S.items():
    assert not f.get("lfs") and isinstance(f.get("size"),int) and 0<=f["size"]<=MAX
    url="https://huggingface.co/"+name+"/resolve/"+rev+"/"+urllib.parse.quote(path)
    b=read(url)
-   blob=hashlib.sha1(b"blob "+str(len(b)).encode()+b"\\0"+b).hexdigest()
+   blob=hashlib.sha1(b"blob "+str(len(b)).encode()+bytes([0])+b).hexdigest()
    expected=f.get("blobId")
    o["items"].append({"repository":name,"revision":rev,"path":path,"size":len(b),"sha256":hashlib.sha256(b).hexdigest(),"git_blob_sha1_expected":expected,"git_blob_sha1_calculated":blob,"git_blob_match":blob==expected,"content_not_archived":True,"license_review_approved":False})
  except Exception as e:o["items"].append({"repository":name,"revision":rev,"status":"CAPTURE_FAILED","error":type(e).__name__,"license_review_approved":False})
@@ -31,7 +31,7 @@ try:
  b=read(url); j=json.loads(b)
  import base64
  raw=base64.b64decode(j["content"]);assert len(raw)==1075 and j["sha"]=="0bf5e90cac691b999d4a35044f97167d7bbbf0b9"
- calc=hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\\0"+raw).hexdigest()
+ calc=hashlib.sha1(b"blob "+str(len(raw)).encode()+bytes([0])+raw).hexdigest()
  o["items"].append({"repository":"snakers4/silero-vad","revision":"1e261b036686cd0017d500ee96acd1c4ba572a9d","path":"LICENSE","size":len(raw),"sha256":hashlib.sha256(raw).hexdigest(),"git_blob_sha1_expected":j["sha"],"git_blob_sha1_calculated":calc,"git_blob_match":calc==j["sha"],"content_not_archived":True,"license_review_approved":False})
 except Exception as e:o["items"].append({"repository":"snakers4/silero-vad","path":"LICENSE","status":"CAPTURE_FAILED","error":type(e).__name__,"license_review_approved":False})
 b=(json.dumps(o,ensure_ascii=False,indent=2)+"\n").encode();(P/"small-text.json").write_bytes(b);(P/"small-text.sha256").write_text(hashlib.sha256(b).hexdigest()+"  small-text.json\n")
