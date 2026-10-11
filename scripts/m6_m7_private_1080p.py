@@ -6,9 +6,9 @@ EXPECTED='1daf7a269c0a39ab8c9bab59048c6c36293ce5ee5a9e878bb8971f689126271f'
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def cmd(args):return subprocess.run(args,check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE).stdout
 def font(size):
- for p in ['/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc','/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf']:
+ for p in ['/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc']:
   if pathlib.Path(p).exists():return ImageFont.truetype(p,size)
- raise RuntimeError('No usable font')
+ raise RuntimeError('M7_FONT_MISSING: Noto Sans CJK must be installed; do not render missing glyph boxes')
 def main():
  p=argparse.ArgumentParser();p.add_argument('--handoff',type=pathlib.Path,required=True);p.add_argument('--sprite',type=pathlib.Path,required=True);p.add_argument('--source',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True);a=p.parse_args()
  m=json.loads((a.handoff/'manifest.json').read_text());source=json.loads((a.source/'source.json').read_text())
@@ -28,12 +28,16 @@ def main():
    d.text((110,79),'TAIWAN STOCK',font=font(49),fill='#f8fafc')
    d.text((113,215),title,font=font(64),fill='#ffcf73')
    # Copy text verbatim; never pretend it is acoustic evidence.
-   raw=scene['display_text'];line='';lines=[]
+   raw=scene['display_text'];line='';lines=[];body_font=font(37)
    for ch in raw:
-    if len(line)>=24 and ch in '，。！？；、 ':lines.append(line);line=''
-    line+=ch
+    proposal=line+ch
+    if line and d.textbbox((0,0),proposal,font=body_font)[2]>1050:
+     lines.append(line);line=ch
+    else:line=proposal
    if line:lines.append(line)
-   for j,line in enumerate(lines[:7]):d.text((116,325+j*72),line,font=font(39),fill='#ffffff')
+   # Never clip or silently omit narration: copy full text to subtitle sidecar; slides show overview.
+   for j,line in enumerate(lines[:7]):d.text((116,325+j*66),line,font=body_font,fill='#ffffff')
+   if len(lines)>7:d.text((116,808),'完整內容請開啟 CC 字幕',font=font(27),fill='#cbd5e1')
    for j in range(7):
     x=110+j*205;d.rounded_rectangle((x,888,x+188,906),7,fill='#ffcf73' if j==ix else '#3c536b')
    d.text((110,932),f'{ix+1}/7   {title}',font=font(31),fill='#dbeafe')
@@ -58,11 +62,11 @@ def main():
   concat=root/'concat.txt';concat.write_text(''.join("file '"+str(q)+"'\n" for q in pieces))
   raw=root/'joined.mp4';cmd(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(concat),'-c','copy',str(raw)])
   movie=a.output/'m6-m7-private-1080p.mp4'
-  srt=str((a.handoff/'candidate.srt').resolve()).replace(':','\\:').replace("'","\\'")
-  cmd(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(raw),'-vf',"subtitles=filename='"+srt+"':force_style='FontName=Noto Sans CJK TC,FontSize=19,MarginV=145,Outline=2'",'-c:v','libx264','-preset','veryfast','-crf','24','-c:a','copy','-movflags','+faststart',str(movie)])
+  # Keep estimated subtitles as optional external CC: do NOT burn a full-width line over presenter.
+  cmd(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',str(raw),'-c','copy','-movflags','+faststart',str(movie)])
   info=json.loads(cmd(['ffprobe','-v','error','-show_entries','format=duration:stream=codec_name,width,height','-of','json',str(movie)]))
   v=next(s for s in info['streams'] if s['codec_name']=='h264');dur=float(info['format']['duration']);assert (v['width'],v['height'])==(1920,1080) and abs(dur-79.416)<1.5
-  proof={'schema':'M6-M7-PRIVATE-REVIEW-v1','resolution':'1920x1080','duration_seconds':dur,'source_duration_seconds':79.416,'audio_count':7,'subtitle_count':14,'srt_sha256':EXPECTED,'mp4_sha256':digest(movie),'estimated_timing_not_verified':True,'vtuber':'repository four-state sprite; visual timing only; not phoneme synchronized','release_gate':'BLOCKED','publication_authorized':False,'prompt_b_eligible':False,'real_acoustic_boundaries':'0/15'}
+  proof={'schema':'M6-M7-PRIVATE-REVIEW-v1','resolution':'1920x1080','duration_seconds':dur,'source_duration_seconds':79.416,'audio_count':7,'subtitle_count':14,'srt_sha256':EXPECTED,'mp4_sha256':digest(movie),'estimated_timing_not_verified':True,'subtitles_delivery':'separate optional SRT, not burnt into MP4','cjk_font':'Noto Sans CJK required','vtuber':'repository four-state sprite; visual timing only; not phoneme synchronized','release_gate':'BLOCKED','publication_authorized':False,'prompt_b_eligible':False,'real_acoustic_boundaries':'0/15'}
   (a.output/'review-proof.json').write_text(json.dumps(proof,ensure_ascii=False,indent=2)+'\n')
   (a.output/'candidate.srt').write_bytes((a.handoff/'candidate.srt').read_bytes())
   print('M6_M7_PRIVATE_1080P_PASS duration=%.3f scenes=7 subtitles=14 acoustic=0/15 release=BLOCKED'%dur)
