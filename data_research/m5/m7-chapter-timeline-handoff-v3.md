@@ -47,3 +47,11 @@
 - Run on commit 5231198 FAILED before M6/M7 rendering. The test incorrectly searched the whole renderer main() for scene['display_text']; that reference is essential to the locked speech/caption/display equality check, not slide painting. No regenerated 1080p MP4 in this run (the uploaded private review artifact is not a successful render).
 - Research-only fix commit 9ae7b9267d2f3f9c63a318089c06577e3373a840 limits the no-verbatim-slide check to paint_scene(), and explicitly preserves the original narration integrity guard in main(). No source/MP3/SRT edits.
 - Current status PROGRESS; repeat research workflow on latest branch and inspect M7_SLIDE_CONTENT_PASS, M7_OPENING_STRUCTURE_PASS, new review proof and seven midpoint frames. Release BLOCKED; no publication.
+
+
+## Run 38156510901 — one-chapter/three-visual research acceptance
+- Exact run head: 77bee80e74315c0ec4ce12405a81e5bf5b51e49b; workflow COMPLETED SUCCESS.
+- CI reports M7_SLIDE_CONTENT_PASS, M7_OPENING_STRUCTURE_PASS chapters=1 audio_scenes=7 visual_scenes=3, M7_PROGRESS_MATH_PASS; renderer PASS movie=79.514323s source=79.416s subtitles=14, acoustic=0/15, release=BLOCKED. Artifact 11708184782 (m6-m7-private-review-38156510901).
+- Directly downloaded and inspected archived seven midpoint PNGs in this review: audios 1/2/3 use identical brand visual base; 4/5 market metric cards with market weak status; 6/7 institutional flows, 9.91% reference and three concise observations. Every screenshot displays 1/1 市場開場; time labels and fill advance; male VTuber remains visible in lower-right. Full narration is not copied into slide body.
+- Review-proof: 1920x1080; MP4 SHA256 879a3dca8682d188b103b77985b5e4a3b130eb61e45d723dc3cdee735269cdc9; locked SRT SHA256 1daf7a269c0a39ab8c9bab59048c6c36293ce5ee5a9e878bb8971f689126271f; source original MP3 hash check enforced.
+- M7 opening-layout visual acceptance PASS for this research-only preview. Does not prove external player CC collision-free across players or actual phoneme alignment. TIMING_ESTIMATED_NOT_SYNC_VERIFIED and publication_authorized=false persist; production/YouTube/Prompt B/cron/Pages forbidden.
