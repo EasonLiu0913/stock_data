@@ -4,7 +4,11 @@ import json
 from pathlib import Path
 p=Path(__file__).resolve().parents[1]/"data_research/m5/change-proposals/M7-M8-SUCCESSOR-PAIR-v1.json"
 x=json.loads(p.read_text(encoding="utf-8"))
-assert x["schema"]=="M7-M8-PROSPECTIVE-SUCCESSOR-PAIR-v1"
+assert x["schema"]=="RESEARCH-M7VIS-M8DATA-v1"
+assert x["research_milestone_id"]=="RESEARCH-M7VIS-M8DATA-v1"
+assert x["original_charter_roadmap"]["preserved"] is True
+assert x["original_charter_roadmap"]["private_visual_m7_is_not_original_charter_m7"] is True
+assert set(("M5","M6","M7")).issubset(x["original_charter_roadmap"])
 assert x["status"]=="DRAFT_PREREGISTERED_ON_ISOLATED_BRANCH_ONLY"
 assert x["historical"]["original_m7_prompt_b_pass"]=="NOT_ESTABLISHED"
 assert x["historical"]["retroactive_pass_forbidden"] is True
