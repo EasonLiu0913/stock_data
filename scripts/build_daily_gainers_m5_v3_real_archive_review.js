@@ -3,6 +3,13 @@
 const {inspect}=require('./inspect_daily_gainers_editorial_real_archive');
 const {OPENING_LINES}=require('./daily_gainers_brand_opening');
 const zh=require('./daily_gainers_spoken_zh_tw');
+function spokenDate(date){
+ if(!/^\\d{8}$/.test(date))throw Error('REVIEW_DATE_INVALID');
+ const year=Number(date.slice(0,4)),month=Number(date.slice(4,6)),day=Number(date.slice(6,8));
+ const d=new Date(Date.UTC(year,month-1,day));
+ if(d.getUTCFullYear()!==year||d.getUTCMonth()+1!==month||d.getUTCDate()!==day)throw Error('REVIEW_DATE_INVALID');
+ return zh.integer(month)+'月'+zh.integer(day)+'日';
+}
 function build(){
  const x=inspect(),e=x.evidence,b=e.breadth;
  if(x.publication_authorized!==false||e.scope_verified_for_publication!==false)throw Error('RESEARCH_RELEASE_FLAG_DRIFT');
@@ -13,7 +20,7 @@ function build(){
  const breadth=b.advancers<b.decliners?'偏向弱勢':b.advancers>b.decliners?'偏向強勢':'漲跌家數相當';
  const ratio=Math.abs(e.net_twd)/e.turnover_twd*100;
  if(!Number.isFinite(ratio)||ratio>100)throw Error('CONTEXT_RATIO_ANOMALY');
- const market='十月八日，台股加權指數'+(e.index_change_points<0?'下跌':e.index_change_points>0?'上漲':'持平')+(e.index_change_points===0?'':zh.decimal(Math.abs(e.index_change_points))+'點')+'。當天上漲家數'+zh.integer(b.advancers)+'家，下跌則有'+zh.integer(b.decliners)+'家，市場'+breadth+'。';
+ const market=spokenDate(e.date)+'，台股加權指數'+(e.index_change_points<0?'下跌':e.index_change_points>0?'上漲':'持平')+(e.index_change_points===0?'':zh.decimal(Math.abs(e.index_change_points))+'點')+'。當天上漲家數'+zh.integer(b.advancers)+'家，下跌則有'+zh.integer(b.decliners)+'家，市場'+breadth+'。';
  const turnover='台灣證交所整體市場成交金額約'+zh.toYi(e.turnover_twd)+'億元，'+(e.turnover_twd<e.ma5_twd?'低於':e.turnover_twd>e.ma5_twd?'高於':'等於')+'前五個交易日平均。';
  const groupPhrase=(name,value)=>name+dir(value)+(value===0?'':'約'+zh.toYi(Math.abs(value))+'億元');
  const institution='三大法人合計'+dir(e.net_twd)+(e.net_twd===0?'':'約'+zh.toYi(Math.abs(e.net_twd))+'億元')+'，淨額相當於當天整體市場成交金額約百分之'+zh.decimal(Math.round(ratio*100)/100)+'。'+[groupPhrase('外資',e.groups.foreign),groupPhrase('投信',e.groups.trust),groupPhrase('自營商',e.groups.dealers)].join('、')+'。';
@@ -21,4 +28,4 @@ function build(){
  return {contract:'M5-V3-REAL-ARCHIVE-TEXT-REVIEW-v1',date:e.date,status:'RESEARCH_TEXT_REVIEW_ONLY',source_sha256:e.source_sha256,ratio_type:'NET_FLOW_ABSOLUTE_TO_WHOLE_MARKET_TURNOVER_CONTEXT_ONLY',derived:{institutional_net_twd:e.net_twd,market_turnover_twd:e.turnover_twd,percent:ratio},scenes:[...OPENING_LINES,market,turnover,institution,synthesis].map((speech,i)=>({scene:i+1,speech,caption:speech,display:speech})),publication_authorized:false,tts_authorized:false,video_authorized:false,limitations:['Official original archive manifests retain scopeVerified=false','Review script is not a publication-certified factual source or final approved narration','Ratio is not institutional gross trade market share']};
 }
 if(require.main===module)console.log(JSON.stringify(build(),null,2));
-module.exports={build};
+module.exports={build,spokenDate};
