@@ -18,3 +18,11 @@
 - Remaining visual defects: segmented progress is binary active/inactive per whole chapter, with no continuous within-chapter fill, chapter elapsed/remaining time readout, or labels above individual segments. Slide layouts have substantial empty space in short opening, and current 79-second research script does NOT satisfy production 60–90-second market opening. These require renderer-only improvements or separate longer authorized narration in a future milestone; NEVER stretch or mislabel source audio.
 - M7 disposition: chapter boundary FIX VERIFIED; FULL VISUAL ACCEPTANCE NOT COMPLETE. Research progress PROGRESS, release BLOCKED, acoustic 0/15, no Prompt B.
 - Next: renderer-only intrachapter progress/time readout with deterministic timestamps and sampled visual regression; verify player-specific external CC safe area; maintain locked audio/text and do not automatically invoke publication.
+
+## M7 frame-driven intrachapter progress — Prompt A
+- PROGRESS (implementation submitted; new CI run and artifact not yet verified).
+- Renderer now creates 24fps transparent progress overlays from cumulative original MP3 chapter timeline. Previous full-width active-segment highlight replaced with fractional fill; completed segments remain filled and future segments remain unfilled. Display ordinal/title, elapsed, remaining, and total clip time.
+- Tests exercise 0/25/50/75% for each chapter and before/after all four chapter boundaries, including total clock conservation and 79.416 seconds original audio lock.
+- CI captures 15 intrachapter progress frames and eight boundary-before/after frames, plus prior three baseline frames. Inspect actual rendered pixels before declaring full visual PASS.
+- Original 7 MP3, fixed source narration, 14-cue estimated SRT and sha lock unchanged. Acoustic evidence 0/15, release BLOCKED, no TTS, Prompt B, production, cron, Pages or YouTube.
+- Next: dispatch research workflow and inspect new Run logs and artifact. A green compile or mathematical regression alone is NOT proof of full visual acceptance.
