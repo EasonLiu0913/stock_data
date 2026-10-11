@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   preregistration-only:
     if: github.event_name == 'workflow_dispatch'
@@ -71,6 +72,34 @@ jobs:
             m5-r3-small-text-proof/small-text.sha256
           if-no-files-found: warn
           retention-days: 14
+      - name: Single-pass original-audio seven-scene private candidate
+        id: m5_bulk_candidate
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/m5_bulk_private_candidate.py
+          for attempt in 1 2 3; do
+            if python scripts/m5_bulk_private_candidate.py --github-token "$GH_TOKEN" --output m5-bulk-private-proof | tee m5-bulk-private-result.txt; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "M5_BULK_PRIVATE_CANDIDATE_FAILED; no publication authorization" >&2
+              exit 1
+            fi
+            sleep "$((attempt * 5))"
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload private candidate proof even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-bulk-private-candidate-${{ github.run_id }}
+          path: |
+            m5-bulk-private-result.txt
+            m5-bulk-private-proof/candidate.srt
+            m5-bulk-private-proof/proof.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload research contract proof only
         uses: actions/upload-artifact@v4
         with:
