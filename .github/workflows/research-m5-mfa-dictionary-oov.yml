@@ -17,6 +17,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/m5-oov-evidence" "$MFA_ROOT_DIR" "$RUNNER_TEMP/m5-authentic"
           printf '%s\n' 'publication_authorized=false' 'acoustic_sentence_boundary_verified=false' 'forced_alignment_executed=false' > "$RUNNER_TEMP/m5-oov-evidence/release-lock.txt"
+      - name: Preflight Python research scripts before model downloads
+        run: |
+          python -m py_compile scripts/research_m5_mfa_dictionary_oov.py scripts/research_m5_mfa_alignment_preregister.py
       - name: Download immutable original seven-audio ZIP for transcript only
         env:
           GH_TOKEN: ${{ github.token }}
