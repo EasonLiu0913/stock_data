@@ -187,8 +187,8 @@ jobs:
           from PIL import ImageFont
           path='/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
           font=ImageFont.truetype(path,42)
-          glyphs=[font.getmask(c).tobytes() for c in '市場重點籌碼風險字幕觀賞']
-          missing=font.getmask('�').tobytes()
+          glyphs=[bytes(font.getmask(c)) for c in '市場重點籌碼風險字幕觀賞']
+          missing=bytes(font.getmask('�'))
           assert all(any(g) and g!=missing for g in glyphs), 'M7 CJK glyph preflight failed'
           print('M7_CJK_PREFLIGHT_PASS required_glyphs=12')
           PY
