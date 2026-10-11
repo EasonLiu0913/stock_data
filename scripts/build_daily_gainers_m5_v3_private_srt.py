@@ -20,15 +20,31 @@ with zipfile.ZipFile(archive) as z:
  assert abs(sum(durations)-proof["measured_total_audio_seconds"])<0.001
  assert abs(sum(durations)-79.416)<0.002
 def segments(t):
- # Every character preserved; punctuation stays with its sentence.
+ # Preserve every character. Prefer sentence/clause boundaries; fail closed on
+ # unrecognized overlong clauses instead of cutting through Chinese words.
  out=[]
- for piece in re.findall(r"[^。！？!?；;]+[。！？!?；;]?|[。！？!?；;]",t):
-  if not piece:continue
-  if len(piece)<=30:out.append(piece);continue
-  while len(piece)>30:
-   out.append(piece[:30]);piece=piece[30:]
-  if piece:out.append(piece)
- assert "".join(out)==t
+ for sentence in re.findall(r"[^。！？!?；;]+[。！？!?；;]?|[。！？!?；;]",t):
+  if len(sentence)<=30:
+   out.append(sentence);continue
+  clauses=re.findall(r"[^，,、]+[，,、]?|[，,、]",sentence)
+  expanded=[]
+  for clause in clauses:
+   if len(clause)<=30:
+    expanded.append(clause);continue
+   # Source-grounded semantic boundary in the existing 20261008 research script.
+   # This is editorial grouping, NOT acoustic word alignment.
+   parts=re.split(r"(?=相對於)",clause)
+   if len(parts)==1 or any(not x or len(x)>30 for x in parts):
+    raise ValueError("UNSAFE_OVERLONG_CLAUSE_REQUIRES_EDITORIAL_REVIEW")
+   expanded.extend(parts)
+  current=""
+  for clause in expanded:
+   if len(current)+len(clause)>30:
+    if current:out.append(current)
+    current=clause
+   else:current+=clause
+  if current:out.append(current)
+ assert "".join(out)==t and all(0<len(x)<=30 for x in out)
  return out
 def stamp(ms):
  ms=round(ms);h,ms=divmod(ms,3600000);m,ms=divmod(ms,60000);s,ms=divmod(ms,1000)
