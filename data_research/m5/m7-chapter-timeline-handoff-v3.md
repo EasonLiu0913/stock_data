@@ -34,3 +34,11 @@
 - Independent visual plan: brand_opening = audios 1–3, market_cards = audios 4–5, flow_summary = audios 6–7. No verbatim narration as slide body; external CC retains full text. Market figures are fixed to values crosschecked against locked 20261008 narration, not dynamic fabricated data.
 - Regression is fail-closed on chapters=1, audio_scenes=7, visual_scenes=3; progress math remains one continuous chapter. CI captures one frame from each visual type and archives both chapter-manifest and visual-scene-manifest plus review-proof.
 - Current blocker: dispatch research workflow; inspect CI and actual 1080p MP4 for card typography, presenter overlap and progress before any full visual PASS. Original production locks retained, acoustic 0/15, no TTS or publication.
+
+## M7 final four visual corrections — current Prompt A
+- Active status: PROGRESS; source changes committed, new workflow run and MP4 Artifact not yet verified. Do not claim M7 COMPLETE.
+- Renderer: market_cards adds 市場狀態：偏弱; flow_summary adds institutional volume reference ratio 9.91% and 3 concise bullet observations (weak market, volume below prior five actual trading days, follow institutional flows and breadth). Locked source narration still sole authority; no invented numbers.
+- Regression now checks all required slide labels and explicitly prohibits using scene['display_text'] in renderer main. One chapter, seven audio cuts, three visual types remain fail-closed.
+- CI extracts 7 audio-midpoint frames (audio-01 .. audio-07), as well as 3 scene representatives and progress samples; inspect actual frames for shared backgrounds, text placement, and VTuber occlusion before visual acceptance.
+- Safety: original 7 MP3 hashes and source text unchanged; 14 SRT blocks retained with TIMING_ESTIMATED_NOT_SYNC_VERIFIED. TTS/Prompt B/production/cron/Pages/YouTube prohibited. release BLOCKED, acoustic 0/15.
+- Next action: manual workflow_dispatch on research/m5-r-weight-evidence-20261011 from GitHub UI (current connector lacks dispatch), inspect resulting run logs and artifact, fix any failing research-only rendering.
