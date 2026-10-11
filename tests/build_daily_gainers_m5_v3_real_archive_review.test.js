@@ -23,7 +23,7 @@ test('genuine archive seven-scene V3 review is exact, traceable and release lock
  assert.match(r.scenes[3].speech,/上漲家數.*家，下跌則有.*家/);
  assert.match(r.scenes[4].speech,/前五個交易日平均/);
  assert.match(r.scenes[5].speech,/三大法人合計.*外資.*投信.*自營商/);
- assert.match(r.scenes[5].speech,/淨額相當於.*整體市場成交金額/);
+ assert.match(r.scenes[5].speech,/淨買賣超絕對金額相對於.*整體市場成交金額的參考比率/);
  const zh=require('../scripts/daily_gainers_spoken_zh_tw');
  for(const [label,key] of [['外資','foreign'],['投信','trust'],['自營商','dealers']]){
   const v=e.groups[key];
@@ -62,5 +62,13 @@ test('review carries exact per-claim source evidence without upgrading publicati
  assert.deepEqual(m.source_sha256,r.source_sha256);
  assert.equal(m.scope_verified_for_publication,false);
  assert.equal(m.rights_verified_for_publication,false);
+ assert.equal(r.publication_authorized,false);
+});
+
+test('scene seven next observation is conditional, not a hardcoded weakness forecast',()=>{
+ const r=build(),e=inspect().evidence,b=e.breadth;
+ const continuation=b.advancers>b.decliners&&e.turnover_twd>=e.ma5_twd&&e.net_twd>=0;
+ assert.ok(r.scenes[6].speech.includes(continuation?'能否延續':'如何變化'));
+ assert.doesNotMatch(r.scenes[6].speech,/是否改善/);
  assert.equal(r.publication_authorized,false);
 });
