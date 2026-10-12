@@ -1,0 +1,25 @@
+name: "[CI] Pocket 00981A freshness contract"
+on:
+  push:
+    paths:
+      - 'scripts/pocket_00981a_freshness.js'
+      - 'scripts/crawl_pocket_00981A_holdings.js'
+      - 'tests/pocket_00981a_freshness.test.js'
+      - '.github/workflows/crawl-pocket-00981a.yml'
+      - '.github/workflows/pocket-00981a-freshness-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Syntax and offline freshness tests
+        run: |
+          node --check scripts/crawl_pocket_00981A_holdings.js
+          node --check scripts/pocket_00981a_freshness.js
+          node --test tests/pocket_00981a_freshness.test.js
