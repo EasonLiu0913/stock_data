@@ -1,0 +1,14 @@
+# M8VIS Isolated Successor Handoff v3 — 2026-10-12
+
+Milestone: RESEARCH-M8VIS-v1. Active: Prompt A only. Status: PROGRESS / INCOMPLETE. Prompt B: FROZEN_NOT_AUTHORIZED_NOT_EXECUTED. Main preregistration: false; isolated branch-only. Main HEAD checked: 0a83fe4bfa856503be17d81e7527da7065bf1b19. Research parent: ca60e4cdfba053a62a14872654e19b0d7154b53e.
+
+Owner explicitly authorized M8VIS A design and evidence study, not audiovisual generation or any publication. Baseline: scoped M8DATA A/B complete, 1301 台塑 20261008 verified 15 source pointers / nine visible claims / six excluded, original M7 visual Run 38156510901 Artifact 11708184782 ZIP SHA-256 46b8d22590ab35074b3b080932498557018aa9d653236a3d9c49350c66949c72, original 7 MP3 79.416 seconds and original 14 cue SRT timing ESTIMATED_NOT_SYNC_VERIFIED. Original Charter M7 final B NOT_ESTABLISHED.
+
+New isolated files:
+- M8VIS-ISOLATED-SUCCESSOR-PAIR-v1.json, commit 9268dabdf0c4a9276fe94dbd0a5a936926bde622
+- M8VIS-THREE-SCENE-STATIC-VISUAL-SPEC-v1.json, commit 0ca4dbb73b1d9c247a504eb5a7f4df524273cab5
+- M8VIS-PROMPT-A-EVIDENCE-MATRIX-v1.json, commit b1d2b96001a29336cdc763796c6b9965fb116900
+
+Research findings: three stock scenes correspond exactly to nine approved Claim IDs (stock lead 4, institutional flow 3, sourced theme/risk 2); original M7 conservative manually selected half-open pixel planning rectangles only: left [100,310,1040,810], presenter [1440,380,1880,940], footer [70,900,1900,1080], header [55,90,1850,245]. Original left M7 card already occupies left rectangle, so future M8 may only use own M8 scenes there, without touching original M7. Optional external SRT player placement, dynamic VTuber lipsync, motion, acoustic sync and real progress duration are NOT_TESTED. There is NO authorized M8 audio, so duration remains UNKNOWN, no fabricated remaining-time counter. Six excluded claims cannot leak to display/text. All publication, TTS, render, production, cron, Pages, YouTube, promotion locks false.
+
+Currently blocked: independent M8VIS static negative tests and research CI/job proof not yet run; user authorized Prompt A only, B frozen. Planned direction: add branch-scoped read-only static validator for exact three scene IDs/nine ordered claims, six excludes, disjoint planning rectangles, subtitle runtime UNKNOWN, duration UNKNOWN, fail-closed negatives; complete A evidence review. Do not trigger any media workflow or main promotion.
