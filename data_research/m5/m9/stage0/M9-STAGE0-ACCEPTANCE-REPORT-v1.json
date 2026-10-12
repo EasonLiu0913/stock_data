@@ -1,0 +1,70 @@
+{
+  "schema": "M9-STAGE0-ACCEPTANCE-REPORT-v1",
+  "date": "2026-10-12",
+  "decision": "PASS_SCOPED_SOURCE_AND_BYTE_INTEGRITY_ONLY",
+  "checks": [
+    {
+      "id": "S0-1",
+      "name": "M7 original review ZIP actual bytes SHA256",
+      "status": "PASS",
+      "evidence": "Artifact 11708184782 SHA256 46b8d22590ab35074b3b080932498557018aa9d653236a3d9c49350c66949c72 exact frozen match"
+    },
+    {
+      "id": "S0-2",
+      "name": "Seven original MP3 actual bytes and cross-artifact",
+      "status": "PASS",
+      "evidence": "Artifacts 11697447563 and 11708354218 seven files 7/7 independently SHA256 match frozen per-file list and bytes cross-match"
+    },
+    {
+      "id": "S0-3",
+      "name": "Original audio total provenance",
+      "status": "PASS_RECORDED_PROOF",
+      "evidence": "Seven original audio-proof.json durations sum 79.416 seconds; no re-TTS, no acoustic sentence boundary claim"
+    },
+    {
+      "id": "S0-4",
+      "name": "Original candidate SRT actual bytes",
+      "status": "PASS",
+      "evidence": "M7 ZIP and handoff ZIP candidate.srt byte identical, SHA256 1daf7a269c0a39ab8c9bab59048c6c36293ce5ee5a9e878bb8971f689126271f, 14 blocks; timing estimated not sync verified"
+    },
+    {
+      "id": "S0-5",
+      "name": "M8DATA fixed sample scope",
+      "status": "PASS_STATIC_LEDGER",
+      "evidence": "20261008 1301 three scenes exactly nine unique displayed Claim IDs, six excluded, 15-entry ledger; preserved upstream independent data-only B"
+    },
+    {
+      "id": "S0-6",
+      "name": "Frozen successor A/B completion evidence",
+      "status": "PASS_REFERENCE",
+      "evidence": "M8DATA, M8VIS, M8PREVIEW and M9 scoped A/B signed reports present on research branch; original M7 Charter final B remains NOT_ESTABLISHED"
+    },
+    {
+      "id": "S0-7",
+      "name": "Security execution and release locks",
+      "status": "PASS_SCOPE_NO_EXECUTION",
+      "evidence": "Stage 0 read-only files/artifacts only; no M9 Stage1, TTS, render, production, cron, Pages, YouTube, promotion or unlock"
+    }
+  ],
+  "snapshot_path": "data_research/m5/m9/stage0/M9-STAGE0-READONLY-SOURCE-SNAPSHOT-v1.json",
+  "snapshot_commit": "f5fc772d5b567886e7dd8112389df4257bb5cae0",
+  "source_provenance": "Downloaded three GitHub Actions Artifact ZIP bytes and hashed in isolated analysis runtime; original bytes never altered; GitHub source references retained. Hash comparison uses independently stored frozen values from prior B evidence.",
+  "limitations": [
+    "This is source/byte-integrity acceptance, not actual subtitle acoustic alignment",
+    "Do not treat old M7 79.416s as M8 or complete new video duration",
+    "No new real M8 audio/MP4 or player CC, VTuber or retry run",
+    "Stage1 remains BLOCKED_NOT_AUTHORIZED and each future execute stage separately gated"
+  ],
+  "next": "Stop at Stage0. Any subsequent real M8 script/audio stage needs separate explicit owner authorization and cannot follow automatically.",
+  "locks": {
+    "tts_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false,
+    "m9_execute_authorized": false,
+    "m8_promoted": false
+  }
+}
