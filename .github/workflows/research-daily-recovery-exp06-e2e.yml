@@ -1,0 +1,36 @@
+name: "[Research] Daily Data Recovery Experiment 06 E2E"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-06/request-20261008.json'
+permissions:
+  contents: read
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/research/experiment06_e2e.js
+            /scripts/research/experiment05_phase5_writer.js
+            /scripts/generate_daily_gainers_over_5.js
+            /data_fubon/fubon_20261007_sma.json
+            /data_fubon/fubon_20261008_sma.json
+            /recovery-requests/experiment-06/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Execute real archived-source request, readback, idempotent second execution
+        run: |
+          node scripts/research/experiment06_e2e.js recovery-requests/experiment-06/request-20261008.json
+          test -s tmp/research/experiment06/recovered-20261008.json
+          test -s tmp/research/experiment06/manifest.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment06-recovered-data
+          path: tmp/research/experiment06/
+          retention-days: 30
