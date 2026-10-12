@@ -1,0 +1,26 @@
+name: "[Research] M8VIS Static Contract"
+on:
+  push:
+    branches:
+      - research/m8vis-isolated-20261012
+    paths:
+      - data_research/m5/m8vis/M8VIS-ISOLATED-SUCCESSOR-PAIR-v1.json
+      - data_research/m5/m8vis/M8VIS-THREE-SCENE-STATIC-VISUAL-SPEC-v1.json
+      - scripts/verify_m8vis_static_research.py
+      - .github/workflows/research-m8vis-static.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    if: github.ref == 'refs/heads/research/m8vis-isolated-20261012'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fail-closed M8VIS research contract checks
+        run: python scripts/verify_m8vis_static_research.py
