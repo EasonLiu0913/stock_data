@@ -1,0 +1,52 @@
+{
+  "schema": "M9-STAGE1-ORIGINAL-RUN-FAILURE-REVIEW-v1",
+  "date": "2026-10-12",
+  "original_run": 38209098478,
+  "original_job": 114679047203,
+  "original_head": "4a96bac44b664fb41312935648d573705a4b9b7d",
+  "result": "FAIL_BLOCKED_UPSTREAM_EDGE_TTS_403",
+  "log": "Full original job log read; checkout and Python dependency installation success; first scene edge_tts Communicate.stream() raises aiohttp.client_exceptions.WSServerHandshakeError HTTP 403 on WebSocket (repeated by library).",
+  "original_artifact": {
+    "id": 11728736338,
+    "zip_bytes_reported": 150,
+    "contents": [
+      {
+        "path": "01-stock_lead.mp3",
+        "bytes": 0
+      }
+    ],
+    "three_mp3": false,
+    "wordboundaries": false,
+    "three_srt": false,
+    "combined_srt": false,
+    "proof": false
+  },
+  "acceptance": {
+    "actual_three_mp3": "FAIL_NOT_PRESENT",
+    "file_sha256": "NOT_APPLICABLE_NO_VALID_MP3",
+    "actual_duration": "UNKNOWN",
+    "wordboundary": "NOT_AVAILABLE",
+    "three_scene_srt": "NOT_PRESENT",
+    "combined_srt": "NOT_PRESENT",
+    "nine_claim_content": "PRETTS_SOURCE_ASSERTIONS_ONLY_NOT_AUDIO_VERIFIED",
+    "stage1": "BLOCKED_NOT_PASS"
+  },
+  "root_cause": "External speech endpoint rejected websocket handshake; cannot conclude auth/service policy cause from HTTP 403 alone",
+  "isolated_fix": {
+    "commit": "17bb2bc928f90d0902699f392774d9e227e46d80",
+    "effect": "Deletes partial audio on upstream exception, writes sanitized stage1-failure.json, keeps failure nonzero; no false PASS.",
+    "new_run": 38209767664,
+    "status_at_inspection": "QUEUED_NOT_YET_VERIFIED"
+  },
+  "governance": {
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false,
+    "original_m7_modified": false,
+    "no_manual_duplicate_run": true
+  }
+}
