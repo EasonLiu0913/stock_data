@@ -131,3 +131,6 @@ M9 Stage1 owner decision summary: document `stage1/M9-STAGE1-OWNER-DECISION-SUMM
 
 
 M9 Stage1 Option C: approval terms documented at commit 11b5ef138020820b5c45969f25f2f4e7d0427838. DNS count and UTC window pending owner review; all permissions false; no execution.
+
+
+M9 Stage1 Option C DNS boundary offline review: `stage1/M9-STAGE1-OPTION-C-DNS-BOUNDARY-OFFLINE-REVIEW-v1.json`, commit 3a46fa6af7d5178a61033c3b2e4c24b8985aaef8. Decision BLOCKED_PENDING_DNS_BUDGET_PROOF: one application HTTPS GET does not prove a bounded number of individual implicit OS/runtime DNS operations. GitHub-hosted ubuntu-latest image may change, exact UTC window not approved. Proposed time remains 30s overall, 10s connect, 20s request; first 403 stops; allowlist-only privacy. Next direction: define whether DNS budget counts resolver calls/questions/packets, pin runner image and review enforceable fail-closed resolver boundary offline. No DNS/HTTPS/WSS/TTS request or media and all execute/release permissions false. Actual Stage1 audio BLOCKED_UPSTREAM_403.
