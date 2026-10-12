@@ -1,0 +1,24 @@
+name: "[Research] M9 Resolver Egress Offline"
+on:
+  push:
+    branches:
+      - research/m9-controlled-private-preview-20261012
+    paths:
+      - scripts/verify_m9_stage1_resolver_egress_offline.py
+      - data_research/m5/m9/stage1/M9-STAGE1-CONTROLLED-RESOLVER-EGRESS-PREREG-v1.json
+      - .github/workflows/research-m9-resolver-egress-offline.yml
+permissions:
+  contents: read
+jobs:
+  static-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Static local JSON and 36 mutations
+        run: python -I scripts/verify_m9_stage1_resolver_egress_offline.py
