@@ -1,0 +1,116 @@
+{
+  "schema": "M9-STAGE1-NONSYNTHESIS-DIAGNOSTIC-FEASIBILITY-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_RESEARCH_ONLY_NON_EXECUTABLE",
+  "basis": {
+    "checklist_ci_run": 38214871915,
+    "job": 114697162036,
+    "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT",
+    "negatives": 28,
+    "stage1_audio": "BLOCKED_UPSTREAM_403"
+  },
+  "findings": [
+    {
+      "method": "Offline version and code/configuration inspection",
+      "documented": "Yes: package source and version metadata",
+      "network": "NONE",
+      "tts_synthesis": false,
+      "feasibility": "POSSIBLE_NOW",
+      "limitation": "Cannot establish reachability or determine cause of live HTTP 403"
+    },
+    {
+      "method": "edge_tts.list_voices or CLI --list-voices",
+      "documented": "Upstream package interface",
+      "network": "HTTPS_GET_TO_VOICE_LIST_BACKEND_WITH_SERVICE_GENERATED_PARAMETERS",
+      "tts_synthesis": false,
+      "feasibility": "POSSIBLE_ONLY_AFTER_DISTINCT_EXPLICIT_HTTPS_AUTHORIZATION",
+      "limitation": "Not a health endpoint, uses upstream service, may retry internally after 403; voice-list success cannot establish synthesis WSS connectivity. Require explicit fail-on-first-403 one-attempt implementation without automatic library retry."
+    },
+    {
+      "method": "Synthesis WebSocket handshake without voice content",
+      "documented": "No standalone supported no-synthesis health-check documented in reviewed upstream API; Communicate.stream internally establishes websocket then sends config and SSML synthesis request",
+      "network": "WSS",
+      "tts_synthesis": "RISK_IF_STANDARD_COMMUNICATE_USED",
+      "feasibility": "NOT_ESTABLISHED_DO_NOT_EXECUTE",
+      "limitation": "An ad-hoc handshake may use undocumented endpoint and sensitive query parameters and would not prove speech synthesis; no direct executable proposal."
+    },
+    {
+      "method": "DNS hostname lookup",
+      "documented": "Standard DNS diagnostic, not Edge TTS-specific API",
+      "network": "DNS",
+      "tts_synthesis": false,
+      "feasibility": "OPTIONAL_SEPARATE_APPROVAL_ONLY",
+      "limitation": "Resolution success cannot distinguish server 403, service policy, identity, or synthesis availability"
+    },
+    {
+      "method": "Invented GET /health or alternative endpoint",
+      "documented": "NO official Microsoft Edge TTS health API established",
+      "network": "HTTPS",
+      "tts_synthesis": false,
+      "feasibility": "REJECTED",
+      "limitation": "Do not confuse third-party gateway /health endpoint with Microsoft speech service"
+    }
+  ],
+  "references": [
+    {
+      "url": "https://github.com/rany2/edge-tts/blob/7.2.7/src/edge_tts/voices.py",
+      "scope": "Upstream list_voices implementation; verify exact tag before any future runnable protocol spec"
+    },
+    {
+      "url": "https://github.com/rany2/edge-tts/blob/7.2.7/src/edge_tts/communicate.py",
+      "scope": "Communicate stream performs WSS then configuration and SSML requests; no separate supported no-synthesis check established"
+    },
+    {
+      "url": "https://github.com/rany2/edge-tts",
+      "scope": "Package CLI lists voices via --list-voices; not a service health guarantee"
+    }
+  ],
+  "preferred_order": [
+    "OFFLINE_ONLY: inspect saved logs, pinned 7.2.7 and error classification",
+    "If owner later specifically approves, assess one single HTTPS voice-list metadata request with strict failure-on-first-403 and no audio, with explicit interface and host review first",
+    "Do not attempt handshake-only WSS without documented and separately approved non-synthesis method",
+    "Never infer endpoint block root cause from voice list or DNS success"
+  ],
+  "permissions": {
+    "now": {
+      "dns": false,
+      "https": false,
+      "wss": false,
+      "tts": false
+    },
+    "future": "Require separate owner approval of exact protocol/host/attempt budget and no library hidden 403 retry; no inherited permission from research PASS"
+  },
+  "security": {
+    "log_allowlist": [
+      "UTC time",
+      "installed version",
+      "protocol class",
+      "sanitized status/error category",
+      "duration"
+    ],
+    "prohibit": [
+      "TrustedClientToken",
+      "ConnectionId",
+      "Sec-MS-GEC",
+      "full URL/query",
+      "authorization/cookies",
+      "IP",
+      "raw traceback",
+      "speech text",
+      "raw packets"
+    ],
+    "on_403": "IMMEDIATE_STOP_WITHOUT_RETRY"
+  },
+  "decision": "RESEARCH_COMPLETE_NO_DOCUMENTED_STANDALONE_NONSYNTHESIS_WSS_HEALTH_CHECK_ESTABLISHED",
+  "locks": {
+    "network_diagnostic_authorized": false,
+    "tts_retry_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false
+  }
+}
