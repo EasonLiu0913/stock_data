@@ -26,3 +26,5 @@ for(const p of denied)assert(!/^tmp\/research\/experiment05-phase4\/[-a-z0-9]+\.
 const report={schema:'experiment05-script-level-scoped-v1',main_sha:'a78576294ef7f15354ed1a17b042f302184dbdd0',producers:matrix,workflow_edges:workflow,denied,production_safe_paths:[],research_scope:'tmp/research/experiment05-phase4',claim:'5 sampled scripts and 6 high-risk workflows; not exhaustive global graph',real_producer_execution:'NOT_RUN_IN_THIS_TEST'};
 const dir=path.join(root,'tmp/research/experiment05-phase4');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'script-effects.json'),JSON.stringify(report,null,2)+'\n');
 console.log('EXPERIMENT_05_SCRIPT_EFFECTS_PASS '+JSON.stringify({scripts:matrix.length,workflows:workflow.length,negative:denied.length,production_safe_paths:0}));
+
+// Independent push probe after script-effect workflow registration.
