@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """M9 Stage1 isolated-only voice/SRT research. Never modifies original M7 or uploads video."""
 import asyncio,hashlib,json,re,sys
+from datetime import datetime, timezone
 from pathlib import Path
 from mutagen.mp3 import MP3
 import edge_tts
@@ -26,10 +27,18 @@ async def main():
  for i,scene in enumerate(d["scenes"],1):
   name=f"{i:02d}-{scene['id']}"; audio=OUT/(name+".mp3"); bounds=[]
   stream=edge_tts.Communicate(scene["speech"],VOICE,rate=RATE)
-  with audio.open("wb") as w:
-   async for chunk in stream.stream():
-    if chunk["type"]=="audio": w.write(chunk["data"])
-    elif chunk["type"]=="WordBoundary": bounds.append({"offset_100ns":chunk["offset"],"duration_100ns":chunk["duration"],"text":chunk["text"]})
+  try:
+   with audio.open("wb") as w:
+    async for chunk in stream.stream():
+     if chunk["type"]=="audio": w.write(chunk["data"])
+     elif chunk["type"]=="WordBoundary": bounds.append({"offset_100ns":chunk["offset"],"duration_100ns":chunk["duration"],"text":chunk["text"]})
+  except Exception as exc:
+   # Never publish a partial or zero-byte MP3 as a usable research artifact.
+   audio.unlink(missing_ok=True)
+   failure={"schema":"M9-STAGE1-BLOCKED-DIAGNOSTIC-v1","status":"BLOCKED_TTS_UPSTREAM_ERROR","scene":scene["id"],"error_type":type(exc).__name__,"error_status":getattr(exc,"status",None),"generated_mp3_count":len(results),"partial_audio_removed":True,"stage2_authorized":False,"render_authorized":False,"youtube_authorized":False}
+   (OUT/"stage1-failure.json").write_text(json.dumps(failure,ensure_ascii=False,indent=2)+"\n",encoding="utf8")
+   print("M9_STAGE1_BLOCKED upstream_tts_error="+type(exc).__name__+" partial_audio_removed=true no_render=true no_upload=true",file=sys.stderr)
+   raise RuntimeError("M9 Stage1 TTS unavailable; no usable partial MP3 emitted") from None
   actual=round(MP3(str(audio)).info.length*1000)
   assert audio.stat().st_size>2000 and actual>1000 and bounds, "TTS/audio/WordBoundary unavailable: fail closed"
   end=max(z["offset_100ns"]+z["duration_100ns"] for z in bounds)/10000
