@@ -5,7 +5,7 @@ from pathlib import Path
 p=Path(__file__).resolve().parents[1]/"data_research/m5/m8data/20261008-1301-semantic-draft.json"
 d=json.loads(p.read_text(encoding="utf-8"))
 assert d["status"]=="RESEARCH_DRAFT_UNVERIFIED"
-expected=[["name","code","close_twd","change_pct"],["foreign_net_lots","trust_net_lots","dealer_net_lots"],["news_published_date"]]
+expected=[["name","code","close_twd","change_pct"],["foreign_net_lots","trust_net_lots","dealer_net_lots"],["news_published_date","news_theme"]]
 assert [s["claim_ids"] for s in d["scenes"]]==expected
 def same_claims(a,b):
     return a==b and len(a)==len(set(a))
