@@ -22,3 +22,5 @@ try{
  const report=path.join(root,'tmp/research/experiment05-phase3');fs.mkdirSync(report,{recursive:true});fs.writeFileSync(path.join(report,'real-source-evidence.json'),JSON.stringify(evidence,null,2)+'\n');
  console.log('EXPERIMENT_05_PHASE3_REAL_ARCHIVED_SOURCE_PASS '+JSON.stringify({date:target,stock_count:data.stock_count,production_safe_paths:0}));
 }finally{fs.rmSync(t,{recursive:true,force:true})}
+
+// Independent push probe after CI workflow registration.
