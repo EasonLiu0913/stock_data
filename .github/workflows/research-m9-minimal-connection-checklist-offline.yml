@@ -1,0 +1,25 @@
+name: "[Research] M9 Minimal Connection Checklist Offline"
+on:
+  push:
+    branches:
+      - research/m9-controlled-private-preview-20261012
+    paths:
+      - scripts/verify_m9_stage1_minimal_connection_checklist_offline.py
+      - data_research/m5/m9/stage1/M9-STAGE1-MINIMAL-CONNECTION-AUTHORIZATION-CHECKLIST-v1.json
+      - .github/workflows/research-m9-minimal-connection-checklist-offline.yml
+permissions:
+  contents: read
+jobs:
+  offline:
+    if: github.ref == 'refs/heads/research/m9-controlled-private-preview-20261012'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check offline checklist and 28 mutations
+        run: python -I scripts/verify_m9_stage1_minimal_connection_checklist_offline.py
