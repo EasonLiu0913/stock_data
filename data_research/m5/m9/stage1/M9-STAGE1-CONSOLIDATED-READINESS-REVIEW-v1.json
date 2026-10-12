@@ -1,0 +1,91 @@
+{
+  "schema": "M9-STAGE1-CONSOLIDATED-READINESS-REVIEW-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_DOCUMENT_ONLY",
+  "decision": "STATIC_COMPLETE_RUNTIME_BLOCKED",
+  "static_evidence": [
+    {
+      "topic": "Option C final authorization terms",
+      "run": 38223016609,
+      "job": 114723613114,
+      "negatives": 43,
+      "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT"
+    },
+    {
+      "topic": "DNS accounting and fail-closed",
+      "run": 38227024162,
+      "job": 114736943899,
+      "negatives": 33,
+      "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT"
+    },
+    {
+      "topic": "Auditable resolver plus client-egress",
+      "run": 38228524914,
+      "job": 114741930513,
+      "negatives": 36,
+      "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT"
+    },
+    {
+      "topic": "Runner isolation minimum matrix",
+      "run": 38230918375,
+      "job": 114749888454,
+      "negatives": 70,
+      "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT"
+    },
+    {
+      "topic": "Controlled Runner minimum security",
+      "run": 38234830397,
+      "job": 114762822165,
+      "negatives": 38,
+      "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT"
+    }
+  ],
+  "static_negative_cases_total": 220,
+  "runtime": {
+    "runner_provisioned": false,
+    "immutable_image_and_digest_proven": false,
+    "least_privilege_proven": false,
+    "default_deny_enforcement_proven": false,
+    "ipv4_ipv6_udp_tcp_proxy_os_resolver_coverage_proven": false,
+    "client_egress_packet_budget_proven": false,
+    "pre_egress_overflow_denial_proven": false,
+    "dns_budget_approved": false,
+    "https_get_approved": false,
+    "utc_window_approved": false,
+    "diagnostic_executed": false,
+    "stage1_audio": "BLOCKED_UPSTREAM_403",
+    "root_cause": "UNDETERMINED"
+  },
+  "remaining_risks": [
+    "Static rules do not demonstrate actual independent client-egress enforcement",
+    "Resolver calls, DNS questions and client-egress packets cannot be treated as equivalent",
+    "Mutable runner images and implicit resolution/proxy/fallback paths may escape controls",
+    "Even a successful voice-list GET is not WSS/audio proof",
+    "Privacy redaction, first-403 stop and 30-second cap need runtime evidence under separate authorization"
+  ],
+  "next_required_gate": "OWNER_DECISION_ON_WHETHER_TO_CONTINUE_CONTROLLED_RUNNER_FEASIBILITY_RESEARCH; NO AUTOMATIC_PROVISIONING_OR_NETWORK",
+  "recommendation": "Stop repeating document-only Option C variants; maintain BLOCKED until independent runner/egress feasibility evidence and separate owner approval can be obtained",
+  "future_scope": {
+    "https_get_max": 1,
+    "overall_seconds": 30,
+    "first_403": "STOP_NO_RETRY",
+    "artifact": "FUTURE_SANITIZED_METADATA_ONLY",
+    "dns_count": "UNSET",
+    "utc_window": "UNAPPROVED"
+  },
+  "locks": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  },
+  "no_ci_run": true,
+  "no_network_or_media": true
+}
