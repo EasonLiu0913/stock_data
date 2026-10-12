@@ -1,0 +1,93 @@
+{
+  "schema": "M9-STAGE1-EDGE-TTS-CONTROLLED-CONNECTION-PREREG-v1",
+  "date": "2026-10-12",
+  "mode": "NON_EXECUTABLE_PREREGISTRATION_ONLY",
+  "status": "DRAFT_RESEARCH_NO_NETWORK_PERMISSION",
+  "evidence": {
+    "offline_run": 38212695855,
+    "offline_job": 114690238650,
+    "offline_sha": "4eb9ebab2d3d2d2d2bb747e099d5be18a8b89296",
+    "offline_verdict": "PASS_SCOPED_OFFLINE_DIAGNOSTIC_ONLY",
+    "negative_cases": 20,
+    "failed_audio_runs": [
+      38209098478,
+      38209767664
+    ],
+    "observed_error": "WSServerHandshakeError HTTP 403",
+    "cause": "UNDETERMINED"
+  },
+  "fixed_parameters": {
+    "voice": "zh-TW-YunJheNeural",
+    "rate": "+15%",
+    "dependency": "edge-tts==7.2.7",
+    "python": "3.12",
+    "alternative_voice_or_service": "NOT_AUTHORIZED",
+    "automatic_upgrade": false
+  },
+  "allowed_without_new_approval": [
+    "Read stored sanitized job logs and existing diagnostics",
+    "Compare pinned package versions and source/configuration without importing or invoking TTS",
+    "Record GitHub runner OS/Python/package version only from existing evidence",
+    "Static lint of allowed fields and redaction policy"
+  ],
+  "future_optional_checks_requiring_separate_explicit_approval": [
+    {
+      "stage": "metadata_only",
+      "boundaries": "One specifically approved time-bounded and allowlisted network reachability/handshake diagnostic using legitimate documented interfaces, no synthesized text, audio, authentication bypass, proxy/region workaround or retries; whether handshake itself is permitted must be expressly granted",
+      "max_attempts": 1,
+      "outputs": [
+        "timestamp UTC",
+        "runner OS/Python version",
+        "edge-tts version",
+        "endpoint hostname only when approved",
+        "high-level HTTP/WebSocket status class and sanitized error category",
+        "elapsed time and coarse egress region only if safely available"
+      ],
+      "on_403": "Record BLOCKED_UPSTREAM_403; stop immediately; do not auto-retry or launch TTS"
+    }
+  ],
+  "sensitive_redaction": {
+    "prohibit_capture": [
+      "TrustedClientToken",
+      "ConnectionId",
+      "Sec-MS-GEC",
+      "Sec-MS-GEC-Version values",
+      "signed or full querystring URL",
+      "Authorization and Cookie headers",
+      "proxy credentials",
+      "IP address or account identifiers",
+      "raw speech content",
+      "environment variables or secrets"
+    ],
+    "logs": "Allowlisted structured fields only, redact before artifact creation; do not print traceback URL containing request parameters",
+    "storage": "Research-only minimal metadata with SHA256 and no raw handshake packet dump"
+  },
+  "fail_closed": [
+    "Default deny for all outbound requests including DNS probes, HTTP and WebSocket",
+    "No import/invocation of edge_tts in preregistration or offline tests",
+    "Missing explicit narrow user permission => no network check",
+    "Unexpected response or 403 => BLOCKED, no automatic retry or dependency upgrade",
+    "No claim of service root cause solely from HTTP 403",
+    "No MP3/SRT/WordBoundary generation; no Stage2/render/deploy/upload",
+    "Original M7 untouched and all execution/release locks false"
+  ],
+  "acceptance": [
+    "Document version and failure evidence boundaries",
+    "Explicitly name future optional data fields and prohibited secret-bearing fields",
+    "Document permission checkpoint and one-attempt stop policy",
+    "Independent static-only review before any future network test",
+    "Handoff retains Stage1 actual audio BLOCKED_UPSTREAM_403"
+  ],
+  "locks": {
+    "network_diagnostic_authorized": false,
+    "tts_retry_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false,
+    "m9_execute_authorized": false
+  }
+}
