@@ -1,0 +1,119 @@
+{
+  "schema": "M9-STAGE1-RUNNER-EGRESS-MINIMUM-ACCEPTANCE-MATRIX-v1",
+  "mode": "OFFLINE_NONEXECUTABLE",
+  "decision": "BLOCKED_UNVERIFIED_ENFORCEABLE_EGRESS",
+  "basis": {
+    "run": 38228524914,
+    "job": 114741930513,
+    "negative_cases": 36
+  },
+  "evidence_states": [
+    "UNVERIFIED",
+    "STATIC_CONTRACT_ONLY",
+    "RUNTIME_PROVEN_AFTER_SEPARATE_APPROVAL"
+  ],
+  "matrix": [
+    {
+      "id": "rule_installable",
+      "criterion": "Privilege and installation evidence, not inferred from sudo",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "enforcement",
+      "criterion": "Default deny effective before first diagnostic packet; installation alone insufficient",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "packet_observability",
+      "criterion": "Client-egress actual transmissions independently metered; capture alone insufficient",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "ipv4",
+      "criterion": "Prove IPv4 covered or blocked",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "ipv6",
+      "criterion": "Prove IPv6 covered or blocked",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "udp",
+      "criterion": "Prove UDP DNS and fallback covered",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "tcp",
+      "criterion": "Prove TCP DNS and fallback covered",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "os_resolver",
+      "criterion": "No uninstrumented getaddrinfo escape",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "proxy",
+      "criterion": "No HTTP CONNECT, proxy or encrypted resolver escape",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "overflow",
+      "criterion": "Deny before next egress, not detect after send",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    },
+    {
+      "id": "runner_image",
+      "criterion": "Exact image version and OS resolver configuration recorded; ubuntu-latest not immutable",
+      "state": "STATIC_CONTRACT_ONLY",
+      "runtime_proof": false,
+      "unknown_means": "BLOCKED_NO_DIAGNOSTIC"
+    }
+  ],
+  "scope": {
+    "budget": "UNPROVEN_BLOCKED",
+    "client_egress_boundary": "DEFINED_NOT_ENFORCED",
+    "https_get_max_future": 1,
+    "overall_seconds_future": 30,
+    "utc_window": "UNAPPROVED",
+    "redaction": "ALLOWLIST_ONLY",
+    "first_403": "STOP_NO_RETRY",
+    "audio": "BLOCKED_UPSTREAM_403"
+  },
+  "no_install_or_capture": true,
+  "no_execution": true,
+  "locks": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
