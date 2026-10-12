@@ -1,0 +1,26 @@
+name: "[Research] M9 Controlled Preview Static"
+on:
+  push:
+    branches:
+      - research/m9-controlled-private-preview-20261012
+    paths:
+      - data_research/m5/m9/M9-CONTROLLED-PRIVATE-PREVIEW-PAIR-v1.json
+      - data_research/m5/m9/M9-FUTURE-EXECUTION-ORDER-AND-ACCEPTANCE-v1.json
+      - scripts/verify_m9_controlled_preview_static.py
+      - .github/workflows/research-m9-controlled-preview-static.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    if: github.ref == 'refs/heads/research/m9-controlled-private-preview-20261012'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: M9 fail-closed isolated static research
+        run: python scripts/verify_m9_controlled_preview_static.py
