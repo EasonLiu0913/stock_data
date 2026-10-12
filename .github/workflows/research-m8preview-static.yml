@@ -1,0 +1,26 @@
+name: "[Research] M8PREVIEW Static Contract"
+on:
+  push:
+    branches:
+      - research/m8preview-contract-20261012
+    paths:
+      - data_research/m5/m8preview/M8PREVIEW-ISOLATED-PREREGISTRATION-v1.json
+      - data_research/m5/m8preview/M8PREVIEW-INTEGRATION-ACCEPTANCE-CONTRACT-v1.json
+      - scripts/verify_m8preview_static_research.py
+      - .github/workflows/research-m8preview-static.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    if: github.ref == 'refs/heads/research/m8preview-contract-20261012'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: M8PREVIEW fail-closed research-only static checks
+        run: python scripts/verify_m8preview_static_research.py
