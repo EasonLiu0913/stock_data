@@ -1,0 +1,90 @@
+{
+  "schema": "M9-STAGE1-DNS-RESOLUTION-BOUNDARY-OPTIONS-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_RESEARCH_ONLY",
+  "decision": "PREFER_AUDITABLE_APPLICATION_RESOLVER_PLUS_ENFORCED_EGRESS_FOR_FUTURE_RESEARCH_NOT_APPROVED",
+  "basis": {
+    "accepted_run": 38227024162,
+    "accepted_job": 114736943899,
+    "negative_cases": 33,
+    "execution_state": "BLOCKED_PENDING_ENFORCEABLE_DNS_PROOF"
+  },
+  "measurement_definitions": {
+    "resolver_call": "One application-level resolver invocation; may produce zero or multiple DNS questions",
+    "dns_question": "QNAME and QTYPE question; A, AAAA, CNAME follow-up and retries may multiply",
+    "network_packet": "Actual transmitted UDP/TCP/DoH request and response; caching, fragmentation and retries prevent inference from higher-layer counts",
+    "equivalent": false
+  },
+  "options": [
+    {
+      "name": "Standard OS resolver",
+      "calls": "Observable at application wrapper only",
+      "questions": "Opaque OS/cache behavior",
+      "packets": "Not assured observable or bounded",
+      "risk": "Implicit getaddrinfo, A/AAAA, cache, CNAME, search suffix, retry, mutable runner",
+      "fail_closed": "Cannot independently prove packet budget on stock hosted runner",
+      "verdict": "REJECT_FOR_STRICT_PACKET_BUDGET"
+    },
+    {
+      "name": "Auditable application resolver",
+      "calls": "Instrumentable",
+      "questions": "Can track application-issued QNAME/QTYPE under explicit policy",
+      "packets": "Cannot alone prove OS/network egress or downstream recursive packets",
+      "risk": "Transport/library retries, fallback resolver, hidden DNS, CNAME expansion",
+      "fail_closed": "Reject unapproved QTYPE/hostname/overflow; requires outbound isolation",
+      "verdict": "CONDITIONAL_CANDIDATE"
+    },
+    {
+      "name": "Fixed resolution results",
+      "calls": "May avoid resolver invocation if all layers honor override",
+      "questions": "Zero intended, not independently proven",
+      "packets": "Zero intended, must be enforced by egress boundary",
+      "risk": "Address changes, IPv4/IPv6, TLS hostname/SNI validation, stale mapping, implicit fallback",
+      "fail_closed": "Require no fallback, pinned evidence and TLS identity; not suitable merely to bypass DNS evidence",
+      "verdict": "RESEARCH_ONLY_NOT_DEFAULT"
+    },
+    {
+      "name": "Controlled network egress",
+      "calls": "Must combine with resolver instrumentation",
+      "questions": "Count at selected boundary only",
+      "packets": "Can count/block outbound DNS at enforced boundary; does not imply recursive upstream packets count",
+      "risk": "Hosted runner control limitations, encrypted DNS, proxies, sidecars and unexpected destinations",
+      "fail_closed": "Default deny and enforceable per-protocol/host limits, stop before unobservable egress",
+      "verdict": "REQUIRED_COMPLEMENT_FOR_PACKET_LEVEL_CLAIMS"
+    }
+  ],
+  "selection": {
+    "recommended": "Auditable application resolver PLUS enforceable controlled egress, research only",
+    "reason": "Provides separate evidence for invocation, question, and boundary-observed packet classes; neither component alone proves end-to-end physical packet count",
+    "fallback": "If hosted runner cannot enforce outbound DNS/HTTPS boundary, retain BLOCKED and do not substitute inferred counts",
+    "pending": [
+      "Define boundary and whether packet budget counts client-egress or full recursive chain",
+      "Verify feasible isolation on pinned runner image without live requests",
+      "Statically model A/AAAA, CNAME, cache, retry, fallback and hidden getaddrinfo cases",
+      "Specify separately approved DNS budget and one GET/time window only after evidence"
+    ]
+  },
+  "invariants": {
+    "current_outbound": 0,
+    "https_get_max_future": 1,
+    "wall_clock_seconds_future": 30,
+    "utc_window": "NOT_AUTHORIZED",
+    "dns_budget": "UNPROVEN_BLOCKED",
+    "first_403": "STOP_NO_RETRY",
+    "redaction": "ALLOWLIST_ONLY",
+    "real_audio": "BLOCKED_UPSTREAM_403"
+  },
+  "locks": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
