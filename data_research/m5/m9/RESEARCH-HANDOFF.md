@@ -143,3 +143,6 @@ M9 Stage1 DNS fail-closed offline CI accepted: original Run 38227024162, Job 114
 
 
 M9 DNS boundary options: offline comparison recorded in commit 0c4fef8bb2e2e4409e2f9de9452c1581598128fc. Preferred research candidate is audited application resolver plus enforceable egress. DNS budget remains unproven and execution blocked. All permissions false; no network or media operations.
+
+
+M9 Stage1 resolver and client-egress offline prereg: contract `stage1/M9-STAGE1-CONTROLLED-RESOLVER-EGRESS-PREREG-v1.json` commit 025ddccb8269dcb305eaf481a8af40ceb3c84d51; independent 36 bounded mutation verifier commit 4bf1d68724be15bdb8fc669a68eb5bf5fc577e96; separate read-only workflow commit 496e48808a1c7ed2e66fe2f95162a10bff0af993. Original Run 38228524914 queued when discovered. No new CI PASS until original terminal Job Log. Client-egress packet accounting is a separate boundary from resolver calls and DNS questions. Budget remains UNPROVEN_BLOCKED. All DNS/HTTPS/WSS/TTS, media and release permissions false; original M7 and Stage1 audio blocked state unchanged.
