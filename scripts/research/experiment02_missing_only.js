@@ -11,7 +11,7 @@ const DATA={
  summary:{path:d=>ROOT+'market-summary/'+d+'.json',workflow:'.github/workflows/publish-daily-gainers-unified-analysis.yml',safe:false}
 };
 function plan(input){
- assert(input && /^20\d{6}$/.test(input.date||''),'invalid logical date');
+ assert(input && /^20\d{6}$/.test(input.date||'') && Number.isFinite(Date.parse(input.date.slice(0,4)+'-'+input.date.slice(4,6)+'-'+input.date.slice(6,8))) && new Date(input.date.slice(0,4)+'-'+input.date.slice(4,6)+'-'+input.date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)===input.date.slice(0,4)+'-'+input.date.slice(4,6)+'-'+input.date.slice(6,8),'invalid logical date');
  assert(input.trading_day===true || input.trading_day===false,'trading_day must be verified');
  if (!input.trading_day) return {date:input.date,status:'NON_TRADING_DAY',missing:[],requests:[]};
  assert(input.source_dates && typeof input.source_dates==='object','verified source dates required');
