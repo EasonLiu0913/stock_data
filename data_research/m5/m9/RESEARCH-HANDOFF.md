@@ -121,3 +121,7 @@ Added DOCUMENT_ONLY `stage1/M9-STAGE1-SINGLE-GET-FINAL-AUTHORIZATION-REVIEW-v1.j
 
 
 M9 Stage1 final authorization review: offline verifier commit 2a3eeb1 and workflow commit bbab2d8. Original Run 38223016609; Job 114723613114. Pending terminal CI evidence. All connection and release permissions unchanged (false).
+
+
+## M9 Stage1 final authorization offline CI ACCEPTED — 2026-10-12
+Original Run 38223016609, Job 114723613114, attempt 1, SHA bbab2d8fa36822255cb4ff50f01669b5980fb315 completed SUCCESS. Full original Job Log inspected (25,729 characters), with marker `M9_FINAL_AUTH_REVIEW_OFFLINE_PASS negatives=43 one_GET=true dns=SEPARATE time_max=30s redaction=ALLOWLIST first403=STOP artifact=FUTURE_ONLY owner_approvals=FALSE network=false media=false locks=FALSE`. Signed `stage1/M9-STAGE1-FINAL-AUTHORIZATION-OFFLINE-INDEPENDENT-ACCEPTANCE-v1.json` at commit 1e6811d3e44d0f95208f7fe5eea4b1cbf7ceb390. Decision COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT for 43 bounded document mutations only. All five owner authorization checklist items remain unapproved; all DNS/HTTPS/WSS/TTS, Stage2/render/production/cron/Pages/YouTube and publication locks false. Actual Stage1 audio BLOCKED_UPSTREAM_403, cause UNDETERMINED. No network or audio test, no CI rerun, no automatic next stage, no original M7 modification.
