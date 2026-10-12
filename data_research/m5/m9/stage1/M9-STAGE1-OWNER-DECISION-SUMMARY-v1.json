@@ -1,0 +1,63 @@
+{
+  "schema": "M9-STAGE1-OWNER-DECISION-SUMMARY-v1",
+  "mode": "OFFLINE_DOCUMENT_ONLY",
+  "state": "NOT_AUTHORIZED",
+  "evidence": {
+    "run": 38223016609,
+    "job": 114723613114,
+    "negative_cases": 43,
+    "verdict": "PASS_SCOPED_OFFLINE"
+  },
+  "options": [
+    {
+      "name": "Remain offline",
+      "approval": false,
+      "possible": "Existing logs and code review",
+      "limitation": "Cannot identify current 403 cause"
+    },
+    {
+      "name": "Separate DNS review",
+      "approval": false,
+      "host": "speech.platform.bing.com",
+      "count": "Must disclose and approve individual DNS operations, including implicit resolver behavior",
+      "risk": "External resolver sees query",
+      "possible": "Resolution status only",
+      "limitation": "Does not prove HTTPS or audio"
+    },
+    {
+      "name": "Single HTTPS GET review",
+      "approval": false,
+      "host": "speech.platform.bing.com",
+      "path": "/consumer/speech/synthesize/readaloud/voices/list",
+      "count": "At most one GET; DNS separately approved; no redirect/retry",
+      "time_seconds": {
+        "overall": 30,
+        "connect": 10,
+        "request": 20
+      },
+      "risk": "Upstream list_voices has second GET after 403 and must not be directly used",
+      "possible": "Sanitized metadata status",
+      "limitation": "Does not prove synthesis WSS or audio"
+    }
+  ],
+  "safety": {
+    "first403": "STOP_NO_RETRY",
+    "redaction": "Only allowlisted fields; exclude URL, query, token, Cookie, headers, raw response, IP and secrets",
+    "artifact": "Sanitized diagnostic JSON only after separate approval and execution",
+    "no_media": true,
+    "all_locks_false": true
+  },
+  "permissions": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
