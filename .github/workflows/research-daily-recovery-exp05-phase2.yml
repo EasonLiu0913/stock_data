@@ -1,0 +1,27 @@
+name: "[Research] Daily Data Recovery Experiment 05 Phase 2"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'scripts/research/experiment05_phase2_risk_gates.js'
+      - '.github/workflows/research-daily-recovery-exp05-phase2.yml'
+permissions:
+  contents: read
+jobs:
+  risk-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify exact high-risk chains and deny production paths
+        run: |
+          node scripts/research/experiment05_phase2_risk_gates.js
+          test -f tmp/research/experiment05-phase2/risk-gates.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment05-phase2-risk-gates
+          path: tmp/research/experiment05-phase2/risk-gates.json
+          retention-days: 7
