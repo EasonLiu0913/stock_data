@@ -1,0 +1,72 @@
+{
+  "schema": "M9-STAGE1-CONTROLLED-RESOLVER-EGRESS-PREREG-v1",
+  "mode": "OFFLINE_NONEXECUTABLE",
+  "decision": "BLOCKED_PENDING_ENFORCEABLE_DNS_PROOF",
+  "basis": {
+    "run": 38227024162,
+    "job": 114736943899,
+    "negative_cases": 33
+  },
+  "architecture": "Auditable application resolver plus independently enforced default-deny client-egress boundary; neither component alone establishes transmitted-packet guarantee",
+  "boundary": {
+    "count": "CLIENT_EGRESS_OBSERVED_DNS_TRANSMISSIONS",
+    "not_count": "Remote recursive resolver upstream traffic; do not infer from application calls",
+    "resolver_calls": "Separately instrumented",
+    "dns_questions": "Separately count QNAME/QTYPE",
+    "network_packets": "Separately observe at client egress; count each outbound datagram or stream transport unit under approved precise definition",
+    "equivalent": false,
+    "quantitative_budget": "UNSET_UNTIL_ENFORCEMENT_PROVEN"
+  },
+  "cases": {
+    "A": "Explicit QTYPE approval required",
+    "AAAA": "Independent QTYPE budget; no implicit parallel query",
+    "CNAME": "Each follow-up question separately budgeted; unexpected chain stops",
+    "cache": "Cache hit recorded distinctly, never equated with proved zero egress",
+    "retry": "Zero permitted",
+    "implicit_getaddrinfo": "Reject or prove intercepted; otherwise BLOCKED",
+    "redirect": "Zero permitted",
+    "overflow": "DENY_BEFORE_NEXT_EGRESS_AND_TERMINATE",
+    "unobservable_egress": "BLOCKED_NO_EXECUTION",
+    "fallback_resolver": "PROHIBITED"
+  },
+  "environment": {
+    "runner": "ubuntu-latest mutable; exact image identity and configuration required before authorization",
+    "python": "3.12",
+    "utc_window": "UNAPPROVED"
+  },
+  "https": {
+    "get_max": 1,
+    "overall_seconds": 30,
+    "connect_seconds": 10,
+    "request_seconds": 20,
+    "on_403": "IMMEDIATE_STOP_NO_RETRY",
+    "authorized": false
+  },
+  "privacy": {
+    "allowlist_only": true,
+    "raw_packet_capture": false,
+    "raw_addresses_or_tokens": false,
+    "redaction_failure": "ABORT_NO_ARTIFACT"
+  },
+  "independent_static_acceptance": [
+    "Reject equivalence of resolver calls, DNS questions and egress packets",
+    "Reject hidden A/AAAA, CNAME, cache assumptions and any retries",
+    "Reject implicit resolver, fallback or unobservable egress",
+    "Reject packet counter overrun instead of stopping before further egress",
+    "Require immutable identity evidence rather than relying on ubuntu-latest label",
+    "Retain distinct DNS and HTTPS approval checkpoints and all false locks"
+  ],
+  "locks": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
