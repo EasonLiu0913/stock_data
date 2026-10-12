@@ -33,3 +33,5 @@ fs.mkdirSync(path.join(root,'tmp/research/experiment05-phase2'),{recursive:true}
 const output=path.join(root,'tmp/research/experiment05-phase2/risk-gates.json');
 fs.writeFileSync(output,JSON.stringify({...audit,negative_tests:negative.length,positive_tests:1},null,2)+'\n');
 console.log('EXPERIMENT_05_PHASE2_RISK_GATES_PASS '+JSON.stringify({negative:negative.length,positive:1,production_safe_paths:0,source_contracts:audit.sources.length}));
+
+// Independent CI push probe following workflow registration.
