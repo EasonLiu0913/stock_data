@@ -1,0 +1,24 @@
+name: "[Research] M9 Runner Egress Matrix Offline"
+on:
+  push:
+    branches:
+      - research/m9-controlled-private-preview-20261012
+    paths:
+      - scripts/verify_m9_stage1_runner_egress_matrix_offline.py
+      - data_research/m5/m9/stage1/M9-STAGE1-RUNNER-EGRESS-MINIMUM-ACCEPTANCE-MATRIX-v1.json
+      - .github/workflows/research-m9-runner-egress-matrix-offline.yml
+permissions:
+  contents: read
+jobs:
+  static-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Local JSON and 70 fail-closed mutations
+        run: python -I scripts/verify_m9_stage1_runner_egress_matrix_offline.py
