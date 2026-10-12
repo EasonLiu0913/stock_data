@@ -58,3 +58,7 @@ Handoff v3: Prompt A ACTIVE / PROGRESS; Experiment 05 Phase4 CI terminal proof p
 ## Phase 4 failure diagnosis and scoped fix
 
 Independent Run 38305559415 / Job 114998628201 concluded FAILURE: scanner inferred nonexistent reusable file apply-strategy-tag-registry.yml\" from a grep command's quoted test string in test-official-market-constraints-integration.yml. No artifact was produced and Phase 4 PASS must not be claimed. Fix commit 8e77ef9f10253e09f2cfc11132b941f5d401c1b5 anchors local reusable extraction to YAML uses lines and restricts the captured filename, excluding grep string literals. This is a scanner-only change. Re-run matching independent CI, inspect terminal marker and artifact. Production safe paths [] and all release locks retained. Script-level side-effect audit not yet complete; no real production writer authorized.
+
+## Phase 4 corrected CI checks
+
+Following anchored parser fix 8e77ef9f10253e09f2cfc11132b941f5d401c1b5, Run 38306232550 was observed in_progress. Separate independent probe commit 100392ef3e6eba814002155e2b960c1afbefa167 produced Run 38306260501 (observed in_progress). Neither is PASS until terminal status, raw marker, and artifact digest have been verified. This keeps failed original Run 38305559415 as negative diagnostic evidence only. Remaining script-level chain completeness BLOCKED; production allowlist [].
