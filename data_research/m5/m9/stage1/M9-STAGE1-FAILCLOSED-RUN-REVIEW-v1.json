@@ -1,0 +1,57 @@
+{
+  "schema": "M9-STAGE1-FAILCLOSED-RUN-REVIEW-v1",
+  "date": "2026-10-12",
+  "run": 38209767664,
+  "job": 114681096937,
+  "head_sha": "17bb2bc928f90d0902699f392774d9e227e46d80",
+  "attempt": 1,
+  "run_conclusion": "failure",
+  "job_conclusion": "failure",
+  "original_log_read": true,
+  "original_log_length": 33083,
+  "log_marker": "M9_STAGE1_BLOCKED upstream_tts_error=WSServerHandshakeError partial_audio_removed=true no_render=true no_upload=true",
+  "artifact": {
+    "id": 11729117320,
+    "contents": [
+      {
+        "file": "stage1-failure.json",
+        "bytes": 334
+      }
+    ],
+    "diagnostic": {
+      "schema": "M9-STAGE1-BLOCKED-DIAGNOSTIC-v1",
+      "status": "BLOCKED_TTS_UPSTREAM_ERROR",
+      "scene": "stock_lead",
+      "error_type": "WSServerHandshakeError",
+      "error_status": 403,
+      "generated_mp3_count": 0,
+      "partial_audio_removed": true,
+      "stage2_authorized": false,
+      "render_authorized": false,
+      "youtube_authorized": false
+    }
+  },
+  "acceptance": {
+    "stage1": "BLOCKED_NOT_PASS",
+    "three_mp3": "NOT_PRESENT",
+    "mp3_sha256": "NOT_AVAILABLE",
+    "real_durations": "UNKNOWN",
+    "wordboundary": "NOT_AVAILABLE",
+    "three_srt": "NOT_PRESENT",
+    "combined_srt": "NOT_PRESENT",
+    "claims_audio_parity": "NOT_VERIFIABLE_NO_AUDIO",
+    "failure_hygiene": "PASS_ZERO_BYTE_PARTIAL_REMOVED"
+  },
+  "root_cause_boundary": "Edge TTS upstream websocket handshake rejected HTTP 403; cannot infer precise upstream policy/configuration cause. Repeated original and isolated repair runs; no unlimited retry.",
+  "next": "Stop automatic TTS attempts; investigate compatible authorized TTS endpoint/credentials in isolated research and require a fresh explicitly scoped plan before retry. No fallback voice substitution.",
+  "locks": {
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false,
+    "m9_execute": false
+  }
+}
