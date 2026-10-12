@@ -1,0 +1,122 @@
+{
+  "schema": "M9-STAGE1-VOICE-LIST-HTTPS-NONSYNTHESIS-PREREG-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_STATIC_PREREG_ONLY",
+  "status": "NOT_AUTHORIZED_NOT_EXECUTABLE",
+  "basis": {
+    "checklist_run": 38214871915,
+    "checklist_job": 114697162036,
+    "checklist_decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT",
+    "negative_cases": 28,
+    "upstream_repo": "rany2/edge-tts",
+    "upstream_tag": "7.2.7",
+    "upstream_commit": "b45c019b9948e069c69c6ecb3a341badc970439c",
+    "source_files": [
+      "src/edge_tts/voices.py",
+      "src/edge_tts/constants.py",
+      "src/edge_tts/drm.py"
+    ]
+  },
+  "upstream_implementation": {
+    "method": "aiohttp.ClientSession.get",
+    "protocol": "HTTPS_GET",
+    "hostname": "speech.platform.bing.com",
+    "path_only": "/consumer/speech/synthesize/readaloud/voices/list",
+    "parameters_names_only": [
+      "trustedclienttoken",
+      "Sec-MS-GEC",
+      "Sec-MS-GEC-Version"
+    ],
+    "headers": "VOICE_HEADERS merged with BASE_HEADERS and DRM.headers_with_muid() Cookie",
+    "full_url_or_parameter_values": "NEVER_LOG_OR_COPY",
+    "tts_synthesis": false,
+    "side_effects": "Queries voice-list service; does not synthesize speech, and is not a synthesis WSS health check",
+    "hidden_retry": "list_voices catches aiohttp.ClientResponseError status 403, invokes DRM.handle_client_response_error to adjust clock skew from Date, then issues second __list_voices GET; not guaranteed single attempt",
+    "single_call_safe": false
+  },
+  "current_permission": {
+    "dns": false,
+    "https": false,
+    "http": false,
+    "websocket": false,
+    "tts": false,
+    "media": false,
+    "outbound_requests": 0
+  },
+  "future_proposal_only": {
+    "method": "Separate audited fail-on-first-403 single GET implementation; never call unmodified list_voices if request_budget=1",
+    "authorization": "Owner must separately explicitly authorize exact HTTPS endpoint and DNS resolution if required, one GET, time/runner scope and redaction before any runnable code",
+    "request_budget": {
+      "https_get_max": 1,
+      "hidden_retry_max": 0,
+      "automatic_clock_skew_recall": false,
+      "dns": "Separately count and approve if necessary"
+    },
+    "on_403": "IMMEDIATE_BLOCKED_UPSTREAM_403_NO_RETRY",
+    "on_timeout": "IMMEDIATE_BLOCKED_NO_RETRY",
+    "on_unexpected": "STOP_NO_RETRY",
+    "on_missing_redaction": "ABORT_BEFORE_ARTIFACT",
+    "no_synthesis": true,
+    "no_alternative_endpoint": true,
+    "no_upgrade": true,
+    "no_proxy_or_egress_bypass": true
+  },
+  "redaction": {
+    "allowlist_only": true,
+    "allowed_output": [
+      "timestamp_utc",
+      "pinned_version",
+      "runner_os",
+      "python_version",
+      "protocol_class",
+      "approved_hostname",
+      "sanitized_status_class",
+      "sanitized_error_category",
+      "elapsed_ms",
+      "attempt_count"
+    ],
+    "never_store": [
+      "full URI and querystring",
+      "trustedclienttoken value",
+      "Sec-MS-GEC value",
+      "Sec-MS-GEC-Version value",
+      "MUID Cookie",
+      "request or response headers",
+      "DRM token source",
+      "raw traceback containing URL",
+      "environment and proxy secrets",
+      "IP and identifiers",
+      "voice inventory response body",
+      "speech payload",
+      "raw packet"
+    ],
+    "rule": "Sanitize in memory prior to log or artifact; on redaction failure write no artifact"
+  },
+  "fixed": {
+    "dependency": "edge-tts==7.2.7",
+    "python": "3.12",
+    "voice": "zh-TW-YunJheNeural",
+    "rate": "+15%"
+  },
+  "scope_limits": [
+    "No official standalone synthesis-health endpoint established",
+    "Voice-list HTTPS success does not prove WSS synthesis availability",
+    "HTTP 403 alone cannot prove clock skew, upstream policy or egress IP cause",
+    "No actual request or audio authorized by this document"
+  ],
+  "locks": {
+    "network_diagnostic_authorized": false,
+    "dns_authorized": false,
+    "https_authorized": false,
+    "websocket_authorized": false,
+    "tts_retry_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false,
+    "m9_execute_authorized": false
+  }
+}
