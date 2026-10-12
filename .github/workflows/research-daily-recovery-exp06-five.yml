@@ -1,0 +1,37 @@
+name: "[Research] Experiment 06 Five Real Archived Datasets"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-06/five-20261008.json'
+permissions:
+  contents: read
+jobs:
+  five-real-archived:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/research/experiment06_five_archived_replay.js
+            /data_daily_gain_over_5/analysis-facts/20261008.json
+            /data_daily_gain_over_5/analysis-news/20261008.json
+            /data_daily_gain_over_5/analysis-ai/20261008.json
+            /data_daily_gain_over_5/analysis/20261008.json
+            /data_daily_gain_over_5/market-summary/20261008.json
+            /recovery-requests/experiment-06/five-20261008.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate independent exact request and replay real archived sources into empty sandbox
+        run: |
+          node -e "const a=require('./recovery-requests/experiment-06/five-20261008.json');if(JSON.stringify(a)!==JSON.stringify({schema:'exp06-five-request-v1',date:'20261008',mode:'archived_replay_research_only',datasets:['facts','news','ai','unified','market-summary']}))process.exit(1)"
+          node scripts/research/experiment06_five_archived_replay.js
+          test -s tmp/research/experiment06-five/manifest.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment06-five-archived-replay
+          path: tmp/research/experiment06-five/
+          retention-days: 30
