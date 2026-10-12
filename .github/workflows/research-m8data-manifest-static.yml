@@ -6,6 +6,8 @@ on:
     paths:
       - data_research/m5/m8data/20261008-1301-research-manifest.json
       - scripts/verify_m8data_research_manifest.py
+      - scripts/verify_m8data_semantic_draft.py
+      - data_research/m5/m8data/20261008-1301-semantic-draft.json
       - .github/workflows/research-m8data-manifest-static.yml
   workflow_dispatch:
 permissions:
@@ -23,3 +25,5 @@ jobs:
           python-version: '3.12'
       - name: Fail-closed source and manifest assertions
         run: python scripts/verify_m8data_research_manifest.py
+      - name: Check three-scene semantic draft
+        run: python scripts/verify_m8data_semantic_draft.py
