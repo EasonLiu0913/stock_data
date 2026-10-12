@@ -4,7 +4,7 @@ const {plan,DATA}=require('./experiment02_missing_only.js');
 const date='20261013';
 const all=Object.fromEntries(Object.keys(DATA).map(k=>[k,{exists:true,valid:true,as_of:date}]));
 const source_dates=Object.fromEntries(Object.keys(DATA).map(k=>[k,date]));
-const base=()=>({date,trading_day:true,source_dates,datasets:structuredClone(all),running:[]});
+const base=()=>({date,trading_day:true,source_dates:structuredClone(source_dates),datasets:structuredClone(all),running:[]});
 let p=plan(base());assert.equal(p.status,'COMPLETE');assert.equal(p.requests.length,0);
 let b=base();b.datasets.facts.exists=false;b.datasets.news.exists=false;p=plan(b);assert.deepEqual(p.missing.map(x=>x.dataset),['facts','news']);assert(p.requests.every(x=>x.decision==='BLOCKED_SIDE_EFFECT_REVIEW'));
 b=base();b.datasets.facts.as_of='20261012';p=plan(b);assert.equal(p.missing[0].status,'STALE_DATA_FAILED');
