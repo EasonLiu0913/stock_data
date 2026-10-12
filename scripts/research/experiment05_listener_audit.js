@@ -32,3 +32,5 @@ assert.equal(safety([],matrix).allowed,false);
 const report={schema:'experiment05-listener-inventory-v1',main_reference:'b86fa8fc018a7717990fa8539a09c74a439bdd8a',workflow_count:names.length,event_counts:Object.fromEntries(needles.map(n=>[n,matrix.filter(x=>x.events.includes(n)).length])),matrix,write_policy:'DENY_ALL_UNTIL_MANUAL_EXACT_FILTER_AND_INDIRECT_CHAIN_REVIEW',safe_paths:[],synthetic_negative_tests:4,real_source_recovery:'NOT_RUN'};
 fs.mkdirSync(path.join(root,'tmp/research'),{recursive:true});fs.writeFileSync(path.join(root,'tmp/research/experiment05-matrix.json'),JSON.stringify(report,null,2)+'\n');
 console.log('EXPERIMENT_05_INVENTORY_PASS '+JSON.stringify({count:names.length,events:report.event_counts,publicationRisk:matrix.filter(x=>x.publication_risk).length,writePolicy:report.write_policy}));
+
+// Independent push probe after workflow registration; no production execution.
