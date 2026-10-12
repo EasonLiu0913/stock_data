@@ -19,3 +19,5 @@ const report={schema:'experiment05-phase4-topology-v1',main_reference:'a78576294
 const output=path.join(root,'tmp/research/experiment05-phase4');fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'topology.json'),JSON.stringify(report,null,2)+'\n');console.log('EXPERIMENT_05_PHASE4_STATIC_GATE_PASS '+JSON.stringify({count:names.length,events:report.event_counts,negative:candidate.length+2,positive:1,production_safe_paths:0}));
 
 // Independent push probe after Phase 4 workflow registration.
+
+// Independent rerun probe for corrected YAML uses-line extraction.
