@@ -1,0 +1,23 @@
+name: "[Research] Daily Data Recovery Missing Only Experiment 02"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'scripts/research/experiment02_missing_only.js'
+      - 'scripts/research/experiment02_missing_only.test.js'
+      - '.github/workflows/research-daily-recovery-missing-only-exp02.yml'
+permissions:
+  contents: read
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax and synthetic fail-closed cases
+        run: |
+          node --check scripts/research/experiment02_missing_only.js
+          node --check scripts/research/experiment02_missing_only.test.js
+          node scripts/research/experiment02_missing_only.test.js
