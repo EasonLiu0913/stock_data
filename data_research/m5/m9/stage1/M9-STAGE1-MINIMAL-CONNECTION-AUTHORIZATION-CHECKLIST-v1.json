@@ -1,0 +1,119 @@
+{
+  "schema": "M9-STAGE1-MINIMAL-CONNECTION-AUTHORIZATION-CHECKLIST-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_PLANNING_ONLY_NOT_EXECUTABLE",
+  "baseline": {
+    "prereg": "data_research/m5/m9/stage1/M9-STAGE1-CONTROLLED-CONNECTION-PREREG-v1.json",
+    "accepted_run": 38213624473,
+    "accepted_job": 114693179980,
+    "accepted_verdict": "PASS_SCOPED_OFFLINE_PREREG_ONLY",
+    "actual_audio_state": "BLOCKED_UPSTREAM_403",
+    "root_cause": "UNDETERMINED"
+  },
+  "current_allowed": {
+    "activities": [
+      "Review saved redacted logs and pinned package configuration",
+      "Offline source and schema checks"
+    ],
+    "outbound_requests": 0,
+    "dns": false,
+    "http": false,
+    "https": false,
+    "websocket": false,
+    "tts": false,
+    "media": false
+  },
+  "proposed_future_scope_not_authorized": {
+    "permission_model": "Each type of external communication requires separately explicit approval. Authorizing metadata review does not authorize DNS, HTTPS, WebSocket or TTS.",
+    "target_hostname": "speech.platform.bing.com",
+    "hostname_grounding": "Hostname observed in original failed Stage1 stack traces, not independent endorsement of a diagnostic public API",
+    "protocols": [
+      {
+        "kind": "DNS",
+        "planned": "OPTIONAL_NOT_AUTHORIZED",
+        "attempts": "0 now; at most one future specifically authorized lookup, if technically needed",
+        "risk": "DNS is itself an external request"
+      },
+      {
+        "kind": "HTTPS",
+        "planned": "NOT_AUTHORIZED_BY_THIS_CHECKLIST",
+        "attempts": 0,
+        "rule": "No generic probe, alternative endpoint, or invented health URL"
+      },
+      {
+        "kind": "WSS_WEBSOCKET_TLS",
+        "planned": "SEPARATE_EXPLICIT_AUTHORIZATION_REQUIRED",
+        "attempts": "0 now; at most one future specifically authorized handshake only if documented and technically feasible without synthesis",
+        "rule": "Do not send synthesis content or trigger TTS; if handshake unavoidably initiates service synthesis, stop at planning and request different approval"
+      }
+    ],
+    "tts_synthesis": "NOT_AUTHORIZED",
+    "request_budget": "Strictly one permitted attempt for the separately scoped future diagnostic; no built-in library retry or fallback; if a DNS step plus handshake would count as more than one external operation, disclose each and obtain approval first",
+    "version": "edge-tts==7.2.7",
+    "runtime": "Python 3.12",
+    "voice": "zh-TW-YunJheNeural",
+    "rate": "+15%",
+    "allowed_output_fields": [
+      "timestamp_utc",
+      "runner_os",
+      "python_version",
+      "edge_tts_version",
+      "approved_endpoint_hostname",
+      "protocol_attempted",
+      "sanitized_status_class",
+      "sanitized_error_category",
+      "elapsed_ms"
+    ],
+    "redaction": {
+      "allowlist_only": true,
+      "forbid": [
+        "TrustedClientToken",
+        "ConnectionId",
+        "Sec-MS-GEC",
+        "Sec-MS-GEC-Version values",
+        "full URL or querystring",
+        "Authorization/Cookie headers",
+        "tokens and secrets",
+        "environment variables",
+        "proxy credentials",
+        "raw packet dumps",
+        "speech payload",
+        "raw traceback with URL",
+        "precise IP or user/account IDs"
+      ],
+      "rule": "Sanitize in memory before writing logs/artifacts; errors logged as class/code only"
+    },
+    "stop": {
+      "on_403": "BLOCKED_UPSTREAM_403_IMMEDIATE_STOP",
+      "on_timeout": "BLOCKED_STOP",
+      "on_unexpected_response": "BLOCKED_STOP",
+      "on_sensitive_data_risk": "ABORT_WITHOUT_ARTIFACT",
+      "automatic_retry": false,
+      "dependency_upgrade": false,
+      "alternative_voice_or_service": false
+    }
+  },
+  "authorization_review_questions": [
+    "Is a DNS lookup separately authorized, with its own request count?",
+    "Is a legitimate documented non-synthesis endpoint or handshake method identified? If not, do not probe.",
+    "Which exact protocol and single action, if any, receives owner approval?",
+    "Are security/log redaction constraints independently reviewed?",
+    "Is Stage1 actual synthesis still separately unauthorized?"
+  ],
+  "acceptance_for_current_planning": "Checklist is complete only as an offline proposal; all network and audiovisual activities stay denied.",
+  "locks": {
+    "network_diagnostic_authorized": false,
+    "dns_authorized": false,
+    "http_authorized": false,
+    "websocket_authorized": false,
+    "tts_retry_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false,
+    "m9_execute_authorized": false
+  }
+}
