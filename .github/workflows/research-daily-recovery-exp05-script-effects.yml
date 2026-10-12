@@ -1,0 +1,32 @@
+name: "[Research] Daily Recovery Experiment 05 Script Effects"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'scripts/research/experiment05_script_effects.test.js'
+      - '.github/workflows/research-daily-recovery-exp05-script-effects.yml'
+permissions:
+  contents: read
+jobs:
+  script-effects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/
+            /.github/workflows/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check scoped actual script write sites and publication edges
+        run: |
+          node scripts/research/experiment05_script_effects.test.js
+          test -s tmp/research/experiment05-phase4/script-effects.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment05-script-effects
+          path: tmp/research/experiment05-phase4/script-effects.json
+          retention-days: 7
