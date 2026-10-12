@@ -1,0 +1,54 @@
+{
+  "schema": "M9-STAGE1-OPTION-C-DNS-BOUNDARY-OFFLINE-REVIEW-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_DOCUMENT_ONLY",
+  "decision": "BLOCKED_PENDING_DNS_BUDGET_PROOF",
+  "basis": {
+    "previous_run": 38223016609,
+    "negative_cases": 43,
+    "option_c_commit": "11b5ef138020820b5c45969f25f2f4e7d0427838"
+  },
+  "findings": {
+    "https_get_limit": "Application-level maximum one GET can be specified but does not establish count of resolver operations",
+    "dns": "aiohttp resolver may use asyncio / getaddrinfo and operating-system resolution; A/AAAA, caches and runtime resolver work cannot be reliably counted from GET=1 alone",
+    "runner": "ubuntu-latest image and preinstalled components may change; pin image family and inspect exact version before any future authorization",
+    "current_proof": "NO VERIFIED BOUND ON INDIVIDUAL DNS QUERIES; no outbound diagnostic performed"
+  },
+  "review_outcome": {
+    "dns_budget": "UNPROVEN_BLOCKED",
+    "https_one_get": "STATICALLY_PRE_REGISTERED_NOT_AUTHORIZED",
+    "wall_clock_seconds": 30,
+    "connect_seconds": 10,
+    "request_seconds": 20,
+    "utc_window": "NOT_SPECIFIED_NOT_AUTHORIZED",
+    "redaction": "ALLOWLIST_BEFORE_ARTIFACT",
+    "first_403": "STOP_NO_RETRY",
+    "future_artifact": "NOT_CREATED"
+  },
+  "conditions_before_future_approval": [
+    "Document whether count means resolver calls, DNS questions or transmitted packets; these quantities differ",
+    "Pin runner image and record read-only resolver configuration evidence",
+    "Choose auditable resolver or approved network egress boundary; prove fail-closed controls with offline tests before any live request",
+    "Specify DNS request/operation budget independently, including A/AAAA, CNAME, cache and redirects; if cannot enforce, remain blocked",
+    "Obtain owner approval for exact one-time UTC window, DNS scope and HTTPS GET separately",
+    "Maintain no hidden retry, redirects, clock-skew second GET, token/body disclosure or synthesis"
+  ],
+  "references": [
+    "https://docs.github.com/en/actions/concepts/runners/github-hosted-runners",
+    "https://docs.aiohttp.org/en/v3.10.10/client_advanced.html",
+    "https://github.com/aio-libs/aiohttp/blob/master/aiohttp/resolver.py"
+  ],
+  "permissions": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
