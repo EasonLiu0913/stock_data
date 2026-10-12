@@ -20,3 +20,9 @@ After Experiment 01 passes: audit real daily-video dependency mapping, expected-
 
 ## Next action
 Inspect the probe commit via GitHub and fetch its associated workflow runs, then evaluate Experiment 01 acceptance and checkpoint evidence. Do not call this a validated production recovery solution.
+
+## Experiment 01 execution checkpoint (2026-10-13)
+- Receiver registration commit: 09398becf17da4830aa480a7a90ab129e531622d; documentation commit: b2597b6ac87c4e0daf2db1c0eda315a778cec022.
+- Independent connector-created request commit: 84e239254791e17463fbb5ce8a6f9b82e46b9216. Verified three files readable from the named remote research branch after this commit.
+- Run status: UNVERIFIED, NOT PASS. The available connector's fetch_commit_workflow_runs specifically filters to pull_request events, so its empty result cannot establish that no push run occurred. Web GitHub Actions page fetch was unavailable. Verify with GitHub Actions UI or an API listing filtered by branch/head SHA/event=push; capture run ID, status/conclusion and jobs before PASS. If absent, investigate branch-only new workflow recognition, event authorization and branch/path filters; do not promote to main solely to force the experiment.
+- No crawlers, production, Pages, YouTube, or dispatch were intentionally requested by this isolated test. Existing unrelated repository event listeners have not been independently audited.
