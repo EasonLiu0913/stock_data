@@ -1,0 +1,21 @@
+name: "[Research] Daily Data Recovery Firewall Experiment 04"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'scripts/research/experiment04_firewall.test.js'
+      - '.github/workflows/research-daily-recovery-firewall-exp04.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate isolated video data recovery firewall
+        run: |
+          node scripts/research/experiment04_firewall.test.js
+          test -z "$(git status --porcelain)"
