@@ -27,3 +27,5 @@ try{
  const out=path.join(root,'tmp/research/experiment05-phase5');fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'writer-evidence.json'),JSON.stringify(report,null,2)+'\n');
  console.log('EXPERIMENT_05_PHASE5_WRITER_PASS '+JSON.stringify({stocks:35,negative:fails.length+1,idempotency:true,production_safe_paths:0}));
 }finally{fs.rmSync(tmp,{recursive:true,force:true})}
+
+// Independent CI trigger probe after registration.
