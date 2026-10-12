@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {plan,DATA}=require('./experiment02_missing_only.js');
+const date='20261013';
+const all=Object.fromEntries(Object.keys(DATA).map(k=>[k,{exists:true,valid:true,as_of:date}]));
+const source_dates=Object.fromEntries(Object.keys(DATA).map(k=>[k,date]));
+const base=()=>({date,trading_day:true,source_dates,datasets:structuredClone(all),running:[]});
+let p=plan(base());assert.equal(p.status,'COMPLETE');assert.equal(p.requests.length,0);
+let b=base();b.datasets.facts.exists=false;b.datasets.news.exists=false;p=plan(b);assert.deepEqual(p.missing.map(x=>x.dataset),['facts','news']);assert(p.requests.every(x=>x.decision==='BLOCKED_SIDE_EFFECT_REVIEW'));
+b=base();b.datasets.facts.as_of='20261012';p=plan(b);assert.equal(p.missing[0].status,'STALE_DATA_FAILED');
+b=base();b.datasets.facts.valid=false;p=plan(b);assert.equal(p.missing[0].status,'STALE_DATA_FAILED');
+b=base();b.datasets.facts.exists=false;b.running=[{dataset:'facts',date,status:'in_progress',run_id:123}];p=plan(b);assert.equal(p.requests[0].decision,'RUNNING');assert.deepEqual(p.requests[0].run_ids,[123]);
+b=base();b.trading_day=false;p=plan(b);assert.equal(p.status,'NON_TRADING_DAY');assert.equal(p.requests.length,0);
+b=base();delete b.source_dates.news;assert.throws(()=>plan(b),/expected as-of/);
+b=base();delete b.datasets.ai;assert.throws(()=>plan(b),/observation/);
+b=base();b.date='20261399';assert.throws(()=>plan(b),/invalid logical date/);
+console.log('EXPERIMENT_02_MISSING_ONLY_TESTS_PASS: 9 fixtures; dry run; zero crawler invocations');
