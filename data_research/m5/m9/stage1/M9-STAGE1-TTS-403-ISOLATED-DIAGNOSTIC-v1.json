@@ -1,0 +1,99 @@
+{
+  "schema": "M9-STAGE1-TTS-403-ISOLATED-DIAGNOSTIC-v1",
+  "date": "2026-10-12",
+  "mode": "RESEARCH_ONLY_NO_NETWORK_TTS_NO_MEDIA",
+  "original_evidence": [
+    {
+      "run": 38209098478,
+      "job": 114679047203,
+      "conclusion": "failure",
+      "symptom": "first scene WSServerHandshakeError 403; original zero-byte partial audio"
+    },
+    {
+      "run": 38209767664,
+      "job": 114681096937,
+      "conclusion": "failure",
+      "symptom": "same HTTP 403; fail-closed fix removed partial audio, artifact only stage1-failure.json"
+    }
+  ],
+  "current_workflow": {
+    "branch": "research/m9-controlled-private-preview-20261012",
+    "dependency": "edge-tts==7.2.7",
+    "python": "3.12",
+    "voice": "zh-TW-YunJheNeural",
+    "rate": "+15%",
+    "endpoint_from_original_error": "speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1",
+    "request_parameters_observed": [
+      "TrustedClientToken",
+      "ConnectionId",
+      "Sec-MS-GEC",
+      "Sec-MS-GEC-Version"
+    ],
+    "checkout": "PASS",
+    "dependency_install": "PASS",
+    "failure_phase": "websocket handshake before first useful audio or WordBoundary"
+  },
+  "upstream_research": {
+    "sources": [
+      {
+        "url": "https://github.com/rany2/edge-tts/releases/tag/7.2.8",
+        "observation": "7.2.8 changes CBR offset computation and SSL-context caching, not a documented fix for this 403"
+      },
+      {
+        "url": "https://github.com/rany2/edge-tts/releases/tag/7.2.7",
+        "observation": "7.2.7 release specifies TypedDict typing adjustment without runtime change"
+      },
+      {
+        "url": "https://github.com/rany2/edge-tts/issues/463",
+        "observation": "March 2026 reported same WSServerHandshakeError 403 with Sec-MS-GEC parameters"
+      },
+      {
+        "url": "https://github.com/rany2/edge-tts/issues/460",
+        "observation": "Maintainer notes datacenter IP or VPN may be blocked; observed in different NoAudioReceived issue, so hypothesis not established for this Run"
+      },
+      {
+        "url": "https://github.com/rany2/edge-tts/issues/290",
+        "observation": "Historic protocol changes involving Sec-MS-GEC have caused handshake 403"
+      }
+    ],
+    "hypotheses": [
+      {
+        "name": "Cloud runner egress IP/region or upstream risk controls",
+        "confidence": "POSSIBLE_NOT_PROVEN"
+      },
+      {
+        "name": "Undocumented Read Aloud endpoint/handshake policy drift",
+        "confidence": "POSSIBLE_NOT_PROVEN"
+      },
+      {
+        "name": "Version/protocol compatibility",
+        "confidence": "POSSIBLE_NOT_PROVEN; 7.2.7 vs 7.2.8 changelog does not establish a 403 fix"
+      },
+      {
+        "name": "Clock/token-sensitive request handling",
+        "confidence": "POSSIBLE_NOT_PROVEN; current Log contains Sec-MS-GEC but no controlled evidence"
+      },
+      {
+        "name": "Fixed script or claim/SRT error",
+        "confidence": "NOT_SUPPORTED_AS_CAUSE; websocket failed before any data returned"
+      }
+    ]
+  },
+  "previous_success_scope": "M7 seven original MP3 and source bytes were verified in Stage0, but current review has no matched successful job showing identical runner egress, dependency version and endpoint at this timestamp; earlier success cannot imply current connectivity",
+  "proposal": {
+    "no_audio_detector": "Locally lint research workflow/script for expected version, voice, speed and fail-closed catch; consume saved sanitized diagnostic JSON and job marker only; zero network requests, zero TTS, zero audio output",
+    "optional_future_network_check": "Requires separate approval; only metadata/handshake investigation using legitimate documented interfaces, log sanitized status/time/environment metadata, never print token, Sec-MS-GEC or full URL; any connection refusal => BLOCKED, no audio and no automatic retry",
+    "fail_closed": "No dependency auto-upgrade, proxy/region bypass, alternate endpoint or replacement voice; stop repeated failed calls, delete partial output, preserve only sanitized error proof, all locked"
+  },
+  "decision": "DIAGNOSIS_COMPLETE_CAUSE_UNDETERMINED_STAGE1_BLOCKED",
+  "locks": {
+    "stage1_audio_retry": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
