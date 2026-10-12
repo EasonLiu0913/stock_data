@@ -1,0 +1,27 @@
+name: "[Research] Daily Data Recovery Experiment 05 Phase 4"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'scripts/research/experiment05_phase4_topology.test.js'
+      - '.github/workflows/research-daily-recovery-exp05-phase4.yml'
+permissions:
+  contents: read
+jobs:
+  topology:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Inspect workflow topology and deny data writes
+        run: |
+          node scripts/research/experiment05_phase4_topology.test.js
+          test -s tmp/research/experiment05-phase4/topology.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment05-phase4-topology
+          path: tmp/research/experiment05-phase4/topology.json
+          retention-days: 7
