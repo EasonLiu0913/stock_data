@@ -1,0 +1,145 @@
+{
+  "schema": "M9-STAGE1-SINGLE-GET-FINAL-AUTHORIZATION-REVIEW-v1",
+  "date": "2026-10-12",
+  "mode": "DOCUMENT_ONLY_NO_EXECUTION",
+  "decision": "READY_FOR_OWNER_REVIEW_NOT_AUTHORIZED",
+  "evidence": {
+    "accepted_run": 38220852707,
+    "accepted_job": 114716484378,
+    "accepted_sha": "c41b2c0ae2f64b5894cff4081d4a7b8c24025313",
+    "negative_cases": 39,
+    "accepted_decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT",
+    "upstream_tag": "edge-tts==7.2.7",
+    "stage1_audio": "BLOCKED_UPSTREAM_403",
+    "cause": "UNDETERMINED"
+  },
+  "scope": {
+    "purpose": "Non-synthesis voice-list metadata diagnostic only, not a synthesis/WSS health-check or audio authorization",
+    "method": "A separately audited single-GET implementation, not unmodified edge_tts.list_voices() or CLI --list-voices",
+    "protocol": "HTTPS GET",
+    "exact_hostname": "speech.platform.bing.com",
+    "exact_path": "/consumer/speech/synthesize/readaloud/voices/list",
+    "query_keys_names_only": [
+      "trustedclienttoken",
+      "Sec-MS-GEC",
+      "Sec-MS-GEC-Version"
+    ],
+    "do_not_persist_full_url": true,
+    "https_get_limit": 1,
+    "redirect_follow_limit": 0,
+    "hidden_retry_limit": 0,
+    "clock_skew_recall_limit": 0,
+    "auto_retry_limit": 0,
+    "dns": {
+      "authorized_now": false,
+      "independent_owner_approval_required": true,
+      "operation_budget": "MUST_BE_EXPLICITLY_DECLARED_AND_APPROVED_BEFORE_EXECUTION; NO_IMPLICIT_LOOKUP",
+      "note": "Any DNS performed by runtime/OS/resolver is a distinct outbound operation and must be disclosed; if unable to enforce or count, remain BLOCKED"
+    },
+    "time": {
+      "authorized_now": false,
+      "proposed_wall_clock_limit_seconds": 30,
+      "proposed_connect_timeout_seconds": 10,
+      "proposed_total_request_timeout_seconds": 20,
+      "runner_and_window": "Must be named in separate owner approval; no standing/recurring authorization"
+    },
+    "fixed": {
+      "dependency": "edge-tts==7.2.7",
+      "python": "3.12",
+      "voice": "zh-TW-YunJheNeural",
+      "rate": "+15%"
+    }
+  },
+  "privacy": {
+    "allowlisted_artifact_fields": [
+      "timestamp_utc",
+      "runner_os",
+      "python_version",
+      "pinned_version",
+      "approved_hostname",
+      "protocol_class",
+      "sanitized_status_class",
+      "sanitized_error_category",
+      "elapsed_ms",
+      "attempt_count",
+      "decision",
+      "source_contract_sha256"
+    ],
+    "never_capture": [
+      "full request URL/query or signed parameter values",
+      "trustedclienttoken value",
+      "Sec-MS-GEC and Sec-MS-GEC-Version values",
+      "Cookie or MUID",
+      "request/response headers",
+      "authentication and environment/proxy secrets",
+      "raw traceback/packet capture",
+      "IP/user/account identifiers",
+      "voice-list body",
+      "speech text and audio"
+    ],
+    "policy": "In-memory sanitize before any structured log/artifact; redaction failure => no artifact; only high-level result category"
+  },
+  "stop_conditions": {
+    "first_403": "BLOCKED_UPSTREAM_403_IMMEDIATE_STOP_NO_SECOND_GET",
+    "redirect": "BLOCKED_REDIRECT_STOP_NO_FOLLOW",
+    "timeout": "BLOCKED_TIMEOUT_NO_RETRY",
+    "unexpected_status": "BLOCKED_UNEXPECTED_STOP",
+    "hidden_retry_detected": "ABORT_AND_FAIL_REVIEW",
+    "dns_scope_unknown": "BLOCKED_BEFORE_REQUEST",
+    "approval_missing": "BLOCKED_BEFORE_REQUEST",
+    "redaction_failed": "ABORT_WITHOUT_ARTIFACT"
+  },
+  "proposed_evidence_artifact": {
+    "filename": "m9-stage1-voice-list-sanitized-diagnostic.json",
+    "creation": "ONLY_AFTER_SEPARATE_AUTHORIZATION_AND_EXECUTION; NOT_CREATED_BY_THIS_REVIEW",
+    "contents": "Strict privacy.allowlisted_artifact_fields; no body, full URL or packet data",
+    "success_verdict": "VOICE_LIST_METADATA_REACHABLE_ONLY_NOT_WSS_AUDIO_PASS",
+    "failure_verdict": "Sanitized stop reason; no retry",
+    "audio_files": 0
+  },
+  "prohibitions": [
+    "No DNS, HTTP, HTTPS, WebSocket or TTS in current research phase",
+    "No unmodified list_voices due to potential 403-triggered second GET",
+    "No redirects, hidden retries, clock skew second GET, alternate hosts, proxy/egress/region bypass or dependency upgrades",
+    "No MP3, SRT, WordBoundary, speech synthesis or inference of actual WSS health",
+    "No Stage2, render, production, cron, Pages, YouTube or publication",
+    "No automatic follow-on execution or implicit permission inheritance"
+  ],
+  "owner_authorization_checklist": [
+    {
+      "item": "Exact HTTPS GET host/path, one-attempt budget and 30-second maximum window",
+      "approved": false
+    },
+    {
+      "item": "DNS resolver/operation count separately specified and approved",
+      "approved": false
+    },
+    {
+      "item": "Audited one-GET code and absence of hidden retry/redirect verified before use",
+      "approved": false
+    },
+    {
+      "item": "Runner, UTC execution window and sanitized artifact fields expressly approved",
+      "approved": false
+    },
+    {
+      "item": "403 immediate stop and secret redaction independently reviewed",
+      "approved": false
+    }
+  ],
+  "current_locks": {
+    "dns_authorized": false,
+    "https_authorized": false,
+    "websocket_authorized": false,
+    "tts_authorized": false,
+    "tts_retry_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false,
+    "m9_execute_authorized": false
+  }
+}
