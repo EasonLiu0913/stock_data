@@ -1,0 +1,154 @@
+{
+  "schema": "M8DATA-PRE-A-SAMPLE-v1",
+  "status": "DRAFT_NOT_PROMPT_A_ACCEPTED",
+  "date": "20261008",
+  "branch": "research/m5-r-weight-evidence-20261011",
+  "governance": {
+    "main_preregistered": false,
+    "prompt_a_complete": false,
+    "prompt_b_eligible": false,
+    "all_release_locks_false": true
+  },
+  "sources": [
+    {
+      "role": "universe",
+      "path": "data_daily_gain_over_5/20261008.json",
+      "git_blob": "c61751d61cd4179f985e96a19a8c558cc3ef34e9"
+    },
+    {
+      "role": "facts",
+      "path": "data_daily_gain_over_5/analysis-facts/20261008.json",
+      "git_blob": "620b75728fd37a25dfc9bd7fa5a1fddfc1f4f8f6"
+    },
+    {
+      "role": "news",
+      "path": "data_daily_gain_over_5/analysis-news/20261008.json",
+      "git_blob": "198179f7f9d3106fca78d80c83d376e672af4817"
+    },
+    {
+      "role": "ai",
+      "path": "data_daily_gain_over_5/analysis-ai/20261008.json",
+      "git_blob": "0fef928797b707be454ac91c2e592a003d4e0860"
+    }
+  ],
+  "sample": {
+    "code": "1301",
+    "name": "台塑",
+    "eligibility": {
+      "change_pct_gt_5": true,
+      "ordinary_listed_identity": "PENDING_INDEPENDENT_CHECK"
+    },
+    "scenes": [
+      {
+        "id": "stock_lead",
+        "claims": [
+          {
+            "value": "81.3",
+            "unit": "TWD",
+            "pointer": "/stocks/21/close",
+            "role": "universe"
+          },
+          {
+            "value": 7.82,
+            "unit": "percent",
+            "pointer": "/stocks/21/change_pct",
+            "role": "universe"
+          },
+          {
+            "value": 245433,
+            "unit": "lots_as_source_reported",
+            "pointer": "/stocks/21/volume",
+            "role": "universe"
+          }
+        ]
+      },
+      {
+        "id": "flow_evidence",
+        "claims": [
+          {
+            "value": 14225,
+            "unit": "lots",
+            "role": "facts",
+            "pointer": "/stocks/21/flow/foreign/net_lots"
+          },
+          {
+            "value": 13940,
+            "unit": "lots",
+            "role": "facts",
+            "pointer": "/stocks/21/flow/investment_trust/net_lots"
+          },
+          {
+            "value": -567,
+            "unit": "lots",
+            "role": "facts",
+            "pointer": "/stocks/21/flow/dealer/net_lots"
+          },
+          {
+            "value": 10542,
+            "unit": "lots",
+            "role": "facts",
+            "pointer": "/stocks/21/flow/margin/margin_delta"
+          }
+        ],
+        "broker_note": "Broker branch entries are trade routing evidence, not proof of investor identity"
+      },
+      {
+        "id": "catalyst_risk",
+        "claims": [
+          {
+            "value": "industry_theme",
+            "role": "news",
+            "pointer": "/analyses/21/cause_type"
+          },
+          {
+            "value": "corroborated",
+            "role": "news",
+            "pointer": "/analyses/21/evidence_strength"
+          },
+          {
+            "value": "2026-10-08",
+            "role": "news",
+            "pointer": "/analyses/21/sources/0/published_at"
+          },
+          {
+            "value": 2.1,
+            "role": "facts",
+            "pointer": "/stocks/21/technical/volume_ratio_vs_previous"
+          }
+        ],
+        "risk": "Margin rose 10542 lots; thematic reporting does not prove price causality; article timestamp is date-only and knowledge cutoff still requires check"
+      }
+    ]
+  },
+  "excluded_examples": [
+    {
+      "code": "9103",
+      "reason": "DR, not ordinary listed equity"
+    },
+    {
+      "code": "6645",
+      "reason": "Innovation board classification requires separate eligibility review"
+    },
+    {
+      "code": "7740",
+      "reason": "Innovation board classification requires separate eligibility review"
+    }
+  ],
+  "pending": [
+    "main preregistration",
+    "independent stock identity verification",
+    "unit/provenance and JSON pointer machine test",
+    "article time vs cutoff check",
+    "speech/caption semantic parity",
+    "M7 original asset independent unchanged-hash check",
+    "CI test and independent review"
+  ],
+  "baseline": {
+    "m7_run": 38156510901,
+    "mp3_count": 7,
+    "audio_seconds": 79.416,
+    "srt_cues": 14,
+    "srt_sha256": "1daf7a269c0a39ab8c9bab59048c6c36293ce5ee5a9e878bb8971f689126271f",
+    "timing": "TIMING_ESTIMATED_NOT_SYNC_VERIFIED"
+  }
+}
