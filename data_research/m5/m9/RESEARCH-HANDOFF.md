@@ -128,3 +128,6 @@ Original Run 38223016609, Job 114723613114, attempt 1, SHA bbab2d8fa36822255cb4f
 
 
 M9 Stage1 owner decision summary: document `stage1/M9-STAGE1-OWNER-DECISION-SUMMARY-v1.json`, commit bea4e9d3c7ba2f8abd209314e3f2c3b22f1bbc14. Based on accepted Run 38223016609 and 43 negative cases. Separately presents remain-offline, independently authorized DNS and separately authorized one HTTPS GET; proposed 30-second limit, risks, permitted sanitized evidence and no inference about actual audio. All choices unapproved, no requests or media, Stage1 audio still BLOCKED_UPSTREAM_403, all execution/release locks false.
+
+
+M9 Stage1 Option C: approval terms documented at commit 11b5ef138020820b5c45969f25f2f4e7d0427838. DNS count and UTC window pending owner review; all permissions false; no execution.
