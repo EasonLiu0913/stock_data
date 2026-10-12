@@ -1,0 +1,75 @@
+{
+  "schema": "M9-STAGE1-GITHUB-HOSTED-EGRESS-CAPABILITY-OFFLINE-REVIEW-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_DOCUMENT_ONLY",
+  "decision": "BLOCKED_UNVERIFIED_ENFORCEABLE_EGRESS",
+  "basis": {
+    "accepted_run": 38228524914,
+    "accepted_job": 114741930513,
+    "negative_cases": 36,
+    "accepted_decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT"
+  },
+  "observability": {
+    "application_resolver_calls": "CONDITIONALLY_OBSERVABLE_WITH_INSTRUMENTATION",
+    "dns_questions": "ONLY_AT_DEFINED_INSTRUMENTED_BOUNDARY",
+    "client_egress_packets": "UNVERIFIED_ON_STANDARD_HOSTED_RUNNER",
+    "packet_capture_alone": "NOT_ENFORCEMENT"
+  },
+  "enforcement": {
+    "linux_sudo": "DOCUMENTED_CAPABILITY_NOT_PROOF_OF_RULE_INSTALLATION",
+    "standard_runner_public_network": "DEFAULT_PUBLIC_INTERNET_ACCESS",
+    "host_firewall": "REQUIRES_ACTUAL_PRIVILEGE_AND_RULE_EFFECTIVENESS_EVIDENCE",
+    "hidden_dns": "MUST_INCLUDE_OS_RUNTIME_PROXY_IPV4_IPV6_AND_ENCRYPTED_FALLBACK",
+    "pre_egress_stop": "MUST_PROVE_DEFAULT_DENY_BEFORE_FIRST_DIAGNOSTIC_PACKET",
+    "rule_failure": "FAIL_CLOSED_NO_DIAGNOSTIC",
+    "capability_now": "NOT_PROVEN"
+  },
+  "runner": {
+    "label": "ubuntu-latest",
+    "immutable": false,
+    "requires_image_version": true,
+    "requires_os_resolver_config_snapshot": true,
+    "requires_privilege_and_firewall_evidence": true,
+    "privileged_host_changes_authorized_now": false
+  },
+  "network_options": {
+    "standard_hosted": "NOT_ACCEPTED_FOR_PACKET_BUDGET_WITHOUT_PROOF",
+    "dedicated_vnet_or_controlled_runner": "ALTERNATIVE_REQUIRES_SEPARATE_SCOPE_AND_AUTHORIZATION",
+    "current_runner_eligibility": "UNKNOWN"
+  },
+  "preconditions": [
+    "Specify exactly which network boundary is metered",
+    "Prove policy precedence before any diagnostic request",
+    "Independently verify rule enforcement for UDP/TCP IPv4/IPv6 and bypass paths",
+    "Show no proxy, DoH or uninstrumented resolver escape",
+    "Verify rule installation and failure behavior without converting static CI success into runtime proof",
+    "Request separate owner approval for DNS budget, single HTTPS GET, runner and exact UTC window"
+  ],
+  "sources": [
+    "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+    "https://docs.github.com/en/enterprise-cloud@latest/actions/concepts/runners/private-networking",
+    "https://docs.github.com/en/organizations/managing-organization-settings/configuring-private-networking-for-github-hosted-runners-in-your-organization"
+  ],
+  "invariants": {
+    "https_get_max_future": 1,
+    "wall_clock_seconds_future": 30,
+    "utc_window": "UNAPPROVED",
+    "dns_budget": "UNPROVEN_BLOCKED",
+    "first403": "STOP_NO_RETRY",
+    "redaction": "ALLOWLIST_ONLY",
+    "stage1_audio": "BLOCKED_UPSTREAM_403"
+  },
+  "locks": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false
+  }
+}
