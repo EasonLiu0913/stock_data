@@ -1,0 +1,37 @@
+name: "[Research] Daily Data Recovery Push Experiment 01"
+
+on:
+  push:
+    branches:
+      - research/daily-data-recovery-v2-exp01-20261013
+    paths:
+      - 'recovery-requests/experiment-01/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-daily-recovery-exp01
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inert experiment request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ github.event_name }}" = push
+          test "${{ github.ref_name }}" = research/daily-data-recovery-v2-exp01-20261013
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          files = list(Path('recovery-requests/experiment-01').glob('*.json'))
+          assert len(files) == 1, f'expected one probe file, got {files}'
+          obj = json.loads(files[0].read_text())
+          assert obj == {'experiment':'01','target':'daily_5pct_video','mode':'inert_probe','date':'20261013','requested_by':'chatgpt-github-connector'}
+          print('EXPERIMENT_01_PROBE_VALID')
+          PY
+          echo 'Experiment 01: inert push probe validated; no data collection, publish, or dispatch performed.' >> "$GITHUB_STEP_SUMMARY"
