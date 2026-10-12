@@ -140,3 +140,6 @@ M9 Stage1 DNS accounting offline research (2026-10-12): `stage1/M9-STAGE1-OPTION
 
 
 M9 Stage1 DNS fail-closed offline CI accepted: original Run 38227024162, Job 114736943899, attempt 1, SHA ac7fc8d164c07472f231691e4e48d80049efa265 completed SUCCESS. Full original Log read (23,657 characters): `M9_DNS_FAILCLOSED_STATIC_PASS negatives=33 resolver_calls!=questions!=packets budget=UNPROVEN_BLOCKED runner=NOT_IMMUTABLE get_max=1 time=30s no_network=true no_media=true locks=FALSE`. Acceptance signed in `stage1/M9-STAGE1-DNS-FAILCLOSED-OFFLINE-INDEPENDENT-ACCEPTANCE-v1.json` commit eaaba2a5373afcca91db179d4f8f7589ceed5260. Verdict COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT ONLY; execution remains BLOCKED_PENDING_ENFORCEABLE_DNS_PROOF. No CI rerun, network, TTS, media, Stage2/render/production/cron/Pages/YouTube or permission change; real audio BLOCKED_UPSTREAM_403.
+
+
+M9 DNS boundary options: offline comparison recorded in commit 0c4fef8bb2e2e4409e2f9de9452c1581598128fc. Preferred research candidate is audited application resolver plus enforceable egress. DNS budget remains unproven and execution blocked. All permissions false; no network or media operations.
