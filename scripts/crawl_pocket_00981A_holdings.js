@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const {expectedHoldingsDate, assertFreshHoldings, assertIndustryDate} = require('./pocket_00981a_freshness');
 
 const ETF_ID = '00981A';
 const HOLDINGS_API_URL = 'https://www.pocket.tw/api/cm/MobileService/ashx/GetDtnoData.ashx?action=getdtnodata&DtNo=59449513&ParamStr=AssignID%3D00981A%3BMTPeriod%3D0%3BDTMode%3D0%3BDTRange%3D1%3BDTOrder%3D1%3BMajorTable%3DM722%3B&FilterNo=0';
@@ -283,7 +284,7 @@ function refreshFilesJson() {
         const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL, 'holdings', accessToken);
         const holdings = holdingsPayload.Data.map(normalizeHolding);
         const holdingsSummary = summarize(holdings);
-        assertCompactDate(holdingsSummary.date, 'Pocket holdings response');
+        assertFreshHoldings(holdingsSummary, holdings, expectedHoldingsDate(getTaipeiTodayCompact(), process.env.POCKET_EXPECTED_HOLDINGS_DATE));
         console.log(
             '[holdings] accepted data date=' + holdingsSummary.date +
             '; rows=' + holdingsSummary.totalRows +
@@ -307,7 +308,7 @@ function refreshFilesJson() {
         const industryPayload = await fetchPocketData(INDUSTRY_API_URL, 'industry', accessToken);
         const industryDistribution = normalizeIndustryDistribution(industryPayload);
         const industrySummary = summarizeIndustry(industryDistribution);
-        assertCompactDate(industrySummary.date, 'Pocket industry response');
+        assertIndustryDate(industrySummary, holdingsSummary.date);
         console.log(
             '[industry] accepted data date=' + industrySummary.date +
             '; rows=' + industrySummary.totalRows +
