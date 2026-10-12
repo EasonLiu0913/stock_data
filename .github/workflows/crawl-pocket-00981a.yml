@@ -9,6 +9,11 @@ on:
     # Weekdays 13:22 Taipei Time (05:22 UTC)
     - cron: '22 5 * * 1-5'
   workflow_dispatch:
+    inputs:
+      expected_holdings_date:
+        description: "Verified target trading date YYYYMMDD (for holidays/manual recovery); blank uses Taipei weekday/weekend policy"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -31,6 +36,8 @@ jobs:
         with:
           node-version: '24'
       - name: Check latest holdings data date
+        env:
+          POCKET_EXPECTED_HOLDINGS_DATE: ${{ inputs.expected_holdings_date || '' }}
         id: check_holdings
         run: |
           TODAY=$(TZ='Asia/Taipei' date '+%Y%m%d')
