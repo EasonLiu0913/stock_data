@@ -1,0 +1,25 @@
+name: "[Research] M8DATA Manifest Static"
+on:
+  push:
+    branches:
+      - research/m8data-manifest-20261012
+    paths:
+      - data_research/m5/m8data/**
+      - scripts/verify_m8data_research_manifest.py
+      - .github/workflows/research-m8data-manifest-static.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    if: github.ref == 'refs/heads/research/m8data-manifest-20261012'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fail-closed source and manifest assertions
+        run: python scripts/verify_m8data_research_manifest.py
