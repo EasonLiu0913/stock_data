@@ -1,0 +1,128 @@
+{
+  "schema": "M9-STAGE1-SINGLE-GET-FAIL-FIRST-403-IMPLEMENTATION-PREREG-v1",
+  "date": "2026-10-12",
+  "mode": "NON_EXECUTABLE_STATIC_DESIGN_ONLY",
+  "status": "PENDING_INDEPENDENT_STATIC_ACCEPTANCE_NO_NETWORK_AUTHORIZATION",
+  "basis": {
+    "run": 38218494173,
+    "job": 114708777268,
+    "decision": "COMPLETE_PASS_SCOPED_OFFLINE_INDEPENDENT",
+    "negative_cases": 38,
+    "upstream_tag": "7.2.7",
+    "upstream_commit": "b45c019b9948e069c69c6ecb3a341badc970439c",
+    "root_cause": "UNDETERMINED"
+  },
+  "target": {
+    "protocol": "HTTPS_GET",
+    "hostname": "speech.platform.bing.com",
+    "path_only": "/consumer/speech/synthesize/readaloud/voices/list",
+    "no_alternate_endpoint": true,
+    "query_key_names_only": [
+      "trustedclienttoken",
+      "Sec-MS-GEC",
+      "Sec-MS-GEC-Version"
+    ],
+    "request_header_provenance": "Upstream VOICE_HEADERS BASE_HEADERS and generated MUID Cookie; never log values",
+    "purpose": "voice-list metadata only; neither synthesis nor WSS health-check proof"
+  },
+  "authorization": {
+    "current_dns": false,
+    "current_https": false,
+    "current_http": false,
+    "current_wss": false,
+    "current_tts": false,
+    "current_outbound_operations": 0,
+    "future_https_get_requires_separate_explicit_owner_approval": true,
+    "future_dns_requires_separate_explicit_owner_approval": true,
+    "dns_operation_count_independently_disclosed": true,
+    "approval_must_specify": "exact hostname/path/protocol, DNS policy, one GET maximum, runner/time scope, redaction and termination",
+    "no_permission_inherited_from_static_pass": true
+  },
+  "proposed_nonexecuting_algorithm": [
+    "Verify narrow owner authorization before any external operation; default deny DNS and HTTPS",
+    "Use audited single-request client only; do not invoke unmodified edge_tts.list_voices(), CLI --list-voices or wrapper that silently retries",
+    "Set HTTPS GET budget=1 and disable HTTP client status retries/redirects and application-level clock skew recall; disclose separately DNS operations",
+    "Generate necessary protocol request values only in memory immediately before approved attempt; never log URL, values, Cookie or headers",
+    "On first response/error, sanitize into predefined allowlist; for HTTP 403 emit BLOCKED_UPSTREAM_403 and terminate with no second GET",
+    "On timeout, redirect, unexpected status or redaction risk stop; do not fall back to other host/version/proxy/voice, and never synthesize",
+    "Write only sanitized minimal proof after successful in-memory redaction; keep actual stage1 audio BLOCKED until independently obtained audio evidence"
+  ],
+  "request_budget": {
+    "https_get_max": 1,
+    "redirect_follow_max": 0,
+    "automatic_retry_max": 0,
+    "hidden_403_second_get_max": 0,
+    "clock_skew_second_get_max": 0,
+    "dns": "NOT_AUTHORIZED_NOW_SEPARATE_EXPLICIT_COUNT_IF_FUTURE",
+    "current_total": 0
+  },
+  "outcomes": {
+    "http_403": "BLOCKED_UPSTREAM_403_IMMEDIATE_STOP",
+    "timeout": "BLOCKED_TIMEOUT_STOP",
+    "redirect": "BLOCKED_UNEXPECTED_REDIRECT_STOP",
+    "unexpected": "BLOCKED_UNEXPECTED_STOP",
+    "redaction_failure": "ABORT_NO_ARTIFACT",
+    "success": "VOICE_LIST_METADATA_REACHABLE_ONLY_NOT_WSS_AUDIO_PASS"
+  },
+  "redaction": {
+    "allowlist_only": true,
+    "allowed_fields": [
+      "timestamp_utc",
+      "runner_os",
+      "python_version",
+      "pinned_version",
+      "approved_hostname",
+      "protocol_class",
+      "sanitized_status_class",
+      "sanitized_error_category",
+      "elapsed_ms",
+      "attempt_count"
+    ],
+    "forbidden": [
+      "full_url_and_querystring",
+      "trustedclienttoken_value",
+      "Sec-MS-GEC_value",
+      "Sec-MS-GEC-Version_value",
+      "MUID_Cookie",
+      "all_request_response_headers",
+      "raw_traceback",
+      "raw_voice_list_body",
+      "raw_packets",
+      "network_IP_identifiers",
+      "secrets_and_environment",
+      "speech_text"
+    ],
+    "before_artifact": true
+  },
+  "acceptance_gates": [
+    "Baseline original Run and upstream retry risk pinned",
+    "Present-time external operation count remains zero and all permissions false",
+    "Single GET, redirects zero, 403 retry zero, clock-skew re-call zero",
+    "DNS and HTTPS approvals independently explicit with operation counts",
+    "No synthesis, MP3, SRT, WSS test or claims of acoustic verification",
+    "First 403/timeout/redirect/error fails closed with sanitized evidence only",
+    "Sensitive fields never appear in persisted logs and redaction failure produces no artifact",
+    "Fixed edge-tts==7.2.7, zh-TW-YunJheNeural, +15%; no substitute",
+    "All production/publication locks false and no auto execution"
+  ],
+  "fixed": {
+    "dependency": "edge-tts==7.2.7",
+    "voice": "zh-TW-YunJheNeural",
+    "rate": "+15%"
+  },
+  "locks": {
+    "dns_authorized": false,
+    "https_authorized": false,
+    "websocket_authorized": false,
+    "tts_authorized": false,
+    "tts_retry_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false,
+    "m9_execute_authorized": false
+  }
+}
