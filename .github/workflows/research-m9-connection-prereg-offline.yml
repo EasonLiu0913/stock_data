@@ -1,0 +1,25 @@
+name: "[Research] M9 Connection Prereg Offline"
+on:
+  push:
+    branches:
+      - research/m9-controlled-private-preview-20261012
+    paths:
+      - scripts/verify_m9_stage1_connection_prereg_offline.py
+      - data_research/m5/m9/stage1/M9-STAGE1-CONTROLLED-CONNECTION-PREREG-v1.json
+      - .github/workflows/research-m9-connection-prereg-offline.yml
+permissions:
+  contents: read
+jobs:
+  offline:
+    if: github.ref == 'refs/heads/research/m9-controlled-private-preview-20261012'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline prereg contract and 22 negative cases
+        run: python -I scripts/verify_m9_stage1_connection_prereg_offline.py
