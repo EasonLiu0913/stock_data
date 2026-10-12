@@ -34,9 +34,12 @@ jobs:
         id: check_holdings
         run: |
           TODAY=$(TZ='Asia/Taipei' date '+%Y%m%d')
+          EXPECTED=$(node -e "console.log(require('./scripts/pocket_00981a_freshness').expectedHoldingsDate(process.argv[1], process.env.POCKET_EXPECTED_HOLDINGS_DATE || ''))" "$TODAY")
+          echo "Expected holdings date: $EXPECTED"
           LATEST_FILE="data_pocket/00981A_holdings_latest.json"
 
           echo "today=${TODAY}" >> "$GITHUB_OUTPUT"
+          echo "expected=${EXPECTED}" >> "$GITHUB_OUTPUT"
           echo "latest_file=${LATEST_FILE}" >> "$GITHUB_OUTPUT"
 
           if [ ! -f "$LATEST_FILE" ]; then
@@ -48,15 +51,17 @@ jobs:
           HOLDINGS_DATE=$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(p.summary?.date || '')" "$LATEST_FILE")
           echo "holdings_date=${HOLDINGS_DATE}" >> "$GITHUB_OUTPUT"
 
-          if [ "$HOLDINGS_DATE" = "$TODAY" ]; then
+          if [ "$HOLDINGS_DATE" = "$EXPECTED" ]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "Latest holdings data date is today (${TODAY}). Crawler will not run."
+            echo "Latest holdings data date matches expected (${EXPECTED}). Crawler will not run."
           else
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Latest holdings data date is ${HOLDINGS_DATE:-empty}, not today (${TODAY}). Crawler will run."
+            echo "Latest holdings data date is ${HOLDINGS_DATE:-empty}, not expected (${EXPECTED}). Crawler will run."
           fi
 
       - name: Run Pocket 00981A crawler
+        env:
+          POCKET_EXPECTED_HOLDINGS_DATE: ${{ steps.check_holdings.outputs.expected }}
         if: steps.check_holdings.outputs.should_run == 'true'
         run: node scripts/crawl_pocket_00981A_holdings.js
 
