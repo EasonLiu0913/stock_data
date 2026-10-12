@@ -1,0 +1,77 @@
+{
+  "schema": "M9-STAGE1-CONTROLLED-RUNNER-FINAL-OWNER-DECISION-v1",
+  "date": "2026-10-12",
+  "mode": "DOCUMENT_ONLY_NO_EXECUTION",
+  "status": "AWAITING_EXPLICIT_OWNER_CHOICE",
+  "basis": {
+    "consolidated": "M9-STAGE1-CONSOLIDATED-READINESS-REVIEW-v1",
+    "runs": [
+      38223016609,
+      38227024162,
+      38228524914,
+      38230918375,
+      38234830397
+    ],
+    "static_negative_cases": 220,
+    "static_status": "COMPLETE",
+    "runtime_status": "BLOCKED"
+  },
+  "alternatives": [
+    {
+      "choice": "KEEP_BLOCKED",
+      "cost": "No new infrastructure or operational exposure; root cause remains unknown and audio unavailable",
+      "risk": "Research cannot establish live DNS/voice-list reachability",
+      "evidence": "Existing five signed offline acceptances only",
+      "authorization": "No new permission; all locks remain false"
+    },
+    {
+      "choice": "CONTINUE_OFFLINE_FEASIBILITY_RESEARCH",
+      "cost": "Additional engineering and independent security review; no cost or duration estimate substantiated",
+      "risk": "Further static work may not prove packet enforcement or change the upstream 403",
+      "evidence_needed": [
+        "Owner-defined egress accounting boundary",
+        "Exact runner/image and privilege plan",
+        "Independent control-plane design for pre-first-packet default deny",
+        "IPv4/IPv6 UDP/TCP OS resolver proxy fallback and encrypted-DNS bypass review",
+        "Independent pre-overflow denial and privacy evidence plan"
+      ],
+      "authorization": "Only document-only feasibility review in isolated branch; separately seek approval before provisioning or runtime validation"
+    }
+  ],
+  "recommendation": "Prefer KEEP_BLOCKED by default unless owner explicitly values an additional bounded offline feasibility study. Stop repeating equivalently scoped static CI.",
+  "future_execution_gates": [
+    "Separate explicit owner scope for runner provisioning and its security risks",
+    "Pinned image identity, least-privilege and independently enforceable default-deny egress proof",
+    "Separate quantified resolver calls, DNS questions and client-egress budget with fail-closed enforcement evidence",
+    "Separate DNS permission from one HTTPS GET permission",
+    "Exact one-time UTC window and runner selection",
+    "Allowlist sanitized artifact, immediate first-403 stop, no redirect/retry",
+    "No inferred WSS/audio success or automatic Stage2/publication"
+  ],
+  "unchanged": {
+    "runner_created": false,
+    "network_diagnostic": false,
+    "media_generated": false,
+    "stage1_audio": "BLOCKED_UPSTREAM_403",
+    "root_cause": "UNDETERMINED",
+    "https_get_max_proposed": 1,
+    "time_limit_seconds_proposed": 30,
+    "dns_budget": "UNSET",
+    "utc_window": "UNAPPROVED"
+  },
+  "locks": {
+    "dns": false,
+    "https": false,
+    "wss": false,
+    "tts": false,
+    "tts_retry": false,
+    "stage2": false,
+    "render": false,
+    "production": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false,
+    "publication": false,
+    "m9_execute": false
+  }
+}
