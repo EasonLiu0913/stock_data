@@ -1,0 +1,86 @@
+{
+  "schema": "M9-STAGE1-OPTION-C-DNS-FAILCLOSED-PREREG-v1",
+  "date": "2026-10-12",
+  "mode": "OFFLINE_STATIC_NONEXECUTABLE",
+  "decision": "BLOCKED_PENDING_ENFORCEABLE_DNS_PROOF",
+  "baseline": {
+    "run": 38223016609,
+    "negative_cases": 43,
+    "previous_decision": "BLOCKED_PENDING_DNS_BUDGET_PROOF"
+  },
+  "accounting": {
+    "resolver_calls": "Application-level invocation count; not equivalent to DNS questions or transmitted packets",
+    "dns_questions": "Individual QNAME/QTYPE questions including A and AAAA; CNAME chain and retries may add questions",
+    "network_packets": "Actual emitted UDP/TCP/DoH packets including retries/fragmentation; cannot infer from calls or questions",
+    "equivalence_assumed": false,
+    "budget_unit": "UNDECIDED_REQUIRES_OWNER_APPROVAL",
+    "current_external_operations": 0,
+    "proposed_budget": "NO_NUMERIC_BUDGET_UNTIL_AUDITABLE_EGRESS_BOUNDARY_DEMONSTRATED"
+  },
+  "resolver_boundary": {
+    "method": "OFFLINE_DESIGN_ONLY",
+    "implicit_os_getaddrinfo": "UNBOUNDED_UNLESS_INSTRUMENTED_AND_EGRESS_GATED",
+    "cache_behavior": "MUST_DOCUMENT; cache hit does not prove packet budget enforcement",
+    "a_aaaa_cname_retry": "MUST_ACCOUNT_SEPARATELY",
+    "unexpected_resolution": "FAIL_CLOSED_BEFORE_HTTPS",
+    "excess": "STOP_AND_BLOCK_NO_FALLBACK",
+    "unobservable_packets": "BLOCKED_NO_EXECUTION",
+    "proxy_fallback": false
+  },
+  "runner": {
+    "label": "ubuntu-latest",
+    "immutable": false,
+    "require_exact_image_version_and_digest_evidence": true,
+    "require_python_version": "3.12",
+    "require_resolver_config_snapshot": "READ_ONLY_SANITIZED_BEFORE_APPROVAL",
+    "utc_window": "NOT_SPECIFIED_NOT_AUTHORIZED",
+    "no_assumption_from_label": true
+  },
+  "https": {
+    "get_max": 1,
+    "redirects": 0,
+    "retries": 0,
+    "clock_skew_second_get": 0,
+    "currently_authorized": false,
+    "wall_clock_seconds": 30,
+    "connect_seconds": 10,
+    "request_seconds": 20,
+    "first403": "BLOCKED_UPSTREAM_403_IMMEDIATE_STOP"
+  },
+  "privacy": {
+    "allowlist_only": true,
+    "never_store": [
+      "raw DNS payload",
+      "full URL/query",
+      "IP address",
+      "tokens",
+      "Cookie",
+      "request/response headers",
+      "raw traceback",
+      "environment secrets"
+    ],
+    "redaction_failure": "ABORT_NO_ARTIFACT"
+  },
+  "acceptance": [
+    "Distinguish resolver call, DNS question and physical packet accounting",
+    "Reject any equation one GET equals one DNS request",
+    "Fail closed for implicit getaddrinfo, A/AAAA, CNAME, cache, retry, unexpected packet and unverifiable egress",
+    "No DNS numerical budget until independent enforcement proof",
+    "Do not treat ubuntu-latest as immutable, require exact image/version evidence",
+    "Respect first 403, one GET, 30-second overall time and privacy allowlist",
+    "All owner/network/media/release permissions remain false"
+  ],
+  "locks": {
+    "dns_authorized": false,
+    "https_authorized": false,
+    "wss_authorized": false,
+    "tts_authorized": false,
+    "stage2_authorized": false,
+    "render_authorized": false,
+    "production_authorized": false,
+    "cron_authorized": false,
+    "pages_authorized": false,
+    "youtube_authorized": false,
+    "publication_authorized": false
+  }
+}
