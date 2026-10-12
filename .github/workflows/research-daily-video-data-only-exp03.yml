@@ -1,0 +1,23 @@
+name: "[Research] Daily Video Data Only Experiment 03"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'scripts/research/experiment03_data_only.test.js'
+      - '.github/workflows/research-daily-video-data-only-exp03.yml'
+permissions:
+  contents: read
+jobs:
+  data-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify isolated genuine list generator
+        run: |
+          node --check scripts/research/experiment03_data_only.test.js
+          node scripts/research/experiment03_data_only.test.js
+      - name: Assert no tracked repository writes
+        run: git diff --exit-code && test -z "$(git status --porcelain)"
