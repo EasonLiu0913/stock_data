@@ -25,6 +25,19 @@ for role, info in m["source_files"].items():
     assert got==info["git_blob_sha"], (role,got,info["git_blob_sha"])
     sources[role]=json.loads(raw)
     assert sources[role]["target_date"]==m["date"]
+# The full 15-entry ledger is provenance, NOT automatically the displayed scope.
+semantic=json.loads((R/m["display_scope"]["semantic_draft_path"]).read_text(encoding="utf-8"))
+assert [(scene["id"],scene["keys"]) for scene in m["scenes"]]==[(scene["id"],scene["claim_ids"]) for scene in semantic["scenes"]]
+ledger_keys=[item["key"] for item in m["claims"]]
+assert len(ledger_keys)==len(set(ledger_keys))
+shown=[key for scene in m["scenes"] for key in scene["keys"]]
+assert len(shown)==len(set(shown))
+assert set(shown).issubset(set(ledger_keys))
+excluded=set(m["display_scope"]["excluded_pending_verification"])
+assert excluded.isdisjoint(shown)
+assert set(ledger_keys)==set(shown)|excluded
+assert {"volume_reported","margin_delta_reported","broker_top_buy_name","broker_top_buy_reported_net","ai_reason"}.issubset(excluded)
+assert [x["id"] for x in m["scenes"]]==["stock_lead","flow_evidence","catalyst_risk"]
 assert len(m["claims"])>=15
 for c in m["claims"]:
     assert resolve(sources[c["role"]],c["pointer"])==c["value"],c["key"]
@@ -52,4 +65,4 @@ assert m["news_time_gate"]["article_time_status"]=="UNKNOWN"
 assert m["news_time_gate"]["causal_claim_authorized"] is False
 assert m["news_time_gate"]["news_claim_for_ai_cutoff_authorized"] is False
 assert m["m7"]["source_audio_unchanged"]=="NOT_INDEPENDENTLY_REVERIFIED"
-print("M8DATA_DRAFT_STATIC_PASS pointer=15 missing=UNKNOWN negative=PASS chronology=BLOCKED M7_HASH=NOT_REVERIFIED A=INCOMPLETE release=BLOCKED")
+print("M8DATA_DRAFT_STATIC_PASS display_scope=9 ledger=15 parity=PASS excluded=6 pointer=15 missing=UNKNOWN negative=PASS chronology=BLOCKED M7_HASH=NOT_REVERIFIED A=INCOMPLETE release=BLOCKED")
