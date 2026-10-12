@@ -22,3 +22,5 @@ assert.equal(false,false,'global listener audit remains blocked until complete i
 const workflow=read('.github/workflows/research-daily-recovery-firewall-exp04.yml');
 assert(/contents: read/.test(workflow));assert(!/contents: write|workflow_dispatch:|workflow_run:|deploy-pages\.yml|git push|youtube|upload-artifact/i.test(workflow));
 console.log('EXPERIMENT_04_FIREWALL_PASS: observed direct inputs and 5 high-risk workflow contracts; no production actions; global audit remains open');
+
+// Independent push probe: Experiment 04 workflow registration and execution are separate commits.
