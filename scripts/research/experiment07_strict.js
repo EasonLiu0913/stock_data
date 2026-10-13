@@ -14,7 +14,7 @@ try{
  assert.equal(facts.stock_count,35);assert(Object.values(facts.source_status).every(x=>x==='available'),'Facts incomplete');
  const ai=fs.readFileSync(path.join(t,'research_pending/daily-gainers-ai/'+d+'.json'));
  fs.mkdirSync(path.join(t,'data_daily_gain_over_5/analysis-ai'),{recursive:true});fs.writeFileSync(path.join(t,'data_daily_gain_over_5/analysis-ai/'+d+'.json'),ai,{flag:'wx'});
- fs.mkdirSync(path.join(t,'data_daily_gain_over_5/analysis-news'),{recursive:true});fs.copyFileSync(path.join(t,'data_daily_gain_over_5/analysis-news/'+d+'.json'),path.join(t,'data_daily_gain_over_5/analysis-news/'+d+'.json')); 
+
  run('validate_daily_gainers_news_analysis.js',[d]);run('validate_daily_gainers_ai_analysis.js',[d]);
  run('publish_daily_gainers_unified_analysis.js',[d]);
  const unified=JSON.parse(fs.readFileSync(path.join(t,'data_daily_gain_over_5/analysis/'+d+'.json')));assert.equal(unified.generation_mode,'ai_verified');assert.equal(unified.stock_count,35);
