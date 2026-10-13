@@ -52,6 +52,7 @@ jobs:
         run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
 
       - name: Decide upload-only or full rendering
+        if: ${{ false }} # formal artifact API and upload routing locked during integration acceptance
         id: decision
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
