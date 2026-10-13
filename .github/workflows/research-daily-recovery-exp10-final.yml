@@ -1,0 +1,67 @@
+name: "[Research] Experiment 10 Candidate Final Acceptance"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-final-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-final-ci/
+      - name: Independently read back candidate and negative cases
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy,sys
+          r=pathlib.Path('recovery-requests');root=r/'experiment-10'
+          load=lambda p:json.loads(p.read_text())
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          q=load(r/'experiment-10-final-ci/request.json');a=load(root/'candidate-final-acceptance.json')
+          assert sha(root/'candidate-final-acceptance.json')==q['acceptance_sha']
+          assert sha(r/'experiment-09/diagnostic.json')==a['experiment09_sha']=='3cd41732762e71143f40f845155199aabd728dbb'
+          for k,v in a['source_blobs'].items():assert sha(root/k)==v
+          for v in a['original_batches']:assert sha(pathlib.Path(v['path']))==v['sha']
+          sys.path.insert(0,str(root))
+          from validate_candidate_consumer import validate
+          old=load(root/'claim-provenance.json');promotion=load(root/'safe-claim-promotion.json')
+          c=load(root/'candidate-claim-provenance.json');o=load(root/'candidate-consumer-output.json')
+          validate(old,promotion,c,o)
+          def check(x):
+            assert x['target_date']=='20261012'
+            assert x['stock_count']==len(o['stocks'])==55
+            assert x['original_claim_count']==len(old['items'])==11
+            assert x['added_claim_count']==len(promotion['new_claims'])==6
+            assert x['candidate_claim_count']==len(c['items'])==17
+            assert x['stocks_with_claims']==sum(bool(v['claim_ids']) for v in o['stocks'])==14
+            assert x['stocks_without_claims']==41
+            assert x['effective_denied_count']==len(c['denied'])==20
+            assert x['legacy_denied_count']==len(c['original_denied_audit'])==16
+            assert x['invalid_cross_stock_count']==len(promotion['rejected_cross_stock_entries'])==10
+            assert all(v['news_state']=='SOURCE_INSUFFICIENT_NOT_NO_NEWS' and v['catalyst_status']=='UNVERIFIED' for v in o['stocks'] if not v['claim_ids'])
+            assert x['contract_status']=='ISOLATED_CANDIDATE_RESEARCH_COMPLETE'
+            assert x['semantic_source_status']=='PARTIAL_EXTERNAL_PROVENANCE'
+            assert x['production']=='DENY_ALL' and x['publication_authorized'] is False and x['prompt_b']=='INELIGIBLE'
+          check(a)
+          n=0
+          for kind in ['release','publication','prompt_b','false_complete','invented_stock','denied_change','false_no_news']:
+            z=copy.deepcopy(a)
+            if kind=='release':z['production']='ALLOW'
+            if kind=='publication':z['publication_authorized']=True
+            if kind=='prompt_b':z['prompt_b']='ELIGIBLE'
+            if kind=='false_complete':z['semantic_source_status']='COMPLETE'
+            if kind=='invented_stock':z['stock_count']=56
+            if kind=='denied_change':z['effective_denied_count']=19
+            if kind=='false_no_news':z['stocks_without_claims']=0
+            try:check(z)
+            except AssertionError:n+=1
+            else:raise AssertionError('escaped '+kind)
+          assert n==7 and q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_FINAL_ACCEPTANCE PASS stocks=55 claims=17 with_claims=14 source_insufficient=41 negatives=7 research=COMPLETE semantic=PARTIAL publication=BLOCKED production=DENY_ALL')
