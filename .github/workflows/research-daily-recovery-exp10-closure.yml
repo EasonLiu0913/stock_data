@@ -1,0 +1,70 @@
+name: "[Research] Experiment 10 Evidence Closure"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-closure-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-closure-ci/
+      - name: Verify 55-stock allowlist, exact URLs and release lock
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json')
+          a=load(r/'experiment-10/article-level-validation.json')
+          d=load(r/'experiment-10/citation-remediation.json')
+          c=load(r/'experiment-10/full55-coverage.json')
+          x=load(r/'experiment-10/evidence-closure.json')
+          q=load(r/'experiment-10-closure-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/evidence-closure.json')==q['closure_blob_sha']
+          assert sha(r/'experiment-10/article-level-validation.json')==x['sources']['article_validation_sha']
+          assert sha(r/'experiment-10/citation-remediation.json')==x['sources']['remediation_sha']
+          assert sha(r/'experiment-10/full55-coverage.json')==x['sources']['coverage_sha']
+          def check(y):
+            codes=[s['code'] for g in c['batches'] for s in g['stocks']]
+            assert y['target_date']=='20261012' and y['stock_count']==len(y['roster'])==55
+            assert [s['code'] for s in y['roster']]==codes and len(set(codes))==55
+            assert len(y['allowed'])==11 and len(y['denied'])==16
+            assert len({(v['code'],v['url']) for v in y['allowed']+y['denied']})==27
+            for v in y['allowed']:
+              assert v['ai_allowed'] is True and v['causal_allowed'] is False
+              assert v['url'].startswith('https://') and v['code'] in codes
+            assert all(v['ai_allowed'] is False and v['causal_allowed'] is False for v in y['denied'])
+            for s in y['roster']:
+              assert s['ai_allowed_refs']==[v['url'] for v in y['allowed'] if v['code']==s['code']]
+              assert s['news_state']==('EVIDENCE_SCOPED_NO_CAUSALITY' if s['ai_allowed_refs'] else 'SOURCE_INSUFFICIENT_NOT_NO_NEWS')
+              assert s['catalyst_status']=='UNVERIFIED'
+            ar=y['newly_verified_article']
+            assert ar['date']=='2026-10-12' and ar['url']=='https://www.ftnn.com.tw/news/586562'
+            assert set(ar['scope'])=={'2603','2615','2609','1101','1312'}
+            assert y['status']=='FAIL_CLOSED_PARTIAL_ARTICLE_EVIDENCE'
+            assert y['production']=='DENY_ALL' and y['publication_authorized'] is False
+          check(x)
+          n=0
+          for k in ('duplicate','false_news','fake_cause','fake_scope','unlock'):
+            y=copy.deepcopy(x)
+            if k=='duplicate':y['allowed'].append(copy.deepcopy(y['allowed'][0]))
+            if k=='false_news':next(s for s in y['roster'] if not s['ai_allowed_refs'])['news_state']='NO_NEWS_EXISTS'
+            if k=='fake_cause':y['allowed'][0]['causal_allowed']=True
+            if k=='fake_scope':y['newly_verified_article']['scope']['9999']='invented'
+            if k=='unlock':y['production']='ALLOW'
+            try:check(y)
+            except AssertionError:n+=1
+            else:raise AssertionError('negative escaped '+k)
+          assert n==5 and m['production']==q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_EVIDENCE_CLOSURE PASS stocks=55 allow_refs=11 denied_refs=16 negative_tests=5 canonical_publication=BLOCKED production=DENY_ALL')
