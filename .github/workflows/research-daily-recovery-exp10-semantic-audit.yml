@@ -1,0 +1,64 @@
+name: "[Research] Experiment 10 Semantic Evidence Audit"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-semantic-audit-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-semantic-audit-ci/
+      - name: Verify 55 stock citation inventory and fail-closed decision
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          a=load(r/'experiment-10/canonical-semantic-audit.json');m=load(r/'experiment-10/manifest.json')
+          q=load(r/'experiment-10-semantic-audit-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/canonical-semantic-audit.json')==q['audit_blob_sha']
+          batches=[load(r/('experiment-10/semantic-batch-%02d.json'%i)) for i in range(1,7)]
+          assert all(sha(r/z['path'])==z['sha'] for z in a['source_batch_blobs'])
+          def check(x):
+            ss=[s for v in batches for s in v['stocks']]
+            assert x['target_date']=='20261012' and len(x['records'])==x['record_count']==x['stock_count']==55
+            assert [z['code'] for z in x['records']]==[z['code'] for z in ss]
+            assert len(set(z['code'] for z in x['records']))==55
+            assert x['decision']=='FAIL_CLOSED_CONTENT_AND_DATE_NOT_FULLY_REVERIFIED'
+            for z,s in zip(x['records'],ss):
+              assert len(z['references'])==len(s['references'])
+              assert z['ai_causality']=='UNVERIFIED' and z['publish_eligible'] is False
+              for a,b in zip(z['references'],s['references']):
+                assert a['url']==b['url'] and a['url'].startswith('https://')
+                assert a['causality']=='UNVERIFIED'
+                assert a['semantic_use']!='APPROVED_FOR_PUBLICATION'
+                if a['is_dynamic_listing'] or a['date_precision']=='AMBIGUOUS':
+                  assert a['semantic_use']=='BLOCK_AS_INDIVIDUAL_NEWS_EVIDENCE'
+            assert x['production']=='DENY_ALL' and x['publication_authorized'] is False
+          check(a)
+          n=0
+          for k in ('fake_url','release','causality','duplicate','false_date_clearance'):
+            z=copy.deepcopy(a)
+            if k=='fake_url':z['records'][0]['references'][0]['url']='https://fake.example'
+            if k=='release':z['production']='ALLOW'
+            if k=='causality':z['records'][0]['ai_causality']='VERIFIED'
+            if k=='duplicate':z['records'][1]['code']=z['records'][0]['code']
+            if k=='false_date_clearance':
+              t=next(ref for rec in z['records'] for ref in rec['references'] if ref['date_precision']=='AMBIGUOUS')
+              t['semantic_use']='APPROVED_FOR_PUBLICATION'
+            try:check(z)
+            except AssertionError:n+=1
+            else:raise AssertionError('negative escaped '+k)
+          assert n==5 and m['production']==q['production']=='DENY_ALL' and not q['publication_authorized']
+          print('EXPERIMENT10_SEMANTIC_EVIDENCE_AUDIT PASS stocks=55 references='+str(sum(len(z['references']) for z in a['records']))+' negative_tests=5 semantic_publication=BLOCKED production=DENY_ALL')
