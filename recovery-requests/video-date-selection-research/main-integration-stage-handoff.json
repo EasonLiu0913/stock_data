@@ -1,0 +1,39 @@
+{
+  "schema": "video-date-main-integration-stage-v1",
+  "base_main": "a28078ee8267a117e71bec986a1a6e37c49b5b7e",
+  "branch": "fix/video-date-fail-closed-20261013",
+  "changes": [
+    "scripts/resolve_daily_gainers_video_target_date.js",
+    ".github/workflows/daily-gainers-video-upload-orchestrator.yml",
+    "tests/resolve_daily_gainers_video_target_date.test.js"
+  ],
+  "observations": [
+    "blank date no longer selects lexical latest historical script",
+    "explicit historical dates are blocked pending independent authority",
+    "candidate workflow outbound artifact decision and both video dispatches disabled",
+    "existing combined render-upload path cannot serve preview-only"
+  ],
+  "evidence": {
+    "local_resolver_smoke": "PASS 4 scenarios against locally reconstructed resolver logic; remote resolver blob differs, therefore NOT an exact remote execution acceptance",
+    "branch_test_file": "PERSISTED_NOT_RUN",
+    "github_actions": "ZERO_RUNS_OBSERVED",
+    "branch_workflow_sha": "f48cf91fdbe11b92e2297b20d3fb6a3a8de6c763"
+  },
+  "acceptance": "PENDING_EXACT_SHA_TEST_EXECUTION_AND_WORKFLOW_CI",
+  "merge_main": "WITHHELD",
+  "blockers": [
+    "actual same-day TWSE calendar adapter not independently verified",
+    "render-only executable separated from upload not implemented",
+    "candidate presently disables dispatch and cannot be treated as complete production behavior",
+    "no branch CI run or independent full workflow acceptance"
+  ],
+  "release": {
+    "production": "DENY_ALL",
+    "publication_authorized": false,
+    "cron_unchanged": true,
+    "main_untouched": true,
+    "formal_video": false,
+    "youtube": false
+  },
+  "next": "Execute exact remote test and CI on isolated branch, complete dedicated preview routing and real source/QA adapters with release locks; only then consider merging main."
+}
