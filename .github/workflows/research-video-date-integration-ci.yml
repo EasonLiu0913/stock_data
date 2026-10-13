@@ -8,6 +8,7 @@ on:
       - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
       - ".github/workflows/generate-upload-daily-gainers-video.yml"
       - ".github/workflows/research-video-date-integration-ci.yml"
+      - ".github/workflows/research-daily-gainers-render-preview-only.yml"
 permissions:
   contents: read
 jobs:
@@ -33,5 +34,11 @@ jobs:
           assert(!y.includes('sort | tail -1'));
           assert.match(y,/if: \$\{\{ false \}\} # formal artifact API/);
           assert.equal((y.match(/if: \$\{\{ false \}\}/g)||[]).length,3);
+          const preview=fs.readFileSync('.github/workflows/research-daily-gainers-render-preview-only.yml','utf8');
+          assert.match(preview,/workflow_dispatch:/);
+          assert.match(preview,/github.ref != 'refs\\/heads\\/main'/);
+          for(const forbidden of ['secrets.','upload_youtube.js','upload_youtube_caption.js','video_upload_receipts','gh workflow run'])assert(!preview.includes(forbidden),forbidden);
+          const combined=fs.readFileSync('.github/workflows/generate-upload-daily-gainers-video.yml','utf8');
+          assert(!combined.includes('sort | tail -1'));
           console.log('PASS no outbound artifact route and no old-script fallback');
           NODE
