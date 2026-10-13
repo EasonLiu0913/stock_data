@@ -1,0 +1,42 @@
+name: "[Research] Experiment 10 News Batch Validation"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-10-news-ci/request.json'
+permissions:
+  contents: read
+jobs:
+  news-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify dated attributed news, checkpoint and immutable Experiment 09
+        shell: python
+        run: |
+          import json,subprocess,datetime,pathlib
+          root=pathlib.Path('recovery-requests')
+          m=json.loads((root/'experiment-10/manifest.json').read_text())
+          d=json.loads((root/'experiment-10/news-batch-1516-1563.json').read_text())
+          assert m['target_date']==d['target_date']=='20261012'
+          assert d['codes']==['1516','2429','6909','3008','1563']
+          assert len(d['stocks'])==5 and len({s['code'] for s in d['stocks']})==5
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(m['raw_path'])==m['raw_blob_sha']
+          assert sha(m['facts_path'])==m['facts_blob_sha']
+          assert sha(root/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert m['production']=='DENY_ALL' and m['publication_authorized'] is False
+          verified=[]
+          for s in d['stocks']:
+            for n in s['news_evidence']:
+              assert n['event_date']=='2026-10-12'
+              assert n['published_at'].startswith('2026-10-12')
+              assert n['url'].startswith('https://') and n['title'] and n['claim'] and n['publisher']
+              assert n['verification']=='DATE_AND_TEXT_VERIFIED'
+              verified.append(n['claim_id'])
+            if not s['news_evidence']:assert s['news_status']=='PENDING_INDEPENDENT_SOURCE_VERIFICATION'
+          assert len(verified)==2 and len(set(verified))==2
+          assert d['status']=='PARTIAL_NEWS_VERIFIED_OTHER_FOUR_PENDING'
+          print('EXPERIMENT10_NEWS_BATCH_VALIDATION PASS',json.dumps({'claims':len(verified),'stock_count':len(d['stocks']),'publication_authorized':False}))
