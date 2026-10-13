@@ -1,0 +1,59 @@
+name: "[Research] Experiment 10 Source Gap Closure"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-gap-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-gap-ci/
+      - name: Verify immutable source correction and negative cases
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests');load=lambda p:json.loads(p.read_text())
+          a=load(r/'experiment-10/source-provenance-gap.json');q=load(r/'experiment-10-gap-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/source-provenance-gap.json')==q['gap_blob_sha']
+          for k,name in [('source_manifest_blob_sha','manifest.json'),('source_boundary_blob_sha','research-boundary.json'),('source_article_validation_blob_sha','article-level-validation.json'),('source_claim_blob_sha','claim-provenance.json')]:
+            if name=='manifest.json':continue
+            assert sha(r/('experiment-10/'+name))==a[k]
+          v=load(r/'experiment-10/article-level-validation.json')
+          def check(x):
+            assert len(x['additive_corrections'])==5
+            assert x['target_date']=='20261012'
+            assert {e['code'] for e in x['additive_corrections']}=={'6909','3008','1563','6742','3311'}
+            assert x['remaining_prior_insufficient_entries']==11
+            assert x['originals_untouched'] is True and x['decision']=='PARTIAL_SOURCE_GAP_CLOSURE_NOT_PUBLICATION'
+            for e in x['additive_corrections']:
+              assert e['url'].startswith('https://') and e['published_at'].startswith('2026-10-12')
+              assert e['matched_prior_entries']==1 and e['causal_status']=='UNVERIFIED'
+              assert any(s['code']==e['code'] and (s['original_url']==e['url'] or s.get('replacement_url')==e['url']) for s in v['items'])
+              assert e['verified_claim'] and e['allowed_AI_scope']=='Only the verified historical statement, not cause'
+            assert x['production']=='DENY_ALL' and x['publication_authorized'] is False
+          check(a)
+          n=0
+          for k in ['wrong_stock','wrong_url','date','cause','duplicate','release']:
+            z=copy.deepcopy(a)
+            if k=='wrong_stock':z['additive_corrections'][0]['code']='9999'
+            if k=='wrong_url':z['additive_corrections'][0]['url']='https://invalid.test'
+            if k=='date':z['additive_corrections'][0]['published_at']='2026-10-13'
+            if k=='cause':z['additive_corrections'][0]['causal_status']='VERIFIED'
+            if k=='duplicate':z['additive_corrections'][1]=copy.deepcopy(z['additive_corrections'][0])
+            if k=='release':z['production']='ALLOW'
+            try:check(z)
+            except AssertionError:n+=1
+            else:raise AssertionError('negative escaped '+k)
+          assert n==6 and q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_SOURCE_GAP_CLOSURE PASS corrections=5 remaining=11 negative_tests=6 publication=BLOCKED production=DENY_ALL')
