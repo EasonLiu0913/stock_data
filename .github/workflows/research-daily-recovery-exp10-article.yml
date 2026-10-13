@@ -1,0 +1,66 @@
+name: "[Research] Experiment 10 Article-Level Validation"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-article-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-article-ci/
+      - name: Validate article source identity, scope and fail-closed test vectors
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy
+          r=pathlib.Path('recovery-requests'); load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json'); a=load(r/'experiment-10/canonical-semantic-audit.json')
+          d=load(r/'experiment-10/citation-remediation.json')
+          x=load(r/'experiment-10/article-level-validation.json'); q=load(r/'experiment-10-article-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/article-level-validation.json')==q['article_blob_sha']
+          assert sha(r/'experiment-10/canonical-semantic-audit.json')==x['source_audit_sha']
+          assert sha(r/'experiment-10/citation-remediation.json')==x['source_remediation_sha']
+          def check(z):
+            assert z['target_date']=='20261012' and z['stock_count']==55
+            original=[(s,i,v) for s in a['records'] for i,v in enumerate(s['references']) if not v['is_dynamic_listing']]
+            replacements=[v for v in d['items'] if v['remediation']['status']=='REPLACED_WITH_FIXED_ARTICLE']
+            assert z['non_dynamic_entries']==len(original)==19
+            assert z['replacement_entries']==len(replacements)==3 and len(z['items'])==22
+            for item,(s,i,v) in zip(z['items'][:19],original):
+              assert item['code']==s['code'] and item['reference_index']==i and item['original_url']==v['url']
+            for item,v in zip(z['items'][19:],replacements):
+              assert item['code']==v['code'] and item['replacement_url']==v['remediation']['url']
+            assert len([v for v in z['items'] if v['validation_status']=='CONTENT_DATE_CONFIRMED_SCOPE_LIMITED'])==6
+            for v in z['items']:
+              assert v['original_url'].startswith('https://')
+              assert v['ai_causal_support'] is False and v['publish_eligible'] is False
+              if v['validation_status']=='CONTENT_DATE_CONFIRMED_SCOPE_LIMITED':
+                assert v['confirmed']['date'] in ('2026-10-08','2026-10-12')
+                assert v['confirmed']['publisher'] and v['confirmed']['claim']
+              else: assert v['validation_status'] in ('SOURCE_INSUFFICIENT_NOT_REVERIFIED','STOCK_MENTION_NOT_CONFIRMED_IN_ARTICLE')
+            assert z['decision']=='FAIL_CLOSED_NOT_ALL_ARTICLES_CONTENT_VERIFIED'
+            assert z['production']=='DENY_ALL' and z['publication_authorized'] is False
+          check(x)
+          n=0
+          for kind in ('wrong_url','fabricated_content','stock_swap','causal_inference','unlock'):
+            z=copy.deepcopy(x)
+            if kind=='wrong_url':z['items'][0]['original_url']='https://example.invalid'
+            if kind=='fabricated_content':z['items'][0]['validation_status']='CONTENT_DATE_CONFIRMED_SCOPE_LIMITED';z['items'][0]['confirmed']={'date':'2026-10-12','publisher':'fake','claim':'fake'}
+            if kind=='stock_swap':z['items'][1]['code']='FAKE'
+            if kind=='causal_inference':z['items'][0]['ai_causal_support']=True
+            if kind=='unlock':z['production']='ALLOW'
+            try:check(z)
+            except (AssertionError,TypeError,KeyError):n+=1
+            else:raise AssertionError('negative escaped: '+kind)
+          assert n==5 and m['production']==q['production']=='DENY_ALL' and not q['publication_authorized']
+          print('EXPERIMENT10_ARTICLE_LEVEL_VALIDATION PASS entries=22 content_date_confirmed=6 insufficient=16 negative_tests=5 canonical_publication=BLOCKED production=DENY_ALL')
