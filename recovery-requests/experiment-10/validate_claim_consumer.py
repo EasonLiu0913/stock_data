@@ -11,6 +11,7 @@ def validate(provenance, output):
         assert s['news_state']==base['news_state']
         assert s['claim_ids']==base['claim_ids']
         assert len(s['assertions'])==len(s['claim_ids'])
+        assert [z['claim_id'] for z in s['assertions']]==s['claim_ids']
         for z in s['assertions']:
             assert z['claim_id'] in claims
             c=claims[z['claim_id']]
