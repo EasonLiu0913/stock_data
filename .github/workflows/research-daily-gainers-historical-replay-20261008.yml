@@ -32,6 +32,7 @@ jobs:
             data_daily_gain_over_5
             data_history_sma/non_trading_days.json
             video_scripts
+            recovery-requests/video-date-selection-research/replay-input
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -53,6 +54,16 @@ jobs:
           ffmpeg -version | head -1
           rsvg-convert --version
           timeout 180s python -m pip install --disable-pip-version-check --no-cache-dir --retries 4 --timeout 30 edge-tts gTTS mutagen pypinyin
+
+      - name: Prepare derived research input in ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/research_create_20261008_replay_script.js
+          node scripts/research_preflight_20261008_replay.js
+          test -s recovery-requests/video-date-selection-research/replay-input/20261008-provenance.json
+          cp recovery-requests/video-date-selection-research/replay-input/20261008.json video_scripts/daily-gainers/20261008.json
+          echo 'Derived 20261008 replay staged only in disposable Actions checkout.'
 
       - name: Resolve target date
         id: date
@@ -147,6 +158,7 @@ jobs:
         with:
           name: "research-historical-replay-20261008-${{ github.run_id }}"
           path: |
+            recovery-requests/video-date-selection-research/replay-input/20261008-provenance.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/metadata.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail.jpg
