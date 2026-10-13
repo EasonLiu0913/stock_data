@@ -1,0 +1,106 @@
+{
+  "schema": "experiment10-final-integration-readiness-audit-v2",
+  "target_date": "20261012",
+  "baseline": {
+    "main": "a28078ee8267a117e71bec986a1a6e37c49b5b7e",
+    "research": "9414ae7d2e4e22b4e1a03ab89fc4d43d3309984b",
+    "r1r2_closure_sha": "9482af59d4815ee018f01063560923c616696669",
+    "formal_consumer_sha": "89f36d06822e21171bd3d638b3c015c31e8a7f9d",
+    "exp09_sha": "3cd41732762e71143f40f845155199aabd728dbb"
+  },
+  "scope": "DESIGN_ONLY_NO_MAIN_OR_PRODUCTION_WRITES",
+  "matrix": [
+    {
+      "stage": "Research adapter",
+      "potential_files": [
+        "recovery-requests/experiment-10/candidate-consumer-output.json",
+        "recovery-requests/experiment-10/candidate-consumer-v2-shadow-design.json",
+        "scripts/validate_daily_gainers_news_analysis.js"
+      ],
+      "dependency": "Exact Facts and provenance SHAs, fixed date, 17 original claims, 41 shadow unaccepted",
+      "proposed_change": "Separate approved claim projection from shadow research; never promote on source discovery",
+      "side_effect": "No writes in this audit; any future formal News write has push listener",
+      "gate": "R1 accepted exact statement only; R2 independent execution; explicit owner authorization"
+    },
+    {
+      "stage": "News",
+      "potential_files": [
+        "data_daily_gain_over_5/analysis-news/YYYYMMDD.json",
+        ".github/workflows/publish-daily-gainers-news-summary.yml"
+      ],
+      "dependency": "Per-stock date/code/url/publisher/exact bounded statement",
+      "proposed_change": "Strict schema and no-news distinction, independent source acceptance",
+      "side_effect": "main analysis-news push triggers summary publisher; summary may invoke deploy-pages reusable workflow",
+      "gate": "No 29 unaccepted as claims; no causal inference"
+    },
+    {
+      "stage": "AI",
+      "potential_files": [
+        "scripts/daily_gainers_ai_contract_cli.js",
+        "scripts/validate_daily_gainers_ai_analysis.js",
+        "data_daily_gain_over_5/analysis-ai/YYYYMMDD.json",
+        ".github/workflows/publish-daily-gainers-ai-analysis.yml"
+      ],
+      "dependency": "Only accepted News claims + facts snapshot",
+      "proposed_change": "Fail closed on denied/unknown/after-close source references",
+      "side_effect": "AI writer has main push/schedule/dispatch and may invoke Pages",
+      "gate": "Same logical date and source SHA; no legacy fallback"
+    },
+    {
+      "stage": "Unified",
+      "potential_files": [
+        ".github/workflows/publish-daily-gainers-unified-analysis.yml",
+        "data_daily_gain_over_5/analysis-unified/YYYYMMDD.json"
+      ],
+      "dependency": "Matching validated Facts, News, AI on date",
+      "proposed_change": "Join only fully validated inputs; refuse stale or missing components",
+      "side_effect": "analysis-ai main push invokes Unified writer and optional deploy-pages",
+      "gate": "No partial research output into formal summary"
+    },
+    {
+      "stage": "Video script",
+      "potential_files": [
+        "video_scripts/daily-gainers/YYYYMMDD.json",
+        ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
+      ],
+      "dependency": "Unified and daily video required data date locked",
+      "proposed_change": "Require explicit same-date manuscript/media manifest and no old-draft fallback",
+      "side_effect": "main video_scripts push or existing schedule can dispatch render/upload",
+      "gate": "No blank-date default to old report; no trigger in research"
+    },
+    {
+      "stage": "Render/upload",
+      "potential_files": [
+        ".github/workflows/generate-upload-daily-gainers-video.yml"
+      ],
+      "dependency": "Approved script, exact date, subtitle/narration parity and publication lock",
+      "proposed_change": "Separate render-only investigation from explicit publication authorization",
+      "side_effect": "TTS/video render/YouTube upload",
+      "gate": "Owner-gated, forbidden this round"
+    },
+    {
+      "stage": "Pages",
+      "potential_files": [
+        ".github/workflows/deploy-pages.yml"
+      ],
+      "dependency": "News/AI/Unified summary completeness",
+      "proposed_change": "Single post-summary dispatch only upon separate authorization",
+      "side_effect": "Pages deployment",
+      "gate": "Forbidden this round"
+    }
+  ],
+  "fail_closed": [
+    "All 55 roster codes match baseline; only original 17 scoped claims persist",
+    "41 shadow remain research-only, 29 restricted/unaccepted, no implicit promotion",
+    "Provenance requires target date, immutable SHA, code, URL, timestamp, publisher, statement and noncausal guard",
+    "Never treat source discovery, HTTP 200 or green CI alone as semantic or as-of acceptance",
+    "No old date or post-close source recast as target intraday cause; no industry context recast as company-specific cause",
+    "No source-insufficient recast as NO_NEWS_EXISTS",
+    "Independent R2 CI and V2 Python actual-run evidence remain distinct pending gates",
+    "Any main data output, workflow trigger, schedule, reusable Pages job, video dispatch or external publishing needs new separate owner approval",
+    "No Prompt B, cron, production, main, Pages, YouTube or formal video in this research audit"
+  ],
+  "readiness": "DESIGN_AUDIT_COMPLETE_IMPLEMENTATION_NOT_AUTHORIZED",
+  "publication_authorized": false,
+  "production": "DENY_ALL"
+}
