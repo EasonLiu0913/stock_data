@@ -1,0 +1,36 @@
+name: "[Research] Experiment 08 ChatGPT Semantic Handoff"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-08/request-20261008.json'
+permissions:
+  contents: read
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/research/experiment08_handoff.test.js
+            /data_daily_gain_over_5/20261008.json
+            /data_daily_gain_over_5/analysis-facts/20261008.json
+            /data_daily_gain_over_5/analysis-news/20261008.json
+            /research_pending/daily-gainers-ai/20261008.json
+            /.github/workflows/publish-daily-gainers-news-summary.yml
+            /.github/workflows/publish-daily-gainers-ai-analysis.yml
+            /recovery-requests/experiment-08/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: |
+          node scripts/research/experiment08_handoff.test.js
+          test -s tmp/research/experiment08/handoff.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiment08-chatgpt-handoff
+          path: tmp/research/experiment08/handoff.json
+          retention-days: 30
