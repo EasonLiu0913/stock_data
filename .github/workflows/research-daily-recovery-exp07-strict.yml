@@ -1,0 +1,52 @@
+name: "[Research] Experiment 07 Strict Unified and Final Summary"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-07/strict-20261008.json'
+permissions:
+  contents: read
+jobs:
+  strict-recompute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/research/experiment07_strict.js
+            /scripts/generate_daily_gainers_over_5.js
+            /scripts/build_daily_gainers_ai_facts.js
+            /scripts/validate_daily_gainers_news_analysis.js
+            /scripts/validate_daily_gainers_ai_analysis.js
+            /scripts/publish_daily_gainers_unified_analysis.js
+            /scripts/build_daily_gainers_market_summary.js
+            /scripts/lib/daily_gainers_ai_contract.js
+            /config/daily-gainers-ai-contract.json
+            /config/daily-gainers-theme-taxonomy.json
+            /research_pending/daily-gainers-ai/20261008.json
+            /data_daily_gain_over_5/analysis-news/20261008.json
+            /data_fubon/fubon_20261007_sma.json
+            /data_fubon/fubon_20261008_sma.json
+            /data_twse_margin_balance/20261008_twse_margin_balance.csv
+            /data_fubon_broker_details/fubon_20261008_券商分點進出明細.json
+            /data_twse_mi_index/20261008_twse_mi_index.json
+            /data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            /data_twse_investment_trust/20261008_twse_investment_trust.json
+            /data_twse_dealers/20261008_twse_dealers.json
+            /recovery-requests/experiment-07/strict-20261008.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: |
+          node -e "const r=require('./recovery-requests/experiment-07/strict-20261008.json');if(JSON.stringify(r)!==JSON.stringify({schema:'exp07-strict-request-v1',date:'20261008',mode:'isolated_strict_recompute',semantic_input:'verified_archived_only'}))process.exit(1)"
+          node scripts/research/experiment07_strict.js
+          test -s tmp/research/experiment07-strict/manifest.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: experiment07-strict-evidence
+          path: tmp/research/experiment07-strict/
+          if-no-files-found: warn
+          retention-days: 30
