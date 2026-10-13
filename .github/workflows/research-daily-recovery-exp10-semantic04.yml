@@ -1,0 +1,62 @@
+name: "[Research] Experiment 10 Semantic Batch 04"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-semantic04-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-semantic04-ci/
+      - name: Check fixed roster, source dates, negative cases and release locks
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json'); c=load(r/'experiment-10/full55-coverage.json')
+          a=load(r/'experiment-10/batch03-date-audit.json'); s=load(r/'experiment-10/semantic-batch-04.json')
+          q=load(r/'experiment-10-semantic04-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/semantic-batch-04.json')==q['batch04_blob_sha']
+          assert sha(r/'experiment-10/batch03-date-audit.json')==q['date_audit_blob_sha']
+          assert sha(r/'experiment-10/semantic-batch-03.json')==a['original_batch03_blob_sha']
+          assert sha(r/'experiment-10/full55-coverage.json')==s['source_coverage_blob_sha']==m['full55_coverage']['git_blob_sha']
+          assert s['source_facts_blob_sha']==m['facts_blob_sha']
+          assert a['corrections'][0]['original_announcement_date']=='2026-10-10'
+          assert a['corrections'][0]['separate_news_date']=='2026-10-12'
+          assert a['corrections'][1]['correct_announcement_date']=='2026-10-08'
+          assert a['corrections'][1]['oct12_news']=='NOT_VERIFIED'
+          def check(z):
+            assert z['batch_index']==4 and z['target_date']=='20261012' and len(z['stocks'])==10
+            for u,v in zip(z['stocks'],c['batches'][3]['stocks']):
+              assert u['code']==v['code'] and u['name']==v['name']
+              assert u['ai_analysis']['change_pct']==v['facts']['change_pct']
+              assert u['ai_analysis']['volume']==v['facts']['volume']
+              assert u['ai_analysis']['foreign_net_shares']==v['facts']['foreign_net_shares']
+              assert u['catalyst_status']=='UNVERIFIED' and u['news_status']!='NO_NEWS_EXISTS'
+              assert u['validation_status']=='SOURCE_BOUND_RESEARCH_DRAFT'
+            assert z['production']=='DENY_ALL' and z['publication_authorized'] is False
+          check(s)
+          n=0
+          for k in ['code','date','catalyst','release']:
+            t=copy.deepcopy(s)
+            if k=='code':t['stocks'][0]['code']='INVALID'
+            if k=='date':t['stocks'][0]['ai_analysis']['volume']=-1
+            if k=='catalyst':t['stocks'][0]['catalyst_status']='VERIFIED'
+            if k=='release':t['production']='ALLOW'
+            try:check(t)
+            except AssertionError:n+=1
+            else:raise AssertionError(k)
+          assert n==4 and q['production']==m['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_SEMANTIC_BATCH04 PASS stocks=10 date_corrections=2 negative_tests=4 verified_catalysts=0 production=DENY_ALL')
