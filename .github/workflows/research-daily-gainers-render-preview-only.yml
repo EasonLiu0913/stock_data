@@ -30,6 +30,7 @@ jobs:
             tests/daily_gainers_video_date_gate.test.js
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
+            data_history_sma/non_trading_days.json
             video_scripts
 
       - name: Setup Node.js
@@ -70,6 +71,8 @@ jobs:
             [ -s "$file" ] || { echo "Missing required file: $file" >&2; exit 1; }
           done
           [ -s "video_scripts/daily-gainers/${date}.json" ] || { echo "Missing ChatGPT video script for ${date}" >&2; exit 1; }
+          resolved="$(node scripts/resolve_daily_gainers_video_target_date.js "$date")"
+          [ "$resolved" = "$date" ] || { echo "Resolved target date mismatch" >&2; exit 2; }
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
       - name: Validate historical video date-gate regression
@@ -156,7 +159,7 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
       - name: Preview-only summary
