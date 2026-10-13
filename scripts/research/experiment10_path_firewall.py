@@ -2,7 +2,7 @@
 """Experiment10 fail-closed path-specific GitHub Actions side-effect firewall."""
 import fnmatch, json, pathlib, re, hashlib, sys
 import yaml
-ROOT=pathlib.Path('.'); TARGET='recovery-requests/experiment-10/manifest.json'; BRANCH='research/daily-data-recovery-v2-exp01-20261013'
+ROOT=pathlib.Path('.'); TARGETS=['recovery-requests/experiment-10/manifest.json','recovery-requests/experiment-10/news-batch-1516-1563.json','recovery-requests/experiment-10/ai-batch-1516-1563.json','recovery-requests/experiment-10/news-full-20261012.json','recovery-requests/experiment-10/ai-full-20261012.json','recovery-requests/experiment-10/validation.json']; BRANCH='research/daily-data-recovery-v2-exp01-20261013'
 def arr(v):
  if v is None:return []
  return v if isinstance(v,list) else [v]
@@ -31,7 +31,7 @@ def analyze(text,name):
   if event=='push':
    if spec is None: blockers.append('UNFILTERED_PUSH');continue
    if not isinstance(spec,dict):blockers.append('UNKNOWN_PUSH_FILTER');continue
-   if selected({'branches':spec.get('branches',[]),'branches-ignore':spec.get('branches-ignore',[])},BRANCH,True) and selected({'paths':spec.get('paths',[]),'paths-ignore':spec.get('paths-ignore',[])},TARGET,True):
+   if selected({'branches':spec.get('branches',[]),'branches-ignore':spec.get('branches-ignore',[])},BRANCH,True) and any(selected({'paths':spec.get('paths',[]),'paths-ignore':spec.get('paths-ignore',[])},target,True) for target in TARGETS):
     blockers.append('MATCHING_PUSH')
  # Other event families are not inherently caused by a contents push; inspect only potential push listener and its secondary effects.
  return {'file':name,'decision':'BLOCKED' if blockers else 'NON_MATCHING_PUSH','events':observed,'reason':blockers}
@@ -49,7 +49,7 @@ def main():
  for name,t,expected in negatives:
   t=t.replace('\\n','\n');got=analyze(t,name)['decision'];assert got==expected,(name,got,expected)
  blocked=[x for x in docs if x['decision']=='BLOCKED']
- state={'schema':'experiment10-path-firewall-v1','target_branch':BRANCH,'target_prefix':'recovery-requests/experiment-10/','workflow_count':len(docs),'negative_tests':len(negatives),'blocked':blocked,'workflow_manifest':docs,'production_safe_paths':[],'production':'DENY_ALL','decision':'PASS_RESEARCH_ONLY' if not blocked else 'BLOCKED'}
+ state={'schema':'experiment10-path-firewall-v1','target_branch':BRANCH,'target_prefix':'recovery-requests/experiment-10/','tested_paths':TARGETS,'workflow_count':len(docs),'negative_tests':len(negatives),'blocked':blocked,'workflow_manifest':docs,'production_safe_paths':[],'production':'DENY_ALL','decision':'PASS_RESEARCH_ONLY' if not blocked else 'BLOCKED'}
  out=ROOT/'tmp/research/experiment10-audit';out.mkdir(parents=True,exist_ok=True);(out/'audit.json').write_text(json.dumps(state,ensure_ascii=False,indent=2)+'\n')
  print('EXPERIMENT_10_PATH_AUDIT '+json.dumps({'decision':state['decision'],'workflows':len(docs),'negative_tests':len(negatives),'blockers':len(blocked),'production_safe_paths':0}))
  if blocked:sys.exit(2)
