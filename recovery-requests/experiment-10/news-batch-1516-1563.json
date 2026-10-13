@@ -1,7 +1,7 @@
 {
   "schema": "experiment10-news-batch-evidence-v1",
   "target_date": "20261012",
-  "status": "FACTS_EVIDENCE_PREPARED_NEWS_NOT_GENERATED",
+  "status": "PARTIAL_NEWS_VERIFIED_OTHER_FOUR_PENDING",
   "source": {
     "path": "data_daily_gain_over_5/analysis-facts/20261012.json",
     "git_blob_sha": "036b37f9b2c3f072ac20ce9fa97f55f40577c996",
@@ -224,8 +224,33 @@
           "net": 361
         }
       },
-      "news_evidence": [],
-      "news_status": "PENDING_INDEPENDENT_SOURCE_VERIFICATION",
+      "news_evidence": [
+        {
+          "claim_id": "3008-20261012-01",
+          "event_date": "2026-10-12",
+          "published_at": "2026-10-12 11:19 Asia/Taipei",
+          "publisher": "MoneyDJ / 公開資訊觀測站重大訊息轉載",
+          "title": "大立光電澄清媒體報導",
+          "url": "https://www.moneydj.com/kmdj/news/newsviewer.aspx?a=17baf5eb-b222-4d37-896f-bcde3b452b27",
+          "claim": "大立光於10月12日澄清公司並未提供財務預測，營收及每股純益實際數據應以公司依法公告為準。",
+          "source_type": "issuer_disclosure_republication",
+          "verification": "DATE_AND_TEXT_VERIFIED",
+          "not_claimed": "不把媒體引述的券商預測當作公司財測"
+        },
+        {
+          "claim_id": "3008-20261012-02",
+          "event_date": "2026-10-12",
+          "published_at": "2026-10-12 11:28 Asia/Taipei (event time; site date displayed 2026/10/12)",
+          "publisher": "鉅亨網",
+          "title": "盤中速報 - 大立光(3008)股價拉至漲停",
+          "url": "https://gfemobile.cnyes.com/news/id/6627957",
+          "claim": "10月12日11:28，大立光盤中漲停報7325元。",
+          "source_type": "dated_market_report",
+          "verification": "DATE_AND_TEXT_VERIFIED",
+          "not_claimed": "盤中成交張數不作為收盤張數"
+        }
+      ],
+      "news_status": "PARTIAL_VERIFIED",
       "ai_status": "NOT_GENERATED"
     },
     {
@@ -289,7 +314,10 @@
     "all_present_in_facts": true,
     "no_news_claims_fabricated": true,
     "production": "DENY_ALL",
-    "publication_authorized": false
+    "publication_authorized": false,
+    "verified_news_claims": 2,
+    "verified_stock_count": 1,
+    "no_unverified_catalyst_claims": true
   },
-  "next_stage": "VERIFY_DATED_EXTERNAL_NEWS_AND_PERSIST_ATTRIBUTED_NEWS_BATCH"
+  "next_stage": "INDEPENDENT_CI_NEWS_VALIDATION_AND_RESEARCH_REMAINDER"
 }
