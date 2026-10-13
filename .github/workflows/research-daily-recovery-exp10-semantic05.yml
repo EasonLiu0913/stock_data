@@ -1,0 +1,57 @@
+name: "[Research] Experiment 10 Semantic Batch 05"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-semantic05-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-semantic05-ci/
+      - name: Validate source-bound fifth batch and negative cases
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json'); c=load(r/'experiment-10/full55-coverage.json')
+          s=load(r/'experiment-10/semantic-batch-05.json'); q=load(r/'experiment-10-semantic05-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/semantic-batch-05.json')==q['semantic_blob_sha']
+          assert sha(r/'experiment-10/full55-coverage.json')==s['source_coverage_blob_sha']==m['full55_coverage']['git_blob_sha']
+          assert s['source_facts_blob_sha']==m['facts_blob_sha'] and m['publication_authorized'] is False
+          def check(d):
+            assert d['target_date']=='20261012' and d['batch_index']==5 and len(d['stocks'])==10
+            for a,v in zip(d['stocks'],c['batches'][4]['stocks']):
+              assert a['code']==v['code'] and a['name']==v['name']
+              assert a['ai_analysis']['change_pct']==v['facts']['change_pct']
+              assert a['ai_analysis']['volume']==v['facts']['volume']
+              assert a['ai_analysis']['foreign_net_shares']==v['facts']['foreign_net_shares']
+              assert a['catalyst_status']=='UNVERIFIED' and a['news_status']!='NO_NEWS_EXISTS'
+              for z in a['references']:
+                assert z['url'].startswith('https://') and z['claim'] and (z.get('published_date') or z.get('evidence_date'))
+                if z['kind']=='PRIOR_COMPANY_REVENUE':assert z['published_date']<'2026-10-12'
+            assert d['production']=='DENY_ALL' and d['publication_authorized'] is False
+          check(s)
+          n=0
+          for kind in ['code','facts','fake_news','unlock']:
+            t=copy.deepcopy(s)
+            if kind=='code':t['stocks'][0]['code']='FAKE'
+            if kind=='facts':t['stocks'][0]['ai_analysis']['change_pct']=-99
+            if kind=='fake_news':t['stocks'][4]['catalyst_status']='VERIFIED'
+            if kind=='unlock':t['production']='ALLOW'
+            try:check(t)
+            except AssertionError:n+=1
+            else:raise AssertionError(kind)
+          assert n==4 and q['production']==m['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_SEMANTIC_BATCH05 PASS stocks=10 attributed_sources=4 verified_catalysts=0 negative_tests=4 production=DENY_ALL')
