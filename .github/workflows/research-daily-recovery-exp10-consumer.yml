@@ -1,0 +1,54 @@
+name: "[Research] Experiment 10 Claim Consumer"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-consumer-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-consumer-ci/
+      - name: End-to-end consumer and negative tests
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy,sys
+          sys.path.insert(0,'recovery-requests/experiment-10')
+          from validate_claim_consumer import validate
+          r=pathlib.Path('recovery-requests');load=lambda p:json.loads(p.read_text())
+          p=load(r/'experiment-10/claim-provenance.json');o=load(r/'experiment-10/consumer-output.json')
+          q=load(r/'experiment-10-consumer-ci/request.json');m=load(r/'experiment-10/manifest.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/claim-provenance.json')==m['claim_provenance']['git_blob_sha']==q['claim_sha']
+          assert sha(r/'experiment-10/consumer-output.json')==q['output_sha']
+          assert sha(r/'experiment-10/validate_claim_consumer.py')==q['validator_sha']
+          validate(p,o)
+          checks=0
+          cases=['fake_id','cross_stock','bad_url','wrong_date','wrong_publisher','unsupported_statement','causality','denied_url','fake_no_news','unlock']
+          exemplar=next(s for s in o['stocks'] if s['assertions'])
+          for case in cases:
+            z=copy.deepcopy(o);s=next(s for s in z['stocks'] if s['code']==exemplar['code']);a=s['assertions'][0]
+            if case=='fake_id':a['claim_id']='FAKE'
+            if case=='cross_stock':a['code']='9999'
+            if case=='bad_url':a['url']='https://fake.invalid'
+            if case=='wrong_date':a['source_date']='2026-10-13'
+            if case=='wrong_publisher':a['publisher']='FAKE'
+            if case=='unsupported_statement':a['statement']='上漲原因已證實'
+            if case=='causality':a['causal_inference']=True
+            if case=='denied_url':a['url']=p['denied'][0]['url']
+            if case=='fake_no_news':s['news_state']='NO_NEWS_EXISTS'
+            if case=='unlock':z['production']='ALLOW'
+            try:validate(p,z)
+            except (AssertionError,KeyError):checks+=1
+            else:raise AssertionError('negative escaped '+case)
+          assert checks==10 and q['production']==m['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_CLAIM_CONSUMER PASS stocks=55 claims=11 negatives=10 publication=BLOCKED production=DENY_ALL')
