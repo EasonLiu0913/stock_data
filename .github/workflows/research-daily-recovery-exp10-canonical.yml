@@ -1,0 +1,69 @@
+name: "[Research] Experiment 10 Canonical Full55 Audit"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-canonical-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  canonical:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-canonical-ci/
+            /data_daily_gain_over_5/analysis-facts/20261012.json
+      - name: Validate all six batches and fail closed on semantic gaps
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests'); load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json'); c=load(r/'experiment-10/full55-coverage.json')
+          q=load(r/'experiment-10-canonical-ci/request.json')
+          f=load(pathlib.Path('data_daily_gain_over_5/analysis-facts/20261012.json'))
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(pathlib.Path('data_daily_gain_over_5/analysis-facts/20261012.json'))==m['facts_blob_sha']
+          assert sha(r/'experiment-10/full55-coverage.json')==m['full55_coverage']['git_blob_sha']
+          assert sha(r/'experiment-10/semantic-batch-06.json')==q['batch06_blob_sha']
+          ss=[s for g in c['batches'] for s in g['stocks']]
+          assert len(ss)==55 and len(set(s['code'] for s in ss))==55
+          assert [s['code'] for s in ss]==[s['code'] for s in f['stocks']]
+          batches=[load(r/('experiment-10/semantic-batch-%02d.json'%i)) for i in range(1,7)]
+          assert [len(z['stocks']) for z in batches]==[10,10,10,10,10,5]
+          allitems=[s for z in batches for s in z['stocks']]
+          assert [s['code'] for s in allitems]==[s['code'] for s in ss]
+          for z in batches:
+            assert z['target_date']=='20261012' and z['source_facts_blob_sha']==m['facts_blob_sha']
+            assert z['source_coverage_blob_sha']==m['full55_coverage']['git_blob_sha']
+            assert z['production']=='DENY_ALL' and z['publication_authorized'] is False
+            for s in z['stocks']:
+              assert s['catalyst_status']=='UNVERIFIED'
+              assert s['news_status']!='NO_NEWS_EXISTS'
+              for a in s['references']:
+                assert a['url'].startswith('https://')
+          a=load(r/'experiment-10/batch03-date-audit.json')
+          assert a['original_untouched'] and a['corrections'][0]['original_announcement_date']=='2026-10-10'
+          assert a['corrections'][1]['correct_announcement_date']=='2026-10-08'
+          assert m['production']==q['production']=='DENY_ALL' and not m['publication_authorized'] and not q['publication_authorized']
+          negatives=0
+          for key in ('duplicate','unlock','fabrication','date'):
+            t=copy.deepcopy(allitems)
+            if key=='duplicate':t[0]['code']=t[1]['code']
+            if key=='unlock':t[0]['catalyst_status']='VERIFIED'
+            if key=='fabrication':t[0]['news_status']='NO_NEWS_EXISTS'
+            if key=='date':t[0]['references'].append({'url':'fake','published_date':'2026-10-13'})
+            try:
+              assert len(set(s['code'] for s in t))==55
+              for s in t:
+                assert s['catalyst_status']=='UNVERIFIED' and s['news_status']!='NO_NEWS_EXISTS'
+                for a in s['references']: assert a['url'].startswith('https://')
+            except AssertionError: negatives+=1
+            else: raise AssertionError('negative escaped '+key)
+          assert negatives==4
+          print('EXPERIMENT10_CANONICAL_AUDIT STRUCTURAL_PASS stocks=55 batches=6 negatives=4 semantic_news_complete=false canonical_publication=BLOCKED production=DENY_ALL')
