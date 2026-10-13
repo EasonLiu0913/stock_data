@@ -29,7 +29,7 @@ jobs:
           assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
           assert sha(r/'experiment-10/canonical-semantic-audit.json')==q['audit_blob_sha']
           batches=[load(r/('experiment-10/semantic-batch-%02d.json'%i)) for i in range(1,7)]
-          assert all(sha(r/z['path'])==z['sha'] for z in a['source_batch_blobs'])
+          assert all(sha(pathlib.Path(z['path']))==z['sha'] for z in a['source_batch_blobs'])
           def check(x):
             ss=[s for v in batches for s in v['stocks']]
             assert x['target_date']=='20261012' and len(x['records'])==x['record_count']==x['stock_count']==55
