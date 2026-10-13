@@ -1,0 +1,62 @@
+{
+  "schema": "daily-data-recovery-v2/experiment-09-diagnostic-v1",
+  "experiment_id": "09",
+  "checkpoint_type": "minimal",
+  "actual_started_at": "2026-10-13T10:19:52.134+08:00",
+  "checkpoint_written_at": "2026-10-13T02:23:41.845Z",
+  "scheduled_round_context": {
+    "expected_round1": "2026-10-13T10:10:00+08:00",
+    "observed_last_run_time": "2026-10-13T10:15:54+08:00",
+    "observation_note": "last_run_time is not proof of durable output; current diagnostic is a separate run"
+  },
+  "target_date": "20261012",
+  "repository": "EasonLiu0913/stock_data",
+  "main_sha": "6df57dce8448297d7e4572ede80a9d6c47a62e26",
+  "research_branch": "research/daily-data-recovery-v2-exp01-20261013",
+  "research_sha_before": "a8a90b73e288d70fa2e71fe35f4175514d82ac02",
+  "source_git_blob_shas": {
+    "main_raw": "367e175bc86fed172cd040701d17ad725b9dab57",
+    "main_facts": "026bbdfff3eadfba514da70d2eb0641f3159247e",
+    "research_raw": "367e175bc86fed172cd040701d17ad725b9dab57",
+    "research_facts": "036b37f9b2c3f072ac20ce9fa97f55f40577c996"
+  },
+  "source_status": {
+    "raw": "COMPLETE",
+    "facts": "COMPLETE",
+    "required_facts_sources": "6/6 available",
+    "stock_count": 55,
+    "raw_facts_order": "MATCH"
+  },
+  "stage": "DIAGNOSTIC_MINIMAL_CHECKPOINT",
+  "stages": {
+    "SCHEDULE_TRIGGERED": "PASS",
+    "SOURCE_READY": "PASS",
+    "RESEARCH_STARTED": "BLOCKED",
+    "NEWS_GENERATED": "NOT_ATTEMPTED",
+    "NEWS_VALIDATED": "NOT_ATTEMPTED",
+    "AI_GENERATED": "NOT_ATTEMPTED",
+    "AI_VALIDATED": "NOT_ATTEMPTED",
+    "GITHUB_WRITE": "RUNNING",
+    "READBACK": "NOT_ATTEMPTED",
+    "CI_RUN": "NOT_ATTEMPTED"
+  },
+  "investigation": {
+    "initial_remote_experiment09_news": "MISSING",
+    "initial_remote_experiment09_ai": "MISSING",
+    "initial_remote_manifest": "MISSING",
+    "initial_research_sha_unchanged": true,
+    "github_connector_permissions": "push=true",
+    "local_git_network": "DNS_UNAVAILABLE",
+    "node_runtime": "Node 22 available; repo not cloned",
+    "push_listener_audit": "248 research-branch workflow YAML headers checked; no observed matching push path for recovery-requests/experiment-09/diagnostic.json; prior Experiment 05 production write allowlist remains empty"
+  },
+  "blocker": "No durable Experiment09 News/AI/Manifest from 10:10; prior round reports connector write rejected, cause not yet reproduced in this run",
+  "next_action": "Create minimal research-only diagnostic checkpoint, fetch/readback blob SHA; then diagnose News/AI validator availability and record final stages. Production DENY ALL.",
+  "production": "DENY_ALL",
+  "handoff_v3": {
+    "progress": "PROGRESS",
+    "prompt_a": "INCOMPLETE",
+    "prompt_b": "INELIGIBLE",
+    "plan_changed": false
+  }
+}
