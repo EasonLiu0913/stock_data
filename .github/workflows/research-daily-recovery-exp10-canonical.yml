@@ -43,7 +43,7 @@ jobs:
             assert z['source_coverage_blob_sha']==m['full55_coverage']['git_blob_sha']
             assert z['production']=='DENY_ALL' and z['publication_authorized'] is False
             for s in z['stocks']:
-              assert s['catalyst_status']=='UNVERIFIED'
+              assert s.get('catalyst_status',s.get('ai_analysis',{}).get('catalyst_status'))=='UNVERIFIED'
               assert s['news_status']!='NO_NEWS_EXISTS'
               for a in s['references']:
                 assert a['url'].startswith('https://')
@@ -61,7 +61,7 @@ jobs:
             try:
               assert len(set(s['code'] for s in t))==55
               for s in t:
-                assert s['catalyst_status']=='UNVERIFIED' and s['news_status']!='NO_NEWS_EXISTS'
+                assert s.get('catalyst_status',s.get('ai_analysis',{}).get('catalyst_status'))=='UNVERIFIED' and s['news_status']!='NO_NEWS_EXISTS'
                 for a in s['references']: assert a['url'].startswith('https://')
             except AssertionError: negatives+=1
             else: raise AssertionError('negative escaped '+key)
