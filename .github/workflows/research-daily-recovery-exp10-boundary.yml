@@ -1,0 +1,57 @@
+name: "[Research] Experiment 10 Completion Boundary"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-boundary-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-boundary-ci/
+      - name: Validate hardened consumer and research boundary
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy,sys
+          sys.path.insert(0,'recovery-requests/experiment-10')
+          from validate_claim_consumer import validate
+          r=pathlib.Path('recovery-requests'); load=lambda p:json.loads(p.read_text())
+          a=load(r/'experiment-10/research-boundary.json');p=load(r/'experiment-10/claim-provenance.json')
+          o=load(r/'experiment-10/consumer-output.json');m=load(r/'experiment-10/manifest.json')
+          q=load(r/'experiment-10-boundary-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/research-boundary.json')==q['boundary_sha']
+          assert sha(r/'experiment-10/claim-provenance.json')==a['claim_sha']==m['claim_provenance']['git_blob_sha']
+          assert sha(r/'experiment-10/consumer-output.json')==a['output_sha']
+          assert sha(r/'experiment-10/validate_claim_consumer.py')==a['hardened_validator_sha']
+          validate(p,o)
+          assert a['boundary']=='ISOLATED_CONTRACT_RESEARCH_COMPLETE_WITH_KNOWN_SEMANTIC_GAPS'
+          assert a['production']==m['production']==q['production']=='DENY_ALL'
+          assert a['publication_authorized'] is False and q['publication_authorized'] is False
+          assert a['prompt_b']=='INELIGIBLE'
+          tests=0
+          for kind in ['duplicate_assertion','missing_assertion','cross_stock','fabricated_statement','causality','release','fake_no_news']:
+            x=copy.deepcopy(o)
+            with_two=next(s for s in x['stocks'] if len(s['assertions'])>=2)
+            first=next(s for s in x['stocks'] if s['assertions'])
+            if kind=='duplicate_assertion': with_two['assertions'][1]=copy.deepcopy(with_two['assertions'][0])
+            if kind=='missing_assertion':with_two['assertions'].pop()
+            if kind=='cross_stock':first['assertions'][0]['code']='9999'
+            if kind=='fabricated_statement':first['assertions'][0]['statement']='verified stock price catalyst'
+            if kind=='causality':first['assertions'][0]['causal_inference']=True
+            if kind=='release':x['production']='ALLOW'
+            if kind=='fake_no_news':first['news_state']='NO_NEWS_EXISTS'
+            try: validate(p,x)
+            except (AssertionError,KeyError):tests+=1
+            else:raise AssertionError('negative escaped '+kind)
+          assert tests==7
+          print('EXPERIMENT10_BOUNDARY_REVIEW PASS stocks=55 claims=11 negatives=7 research_contract=COMPLETE_WITH_GAPS semantic_publication=BLOCKED production=DENY_ALL')
