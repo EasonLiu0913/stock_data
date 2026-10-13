@@ -1,0 +1,50 @@
+name: "[Research] Experiment 07 Real Producer Recovery"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-07/request-20261008.json'
+permissions:
+  contents: read
+jobs:
+  real-producers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/research/experiment07_real_producer.js
+            /scripts/generate_daily_gainers_over_5.js
+            /scripts/build_daily_gainers_ai_facts.js
+            /scripts/build_daily_gainers_market_summary.js
+            /scripts/lib/daily_gainers_ai_contract.js
+            /config/daily-gainers-ai-contract.json
+            /config/daily-gainers-theme-taxonomy.json
+            /data_fubon/fubon_20261007_sma.json
+            /data_fubon/fubon_20261008_sma.json
+            /data_twse_margin_balance/20261008_twse_margin_balance.csv
+            /data_fubon_broker_details/fubon_20261008_券商分點進出明細.json
+            /data_twse_mi_index/20261008_twse_mi_index.json
+            /data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            /data_twse_investment_trust/20261008_twse_investment_trust.json
+            /data_twse_dealers/20261008_twse_dealers.json
+            /recovery-requests/experiment-07/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate exact research request
+        run: |
+          node -e "const r=require('./recovery-requests/experiment-07/request-20261008.json');if(JSON.stringify(r)!==JSON.stringify({schema:'exp07-request-v1',mode:'isolated_research_only',date:'20261008',target:'daily_5pct_video',producers:['list','facts','preliminary-market-summary']}))process.exit(1)"
+      - name: Run original producers in blank temp root and verify output
+        run: |
+          node scripts/research/experiment07_real_producer.js
+          test -s tmp/research/experiment07/manifest.json
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: experiment07-real-producer-evidence
+          path: tmp/research/experiment07/
+          if-no-files-found: warn
+          retention-days: 30
