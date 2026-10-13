@@ -1,7 +1,7 @@
 {
   "schema": "experiment10-checkpoint-v1",
   "target_date": "20261012",
-  "status": "SOURCE_READY_NEWS_AI_PENDING",
+  "status": "FIRST_BATCH_FACTS_EVIDENCE_PERSISTED_NEWS_AI_PENDING",
   "raw_path": "data_daily_gain_over_5/20261012.json",
   "raw_blob_sha": "367e175bc86fed172cd040701d17ad725b9dab57",
   "facts_path": "data_daily_gain_over_5/analysis-facts/20261012.json",
@@ -19,7 +19,7 @@
     "facts_blob_sha_verified": "036b37f9b2c3f072ac20ce9fa97f55f40577c996",
     "experiment09_blob_sha_unchanged": "3cd41732762e71143f40f845155199aabd728dbb"
   },
-  "next_stage": "NEWS_AI_BATCH_RESEARCH_PENDING",
+  "next_stage": "VERIFY_DATED_NEWS_SOURCES_AND_PERSIST_ATTRIBUTED_BATCH",
   "validation": {
     "stage": "MANIFEST_SOURCE_READBACK_AND_PATH_FIREWALL",
     "result": "PASS",
@@ -32,10 +32,24 @@
   "handoff_v3": {
     "active": "PROMPT_A",
     "progress": "PROGRESS",
-    "completed": "10/12 raw and Facts source blob verification; persisted manifest readback; read-only path firewall CI",
-    "blocker": "News/AI real research batches, persistence and cross-manual-run continuation not yet validated",
-    "planned_direction": "Create bounded News batch from 10/12 Facts and source-verified evidence; readback, then independent AI batch and resume test",
+    "completed": "10/12 raw and Facts source blob verification; persisted manifest readback; read-only path firewall CI; first five-stock Facts evidence batch persisted and remote readback verified",
+    "blocker": "Independent dated News source validation, full News/AI generation, canonical content validation and cross-manual-run resume CI remain pending",
+    "planned_direction": "Resume from GitHub manifest and first-batch blob SHA; research attributed external news, validate each claim; then independent AI batch and CI readback",
     "prompt_b": "INELIGIBLE",
     "production": "DENY_ALL"
+  },
+  "news_batch": {
+    "path": "recovery-requests/experiment-10/news-batch-1516-1563.json",
+    "git_blob_sha": "ff82b731e6150fa217e36864b8c151520b883a60",
+    "stock_codes": [
+      "1516",
+      "2429",
+      "6909",
+      "3008",
+      "1563"
+    ],
+    "status": "FACTS_EVIDENCE_PREPARED_NEWS_NOT_GENERATED",
+    "readback": "VERIFIED",
+    "commit_sha": "ec4d5d081685f7323cd9524101456599ce719c6f"
   }
 }
