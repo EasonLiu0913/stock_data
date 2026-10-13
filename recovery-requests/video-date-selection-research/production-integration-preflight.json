@@ -1,0 +1,38 @@
+{
+  "schema": "video-date-production-integration-preflight-v1",
+  "main_head": "a28078ee8267a117e71bec986a1a6e37c49b5b7e",
+  "isolated_research_head": "1315861243e576159f159fa5d71b59f7c554dd43",
+  "exact_source_shas": {
+    "resolver": "764cc21a8636c3ad62abb4398596f44a113d43a0",
+    "tests": "5bf341d1f5fc7dbfa8c2d64f11b12c45493ce99e",
+    "execution_evidence": "32e74d05d28e02f31a94cb82925b3ad03b45579b"
+  },
+  "main_entrypoints": {
+    "workflow": ".github/workflows/daily-gainers-video-upload-orchestrator.yml",
+    "workflow_sha": "6e71da925b5b08a6d9d9c93c2c0a909f142f77fb",
+    "validator": "scripts/validate_daily_gainers_video_script.js",
+    "validator_sha": "d6a1283b7f9cfd52f85427ce30ff74c9c4fe8858",
+    "decision": "scripts/decide_daily_gainers_video_upload.sh",
+    "decision_sha": "80aff1b90740fb6bff49ec13dcd925d6d3f2b42e"
+  },
+  "preflight_findings": [
+    "Blank date currently uses lexical max script filename without independently resolved intended trading date",
+    "Current validator validates chosen date consistency but not intended date",
+    "Existing render dispatch targets combined generate-and-upload workflow; research-only preview must never point to it",
+    "Current active video Handoff has frozen phased A/B release gates; research Node 14/14 does not supersede them"
+  ],
+  "integration_contract": [
+    "Preregister phase-specific owner-governed A/B before main edit",
+    "No silent historical fallback, reject missing same-day script/data",
+    "Keep historical date handling separately explicit and authorized",
+    "Separate actual preview-only job from upload-capable job; never map preview route to existing combined job",
+    "Add deterministic tests for blank date, history, missing data, receipt, mismatched artifact, authorization and no unexpected dispatch",
+    "Complete push-listener, workflow_dispatch, schedule, reusable Pages and YouTube indirect effects audit at fresh main",
+    "After independently accepted changes and separately authorized rollout only, consider main; do not authorize YouTube by date decision alone"
+  ],
+  "current_status": "INTEGRATION_PREFLIGHT_COMPLETE_MAIN_EDIT_BLOCKED_BY_FROZEN_OWNER_GATES",
+  "main_modified": false,
+  "production": "DENY_ALL",
+  "publication_authorized": false,
+  "prompt_b": "NOT_AUTO_EXECUTED"
+}
