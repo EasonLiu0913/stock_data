@@ -1,0 +1,74 @@
+name: "[Research] Experiment 10 Full55 Coverage"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-full55-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-full55-ci/
+            /data_daily_gain_over_5/analysis-facts/20261012.json
+      - name: Verify 55 roster, source SHA, no fabrication, negative cases
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json')
+          x=load(r/'experiment-10/full55-coverage.json')
+          n=load(r/'experiment-10/news-batch-1516-1563.json')
+          a=load(r/'experiment-10/ai-batch-1516-1563.json')
+          q=load(r/'experiment-10-full55-ci/request.json')
+          f=load(pathlib.Path('data_daily_gain_over_5/analysis-facts/20261012.json'))
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/full55-coverage.json')==q['coverage_blob_sha']
+          assert sha(pathlib.Path('data_daily_gain_over_5/analysis-facts/20261012.json'))==x['source']['facts_blob_sha']==m['facts_blob_sha']
+          assert sha(r/'experiment-10/news-batch-1516-1563.json')==x['source']['bounded_news_blob_sha']
+          assert sha(r/'experiment-10/ai-batch-1516-1563.json')==x['source']['bounded_ai_blob_sha']
+          def validate(y):
+            groups=y['batches']
+            assert len(groups)==6 and [len(g['stocks']) for g in groups]==[10,10,10,10,10,5]
+            ss=[s for g in groups for s in g['stocks']]
+            assert len(ss)==y['stock_count']==f['stock_count']==55
+            assert [s['code'] for s in ss]==[s['code'] for s in f['stocks']]
+            assert len(set(s['code'] for s in ss))==55
+            for i,(s,t) in enumerate(zip(ss,f['stocks'])):
+              assert s['code']==t['code'] and s['name']==t['name']
+              assert s['facts']['change_pct']==t['price']['change_pct']
+              assert s['facts']['volume']==t['price']['volume']
+              assert s['source_facts_blob_sha']==m['facts_blob_sha']
+              assert s['catalyst_status']=='UNVERIFIED'
+              if i<5:
+                assert s['news_claim_ids']==[z['claim_id'] for z in n['stocks'][i]['news_evidence']]
+                assert s['news_source_urls']==[z['url'] for z in n['stocks'][i]['news_evidence']]
+              else:
+                assert s['news_status']=='NEWS_UNVERIFIED_NOT_RESEARCHED'
+                assert s['news_claim_ids']==s['news_source_urls']==[]
+                assert s['ai_status']=='DETERMINISTIC_FACTS_SUMMARY_NOT_SEMANTIC_AI_VALIDATED'
+            assert y['production']==q['production']==m['production']=='DENY_ALL'
+            assert y['publication_authorized'] is False and q['publication_authorized'] is False
+          validate(x)
+          tests=0
+          for change in ('duplicate','order','fabrication','date','release'):
+            z=copy.deepcopy(x)
+            if change=='duplicate':z['batches'][0]['stocks'][1]['code']=z['batches'][0]['stocks'][0]['code']
+            if change=='order':z['batches'][0]['stocks'].reverse()
+            if change=='fabrication':z['batches'][1]['stocks'][0]['news_claim_ids']=['FAKE']
+            if change=='date':z['batches'][1]['stocks'][0]['source_facts_blob_sha']='invalid'
+            if change=='release':z['production']='ALLOW'
+            try:validate(z)
+            except AssertionError:tests+=1
+            else:raise AssertionError('negative test escaped '+change)
+          assert tests==5
+          print('EXPERIMENT10_FULL55_COVERAGE PASS stocks=55 batches=6 verified_market_event_stocks=5 news_unresearched=50 negative_tests=5 production=DENY_ALL')
