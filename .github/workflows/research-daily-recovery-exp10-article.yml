@@ -55,7 +55,7 @@ jobs:
           for kind in ('wrong_url','fabricated_content','stock_swap','causal_inference','unlock'):
             z=copy.deepcopy(x)
             if kind=='wrong_url':z['items'][0]['original_url']='https://example.invalid'
-            if kind=='fabricated_content':z['items'][0]['validation_status']='CONTENT_DATE_CONFIRMED_SCOPE_LIMITED';z['items'][0]['confirmed']={'date':'2026-10-12','publisher':'fake','claim':'fake'}
+            if kind=='fabricated_content':next(v for v in z['items'] if v['validation_status']!='CONTENT_DATE_CONFIRMED_SCOPE_LIMITED')['validation_status']='CONTENT_DATE_CONFIRMED_SCOPE_LIMITED'
             if kind=='stock_swap':z['items'][1]['code']='FAKE'
             if kind=='causal_inference':z['items'][0]['ai_causal_support']=True
             if kind=='unlock':z['production']='ALLOW'
