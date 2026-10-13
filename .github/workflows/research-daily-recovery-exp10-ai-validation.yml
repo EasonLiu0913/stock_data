@@ -1,0 +1,45 @@
+name: "[Research] Experiment 10 AI Batch Validation"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-10-ai-ci/request.json'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-ai-ci/
+      - name: Validate AI source links and negative cases
+        shell: python
+        run: |
+          import json, pathlib, subprocess
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json')
+          n=load(r/'experiment-10/news-batch-1516-1563.json')
+          a=load(r/'experiment-10/ai-batch-1516-1563.json')
+          q=load(r/'experiment-10-ai-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert m['target_date']==a['target_date']==n['target_date']==q['target_date']=='20261012'
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/news-batch-1516-1563.json')==a['source_news_blob_sha']==q['news_blob_sha']
+          assert sha(r/'experiment-10/ai-batch-1516-1563.json')==m['ai_batch']['git_blob_sha']==q['ai_blob_sha']
+          assert a['source_facts_blob_sha']==m['facts_blob_sha'] and a['source_raw_blob_sha']==m['raw_blob_sha']
+          assert len(a['stocks'])==len(n['stocks'])==5
+          assert [s['code'] for s in a['stocks']]==[s['code'] for s in n['stocks']]
+          for s,t in zip(a['stocks'],n['stocks']):
+            assert s['market_event_claim_ids']==[x['claim_id'] for x in t['news_evidence']]
+            assert s['catalyst_status']=='UNVERIFIED' and s['validation_status']=='DRAFT_PENDING_INDEPENDENT_CI'
+            assert s['observations'] and s['risk'] and s['inference']
+          assert a['production']==m['production']==q['production']=='DENY_ALL'
+          assert not a['publication_authorized'] and not m['publication_authorized'] and not q['publication_authorized']
+          print('EXPERIMENT10_AI_BATCH_VALIDATION PASS five_stocks=5 news_claims=6 production=DENY_ALL')
