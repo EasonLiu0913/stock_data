@@ -10,6 +10,7 @@ on:
       - ".github/workflows/generate-upload-daily-gainers-video.yml"
       - ".github/workflows/research-video-date-integration-ci.yml"
       - ".github/workflows/research-daily-gainers-render-preview-only.yml"
+      - ".github/workflows/research-daily-gainers-historical-replay-20261008.yml"
 permissions:
   contents: read
 jobs:
@@ -31,6 +32,7 @@ jobs:
             .github/workflows/daily-gainers-video-upload-orchestrator.yml
             .github/workflows/generate-upload-daily-gainers-video.yml
             .github/workflows/research-daily-gainers-render-preview-only.yml
+            .github/workflows/research-daily-gainers-historical-replay-20261008.yml
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
@@ -51,6 +53,11 @@ jobs:
           assert.match(preview,/workflow_dispatch:/);
           assert(preview.includes("github.ref != 'refs/heads/main'"));
           for(const forbidden of ['secrets.','upload_youtube.js','upload_youtube_caption.js','video_upload_receipts','gh workflow run'])assert(!preview.includes(forbidden),forbidden);
+          const replay=fs.readFileSync('.github/workflows/research-daily-gainers-historical-replay-20261008.yml','utf8');
+          assert(replay.includes("inputs.research_confirmation == 'REPLAY_20261008'"));
+          assert(replay.includes("github.ref == 'refs/heads/fix/video-date-fail-closed-20261013'"));
+          assert(replay.includes("INPUT_DATE: '20261008'"));
+          for(const forbidden of ['secrets.','upload_youtube.js','upload_youtube_caption.js','video_upload_receipts','gh workflow run'])assert(!replay.includes(forbidden),forbidden);
           const combined=fs.readFileSync('.github/workflows/generate-upload-daily-gainers-video.yml','utf8');
           assert(!combined.includes('sort | tail -1'));
           console.log('PASS no outbound artifact route and no old-script fallback');
