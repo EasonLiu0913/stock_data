@@ -1,0 +1,25 @@
+name: "[Research] Experiment 10 Path Firewall"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths:
+      - 'recovery-requests/experiment-10-audit/request.json'
+permissions:
+  contents: read
+jobs:
+  firewall:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'PyYAML==6.0.2'
+      - name: Verify research-only path firewall and negative cases
+        run: python scripts/research/experiment10_path_firewall.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: experiment10-path-firewall
+          path: tmp/research/experiment10-audit/audit.json
+          retention-days: 30
