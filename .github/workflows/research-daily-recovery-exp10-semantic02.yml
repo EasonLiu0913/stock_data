@@ -1,0 +1,61 @@
+name: "[Research] Experiment 10 Semantic Batch 02"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-semantic02-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-semantic02-ci/
+      - name: Validate ten-stock batch and absence of fabricated catalysts
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json')
+          x=load(r/'experiment-10/full55-coverage.json')
+          s=load(r/'experiment-10/semantic-batch-02.json')
+          q=load(r/'experiment-10-semantic02-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/semantic-batch-02.json')==q['semantic_blob_sha']
+          assert sha(r/'experiment-10/full55-coverage.json')==s['source_coverage_blob_sha']==m['full55_coverage']['git_blob_sha']
+          assert s['source_facts_blob_sha']==m['facts_blob_sha']
+          assert s['batch_index']==2 and s['target_date']==m['target_date']=='20261012'
+          def validate(y):
+            assert len(y['stocks'])==10
+            for a,b in zip(y['stocks'],x['batches'][1]['stocks']):
+              assert a['code']==b['code'] and a['name']==b['name']
+              assert a['ai_analysis']['observed_change_pct']==b['facts']['change_pct']
+              assert a['ai_analysis']['observed_volume']==b['facts']['volume']
+              assert a['ai_analysis']['foreign_net_shares']==b['facts']['foreign_net_shares']
+              assert a['news_status']=='DATED_MARKET_DATA_ONLY_NO_CATALYST_VERIFIED'
+              assert a['news_catalyst_status']=='SOURCE_INSUFFICIENT_NOT_NO_NEWS'
+              assert a['ai_analysis']['catalyst_status']=='UNVERIFIED'
+              assert len(a['references'])==1 and a['references'][0]['evidence_date']=='2026-10-12'
+              assert a['references'][0]['url'].startswith('https://')
+            assert y['production']=='DENY_ALL' and y['publication_authorized'] is False
+          validate(s)
+          tests=0
+          for kind in ['code','date','catalyst','unlock']:
+            t=copy.deepcopy(s)
+            if kind=='code':t['stocks'][0]['code']='FAKE'
+            if kind=='date':t['stocks'][0]['references'][0]['evidence_date']='2026-10-13'
+            if kind=='catalyst':t['stocks'][0]['ai_analysis']['catalyst_status']='VERIFIED'
+            if kind=='unlock':t['production']='ALLOW'
+            try:validate(t)
+            except AssertionError:tests+=1
+            else:raise AssertionError(kind)
+          assert tests==4 and q['production']==m['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_SEMANTIC_BATCH02 PASS stocks=10 dated_market_data=10 catalyst_verified=0 negative_tests=4 production=DENY_ALL')
