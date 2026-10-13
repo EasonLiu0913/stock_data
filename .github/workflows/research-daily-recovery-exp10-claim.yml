@@ -1,0 +1,66 @@
+name: "[Research] Experiment 10 Claim Provenance"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-claim-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-claim-ci/
+      - name: Validate eleven immutable claims and denied references
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy
+          r=pathlib.Path('recovery-requests'); load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json');c=load(r/'experiment-10/evidence-closure.json')
+          a=load(r/'experiment-10/article-level-validation.json');d=load(r/'experiment-10/citation-remediation.json')
+          p=load(r/'experiment-10/claim-provenance.json');q=load(r/'experiment-10-claim-ci/request.json')
+          sha=lambda path:subprocess.check_output(['git','hash-object',str(path)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/claim-provenance.json')==q['claim_blob_sha']
+          assert sha(r/'experiment-10/evidence-closure.json')==p['source_closure_sha']==m['evidence_closure']['git_blob_sha']
+          assert sha(r/'experiment-10/article-level-validation.json')==p['source_article_validation_sha']
+          assert sha(r/'experiment-10/citation-remediation.json')==p['source_remediation_sha']
+          def check(x):
+            assert x['target_date']=='20261012' and len(x['items'])==len(c['allowed'])==11
+            assert len(x['denied'])==len(c['denied'])==16 and len(x['roster'])==55
+            assert len(set(t['claim_id'] for t in x['items']))==11
+            assert [t['claim_id'] for t in x['items']]==['EXP10-20261012-%03d'%i for i in range(1,12)]
+            assert [(v['code'],v['url']) for v in x['items']]==[(v['code'],v['url']) for v in c['allowed']]
+            assert [(v['code'],v['url']) for v in x['denied']]==[(v['code'],v['url']) for v in c['denied']]
+            assert all(v['ai_use'] is False for v in x['denied'])
+            assert not (set((v['code'],v['url']) for v in x['items']) & set((v['code'],v['url']) for v in x['denied']))
+            assert [v['code'] for v in x['roster']]==[v['code'] for v in c['roster']]
+            for v,original in zip(x['items'],c['allowed']):
+              assert v['source_closure_sha']==x['source_closure_sha']
+              assert v['source_date'] in ('2026-10-08','2026-10-12') and v['publisher'] and v['allowed_statement']
+              assert v['ai_use'] is True and v['causal_allowed'] is False and original['causal_allowed'] is False
+            for v in x['roster']:
+              assert v['claim_ids']==[t['claim_id'] for t in x['items'] if t['code']==v['code'] and t['ai_use']]
+              assert v['news_state']!='NO_NEWS_EXISTS' and v['catalyst_status']=='UNVERIFIED'
+            assert x['production']=='DENY_ALL' and x['publication_authorized'] is False
+          check(p)
+          count=0
+          for k in ('duplicate_id','fake_url','denied_promoted','unsupported_causality','fake_news','unlock'):
+            x=copy.deepcopy(p)
+            if k=='duplicate_id':x['items'][1]['claim_id']=x['items'][0]['claim_id']
+            if k=='fake_url':x['items'][0]['url']='https://fake.invalid'
+            if k=='denied_promoted':x['denied'][0]['ai_use']=True
+            if k=='unsupported_causality':x['items'][0]['causal_allowed']=True
+            if k=='fake_news':x['roster'][0]['news_state']='NO_NEWS_EXISTS'
+            if k=='unlock':x['production']='ALLOW'
+            try:check(x)
+            except AssertionError:count+=1
+            else:raise AssertionError('negative escaped '+k)
+          assert count==6 and m['production']==q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_CLAIM_PROVENANCE PASS claims=11 denied=16 stocks=55 negative_tests=6 causality=UNVERIFIED production=DENY_ALL')
