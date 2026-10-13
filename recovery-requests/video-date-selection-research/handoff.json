@@ -1,0 +1,41 @@
+{
+  "schema": "daily-gainers-video-date-selection-isolated-research-v1",
+  "main_baseline": "a28078ee8267a117e71bec986a1a6e37c49b5b7e",
+  "research_files": [
+    "recovery-requests/video-date-selection-research/date_decision.js",
+    "recovery-requests/video-date-selection-research/date_decision.test.js"
+  ],
+  "source_shas": [
+    "764cc21a8636c3ad62abb4398596f44a113d43a0",
+    "5bf341d1f5fc7dbfa8c2d64f11b12c45493ce99e"
+  ],
+  "diagnosis": {
+    "blank_date": "main orchestrator resolves maximum historical script filename rather than expected trade date",
+    "validator": "validates chosen date consistency, not invocation expected date",
+    "decision": "render currently dispatches combined Generate & Upload workflow; preview and upload are not separated",
+    "observed_20261012_summary": "preliminary/partial in reviewed main snapshot, cannot authorize current date upload"
+  },
+  "contract": {
+    "expected_date": "Must be independently established from TWSE trading calendar and invocation scope; cannot infer from latest script",
+    "blank_date": "Resolve only expectedDate; never fall back to old script",
+    "historical": "Explicit date plus independent historical authorization",
+    "render": "RENDER_PREVIEW_ONLY requires own isolated renderer; NEVER map to current combined render/upload workflow",
+    "upload": "separate uploadAuthorized gate and matching complete dated artifact",
+    "retry": "same-date QA verified artifact + upload authorization",
+    "receipt": "no duplicate upload"
+  },
+  "local_test_status": "TEST_FILE_PERSISTED_EXECUTION_NOT_YET_VERIFIED",
+  "forbidden": [
+    "main writes",
+    "production",
+    "cron",
+    "Pages",
+    "YouTube",
+    "formal video",
+    "Prompt B",
+    "Experiment 10 structural redo"
+  ],
+  "research_progress_status": "PROGRESS",
+  "phase_status": "PROMPT_A_ISOLATED_IMPLEMENTATION_TEST_EXECUTION_PENDING",
+  "next_action": "Run isolated node test and remote-readback, separately preregister independent acceptance before any production proposal"
+}
