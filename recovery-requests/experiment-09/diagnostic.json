@@ -1,7 +1,7 @@
 {
   "schema": "daily-data-recovery-v2/experiment-09-diagnostic-v1",
   "experiment_id": "09",
-  "checkpoint_type": "minimal",
+  "checkpoint_type": "final",
   "actual_started_at": "2026-10-13T10:19:52.134+08:00",
   "checkpoint_written_at": "2026-10-13T02:23:41.845Z",
   "scheduled_round_context": {
@@ -27,7 +27,7 @@
     "stock_count": 55,
     "raw_facts_order": "MATCH"
   },
-  "stage": "DIAGNOSTIC_MINIMAL_CHECKPOINT",
+  "stage": "DIAGNOSTIC_FINAL",
   "stages": {
     "SCHEDULE_TRIGGERED": "PASS",
     "SOURCE_READY": "PASS",
@@ -36,8 +36,8 @@
     "NEWS_VALIDATED": "NOT_ATTEMPTED",
     "AI_GENERATED": "NOT_ATTEMPTED",
     "AI_VALIDATED": "NOT_ATTEMPTED",
-    "GITHUB_WRITE": "RUNNING",
-    "READBACK": "NOT_ATTEMPTED",
+    "GITHUB_WRITE": "PASS",
+    "READBACK": "PASS",
     "CI_RUN": "NOT_ATTEMPTED"
   },
   "investigation": {
@@ -50,13 +50,14 @@
     "node_runtime": "Node 22 available; repo not cloned",
     "push_listener_audit": "248 research-branch workflow YAML headers checked; no observed matching push path for recovery-requests/experiment-09/diagnostic.json; prior Experiment 05 production write allowlist remains empty"
   },
-  "blocker": "No durable Experiment09 News/AI/Manifest from 10:10; prior round reports connector write rejected, cause not yet reproduced in this run",
-  "next_action": "Create minimal research-only diagnostic checkpoint, fetch/readback blob SHA; then diagnose News/AI validator availability and record final stages. Production DENY ALL.",
+  "blocker": "Original 10:10 round produced no durable News/AI/Manifest; separate diagnostic checkpoint exists. No complete 55-stock new research or canonical validator execution evidenced.",
+  "next_action": "Inspect original scheduler execution and connector rejection trace; only resume isolated News research with validator and durable manifest. No production changes.",
   "production": "DENY_ALL",
   "handoff_v3": {
     "progress": "PROGRESS",
     "prompt_a": "INCOMPLETE",
     "prompt_b": "INELIGIBLE",
     "plan_changed": false
-  }
+  },
+  "research_sha_observed": "564ecfbbbf4d9907290c269af3d87cc748c0a410"
 }
