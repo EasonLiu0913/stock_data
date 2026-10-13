@@ -1,0 +1,50 @@
+name: "[Research] Experiment 10 Semantic Batch 01"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-semantic-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-semantic-ci/
+      - name: Validate source-bound semantic batch and missing-news distinctions
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          root=pathlib.Path('recovery-requests')
+          load=lambda x:json.loads(x.read_text())
+          m=load(root/'experiment-10/manifest.json')
+          c=load(root/'experiment-10/full55-coverage.json')
+          s=load(root/'experiment-10/semantic-batch-01.json')
+          q=load(root/'experiment-10-semantic-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(root/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(root/'experiment-10/semantic-batch-01.json')==q['semantic_blob_sha']
+          assert sha(root/'experiment-10/full55-coverage.json')==s['source_coverage_blob_sha']==m['full55_coverage']['git_blob_sha']
+          assert s['source_facts_blob_sha']==m['facts_blob_sha']
+          assert s['target_date']==c['target_date']==m['target_date']=='20261012'
+          expected=c['batches'][0]['stocks']
+          assert len(s['stocks'])==len(expected)==10
+          for i,(a,b) in enumerate(zip(s['stocks'],expected)):
+            assert a['code']==b['code'] and a['name']==b['name']
+            assert a['ai_analysis']['observed_change_pct']==b['facts']['change_pct']
+            assert a['ai_analysis']['observed_volume']==b['facts']['volume']
+            assert a['ai_analysis']['catalyst_status']=='UNVERIFIED'
+            assert a['semantic_validation']=='SOURCE_BOUND_RESEARCH_DRAFT'
+            assert a['news_status']!='NO_NEWS_EXISTS'
+            for item in a['references']:
+              assert item['url'].startswith('https://') and item['published_date']=='2026-10-12'
+            if i>=5 and a['code']!='2355':assert a['news_status']=='SOURCE_INSUFFICIENT_NOT_NO_NEWS' and not a['references']
+          assert len([a for a in s['stocks'] if a['code']=='2355' and len(a['references'])==1])==1
+          assert s['publication_authorized'] is False and s['production']==m['production']==q['production']=='DENY_ALL'
+          print('EXPERIMENT10_SEMANTIC_BATCH01 PASS stocks=10 newly_attributed=1 remaining_source_insufficient=4 no_fabricated_catalysts=true production=DENY_ALL')
