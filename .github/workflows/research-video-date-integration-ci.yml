@@ -1,0 +1,80 @@
+name: "[Research] Video Date Integration Safe CI"
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/resolve_daily_gainers_video_target_date.js"
+      - "tests/resolve_daily_gainers_video_target_date.test.js"
+      - "tests/video_date_merge_acceptance.test.js"
+      - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
+      - ".github/workflows/generate-upload-daily-gainers-video.yml"
+      - ".github/workflows/research-video-date-integration-ci.yml"
+      - ".github/workflows/research-daily-gainers-render-preview-only.yml"
+      - ".github/workflows/research-daily-gainers-historical-replay-20261008.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            scripts/resolve_daily_gainers_video_target_date.js
+            scripts/resolve_forecast_dates.js
+            data_history_sma/non_trading_days.json
+            tests/resolve_daily_gainers_video_target_date.test.js
+            tests/video_date_merge_acceptance.test.js
+            .github/workflows/daily-gainers-video-upload-orchestrator.yml
+            .github/workflows/generate-upload-daily-gainers-video.yml
+            .github/workflows/research-daily-gainers-render-preview-only.yml
+            .github/workflows/research-daily-gainers-historical-replay-20261008.yml
+            scripts/research_create_20261008_replay_script.js
+            scripts/research_preflight_20261008_replay.js
+            scripts/validate_daily_gainers_video_script.js
+            scripts/daily_gainers_brand_opening.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/market-summary/20261008.json
+            video_scripts/daily-gainers/20261008.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: node --check scripts/resolve_daily_gainers_video_target_date.js
+      - run: node tests/resolve_daily_gainers_video_target_date.test.js
+      - run: node tests/video_date_merge_acceptance.test.js
+      - name: Derive replay candidate with source hash and exact diff
+        run: node scripts/research_create_20261008_replay_script.js
+      - name: Historical replay 20261008 source preflight only (no render)
+        run: node scripts/research_preflight_20261008_replay.js
+      - name: Fail closed on outbound routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const y=fs.readFileSync('.github/workflows/daily-gainers-video-upload-orchestrator.yml','utf8');
+          assert(!y.includes('sort | tail -1'));
+          assert.match(y,/if: \$\{\{ false \}\} # formal artifact API/);
+          assert.equal((y.match(/if: \$\{\{ false \}\}/g)||[]).length,3);
+          const preview=fs.readFileSync('.github/workflows/research-daily-gainers-render-preview-only.yml','utf8');
+          assert.match(preview,/workflow_dispatch:/);
+          assert(preview.includes("github.ref != 'refs/heads/main'"));
+          for(const forbidden of ['secrets.','upload_youtube.js','upload_youtube_caption.js','video_upload_receipts','gh workflow run'])assert(!preview.includes(forbidden),forbidden);
+          const replay=fs.readFileSync('.github/workflows/research-daily-gainers-historical-replay-20261008.yml','utf8');
+          assert(replay.includes("inputs.research_confirmation == 'REPLAY_20261008'"));
+          assert(replay.includes("github.ref == 'refs/heads/fix/video-date-fail-closed-20261013'"));
+          assert(replay.includes("INPUT_DATE: '20261008'"));
+          assert(replay.includes('node scripts/research_create_20261008_replay_script.js'));
+          assert(replay.includes('node scripts/research_preflight_20261008_replay.js'));
+          assert(replay.includes('20261008-provenance.json'));
+          assert(replay.includes('cp recovery-requests/video-date-selection-research/replay-input/20261008.json video_scripts/daily-gainers/20261008.json'));
+          for(const forbidden of ['secrets.','upload_youtube.js','upload_youtube_caption.js','video_upload_receipts','gh workflow run'])assert(!replay.includes(forbidden),forbidden);
+          const combined=fs.readFileSync('.github/workflows/generate-upload-daily-gainers-video.yml','utf8');
+          assert(!combined.includes('sort | tail -1'));
+          console.log('PASS no outbound artifact route and no old-script fallback');
+          NODE

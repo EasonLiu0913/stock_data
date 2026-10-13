@@ -1,0 +1,26 @@
+{
+  "schema": "edge-tts-20261008-investigation-v2",
+  "probe_runs": [
+    38411175336,
+    38411344995
+  ],
+  "client": "edge-tts==7.2.8",
+  "voice": "zh-TW-YunJheNeural",
+  "rate": "+15%",
+  "observed": "WSServerHandshakeError HTTP_403 at single short sentence; zero audio bytes and zero WordBoundary on both probes",
+  "source_check": "Project Edge TTS service inaccessible in research GitHub runner; upstream issue/discussion also report 403, not proof of same cause",
+  "hypotheses": [
+    "upstream handshake compatibility",
+    "regional/datacenter IP policy",
+    "temporary service denial"
+  ],
+  "not_proven": "Specific cause cannot be assigned without controlled evidence",
+  "decisions": [
+    "disable pull_request-triggered full historical Render and repeated TTS probe",
+    "do not downgrade/change official voice or use guessed subtitle timing",
+    "do not reuse historic audio unless text, voice, speed, source hash and actual alignment are proven identical",
+    "retain manual-only isolated research entry with no credentials or uploads"
+  ],
+  "next_gate": "Use independent service-status/version evidence then one deliberately authorized compatibility probe; only after real audio and WordBoundary PASS may full replay resume",
+  "status": "BLOCKED_EXTERNAL_TTS"
+}
