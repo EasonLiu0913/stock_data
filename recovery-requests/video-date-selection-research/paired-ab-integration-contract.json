@@ -1,0 +1,49 @@
+{
+  "schema": "video-date-integration-paired-ab-v1",
+  "scope": "INDEPENDENT_VIDEO_DATE_INTEGRATION_CHANGE_NOT_M5_M8_OR_EXP10",
+  "baseline": {
+    "main": "a28078ee8267a117e71bec986a1a6e37c49b5b7e",
+    "research": "51814ae3b7bb80ff83e4d1c14070bb81b623e2f6",
+    "resolver_sha": "764cc21a8636c3ad62abb4398596f44a113d43a0",
+    "original_test_sha": "5bf341d1f5fc7dbfa8c2d64f11b12c45493ce99e",
+    "execution_evidence_sha": "32e74d05d28e02f31a94cb82925b3ad03b45579b"
+  },
+  "prompt_a": {
+    "state": "ACTIVE",
+    "goal": "Prepare and test no-side-effect integration of existing date decision with a simulated workflow router in isolated research namespace",
+    "acceptance": [
+      "Preserve frozen 14-case original source",
+      "Mock router must never dispatch actual workflow or make API/network request",
+      "Resolve blank input to independently supplied target date only",
+      "Distinguish preview-only from actual upload and prevent render mapping to combined Generate & Upload",
+      "Negative tests block stale, partial, mismatched artifact and unauthorized upload",
+      "Obtain actual execution exit code, stdout and file SHAs plus remote readback",
+      "No changes to main, cron, production, Pages, YouTube or formal video"
+    ]
+  },
+  "prompt_b": {
+    "state": "PENDING_NOT_AUTHORIZED_FOR_AUTOMATIC_EXECUTION",
+    "goal": "Independent reviewer verifies A committed exact SHAs, original 14-case and isolated integration tests, no side effects, and matches fresh main triggers",
+    "acceptance": [
+      "Re-fetch remote source and test SHAs at frozen HEAD",
+      "Independent runner reproduces tests without writing production or dispatching workflows",
+      "Inspect target-date provenance and test matrix including nontrading/unknown expected date",
+      "Verify release flags publication=false, main unchanged, no new active listener",
+      "Report independent verdict and remaining gates; does not authorize production or upload"
+    ]
+  },
+  "release": {
+    "main_integration": "SEPARATE_OWNER_GATED_AFTER_B",
+    "production": "DENY_ALL",
+    "publication_authorized": false,
+    "formal_video": false,
+    "cron": false,
+    "pages": false,
+    "youtube": false
+  },
+  "handoff_v3": {
+    "progress": "PROGRESS",
+    "blocker": "Independent Prompt B pending; production integration not authorized",
+    "planned_direction": "Finish bounded Prompt A mock integration and actual test, then request independent B explicitly; no expansion of date resolver"
+  }
+}
