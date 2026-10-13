@@ -33,6 +33,7 @@ jobs:
             .github/workflows/generate-upload-daily-gainers-video.yml
             .github/workflows/research-daily-gainers-render-preview-only.yml
             .github/workflows/research-daily-gainers-historical-replay-20261008.yml
+            scripts/research_create_20261008_replay_script.js
             scripts/validate_daily_gainers_video_script.js
             scripts/daily_gainers_brand_opening.js
             data_daily_gain_over_5/20261008.json
@@ -45,6 +46,8 @@ jobs:
       - run: node --check scripts/resolve_daily_gainers_video_target_date.js
       - run: node tests/resolve_daily_gainers_video_target_date.test.js
       - run: node tests/video_date_merge_acceptance.test.js
+      - name: Derive replay candidate with source hash and exact diff
+        run: node scripts/research_create_20261008_replay_script.js
       - name: Historical replay 20261008 source preflight only (no render)
         run: node scripts/validate_daily_gainers_video_script.js 20261008
       - name: Fail closed on outbound routing
