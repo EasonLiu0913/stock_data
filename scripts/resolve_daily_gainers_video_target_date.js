@@ -6,7 +6,8 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const input=(process.argv[2]||'').trim();
-const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replace(/-/g,'');
+const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+const today=parts.year+parts.month+parts.day;
 const date=input||today;
 function fail(code){process.stderr.write(code+'\n');process.exit(2);}
 if(!/^20\d{6}$/.test(date))fail('INVALID_DATE');
