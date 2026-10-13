@@ -1,0 +1,65 @@
+name: "[Research] Experiment 10 Safe Claim Promotion"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-promotion-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-promotion-ci/
+      - name: Check source-specific promotion and fail-closed negative tests
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests');load=lambda p:json.loads(p.read_text())
+          x=load(r/'experiment-10/safe-claim-promotion.json');g=load(r/'experiment-10/source-provenance-gap.json')
+          p=load(r/'experiment-10/claim-provenance.json');a=load(r/'experiment-10/article-level-validation.json')
+          q=load(r/'experiment-10-promotion-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/safe-claim-promotion.json')==q['promotion_sha']
+          assert sha(r/'experiment-10/source-provenance-gap.json')==x['source']['gap_sha']
+          assert sha(r/'experiment-10/claim-provenance.json')==x['source']['claim_sha']
+          assert sha(r/'experiment-10/article-level-validation.json')==x['source']['article_sha']
+          def verify(v):
+            assert v['target_date']=='20261012' and v['reviewed_remaining']==11 and v['verified_remaining']==1
+            assert len(v['new_claims'])==6 and len(v['rejected_cross_stock_entries'])==10
+            assert len(set(z['claim_id'] for z in v['new_claims']+p['items']))==17
+            assert v['existing_claim_ids']==[z['claim_id'] for z in p['items']]
+            for z,gap in zip(v['new_claims'][1:],g['additive_corrections']):
+              assert z['code']==gap['code'] and z['url']==gap['url'] and z['allowed_statement']==gap['verified_claim']
+              assert z['source_date']==gap['published_at'][:10] and z['source_gap_sha']==v['source']['gap_sha']
+            s=v['new_claims'][0]
+            assert s['code']=='2355' and s['url']=='https://cmnews.com.tw/article/cmoneyairesearcher-ce368d22-c5e6-11f1-aa29-c5386ed0d5dd'
+            assert s['source_date']=='2026-10-12' and s['publisher']=='CMoney'
+            assert all(z['causal_allowed'] is False and z['ai_use'] is True and z['allowed_statement'] for z in v['new_claims'])
+            assert all(z['ai_use'] is False and z['url']=='https://www.ftnn.com.tw/news/586577' for z in v['rejected_cross_stock_entries'])
+            assert v['existing_claims_untouched'] and v['existing_consumer_untouched']
+            assert v['status']=='ISOLATED_PROMOTION_CANDIDATE_NOT_CONSUMER_MERGED'
+            assert v['production']=='DENY_ALL' and v['publication_authorized'] is False
+          verify(x)
+          n=0
+          for kind in ['duplicate_id','cross_stock','false_url','date','causality','misuse_ftnn','unlock']:
+            z=copy.deepcopy(x)
+            if kind=='duplicate_id':z['new_claims'][0]['claim_id']=p['items'][0]['claim_id']
+            if kind=='cross_stock':z['new_claims'][1]['code']='9999'
+            if kind=='false_url':z['new_claims'][1]['url']='https://invalid.example'
+            if kind=='date':z['new_claims'][1]['source_date']='2026-10-13'
+            if kind=='causality':z['new_claims'][0]['causal_allowed']=True
+            if kind=='misuse_ftnn':z['rejected_cross_stock_entries'][0]['ai_use']=True
+            if kind=='unlock':z['production']='ALLOW'
+            try:verify(z)
+            except AssertionError:n+=1
+            else:raise AssertionError(kind)
+          assert n==7 and q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_SAFE_CLAIM_PROMOTION PASS new_claims=6 rejected_cross_stock=10 negative_tests=7 consumer_unchanged=true publication=BLOCKED production=DENY_ALL')
