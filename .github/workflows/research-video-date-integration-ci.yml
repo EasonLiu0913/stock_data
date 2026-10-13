@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/resolve_daily_gainers_video_target_date.js"
       - "tests/resolve_daily_gainers_video_target_date.test.js"
+      - "tests/video_date_merge_acceptance.test.js"
       - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
       - ".github/workflows/generate-upload-daily-gainers-video.yml"
       - ".github/workflows/research-video-date-integration-ci.yml"
@@ -24,6 +25,7 @@ jobs:
           sparse-checkout: |
             scripts/resolve_daily_gainers_video_target_date.js
             tests/resolve_daily_gainers_video_target_date.test.js
+            tests/video_date_merge_acceptance.test.js
             .github/workflows/daily-gainers-video-upload-orchestrator.yml
             .github/workflows/generate-upload-daily-gainers-video.yml
             .github/workflows/research-daily-gainers-render-preview-only.yml
@@ -32,6 +34,7 @@ jobs:
           node-version: "24"
       - run: node --check scripts/resolve_daily_gainers_video_target_date.js
       - run: node tests/resolve_daily_gainers_video_target_date.test.js
+      - run: node tests/video_date_merge_acceptance.test.js
       - name: Fail closed on outbound routing
         shell: bash
         run: |
