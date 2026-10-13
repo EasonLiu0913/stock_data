@@ -1,0 +1,63 @@
+name: "[Research] Experiment 10 Citation Remediation"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-remediation-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-remediation-ci/
+      - name: Validate immutable remediation and five negative cases
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy
+          r=pathlib.Path('recovery-requests')
+          load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json');a=load(r/'experiment-10/canonical-semantic-audit.json')
+          d=load(r/'experiment-10/citation-remediation.json');q=load(r/'experiment-10-remediation-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/citation-remediation.json')==q['remediation_blob_sha']
+          assert sha(r/'experiment-10/canonical-semantic-audit.json')==d['source_audit_sha']
+          def check(x):
+            assert x['target_date']=='20261012' and x['original_batches_untouched'] is True
+            risk=[(s,z,i) for s in a['records'] for i,z in enumerate(s['references']) if z['is_dynamic_listing'] or z['date_precision']=='AMBIGUOUS']
+            assert x['risk_entries']==len(x['items'])==len(risk)==20
+            assert x['replaced_entries']==3 and x['source_insufficient_entries']==17
+            seen=set()
+            for e in x['items']:
+              key=(e['code'],e['reference_index']);assert key not in seen;seen.add(key)
+              s=next(s for s in a['records'] if s['code']==e['code'])
+              assert e['old_url']==s['references'][e['reference_index']]['url']
+              y=e['remediation'];assert y['causality']=='UNVERIFIED'
+              if y['status']=='REPLACED_WITH_FIXED_ARTICLE':
+                assert e['code'] in ('3311','6924','1101')
+                assert y['url'].startswith('https://') and y['verified_date_and_content'] is True
+                assert y['date'] in ('2026-10-08','2026-10-12') and y['publisher'] and y['claim']
+                if e['code']=='6924': assert y['date']=='2026-10-08' and y['kind']=='PRIOR_FIXED_ARTICLE'
+              else:assert y['status']=='SOURCE_INSUFFICIENT' and y['replacement_url'] is None and y['verified_date_and_content'] is False
+            assert x['decision']=='PARTIAL_REMEDIATION_FAIL_CLOSED' and x['production']=='DENY_ALL' and x['publication_authorized'] is False
+          check(d)
+          n=0
+          for kind in ('duplicate','url','date','false_clearance','release'):
+            z=copy.deepcopy(d)
+            if kind=='duplicate':z['items'][1]['code']=z['items'][0]['code'];z['items'][1]['reference_index']=z['items'][0]['reference_index']
+            if kind=='url':next(e for e in z['items'] if e['code']=='3311')['remediation']['url']='bad'
+            if kind=='date':next(e for e in z['items'] if e['code']=='6924')['remediation']['date']='2026-10-12'
+            if kind=='false_clearance':next(e for e in z['items'] if e['remediation']['status']=='SOURCE_INSUFFICIENT')['remediation']['status']='REPLACED_WITH_FIXED_ARTICLE'
+            if kind=='release':z['production']='ALLOW'
+            try:check(z)
+            except (AssertionError,KeyError):n+=1
+            else:raise AssertionError(kind)
+          assert n==5 and q['production']==m['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_CITATION_REMEDIATION PASS risk=20 replaced=3 source_insufficient=17 negative_tests=5 publication=BLOCKED production=DENY_ALL')
