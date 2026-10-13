@@ -1,0 +1,74 @@
+{
+  "schema": "exp10-integration-readiness-v1",
+  "target_date": "20261012",
+  "baseline": {
+    "research_head": "11bb62819d27bca048f1ab023a4a5ae152a9f64f",
+    "manifest_sha": "c26980f2a50c9d7267c04a2e154bd6582eb6380e",
+    "final_acceptance_sha": "59d297431f5f3b3a7c83b4307e9ae14941409f2c",
+    "prior_run": 38348803353
+  },
+  "delivered": {
+    "stock_count": 55,
+    "candidate_claims": 17,
+    "stocks_with_scoped_claims": 14,
+    "source_insufficient": 41,
+    "effective_denied": 20,
+    "contract": "ISOLATED_RESEARCH_COMPLETE",
+    "external_semantics": "PARTIAL",
+    "publication": "BLOCKED"
+  },
+  "main_integration_matrix": [
+    {
+      "source": "recovery-requests/experiment-10/candidate-claim-provenance.json",
+      "potential_consumer": "scripts/validate_daily_gainers_news_analysis.js",
+      "target": "data_daily_gain_over_5/analysis-news/YYYYMMDD.json",
+      "trigger": ".github/workflows/publish-daily-gainers-news-summary.yml push on analysis-news/*.json",
+      "indirect_side_effect": "data writes and downstream deploy-pages.yml",
+      "readiness": "DESIGN_ONLY_FORBIDDEN_TO_EXECUTE"
+    },
+    {
+      "source": "bounded AI claim output",
+      "potential_consumer": "scripts/daily_gainers_ai_contract_cli.js",
+      "target": "data_daily_gain_over_5/analysis-ai/YYYYMMDD.json",
+      "trigger": ".github/workflows/publish-daily-gainers-unified-analysis.yml push on analysis-ai/*.json",
+      "indirect_side_effect": "Unified analysis, summary commit and Pages",
+      "readiness": "DESIGN_ONLY_FORBIDDEN_TO_EXECUTE"
+    },
+    {
+      "source": "pending AI writer",
+      "potential_consumer": ".github/workflows/publish-daily-gainers-ai-analysis.yml",
+      "target": "data_daily_gain_over_5/analysis/YYYYMMDD.json",
+      "trigger": "schedule and workflow_dispatch",
+      "indirect_side_effect": "promote AI/unified/summary and deploy Pages",
+      "readiness": "DESIGN_ONLY_FORBIDDEN_TO_EXECUTE"
+    },
+    {
+      "source": "Unified script or video script",
+      "potential_consumer": ".github/workflows/daily-gainers-video-upload-orchestrator.yml",
+      "target": "video_scripts/daily-gainers/YYYYMMDD.json",
+      "trigger": "push, schedule, workflow_dispatch",
+      "indirect_side_effect": "dispatch retry-upload or generate-upload video on main",
+      "readiness": "DESIGN_ONLY_FORBIDDEN_TO_EXECUTE"
+    },
+    {
+      "source": "video render gate",
+      "potential_consumer": ".github/workflows/generate-upload-daily-gainers-video.yml",
+      "target": "video package / YouTube",
+      "trigger": "workflow_dispatch",
+      "indirect_side_effect": "TTS, render, subtitle, thumbnail, private YouTube upload",
+      "readiness": "DESIGN_ONLY_FORBIDDEN_TO_EXECUTE"
+    }
+  ],
+  "fail_closed_criteria": [
+    "No copies or writes to main/formal analysis-news, analysis-ai, unified, market-summary or video_scripts",
+    "Research consumer input must bind exact date Facts SHA, Claim ID, code, URL, publisher, allowable statement and provenance SHA",
+    "Denied references and unverified causality never flow into AI output",
+    "41 SOURCE_INSUFFICIENT must not be turned into NO_NEWS_EXISTS",
+    "Publication flag false, production DENY_ALL, Prompt B INELIGIBLE",
+    "Before separate authorization inspect all push, dispatch, schedule, reusable workflow and direct upload paths"
+  ],
+  "status": "READINESS_AUDIT_COMPLETE_INTEGRATION_NOT_AUTHORIZED",
+  "production": "DENY_ALL",
+  "publication_authorized": false,
+  "prompt_b": "INELIGIBLE"
+}
