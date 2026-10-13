@@ -1,0 +1,63 @@
+name: "[Research] Experiment 10 Additive Candidate Consumer"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-candidate-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-candidate-ci/
+      - name: Execute actual candidate consumer and negative tests
+        shell: python
+        run: |
+          import json,pathlib,subprocess,sys,copy
+          r=pathlib.Path('recovery-requests');p=r/'experiment-10'
+          sys.path.insert(0,str(p))
+          from validate_candidate_consumer import validate
+          load=lambda path:json.loads(path.read_text())
+          old,promotion,candidate,output=[load(p/name) for name in ('claim-provenance.json','safe-claim-promotion.json','candidate-claim-provenance.json','candidate-consumer-output.json')]
+          q=load(r/'experiment-10-candidate-ci/request.json');m=load(p/'manifest.json')
+          sha=lambda path:subprocess.check_output(['git','hash-object',str(path)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(p/'claim-provenance.json')==q['original_sha']==m['claim_provenance']['git_blob_sha']
+          assert sha(p/'safe-claim-promotion.json')==q['promotion_sha']==m['safe_claim_promotion']['git_blob_sha']
+          assert sha(p/'candidate-claim-provenance.json')==q['candidate_sha']
+          assert sha(p/'candidate-consumer-output.json')==q['output_sha']
+          assert sha(p/'validate_candidate_consumer.py')==q['validator_sha']
+          assert sha(p/'consumer-output.json')==q['original_output_sha']
+          assert sha(p/'validate_claim_consumer.py')==q['original_validator_sha']
+          validate(old,promotion,candidate,output)
+          cases=['repeat_id','old_claim_mutation','wrong_stock','wrong_date','bad_url','bad_statement','causal','denied_url','ftnn_misuse','duplicate_assertion','missing_assertion','false_no_news','unlock']
+          n=0
+          for kind in cases:
+            o=copy.deepcopy(output);c=copy.deepcopy(candidate)
+            s=next(x for x in o['stocks'] if len(x['assertions'])>=2)
+            v=s['assertions'][0]
+            if kind=='repeat_id':c['items'][11]['claim_id']=c['items'][0]['claim_id']
+            if kind=='old_claim_mutation':c['items'][0]['allowed_statement']='altered'
+            if kind=='wrong_stock':v['code']='9999'
+            if kind=='wrong_date':v['source_date']='2026-10-13'
+            if kind=='bad_url':v['url']='https://fake.invalid'
+            if kind=='bad_statement':v['statement']='causal prediction'
+            if kind=='causal':v['causal_inference']=True
+            if kind=='denied_url':v['url']=c['denied'][0]['url']
+            if kind=='ftnn_misuse':v['url']='https://www.ftnn.com.tw/news/586577'
+            if kind=='duplicate_assertion':s['assertions'][1]=copy.deepcopy(v)
+            if kind=='missing_assertion':s['assertions'].pop()
+            if kind=='false_no_news':s['news_state']='NO_NEWS_EXISTS'
+            if kind=='unlock':o['production']='ALLOW'
+            try:validate(old,promotion,c,o)
+            except (AssertionError,KeyError):n+=1
+            else:raise AssertionError('negative escaped '+kind)
+          assert n==13 and m['production']==q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_ADDITIVE_CONSUMER PASS stocks=55 claims=17 original=11 added=6 effective_denied=20 negatives=13 publication=BLOCKED production=DENY_ALL')
