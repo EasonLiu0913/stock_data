@@ -1,14 +1,14 @@
 {
   "schema": "experiment10-checkpoint-v1",
   "target_date": "20261012",
-  "status": "FIRST_BATCH_FACTS_EVIDENCE_PERSISTED_NEWS_AI_PENDING",
+  "status": "PARTIAL_NEWS_PERSISTED_CI_PENDING",
   "raw_path": "data_daily_gain_over_5/20261012.json",
   "raw_blob_sha": "367e175bc86fed172cd040701d17ad725b9dab57",
   "facts_path": "data_daily_gain_over_5/analysis-facts/20261012.json",
   "facts_blob_sha": "036b37f9b2c3f072ac20ce9fa97f55f40577c996",
   "stock_count": 55,
   "bootstrap_run_id": 38340643197,
-  "news_status": "NOT_GENERATED",
+  "news_status": "PARTIAL_VERIFIED_2_CLAIMS_1_OF_5_STOCKS",
   "ai_status": "NOT_GENERATED",
   "production": "DENY_ALL",
   "publication_authorized": false,
@@ -19,7 +19,7 @@
     "facts_blob_sha_verified": "036b37f9b2c3f072ac20ce9fa97f55f40577c996",
     "experiment09_blob_sha_unchanged": "3cd41732762e71143f40f845155199aabd728dbb"
   },
-  "next_stage": "VERIFY_DATED_NEWS_SOURCES_AND_PERSIST_ATTRIBUTED_BATCH",
+  "next_stage": "OBTAIN_INDEPENDENT_NEWS_CI_RUN_AND_COMPLETE_FOUR_SOURCE_REVIEWS",
   "validation": {
     "stage": "MANIFEST_SOURCE_READBACK_AND_PATH_FIREWALL",
     "result": "PASS",
@@ -32,15 +32,15 @@
   "handoff_v3": {
     "active": "PROMPT_A",
     "progress": "PROGRESS",
-    "completed": "10/12 raw and Facts source blob verification; persisted manifest readback; read-only path firewall CI; first five-stock Facts evidence batch persisted and remote readback verified",
-    "blocker": "Independent dated News source validation, full News/AI generation, canonical content validation and cross-manual-run resume CI remain pending",
-    "planned_direction": "Resume from GitHub manifest and first-batch blob SHA; research attributed external news, validate each claim; then independent AI batch and CI readback",
+    "completed": "10/12 raw and Facts source blob verification; persisted manifest readback; read-only path firewall CI; first five-stock Facts evidence batch persisted and remote readback verified; 3008 two dated news claims persisted with source URLs; remote news readback",
+    "blocker": "Independent new News CI run not yet observed; remaining four stocks news unverified; AI and resume validation not attempted",
+    "planned_direction": "Obtain actual isolated News CI Run ID and passing job logs; verify remaining stock news before full News; then independently build AI with checkpoint resume",
     "prompt_b": "INELIGIBLE",
     "production": "DENY_ALL"
   },
   "news_batch": {
     "path": "recovery-requests/experiment-10/news-batch-1516-1563.json",
-    "git_blob_sha": "ff82b731e6150fa217e36864b8c151520b883a60",
+    "git_blob_sha": "36ce1c4574265341a1a3f685932fb0a91cd2ad58",
     "stock_codes": [
       "1516",
       "2429",
@@ -48,8 +48,15 @@
       "3008",
       "1563"
     ],
-    "status": "FACTS_EVIDENCE_PREPARED_NEWS_NOT_GENERATED",
+    "status": "PARTIAL_NEWS_VERIFIED_OTHER_FOUR_PENDING",
     "readback": "VERIFIED",
     "commit_sha": "ec4d5d081685f7323cd9524101456599ce719c6f"
+  },
+  "news_validation_ci": {
+    "workflow": ".github/workflows/research-daily-recovery-exp10-news-validation.yml",
+    "trigger_path": "recovery-requests/experiment-10-news-ci/request.json",
+    "trigger_commit": "39ac6c2919260db20ac73c21acf2a476131df5c1",
+    "status": "RUN_NOT_YET_OBSERVED",
+    "conclusion": "UNVERIFIED"
   }
 }
