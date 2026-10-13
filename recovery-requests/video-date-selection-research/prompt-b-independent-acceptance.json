@@ -1,0 +1,51 @@
+{
+  "schema": "video-date-integration-prompt-b-independent-acceptance-v1",
+  "reviewed_frozen_head": "2c042dc043ef156a451b772a531c13dc7390af3f",
+  "main_head": "a28078ee8267a117e71bec986a1a6e37c49b5b7e",
+  "contract_sha": "b1c7c3d0906726c543cac11480a39c66b231652c",
+  "actual_reconstructed_source_shas": {
+    "date_decision.js": "764cc21a8636c3ad62abb4398596f44a113d43a0",
+    "date_decision.test.js": "5bf341d1f5fc7dbfa8c2d64f11b12c45493ce99e",
+    "integration_mock.test.js": "57d6b84273d8e49cb67888ad569bb8405c340113"
+  },
+  "runner": {
+    "kind": "isolated local Node.js runtime; exact fetched text independently reconstructed; git hash-object checked",
+    "node": "v22.16.0",
+    "git": "2.47.3",
+    "commands": [
+      {
+        "command": "node date_decision.test.js",
+        "exit_code": 0,
+        "stdout": "PASS isolated video date contract 14/14 scenarios; no side effects"
+      },
+      {
+        "command": "node integration_mock.test.js",
+        "exit_code": 0,
+        "stdout": "PASS isolated integration mock 12/12 cases; zero real dispatch; preview/upload separated"
+      }
+    ],
+    "github_actions_ci": "NOT_RUN"
+  },
+  "acceptance": {
+    "frozen_source": "PASS",
+    "independent_execution": "PASS_26_OF_26",
+    "unknown_calendar_and_stale_fallback": "PASS_TESTED",
+    "negative_route": "PASS_TESTED",
+    "no_real_dispatch_in_mock": "PASS_STATIC_AND_EXECUTED",
+    "production_end_to_end": "NOT_TESTED",
+    "actual_calendar_adapter": "NOT_IMPLEMENTED",
+    "actual_artifact_qa_binding": "NOT_IMPLEMENTED"
+  },
+  "fresh_main_trigger_audit": {
+    "orchestrator_sha": "6e71da925b5b08a6d9d9c93c2c0a909f142f77fb",
+    "combined_render_upload_sha": "723a265e7c027b44a10499924facb8b82fe2930a",
+    "decision_shell_sha": "80aff1b90740fb6bff49ec13dcd925d6d3f2b42e",
+    "finding": "Main has schedule/dispatch/push on video_scripts; existing render route triggers combined generate-upload and must NOT receive research preview decisions"
+  },
+  "verdict": "PROMPT_B_PASS_ISOLATED_CONTRACT_ONLY",
+  "integration_eligibility": "SEPARATE_AUTHORIZED_MAIN_CHANGE_AND_REAL_WORKFLOW_INTEGRATION_TESTS_REQUIRED",
+  "publication_authorized": false,
+  "production": "DENY_ALL",
+  "prompt_b_completed": true,
+  "notes": "Independent B confirms pure no-side-effect logic and 26 test cases only, not GitHub Actions CI or actual formal workflow/video integration."
+}
