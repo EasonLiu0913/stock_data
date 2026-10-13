@@ -1,0 +1,59 @@
+name: "[Research] Experiment 10 Integration Readiness"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-readiness-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-readiness-ci/
+      - name: Verify final acceptance provenance and no-integration matrix
+        shell: python
+        run: |
+          import json,pathlib,subprocess,copy
+          r=pathlib.Path('recovery-requests');p=r/'experiment-10'
+          load=lambda path:json.loads(path.read_text())
+          sha=lambda path:subprocess.check_output(['git','hash-object',str(path)],text=True).strip()
+          a=load(p/'integration-readiness.json');q=load(r/'experiment-10-readiness-ci/request.json')
+          f=load(p/'candidate-final-acceptance.json')
+          assert sha(p/'integration-readiness.json')==q['audit_sha']
+          assert sha(p/'candidate-final-acceptance.json')==a['baseline']['final_acceptance_sha']
+          assert sha(r/'experiment-09/diagnostic.json')=='3cd41732762e71143f40f845155199aabd728dbb'
+          for item in f['original_batches']:assert sha(pathlib.Path(item['path']))==item['sha']
+          def check(x):
+            d=x['delivered']
+            assert (d['stock_count'],d['candidate_claims'],d['stocks_with_scoped_claims'],d['source_insufficient'],d['effective_denied'])==(55,17,14,41,20)
+            assert d['external_semantics']=='PARTIAL' and d['publication']=='BLOCKED'
+            assert len(x['main_integration_matrix'])==5
+            assert all(z['readiness']=='DESIGN_ONLY_FORBIDDEN_TO_EXECUTE' and z['indirect_side_effect'] for z in x['main_integration_matrix'])
+            assert any('Pages' in z['indirect_side_effect'] for z in x['main_integration_matrix'])
+            assert any('YouTube' in z['indirect_side_effect'] for z in x['main_integration_matrix'])
+            assert len(x['fail_closed_criteria'])==6
+            assert x['status']=='READINESS_AUDIT_COMPLETE_INTEGRATION_NOT_AUTHORIZED'
+            assert x['production']=='DENY_ALL' and x['publication_authorized'] is False and x['prompt_b']=='INELIGIBLE'
+          check(a)
+          n=0
+          for k in ['release','publication','prompt_b','fabricated_semantic','integration_execution','hide_youtube','hide_pages']:
+            v=copy.deepcopy(a)
+            if k=='release':v['production']='ALLOW'
+            if k=='publication':v['publication_authorized']=True
+            if k=='prompt_b':v['prompt_b']='ELIGIBLE'
+            if k=='fabricated_semantic':v['delivered']['external_semantics']='COMPLETE'
+            if k=='integration_execution':v['main_integration_matrix'][0]['readiness']='EXECUTE'
+            if k=='hide_youtube':v['main_integration_matrix']=[z for z in v['main_integration_matrix'] if 'YouTube' not in z['indirect_side_effect']]
+            if k=='hide_pages':v['main_integration_matrix']=[z for z in v['main_integration_matrix'] if 'Pages' not in z['indirect_side_effect']]
+            try:check(v)
+            except AssertionError:n+=1
+            else:raise AssertionError(k)
+          assert n==7 and q['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_INTEGRATION_READINESS PASS stocks=55 claims=17 matrix=5 negatives=7 research=COMPLETE semantic=PARTIAL integration=NOT_AUTHORIZED production=DENY_ALL')
