@@ -1,0 +1,37 @@
+name: "[Research] Video Date Integration Safe CI"
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/resolve_daily_gainers_video_target_date.js"
+      - "tests/resolve_daily_gainers_video_target_date.test.js"
+      - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
+      - ".github/workflows/generate-upload-daily-gainers-video.yml"
+      - ".github/workflows/research-video-date-integration-ci.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node --check scripts/resolve_daily_gainers_video_target_date.js
+      - run: node tests/resolve_daily_gainers_video_target_date.test.js
+      - name: Fail closed on outbound routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const y=fs.readFileSync('.github/workflows/daily-gainers-video-upload-orchestrator.yml','utf8');
+          assert(!y.includes('sort | tail -1'));
+          assert.match(y,/if: \$\{\{ false \}\} # formal artifact API/);
+          assert.equal((y.match(/if: \$\{\{ false \}\}/g)||[]).length,3);
+          console.log('PASS no outbound artifact route and no old-script fallback');
+          NODE
