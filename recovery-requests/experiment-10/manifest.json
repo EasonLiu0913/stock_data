@@ -1,7 +1,7 @@
 {
   "schema": "experiment10-checkpoint-v1",
   "target_date": "20261012",
-  "status": "NEWS_AND_AI_BATCH_CI_PASS_CROSS_MANUAL_RESUME_PENDING",
+  "status": "BOUNDED_NEWS_AI_RESUME_PASS_FULL_55_PENDING",
   "raw_path": "data_daily_gain_over_5/20261012.json",
   "raw_blob_sha": "367e175bc86fed172cd040701d17ad725b9dab57",
   "facts_path": "data_daily_gain_over_5/analysis-facts/20261012.json",
@@ -19,7 +19,7 @@
     "facts_blob_sha_verified": "036b37f9b2c3f072ac20ce9fa97f55f40577c996",
     "experiment09_blob_sha_unchanged": "3cd41732762e71143f40f845155199aabd728dbb"
   },
-  "next_stage": "CROSS_MANUAL_RUN_RESUME_FROM_REMOTE_MANIFEST",
+  "next_stage": "ASSESS_FULL_55_STOCK_CANONICAL_NEWS_AI_CONTRACT",
   "validation": {
     "stage": "MANIFEST_SOURCE_READBACK_AND_PATH_FIREWALL",
     "result": "PASS",
@@ -32,9 +32,9 @@
   "handoff_v3": {
     "active": "PROMPT_A",
     "progress": "PROGRESS",
-    "completed": "10/12 raw and Facts source blob verification; persisted manifest readback; read-only path firewall CI; first five-stock Facts evidence batch persisted and remote readback verified; 3008 two dated news claims persisted with source URLs; remote news readback; five-stock six dated market-event claims persisted, push listener confirmed with real Run IDs 38343894886 and 38344020124; News CI Run 38344020124 SUCCESS job 115121163146 six claims; bounded AI research draft persisted and readback; AI CI Run 38345778624 success job 115126737553, five-stock AI draft source linkage verified",
-    "blocker": "Fresh independent manual-run remote checkpoint resume and canonical full 55-stock News/AI output remain unverified",
-    "planned_direction": "On next manual Prompt A read latest branch, manifest and both Git blobs without trusting chat-local state; compare immutable Exp09 and CI run IDs; perform resume acceptance. No Prompt B or production.",
+    "completed": "10/12 raw and Facts source blob verification; persisted manifest readback; read-only path firewall CI; first five-stock Facts evidence batch persisted and remote readback verified; 3008 two dated news claims persisted with source URLs; remote news readback; five-stock six dated market-event claims persisted, push listener confirmed with real Run IDs 38343894886 and 38344020124; News CI Run 38344020124 SUCCESS job 115121163146 six claims; bounded AI research draft persisted and readback; AI CI Run 38345778624 success job 115126737553, five-stock AI draft source linkage verified; cross-manual remote-only resume verified News/AI Git blob hashes and both CI job logs",
+    "blocker": "Only bounded five-stock research has passed; canonical 55-stock News/AI generation, coverage and final output contract not validated",
+    "planned_direction": "Define and validate canonical 55-stock News/AI coverage from source-locked 20261012 Facts, with explicit no-news statuses and strict anti-fabrication gates; preserve all release locks",
     "prompt_b": "INELIGIBLE",
     "production": "DENY_ALL"
   },
@@ -67,7 +67,7 @@
     "path": "recovery-requests/experiment-10/ai-batch-1516-1563.json",
     "git_blob_sha": "f79195f7d8a1f18d8f2309578a4e8300e8364204",
     "commit_sha": "50cac19d40740b6e9adaa52d872aae890c13a26f",
-    "status": "DRAFT_PENDING_INDEPENDENT_CI",
+    "status": "RESEARCH_DRAFT_CI_PASS",
     "readback": "VERIFIED"
   },
   "ai_validation_ci": {
@@ -79,5 +79,30 @@
     "conclusion": "SUCCESS",
     "job_id": 115126737553,
     "log_proof": "EXPERIMENT10_AI_BATCH_VALIDATION PASS five_stocks=5 news_claims=6 production=DENY_ALL"
+  },
+  "resume_acceptance": {
+    "schema": "experiment10-cross-manual-resume-v1",
+    "status": "PASS_REMOTE_READBACK",
+    "research_head_at_start": "3eeceaa8c7c433b724d3a230daf9a50b6d286b77",
+    "manifest_blob_sha_at_start": "32710feaa062e8b5a882e5f7a877104a8d7629c0",
+    "news_blob_sha_verified": "b1513c580dedf23ee8dc3b681272ce871322a64e",
+    "ai_blob_sha_verified": "f79195f7d8a1f18d8f2309578a4e8300e8364204",
+    "experiment09_blob_sha_verified": "3cd41732762e71143f40f845155199aabd728dbb",
+    "news_ci": {
+      "run_id": 38344020124,
+      "job_id": 115121163146,
+      "conclusion": "success",
+      "proof": "EXPERIMENT10_NEWS_BATCH_VALIDATION PASS claims=6 stock_count=5 publication_authorized=false"
+    },
+    "ai_ci": {
+      "run_id": 38345778624,
+      "job_id": 115126737553,
+      "conclusion": "success",
+      "proof": "EXPERIMENT10_AI_BATCH_VALIDATION PASS five_stocks=5 news_claims=6 production=DENY_ALL"
+    },
+    "scope": "five_stock_bounded_research_only",
+    "full_55_stock_canonical_output": "NOT_VALIDATED",
+    "production": "DENY_ALL",
+    "publication_authorized": false
   }
 }
