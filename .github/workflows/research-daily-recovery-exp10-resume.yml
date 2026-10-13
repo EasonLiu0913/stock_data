@@ -1,0 +1,62 @@
+name: "[Research] Experiment 10 Closure Cross-Run Resume"
+on:
+  push:
+    branches: [research/daily-data-recovery-v2-exp01-20261013]
+    paths: ['recovery-requests/experiment-10-resume-ci/request.json']
+permissions:
+  contents: read
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /recovery-requests/experiment-09/diagnostic.json
+            /recovery-requests/experiment-10/
+            /recovery-requests/experiment-10-resume-ci/
+      - name: Readback and fail-closed negative tests
+        shell: python
+        run: |
+          import pathlib,json,subprocess,copy
+          r=pathlib.Path('recovery-requests'); load=lambda p:json.loads(p.read_text())
+          m=load(r/'experiment-10/manifest.json'); c=load(r/'experiment-10/evidence-closure.json')
+          a=load(r/'experiment-10/closure-cross-run-resume.json'); q=load(r/'experiment-10-resume-ci/request.json')
+          sha=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert sha(r/'experiment-09/diagnostic.json')==a['experiment09_sha']=='3cd41732762e71143f40f845155199aabd728dbb'
+          assert sha(r/'experiment-10/closure-cross-run-resume.json')==q['resume_blob_sha']
+          assert sha(r/'experiment-10/evidence-closure.json')==a['closure_sha']==m['evidence_closure']['git_blob_sha']
+          for item in a['source_batch_shas']:assert sha(pathlib.Path(item['path']))==item['sha']
+          def check(x):
+            assert x['target_date']=='20261012' and x['stock_count']==len(x['roster'])==55
+            assert len(x['allowed'])==11 and len(x['denied'])==16
+            assert len(set((z['code'],z['url']) for z in x['allowed']+x['denied']))==27
+            keys={(z['code'],z['url']) for z in x['allowed']}
+            for s in x['roster']:
+              assert s['catalyst_status']=='UNVERIFIED'
+              assert s['news_state']!='NO_NEWS_EXISTS'
+              assert all((s['code'],u) in keys for u in s['ai_allowed_refs'])
+              assert s['ai_allowed_refs']==[z['url'] for z in x['allowed'] if z['code']==s['code']]
+            for z in x['allowed']:
+              assert z['ai_allowed'] is True and z['causal_allowed'] is False
+            for z in x['denied']:assert z['ai_allowed'] is False and z['causal_allowed'] is False
+            assert x['production']=='DENY_ALL' and x['publication_authorized'] is False
+          check(c)
+          assert a['allowed_refs']==11 and a['denied_refs']==16 and a['stocks_with_refs']==9
+          assert a['unapproved_ai_reference_issues']==[]
+          assert a['conclusion']=='PASS_REMOTE_CHECKPOINT_RESTORATION_NOT_SEMANTIC_PUBLICATION'
+          n=0
+          for k in ('invented_ref','denied_promoted','causality','fake_no_news','unlock'):
+            t=copy.deepcopy(c)
+            if k=='invented_ref':t['roster'][0]['ai_allowed_refs'].append('https://fake.invalid')
+            if k=='denied_promoted':t['denied'][0]['ai_allowed']=True
+            if k=='causality':t['allowed'][0]['causal_allowed']=True
+            if k=='fake_no_news':t['roster'][0]['news_state']='NO_NEWS_EXISTS'
+            if k=='unlock':t['production']='ALLOW'
+            try:check(t)
+            except AssertionError:n+=1
+            else:raise AssertionError(k)
+          assert n==5 and q['production']==m['production']=='DENY_ALL' and q['publication_authorized'] is False
+          print('EXPERIMENT10_CROSS_RUN_RESUME PASS stocks=55 allow=11 denied=16 negative_tests=5 semantic_publication=BLOCKED production=DENY_ALL')
