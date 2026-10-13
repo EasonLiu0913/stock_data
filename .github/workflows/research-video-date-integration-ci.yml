@@ -69,6 +69,10 @@ jobs:
           assert(replay.includes("inputs.research_confirmation == 'REPLAY_20261008'"));
           assert(replay.includes("github.ref == 'refs/heads/fix/video-date-fail-closed-20261013'"));
           assert(replay.includes("INPUT_DATE: '20261008'"));
+          assert(replay.includes('node scripts/research_create_20261008_replay_script.js'));
+          assert(replay.includes('node scripts/research_preflight_20261008_replay.js'));
+          assert(replay.includes('20261008-provenance.json'));
+          assert(replay.includes('cp recovery-requests/video-date-selection-research/replay-input/20261008.json video_scripts/daily-gainers/20261008.json'));
           for(const forbidden of ['secrets.','upload_youtube.js','upload_youtube_caption.js','video_upload_receipts','gh workflow run'])assert(!replay.includes(forbidden),forbidden);
           const combined=fs.readFileSync('.github/workflows/generate-upload-daily-gainers-video.yml','utf8');
           assert(!combined.includes('sort | tail -1'));
