@@ -34,24 +34,6 @@ jobs:
       - name: Build dated research content package
         run: |
           set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const crypto = require('node:crypto');
-          const path = 'video_scripts/daily-gainers/20261008.json';
-          const source = fs.readFileSync(path);
-          const originalSha256 = crypto.createHash('sha256').update(source).digest('hex');
-          const script = JSON.parse(source);
-          const { OPENING_TEXT } = require('./scripts/daily_gainers_brand_opening');
-          const first = script.scenes[0].narration;
-          const redundant = '歡迎來到 TAIWANSTOCK。';
-          if (!first.startsWith(redundant)) throw Error('Unexpected original opening; refuse derivative rewrite');
-          script.scenes[0].narration = first.slice(redundant.length).trimStart();
-          fs.mkdirSync('output/research-tts-731', {recursive:true});
-          fs.writeFileSync('output/research-tts-731/20261008-original-sha256.txt', originalSha256 + '\\n');
-          fs.writeFileSync('output/research-tts-731/20261008-opening-change.json', JSON.stringify({source_sha256:originalSha256, removed_prefix:redundant, replacement_prepend_by_existing_brand_opening:OPENING_TEXT, source_unchanged_in_git:true},null,2) + '\\n');
-          fs.writeFileSync(path,JSON.stringify(script,null,2)+'\\n');
-          console.log('Isolated runtime derivative created, original SHA256:', originalSha256);
-          NODE
           node scripts/validate_daily_gainers_video_script.js 20261008
           node scripts/build_daily_gainers_video_package.js 20261008
       - name: Synthesize complete YunJhe +15 percent narration
