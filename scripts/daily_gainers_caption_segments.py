@@ -119,6 +119,12 @@ def segment_pairs(pairs, max_chars=MAX_CHARS, max_phrases=MAX_PHRASES):
         current_c += c
         current_s += s
         count += 1
+        # Completed sentences are separate cues even if the next would fit.
+        # Keep the caption/speech pair intact.
+        if c.rstrip().endswith(("。", "！", "？", "!", "?")):
+            out.append({"caption": current_c, "speech": current_s})
+            current_c = current_s = ""
+            count = 0
     if current_c:
         out.append({"caption": current_c, "speech": current_s})
     if "".join(x["caption"] for x in out) != "".join(x["caption"] for x in pairs):
