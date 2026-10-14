@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { validate: validateV2 } = require('./validate_daily_gainers_video_v2');
+const { visuals } = require('./daily_gainers_m7vis_v2');
 
 
 const date = process.argv[2];
@@ -75,6 +76,7 @@ function singleLineTextBlock(x, y, text, baseSize, weight='400', opacity=1, maxW
   return `<text x="${x}" y="${y}" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="${size}" font-weight="${weight}" fill="#f8fafc" opacity="${opacity}" textLength="${Math.min(maxWidth, Math.max(1, estimatedWidth * size / baseSize))}" lengthAdjust="spacingAndGlyphs">${escapeXml(value)}</text>`;
 }
 function renderSvg(scene) {
+  const visual = visuals(scene, summary, raw);
   let y = 330;
   const bulletSvg = scene.bullets.map((b, idx) => {
     const lines = wrap(b, 34);
@@ -90,7 +92,7 @@ function renderSvg(scene) {
   <rect x="118" y="95" width="14" height="150" rx="7" fill="#38bdf8"/>
   ${textBlock(165, 150, scene.title, 70, '700')}
   ${singleLineTextBlock(165, 252, scene.subtitle, 34, '500', 0.82)}
-  ${bulletSvg}
+  ${visual.svg}
   <text x="165" y="1010" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="26" fill="#94a3b8">${escapeXml(scene.footer || 'TAIWANSTOCK｜每日 5% 強勢股研究')}</text>
   <text x="1390" y="1010" text-anchor="middle" font-family="Noto Sans CJK TC, Noto Sans TC, sans-serif" font-size="22" font-weight="400" fill="#94a3b8" opacity="0.68">歡迎打開 CC中文字幕觀賞</text>
   <text x="1755" y="1010" font-family="Noto Sans CJK TC, sans-serif" font-size="24" fill="#64748b">${scene.id}/${scenes.length}</text>
@@ -110,6 +112,7 @@ const plan = {
   source_files: [rawPath.replace(root + path.sep,''), aiPath.replace(root + path.sep,''), summaryPath.replace(root + path.sep,''), videoScriptPath.replace(root + path.sep,'')],
   narration_chars: narrationChars,
   scene_count: scenes.length,
+  visual_system: 'M7VIS-sourced-cards-v2',
   scenes
 };
 fs.writeFileSync(path.join(outDir, 'plan.json'), JSON.stringify(plan, null, 2) + '\n');
