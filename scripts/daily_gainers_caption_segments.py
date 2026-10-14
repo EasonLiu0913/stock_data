@@ -6,6 +6,7 @@ punctuation, preserving speech/caption equivalence.
 """
 import re
 from difflib import SequenceMatcher
+from daily_gainers_caption_width import display_columns, MAX_COLUMNS
 
 PUNCT = "，。！？；、：,!?;:"
 MAX_CHARS = 30
@@ -112,7 +113,7 @@ def segment_pairs(pairs, max_chars=MAX_CHARS, max_phrases=MAX_PHRASES):
     current_c = current_s = ""
     count = 0
     for c, s in units:
-        if current_c and (len(current_c) + len(c) > max_chars or count >= max_phrases):
+        if current_c and (len(current_c) + len(c) > max_chars or display_columns(current_c + c) > MAX_COLUMNS or count >= max_phrases):
             out.append({"caption": current_c, "speech": current_s})
             current_c = current_s = ""
             count = 0
@@ -121,6 +122,8 @@ def segment_pairs(pairs, max_chars=MAX_CHARS, max_phrases=MAX_PHRASES):
         count += 1
     if current_c:
         out.append({"caption": current_c, "speech": current_s})
+    if any(display_columns(x["caption"]) > MAX_COLUMNS for x in out):
+        raise ValueError("An indivisible paired caption exceeds screen width; revise source cues")
     if "".join(x["caption"] for x in out) != "".join(x["caption"] for x in pairs):
         raise ValueError("Caption lost text in segmentation")
     if "".join(x["speech"] for x in out) != "".join(x["speech"] for x in pairs):
