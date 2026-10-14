@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
-const { normalizeNarrationRepetition } = require('./daily_gainers_text_cleanup');
-const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
+const { validate: validateV2 } = require('./validate_daily_gainers_video_v2');
+
 
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) {
@@ -32,16 +32,19 @@ const videoScript = JSON.parse(fs.readFileSync(videoScriptPath, 'utf8'));
 if (videoScript.target_date !== date || videoScript.stock_count !== raw.stock_count || videoScript.privacy_status !== 'private') {
   throw new Error('Video script failed date, stock count, or privacy gate');
 }
+validateV2(videoScript);
 const scenes = videoScript.scenes.map((s, i) => ({
   id: i + 1,
   title: s.title,
   subtitle: s.subtitle,
   bullets: s.bullets,
-  narration: normalizeNarrationRepetition(i === 0 ? addOpening(s.narration) : s.narration),
+  speech_text: s.speech_text,
+  caption_text: s.caption_text,
+  caption_cues: s.caption_cues,
   stock_codes: Array.isArray(s.stock_codes) ? s.stock_codes.map(String) : [],
   footer: s.footer || ''
 }));
-assertOpening(scenes[0].narration);
+
 const outDir = path.join(root, 'output', 'daily-gainers-video', date);
 const slidesDir = path.join(outDir, 'slides');
 fs.mkdirSync(slidesDir, { recursive: true });
@@ -98,10 +101,10 @@ for (const scene of scenes) {
   fs.writeFileSync(path.join(slidesDir, `${String(scene.id).padStart(2,'0')}.svg`), renderSvg(scene));
 }
 
-const narrationChars = scenes.reduce((n,s)=>n+[...s.narration].length,0);
+const narrationChars = scenes.reduce((n,s)=>n+[...s.speech_text].length,0);
 const plan = {
-  schema_version: 1,
-  methodology_version: 'daily-gainers-video-v1',
+  schema_version: 2,
+  methodology_version: 'daily-gainers-video-paired-v2',
   target_date: date,
   generated_at: new Date().toISOString(),
   source_files: [rawPath.replace(root + path.sep,''), aiPath.replace(root + path.sep,''), summaryPath.replace(root + path.sep,''), videoScriptPath.replace(root + path.sep,'')],
