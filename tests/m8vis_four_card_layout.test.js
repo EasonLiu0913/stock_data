@@ -28,6 +28,19 @@ try {
   for (const value of ['5%～7% 強勢股','7%～9.5% 強勢股','9.5% 以上強勢股','強勢股總數']) {
     assert.ok(svg.includes(value),value);
   }
+  // A 28-character card must wrap to two lines without dropping content.
+  const longPoint = '這是一段用來驗證資訊卡在較長內容下仍能保持完整可讀的文字';
+  assert.ok([...longPoint].length <= 28);
+  const secondPlan = JSON.parse(fs.readFileSync(path.join(dir,'plan.json'),'utf8'));
+  secondPlan.scenes[0].visual_summary_points[0] = longPoint;
+  fs.writeFileSync(path.join(dir,'plan.json'),JSON.stringify(secondPlan));
+  const wrapped = spawnSync(process.execPath,
+    [path.join(root,'scripts/build_daily_gainers_v2_slides.js'),date],
+    {cwd:temp,encoding:'utf8'});
+  assert.equal(wrapped.status,0,wrapped.stderr);
+  const wrappedSvg = fs.readFileSync(path.join(dir,'slides/01.svg'),'utf8');
+  assert.ok(wrappedSvg.includes([...longPoint].slice(0,14).join('')));
+  assert.ok(wrappedSvg.includes([...longPoint].slice(14).join('')));
   // Card bounds: x<=1278, y<=708; progress overlay begins at y=815.
   assert.ok(514+194<815);
   assert.ok(720+558<1920-390);
