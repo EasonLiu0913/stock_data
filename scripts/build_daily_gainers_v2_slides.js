@@ -22,10 +22,20 @@ for(const scene of plan.scenes){
   const cardHeight=points.length>=5?94:points.length===4?112:138;
   const spacing=points.length>=5?12:18;
   const startY=292;
-  const rows=points.map((item,i)=>{
+  // Four verified facts get a readable 2x2 card layout, staying left of
+  // the presenter and above the lower-third progress/caption region.
+  const rows=points.length===4 ? points.map((item,i)=>{
+    const x=130+(i%2)*590, y=292+Math.floor(i/2)*222;
+    const chars=[...item];
+    const lines=chars.length>14?[chars.slice(0,14).join(''),chars.slice(14).join('')]:[item];
+    const font=lines.some(line=>[...line].length>14)?29:34;
+    const text=lines.map((line,j)=>'<text x="'+(x+28)+'" y="'+(y+104+j*46)+'" fill="#e8f3fc" font-size="'+font+'" font-family="Noto Sans CJK TC">'+escape(line)+'</text>').join('');
+    return '<rect x="'+x+'" y="'+y+'" width="558" height="194" rx="20" fill="#12263d" stroke="#29465e" stroke-width="2"/>'+
+      '<text x="'+(x+28)+'" y="'+(y+46)+'" font-size="24" fill="#67e8f9" font-family="Noto Sans CJK TC">'+String(i+1).padStart(2,'0')+'</text>'+text;
+  }).join('') : points.map((item,i)=>{
     const y=startY+i*(cardHeight+spacing);
     const font=[...item].length>24?31:36;
-    const number=pageType==='checklist'?String(i+1).padStart(2,'0'):String(i+1).padStart(2,'0');
+    const number=String(i+1).padStart(2,'0');
     return '<rect x="130" y="'+y+'" width="'+maxX+'" height="'+cardHeight+'" rx="18" fill="#12263d" stroke="#29465e" stroke-width="2"/>'+
       '<rect x="150" y="'+(y+20)+'" width="55" height="'+(cardHeight-40)+'" rx="12" fill="#164e63"/>'+
       '<text x="177" y="'+(y+cardHeight/2+12)+'" font-size="29" text-anchor="middle" fill="#67e8f9" font-family="Noto Sans CJK TC">'+number+'</text>'+
