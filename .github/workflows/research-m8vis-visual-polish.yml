@@ -1,0 +1,34 @@
+name: "[Research M8VIS] Visual Polish Safe CI"
+on:
+  push:
+    branches:
+      - research/m8vis-v2-visual-polish-20261014
+    paths:
+      - '.github/workflows/research-m8vis-visual-polish.yml'
+      - 'scripts/daily_gainers_caption_segments.py'
+      - 'scripts/build_daily_gainers_v2_slides.js'
+      - 'tests/test_daily_gainers_caption_segments.py'
+      - 'tests/m8vis_four_card_layout.test.js'
+permissions:
+  contents: read
+jobs:
+  static-visual:
+    if: github.ref == 'refs/heads/research/m8vis-v2-visual-polish-20261014'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Caption segmentation and four-card regression
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py' -v
+          node tests/m8vis_four_card_layout.test.js
+          node --check scripts/build_daily_gainers_v2_slides.js
