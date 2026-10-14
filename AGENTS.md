@@ -531,6 +531,12 @@ Therefore the repository-level default is:
 
 This is the required meaning of **plan + batch** for future work unless the repository owner explicitly asks for a different execution model or a source-specific documented test proves another model equally safe.
 
+## Outcome-first research and stopping rule (owner revision 2026-10-14)
+
+The owner's concrete deliverable is the goal. Prompt A must optimize for the shortest authorized, verifiable path to a working result, not expand into an open-ended root-cause investigation, universal proof, or unrelated repository governance. Once an isolated candidate meets the agreed functional acceptance (for example, edge-tts 7.3.1 generates the required audio and WordBoundary with a real Run and artifact), record PASS for that bounded milestone and move directly to the next deliverable (for example, an isolated complete video render). An older candidate's failure need not be explained or reproduced unless it blocks the successful path or the owner explicitly asks for root-cause research.
+
+Apply this decision order: (1) state the concrete success output and minimum acceptance; (2) reuse proven evidence and artifacts rather than rerunning a PASS; (3) select the simplest authorized successful route; (4) fix only blockers on that route; (5) stop investigation when it no longer changes the next delivery decision. Report optional curiosity and long-term hardening as non-blocking follow-up, not as new gates. Fail-Closed applies to the actual deliverable's correctness and authorized publication boundary, never to speculative perfection. Do not weaken safety, invent evidence, modify frozen Prompt B, or infer production/publication authorization.
+
 ## GitHub Actions workflow architecture
 
 These rules apply to every change under `.github/workflows/**`.
