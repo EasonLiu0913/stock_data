@@ -1,0 +1,71 @@
+name: "[Research] Edge TTS 7.3.1 isolated video render"
+on:
+  push:
+    branches:
+      - research/video-tts-edge-731-20261014
+    paths:
+      - .github/workflows/research-video-tts-731-render.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    if: github.ref == 'refs/heads/research/video-tts-edge-731-20261014'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated media dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1 gTTS mutagen pypinyin
+          python -m pip freeze > dependency-versions.txt
+          python -c "import importlib.metadata as m; assert m.version('edge-tts') == '7.3.1'"
+      - name: Build dated research content package
+        run: |
+          set -euo pipefail
+          node scripts/validate_daily_gainers_video_script.js 20261008
+          node scripts/build_daily_gainers_video_package.js 20261008
+      - name: Synthesize complete YunJhe +15 percent narration
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: "+15%"
+        run: python scripts/synthesize_daily_gainers_tts.py output/daily-gainers-video/20261008/plan.json
+      - name: Build lip sync
+        run: python scripts/build_daily_gainers_lipsync.py output/daily-gainers-video/20261008/plan.json
+      - name: Render isolated MP4
+        env:
+          YOUTUBE_VTUBER_ENABLED: "1"
+        run: node scripts/render_daily_gainers_video.js 20261008
+      - name: Build Traditional Chinese subtitles
+        run: python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261008/plan.json
+      - name: Verify local deliverables only
+        run: |
+          set -euo pipefail
+          dir=output/daily-gainers-video/20261008
+          test -s "$dir/daily-gainers-20261008.mp4"
+          test -s "$dir/daily-gainers-20261008.zh-TW.srt"
+          test -s "$dir/tts-manifest.json"
+          test -s "$dir/qa.json"
+          ffprobe -v error -show_entries format=duration,size -of json "$dir/daily-gainers-20261008.mp4"
+          sha256sum "$dir/daily-gainers-20261008.mp4" "$dir/daily-gainers-20261008.zh-TW.srt"
+      - name: Preserve evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edge-tts-731-isolated-render-${{ github.run_id }}
+          path: |
+            dependency-versions.txt
+            output/daily-gainers-video/20261008/
+          if-no-files-found: warn
+          retention-days: 14
