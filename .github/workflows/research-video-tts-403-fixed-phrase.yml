@@ -1,0 +1,30 @@
+name: "[Research M5] Edge TTS 403 fixed-phrase preflight"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned dependency
+        run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Offline fail-closed tests
+        run: python scripts/research_video_tts_403_fixed_phrase.py --self-test
+      - name: Fixed phrase YunJhe +15 percent probe only
+        run: python scripts/research_video_tts_403_fixed_phrase.py
+      - name: Preserve isolated evidence on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-m5-tts-fixed-phrase-${{ github.run_id }}
+          path: output/research-video-tts-403/
+          if-no-files-found: error
+          retention-days: 14
