@@ -531,6 +531,32 @@ Therefore the repository-level default is:
 
 This is the required meaning of **plan + batch** for future work unless the repository owner explicitly asks for a different execution model or a source-specific documented test proves another model equally safe.
 
+## Prompt A pragmatic execution and proportional safety (owner revision 2026-10-14)
+
+Prompt A is an execution contract, not a reason to repeatedly stop at a solvable intermediate obstacle. Within the owner's current authorization and frozen A/B scope, independently inspect supported tools, choose a lawful alternative route, execute bounded steps, read back results, and continue to the defined phase boundary. Do not ask the owner to repeat "continue" merely because the first implementation route failed. Do not promise asynchronous execution without an actual scheduler.
+
+### Separate four kinds of constraints
+
+1. Platform facts: verify against actual behavior/docs; GitHub Actions `push` can run a workflow on a non-default branch. `workflow_dispatch` requires the workflow file on the default branch.
+2. Connector capabilities: lack of a direct dispatch action is not lack of repository write access. Discover supported actions (`create_file`, `update_file`, CI readback, etc.) and choose an equivalent authorized route.
+3. Repository guidance: use risk-proportionate checks, not speculative blanket vetoes. A full repository audit is required only when the change actually creates or modifies broad trigger/chaining/deployment behavior or an explicit owner contract demands it. For a new read-only, branch-and-path-scoped research CI, first inspect relevant existing listeners and direct side-effect paths; document residual uncertainty without automatically expanding into an unrelated all-workflow audit.
+4. Owner/platform hard boundaries: never infer permission for main, production, publishing, secrets, external writes, paid operations or frozen Prompt B from a research-only authorization. Respect actual tool security blocks; diagnose them rather than bypassing them.
+
+### Minimum viable evidence loop
+
+- Establish exact branch, HEAD, target file and intended output.
+- Prefer the smallest existing proven workflow pattern. Use branch/path-scoped `push` for a new research-only workflow when manual dispatch is unavailable because the file is not on the default branch. Keep `contents: read`, no secrets, no publishing, and an explicit branch guard where appropriate.
+- Before a write, inspect the change's relevant event listeners and directly reachable side effects. Escalate audit breadth only on evidence of a broader risk. A theoretical unknown alone is not proof of a forbidden effect.
+- After writing, fetch the changed file and actual commit SHA. Inspect actual CI via a supported run listing or supplied run URL; distinguish an unavailable query from a run that did not happen. Never invent Run ID, PASS, MP3 hash, WordBoundary, logs or artifacts.
+- If blocked, identify the specific failed route, test an authorized alternative in the same invocation when possible, preserve successful checkpoints, and request owner action only for a real authorization/permission/external gate.
+- Fail-Closed means never mislabel missing or failing acceptance evidence as PASS. It does not mean prohibiting bounded isolated investigation. Preserve preregistered Prompt B and the phase boundary.
+
+### Proportional workflow review
+
+For a research-only workflow that cannot write or publish, check branch/path filters, permissions, checked-out ref, job commands, artifact destinations and known directly relevant listeners. For workflows that write repository data, dispatch other workflows, change deployment triggers, use elevated tokens or can publish, perform the expanded source-to-output-to-trigger-to-side-effect review before execution. A change to `.github/workflows/**` alone does not automatically require fetching every workflow file when the narrow route is demonstrably isolated.
+
+This amendment clarifies execution method only; it does not retroactively change any frozen A/B acceptance, permit production/publishing, or waive actual security controls.
+
 ## GitHub Actions workflow architecture
 
 These rules apply to every change under `.github/workflows/**`.
