@@ -32,3 +32,21 @@ jobs:
           python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py' -v
           node tests/m8vis_four_card_layout.test.js
           node --check scripts/build_daily_gainers_v2_slides.js
+      - name: Render isolated four-card visual sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/daily-gainers-video/20261008
+          node -e 'const fs=require("fs");fs.writeFileSync("output/daily-gainers-video/20261008/plan.json",JSON.stringify({schema_version:2,target_date:"20261008",scenes:[{id:1,title:"市場概況",subtitle:"四格資訊",visual_summary_points:["5%～7% 強勢股","7%～9.5% 強勢股","9.5% 以上強勢股","強勢股總數"]}]}))'
+          node scripts/build_daily_gainers_v2_slides.js 20261008
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends librsvg2-bin fonts-noto-cjk
+          rsvg-convert -w 1920 -h 1080 output/daily-gainers-video/20261008/slides/01.svg -o output/daily-gainers-video/20261008/m8vis-four-card.png
+          test -s output/daily-gainers-video/20261008/m8vis-four-card.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m8vis-four-card-visual
+          path: |
+            output/daily-gainers-video/20261008/slides/01.svg
+            output/daily-gainers-video/20261008/m8vis-four-card.png
+          if-no-files-found: error
