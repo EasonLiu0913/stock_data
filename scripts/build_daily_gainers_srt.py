@@ -5,6 +5,7 @@ from mutagen.mp3 import MP3
 from daily_gainers_spoken_text import normalize_spoken_text
 from daily_gainers_subtitle_alignment import align_cues
 from daily_gainers_caption_segments import segment_pairs
+from daily_gainers_caption_width import check_caption
 
 if len(sys.argv) < 2:
     print("Usage: python scripts/build_daily_gainers_srt.py <plan.json>", file=sys.stderr)
@@ -197,6 +198,9 @@ for scene in plan.get("scenes", []):
         timed_pairs = segment_pairs(pairs)
         chunks = [item["caption"] for item in timed_pairs]
         spoken_chunks = [item["speech"] for item in timed_pairs]
+    if plan.get('schema_version') == 2:
+        for caption in chunks:
+            check_caption(caption)
     if not chunks:
         cursor += rendered_duration
         continue
