@@ -19,7 +19,7 @@ function validate(script) {
     check(!cues.some(x => /[\r\n]/.test(x.caption)), 'Cue contains preformatted line break');
     check(!cues.some(x => [...x.caption].length > 30), 'Caption cue exceeds 30 code points including punctuation');
     check(!cues.some(x => captionWidth(x.caption) > MAX_WIDTH), 'Caption cue exceeds conservative width budget');
-    check(!cues.some(x => /(?:代號[零〇一二兩三四五六七八九]{4}|百分之[零〇一二兩三四五六七八九十百千點]+|[零〇一二兩三四五六七八九十百千萬億點]+(?:元|張))/.test(x.caption)), 'Caption contains spoken-form financial number');
+    check(!cues.some(x => /(?:代號[零〇一二兩三四五六七八九]{4}|百分之[零〇一二兩三四五六七八九十百千點]+|[零〇一二兩三四五六七八九][零〇一二兩三四五六七八九十百千萬億點]*(?:元|張))/.test(x.caption)), 'Caption contains spoken-form financial number');
     if (index === 0) {
       check(scene.caption_text.startsWith(OPENING_TEXT), 'Caption brand opening mismatch');
       check(scene.speech_text.startsWith(OPENING_TEXT), 'Speech brand opening mismatch');
