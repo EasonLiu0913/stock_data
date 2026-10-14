@@ -124,6 +124,14 @@ When the owner asks to list `pending` tasks, read `docs/agent-prompts/task-routi
 
 Listing pending tasks is read-only and must not activate or execute them.
 
+## Execution efficiency and recovery from solvable blockers (owner revision 2026-10-14)
+
+Within the already authorized phase-specific Prompt A scope, take the shortest verifiable route to its actual deliverable. A failed implementation method is not automatically a blocked project. Before reporting BLOCKED: (1) separate platform rule from connector limitation and repository advice; (2) discover available tool alternatives; (3) attempt an authorized, bounded alternative when safe; (4) preserve completed commits/artifacts rather than restarting; and (5) identify a real external gate if no route remains. Do not ask the owner to issue repeated "continue Prompt A" turns for steps that can be completed now.
+
+For a newly created research-only GitHub Actions workflow on a non-default branch, `workflow_dispatch` may not be available until the file is on the default branch. Prefer an isolated `push` trigger filtered to the exact research branch and workflow/script paths where the owner has authorized research-branch writes. Confirm minimal token permissions, branch guard, no production/Pages/YouTube/secret side effects, and relevant direct listeners, including any matching privileged listener and its downstream permissions or deployment/dispatch side effects. Do not require an exhaustive unrelated repository-wide audit as a universal prerequisite. Expand to full dependency/trigger review when the proposed change actually touches shared listeners, privileged dispatch, writers or publication routes.
+
+After a write, remote readback and commit SHA are required. CI acceptance additionally requires actual run/job/log/artifact evidence. A connector endpoint that lists only PR runs cannot establish that a Push run is absent. Keep `PROGRESS` (new material evidence), `phase_status` (including incomplete), and `BLOCKED` (real unmet dependency) distinct. Fail-Closed protects truthful acceptance, not experimentation. None of this changes owner authorization, immutable Prompt B, external tool security checks or the required stop at the A/B boundary.
+
 ## Execution rules
 
 Once the correct phase-specific Prompt A is selected:
