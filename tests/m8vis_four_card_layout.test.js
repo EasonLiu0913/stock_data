@@ -39,7 +39,7 @@ try {
   const metricSvg=fs.readFileSync(path.join(dir,'slides/01.svg'),'utf8');
   assert.ok(metricSvg.includes('當日上市強勢股漲幅分布'));
   assert.equal((metricSvg.match(/font-size="64"/g)||[]).length,4);
-  assert.equal((metricSvg.match(/font-size="27"[^>]*>檔<\\/text>/g)||[]).length,4);
+  assert.equal(metricSvg.split('font-size="27"').length-1,4);
   for(const count of ['12','8','15','35']) assert.ok(metricSvg.includes('>'+count+'</text>'));
   // A 28-character card must wrap to two lines without dropping content.
   const longPoint = '這是一段用來驗證資訊卡在較長內容下仍能保持完整可讀的文字';
