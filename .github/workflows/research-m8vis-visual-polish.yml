@@ -48,7 +48,7 @@ jobs:
           ];
           if(bands.reduce((a,b)=>a+b,0)!==data.stock_count)throw Error('Band sum mismatch');
           const points=['5%～7%：'+bands[0]+' 檔','7%～9.5%：'+bands[1]+' 檔','9.5% 以上：'+bands[2]+' 檔','強勢股總數：'+data.stock_count+' 檔'];
-          fs.writeFileSync('output/daily-gainers-video/20261008/plan.json',JSON.stringify({schema_version:2,target_date:'20261008',scenes:[{id:1,title:'10/08 強勢股市場概況',subtitle:'依 20261008.json 實際漲幅分布',visual_summary_points:points}]}));
+          fs.writeFileSync('output/daily-gainers-video/20261008/plan.json',JSON.stringify({schema_version:2,target_date:'20261008',scenes:[{id:1,title:'10/08 強勢股市場概況',subtitle:'當日上市強勢股漲幅分布',visual_summary_points:points}]}));
           console.log('M8VIS_REAL_DATA',JSON.stringify({bands,total:data.stock_count,points}));
           NODE
           node scripts/build_daily_gainers_v2_slides.js 20261008
