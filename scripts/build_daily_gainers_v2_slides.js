@@ -26,10 +26,16 @@ for(const scene of plan.scenes){
   // the presenter and above the lower-third progress/caption region.
   const rows=points.length===4 ? points.map((item,i)=>{
     const x=130+(i%2)*590, y=292+Math.floor(i/2)*222;
+    // Highlight a verified numeric count without changing the source wording.
+    const metric=item.match(/^(.+?)：([0-9,]+) 檔$/u);
     const chars=[...item];
     const lines=chars.length>14?[chars.slice(0,14).join(''),chars.slice(14).join('')]:[item];
     const font=lines.some(line=>[...line].length>14)?29:34;
-    const text=lines.map((line,j)=>'<text x="'+(x+28)+'" y="'+(y+104+j*46)+'" fill="#e8f3fc" font-size="'+font+'" font-family="Noto Sans CJK TC">'+escape(line)+'</text>').join('');
+    const text=metric
+      ? '<text x="'+(x+28)+'" y="'+(y+98)+'" fill="#b0cde5" font-size="30" font-family="Noto Sans CJK TC">'+escape(metric[1])+'</text>'+
+        '<text x="'+(x+28)+'" y="'+(y+167)+'" fill="#f8fafc" font-size="64" font-weight="bold" font-family="Noto Sans CJK TC">'+escape(metric[2])+'</text>'+
+        '<text x="'+(x+145)+'" y="'+(y+166)+'" fill="#67e8f9" font-size="27" font-family="Noto Sans CJK TC">檔</text>'
+      : lines.map((line,j)=>'<text x="'+(x+28)+'" y="'+(y+104+j*46)+'" fill="#e8f3fc" font-size="'+font+'" font-family="Noto Sans CJK TC">'+escape(line)+'</text>').join('');
     return '<rect x="'+x+'" y="'+y+'" width="558" height="194" rx="20" fill="#12263d" stroke="#29465e" stroke-width="2"/>'+
       '<text x="'+(x+28)+'" y="'+(y+46)+'" font-size="24" fill="#67e8f9" font-family="Noto Sans CJK TC">'+String(i+1).padStart(2,'0')+'</text>'+text;
   }).join('') : points.map((item,i)=>{
