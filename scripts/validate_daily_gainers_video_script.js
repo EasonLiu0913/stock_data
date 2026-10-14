@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
-const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
+const { validate: validateV2 } = require('./validate_daily_gainers_video_v2');
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) throw Error('Expected YYYYMMDD');
 const root = 'data_daily_gain_over_5';
@@ -14,7 +14,8 @@ function check(cond, msg) { if (!cond) throw Error(msg); }
 check(raw.target_date === date && ai.target_date === date && summary.target_date === date && script.target_date === date, 'date mismatch');
 check(summary.status === 'final' && summary.coverage?.overall === 'complete', 'summary not final/complete');
 check(raw.stock_count === raw.stocks.length && ai.stock_count === raw.stock_count && script.stock_count === raw.stock_count, 'stock count mismatch');
-check(script.schema_version === 1 && script.methodology_version === 'chatgpt-video-script-v1', 'script schema mismatch');
+check(script.schema_version === 2, 'V2 paired script required');
+validateV2(script);
 // The script is approved for a trading date, not for a volatile summary generation timestamp.
 // Keep the original source timestamp for provenance without invalidating historical videos.
 check(typeof script.source_summary_generated_at === 'string' && !Number.isNaN(Date.parse(script.source_summary_generated_at)), 'missing or invalid original source timestamp');
@@ -25,11 +26,9 @@ for (const [i,s] of script.scenes.entries()) {
   check(typeof s.title === 'string' && s.title.trim().length > 0 && s.title.length <= 85, 'invalid scene title ' + i);
   check(typeof s.subtitle === 'string' && s.subtitle.length <= 160, 'invalid scene subtitle ' + i);
   check(Array.isArray(s.bullets) && s.bullets.length <= 5 && s.bullets.every(b=>typeof b === 'string' && b.length <= 220), 'invalid bullets ' + i);
-  check(typeof s.narration === 'string' && s.narration.length >= 75 && s.narration.length <= 1800, 'invalid narration ' + i);
+  check(typeof s.speech_text === 'string' && s.speech_text.length >= 75 && s.speech_text.length <= 1800, 'invalid speech text ' + i);
   check(!s.stock_codes || (Array.isArray(s.stock_codes) && s.stock_codes.every(c => codes.has(String(c)))), 'invalid stock code ' + i);
-  const effectiveNarration = i === 0 ? addOpening(s.narration) : s.narration;
-  if (i === 0) assertOpening(effectiveNarration);
-  chars += [...effectiveNarration].length;
+  chars += [...s.speech_text].length;
 }
 check(chars >= 1100 && chars <= 5500, 'narration length outside video bounds: ' + chars);
 check(script.privacy_status === 'private', 'video must be private');
