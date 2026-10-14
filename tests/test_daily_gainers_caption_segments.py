@@ -13,6 +13,16 @@ class SegmentationTest(unittest.TestCase):
         self.assertEqual(result[0]["caption"], "今天外資買超，市場量能增加。")
         self.assertEqual("".join(x["caption"] for x in result), pairs[0]["caption"])
 
+    def test_fixed_opening_sentences_are_separate(self):
+        opening = "大家好，歡迎來到 TAIWAN STOCK！追蹤資金，解讀行情。錢在哪，我們就在哪！"
+        result = segment_pairs([{"caption": opening, "speech": opening}])
+        self.assertEqual([x["caption"] for x in result], [
+            "大家好，歡迎來到 TAIWAN STOCK！",
+            "追蹤資金，解讀行情。",
+            "錢在哪，我們就在哪！",
+        ])
+        self.assertEqual("".join(x["speech"] for x in result), opening)
+
     def test_numbers_preserve_spoken_content(self):
         pairs = [{"caption": "今天上漲5%，外資買超35檔。", "speech": "今天上漲百分之五，外資買超三十五檔。"}]
         result = segment_pairs(pairs)
