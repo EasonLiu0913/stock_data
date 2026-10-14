@@ -1,0 +1,36 @@
+name: "[Research] Edge TTS 7.3.1 isolated fixed phrase"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: github.ref == 'refs/heads/research/video-tts-edge-731-20261014'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned version
+        run: |
+          python -m pip install edge-tts==7.3.1
+          python -m pip freeze > dependency-versions.txt
+          python -c "import importlib.metadata as m; assert m.version('edge-tts') == '7.3.1'"
+      - name: Offline fail-closed checks
+        run: python scripts/research_video_tts_403_fixed_phrase.py --self-test
+      - name: Fixed phrase only
+        run: python scripts/research_video_tts_403_fixed_phrase.py
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edge-tts-731-evidence
+          path: |
+            output/research-video-tts-403/
+            dependency-versions.txt
+          if-no-files-found: warn
+          retention-days: 14
