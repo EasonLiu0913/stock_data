@@ -13,6 +13,8 @@ on:
       - 'tests/daily_gainers_v2_full_20261008.test.js'
       - 'scripts/daily_gainers_text_variants.js'
       - 'scripts/verify_daily_gainers_v2_media_proof.js'
+      - 'tests/m8vis_market_opening_evidence.test.js'
+      - 'docs/policies/daily-gainers-video-editorial-verification-delivery-v1.md'
       - 'video_scripts/daily-gainers/v2/20261008/master.json'
 permissions:
   contents: read
@@ -36,6 +38,7 @@ jobs:
           set -euo pipefail
           python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py' -v
           node tests/m8vis_four_card_layout.test.js
+          node tests/m8vis_market_opening_evidence.test.js
           node --check scripts/build_daily_gainers_v2_slides.js
       - name: Render isolated four-card visual sample
         shell: bash
