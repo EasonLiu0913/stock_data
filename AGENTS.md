@@ -694,3 +694,19 @@ For EVERY Handoff v3 Prompt A/B reply, use a **ChatGPT native interactive card**
 ## Mandatory daily data recovery / Actions dispatch reference
 
 Before diagnosing daily missing stock datasets, asking GitHub Actions to backfill, or proposing a recovery dispatcher, read `docs/architecture/daily-data-recovery-agent-dispatch-v1.md`. Distinguish verified data completeness from green CI, source expected date from calendar date, `workflow_dispatch` capability from push-triggered CI and rerun, and read permissions from Actions write permission. Never invent a Run ID or claim unavailable dispatch succeeded. Check current main, declared workflow inputs, existing queued/running jobs, source cadence, deduplication, and post-run artifacts. This is documentation-only: it does not authorize a dispatcher, crawler execution, deployment, production video, YouTube, or changes to M9 Owner Choice A BLOCKED and publication locks.
+
+## GitHub Actions Push CI Run discovery (owner-verified 2026-10-15)
+
+After an authorized isolated-branch push, the agent MUST discover the real Push CI Run ID and URL itself. Never ask the owner to supply a Run ID when the connected GitHub fetch capability can enumerate workflow runs. Do not infer a Run ID from a commit SHA or claim that a push necessarily started a run.
+
+The connected GitHub tool `fetch_commit_workflow_runs` currently filters to **pull_request-triggered runs only**; an empty response does NOT prove that a push run is absent. Likewise `get_commit_combined_status` can return no statuses even when Actions runs exist. Use the connected GitHub **generic fetch** action with the exact allowed REST collection URL (without query parameters):
+
+```text
+https://api.github.com/repos/EasonLiu0913/stock_data/actions/runs
+```
+
+Parse its JSON `workflow_runs` array and match **exact** `head_sha` against the pushed commit, plus `head_branch` and `path` (workflow file); confirm `event` is `push` when expecting a push. Inspect `id`, `html_url`, `status`, `conclusion`, `created_at`, `run_attempt`. This collection is paginated: if no match appears on the first page, follow supported collection pagination or another authorized read route; do not interpret a first-page miss as no run. Some generic fetch URLs with query strings or GitHub Actions HTML pages may be rejected even though the bare REST collection works. If the connector does not support a required page, report the actual limitation rather than asking the owner for an ID by default.
+
+Example of a **verified historical** match (not a current/latest-run claim): commit `8dd41c420dede9f9ee30b7947e9056eef17e394d` → Run `38665492479`, `https://github.com/EasonLiu0913/stock_data/actions/runs/38665492479` (`.github/workflows/research-m8vis-visual-polish.yml`). Construct no URL until the actual `id`/`html_url` is returned. Give the owner the verified `html_url` immediately so they can inspect live progress.
+
+Then use the GitHub connector `fetch_workflow_run_jobs(repo_full_name, run_id)` to obtain job IDs and step conclusions; `fetch_workflow_job_logs(repo_full_name, job_id)` for the real failure; `fetch_workflow_run_artifacts(repo_full_name, run_id)` for artifact IDs, names, sizes and availability; download an artifact only when needed and supported. Diagnose and repair **the latest matching run**, not stale unrelated failures. Verify the new commit/branch and workflow scope before any retry or fix. Preserve the project's preregistered A/B, isolation, publishing locks and fail-closed acceptance; do not modify main, production, cron, Pages or YouTube without separate authorization.
