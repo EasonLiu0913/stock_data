@@ -53,10 +53,11 @@ function marginByCode(file) {
   }
   return map;
 }
-function findFieldIndex(fields, candidates, fallback = -1) {
+function findFieldIndex(fields, candidates, fallback = -1, preferLast = false) {
   const normalized = (fields || []).map((v) => String(v ?? '').replace(/\s+/g, '').trim());
   for (const candidate of candidates) {
-    const idx = normalized.indexOf(candidate.replace(/\s+/g, ''));
+    const name = candidate.replace(/\s+/g, '');
+    const idx = preferLast ? normalized.lastIndexOf(name) : normalized.indexOf(name);
     if (idx >= 0) return idx;
   }
   return fallback;
@@ -64,7 +65,7 @@ function findFieldIndex(fields, candidates, fallback = -1) {
 const INSTITUTIONAL_SOURCES = {
   foreign: { dir: 'data_twse_foreign_investors', suffix: '_twse_foreign_investors.json', fallbackCode: 1, fallbackNet: 11, netNames: ['買賣超股數', '買賣超股數(不含外資自營商)', '外陸資買賣超股數'] },
   trust: { dir: 'data_twse_investment_trust', suffix: '_twse_investment_trust.json', fallbackCode: 1, fallbackNet: 5, netNames: ['買賣超股數', '投信買賣超股數'] },
-  dealer: { dir: 'data_twse_dealers', suffix: '_twse_dealers.json', fallbackCode: 0, fallbackNet: 10, netNames: ['買賣超股數', '自營商買賣超股數'] },
+  dealer: { dir: 'data_twse_dealers', suffix: '_twse_dealers.json', fallbackCode: 0, fallbackNet: 10, preferLastNet: true, netNames: ['買賣超股數', '自營商買賣超股數'] },
 };
 function loadInstitutionalSource(date, key) {
   const cfg = INSTITUTIONAL_SOURCES[key];
@@ -76,7 +77,7 @@ function loadInstitutionalSource(date, key) {
   if (payload.stat && payload.stat !== 'OK') return result;
   const fields = Array.isArray(payload.fields) ? payload.fields : [];
   const codeIndex = findFieldIndex(fields, ['證券代號', '股票代號', '證券代碼', '股票代碼'], cfg.fallbackCode);
-  const netIndex = findFieldIndex(fields, cfg.netNames, cfg.fallbackNet);
+  const netIndex = findFieldIndex(fields, cfg.netNames, cfg.fallbackNet, cfg.preferLastNet === true);
   result.status = 'available'; result.row_count = payload.data.length;
   for (const row of payload.data) {
     if (!Array.isArray(row)) continue;
