@@ -50,3 +50,18 @@ The prior "workflow not identified" entries are superseded for **workflow existe
 | Institutional date range | `.github/workflows/crawl-twse-institutional-summaries-range.yml`: `workflow_dispatch start_date,end_date` and dataset flags | `contents:write`; range data backfill, not a read-only source check | Not authorized to dispatch. |
 
 Next: obtain/inspect 20261008 MI_INDEX raw bytes through a bounded supported retrieval method, identify the exact official stock-only table and a reliable ordinary-stock identity join, verify source date and denominator; then implement a read-only parser/negative tests on the research branch. For BFI82U, identify actual final raw source and verify whether any workflow stores its aggregate; do not conflate TWT38U/TWT44U/TWT43U with BFI82U. Audit directly relevant main push listeners before proposing any writer. No dispatch or publication authorized by this correction.
+
+## 2026-10-15 follow-up: verified paths from non-truncated Git tree
+The initial recursive main tree returned `truncated=true` (56,809 entries); a separate root tree and scripts subtree (`7e9daae5e5d1102f6156fda0f0dbfdf5096ed20f`, 514 entries, `truncated=false`) established actual script paths. This supersedes the earlier “not identified” wording for the MI_INDEX crawler, but does **not** certify 20261008 breadth.
+
+| Verified main path | Verified behavior | Research boundary |
+|---|---|---|
+| `.github/workflows/crawl-twse-mi-index.yml` | `workflow_dispatch` optional `date` YYYYMMDD, optional `type` default ALL; `scripts/crawl_twse_mi_index.js`; output `data_twse_mi_index/{date}_twse_mi_index.json`; `contents: write`, commits and pushes `HEAD:main` | EXISTING CRAWLER FOUND; NOT SAFE TO DISPATCH in isolated research; presence of output must be validated separately |
+| `.github/workflows/backfill-twse-mi-index-range.yml` | Required `start_date`, `end_date`; optional batch_size/force; `contents: write`, commits and pushes main | NOT SAFE TO DISPATCH; broad history writer |
+| `scripts/inspect_twse_mi_index_breadth.js` | Date/stat/table inspection, raw SHA, official stock aggregate if schema matches; explicitly inspection-only | Candidate for isolated read-only source inspection, not final classified breadth |
+| `scripts/build_twse_common_stock_breadth.js` | Date-checked MI_INDEX stock table plus date-attested TWSE classified master; rejects unknown identities; returns advancers/decliners/unchanged/no-trade/no-comparison and eligible denominator | Existing parser identified; date-specific security-master proof and limit-up field still need independent verification; no fabricated aggregate |
+| `scripts/merge_daily_gainers_market_opening_breadth.js` | Requires verified MI_INDEX and date-specific classified security-master manifests; writes separate `.with-breadth.json`, preserves partial status | Do not promote to final or overwrite base snapshot |
+| `.github/workflows/crawl-twse-institutional-summaries.yml` | Optional date; calls TWT38U, TWT44U, TWT43U separate crawlers; `contents: write`, commits to main | NOT equivalent to final BFI82U aggregate; do not use as unverified mapping |
+| `scripts/capture_twse_m2_primary_source.js` | Hardcoded 20261008 BFI82U/FMTQIK/BFIAMU original HTTP capture with SHA and manifest; marks scopeVerified=false until independent check | Research capture utility, not a general date-scoped production crawler or proof of final aggregate by itself |
+
+Next: inspect exact 20261008 MI_INDEX existing raw file and independently attested classified master; confirm source schema and price-limit handling, and test an isolated read-only transformation. No workflow dispatched in this audit.
