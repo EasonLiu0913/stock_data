@@ -2,7 +2,7 @@ name: Research Video Recovery Readonly
 on:
   push:
     branches: [research/market-opening-master-a-20261015]
-    paths: ['.github/workflows/research-video-recovery-readonly.yml', 'scripts/run_video_recovery_readonly_ci.sh', 'scripts/detect_video_data_recovery_gaps.js', 'scripts/plan_video_data_recovery.js', 'tests/video_data_recovery_*.test.js']
+    paths: ['.github/workflows/research-video-recovery-readonly.yml', 'scripts/run_video_recovery_readonly_ci.sh', 'scripts/detect_video_data_recovery_gaps.js', 'scripts/plan_video_data_recovery.js', 'tests/video_data_recovery_*.test.js', 'scripts/research_market_opening_mi_index_breadth*.js']
 permissions:
   contents: read
 jobs:
@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: '24'
       - run: bash scripts/run_video_recovery_readonly_ci.sh
+      - name: Verify MI_INDEX parser negative cases
+        run: node scripts/research_market_opening_mi_index_breadth.test.js
       - name: Preserve read-only proof
         if: always()
         uses: actions/upload-artifact@v4
