@@ -87,3 +87,16 @@ The generic GitHub `git/trees/main?recursive=1` response reported `truncated=tru
 - `scripts/crawl_twse_mi_index.js` directly names official `https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX`. Main tree shows a dated `data_twse_mi_index/20261008_twse_mi_index.json` blob, but its large content was not inspected in this checkpoint; **presence is not validated completeness**.
 
 **Revised source mapping:** MI_INDEX crawler/workflow is IDENTIFIED, but the date-specific raw bytes, quote-table selection, ordinary-stock classification and breadth parser still require independent inspection. Dedicated BFI82U final aggregate workflow remains UNVERIFIED. None of the above main-writing workflows are added to the read-only recovery allowlist or dispatched. Next inspect bounded file metadata/selected table fields and actual classification source before implementing a read-only breadth extractor. Do not claim absence from a truncated tree or empty code search.
+
+## R0 discovery correction — actual main tree inspection (2026-10-15)
+
+The repository recursive tree endpoint returned `truncated=true`, but exposed the following **actual** workflow paths; default-branch code search returning no MI_INDEX/BFI82U hits was inconclusive. Full YAML was fetched individually from main:
+
+| Actual workflow | Inputs and produced data | Privilege / decision |
+|---|---|---|
+| `.github/workflows/crawl-twse-mi-index.yml` | `workflow_dispatch` optional `date` YYYYMMDD and `type` default `ALL`; `scripts/crawl_twse_mi_index.js`; `data_twse_mi_index/{date}_twse_mi_index.json`; nonempty tables/rows check | `contents: write`, `git push origin HEAD:main`; **not read-only; do not dispatch**. Existing-file check validates nonempty rows, not ordinary-stock classification or breadth denominator. |
+| `.github/workflows/backfill-twse-mi-index-range.yml` | `start_date`, `end_date`, `batch_size`, `force`; range planner/batch script; dated `data_twse_mi_index` JSON | `contents: write`, explicit main checkout/reset/push; **not authorized for isolated research dispatch**. |
+| `.github/workflows/crawl-twse-institutional-summaries.yml` | Optional `date`; TWT38U foreign, TWT44U investment trust, TWT43U dealers; writes three respective data directories | `contents: write`, main push; **not BFI82U final consolidated proof**, do not substitute. |
+| `.github/workflows/crawl-twse-institutional-investors.yml` | Optional `date`; `scripts/crawl_twse_institutional_investors.js`; `data_twse_institutional_investors/{date}_twse_institutional_investors.json` | `contents: write`, main push; combined per-stock data is not independently proven final BFI82U summary. |
+
+Next inspect dated `20261008` MI_INDEX raw output and `scripts/crawl_twse_mi_index.js` parser to identify stock-specific table, official security classification, no-trade handling and full denominator; separately locate final BFI82U raw evidence and provenance. Source existence alone does not clear the editorial gate. No workflow dispatched or main modified.
