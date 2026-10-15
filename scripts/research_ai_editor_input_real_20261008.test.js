@@ -8,6 +8,7 @@ const editorInput=buildAIInput(read('/tmp/video-recovery-proof/market-opening-un
 assert.deepEqual(editorInput.candidates.map(s=>s.code),['6672','2305','1301','3416','9103','2428']);
 assert.equal(editorInput.editorial_instructions.publication_authorized,false);
 assert.ok(editorInput.sources.every(s=>s.published_at<='2026-10-08'));
+console.log('AI_EDITOR_INPUT_EMBEDDED_MASTER_SHA256='+editorInput.sha256);
 const output='/tmp/video-recovery-proof/ai-editor-input-v3.json';
 fs.writeFileSync(output,JSON.stringify(editorInput,null,2)+'\n');
 const fileHash=crypto.createHash('sha256').update(fs.readFileSync(output)).digest('hex');
