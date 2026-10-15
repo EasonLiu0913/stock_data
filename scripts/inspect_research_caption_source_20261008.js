@@ -25,7 +25,7 @@ function inspectCaptionSource(source){
  for(const part of source.parts){
   verifySequence(part.spoken_sentences,part.caption_sentences);
   for(const caption of part.caption_sentences){
-   const remainder=caption.replace(/下一交易日/g,'');
+   const remainder=caption.replace(/下一交易日/g,'').replace(/([0-9][0-9,]*(?:\.[0-9]+)?)億元/g,'$1元');
    assert.ok(!numeral.test(remainder),'UNMAPPED_CHINESE_NUMERAL');
    segmentCaption(caption);count++;
   }
