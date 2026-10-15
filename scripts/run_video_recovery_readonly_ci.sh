@@ -38,6 +38,10 @@ node - <<'NODE'
 const assert=require('node:assert/strict'),fs=require('fs');
 const {assemble}=require('./scripts/research_market_opening_v2_preview_adapter_20261008');
 const m=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/market-opening-unified-research-master.json'));
+assert.equal(m.breadth.identity_evidence.status,'UNVERIFIED');
+assert.equal(m.breadth.identity_evidence.as_of_common_stock_roster_sha256,null);
+assert.equal(m.breadth.identity_evidence.certified_common_stock_denominator,null);
+assert.equal(m.breadth.identity_evidence.official_stock_column_denominator,m.breadth.denominator);
 const a=assemble(m);assert.deepEqual(a.narration.snapshot,a.captions.snapshot);assert.deepEqual(a.narration.snapshot,a.information_cards.snapshot);
 assert.deepEqual(a.narration.lines.slice(0,3),require('./scripts/daily_gainers_brand_opening').OPENING_LINES);
 assert.equal(a.publication_authorized,false);assert.equal(a.video_authorized,false);
