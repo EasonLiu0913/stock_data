@@ -6,11 +6,12 @@ function plan(report,allowlist={}){
  for(const f of report.items){
   if(f.status==='PRESENT_UNVERIFIED')continue;
   const mapping=allowlist[f.id];
-  const key=mapping?.workflow_path||f.recovery||'UNMAPPED';
-  if(!groups.has(key))groups.set(key,{workflow_path:mapping?.workflow_path||null,fields:[],decision:'BLOCKED',reason:'NO_VERIFIED_SAFE_DATA_ONLY_WORKFLOW'});
+  const approved=mapping?.verified_data_only===true&&mapping?.side_effect_audit==='PASS'&&mapping?.input_date==='date'&&typeof mapping?.workflow_path==='string'&&mapping.workflow_path.startsWith('.github/workflows/');
+  const key=approved?mapping.workflow_path:'BLOCKED:'+f.id;
+  if(!groups.has(key))groups.set(key,{workflow_path:approved?mapping.workflow_path:null,fields:[],decision:'BLOCKED',reason:'NO_VERIFIED_SAFE_DATA_ONLY_WORKFLOW'});
   const g=groups.get(key);g.fields.push({id:f.id,status:f.status});
   // A mapping is not authorization. A planner can only suggest a dry-run candidate.
-  if(mapping?.verified_data_only===true&&mapping?.side_effect_audit==='PASS'&&mapping?.input_date==='date') {
+  if(approved) {
    g.decision='DRY_RUN_CANDIDATE_ONLY';g.reason='REQUIRES_RUN_DEDUPLICATION_AND_EXPLICIT_AUTHORIZATION';
   }
  }
