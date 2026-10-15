@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {plan}=require('../scripts/plan_video_data_recovery');
+const report={mode:'READ_ONLY_NO_DISPATCH',date:'20261008',items:[{id:'breadth_rising',status:'MISSING',recovery:'workflow_unverified'},{id:'breadth_falling',status:'MISSING',recovery:'workflow_unverified'},{id:'foreign_net',status:'PRESENT_UNVERIFIED',recovery:'dedicated_workflow_unverified'}]};
+const p=plan(report);
+assert.equal(p.mode,'PLAN_ONLY_NO_DISPATCH');
+assert.equal(p.actions.length,1);
+assert.equal(p.actions[0].decision,'BLOCKED');
+assert.equal(p.actions[0].fields.length,2);
+const candidate=plan(report,{breadth_rising:{workflow_path:'verified.yml',verified_data_only:true,side_effect_audit:'PASS',input_date:'date'}});
+assert.equal(candidate.actions.find(x=>x.workflow_path==='verified.yml').decision,'DRY_RUN_CANDIDATE_ONLY');
+assert.throws(()=>plan({items:[]}),/Untrusted/);
+console.log('PASS read-only planner blocks unmapped recovery and does not dispatch');
