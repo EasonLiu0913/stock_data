@@ -51,6 +51,23 @@ assert.equal(a.narration.lines.length,a.captions.lines.length);
 assert.throws(()=>assemble({...m,editorial_complete:true}));
 console.log('V2_THREE_SURFACE_RESEARCH_WIRING_PASS; actual synthesis pending');
 NODE
+node --check scripts/research_market_opening_v2_scope_safe_20261008.js
+node - <<'NODE'
+const fs=require('fs'),assert=require('node:assert/strict');
+const {project}=require('./scripts/research_market_opening_v2_scope_safe_20261008');
+const m=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/market-opening-unified-research-master.json'));
+const v=project(m);
+assert.match(v.market_context.scope,/官方 MI_INDEX/);
+assert.equal(v.required_market_claims_verified,true);
+assert.equal(v.featured_stock_catalyst_claims_verified,false);
+assert.equal(v.render_authorized,false);
+assert.deepEqual(v.narration_lines,v.caption_lines);
+assert.deepEqual(v.market_context,v.card_snapshot);
+assert.throws(()=>project({...m,breadth:{...m.breadth,denominator:1}}));
+assert.throws(()=>project({...m,institutional:{...m.institutional,foreign:{...m.institutional.foreign,net_twd:0}}}));
+fs.writeFileSync('/tmp/video-recovery-proof/v2-scope-safe-market-context.json',JSON.stringify(v,null,2)+'\\n');
+console.log('V2_SCOPE_SAFE_MARKET_CONTEXT_PASS; catalyst evidence and synthesis remain pending');
+NODE
 set +e
 node scripts/detect_video_data_recovery_gaps.js 20261008 > /tmp/video-recovery-proof/gaps.json
 gap_status=$?
