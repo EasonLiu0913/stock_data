@@ -18,6 +18,10 @@ function validate(d,master){
   if(c.epistemic_status==='verified_event')assert.ok(c.source_ids.length,'EVENT_SOURCE');
   for(const id of c.source_ids)assert.ok(sourceIds.has(id),'SOURCE_POINTER');
   assert.notEqual(c.causality_verified,true,'UNVERIFIED_CAUSALITY');
+  if(c.epistemic_status==='verified_event')for(const id of c.source_ids){
+   const src=master.sources.find(s=>s.id===id);
+   assert.notEqual(src.verification,'upstream_reference_requires_editor_review','UNREVIEWED_EVENT_SOURCE');
+  }
  }
  const lines=d.opening.spoken_sentences;
  assert.deepEqual(lines.slice(0,4),['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'],'FIXED_FOUR_LINE_OPENING');
