@@ -28,7 +28,26 @@
       "net_twd": -75852293490,
       "unit": "TWD",
       "market_scope": "TWSE",
-      "definition": "foreign and mainland investors excluding foreign dealers"
+      "definition": "foreign and mainland investors excluding foreign dealers; final TWSE BFI82U including block trades",
+      "source_date": "20261008"
+    },
+    "investment_trust": {
+      "buy_twd": 24525731364,
+      "sell_twd": 21516801351,
+      "net_twd": 3008930013,
+      "unit": "TWD",
+      "market_scope": "TWSE",
+      "source_date": "20261008",
+      "definition": "final TWSE BFI82U, including block trades"
+    },
+    "dealers": {
+      "buy_twd": 30282393030,
+      "sell_twd": 49013654634,
+      "net_twd": -18731261604,
+      "unit": "TWD",
+      "market_scope": "TWSE",
+      "source_date": "20261008",
+      "definition": "sum of proprietary trading and hedging, final TWSE BFI82U"
     }
   },
   "preliminary_gainers": {
@@ -63,19 +82,27 @@
       "unit": "TWD",
       "verified": true,
       "source_path_or_endpoint": "data_twse_market_chart/market_chart.json"
+    },
+    {
+      "source_name": "TWSE BFI82U final dated official report",
+      "source_date": "20261008",
+      "market_scope": "TWSE",
+      "unit": "TWD",
+      "verified": true,
+      "source_path_or_endpoint": "https://www.twse.com.tw/zh/trading/foreign/bfi82u.html?report1=month",
+      "version_note": "final report includes block trades; distinct from 15:05 preliminary"
     }
   ],
   "quality": {
     "missing_fields": [
       "breadth",
       "listed common-stock identity master",
-      "investment_trust total TWD",
-      "dealers total TWD",
       "sector_flows",
       "market_regime"
     ],
     "warnings": [
-      "Preliminary 5% stock count has not passed TWSE-only common-stock classification"
+      "Preliminary 5% stock count has not passed TWSE-only common-stock classification",
+      "Final BFI82U investment trust 3,008,930,013 TWD differs from preliminary 15:05 report 4,688,777,263 TWD; final official report is canonical. Whole-market common-stock breadth remains unverified."
     ],
     "blocking_reasons": [
       "COMPLETE_PUBLICATION_NOT_AUTHORIZED"
