@@ -6,6 +6,7 @@ node --check scripts/plan_video_data_recovery.js
 node --check scripts/verify_market_opening_master_20261008.js
 node tests/research_caption_numeric_parity_20261008.test.js
 node tests/research_caption_projection_full_20261008.test.js
+node tests/research_caption_sentence_parity_20261008.test.js
 node tests/video_data_recovery_gap_detector.test.js
 node tests/video_data_recovery_planner.test.js
 node --check scripts/parse_twse_official_stock_aggregate.js
