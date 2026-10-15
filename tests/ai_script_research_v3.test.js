@@ -1,0 +1,20 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {validate}=require('../scripts/validate_ai_script_research_v3');
+const hash='a'.repeat(64);
+const master={target_date:'20261008',sha256:hash,candidates:[{code:'6672',name:'甲',previous_close:100,close:106},{code:'2305',name:'乙',previous_close:100,close:105}],sources:[{id:'S1'}]};
+const brand=['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'];
+const draft={schema_version:3,author:'ChatGPT_AI',target_date:'20261008',research_master_sha256:hash,publication_authorized:false,featured:[{code:'6672',name:'甲'},{code:'2305',name:'乙'}],claims:[{id:'C1',epistemic_status:'verified_event',source_ids:['S1']}],opening:{spoken_sentences:brand,caption_sentences:[...brand]},segments:[{spoken_sentences:['研究內容。'],caption_sentences:['研究內容。'],claim_ids:['C1'],card_claim_ids:['C1']}]};
+assert.equal(validate(draft,master).render_authorized,false);
+function rejects(mutator,pattern){const x=structuredClone(draft),m=structuredClone(master);mutator(x,m);assert.throws(()=>validate(x,m),pattern);}
+rejects(x=>x.target_date='20261007',/DATE/);
+rejects(x=>x.research_master_sha256='b'.repeat(64),/MASTER_DRIFT/);
+rejects(x=>x.publication_authorized=true,/PUBLICATION/);
+rejects((x,m)=>m.candidates[0].close=102,/GAIN/);
+rejects(x=>x.claims[0].source_ids=[],/EVENT_SOURCE/);
+rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
+rejects(x=>x.claims[0].epistemic_status='causal_proof',/CLAIM_GRADE/);
+rejects(x=>x.opening.spoken_sentences[0]='舊版開場',/BRAND/);
+rejects(x=>x.opening.caption_sentences[1]='不一致',/CAPTION/);
+rejects(x=>x.segments[0].card_claim_ids=['missing'],/CLAIM_POINTER/);
+console.log('AI_SCRIPT_V3_CONTRACT_NEGATIVE_TEST_PASS; no synthesis or publication');
