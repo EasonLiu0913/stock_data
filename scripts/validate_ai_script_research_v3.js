@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict');
+// Validate externally AI-authored text; never generate or repair narration.
+function validate(d,master){
+ assert.equal(d.schema_version,3,'SCHEMA');
+ assert.equal(d.author,'ChatGPT_AI','AUTHOR');
+ assert.equal(d.target_date,master.target_date,'DATE');
+ assert.match(master.sha256,/^[a-f0-9]{64}$/,'HASH');
+ assert.equal(d.research_master_sha256,master.sha256,'MASTER_DRIFT');
+ assert.equal(d.publication_authorized,false,'PUBLICATION');
+ assert.ok(d.featured.length>=2,'FEATURED');
+ const stocks=new Map(master.candidates.map(s=>[s.code,s]));
+ for(const f of d.featured){const s=stocks.get(f.code);assert.ok(s&&s.name===f.name,'STOCK');assert.ok(s.previous_close>0&&(s.close/s.previous_close-1)*100>=5-0.011,'GAIN');}
+ const sourceIds=new Set(master.sources.map(s=>s.id)),claimIds=new Set();
+ for(const c of d.claims){
+  assert.ok(c.id&&!claimIds.has(c.id),'CLAIM_ID');claimIds.add(c.id);
+  assert.ok(['verified_event','contemporary_association','hypothesis','unknown'].includes(c.epistemic_status),'CLAIM_GRADE');
+  if(c.epistemic_status==='verified_event')assert.ok(c.source_ids.length,'EVENT_SOURCE');
+  for(const id of c.source_ids)assert.ok(sourceIds.has(id),'SOURCE_POINTER');
+ }
+ const lines=d.opening.spoken_sentences;
+ assert.deepEqual(lines.slice(0,3),['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！'],'BRAND');
+ assert.equal(lines.at(-1),'我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。','CC');
+ assert.deepEqual(lines,d.opening.caption_sentences,'CAPTION');
+ for(const s of d.segments){assert.deepEqual(s.spoken_sentences,s.caption_sentences,'SEGMENT_CAPTION');for(const id of [...s.claim_ids,...s.card_claim_ids])assert.ok(claimIds.has(id),'CLAIM_POINTER');}
+ return {status:'RESEARCH_VALIDATED',editorial_complete:false,render_authorized:false,publication_authorized:false};
+}
+module.exports={validate};
