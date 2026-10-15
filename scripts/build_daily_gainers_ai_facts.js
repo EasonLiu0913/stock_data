@@ -78,11 +78,21 @@ function loadInstitutionalSource(date, key) {
   const fields = Array.isArray(payload.fields) ? payload.fields : [];
   const codeIndex = findFieldIndex(fields, ['證券代號', '股票代號', '證券代碼', '股票代碼'], cfg.fallbackCode);
   const netIndex = findFieldIndex(fields, cfg.netNames, cfg.fallbackNet, cfg.preferLastNet === true);
+  if (key === 'dealer') {
+    // TWSE dealer table: proprietary net index 4, hedging net index 7, combined net index 10.
+    // Duplicate field names make generic lookup ambiguous; fail closed on schema drift.
+    if (fields.length !== 11 || netIndex !== 10) throw new Error('DEALER_TOTAL_SCHEMA_DRIFT');
+  }
   result.status = 'available'; result.row_count = payload.data.length;
   for (const row of payload.data) {
     if (!Array.isArray(row)) continue;
     const code = String(row[codeIndex] ?? '').trim(); if (!code) continue;
-    result.rows.set(code, { net_shares: numeric(row[netIndex]) });
+    const net = numeric(row[netIndex]);
+    if (key === 'dealer') {
+      const proprietary = numeric(row[4]), hedging = numeric(row[7]);
+      if (proprietary === null || hedging === null || net === null || proprietary + hedging !== net) throw new Error('DEALER_TOTAL_MISMATCH '+code);
+    }
+    result.rows.set(code, { net_shares: net });
   }
   return result;
 }
