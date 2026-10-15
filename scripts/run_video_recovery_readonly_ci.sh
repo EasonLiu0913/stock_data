@@ -8,7 +8,9 @@ node tests/video_data_recovery_gap_detector.test.js
 node tests/video_data_recovery_planner.test.js
 node --check scripts/parse_twse_official_stock_aggregate.js
 node tests/twse_official_stock_aggregate.test.js
+node --check scripts/verify_real_mi_index_20261008_readonly.js
 mkdir -p /tmp/video-recovery-proof
+node scripts/verify_real_mi_index_20261008_readonly.js
 set +e
 node scripts/detect_video_data_recovery_gaps.js 20261008 > /tmp/video-recovery-proof/gaps.json
 gap_status=$?
