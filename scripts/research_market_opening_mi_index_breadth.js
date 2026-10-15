@@ -10,10 +10,10 @@ function parse(raw, targetDate) {
   const t = matches[0];
   if (JSON.stringify(t.fields) !== JSON.stringify(['類型','整體市場','股票']) || !Array.isArray(t.data) || t.data.length !== 5) throw Error('BREADTH_SCHEMA_INVALID');
   const names = ['上漲(漲停)','下跌(跌停)','持平','未成交','無比價'];
-  const n = x => { if (typeof x !== 'string' || !/^(?:0|[1-9]\\d{0,2}(?:,\\d{3})*|[1-9]\\d*)$/.test(x)) throw Error('BREADTH_NUMBER_INVALID'); return Number(x.replace(/,/g,'')); };
+  const n = x => { if (typeof x !== 'string' || !/^(?:0|[1-9]\d{0,2}(?:,\d{3})*|[1-9]\d*)$/.test(x)) throw Error('BREADTH_NUMBER_INVALID'); return Number(x.replace(/,/g,'')); };
   const rows = t.data.map((row,i) => {
     if (!Array.isArray(row) || row.length !== 3 || row[0] !== names[i]) throw Error('BREADTH_ROW_INVALID');
-    if (i < 2) { const m = /^([\\d,]+)\\(([\\d,]+)\\)$/.exec(row[2]); if (!m) throw Error('BREADTH_LIMIT_FORMAT_INVALID'); const count=n(m[1]), limit=n(m[2]); if (limit>count) throw Error('BREADTH_LIMIT_EXCEEDS_COUNT'); return {count,limit}; }
+    if (i < 2) { const m = /^([\d,]+)\(([\d,]+)\)$/.exec(row[2]); if (!m) throw Error('BREADTH_LIMIT_FORMAT_INVALID'); const count=n(m[1]), limit=n(m[2]); if (limit>count) throw Error('BREADTH_LIMIT_EXCEEDS_COUNT'); return {count,limit}; }
     return {count:n(row[2])};
   });
   const [up,down,flat,untraded,noComparison]=rows;
