@@ -145,3 +145,20 @@ The earlier `NOT YET IDENTIFIED` workflow statements are superseded **for crawle
 - Existing `scripts/inspect_twse_mi_index_breadth.js` can inspect the local raw file and surface official `漲跌證券數合計` / `股票` aggregate without pretending per-security identity proof. This is the next read-only experiment.
 - **Critical contract mismatch to resolve before merging:** `scripts/build_twse_common_stock_breadth.js` includes `no_comparison_count` in its five-bucket denominator, whereas `scripts/validate_daily_gainers_market_opening.js` requires `advancers+decliners+unchanged+no_trade_count === eligible_count` and does not account for `no_comparison_count`. The validator also requires full `identities`, while `scripts/verify_daily_gainers_official_market_breadth.js` explicitly returns `legal_identity_master_certified:false` and only aggregate opening eligibility. These are distinct source/identity policies and must not be silently interchanged. `limit_up_count` remains unverified in this chain.
 - Next: independently inspect full 20261008 MI_INDEX via bounded/read-only access; preregister separate official-stock aggregate vs verified classified common-stock contracts; add negative fixture for nonzero no-comparison; require owner-approved schema migration before any change to canonical acceptance. No production write/dispatch.
+
+## R0 dated MI_INDEX full JSON inspection (20261008)
+
+Read the actual GitHub contents endpoint for `main:data_twse_mi_index/20261008_twse_mi_index.json` and parsed the full response (not the empty large-blob text from `fetch_file`). Top-level `date=20261008`, `stat=OK`, 10 tables. The `漲跌證券數合計` table has fields `類型,整體市場,股票`; its official **股票** column reports:
+
+| Official category | Stock count |
+|---|---:|
+| 上漲(漲停) | 425 (14) |
+| 下跌(跌停) | 540 (2) |
+| 持平 | 109 |
+| 未成交 | 3 |
+| 無比價 | 5 |
+| Five-category sum | 1082 |
+
+The separate `每日收盤行情(全部)` table has 36,699 rows and includes stock-code, close, price sign and change columns. Its row count is NOT a common-stock denominator. The official aggregate demonstrates a real `no_comparison_count=5`; any denominator policy omitting it is inconsistent with the five-category aggregate. This evidence is source inspection, not a certified as-of per-security common-stock identity master; `TWSE_OFFICIAL_STOCK_COLUMN` and `TWSE_COMMON_STOCK` remain distinct contract scopes. Full source byte SHA-256 and independent archive verification remain outstanding; Git blob SHA `2666ad48ea4948c410c6421b4a9cba7067376767` is not a substitute for raw SHA-256.
+
+**Proposed isolated next tests:** parse `425(14)` and `540(2)` without losing limit-up/down; assert sum 1082 and no-comparison 5; reject malformed table/date/scope; keep editorial gate BLOCKED until approved scope migration, source digest and any additional mandatory evidence are reconciled. No publishing, main edits, workflow dispatch or Prompt B.
