@@ -68,6 +68,21 @@ assert.throws(()=>project({...m,institutional:{...m.institutional,foreign:{...m.
 fs.writeFileSync('/tmp/video-recovery-proof/v2-scope-safe-market-context.json',JSON.stringify(v,null,2)+'\\n');
 console.log('V2_SCOPE_SAFE_MARKET_CONTEXT_PASS; catalyst evidence and synthesis remain pending');
 NODE
+node --check scripts/research_v2_featured_evidence_20261008.js
+node scripts/research_v2_featured_evidence_20261008.js
+node - <<'NODE'
+const fs=require('fs'),assert=require('node:assert/strict');
+const {build}=require('./scripts/research_v2_featured_evidence_20261008');
+const paths=['data_daily_gain_over_5/20261008.json','data_daily_gain_over_5/analysis-news/20261008.json','data_daily_gain_over_5/analysis-ai/20261008.json','data_daily_gain_over_5/analysis-facts/20261008.json'];
+const [l,n,a,f]=paths.map(p=>JSON.parse(fs.readFileSync(p)));
+const v=build(l,n,a,f);assert.ok(v.selected.length>=2);assert.equal(v.render_authorized,false);
+assert.throws(()=>build({...l,target_date:'20261007'},n,a,f),/WRONG_DATE/);
+const bad=structuredClone(l);bad.stocks.find(x=>x.code===a.priority_watchlist[0]).close=1;
+assert.throws(()=>build(bad,n,a,f),/NOT_5_PERCENT|PRICE_CHANGE_MISMATCH/);
+const wrong=structuredClone(n);wrong.analyses.find(x=>x.code===a.priority_watchlist[0]).sources=[{title:'future',url:'https://example.com',published_at:'2026-10-09'}];
+assert.throws(()=>build(l,wrong,a,f),/POST_DATE_SOURCE/);
+console.log('V2_FEATURED_EVIDENCE_NEGATIVE_TEST_PASS');
+NODE
 set +e
 node scripts/detect_video_data_recovery_gaps.js 20261008 > /tmp/video-recovery-proof/gaps.json
 gap_status=$?
