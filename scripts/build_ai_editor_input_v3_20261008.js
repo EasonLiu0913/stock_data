@@ -12,6 +12,10 @@ function build(m,list,news,facts,ai){
  for(const code of ai.priority_watchlist){
   const s=l.get(code),item=n.get(code),fact=f.get(code),analysis=a.get(code);
   assert.ok(s&&item&&fact&&analysis,'MISSING_CANDIDATE');
+  if(code==='2305'){
+   assert.equal(fact.flow.dealer.net_shares,41283,'2305_FACTS_MISMATCH');
+   assert.ok(!analysis.reason_summary.includes('自營商淨額0張'),'2305_STALE_AI');
+  }
   assert.ok((s.close/s.previous_close-1)*100>=5-0.011,'NOT_GAINER');
   const source_ids=[];
   for(const [i,x] of (item.sources||[]).entries()){
