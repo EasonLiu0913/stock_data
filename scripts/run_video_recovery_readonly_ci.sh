@@ -32,6 +32,18 @@ const stale=structuredClone(c);stale.master_sha256='0'.repeat(64);
 assert.throws(()=>verifyProjections(m,stale),/MASTER_SHA_DRIFT/);
 console.log('THREE_PREVIEW_PROJECTIONS_SHA_AND_NEGATIVE_TEST_PASS; production unchanged');
 NODE
+node --check scripts/research_market_opening_v2_preview_adapter_20261008.js
+node scripts/research_market_opening_v2_preview_adapter_20261008.js
+node - <<'NODE'
+const assert=require('node:assert/strict'),fs=require('fs');
+const {assemble}=require('./scripts/research_market_opening_v2_preview_adapter_20261008');
+const m=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/market-opening-unified-research-master.json'));
+const a=assemble(m);assert.deepEqual(a.narration.snapshot,a.captions.snapshot);assert.deepEqual(a.narration.snapshot,a.information_cards.snapshot);
+assert.deepEqual(a.narration.lines.slice(0,3),require('./scripts/daily_gainers_brand_opening').OPENING_LINES);
+assert.equal(a.publication_authorized,false);assert.equal(a.video_authorized,false);
+assert.throws(()=>assemble({...m,editorial_complete:true}));
+console.log('V2_THREE_SURFACE_RESEARCH_WIRING_PASS; actual synthesis pending');
+NODE
 set +e
 node scripts/detect_video_data_recovery_gaps.js 20261008 > /tmp/video-recovery-proof/gaps.json
 gap_status=$?
