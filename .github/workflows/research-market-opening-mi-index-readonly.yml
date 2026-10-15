@@ -1,0 +1,39 @@
+name: Research Market Opening MI_INDEX Readonly
+on:
+  push:
+    branches: [research/market-opening-master-a-20261015]
+    paths:
+      - '.github/workflows/research-market-opening-mi-index-readonly.yml'
+      - 'scripts/research_market_opening_mi_index_breadth.js'
+      - 'scripts/research_market_opening_mi_index_breadth.test.js'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_market_opening_mi_index_breadth.js
+            scripts/research_market_opening_mi_index_breadth.test.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify source parser and fail-closed negative cases
+        run: |
+          mkdir -p /tmp/market-opening-proof
+          node --check scripts/research_market_opening_mi_index_breadth.js
+          node --check scripts/research_market_opening_mi_index_breadth.test.js
+          node scripts/research_market_opening_mi_index_breadth.test.js | tee /tmp/market-opening-proof/test-result.txt
+          printf 'editorial_complete=false\nordinary_stock_identity_verified=false\n' > /tmp/market-opening-proof/release-lock.txt
+      - name: Preserve bounded proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-opening-mi-index-readonly-proof
+          path: /tmp/market-opening-proof/
+          if-no-files-found: warn
+          retention-days: 14
