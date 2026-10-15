@@ -23,3 +23,11 @@ jobs:
         with:
           node-version: '24'
       - run: bash scripts/run_video_recovery_readonly_ci.sh
+      - name: Preserve read-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-recovery-readonly-proof
+          path: /tmp/video-recovery-proof/
+          if-no-files-found: error
+          retention-days: 14
