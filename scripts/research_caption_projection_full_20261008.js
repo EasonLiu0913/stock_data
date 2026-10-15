@@ -23,4 +23,4 @@ function project(sentence){
  }
  return result;
 }
-module.exports={phrases};
+module.exports={phrases,project};
