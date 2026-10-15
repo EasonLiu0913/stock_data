@@ -4,7 +4,7 @@ Owner approval: 2026-10-11. Canonical durable rule for the active `daily-gainers
 
 ## Immutable brand and presentation
 - Exactly: 「大家好，歡迎來到 TAIWAN STOCK！」「追蹤資金，解讀行情。」「錢在哪，我們就在哪！」
-- Complete market opening including branding targets 60–90 seconds measured against the actual completed media; 70% professional financial anchor / 30% incisive analyst.
+- Complete market opening including branding targets **30–90 seconds**, measured against actual completed media; 70% professional financial anchor / 30% incisive analyst. Owner-approved M8VIS amendment on 2026-10-15 supersedes the earlier 60–90-second duration only. Mandatory verified content and other editorial gates are unchanged.
 - Spoken script, actual TTS, on-screen display claims and Traditional Chinese SRT are generated from one verified semantic source. Narration and SRT must not omit, contradict or silently paraphrase each other; review timing/word boundaries against final media. Any substantive script edit invalidates affected old TTS/SRT/render proof, and requires regeneration and re-verification of affected material.
 
 ## Owner-approved seven-scene editorial intent
