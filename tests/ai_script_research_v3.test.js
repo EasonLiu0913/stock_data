@@ -19,4 +19,5 @@ rejects(x=>x.opening.caption_sentences[1]='不一致',/CAPTION/);
 rejects(x=>{x.opening.spoken_sentences=[...brand.slice(0,3),'市場分析。',brand[3]];x.opening.caption_sentences=[...x.opening.spoken_sentences];},/FIXED_FOUR_LINE_OPENING/);
 rejects(x=>{x.opening.spoken_sentences=[...brand,brand[3]];x.opening.caption_sentences=[...x.opening.spoken_sentences];},/CC_ONCE/);
 rejects(x=>x.segments[0].card_claim_ids=['missing'],/CLAIM_POINTER/);
+rejects(x=>{x.segments[0].spoken_sentences=[brand[3]];x.segments[0].caption_sentences=[brand[3]];},/CC_ONLY_IN_OPENING/);
 console.log('AI_SCRIPT_V3_CONTRACT_NEGATIVE_TEST_PASS; no synthesis or publication');
