@@ -16,3 +16,6 @@ for(const mutate of [
  p=>p.stat='ERROR'
 ]){const p=base();mutate(p);assert.throws(()=>parse(p,'20261008'));}
 console.log('PASS official dated stock aggregate, limits, five buckets and negative fixtures; identity remains uncertified');
+
+// Run the independently authored AI-script contract fixtures in this existing CI-listed test entry point.
+require('./ai_script_research_v3.test.js');
