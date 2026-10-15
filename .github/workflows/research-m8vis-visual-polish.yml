@@ -63,3 +63,80 @@ jobs:
             output/daily-gainers-video/20261008/slides/01.svg
             output/daily-gainers-video/20261008/m8vis-four-card.png
           if-no-files-found: error
+
+  full-preview:
+    needs: static-visual
+    if: github.ref == 'refs/heads/research/m8vis-v2-visual-polish-20261014'
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated media dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts mutagen pypinyin
+      - name: Validate immutable 10/08 V2 inputs and build nine-scene plan
+        run: |
+          set -euo pipefail
+          node tests/daily_gainers_text_variants.test.js
+          node tests/daily_gainers_v2_full_20261008.test.js
+          python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py' -v
+          node scripts/build_daily_gainers_v2_preview.js 20261008
+          mkdir -p output/daily-gainers-video/20261008
+          cp output/daily-gainers-v2-preview/20261008/*.json output/daily-gainers-video/20261008/
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='output/daily-gainers-video/20261008/plan.json';
+          const v=JSON.parse(fs.readFileSync(p));
+          if(v.target_date!=='20261008'||v.scenes.length!==9||v.scenes.some(s=>!s.caption_cues?.length))throw Error('Invalid frozen preview plan');
+          console.log('M8VIS_FULL_PREVIEW_PLAN_PASS scenes='+v.scenes.length);
+          NODE
+          node scripts/build_daily_gainers_v2_slides.js 20261008
+      - name: Generate isolated narration (never upload)
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: '+15%'
+        run: python scripts/synthesize_daily_gainers_tts.py output/daily-gainers-video/20261008/plan.json
+      - name: Generate presenter lip sync and composite complete MP4
+        run: |
+          set -euo pipefail
+          python scripts/build_daily_gainers_lipsync.py output/daily-gainers-video/20261008/plan.json
+          YOUTUBE_VTUBER_ENABLED=1 node scripts/render_daily_gainers_video.js 20261008
+          python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261008/plan.json
+          node scripts/verify_daily_gainers_v2_media_proof.js 20261008
+          test -s output/daily-gainers-video/20261008/daily-gainers-20261008.mp4
+          test -s output/daily-gainers-video/20261008/daily-gainers-20261008.zh-TW.srt
+          ffprobe -v error -show_entries stream=codec_type,width,height -of json output/daily-gainers-video/20261008/daily-gainers-20261008.mp4
+          sha256sum output/daily-gainers-video/20261008/daily-gainers-20261008.mp4 output/daily-gainers-video/20261008/daily-gainers-20261008.zh-TW.srt
+      - name: Capture composite inspection frames
+        if: success()
+        run: |
+          set -euo pipefail
+          dir=output/daily-gainers-video/20261008
+          mkdir -p "$dir/m8vis-inspection"
+          for sec in 1 4 8 15 30 60; do
+            ffmpeg -y -loglevel error -ss "$sec" -i "$dir/daily-gainers-20261008.mp4" -frames:v 1 "$dir/m8vis-inspection/frame-${sec}s.png"
+          done
+          cp public/daily-gainers-v2-video-preview.html "$dir/m8vis-inspection/video-preview.html"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m8vis-full-composite-20261008
+          path: |
+            output/daily-gainers-video/20261008/plan.json
+            output/daily-gainers-video/20261008/slide-manifest.json
+            output/daily-gainers-video/20261008/daily-gainers-20261008.mp4
+            output/daily-gainers-video/20261008/daily-gainers-20261008.zh-TW.srt
+            output/daily-gainers-video/20261008/m8vis-inspection/
+          if-no-files-found: warn
+          retention-days: 7
