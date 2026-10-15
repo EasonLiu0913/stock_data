@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "status": "research_only",
+  "contract_id": "daily-gainers-video-v2-market-opening-successor",
+  "target_date": "20261008",
+  "required": [
+    {"id":"taiex","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"taiex.close","source":"TWSE MI_5MINS_HIST","recovery":"existing_market_chart_with_publish_side_effects"},
+    {"id":"market_turnover","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"market_trading.turnover_twd","source":"TWSE FMTQIK","recovery":"existing_market_chart_with_publish_side_effects"},
+    {"id":"turnover_ma5","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"market_trading.turnover_ma5_twd","source":"TWSE FMTQIK previous five trading days","recovery":"existing_market_chart_with_publish_side_effects"},
+    {"id":"breadth_rising","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"breadth.rising_count","source":"TWSE MI_INDEX stock universe","recovery":"workflow_unverified"},
+    {"id":"breadth_falling","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"breadth.falling_count","source":"TWSE MI_INDEX stock universe","recovery":"workflow_unverified"},
+    {"id":"breadth_unchanged","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"breadth.unchanged_count","source":"TWSE MI_INDEX stock universe","recovery":"workflow_unverified"},
+    {"id":"breadth_limit_up","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"breadth.limit_up_count","source":"TWSE MI_INDEX stock universe","recovery":"workflow_unverified"},
+    {"id":"breadth_denominator","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"breadth.denominator","source":"TWSE ordinary-stock identity + MI_INDEX","recovery":"workflow_unverified"},
+    {"id":"foreign_net","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"institutional.foreign.net_twd","source":"TWSE BFI82U final","recovery":"dedicated_workflow_unverified"},
+    {"id":"trust_net","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"institutional.investment_trust.net_twd","source":"TWSE BFI82U final","recovery":"dedicated_workflow_unverified"},
+    {"id":"dealers_net","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"institutional.dealers.net_twd","source":"TWSE BFI82U final","recovery":"dedicated_workflow_unverified"},
+    {"id":"market_regime","path":"data_daily_gain_over_5/market-opening/{date}.json","json_path":"market_regime","source":"deterministic validated breadth + turnover + flows","recovery":"derived_after_dependencies"}
+  ]
+}
