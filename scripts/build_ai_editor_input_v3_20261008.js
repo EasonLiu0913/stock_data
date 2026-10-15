@@ -14,7 +14,8 @@ function build(m,list,news,facts,ai){
   assert.ok(s&&item&&fact&&analysis,'MISSING_CANDIDATE');
   if(code==='2305'){
    assert.equal(fact.flow.dealer.net_shares,41283,'2305_FACTS_MISMATCH');
-   assert.ok(!analysis.reason_summary.includes('自營商淨額0張'),'2305_STALE_AI');
+   assert.ok(!analysis.reason_summary.includes('自營商淨額0張') && !(analysis.evidence||[]).some(v=>v.includes('自營商0張')),'2305_STALE_AI');
+   assert.notEqual(analysis.institutional_verification?.status,'inconclusive','2305_STALE_VERIFICATION');
   }
   assert.ok((s.close/s.previous_close-1)*100>=5-0.011,'NOT_GAINER');
   const source_ids=[];
