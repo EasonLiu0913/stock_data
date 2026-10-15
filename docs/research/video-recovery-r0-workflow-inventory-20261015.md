@@ -111,3 +111,15 @@ The main recursive tree API returned `truncated=true` (56,809 entries), but expo
 - The actual main tree also lists `.github/workflows/crawl-twse-institutional-investors.yml`, `.github/workflows/crawl-twse-institutional-investors-history.yml`, `.github/workflows/crawl-twse-institutional-summaries-range.yml` and `.github/workflows/research-m2-twse-primary-evidence.yml`; inspect contents and raw output before asserting BFI82U mapping.
 
 Next: fetch dated `data_twse_mi_index/20261008_twse_mi_index.json` from main, inspect table identity, stock row scope and classification join; inspect BFI82U-specific source workflow/parser. No dispatch, no release changes. The tree is truncated, so absence of other paths is not established.
+
+## 2026-10-15 follow-up: actual main workflow discovery (read-only)
+The GitHub generic fetch of `/git/trees/main?recursive=1` returned `truncated=true`, but exposed exact candidate workflow paths; these were individually fetched from main. Thus the previous “NOT YET IDENTIFIED” MI_INDEX workflow status is superseded for **crawler discovery only**, not for ordinary-stock breadth extraction or dispatch authorization.
+
+| Verified main path | Exact inputs / source | Output and side effects | Research decision |
+|---|---|---|---|
+| `.github/workflows/crawl-twse-mi-index.yml` (blob `1760f39af80d09b686bbbb52b108bbcaba5488ea`) | `workflow_dispatch` optional `date` YYYYMMDD, `type` default ALL; `scripts/crawl_twse_mi_index.js` | `data_twse_mi_index/{date}_twse_mi_index.json`, files.json; `contents:write`, git push HEAD:main; existing file validation checks nonempty tables/rows, **not** verified ordinary-stock breadth | FOUND, NOT ALLOWLISTED for research dispatch |
+| `.github/workflows/backfill-twse-mi-index-range.yml` (blob `f6538e0664af5ddff50109a0478f7551b6d70c65`) | required `start_date`, `end_date`; optional `batch_size`, `force`; range planner and batch runner | writes MI_INDEX dated JSON and files.json; `contents:write`, resets to main and pushes HEAD:main | FOUND, NOT ALLOWLISTED for research dispatch |
+| `.github/workflows/crawl-twse-institutional-summaries.yml` (blob `2a6306e26ebe6b26a581787b58741dc3b1221681`) | optional date; **TWT38U/TWT44U/TWT43U**, not BFI82U | writes `data_twse_foreign_investors`, `data_twse_investment_trust`, `data_twse_dealers`; `contents:write`, pushes main | Distinct source/version; NOT a verified BFI82U final mapping |
+| `.github/workflows/crawl-twse-institutional-summaries-range.yml` (blob `9f70a0d6a6b98eb7ea8ea644ca358c1894b2c2d5`) | required start/end dates and TWT group selection | main checkout, `contents:write`; source remains TWT series | NOT a verified BFI82U final mapping; no dispatch |
+
+The recursive tree was truncated, so absence of any other parser/workflow cannot be inferred. Next read the exact MI_INDEX 20261008 raw JSON (if available), `scripts/crawl_twse_mi_index.js`, classification source and BFI82U-specific source/manifest before deriving breadth. Audit relevant main push listeners before any proposed write action. No workflow invoked by this discovery.
