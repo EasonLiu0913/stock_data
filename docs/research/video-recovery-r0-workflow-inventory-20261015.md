@@ -100,3 +100,14 @@ The repository recursive tree endpoint returned `truncated=true`, but exposed th
 | `.github/workflows/crawl-twse-institutional-investors.yml` | Optional `date`; `scripts/crawl_twse_institutional_investors.js`; `data_twse_institutional_investors/{date}_twse_institutional_investors.json` | `contents: write`, main push; combined per-stock data is not independently proven final BFI82U summary. |
 
 Next inspect dated `20261008` MI_INDEX raw output and `scripts/crawl_twse_mi_index.js` parser to identify stock-specific table, official security classification, no-trade handling and full denominator; separately locate final BFI82U raw evidence and provenance. Source existence alone does not clear the editorial gate. No workflow dispatched or main modified.
+
+## R0 update — verified repository tree discovery (2026-10-15)
+The main recursive tree API returned `truncated=true` (56,809 entries), but exposed actual workflow paths previously missed by default-branch code search. This supersedes only the earlier `NOT YET IDENTIFIED` **workflow existence** statement; it does not establish ordinary-stock breadth derivation or authorize dispatch.
+
+- `.github/workflows/crawl-twse-mi-index.yml`: `workflow_dispatch` accepts optional `date` YYYYMMDD and `type` default ALL; output `data_twse_mi_index/{date}_twse_mi_index.json`, requires nonempty tables/rows; `contents:write`, commits and pushes to main. It validates nonempty raw tables, **not** verified ordinary-stock breadth/classification. Not approved for research dispatch.
+- `.github/workflows/backfill-twse-mi-index-range.yml`: required `start_date`, `end_date`, optional `batch_size`, `force`; validates via `scripts/plan_twse_mi_index_range_backfill.js`, persists dated raw MI_INDEX files and pushes main. Not read-only.
+- `.github/workflows/backfill-twse-core-range-data.yml`: `source` choice all/mi_index/margin, date range, batches; commits completed data to main; not a narrow read-only research job.
+- `.github/workflows/crawl-twse-institutional-summaries.yml`: optional `date`; crawls **TWT38U, TWT44U, TWT43U** into `data_twse_foreign_investors`, `data_twse_investment_trust`, `data_twse_dealers`; writes main. These are not automatically the same as the required **BFI82U final same-version aggregate**; mapping remains unverified.
+- The actual main tree also lists `.github/workflows/crawl-twse-institutional-investors.yml`, `.github/workflows/crawl-twse-institutional-investors-history.yml`, `.github/workflows/crawl-twse-institutional-summaries-range.yml` and `.github/workflows/research-m2-twse-primary-evidence.yml`; inspect contents and raw output before asserting BFI82U mapping.
+
+Next: fetch dated `data_twse_mi_index/20261008_twse_mi_index.json` from main, inspect table identity, stock row scope and classification join; inspect BFI82U-specific source workflow/parser. No dispatch, no release changes. The tree is truncated, so absence of other paths is not established.
