@@ -14,7 +14,7 @@ rejects((x,m)=>m.candidates[0].close=102,/GAIN/);
 rejects(x=>x.claims[0].source_ids=[],/EVENT_SOURCE/);
 rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
 rejects(x=>x.claims[0].epistemic_status='causal_proof',/CLAIM_GRADE/);
-rejects(x=>x.opening.spoken_sentences[0]='舊版開場',/BRAND/);
+rejects(x=>x.opening.spoken_sentences[0]='舊版開場',/FIXED_FOUR_LINE_OPENING/);
 rejects(x=>x.opening.caption_sentences[1]='不一致',/CAPTION/);
 rejects(x=>x.segments[0].card_claim_ids=['missing'],/CLAIM_POINTER/);
 console.log('AI_SCRIPT_V3_CONTRACT_NEGATIVE_TEST_PASS; no synthesis or publication');
