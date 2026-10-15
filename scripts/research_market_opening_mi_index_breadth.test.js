@@ -24,7 +24,7 @@ assert.deepEqual(editorInput.candidates.map(s=>s.code),['6672','2305','1301','34
 assert.equal(editorInput.editorial_instructions.publication_authorized,false);
 assert.ok(editorInput.sources.every(s=>s.published_at<='2026-10-08'));
 const output='/tmp/video-recovery-proof/ai-editor-input-v3.json';
-fs.writeFileSync(output,JSON.stringify(editorInput,null,2)+'\\n');
+fs.writeFileSync(output,JSON.stringify(editorInput,null,2)+'\n');
 const fileHash=crypto.createHash('sha256').update(fs.readFileSync(output)).digest('hex');
-fs.appendFileSync('/tmp/video-recovery-proof/SHA256SUMS',fileHash+'  '+output+'\\n');
+fs.appendFileSync('/tmp/video-recovery-proof/SHA256SUMS',fileHash+'  '+output+'\n');
 console.log('AI_EDITOR_INPUT_V3_REAL_20261008_PASS candidates='+editorInput.candidates.length+' file_sha256='+fileHash+' research_only=true');
