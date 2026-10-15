@@ -11,6 +11,8 @@ node tests/twse_official_stock_aggregate.test.js
 node --check scripts/verify_real_mi_index_20261008_readonly.js
 mkdir -p /tmp/video-recovery-proof
 node scripts/verify_real_mi_index_20261008_readonly.js
+node --check scripts/verify_bfi82u_three_groups_20261008_readonly.js
+node scripts/verify_bfi82u_three_groups_20261008_readonly.js
 set +e
 node scripts/detect_video_data_recovery_gaps.js 20261008 > /tmp/video-recovery-proof/gaps.json
 gap_status=$?
