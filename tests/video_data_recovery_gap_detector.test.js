@@ -1,9 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
+const fs=require('node:fs'),path=require('node:path');
 const {inspect}=require('../scripts/detect_video_data_recovery_gaps');
 const contract=require('../config/research/video-data-recovery-contract-v1.json');
-const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+const read=p=>JSON.parse(fs.readFileSync(path.resolve(__dirname,'..',p),'utf8'));
 const result=inspect(contract,read,'20261008');
 assert.equal(result.mode,'READ_ONLY_NO_DISPATCH');
 assert.equal(result.status,'BLOCKED');
