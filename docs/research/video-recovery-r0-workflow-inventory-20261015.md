@@ -65,3 +65,13 @@ The initial recursive main tree returned `truncated=true` (56,809 entries); a se
 | `scripts/capture_twse_m2_primary_source.js` | Hardcoded 20261008 BFI82U/FMTQIK/BFIAMU original HTTP capture with SHA and manifest; marks scopeVerified=false until independent check | Research capture utility, not a general date-scoped production crawler or proof of final aggregate by itself |
 
 Next: inspect exact 20261008 MI_INDEX existing raw file and independently attested classified master; confirm source schema and price-limit handling, and test an isolated read-only transformation. No workflow dispatched in this audit.
+
+## 2026-10-15 follow-up: direct main tree/YAML discovery (supersedes earlier NOT YET IDENTIFIED for MI_INDEX)
+The recursive main tree response reported `truncated=true`; paths below were individually fetched and read from main, so the conclusions are path-specific, not a claim of complete repository enumeration. Default-branch code search returning no MI_INDEX/BFI82U hits was inconclusive.
+
+- `.github/workflows/crawl-twse-mi-index.yml`: verified schedule and `workflow_dispatch` inputs `date` (optional YYYYMMDD) and `type` (default ALL); invokes `scripts/crawl_twse_mi_index.js --date ... --max-retries 3`; output `data_twse_mi_index/{date}_twse_mi_index.json`. Existing-file check only verifies nonempty tables/rows, **not** the target ordinary-stock breadth classification. `contents:write`, commits `data_twse_mi_index/` and pushes HEAD:main. Therefore FOUND but **NOT AUTHORIZED for isolated research dispatch**.
+- `.github/workflows/backfill-twse-mi-index-range.yml`: verified `workflow_dispatch` start_date/end_date/batch_size/force; plan, crawl, main-persist and verify jobs; writes main and regenerates file lists. FOUND, **NOT AUTHORIZED for isolated research dispatch**.
+- `.github/workflows/crawl-twse-institutional-summaries.yml`: date input; collects TWT38U/TWT44U/TWT43U to three dedicated directories and pushes main. These per-category tables are **not** a proven substitute for the same-version final BFI82U summary.
+- `.github/workflows/crawl-twse-institutional-summaries-range.yml`: start_date/end_date and category selectors, range crawler, contents:write. Again TWT38U/TWT44U/TWT43U rather than verified BFI82U final summary. No dispatch.
+
+Next source check: fetch exact `data_twse_mi_index/20261008_twse_mi_index.json` on main (or record absent), inspect `scripts/crawl_twse_mi_index.js` parser and official security-classification provenance; identify dated BFI82U source independently. Even when a raw MI_INDEX file exists, never infer verified ordinary-stock rising/falling/flat/limit-up/denominator without table identity, date, scope, exclusions and classification validation.
