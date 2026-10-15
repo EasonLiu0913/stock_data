@@ -1,6 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const {integerSpoken,decimalSpoken,buildVariants} = require('../scripts/daily_gainers_text_variants');
+const {OPENING_LINES,OPENING_TEXT} = require('../scripts/daily_gainers_brand_opening');
 assert.equal(integerSpoken(12500),'一萬二千五百');
 assert.equal(integerSpoken(2026),'二千零二十六');
 assert.equal(decimalSpoken('9.87'),'九點八七');
@@ -12,8 +13,16 @@ const doc={schema_version:2,target_date:'20261009',scenes:[{cues:[[
   {type:'number',value:'12500'},{type:'text',value:'張。'}]]}]};
 const rules={version:'daily-gainers-text-presentation-v1'};
 const r=buildVariants(doc,raw,rules);
-assert.equal(r.captions[0].text,'10/9，台積電收盤上漲3.25%，外資買超12,500張。');
-assert.equal(r.speech[0].text,'十月九日，台積電收盤上漲百分之三點二五，外資買超一萬二千五百張。');
+const expectedCaption='10/9，台積電收盤上漲3.25%，外資買超12,500張。';
+const expectedSpeech='十月九日，台積電收盤上漲百分之三點二五，外資買超一萬二千五百張。';
+assert.deepEqual(OPENING_LINES,['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！']);
+assert.equal(r.captions[0].text,OPENING_TEXT+expectedCaption);
+assert.equal(r.speech[0].text,OPENING_TEXT+expectedSpeech);
+assert.equal(r.captions[0].text.split(OPENING_TEXT).length,2,'Brand opening must appear exactly once');
+assert.deepEqual(r.cue_pairs[0].caption_cues.slice(0,3).map(x=>x.caption),OPENING_LINES);
+assert.deepEqual(r.cue_pairs[0].caption_cues.slice(0,3).map(x=>x.speech),OPENING_LINES);
+assert.equal(r.cue_pairs[0].caption_cues[3].caption,expectedCaption);
+assert.equal(r.cue_pairs[0].caption_cues[3].speech,expectedSpeech);
 assert.ok(r.display[0].text.includes('台積電（2330）'));
 assert.equal(r.manifest.scene_count,1);
 assert.equal(r.cue_pairs[0].caption_cues[0].caption,r.captions[0].text);
