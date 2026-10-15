@@ -8,6 +8,7 @@ function assemble(master){
  const contract=build(master);verifyProjections(master,contract);
  const v=contract.consumers.narration;
  assert.equal(v.date,'20261008');assert.equal(master.editorial_complete,false);
+ // Preview-only projection is not a synthesis authorization; source identity remains uncertified.
  const count=n=>String(n);
  const lines=[
   ...OPENING_LINES,
@@ -22,6 +23,10 @@ function assemble(master){
  const result={status:'RESEARCH_ONLY',publication_authorized:false,tts_authorized:false,video_authorized:false,editorial_complete:false,master_sha256:contract.master_sha256,snapshot_sha256:contract.snapshot_sha256,narration:{snapshot:v,lines},captions:{snapshot:v,lines:[...lines]},information_cards:cards};
  for(const name of ['narration','captions','information_cards'])assert.equal(JSON.stringify(result[name].snapshot),canonical,'V2_'+name+'_DRIFT');
  assert.deepEqual(result.narration.lines,result.captions.lines);
+ assert.equal(master.breadth.verified_twse_common_stock_only,false);
+ assert.equal(result.tts_authorized,false);assert.equal(result.video_authorized,false);
+ // A5: a successful adapter must never be mistaken for the unconditional editorial gate.
+ result.editorial_gate={status:'BLOCKED',reasons:[...master.missing],render_allowed:false,tts_allowed:false};
  return result;
 }
 if(require.main===module){
