@@ -557,6 +557,22 @@ Prompt A is an execution contract, not a reason to repeatedly stop at a solvable
 - If blocked, identify the specific failed route, test an authorized alternative in the same invocation when possible, preserve successful checkpoints, and request owner action only for a real authorization/permission/external gate.
 - Fail-Closed means never mislabel missing or failing acceptance evidence as PASS. It does not mean prohibiting bounded isolated investigation. Preserve preregistered Prompt B and the phase boundary.
 
+### Verified GitHub Actions Run ID retrieval (owner-confirmed 2026-10-15)
+
+When a workflow is triggered by `push` (including an isolated research branch), **use the GitHub connector's generic `fetch` action to read the Actions Runs collection**. Do not use `fetch_commit_workflow_runs` as the sole discovery route: that wrapper currently filters to pull-request-triggered runs, so an empty result does **not** mean a push CI did not run.
+
+Proven connector call:
+
+```text
+mcp__GitHub__fetch({
+  url: "https://api.github.com/repos/EasonLiu0913/stock_data/actions/runs?per_page=100"
+})
+```
+
+Parse the JSON `workflow_runs` collection, then match **all available identity evidence**: `head_sha` (actual commit SHA), `head_branch`, and `path` (exact `.github/workflows/<file>.yml`); verify `event`, `status`, `conclusion`, `created_at`, and `run_attempt`. Read `id` as the real Run ID and `html_url` as the direct URL (`https://github.com/EasonLiu0913/stock_data/actions/runs/<id>`). For runs not found on the first page, use supported pagination or narrower allowed collection queries; do not infer non-existence from a partial listing. A workflow-list page is **not** an individual Run URL.
+
+Then call `fetch_workflow_run_jobs({repo_full_name,run_id})`, `fetch_workflow_job_logs({repo_full_name,job_id})`, and `fetch_workflow_run_artifacts({repo_full_name,run_id})` as applicable. Distinguish `cancelled` / skipped test steps from test failure or PASS. This route was verified against research commit `3f06910728335d2dd54344713cae29b29324ecaa`: Run `38716908303`, job `116361721953`, `push` event, `cancelled` during checkout; the tests never ran. Never invent a Run ID or ask the owner to locate a URL before trying this known supported connector route.
+
 ### Proportional workflow review
 
 For a research-only workflow that cannot write or publish, check branch/path filters, permissions, checked-out ref, job commands, artifact destinations and known directly relevant listeners. Explicitly inspect any known privileged listener matching that research branch, path or completion event; its downstream permissions and dispatch/deployment behavior must be considered even if the research workflow itself has `contents: read`. For workflows that write repository data, dispatch other workflows, change deployment triggers, use elevated tokens or can publish, perform the expanded source-to-output-to-trigger-to-side-effect review before execution. A change to `.github/workflows/**` alone does not automatically require fetching every workflow file when the narrow route is demonstrably isolated.
