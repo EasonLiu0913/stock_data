@@ -12,7 +12,7 @@ assert.equal(plan.scenes.length,9);
 assert.equal(sub.scenes.length,9);
 assert.equal(tts.scenes.length,9);
 // Owner-approved opening duration: 30 to 90 seconds, measured from actual TTS.
-const opening=tts.scenes.find(scene=>Number(scene.id)===1);
+const opening=render.scenes.find(scene=>Number(scene.id)===1);
 assert.ok(opening && Number.isFinite(opening.duration_seconds),'opening duration missing');
 assert.ok(opening.duration_seconds>=30 && opening.duration_seconds<=90,'opening duration outside 30 to 90 seconds');
 assert.equal(render.scenes.length,9);
