@@ -18,9 +18,13 @@ function project(sentence){
  const tokens=[];
  for(const [word,number] of sorted){
   // Protect replacements from subsequent phrase matches.
-  result=result.split(word).joinWithPlaceholder;
-  if(result===undefined)throw Error('INTERNAL');
+  const chunks=result.split(word);
+  if(chunks.length>1){
+   const token='\uE000'+tokens.length+'\uE001';
+   tokens.push(number);
+   result=chunks.join(token);
+  }
  }
- return result;
+ return result.replace(/\uE000(\d+)\uE001/g,(_,i)=>tokens[Number(i)]);
 }
 module.exports={phrases,project};
