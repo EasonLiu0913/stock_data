@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {inspect}=require('../scripts/detect_video_data_recovery_gaps');
+const contract=require('../config/research/video-data-recovery-contract-v1.json');
+const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+const result=inspect(contract,read,'20261008');
+assert.equal(result.mode,'READ_ONLY_NO_DISPATCH');
+assert.equal(result.status,'BLOCKED');
+assert.equal(result.items.find(x=>x.id==='breadth_rising').status,'MISSING');
+const extended=structuredClone(contract);
+extended.required.push({id:'additional',path:'data_daily_gain_over_5/market-opening/{date}.json',json_path:'additional',source:'future',recovery:'workflow_unverified'});
+assert.equal(inspect(extended,read,'20261008').items.find(x=>x.id==='additional').status,'MISSING');
+console.log('PASS gap detector partial date and new schema field');
