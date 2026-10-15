@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {preview}=require('../scripts/build_daily_gainers_v2_preview');
+const {OPENING_LINES, OPENING_TEXT}=require('../scripts/daily_gainers_brand_opening');
 const root=path.resolve(__dirname,'..');
 const base='video_scripts/daily-gainers';
 const master=JSON.parse(fs.readFileSync(path.join(root,base,'v2/20261008/master.json'),'utf8'));
@@ -29,6 +30,7 @@ for(let i=0;i<9;i++){
    throw new Error('Unexpected source token '+t.type);
  }).join('');
  let expected=legacy.scenes[i].narration;
+ if(i===0) expected=OPENING_TEXT+expected.replace(/^歡迎來到 TAIWANSTOCK。/, '');
  if(i===5)expected=expected.replace('台塑，代號一三零一','台塑');
  expected=expected.replace(/代號([零一二三四五六七八九]{4})/g,(whole,spoken)=>{
    const code=[...spoken].map(ch=>String(d.indexOf(ch))).join('');
@@ -38,6 +40,10 @@ for(let i=0;i<9;i++){
 }
 const out=preview('20261008',root);
 assert.equal(out.plan.scene_count,9);
+assert.deepEqual(out.plan.scenes[0].caption_cues.slice(0,3).map(c=>c.caption), OPENING_LINES);
+assert.deepEqual(out.plan.scenes[0].caption_cues.slice(0,3).map(c=>c.speech), OPENING_LINES);
+assert.equal(out.plan.scenes[0].speech_text.split(OPENING_TEXT).length-1,1);
+assert.ok(!out.plan.scenes[0].speech_text.includes('歡迎來到 TAIWANSTOCK。'));
 assert.ok(out.plan.scenes.every(s=>s.caption_cues.map(x=>x.caption).join('')===s.caption_text));
 assert.ok(out.plan.scenes.every(s=>s.caption_cues.map(x=>x.speech).join('')===s.speech_text));
 assert.ok(out.plan.scenes[2].speech_text.includes('美德醫療-DR'));
