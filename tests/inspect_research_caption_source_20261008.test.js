@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {inspectCaptionSource,segmentCaption}=require('../scripts/inspect_research_caption_source_20261008');
+const source=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/20261008-research-caption-source.json','utf8'));
+assert.equal(inspectCaptionSource(source),21);
+const segmented=source.parts.map(part=>({id:part.id,lines:part.caption_sentences.map(s=>segmentCaption(s))}));
+assert.throws(()=>segmentCaption('甲'.repeat(31)+'。'),/CAPTION_CLAUSE_TOO_LONG/);
+fs.writeFileSync('/tmp/video-recovery-proof/20261008-research-caption-segments.json',JSON.stringify({status:'RESEARCH_SEGMENTS_NOT_TIMED_SRT',parts:segmented},null,2));
+console.log('RESEARCH_CAPTION_ARTIFACT_INSPECTION_PASS sentences=21 max_line=30 no_srt=true');
