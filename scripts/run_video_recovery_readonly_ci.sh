@@ -15,6 +15,8 @@ node --check scripts/verify_bfi82u_three_groups_20261008_readonly.js
 node scripts/verify_bfi82u_three_groups_20261008_readonly.js
 node --check scripts/research_market_opening_unified_master_20261008.js
 node scripts/research_market_opening_unified_master_20261008.js
+node --check scripts/research_market_opening_consumer_contract_20261008.js
+node scripts/research_market_opening_consumer_contract_20261008.js
 set +e
 node scripts/detect_video_data_recovery_gaps.js 20261008 > /tmp/video-recovery-proof/gaps.json
 gap_status=$?
