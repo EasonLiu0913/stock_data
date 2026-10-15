@@ -19,8 +19,8 @@ function validate(d,master){
   for(const id of c.source_ids)assert.ok(sourceIds.has(id),'SOURCE_POINTER');
  }
  const lines=d.opening.spoken_sentences;
- assert.deepEqual(lines.slice(0,3),['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！'],'BRAND');
- assert.equal(lines.at(-1),'我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。','CC');
+ assert.deepEqual(lines.slice(0,4),['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'],'FIXED_FOUR_LINE_OPENING');
+ assert.equal(lines.filter(s=>s==='我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。').length,1,'CC_ONCE');
  assert.deepEqual(lines,d.opening.caption_sentences,'CAPTION');
  for(const s of d.segments){assert.deepEqual(s.spoken_sentences,s.caption_sentences,'SEGMENT_CAPTION');for(const id of [...s.claim_ids,...s.card_claim_ids])assert.ok(claimIds.has(id),'CLAIM_POINTER');}
  return {status:'RESEARCH_VALIDATED',editorial_complete:false,render_authorized:false,publication_authorized:false};
