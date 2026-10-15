@@ -19,3 +19,10 @@ Status: CI PASS / EDITORIAL DATA BLOCKED / RESEARCH ONLY. This evidence does not
 - Next: inspect actual main workflow/script directory and official source parser/output mapping with explicit paths, input dates, output and indirect side effects; update allowlist only for independently verified data-only workflows. Preserve A/B frozen gates and Fail-Closed behavior.
 
 Research progress: PROGRESS. Phase A: IN_PROGRESS. Blocker: source-to-workflow mapping and 20261008 ordinary-stock breadth. Pivot: if no safe existing date-scoped crawler exists, document missing implementation and design a read-only source parser/fixture; do not dispatch a broad publication workflow.
+
+## Official stock aggregate parser acceptance — Run 38739167425
+
+- Research head `0c310b3bdc98b7828a6d5bb812875d04e941a147`; [Run 38739167425](https://github.com/EasonLiu0913/stock_data/actions/runs/38739167425): completed SUCCESS; Job 116436070891 SUCCESS.
+- Job log: `PASS official dated stock aggregate, limits, five buckets and negative fixtures; identity remains uncertified`; detector and planner PASS; `Expected BLOCKED proof verified; no publication or dispatch.`
+- [Artifact 11975740175](https://github.com/EasonLiu0913/stock_data/actions/runs/38739167425/artifacts/11975740175), `video-recovery-readonly-proof`, 1456 bytes, ZIP digest `sha256:42b369aa7abe1210258d0246c6f8d6269d22e7dab73dc610dab4c395eec14280`, expires 2026-10-29 13:01:07 UTC. ZIP digest verified against job log and artifact metadata; inner files not independently downloaded/rehashed.
+- This tests synthetic fixture values copied from official aggregate, not an independent raw-source-to-output end-to-end hash verification. The new parser output is `TWSE_OFFICIAL_STOCK_COLUMN`, `legal_identity_master_certified:false`, `publication_authorized:false`. 20261008 Master still BLOCKED; full historical per-security classification and scope migration unresolved. Node20 action deprecation warning is nonblocking.
