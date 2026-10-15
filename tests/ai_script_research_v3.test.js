@@ -14,6 +14,7 @@ rejects((x,m)=>m.candidates[0].close=102,/GAIN/);
 rejects(x=>x.claims[0].source_ids=[],/EVENT_SOURCE/);
 rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
 rejects(x=>x.claims[0].epistemic_status='causal_proof',/CLAIM_GRADE/);
+rejects(x=>x.claims[0].causality_verified=true,/UNVERIFIED_CAUSALITY/);
 rejects(x=>x.opening.spoken_sentences[0]='舊版開場',/FIXED_FOUR_LINE_OPENING/);
 rejects(x=>x.opening.caption_sentences[1]='不一致',/CAPTION/);
 rejects(x=>{x.opening.spoken_sentences=[...brand.slice(0,3),'市場分析。',brand[3]];x.opening.caption_sentences=[...x.opening.spoken_sentences];},/FIXED_FOUR_LINE_OPENING/);
