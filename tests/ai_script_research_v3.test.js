@@ -16,5 +16,7 @@ rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
 rejects(x=>x.claims[0].epistemic_status='causal_proof',/CLAIM_GRADE/);
 rejects(x=>x.opening.spoken_sentences[0]='舊版開場',/FIXED_FOUR_LINE_OPENING/);
 rejects(x=>x.opening.caption_sentences[1]='不一致',/CAPTION/);
+rejects(x=>{x.opening.spoken_sentences=[...brand.slice(0,3),'市場分析。',brand[3]];x.opening.caption_sentences=[...x.opening.spoken_sentences];},/FIXED_FOUR_LINE_OPENING/);
+rejects(x=>{x.opening.spoken_sentences=[...brand,brand[3]];x.opening.caption_sentences=[...x.opening.spoken_sentences];},/CC_ONCE/);
 rejects(x=>x.segments[0].card_claim_ids=['missing'],/CLAIM_POINTER/);
 console.log('AI_SCRIPT_V3_CONTRACT_NEGATIVE_TEST_PASS; no synthesis or publication');
