@@ -8,6 +8,7 @@ node tests/research_caption_numeric_parity_20261008.test.js
 node tests/research_caption_projection_full_20261008.test.js
 node tests/research_caption_sentence_parity_20261008.test.js
 node tests/build_research_caption_source_20261008.test.js
+node tests/inspect_research_caption_source_20261008.test.js
 node tests/video_data_recovery_gap_detector.test.js
 node tests/video_data_recovery_planner.test.js
 node --check scripts/parse_twse_official_stock_aggregate.js
