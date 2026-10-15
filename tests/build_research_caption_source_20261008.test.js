@@ -26,6 +26,15 @@ const swapped=structuredClone(artifact);
 [swapped.parts[2],swapped.parts[3]]=[swapped.parts[3],swapped.parts[2]];
 assert.notDeepEqual(swapped.parts.map(p=>p.id),expectedIds,'V3_ORDER_DRIFT');
 console.log('V3_CAPTION_INVENTORY_NEGATIVE_TEST_PASS research_only=true');
+// The archived seven-scene deterministic review must never replace the authored V3 source.
+const legacy=require('../scripts/build_daily_gainers_m5_v3_real_archive_review').build();
+assert.equal(legacy.scenes.length,7,'LEGACY_SCENE_COUNT');
+assert.notEqual(legacy.contract,d.schema_version,'LEGACY_NOT_V3_SCHEMA');
+assert.ok(!('opening' in legacy&&'segments' in legacy&&'research_master_sha256' in legacy),'LEGACY_NOT_AI_ORIGINAL');
+assert.equal(d.schema_version,3,'AI_V3_SCHEMA');
+assert.equal(d.author,'ChatGPT_AI','AI_V3_AUTHOR');
+assert.equal(d.research_master_sha256,artifact.research_master_sha256,'MASTER_SOURCE_PARITY');
+console.log('V3_LEGACY_SOURCE_REJECTION_PASS research_only=true');
 fs.mkdirSync('/tmp/video-recovery-proof',{recursive:true});
 fs.writeFileSync('/tmp/video-recovery-proof/20261008-research-caption-source.json',JSON.stringify(artifact,null,2)+'\n');
 console.log('DATED_RESEARCH_CAPTION_SOURCE_PASS sentences=21 no_srt=true no_render=true');
