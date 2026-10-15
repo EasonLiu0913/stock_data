@@ -43,6 +43,9 @@ jobs:
       - name: Verify editorial research does not repeat stale 2305 caveat
         run: |
           node -e "const fs=require('fs');const s=fs.readFileSync('data_research/m5/ai-script-generation/20261008-featured-editorial-research.md','utf8');if(!s.includes('合計+41,283股')||s.includes('等待法人數字完成原始來源核對'))process.exit(1);console.log('EDITORIAL_2305_RECONCILED_PASS')"
+      - name: Verify dated claim review reconciled
+        run: |
+          node -e "const fs=require('fs');const s=fs.readFileSync('data_research/m5/ai-script-generation/20261008-claim-review.md','utf8');if(!s.includes('dealer +41')||s.includes('Full three-group gate FAILS CLOSED'))process.exit(1);console.log('CLAIM_REVIEW_2305_RECONCILED_PASS')"
       - name: Verify dated 2305 dealer total against corrected Facts
         run: node tests/research_dealer_total_20261008.test.js
       - name: Preserve read-only proof
