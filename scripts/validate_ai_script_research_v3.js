@@ -22,7 +22,7 @@ function validate(d,master){
  assert.deepEqual(lines.slice(0,4),['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'],'FIXED_FOUR_LINE_OPENING');
  assert.equal(lines.filter(s=>s==='我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。').length,1,'CC_ONCE');
  assert.deepEqual(lines,d.opening.caption_sentences,'CAPTION');
- for(const s of d.segments){assert.deepEqual(s.spoken_sentences,s.caption_sentences,'SEGMENT_CAPTION');for(const id of [...s.claim_ids,...s.card_claim_ids])assert.ok(claimIds.has(id),'CLAIM_POINTER');}
+ for(const s of d.segments){assert.ok(!s.spoken_sentences.includes('我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'),'CC_ONLY_IN_OPENING');assert.deepEqual(s.spoken_sentences,s.caption_sentences,'SEGMENT_CAPTION');for(const id of [...s.claim_ids,...s.card_claim_ids])assert.ok(claimIds.has(id),'CLAIM_POINTER');}
  return {status:'RESEARCH_VALIDATED',editorial_complete:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={validate};
