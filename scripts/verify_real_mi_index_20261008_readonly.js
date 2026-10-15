@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+const {parse}=require('./parse_twse_official_stock_aggregate');
+const file='data_twse_mi_index/20261008_twse_mi_index.json';
+const bytes=fs.readFileSync(file),sha256=crypto.createHash('sha256').update(bytes).digest('hex');
+const payload=JSON.parse(bytes.toString('utf8'));
+assert.equal(payload.type,'ALL','MI_INDEX_TYPE_NOT_ALL');
+const result=parse(payload,'20261008');
+assert.deepEqual([result.advancers,result.limit_up_count,result.decliners,result.limit_down_count,result.unchanged,result.no_trade_count,result.no_comparison_count,result.eligible_count],[425,14,540,2,109,3,5,1082]);
+assert.equal(result.legal_identity_master_certified,false);assert.equal(result.publication_authorized,false);
+const proof={source_path:file,source_date:payload.date,source_type:payload.type,source_stat:payload.stat,source_sha256:sha256,source_bytes:bytes.length,official_stock_aggregate:result,editorial_status:'BLOCKED',note:'Official 股票 aggregate is not an independently certified as-of per-security common-stock identity master.'};
+fs.mkdirSync('/tmp/video-recovery-proof',{recursive:true});
+fs.writeFileSync('/tmp/video-recovery-proof/official-stock-aggregate.json',JSON.stringify(proof,null,2)+'\n');
+console.log('PASS actual dated MI_INDEX official 股票 column, 1082 five-bucket denominator; editorial BLOCKED; source sha256 '+sha256);
