@@ -15,6 +15,17 @@ assert.ok(artifact.parts.find(p=>p.id==='market').caption_sentences.some(s=>s.in
 assert.ok(artifact.parts.find(p=>p.id==='2305').caption_sentences.some(s=>s.includes('3,697,975股')));
 const altered=structuredClone(artifact);altered.parts[1].caption_sentences[0]+='遺漏';
 assert.throws(()=>verifySequence(altered.parts[1].spoken_sentences,altered.parts[1].caption_sentences),/CAPTION_SEMANTIC_DRIFT/);
+// Fail closed on loss of the AI-authored source's ordered sentence inventory.
+const expectedIds=['opening','market','6672','2305','1301','conclusion'];
+assert.deepEqual(artifact.parts.map(p=>p.id),expectedIds,'V3_PART_ORDER');
+assert.deepEqual(artifact.parts.map(p=>p.spoken_sentences.length),[4,5,3,3,3,3],'V3_SENTENCE_COUNTS');
+const missing=structuredClone(artifact);
+missing.parts[2].spoken_sentences.pop();
+assert.throws(()=>verifySequence(missing.parts[2].spoken_sentences,missing.parts[2].caption_sentences),/SENTENCE_COUNT_DRIFT/);
+const swapped=structuredClone(artifact);
+[swapped.parts[2],swapped.parts[3]]=[swapped.parts[3],swapped.parts[2]];
+assert.notDeepEqual(swapped.parts.map(p=>p.id),expectedIds,'V3_ORDER_DRIFT');
+console.log('V3_CAPTION_INVENTORY_NEGATIVE_TEST_PASS research_only=true');
 fs.mkdirSync('/tmp/video-recovery-proof',{recursive:true});
 fs.writeFileSync('/tmp/video-recovery-proof/20261008-research-caption-source.json',JSON.stringify(artifact,null,2)+'\n');
 console.log('DATED_RESEARCH_CAPTION_SOURCE_PASS sentences=21 no_srt=true no_render=true');
