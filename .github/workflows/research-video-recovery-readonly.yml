@@ -32,6 +32,11 @@ jobs:
       - run: bash scripts/run_video_recovery_readonly_ci.sh
       - name: Verify MI_INDEX parser negative cases
         run: node scripts/research_market_opening_mi_index_breadth.test.js
+      - name: Verify real AI editor input and archive SHA
+        run: |
+          node --check scripts/research_ai_editor_input_real_20261008.test.js
+          node scripts/research_ai_editor_input_real_20261008.test.js
+          sha256sum -c /tmp/video-recovery-proof/SHA256SUMS
       - name: Preserve read-only proof
         if: always()
         uses: actions/upload-artifact@v4
