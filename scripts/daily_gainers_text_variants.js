@@ -123,9 +123,11 @@ function buildVariants(doc, raw, rules) {
     // Inject the same immutable sentences into both speech and caption tokens.
     // Do not mutate the date-specific master JSON.
     const firstText = scene.cues[0]?.[0]?.type === 'text' ? scene.cues[0][0].value : '';
-    if (i === 0 && /^(大家好|歡迎來到|追蹤資金|錢在哪)/.test(firstText) && !firstText.startsWith(OPENING_TEXT))
+    const hasCanonicalOpening = i === 0 && OPENING_LINES.every((line, n) =>
+      scene.cues[n]?.length === 1 && scene.cues[n][0]?.type === 'text' && scene.cues[n][0].value === line);
+    if (i === 0 && /^(大家好|歡迎來到|追蹤資金|錢在哪)/.test(firstText) && !hasCanonicalOpening)
       throw new Error('V2 first-scene opening conflicts with immutable brand opening');
-    const sceneCues = i === 0 && !firstText.startsWith(OPENING_TEXT)
+    const sceneCues = i === 0 && !hasCanonicalOpening
       ? [...OPENING_LINES.map(value => [{type:'text', value}]), ...scene.cues]
       : scene.cues;
     const cues = sceneCues.map((tokens, j) => {
