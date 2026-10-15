@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const raw=JSON.parse(fs.readFileSync('data_twse_dealers/20261008_twse_dealers.json','utf8'));
+const facts=JSON.parse(fs.readFileSync('data_daily_gain_over_5/analysis-facts/20261008.json','utf8'));
+assert.equal(raw.date,'20261008');assert.equal(raw.fields.length,11);
+const row=raw.data.find(r=>String(r[0]).trim()==='2305');assert.ok(row,'DEALER_ROW_MISSING');
+const n=i=>Number(String(row[i]).replaceAll(',',''));
+assert.equal(n(4),0);assert.equal(n(7),41283);assert.equal(n(4)+n(7),n(10),'DEALER_SUBTOTAL_MISMATCH');
+const stock=facts.stocks.find(s=>s.code==='2305');assert.ok(stock);
+assert.equal(stock.flow.dealer.net_shares,n(10),'STALE_DEALER_FACTS');
+assert.equal(stock.flow.dealer.net_lots,Math.round(n(10)/1000),'STALE_DEALER_LOTS');
+assert.equal(stock.flow.institutional_verification_required,false,'VERIFICATION_GATE');
+console.log('RESEARCH_2305_DEALER_TOTAL_PASS raw='+n(10)+' shares; no publication');
