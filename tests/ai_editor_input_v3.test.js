@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {build}=require('../scripts/build_ai_editor_input_v3_20261008');
+const date='20261008';
+const master={target_date:date,market:'TWSE',breadth:{scope:'TWSE_OFFICIAL_STOCK_COLUMN'}};
+const list={target_date:date,stocks:[{code:'6672',name:'甲',previous_close:100,close:106,change_pct:6,volume:100},{code:'2305',name:'乙',previous_close:100,close:105,change_pct:5,volume:200}]};
+const news={target_date:date,analyses:list.stocks.map(s=>({code:s.code,evidence_strength:'circumstantial',reason_summary:'Unverified association',sources:[{title:'Dated reference',url:'https://example.org/source',published_at:'2026-10-08'}]}))};
+const facts={target_date:date,stocks:list.stocks.map(s=>({code:s.code,price:{close:s.close}}))};
+const ai={target_date:date,priority_watchlist:['6672','2305'],analyses:list.stocks.map(s=>({code:s.code,reason_summary:'Hypothesis only'}))};
+const run=(m=master,l=list,n=news,f=facts,a=ai)=>build(m,l,n,f,a);
+const result=run();assert.equal(result.candidates.length,2);assert.equal(result.sources.length,2);
+assert.equal(result.candidates[0].causality_verified,false);assert.equal(result.editorial_instructions.publication_authorized,false);
+assert.match(result.sha256,/^[a-f0-9]{64}$/);assert.equal(run().sha256,result.sha256);
+assert.throws(()=>run({...master,target_date:'20261007'}),/DATE_DRIFT/);
+assert.throws(()=>run(master,{...list,stocks:[{...list.stocks[0],close:102},list.stocks[1]]}),/NOT_GAINER/);
+assert.throws(()=>run(master,list,{...news,analyses:[{...news.analyses[0],sources:[{...news.analyses[0].sources[0],published_at:'2026-10-09'}]},news.analyses[1]]}),/FUTURE_SOURCE/);
+assert.throws(()=>run(master,list,news,facts,{...ai,priority_watchlist:['6672','9999']}),/MISSING_CANDIDATE/);
+console.log('AI_EDITOR_INPUT_V3_CONTRACT_PASS; deterministic input only, no narration or publication');
