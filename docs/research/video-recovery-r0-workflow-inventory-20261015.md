@@ -16,3 +16,13 @@ build-twse-market-chart.yml contains a git push to main and a reusable deploy_pa
 
 ## Next R0 questions
 Identify exact existing MI_INDEX and BFI82U crawler/workflow/parser paths (or record MISSING if absent); confirm target-date support, output and safe read-only dry run; inspect latest existing runs and exact side effects; complete field-to-source matrix; implement schema-derived read-only gap detector and fixture tests. The current 10/08 content gate remains BLOCKED until official stock-scope breadth is verified. No actual dispatch, CI Run ID or Artifact from this inventory.
+
+## 2026-10-15 main tree correction — actual workflows found
+The earlier “NOT YET IDENTIFIED” is superseded for MI_INDEX *raw collection*, not for verified ordinary-stock breadth parsing. A repository tree listing (truncated at 56,809 entries, so not exhaustive) identified and full main YAML inspection confirmed:
+
+- `.github/workflows/crawl-twse-mi-index.yml`: schedule plus `workflow_dispatch(date optional YYYYMMDD, type optional default ALL)`; writes `data_twse_mi_index/{date}_twse_mi_index.json` through `scripts/crawl_twse_mi_index.js`, regenerates index and pushes to main; `contents:write`. The exact `20261008_twse_mi_index.json` path exists on main (blob SHA `2666ad48ea4948c410c6421b4a9cba7067376767`), but connector returned no inline content, so its payload, table identity, date and counts are **NOT YET VALIDATED**. Do not treat existence as breadth PASS.
+- `.github/workflows/backfill-twse-mi-index-range.yml`: dispatch start_date/end_date, batch_size, force; validates, writes and pushes to main; not authorized for isolated research.
+- `.github/workflows/crawl-twse-institutional-summaries.yml`: dispatch date, collects TWT38U/TWT44U/TWT43U into three institutional-summary directories and pushes main. These are **not** equivalent to BFI82U final aggregate.
+- `.github/workflows/crawl-twse-institutional-summaries-range.yml`: dispatch start_date/end_date and institution selectors, writes main; not a verified BFI82U final crawler.
+
+Correction: generic default-branch code search returning zero for MI_INDEX/BFI82U was a discovery false negative, not absence evidence. The main tree reveals actual MI_INDEX collectors. No workflows dispatched, no main/production/cron/Pages/YouTube changes. Next: inspect the existing 10/08 MI_INDEX blob with an appropriate supported fetch, identify its ordinary-stock table and as-of classification source, and trace whether any independent BFI82U final source workflow exists. Keep ordinary-stock breadth BLOCKED until content validated.
