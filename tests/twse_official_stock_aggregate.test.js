@@ -19,3 +19,5 @@ console.log('PASS official dated stock aggregate, limits, five buckets and negat
 
 // Run the independently authored AI-script contract fixtures in this existing CI-listed test entry point.
 require('./ai_script_research_v3.test.js');
+
+require('./ai_editor_input_v3.test.js');
