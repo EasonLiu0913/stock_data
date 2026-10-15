@@ -41,6 +41,9 @@ const m=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/market-opening-uni
 const a=assemble(m);assert.deepEqual(a.narration.snapshot,a.captions.snapshot);assert.deepEqual(a.narration.snapshot,a.information_cards.snapshot);
 assert.deepEqual(a.narration.lines.slice(0,3),require('./scripts/daily_gainers_brand_opening').OPENING_LINES);
 assert.equal(a.publication_authorized,false);assert.equal(a.video_authorized,false);
+assert.equal(a.editorial_gate.status,'BLOCKED');assert.equal(a.editorial_gate.render_allowed,false);assert.equal(a.editorial_gate.tts_allowed,false);
+assert.ok(a.editorial_gate.reasons.includes('certified common-stock breadth'));
+assert.equal(a.narration.lines.length,a.captions.lines.length);
 assert.throws(()=>assemble({...m,editorial_complete:true}));
 console.log('V2_THREE_SURFACE_RESEARCH_WIRING_PASS; actual synthesis pending');
 NODE
