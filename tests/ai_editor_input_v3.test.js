@@ -9,7 +9,8 @@ const facts={target_date:date,stocks:list.stocks.map(s=>({code:s.code,price:{clo
 const ai={target_date:date,priority_watchlist:['6672','2305'],analyses:list.stocks.map(s=>({code:s.code,reason_summary:'Hypothesis only',institutional_verification:{status:'verified'}}))};
 const run=(m=master,l=list,n=news,f=facts,a=ai)=>build(m,l,n,f,a);
 const result=run();assert.equal(result.candidates.length,2);assert.equal(result.sources.length,2);
-assert.equal(result.candidates[0].causality_verified,false);assert.equal(result.editorial_instructions.publication_authorized,false);
+assert.equal(result.candidates[0].causality_verified,false);
+assert.deepEqual(result.candidates.map(c=>c.facts.price.close),result.candidates.map(c=>c.close),'FIXTURE_FACTS_CLOSE_PARITY');assert.equal(result.editorial_instructions.publication_authorized,false);
 assert.match(result.sha256,/^[a-f0-9]{64}$/);assert.equal(run().sha256,result.sha256);
 assert.throws(()=>run({...master,target_date:'20261007'}),/DATE_DRIFT/);
 assert.throws(()=>run({...master,source_evidence:{...master.source_evidence,mi_index:'data_twse_mi_index/20261007_twse_mi_index.json'}}),/MI_INDEX_SOURCE_DRIFT/);
