@@ -11,6 +11,7 @@ rejects(x=>x.target_date='20261007',/DATE/);
 rejects(x=>x.research_master_sha256='b'.repeat(64),/MASTER_DRIFT/);
 rejects(x=>x.publication_authorized=true,/PUBLICATION/);
 rejects((x,m)=>m.candidates[0].close=102,/GAIN/);
+rejects(x=>x.featured.push({...x.featured[0]}),/DUPLICATE_FEATURED/);
 rejects(x=>x.claims[0].source_ids=[],/EVENT_SOURCE/);
 rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
 rejects(x=>x.claims[0].source_ids=null,/SOURCE_IDS_ARRAY/);
