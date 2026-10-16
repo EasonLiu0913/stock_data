@@ -48,7 +48,7 @@ assert.ok(marketSegment,'MARKET_SEGMENT_MISSING');
 for(const id of ['MARKET_INDEX','MARKET_BREADTH','MARKET_TURNOVER','MARKET_INSTITUTIONAL'])assert.ok(marketSegment.claim_ids.includes(id)&&marketSegment.card_claim_ids.includes(id),'MARKET_SURFACE_MISSING '+id);
 assert.deepEqual(marketSegment.spoken_sentences,marketSegment.caption_sentences,'MARKET_CAPTION_DRIFT');
 console.log('MARKET_DATED_NUMERIC_SOURCE_AND_SURFACE_GUARD_PASS research_only=true');
-assert.equal(market.taiex.close-market.taiex.previous_close,Math.round(market.taiex.change_points*100)/100,'INDEX_CHANGE_ARITHMETIC_DRIFT');
+assert.equal(Math.round((market.taiex.close-market.taiex.previous_close)*100),Math.round(market.taiex.change_points*100),'INDEX_CHANGE_ARITHMETIC_DRIFT');
 assert.equal(market.market_trading.turnover_ratio_ma5,market.market_trading.turnover_twd/market.market_trading.turnover_ma5_twd,'TURNOVER_RATIO_DRIFT');
 assert.equal(market.institutional.total.net_twd,['foreign','investment_trust','dealers'].reduce((sum,k)=>sum+market.institutional[k].net_twd,0),'INSTITUTIONAL_TOTAL_DRIFT');
 console.log('MARKET_DERIVED_ARITHMETIC_GUARD_PASS research_only=true');
