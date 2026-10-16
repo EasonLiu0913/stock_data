@@ -106,6 +106,21 @@ probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_entries"
 assert abs(float(probe["format"]["duration"])-bridge["total_seconds"])<1.5
 assert any(s.get("width")==1920 and s.get("height")==1080 for s in probe["streams"])
 assert any(s["codec_type"]=="audio" for s in probe["streams"])
-proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":21,"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":True,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":False,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
+# Decode actual encoded MP4 frames rather than trusting the filtergraph alone.
+# Choose distinct pose windows inside the first verified sentence; compare only
+# the presenter reservation, where the scene background remains unchanged.
+from PIL import ImageChops
+samples=[]
+for stamp in (0.08,0.24,0.40,0.56):
+ frame=out/f"encoded-presenter-{round(stamp*100):03}.png"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-ss",f"{stamp:.3f}","-i",str(mp4),"-frames:v","1",str(frame)],check=True)
+ assert frame.is_file() and frame.stat().st_size>0,("ENCODED_FRAME_MISSING",stamp)
+ with Image.open(frame) as captured:
+  assert captured.size==(1920,1080),("ENCODED_FRAME_SIZE_DRIFT",stamp)
+  samples.append(captured.convert("RGB").crop((px,py,px+pw,py+ph)))
+diffs=[ImageChops.difference(samples[0],other).getbbox() is not None for other in samples[1:]]
+assert any(diffs),"ENCODED_PRESENTER_NOT_CHANGING"
+encoded_presenter_motion_verified=True
+proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":21,"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":True,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":encoded_presenter_motion_verified,"encoded_presenter_frame_samples":4,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
 (out/"visual-render-proof.json").write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
-print("V3_M8VIS_VISUAL_RENDER_PASS scenes=6 original_sprite_four_poses=true heuristic_mouth=true subtitles_burned=true lip_sync=false editorial_certified=false no_publish=true")
+print("V3_M8VIS_VISUAL_RENDER_PASS scenes=6 original_sprite_four_poses=true heuristic_mouth=true encoded_presenter_motion=true subtitles_burned=true lip_sync=false editorial_certified=false no_publish=true")
