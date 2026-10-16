@@ -50,7 +50,7 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
   for k,ch in enumerate(chunks):d.text((x+48,yy+k*size*1.15),ch,font=f,fill="#f2f5f8")
  px,py,pw,ph=zones["presenter_reserved"];im.alpha_composite(avatar,(px+(pw-avatar.width)//2,py+ph-avatar.height))
  rect(d,zones["subtitle_reserved"],"#26384a")
- d.text((215,850),"字幕依 SRT 時間軸另行燒錄",font=font(28),fill="#a8b7c7")
+ # Keep the SRT burn-in zone empty: placeholder text would overlap real captions.
  rect(d,zones["progress_reserved"],"#26384a")
  for j in range(6):
   xx=120+j*285;d.rounded_rectangle((xx,996,xx+255,1009),radius=5,fill="#e9bb77" if j<=i else "#627387")
