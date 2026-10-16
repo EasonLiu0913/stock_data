@@ -67,7 +67,7 @@ rows.append("file 'scene-06.png'");concat.write_text("\n".join(rows)+"\n")
 mp4=out/"m8vis-six-scene-static-presenter-research.mp4"
 # Subtitle file lives in /tmp and has no shell interpolation; FFmpeg draws the verified SRT.
 sub=str(srt).replace("\\","\\\\").replace(":","\\:")
-subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-safe","0","-f","concat","-i",str(concat),"-i",str(audio),"-vf",f"fps=15,subtitles='{sub}':force_style='FontName=Noto Sans CJK TC,FontSize=23,MarginV=145,Outline=2'","-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","veryfast","-crf","29","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-shortest",str(mp4)],check=True)
+subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-safe","0","-f","concat","-i",str(concat),"-i",str(audio),"-vf",f"fps=15,subtitles='{sub}':force_style='FontName=Noto Sans CJK TC,FontSize=13,Alignment=2,MarginV=170,Outline=1,Shadow=0'","-map","0:v:0","-map","1:a:0","-c:v","libx264","-preset","veryfast","-crf","29","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-shortest",str(mp4)],check=True)
 probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type,width,height","-of","json",str(mp4)],text=True))
 assert abs(float(probe["format"]["duration"])-bridge["total_seconds"])<1.5
 assert any(s.get("width")==1920 and s.get("height")==1080 for s in probe["streams"])
