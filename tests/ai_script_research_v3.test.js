@@ -7,6 +7,7 @@ const brand=['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀�
 const draft={schema_version:3,author:'ChatGPT_AI',target_date:'20261008',research_master_sha256:hash,publication_authorized:false,featured:[{code:'6672',name:'甲'},{code:'2305',name:'乙'}],claims:[{id:'C1',epistemic_status:'verified_event',source_ids:['S1']},...['MARKET_INDEX','MARKET_BREADTH','MARKET_TURNOVER','MARKET_INSTITUTIONAL','6672_PRICE','6672_FLOW','2305_PRICE','2305_FLOW'].map(id=>({id,epistemic_status:'unknown',source_ids:[]}))],opening:{spoken_sentences:brand,caption_sentences:[...brand]},segments:[{spoken_sentences:['研究內容。'],caption_sentences:['研究內容。'],claim_ids:['C1'],card_claim_ids:['C1']}]};
 assert.equal(validate(draft,master).render_authorized,false);
 function rejects(mutator,pattern){const x=structuredClone(draft),m=structuredClone(master);mutator(x,m);assert.throws(()=>validate(x,m),pattern);}
+rejects(x=>x.claims=x.claims.filter(c=>c.id!=='6672_PRICE'),/NUMERIC_CLAIM_MISSING 6672_PRICE/);
 rejects(x=>x.target_date='20261007',/DATE/);
 rejects(x=>x.research_master_sha256='b'.repeat(64),/MASTER_DRIFT/);
 rejects(x=>x.publication_authorized=true,/PUBLICATION/);
