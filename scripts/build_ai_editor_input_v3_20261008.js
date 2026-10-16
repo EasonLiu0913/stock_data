@@ -20,6 +20,7 @@ function build(m,list,news,facts,ai){
   assert.ok((s.close/s.previous_close-1)*100>=5-0.011,'NOT_GAINER');
   const source_ids=[];
   for(const [i,x] of (item.sources||[]).entries()){
+   assert.ok(typeof x.published_at==='string' && /^\d{4}-\d{2}-\d{2}(?:$|T)/.test(x.published_at),'SOURCE_DATE_FORMAT');
    assert.ok(x.published_at.slice(0,10)<='2026-10-08','FUTURE_SOURCE');
    const id='NEWS_'+code+'_'+(i+1);source_ids.push(id);
    sources.push({id,code,title:x.title,url:x.url,published_at:x.published_at,verification:'upstream_reference_requires_editor_review'});
