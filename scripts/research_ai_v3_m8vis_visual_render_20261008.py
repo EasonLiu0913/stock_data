@@ -72,7 +72,7 @@ concat=out/"scenes.ffconcat"
 rows=["ffconcat version 1.0"]
 for i,c in enumerate(layout["cards"]):
  rows.extend([f"file 'scene-{i+1:02}.png'",f"duration {c['end_seconds']-c['start_seconds']:.3f}"])
-rows.append("file 'scene-06.png'");concat.write_text("\\n".join(rows)+"\\n")
+rows.append("file 'scene-06.png'");concat.write_text("\n".join(rows)+"\n")
 # Keep the closed mouth visible between active intervals; switch whole transparent
 # presenter columns on top of it, so the first original sprite column is never lost.
 intervals={name:[] for name in ("small","o","wide")}
