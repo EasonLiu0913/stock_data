@@ -23,6 +23,18 @@ assert.ok(segment2305 && segment2305.claim_ids.includes('2305_FLOW') && segment2
 assert.ok(segment2305.spoken_sentences.some(s=>s.includes('三百六十九萬七千九百七十五股') && s.includes('賣超五千股') && s.includes('四萬一千二百八十三股')),'2305_FLOW_NARRATION_DRIFT');
 assert.deepEqual(segment2305.spoken_sentences,segment2305.caption_sentences,'2305_FLOW_CAPTION_DRIFT');
 console.log('2305_FLOW_DATED_SOURCE_AND_NARRATION_GUARD_PASS research_only=true');
+for(const code of ['6672','1301']){
+ const candidate=editorInput.candidates.find(c=>c.code===code);
+ const segment=authored.segments.find(s=>s.id===code);
+ assert.ok(candidate&&segment,'FEATURED_SOURCE_OR_SEGMENT_MISSING '+code);
+ assert.equal(candidate.facts.price.close,candidate.close,'FEATURED_CLOSE_DRIFT '+code);
+ assert.equal(candidate.facts.price.previous_close,candidate.previous_close,'FEATURED_PREVIOUS_CLOSE_DRIFT '+code);
+ assert.ok(segment.claim_ids.includes(code+'_PRICE')&&segment.card_claim_ids.includes(code+'_PRICE'),'FEATURED_PRICE_SURFACE_MISSING '+code);
+ assert.ok(segment.claim_ids.includes(code+'_FLOW')&&segment.card_claim_ids.includes(code+'_FLOW'),'FEATURED_FLOW_SURFACE_MISSING '+code);
+ assert.deepEqual(segment.spoken_sentences,segment.caption_sentences,'FEATURED_CAPTION_DRIFT '+code);
+}
+console.log('6672_1301_DATED_PRICE_FLOW_SURFACE_GUARD_PASS research_only=true');
+
 console.log('AI_AUTHORED_ORIGINAL_V3_CONTRACT_PASS research_only=true');
 const output='/tmp/video-recovery-proof/ai-editor-input-v3.json';
 fs.writeFileSync(output,JSON.stringify(editorInput,null,2)+'\n');
