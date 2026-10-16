@@ -54,8 +54,8 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
   yy=y+38+j*(90 if len(lines)>3 else 150)
   for k,ch in enumerate(chunks):d.text((x+48,yy+k*size*1.15),ch,font=f,fill="#f2f5f8")
  px,py,pw,ph=zones["presenter_reserved"]
-  assert poses["closed"].width<=pw and poses["closed"].height<=ph,"PRESENTER_RESERVED_ZONE_OVERFLOW"
-  avatar_x=px+(pw-poses["closed"].width)//2;avatar_y=py+ph-poses["closed"].height
+ assert poses["closed"].width<=pw and poses["closed"].height<=ph,"PRESENTER_RESERVED_ZONE_OVERFLOW"
+ avatar_x=px+(pw-poses["closed"].width)//2;avatar_y=py+ph-poses["closed"].height
  rect(d,zones["subtitle_reserved"],"#26384a")
  # Keep the SRT burn-in zone empty: placeholder text would overlap real captions.
  rect(d,zones["progress_reserved"],"#26384a")
