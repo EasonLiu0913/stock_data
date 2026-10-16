@@ -22,7 +22,9 @@ function buildResearchCaptionSource(d){
   caption_sentences:part.spoken_sentences.map(project)
  }));
  for(const part of projected)verifySequence(part.spoken_sentences,part.caption_sentences);
+ const media_input=projected.map((p,i)=>({scene:i+1,id:p.id,speech_sentences:p.spoken_sentences,caption_sentences:p.caption_sentences,claim_ids:p.claim_ids,card_claim_ids:p.card_claim_ids}));
+ assert.deepEqual(media_input.map(p=>p.speech_sentences.length),[4,5,3,3,3,3],'MEDIA_SENTENCE_INVENTORY');
  return {target_date:d.target_date,research_master_sha256:d.research_master_sha256,
-  status:'RESEARCH_CAPTION_SOURCE_NOT_SRT',render_authorized:false,publication_authorized:false,parts:projected};
+  status:'RESEARCH_CAPTION_SOURCE_NOT_SRT',render_authorized:false,publication_authorized:false,real_tts_generated:false,timed_srt_generated:false,mp4_generated:false,media_input_status:'V3_SIX_SCENE_SEMANTIC_INPUT_ONLY',media_input,parts:projected};
 }
 module.exports={buildResearchCaptionSource};
