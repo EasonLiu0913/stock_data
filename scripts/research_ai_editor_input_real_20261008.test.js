@@ -7,6 +7,7 @@ const root='data_daily_gain_over_5/';
 const editorInput=buildAIInput(read('/tmp/video-recovery-proof/market-opening-unified-research-master.json'),read(root+'20261008.json'),read(root+'analysis-news/20261008.json'),read(root+'analysis-facts/20261008.json'),read(root+'analysis-ai/20261008.json'));
 assert.deepEqual(editorInput.candidates.map(s=>s.code),['6672','2305','1301','3416','9103','2428']);
 assert.equal(editorInput.editorial_instructions.publication_authorized,false);
+assert.deepEqual(editorInput.candidates.map(c=>c.facts.price.close),editorInput.candidates.map(c=>c.close),'REAL_FACTS_CLOSE_DRIFT');
 assert.ok(editorInput.sources.every(s=>s.published_at<='2026-10-08'));
 console.log('AI_EDITOR_INPUT_EMBEDDED_MASTER_SHA256='+editorInput.sha256);
 const authored=read('data_research/m5/ai-script-generation/20261008-original-script-v3-research.json');
