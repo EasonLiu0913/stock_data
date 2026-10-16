@@ -16,6 +16,7 @@ function validate(d,master){
   assert.ok(c.id&&!claimIds.has(c.id),'CLAIM_ID');claimIds.add(c.id);
   assert.ok(['verified_event','contemporary_association','hypothesis','unknown'].includes(c.epistemic_status),'CLAIM_GRADE');
   if(c.epistemic_status==='verified_event')assert.ok(c.source_ids.length,'EVENT_SOURCE');
+  if(c.epistemic_status==='contemporary_association')assert.ok(Array.isArray(c.source_ids)&&c.source_ids.length>0,'ASSOCIATION_SOURCE');
   for(const id of c.source_ids)assert.ok(sourceIds.has(id),'SOURCE_POINTER');
   assert.notEqual(c.causality_verified,true,'UNVERIFIED_CAUSALITY');
   if(c.epistemic_status==='verified_event')for(const id of c.source_ids){
