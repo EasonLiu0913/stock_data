@@ -8,6 +8,8 @@ const draft={schema_version:3,author:'ChatGPT_AI',target_date:'20261008',researc
 assert.equal(validate(draft,master).render_authorized,false);
 function rejects(mutator,pattern){const x=structuredClone(draft),m=structuredClone(master);mutator(x,m);assert.throws(()=>validate(x,m),pattern);}
 rejects(x=>x.claims=x.claims.filter(c=>c.id!=='6672_PRICE'),/NUMERIC_CLAIM_MISSING 6672_PRICE/);
+rejects(x=>x.segments[0].claim_ids=x.segments[0].claim_ids.filter(id=>id!=='6672_PRICE'),/NUMERIC_SPOKEN_POINTER_MISSING 6672_PRICE/);
+rejects(x=>x.segments[0].card_claim_ids=x.segments[0].card_claim_ids.filter(id=>id!=='6672_PRICE'),/NUMERIC_CARD_POINTER_MISSING 6672_PRICE/);
 rejects(x=>x.target_date='20261007',/DATE/);
 rejects(x=>x.research_master_sha256='b'.repeat(64),/MASTER_DRIFT/);
 rejects(x=>x.publication_authorized=true,/PUBLICATION/);
