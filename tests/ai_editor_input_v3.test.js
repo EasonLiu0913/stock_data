@@ -12,6 +12,7 @@ const result=run();assert.equal(result.candidates.length,2);assert.equal(result.
 assert.equal(result.candidates[0].causality_verified,false);assert.equal(result.editorial_instructions.publication_authorized,false);
 assert.match(result.sha256,/^[a-f0-9]{64}$/);assert.equal(run().sha256,result.sha256);
 assert.throws(()=>run({...master,target_date:'20261007'}),/DATE_DRIFT/);
+assert.throws(()=>run({...master,source_evidence:{mi_index:'data_twse_mi_index/20261007_twse_mi_index.json'}}),/MI_INDEX_SOURCE_DRIFT/);
 assert.throws(()=>run(master,{...list,stocks:[{...list.stocks[0],close:102},list.stocks[1]]}),/NOT_GAINER/);
 assert.throws(()=>run(master,list,{...news,analyses:[{...news.analyses[0],sources:[{...news.analyses[0].sources[0],published_at:'2026-10-09'}]},news.analyses[1]]}),/FUTURE_SOURCE/);
 assert.throws(()=>run(master,list,news,facts,{...ai,priority_watchlist:['6672','9999']}),/MISSING_CANDIDATE/);
