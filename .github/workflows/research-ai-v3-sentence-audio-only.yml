@@ -1,0 +1,45 @@
+name: Research AI V3 Sentence Audio Only
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sentence-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source and install isolated audio tools
+        run: |
+          set -euo pipefail
+          node tests/build_research_caption_source_20261008.test.js
+          python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py
+          python -m pip install --disable-pip-version-check edge-tts==7.2.7
+          command -v ffprobe
+      - name: Generate actual V3 sentence audio, never publish
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ai-v3-sentence-audio
+          node - <<'NODE' > /tmp/ai-v3-sentence-audio/source.json
+          const fs=require('fs');
+          const {buildResearchCaptionSource}=require('./scripts/build_research_caption_source_20261008');
+          const d=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-script-v3-research.json'));
+          process.stdout.write(JSON.stringify(buildResearchCaptionSource(d),null,2)+'\n');
+          NODE
+          python scripts/research_ai_v3_sentence_edge_tts_20261008.py /tmp/ai-v3-sentence-audio/source.json /tmp/ai-v3-sentence-audio/audio
+      - name: Retain research evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-v3-sentence-audio-proof
+          path: /tmp/ai-v3-sentence-audio/
+          if-no-files-found: warn
+          retention-days: 14
