@@ -12,16 +12,17 @@ assert layout["research_master_sha256"]==source["research_master_sha256"]==bridg
 fontpath="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 assert pathlib.Path(fontpath).exists(),"CJK_FONT_REQUIRED"
 font=lambda n:ImageFont.truetype(fontpath,n)
-presenter=repo/"assets/video/vtuber/daily-gainers-presenter.webp"
-assert presenter.is_file(),"PRESENTER_ASSET_REQUIRED"
-# Prefer Pillow; FFmpeg is an independent decoder for valid WebP variants.
-try:
- avatar=Image.open(presenter).convert("RGBA")
-except (OSError,ValueError) as exc:
- decoded=out/"presenter-decoded.png"
- attempt=subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(presenter),"-frames:v","1",str(decoded)],capture_output=True,text=True)
- assert attempt.returncode==0 and decoded.is_file() and decoded.stat().st_size>0,("PRESENTER_DECODE_FAILED",str(exc),attempt.stderr[-500:])
- avatar=Image.open(decoded).convert("RGBA")
+# Use verified original sprite, not the corrupt derived presenter WebP.
+sprite=repo/"assets/daily-gainers-vtuber-sprite.webp"
+assert sprite.is_file(),"ORIGINAL_SPRITE_REQUIRED"
+decoded=out/"original-sprite-decoded.png"
+attempt=subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(sprite),"-frames:v","1",str(decoded)],capture_output=True,text=True)
+assert attempt.returncode==0 and decoded.is_file() and decoded.stat().st_size>0,("ORIGINAL_SPRITE_DECODE_FAILED",attempt.stderr[-500:])
+full=Image.open(decoded).convert("RGBA")
+assert full.size==(4096,1536),("SPRITE_DIMENSION_DRIFT",full.size)
+avatar=full.crop((0,0,1024,1536))
+assert avatar.getbbox() is not None,"EMPTY_PRESENTER_CROP"
+avatar.save(out/"presenter-derived-neutral.png")
 avatar.thumbnail((350,470))
 labels={"opening":"TAIWAN STOCK","market":"上市市場總覽","6672":"騰輝電子-KY（6672）","2305":"全友（2305）","1301":"台塑（1301）","conclusion":"今日重點整理"}
 zones=layout["zones"]
