@@ -9,6 +9,8 @@ function build(m,list,news,facts,ai){
  const by=(xs)=>new Map(xs.map(x=>[x.code,x]));
  const n=by(news.analyses),f=by(facts.stocks),a=by(ai.analyses),l=by(list.stocks);
  const sources=[],candidates=[];
+ // Provenance is research metadata, not a claim of independently reviewed causality.
+ assert.equal(m.source_evidence?.mi_index,'data_twse_mi_index/20261008_twse_mi_index.json','MI_INDEX_SOURCE_DRIFT');
  for(const code of ai.priority_watchlist){
   const s=l.get(code),item=n.get(code),fact=f.get(code),analysis=a.get(code);
   assert.ok(s&&item&&fact&&analysis,'MISSING_CANDIDATE');
