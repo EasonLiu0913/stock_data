@@ -21,6 +21,7 @@ function build(m,list,news,facts,ai){
    assert.ok(!analysis.reason_summary.includes('自營商淨額0張') && !(analysis.evidence||[]).some(v=>v.includes('自營商0張')),'2305_STALE_AI');
    assert.notEqual(analysis.institutional_verification?.status,'inconclusive','2305_STALE_VERIFICATION');
   }
+  assert.equal(fact.price?.close,s.close,'FACTS_CLOSE_DRIFT');
   assert.ok((s.close/s.previous_close-1)*100>=5-0.011,'NOT_GAINER');
   const source_ids=[];
   for(const [i,x] of (item.sources||[]).entries()){
