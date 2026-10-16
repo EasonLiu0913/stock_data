@@ -9,6 +9,7 @@ function validate(d,master){
  assert.equal(d.research_master_sha256,master.sha256,'MASTER_DRIFT');
  assert.equal(d.publication_authorized,false,'PUBLICATION');
  assert.ok(d.featured.length>=2,'FEATURED');
+ assert.equal(new Set(d.featured.map(s=>s.code)).size,d.featured.length,'DUPLICATE_FEATURED');
  const stocks=new Map(master.candidates.map(s=>[s.code,s]));
  for(const f of d.featured){const s=stocks.get(f.code);assert.ok(s&&s.name===f.name,'STOCK');assert.ok(s.previous_close>0&&(s.close/s.previous_close-1)*100>=5-0.011,'GAIN');}
  const sourceIds=new Set(master.sources.map(s=>s.id)),claimIds=new Set();
