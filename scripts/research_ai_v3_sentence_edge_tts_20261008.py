@@ -21,7 +21,7 @@ try:
      valid=run.returncode==0 and path.exists() and path.stat().st_size>=100
      if valid:break
      detail=(run.stderr or run.stdout or "empty CLI output")
-     detail=re.sub(r'(TrustedClientToken|ConnectionId|Sec-MS-GEC|Sec-MS-GEC-Version)=[^&\\s\\'"]+',r'\\1=[REDACTED]',detail)
+     detail=re.sub(r"(TrustedClientToken|ConnectionId|Sec-MS-GEC|Sec-MS-GEC-Version)=[^&\\s]+",r"\\1=[REDACTED]",detail)
      errors.append({"attempt":attempt,"exit_code":run.returncode,"error":detail[-2500:]})
     except subprocess.TimeoutExpired:
      errors.append({"attempt":attempt,"error":"CLI_TIMEOUT_75_SECONDS"})
