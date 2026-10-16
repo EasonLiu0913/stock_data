@@ -11,6 +11,7 @@ function build(m,list,news,facts,ai){
  const sources=[],candidates=[];
  // Provenance is research metadata, not a claim of independently reviewed causality.
  assert.equal(m.source_evidence?.mi_index,'data_twse_mi_index/20261008_twse_mi_index.json','MI_INDEX_SOURCE_DRIFT');
+ assert.match(m.source_evidence?.bfi82u_raw_sha256||'',/^[a-f0-9]{64}$/,'BFI82U_SOURCE_HASH_MISSING');
  for(const code of ai.priority_watchlist){
   const s=l.get(code),item=n.get(code),fact=f.get(code),analysis=a.get(code);
   assert.ok(s&&item&&fact&&analysis,'MISSING_CANDIDATE');
