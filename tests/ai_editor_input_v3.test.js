@@ -17,4 +17,5 @@ assert.throws(()=>run(master,list,{...news,analyses:[{...news.analyses[0],source
 assert.throws(()=>run(master,list,news,facts,{...ai,priority_watchlist:['6672','9999']}),/MISSING_CANDIDATE/);
 const stale={...ai,analyses:ai.analyses.map(s=>s.code==='2305'?{...s,reason_summary:'自營商淨額0張'}:s)};
 assert.throws(()=>run(master,list,news,facts,stale),/2305_STALE_AI/);
+assert.throws(()=>run(master,list,{...news,analyses:[{...news.analyses[0],sources:[{...news.analyses[0].sources[0],published_at:null}]},news.analyses[1]]}),/SOURCE_DATE_FORMAT/);
 console.log('AI_EDITOR_INPUT_V3_CONTRACT_PASS; deterministic input only, no narration or publication');
