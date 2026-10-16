@@ -13,6 +13,8 @@ function validate(d,master){
  const stocks=new Map(master.candidates.map(s=>[s.code,s]));
  for(const f of d.featured){const s=stocks.get(f.code);assert.ok(s&&s.name===f.name,'STOCK');assert.ok(s.previous_close>0&&(s.close/s.previous_close-1)*100>=5-0.011,'GAIN');}
  const sourceIds=new Set(master.sources.map(s=>s.id)),claimIds=new Set();
+ const requiredNumericClaims=['MARKET_INDEX','MARKET_BREADTH','MARKET_TURNOVER','MARKET_INSTITUTIONAL',...d.featured.flatMap(s=>[s.code+'_PRICE',s.code+'_FLOW'])];
+ assert.equal(new Set(requiredNumericClaims).size,requiredNumericClaims.length,'NUMERIC_CLAIM_ID_DUPLICATE');
  for(const c of d.claims){
   assert.ok(c.id&&!claimIds.has(c.id),'CLAIM_ID');claimIds.add(c.id);
   assert.ok(['verified_event','contemporary_association','hypothesis','unknown'].includes(c.epistemic_status),'CLAIM_GRADE');
@@ -27,6 +29,7 @@ function validate(d,master){
    assert.notEqual(src.verification,'upstream_reference_requires_editor_review','UNREVIEWED_EVENT_SOURCE');
   }
  }
+ for(const id of requiredNumericClaims)assert.ok(claimIds.has(id),'NUMERIC_CLAIM_MISSING '+id);
  const lines=d.opening.spoken_sentences;
  assert.deepEqual(lines.slice(0,4),['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'],'FIXED_FOUR_LINE_OPENING');
  assert.equal(lines.filter(s=>s==='我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。').length,1,'CC_ONCE');
