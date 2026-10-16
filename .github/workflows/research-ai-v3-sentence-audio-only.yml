@@ -10,6 +10,7 @@ on:
       - 'scripts/research_ai_v3_m8vis_timing_handoff_20261008.py'
       - 'scripts/research_ai_v3_diagnostic_render_20261008.py'
       - 'scripts/research_ai_v3_m8vis_layout_20261008.py'
+      - 'scripts/research_ai_v3_m8vis_visual_render_20261008.py'
 permissions:
   contents: read
 jobs:
@@ -31,8 +32,11 @@ jobs:
         run: |
           set -euo pipefail
           node tests/build_research_caption_source_20261008.test.js
-          python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py scripts/research_ai_v3_sentence_media_bridge_20261008.py scripts/research_ai_v3_m8vis_timing_handoff_20261008.py scripts/research_ai_v3_diagnostic_render_20261008.py scripts/research_ai_v3_m8vis_layout_20261008.py
+          python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py scripts/research_ai_v3_sentence_media_bridge_20261008.py scripts/research_ai_v3_m8vis_timing_handoff_20261008.py scripts/research_ai_v3_diagnostic_render_20261008.py scripts/research_ai_v3_m8vis_layout_20261008.py scripts/research_ai_v3_m8vis_visual_render_20261008.py
           python -m pip install --disable-pip-version-check edge-tts==7.3.1
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
           echo "::group::FFmpeg and ffprobe diagnostics"
           echo "PATH=$PATH"
           uname -a
@@ -86,6 +90,10 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/research_ai_v3_diagnostic_render_20261008.py /tmp/ai-v3-sentence-audio
+      - name: Render research M8VIS static-presenter visual preview
+        run: |
+          set -euo pipefail
+          python scripts/research_ai_v3_m8vis_visual_render_20261008.py /tmp/ai-v3-sentence-audio .
       - name: Retain research evidence only
         if: always()
         uses: actions/upload-artifact@v4
