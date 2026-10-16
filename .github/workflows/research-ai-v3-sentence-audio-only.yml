@@ -29,7 +29,23 @@ jobs:
           node tests/build_research_caption_source_20261008.test.js
           python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py
           python -m pip install --disable-pip-version-check edge-tts==7.2.7
-          command -v ffprobe
+          echo "::group::FFmpeg and ffprobe diagnostics"
+          echo "PATH=$PATH"
+          uname -a
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            echo "::notice::FFmpeg tools missing; installing Ubuntu ffmpeg package"
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          for tool in ffmpeg ffprobe; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error::$tool unavailable after installation"
+              exit 1
+            fi
+            command -v "$tool"
+            "$tool" -version | head -n 1
+          done
+          echo "::endgroup::"
       - name: Generate actual V3 sentence audio, never publish
         run: |
           set -euo pipefail
