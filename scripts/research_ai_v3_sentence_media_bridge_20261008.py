@@ -33,10 +33,10 @@ def srt_clock(seconds):
  return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 assert all(timeline[i]["end_seconds"]<=timeline[i+1]["start_seconds"] for i in range(len(timeline)-1))
 assert all(row["caption_text"].strip() for row in timeline)
-srt="".join(f'{i}\\n{srt_clock(row["start_seconds"])} --> {srt_clock(row["end_seconds"])}\\n{row["caption_text"]}\\n\\n' for i,row in enumerate(timeline,1))
+srt="".join(f'{i}\n{srt_clock(row["start_seconds"])} --> {srt_clock(row["end_seconds"])}\n{row["caption_text"]}\n\n' for i,row in enumerate(timeline,1))
 assert srt.count(" --> ")==21
 (root/"research-sentence-captions.srt").write_text(srt,encoding="utf-8")
 caption_proof={"contract":"AI_V3_RESEARCH_SENTENCE_SRT_ONLY","research_master_sha256":proof["research_master_sha256"],"sentence_count":21,"total_seconds":round(cursor,3),"srt_sha256":hashlib.sha256(srt.encode()).hexdigest(),"publication_authorized":False,"render_authorized":False,"mp4_generated":False}
-(root/"research-caption-proof.json").write_text(json.dumps(caption_proof,ensure_ascii=False,indent=2)+"\\n")
+(root/"research-caption-proof.json").write_text(json.dumps(caption_proof,ensure_ascii=False,indent=2)+"\n")
 print(f'V3_RESEARCH_SENTENCE_SRT_PASS blocks=21 total_seconds={cursor:.3f} no_render=true no_publish=true')
-print(f"V3_MEDIA_BRIDGE_PASS sentences={n} total_seconds={cursor:.3f} no_srt=true no_render=true no_publish=true")
+print(f"V3_MEDIA_BRIDGE_PASS sentences={n} total_seconds={cursor:.3f} research_srt=true no_render=true no_publish=true")
