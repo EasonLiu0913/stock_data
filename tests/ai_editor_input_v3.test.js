@@ -16,6 +16,7 @@ assert.throws(()=>run({...master,target_date:'20261007'}),/DATE_DRIFT/);
 assert.throws(()=>run({...master,source_evidence:{...master.source_evidence,mi_index:'data_twse_mi_index/20261007_twse_mi_index.json'}}),/MI_INDEX_SOURCE_DRIFT/);
 assert.throws(()=>run({...master,source_evidence:{...master.source_evidence,bfi82u_raw_sha256:''}}),/BFI82U_SOURCE_HASH_MISSING/);
 assert.throws(()=>run({...master,source_evidence:{...master.source_evidence,base:'data_daily_gain_over_5/market-opening/20261007.json'}}),/MARKET_BASE_SOURCE_DRIFT/);
+assert.throws(()=>run(master,list,news,{...facts,stocks:[{...facts.stocks[0],price:{close:105}},facts.stocks[1]]}),/FACTS_CLOSE_DRIFT/);
 assert.throws(()=>run(master,{...list,stocks:[{...list.stocks[0],close:102},list.stocks[1]]}),/NOT_GAINER/);
 assert.throws(()=>run(master,list,{...news,analyses:[{...news.analyses[0],sources:[{...news.analyses[0].sources[0],published_at:'2026-10-09'}]},news.analyses[1]]}),/FUTURE_SOURCE/);
 assert.throws(()=>run(master,list,news,facts,{...ai,priority_watchlist:['6672','9999']}),/MISSING_CANDIDATE/);
