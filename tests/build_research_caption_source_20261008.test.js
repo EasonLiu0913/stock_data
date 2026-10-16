@@ -6,6 +6,13 @@ const {verifySequence}=require('../scripts/research_caption_sentence_parity_2026
 const d=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-script-v3-research.json','utf8'));
 const artifact=buildResearchCaptionSource(d);
 assert.equal(artifact.parts.length,6);
+assert.equal(artifact.media_input_status,'V3_SIX_SCENE_SEMANTIC_INPUT_ONLY');
+assert.deepEqual(artifact.media_input.map(s=>s.id),['opening','market','6672','2305','1301','conclusion']);
+assert.deepEqual(artifact.media_input.map(s=>s.speech_sentences.length),[4,5,3,3,3,3]);
+assert.equal(artifact.media_input.reduce((n,s)=>n+s.speech_sentences.length,0),21);
+assert.deepEqual(artifact.media_input.map(s=>s.card_claim_ids),artifact.parts.map(p=>p.card_claim_ids));
+for(const flag of ['real_tts_generated','timed_srt_generated','mp4_generated'])assert.equal(artifact[flag],false);
+console.log('V3_SIX_SCENE_SEMANTIC_MEDIA_INPUT_PASS no_tts=true no_srt=true no_mp4=true');
 for(const part of d.segments){const projected=artifact.parts.find(p=>p.id===part.id);assert.deepEqual(projected.claim_ids,part.claim_ids);assert.deepEqual(projected.card_claim_ids,part.card_claim_ids);}
 const badClaim=structuredClone(d);badClaim.segments[0].card_claim_ids.push('NONEXISTENT_CLAIM');
 assert.throws(()=>buildResearchCaptionSource(badClaim),/UNKNOWN_CLAIM_ID/);
