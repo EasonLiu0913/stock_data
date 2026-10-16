@@ -64,27 +64,34 @@ jobs:
           test -s /tmp/ai-v3-sentence-audio/fixed-probe.mp3
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 /tmp/ai-v3-sentence-audio/fixed-probe.mp3 | tee /tmp/ai-v3-sentence-audio/fixed-probe-duration.txt
           sha256sum /tmp/ai-v3-sentence-audio/fixed-probe.mp3 | tee /tmp/ai-v3-sentence-audio/fixed-probe-sha256.txt
-          # Isolated CLI WordBoundary probe; keep the 21-sentence production research path unchanged.
-          edge-tts --voice zh-TW-YunJheNeural --rate '+15%' --text '大家好，歡迎來到 TAIWAN STOCK！' --write-media /tmp/ai-v3-sentence-audio/wordboundary-probe.mp3 --write-subtitles /tmp/ai-v3-sentence-audio/wordboundary-probe.srt
-          test -s /tmp/ai-v3-sentence-audio/wordboundary-probe.mp3
-          test -s /tmp/ai-v3-sentence-audio/wordboundary-probe.srt
+          # Probe raw metadata from the Python API; CLI SRT cue count is not WordBoundary count.
           python - <<'PY'
-          import json,pathlib,re,subprocess
+          import asyncio,hashlib,json,pathlib,subprocess
+          import edge_tts
           root=pathlib.Path('/tmp/ai-v3-sentence-audio')
-          srt=(root/'wordboundary-probe.srt').read_text(encoding='utf-8-sig')
-          spans=re.findall(r'([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}) --> ([0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3})',srt)
-          assert len(spans)>=2,('WORDBOUNDARY_SUBTITLE_EVENTS_MISSING',len(spans))
-          def seconds(value):
-           h,m,rest=value.split(':');sec,ms=rest.split(',')
-           return int(h)*3600+int(m)*60+int(sec)+int(ms)/1000
-          boundaries=[(seconds(a),seconds(b)) for a,b in spans]
-          assert all(0<=a<b for a,b in boundaries),'WORDBOUNDARY_INVALID_INTERVAL'
-          assert all(boundaries[i][1]<=boundaries[i+1][0]+0.002 for i in range(len(boundaries)-1)),'WORDBOUNDARY_OVERLAP'
+          async def probe():
+           audio=bytearray()
+           events=[]
+           communicate=edge_tts.Communicate('大家好，歡迎來到 TAIWAN STOCK！',voice='zh-TW-YunJheNeural',rate='+15%')
+           async for chunk in communicate.stream():
+            if chunk['type']=='audio':
+             audio.extend(chunk['data'])
+            elif chunk['type']=='WordBoundary':
+             events.append({'offset_100ns':int(chunk['offset']),'duration_100ns':int(chunk['duration']),'text':chunk['text']})
+           return audio,events
+          audio,events=asyncio.run(probe())
+          assert len(audio)>100,'WORDBOUNDARY_AUDIO_MISSING'
+          (root/'wordboundary-probe.mp3').write_bytes(audio)
+          (root/'wordboundary-events.json').write_text(json.dumps(events,ensure_ascii=False,indent=2)+'\\n')
+          assert len(events)>=2,('RAW_WORDBOUNDARY_EVENTS_MISSING',len(events))
+          assert all(e['text'].strip() and e['offset_100ns']>=0 and e['duration_100ns']>0 for e in events),'WORDBOUNDARY_INVALID_EVENT'
+          assert all(events[i]['offset_100ns']<=events[i+1]['offset_100ns'] for i in range(len(events)-1)),'WORDBOUNDARY_UNSORTED'
           duration=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',str(root/'wordboundary-probe.mp3')],text=True).strip())
-          assert boundaries[-1][1]<=duration+0.35,('WORDBOUNDARY_EXCEEDS_AUDIO',boundaries[-1][1],duration)
-          proof={'contract':'EDGE_TTS_731_FIXED_WORD_BOUNDARY_CLI_PROBE','event_count':len(spans),'audio_seconds':duration,'last_event_end_seconds':boundaries[-1][1],'word_timing_probe_pass':True,'phoneme_alignment_verified':False,'lip_sync_verified':False,'publication_authorized':False}
+          last=max((e['offset_100ns']+e['duration_100ns'])/10000000 for e in events)
+          assert last<=duration+0.35,('WORDBOUNDARY_EXCEEDS_AUDIO',last,duration)
+          proof={'contract':'EDGE_TTS_731_FIXED_RAW_WORD_BOUNDARY_PROBE','event_count':len(events),'audio_seconds':duration,'last_event_end_seconds':last,'mp3_sha256':hashlib.sha256(audio).hexdigest(),'raw_word_timing_probe_pass':True,'phoneme_alignment_verified':False,'lip_sync_verified':False,'publication_authorized':False}
           (root/'wordboundary-probe-proof.json').write_text(json.dumps(proof,ensure_ascii=False,indent=2)+'\\n')
-          print('EDGE_TTS_WORDBOUNDARY_PROBE_PASS events='+str(len(spans))+' no_lip_sync_claim=true no_publish=true')
+          print('EDGE_TTS_RAW_WORDBOUNDARY_PROBE_PASS events='+str(len(events))+' no_lip_sync_claim=true no_publish=true')
           PY
       - name: Generate actual V3 sentence audio, never publish
         run: |
