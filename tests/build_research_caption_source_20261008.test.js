@@ -6,6 +6,10 @@ const {verifySequence}=require('../scripts/research_caption_sentence_parity_2026
 const d=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-script-v3-research.json','utf8'));
 const artifact=buildResearchCaptionSource(d);
 assert.equal(artifact.parts.length,6);
+for(const part of d.segments){const projected=artifact.parts.find(p=>p.id===part.id);assert.deepEqual(projected.claim_ids,part.claim_ids);assert.deepEqual(projected.card_claim_ids,part.card_claim_ids);}
+const badClaim=structuredClone(d);badClaim.segments[0].card_claim_ids.push('NONEXISTENT_CLAIM');
+assert.throws(()=>buildResearchCaptionSource(badClaim),/UNKNOWN_CLAIM_ID/);
+console.log('V3_CLAIM_CARD_LINK_PARITY_PASS research_only=true');
 assert.equal(artifact.parts.reduce((n,p)=>n+p.caption_sentences.length,0),21);
 assert.equal(artifact.render_authorized,false);
 assert.equal(artifact.publication_authorized,false);
