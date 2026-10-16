@@ -28,7 +28,7 @@ jobs:
           set -euo pipefail
           node tests/build_research_caption_source_20261008.test.js
           python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py
-          python -m pip install --disable-pip-version-check edge-tts==7.2.7
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1
           echo "::group::FFmpeg and ffprobe diagnostics"
           echo "PATH=$PATH"
           uname -a
@@ -46,6 +46,15 @@ jobs:
             "$tool" -version | head -n 1
           done
           echo "::endgroup::"
+      - name: Probe Edge TTS 7.3.1 fixed short sentence, fail closed
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ai-v3-sentence-audio
+          python -m pip show edge-tts > /tmp/ai-v3-sentence-audio/edge-tts-version.txt
+          edge-tts --voice zh-TW-YunJheNeural --rate '+15%' --text '大家好，歡迎來到 TAIWAN STOCK！' --write-media /tmp/ai-v3-sentence-audio/fixed-probe.mp3
+          test -s /tmp/ai-v3-sentence-audio/fixed-probe.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 /tmp/ai-v3-sentence-audio/fixed-probe.mp3 | tee /tmp/ai-v3-sentence-audio/fixed-probe-duration.txt
+          sha256sum /tmp/ai-v3-sentence-audio/fixed-probe.mp3 | tee /tmp/ai-v3-sentence-audio/fixed-probe-sha256.txt
       - name: Generate actual V3 sentence audio, never publish
         run: |
           set -euo pipefail
