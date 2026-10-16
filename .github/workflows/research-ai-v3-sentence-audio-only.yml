@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/research-ai-v3-sentence-audio-only.yml'
       - 'scripts/research_ai_v3_sentence_edge_tts_20261008.py'
+      - 'scripts/research_ai_v3_sentence_media_bridge_20261008.py'
 permissions:
   contents: read
 jobs:
@@ -27,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           node tests/build_research_caption_source_20261008.test.js
-          python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py
+          python -m py_compile scripts/research_ai_v3_sentence_edge_tts_20261008.py scripts/research_ai_v3_sentence_media_bridge_20261008.py
           python -m pip install --disable-pip-version-check edge-tts==7.3.1
           echo "::group::FFmpeg and ffprobe diagnostics"
           echo "PATH=$PATH"
@@ -66,6 +67,10 @@ jobs:
           process.stdout.write(JSON.stringify(buildResearchCaptionSource(d),null,2)+'\n');
           NODE
           python scripts/research_ai_v3_sentence_edge_tts_20261008.py /tmp/ai-v3-sentence-audio/source.json /tmp/ai-v3-sentence-audio/audio
+      - name: Validate research-only shared media timeline
+        run: |
+          set -euo pipefail
+          python scripts/research_ai_v3_sentence_media_bridge_20261008.py /tmp/ai-v3-sentence-audio
       - name: Retain research evidence only
         if: always()
         uses: actions/upload-artifact@v4
