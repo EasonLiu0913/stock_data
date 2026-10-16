@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Isolated AI V3 sentence-level Edge TTS proof; never publishes or renders."""
-import hashlib,json,pathlib,subprocess,sys
+import hashlib,json,pathlib,subprocess,sys,time,re
 src=pathlib.Path(sys.argv[1]); out=pathlib.Path(sys.argv[2]); out.mkdir(parents=True,exist_ok=True)
 d=json.loads(src.read_text())
 assert d["target_date"]=="20261008" and d["media_input_status"]=="V3_SIX_SCENE_SEMANTIC_INPUT_ONLY"
@@ -14,8 +14,22 @@ try:
    assert spoken and caption
    path=out/f'{part["scene"]:02d}-{index:02d}.mp3'
    cmd=["edge-tts","--voice",proof["voice"],"--rate",proof["rate"],"--text",spoken,"--write-media",str(path)]
-   run=subprocess.run(cmd,capture_output=True,text=True,timeout=75)
-   if run.returncode or not path.exists() or path.stat().st_size<100:raise RuntimeError(f'TTS_FAILED {part["id"]} {index}: '+run.stderr[-300:])
+   errors=[]
+   for attempt in range(1,4):
+    try:
+     run=subprocess.run(cmd,capture_output=True,text=True,timeout=75)
+     valid=run.returncode==0 and path.exists() and path.stat().st_size>=100
+     if valid:break
+     detail=(run.stderr or run.stdout or "empty CLI output")
+     detail=re.sub(r'(TrustedClientToken|ConnectionId|Sec-MS-GEC|Sec-MS-GEC-Version)=[^&\\s\\'"]+',r'\\1=[REDACTED]',detail)
+     errors.append({"attempt":attempt,"exit_code":run.returncode,"error":detail[-2500:]})
+    except subprocess.TimeoutExpired:
+     errors.append({"attempt":attempt,"error":"CLI_TIMEOUT_75_SECONDS"})
+    if path.exists():path.unlink()
+    if attempt<3:time.sleep(2*attempt)
+   else:
+    raise RuntimeError(f'TTS_FAILED {part["id"]} {index}: '+json.dumps(errors,ensure_ascii=False))
+
    probe=subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",str(path)],capture_output=True,text=True,timeout=20,check=True)
    duration=float(probe.stdout.strip())
    assert 0.1<duration<120
