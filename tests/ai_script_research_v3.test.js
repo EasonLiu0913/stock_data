@@ -13,6 +13,8 @@ rejects(x=>x.publication_authorized=true,/PUBLICATION/);
 rejects((x,m)=>m.candidates[0].close=102,/GAIN/);
 rejects(x=>x.claims[0].source_ids=[],/EVENT_SOURCE/);
 rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
+rejects(x=>x.claims[0].source_ids=null,/SOURCE_IDS_ARRAY/);
+rejects(x=>x.claims[0].source_ids=['S1','S1'],/DUPLICATE_SOURCE_POINTER/);
 rejects(x=>x.claims[0].epistemic_status='causal_proof',/CLAIM_GRADE/);
 rejects(x=>{x.claims[0].epistemic_status='contemporary_association';x.claims[0].source_ids=[];},/ASSOCIATION_SOURCE/);
 rejects(x=>{x.claims[0].epistemic_status='contemporary_association';x.claims[0].source_ids=['missing'];},/SOURCE_POINTER/);
