@@ -13,8 +13,11 @@ function buildResearchCaptionSource(d){
  assert.equal(d.target_date,'20261008','DATE');
  assert.equal(d.publication_authorized,false,'PUBLICATION');
  const parts=[d.opening,...d.segments];
+ const claimIds=new Set(d.claims.map(c=>c.id));
+ for(const part of parts)for(const id of [...(part.claim_ids||[]),...(part.card_claim_ids||[])])assert.ok(claimIds.has(id),'UNKNOWN_CLAIM_ID');
  const projected=parts.map(part=>({
   id:part.id||'opening',
+  claim_ids:part.claim_ids||[],card_claim_ids:part.card_claim_ids||[],
   spoken_sentences:part.spoken_sentences,
   caption_sentences:part.spoken_sentences.map(project)
  }));
