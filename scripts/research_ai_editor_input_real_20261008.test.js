@@ -34,6 +34,21 @@ for(const code of ['6672','1301']){
  assert.deepEqual(segment.spoken_sentences,segment.caption_sentences,'FEATURED_CAPTION_DRIFT '+code);
 }
 console.log('6672_1301_DATED_PRICE_FLOW_SURFACE_GUARD_PASS research_only=true');
+const market=editorInput.market;
+assert.equal(market.target_date,authored.target_date,'MARKET_CLAIM_DATE_DRIFT');
+assert.equal(market.taiex.close,49313.44,'MARKET_INDEX_CLOSE_DRIFT');
+assert.equal(market.taiex.change_points,-492.93,'MARKET_INDEX_POINTS_DRIFT');
+assert.equal(market.breadth.scope,'TWSE_OFFICIAL_STOCK_COLUMN','MARKET_BREADTH_SCOPE_DRIFT');
+assert.deepEqual([market.breadth.rising_count,market.breadth.falling_count,market.breadth.unchanged_count,market.breadth.limit_up_count,market.breadth.limit_down_count],[425,540,109,14,2],'MARKET_BREADTH_COUNTS_DRIFT');
+assert.equal(market.market_trading.turnover_twd,924509097873,'MARKET_TURNOVER_DRIFT');
+assert.equal(market.market_trading.turnover_ma5_twd,1007158931238.4,'MARKET_MA5_DRIFT');
+assert.deepEqual(['foreign','investment_trust','dealers'].map(k=>market.institutional[k].net_twd),[-75852293490,3008930013,-18731261604],'MARKET_INSTITUTIONAL_DRIFT');
+const marketSegment=authored.segments.find(s=>s.id==='market');
+assert.ok(marketSegment,'MARKET_SEGMENT_MISSING');
+for(const id of ['MARKET_INDEX','MARKET_BREADTH','MARKET_TURNOVER','MARKET_INSTITUTIONAL'])assert.ok(marketSegment.claim_ids.includes(id)&&marketSegment.card_claim_ids.includes(id),'MARKET_SURFACE_MISSING '+id);
+assert.deepEqual(marketSegment.spoken_sentences,marketSegment.caption_sentences,'MARKET_CAPTION_DRIFT');
+console.log('MARKET_DATED_NUMERIC_SOURCE_AND_SURFACE_GUARD_PASS research_only=true');
+
 
 console.log('AI_AUTHORED_ORIGINAL_V3_CONTRACT_PASS research_only=true');
 const output='/tmp/video-recovery-proof/ai-editor-input-v3.json';
