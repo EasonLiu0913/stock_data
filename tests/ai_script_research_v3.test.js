@@ -4,7 +4,7 @@ const {validate}=require('../scripts/validate_ai_script_research_v3');
 const hash='a'.repeat(64);
 const master={target_date:'20261008',sha256:hash,candidates:[{code:'6672',name:'甲',previous_close:100,close:106},{code:'2305',name:'乙',previous_close:100,close:105}],sources:[{id:'S1',verification:'independently_reviewed'}]};
 const brand=['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'];
-const draft={schema_version:3,author:'ChatGPT_AI',target_date:'20261008',research_master_sha256:hash,publication_authorized:false,featured:[{code:'6672',name:'甲'},{code:'2305',name:'乙'}],claims:[{id:'C1',epistemic_status:'verified_event',source_ids:['S1']}],opening:{spoken_sentences:brand,caption_sentences:[...brand]},segments:[{spoken_sentences:['研究內容。'],caption_sentences:['研究內容。'],claim_ids:['C1'],card_claim_ids:['C1']}]};
+const draft={schema_version:3,author:'ChatGPT_AI',target_date:'20261008',research_master_sha256:hash,publication_authorized:false,featured:[{code:'6672',name:'甲'},{code:'2305',name:'乙'}],claims:[{id:'C1',epistemic_status:'verified_event',source_ids:['S1']},...['MARKET_INDEX','MARKET_BREADTH','MARKET_TURNOVER','MARKET_INSTITUTIONAL','6672_PRICE','6672_FLOW','2305_PRICE','2305_FLOW'].map(id=>({id,epistemic_status:'unknown',source_ids:[]}))],opening:{spoken_sentences:brand,caption_sentences:[...brand]},segments:[{spoken_sentences:['研究內容。'],caption_sentences:['研究內容。'],claim_ids:['C1'],card_claim_ids:['C1']}]};
 assert.equal(validate(draft,master).render_authorized,false);
 function rejects(mutator,pattern){const x=structuredClone(draft),m=structuredClone(master);mutator(x,m);assert.throws(()=>validate(x,m),pattern);}
 rejects(x=>x.target_date='20261007',/DATE/);
