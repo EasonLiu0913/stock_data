@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const {build}=require('../scripts/build_ai_editor_input_v3_20261008');
 const date='20261008';
-const master={target_date:date,market:'TWSE',breadth:{scope:'TWSE_OFFICIAL_STOCK_COLUMN'}};
+const master={target_date:date,market:'TWSE',breadth:{scope:'TWSE_OFFICIAL_STOCK_COLUMN'},source_evidence:{mi_index:'data_twse_mi_index/20261008_twse_mi_index.json'}};
 const list={target_date:date,stocks:[{code:'6672',name:'甲',previous_close:100,close:106,change_pct:6,volume:100},{code:'2305',name:'乙',previous_close:100,close:105,change_pct:5,volume:200}]};
 const news={target_date:date,analyses:list.stocks.map(s=>({code:s.code,evidence_strength:'circumstantial',reason_summary:'Unverified association',sources:[{title:'Dated reference',url:'https://example.org/source',published_at:'2026-10-08'}]}))};
 const facts={target_date:date,stocks:list.stocks.map(s=>({code:s.code,price:{close:s.close},flow:{dealer:{net_shares:s.code==='2305'?41283:0}}}))};
