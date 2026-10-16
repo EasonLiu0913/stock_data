@@ -14,6 +14,8 @@ rejects((x,m)=>m.candidates[0].close=102,/GAIN/);
 rejects(x=>x.claims[0].source_ids=[],/EVENT_SOURCE/);
 rejects(x=>x.claims[0].source_ids=['missing'],/SOURCE_POINTER/);
 rejects(x=>x.claims[0].epistemic_status='causal_proof',/CLAIM_GRADE/);
+rejects(x=>{x.claims[0].epistemic_status='contemporary_association';x.claims[0].source_ids=[];},/ASSOCIATION_SOURCE/);
+rejects(x=>{x.claims[0].epistemic_status='contemporary_association';x.claims[0].source_ids=['missing'];},/SOURCE_POINTER/);
 rejects(x=>x.claims[0].causality_verified=true,/UNVERIFIED_CAUSALITY/);
 rejects((x,m)=>m.sources[0].verification='upstream_reference_requires_editor_review',/UNREVIEWED_EVENT_SOURCE/);
 rejects(x=>x.opening.spoken_sentences[0]='舊版開場',/FIXED_FOUR_LINE_OPENING/);
