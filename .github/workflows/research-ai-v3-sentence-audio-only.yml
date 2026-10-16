@@ -1,10 +1,16 @@
 name: Research AI V3 Sentence Audio Only
 on:
   workflow_dispatch:
+  push:
+    branches: [research/market-opening-master-a-20261015]
+    paths:
+      - '.github/workflows/research-ai-v3-sentence-audio-only.yml'
+      - 'scripts/research_ai_v3_sentence_edge_tts_20261008.py'
 permissions:
   contents: read
 jobs:
   sentence-audio:
+    if: github.ref == 'refs/heads/research/market-opening-master-a-20261015'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
