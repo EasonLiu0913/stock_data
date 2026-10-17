@@ -180,7 +180,8 @@ assert len(card_content_proof)==len(layout["cards"]),"CARD_CONTENT_PROOF_COUNT_D
 # explicitly heuristic, NOT phoneme alignment or a claim of verified lip-sync.
 audio=root/"diagnostic-preview/continuous.wav";assert audio.is_file()
 srt=root/"research-sentence-captions.srt";assert srt.is_file()
-assert len(bridge["sentences"])>0 and len(bridge["sentences"])==caption["sentence_count"] and bridge["total_seconds"]>0
+assert len(bridge["sentences"])>0 and bridge["total_seconds"]>0
+assert sum(len(p["speech_sentences"]) for p in source["media_input"])==len(bridge["sentences"]),"M8VIS_RENDER_SENTENCE_INVENTORY_DRIFT"
 concat=out/"scenes.ffconcat"
 rows=["ffconcat version 1.0"]
 for i,c in enumerate(layout["cards"]):
