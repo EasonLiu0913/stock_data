@@ -73,6 +73,13 @@ for(const [id,values] of Object.entries(numericClaimValues)){
 }
 assert.equal(Object.keys(numericClaimValues).length,4+authored.featured.length*2,'NUMERIC_MANIFEST_COUNT_DRIFT');
 console.log('AI_NUMERIC_CLAIM_DYNAMIC_MANIFEST_PASS claims='+Object.keys(numericClaimValues).length+' research_only=true');
+const manifestPath='/tmp/video-recovery-proof/ai-numeric-claims-v3.json';
+const manifest={schema_version:1,target_date:editorInput.target_date,editor_input_sha256:editorInput.sha256,source_scope:market.breadth.scope,publication_authorized:false,render_authorized:false,claims:numericClaimValues};
+fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n');
+const manifestHash=crypto.createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
+fs.appendFileSync('/tmp/video-recovery-proof/SHA256SUMS',manifestHash+'  '+manifestPath+'\n');
+assert.deepEqual(read(manifestPath).claims,numericClaimValues,'NUMERIC_MANIFEST_ROUNDTRIP_DRIFT');
+console.log('AI_NUMERIC_CLAIM_MANIFEST_ARTIFACT_PASS sha256='+manifestHash+' research_only=true');
 
 
 console.log('AI_AUTHORED_ORIGINAL_V3_CONTRACT_PASS research_only=true');
