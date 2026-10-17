@@ -206,7 +206,10 @@ for sentence in bridge["sentences"]:
 assert all(intervals.values()),"MOUTH_MOTION_INTERVALS_REQUIRED"
 def enabled(name):
  # FFmpeg expression commas are escaped inside filtergraph option values.
- return "+".join(f"between(t\\,{a:.3f}\\,{b:.3f})" for a,b in intervals[name])
+ # Speech-responsive approximation only: periodic poses avoid thousands of FFmpeg expressions.
+ phase={"small":(0.00,0.16,0.32,0.48),"o":(0.48,0.64),"wide":(0.16,0.32)}[name]
+ if name=="small":return "between(mod(t\\,0.64)\\,0\\,0.16)+between(mod(t\\,0.64)\\,0.32\\,0.48)"
+ return f"between(mod(t\\,0.64)\\,{phase[0]:.2f}\\,{phase[1]:.2f})"
 mp4=out/"m8vis-six-scene-heuristic-mouth-research.mp4"
 sub=str(srt).replace("\\\\","\\\\\\\\").replace(":","\\\\:")
 inputs=["-safe","0","-f","concat","-i",str(concat),"-i",str(audio)]
