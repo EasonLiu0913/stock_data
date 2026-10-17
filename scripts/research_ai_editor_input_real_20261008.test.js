@@ -103,6 +103,7 @@ for(const featured of authored.featured){
  const projected=segment.spoken_sentences.map(projectDatedCaption);
  const expectedClose=formatNumber(numericClaimValues[featured.code+'_PRICE'].close);
  assert.ok(projected.some(s=>s.includes(expectedClose)),'CAPTION_MANIFEST_FEATURED_CLOSE_DRIFT '+featured.code);
+ assert.throws(()=>assert.ok(projected.some(s=>s.includes(formatNumber(numericClaimValues[featured.code+'_PRICE'].close+10000))),'CAPTION_MANIFEST_FEATURED_CLOSE_DRIFT '+featured.code),/CAPTION_MANIFEST_FEATURED_CLOSE_DRIFT/,'CAPTION_MANIFEST_FEATURED_NEGATIVE_TEST_FAILED '+featured.code);
 }
 console.log('DATED_CAPTION_FEATURED_CLOSE_MANIFEST_PARITY_PASS count='+authored.featured.length+' research_only=true');
 
