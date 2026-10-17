@@ -10,6 +10,7 @@ function rejects(mutator,pattern){const x=structuredClone(draft),m=structuredClo
 rejects(x=>x.claims=x.claims.filter(c=>c.id!=='6672_PRICE'),/NUMERIC_CLAIM_MISSING 6672_PRICE/);
 rejects(x=>x.segments[0].claim_ids=x.segments[0].claim_ids.filter(id=>id!=='6672_PRICE'),/NUMERIC_SPOKEN_POINTER_MISSING 6672_PRICE/);
 rejects(x=>x.segments[0].card_claim_ids=x.segments[0].card_claim_ids.filter(id=>id!=='6672_PRICE'),/NUMERIC_CARD_POINTER_MISSING 6672_PRICE/);
+rejects(x=>{x.segments.push({spoken_sentences:['另一段。'],caption_sentences:['另一段。'],claim_ids:['6672_PRICE'],card_claim_ids:[]});},/NUMERIC_SEGMENT_SURFACE_DRIFT 6672_PRICE/);
 rejects(x=>x.target_date='20261007',/DATE/);
 rejects(x=>x.research_master_sha256='b'.repeat(64),/MASTER_DRIFT/);
 rejects(x=>x.publication_authorized=true,/PUBLICATION/);
