@@ -42,6 +42,8 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  # The card content is sourced verbatim from the same narration/caption source, not reconstructed figures.
  x,y,w,h=zones["card_area"]
  lines=part["caption_sentences"]
+ timed_captions=[s["caption_text"] for s in bridge["sentences"] if s["scene"]==card["scene"]]
+ assert lines==timed_captions,("CARD_TIMED_CAPTION_CONTENT_DRIFT",card["scene"])
  assert len(lines)<=5,("CARD_SENTENCE_TRUNCATION_FORBIDDEN",card["scene"],len(lines))
  assert all(isinstance(line,str) and line.strip() for line in lines),("CARD_SENTENCE_EMPTY",card["scene"])
  for j,line in enumerate(lines):
