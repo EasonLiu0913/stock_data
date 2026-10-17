@@ -33,6 +33,7 @@ labels={"opening":"TAIWAN STOCK","market":"上市市場總覽","6672":"騰輝電
 zones=layout["zones"]
 def rect(d,z,fill,outline=None):
  x,y,w,h=z;d.rounded_rectangle((x,y,x+w,y+h),radius=24,fill=fill,outline=outline,width=3)
+card_content_proof=[]
 for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  assert card["scene"]==part["id"] and card["claim_ids"]==part["card_claim_ids"]
  im=Image.new("RGBA",(1920,1080),"#172331");d=ImageDraw.Draw(im)
@@ -44,6 +45,7 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  lines=part["caption_sentences"]
  timed_captions=[s["caption_text"] for s in bridge["sentences"] if s["scene"]==card["scene"]]
  assert lines==timed_captions,("CARD_TIMED_CAPTION_CONTENT_DRIFT",card["scene"])
+ card_content_proof.append({"scene":card["scene"],"claim_ids":card["claim_ids"],"caption_sentences":lines,"caption_sha256":hashlib.sha256(json.dumps(lines,ensure_ascii=False,separators=(",",":")).encode("utf-8")).hexdigest()})
  assert len(lines)<=5,("CARD_SENTENCE_TRUNCATION_FORBIDDEN",card["scene"],len(lines))
  assert all(isinstance(line,str) and line.strip() for line in lines),("CARD_SENTENCE_EMPTY",card["scene"])
  for j,line in enumerate(lines):
@@ -67,6 +69,8 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
   xx=120+j*285;d.rounded_rectangle((xx,996,xx+255,1009),radius=5,fill="#e9bb77" if j<=i else "#627387")
  d.text((120,1015),f"{i+1}/6  ·  研究預覽｜財經內容尚未完成編輯驗證",font=font(24),fill="#ffffff")
  im.convert("RGB").save(out/f"scene-{i+1:02}.png")
+assert len(card_content_proof)==len(layout["cards"]),"CARD_CONTENT_PROOF_COUNT_DRIFT"
+(out/"card-content-proof.json").write_text(json.dumps({"contract":"M8VIS_RENDERED_CARD_TEXT_RESEARCH_ONLY","research_master_sha256":source["research_master_sha256"],"cards":card_content_proof,"publication_authorized":False},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 # Audio-derived sentence boundaries are verified by the bridge. Mouth pose cycles are
 # explicitly heuristic, NOT phoneme alignment or a claim of verified lip-sync.
 audio=root/"diagnostic-preview/continuous.wav";assert audio.is_file()
