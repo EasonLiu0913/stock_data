@@ -117,17 +117,25 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  card_content_proof.append({"scene":card["scene"],"claim_ids":card["claim_ids"],"caption_sentences":lines,"caption_sha256":hashlib.sha256(json.dumps(lines,ensure_ascii=False,separators=(",",":")).encode("utf-8")).hexdigest()})
  assert len(lines)<=5,("CARD_SENTENCE_TRUNCATION_FORBIDDEN",card["scene"],len(lines))
  assert all(isinstance(line,str) and line.strip() for line in lines),("CARD_SENTENCE_EMPTY",card["scene"])
+ # Visual-polish research: fit every complete caption into a measured row,
+ # rather than relying on fixed offsets that can overlap after wrapping.
+ row_h=(h-76)/len(lines); card_rows=[]
  for j,line in enumerate(lines):
-  # Fit into bounded card width, preserve complete text by wrapping into multiple lines.
-  size=31 if len(lines)>3 else 37;f=font(size)
-  maxw=w-110; chunks=[];cur=""
-  for ch in line:
-   if d.textbbox((0,0),cur+ch,font=f)[2]>maxw and cur:chunks.append(cur);cur=ch
-   else:cur+=ch
-  if cur:chunks.append(cur)
-  assert len(chunks)<=2,("CARD_TEXT_OVERFLOW",card["scene"],j)
-  yy=y+38+j*(90 if len(lines)>3 else 150)
-  for k,ch in enumerate(chunks):d.text((x+48,yy+k*size*1.15),ch,font=f,fill="#f2f5f8")
+  maxw=w-110
+  for size in range(39,25,-1):
+   f=font(size);chunks=[];cur=""
+   for ch in line:
+    if d.textbbox((0,0),cur+ch,font=f)[2]>maxw and cur:chunks.append(cur);cur=ch
+    else:cur+=ch
+   if cur:chunks.append(cur)
+   line_h=size*1.3
+   if len(chunks)<=2 and len(chunks)*line_h<=row_h-12:break
+  else:raise AssertionError(("CARD_TEXT_OVERFLOW",card["scene"],j))
+  yy=y+38+j*row_h+(row_h-len(chunks)*line_h)/2
+  assert yy>=y+30 and yy+len(chunks)*line_h<=y+h-25,("CARD_TEXT_VERTICAL_OVERFLOW",card["scene"],j)
+  for k,ch in enumerate(chunks):d.text((x+48,round(yy+k*line_h)),ch,font=f,fill="#f2f5f8")
+  card_rows.append({"font_px":size,"wrapped_lines":len(chunks),"row_height_px":round(row_h,1)})
+ card_content_proof[-1]["visual_polish_rows"]=card_rows
  px,py,pw,ph=zones["presenter_reserved"]
  assert poses["closed"].width<=pw and poses["closed"].height<=ph,"PRESENTER_RESERVED_ZONE_OVERFLOW"
  avatar_x=px+(pw-poses["closed"].width)//2;avatar_y=py+ph-poses["closed"].height
