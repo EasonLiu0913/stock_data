@@ -52,6 +52,27 @@ assert.equal(Math.round((market.taiex.close-market.taiex.previous_close)*100),Ma
 assert.equal(market.market_trading.turnover_ratio_ma5,market.market_trading.turnover_twd/market.market_trading.turnover_ma5_twd,'TURNOVER_RATIO_DRIFT');
 assert.equal(market.institutional.total.net_twd,['foreign','investment_trust','dealers'].reduce((sum,k)=>sum+market.institutional[k].net_twd,0),'INSTITUTIONAL_TOTAL_DRIFT');
 console.log('MARKET_DERIVED_ARITHMETIC_GUARD_PASS research_only=true');
+// Research-only numeric claim manifest: values are read from the dated input, never copied from a prior day's script.
+const numericClaimValues={
+ MARKET_INDEX:{close:market.taiex.close,change_points:market.taiex.change_points,change_pct:market.taiex.change_pct},
+ MARKET_BREADTH:{scope:market.breadth.scope,rising:market.breadth.rising_count,falling:market.breadth.falling_count,unchanged:market.breadth.unchanged_count,limit_up:market.breadth.limit_up_count,limit_down:market.breadth.limit_down_count},
+ MARKET_TURNOVER:{twd:market.market_trading.turnover_twd,previous_five_trading_days_mean_twd:market.market_trading.turnover_ma5_twd},
+ MARKET_INSTITUTIONAL:Object.fromEntries(['foreign','investment_trust','dealers'].map(k=>[k,market.institutional[k].net_twd]))
+};
+for(const featured of authored.featured){
+ const c=editorInput.candidates.find(x=>x.code===featured.code);
+ assert.ok(c,'NUMERIC_MANIFEST_CANDIDATE_MISSING '+featured.code);
+ numericClaimValues[featured.code+'_PRICE']={close:c.close,previous_close:c.previous_close,change_pct:c.change_pct,unit:'TWD_per_share'};
+ numericClaimValues[featured.code+'_FLOW']=Object.fromEntries(['foreign','investment_trust','dealer'].map(k=>[k,c.facts.flow[k].net_shares]));
+}
+const declared=new Set(authored.claims.map(c=>c.id));
+for(const [id,values] of Object.entries(numericClaimValues)){
+ assert.ok(declared.has(id),'NUMERIC_MANIFEST_CLAIM_MISSING '+id);
+ assert.ok(Object.values(values).every(v=>typeof v==='number'&&Number.isFinite(v)||typeof v==='string'&&v.length>0),'NUMERIC_MANIFEST_INVALID_VALUE '+id);
+ assert.ok(authored.segments.some(s=>s.claim_ids.includes(id)&&s.card_claim_ids.includes(id)),'NUMERIC_MANIFEST_SURFACE_MISSING '+id);
+}
+assert.equal(Object.keys(numericClaimValues).length,4+authored.featured.length*2,'NUMERIC_MANIFEST_COUNT_DRIFT');
+console.log('AI_NUMERIC_CLAIM_DYNAMIC_MANIFEST_PASS claims='+Object.keys(numericClaimValues).length+' research_only=true');
 
 
 console.log('AI_AUTHORED_ORIGINAL_V3_CONTRACT_PASS research_only=true');
