@@ -68,7 +68,10 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  for j in range(6):
   xx=120+j*285;d.rounded_rectangle((xx,996,xx+255,1009),radius=5,fill="#e9bb77" if j<=i else "#627387")
  d.text((120,1015),f"{i+1}/6  ·  研究預覽｜財經內容尚未完成編輯驗證",font=font(24),fill="#ffffff")
- im.convert("RGB").save(out/f"scene-{i+1:02}.png")
+ scene_path=out/f"scene-{i+1:02}.png"
+ im.convert("RGB").save(scene_path)
+ assert scene_path.is_file() and scene_path.stat().st_size>0,("CARD_SCENE_IMAGE_MISSING",card["scene"])
+ card_content_proof[-1]["scene_png_sha256"]=hashlib.sha256(scene_path.read_bytes()).hexdigest()
 assert len(card_content_proof)==len(layout["cards"]),"CARD_CONTENT_PROOF_COUNT_DRIFT"
 (out/"card-content-proof.json").write_text(json.dumps({"contract":"M8VIS_RENDERED_CARD_TEXT_RESEARCH_ONLY","research_master_sha256":source["research_master_sha256"],"cards":card_content_proof,"publication_authorized":False},ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 # Audio-derived sentence boundaries are verified by the bridge. Mouth pose cycles are
