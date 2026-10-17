@@ -49,7 +49,7 @@ assert pct(manifest["claims"]["MARKET_INDEX"]["change_pct"]) in market_text,"M8V
 # Require bounded numeric tokens: e.g. '2' must not accidentally match '425'.
 import re
 def has_number_token(s,n):
- return re.search(r"(?<![\\d,.])"+re.escape(number(n))+r"(?![\\d,.])",s) is not None
+ return re.search(r"(?<![\d,.])"+re.escape(number(n))+r"(?![\d,.])",s) is not None
 assert not has_number_token("425家",2),"M8VIS_NUMERIC_TOKEN_NEGATIVE_CONTROL_FAILED"
 for key in ("rising","falling","unchanged","limit_up","limit_down"):
  assert has_number_token(market_text,manifest["claims"]["MARKET_BREADTH"][key]),("M8VIS_RENDER_BREADTH_TOKEN_DRIFT",key)
