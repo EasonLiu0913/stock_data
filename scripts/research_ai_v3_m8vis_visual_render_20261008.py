@@ -115,7 +115,9 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  timed_captions=[s["caption_text"] for s in bridge["sentences"] if s["scene"]==card["scene"]]
  assert lines==timed_captions,("CARD_TIMED_CAPTION_CONTENT_DRIFT",card["scene"])
  card_content_proof.append({"scene":card["scene"],"claim_ids":card["claim_ids"],"caption_sentences":lines,"caption_sha256":hashlib.sha256(json.dumps(lines,ensure_ascii=False,separators=(",",":")).encode("utf-8")).hexdigest()})
- assert len(lines)<=5,("CARD_SENTENCE_TRUNCATION_FORBIDDEN",card["scene"],len(lines))
+ # Narration/SRT may grow independently of the persistent structured card.
+ # Preserve every timed caption in the proof; never truncate to a legacy five-sentence limit.
+ assert len(lines)==len(timed_captions)>0,("CARD_SENTENCE_INVENTORY_DRIFT",card["scene"])
  assert all(isinstance(line,str) and line.strip() for line in lines),("CARD_SENTENCE_EMPTY",card["scene"])
  # Structured information cards are independent of SRT/caption sentences.
  # Only verified manifest figures may populate numeric tiles.
