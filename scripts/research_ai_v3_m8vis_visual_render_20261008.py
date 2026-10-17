@@ -123,16 +123,41 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  # Only verified manifest figures may populate numeric tiles.
  scene=card["scene"];claims=manifest["claims"]; tiles=[]
  if scene=="market":
-  breadth=claims["MARKET_BREADTH"]
+  breadth=claims["MARKET_BREADTH"];idx=claims["MARKET_INDEX"];turn=claims["MARKET_TURNOVER"];inst=claims["MARKET_INSTITUTIONAL"]
   tiles=[("上漲",number(breadth["rising"]),"家"),("下跌",number(breadth["falling"]),"家"),("平盤",number(breadth["unchanged"]),"家"),("漲停",number(breadth["limit_up"]),"家")]
-  # Owner-approved 2x2 cross divider, not four caption paragraphs.
-  d.line((x+w/2,y+24,x+w/2,y+h-24),fill="#7991a7",width=4)
-  d.line((x+24,y+h/2,x+w-24,y+h/2),fill="#7991a7",width=4)
+  # One persistent dashboard, sourced exclusively from the dated verified manifest.
+  def panel(box):
+   xx,yy,ww,hh=box
+   d.rounded_rectangle((xx,yy,xx+ww,yy+hh),radius=13,fill="#344b61",outline="#66829b",width=2)
+  panel((x+22,y+20,520,140))
+  d.text((x+45,y+30),"加權指數",font=font(26),fill="#d4e0ea")
+  d.text((x+45,y+66),number(idx["close"]),font=font(54),fill="#ffffff")
+  d.text((x+320,y+82),("-" if idx["change_points"]<0 else "+" if idx["change_points"]>0 else "")+number(abs(idx["change_points"]))+"  "+("-" if idx["change_pct"]<0 else "+" if idx["change_pct"]>0 else "")+pct(idx["change_pct"]),font=font(23),fill="#ffb6a6" if idx["change_points"]<0 else "#bce9c5")
   for j,(heading,value,unit) in enumerate(tiles):
-   cx=x+w*(0.25 if j%2==0 else 0.75);cy=y+h*(0.25 if j<2 else 0.75)
-   d.text((cx,cy-85),heading,font=font(39),fill="#d4e0ea",anchor="mm")
-   d.text((cx,cy+5),value,font=font(91),fill="#f5f7fa",anchor="mm")
-   d.text((cx,cy+90),unit,font=font(29),fill="#e9bb77",anchor="mm")
+   xx=x+565+(j%2)*392; yy=y+20+(j//2)*74
+   panel((xx,yy,370,66))
+   d.text((xx+18,yy+15),heading,font=font(26),fill="#d4e0ea")
+   d.text((xx+165,yy+9),value,font=font(37),fill="#ffffff")
+   d.text((xx+315,yy+18),unit,font=font(21),fill="#e9bb77")
+  panel((x+22,y+180,520,145))
+  d.text((x+45,y+188),"全市場成交金額",font=font(25),fill="#d4e0ea")
+  d.text((x+45,y+225),rounded_yi(turn["twd"])+" 億",font=font(45),fill="#ffffff")
+  d.text((x+275,y+239),"近5日均 "+rounded_yi(turn["previous_five_trading_days_mean_twd"])+" 億",font=font(22),fill="#d4e0ea")
+  ratio=turn["twd"]/turn["previous_five_trading_days_mean_twd"]
+  assert 0<=ratio<=10,"MARKET_DASHBOARD_TURNOVER_RATIO_INVALID"
+  d.rounded_rectangle((x+45,y+292,x+495,y+302),radius=5,fill="#192938")
+  d.rounded_rectangle((x+45,y+292,x+45+round(450*min(ratio,1)),y+302),radius=5,fill="#e9bb77")
+  panel((x+565,y+180,762,145))
+  d.text((x+585,y+188),"三大法人淨買賣超（億元）",font=font(25),fill="#d4e0ea")
+  for j,(key,label) in enumerate((("foreign","外資"),("investment_trust","投信"),("dealers","自營商"))):
+   val=inst[key];xx=x+585+j*250
+   d.text((xx,y+228),label,font=font(24),fill="#d4e0ea")
+   d.text((xx,y+264),("+" if val>0 else "-" if val<0 else "")+rounded_yi(val),font=font(36),fill="#bce9c5" if val>0 else "#ffb6a6" if val<0 else "#ffffff")
+  panel((x+22,y+345,1305,175))
+  d.text((x+45,y+355),"市場評價｜當日偏弱",font=font(33),fill="#e9bb77")
+  d.text((x+45,y+408),"下跌家數較多  ·  成交低於近5日均量  ·  法人合計偏賣",font=font(27),fill="#ffffff")
+  d.text((x+45,y+460),"當日訊號，不代表後續趨勢已確認",font=font(23),fill="#d4e0ea")
+  assert breadth["falling"]>breadth["rising"] and ratio<1 and sum(inst[k] for k in ("foreign","investment_trust","dealers"))<0,"MARKET_DASHBOARD_ASSESSMENT_UNSUPPORTED"
  elif scene in ("6672","2305","1301"):
   price=claims[scene+"_PRICE"];fl=claims[scene+"_FLOW"]
   tiles=[("收盤價",number(price["close"]),"元"),("漲跌幅",pct(price["change_pct"]),"漲跌幅"),("前收盤",number(price["previous_close"]),"元")]
@@ -162,7 +187,7 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
    d.text((x+140,yy),heading+"｜"+value,font=font(48),fill="#ffffff")
  assert tiles and not any(line in str(tiles) for line in lines),"STRUCTURED_CARD_MUST_NOT_DUPLICATE_CAPTION"
  card_content_proof[-1]["subtitle_background_drawn"]=False
- card_content_proof[-1]["structured_card"]={"type":"cross_2x2" if scene=="market" else "stock_metrics" if scene in ("6672","2305","1301") else "opening_brand" if scene=="opening" else "three_takeaways","tiles":[{"label":v[0],"value":v[1],"unit":v[2]} for v in tiles],"source":"verified_numeric_manifest" if scene=="market" or scene in ("6672","2305","1301") else "editorial_section_labels"}
+ card_content_proof[-1]["structured_card"]={"type":"market_dashboard_v1" if scene=="market" else "stock_metrics" if scene in ("6672","2305","1301") else "opening_brand" if scene=="opening" else "three_takeaways","tiles":[{"label":v[0],"value":v[1],"unit":v[2]} for v in tiles],"source":"verified_numeric_manifest" if scene=="market" or scene in ("6672","2305","1301") else "editorial_section_labels"}
  px,py,pw,ph=zones["presenter_reserved"]
  assert poses["closed"].width<=pw and poses["closed"].height<=ph,"PRESENTER_RESERVED_ZONE_OVERFLOW"
  avatar_x=px+(pw-poses["closed"].width)//2;avatar_y=py+ph-poses["closed"].height
