@@ -39,6 +39,8 @@ try:
  source_sentence_count=sum(len(p["speech_sentences"]) for p in d["media_input"])
  assert len(proof["sentences"])==source_sentence_count,"TTS_SOURCE_SENTENCE_INVENTORY_DRIFT"
  proof["source_sentence_count"]=source_sentence_count
+ proof["total_audio_seconds"]=round(sum(item["duration_seconds"] for item in proof["sentences"]),3)
+ assert proof["total_audio_seconds"]>0,"TTS_TOTAL_AUDIO_DURATION_INVALID"
  opening=sum(s["duration_seconds"] for s in proof["sentences"] if s["part"] in ("opening","market"))
  proof["opening_seconds"]=opening
  proof["opening_30_to_90_seconds_pass"]=30<=opening<=90
