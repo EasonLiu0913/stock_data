@@ -24,7 +24,16 @@ for code in ("6672","2305","1301"):
  assert number(manifest["claims"][code+"_PRICE"]["close"]) in by_scene[code],("M8VIS_RENDER_FEATURED_CLOSE_DRIFT",code)
 flow=manifest["claims"]["2305_FLOW"]
 assert number(flow["foreign"]) in by_scene["2305"] and number(flow["dealer"]) in by_scene["2305"],"M8VIS_RENDER_2305_FLOW_DRIFT"
-print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 research_only=true")
+# Check further date-specific values against the exact text drawn on the cards.
+market_text=by_scene["market"]
+for key in ("rising","falling","unchanged","limit_up","limit_down"):
+ assert number(manifest["claims"]["MARKET_BREADTH"][key]) in market_text,("M8VIS_RENDER_BREADTH_DRIFT",key)
+for code in ("6672","2305","1301"):
+ price=manifest["claims"][code+"_PRICE"]
+ assert number(price["previous_close"]) in by_scene[code],("M8VIS_RENDER_PREVIOUS_CLOSE_DRIFT",code)
+# A negative control must reject a deliberately altered manifest value.
+assert number(manifest["claims"]["MARKET_INDEX"]["close"]+10000) not in market_text,"M8VIS_RENDER_NUMERIC_NEGATIVE_CONTROL_FAILED"
+print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 breadth=5 previous_close=3 negative_control=true research_only=true")
 fontpath="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 assert pathlib.Path(fontpath).exists(),"CJK_FONT_REQUIRED"
 font=lambda n:ImageFont.truetype(fontpath,n)
