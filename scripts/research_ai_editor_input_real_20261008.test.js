@@ -85,6 +85,18 @@ assert.throws(()=>assert.deepEqual(tamperedManifest.claims,numericClaimValues,'N
 assert.equal(read(manifestPath).claims.MARKET_INDEX.close,numericClaimValues.MARKET_INDEX.close,'NUMERIC_MANIFEST_PROOF_MUTATED');
 console.log('AI_NUMERIC_CLAIM_MANIFEST_TAMPER_REJECTED research_only=true');
 console.log('AI_NUMERIC_CLAIM_MANIFEST_ARTIFACT_PASS sha256='+manifestHash+' research_only=true');
+// Dated projection regression: check actual caption digits against source-derived values, not only claim IDs.
+const {project:projectDatedCaption}=require('./research_caption_projection_full_20261008');
+const formatNumber=n=>n.toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
+const marketProjected=marketSegment.spoken_sentences.map(projectDatedCaption);
+const flow2305Projected=segment2305.spoken_sentences.map(projectDatedCaption);
+const expectedIndex=formatNumber(numericClaimValues.MARKET_INDEX.close);
+const expected2305Foreign=formatNumber(numericClaimValues['2305_FLOW'].foreign);
+const expected2305Dealer=formatNumber(numericClaimValues['2305_FLOW'].dealer);
+assert.ok(marketProjected.some(s=>s.includes(expectedIndex)),'CAPTION_MANIFEST_INDEX_DRIFT');
+assert.ok(flow2305Projected.some(s=>s.includes(expected2305Foreign)&&s.includes(expected2305Dealer)),'CAPTION_MANIFEST_2305_FLOW_DRIFT');
+assert.throws(()=>assert.ok(marketProjected.some(s=>s.includes(formatNumber(numericClaimValues.MARKET_INDEX.close+1))),'CAPTION_MANIFEST_INDEX_DRIFT'),/CAPTION_MANIFEST_INDEX_DRIFT/,'CAPTION_MANIFEST_NEGATIVE_TEST_FAILED');
+console.log('DATED_CAPTION_NUMERIC_MANIFEST_PARITY_PASS research_only=true');
 
 
 console.log('AI_AUTHORED_ORIGINAL_V3_CONTRACT_PASS research_only=true');
