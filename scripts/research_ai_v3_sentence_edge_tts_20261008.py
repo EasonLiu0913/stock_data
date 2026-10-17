@@ -36,7 +36,9 @@ try:
    assert 0.1<duration<120
    proof["sentences"].append({"part":part["id"],"sentence":index,"spoken_text":spoken,"caption_text":caption,"file":path.name,"duration_seconds":duration,"sha256":hashlib.sha256(path.read_bytes()).hexdigest(),"claim_ids":part["claim_ids"],"card_claim_ids":part["card_claim_ids"]})
    (out/"partial-proof.json").write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
- assert len(proof["sentences"])==sum(len(p["speech_sentences"]) for p in d["media_input"])
+ source_sentence_count=sum(len(p["speech_sentences"]) for p in d["media_input"])
+ assert len(proof["sentences"])==source_sentence_count,"TTS_SOURCE_SENTENCE_INVENTORY_DRIFT"
+ proof["source_sentence_count"]=source_sentence_count
  opening=sum(s["duration_seconds"] for s in proof["sentences"] if s["part"] in ("opening","market"))
  proof["opening_seconds"]=opening
  proof["opening_30_to_90_seconds_pass"]=30<=opening<=90
