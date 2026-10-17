@@ -97,6 +97,14 @@ assert.ok(marketProjected.some(s=>s.includes(expectedIndex)),'CAPTION_MANIFEST_I
 assert.ok(flow2305Projected.some(s=>s.includes(expected2305Foreign)&&s.includes(expected2305Dealer)),'CAPTION_MANIFEST_2305_FLOW_DRIFT');
 assert.throws(()=>assert.ok(marketProjected.some(s=>s.includes(formatNumber(numericClaimValues.MARKET_INDEX.close+1))),'CAPTION_MANIFEST_INDEX_DRIFT'),/CAPTION_MANIFEST_INDEX_DRIFT/,'CAPTION_MANIFEST_NEGATIVE_TEST_FAILED');
 console.log('DATED_CAPTION_NUMERIC_MANIFEST_PARITY_PASS research_only=true');
+for(const featured of authored.featured){
+ const segment=authored.segments.find(s=>s.id===featured.code);
+ assert.ok(segment,'CAPTION_MANIFEST_FEATURED_SEGMENT_MISSING '+featured.code);
+ const projected=segment.spoken_sentences.map(projectDatedCaption);
+ const expectedClose=formatNumber(numericClaimValues[featured.code+'_PRICE'].close);
+ assert.ok(projected.some(s=>s.includes(expectedClose)),'CAPTION_MANIFEST_FEATURED_CLOSE_DRIFT '+featured.code);
+}
+console.log('DATED_CAPTION_FEATURED_CLOSE_MANIFEST_PARITY_PASS count='+authored.featured.length+' research_only=true');
 
 
 console.log('AI_AUTHORED_ORIGINAL_V3_CONTRACT_PASS research_only=true');
