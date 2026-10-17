@@ -38,6 +38,7 @@ function validate(d,master){
  const spokenPointers=new Set(d.segments.flatMap(s=>s.claim_ids));
  const cardPointers=new Set(d.segments.flatMap(s=>s.card_claim_ids));
  for(const id of requiredNumericClaims){assert.ok(spokenPointers.has(id),'NUMERIC_SPOKEN_POINTER_MISSING '+id);assert.ok(cardPointers.has(id),'NUMERIC_CARD_POINTER_MISSING '+id);}
+ for(const s of d.segments){for(const id of requiredNumericClaims){assert.equal(s.claim_ids.includes(id),s.card_claim_ids.includes(id),'NUMERIC_SEGMENT_SURFACE_DRIFT '+id);}}
  return {status:'RESEARCH_VALIDATED',editorial_complete:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={validate};
