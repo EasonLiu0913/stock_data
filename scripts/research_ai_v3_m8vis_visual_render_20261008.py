@@ -277,8 +277,11 @@ handoff={"contract":"M8VIS_RESEARCH_PREVIEW_HANDOFF_V1","target_date":manifest["
 (out/"preview-handoff.json").write_text(json.dumps(handoff,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 assert json.loads((out/"preview-handoff.json").read_text(encoding="utf-8"))==handoff,"M8VIS_HANDOFF_JSON_ROUNDTRIP_FAILED"
 assert all(c.get("structured_card",{}).get("tiles") for c in card_proof["cards"]),"STRUCTURED_CARDS_REQUIRED"
-assert card_proof["cards"][1]["structured_card"]["type"]=="cross_2x2","MARKET_CROSS_CARD_REQUIRED"
-print("M8VIS_STRUCTURED_CARDS_PASS scenes=6 market_cross_2x2=true caption_backdrops=false manual_review=pending")
+market_card=card_proof["cards"][1]["structured_card"]
+assert market_card["type"]=="market_dashboard_v1","MARKET_DASHBOARD_REQUIRED"
+assert market_card["source"]=="verified_numeric_manifest","MARKET_DASHBOARD_MANIFEST_REQUIRED"
+assert [(t["label"],t["value"],t["unit"]) for t in market_card["tiles"]]==[("上漲",number(manifest["claims"]["MARKET_BREADTH"]["rising"]),"家"),("下跌",number(manifest["claims"]["MARKET_BREADTH"]["falling"]),"家"),("平盤",number(manifest["claims"]["MARKET_BREADTH"]["unchanged"]),"家"),("漲停",number(manifest["claims"]["MARKET_BREADTH"]["limit_up"]),"家")],"MARKET_DASHBOARD_BREADTH_DRIFT"
+print("M8VIS_STRUCTURED_CARDS_PASS scenes=6 market_dashboard_v1=true verified_breadth=true caption_backdrops=false manual_review=pending")
 print(f"M8VIS_PREVIEW_HANDOFF_PASS scenes=6 sentences={len(bridge['sentences'])} numeric_claims=10 manual_review=pending editorial=pending lip_sync=pending no_publish=true")
 (out/"visual-render-proof.json").write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
 print("V3_M8VIS_VISUAL_RENDER_PASS scenes=6 original_sprite_four_poses=true heuristic_mouth=true encoded_presenter_motion=true subtitles_burned=true lip_sync=false editorial_certified=false no_publish=true")
