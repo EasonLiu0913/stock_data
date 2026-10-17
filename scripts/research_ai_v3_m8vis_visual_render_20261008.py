@@ -40,9 +40,22 @@ assert rounded_yi(turnover["twd"]) in market_text, "M8VIS_RENDER_TURNOVER_DRIFT"
 assert rounded_yi(turnover["previous_five_trading_days_mean_twd"]) in market_text, "M8VIS_RENDER_TURNOVER_MA5_DRIFT"
 for key in ("foreign","investment_trust","dealers"):
  assert rounded_yi(manifest["claims"]["MARKET_INSTITUTIONAL"][key]) in market_text,("M8VIS_RENDER_INSTITUTIONAL_DRIFT",key)
+# Percentage displays are reviewed rounded editorial projections, not raw-value equality.
+def pct(n,places=2):
+ return f"{abs(n):.{places}f}".rstrip("0").rstrip(".")+"%"
+for code in ("6672","2305","1301"):
+ assert pct(manifest["claims"][code+"_PRICE"]["change_pct"]) in by_scene[code],("M8VIS_RENDER_FEATURED_PCT_DRIFT",code)
+assert pct(manifest["claims"]["MARKET_INDEX"]["change_pct"]) in market_text,"M8VIS_RENDER_INDEX_PCT_DRIFT"
+# Require bounded numeric tokens: e.g. '2' must not accidentally match '425'.
+import re
+def has_number_token(s,n):
+ return re.search(r"(?<![\\d,.])"+re.escape(number(n))+r"(?![\\d,.])",s) is not None
+assert not has_number_token("425家",2),"M8VIS_NUMERIC_TOKEN_NEGATIVE_CONTROL_FAILED"
+for key in ("rising","falling","unchanged","limit_up","limit_down"):
+ assert has_number_token(market_text,manifest["claims"]["MARKET_BREADTH"][key]),("M8VIS_RENDER_BREADTH_TOKEN_DRIFT",key)
 # A negative control must reject a deliberately altered manifest value.
 assert number(manifest["claims"]["MARKET_INDEX"]["close"]+10000) not in market_text,"M8VIS_RENDER_NUMERIC_NEGATIVE_CONTROL_FAILED"
-print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 breadth=5 previous_close=3 turnover=2 institutional=3 negative_control=true research_only=true")
+print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 breadth=5 previous_close=3 turnover=2 institutional=3 pct=4 bounded_breadth=true negative_control=true research_only=true")
 fontpath="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 assert pathlib.Path(fontpath).exists(),"CJK_FONT_REQUIRED"
 font=lambda n:ImageFont.truetype(fontpath,n)
