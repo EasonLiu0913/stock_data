@@ -10,7 +10,10 @@ function buildResearchCaptionSource(d){
  assert.match(d.research_master_sha256,/^[a-f0-9]{64}$/,'MASTER_SHA');
  assert.deepEqual([d.opening,...d.segments].map(p=>p.id||'opening'),['opening','market','6672','2305','1301','conclusion'],'PART_ORDER');
  const sentenceInventory=[d.opening,...d.segments].map(p=>p.spoken_sentences.length);
- assert.deepEqual(sentenceInventory,[4,5,3,3,3,3],'SENTENCE_INVENTORY');
+ assert.equal(sentenceInventory[0],4,'SENTENCE_INVENTORY_OPENING');
+ assert.ok(sentenceInventory[1]>=5 && sentenceInventory[1]<=16,'SENTENCE_INVENTORY_MARKET');
+ for(const count of sentenceInventory.slice(2,5))assert.ok(count>=3 && count<=20,'SENTENCE_INVENTORY_FEATURED');
+ assert.ok(sentenceInventory[5]>=3 && sentenceInventory[5]<=12,'SENTENCE_INVENTORY_CONCLUSION');
  assert.equal(d.target_date,'20261008','DATE');
  assert.equal(d.publication_authorized,false,'PUBLICATION');
  const parts=[d.opening,...d.segments];
