@@ -9,6 +9,22 @@ source=json.loads((root/"source.json").read_text())
 assert layout["publication_authorized"] is False and layout["editorial_complete"] is False
 assert bridge["publication_authorized"] is False and len(layout["cards"])==6
 assert layout["research_master_sha256"]==source["research_master_sha256"]==bridge["research_master_sha256"]
+manifest_path=root/"ai-numeric-claims-v3.json"
+assert manifest_path.is_file(),"M8VIS_NUMERIC_MANIFEST_REQUIRED"
+manifest=json.loads(manifest_path.read_text())
+assert manifest["target_date"]==source["target_date"],"M8VIS_NUMERIC_DATE_DRIFT"
+assert manifest["editor_input_sha256"]==source["research_master_sha256"],"M8VIS_NUMERIC_MASTER_DRIFT"
+assert manifest["publication_authorized"] is False and manifest["render_authorized"] is False
+assert len(manifest["claims"])==10,"M8VIS_NUMERIC_CLAIM_COUNT_DRIFT"
+def number(n):
+ return f"{n:,.2f}".rstrip("0").rstrip(".") if isinstance(n,float) else f"{n:,}"
+by_scene={p["id"]:" ".join(p["caption_sentences"]) for p in source["media_input"]}
+assert number(manifest["claims"]["MARKET_INDEX"]["close"]) in by_scene["market"],"M8VIS_RENDER_INDEX_VALUE_DRIFT"
+for code in ("6672","2305","1301"):
+ assert number(manifest["claims"][code+"_PRICE"]["close"]) in by_scene[code],("M8VIS_RENDER_FEATURED_CLOSE_DRIFT",code)
+flow=manifest["claims"]["2305_FLOW"]
+assert number(flow["foreign"]) in by_scene["2305"] and number(flow["dealer"]) in by_scene["2305"],"M8VIS_RENDER_2305_FLOW_DRIFT"
+print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 research_only=true")
 fontpath="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 assert pathlib.Path(fontpath).exists(),"CJK_FONT_REQUIRED"
 font=lambda n:ImageFont.truetype(fontpath,n)
