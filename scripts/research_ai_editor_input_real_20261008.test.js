@@ -79,6 +79,11 @@ fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n');
 const manifestHash=crypto.createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
 fs.appendFileSync('/tmp/video-recovery-proof/SHA256SUMS',manifestHash+'  '+manifestPath+'\n');
 assert.deepEqual(read(manifestPath).claims,numericClaimValues,'NUMERIC_MANIFEST_ROUNDTRIP_DRIFT');
+const tamperedManifest=read(manifestPath);
+tamperedManifest.claims.MARKET_INDEX.close+=1;
+assert.throws(()=>assert.deepEqual(tamperedManifest.claims,numericClaimValues,'NUMERIC_MANIFEST_ROUNDTRIP_DRIFT'),/NUMERIC_MANIFEST_ROUNDTRIP_DRIFT/,'NUMERIC_MANIFEST_NEGATIVE_TEST_FAILED');
+assert.equal(read(manifestPath).claims.MARKET_INDEX.close,numericClaimValues.MARKET_INDEX.close,'NUMERIC_MANIFEST_PROOF_MUTATED');
+console.log('AI_NUMERIC_CLAIM_MANIFEST_TAMPER_REJECTED research_only=true');
 console.log('AI_NUMERIC_CLAIM_MANIFEST_ARTIFACT_PASS sha256='+manifestHash+' research_only=true');
 
 
