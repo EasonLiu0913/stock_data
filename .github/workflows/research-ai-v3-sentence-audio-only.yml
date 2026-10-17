@@ -55,6 +55,26 @@ jobs:
             "$tool" -version | head -n 1
           done
           echo "::endgroup::"
+      - name: Fail closed on dated numeric manifest before TTS
+        run: |
+          set -euo pipefail
+          bash scripts/run_video_recovery_readonly_ci.sh
+          node scripts/research_ai_editor_input_real_20261008.test.js
+          sha256sum -c /tmp/video-recovery-proof/SHA256SUMS
+          mkdir -p /tmp/ai-v3-sentence-audio
+          cp /tmp/video-recovery-proof/ai-numeric-claims-v3.json /tmp/ai-v3-sentence-audio/ai-numeric-claims-v3.json
+          node - <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const d=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-script-v3-research.json'));
+          const m=JSON.parse(fs.readFileSync('/tmp/ai-v3-sentence-audio/ai-numeric-claims-v3.json'));
+          const s=require('./scripts/build_research_caption_source_20261008').buildResearchCaptionSource(d);
+          assert.equal(m.target_date,s.target_date,'NUMERIC_MEDIA_DATE_DRIFT');
+          assert.equal(m.editor_input_sha256,s.research_master_sha256,'NUMERIC_MEDIA_MASTER_DRIFT');
+          assert.equal(m.publication_authorized,false);
+          assert.equal(m.render_authorized,false);
+          for(const id of Object.keys(m.claims))assert.ok(s.media_input.some(p=>p.claim_ids.includes(id)&&p.card_claim_ids.includes(id)),'NUMERIC_MEDIA_POINTER_MISSING '+id);
+          console.log('M8VIS_PRE_TTS_NUMERIC_MANIFEST_PASS claims='+Object.keys(m.claims).length+' publication=false');
+          NODE
       - name: Probe Edge TTS 7.3.1 fixed short sentence, fail closed
         run: |
           set -euo pipefail
