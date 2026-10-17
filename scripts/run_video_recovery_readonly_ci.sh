@@ -40,6 +40,17 @@ NODE
 node --check scripts/research_market_opening_v2_preview_adapter_20261008.js
 node scripts/research_market_opening_v2_preview_adapter_20261008.js
 node - <<'NODE'
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const p=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/market-opening-v2-preview-projections.json'));
+const line=p.narration.lines[4];
+assert.match(line,/官方 MI_INDEX「股票」欄統計/);
+assert.match(line,/不是逐檔認證的普通股母體/);
+assert.equal(line,p.captions.lines[4]);
+assert.equal(p.publication_authorized,false);
+assert.equal(p.video_authorized,false);
+console.log('V2_BREADTH_SCOPE_LABEL_AND_CAPTION_PARITY_PASS; no publish');
+NODE
+node - <<'NODE'
 const assert=require('node:assert/strict'),fs=require('fs');
 const {assemble}=require('./scripts/research_market_opening_v2_preview_adapter_20261008');
 const m=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/market-opening-unified-research-master.json'));
