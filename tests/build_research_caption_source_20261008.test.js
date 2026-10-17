@@ -8,8 +8,8 @@ const artifact=buildResearchCaptionSource(d);
 assert.equal(artifact.parts.length,6);
 assert.equal(artifact.media_input_status,'V3_SIX_SCENE_SEMANTIC_INPUT_ONLY');
 assert.deepEqual(artifact.media_input.map(s=>s.id),['opening','market','6672','2305','1301','conclusion']);
-assert.deepEqual(artifact.media_input.map(s=>s.speech_sentences.length),[4,5,4,4,4,3]);
-assert.equal(artifact.media_input.reduce((n,s)=>n+s.speech_sentences.length,0),24);
+assert.deepEqual(artifact.media_input.map(s=>s.speech_sentences.length),[4,5,9,9,9,3]);
+assert.equal(artifact.media_input.reduce((n,s)=>n+s.speech_sentences.length,0),39);
 assert.deepEqual(artifact.media_input.map(s=>s.card_claim_ids),artifact.parts.map(p=>p.card_claim_ids));
 for(const flag of ['real_tts_generated','timed_srt_generated','mp4_generated'])assert.equal(artifact[flag],false);
 console.log('V3_SIX_SCENE_SEMANTIC_MEDIA_INPUT_PASS no_tts=true no_srt=true no_mp4=true');
@@ -17,7 +17,7 @@ for(const part of d.segments){const projected=artifact.parts.find(p=>p.id===part
 const badClaim=structuredClone(d);badClaim.segments[0].card_claim_ids.push('NONEXISTENT_CLAIM');
 assert.throws(()=>buildResearchCaptionSource(badClaim),/UNKNOWN_CLAIM_ID/);
 console.log('V3_CLAIM_CARD_LINK_PARITY_PASS research_only=true');
-assert.equal(artifact.parts.reduce((n,p)=>n+p.caption_sentences.length,0),24);
+assert.equal(artifact.parts.reduce((n,p)=>n+p.caption_sentences.length,0),39);
 assert.equal(artifact.render_authorized,false);
 assert.equal(artifact.publication_authorized,false);
 for(const p of artifact.parts)assert.equal(verifySequence(p.spoken_sentences,p.caption_sentences),true);
@@ -29,7 +29,7 @@ assert.throws(()=>verifySequence(altered.parts[1].spoken_sentences,altered.parts
 // Fail closed on loss of the AI-authored source's ordered sentence inventory.
 const expectedIds=['opening','market','6672','2305','1301','conclusion'];
 assert.deepEqual(artifact.parts.map(p=>p.id),expectedIds,'V3_PART_ORDER');
-assert.deepEqual(artifact.parts.map(p=>p.spoken_sentences.length),[4,5,4,4,4,3],'V3_SENTENCE_COUNTS');
+assert.deepEqual(artifact.parts.map(p=>p.spoken_sentences.length),[4,5,9,9,9,3],'V3_SENTENCE_COUNTS');
 const missing=structuredClone(artifact);
 missing.parts[2].spoken_sentences.pop();
 assert.throws(()=>verifySequence(missing.parts[2].spoken_sentences,missing.parts[2].caption_sentences),/SENTENCE_COUNT_DRIFT/);
@@ -61,7 +61,7 @@ console.log('V3_BUILDER_SENTENCE_INVENTORY_NEGATIVE_TEST_PASS research_only=true
 const expanded=structuredClone(d);
 expanded.segments[1].spoken_sentences.push('後續還要觀察量價是否延續，不能只憑單日漲幅判定趨勢。');
 const expandedArtifact=buildResearchCaptionSource(expanded);
-assert.deepEqual(expandedArtifact.media_input.map(p=>p.speech_sentences.length),[4,5,5,4,4,3]);
+assert.deepEqual(expandedArtifact.media_input.map(p=>p.speech_sentences.length),[4,5,10,9,9,3]);
 for(const p of expandedArtifact.parts)assert.equal(verifySequence(p.spoken_sentences,p.caption_sentences),true);
 assert.equal(expandedArtifact.publication_authorized,false);
 console.log('V3_EXPANDED_FEATURED_SENTENCE_PASS research_only=true');
@@ -76,4 +76,4 @@ assert.throws(()=>buildResearchCaptionSource(prematurePublication),/PUBLICATION/
 console.log('V3_BUILDER_PUBLICATION_GATE_NEGATIVE_TEST_PASS research_only=true');
 fs.mkdirSync('/tmp/video-recovery-proof',{recursive:true});
 fs.writeFileSync('/tmp/video-recovery-proof/20261008-research-caption-source.json',JSON.stringify(artifact,null,2)+'\n');
-console.log('DATED_RESEARCH_CAPTION_SOURCE_PASS sentences=24 no_srt=true no_render=true');
+console.log('DATED_RESEARCH_CAPTION_SOURCE_PASS sentences=39 no_srt=true no_render=true');
