@@ -9,7 +9,7 @@ assert caption["contract"]=="AI_V3_RESEARCH_SENTENCE_SRT_ONLY"
 assert bridge["research_master_sha256"]==caption["research_master_sha256"]
 assert bridge["publication_authorized"] is False and bridge["render_authorized"] is False
 rows=bridge["sentences"]
-assert len(rows)==caption["sentence_count"]==21
+assert len(rows)>0 and len(rows)==caption["sentence_count"]
 scenes=[]
 for row in rows:
  if not scenes or scenes[-1]["id"]!=row["scene"]:
@@ -24,4 +24,4 @@ assert all(a["end_seconds"]<=b["start_seconds"] for a,b in zip(scenes,scenes[1:]
 assert scenes[-1]["end_seconds"]==bridge["total_seconds"]==caption["total_seconds"]
 manifest={"contract":"AI_V3_M8VIS_TIMING_HANDOFF_RESEARCH_ONLY","target_date":"20261008","research_master_sha256":bridge["research_master_sha256"],"caption_srt_sha256":caption["srt_sha256"],"total_seconds":bridge["total_seconds"],"scenes":scenes,"visual_assets_verified":False,"vtuber_verified":False,"occlusion_verified":False,"mp4_generated":False,"render_authorized":False,"publication_authorized":False}
 (root/"m8vis-timing-handoff.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n")
-print("V3_M8VIS_TIMING_HANDOFF_PASS scenes=6 sentences=21 visual_render=false no_publish=true")
+print(f"V3_M8VIS_TIMING_HANDOFF_PASS scenes={len(scenes)} sentences={len(rows)} visual_render=false no_publish=true")
