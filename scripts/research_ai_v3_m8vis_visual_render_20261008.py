@@ -159,12 +159,13 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
    d.ellipse((x+65,yy+13,x+105,yy+53),fill="#e9bb77")
    d.text((x+140,yy),heading+"｜"+value,font=font(48),fill="#ffffff")
  assert tiles and not any(line in str(tiles) for line in lines),"STRUCTURED_CARD_MUST_NOT_DUPLICATE_CAPTION"
+ card_content_proof[-1]["subtitle_background_drawn"]=False
  card_content_proof[-1]["structured_card"]={"type":"cross_2x2" if scene=="market" else "stock_metrics" if scene in ("6672","2305","1301") else "opening_brand" if scene=="opening" else "three_takeaways","tiles":[{"label":v[0],"value":v[1],"unit":v[2]} for v in tiles],"source":"verified_numeric_manifest" if scene=="market" or scene in ("6672","2305","1301") else "editorial_section_labels"}
  px,py,pw,ph=zones["presenter_reserved"]
  assert poses["closed"].width<=pw and poses["closed"].height<=ph,"PRESENTER_RESERVED_ZONE_OVERFLOW"
  avatar_x=px+(pw-poses["closed"].width)//2;avatar_y=py+ph-poses["closed"].height
- rect(d,zones["subtitle_reserved"],"#26384a")
- # Keep the SRT burn-in zone empty: placeholder text would overlap real captions.
+ # Owner review: no opaque subtitle backdrop; retain the reserved region as a layout constraint only.
+ # SRT is burned in separately with a larger outlined font above the progress strip.
  rect(d,zones["progress_reserved"],"#26384a")
  for j in range(6):
   xx=120+j*285;d.rounded_rectangle((xx,996,xx+255,1009),radius=5,fill="#e9bb77" if j<=i else "#627387")
@@ -212,7 +213,7 @@ filters=[f"[0:v]fps=15,format=rgba[base]",
  f"[base][2:v]overlay={avatar_x}:{avatar_y}:shortest=1:format=auto[v0]"]
 for i,name in enumerate(("small","o","wide")):
  filters.append(f"[v{i}][{i+3}:v]overlay={avatar_x}:{avatar_y}:enable='{enabled(name)}':shortest=1:format=auto[v{i+1}]")
-filters.append(f"[v3]subtitles='{sub}':force_style='FontName=Noto Sans CJK TC,FontSize=13,Alignment=2,MarginV=35,Outline=1,Shadow=0',format=yuv420p[vout]")
+filters.append(f"[v3]subtitles='{sub}':force_style='FontName=Noto Sans CJK TC,FontSize=20,Alignment=2,MarginV=135,Outline=2,Shadow=0,BorderStyle=1',format=yuv420p[vout]")
 subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y",*inputs,"-filter_complex",";".join(filters),"-map","[vout]","-map","1:a:0","-c:v","libx264","-preset","veryfast","-crf","29","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-shortest",str(mp4)],check=True)
 probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type,width,height","-of","json",str(mp4)],text=True))
 assert abs(float(probe["format"]["duration"])-bridge["total_seconds"])<1.5
