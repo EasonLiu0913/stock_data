@@ -85,6 +85,19 @@ assert.throws(()=>assert.deepEqual(tamperedManifest.claims,numericClaimValues,'N
 assert.equal(read(manifestPath).claims.MARKET_INDEX.close,numericClaimValues.MARKET_INDEX.close,'NUMERIC_MANIFEST_PROOF_MUTATED');
 console.log('AI_NUMERIC_CLAIM_MANIFEST_TAMPER_REJECTED research_only=true');
 console.log('AI_NUMERIC_CLAIM_MANIFEST_ARTIFACT_PASS sha256='+manifestHash+' research_only=true');
+
+const {buildResearchCaptionSource}=require('./build_research_caption_source_20261008');
+const mediaSource=buildResearchCaptionSource(authored);
+assert.equal(manifest.target_date,mediaSource.target_date,'MEDIA_NUMERIC_DATE_DRIFT');
+assert.equal(manifest.editor_input_sha256,mediaSource.research_master_sha256,'MEDIA_NUMERIC_MASTER_SHA_DRIFT');
+for(const id of Object.keys(manifest.claims)){
+ assert.ok(mediaSource.media_input.some(p=>p.claim_ids.includes(id)&&p.card_claim_ids.includes(id)),'MEDIA_NUMERIC_CLAIM_POINTER_MISSING '+id);
+}
+const wrongMedia=structuredClone(mediaSource);
+wrongMedia.research_master_sha256='0'.repeat(64);
+assert.throws(()=>assert.equal(manifest.editor_input_sha256,wrongMedia.research_master_sha256,'MEDIA_NUMERIC_MASTER_SHA_DRIFT'),/MEDIA_NUMERIC_MASTER_SHA_DRIFT/);
+console.log('MEDIA_NUMERIC_MANIFEST_SOURCE_IDENTITY_PASS claims='+Object.keys(manifest.claims).length+' research_only=true');
+
 // Dated projection regression: check actual caption digits against source-derived values, not only claim IDs.
 const {project:projectDatedCaption}=require('./research_caption_projection_full_20261008');
 const formatNumber=n=>n.toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
