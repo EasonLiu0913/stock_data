@@ -9,7 +9,7 @@ for(const part of parts){
  assert.deepEqual(part.spoken_sentences,part.caption_sentences,'RESEARCH_PLACEHOLDER_DRIFT');
  for(const spoken of part.spoken_sentences){
   const caption=project(spoken);checked++;
-  for(const [word,digits] of phrases)if(spoken.includes(word)){
+  for(const [word,digits] of phrases)if(spoken.includes(word) && !phrases.some(([longer])=>longer.length>word.length && longer.includes(word) && spoken.includes(longer))){
    assert.ok(caption.includes(digits),'MISSING_DIGITS:'+word);
    assert.ok(!caption.includes(word),'UNPROJECTED:'+word);
    changed++;
