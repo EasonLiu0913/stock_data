@@ -15,6 +15,8 @@ cards=[]
 for scene,part in zip(handoff["scenes"],source["media_input"]):
  assert scene["claim_ids"]==part["claim_ids"]==scene["card_claim_ids"]==part["card_claim_ids"]
  assert all(cid in claims for cid in scene["claim_ids"])
+ assert len(scene["claim_ids"])==len(set(scene["claim_ids"])),("DUPLICATE_CARD_CLAIM",scene["id"])
+ assert all(isinstance(cid,str) and cid for cid in scene["claim_ids"]),("INVALID_CARD_CLAIM",scene["id"])
  cards.append({"scene":scene["id"],"start_seconds":scene["start_seconds"],"end_seconds":scene["end_seconds"],"claim_ids":scene["claim_ids"],"claim_statuses":{cid:claims[cid]["epistemic_status"] for cid in scene["claim_ids"]},"editorial_certified":False,"watermark":"研究預覽｜財經內容尚未完成編輯驗證"})
 # Explicit safe zones in 1920x1080; reserved bottom subtitle and progress bar and lower-right presenter.
 zones={"canvas":[0,0,1920,1080],"title":[110,80,1540,160],"card_area":[110,270,1400,550],"presenter_reserved":[1510,350,360,490],"subtitle_reserved":[190,830,1320,130],"progress_reserved":[90,975,1740,75]}
