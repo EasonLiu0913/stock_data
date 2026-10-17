@@ -213,7 +213,7 @@ filters=[f"[0:v]fps=15,format=rgba[base]",
  f"[base][2:v]overlay={avatar_x}:{avatar_y}:shortest=1:format=auto[v0]"]
 for i,name in enumerate(("small","o","wide")):
  filters.append(f"[v{i}][{i+3}:v]overlay={avatar_x}:{avatar_y}:enable='{enabled(name)}':shortest=1:format=auto[v{i+1}]")
-filters.append(f"[v3]subtitles='{sub}':force_style='FontName=Noto Sans CJK TC,FontSize=20,Alignment=2,MarginV=135,Outline=2,Shadow=0,BorderStyle=1',format=yuv420p[vout]")
+filters.append(f"[v3]subtitles='{sub}':force_style='FontName=Noto Sans CJK TC,FontSize=20,Alignment=2,MarginV=35,Outline=2,Shadow=0,BorderStyle=1',format=yuv420p[vout]")
 subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y",*inputs,"-filter_complex",";".join(filters),"-map","[vout]","-map","1:a:0","-c:v","libx264","-preset","veryfast","-crf","29","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-shortest",str(mp4)],check=True)
 probe=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration:stream=codec_type,width,height","-of","json",str(mp4)],text=True))
 assert abs(float(probe["format"]["duration"])-bridge["total_seconds"])<1.5
