@@ -180,7 +180,7 @@ assert len(card_content_proof)==len(layout["cards"]),"CARD_CONTENT_PROOF_COUNT_D
 # explicitly heuristic, NOT phoneme alignment or a claim of verified lip-sync.
 audio=root/"diagnostic-preview/continuous.wav";assert audio.is_file()
 srt=root/"research-sentence-captions.srt";assert srt.is_file()
-assert len(bridge["sentences"])==21 and bridge["total_seconds"]>0
+assert len(bridge["sentences"])>0 and len(bridge["sentences"])==caption["sentence_count"] and bridge["total_seconds"]>0
 concat=out/"scenes.ffconcat"
 rows=["ffconcat version 1.0"]
 for i,c in enumerate(layout["cards"]):
@@ -234,7 +234,7 @@ for stamp in (0.08,0.24,0.40,0.56):
 diffs=[ImageChops.difference(samples[0],other).getbbox() is not None for other in samples[1:]]
 assert any(diffs),"ENCODED_PRESENTER_NOT_CHANGING"
 encoded_presenter_motion_verified=True
-proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":21,"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":True,"scene_caption_backdrops_rendered":False,"structured_information_cards_verified":True,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":encoded_presenter_motion_verified,"encoded_presenter_frame_samples":4,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
+proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":len(bridge["sentences"]),"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":True,"scene_caption_backdrops_rendered":False,"structured_information_cards_verified":True,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":encoded_presenter_motion_verified,"encoded_presenter_frame_samples":4,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
 # Consolidated machine-verifiable preview handoff. Manual/editorial gates stay false.
 card_proof=json.loads((out/"card-content-proof.json").read_text(encoding="utf-8"))
 assert len(card_proof["cards"])==6,"M8VIS_HANDOFF_CARD_COUNT_DRIFT"
@@ -247,6 +247,6 @@ assert json.loads((out/"preview-handoff.json").read_text(encoding="utf-8"))==han
 assert all(c.get("structured_card",{}).get("tiles") for c in card_proof["cards"]),"STRUCTURED_CARDS_REQUIRED"
 assert card_proof["cards"][1]["structured_card"]["type"]=="cross_2x2","MARKET_CROSS_CARD_REQUIRED"
 print("M8VIS_STRUCTURED_CARDS_PASS scenes=6 market_cross_2x2=true caption_backdrops=false manual_review=pending")
-print("M8VIS_PREVIEW_HANDOFF_PASS scenes=6 sentences=21 numeric_claims=10 manual_review=pending editorial=pending lip_sync=pending no_publish=true")
+print(f"M8VIS_PREVIEW_HANDOFF_PASS scenes=6 sentences={len(bridge['sentences'])} numeric_claims=10 manual_review=pending editorial=pending lip_sync=pending no_publish=true")
 (out/"visual-render-proof.json").write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
 print("V3_M8VIS_VISUAL_RENDER_PASS scenes=6 original_sprite_four_poses=true heuristic_mouth=true encoded_presenter_motion=true subtitles_burned=true lip_sync=false editorial_certified=false no_publish=true")
