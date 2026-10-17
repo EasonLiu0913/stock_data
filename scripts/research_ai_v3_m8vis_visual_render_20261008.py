@@ -42,7 +42,9 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  # The card content is sourced verbatim from the same narration/caption source, not reconstructed figures.
  x,y,w,h=zones["card_area"]
  lines=part["caption_sentences"]
- for j,line in enumerate(lines[:5]):
+ assert len(lines)<=5,("CARD_SENTENCE_TRUNCATION_FORBIDDEN",card["scene"],len(lines))
+ assert all(isinstance(line,str) and line.strip() for line in lines),("CARD_SENTENCE_EMPTY",card["scene"])
+ for j,line in enumerate(lines):
   # Fit into bounded card width, preserve complete text by wrapping into multiple lines.
   size=31 if len(lines)>3 else 37;f=font(size)
   maxw=w-110; chunks=[];cur=""
