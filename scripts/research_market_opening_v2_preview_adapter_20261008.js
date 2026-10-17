@@ -13,7 +13,7 @@ function assemble(master){
  const lines=[
   ...OPENING_LINES,
   '我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。',
-  '今天上市市場上漲'+count(v.rising_count)+'家，下跌'+count(v.falling_count)+'家，平盤'+count(v.unchanged_count)+'家，漲停'+count(v.limit_up_count)+'家。',
+  '依證交所官方 MI_INDEX「股票」欄統計，今天上漲'+count(v.rising_count)+'家，下跌'+count(v.falling_count)+'家，平盤'+count(v.unchanged_count)+'家，漲停'+count(v.limit_up_count)+'家；這不是逐檔認證的普通股母體。',
   '大盤漲跌幅為'+String(v.index_change_pct)+'%，全市場成交金額為'+String(v.turnover_twd)+'元。',
   '外資淨額'+String(v.foreign_net_twd)+'元，投信'+String(v.trust_net_twd)+'元，自營商'+String(v.dealer_net_twd)+'元。',
   '依指數方向、漲跌家數與三大法人淨額交叉觀察，本日研究訊號為'+v.regime+'；這不是經過正式編輯認證的市場結論。'
