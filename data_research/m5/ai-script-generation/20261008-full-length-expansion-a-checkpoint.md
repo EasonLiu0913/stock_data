@@ -1,0 +1,24 @@
+# Prompt A V3 — 20261008 full-length expansion checkpoint
+
+Status: PROGRESS / RESEARCH_ONLY. Owner requested continuation. This document is a research checkpoint, NOT the completed full-length script, CI PASS, or authorization to render/publish. Prompt B FROZEN; publication_authorized=false; render_authorized=false.
+
+## Durable baseline and gap
+- Run 39041597754, commit 79097f4631786553693648c79ad7d0c06489d1b4, Artifact 12104268170: actual M8VIS research preview 118.152 seconds, six scenes, 21 sentence units; user accepted restored original subtitle vertical position. Preserve approved horizontal centering, no caption background, M8VIS card composition.
+- Actual frozen JSON `20261008-original-script-v3-research.json` has only three sentence units each for 6672, 2305 and 1301. `editorial_complete=false`; caption projection still IDENTICAL_RESEARCH_PLACEHOLDER_NOT_FINAL_SRT. Thus 118.152-second research preview is not the 5–10-minute full-video acceptance.
+- Owner explicitly removed precise phoneme-level lip sync as a desired feature. Natural approximate speech-responsive presenter animation remains. This instruction does NOT remove sentence-level spoken/SRT semantic parity, actual media proof, or immutable historical acceptance; resolve any genuine contract conflict prospectively under governance, not by editing old PASS.
+
+## Evidence-bounded expansion direction (not a deterministic script template)
+- 6672 騰輝電子-KY: 505→555 TWD (+9.9%), 3,825 lots; foreign +251, trust +20, dealer -21 lots; margin -178 lots. Distinguish dated stock/Facts proof from upstream September revenue/news pointers whose underlying webpages have not been independently verified. Discuss competing interpretations and next-day price/volume and revenue persistence without claiming news caused the move.
+- 2305 全友: 58.9→64.7 TWD (+9.85%), 10,587 lots; foreign raw +3,697,975 shares, trust -5,000 shares, dealer proprietary 0 plus hedge +41,283 = TOTAL +41,283 shares (approximately +41 lots); margin +529 lots. Do not misstate dealer as zero total or upgrade generic ticker news URL to independently verified event.
+- 1301 台塑: 75.4→81.3 TWD (+7.82%), 245,433 lots; foreign +14,225, trust +13,940, dealer -567 lots, margin +10,542 lots. Petrochemical Q4 demand is a contemporaneous expectation, not demonstrated spread or earnings improvement.
+- Market: preserve dated MI_INDEX 股票-column breadth 425 up, 540 down, 109 unchanged, 14 limit-up, 2 limit-down, and final BFI82U institutional directions. Scope is not a certified historical ordinary-stock roster.
+- Fixed four opening sentences verbatim, fourth CC reminder exactly once. Market opening 30–90 seconds under latest owner instruction; original M8VIS market narration measured 39.072 seconds. Target full video 300–600 seconds measured from newly synthesized media, never by adding silence or duplicating text.
+
+## Required next implementation and proof
+1. Independently source-review any newly promoted revenue/event claims; otherwise label as contemporary association/hypothesis or omit. Produce original, evidence-backed editorial expansion and per-claim provenance, dates, units, epistemic status and source pointers.
+2. Update one canonical research JSON, derive spoken and Arabic-number caption variants with sentence-level semantic equivalence, natural punctuation and <=30-character lines. Any material edits invalidate affected previous TTS/SRT/MP4 proof.
+3. Audit exact research branch push paths and all matching privileged indirect listeners before changes that trigger CI. Existing `research-ai-v3-sentence-audio-only.yml` only pushes on its own workflow or seven named scripts; a documentation-only commit here does NOT trigger it. Its token is contents:read and its job is branch-guarded; `deploy-pages.yml` and `daily-gainers-video-upload-orchestrator.yml` push filters are main-only.
+4. Then execute isolated real Edge TTS (+15% zh-TW-YunJheNeural), SRT, M8VIS and MP4 with real Run ID, job log, Artifact, duration and hashes. Preserve accepted subtitle position, no overlapping VTuber/cards/progress.
+5. Do not claim A COMPLETE until the real complete 300–600-second video, actual caption/audio parity, source audit and visual acceptance are proven. Prompt B remains ineligible.
+
+No production, cron, Pages, YouTube, main, publication lock or Prompt B modifications in this checkpoint.
