@@ -202,5 +202,14 @@ diffs=[ImageChops.difference(samples[0],other).getbbox() is not None for other i
 assert any(diffs),"ENCODED_PRESENTER_NOT_CHANGING"
 encoded_presenter_motion_verified=True
 proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":21,"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":True,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":encoded_presenter_motion_verified,"encoded_presenter_frame_samples":4,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
+# Consolidated machine-verifiable preview handoff. Manual/editorial gates stay false.
+card_proof=json.loads((out/"card-content-proof.json").read_text(encoding="utf-8"))
+assert len(card_proof["cards"])==6,"M8VIS_HANDOFF_CARD_COUNT_DRIFT"
+assert len({c["scene"] for c in card_proof["cards"]})==6,"M8VIS_HANDOFF_DUPLICATE_SCENE"
+assert sum(len(c["caption_sentences"]) for c in card_proof["cards"])==len(bridge["sentences"]),"M8VIS_HANDOFF_SENTENCE_COUNT_DRIFT"
+assert all(c["scene_png_sha256"] and c["caption_sha256"] for c in card_proof["cards"]),"M8VIS_HANDOFF_CARD_HASH_MISSING"
+handoff={"contract":"M8VIS_RESEARCH_PREVIEW_HANDOFF_V1","target_date":manifest["target_date"],"research_master_sha256":source["research_master_sha256"],"numeric_claim_count":len(manifest["claims"]),"scene_count":proof["scene_count"],"sentence_count":proof["sentence_count"],"video_seconds":proof["video_seconds"],"mp4_sha256":proof["mp4_sha256"],"card_content_proof_sha256":hashlib.sha256((out/"card-content-proof.json").read_bytes()).hexdigest(),"srt_sha256":hashlib.sha256(srt.read_bytes()).hexdigest(),"machine_gates":{"numeric_caption_parity":True,"card_timed_caption_parity":True,"scene_png_hashes":True,"encoded_presenter_motion":True,"subtitle_burned_in":True},"pending_gates":{"manual_visual_review":True,"editorial_certification":True,"accurate_lip_sync":True},"publication_authorized":False,"render_authorized":False}
+(out/"preview-handoff.json").write_text(json.dumps(handoff,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+print("M8VIS_PREVIEW_HANDOFF_PASS scenes=6 sentences=21 numeric_claims=10 manual_review=pending editorial=pending lip_sync=pending no_publish=true")
 (out/"visual-render-proof.json").write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
 print("V3_M8VIS_VISUAL_RENDER_PASS scenes=6 original_sprite_four_poses=true heuristic_mouth=true encoded_presenter_motion=true subtitles_burned=true lip_sync=false editorial_certified=false no_publish=true")
