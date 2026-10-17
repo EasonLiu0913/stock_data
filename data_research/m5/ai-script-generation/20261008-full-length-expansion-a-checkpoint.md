@@ -22,3 +22,9 @@ Status: PROGRESS / RESEARCH_ONLY. Owner requested continuation. This document is
 5. Do not claim A COMPLETE until the real complete 300–600-second video, actual caption/audio parity, source audit and visual acceptance are proven. Prompt B remains ineligible.
 
 No production, cron, Pages, YouTube, main, publication lock or Prompt B modifications in this checkpoint.
+
+## 2026-10-18 continuation: verified first expansion
+- Research source now has 24 spoken sentence units: opening 4, market 5, featured 6672/2305/1301 each 4, conclusion 3. Three newly added sentences describe dated trading volume and margin changes, without promoting unreviewed news into proven causality.
+- Research Video Recovery Readonly Run 39047778017 on commit 8fcc8825c6216ee8383a8ff9a970c53a0bc9786c completed SUCCESS. Earlier intermediate runs failed on stale sentence-count assertions and overlapping Chinese-number phrase test logic; those failures were diagnosed from actual job logs and repaired. This is source/caption research validation only, NOT new real audio, SRT or MP4 acceptance.
+- Media bridge still hard-codes the historical 21-sentence preview. Do not replay old audio proof against the changed 24-sentence source; synthesize fresh per-sentence audio and verify new hashes/duration after substantive editorial expansion. The approved historical 118.152-second preview remains archived, not overwritten.
+- Remaining: expand evidence-backed analysis to measured 300–600 seconds without silence padding, keep market opening 30–90 seconds, preserve original subtitle placement and verify newly generated media in isolated CI. Prompt B frozen; publication_authorized=false.
