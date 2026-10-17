@@ -56,7 +56,7 @@ const wrongMaster=structuredClone(d);wrongMaster.research_master_sha256='invalid
 assert.throws(()=>buildResearchCaptionSource(wrongMaster),/MASTER_SHA/);
 console.log('V3_BUILDER_MASTER_SHA_NEGATIVE_TEST_PASS research_only=true');
 const missingSentence=structuredClone(d);missingSentence.segments[0].spoken_sentences.pop();
-assert.throws(()=>buildResearchCaptionSource(missingSentence),/SENTENCE_INVENTORY/);
+assert.throws(()=>buildResearchCaptionSource(missingSentence),/SENTENCE_INVENTORY_MARKET/);
 console.log('V3_BUILDER_SENTENCE_INVENTORY_NEGATIVE_TEST_PASS research_only=true');
 const unauthorizedRender=structuredClone(d);unauthorizedRender.render_authorized=true;
 assert.throws(()=>buildResearchCaptionSource(unauthorizedRender),/RENDER_GATE/);
