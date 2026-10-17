@@ -53,9 +53,17 @@ def has_number_token(s,n):
 assert not has_number_token("425家",2),"M8VIS_NUMERIC_TOKEN_NEGATIVE_CONTROL_FAILED"
 for key in ("rising","falling","unchanged","limit_up","limit_down"):
  assert has_number_token(market_text,manifest["claims"]["MARKET_BREADTH"][key]),("M8VIS_RENDER_BREADTH_TOKEN_DRIFT",key)
+# Verify share-to-lot display conversion (one TWSE lot = 1,000 shares).
+# Editorial narration explicitly marks these as approximate lots.
+def approx_lots(shares):
+ return number(round(abs(shares)/1000))
+for code,keys in (("6672",("foreign","investment_trust","dealer")),("1301",("foreign","investment_trust"))):
+ for key in keys:
+  assert has_number_token(by_scene[code],round(abs(manifest["claims"][code+"_FLOW"][key])/1000)),("M8VIS_RENDER_FLOW_LOTS_DRIFT",code,key)
+assert has_number_token(by_scene["2305"],abs(manifest["claims"]["2305_FLOW"]["investment_trust"])),"M8VIS_RENDER_2305_TRUST_SHARES_DRIFT"
 # A negative control must reject a deliberately altered manifest value.
 assert number(manifest["claims"]["MARKET_INDEX"]["close"]+10000) not in market_text,"M8VIS_RENDER_NUMERIC_NEGATIVE_CONTROL_FAILED"
-print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 breadth=5 previous_close=3 turnover=2 institutional=3 pct=4 bounded_breadth=true negative_control=true research_only=true")
+print("M8VIS_RENDER_NUMERIC_CAPTION_VALUE_PASS index=1 featured_close=3 flow2305=2 breadth=5 previous_close=3 turnover=2 institutional=3 pct=4 flow_lots=5 flow2305_trust=1 bounded_breadth=true negative_control=true research_only=true")
 fontpath="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 assert pathlib.Path(fontpath).exists(),"CJK_FONT_REQUIRED"
 font=lambda n:ImageFont.truetype(fontpath,n)
