@@ -117,25 +117,49 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
  card_content_proof.append({"scene":card["scene"],"claim_ids":card["claim_ids"],"caption_sentences":lines,"caption_sha256":hashlib.sha256(json.dumps(lines,ensure_ascii=False,separators=(",",":")).encode("utf-8")).hexdigest()})
  assert len(lines)<=5,("CARD_SENTENCE_TRUNCATION_FORBIDDEN",card["scene"],len(lines))
  assert all(isinstance(line,str) and line.strip() for line in lines),("CARD_SENTENCE_EMPTY",card["scene"])
- # Visual-polish research: fit every complete caption into a measured row,
- # rather than relying on fixed offsets that can overlap after wrapping.
- row_h=(h-76)/len(lines); card_rows=[]
- for j,line in enumerate(lines):
-  maxw=w-110
-  for size in range(39,25,-1):
-   f=font(size);chunks=[];cur=""
-   for ch in line:
-    if d.textbbox((0,0),cur+ch,font=f)[2]>maxw and cur:chunks.append(cur);cur=ch
-    else:cur+=ch
-   if cur:chunks.append(cur)
-   line_h=size*1.3
-   if len(chunks)<=2 and len(chunks)*line_h<=row_h-12:break
-  else:raise AssertionError(("CARD_TEXT_OVERFLOW",card["scene"],j))
-  yy=y+38+j*row_h+(row_h-len(chunks)*line_h)/2
-  assert yy>=y+30 and yy+len(chunks)*line_h<=y+h-25,("CARD_TEXT_VERTICAL_OVERFLOW",card["scene"],j)
-  for k,ch in enumerate(chunks):d.text((x+48,round(yy+k*line_h)),ch,font=f,fill="#f2f5f8")
-  card_rows.append({"font_px":size,"wrapped_lines":len(chunks),"row_height_px":round(row_h,1)})
- card_content_proof[-1]["visual_polish_rows"]=card_rows
+ # Structured information cards are independent of SRT/caption sentences.
+ # Only verified manifest figures may populate numeric tiles.
+ scene=card["scene"];claims=manifest["claims"]; tiles=[]
+ if scene=="market":
+  breadth=claims["MARKET_BREADTH"]
+  tiles=[("上漲",number(breadth["rising"]),"家"),("下跌",number(breadth["falling"]),"家"),("平盤",number(breadth["unchanged"]),"家"),("漲停",number(breadth["limit_up"]),"家")]
+  # Owner-approved 2x2 cross divider, not four caption paragraphs.
+  d.line((x+w/2,y+24,x+w/2,y+h-24),fill="#7991a7",width=4)
+  d.line((x+24,y+h/2,x+w-24,y+h/2),fill="#7991a7",width=4)
+  for j,(heading,value,unit) in enumerate(tiles):
+   cx=x+w*(0.25 if j%2==0 else 0.75);cy=y+h*(0.25 if j<2 else 0.75)
+   d.text((cx,cy-85),heading,font=font(39),fill="#d4e0ea",anchor="mm")
+   d.text((cx,cy+5),value,font=font(91),fill="#f5f7fa",anchor="mm")
+   d.text((cx,cy+90),unit,font=font(29),fill="#e9bb77",anchor="mm")
+ elif scene in ("6672","2305","1301"):
+  price=claims[scene+"_PRICE"];fl=claims[scene+"_FLOW"]
+  tiles=[("收盤價",number(price["close"]),"元"),("漲跌幅",pct(price["change_pct"]),"漲跌幅"),("前收盤",number(price["previous_close"]),"元")]
+  for j,(heading,value,unit) in enumerate(tiles):
+   xx=x+45+j*450
+   rect(d,(xx,y+45,410,190),"#344b61","#66829b")
+   d.text((xx+25,y+65),heading,font=font(32),fill="#d4e0ea")
+   d.text((xx+25,y+125),value,font=font(60),fill="#ffffff")
+  for j,(key,label) in enumerate((("foreign","外資"),("investment_trust","投信"),("dealer","自營商"))):
+   if key not in fl:continue
+   value=fl[key];unit="股" if scene=="2305" else "張"
+   shown=number(abs(value)) if scene=="2305" else approx_lots(value)
+   heading=label+" "+direction(value)
+   xx=x+50+j*445
+   d.text((xx,y+315),heading,font=font(35),fill="#e9bb77")
+   d.text((xx,y+390),shown+" "+unit,font=font(43),fill="#ffffff")
+ elif scene=="opening":
+  tiles=[("品牌","TAIWAN STOCK",""),("主題","追蹤資金・解讀行情","")]
+  d.text((x+85,y+105),"TAIWAN STOCK",font=font(82),fill="#e9bb77")
+  d.text((x+85,y+280),"追蹤資金  /  解讀行情",font=font(52),fill="#ffffff")
+  d.text((x+85,y+405),"每日 5% 強勢股研究",font=font(39),fill="#d4e0ea")
+ else:
+  tiles=[("市場","漲跌與資金",""),("個股","強勢股研究",""),("觀察","後續追蹤","")]
+  for j,(heading,value,unit) in enumerate(tiles):
+   yy=y+65+j*150
+   d.ellipse((x+65,yy+13,x+105,yy+53),fill="#e9bb77")
+   d.text((x+140,yy),heading+"｜"+value,font=font(48),fill="#ffffff")
+ assert tiles and not any(line in str(tiles) for line in lines),"STRUCTURED_CARD_MUST_NOT_DUPLICATE_CAPTION"
+ card_content_proof[-1]["structured_card"]={"type":"cross_2x2" if scene=="market" else "stock_metrics" if scene in ("6672","2305","1301") else "opening_brand" if scene=="opening" else "three_takeaways","tiles":[{"label":v[0],"value":v[1],"unit":v[2]} for v in tiles],"source":"verified_numeric_manifest" if scene=="market" or scene in ("6672","2305","1301") else "editorial_section_labels"}
  px,py,pw,ph=zones["presenter_reserved"]
  assert poses["closed"].width<=pw and poses["closed"].height<=ph,"PRESENTER_RESERVED_ZONE_OVERFLOW"
  avatar_x=px+(pw-poses["closed"].width)//2;avatar_y=py+ph-poses["closed"].height
@@ -209,16 +233,16 @@ for stamp in (0.08,0.24,0.40,0.56):
 diffs=[ImageChops.difference(samples[0],other).getbbox() is not None for other in samples[1:]]
 assert any(diffs),"ENCODED_PRESENTER_NOT_CHANGING"
 encoded_presenter_motion_verified=True
-proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":21,"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":False,"scene_caption_backdrops_rendered":True,"structured_information_cards_verified":False,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":encoded_presenter_motion_verified,"encoded_presenter_frame_samples":4,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
+proof={"contract":"M8VIS_RESEARCH_HEURISTIC_MOUTH_PREVIEW","scene_count":6,"sentence_count":21,"mp4_sha256":hashlib.sha256(mp4.read_bytes()).hexdigest(),"video_seconds":float(probe["format"]["duration"]),"scene_cards_rendered":True,"scene_caption_backdrops_rendered":False,"structured_information_cards_verified":True,"subtitle_burned_in":True,"original_sprite_four_poses_integrated":True,"heuristic_mouth_intervals":sum(map(len,intervals.values())),"mouth_motion_verified":encoded_presenter_motion_verified,"encoded_presenter_frame_samples":4,"lip_sync_verified":False,"visual_manual_review":False,"editorial_certified":False,"publication_authorized":False}
 # Consolidated machine-verifiable preview handoff. Manual/editorial gates stay false.
 card_proof=json.loads((out/"card-content-proof.json").read_text(encoding="utf-8"))
 assert len(card_proof["cards"])==6,"M8VIS_HANDOFF_CARD_COUNT_DRIFT"
 assert len({c["scene"] for c in card_proof["cards"]})==6,"M8VIS_HANDOFF_DUPLICATE_SCENE"
 assert sum(len(c["caption_sentences"]) for c in card_proof["cards"])==len(bridge["sentences"]),"M8VIS_HANDOFF_SENTENCE_COUNT_DRIFT"
 assert all(c["scene_png_sha256"] and c["caption_sha256"] for c in card_proof["cards"]),"M8VIS_HANDOFF_CARD_HASH_MISSING"
-handoff={"contract":"M8VIS_RESEARCH_PREVIEW_HANDOFF_V1","target_date":manifest["target_date"],"research_master_sha256":source["research_master_sha256"],"numeric_claim_count":len(manifest["claims"]),"scene_count":proof["scene_count"],"sentence_count":proof["sentence_count"],"video_seconds":proof["video_seconds"],"mp4_sha256":proof["mp4_sha256"],"card_content_proof_sha256":hashlib.sha256((out/"card-content-proof.json").read_bytes()).hexdigest(),"srt_sha256":hashlib.sha256(srt.read_bytes()).hexdigest(),"machine_gates":{"numeric_caption_parity":True,"card_timed_caption_parity":True,"scene_png_hashes":True,"encoded_presenter_motion":True,"subtitle_burned_in":True,"structured_information_cards":False},"failed_gates":{"structured_information_cards":"OWNER_REJECTED_CAPTION_DUPLICATION"},"pending_gates":{"manual_visual_review":True,"editorial_certification":True,"accurate_lip_sync":True},"publication_authorized":False,"render_authorized":False}
+handoff={"contract":"M8VIS_RESEARCH_PREVIEW_HANDOFF_V1","target_date":manifest["target_date"],"research_master_sha256":source["research_master_sha256"],"numeric_claim_count":len(manifest["claims"]),"scene_count":proof["scene_count"],"sentence_count":proof["sentence_count"],"video_seconds":proof["video_seconds"],"mp4_sha256":proof["mp4_sha256"],"card_content_proof_sha256":hashlib.sha256((out/"card-content-proof.json").read_bytes()).hexdigest(),"srt_sha256":hashlib.sha256(srt.read_bytes()).hexdigest(),"machine_gates":{"numeric_caption_parity":True,"card_timed_caption_parity":True,"scene_png_hashes":True,"encoded_presenter_motion":True,"subtitle_burned_in":True,"structured_information_cards":True},"pending_gates":{"manual_visual_review":True,"editorial_certification":True,"accurate_lip_sync":True},"publication_authorized":False,"render_authorized":False}
 (out/"preview-handoff.json").write_text(json.dumps(handoff,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 assert json.loads((out/"preview-handoff.json").read_text(encoding="utf-8"))==handoff,"M8VIS_HANDOFF_JSON_ROUNDTRIP_FAILED"
-print("M8VIS_PREVIEW_HANDOFF_PASS scenes=6 sentences=21 numeric_claims=10 manual_review=pending editorial=pending lip_sync=pending no_publish=true")
+assert all(c.get("structured_card",{}).get("tiles") for c in card_proof["cards"]),"STRUCTURED_CARDS_REQUIRED"\nassert card_proof["cards"][1]["structured_card"]["type"]=="cross_2x2","MARKET_CROSS_CARD_REQUIRED"\nprint("M8VIS_STRUCTURED_CARDS_PASS scenes=6 market_cross_2x2=true caption_backdrops=false manual_review=pending")\nprint("M8VIS_PREVIEW_HANDOFF_PASS scenes=6 sentences=21 numeric_claims=10 manual_review=pending editorial=pending lip_sync=pending no_publish=true")
 (out/"visual-render-proof.json").write_text(json.dumps(proof,ensure_ascii=False,indent=2)+"\n")
 print("V3_M8VIS_VISUAL_RENDER_PASS scenes=6 original_sprite_four_poses=true heuristic_mouth=true encoded_presenter_motion=true subtitles_burned=true lip_sync=false editorial_certified=false no_publish=true")
