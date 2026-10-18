@@ -41,7 +41,16 @@ function run(root,date,out){
   result.stages[2].status='REVIEW_REQUIRED';
   result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),...(institutional.status==='VERIFIED'?[]:['FINAL_DATED_BFI82U_THREE_GROUPS_PENDING']),...(breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?[]:['DATED_MI_INDEX_STOCK_AGGREGATE_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
   const emptyReview={target_date:date,inventory_sha256:hash(JSON.stringify(claims)),decisions:[]};
-  const gate=review(claims,emptyReview);
+  // Explicit review decisions are an input, never inferred from a research memo or claim inventory.
+  const reviewInputPath=path.join(out,'editorial-review-input.json');
+  let gate;
+  if(fs.existsSync(reviewInputPath)){
+   try{gate=review(claims,JSON.parse(fs.readFileSync(reviewInputPath,'utf8')));}
+   catch(e){
+    gate={contract:'DATE_TO_VIDEO_V1_D4_REVIEW_GATE',target_date:date,status:'REJECTED',reason:e.message,inventory_sha256:emptyReview.inventory_sha256,approved_claim_ids:[],claim_whitelist_verified:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+    result.blockers.push('INDEPENDENT_REVIEW_INPUT_REJECTED');
+   }
+  }else gate=review(claims,emptyReview);
   const editorialBrief={target_date:date,contract:'DATE_TO_VIDEO_V1_EDITORIAL_RESEARCH_BRIEF',status:marketMaster.status==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?'OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED':'WAITING_MARKET_MASTER',source_master_sha256:hash(JSON.stringify(marketMaster)),observations:marketMaster.status==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?[{kind:'OFFICIAL_STOCK_COLUMN_BREADTH',advancers:breadth.advancers,decliners:breadth.decliners,unchanged:breadth.unchanged,limit_up_count:breadth.limit_up_count,identity_certified:false},{kind:'MARKET_TURNOVER',turnover_twd:marketMaster.market_trading.turnover_twd},{kind:'INSTITUTIONAL_FLOWS',groups:marketMaster.institutional}]:[],analysis_questions:['Is breadth consistent with index direction and turnover?','Do institutional net flows support or diverge from breadth?','Which independently reviewed stock claims provide a differentiated, non-causal interpretation?'],approved_claim_ids:gate.approved_claim_ids,original_analysis:null,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
   if(editorialBrief.observations.length===3){
    const flows=marketMaster.institutional;

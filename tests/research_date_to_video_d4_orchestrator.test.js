@@ -37,6 +37,16 @@ for(const date of ['20261008','20261013']){
  }else assert.equal(r.stages[0].status,'WAITING_SOURCE');
  console.log('D4_ORCHESTRATOR_DATE_STATUS '+date+' '+r.stages[0].status);
 }
+const reviewDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-review-'));
+fs.writeFileSync(path.join(reviewDir,'editorial-review-input.json'),JSON.stringify({target_date:'20261013',inventory_sha256:'wrong',decisions:[]}));
+const reviewRejected=run('.','20261008',reviewDir);
+const rejectedReview=JSON.parse(fs.readFileSync(path.join(reviewDir,'editorial-review.json')));
+assert.equal(rejectedReview.status,'REJECTED');
+assert.equal(rejectedReview.claim_whitelist_verified,false);
+assert.equal(rejectedReview.approved_claim_ids.length,0);
+assert.ok(reviewRejected.blockers.includes('INDEPENDENT_REVIEW_INPUT_REJECTED'));
+assert.equal(reviewRejected.render_authorized,false);
+console.log('D4_INDEPENDENT_REVIEW_INPUT_FAIL_CLOSED_PASS');
 const draftDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-draft-'));
 fs.writeFileSync(path.join(draftDir,'original-analysis-draft-input.json'),JSON.stringify({target_date:'20261008',insights:[]}));
 const rejected=run('.','20261008',draftDir);
