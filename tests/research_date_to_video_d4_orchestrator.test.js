@@ -173,6 +173,16 @@ assert.deepEqual(compat.source_section_ids,projection.sections.map(x=>x.id));
 assert.equal(compat.market_master_sha256,projection.market_master_sha256);
 assert.equal(compat.render_authorized,false);
 assert.equal(compat.publication_authorized,false);
+const adapter=JSON.parse(fs.readFileSync(path.join(candidateDir,'m8vis-scene-adapter.json')));
+assert.deepEqual(adapter.scene_ids,['opening','market','6672','2305','1301','conclusion']);
+assert.deepEqual(adapter.scenes[1].source_section_ids,projection.sections.slice(0,2).map(x=>x.id));
+assert.deepEqual(adapter.scenes[5].source_section_ids,projection.sections.slice(3).map(x=>x.id));
+for(const code of ['6672','2305','1301']){const scene=adapter.scenes.find(x=>x.id===code);assert.equal(scene.stock_claim_id,'20261008:'+code+':PRICE_CHANGE');assert.equal(scene.stock_claim_review_pending,true);assert.deepEqual(scene.excluded_pending_claim_ids,[scene.stock_claim_id]);assert.equal(scene.caption_sentences,null);assert.equal(scene.visual_asset,null);assert.equal(scene.render_authorized,false);}
+assert.equal(adapter.scenes[0].opening_branding_required,true);
+assert.equal(adapter.scenes[0].facts.length,0);
+assert.equal(adapter.legacy_renderer_compatible,false);
+assert.equal(adapter.publication_authorized,false);
+console.log('D4_M8VIS_SIX_SCENE_RESEARCH_ADAPTER_PASS');
 console.log('D4_M8VIS_COMPATIBILITY_GAP_REPORTED_PASS');
 assert.deepEqual(projection.factual_card_inputs.map(x=>x.section_id),projection.sections.map(x=>x.id));
 assert.deepEqual(projection.scene_plan.map(x=>x.source_section_id),projection.sections.map(x=>x.id));
@@ -224,7 +234,7 @@ fs.writeFileSync(path.join(staleDir,'original-analysis-draft-check.json'),'{"sta
 const rerunMissing=run('.','20261014',staleDir);
 assert.equal(rerunMissing.stages[0].status,'WAITING_SOURCE');
 assert.ok(fs.existsSync(path.join(staleDir,'status.json')));
-for(const name of ['featured-price-observations.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','independent-review-worksheet.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
+for(const name of ['featured-price-observations.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','independent-review-worksheet.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
 console.log('D4_REUSED_OUTPUT_DIR_FAIL_CLOSED_PASS');
 const malformedDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-malformed-'));
 const originalRead=fs.readFileSync;
