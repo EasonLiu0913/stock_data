@@ -64,6 +64,12 @@ function run(root,date,out){
    try{const {preflight}=require('./research_date_to_video_d4_candidate_preflight');write('authored-candidate-preflight.json',preflight(JSON.parse(fs.readFileSync(candidatePath,'utf8')),marketMaster,claims,gate));}
    catch(e){write('authored-candidate-preflight.json',{contract:'DATE_TO_VIDEO_V1_D4_CANDIDATE_PREFLIGHT',target_date:date,status:'REJECTED',reason:e.message,editorial_certified:false,render_authorized:false,publication_authorized:false});result.blockers.push('AUTHORED_CANDIDATE_PREFLIGHT_REJECTED')}
   }
+  // Produce a date-scoped, non-narratable factual stock-price snapshot without silently approving claims.
+  const candidatePriceClaims=claims.claims.filter(c=>c.kind==='PRICE_CHANGE'&&['6672','2305','1301'].includes(c.code));
+  if(date==='20261008'){
+   const priceSnapshot={contract:'DATE_TO_VIDEO_V1_D4_FEATURED_PRICE_OBSERVATIONS',target_date:date,status:'CROSSCHECKED_PRICE_ONLY_INDEPENDENT_EDITORIAL_REVIEW_PENDING',claim_inventory_sha256:hash(JSON.stringify(claims)),stocks:candidatePriceClaims.map(c=>({code:c.code,claim_id:c.claim_id,change_pct:c.statement,evidence_sources:c.evidence_sources,review_status:gate.approved_claim_ids.includes(c.claim_id)?'EXPLICIT_REVIEW_DECISION_PRESENT':'REVIEW_REQUIRED'})),news_causality_verified:false,stock_flow_verified_for_narration:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+   write('featured-price-observations.json',priceSnapshot);
+  }
   const draftPath=path.join(out,'original-analysis-draft-input.json');
   if(fs.existsSync(draftPath)){
    let draftCheck;

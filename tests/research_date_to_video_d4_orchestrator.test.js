@@ -129,6 +129,14 @@ console.log('D4_DATED_PRICE_CLAIM_SOURCE_CROSSCHECK_PASS');
 assert.equal(actualPreflight.candidate_sha256,crypto.createHash('sha256').update(JSON.stringify(actualCandidate)).digest('hex'));
 assert.equal(actualPreflight.inventory_sha256,crypto.createHash('sha256').update(JSON.stringify(JSON.parse(fs.readFileSync(path.join(candidateDir,'claims.json'))))).digest('hex'));
 assert.equal(actualPreflight.render_authorized,false);
+const factualPrices=JSON.parse(fs.readFileSync(path.join(candidateDir,'featured-price-observations.json')));
+assert.equal(factualPrices.status,'CROSSCHECKED_PRICE_ONLY_INDEPENDENT_EDITORIAL_REVIEW_PENDING');
+assert.deepEqual(new Set(factualPrices.stocks.map(x=>x.code)),new Set(['6672','2305','1301']));
+assert.ok(factualPrices.stocks.every(x=>x.review_status==='REVIEW_REQUIRED'&&x.evidence_sources[0].origin==='dated_list_and_facts_crosscheck'));
+assert.equal(factualPrices.news_causality_verified,false);
+assert.equal(factualPrices.narration_authorized,false);
+assert.equal(factualPrices.render_authorized,false);
+console.log('D4_FEATURED_FACTUAL_PRICE_SNAPSHOT_PASS');
 console.log('D4_REAL_CANDIDATE_ACTIONABLE_PREFLIGHT_PASS');
 
 const candidateCheck=JSON.parse(fs.readFileSync(path.join(candidateDir,'original-analysis-draft-check.json')));
