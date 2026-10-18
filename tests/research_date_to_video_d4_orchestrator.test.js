@@ -62,6 +62,25 @@ assert.equal(reviewed.claim_whitelist_verified,false);
 assert.equal(reviewed.editorial_certified,false);
 assert.equal(reviewValidRun.render_authorized,false);
 assert.deepEqual(JSON.parse(fs.readFileSync(path.join(reviewValidDir,'original-analysis-task.json'))).approved_claim_ids,[priceClaim.claim_id]);
+const draftTask=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'original-analysis-task.json')));
+const mkInsight=(id,section,evidence)=>({id,section,observation:'可核對的日期限定觀察',interpretation:'獨立研究解讀，尚待編輯審核',uncertainty:'相關性不代表因果',evidence});
+const datedDraft={target_date:'20261008',insights:[
+ mkInsight('breadth','market_breadth_vs_index',[{type:'master_field',path:'breadth.advancers'},{type:'master_field',path:'taiex.change_points'}]),
+ mkInsight('flow','institutional_flow_vs_breadth',[{type:'master_field',path:'institutional.foreign.net_twd'}]),
+ mkInsight('stock','selected_stock_evidence',[{type:'claim_id',id:priceClaim.claim_id}]),
+ mkInsight('counter','counterarguments_and_uncertainty',[{type:'master_field',path:'breadth.decliners'}]),
+ mkInsight('summary','three_point_summary',[{type:'master_field',path:'market_trading.turnover_twd'}])
+]};
+assert.equal(draftTask.required_sections.length,datedDraft.insights.length);
+fs.writeFileSync(path.join(reviewValidDir,'original-analysis-draft-input.json'),JSON.stringify(datedDraft));
+const draftIntegrated=run('.','20261008',reviewValidDir);
+const draftIntegratedCheck=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'original-analysis-draft-check.json')));
+assert.equal(draftIntegratedCheck.status,'STRUCTURAL_EVIDENCE_VALIDATED_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED');
+assert.equal(draftIntegratedCheck.editorial_certified,false);
+assert.equal(draftIntegratedCheck.render_authorized,false);
+assert.equal(draftIntegrated.render_authorized,false);
+assert.equal(JSON.parse(fs.readFileSync(path.join(reviewValidDir,'media-handoff.json'))).draft_check_status,draftIntegratedCheck.status);
+console.log('D4_REVIEW_TO_ORIGINAL_DRAFT_INTEGRATION_PASS');
 console.log('D4_EXPLICIT_DATED_REVIEW_INPUT_PASS');
 const draftDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-draft-'));
 fs.writeFileSync(path.join(draftDir,'original-analysis-draft-input.json'),JSON.stringify({target_date:'20261008',insights:[]}));
