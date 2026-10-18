@@ -66,7 +66,11 @@ function run(root,date,out){
    catch(e){draftCheck={contract:'DATE_TO_VIDEO_V1_DRAFT_EVIDENCE_GATE',target_date:date,status:'REJECTED',reason:e.message,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};result.blockers.push('ORIGINAL_ANALYSIS_DRAFT_REJECTED');}
    write('original-analysis-draft-check.json',draftCheck);
   }
-  const mediaHandoff={contract:'DATE_TO_VIDEO_V1_RESEARCH_MEDIA_HANDOFF',target_date:date,status:'BLOCKED_PENDING_EDITORIAL_AND_MEDIA_INPUTS',source_master_sha256:analysisTask.market_master_sha256,analysis_task_sha256:hash(JSON.stringify(analysisTask)),required_inputs:['independently_reviewed_original_analysis','approved_narration_script','narration_subtitle_sentence_parity','edge_tts_audio','vtuber_visual','scene_cards','offline_mp4_acceptance'],draft_check_status:fs.existsSync(path.join(out,'original-analysis-draft-check.json'))?JSON.parse(fs.readFileSync(path.join(out,'original-analysis-draft-check.json'),'utf8')).status:'NOT_SUBMITTED',fixed_opening_lines:['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','那麼我們開始囉。'],market_opening_seconds:{min:30,max:90},research_only:true,editorial_certified:false,render_authorized:false,publication_authorized:false};
+  const draftCheckPath=path.join(out,'original-analysis-draft-check.json');
+  const draftCheck=fs.existsSync(draftCheckPath)?JSON.parse(fs.readFileSync(draftCheckPath,'utf8')):null;
+  const reviewGateSha=hash(JSON.stringify(gate));
+  const draftCheckSha=draftCheck?hash(JSON.stringify(draftCheck)):null;
+  const mediaHandoff={contract:'DATE_TO_VIDEO_V1_RESEARCH_MEDIA_HANDOFF',target_date:date,status:'BLOCKED_PENDING_EDITORIAL_AND_MEDIA_INPUTS',source_master_sha256:analysisTask.market_master_sha256,analysis_task_sha256:hash(JSON.stringify(analysisTask)),required_inputs:['independently_reviewed_original_analysis','approved_narration_script','narration_subtitle_sentence_parity','edge_tts_audio','vtuber_visual','scene_cards','offline_mp4_acceptance'],draft_check_status:draftCheck?.status||'NOT_SUBMITTED',review_gate_sha256:reviewGateSha,draft_check_sha256:draftCheckSha,approved_claim_count:gate.approved_claim_ids.length,fixed_opening_lines:['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','那麼我們開始囉。'],market_opening_seconds:{min:30,max:90},research_only:true,editorial_certified:false,render_authorized:false,publication_authorized:false};
   write('media-handoff.json',mediaHandoff);
   write('original-analysis-task.json',analysisTask);
   write('editorial-research-brief.json',editorialBrief);
