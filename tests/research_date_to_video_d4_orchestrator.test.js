@@ -6,11 +6,12 @@ for(const date of ['20261008','20261013']){
  const r=run('.',date,dir);
  assert.equal(r.target_date,date);assert.equal(r.render_authorized,false);assert.equal(r.publication_authorized,false);
  assert.ok(fs.existsSync(path.join(dir,'status.json')));
- if(r.stages[0].status==='EVIDENCE_JOINED_NOT_CERTIFIED'){
+ if(['EVIDENCE_JOINED_NOT_CERTIFIED','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING'].includes(r.stages[0].status)){
   const claims=JSON.parse(fs.readFileSync(path.join(dir,'claims.json')));
   assert.equal(claims.target_date,date);assert.ok(claims.claim_count>0);
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
+  if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
  }else assert.equal(r.stages[0].status,'WAITING_SOURCE');
  console.log('D4_ORCHESTRATOR_DATE_STATUS '+date+' '+r.stages[0].status);
 }
