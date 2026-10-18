@@ -17,7 +17,12 @@ function verify(bytes,manifest,date){
 }
 function inspect(root,date){
  assert.match(date,/^20\d{6}$/);const prefix=path.join(root,'data_research/twse-market-opening/primary-archive',date,date+'-bfi82u');
- if(!fs.existsSync(prefix+'.json')||!fs.existsSync(prefix+'.manifest.json'))return {target_date:date,status:'WAITING_SOURCE',missing:['DATED_FINAL_BFI82U_RAW_AND_MANIFEST'],final_six_rows_verified:false,publication_authorized:false};
+ if(!fs.existsSync(prefix+'.json')||!fs.existsSync(prefix+'.manifest.json')){
+  const existing=['data_twse_institutional_investors/'+date+'_twse_institutional_investors.json','data_twse_foreign_investors/'+date+'_twse_foreign_investors.json','data_twse_investment_trust/'+date+'_twse_investment_trust.json','data_twse_dealers/'+date+'_twse_dealers.json'];
+  const repo_daily_files=existing.filter(p=>fs.existsSync(path.join(root,p)));
+  const raw=fs.existsSync(prefix+'.json'),manifest=fs.existsSync(prefix+'.manifest.json');
+  return {target_date:date,status:'WAITING_SOURCE',missing:[...(!raw?['DATED_FINAL_BFI82U_RAW_MISSING']:[]),...(!manifest?['DATED_FINAL_BFI82U_MANIFEST_MISSING']:[])],repo_daily_files,repo_daily_institutional_present:repo_daily_files.length>0,bfi82u_archive_status:'MISSING_OR_INCOMPLETE',note:'Daily security-level share counts are not BFI82U market-wide TWD amounts; obtain and verify dated official six-row payload before certification.',final_six_rows_verified:false,publication_authorized:false};
+ }
  return {target_date:date,status:'VERIFIED',...verify(fs.readFileSync(prefix+'.json'),JSON.parse(fs.readFileSync(prefix+'.manifest.json','utf8')),date)};
 }
 module.exports={verify,inspect};
