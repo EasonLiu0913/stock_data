@@ -124,6 +124,18 @@ assert.throws(()=>parse(payload,'20261008'),/INVALID_OR_STALE_MI_INDEX/);
 fs.writeFileSync('/tmp/video-recovery-proof/multidate-20261013-mi-index-breadth.json',JSON.stringify(b,null,2)+'\n');
 console.log('MULTIDATE_20261013_OFFICIAL_STOCK_COLUMN_PASS '+b.eligible_count+'; identity uncertified; publication false');
 NODE
+node - <<'NODE'
+const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+const path='data_twse_institutional_investors/20261013_twse_institutional_investors.json',date='20261013';
+const bytes=fs.readFileSync(path),sha256=crypto.createHash('sha256').update(bytes).digest('hex'),d=JSON.parse(bytes);
+const keys=Object.keys(d);
+const dateFields=Object.fromEntries(keys.filter(k=>/date|time|source|status|unit|market|count|stat/i.test(k)).map(k=>[k,typeof d[k]==='object'?(Array.isArray(d[k])?'array':'object'):d[k]]));
+const arrays=Object.fromEntries(keys.filter(k=>Array.isArray(d[k])).map(k=>[k,{length:d[k].length,firstType:typeof d[k][0],firstKeys:d[k][0]&&typeof d[k][0]==='object'?Object.keys(d[k][0]).slice(0,18):[]}]));
+assert.ok(bytes.length>1000&&keys.length>0);
+const proof={target_date:date,source_path:path,sha256,bytes:bytes.length,root_keys:keys,date_fields:dateFields,arrays,source_scope_verified:false,bfi82u_final_market_totals_verified:false,publication_authorized:false};
+fs.writeFileSync('/tmp/video-recovery-proof/multidate-20261013-institutional-schema.json',JSON.stringify(proof,null,2)+'\n');
+console.log('MULTIDATE_20261013_INSTITUTIONAL_SCHEMA_INSPECT '+JSON.stringify(proof));
+NODE
 node --check scripts/research_multidate_input_readiness_v1.js
 node tests/research_multidate_input_readiness_v1.test.js
 node scripts/research_multidate_input_readiness_v1.js 20261008 > /tmp/video-recovery-proof/multidate-20261008-readiness.json
