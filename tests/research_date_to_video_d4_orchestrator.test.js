@@ -12,7 +12,7 @@ for(const date of ['20261008','20261013']){
   const institutional=JSON.parse(fs.readFileSync(path.join(dir,'institutional-evidence.json')));
   assert.equal(institutional.target_date,date);
   if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');}
-  if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));}
+  if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('DATED_FINAL_BFI82U_RAW_MISSING'));assert.ok(r.blockers.includes('DATED_FINAL_BFI82U_MANIFEST_MISSING'));assert.equal(r.source_readiness.bfi82u_archive_status,'MISSING_OR_INCOMPLETE');}
   const breadth=JSON.parse(fs.readFileSync(path.join(dir,'breadth-evidence.json')));
   assert.equal(breadth.target_date,date);assert.equal(breadth.publication_authorized,false);
   if(date==='20261008'){assert.equal(breadth.status,'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED');assert.equal(breadth.legal_identity_master_certified,false);assert.equal(r.stages[1].status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');}
@@ -37,7 +37,7 @@ for(const date of ['20261008','20261013']){
   assert.equal(noInputManifest.editorial_certified,false);
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
-  if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
+  if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING'));}
  }else assert.equal(r.stages[0].status,'WAITING_SOURCE');
  console.log('D4_ORCHESTRATOR_DATE_STATUS '+date+' '+r.stages[0].status);
 }
