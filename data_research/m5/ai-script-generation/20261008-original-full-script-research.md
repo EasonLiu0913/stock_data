@@ -6,7 +6,7 @@ Status: AI_AUTHORED_RESEARCH_DRAFT; NOT validated v3 JSON; publication_authorize
 1. 大家好，歡迎來到 TAIWAN STOCK！
 2. 追蹤資金，解讀行情。
 3. 錢在哪，我們就在哪！
-4. 我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。
+4. 那麼我們開始囉。
 
 ## Market opening — authored research narration
 今天先看上市市場。加權指數收在四萬九千三百一十三點四四點，下跌四百九十二點九三點，跌幅約百分之零點九九。上市市場當天的股票漲跌統計，上漲四百二十五家，下跌五百四十家，平盤一百零九家；另有十四家漲停、兩家跌停。下跌家數多於上漲家數，市場廣度偏弱。

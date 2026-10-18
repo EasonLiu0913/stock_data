@@ -70,7 +70,7 @@ jobs:
           node -e "const fs=require('fs');const s=fs.readFileSync('data_research/m5/ai-script-generation/20261008-claim-review.md','utf8');if(!s.includes('dealer +41')||s.includes('Full three-group gate FAILS CLOSED'))process.exit(1);console.log('CLAIM_REVIEW_2305_RECONCILED_PASS')"
       - name: Verify original full editorial research draft present
         run: |
-          node -e "const fs=require('fs');const s=fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-full-script-research.md','utf8');for(const t of ['TAIWAN STOCK','騰輝電子','全友','台塑','四萬一千二百八十三股','publication_authorized=false'])if(!s.includes(t))process.exit(1);console.log('ORIGINAL_FULL_SCRIPT_RESEARCH_DRAFT_PRESENT')"
+          node -e "const fs=require('fs');const s=fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-full-script-research.md','utf8');for(const t of ['TAIWAN STOCK','騰輝電子','全友','台塑','四萬一千二百八十三股','publication_authorized=false'])if(!s.includes(t))process.exit(1);if(!s.includes('4. 那麼我們開始囉。')||s.includes('我們有提供中文 CC 字幕'))process.exit(1);console.log('ORIGINAL_FULL_SCRIPT_RESEARCH_DRAFT_PRESENT')"
       - name: Verify dated 2305 dealer total against corrected Facts
         run: node tests/research_dealer_total_20261008.test.js
       - name: Preserve read-only proof
