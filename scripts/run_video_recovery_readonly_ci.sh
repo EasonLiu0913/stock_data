@@ -108,6 +108,18 @@ set -e
 node -e "const fs=require('fs');const g=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/gaps.json'));const e=JSON.parse(fs.readFileSync('/tmp/video-recovery-proof/editorial.json'));if(g.status!=='BLOCKED'||e.editorial_status!=='BLOCKED')process.exit(1)"
 test "$gap_status" -eq 1
 test "$editorial_status" -eq 1
+node - <<'NODE'
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {parse}=require('./scripts/parse_twse_official_stock_aggregate');
+const date='20261013',file='data_twse_mi_index/'+date+'_twse_mi_index.json';
+const payload=JSON.parse(fs.readFileSync(file,'utf8'));
+const b=parse(payload,date);
+assert.equal(b.target_date,date);assert.equal(b.scope,'TWSE_OFFICIAL_STOCK_COLUMN');
+assert.equal(b.publication_authorized,false);assert.equal(b.legal_identity_master_certified,false);
+assert.throws(()=>parse(payload,'20261008'),/INVALID_OR_STALE_MI_INDEX/);
+fs.writeFileSync('/tmp/video-recovery-proof/multidate-20261013-mi-index-breadth.json',JSON.stringify(b,null,2)+'\n');
+console.log('MULTIDATE_20261013_OFFICIAL_STOCK_COLUMN_PASS '+b.eligible_count+'; identity uncertified; publication false');
+NODE
 node --check scripts/research_multidate_input_readiness_v1.js
 node tests/research_multidate_input_readiness_v1.test.js
 node scripts/research_multidate_input_readiness_v1.js 20261008 > /tmp/video-recovery-proof/multidate-20261008-readiness.json
