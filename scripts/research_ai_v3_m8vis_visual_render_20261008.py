@@ -16,6 +16,15 @@ assert manifest["target_date"]==source["target_date"],"M8VIS_NUMERIC_DATE_DRIFT"
 assert manifest["editor_input_sha256"]==source["research_master_sha256"],"M8VIS_NUMERIC_MASTER_DRIFT"
 assert manifest["publication_authorized"] is False and manifest["render_authorized"] is False
 assert len(manifest["claims"])==10,"M8VIS_NUMERIC_CLAIM_COUNT_DRIFT"
+def market_assessment(rising,falling,ratio,net):
+ weak=int(falling>rising)+int(ratio<1)+int(net<0)
+ strong=int(rising>falling)+int(ratio>1)+int(net>0)
+ return "當日偏弱" if weak>=2 and weak>strong else "當日偏強" if strong>=2 and strong>weak else "當日訊號分歧"
+assert market_assessment(425,540,.9,-1)=="當日偏弱"
+assert market_assessment(540,425,1.1,1)=="當日偏強"
+assert market_assessment(540,425,.9,0)=="當日訊號分歧"
+assert market_assessment(425,425,1,0)=="當日訊號分歧"
+print("M8VIS_ASSESSMENT_SCENARIOS_PASS")
 def number(n):
  return f"{n:,.2f}".rstrip("0").rstrip(".") if isinstance(n,float) else f"{n:,}"
 by_scene={p["id"]:" ".join(p["caption_sentences"]) for p in source["media_input"]}
