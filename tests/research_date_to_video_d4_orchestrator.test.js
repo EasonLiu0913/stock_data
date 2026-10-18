@@ -13,6 +13,10 @@ for(const date of ['20261008','20261013']){
   assert.equal(institutional.target_date,date);
   if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'FINAL_BFI82U_VERIFIED_MARKET_MASTER_PENDING');}
   if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));}
+  const breadth=JSON.parse(fs.readFileSync(path.join(dir,'breadth-evidence.json')));
+  assert.equal(breadth.target_date,date);assert.equal(breadth.publication_authorized,false);
+  if(date==='20261008'){assert.equal(breadth.status,'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED');assert.equal(breadth.legal_identity_master_certified,false);assert.equal(r.stages[1].status,'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED');}
+  if(date==='20261013'){assert.ok(r.blockers.includes('DATED_MI_INDEX_STOCK_AGGREGATE_PENDING'));}
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
   if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
