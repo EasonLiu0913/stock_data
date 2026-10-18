@@ -9,6 +9,10 @@ for(const date of ['20261008','20261013']){
  if(['EVIDENCE_JOINED_NOT_CERTIFIED','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING'].includes(r.stages[0].status)){
   const claims=JSON.parse(fs.readFileSync(path.join(dir,'claims.json')));
   assert.equal(claims.target_date,date);assert.ok(claims.claim_count>0);
+  const institutional=JSON.parse(fs.readFileSync(path.join(dir,'institutional-evidence.json')));
+  assert.equal(institutional.target_date,date);
+  if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'FINAL_BFI82U_VERIFIED_MARKET_MASTER_PENDING');}
+  if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));}
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
   if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
