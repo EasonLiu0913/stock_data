@@ -165,6 +165,7 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
   weak=(breadth["falling"]>breadth["rising"])+(ratio<1)+(net<0)
   strong=(breadth["rising"]>breadth["falling"])+(ratio>1)+(net>0)
   assessment_label="當日偏弱" if weak>=2 and weak>strong else "當日偏強" if strong>=2 and strong>weak else "當日訊號分歧"
+  assert (weak+strong)<=3 and assessment_label in ("當日偏弱","當日偏強","當日訊號分歧"),"MARKET_DASHBOARD_ASSESSMENT_INVALID"
   d.text((x+45,y+346),"市場評價｜"+assessment_label,font=font(30),fill="#e9bb77")
   d.text((x+45,y+391),breadth_label+"  ·  "+turnover_label+"  ·  "+institutional_label,font=font(25),fill="#ffffff")
   d.text((x+45,y+434),"當日訊號，不代表後續趨勢已確認",font=font(22),fill="#d4e0ea")
