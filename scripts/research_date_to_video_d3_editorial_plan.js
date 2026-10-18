@@ -10,6 +10,12 @@ function plan(d){
  if(b){
   assert.equal(b.target_date,d.target_date);assert.equal(b.scope,'TWSE_OFFICIAL_STOCK_COLUMN');
   claims.push({id:d.target_date+':BREADTH',kind:'observed',evidence:'official_stock_breadth',fact:{advancers:b.advancers,decliners:b.decliners,unchanged:b.unchanged,limit_up:b.limit_up_count,limit_down:b.limit_down_count},scope:b.scope,causality:'NOT_ASSERTED'});
+  const directional=b.advancers+b.decliners;
+  assert.ok(Number.isSafeInteger(directional)&&directional>0);
+  const downShare=Number((b.decliners/directional*100).toFixed(2));
+  const upShare=Number((b.advancers/directional*100).toFixed(2));
+  const gap=b.decliners-b.advancers;
+  claims.push({id:d.target_date+':BREADTH_ASYMMETRY',kind:'derived_interpretation',evidence:[d.target_date+':BREADTH'],fact:{directional_count:directional,up_share_percent:upShare,down_share_percent:downShare,decliners_minus_advancers:gap},interpretation:gap>0?'下跌家數多於上漲家數，當日廣度偏弱':gap<0?'上漲家數多於下跌家數，當日廣度偏強':'上漲與下跌家數相同',limits:['只描述當日官方股票欄廣度','不能單獨證明趨勢反轉或個股上漲原因','不等於逐檔普通股分類'],causality:'NOT_ASSERTED'});
   questions.push({id:'BREADTH_VS_LEADERS',angle:'大盤漲跌家數與強勢股集中度是否背離？',requires:['verified_5pct_universe','breadth_scope_reconciliation'],status:'RESEARCH_PENDING'});
  }else blockers.push('OFFICIAL_BREADTH_MISSING');
  if(m?.turnover_twd)questions.push({id:'TURNOVER_CONTEXT',angle:'量能相對前五個交易日的變化，是擴散參與還是少數標的集中？',requires:['verified_prior_five_turnover','concentration_evidence'],status:'RESEARCH_PENDING'});
