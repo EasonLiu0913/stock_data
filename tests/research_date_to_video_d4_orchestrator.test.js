@@ -25,6 +25,10 @@ for(const date of ['20261008','20261013']){
   assert.equal(brief.target_date,date);assert.equal(brief.editorial_certified,false);assert.equal(brief.narration_authorized,false);assert.equal(brief.render_authorized,false);assert.equal(brief.original_analysis,null);
   if(date==='20261008'){assert.equal(brief.status,'OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED');assert.equal(brief.observations.length,3);assert.equal(brief.derived_comparisons.breadth_net_count,master.breadth.advancers-master.breadth.decliners);assert.equal(brief.derived_comparisons.institutional_total_net_twd,['foreign','investment_trust','dealers'].reduce((sum,name)=>sum+master.institutional[name].net_twd,0));assert.equal(brief.derived_comparisons.interpretation_status,'OBSERVATION_ONLY_NO_CAUSAL_CLAIM');}
   if(date==='20261013'){assert.equal(brief.status,'WAITING_MARKET_MASTER');assert.equal(brief.observations.length,0);assert.equal(brief.derived_comparisons,undefined);}
+  const task=JSON.parse(fs.readFileSync(path.join(dir,'original-analysis-task.json')));
+  assert.equal(task.target_date,date);assert.equal(task.market_master_sha256,brief.source_master_sha256);assert.equal(task.draft,null);assert.equal(task.independent_review_required,true);assert.equal(task.narration_authorized,false);assert.equal(task.render_authorized,false);
+  if(date==='20261008'){assert.equal(task.status,'READY_FOR_EVIDENCE_GROUNDED_DRAFT');assert.equal(task.required_sections.length,5);}
+  if(date==='20261013')assert.equal(task.status,'WAITING_MARKET_MASTER');
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
   if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
