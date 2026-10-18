@@ -165,6 +165,9 @@ assert.equal(outline.narration_script,null);assert.equal(outline.render_authoriz
 const projection=JSON.parse(fs.readFileSync(path.join(candidateDir,'semantic-consumer-projection.json')));
 assert.equal(projection.source_outline_sha256,digest(outline));
 assert.deepEqual(projection.factual_card_inputs.map(x=>x.section_id),projection.sections.map(x=>x.id));
+assert.deepEqual(projection.scene_plan.map(x=>x.source_section_id),projection.sections.map(x=>x.id));
+assert.deepEqual(projection.scene_plan.map(x=>x.sequence),[1,2,3,4,5]);
+for(const slot of projection.scene_plan){assert.equal(slot.source_master_sha256,projection.market_master_sha256);assert.equal(slot.visual_asset,null);assert.equal(slot.display_authorized,false);assert.equal(slot.requires_editorial_review,true);assert.equal(projection.factual_card_inputs[slot.card_input_index].section_id,slot.source_section_id);}
 for(const card of projection.factual_card_inputs){assert.equal(card.source_master_sha256,projection.market_master_sha256);assert.equal(card.display_authorized,false);assert.equal(card.editorial_text,null);assert.deepEqual(card.facts,projection.sections.find(x=>x.id===card.section_id).resolved_master_observations);}
 const pendingCard=projection.factual_card_inputs.find(x=>x.section==='selected_stock_evidence');
 assert.equal(pendingCard.facts.length,0);
