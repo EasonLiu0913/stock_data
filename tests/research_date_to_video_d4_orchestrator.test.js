@@ -150,6 +150,9 @@ assert.equal(fs.existsSync(path.join(candidateDir,'editorial-review-input.json')
 console.log('D4_WORKSHEET_DOES_NOT_FORGE_REVIEW_INPUT_PASS');
 const outline=JSON.parse(fs.readFileSync(path.join(candidateDir,'candidate-semantic-outline.json')));
 assert.equal(outline.candidate_sha256,actualPreflight.candidate_sha256);
+assert.equal(outline.market_master_sha256,digest(JSON.parse(fs.readFileSync(path.join(candidateDir,'market-master.json')))));
+assert.equal(outline.review_gate_sha256,digest(JSON.parse(fs.readFileSync(path.join(candidateDir,'editorial-review.json')))));
+assert.equal(outline.target_date,'20261008');
 assert.deepEqual(outline.sections.map(x=>x.id),actualCandidate.insights.map(x=>x.id));
 assert.ok(outline.sections.every(x=>x.observation&&x.interpretation&&x.uncertainty));
 assert.equal(outline.sections.find(x=>x.section==='selected_stock_evidence').claim_review_pending,true);
