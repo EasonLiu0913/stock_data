@@ -26,11 +26,22 @@ function run(root,date,out){
    try{const bytes=fs.readFileSync(breadthPath);breadth={...parseBreadth(JSON.parse(bytes),date),status:'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED',source_sha256:hash(bytes)};}
    catch(e){breadth={target_date:date,status:'REJECTED',reason:e.message,publication_authorized:false};}
   }
-  result.stages[1].status=institutional.status==='VERIFIED'&&breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED':'WAITING_FINAL_MARKET_MASTER';
+  let marketMaster={target_date:date,status:'WAITING_SOURCE',publication_authorized:false,editorial_complete:false};
+  if(!marketOnlyMissing&&institutional.status==='VERIFIED'&&breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'){
+   try{
+    const base=load('market-opening/');
+    if(base.target_date!==date||base.market!=='TWSE'||base.status!=='partial')throw Error('INVALID_DATED_MARKET_BASE');
+    for(const name of ['foreign','investment_trust','dealers'])for(const key of ['buy_twd','sell_twd','net_twd'])if(base.institutional?.[name]?.[key]!==institutional.institutional[name][key])throw Error('MARKET_BASE_INSTITUTIONAL_MISMATCH_'+name+'_'+key);
+    const trading=base.market_trading;if(!Number.isSafeInteger(trading?.turnover_twd)||trading.turnover_twd<=0)throw Error('INVALID_DATED_TURNOVER');
+    marketMaster={target_date:date,status:'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING',market:'TWSE',taiex:base.taiex,market_trading:trading,breadth, institutional:institutional.institutional,source_evidence:{market_base_sha256:hash(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening',date+'.json'))),mi_index_sha256:breadth.source_sha256,bfi82u_sha256:institutional.raw_sha256},ordinary_share_identity_certified:false,editorial_complete:false,publication_authorized:false};
+   }catch(e){marketMaster={target_date:date,status:'REJECTED',reason:e.message,editorial_complete:false,publication_authorized:false};}
+  }
+  result.stages[1].status=marketMaster.status==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING':institutional.status==='VERIFIED'&&breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED':'WAITING_FINAL_MARKET_MASTER';
   result.stages[2].status='REVIEW_REQUIRED';
   result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),...(institutional.status==='VERIFIED'?[]:['FINAL_DATED_BFI82U_THREE_GROUPS_PENDING']),...(breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?[]:['DATED_MI_INDEX_STOCK_AGGREGATE_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
   const emptyReview={target_date:date,inventory_sha256:hash(JSON.stringify(claims)),decisions:[]};
   const gate=review(claims,emptyReview);
+  write('market-master.json',marketMaster);
   write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('breadth-evidence.json',breadth);write('editorial-review.json',gate);
  }catch(e){
   result.stages[0].status='WAITING_SOURCE';result.blockers.push('D4_JOIN_REJECTED:'+e.message);
