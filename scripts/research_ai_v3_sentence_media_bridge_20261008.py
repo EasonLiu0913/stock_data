@@ -54,7 +54,7 @@ def wrap_caption(text, limit=30):
  assert "".join(lines)==text, "SRT_TEXT_DRIFT"
  return "\n".join(lines)
 
-assert wrap_caption("甲"*31)=="甲"*30+"\\n甲"
+assert wrap_caption("甲"*31)=="甲"*30+"\n甲"
 assert wrap_caption("今天上漲，明天觀察。")=="今天上漲，明天觀察。"
 srt="".join(f'{i}\n{srt_clock(row["start_seconds"])} --> {srt_clock(row["end_seconds"])}\n{wrap_caption(row["caption_text"])}\n\n' for i,row in enumerate(timeline,1))
 assert srt.count(" --> ")==expected_count
