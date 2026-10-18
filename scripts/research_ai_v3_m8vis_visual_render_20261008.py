@@ -153,10 +153,13 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
    val=inst[key];xx=x+585+j*250
    d.text((xx,y+228),label,font=font(24),fill="#d4e0ea")
    d.text((xx,y+264),("+" if val>0 else "-" if val<0 else "")+rounded_yi(val),font=font(36),fill="#bce9c5" if val>0 else "#ffb6a6" if val<0 else "#ffffff")
-  panel((x+22,y+345,1305,175))
-  d.text((x+45,y+355),"市場評價｜當日偏弱",font=font(33),fill="#e9bb77")
-  d.text((x+45,y+408),"下跌家數較多  ·  成交低於近5日均量  ·  法人合計偏賣",font=font(27),fill="#ffffff")
-  d.text((x+45,y+460),"當日訊號，不代表後續趨勢已確認",font=font(23),fill="#d4e0ea")
+  # Keep the bottom assessment fully above the original subtitle band; do not move captions.
+  assessment=(x+22,y+338,1305,130)
+  assert assessment[1]+assessment[3]<=zones["subtitle_reserved"][1]-40,"MARKET_DASHBOARD_SUBTITLE_CLEARANCE"
+  panel(assessment)
+  d.text((x+45,y+346),"市場評價｜當日偏弱",font=font(30),fill="#e9bb77")
+  d.text((x+45,y+391),"下跌家數較多  ·  成交低於近5日均量  ·  法人合計偏賣",font=font(25),fill="#ffffff")
+  d.text((x+45,y+434),"當日訊號，不代表後續趨勢已確認",font=font(22),fill="#d4e0ea")
   assert breadth["falling"]>breadth["rising"] and ratio<1 and sum(inst[k] for k in ("foreign","investment_trust","dealers"))<0,"MARKET_DASHBOARD_ASSESSMENT_UNSUPPORTED"
  elif scene in ("6672","2305","1301"):
   price=claims[scene+"_PRICE"];fl=claims[scene+"_FLOW"]
