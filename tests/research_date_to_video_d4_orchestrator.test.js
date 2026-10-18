@@ -164,6 +164,12 @@ assert.equal(outline.sections.find(x=>x.section==='selected_stock_evidence').cla
 assert.equal(outline.narration_script,null);assert.equal(outline.render_authorized,false);
 const projection=JSON.parse(fs.readFileSync(path.join(candidateDir,'semantic-consumer-projection.json')));
 assert.equal(projection.source_outline_sha256,digest(outline));
+assert.deepEqual(projection.factual_card_inputs.map(x=>x.section_id),projection.sections.map(x=>x.id));
+for(const card of projection.factual_card_inputs){assert.equal(card.source_master_sha256,projection.market_master_sha256);assert.equal(card.display_authorized,false);assert.equal(card.editorial_text,null);assert.deepEqual(card.facts,projection.sections.find(x=>x.id===card.section_id).resolved_master_observations);}
+const pendingCard=projection.factual_card_inputs.find(x=>x.section==='selected_stock_evidence');
+assert.equal(pendingCard.facts.length,0);
+assert.equal(pendingCard.excluded_pending_claim_ids.length,3);
+assert.equal(projection.consumer_contracts.scene_cards.cards,null);
 assert.ok(projection.sections[0].resolved_master_observations.length>0);
 for(const entry of projection.sections[0].resolved_master_observations){let v=JSON.parse(fs.readFileSync(path.join(candidateDir,'market-master.json')));for(const key of entry.path.split('.'))v=v[key];assert.equal(entry.value,v);}
 assert.equal(projection.sections.find(x=>x.section==='selected_stock_evidence').resolved_master_observations.length,0);
