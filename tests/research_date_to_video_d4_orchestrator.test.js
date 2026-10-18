@@ -11,12 +11,16 @@ for(const date of ['20261008','20261013']){
   assert.equal(claims.target_date,date);assert.ok(claims.claim_count>0);
   const institutional=JSON.parse(fs.readFileSync(path.join(dir,'institutional-evidence.json')));
   assert.equal(institutional.target_date,date);
-  if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED');}
+  if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');}
   if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));}
   const breadth=JSON.parse(fs.readFileSync(path.join(dir,'breadth-evidence.json')));
   assert.equal(breadth.target_date,date);assert.equal(breadth.publication_authorized,false);
   if(date==='20261008'){assert.equal(breadth.status,'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED');assert.equal(breadth.legal_identity_master_certified,false);assert.equal(r.stages[1].status,'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED');}
   if(date==='20261013'){assert.equal(breadth.status,'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED');assert.equal(breadth.legal_identity_master_certified,false);assert.ok(!r.blockers.includes('DATED_MI_INDEX_STOCK_AGGREGATE_PENDING'));}
+  const master=JSON.parse(fs.readFileSync(path.join(dir,'market-master.json')));
+  assert.equal(master.target_date,date);assert.equal(master.publication_authorized,false);
+  if(date==='20261008'){assert.equal(master.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');assert.ok(master.market_trading.turnover_twd>0);assert.equal(master.ordinary_share_identity_certified,false);}
+  if(date==='20261013')assert.equal(master.status,'WAITING_SOURCE');
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
   if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
