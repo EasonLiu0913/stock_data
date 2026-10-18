@@ -36,7 +36,7 @@ assert all(timeline[i]["end_seconds"]<=timeline[i+1]["start_seconds"] for i in r
 assert all(row["caption_text"].strip() for row in timeline)
 def wrap_caption(text, limit=30):
  # Display-only line breaks; preserve exact characters and sentence timing.
- assert "\\n" not in text and "\\r" not in text
+ assert "\n" not in text and "\r" not in text
  pieces=re.findall(r"[^。！？；，、]+[。！？；，、]?",text)
  assert "".join(pieces)==text
  lines=[]; current=""
@@ -52,7 +52,7 @@ def wrap_caption(text, limit=30):
  if current: lines.append(current)
  assert lines and all(0<len(line)<=limit for line in lines)
  assert "".join(lines)==text, "SRT_TEXT_DRIFT"
- return "\\n".join(lines)
+ return "\n".join(lines)
 
 assert wrap_caption("甲"*31)=="甲"*30+"\\n甲"
 assert wrap_caption("今天上漲，明天觀察。")=="今天上漲，明天觀察。"
