@@ -150,6 +150,22 @@ assert.throws(()=>verify(Buffer.concat([bytes,Buffer.from(' ')]),manifest,'20261
 fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-bfi82u-date-gate.json',JSON.stringify({verified_20261008:good,missing_20261013:missing,wrong_date_rejected:true,tampered_bytes_rejected:true},null,2)+'\n');
 console.log('DATE_TO_VIDEO_BFI82U_DATE_GATE_PASS 20261008 VERIFIED 20261013 WAITING_SOURCE');
 NODE
+node --check scripts/research_date_to_video_d3_featured_triage.js
+node - <<'NODE'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {build}=require('./scripts/research_date_to_video_d3_featured_triage');
+const raw=JSON.parse(fs.readFileSync('data_daily_gain_over_5/20261013.json','utf8'));
+const r=build(raw);
+assert.equal(r.preliminary_count,25);assert.equal(r.featured_selection_certified,false);
+assert.equal(r.render_authorized,false);assert.equal(r.publication_authorized,false);
+assert.ok(r.rows.find(s=>s.code==='1312A').identity_review_flags.includes('NON_FOUR_DIGIT_CODE_REVIEW'));
+assert.ok(r.rows.find(s=>s.code==='9103').identity_review_flags.includes('DEPOSITARY_RECEIPT_EXCLUDE_FROM_COMMON_STOCK'));
+assert.ok(r.rows.find(s=>s.code==='6645').identity_review_flags.includes('INNOVATION_BOARD_IDENTITY_REVIEW'));
+assert.ok(r.rows.every(s=>s.eligible_for_final_feature===false&&s.narration_authorized===false));
+assert.throws(()=>build({...raw,target_date:'20261012',stocks:raw.stocks.map((s,i)=>i? s:{...s,close:s.close+1})}),/PRICE_CHANGE_MISMATCH/);
+fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-d3-featured-triage.json',JSON.stringify(r,null,2)+'\n');
+console.log('DATE_TO_VIDEO_D3_FEATURED_TRIAGE_PASS preliminary=25 identity_and_catalyst_pending');
+NODE
 node --check scripts/research_date_to_video_d3_editorial_plan.js
 node - <<'NODE'
 const assert=require('node:assert/strict'),fs=require('node:fs');
