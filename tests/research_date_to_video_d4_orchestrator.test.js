@@ -183,6 +183,15 @@ assert.throws(()=>project(badOutline,projectionMaster,projectionReview),/PROJECT
 const emptyEvidenceOutline=JSON.parse(JSON.stringify(outline));
 emptyEvidenceOutline.sections[0].evidence=[];
 assert.throws(()=>project(emptyEvidenceOutline,projectionMaster,projectionReview),/PROJECTION_MISSING_EVIDENCE/);
+const blankOutline=JSON.parse(JSON.stringify(outline));blankOutline.sections[0].interpretation='  ';
+assert.throws(()=>project(blankOutline,projectionMaster,projectionReview),/PROJECTION_EMPTY_SEMANTIC_FIELD_interpretation/);
+const duplicateOutline=JSON.parse(JSON.stringify(outline));duplicateOutline.sections[1].id=duplicateOutline.sections[0].id;
+assert.throws(()=>project(duplicateOutline,projectionMaster,projectionReview),/PROJECTION_DUPLICATE_OR_EMPTY_SECTION_ID/);
+const wrongDateClaim=JSON.parse(JSON.stringify(outline));wrongDateClaim.sections[2].evidence[0].id='20261013:6672:PRICE_CHANGE';
+assert.throws(()=>project(wrongDateClaim,projectionMaster,projectionReview),/PROJECTION_INVALID_DATED_CLAIM_ID/);
+const unknownEvidence=JSON.parse(JSON.stringify(outline));unknownEvidence.sections[0].evidence[0]={type:'unreviewed_news',id:'fake'};
+assert.throws(()=>project(unknownEvidence,projectionMaster,projectionReview),/PROJECTION_UNKNOWN_EVIDENCE_TYPE/);
+console.log('D4_SEMANTIC_PROJECTION_CONTENT_NEGATIVE_PASS');
 console.log('D4_SEMANTIC_PROJECTION_SOURCE_FIELD_NEGATIVE_PASS');
 console.log('D4_SINGLE_MASTER_PROJECTION_FAIL_CLOSED_PASS');
 console.log('D4_AUTHORED_SEMANTIC_OUTLINE_RESEARCH_ONLY_PASS');
