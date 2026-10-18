@@ -7,6 +7,9 @@ assert d["target_date"]=="20261008" and d["media_input_status"]=="V3_SIX_SCENE_S
 assert [p["id"] for p in d["media_input"]]==["opening","market","6672","2305","1301","conclusion"]
 assert all(len(p["speech_sentences"])==len(p["caption_sentences"])>0 for p in d["media_input"])
 assert len(d["media_input"][0]["speech_sentences"])==4
+assert d["media_input"][0]["speech_sentences"][3]=="那麼我們開始囉。","V4_TTS_FOURTH_LINE"
+assert d["media_input"][0]["caption_sentences"][3]=="那麼我們開始囉。","V4_CAPTION_FOURTH_LINE"
+assert not any("CC 字幕" in s for p in d["media_input"] for s in p["speech_sentences"]+p["caption_sentences"]),"V4_OBSOLETE_CC_MEDIA"
 assert all(d[k] is False for k in ("publication_authorized","render_authorized","real_tts_generated","timed_srt_generated","mp4_generated"))
 proof={"contract":"AI_V3_SENTENCE_AUDIO_RESEARCH_ONLY","target_date":"20261008","research_master_sha256":d["research_master_sha256"],"voice":"zh-TW-YunJheNeural","rate":"+15%","publication_authorized":False,"timed_srt_generated":False,"mp4_generated":False,"sentences":[]}
 try:
