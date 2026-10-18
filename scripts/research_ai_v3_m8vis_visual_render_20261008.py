@@ -157,10 +157,17 @@ for i,(card,part) in enumerate(zip(layout["cards"],source["media_input"])):
   assessment=(x+22,y+338,1305,130)
   assert assessment[1]+assessment[3]<=zones["subtitle_reserved"][1]-40,"MARKET_DASHBOARD_SUBTITLE_CLEARANCE"
   panel(assessment)
-  d.text((x+45,y+346),"市場評價｜當日偏弱",font=font(30),fill="#e9bb77")
-  d.text((x+45,y+391),"下跌家數較多  ·  成交低於近5日均量  ·  法人合計偏賣",font=font(25),fill="#ffffff")
+  # All three labels are computed from this date's verified numeric manifest.
+  breadth_label="下跌家數較多" if breadth["falling"]>breadth["rising"] else "上漲家數較多" if breadth["rising"]>breadth["falling"] else "漲跌家數相同"
+  turnover_label="成交低於近5日均量" if ratio<1 else "成交高於近5日均量" if ratio>1 else "成交等於近5日均量"
+  net=sum(inst[k] for k in ("foreign","investment_trust","dealers"))
+  institutional_label="法人合計偏賣" if net<0 else "法人合計偏買" if net>0 else "法人合計持平"
+  weak=(breadth["falling"]>breadth["rising"])+(ratio<1)+(net<0)
+  strong=(breadth["rising"]>breadth["falling"])+(ratio>1)+(net>0)
+  assessment_label="當日偏弱" if weak>=2 and weak>strong else "當日偏強" if strong>=2 and strong>weak else "當日訊號分歧"
+  d.text((x+45,y+346),"市場評價｜"+assessment_label,font=font(30),fill="#e9bb77")
+  d.text((x+45,y+391),breadth_label+"  ·  "+turnover_label+"  ·  "+institutional_label,font=font(25),fill="#ffffff")
   d.text((x+45,y+434),"當日訊號，不代表後續趨勢已確認",font=font(22),fill="#d4e0ea")
-  assert breadth["falling"]>breadth["rising"] and ratio<1 and sum(inst[k] for k in ("foreign","investment_trust","dealers"))<0,"MARKET_DASHBOARD_ASSESSMENT_UNSUPPORTED"
  elif scene in ("6672","2305","1301"):
   price=claims[scene+"_PRICE"];fl=claims[scene+"_FLOW"]
   tiles=[("收盤價",number(price["close"]),"元"),("漲跌幅",pct(price["change_pct"]),"漲跌幅"),("前收盤",number(price["previous_close"]),"元")]
