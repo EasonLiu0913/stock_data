@@ -136,6 +136,29 @@ const proof={target_date:date,source_path:path,sha256,bytes:bytes.length,root_ke
 fs.writeFileSync('/tmp/video-recovery-proof/multidate-20261013-institutional-schema.json',JSON.stringify(proof,null,2)+'\n');
 console.log('MULTIDATE_20261013_INSTITUTIONAL_SCHEMA_INSPECT '+JSON.stringify(proof));
 NODE
+node --check scripts/research_date_to_video_v1.js
+node - <<'NODE'
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {plan}=require('./scripts/research_date_to_video_v1');
+assert.throws(()=>plan('.','2026108'),/INVALID_DATE_FORMAT/);
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d1-'));
+try{
+ const blocked=plan(tmp,'20261013');
+ assert.equal(blocked.ready_to_render,false);assert.equal(blocked.stages[0].status,'WAITING_SOURCE');
+ assert.equal(blocked.stages[1].status,'NOT_RUN');assert.equal(blocked.publication_authorized,false);
+ const base=path.join(tmp,'data_daily_gain_over_5');
+ for(const name of ['market-opening','analysis-facts','analysis-news','analysis-ai']){
+  fs.mkdirSync(path.join(base,name),{recursive:true});
+  fs.writeFileSync(path.join(base,name,'20261013.json'),JSON.stringify({target_date:'20261008'}));
+ }
+ const stale=plan(tmp,'20261013');assert.equal(stale.stages[0].status,'WAITING_SOURCE');assert.equal(stale.blockers.length,4);
+ for(const name of ['market-opening','analysis-facts','analysis-news','analysis-ai'])fs.writeFileSync(path.join(base,name,'20261013.json'),JSON.stringify({target_date:'20261013'}));
+ const present=plan(tmp,'20261013');assert.equal(present.stages[0].status,'INPUT_FILES_PRESENT');
+ assert.equal(present.ready_to_render,false);assert.equal(present.stages[4].status,'NOT_RUN');
+ fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-d1-fixture.json',JSON.stringify({missing:blocked,stale,files_present_not_certified:present},null,2)+'\n');
+ console.log('DATE_TO_VIDEO_D1_FAIL_CLOSED_PASS');
+}finally{fs.rmSync(tmp,{recursive:true,force:true})}
+NODE
 node --check scripts/research_multidate_input_readiness_v1.js
 node tests/research_multidate_input_readiness_v1.test.js
 node scripts/research_multidate_input_readiness_v1.js 20261008 > /tmp/video-recovery-proof/multidate-20261008-readiness.json
