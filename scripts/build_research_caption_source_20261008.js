@@ -11,6 +11,11 @@ function buildResearchCaptionSource(d){
  assert.deepEqual([d.opening,...d.segments].map(p=>p.id||'opening'),['opening','market','6672','2305','1301','conclusion'],'PART_ORDER');
  const sentenceInventory=[d.opening,...d.segments].map(p=>p.spoken_sentences.length);
  assert.equal(sentenceInventory[0],4,'SENTENCE_INVENTORY_OPENING');
+ const fixedOpening=['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','那麼我們開始囉。'];
+ assert.deepEqual(d.opening.spoken_sentences,fixedOpening,'V4_FIXED_OPENING_SPOKEN');
+ assert.deepEqual(d.opening.caption_sentences,fixedOpening,'V4_FIXED_OPENING_CAPTION');
+ assert.ok(!d.opening.spoken_sentences.some(s=>s.includes('CC 字幕')),'V4_OBSOLETE_CC_REMINDER');
+
  assert.ok(sentenceInventory[1]>=5 && sentenceInventory[1]<=16,'SENTENCE_INVENTORY_MARKET');
  for(const count of sentenceInventory.slice(2,5))assert.ok(count>=3 && count<=20,'SENTENCE_INVENTORY_FEATURED');
  assert.ok(sentenceInventory[5]>=3 && sentenceInventory[5]<=12,'SENTENCE_INVENTORY_CONCLUSION');
