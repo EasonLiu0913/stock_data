@@ -20,7 +20,7 @@ function project(outline,master,review){
     let value=master;
     for(const part of e.path.split('.')){assert.ok(value!==null&&typeof value==='object'&&Object.hasOwn(value,part),'PROJECTION_UNKNOWN_MASTER_FIELD');value=value[part]}
     assert.ok(value!==null&&value!==undefined&&typeof value!=='object','PROJECTION_UNRESOLVED_MASTER_FIELD');
-   }else if(e.type==='claim_id')assert.ok(typeof e.id==='string'&&/^\\d{8}:[0-9A-Za-z-]+:[A-Z_]+$/.test(e.id)&&e.id.startsWith(outline.target_date+':'),'PROJECTION_INVALID_DATED_CLAIM_ID');
+   }else if(e.type==='claim_id')assert.ok(typeof e.id==='string'&&/^\d{8}:[0-9A-Za-z-]+:[A-Z_]+$/.test(e.id)&&e.id.startsWith(outline.target_date+':'),'PROJECTION_INVALID_DATED_CLAIM_ID');
    else assert.fail('PROJECTION_UNKNOWN_EVIDENCE_TYPE');
   }
   const pending=s.evidence.filter(e=>e.type==='claim_id'&&!approved.has(e.id)).map(e=>e.id);
