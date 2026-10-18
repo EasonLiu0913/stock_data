@@ -10,6 +10,15 @@ function project(outline,master,review){
  assert.ok(Array.isArray(outline.sections)&&outline.sections.length>0,'PROJECTION_EMPTY_OUTLINE');
  const approved=new Set(review.approved_claim_ids||[]);
  const sections=outline.sections.map(s=>{
+  assert.ok(Array.isArray(s.evidence)&&s.evidence.length>0,'PROJECTION_MISSING_EVIDENCE');
+  for(const e of s.evidence){
+   if(e.type==='master_field'){
+    assert.ok(typeof e.path==='string'&&e.path.length>0,'PROJECTION_INVALID_MASTER_PATH');
+    let value=master;
+    for(const part of e.path.split('.')){assert.ok(value!==null&&typeof value==='object'&&Object.hasOwn(value,part),'PROJECTION_UNKNOWN_MASTER_FIELD');value=value[part]}
+    assert.ok(value!==null&&value!==undefined&&typeof value!=='object','PROJECTION_UNRESOLVED_MASTER_FIELD');
+   }else assert.equal(e.type,'claim_id','PROJECTION_UNKNOWN_EVIDENCE_TYPE');
+  }
   const pending=s.evidence.filter(e=>e.type==='claim_id'&&!approved.has(e.id)).map(e=>e.id);
   assert.equal(s.claim_review_pending,pending.length>0,'PROJECTION_STALE_CLAIM_FLAG');
   return {id:s.id,section:s.section,observation:s.observation,interpretation:s.interpretation,uncertainty:s.uncertainty,evidence:s.evidence,review_status:pending.length?'REVIEW_REQUIRED':'STRUCTURAL_ONLY_NOT_EDITORIAL_CERTIFIED',pending_claim_ids:pending};
