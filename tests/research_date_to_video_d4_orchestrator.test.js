@@ -164,6 +164,9 @@ assert.equal(outline.sections.find(x=>x.section==='selected_stock_evidence').cla
 assert.equal(outline.narration_script,null);assert.equal(outline.render_authorized,false);
 const projection=JSON.parse(fs.readFileSync(path.join(candidateDir,'semantic-consumer-projection.json')));
 assert.equal(projection.source_outline_sha256,digest(outline));
+assert.ok(projection.sections[0].resolved_master_observations.length>0);
+for(const entry of projection.sections[0].resolved_master_observations){let v=JSON.parse(fs.readFileSync(path.join(candidateDir,'market-master.json')));for(const key of entry.path.split('.'))v=v[key];assert.equal(entry.value,v);}
+assert.equal(projection.sections.find(x=>x.section==='selected_stock_evidence').resolved_master_observations.length,0);
 assert.equal(projection.market_master_sha256,outline.market_master_sha256);
 assert.equal(projection.review_gate_sha256,outline.review_gate_sha256);
 for(const consumer of Object.values(projection.consumer_contracts))assert.deepEqual(consumer.source_section_ids,outline.sections.map(x=>x.id));
