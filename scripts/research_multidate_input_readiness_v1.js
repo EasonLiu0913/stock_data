@@ -7,7 +7,10 @@ function inspectDate(root,date){
  const files=Object.fromEntries(names.map(n=>[n,path.join(root,'data_daily_gain_over_5',n,`${date}.json`)]));
  const present=Object.fromEntries(Object.entries(files).map(([n,p])=>[n,fs.existsSync(p)]));
  const missing=names.filter(n=>!present[n]);
- return {target_date:date,ready:missing.length===0,missing,present,baseline:date==='20261008',research_only:true,publication_authorized:false};
+ const wrong_date=[];
+ for(const n of names){if(!present[n])continue;try{const d=JSON.parse(fs.readFileSync(files[n],'utf8'));if(d.target_date!==date)wrong_date.push(n);}catch(_){wrong_date.push(n);}}
+
+ return {target_date:date,ready:missing.length===0&&wrong_date.length===0,missing,wrong_date,present,baseline:date==='20261008',research_only:true,publication_authorized:false};
 }
 if(require.main===module){
  const date=process.argv[2];if(!date){console.error('Usage: node scripts/research_multidate_input_readiness_v1.js YYYYMMDD [repo-root]');process.exit(2)}
