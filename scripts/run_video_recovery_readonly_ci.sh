@@ -136,6 +136,19 @@ const proof={target_date:date,source_path:path,sha256,bytes:bytes.length,root_ke
 fs.writeFileSync('/tmp/video-recovery-proof/multidate-20261013-institutional-schema.json',JSON.stringify(proof,null,2)+'\n');
 console.log('MULTIDATE_20261013_INSTITUTIONAL_SCHEMA_INSPECT '+JSON.stringify(proof));
 NODE
+node --check scripts/research_date_to_video_d2_partial.js
+node - <<'NODE'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {inspect}=require('./scripts/research_date_to_video_d2_partial');
+const r=inspect('.','20261013');
+assert.equal(r.target_date,'20261013');assert.equal(r.partial_master.status,'partial');
+assert.equal(r.partial_master.institutional.investment_trust,undefined);
+assert.equal(r.ready_to_render,false);assert.equal(r.publication_authorized,false);
+assert.equal(Object.keys(r.source_hashes).length,2);
+assert.throws(()=>inspect('.','20261008x'),/INVALID_DATE_FORMAT/);
+fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-d2-20261013-partial.json',JSON.stringify(r,null,2)+'\n');
+console.log('DATE_TO_VIDEO_D2_20261013_PARTIAL_PASS '+r.partial_master.market_trading.turnover_twd);
+NODE
 node --check scripts/research_date_to_video_v1.js
 node - <<'NODE'
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
