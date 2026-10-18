@@ -59,6 +59,21 @@ jobs:
           node --check scripts/research_date_to_video_d4_candidate_preflight.js
           node --check scripts/research_date_to_video_d4_draft_gate.js
           node tests/research_date_to_video_d4_draft_gate.test.js
+      - name: Fetch and validate 20261013 official BFI82U into isolated artifact directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/date-to-video-bfi82u-20261013
+          node scripts/research_date_to_video_bfi82u_archive.js 20261013 /tmp/date-to-video-bfi82u-20261013
+          node -e "const r=require('./scripts/research_date_to_video_bfi82u_v1').inspect('/tmp/date-to-video-bfi82u-20261013','20261013');if(r.status!=='VERIFIED'||!r.final_six_rows_verified||r.publication_authorized!==false)process.exit(1);console.log(JSON.stringify({status:r.status,target_date:r.target_date,raw_sha256:r.raw_sha256,final_six_rows_verified:r.final_six_rows_verified,publication_authorized:r.publication_authorized}))"
+      - name: Upload 20261013 verified official BFI82U research archive
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dated-bfi82u-20261013-research-only
+          path: /tmp/date-to-video-bfi82u-20261013/data_research/twse-market-opening/primary-archive/20261013/
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify MI_INDEX parser negative cases
         run: node scripts/research_market_opening_mi_index_breadth.test.js
       - name: Verify real AI editor input and archive SHA
