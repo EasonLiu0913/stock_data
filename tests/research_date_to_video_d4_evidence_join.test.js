@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {join}=require('../scripts/research_date_to_video_d4_evidence_join');
+const date='20261008',cutoff='2026-10-08T23:59:59+08:00';
+const list={target_date:date,stock_count:1,stocks:[{code:'1301',name:'台塑'}]};
+const facts={target_date:date,stock_count:1,stocks:[{code:'1301',name:'台塑'}]};
+const news={target_date:date,stock_count:1,analyses:[{code:'1301',name:'台塑',sources:[{url:'https://example.org/a',published_at:'2026-10-08T10:00:00+08:00'}]}]};
+const ai={target_date:date,stock_count:1,analyses:[{code:'1301',sources:[]}]};
+const input={date,cutoff,list,facts,news,ai};
+const result=join(input);assert.equal(result.joined_count,1);assert.equal(result.render_authorized,false);
+assert.equal(result.rows[0].narration_authorized,false);
+assert.throws(()=>join({...input,facts:{...facts,target_date:'20261007'}}),/WRONG_DATE_facts/);
+assert.throws(()=>join({...input,news:{...news,analyses:[]}}),/MISSING_JOIN/);
+assert.throws(()=>join({...input,news:{...news,analyses:[{...news.analyses[0],sources:[{url:'https://example.org/future',published_at:'2026-10-09'}]}]}}),/POST_CUTOFF_SOURCE/);
+assert.throws(()=>join({...input,cutoff:'2026-10-07T23:00:00+08:00'}),/CUTOFF_DATE_MISMATCH/);
+assert.throws(()=>join({...input,ai:{...ai,analyses:[{code:'1301',sources:[{url:'https://example.org/unknown'}]}]}}),/SOURCE_PROVENANCE_MISSING/);
+console.log('DATE_TO_VIDEO_D4_EVIDENCE_JOIN_FIXTURE_PASS; no render or publication');
