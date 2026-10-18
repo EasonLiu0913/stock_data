@@ -41,6 +41,18 @@ See `docs/project-philosophy.md` and `docs/decisions/ADR-000-project-philosophy.
 
 When working on `daily-gainers-market-opening-end-to-end`, daily 5% video facts, script, narration, subtitles, generation, repair, uploads or scheduling, read and obey `docs/policies/daily-gainers-video-editorial-verification-delivery-v1.md` **before** changing code or declaring PASS. Its figures are illustrative, never fixed daily data. Validation failure triggers truthful diagnosis/repair and continuation to verified daily delivery, not bypassing tests or inventing figures. This policy is owner-approved editorial/delivery intent; it does not override frozen phase A/B gates or authorize production/publishing by itself.
 
+## Daily 5% video — single-date research entry point (isolated Prompt A)
+
+For the active `daily-gainers-market-opening-end-to-end` project, prefer the owner-approved Date-to-Video V1 date-driven research path instead of repeatedly assembling individual checks by hand. Current D4 entry point (run in an authorized research checkout):
+
+```bash
+node scripts/research_date_to_video_d4_orchestrator.js YYYYMMDD . /tmp/date-to-video-d4
+```
+
+Example: `node scripts/research_date_to_video_d4_orchestrator.js 20261008 . /tmp/date-to-video-d4`. This D4 entry connects explicit-date readiness, Evidence Join, Claim Inventory, Review Gate and research artifact output. It is **not yet a complete MP4 generator**; do not describe a successful D4 CI as completed Date-to-Video delivery. Do not borrow another trading date's inputs or silently fall back to the immutable 20261008 Golden Baseline. Missing or uncertified inputs remain `WAITING_SOURCE` / `REVIEW_REQUIRED`; Claim IDs and model summaries are not independently certified causal claims. Keep `render_authorized=false`, `publication_authorized=false`, Prompt B frozen, and all main/production/cron/Pages/YouTube/release locks unchanged. A change to these boundaries requires separate owner authorization.
+
+Before extending the entry point, read `docs/handoffs/daily-gainers-market-opening-end-to-end.md`, `data_research/m5/change-proposals/DATE-TO-VIDEO-V1-OWNER-APPROVED-A-CONTRACT.md`, and `scripts/research_date_to_video_d4_orchestrator.js`. Preserve one explicit-date orchestrator as later verified Market Master, original editorial, semantic projection, offline MP4 and acceptance-artifact stages are integrated; avoid creating a competing manual pipeline. Validate actual dated artifacts and job logs, not only a green workflow conclusion.
+
 ## Mandatory documentation handoff
 
 The documentation is a living project handoff. Do not rely only on prior chat history when the repository documents contain the current decision or roadmap.
