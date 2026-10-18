@@ -12,4 +12,9 @@ assert.throws(()=>validate(task,master,inventory,{...review,approved_claim_ids:[
 assert.throws(()=>validate(task,master,inventory,review,{...draft,target_date:'20261013'}),/DRAFT_DATE_MISMATCH/);
 assert.throws(()=>validate(task,{...master,breadth:{advancers:6}},inventory,review,draft),/MASTER_SHA_MISMATCH/);
 assert.throws(()=>validate(task,master,inventory,review,{...draft,insights:[insight('market_breadth_vs_index',[{type:'master_field',path:'breadth.missing'}]),draft.insights[1]]}),/MISSING_MASTER_FIELD/);
+const numericFieldMaster={...master,market_trading:{...master.market_trading,turnover_ratio_ma5:0.9}};
+const numericFieldTask={...task,market_master_sha256:sha(numericFieldMaster)};
+const numericFieldDraft={...draft,insights:[insight('market_breadth_vs_index',[{type:'master_field',path:'market_trading.turnover_ratio_ma5'}]),draft.insights[1]]};
+assert.equal(validate(numericFieldTask,numericFieldMaster,inventory,review,numericFieldDraft).render_authorized,false);
+assert.throws(()=>validate(numericFieldTask,numericFieldMaster,inventory,review,{...numericFieldDraft,insights:[insight('market_breadth_vs_index',[{type:'master_field',path:'market_trading.missing5'}]),draft.insights[1]]}),/MISSING_MASTER_FIELD/);
 console.log('D4_ORIGINAL_DRAFT_GATE_FAIL_CLOSED_PASS');

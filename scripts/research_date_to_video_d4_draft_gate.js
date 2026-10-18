@@ -23,7 +23,7 @@ function validate(task,master,inventory,review,draft){
   assert.ok(Array.isArray(insight.evidence)&&insight.evidence.length>0,'INSIGHT_WITHOUT_EVIDENCE');
   for(const e of insight.evidence){
    if(e.type==='master_field'){
-    assert.ok(typeof e.path==='string'&&/^[a-z_]+(?:\.[a-z_]+)*$/.test(e.path),'INVALID_MASTER_PATH');
+    assert.ok(typeof e.path==='string'&&/^[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*$/.test(e.path),'INVALID_MASTER_PATH');
     const parts=e.path.split('.');assert.ok(allowed.has(parts[0]),'UNSUPPORTED_MASTER_PATH');
     let value=master;for(const part of parts){assert.ok(value!==null&&typeof value==='object'&&Object.hasOwn(value,part),'MISSING_MASTER_FIELD');value=value[part]}
     assert.ok(value!==null&&typeof value!=='object','MASTER_FIELD_NOT_SCALAR');
