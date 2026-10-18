@@ -102,6 +102,8 @@ jobs:
       - name: Verify dated original analysis candidate and independent review packet
         run: |
           node -e "const fs=require('fs');const p='/tmp/date-to-video-d4-20261013/';const a=JSON.parse(fs.readFileSync(p+'authored-candidate-preflight.json'));const o=JSON.parse(fs.readFileSync(p+'candidate-semantic-outline.json'));const w=JSON.parse(fs.readFileSync(p+'independent-review-worksheet.json'));const m=JSON.parse(fs.readFileSync(p+'m8vis-scene-adapter.json'));if(a.status==='REJECTED'||a.unknown_claim_ids.length||a.invalid_master_fields.length||a.missing_claim_reviews.length!==3||o.sections.length!==5||w.review_items.length!==3||JSON.stringify(m.scene_ids)!==JSON.stringify(['opening','market','6668','3406','6505','conclusion'])||m.render_authorized!==false||o.editorial_certified!==false||o.render_authorized!==false)process.exit(1);console.log(JSON.stringify({preflight:a.status,sections:o.sections.length,review_items:w.review_items.length,scene_ids:m.scene_ids,editorial_certified:o.editorial_certified}))"
+      - name: Verify dated selected stock price evidence
+        run: node scripts/research_date_to_video_d4_price_review_evidence.js 20261013 . 6668 3406 6505
       - name: Upload D4 20261013 research-only diagnostics
         if: always()
         uses: actions/upload-artifact@v4
