@@ -160,7 +160,14 @@ for(const date of ['20261008','20261013']){
  assert.equal(r.target_date,date);assert.equal(r.original_insight_certified,false);
  assert.equal(r.render_authorized,false);assert.equal(r.publication_authorized,false);
  assert.ok(r.questions.some(q=>q.id==='FLOW_BREADTH_DIVERGENCE'));
- if(date==='20261013')assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_PENDING'));
+ if(date==='20261013'){
+  assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_PENDING'));
+  const a=r.claims.find(c=>c.id==='20261013:BREADTH_ASYMMETRY');
+  assert.equal(a.fact.directional_count,999);
+  assert.equal(a.fact.decliners_minus_advancers,461);
+  assert.equal(a.fact.down_share_percent,73.07);
+  assert.equal(a.causality,'NOT_ASSERTED');
+}
  else assert.ok(r.claims.some(c=>c.kind==='observed'&&c.evidence==='final_bfi82u'));
  fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-d3-'+date+'.json',JSON.stringify(r,null,2)+'\n');
 }
