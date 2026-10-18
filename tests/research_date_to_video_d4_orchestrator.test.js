@@ -143,6 +143,11 @@ assert.deepEqual(new Set(worksheet.review_items.map(x=>x.claim_id)),new Set(actu
 assert.ok(worksheet.review_items.every(x=>x.decision==='PENDING'&&x.reviewer===null&&x.evidence_checked===false));
 assert.equal(worksheet.render_authorized,false);
 console.log('D4_INDEPENDENT_REVIEW_WORKSHEET_PENDING_PASS');
+assert.equal(worksheet.review_input_filename,'editorial-review-input.json');
+assert.equal(worksheet.candidate_sha256,actualPreflight.candidate_sha256);
+assert.ok(worksheet.review_items.every(x=>x.rationale===null&&x.causal_language_prohibited===null));
+assert.equal(fs.existsSync(path.join(candidateDir,'editorial-review-input.json')),false);
+console.log('D4_WORKSHEET_DOES_NOT_FORGE_REVIEW_INPUT_PASS');
 const staleDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-stale-'));
 run('.','20261008',staleDir);
 assert.ok(fs.existsSync(path.join(staleDir,'featured-price-observations.json')));
