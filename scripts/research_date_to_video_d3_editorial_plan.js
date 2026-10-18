@@ -16,6 +16,11 @@ function plan(d){
   const upShare=Number((b.advancers/directional*100).toFixed(2));
   const gap=b.decliners-b.advancers;
   claims.push({id:d.target_date+':BREADTH_ASYMMETRY',kind:'derived_interpretation',evidence:[d.target_date+':BREADTH'],fact:{directional_count:directional,up_share_percent:upShare,down_share_percent:downShare,decliners_minus_advancers:gap},interpretation:gap>0?'下跌家數多於上漲家數，當日廣度偏弱':gap<0?'上漲家數多於下跌家數，當日廣度偏強':'上漲與下跌家數相同',limits:['只描述當日官方股票欄廣度','不能單獨證明趨勢反轉或個股上漲原因','不等於逐檔普通股分類'],causality:'NOT_ASSERTED'});
+  const preliminary=d.partial_master.preliminary_gainers;
+  if(preliminary?.count!==undefined){
+   assert.ok(Number.isSafeInteger(preliminary.count)&&preliminary.count>=0);
+   claims.push({id:d.target_date+':WEAK_BREADTH_WITH_PRELIMINARY_GAINERS',kind:'cross_source_observation',evidence:[d.target_date+':BREADTH_ASYMMETRY','partial_master.preliminary_gainers'],fact:{decliners:b.decliners,advancers:b.advancers,preliminary_gainers_over_5pct:preliminary.count},interpretation:gap>0&&preliminary.count>0?'廣度偏弱的同日，初步清單仍出現漲幅超過5%的標的；值得逐檔檢驗強勢是否集中於少數題材':gap<0?'廣度偏強，仍須獨立驗證強勢股清單':'尚不足以判定市場分化',limits:['初步5%清單尚未完成上市普通股身分驗證','兩來源母體不完全相同，不得以初步清單數除以官方股票欄家數','不能據此推論題材集中、主力買盤或價格因果'],causality:'NOT_ASSERTED',narration_authorized:false});
+  }
   questions.push({id:'BREADTH_VS_LEADERS',angle:'大盤漲跌家數與強勢股集中度是否背離？',requires:['verified_5pct_universe','breadth_scope_reconciliation'],status:'RESEARCH_PENDING'});
  }else blockers.push('OFFICIAL_BREADTH_MISSING');
  if(m?.turnover_twd)questions.push({id:'TURNOVER_CONTEXT',angle:'量能相對前五個交易日的變化，是擴散參與還是少數標的集中？',requires:['verified_prior_five_turnover','concentration_evidence'],status:'RESEARCH_PENDING'});
