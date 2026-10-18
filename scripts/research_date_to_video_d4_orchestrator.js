@@ -5,6 +5,7 @@ const {plan}=require('./research_date_to_video_v1');
 const {join}=require('./research_date_to_video_d4_evidence_join');
 const {inventory}=require('./research_date_to_video_d4_claim_inventory');
 const {review}=require('./research_date_to_video_d4_review_gate');
+const {inspect:inspectBfi82u}=require('./research_date_to_video_bfi82u_v1');
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 function run(root,date,out){
  const status=plan(root,date),result={contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,research_only:true,publication_authorized:false,render_authorized:false,ready_to_render:false,stages:status.stages,blockers:[...status.blockers],artifacts:[]};
@@ -17,12 +18,13 @@ function run(root,date,out){
  try{
   const joined=join({date,cutoff,...inputs}),claims=inventory(joined,inputs);
   result.stages[0].status=marketOnlyMissing?'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING':'EVIDENCE_JOINED_NOT_CERTIFIED';
-  result.stages[1].status='WAITING_FINAL_MARKET_MASTER';
+  const institutional=inspectBfi82u(root,date);
+  result.stages[1].status=institutional.status==='VERIFIED'?'FINAL_BFI82U_VERIFIED_MARKET_MASTER_PENDING':'WAITING_FINAL_MARKET_MASTER';
   result.stages[2].status='REVIEW_REQUIRED';
-  result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
+  result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),...(institutional.status==='VERIFIED'?[]:['FINAL_DATED_BFI82U_THREE_GROUPS_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
   const emptyReview={target_date:date,inventory_sha256:hash(JSON.stringify(claims)),decisions:[]};
   const gate=review(claims,emptyReview);
-  write('evidence-join.json',joined);write('claims.json',claims);write('editorial-review.json',gate);
+  write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('editorial-review.json',gate);
  }catch(e){
   result.stages[0].status='WAITING_SOURCE';result.blockers.push('D4_JOIN_REJECTED:'+e.message);
  }
