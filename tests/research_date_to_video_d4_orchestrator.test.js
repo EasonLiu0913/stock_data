@@ -146,6 +146,21 @@ assert.equal(rerunMissing.stages[0].status,'WAITING_SOURCE');
 assert.ok(fs.existsSync(path.join(staleDir,'status.json')));
 for(const name of ['featured-price-observations.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
 console.log('D4_REUSED_OUTPUT_DIR_FAIL_CLOSED_PASS');
+const malformedDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-malformed-'));
+const originalRead=fs.readFileSync;
+try{
+ fs.readFileSync=function(file,...args){
+  if(String(file).endsWith('20261008-d4-original-analysis-candidate.json'))return '{malformed';
+  return originalRead.call(this,file,...args);
+ };
+ const malformedRun=run('.','20261008',malformedDir);
+ assert.equal(malformedRun.render_authorized,false);
+ const malformedAudit=JSON.parse(originalRead(path.join(malformedDir,'authored-candidate-preflight.json')));
+ assert.equal(malformedAudit.status,'REJECTED');
+ assert.equal(fs.existsSync(path.join(malformedDir,'featured-price-observations.json')),false);
+ assert.ok(malformedRun.blockers.includes('AUTHORED_CANDIDATE_PREFLIGHT_REJECTED'));
+}finally{fs.readFileSync=originalRead}
+console.log('D4_MALFORMED_CANDIDATE_FAIL_CLOSED_PASS');
 console.log('D4_REAL_CANDIDATE_ACTIONABLE_PREFLIGHT_PASS');
 
 const candidateCheck=JSON.parse(fs.readFileSync(path.join(candidateDir,'original-analysis-draft-check.json')));
