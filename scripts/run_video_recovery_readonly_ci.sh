@@ -111,6 +111,12 @@ test "$editorial_status" -eq 1
 node --check scripts/research_multidate_input_readiness_v1.js
 node tests/research_multidate_input_readiness_v1.test.js
 node scripts/research_multidate_input_readiness_v1.js 20261008 > /tmp/video-recovery-proof/multidate-20261008-readiness.json
+set +e
+node scripts/research_multidate_input_readiness_v1.js 20261007 > /tmp/video-recovery-proof/multidate-20261007-readiness.json
+multidate_missing_status=$?
+set -e
+test "$multidate_missing_status" -eq 3
+node -e "const r=require('/tmp/video-recovery-proof/multidate-20261007-readiness.json');if(r.ready||!r.missing.includes('market-opening')||r.publication_authorized!==false)process.exit(1)"
 node -e "const r=require('/tmp/video-recovery-proof/multidate-20261008-readiness.json');if(!r.ready||r.target_date!=='20261008')process.exit(1)"
 sha256sum /tmp/video-recovery-proof/*.json > /tmp/video-recovery-proof/SHA256SUMS
 printf 'Expected BLOCKED proof verified; no publication or dispatch.\n'
