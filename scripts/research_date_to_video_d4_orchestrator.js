@@ -43,7 +43,8 @@ function run(root,date,out){
   }
   result.stages[1].status=marketMaster.status==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING':institutional.status==='VERIFIED'&&breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED':'WAITING_FINAL_MARKET_MASTER';
   result.stages[2].status='REVIEW_REQUIRED';
-  result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),...(institutional.status==='VERIFIED'?[]:['FINAL_DATED_BFI82U_THREE_GROUPS_PENDING']),...(breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?[]:['DATED_MI_INDEX_STOCK_AGGREGATE_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
+  result.source_readiness={target_date:date,repo_daily_institutional_present:institutional.repo_daily_institutional_present??fs.existsSync(path.join(root,'data_twse_institutional_investors',date+'_twse_institutional_investors.json')),bfi82u_archive_status:institutional.status==='VERIFIED'?'VERIFIED':institutional.bfi82u_archive_status||institutional.status,market_master_status:marketMaster.status};
+  result.blockers=[...(marketOnlyMissing?['MARKET_OPENING_DATED_BASE_MISSING']:[]),...(institutional.status==='VERIFIED'?[]:institutional.missing||['BFI82U_ARCHIVE_UNVERIFIED']),...(breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?[]:['DATED_MI_INDEX_STOCK_AGGREGATE_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
   const emptyReview={target_date:date,inventory_sha256:hash(JSON.stringify(claims)),decisions:[]};
   // Explicit review decisions are an input, never inferred from a research memo or claim inventory.
   const reviewInputPath=path.join(out,'editorial-review-input.json');
