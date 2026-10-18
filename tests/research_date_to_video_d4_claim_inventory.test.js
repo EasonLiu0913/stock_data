@@ -12,5 +12,12 @@ for(const date of ['20261008','20261013']){
  assert.equal(claims.render_authorized,false);assert.equal(claims.publication_authorized,false);
  const changed=structuredClone(inputs);changed.news.analyses[0].reason_summary='tampered';
  assert.throws(()=>inventory(joined,changed),/NEWS_SHA_DRIFT/);
+ const drift=structuredClone(inputs);
+ const first=drift.facts.stocks.find(x=>x.price&&Number.isFinite(x.price.change_pct));
+ assert.ok(first,'DATED_PRICE_ROW_REQUIRED');
+ first.price.change_pct+=0.01;
+ const driftJoin=join({date,cutoff,...drift});
+ assert.throws(()=>inventory(driftJoin,drift),/PRICE_CHANGE_SOURCE_MISMATCH/);
+ console.log('D4_PRICE_CHANGE_MISMATCH_FAIL_CLOSED_PASS '+date);
  console.log('D4_DATED_CLAIM_INVENTORY_PASS '+date+' claims='+claims.claim_count+' whitelist=false');
 }
