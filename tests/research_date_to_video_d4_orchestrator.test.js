@@ -119,6 +119,11 @@ assert.equal(actualPreflight.status,'REVIEW_OR_EVIDENCE_PENDING');
 assert.deepEqual(new Set(actualPreflight.missing_claim_reviews.map(x=>x.claim_id)),new Set(['20261008:6672:PRICE_CHANGE','20261008:2305:PRICE_CHANGE','20261008:1301:PRICE_CHANGE']));
 assert.deepEqual(actualPreflight.unknown_claim_ids,[]);
 assert.deepEqual(actualPreflight.invalid_master_fields,[]);
+assert.equal(actualPreflight.review_packet.length,3);
+assert.deepEqual(new Set(actualPreflight.review_packet.map(c=>c.claim_id)),new Set(actualPreflight.missing_claim_reviews.map(c=>c.claim_id)));
+assert.ok(actualPreflight.review_packet.every(c=>c.kind==='PRICE_CHANGE'&&c.review_decision==='PENDING_INDEPENDENT_REVIEW'&&c.evidence_checked===false));
+assert.equal(actualPreflight.candidate_sha256,crypto.createHash('sha256').update(JSON.stringify(actualCandidate)).digest('hex'));
+assert.equal(actualPreflight.inventory_sha256,crypto.createHash('sha256').update(JSON.stringify(JSON.parse(fs.readFileSync(path.join(candidateDir,'claims.json'))))).digest('hex'));
 assert.equal(actualPreflight.render_authorized,false);
 console.log('D4_REAL_CANDIDATE_ACTIONABLE_PREFLIGHT_PASS');
 
