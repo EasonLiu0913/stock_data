@@ -150,6 +150,23 @@ assert.throws(()=>verify(Buffer.concat([bytes,Buffer.from(' ')]),manifest,'20261
 fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-bfi82u-date-gate.json',JSON.stringify({verified_20261008:good,missing_20261013:missing,wrong_date_rejected:true,tampered_bytes_rejected:true},null,2)+'\n');
 console.log('DATE_TO_VIDEO_BFI82U_DATE_GATE_PASS 20261008 VERIFIED 20261013 WAITING_SOURCE');
 NODE
+node --check scripts/research_date_to_video_d3_editorial_plan.js
+node - <<'NODE'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {inspect}=require('./scripts/research_date_to_video_d2_partial');
+const {plan}=require('./scripts/research_date_to_video_d3_editorial_plan');
+for(const date of ['20261008','20261013']){
+ const r=plan(inspect('.',date));
+ assert.equal(r.target_date,date);assert.equal(r.original_insight_certified,false);
+ assert.equal(r.render_authorized,false);assert.equal(r.publication_authorized,false);
+ assert.ok(r.questions.some(q=>q.id==='FLOW_BREADTH_DIVERGENCE'));
+ if(date==='20261013')assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_PENDING'));
+ else assert.ok(r.claims.some(c=>c.kind==='observed'&&c.evidence==='final_bfi82u'));
+ fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-d3-'+date+'.json',JSON.stringify(r,null,2)+'\n');
+}
+assert.throws(()=>plan({...inspect('.','20261013'),target_date:'20261007'}),/MASTER_DATE_MISMATCH/);
+console.log('DATE_TO_VIDEO_D3_EVIDENCE_PLAN_PASS editorial_not_certified');
+NODE
 node --check scripts/research_date_to_video_d2_partial.js
 node - <<'NODE'
 const assert=require('node:assert/strict'),fs=require('node:fs');
