@@ -1,0 +1,21 @@
+'use strict';
+// D3 research-only editorial evidence planner: distinguish interpretation from source facts.
+// No templated narration, TTS, render or publication authorization.
+const assert=require('node:assert/strict');
+function plan(d){
+ assert.match(d?.target_date||'',/^20\d{6}$/);
+ assert.equal(d.partial_master?.target_date,d.target_date,'MASTER_DATE_MISMATCH');
+ const b=d.official_stock_breadth,m=d.partial_master.market_trading,i=d.final_bfi82u;
+ const claims=[],questions=[],blockers=[];
+ if(b){
+  assert.equal(b.target_date,d.target_date);assert.equal(b.scope,'TWSE_OFFICIAL_STOCK_COLUMN');
+  claims.push({id:d.target_date+':BREADTH',kind:'observed',evidence:'official_stock_breadth',fact:{advancers:b.advancers,decliners:b.decliners,unchanged:b.unchanged,limit_up:b.limit_up_count,limit_down:b.limit_down_count},scope:b.scope,causality:'NOT_ASSERTED'});
+  questions.push({id:'BREADTH_VS_LEADERS',angle:'大盤漲跌家數與強勢股集中度是否背離？',requires:['verified_5pct_universe','breadth_scope_reconciliation'],status:'RESEARCH_PENDING'});
+ }else blockers.push('OFFICIAL_BREADTH_MISSING');
+ if(m?.turnover_twd)questions.push({id:'TURNOVER_CONTEXT',angle:'量能相對前五個交易日的變化，是擴散參與還是少數標的集中？',requires:['verified_prior_five_turnover','concentration_evidence'],status:'RESEARCH_PENDING'});
+ if(i?.status==='VERIFIED')claims.push({id:d.target_date+':INSTITUTIONAL',kind:'observed',evidence:'final_bfi82u',fact:i.institutional,scope:'TWSE_BFI82U_NOT_COMMON_STOCK_ONLY',causality:'NOT_ASSERTED'});
+ else blockers.push('FINAL_DATED_BFI82U_PENDING');
+ questions.push({id:'FLOW_BREADTH_DIVERGENCE',angle:'法人淨流向與市場廣度是否同向？若背離，哪些觀察能區分結構性分化與單日雜訊？',requires:['final_bfi82u','official_breadth','compatible_scope_review'],status:'RESEARCH_PENDING'});
+ return {contract:'DATE_TO_VIDEO_V1_D3_EDITORIAL_RESEARCH_PLAN',target_date:d.target_date,claims,questions,blockers,original_insight_certified:false,editorial_complete:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
+}
+module.exports={plan};
