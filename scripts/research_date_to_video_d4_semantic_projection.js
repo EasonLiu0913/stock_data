@@ -9,7 +9,10 @@ function project(outline,master,review){
  assert.equal(outline.review_gate_sha256,sha(review),'PROJECTION_STALE_REVIEW');
  assert.ok(Array.isArray(outline.sections)&&outline.sections.length>0,'PROJECTION_EMPTY_OUTLINE');
  const approved=new Set(review.approved_claim_ids||[]);
+ const seen=new Set();
  const sections=outline.sections.map(s=>{
+  assert.ok(typeof s.id==='string'&&s.id.trim()&&!seen.has(s.id),'PROJECTION_DUPLICATE_OR_EMPTY_SECTION_ID');seen.add(s.id);
+  for(const key of ['section','observation','interpretation','uncertainty'])assert.ok(typeof s[key]==='string'&&s[key].trim(),'PROJECTION_EMPTY_SEMANTIC_FIELD_'+key);
   assert.ok(Array.isArray(s.evidence)&&s.evidence.length>0,'PROJECTION_MISSING_EVIDENCE');
   for(const e of s.evidence){
    if(e.type==='master_field'){
@@ -17,7 +20,8 @@ function project(outline,master,review){
     let value=master;
     for(const part of e.path.split('.')){assert.ok(value!==null&&typeof value==='object'&&Object.hasOwn(value,part),'PROJECTION_UNKNOWN_MASTER_FIELD');value=value[part]}
     assert.ok(value!==null&&value!==undefined&&typeof value!=='object','PROJECTION_UNRESOLVED_MASTER_FIELD');
-   }else assert.equal(e.type,'claim_id','PROJECTION_UNKNOWN_EVIDENCE_TYPE');
+   }else if(e.type==='claim_id')assert.ok(typeof e.id==='string'&&/^\\d{8}:[0-9A-Za-z-]+:[A-Z_]+$/.test(e.id)&&e.id.startsWith(outline.target_date+':'),'PROJECTION_INVALID_DATED_CLAIM_ID');
+   else assert.fail('PROJECTION_UNKNOWN_EVIDENCE_TYPE');
   }
   const pending=s.evidence.filter(e=>e.type==='claim_id'&&!approved.has(e.id)).map(e=>e.id);
   assert.equal(s.claim_review_pending,pending.length>0,'PROJECTION_STALE_CLAIM_FLAG');
