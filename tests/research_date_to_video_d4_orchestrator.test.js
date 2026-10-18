@@ -35,6 +35,11 @@ for(const date of ['20261008','20261013']){
  }else assert.equal(r.stages[0].status,'WAITING_SOURCE');
  console.log('D4_ORCHESTRATOR_DATE_STATUS '+date+' '+r.stages[0].status);
 }
+const draftDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-draft-'));
+fs.writeFileSync(path.join(draftDir,'original-analysis-draft-input.json'),JSON.stringify({target_date:'20261008',insights:[]}));
+const rejected=run('.','20261008',draftDir);
+const draftCheck=JSON.parse(fs.readFileSync(path.join(draftDir,'original-analysis-draft-check.json')));
+assert.equal(draftCheck.status,'REJECTED');assert.equal(draftCheck.reason,'EMPTY_INSIGHTS');assert.equal(draftCheck.narration_authorized,false);assert.equal(rejected.render_authorized,false);assert.ok(rejected.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-missing-'));
 const missing=run('.','20261014',dir);assert.equal(missing.stages[0].status,'WAITING_SOURCE');
 assert.equal(missing.render_authorized,false);assert.equal(missing.artifacts.length,1);
