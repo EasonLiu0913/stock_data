@@ -5,6 +5,16 @@ const {buildResearchCaptionSource}=require('../scripts/build_research_caption_so
 const {verifySequence}=require('../scripts/research_caption_sentence_parity_20261008');
 const d=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-original-script-v3-research.json','utf8'));
 const artifact=buildResearchCaptionSource(d);
+const v4Opening=['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','那麼我們開始囉。'];
+assert.deepEqual(d.opening.spoken_sentences,v4Opening,'V4_OPENING_SPOKEN');
+assert.deepEqual(d.opening.caption_sentences,v4Opening,'V4_OPENING_CAPTION');
+const obsolete=structuredClone(d);
+obsolete.opening.spoken_sentences[3]='我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。';
+assert.throws(()=>buildResearchCaptionSource(obsolete),/V4_FIXED_OPENING_SPOKEN/,'V4_OBSOLETE_CC_NEGATIVE');
+const captionDrift=structuredClone(d);
+captionDrift.opening.caption_sentences[3]='我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。';
+assert.throws(()=>buildResearchCaptionSource(captionDrift),/V4_FIXED_OPENING_CAPTION/,'V4_CAPTION_NEGATIVE');
+console.log('V4_FIXED_OPENING_NEGATIVE_TEST_PASS research_only=true');
 assert.equal(artifact.parts.length,6);
 assert.equal(artifact.media_input_status,'V3_SIX_SCENE_SEMANTIC_INPUT_ONLY');
 assert.deepEqual(artifact.media_input.map(s=>s.id),['opening','market','6672','2305','1301','conclusion']);
