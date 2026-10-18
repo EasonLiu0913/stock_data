@@ -3,7 +3,9 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function inspect(root,date,codes){
- assert.match(date,/^20\d{6}$/);assert.ok(Array.isArray(codes)&&codes.length>0&&new Set(codes).size===codes.length,'INVALID_STOCK_CODES');
+ assert.match(date,/^20\d{6}$/);
+ if(!codes.length){const candidate=JSON.parse(fs.readFileSync(path.join(root,'data_research/m5/ai-script-generation/'+date+'-d4-original-analysis-candidate.json')));assert.equal(candidate.target_date,date,'CANDIDATE_DATE_MISMATCH');codes=[...new Set(candidate.insights.flatMap(i=>i.evidence.filter(e=>e.type==='claim_id'&&e.id.startsWith(date+':')&&e.id.endsWith(':PRICE_CHANGE')).map(e=>e.id.split(':')[1])))];}
+ assert.ok(Array.isArray(codes)&&codes.length>0&&new Set(codes).size===codes.length,'INVALID_STOCK_CODES');
  const read=p=>{const bytes=fs.readFileSync(path.join(root,p));return {data:JSON.parse(bytes),sha256:sha(bytes),path:p}};
  const list=read('data_daily_gain_over_5/'+date+'.json'),facts=read('data_daily_gain_over_5/analysis-facts/'+date+'.json');
  assert.equal(list.data.target_date,date);assert.equal(facts.data.target_date,date);assert.equal(list.data.stock_count,list.data.stocks.length);assert.equal(facts.data.stock_count,facts.data.stocks.length);
