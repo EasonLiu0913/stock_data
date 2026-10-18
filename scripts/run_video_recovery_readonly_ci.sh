@@ -167,6 +167,11 @@ for(const date of ['20261008','20261013']){
   assert.equal(a.fact.decliners_minus_advancers,461);
   assert.equal(a.fact.down_share_percent,73.07);
   assert.equal(a.causality,'NOT_ASSERTED');
+  const contrast=r.claims.find(c=>c.id==='20261013:WEAK_BREADTH_WITH_PRELIMINARY_GAINERS');
+  assert.equal(contrast.fact.preliminary_gainers_over_5pct,25);
+  assert.equal(contrast.fact.decliners,730);
+  assert.equal(contrast.narration_authorized,false);
+  assert.ok(contrast.limits.some(s=>s.includes('母體不完全相同')));
 }
  else assert.ok(r.claims.some(c=>c.kind==='observed'&&c.evidence==='final_bfi82u'));
  fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-d3-'+date+'.json',JSON.stringify(r,null,2)+'\n');
