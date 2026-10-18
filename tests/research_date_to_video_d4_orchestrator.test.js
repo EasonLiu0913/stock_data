@@ -21,6 +21,10 @@ for(const date of ['20261008','20261013']){
   assert.equal(master.target_date,date);assert.equal(master.publication_authorized,false);
   if(date==='20261008'){assert.equal(master.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');assert.ok(master.market_trading.turnover_twd>0);assert.equal(master.ordinary_share_identity_certified,false);}
   if(date==='20261013')assert.equal(master.status,'WAITING_SOURCE');
+  const brief=JSON.parse(fs.readFileSync(path.join(dir,'editorial-research-brief.json')));
+  assert.equal(brief.target_date,date);assert.equal(brief.editorial_certified,false);assert.equal(brief.narration_authorized,false);assert.equal(brief.render_authorized,false);assert.equal(brief.original_analysis,null);
+  if(date==='20261008'){assert.equal(brief.status,'OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED');assert.equal(brief.observations.length,3);}
+  if(date==='20261013'){assert.equal(brief.status,'WAITING_MARKET_MASTER');assert.equal(brief.observations.length,0);}
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
   if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
