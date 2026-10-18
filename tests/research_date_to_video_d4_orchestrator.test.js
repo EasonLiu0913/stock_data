@@ -137,6 +137,15 @@ assert.equal(factualPrices.news_causality_verified,false);
 assert.equal(factualPrices.narration_authorized,false);
 assert.equal(factualPrices.render_authorized,false);
 console.log('D4_FEATURED_FACTUAL_PRICE_SNAPSHOT_PASS');
+const staleDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-stale-'));
+run('.','20261008',staleDir);
+assert.ok(fs.existsSync(path.join(staleDir,'featured-price-observations.json')));
+fs.writeFileSync(path.join(staleDir,'original-analysis-draft-check.json'),'{"status":"STALE"}');
+const rerunMissing=run('.','20261014',staleDir);
+assert.equal(rerunMissing.stages[0].status,'WAITING_SOURCE');
+assert.ok(fs.existsSync(path.join(staleDir,'status.json')));
+for(const name of ['featured-price-observations.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
+console.log('D4_REUSED_OUTPUT_DIR_FAIL_CLOSED_PASS');
 console.log('D4_REAL_CANDIDATE_ACTIONABLE_PREFLIGHT_PASS');
 
 const candidateCheck=JSON.parse(fs.readFileSync(path.join(candidateDir,'original-analysis-draft-check.json')));

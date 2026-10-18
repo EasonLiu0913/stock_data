@@ -12,6 +12,10 @@ const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 function run(root,date,out){
  const status=plan(root,date),result={contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,research_only:true,publication_authorized:false,render_authorized:false,ready_to_render:false,stages:status.stages,blockers:[...status.blockers],artifacts:[]};
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
+ // A repeated run must not expose artifacts from an earlier date or earlier approval state.
+ // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
+ const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','original-analysis-draft-check.json','authored-candidate-preflight.json','featured-price-observations.json'];
+ for(const name of generated){const file=path.join(out,name);if(fs.existsSync(file))fs.unlinkSync(file)}
  const marketOnlyMissing=status.blockers.length===1&&status.blockers[0]==='MISSING:market-opening';
  if(status.stages[0].status==='WAITING_SOURCE'&&!marketOnlyMissing){write('status.json',result);return result}
  const load=(part)=>JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5',part,date+'.json'),'utf8'));
