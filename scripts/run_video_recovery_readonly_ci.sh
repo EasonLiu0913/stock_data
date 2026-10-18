@@ -136,6 +136,20 @@ const proof={target_date:date,source_path:path,sha256,bytes:bytes.length,root_ke
 fs.writeFileSync('/tmp/video-recovery-proof/multidate-20261013-institutional-schema.json',JSON.stringify(proof,null,2)+'\n');
 console.log('MULTIDATE_20261013_INSTITUTIONAL_SCHEMA_INSPECT '+JSON.stringify(proof));
 NODE
+node --check scripts/research_date_to_video_bfi82u_v1.js
+node - <<'NODE'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {inspect,verify}=require('./scripts/research_date_to_video_bfi82u_v1');
+const good=inspect('.','20261008'),missing=inspect('.','20261013');
+assert.equal(good.status,'VERIFIED');assert.equal(good.final_six_rows_verified,true);
+assert.equal(missing.status,'WAITING_SOURCE');assert.equal(missing.final_six_rows_verified,false);
+const root='data_research/twse-market-opening/primary-archive/20261008/20261008-bfi82u';
+const bytes=fs.readFileSync(root+'.json'),manifest=JSON.parse(fs.readFileSync(root+'.manifest.json'));
+assert.throws(()=>verify(bytes,manifest,'20261013'),/MANIFEST_TARGET_DATE/);
+assert.throws(()=>verify(Buffer.concat([bytes,Buffer.from(' ')]),manifest,'20261008'),/RAW_SHA_MISMATCH/);
+fs.writeFileSync('/tmp/video-recovery-proof/date-to-video-bfi82u-date-gate.json',JSON.stringify({verified_20261008:good,missing_20261013:missing,wrong_date_rejected:true,tampered_bytes_rejected:true},null,2)+'\n');
+console.log('DATE_TO_VIDEO_BFI82U_DATE_GATE_PASS 20261008 VERIFIED 20261013 WAITING_SOURCE');
+NODE
 node --check scripts/research_date_to_video_d2_partial.js
 node - <<'NODE'
 const assert=require('node:assert/strict'),fs=require('node:fs');
