@@ -4,8 +4,8 @@ const assert=require('node:assert/strict');
 const crypto=require('node:crypto');
 const hash=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 function join({date,list,facts,news,ai,cutoff}){
- assert.match(date||'',/^20\\d{6}$/);
- assert.ok(/^\\d{4}-\\d{2}-\\d{2}T/.test(cutoff||''),'INVALID_CUTOFF');
+ assert.match(date||'',/^20\d{6}$/);
+ assert.ok(/^\d{4}-\d{2}-\d{2}T/.test(cutoff||''),'INVALID_CUTOFF');
  const cutoffMs=Date.parse(cutoff);assert.ok(Number.isFinite(cutoffMs),'INVALID_CUTOFF');
  const day=date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6);
  assert.equal(cutoff.slice(0,10),day,'CUTOFF_DATE_MISMATCH');
@@ -34,7 +34,7 @@ function join({date,list,facts,news,ai,cutoff}){
    for(const source of v.sources||[]){
     assert.ok(source.url&&source.published_at,'SOURCE_PROVENANCE_MISSING:'+code);
     const published=source.published_at;
-    assert.match(published,/^\\d{4}-\\d{2}-\\d{2}(?:T.*)?$/,'INVALID_SOURCE_DATE');
+    assert.match(published,/^\d{4}-\d{2}-\d{2}(?:T.*)?$/,'INVALID_SOURCE_DATE');
     const ms=published.length===10?Date.parse(published+'T23:59:59+08:00'):Date.parse(published);
     assert.ok(Number.isFinite(ms),'INVALID_SOURCE_TIMESTAMP');
     assert.ok(ms<=cutoffMs,'POST_CUTOFF_SOURCE:'+code);
