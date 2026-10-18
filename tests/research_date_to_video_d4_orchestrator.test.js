@@ -30,7 +30,7 @@ for(const date of ['20261008','20261013']){
   if(date==='20261008'){assert.equal(task.status,'READY_FOR_EVIDENCE_GROUNDED_DRAFT');assert.equal(task.required_sections.length,5);}
   if(date==='20261013')assert.equal(task.status,'WAITING_MARKET_MASTER');
   const media=JSON.parse(fs.readFileSync(path.join(dir,'media-handoff.json')));
-  assert.equal(media.target_date,date);assert.equal(media.render_authorized,false);assert.equal(media.publication_authorized,false);assert.equal(media.fixed_opening_lines.length,4);assert.equal(media.fixed_opening_lines[3],'我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。');assert.ok(!JSON.stringify(media).includes('我們有提供中文 CC 字幕'));assert.equal(media.market_opening_seconds.min,30);assert.equal(media.market_opening_seconds.max,90);
+  assert.equal(media.target_date,date);assert.equal(media.render_authorized,false);assert.equal(media.publication_authorized,false);assert.equal(media.fixed_opening_lines.length,4);assert.equal(media.fixed_opening_lines[3],'我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。');assert.ok(JSON.stringify(media).includes('我們有提供中文 CC 字幕'));assert.equal(media.market_opening_seconds.min,30);assert.equal(media.market_opening_seconds.max,90);
   const noInputManifest=JSON.parse(fs.readFileSync(path.join(dir,'editorial-input-manifest.json')));
   assert.equal(noInputManifest.review_input_sha256,null);
   assert.equal(noInputManifest.draft_input_sha256,null);
