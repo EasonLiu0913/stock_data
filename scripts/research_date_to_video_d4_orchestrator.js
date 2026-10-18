@@ -42,6 +42,12 @@ function run(root,date,out){
   const emptyReview={target_date:date,inventory_sha256:hash(JSON.stringify(claims)),decisions:[]};
   const gate=review(claims,emptyReview);
   const editorialBrief={target_date:date,contract:'DATE_TO_VIDEO_V1_EDITORIAL_RESEARCH_BRIEF',status:marketMaster.status==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?'OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED':'WAITING_MARKET_MASTER',source_master_sha256:hash(JSON.stringify(marketMaster)),observations:marketMaster.status==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?[{kind:'OFFICIAL_STOCK_COLUMN_BREADTH',advancers:breadth.advancers,decliners:breadth.decliners,unchanged:breadth.unchanged,limit_up_count:breadth.limit_up_count,identity_certified:false},{kind:'MARKET_TURNOVER',turnover_twd:marketMaster.market_trading.turnover_twd},{kind:'INSTITUTIONAL_FLOWS',groups:marketMaster.institutional}]:[],analysis_questions:['Is breadth consistent with index direction and turnover?','Do institutional net flows support or diverge from breadth?','Which independently reviewed stock claims provide a differentiated, non-causal interpretation?'],approved_claim_ids:gate.approved_claim_ids,original_analysis:null,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+  if(editorialBrief.observations.length===3){
+   const flows=marketMaster.institutional;
+   const totalNet=['foreign','investment_trust','dealers'].reduce((sum,name)=>sum+flows[name].net_twd,0);
+   const breadthNet=breadth.advancers-breadth.decliners;
+   editorialBrief.derived_comparisons={breadth_net_count:breadthNet,institutional_total_net_twd:totalNet,breadth_direction:Math.sign(breadthNet),institutional_direction:Math.sign(totalNet),directional_relation:Math.sign(breadthNet)===Math.sign(totalNet)?'SAME_SIGN':'DIFFERENT_SIGN',interpretation_status:'OBSERVATION_ONLY_NO_CAUSAL_CLAIM',source_master_sha256:editorialBrief.source_master_sha256};
+  }
   write('editorial-research-brief.json',editorialBrief);
   write('market-master.json',marketMaster);
   write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('breadth-evidence.json',breadth);write('editorial-review.json',gate);
