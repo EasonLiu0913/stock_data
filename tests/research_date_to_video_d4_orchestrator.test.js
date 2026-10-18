@@ -122,6 +122,10 @@ assert.deepEqual(actualPreflight.invalid_master_fields,[]);
 assert.equal(actualPreflight.review_packet.length,3);
 assert.deepEqual(new Set(actualPreflight.review_packet.map(c=>c.claim_id)),new Set(actualPreflight.missing_claim_reviews.map(c=>c.claim_id)));
 assert.ok(actualPreflight.review_packet.every(c=>c.kind==='PRICE_CHANGE'&&c.review_decision==='PENDING_INDEPENDENT_REVIEW'&&c.evidence_checked===false));
+assert.ok(actualPreflight.review_packet.every(c=>c.evidence_sources.length===1&&c.evidence_sources[0].origin==='dated_list_and_facts_crosscheck'&&c.evidence_sources[0].list_sha256&&c.evidence_sources[0].facts_sha256));
+const originalList=JSON.parse(fs.readFileSync('data_daily_gain_over_5/20261008.json'));
+for(const item of actualPreflight.review_packet){const code=item.claim_id.split(':')[1];assert.equal(item.statement,originalList.stocks.find(x=>x.code===code).change_pct);assert.equal(item.evidence_sources[0].change_pct,item.statement);}
+console.log('D4_DATED_PRICE_CLAIM_SOURCE_CROSSCHECK_PASS');
 assert.equal(actualPreflight.candidate_sha256,crypto.createHash('sha256').update(JSON.stringify(actualCandidate)).digest('hex'));
 assert.equal(actualPreflight.inventory_sha256,crypto.createHash('sha256').update(JSON.stringify(JSON.parse(fs.readFileSync(path.join(candidateDir,'claims.json'))))).digest('hex'));
 assert.equal(actualPreflight.render_authorized,false);
