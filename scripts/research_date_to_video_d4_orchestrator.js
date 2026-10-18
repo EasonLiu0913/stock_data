@@ -5,6 +5,7 @@ const {plan}=require('./research_date_to_video_v1');
 const {join}=require('./research_date_to_video_d4_evidence_join');
 const {inventory}=require('./research_date_to_video_d4_claim_inventory');
 const {review}=require('./research_date_to_video_d4_review_gate');
+const {validate:validateDraft}=require('./research_date_to_video_d4_draft_gate');
 const {inspect:inspectBfi82u}=require('./research_date_to_video_bfi82u_v1');
 const {parse:parseBreadth}=require('./parse_twse_official_stock_aggregate');
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
@@ -49,6 +50,13 @@ function run(root,date,out){
    editorialBrief.derived_comparisons={breadth_net_count:breadthNet,institutional_total_net_twd:totalNet,breadth_direction:Math.sign(breadthNet),institutional_direction:Math.sign(totalNet),directional_relation:Math.sign(breadthNet)===Math.sign(totalNet)?'SAME_SIGN':'DIFFERENT_SIGN',interpretation_status:'OBSERVATION_ONLY_NO_CAUSAL_CLAIM',source_master_sha256:editorialBrief.source_master_sha256};
   }
   const analysisTask={contract:'DATE_TO_VIDEO_V1_ORIGINAL_ANALYSIS_TASK',target_date:date,status:editorialBrief.status==='OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED'?'READY_FOR_EVIDENCE_GROUNDED_DRAFT':'WAITING_MARKET_MASTER',market_master_sha256:editorialBrief.source_master_sha256,claim_inventory_sha256:hash(JSON.stringify(claims)),approved_claim_ids:gate.approved_claim_ids,required_sections:['market_breadth_vs_index','institutional_flow_vs_breadth','selected_stock_evidence','counterarguments_and_uncertainty','three_point_summary'],instructions:['Write original differentiated Traditional Chinese analysis; do not simply restate numbers or fill a fixed script template.','For each insight supply master evidence field paths or independently approved claim IDs; separate observation, interpretation and uncertainty.','Do not assert causality from directional co-movement, do not use unreviewed News or AI summaries as facts.','No stock-level narration without approved claim IDs; no approval may be inferred from an empty review.','Preserve four fixed opening lines, 30-90 second market opening, subtitle and narration semantic parity when later projected.'],draft:null,independent_review_required:true,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+  const draftPath=path.join(out,'original-analysis-draft-input.json');
+  if(fs.existsSync(draftPath)){
+   let draftCheck;
+   try{draftCheck=validateDraft(analysisTask,marketMaster,claims,gate,JSON.parse(fs.readFileSync(draftPath,'utf8')));}
+   catch(e){draftCheck={contract:'DATE_TO_VIDEO_V1_DRAFT_EVIDENCE_GATE',target_date:date,status:'REJECTED',reason:e.message,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};result.blockers.push('ORIGINAL_ANALYSIS_DRAFT_REJECTED');}
+   write('original-analysis-draft-check.json',draftCheck);
+  }
   write('original-analysis-task.json',analysisTask);
   write('editorial-research-brief.json',editorialBrief);
   write('market-master.json',marketMaster);
