@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Research-only V3 sentence audio to caption/card timeline; no rendering or publishing."""
-import hashlib,json,pathlib,sys
+import hashlib,json,pathlib,re,sys
 root=pathlib.Path(sys.argv[1]); source=json.loads((root/"source.json").read_text()); proof=json.loads((root/"audio"/"audio-proof.json").read_text())
 assert proof["contract"]=="AI_V3_SENTENCE_AUDIO_RESEARCH_ONLY"
 assert proof["research_master_sha256"]==source["research_master_sha256"]
@@ -34,8 +34,32 @@ def srt_clock(seconds):
  return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 assert all(timeline[i]["end_seconds"]<=timeline[i+1]["start_seconds"] for i in range(len(timeline)-1))
 assert all(row["caption_text"].strip() for row in timeline)
-srt="".join(f'{i}\n{srt_clock(row["start_seconds"])} --> {srt_clock(row["end_seconds"])}\n{row["caption_text"]}\n\n' for i,row in enumerate(timeline,1))
+def wrap_caption(text, limit=30):
+ # Display-only line breaks; preserve exact characters and sentence timing.
+ assert "\\n" not in text and "\\r" not in text
+ pieces=re.findall(r"[^。！？；，、]+[。！？；，、]?",text)
+ assert "".join(pieces)==text
+ lines=[]; current=""
+ for piece in pieces:
+  if len(current)+len(piece)<=limit:
+   current+=piece
+   continue
+  if current:
+   lines.append(current); current=""
+  while len(piece)>limit:
+   lines.append(piece[:limit]); piece=piece[limit:]
+  current=piece
+ if current: lines.append(current)
+ assert lines and all(0<len(line)<=limit for line in lines)
+ assert "".join(lines)==text, "SRT_TEXT_DRIFT"
+ return "\\n".join(lines)
+
+assert wrap_caption("甲"*31)=="甲"*30+"\\n甲"
+assert wrap_caption("今天上漲，明天觀察。")=="今天上漲，明天觀察。"
+srt="".join(f'{i}\n{srt_clock(row["start_seconds"])} --> {srt_clock(row["end_seconds"])}\n{wrap_caption(row["caption_text"])}\n\n' for i,row in enumerate(timeline,1))
 assert srt.count(" --> ")==expected_count
+assert all(len(line)<=30 for block in srt.strip().split("\n\n") for line in block.splitlines()[2:]), "SRT_DISPLAY_LINE_TOO_LONG"
+assert all("".join(block.splitlines()[2:])==row["caption_text"] for block,row in zip(srt.strip().split("\n\n"),timeline)), "SRT_TEXT_DRIFT"
 (root/"research-sentence-captions.srt").write_text(srt,encoding="utf-8")
 caption_proof={"contract":"AI_V3_RESEARCH_SENTENCE_SRT_ONLY","research_master_sha256":proof["research_master_sha256"],"sentence_count":expected_count,"total_seconds":round(cursor,3),"srt_sha256":hashlib.sha256(srt.encode()).hexdigest(),"publication_authorized":False,"render_authorized":False,"mp4_generated":False}
 (root/"research-caption-proof.json").write_text(json.dumps(caption_proof,ensure_ascii=False,indent=2)+"\n")
