@@ -31,6 +31,10 @@ for(const date of ['20261008','20261013']){
   if(date==='20261013')assert.equal(task.status,'WAITING_MARKET_MASTER');
   const media=JSON.parse(fs.readFileSync(path.join(dir,'media-handoff.json')));
   assert.equal(media.target_date,date);assert.equal(media.render_authorized,false);assert.equal(media.publication_authorized,false);assert.equal(media.fixed_opening_lines.length,4);assert.equal(media.fixed_opening_lines[3],'那麼我們開始囉。');assert.ok(!JSON.stringify(media).includes('我們有提供中文 CC 字幕'));assert.equal(media.market_opening_seconds.min,30);assert.equal(media.market_opening_seconds.max,90);
+  const noInputManifest=JSON.parse(fs.readFileSync(path.join(dir,'editorial-input-manifest.json')));
+  assert.equal(noInputManifest.review_input_sha256,null);
+  assert.equal(noInputManifest.draft_input_sha256,null);
+  assert.equal(noInputManifest.editorial_certified,false);
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
   if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MISSING:market-opening'));}
@@ -46,6 +50,11 @@ assert.equal(rejectedReview.claim_whitelist_verified,false);
 assert.equal(rejectedReview.approved_claim_ids.length,0);
 assert.ok(reviewRejected.blockers.includes('INDEPENDENT_REVIEW_INPUT_REJECTED'));
 assert.equal(reviewRejected.render_authorized,false);
+const rejectedManifest=JSON.parse(fs.readFileSync(path.join(reviewDir,'editorial-input-manifest.json')));
+assert.equal(rejectedManifest.review_input_sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(reviewDir,'editorial-review-input.json'))).digest('hex'));
+assert.equal(rejectedManifest.draft_input_sha256,null);
+assert.equal(rejectedManifest.editorial_certified,false);
+assert.equal(rejectedManifest.render_authorized,false);
 console.log('D4_INDEPENDENT_REVIEW_INPUT_FAIL_CLOSED_PASS');
 const crypto=require('node:crypto');
 const reviewValidDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-reviewed-'));
