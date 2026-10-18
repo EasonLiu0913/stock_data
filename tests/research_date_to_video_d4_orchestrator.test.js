@@ -11,7 +11,7 @@ for(const date of ['20261008','20261013']){
   assert.equal(claims.target_date,date);assert.ok(claims.claim_count>0);
   const institutional=JSON.parse(fs.readFileSync(path.join(dir,'institutional-evidence.json')));
   assert.equal(institutional.target_date,date);
-  if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'FINAL_BFI82U_VERIFIED_MARKET_MASTER_PENDING');}
+  if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED');}
   if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));}
   const breadth=JSON.parse(fs.readFileSync(path.join(dir,'breadth-evidence.json')));
   assert.equal(breadth.target_date,date);assert.equal(breadth.publication_authorized,false);
