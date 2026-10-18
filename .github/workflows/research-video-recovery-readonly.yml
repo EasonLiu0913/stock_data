@@ -111,7 +111,7 @@ jobs:
       - name: Verify price provenance is linked into independent review worksheet
         run: node -e "const p='/tmp/date-to-video-d4-20261013/';const w=require(p+'independent-review-worksheet.json');const e=require(p+'dated-price-review-evidence.json');if(w.review_items.length!==3||w.review_items.some(x=>{const s=e.stocks.find(y=>y.claim_id===x.claim_id);return !s||x.dated_price_crosscheck?.source_list_sha256!==s.source_list_sha256||x.dated_price_crosscheck?.source_facts_sha256!==s.source_facts_sha256||x.dated_price_crosscheck?.independent_source_reviewed!==false||x.decision!=='PENDING'}))process.exit(1);console.log('D4_REVIEW_WORKSHEET_PRICE_PROVENANCE_PASS')"
       - name: Verify owner-approved fourth opening line in D4 handoff
-        run: node -e "const m=require('/tmp/date-to-video-d4-20261013/media-handoff.json');if(m.fixed_opening_lines[3]!=='我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'||m.render_authorized!==false||m.publication_authorized!==false)process.exit(1);console.log('D4_FIXED_OPENING_LINE_PASS')"
+        run: node -e "const m=require('/tmp/date-to-video-d4-20261013/media-handoff.json');if(m.fixed_opening_lines[3]!=='那麼我們開始囉。'||m.render_authorized!==false||m.publication_authorized!==false)process.exit(1);console.log('D4_FIXED_OPENING_LINE_PASS')"
       - name: Upload D4 20261013 research-only diagnostics
         if: always()
         uses: actions/upload-artifact@v4
