@@ -164,6 +164,16 @@ assert.equal(outline.sections.find(x=>x.section==='selected_stock_evidence').cla
 assert.equal(outline.narration_script,null);assert.equal(outline.render_authorized,false);
 const projection=JSON.parse(fs.readFileSync(path.join(candidateDir,'semantic-consumer-projection.json')));
 assert.equal(projection.source_outline_sha256,digest(outline));
+const compat=JSON.parse(fs.readFileSync(path.join(candidateDir,'m8vis-compatibility.json')));
+assert.equal(compat.status,'ADAPTER_REQUIRED_LEGACY_FIXED_SCENE_CONTRACT');
+assert.equal(compat.legacy_required_scene_count,6);
+assert.equal(compat.d4_section_count,5);
+assert.equal(compat.legacy_renderer_compatible,false);
+assert.deepEqual(compat.source_section_ids,projection.sections.map(x=>x.id));
+assert.equal(compat.market_master_sha256,projection.market_master_sha256);
+assert.equal(compat.render_authorized,false);
+assert.equal(compat.publication_authorized,false);
+console.log('D4_M8VIS_COMPATIBILITY_GAP_REPORTED_PASS');
 assert.deepEqual(projection.factual_card_inputs.map(x=>x.section_id),projection.sections.map(x=>x.id));
 assert.deepEqual(projection.scene_plan.map(x=>x.source_section_id),projection.sections.map(x=>x.id));
 assert.deepEqual(projection.scene_plan.map(x=>x.sequence),[1,2,3,4,5]);
@@ -214,7 +224,7 @@ fs.writeFileSync(path.join(staleDir,'original-analysis-draft-check.json'),'{"sta
 const rerunMissing=run('.','20261014',staleDir);
 assert.equal(rerunMissing.stages[0].status,'WAITING_SOURCE');
 assert.ok(fs.existsSync(path.join(staleDir,'status.json')));
-for(const name of ['featured-price-observations.json','candidate-semantic-outline.json','semantic-consumer-projection.json','independent-review-worksheet.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
+for(const name of ['featured-price-observations.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','independent-review-worksheet.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
 console.log('D4_REUSED_OUTPUT_DIR_FAIL_CLOSED_PASS');
 const malformedDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-malformed-'));
 const originalRead=fs.readFileSync;
