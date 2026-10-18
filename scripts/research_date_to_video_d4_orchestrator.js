@@ -6,6 +6,7 @@ const {join}=require('./research_date_to_video_d4_evidence_join');
 const {inventory}=require('./research_date_to_video_d4_claim_inventory');
 const {review}=require('./research_date_to_video_d4_review_gate');
 const {inspect:inspectBfi82u}=require('./research_date_to_video_bfi82u_v1');
+const {parse:parseBreadth}=require('./parse_twse_official_stock_aggregate');
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 function run(root,date,out){
  const status=plan(root,date),result={contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,research_only:true,publication_authorized:false,render_authorized:false,ready_to_render:false,stages:status.stages,blockers:[...status.blockers],artifacts:[]};
@@ -19,12 +20,18 @@ function run(root,date,out){
   const joined=join({date,cutoff,...inputs}),claims=inventory(joined,inputs);
   result.stages[0].status=marketOnlyMissing?'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING':'EVIDENCE_JOINED_NOT_CERTIFIED';
   const institutional=inspectBfi82u(root,date);
-  result.stages[1].status=institutional.status==='VERIFIED'?'FINAL_BFI82U_VERIFIED_MARKET_MASTER_PENDING':'WAITING_FINAL_MARKET_MASTER';
+  const breadthPath=path.join(root,'data_twse_mi_index',date+'_twse_mi_index.json');
+  let breadth={target_date:date,status:'WAITING_SOURCE',missing:['DATED_MI_INDEX_STOCK_AGGREGATE'],publication_authorized:false};
+  if(fs.existsSync(breadthPath)){
+   try{const bytes=fs.readFileSync(breadthPath);breadth={...parseBreadth(JSON.parse(bytes),date),status:'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED',source_sha256:hash(bytes)};}
+   catch(e){breadth={target_date:date,status:'REJECTED',reason:e.message,publication_authorized:false};}
+  }
+  result.stages[1].status=institutional.status==='VERIFIED'&&breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?'MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED':'WAITING_FINAL_MARKET_MASTER';
   result.stages[2].status='REVIEW_REQUIRED';
-  result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),...(institutional.status==='VERIFIED'?[]:['FINAL_DATED_BFI82U_THREE_GROUPS_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
+  result.blockers=[...(marketOnlyMissing?['MISSING:market-opening']:[]),...(institutional.status==='VERIFIED'?[]:['FINAL_DATED_BFI82U_THREE_GROUPS_PENDING']),...(breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED'?[]:['DATED_MI_INDEX_STOCK_AGGREGATE_PENDING']),'FINAL_MARKET_MASTER_NOT_CERTIFIED','CLAIM_REVIEW_REQUIRED'];
   const emptyReview={target_date:date,inventory_sha256:hash(JSON.stringify(claims)),decisions:[]};
   const gate=review(claims,emptyReview);
-  write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('editorial-review.json',gate);
+  write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('breadth-evidence.json',breadth);write('editorial-review.json',gate);
  }catch(e){
   result.stages[0].status='WAITING_SOURCE';result.blockers.push('D4_JOIN_REJECTED:'+e.message);
  }
