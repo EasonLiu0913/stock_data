@@ -14,7 +14,7 @@ function run(root,date,out){
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
  // A repeated run must not expose artifacts from an earlier date or earlier approval state.
  // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
- const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','featured-price-observations.json'];
+ const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','featured-price-observations.json'];
  for(const name of generated){const file=path.join(out,name);if(fs.existsSync(file))fs.unlinkSync(file)}
  const marketOnlyMissing=status.blockers.length===1&&status.blockers[0]==='MISSING:market-opening';
  if(status.stages[0].status==='WAITING_SOURCE'&&!marketOnlyMissing){write('status.json',result);return result}
@@ -81,6 +81,11 @@ function run(root,date,out){
   if(validatedCandidate){
    const candidateAudit=JSON.parse(fs.readFileSync(path.join(out,'authored-candidate-preflight.json'),'utf8'));
    write('candidate-semantic-outline.json',{contract:'DATE_TO_VIDEO_V1_D4_CANDIDATE_SEMANTIC_OUTLINE',target_date:date,candidate_sha256:candidateAudit.candidate_sha256,inventory_sha256:candidateAudit.inventory_sha256,market_master_sha256:hash(JSON.stringify(marketMaster)),review_gate_sha256:hash(JSON.stringify(gate)),source_document:validatedCandidate.source_document,sections:validatedCandidate.insights.map(i=>({id:i.id,section:i.section,observation:i.observation,interpretation:i.interpretation,uncertainty:i.uncertainty,evidence:i.evidence,claim_review_pending:i.evidence.some(e=>e.type==='claim_id'&&!gate.approved_claim_ids.includes(e.id))})),status:'RESEARCH_OUTLINE_ONLY_EDITORIAL_REVIEW_PENDING',narration_script:null,subtitle_srt:null,scene_cards:null,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});
+  }
+  if(fs.existsSync(path.join(out,'candidate-semantic-outline.json'))){
+   const {project}=require('./research_date_to_video_d4_semantic_projection');
+   try{write('semantic-consumer-projection.json',project(JSON.parse(fs.readFileSync(path.join(out,'candidate-semantic-outline.json'),'utf8')),marketMaster,gate));}
+   catch(e){result.blockers.push('SEMANTIC_PROJECTION_REJECTED:'+e.message)}
   }
   // Produce a date-scoped, non-narratable factual stock-price snapshot without silently approving claims.
   const candidatePriceIds=new Set(validatedCandidate?validatedCandidate.insights.flatMap(i=>i.evidence.filter(e=>e.type==='claim_id').map(e=>e.id)):[]);
