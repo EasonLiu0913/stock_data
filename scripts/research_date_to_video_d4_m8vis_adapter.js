@@ -1,7 +1,7 @@
 'use strict';
 // D4-to-M8VIS research storyboard only. No fabricated narration, timing, media or approval.
 const assert=require('node:assert/strict');
-const map=[['opening',[]],['market',['market_breadth_vs_index','institutional_flow_vs_breadth']],['6672',['selected_stock_evidence']],['2305',['selected_stock_evidence']],['1301',['selected_stock_evidence']],['conclusion',['counterarguments_and_uncertainty','three_point_summary']]];
+// Derive dated stock slots from authored claim evidence; never reuse 20261008 tickers for other dates.
 function adapt(p){
  assert.equal(p.contract,'DATE_TO_VIDEO_V1_D4_SINGLE_MASTER_SEMANTIC_PROJECTION','ADAPTER_PROJECTION_REQUIRED');
  assert.equal(p.render_authorized,false,'ADAPTER_RENDER_LOCK_REQUIRED');
@@ -9,15 +9,19 @@ function adapt(p){
  const sections=new Map(p.sections.map(s=>[s.section,s]));
  assert.equal(sections.size,p.sections.length,'ADAPTER_DUPLICATE_SEMANTIC_SECTION');
  assert.deepEqual([...sections.keys()],['market_breadth_vs_index','institutional_flow_vs_breadth','selected_stock_evidence','counterarguments_and_uncertainty','three_point_summary'],'ADAPTER_SECTION_CONTRACT_DRIFT');
+ const selectedSection=sections.get('selected_stock_evidence');
+ const stockIds=[...new Set(selectedSection.evidence.filter(e=>e.type==='claim_id'&&e.id.startsWith(p.target_date+':')&&e.id.endsWith(':PRICE_CHANGE')).map(e=>e.id.split(':')[1]))];
+ assert.ok(stockIds.length>0,'ADAPTER_STOCK_CLAIM_MISSING');
+ const map=[['opening',[]],['market',['market_breadth_vs_index','institutional_flow_vs_breadth']],...stockIds.map(id=>[id,['selected_stock_evidence']]),['conclusion',['counterarguments_and_uncertainty','three_point_summary']]];
  const scenes=map.map(([id,names])=>{
   const chosen=names.map(n=>sections.get(n));assert.ok(chosen.every(Boolean),'ADAPTER_MISSING_SECTION');
-  const selected=id==='6672'||id==='2305'||id==='1301';
+  const selected=stockIds.includes(id);
   const claim=selected?p.target_date+':'+id+':PRICE_CHANGE':null;
   if(selected)assert.ok(chosen[0].evidence.some(e=>e.type==='claim_id'&&e.id===claim),'ADAPTER_STOCK_CLAIM_MISSING');
   const facts=chosen.flatMap(s=>s.resolved_master_observations.map(x=>({section_id:s.id,...x})));
   const pending=selected?chosen[0].pending_claim_ids.filter(x=>x===claim):[...new Set(chosen.flatMap(s=>s.pending_claim_ids))];
   return {id,source_section_ids:chosen.map(s=>s.id),market_master_sha256:p.market_master_sha256,facts,stock_claim_id:claim,stock_claim_review_pending:selected?pending.length>0:false,excluded_pending_claim_ids:pending,opening_branding_required:id==='opening',caption_sentences:null,start_seconds:null,end_seconds:null,visual_asset:null,render_authorized:false};
  });
- return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_SIX_SCENE_ADAPTER_RESEARCH',target_date:p.target_date,source_outline_sha256:p.source_outline_sha256,market_master_sha256:p.market_master_sha256,scene_ids:scenes.map(s=>s.id),scenes,status:'SCENE_MAPPING_ONLY_NARRATION_AND_TIMING_PENDING',legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+ return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_DATED_SCENE_ADAPTER_RESEARCH',target_date:p.target_date,source_outline_sha256:p.source_outline_sha256,market_master_sha256:p.market_master_sha256,scene_ids:scenes.map(s=>s.id),scenes,status:'SCENE_MAPPING_ONLY_NARRATION_AND_TIMING_PENDING',legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={adapt};
