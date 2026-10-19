@@ -72,6 +72,26 @@ jobs:
           node --check scripts/research_date_to_video_d4_candidate_preflight.js
           node --check scripts/research_date_to_video_d4_draft_gate.js
           node tests/research_date_to_video_d4_draft_gate.test.js
+      - name: Probe dated FMTQIK original response into isolated candidate evidence
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/fmtqik-research
+          if node scripts/research_official_fmtqik_candidate_stage_v1.js 20261013 /tmp/fmtqik-research > /tmp/fmtqik-research/probe-output.json 2> /tmp/fmtqik-research/probe-error.txt; then
+            echo "FMTQIK_STAGED_CANDIDATE_ONLY_NO_SOURCE_APPROVAL"
+          else
+            echo "FMTQIK_SOURCE_PROBE_PENDING_REVIEW"
+            cat /tmp/fmtqik-research/probe-error.txt
+          fi
+          node -e "const fs=require('fs'),p='/tmp/fmtqik-research/fmtqik-candidate/20261013/candidate-manifest.json';if(fs.existsSync(p)){const m=JSON.parse(fs.readFileSync(p));if(m.master_authorized!==false||m.publication_authorized!==false||m.endpoint_approved!==false)process.exit(1);console.log(JSON.stringify({status:'STAGED_CANDIDATE_REVIEW_REQUIRED',sha256:m.sha256,fields:m.candidate_inspection.field_names,endpoint_approved:false}));}else console.log('FMTQIK_NOT_STAGED_SOURCE_REVIEW_REQUIRED');"
+      - name: Upload isolated FMTQIK candidate probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmtqik-20261013-candidate-probe-research-only
+          path: /tmp/fmtqik-research/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Fetch and validate 20261013 official BFI82U into isolated artifact directory
         shell: bash
         run: |
