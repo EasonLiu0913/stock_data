@@ -297,7 +297,7 @@ const rejected=run('.','20261008',draftDir);
 const draftCheck=JSON.parse(fs.readFileSync(path.join(draftDir,'original-analysis-draft-check.json')));
 assert.equal(draftCheck.status,'REJECTED');assert.equal(draftCheck.reason,'EMPTY_INSIGHTS');assert.equal(JSON.parse(fs.readFileSync(path.join(draftDir,'media-handoff.json'))).draft_check_status,'REJECTED');assert.equal(draftCheck.narration_authorized,false);
 const rejectedDraftManifest=JSON.parse(fs.readFileSync(path.join(draftDir,'editorial-input-manifest.json')));
-const rejectedDraftMedia=JSON.parse(fs.readFileSync(path.join(draftDir,'media-handoff.json')));
+const rejectedDraftMedia=JSON.parse(fs.readFileSync(path.join(draftDir,'media-handoff.json')));assert.deepEqual(rejectedDraftMedia.fixed_opening_lines,['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。']);
 assert.equal(rejectedDraftManifest.review_input_sha256,null);
 assert.equal(rejectedDraftManifest.draft_input_sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(draftDir,'original-analysis-draft-input.json'))).digest('hex'));
 assert.equal(rejectedDraftManifest.draft_check_sha256,rejectedDraftMedia.draft_check_sha256);
