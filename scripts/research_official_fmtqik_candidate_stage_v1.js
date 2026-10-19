@@ -13,7 +13,7 @@ function stage(root,date,bytes,meta){
  if(typeof meta.observedAt!=='string'||!Number.isFinite(Date.parse(meta.observedAt)))throw Error('CANDIDATE_OBSERVATION_TIME_REQUIRED');
  const dir=path.join(root,'fmtqik-candidate',date),raw=path.join(dir,'response.json'),manifestPath=path.join(dir,'candidate-manifest.json');
  if(fs.existsSync(raw)||fs.existsSync(manifestPath))throw Error('CANDIDATE_ALREADY_EXISTS_REVIEW_REQUIRED');
- const manifest={contract:'FMTQIK_STAGED_HTTP_CANDIDATE_V1',target_date:date,source_url_unapproved:meta.sourceUrl,observed_at:meta.observedAt,http_status:meta.httpStatus,content_type:meta.contentType,sha256:sha(bytes),bytes:bytes.length,candidate_inspection:result,endpoint_approved:false,raw_http_provenance_certified:false,master_authorized:false,render_authorized:false,publication_authorized:false};
+ const manifest={contract:'FMTQIK_STAGED_HTTP_CANDIDATE_V1',target_date:date,source_url_unapproved:meta.sourceUrl,observed_at:meta.observedAt,http_status:meta.httpStatus,content_type:meta.contentType,sha256:sha(bytes),bytes:bytes.length,candidate_inspection:result,http_metadata_evidence:'CALLER_SUPPLIED_UNVERIFIED',source_contract_review_required:true,endpoint_approved:false,raw_http_provenance_certified:false,master_authorized:false,render_authorized:false,publication_authorized:false};
  fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(raw,bytes,{flag:'wx'});
  try{fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});}catch(e){fs.unlinkSync(raw);throw e;}
  return {status:'STAGED_CANDIDATE_REVIEW_REQUIRED',target_date:date,sha256:manifest.sha256,raw_path:raw,manifest_path:manifestPath,master_authorized:false,publication_authorized:false};
