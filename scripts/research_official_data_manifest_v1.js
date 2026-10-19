@@ -2,7 +2,7 @@
 // Research-only archive-first inspection. Never downloads, overwrites raw evidence or authorizes publication.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {inspect}=require('./research_date_to_video_bfi82u_v1');
-const {inspect:inspectFmtqik}=require('./research_official_fmtqik_provenance_v1');
+const {inspect:inspectFmtqik,inspectStagedCandidate}=require('./research_official_fmtqik_provenance_v1');
 const {inspect:inspectMiIndex}=require('./research_official_mi_index_provenance_v1');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const canonical=o=>JSON.stringify(o);
@@ -33,6 +33,7 @@ function build(root,date){
    if(evidence.chart_sha256)entry.provenance_diagnostic.derived_chart_sha256=evidence.chart_sha256;
    if(evidence.repository_payload_sha256)entry.provenance_diagnostic.repository_payload_sha256=evidence.repository_payload_sha256;
    if(evidence.reason)entry.provenance_diagnostic.reason=evidence.reason;
+   if(id==='FMTQIK'){const staged=inspectStagedCandidate(root,date);entry.provenance_diagnostic.staged_candidate_status=staged.status;entry.provenance_diagnostic.direct_fetch_receipt_status=staged.receipt_status||null;if(staged.reason)entry.provenance_diagnostic.staged_candidate_reason=staged.reason;entry.provenance_diagnostic.raw_http_provenance_certified=false;}
   }
   return entry;
  });
