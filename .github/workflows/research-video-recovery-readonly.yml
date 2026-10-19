@@ -160,6 +160,35 @@ jobs:
           path: /tmp/fmtqik-20261014-research/
           if-no-files-found: warn
           retention-days: 14
+      - name: Verify three-date original FMTQIK candidate evidence matrix
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+          const specs=[['20261008','/tmp/fmtqik-20261008-research'],['20261013','/tmp/fmtqik-research'],['20261014','/tmp/fmtqik-20261014-research']];
+          const rows=specs.map(([date,root])=>{
+            const p=root+'/fmtqik-candidate/'+date+'/',m=JSON.parse(fs.readFileSync(p+'candidate-manifest.json')),raw=fs.readFileSync(p+'response.json');
+            assert.equal(m.target_date,date);assert.equal(m.sha256,crypto.createHash('sha256').update(raw).digest('hex'));
+            assert.equal(m.http_status,200);assert.equal(m.endpoint_approved,false);assert.equal(m.master_authorized,false);assert.equal(m.publication_authorized,false);
+            const check=JSON.parse(fs.readFileSync(root+(date==='20261013'?'/raw-derived-crosscheck.json':'/crosscheck.json')));
+            assert.equal(check.target_date,date);assert.equal(check.sha256||check.candidate_sha256,m.sha256);
+            assert.equal(check.status,'RAW_DERIVED_VALUES_MATCH_RESEARCH_ONLY');
+            assert.ok(Object.values(check.checks).every(Boolean));
+            return {date,raw_sha256:m.sha256,checks:check.checks,status:check.status};
+          });
+          assert.equal(new Set(rows.map(r=>r.raw_sha256)).size,3);
+          const matrix={contract:'FMTQIK_THREE_DATE_RESEARCH_EVIDENCE_MATRIX_V1',rows,status:'THREE_DATES_RAW_DERIVED_MATCH_RESEARCH_ONLY',source_contract_approved:false,master_authorized:false,publication_authorized:false};
+          fs.mkdirSync('/tmp/fmtqik-evidence-matrix',{recursive:true});
+          fs.writeFileSync('/tmp/fmtqik-evidence-matrix/matrix.json',JSON.stringify(matrix,null,2)+'\n');console.log(JSON.stringify(matrix));
+          NODE
+      - name: Upload FMTQIK three-date evidence matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fmtqik-three-date-evidence-matrix-research-only
+          path: /tmp/fmtqik-evidence-matrix/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Fetch and validate 20261013 official BFI82U into isolated artifact directory
         shell: bash
         run: |
