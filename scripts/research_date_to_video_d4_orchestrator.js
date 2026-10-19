@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const {plan}=require('./research_date_to_video_v1');
 const {FIXED_OPENING_LINES}=require('./research_date_to_video_fixed_opening_v1');
 const {build:buildDatedMediaInput}=require('./research_date_to_video_dated_media_input_v1');
+const {prepare:prepareEditorialNarration}=require('./research_date_to_video_editorial_narration_worksheet_v1');
 const {join}=require('./research_date_to_video_d4_evidence_join');
 const {inventory}=require('./research_date_to_video_d4_claim_inventory');
 const {review}=require('./research_date_to_video_d4_review_gate');
@@ -21,7 +22,7 @@ function run(root,date,out){
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
  // A repeated run must not expose artifacts from an earlier date or earlier approval state.
  // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
- const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json'];
+ const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json'];
  for(const name of generated){const file=path.join(out,name);if(fs.existsSync(file))fs.unlinkSync(file)}
  const officialManifest=buildOfficialManifest(root,date);
  const officialGate=gateOfficialManifest(root,date,officialManifest);
@@ -147,6 +148,7 @@ function run(root,date,out){
   write('market-master.json',marketMaster);
   write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('breadth-evidence.json',breadth);write('editorial-review.json',gate);
   write('dated-media-input.json',buildDatedMediaInput(out));
+  write('editorial-narration-worksheet.json',prepareEditorialNarration(out));
  }catch(e){
   result.stages[0].status='WAITING_SOURCE';result.blockers.push('D4_JOIN_REJECTED:'+e.message);
  }
