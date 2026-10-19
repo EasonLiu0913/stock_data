@@ -10,6 +10,7 @@ function inspectCandidate(bytes,date){
   const p=JSON.parse(bytes.toString('utf8'));
   if(!Array.isArray(p.fields)||!Array.isArray(p.data)||p.fields.length===0)return {...base,reason:'INVALID_CANDIDATE_TABLE'};
   if(p.fields.some(f=>typeof f!=='string')||new Set(p.fields).size!==p.fields.length)return {...base,reason:'INVALID_CANDIDATE_FIELDS'};
+  if(p.fields[0]!=='日期')return {...base,reason:'DATE_COLUMN_IDENTITY_UNVERIFIED'};
   if(p.data.some(r=>!Array.isArray(r)||r.length!==p.fields.length))return {...base,reason:'INVALID_CANDIDATE_ROW_WIDTH'};
   const expected=String(Number(date.slice(0,4))-1911)+'/'+date.slice(4,6)+'/'+date.slice(6,8);
   const matches=p.data.filter(r=>r[0]===expected);
