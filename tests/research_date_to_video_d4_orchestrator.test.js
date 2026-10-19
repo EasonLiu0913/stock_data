@@ -6,6 +6,12 @@ for(const date of ['20261008','20261013']){
  const r=run('.',date,dir);
  assert.equal(r.target_date,date);assert.equal(r.render_authorized,false);assert.equal(r.publication_authorized,false);
  assert.ok(fs.existsSync(path.join(dir,'status.json')));
+ const officialManifest=JSON.parse(fs.readFileSync(path.join(dir,'official-data-manifest.json')));
+ const officialGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));
+ assert.equal(officialManifest.target_date,date);assert.equal(officialGate.target_date,date);assert.equal(officialGate.manifest_sha256,officialManifest.manifest_sha256);
+ assert.equal(officialGate.master_authorized,false);assert.equal(officialGate.publication_authorized,false);
+ if(date==='20261008'){assert.equal(officialGate.status,'PARTIAL_VERIFIED_INSTITUTIONAL_ONLY');assert.equal(officialGate.institutional.raw_sha256,officialManifest.entries[0].raw_sha256);}
+ if(date==='20261013'){assert.equal(officialGate.status,'WAITING_SOURCE');assert.equal(officialGate.institutional,null);}
  if(['EVIDENCE_JOINED_NOT_CERTIFIED','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING'].includes(r.stages[0].status)){
   const claims=JSON.parse(fs.readFileSync(path.join(dir,'claims.json')));
   assert.equal(claims.target_date,date);assert.ok(claims.claim_count>0);
