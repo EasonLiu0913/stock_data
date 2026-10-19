@@ -21,3 +21,21 @@ test('candidate staging records SHA and never approves original provenance',()=>
 test('candidate staging rejects wrong TWSE report and cross-date URL',()=>{const {stage}=require('../scripts/research_official_fmtqik_candidate_stage_v1');const root=fs.mkdtempSync(path.join(os.tmpdir(),'fmtqik-url-'));try{const bytes=Buffer.from(JSON.stringify({fields:['日期','成交金額'],data:[['115/10/08','1000']]}));const meta={httpStatus:200,contentType:'application/json',observedAt:'2026-10-19T00:00:00Z'};for(const sourceUrl of ['https://www.twse.com.tw/rwd/zh/fund/BFI82U?date=20261008&response=json','https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=20261013&response=json','https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date=20261008&response=html'])assert.throws(()=>stage(root,'20261008',bytes,{...meta,sourceUrl}),/CANDIDATE_DATED_FMTQIK_URL_REQUIRED/);}finally{fs.rmSync(root,{recursive:true,force:true});}});
 
 test('candidate fetch rejects invalid dates before network access',()=>{const {fetchCandidate}=require('../scripts/research_official_fmtqik_candidate_stage_v1');assert.throws(()=>fetchCandidate('20260230'),/INVALID_TARGET_DATE/);assert.throws(()=>fetchCandidate('2026108'),/INVALID_TARGET_DATE/);});
+
+test('candidate wrong-date and missing dated source never authorize Master even when another date is valid',()=>{
+ const {inspectCandidate}=require('../scripts/research_official_fmtqik_raw_candidate_v1');
+ const valid=Buffer.from(JSON.stringify({fields:['日期','成交金額','成交股數','成交筆數'],data:[['115/10/13','1,000','2,000','30']]}));
+ const same=inspectCandidate(valid,'20261013');
+ assert.equal(same.status,'CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED');
+ for(const date of ['20261008','20261014']){
+  const wrong=inspectCandidate(valid,date);
+  assert.equal(wrong.reason,'TARGET_DATE_ROW_MISSING');
+  assert.equal(wrong.endpoint_approved,false);
+  assert.equal(wrong.master_authorized,false);
+  assert.equal(wrong.publication_authorized,false);
+ }
+ const missing=inspectCandidate(Buffer.from(JSON.stringify({fields:['日期','成交金額'],data:[]})),'20261013');
+ assert.equal(missing.reason,'TARGET_DATE_ROW_MISSING');
+ assert.equal(missing.raw_http_provenance_certified,false);
+ assert.equal(missing.master_authorized,false);
+});
