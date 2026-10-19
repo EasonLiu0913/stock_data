@@ -10,7 +10,7 @@ function build(root,date){
  const registryBytes=fs.readFileSync(registryPath),registry=JSON.parse(registryBytes);
  if(registry.schema_version!==1||registry.publication_authorized!==false)throw Error('REGISTRY_CONTRACT_MISMATCH');
  const ids=['BFI82U','FMTQIK','BFIAMU','MI_INDEX'];
- if(ids.some(id=>registry.sources.filter(s=>s.id===id).length!==1))throw Error('REGISTRY_SOURCE_SET_MISMATCH');
+ if(!Array.isArray(registry.sources)||registry.sources.length!==ids.length||ids.some(id=>registry.sources.filter(s=>s.id===id).length!==1))throw Error('REGISTRY_SOURCE_SET_MISMATCH');
  const source=registry.sources.find(s=>s.id==='BFI82U');
  if(source.validator!=='scripts/research_date_to_video_bfi82u_v1.js')throw Error('BFI82U_VALIDATOR_NOT_REGISTERED');
  const prefix=path.join(root,'data_research/twse-market-opening/primary-archive',date,date+'-bfi82u');
