@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {run}=require('../scripts/research_date_to_video_d4_orchestrator');
 for(const date of ['20261008','20261013']){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-'));
@@ -88,7 +88,7 @@ assert.equal(rejectedManifest.draft_input_sha256,null);
 assert.equal(rejectedManifest.editorial_certified,false);
 assert.equal(rejectedManifest.render_authorized,false);
 console.log('D4_INDEPENDENT_REVIEW_INPUT_FAIL_CLOSED_PASS');
-const crypto=require('node:crypto');
+
 const reviewValidDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-reviewed-'));
 run('.','20261008',reviewValidDir);
 const datedClaims=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'claims.json')));
