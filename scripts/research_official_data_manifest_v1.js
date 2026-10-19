@@ -10,7 +10,7 @@ function build(root,date){
  if(!/^20\d{6}$/.test(date)||!Number.isFinite(Date.parse(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z'))||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8))throw Error('INVALID_TARGET_DATE');
  const registryPath=path.join(root,'config/research/official-data-registry-v1.json');
  const registryBytes=fs.readFileSync(registryPath),registry=JSON.parse(registryBytes);
- if(registry.schema_version!==1||registry.publication_authorized!==false)throw Error('REGISTRY_CONTRACT_MISMATCH');
+ if(registry.schema_version!==1||registry.registry_id!=='date-to-video-official-data-research'||registry.research_only!==true||registry.publication_authorized!==false)throw Error('REGISTRY_CONTRACT_MISMATCH');
  const ids=['BFI82U','FMTQIK','BFIAMU','MI_INDEX'];
  if(!Array.isArray(registry.sources)||registry.sources.length!==ids.length||ids.some(id=>registry.sources.filter(s=>s.id===id).length!==1))throw Error('REGISTRY_SOURCE_SET_MISMATCH');
  const source=registry.sources.find(s=>s.id==='BFI82U');
