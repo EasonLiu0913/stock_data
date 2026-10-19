@@ -56,7 +56,6 @@ jobs:
           node --check scripts/research_date_to_video_d4_orchestrator.js
           node tests/research_date_to_video_d4_orchestrator.test.js
           node --check scripts/research_date_to_video_media_preflight_v1.js
-          node -e "const p=require('./scripts/research_date_to_video_media_preflight_v1').inspect('/tmp/date-to-video-d4-20261013');if(p.status!=='BLOCKED'||p.render_authorized!==false||p.publication_authorized!==false||!p.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED')||!p.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'))process.exit(1);console.log('D4_MEDIA_PREFLIGHT_FAIL_CLOSED_PASS')"
           node --check scripts/research_official_data_manifest_v1.js
           node --test tests/research_official_data_manifest_v1.test.js
           node --check scripts/research_official_data_recovery_v1.js
@@ -229,6 +228,7 @@ jobs:
           mkdir -p data_research/twse-market-opening/primary-archive/20261013
           cp /tmp/date-to-video-bfi82u-20261013/data_research/twse-market-opening/primary-archive/20261013/* data_research/twse-market-opening/primary-archive/20261013/
           node scripts/research_date_to_video_d4_orchestrator.js 20261013 . /tmp/date-to-video-d4-20261013 || test -f /tmp/date-to-video-d4-20261013/institutional-evidence.json
+          node -e "const p=require('./scripts/research_date_to_video_media_preflight_v1').inspect('/tmp/date-to-video-d4-20261013');if(p.status!=='BLOCKED'||p.render_authorized!==false||p.publication_authorized!==false||!p.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED')||!p.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'))process.exit(1);console.log('D4_MEDIA_PREFLIGHT_FAIL_CLOSED_PASS')"
           node -e "const fs=require('fs');const p='/tmp/date-to-video-d4-20261013/';const i=JSON.parse(fs.readFileSync(p+'institutional-evidence.json'));const s=JSON.parse(fs.readFileSync(p+'status.json'));const m=JSON.parse(fs.readFileSync(p+'market-master.json'));const b=JSON.parse(fs.readFileSync(p+'editorial-research-brief.json'));if(i.status!=='VERIFIED'||i.target_date!=='20261013'||!i.final_six_rows_verified||m.status!=='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'||m.target_date!=='20261013'||m.taiex.close!==48341.31||m.market_trading.turnover_twd!==1201861264942||b.status!=='OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED'||b.observations.length!==3||i.publication_authorized!==false||s.publication_authorized!==false||s.render_authorized!==false)process.exit(1);console.log(JSON.stringify({institutional:i.status,market_master:m.status,editorial_brief:b.status,date:i.target_date,raw_sha256:i.raw_sha256,d4_blockers:s.blockers,publication_authorized:s.publication_authorized}))"
       - name: Verify dated original analysis candidate and independent review packet
         run: |
