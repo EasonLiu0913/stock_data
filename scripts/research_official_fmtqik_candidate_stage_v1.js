@@ -18,6 +18,11 @@ function stage(root,date,bytes,meta){
  try{fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});}catch(e){fs.unlinkSync(raw);throw e;}
  return {status:'STAGED_CANDIDATE_REVIEW_REQUIRED',target_date:date,sha256:manifest.sha256,raw_path:raw,manifest_path:manifestPath,master_authorized:false,publication_authorized:false};
 }
+async function fetchAndStage(root,date){
+ const captured=await fetchCandidate(date);
+ const staged=stage(root,date,captured.bytes,captured.meta);
+ return {...staged,capture_path:'DIRECT_TWSE_HTTPS_FETCH_CANDIDATE_ONLY',source_contract_review_required:true,raw_http_provenance_certified:false};
+}
 function fetchCandidate(date){
  inspectCandidate(Buffer.from('{"fields":["日期","成交金額"],"data":[]}'),date); // validate date without staging
  const sourceUrl='https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date='+date+'&response=json';
@@ -28,5 +33,5 @@ function fetchCandidate(date){
   });request.on('timeout',()=>request.destroy(Error('CANDIDATE_FETCH_TIMEOUT')));request.on('error',reject);
  });
 }
-if(require.main===module){const [date,out]=process.argv.slice(2);if(!out||!path.isAbsolute(out)||path.resolve(out)==='/'){console.error('EXTERNAL_ABSOLUTE_ISOLATED_OUTPUT_REQUIRED');process.exitCode=2;}else fetchCandidate(date).then(x=>console.log(JSON.stringify(stage(out,date,x.bytes,x.meta),null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});}
-module.exports={stage,fetchCandidate};
+if(require.main===module){const [date,out]=process.argv.slice(2);if(!out||!path.isAbsolute(out)||path.resolve(out)==='/'){console.error('EXTERNAL_ABSOLUTE_ISOLATED_OUTPUT_REQUIRED');process.exitCode=2;}else fetchAndStage(out,date).then(x=>console.log(JSON.stringify(x,null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});}
+module.exports={stage,fetchCandidate,fetchAndStage};
