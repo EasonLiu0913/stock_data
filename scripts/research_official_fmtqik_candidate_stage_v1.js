@@ -1,6 +1,6 @@
 'use strict';
 // Research-only, caller-supplied FMTQIK HTTP candidate. No network fetch, source approval or Master promotion.
-const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),https=require('node:https');
 const {inspectCandidate}=require('./research_official_fmtqik_raw_candidate_v1');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function stage(root,date,bytes,meta){
@@ -18,4 +18,15 @@ function stage(root,date,bytes,meta){
  try{fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});}catch(e){fs.unlinkSync(raw);throw e;}
  return {status:'STAGED_CANDIDATE_REVIEW_REQUIRED',target_date:date,sha256:manifest.sha256,raw_path:raw,manifest_path:manifestPath,master_authorized:false,publication_authorized:false};
 }
-module.exports={stage};
+function fetchCandidate(date){
+ inspectCandidate(Buffer.from('{"fields":["日期","成交金額"],"data":[]}'),date); // validate date without staging
+ const sourceUrl='https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date='+date+'&response=json';
+ return new Promise((resolve,reject)=>{
+  const request=https.get(sourceUrl,{timeout:12000,headers:{Accept:'application/json','User-Agent':'stock-data-research/1.0'}},res=>{
+   const chunks=[];let size=0;res.on('data',b=>{size+=b.length;if(size>1024*1024){res.destroy(Error('CANDIDATE_RESPONSE_TOO_LARGE'));return;}chunks.push(b);});
+   res.on('error',reject);res.on('end',()=>resolve({bytes:Buffer.concat(chunks),meta:{httpStatus:res.statusCode,contentType:res.headers['content-type']||'',sourceUrl,observedAt:new Date().toISOString()}}));
+  });request.on('timeout',()=>request.destroy(Error('CANDIDATE_FETCH_TIMEOUT')));request.on('error',reject);
+ });
+}
+if(require.main===module){const [date,out]=process.argv.slice(2);if(!out||!path.isAbsolute(out)||path.resolve(out)==='/'){console.error('EXTERNAL_ABSOLUTE_ISOLATED_OUTPUT_REQUIRED');process.exitCode=2;}else fetchCandidate(date).then(x=>console.log(JSON.stringify(stage(out,date,x.bytes,x.meta),null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});}
+module.exports={stage,fetchCandidate};
