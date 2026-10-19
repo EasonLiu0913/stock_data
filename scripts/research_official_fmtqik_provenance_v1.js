@@ -10,6 +10,7 @@ function inspect(root,date){
  try{
   const bytes=fs.readFileSync(file),chart=JSON.parse(bytes);
   if(chart.sources?.volume!=='TWSE FMTQIK'||chart.units?.turnover!=='TWD'||!Array.isArray(chart.data))throw Error('DERIVED_CHART_SOURCE_UNIT_SCHEMA_MISMATCH');
+  if(chart.data.some(x=>typeof x.date!=='string'||!/^20\d{6}$/.test(x.date)))throw Error('INVALID_DERIVED_CHART_DATE_SCHEMA');
   const matches=chart.data.filter(x=>x.date===date);
   if(matches.length!==1)throw Error(matches.length?'DUPLICATE_DATED_CHART_ROW':'DATED_CHART_ROW_MISSING');
   const r=matches[0];for(const k of ['turnover','volumeShares','transactions'])if(!Number.isSafeInteger(r[k])||r[k]<=0)throw Error('INVALID_DERIVED_'+k);
