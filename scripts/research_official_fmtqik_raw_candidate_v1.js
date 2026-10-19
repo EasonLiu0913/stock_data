@@ -19,7 +19,8 @@ function inspectCandidate(bytes,date){
   if(integerColumns.length===0)return {...base,reason:'CANDIDATE_INTEGER_COLUMNS_UNIDENTIFIED'};
   if(integerColumns.some(i=>typeof matches[0][i]!=='string'||!/^(?:0|[1-9]\d{0,2}(?:,\d{3})*|[1-9]\d*)$/.test(matches[0][i])))return {...base,reason:'INVALID_CANDIDATE_NUMERIC_CELL'};
   const indexColumns=['發行量加權股價指數','漲跌點數'].filter(f=>p.fields.includes(f));
-  if(indexColumns.some(f=>{const cell=matches[0][p.fields.indexOf(f)];return typeof cell!=='string'||!/^(?:0|[1-9]\\d{0,2}(?:,\\d{3})*|[1-9]\\d*)(?:\\.\\d+)?$/.test(cell);}))return {...base,reason:'INVALID_CANDIDATE_INDEX_CELL'};
+  const unsigned=/^(?:0|[1-9]\d{0,2}(?:,\d{3})*|[1-9]\d*)(?:\.\d+)?$/;
+  if(indexColumns.some(f=>{const cell=matches[0][p.fields.indexOf(f)];if(typeof cell!=='string')return true;return !unsigned.test(f==='漲跌點數'&&/^[+-]/.test(cell)?cell.slice(1):cell);}))return {...base,reason:'INVALID_CANDIDATE_INDEX_CELL'};
   return {...base,status:'CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED',candidate_sha256:sha(bytes),candidate_bytes:bytes.length,matched_roc_date:expected,field_names:p.fields,complete_six_field_candidate:['日期','成交股數','成交金額','成交筆數','發行量加權股價指數','漲跌點數'].every(x=>p.fields.includes(x))&&p.fields.length===6,raw_units_verified:false,market_scope_verified:false,source_contract_review_required:true};
  }catch(e){return {...base,reason:'INVALID_CANDIDATE_JSON'};}
 }
