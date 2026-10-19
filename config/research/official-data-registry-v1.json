@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "registry_id": "date-to-video-official-data-research",
+  "research_only": true,
+  "publication_authorized": false,
+  "approval_policy": "Candidate entries cannot be ingested as independently verified raw evidence. A source becomes approved only after source-specific date, schema, scope, unit and provenance checks are implemented and independently reviewed.",
+  "sources": [
+    {
+      "id": "BFI82U",
+      "authority": "TWSE",
+      "purpose": "market-wide institutional buy/sell/net TWD",
+      "endpoint_template": "https://www.twse.com.tw/rwd/zh/fund/BFI82U?type=day&dayDate={YYYYMMDD}&response=json",
+      "date_query": "dayDate YYYYMMDD",
+      "schema": "six rows; fields 單位名稱/買進金額/賣出金額/買賣差額",
+      "units": "TWD",
+      "scope": "TWSE market-wide; not ordinary-share-only",
+      "status": "RESEARCH_VALIDATOR_IMPLEMENTED_SCOPE_PENDING",
+      "validator": "scripts/research_date_to_video_bfi82u_v1.js",
+      "archiver": "scripts/research_date_to_video_bfi82u_archive.js",
+      "archive_pattern": "data_research/twse-market-opening/primary-archive/{YYYYMMDD}/{YYYYMMDD}-bfi82u.json",
+      "failure_policy": "WAITING_SOURCE or reject; no cross-date fallback"
+    },
+    {
+      "id": "FMTQIK",
+      "authority": "TWSE",
+      "purpose": "index and market turnover cross-check",
+      "endpoint_template": null,
+      "date_query": "historical dated source requires independent endpoint contract verification",
+      "schema": "RESEARCH_CANDIDATE_NOT_CERTIFIED",
+      "units": "turnover TWD; verify raw payload units before approval",
+      "scope": "TWSE",
+      "status": "CANDIDATE_DERIVED_CHART_ONLY",
+      "existing_consumer": "scripts/research_date_to_video_market_base.js",
+      "failure_policy": "Do not treat derived chart as original raw proof"
+    },
+    {
+      "id": "BFIAMU",
+      "authority": "TWSE",
+      "purpose": "institutional context independent comparison",
+      "endpoint_template": null,
+      "date_query": "TO_VERIFY",
+      "schema": "TO_VERIFY",
+      "units": "TO_VERIFY",
+      "scope": "TO_VERIFY",
+      "status": "CANDIDATE_UNAPPROVED",
+      "failure_policy": "Exclude from certified Master until dated raw proof and validator exist"
+    },
+    {
+      "id": "MI_INDEX",
+      "authority": "TWSE",
+      "purpose": "dated market breadth using actual official 股票 column",
+      "endpoint_template": null,
+      "date_query": "historical dated payload supported by existing research parser; verify endpoint before automated retrieval",
+      "schema": "date-specific actual column schema; no assumed ordinary-share identity",
+      "units": "counts",
+      "scope": "TWSE official 股票 column; ordinary-share identity uncertified",
+      "status": "RESEARCH_PARSER_IMPLEMENTED_IDENTITY_PENDING",
+      "existing_consumer": "scripts/research_market_opening_mi_index_breadth.js",
+      "failure_policy": "Fail closed on missing dated raw/column/schema; no cross-date fallback"
+    }
+  ]
+}
