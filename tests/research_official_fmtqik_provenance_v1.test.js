@@ -39,3 +39,5 @@ test('candidate wrong-date and missing dated source never authorize Master even 
  assert.equal(missing.raw_http_provenance_certified,false);
  assert.equal(missing.master_authorized,false);
 });
+
+test('partial FMTQIK candidate is never an approved six-field source',()=>{const {inspectCandidate}=require('../scripts/research_official_fmtqik_raw_candidate_v1');const raw=Buffer.from(JSON.stringify({fields:['日期','成交金額'],data:[['115/10/08','1,000']]}));const r=inspectCandidate(raw,'20261008');assert.equal(r.status,'CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED');assert.equal(r.field_names.length,2);assert.equal(r.raw_units_verified,false);assert.equal(r.market_scope_verified,false);assert.equal(r.master_authorized,false);assert.equal(r.publication_authorized,false);});
