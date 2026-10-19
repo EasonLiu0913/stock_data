@@ -15,7 +15,7 @@ function inspectCandidate(bytes,date){
   const expected=String(Number(date.slice(0,4))-1911)+'/'+date.slice(4,6)+'/'+date.slice(6,8);
   const matches=p.data.filter(r=>r[0]===expected);
   if(matches.length!==1)return {...base,reason:matches.length?'DUPLICATE_TARGET_DATE':'TARGET_DATE_ROW_MISSING'};
-  if(matches[0].slice(1).some(v=>typeof v!=='string'||!/^(?:0|[1-9]\\d{0,2}(?:,\\d{3})*|[1-9]\\d*)$/.test(v)))return {...base,reason:'INVALID_CANDIDATE_NUMERIC_CELL'};
+  if(matches[0].slice(1).some(v=>typeof v!=='string'||!/^(?:0|[1-9]\d{0,2}(?:,\d{3})*|[1-9]\d*)$/.test(v)))return {...base,reason:'INVALID_CANDIDATE_NUMERIC_CELL'};
   return {...base,status:'CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED',candidate_sha256:sha(bytes),candidate_bytes:bytes.length,matched_roc_date:expected,field_names:p.fields,raw_units_verified:false,market_scope_verified:false};
  }catch(e){return {...base,reason:'INVALID_CANDIDATE_JSON'};}
 }
