@@ -24,7 +24,7 @@ function build(root,date){
  const diagnostic={FMTQIK:inspectFmtqik,MI_INDEX:inspectMiIndex};
  const entries=ids.map(id=>{
   if(id==='BFI82U')return bfi;
-  const entry={id,status:'UNAPPROVED_OR_RAW_NOT_VALIDATED',source_date:date,publication_authorized:false};
+  const entry={id,status:'UNAPPROVED_OR_RAW_NOT_VALIDATED',source_date:date,action_required:id==='BFIAMU'?'SOURCE_CONTRACT_APPROVAL_REQUIRED':'ORIGINAL_DATED_HTTP_ARCHIVE_AND_VALIDATOR_REQUIRED',publication_authorized:false};
   if(diagnostic[id]){
    const evidence=diagnostic[id](root,date);
    entry.provenance_diagnostic={status:evidence.status,source_path:evidence.source_path,raw_http_provenance_certified:false};
