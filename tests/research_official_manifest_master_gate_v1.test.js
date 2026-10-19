@@ -1,0 +1,11 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {build}=require('../scripts/research_official_data_manifest_v1');
+const {gate}=require('../scripts/research_official_manifest_master_gate_v1');
+const source=path.join(__dirname,'../data_research/twse-market-opening/primary-archive/20261008');
+const registry=fs.readFileSync(path.join(__dirname,'../config/research/official-data-registry-v1.json'));
+function setup(){const root=fs.mkdtempSync(path.join(os.tmpdir(),'manifest-master-'));fs.mkdirSync(path.join(root,'config/research'),{recursive:true});fs.writeFileSync(path.join(root,'config/research/official-data-registry-v1.json'),registry);return root;}
+function copy(root,date='20261008'){const dir=path.join(root,'data_research/twse-market-opening/primary-archive',date);fs.mkdirSync(dir,{recursive:true});for(const suffix of ['.json','.manifest.json'])fs.copyFileSync(path.join(source,'20261008-bfi82u'+suffix),path.join(dir,date+'-bfi82u'+suffix));return dir;}
+test('verified dated archive supplies institutional evidence but never certifies full Master',()=>{const root=setup();try{copy(root);const r=gate(root,'20261008');assert.equal(r.status,'PARTIAL_VERIFIED_INSTITUTIONAL_ONLY');assert.equal(r.institutional.source_date,'20261008');assert.equal(r.institutional.groups.total.unit,'TWD');assert.equal(r.unverified_sources.length,3);assert.equal(r.complete,false);assert.equal(r.master_authorized,false);assert.equal(r.render_authorized,false);}finally{fs.rmSync(root,{recursive:true,force:true});}});
+test('missing archive cannot create institutional evidence or cross-date fallback',()=>{const root=setup();try{copy(root);const r=gate(root,'20261013');assert.equal(r.status,'WAITING_SOURCE');assert.equal(r.institutional,null);}finally{fs.rmSync(root,{recursive:true,force:true});}});
+test('rejects stale manifest and changed raw even if old manifest passed',()=>{const root=setup();try{const dir=copy(root),m=build(root,'20261008');fs.appendFileSync(path.join(dir,'20261008-bfi82u.json'),' ');assert.throws(()=>gate(root,'20261008',m),/STALE_OR_TAMPERED_MANIFEST/);assert.throws(()=>gate(root,'20261013',m),/MANIFEST_DATE_MISMATCH/);}finally{fs.rmSync(root,{recursive:true,force:true});}});
