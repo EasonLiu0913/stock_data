@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {validate}=require('../scripts/research_date_to_video_sentence_parity_v1');
+const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
+const input={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1',target_date:'20261013',source_master_sha256:'fixture-master'};
+const packet={target_date:'20261013',source_master_sha256:'fixture-master',sentences:[...FIXED_OPENING_LINES,'市場觀察仍待審核。'].map((v,i)=>({id:'s'+i,narration:v,subtitle:v}))};
+let result=validate(packet,input);assert.equal(result.status,'STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED');assert.equal(result.narration_authorized,false);assert.equal(result.render_authorized,false);
+result=validate({...packet,target_date:'20261008'},input);assert.ok(result.issues.includes('DATE_MATCH'));
+result=validate({...packet,source_master_sha256:'other'},input);assert.ok(result.issues.includes('MASTER_SHA_MATCH'));
+result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===4?{...s,subtitle:'不同字幕'}:s)},input);assert.ok(result.issues.includes('PARITY_4'));
+result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===3?{...s,narration:'那麼我們開始囉。',subtitle:'那麼我們開始囉。'}:s)},input);assert.ok(result.issues.includes('OPENING_3'));
+result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===4?{...s,id:'s0'}:s)},input);assert.ok(result.issues.includes('SENTENCE_ID_4'));
+console.log('D4_RESEARCH_SENTENCE_PARITY_FAIL_CLOSED_PASS');
