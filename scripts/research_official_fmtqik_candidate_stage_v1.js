@@ -22,7 +22,7 @@ async function fetchAndStage(root,date){
  const captured=await fetchCandidate(date);
  const staged=stage(root,date,captured.bytes,captured.meta);
  // Separate direct-fetch receipt from the caller-supplied candidate manifest. Neither certifies the endpoint.
- const receipt={contract:'FMTQIK_DIRECT_FETCH_RECEIPT_RESEARCH_V1',target_date:date,request_url:captureUrl(date),observed_at:captured.meta.observedAt,http_status:captured.meta.httpStatus,content_type:captured.meta.contentType,response_sha256:sha(captured.bytes),response_bytes:captured.bytes.length,capture_method:'NODE_HTTPS_GET',independently_attested:false,source_contract_review_required:true,raw_http_provenance_certified:false,endpoint_approved:false,master_authorized:false,render_authorized:false,publication_authorized:false};
+ const receipt={contract:'FMTQIK_DIRECT_FETCH_RECEIPT_RESEARCH_V1',target_date:date,request_url:captureUrl(date),observed_at:captured.meta.observedAt,http_status:captured.meta.httpStatus,content_type:captured.meta.contentType,response_sha256:sha(captured.bytes),response_bytes:captured.bytes.length,capture_method:'NODE_HTTPS_GET',response_headers:captured.meta.responseHeaders,request_started_at:captured.meta.requestStartedAt,request_finished_at:captured.meta.observedAt,independently_attested:false,source_contract_review_required:true,raw_http_provenance_certified:false,endpoint_approved:false,master_authorized:false,render_authorized:false,publication_authorized:false};
  const receiptPath=path.join(root,'fmtqik-candidate',date,'direct-fetch-receipt.json');
  fs.writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx'});
  return {...staged,receipt_path:receiptPath,capture_path:'DIRECT_TWSE_HTTPS_FETCH_CANDIDATE_ONLY',source_contract_review_required:true,raw_http_provenance_certified:false};
@@ -32,9 +32,10 @@ function fetchCandidate(date){
  inspectCandidate(Buffer.from('{"fields":["日期","成交金額"],"data":[]}'),date); // validate date without staging
  const sourceUrl=captureUrl(date);
  return new Promise((resolve,reject)=>{
+  const requestStartedAt=new Date().toISOString();
   const request=https.get(sourceUrl,{timeout:12000,headers:{Accept:'application/json','User-Agent':'stock-data-research/1.0'}},res=>{
    const chunks=[];let size=0;res.on('data',b=>{size+=b.length;if(size>1024*1024){res.destroy(Error('CANDIDATE_RESPONSE_TOO_LARGE'));return;}chunks.push(b);});
-   res.on('error',reject);res.on('end',()=>resolve({bytes:Buffer.concat(chunks),meta:{httpStatus:res.statusCode,contentType:res.headers['content-type']||'',sourceUrl,observedAt:new Date().toISOString()}}));
+   res.on('error',reject);res.on('end',()=>resolve({bytes:Buffer.concat(chunks),meta:{httpStatus:res.statusCode,contentType:res.headers['content-type']||'',sourceUrl,requestStartedAt,responseHeaders:{date:res.headers.date||null,'content-type':res.headers['content-type']||null,'content-length':res.headers['content-length']||null,server:res.headers.server||null},observedAt:new Date().toISOString()}}));
   });request.on('timeout',()=>request.destroy(Error('CANDIDATE_FETCH_TIMEOUT')));request.on('error',reject);
  });
 }
