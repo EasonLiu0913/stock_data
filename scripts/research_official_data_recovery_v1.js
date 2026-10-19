@@ -3,6 +3,11 @@
 const fs=require('node:fs'),path=require('node:path');
 const {build}=require('./research_official_data_manifest_v1');
 const {archive,fetchOfficial}=require('./research_date_to_video_bfi82u_archive');
+function planRecovery(root,date){
+ const manifest=build(root,date);
+ const sources=manifest.entries.map(entry=>({id:entry.id,source_date:date,status:entry.status,action_required:entry.id==='BFI82U'?(entry.status==='VERIFIED_RESEARCH_ONLY'?'REUSE_VERIFIED_ARCHIVE':entry.status==='INVALID_ARCHIVE'?'MANUAL_ARCHIVE_REVIEW':entry.missing?.length===2?'APPROVED_BOUNDED_RECOVERY_OR_WAIT':'INCOMPLETE_ARCHIVE_MANUAL_REVIEW'):entry.action_required,automated_retrieval_allowed:entry.id==='BFI82U'&&entry.status==='WAITING_SOURCE'&&entry.missing?.length===2}));
+ return {contract:'OFFICIAL_DATA_RECOVERY_PLAN_RESEARCH_V1',target_date:date,manifest_sha256:manifest.manifest_sha256,sources,complete:false,master_authorized:false,render_authorized:false,publication_authorized:false};
+}
 async function recover(root,date,{fetcher=fetchOfficial,maxAttempts=2}={}){
  if(!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>3)throw Error('INVALID_BOUNDED_ATTEMPTS');
  const before=build(root,date),entry=before.entries[0];
@@ -30,4 +35,4 @@ async function recover(root,date,{fetcher=fetchOfficial,maxAttempts=2}={}){
  return {status:'WAITING_SOURCE',attempts,reason,manifest:build(root,date),publication_authorized:false};
 }
 if(require.main===module){recover(process.argv[3]||'.',process.argv[2]).then(x=>{console.log(JSON.stringify(x,null,2));if(!['REUSED_VERIFIED_ARCHIVE','RECOVERED_VERIFIED_ARCHIVE'].includes(x.status))process.exitCode=1}).catch(e=>{console.error(e.message);process.exitCode=1});}
-module.exports={recover};
+module.exports={recover,planRecovery};
