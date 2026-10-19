@@ -2,8 +2,8 @@
 const assert=require('node:assert/strict');
 const {validate}=require('../scripts/research_date_to_video_sentence_parity_v1');
 const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
-const input={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1',target_date:'20261013',source_master_sha256:'fixture-master'};
-const packet={target_date:'20261013',source_master_sha256:'fixture-master',sentences:[...FIXED_OPENING_LINES,'市場觀察仍待審核。'].map((v,i)=>({id:'s'+i,narration:v,subtitle:v}))};
+const input={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1',target_date:'20261013',source_master_sha256:'a'.repeat(64)};
+const packet={target_date:'20261013',source_master_sha256:'a'.repeat(64),sentences:[...FIXED_OPENING_LINES,'市場觀察仍待審核。'].map((v,i)=>({id:'s'+i,narration:v,subtitle:v}))};
 let result=validate(packet,input);assert.equal(result.status,'STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED');assert.equal(result.narration_authorized,false);assert.equal(result.render_authorized,false);
 result=validate({...packet,target_date:'20261008'},input);assert.ok(result.issues.includes('DATE_MATCH'));
 result=validate({...packet,source_master_sha256:'other'},input);assert.ok(result.issues.includes('MASTER_SHA_MATCH'));
@@ -16,4 +16,6 @@ assert.equal(validate(mapped,input).status,'STRUCTURAL_PARITY_ONLY_EDITORIAL_REV
 assert.ok(validate({...mapped,sentences:mapped.sentences.map((s,i)=>i===4?{...s,subtitle:'10/13下跌5%。'}:s)},input).issues.includes('PARITY_4'));
 assert.ok(validate({...mapped,sentences:mapped.sentences.map((s,i)=>i===4?{...s,spoken_subtitle_mappings:[{spoken:'十三日',display:'13'},{spoken:'十三日',display:'13'}]}:s)},input).issues.includes('MAPPING_4'));
 assert.ok(validate({...mapped,sentences:mapped.sentences.map((s,i)=>i===4?{...s,narration:'五與五',subtitle:'5與五',spoken_subtitle_mappings:[{spoken:'五',display:'5'}]}:s)},input).issues.includes('MAPPING_4'));
+assert.ok(validate({...packet,source_master_sha256:null},{...input,source_master_sha256:null}).issues.includes('MASTER_SHA_MATCH'));
+assert.ok(validate({...packet,target_date:null},{...input,target_date:null}).issues.includes('DATE_MATCH'));
 console.log('D4_RESEARCH_SENTENCE_PARITY_FAIL_CLOSED_PASS');
