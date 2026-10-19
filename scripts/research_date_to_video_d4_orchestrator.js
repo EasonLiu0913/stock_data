@@ -45,7 +45,9 @@ function run(root,date,out){
   const breadthPath=path.join(root,'data_twse_mi_index',date+'_twse_mi_index.json');
   let breadth={target_date:date,status:'WAITING_SOURCE',missing:['DATED_MI_INDEX_STOCK_AGGREGATE'],publication_authorized:false};
   if(fs.existsSync(breadthPath)){
-   try{const bytes=fs.readFileSync(breadthPath);breadth={...parseBreadth(JSON.parse(bytes),date),status:'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED',source_sha256:hash(bytes)};}
+   try{const bytes=fs.readFileSync(breadthPath),expected=officialManifest.entries.find(e=>e.id==='MI_INDEX')?.provenance_diagnostic;
+    if(expected?.status!=='DATED_REPOSITORY_PAYLOAD_SCHEMA_VERIFIED_RAW_HTTP_PROVENANCE_PENDING'||expected.repository_payload_sha256!==hash(bytes))throw Error('MI_INDEX_CHANGED_SINCE_OFFICIAL_MANIFEST');
+    breadth={...parseBreadth(JSON.parse(bytes),date),status:'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED',source_sha256:hash(bytes)};}
    catch(e){breadth={target_date:date,status:'REJECTED',reason:e.message,publication_authorized:false};}
   }
   let marketMaster={target_date:date,status:'WAITING_SOURCE',publication_authorized:false,editorial_complete:false};
