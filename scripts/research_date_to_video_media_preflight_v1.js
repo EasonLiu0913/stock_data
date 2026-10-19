@@ -5,7 +5,7 @@ const {FIXED_OPENING_LINES}=require('./research_date_to_video_fixed_opening_v1')
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
 function inspect(dir){
  const read=name=>{const file=path.join(dir,name);return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):null};
- const handoff=read('media-handoff.json'),master=read('market-master.json'),task=read('original-analysis-task.json'),review=read('editorial-review.json'),input=read('editorial-input-manifest.json');
+ const handoff=read('media-handoff.json'),master=read('market-master.json'),task=read('original-analysis-task.json'),review=read('editorial-review.json'),input=read('editorial-input-manifest.json'),draft=read('original-analysis-draft-check.json');
  const issues=[];const fail=(code,condition)=>{if(!condition)issues.push(code)};
  fail('HANDOFF_REQUIRED',!!handoff);fail('MASTER_REQUIRED',!!master);fail('ANALYSIS_TASK_REQUIRED',!!task);fail('EDITORIAL_REVIEW_REQUIRED',!!review);fail('EDITORIAL_INPUT_MANIFEST_REQUIRED',!!input);
  const date=handoff?.target_date;
@@ -14,7 +14,9 @@ function inspect(dir){
  fail('MASTER_SHA_MATCH',!!master&&!!task&&!!handoff&&task.market_master_sha256===handoff.source_master_sha256&&sha(JSON.stringify(master))===handoff.source_master_sha256);
  fail('TASK_SHA_MATCH',!!task&&!!handoff&&sha(JSON.stringify(task))===handoff.analysis_task_sha256);
  fail('REVIEW_GATE_SHA_MATCH',!!review&&!!input&&!!handoff&&sha(JSON.stringify(review))===input.review_gate_sha256&&input.review_gate_sha256===handoff.review_gate_sha256);
- fail('DRAFT_CHECK_SHA_MATCH',!!input&&!!handoff&&input.draft_check_sha256===handoff.draft_check_sha256);
+ fail('DRAFT_CHECK_SHA_MATCH',!!input&&!!handoff&&input.draft_check_sha256===handoff.draft_check_sha256&&((input.draft_check_sha256===null&&draft===null)||(!!draft&&sha(JSON.stringify(draft))===input.draft_check_sha256)));
+ fail('DRAFT_DATE_MATCH',!draft||draft.target_date===date);
+ fail('DRAFT_NOT_NARRATION_APPROVED',!draft||draft.narration_authorized!==true);
  fail('OPENING_CANONICAL',!!handoff&&JSON.stringify(handoff.fixed_opening_lines)===JSON.stringify(FIXED_OPENING_LINES));
  fail('NO_RENDER_OR_PUBLICATION_AUTHORIZATION',[handoff,master,task,review,input].every(x=>x&&x.render_authorized!==true&&x.publication_authorized!==true));
  fail('EDITORIAL_CERTIFICATION_REQUIRED',review?.editorial_certified===true&&input?.editorial_certified===true&&handoff?.editorial_certified===true);
