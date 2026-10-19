@@ -6,10 +6,15 @@ const {run}=require('./research_date_to_video_d4_orchestrator');
 async function execute(root,date,out,options={}){
  if(!/^20\d{6}$/.test(date||''))throw Error('INVALID_TARGET_DATE');
  if(!out||path.resolve(out)===path.resolve(root)||path.resolve(out).startsWith(path.resolve(root)+path.sep))throw Error('EXTERNAL_ISOLATED_OUTPUT_DIRECTORY_REQUIRED');
+ // A failed retry must never leave the previous successful entry report visible.
+ const reportPath=path.join(out,'official-entry-status.json');
+ if(fs.existsSync(reportPath))fs.unlinkSync(reportPath);
  const recovery=await recover(root,date,options);
  const d4=run(root,date,out);
- const report={contract:'DATE_TO_VIDEO_OFFICIAL_ENTRY_RESEARCH_V1',target_date:date,recovery_status:recovery.status,recovery_attempts:recovery.attempts,recovery_reason:recovery.reason||null,d4_status:d4.stages[0].status,blockers:d4.blockers,render_authorized:false,publication_authorized:false};
- fs.writeFileSync(path.join(out,'official-entry-status.json'),JSON.stringify(report,null,2)+'\n');
+ const datedManifest=JSON.parse(fs.readFileSync(path.join(out,'official-data-manifest.json'),'utf8'));
+ if(datedManifest.target_date!==date||datedManifest.manifest_sha256!==recovery.manifest.manifest_sha256)throw Error('OFFICIAL_ENTRY_RECOVERY_D4_MANIFEST_MISMATCH');
+ const report={contract:'DATE_TO_VIDEO_OFFICIAL_ENTRY_RESEARCH_V1',target_date:date,recovery_status:recovery.status,recovery_attempts:recovery.attempts,recovery_reason:recovery.reason||null,manifest_sha256:datedManifest.manifest_sha256,d4_status:d4.stages[0].status,blockers:d4.blockers,render_authorized:false,publication_authorized:false};
+ fs.writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
  return report;
 }
 if(require.main===module){const [date,root='.',out]=process.argv.slice(2);execute(root,date,out).then(x=>{console.log(JSON.stringify(x,null,2));if(!['REUSED_VERIFIED_ARCHIVE','RECOVERED_VERIFIED_ARCHIVE'].includes(x.recovery_status)||x.blockers.length)process.exitCode=3}).catch(e=>{console.error(e.message);process.exitCode=2});}
