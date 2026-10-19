@@ -2,6 +2,8 @@
 // Research-only archive-first inspection. Never downloads, overwrites raw evidence or authorizes publication.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {inspect}=require('./research_date_to_video_bfi82u_v1');
+const {inspect:inspectFmtqik}=require('./research_official_fmtqik_provenance_v1');
+const {inspect:inspectMiIndex}=require('./research_official_mi_index_provenance_v1');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const canonical=o=>JSON.stringify(o);
 function build(root,date){
@@ -19,7 +21,19 @@ function build(root,date){
   const result=inspect(root,date);
   bfi=result.status==='VERIFIED'?{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',source_date:date,raw_sha256:result.raw_sha256,raw_bytes:result.raw_bytes,archive_path:path.relative(root,prefix+'.json').split(path.sep).join('/'),final_six_rows_verified:result.final_six_rows_verified,publication_authorized:false}:{id:'BFI82U',status:'WAITING_SOURCE',source_date:date,missing:result.missing,publication_authorized:false};
  }catch(e){bfi={id:'BFI82U',status:'INVALID_ARCHIVE',source_date:date,reason:e.message,publication_authorized:false};}
- const entries=ids.map(id=>id==='BFI82U'?bfi:{id,status:'UNAPPROVED_OR_RAW_NOT_VALIDATED',source_date:date,publication_authorized:false});
+ const diagnostic={FMTQIK:inspectFmtqik,MI_INDEX:inspectMiIndex};
+ const entries=ids.map(id=>{
+  if(id==='BFI82U')return bfi;
+  const entry={id,status:'UNAPPROVED_OR_RAW_NOT_VALIDATED',source_date:date,publication_authorized:false};
+  if(diagnostic[id]){
+   const evidence=diagnostic[id](root,date);
+   entry.provenance_diagnostic={status:evidence.status,source_path:evidence.source_path,raw_http_provenance_certified:false};
+   if(evidence.chart_sha256)entry.provenance_diagnostic.derived_chart_sha256=evidence.chart_sha256;
+   if(evidence.repository_payload_sha256)entry.provenance_diagnostic.repository_payload_sha256=evidence.repository_payload_sha256;
+   if(evidence.reason)entry.provenance_diagnostic.reason=evidence.reason;
+  }
+  return entry;
+ });
  const manifest={schema_version:1,target_date:date,registry_sha256:sha(registryBytes),entries,complete:false,master_authorized:false,render_authorized:false,publication_authorized:false};
  return {...manifest,manifest_sha256:sha(Buffer.from(canonical(manifest)))};
 }
