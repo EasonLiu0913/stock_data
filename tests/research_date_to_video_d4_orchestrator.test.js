@@ -309,3 +309,20 @@ const missing=run('.','20261014',dir);assert.equal(missing.stages[0].status,'WAI
 assert.equal(missing.render_authorized,false);assert.deepEqual(missing.artifacts.map(a=>a.name),['official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','status.json']);
 const missingGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));assert.equal(missingGate.target_date,'20261014');assert.equal(missingGate.master_authorized,false);assert.equal(missingGate.publication_authorized,false);
 console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
+
+// Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
+const crossDateDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-cross-date-'));
+try{
+ const first=run('.','20261008',crossDateDir);
+ assert.equal(first.target_date,'20261008');
+ assert.ok(fs.existsSync(path.join(crossDateDir,'market-master-review-packet.json')));
+ const second=run('.','20261013',crossDateDir);
+ assert.equal(second.target_date,'20261013');
+ assert.equal(fs.existsSync(path.join(crossDateDir,'market-master-review-packet.json')),false);
+ for(const file of ['status.json','official-data-manifest.json','official-manifest-master-gate.json','market-master.json','media-handoff.json']){
+  const output=JSON.parse(fs.readFileSync(path.join(crossDateDir,file),'utf8'));
+  assert.equal(output.target_date,'20261013',file+' must not retain previous date');
+  assert.equal(output.publication_authorized,false);
+ }
+ assert.equal(JSON.parse(fs.readFileSync(path.join(crossDateDir,'market-master.json'))).status,'WAITING_SOURCE');
+}finally{fs.rmSync(crossDateDir,{recursive:true,force:true});}
