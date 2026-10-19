@@ -24,7 +24,7 @@ async function fetchAndStage(root,date){
  // Separate direct-fetch receipt from the caller-supplied candidate manifest. Neither certifies the endpoint.
  const receipt={contract:'FMTQIK_DIRECT_FETCH_RECEIPT_RESEARCH_V1',target_date:date,request_url:captureUrl(date),observed_at:captured.meta.observedAt,http_status:captured.meta.httpStatus,content_type:captured.meta.contentType,response_sha256:sha(captured.bytes),response_bytes:captured.bytes.length,capture_method:'NODE_HTTPS_GET',independently_attested:false,source_contract_review_required:true,raw_http_provenance_certified:false,endpoint_approved:false,master_authorized:false,render_authorized:false,publication_authorized:false};
  const receiptPath=path.join(root,'fmtqik-candidate',date,'direct-fetch-receipt.json');
- fs.writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\\n',{flag:'wx'});
+ fs.writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',{flag:'wx'});
  return {...staged,receipt_path:receiptPath,capture_path:'DIRECT_TWSE_HTTPS_FETCH_CANDIDATE_ONLY',source_contract_review_required:true,raw_http_provenance_certified:false};
 }
 function captureUrl(date){return 'https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date='+date+'&response=json';}
