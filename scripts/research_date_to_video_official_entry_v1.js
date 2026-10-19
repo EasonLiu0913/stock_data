@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path');
 const {recover}=require('./research_official_data_recovery_v1');
 const {run}=require('./research_date_to_video_d4_orchestrator');
 async function execute(root,date,out,options={}){
- if(!/^20\d{6}$/.test(date||''))throw Error('INVALID_TARGET_DATE');
+ if(!/^20\d{6}$/.test(date||'')||!Number.isFinite(Date.parse(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z'))||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8))throw Error('INVALID_TARGET_DATE');
  if(!out||path.resolve(out)===path.resolve(root)||path.resolve(out).startsWith(path.resolve(root)+path.sep))throw Error('EXTERNAL_ISOLATED_OUTPUT_DIRECTORY_REQUIRED');
  // A failed retry must never leave the previous successful entry report visible.
  const reportPath=path.join(out,'official-entry-status.json');
