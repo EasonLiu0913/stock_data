@@ -5,7 +5,7 @@ const {build}=require('./research_date_to_video_dated_media_input_v1');
 const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 function prepare(dir){
  const input=build(dir),read=name=>{const p=path.join(dir,name);return fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):null};
- const task=read('original-analysis-task.json'),master=read('market-master.json'),draft=read('original-analysis-draft.json'),check=read('original-analysis-draft-check.json');
+ const task=read('original-analysis-task.json'),master=read('market-master.json'),draft=read('original-analysis-draft-input.json'),check=read('original-analysis-draft-check.json');
  const issues=[...input.blockers];
  if(!draft)issues.push('ORIGINAL_ANALYSIS_DRAFT_REQUIRED');
  if(!check||check.status!=='STRUCTURAL_EVIDENCE_VALIDATED_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'||check.draft_sha256!==sha(draft)||check.task_sha256!==sha(task))issues.push('DRAFT_STRUCTURAL_EVIDENCE_REQUIRED');
