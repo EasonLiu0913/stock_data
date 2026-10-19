@@ -5,8 +5,8 @@ function validate(packet,datedInput){
  const issues=[];const check=(code,ok)=>{if(!ok)issues.push(code)};
  check('DATED_INPUT_REQUIRED',!!datedInput&&datedInput.contract==='DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1');
  check('PACKET_REQUIRED',!!packet&&typeof packet==='object');
- check('DATE_MATCH',!!packet&&!!datedInput&&packet.target_date===datedInput.target_date);
- check('MASTER_SHA_MATCH',!!packet&&!!datedInput&&packet.source_master_sha256===datedInput.source_master_sha256);
+ check('DATE_MATCH',!!packet&&!!datedInput&&typeof packet.target_date==='string'&&/^20\d{6}$/.test(packet.target_date)&&packet.target_date===datedInput.target_date);
+ check('MASTER_SHA_MATCH',!!packet&&!!datedInput&&typeof packet.source_master_sha256==='string'&&/^[a-f0-9]{64}$/.test(packet.source_master_sha256)&&packet.source_master_sha256===datedInput.source_master_sha256);
  check('SENTENCES_REQUIRED',Array.isArray(packet?.sentences)&&packet.sentences.length>=FIXED_OPENING_LINES.length);
  if(Array.isArray(packet?.sentences)){
   const ids=new Set();for(const [i,s] of packet.sentences.entries()){
