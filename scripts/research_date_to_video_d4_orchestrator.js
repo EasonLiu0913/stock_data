@@ -7,6 +7,8 @@ const {inventory}=require('./research_date_to_video_d4_claim_inventory');
 const {review}=require('./research_date_to_video_d4_review_gate');
 const {validate:validateDraft}=require('./research_date_to_video_d4_draft_gate');
 const {inspect:inspectBfi82u}=require('./research_date_to_video_bfi82u_v1');
+const {build:buildOfficialManifest}=require('./research_official_data_manifest_v1');
+const {gate:gateOfficialManifest}=require('./research_official_manifest_master_gate_v1');
 const {parse:parseBreadth}=require('./parse_twse_official_stock_aggregate');
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 function run(root,date,out){
@@ -14,8 +16,12 @@ function run(root,date,out){
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
  // A repeated run must not expose artifacts from an earlier date or earlier approval state.
  // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
- const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json'];
+ const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','official-data-manifest.json','official-manifest-master-gate.json'];
  for(const name of generated){const file=path.join(out,name);if(fs.existsSync(file))fs.unlinkSync(file)}
+ const officialManifest=buildOfficialManifest(root,date);
+ const officialGate=gateOfficialManifest(root,date,officialManifest);
+ write('official-data-manifest.json',officialManifest);
+ write('official-manifest-master-gate.json',officialGate);
  const marketOnlyMissing=status.blockers.length===1&&status.blockers[0]==='MISSING:market-opening';
  if(status.stages[0].status==='WAITING_SOURCE'&&!marketOnlyMissing){write('status.json',result);return result}
  const load=(part)=>JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5',part,date+'.json'),'utf8'));
@@ -25,6 +31,9 @@ function run(root,date,out){
   const joined=join({date,cutoff,...inputs}),claims=inventory(joined,inputs);
   result.stages[0].status=marketOnlyMissing?'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING':'EVIDENCE_JOINED_NOT_CERTIFIED';
   const institutional=inspectBfi82u(root,date);
+  if(officialGate.status==='PARTIAL_VERIFIED_INSTITUTIONAL_ONLY'){
+   if(institutional.status!=='VERIFIED'||officialGate.institutional.raw_sha256!==institutional.raw_sha256)throw Error('OFFICIAL_MANIFEST_D4_INSTITUTIONAL_MISMATCH');
+  }else if(institutional.status==='VERIFIED')throw Error('OFFICIAL_MANIFEST_D4_UNVERIFIED_INSTITUTIONAL');
   const breadthPath=path.join(root,'data_twse_mi_index',date+'_twse_mi_index.json');
   let breadth={target_date:date,status:'WAITING_SOURCE',missing:['DATED_MI_INDEX_STOCK_AGGREGATE'],publication_authorized:false};
   if(fs.existsSync(breadthPath)){
