@@ -14,8 +14,8 @@ for(const date of ['20261008','20261013']){
  assert.equal(recoveryPlan.target_date,date);
  assert.equal(recoveryPlan.manifest_sha256,officialManifest.manifest_sha256);
  assert.equal(recoveryPlan.sources.length,4);
- assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,false);
- assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').action_required,date==='20261008'?'REUSE_VERIFIED_ARCHIVE':'INCOMPLETE_ARCHIVE_MANUAL_REVIEW');
+ assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,date==='20261013');
+ assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').action_required,date==='20261008'?'REUSE_VERIFIED_ARCHIVE':'APPROVED_BOUNDED_RECOVERY_OR_WAIT');
  assert.ok(recoveryPlan.sources.filter(x=>x.id!=='BFI82U').every(x=>x.automated_retrieval_allowed===false));
  assert.equal(recoveryPlan.render_authorized,false);
  assert.equal(recoveryPlan.publication_authorized,false);
