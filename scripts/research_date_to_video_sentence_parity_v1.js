@@ -13,11 +13,22 @@ function validate(packet,datedInput){
    check('SENTENCE_ID_'+i,typeof s?.id==='string'&&s.id.length>0&&!ids.has(s.id));if(typeof s?.id==='string')ids.add(s.id);
    check('NARRATION_'+i,typeof s?.narration==='string'&&s.narration.trim().length>0);
    check('SUBTITLE_'+i,typeof s?.subtitle==='string'&&s.subtitle.trim().length>0);
-   check('PARITY_'+i,typeof s?.narration==='string'&&s.narration===s.subtitle);
+   const mappings=s?.spoken_subtitle_mappings;
+   let projected=s?.narration;
+   let mappingValid=mappings===undefined||Array.isArray(mappings);
+   if(Array.isArray(mappings)){
+    if(i<FIXED_OPENING_LINES.length)mappingValid=false;
+    for(const m of mappings){
+     if(!m||typeof m.spoken!=='string'||typeof m.display!=='string'||!m.spoken||!m.display||m.spoken===m.display||typeof projected!=='string'||projected.split(m.spoken).length!==2||!/[0-9]/.test(m.display)||!/[一二三四五六七八九十百千萬億零〇兩]/.test(m.spoken)){mappingValid=false;continue}
+     projected=projected.replace(m.spoken,m.display);
+    }
+   }
+   check('MAPPING_'+i,mappingValid);
+   check('PARITY_'+i,typeof projected==='string'&&projected===s?.subtitle);
    if(i<FIXED_OPENING_LINES.length)check('OPENING_'+i,s?.narration===FIXED_OPENING_LINES[i]);
   }
  }
- // Exact text parity is intentionally conservative until a reviewed spoken-number/subtitle projection exists.
+ // Only explicit, uniquely located spoken/display pairs are projected; editorial review is still mandatory.
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_PARITY_V1',target_date:datedInput?.target_date||null,status:issues.length?'REJECTED':'STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED',issues,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={validate};
