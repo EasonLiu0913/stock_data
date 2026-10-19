@@ -306,6 +306,6 @@ assert.equal(rejectedDraftManifest.render_authorized,false);
 console.log('D4_REJECTED_DRAFT_PROVENANCE_PASS');assert.equal(rejected.render_authorized,false);assert.ok(rejected.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-missing-'));
 const missing=run('.','20261014',dir);assert.equal(missing.stages[0].status,'WAITING_SOURCE');
-assert.equal(missing.render_authorized,false);assert.deepEqual(missing.artifacts.map(a=>a.name),['official-data-manifest.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','status.json']);
+assert.equal(missing.render_authorized,false);assert.deepEqual(missing.artifacts.map(a=>a.name),['official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','status.json']);
 const missingGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));assert.equal(missingGate.target_date,'20261014');assert.equal(missingGate.master_authorized,false);assert.equal(missingGate.publication_authorized,false);
 console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
