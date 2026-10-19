@@ -18,4 +18,20 @@ function inspect(root,date){
  }catch(e){return {...base,status:'REJECTED',reason:e.message};}
 }
 if(require.main===module){try{console.log(JSON.stringify(inspect(process.argv[3]||'.',process.argv[2]),null,2))}catch(e){console.error(e.message);process.exitCode=1}}
-module.exports={inspect};
+
+// Independent staged-candidate integrity audit; caller metadata is not an authenticated HTTP transcript.
+function inspectStagedCandidate(root,date){
+ const {inspectCandidate}=require('./research_official_fmtqik_raw_candidate_v1');
+ inspectCandidate(Buffer.from('{"fields":["日期","成交金額"],"data":[]}'),date);
+ const dir=path.join(root,'fmtqik-candidate',date),raw=path.join(dir,'response.json'),file=path.join(dir,'candidate-manifest.json');
+ const base={contract:'FMTQIK_STAGED_CANDIDATE_INTEGRITY_AUDIT_V1',target_date:date,status:'WAITING_SOURCE',raw_http_provenance_certified:false,endpoint_approved:false,master_authorized:false,render_authorized:false,publication_authorized:false};
+ if(!fs.existsSync(raw)||!fs.existsSync(file))return base;
+ try{
+  const bytes=fs.readFileSync(raw),m=JSON.parse(fs.readFileSync(file,'utf8')),candidate=inspectCandidate(bytes,date);
+  if(m.contract!=='FMTQIK_STAGED_HTTP_CANDIDATE_V1'||m.target_date!==date||m.sha256!==sha(bytes)||m.bytes!==bytes.length)throw Error('CANDIDATE_MANIFEST_INTEGRITY_MISMATCH');
+  if(candidate.status!=='CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED'||JSON.stringify(m.candidate_inspection)!==JSON.stringify(candidate))throw Error('CANDIDATE_INSPECTION_MISMATCH');
+  if(m.http_metadata_evidence!=='CALLER_SUPPLIED_UNVERIFIED'||m.endpoint_approved!==false||m.raw_http_provenance_certified!==false||m.master_authorized!==false||m.render_authorized!==false||m.publication_authorized!==false)throw Error('CANDIDATE_AUTHORIZATION_STATE_MISMATCH');
+  return {...base,status:'STAGED_BYTES_AND_MANIFEST_MATCH_HTTP_PROVENANCE_PENDING',sha256:sha(bytes),bytes:bytes.length,complete_six_field_candidate:candidate.complete_six_field_candidate,source_contract_review_required:true};
+ }catch(e){return {...base,status:'REJECTED',reason:e.message};}
+}
+module.exports={inspect,inspectStagedCandidate};
