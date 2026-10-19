@@ -13,6 +13,8 @@ function inspect(dir){
  for(const [name,obj] of [['MASTER',master],['TASK',task],['REVIEW',review],['INPUT',input]])fail(name+'_DATE_MATCH',!!date&&obj?.target_date===date);
  fail('MASTER_SHA_MATCH',!!master&&!!task&&!!handoff&&task.market_master_sha256===handoff.source_master_sha256&&sha(JSON.stringify(master))===handoff.source_master_sha256);
  fail('TASK_SHA_MATCH',!!task&&!!handoff&&sha(JSON.stringify(task))===handoff.analysis_task_sha256);
+ fail('REVIEW_GATE_SHA_MATCH',!!review&&!!input&&!!handoff&&sha(JSON.stringify(review))===input.review_gate_sha256&&input.review_gate_sha256===handoff.review_gate_sha256);
+ fail('DRAFT_CHECK_SHA_MATCH',!!input&&!!handoff&&input.draft_check_sha256===handoff.draft_check_sha256);
  fail('OPENING_CANONICAL',!!handoff&&JSON.stringify(handoff.fixed_opening_lines)===JSON.stringify(FIXED_OPENING_LINES));
  fail('NO_RENDER_OR_PUBLICATION_AUTHORIZATION',[handoff,master,task,review,input].every(x=>x&&x.render_authorized!==true&&x.publication_authorized!==true));
  fail('EDITORIAL_CERTIFICATION_REQUIRED',review?.editorial_certified===true&&input?.editorial_certified===true&&handoff?.editorial_certified===true);
