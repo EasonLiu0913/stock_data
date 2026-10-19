@@ -29,9 +29,9 @@
       "schema": "RESEARCH_CANDIDATE_NOT_CERTIFIED",
       "units": "turnover TWD; verify raw payload units before approval",
       "scope": "TWSE",
-      "status": "CANDIDATE_OFFICIAL_HTML_COLUMNS_OBSERVED_JSON_RAW_PENDING",
+      "status": "THREE_DATE_RAW_CANDIDATE_CROSSCHECK_PASSED_SOURCE_APPROVAL_PENDING",
       "existing_consumer": "scripts/research_date_to_video_market_base.js",
-      "failure_policy": "Official HTML is reference only; do not promote derived chart or synthetic/staged candidate as original dated JSON HTTP proof",
+      "failure_policy": "Official HTML is reference only; do not promote derived chart or synthetic/staged candidate as original dated JSON HTTP proof; staged candidate remains research-only until independent source contract approval",
       "official_public_reference": "https://www.twse.com.tw/zh/trading/historical/fmtqik.html",
       "official_report_reference": "https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?response=html",
       "official_display_columns_observed": [
@@ -42,7 +42,21 @@
         "發行量加權股價指數",
         "漲跌點數"
       ],
-      "official_display_units_observed": "元、股; index and change in points; report scope includes regular market, odd lots, after-hours fixed-price and block trades, excludes auction and tender purchase"
+      "official_display_units_observed": "元、股; index and change in points; report scope includes regular market, odd lots, after-hours fixed-price and block trades, excludes auction and tender purchase",
+      "candidate_endpoint_template": "https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date={YYYYMMDD}&response=json",
+      "candidate_archiver": "scripts/research_official_fmtqik_candidate_stage_v1.js",
+      "candidate_validator": "scripts/research_official_fmtqik_raw_candidate_v1.js",
+      "candidate_provenance_validator": "scripts/research_official_fmtqik_provenance_v1.js",
+      "candidate_evidence_dates": [
+        "20261008",
+        "20261013",
+        "20261014"
+      ],
+      "candidate_evidence_run": "https://github.com/EasonLiu0913/stock_data/actions/runs/39221536998",
+      "endpoint_approved": false,
+      "raw_http_provenance_certified": false,
+      "master_authorized": false,
+      "publication_authorized": false
     },
     {
       "id": "BFIAMU",
