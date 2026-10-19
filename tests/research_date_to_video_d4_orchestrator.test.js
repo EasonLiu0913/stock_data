@@ -10,6 +10,11 @@ for(const date of ['20261008','20261013']){
  const officialGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));
  assert.equal(officialManifest.target_date,date);assert.equal(officialGate.target_date,date);assert.equal(officialGate.manifest_sha256,officialManifest.manifest_sha256);
  assert.equal(officialGate.master_authorized,false);assert.equal(officialGate.publication_authorized,false);
+ for(const [name,source] of [['mi-index-provenance.json','MI_INDEX'],['fmtqik-provenance.json','FMTQIK']]){
+  const p=JSON.parse(fs.readFileSync(path.join(dir,name)));assert.equal(p.target_date,date);assert.equal(p.master_authorized,false);assert.equal(p.publication_authorized,false);
+  if(source==='MI_INDEX')assert.equal(p.raw_http_provenance_certified,false);
+  else assert.equal(p.original_http_archive_verified,false);
+ }
  if(date==='20261008'){assert.equal(officialGate.status,'PARTIAL_VERIFIED_INSTITUTIONAL_ONLY');assert.equal(officialGate.institutional.raw_sha256,officialManifest.entries[0].raw_sha256);}
  if(date==='20261013'){assert.equal(officialGate.status,'WAITING_SOURCE');assert.equal(officialGate.institutional,null);}
  if(['EVIDENCE_JOINED_NOT_CERTIFIED','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING'].includes(r.stages[0].status)){
@@ -280,6 +285,6 @@ assert.equal(rejectedDraftManifest.render_authorized,false);
 console.log('D4_REJECTED_DRAFT_PROVENANCE_PASS');assert.equal(rejected.render_authorized,false);assert.ok(rejected.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-missing-'));
 const missing=run('.','20261014',dir);assert.equal(missing.stages[0].status,'WAITING_SOURCE');
-assert.equal(missing.render_authorized,false);assert.deepEqual(missing.artifacts.map(a=>a.name),['official-data-manifest.json','official-manifest-master-gate.json','status.json']);
+assert.equal(missing.render_authorized,false);assert.deepEqual(missing.artifacts.map(a=>a.name),['official-data-manifest.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','status.json']);
 const missingGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));assert.equal(missingGate.target_date,'20261014');assert.equal(missingGate.master_authorized,false);assert.equal(missingGate.publication_authorized,false);
 console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
