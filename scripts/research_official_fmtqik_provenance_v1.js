@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function inspect(root,date){
- if(!/^20\d{6}$/.test(date||'')||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6))throw Error('INVALID_TARGET_DATE');
+ if(!/^20\d{6}$/.test(date||'')||!Number.isFinite(Date.parse(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z'))||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8))throw Error('INVALID_TARGET_DATE');
  const rel='data_twse_market_chart/market_chart.json',file=path.join(root,rel);
  const base={contract:'FMTQIK_DERIVED_CHART_PROVENANCE_V1',target_date:date,source_path:rel,status:'WAITING_SOURCE',original_http_archive_verified:false,raw_http_provenance_certified:false,master_authorized:false,publication_authorized:false};
  if(!fs.existsSync(file))return base;
