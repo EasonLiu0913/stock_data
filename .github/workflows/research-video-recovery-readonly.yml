@@ -84,6 +84,23 @@ jobs:
             cat /tmp/fmtqik-research/probe-error.txt
           fi
           node -e "const fs=require('fs'),p='/tmp/fmtqik-research/fmtqik-candidate/20261013/candidate-manifest.json';if(fs.existsSync(p)){const m=JSON.parse(fs.readFileSync(p));if(m.master_authorized!==false||m.publication_authorized!==false||m.endpoint_approved!==false)process.exit(1);console.log(JSON.stringify({status:'STAGED_CANDIDATE_REVIEW_REQUIRED',sha256:m.sha256,fields:m.candidate_inspection.field_names,endpoint_approved:false}));}else console.log('FMTQIK_NOT_STAGED_SOURCE_REVIEW_REQUIRED');"
+      - name: Crosscheck real FMTQIK candidate against dated derived chart without promotion
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict');
+          const base='/tmp/fmtqik-research/fmtqik-candidate/20261013/';
+          if(!fs.existsSync(base+'candidate-manifest.json')){console.log('FMTQIK_CANDIDATE_NOT_STAGED_NO_CROSSCHECK');process.exit(0);}
+          const raw=fs.readFileSync(base+'response.json'),m=JSON.parse(fs.readFileSync(base+'candidate-manifest.json'));
+          assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),m.sha256);
+          const p=JSON.parse(raw),date='115/10/13',rows=p.data.filter(r=>r[0]===date);
+          assert.equal(rows.length,1);const row=rows[0],chart=JSON.parse(fs.readFileSync('data_twse_market_chart/market_chart.json')).data.find(r=>r.date==='20261013');
+          const read=k=>Number(row[p.fields.indexOf(k)].replaceAll(',',''));
+          const checks={turnover_twd:read('成交金額')===chart.turnover,volume_shares:read('成交股數')===chart.volumeShares,transactions:read('成交筆數')===chart.transactions};
+          const report={contract:'FMTQIK_RAW_TO_DERIVED_RESEARCH_CROSSCHECK_V1',target_date:'20261013',candidate_sha256:m.sha256,checks,status:Object.values(checks).every(Boolean)?'RAW_DERIVED_VALUES_MATCH_RESEARCH_ONLY':'RAW_DERIVED_MISMATCH_REVIEW_REQUIRED',endpoint_approved:false,master_authorized:false,publication_authorized:false};
+          fs.writeFileSync('/tmp/fmtqik-research/raw-derived-crosscheck.json',JSON.stringify(report,null,2)+'\n');
+          console.log(JSON.stringify(report));
+          NODE
       - name: Upload isolated FMTQIK candidate probe
         if: always()
         uses: actions/upload-artifact@v4
