@@ -10,6 +10,18 @@ for(const date of ['20261008','20261013']){
  const officialGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));
  assert.equal(officialManifest.target_date,date);assert.equal(officialGate.target_date,date);assert.equal(officialGate.manifest_sha256,officialManifest.manifest_sha256);
  assert.equal(officialGate.master_authorized,false);assert.equal(officialGate.publication_authorized,false);
+ for(const [id,file] of [['MI_INDEX','mi-index-provenance.json'],['FMTQIK','fmtqik-provenance.json']]){
+  const diagnostic=JSON.parse(fs.readFileSync(path.join(dir,file)));
+  const manifestEntry=officialManifest.entries.find(e=>e.id===id);
+  const gateEntry=officialGate.unverified_sources.find(e=>e.id===id);
+  assert.equal(manifestEntry.source_date,date);
+  assert.equal(manifestEntry.provenance_diagnostic.status,diagnostic.status);
+  assert.equal(manifestEntry.provenance_diagnostic.source_path,diagnostic.source_path);
+  assert.deepEqual(gateEntry.provenance_diagnostic,manifestEntry.provenance_diagnostic);
+  assert.equal(gateEntry.source_date,date);
+  assert.equal(gateEntry.provenance_diagnostic.raw_http_provenance_certified,false);
+ }
+
  for(const [name,source] of [['mi-index-provenance.json','MI_INDEX'],['fmtqik-provenance.json','FMTQIK']]){
   const p=JSON.parse(fs.readFileSync(path.join(dir,name)));assert.equal(p.target_date,date);assert.equal(p.master_authorized,false);assert.equal(p.publication_authorized,false);
   if(source==='MI_INDEX')assert.equal(p.raw_http_provenance_certified,false);
