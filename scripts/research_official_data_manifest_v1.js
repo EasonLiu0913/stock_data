@@ -1,0 +1,27 @@
+'use strict';
+// Research-only archive-first inspection. Never downloads, overwrites raw evidence or authorizes publication.
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const {inspect}=require('./research_date_to_video_bfi82u_v1');
+const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+const canonical=o=>JSON.stringify(o);
+function build(root,date){
+ if(!/^20\d{6}$/.test(date)||!Number.isFinite(Date.parse(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z'))||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8))throw Error('INVALID_TARGET_DATE');
+ const registryPath=path.join(root,'config/research/official-data-registry-v1.json');
+ const registryBytes=fs.readFileSync(registryPath),registry=JSON.parse(registryBytes);
+ if(registry.schema_version!==1||registry.publication_authorized!==false)throw Error('REGISTRY_CONTRACT_MISMATCH');
+ const ids=['BFI82U','FMTQIK','BFIAMU','MI_INDEX'];
+ if(ids.some(id=>registry.sources.filter(s=>s.id===id).length!==1))throw Error('REGISTRY_SOURCE_SET_MISMATCH');
+ const source=registry.sources.find(s=>s.id==='BFI82U');
+ if(source.validator!=='scripts/research_date_to_video_bfi82u_v1.js')throw Error('BFI82U_VALIDATOR_NOT_REGISTERED');
+ const prefix=path.join(root,'data_research/twse-market-opening/primary-archive',date,date+'-bfi82u');
+ let bfi;
+ try{
+  const result=inspect(root,date);
+  bfi=result.status==='VERIFIED'?{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',source_date:date,raw_sha256:result.raw_sha256,raw_bytes:result.raw_bytes,archive_path:path.relative(root,prefix+'.json').split(path.sep).join('/'),final_six_rows_verified:result.final_six_rows_verified,publication_authorized:false}:{id:'BFI82U',status:'WAITING_SOURCE',source_date:date,missing:result.missing,publication_authorized:false};
+ }catch(e){bfi={id:'BFI82U',status:'INVALID_ARCHIVE',source_date:date,reason:e.message,publication_authorized:false};}
+ const entries=ids.map(id=>id==='BFI82U'?bfi:{id,status:'UNAPPROVED_OR_RAW_NOT_VALIDATED',source_date:date,publication_authorized:false});
+ const manifest={schema_version:1,target_date:date,registry_sha256:sha(registryBytes),entries,complete:false,master_authorized:false,render_authorized:false,publication_authorized:false};
+ return {...manifest,manifest_sha256:sha(Buffer.from(canonical(manifest)))};
+}
+if(require.main===module){try{console.log(JSON.stringify(build(process.argv[3]||'.',process.argv[2]),null,2))}catch(e){console.error(e.message);process.exitCode=1}}
+module.exports={build};
