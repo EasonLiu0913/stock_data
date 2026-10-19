@@ -10,6 +10,15 @@ for(const date of ['20261008','20261013']){
  const officialGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));
  assert.equal(officialManifest.target_date,date);assert.equal(officialGate.target_date,date);assert.equal(officialGate.manifest_sha256,officialManifest.manifest_sha256);
  assert.equal(officialGate.master_authorized,false);assert.equal(officialGate.publication_authorized,false);
+ const recoveryPlan=JSON.parse(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json')));
+ assert.equal(recoveryPlan.target_date,date);
+ assert.equal(recoveryPlan.manifest_sha256,officialManifest.manifest_sha256);
+ assert.equal(recoveryPlan.sources.length,4);
+ assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,false);
+ assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').action_required,date==='20261008'?'REUSE_VERIFIED_ARCHIVE':'INCOMPLETE_ARCHIVE_MANUAL_REVIEW');
+ assert.ok(recoveryPlan.sources.filter(x=>x.id!=='BFI82U').every(x=>x.automated_retrieval_allowed===false));
+ assert.equal(recoveryPlan.render_authorized,false);
+ assert.equal(recoveryPlan.publication_authorized,false);
  for(const [id,file] of [['MI_INDEX','mi-index-provenance.json'],['FMTQIK','fmtqik-provenance.json']]){
   const diagnostic=JSON.parse(fs.readFileSync(path.join(dir,file)));
   const manifestEntry=officialManifest.entries.find(e=>e.id===id);
