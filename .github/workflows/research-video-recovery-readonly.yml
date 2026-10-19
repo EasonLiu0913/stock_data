@@ -90,7 +90,7 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:assert/strict');
           const base='/tmp/fmtqik-research/fmtqik-candidate/20261013/';
-          if(!fs.existsSync(base+'candidate-manifest.json')){console.log('FMTQIK_CANDIDATE_NOT_STAGED_NO_CROSSCHECK');process.exit(0);}
+          if(!fs.existsSync(base+'candidate-manifest.json')){console.error('FMTQIK_CANDIDATE_NOT_STAGED_FAIL_CLOSED');process.exit(1);}
           const raw=fs.readFileSync(base+'response.json'),m=JSON.parse(fs.readFileSync(base+'candidate-manifest.json'));
           assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),m.sha256);
           const p=JSON.parse(raw),date='115/10/13',rows=p.data.filter(r=>r[0]===date);
@@ -100,6 +100,7 @@ jobs:
           const report={contract:'FMTQIK_RAW_TO_DERIVED_RESEARCH_CROSSCHECK_V1',target_date:'20261013',candidate_sha256:m.sha256,checks,status:Object.values(checks).every(Boolean)?'RAW_DERIVED_VALUES_MATCH_RESEARCH_ONLY':'RAW_DERIVED_MISMATCH_REVIEW_REQUIRED',endpoint_approved:false,master_authorized:false,publication_authorized:false};
           fs.writeFileSync('/tmp/fmtqik-research/raw-derived-crosscheck.json',JSON.stringify(report,null,2)+'\n');
           console.log(JSON.stringify(report));
+          if(report.status!=='RAW_DERIVED_VALUES_MATCH_RESEARCH_ONLY')process.exitCode=1;
           NODE
       - name: Upload isolated FMTQIK candidate probe
         if: always()
