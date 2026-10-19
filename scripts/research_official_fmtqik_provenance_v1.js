@@ -31,7 +31,15 @@ function inspectStagedCandidate(root,date){
   if(m.contract!=='FMTQIK_STAGED_HTTP_CANDIDATE_V1'||m.target_date!==date||m.sha256!==sha(bytes)||m.bytes!==bytes.length)throw Error('CANDIDATE_MANIFEST_INTEGRITY_MISMATCH');
   if(candidate.status!=='CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED'||JSON.stringify(m.candidate_inspection)!==JSON.stringify(candidate))throw Error('CANDIDATE_INSPECTION_MISMATCH');
   if(m.http_metadata_evidence!=='CALLER_SUPPLIED_UNVERIFIED'||m.endpoint_approved!==false||m.raw_http_provenance_certified!==false||m.master_authorized!==false||m.render_authorized!==false||m.publication_authorized!==false)throw Error('CANDIDATE_AUTHORIZATION_STATE_MISMATCH');
-  return {...base,status:'STAGED_BYTES_AND_MANIFEST_MATCH_HTTP_PROVENANCE_PENDING',sha256:sha(bytes),bytes:bytes.length,complete_six_field_candidate:candidate.complete_six_field_candidate,source_contract_review_required:true};
+  const receiptPath=path.join(dir,'direct-fetch-receipt.json');
+  let receiptStatus='NOT_PRESENT_CALLER_STAGED_CANDIDATE';
+  if(fs.existsSync(receiptPath)){
+   const receipt=JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+   const expected='https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date='+date+'&response=json';
+   if(receipt.contract!=='FMTQIK_DIRECT_FETCH_RECEIPT_RESEARCH_V1'||receipt.target_date!==date||receipt.request_url!==expected||receipt.request_url!==m.source_url_unapproved||receipt.observed_at!==m.observed_at||receipt.http_status!==m.http_status||receipt.content_type!==m.content_type||receipt.response_sha256!==sha(bytes)||receipt.response_bytes!==bytes.length||receipt.capture_method!=='NODE_HTTPS_GET'||receipt.independently_attested!==false||receipt.source_contract_review_required!==true||['raw_http_provenance_certified','endpoint_approved','master_authorized','render_authorized','publication_authorized'].some(k=>receipt[k]!==false))throw Error('DIRECT_FETCH_RECEIPT_MISMATCH');
+   receiptStatus='DIRECT_FETCH_RECEIPT_MATCHES_STAGED_BYTES_UNATTESTED';
+  }
+  return {...base,status:'STAGED_BYTES_AND_MANIFEST_MATCH_HTTP_PROVENANCE_PENDING',receipt_status:receiptStatus,sha256:sha(bytes),bytes:bytes.length,complete_six_field_candidate:candidate.complete_six_field_candidate,source_contract_review_required:true};
  }catch(e){return {...base,status:'REJECTED',reason:e.message};}
 }
 module.exports={inspect,inspectStagedCandidate};
