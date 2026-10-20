@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {advise}=require('../scripts/research_date_to_video_audio_recovery_advice_v1');
+const r=advise({target_date:'20261008',status:'REJECTED',issues:['D4_AUDIO_INPUT_MISSING:sentence-audio-proof.json','D4_AUDIO_CANDIDATE_INVENTORY_DRIFT','D4_AUDIO_INPUT_MISSING:sentence-audio-proof.json','D4_AUDIO_INPUT_INVALID_JSON']});
+assert.equal(r.actions.length,3);
+assert.deepEqual(r.actions.map(x=>x.action),['SUPPLY_MISSING_RESEARCH_ARTIFACT','REGENERATE_FROM_SAME_DATE_VERIFIED_INPUTS','REGENERATE_VALID_JSON_INPUT']);
+assert.equal(r.actions[0].artifact,'sentence-audio-proof.json');
+for(const key of ['automatic_dispatch_authorized','tts_authorized','render_authorized','publication_authorized'])assert.equal(r[key],false);
+assert.equal(r.target_date,'20261008');
+assert.deepEqual(advise({status:'REJECTED',issues:[]}).actions,[]);
+console.log('D4_AUDIO_RECOVERY_ADVICE_PASS');
