@@ -30,8 +30,10 @@ function execute(root,date,out){
  let narrationCandidateReview=null,narrationCandidateSha256=null;
  if(fs.existsSync(candidatePath)){
   const bytes=fs.readFileSync(candidatePath);narrationCandidateSha256=crypto.createHash('sha256').update(bytes).digest('hex');
-  try{narrationCandidateReview=inspectNarrationCandidate(out,JSON.parse(bytes.toString('utf8')));}
-  catch(e){narrationCandidateReview={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  let parsed;
+  try{parsed=JSON.parse(bytes.toString('utf8'));}
+  catch(e){narrationCandidateReview={status:'REJECTED',issues:['NARRATION_CANDIDATE_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(narrationCandidateReview===null)narrationCandidateReview=inspectNarrationCandidate(out,parsed);
  }
  if(sentenceHandoff?.candidate_sentences&&narrationCandidateReview?.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'){
   const packet=JSON.parse(fs.readFileSync(packetPath,'utf8')),candidate=JSON.parse(fs.readFileSync(candidatePath,'utf8'));
