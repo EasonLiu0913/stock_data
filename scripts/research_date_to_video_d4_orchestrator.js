@@ -33,6 +33,7 @@ function run(root,date,out){
  write('official-data-manifest.json',officialManifest);
  const recoveryPlan=planRecovery(root,date);
  if(recoveryPlan.manifest_sha256!==officialManifest.manifest_sha256)throw Error('OFFICIAL_RECOVERY_PLAN_MANIFEST_MISMATCH');
+ if(recoveryPlan.target_date!==date||officialManifest.target_date!==date||recoveryPlan.sources.some(source=>source.source_date!==date))throw Error('OFFICIAL_RECOVERY_PLAN_DATE_MISMATCH');
  result.official_recovery_advice={contract:recoveryPlan.contract,target_date:date,manifest_sha256:recoveryPlan.manifest_sha256,sources:recoveryPlan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed})),master_authorized:false,render_authorized:false,publication_authorized:false};
  write('official-data-recovery-plan.json',recoveryPlan);
  write('official-manifest-master-gate.json',officialGate);
