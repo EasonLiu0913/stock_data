@@ -53,6 +53,7 @@ function fromD4Directory(date,dir){
   const master=read('market-master.json'),claims=read('claims.json');
   if(!task||!master||!claims)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_FILES_REQUIRED'};
   if(master.target_date!==date||claims.target_date!==date)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_DATE_MISMATCH'};
+  if(!task.market_master_sha256||!task.claim_inventory_sha256)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_SHA_REQUIRED'};
  }
  return decision;
 }
