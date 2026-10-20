@@ -32,7 +32,7 @@ function execute(root,date,out){
  }
  if(sentenceHandoff?.candidate_sentences&&narrationCandidateReview?.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'){
   const packet=JSON.parse(fs.readFileSync(packetPath,'utf8')),candidate=JSON.parse(fs.readFileSync(candidatePath,'utf8'));
-  if(JSON.stringify(packet.sentences)!==JSON.stringify(candidate.sentences)){
+  if(JSON.stringify(packet.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]]))!==JSON.stringify(candidate.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]]))){
    narrationCandidateReview={...narrationCandidateReview,status:'REJECTED',issues:[...narrationCandidateReview.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
   }
  }
