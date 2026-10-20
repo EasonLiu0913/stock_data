@@ -13,6 +13,9 @@ function validate(task,master,inventory,review,draft){
  assert.equal(task.status,'READY_FOR_EVIDENCE_GROUNDED_DRAFT','TASK_NOT_READY');
  assert.equal(master.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING','MASTER_NOT_READY');
  assert.equal(review.inventory_sha256,sha(inventory),'REVIEW_SHA_MISMATCH');
+ assert.equal(review.contract,'DATE_TO_VIDEO_V1_D4_REVIEW_GATE','REVIEW_CONTRACT_MISMATCH');
+ assert.equal(review.claim_whitelist_verified,true,'CLAIM_WHITELIST_NOT_VERIFIED');
+ assert.equal(review.editorial_certified,false,'REVIEW_MUST_NOT_AUTO_CERTIFY');
  assert.ok(Array.isArray(draft.insights)&&draft.insights.length>0,'EMPTY_INSIGHTS');
  const approved=new Set(review.approved_claim_ids||[]),allowed=new Set(['taiex','market_trading','breadth','institutional']);
  const ids=new Set(),covered=new Set();
