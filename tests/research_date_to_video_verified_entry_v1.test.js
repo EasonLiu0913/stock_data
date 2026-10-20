@@ -38,6 +38,7 @@ try{
  assert.notEqual(mismatched.sentence_packet_source.sha256,malformed.sentence_packet_source.sha256);
  assert.equal(mismatched.next_action.stage,'REJECTED_SENTENCE_PACKET');
  assert.ok(mismatched.next_action.actions.includes('DATE_MATCH'));
+ assert.equal(mismatched.sentence_handoff.candidate_sentences,null);
  assert.equal(mismatched.sentence_handoff.sentence_parity.status,'REJECTED');
  assert.ok(mismatched.sentence_handoff.sentence_parity.issues.includes('DATE_MATCH'));
  assert.equal(mismatched.sentence_handoff.narration_authorized,false);
