@@ -38,6 +38,24 @@ function fromD4(date,d4,analysisTask){
  const recovery={date,mode:'PLAN_ONLY_NO_DISPATCH',status:missing.length?'BLOCKED':'NO_GAPS_REQUIRES_EDITORIAL_GATE',actions:missing.map(s=>({decision:'BLOCKED',workflow_path:null,fields:[{id:s.id,status:s.status}],reason:s.action_required,automated_retrieval_allowed:s.automated_retrieval_allowed===true}))};
  return decide({date,verification:{target_date:date,status:missing.length?'MISSING':'VERIFIED_RESEARCH_ONLY'},recovery,analysisTask});
 }
+// Consume the real D4 output directory. No inferred completeness from missing files.
+function fromD4Directory(date,dir){
+ const path=require('node:path');
+ const read=name=>{const p=path.join(dir,name);return fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):null;};
+ const d4=read('status.json');
+ assert.equal(d4?.contract,'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR','D4_STATUS_REQUIRED');
+ assert.equal(d4.target_date,date,'D4_DATE_MISMATCH');
+ const task=read('original-analysis-task.json');
+ if(task)assert.equal(task.target_date,date,'D4_TASK_DATE_MISMATCH');
+ const decision=fromD4(date,d4,task);
+ // D4 source verification alone is insufficient; require a ready task and its evidence files.
+ if(decision.stage==='READY_FOR_SCRIPT'){
+  const master=read('market-master.json'),claims=read('claims.json');
+  if(!task||!master||!claims)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_FILES_REQUIRED'};
+  if(master.target_date!==date||claims.target_date!==date)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_DATE_MISMATCH'};
+ }
+ return decision;
+}
 // Date-scoped JSON handoff for a ChatGPT scheduled task; input is an existing, local evidence bundle.
 if(require.main===module){
  const [date,inputPath,outputPath,...extra]=process.argv.slice(2);
@@ -50,4 +68,4 @@ if(require.main===module){
   console.log(JSON.stringify({target_date:date,stage:decision.stage,action:decision.action,automatic_dispatch_authorized:false}));
  }catch(e){console.error(e.message);process.exitCode=1;}
 }
-module.exports={decide,fromD4};
+module.exports={decide,fromD4,fromD4Directory};
