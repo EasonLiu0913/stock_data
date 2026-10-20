@@ -3,6 +3,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const {recover}=require('./research_official_data_recovery_v1');
 const {run}=require('./research_date_to_video_d4_orchestrator');
+const {inspect:inspectMediaPreflight}=require('./research_date_to_video_media_preflight_v1');
 async function execute(root,date,out,options={}){
  if(!/^20\d{6}$/.test(date||'')||!Number.isFinite(Date.parse(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z'))||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8))throw Error('INVALID_TARGET_DATE');
  if(!out||path.resolve(out)===path.resolve(root)||path.resolve(out).startsWith(path.resolve(root)+path.sep))throw Error('EXTERNAL_ISOLATED_OUTPUT_DIRECTORY_REQUIRED');
@@ -16,7 +17,9 @@ async function execute(root,date,out,options={}){
  const recoveryPlan=JSON.parse(fs.readFileSync(path.join(out,'official-data-recovery-plan.json'),'utf8'));
  if(recoveryPlan.target_date!==date||recoveryPlan.manifest_sha256!==datedManifest.manifest_sha256)throw Error('OFFICIAL_ENTRY_RECOVERY_PLAN_MANIFEST_MISMATCH');
  const mandatorySources=datedManifest.entries.filter(e=>e.status!=='VERIFIED_RESEARCH_ONLY').map(e=>({id:e.id,status:e.status,action_required:e.action_required||null,provenance_diagnostic:e.provenance_diagnostic||null}));
- const downstream={market_master:mandatorySources.length?'WAITING_APPROVED_DATED_SOURCES':'REQUIRES_INDEPENDENT_EDITORIAL_REVIEW',original_editorial:'NOT_AUTHORIZED',semantic_projection:'NOT_AUTHORIZED',media_render:'NOT_AUTHORIZED',acceptance_artifacts:'NOT_AUTHORIZED',required_sources:mandatorySources,complete_mp4:false};
+ const mediaPreflight=inspectMediaPreflight(out);
+ if(mediaPreflight.target_date!==null&&mediaPreflight.target_date!==date)throw Error('OFFICIAL_ENTRY_MEDIA_PREFLIGHT_DATE_MISMATCH');
+ const downstream={media_preflight_status:mediaPreflight.status,media_preflight_issues:mediaPreflight.issues,market_master:mandatorySources.length?'WAITING_APPROVED_DATED_SOURCES':'REQUIRES_INDEPENDENT_EDITORIAL_REVIEW',original_editorial:'NOT_AUTHORIZED',semantic_projection:'NOT_AUTHORIZED',media_render:'NOT_AUTHORIZED',acceptance_artifacts:'NOT_AUTHORIZED',required_sources:mandatorySources,complete_mp4:false};
  const report={contract:'DATE_TO_VIDEO_OFFICIAL_ENTRY_RESEARCH_V1',target_date:date,recovery_status:recovery.status,recovery_attempts:recovery.attempts,recovery_reason:recovery.reason||null,manifest_sha256:datedManifest.manifest_sha256,d4_status:d4.stages[0].status,source_actions:recoveryPlan.sources.map(s=>({id:s.id,status:s.status,action_required:s.action_required,automated_retrieval_allowed:s.automated_retrieval_allowed,provenance_diagnostic:datedManifest.entries.find(e=>e.id===s.id)?.provenance_diagnostic||null})),blockers:d4.blockers,downstream,render_authorized:false,publication_authorized:false};
  fs.writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
  return report;
