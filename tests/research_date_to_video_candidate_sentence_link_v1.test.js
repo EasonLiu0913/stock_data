@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {matches}=require('../scripts/research_date_to_video_candidate_sentence_link_v1');
+const packet={sentences:[{id:'opening',narration:'大家好',subtitle:'大家好'},{id:'market',narration:'上漲五％',subtitle:'上漲5%',spoken_subtitle_mappings:[{spoken:'五％',display:'5%'}]}]};
+const candidate={sentences:packet.sentences.map(x=>({...x,insight_id:'i1'}))};
+assert.equal(matches(packet,candidate),true);
+assert.equal(matches(packet,{sentences:candidate.sentences.map((x,i)=>i===1?{...x,narration:'下跌五％'}:x)}),false);
+assert.equal(matches(packet,{sentences:candidate.sentences.map((x,i)=>i===1?{...x,subtitle:'上漲6%'}:x)}),false);
+assert.equal(matches(packet,{sentences:candidate.sentences.slice(0,1)}),false);
+assert.equal(matches(packet,{sentences:candidate.sentences.map((x,i)=>i===1?{...x,spoken_subtitle_mappings:[]}:x)}),false);
+assert.equal(matches(packet,null),false);
+console.log('D4_CANDIDATE_SENTENCE_LINK_FAIL_CLOSED_PASS');
