@@ -6,6 +6,7 @@ function preflight(candidate,master,inventory,review){
  const date=candidate?.target_date;
  for(const [name,obj] of Object.entries({master,inventory,review}))assert.equal(obj?.target_date,date,'CANDIDATE_DATE_MISMATCH_'+name);
  assert.equal(candidate.contract,'DATE_TO_VIDEO_V1_D4_AUTHORED_RESEARCH_CANDIDATE');
+ assert.equal(review?.inventory_sha256,sha(inventory),'CANDIDATE_REVIEW_INVENTORY_SHA_MISMATCH');
  const approved=new Set(review.approved_claim_ids||[]),known=new Set(inventory.claims.map(x=>x.claim_id));
  const missing_claim_reviews=[],unknown_claim_ids=[],invalid_master_fields=[];
  const claimById=new Map(inventory.claims.map(c=>[c.claim_id,c]));
