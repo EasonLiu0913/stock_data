@@ -8,6 +8,7 @@ try{
   assert.equal(result.target_date,date);
   assert.equal(result.verification_status,'VERIFIED_RESEARCH_ONLY',JSON.stringify(result.verification_issues));
   assert.equal(result.media_preflight.target_date,date);assert.equal(result.media_preflight.status,'BLOCKED');assert.ok(result.media_preflight.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED'));assert.ok(result.media_preflight.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'));
+  assert.equal(result.next_action.target_date,date);assert.equal(result.next_action.render_authorized,false);assert.equal(result.next_action.automatic_dispatch_authorized,false);assert.equal(result.next_action.stage,'WAITING_OFFICIAL_SOURCES');assert.ok(result.next_action.actions.length>0);
   assert.equal(result.tts_authorized,false);assert.equal(result.render_authorized,false);assert.equal(result.publication_authorized,false);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))),result);
  }
