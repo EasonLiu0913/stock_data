@@ -2,6 +2,7 @@
 // Independent research handoff integrity check. Never grants downstream authorization.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
+const {inspectDirectory:inspectNarrationCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 function verify(dir){
  const entry=JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'),'utf8'));
@@ -23,6 +24,16 @@ function verify(dir){
   catch(e){expected={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
   if(JSON.stringify(expected)!==JSON.stringify(entry.sentence_handoff))issues.push('SENTENCE_HANDOFF_REVALIDATION_MISMATCH');
  }else if(entry.sentence_handoff!==null)issues.push('UNEXPECTED_SENTENCE_HANDOFF');
+ const candidatePath=path.join(dir,'narration-candidate-input.json'),candidateRecord=entry.narration_candidate_source;
+ if(fs.existsSync(candidatePath)!==!!candidateRecord)issues.push('NARRATION_CANDIDATE_PRESENCE_CHANGED');
+ else if(candidateRecord){
+  const bytes=fs.readFileSync(candidatePath);
+  if(candidateRecord.name!=='narration-candidate-input.json'||sha(bytes)!==candidateRecord.sha256)issues.push('NARRATION_CANDIDATE_CHANGED');
+  let expected;
+  try{expected=inspectNarrationCandidate(dir,JSON.parse(bytes.toString('utf8')));}
+  catch(e){expected={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(JSON.stringify(expected)!==JSON.stringify(entry.narration_candidate_review))issues.push('NARRATION_CANDIDATE_REVALIDATION_MISMATCH');
+ }else if(entry.narration_candidate_review!==null)issues.push('UNEXPECTED_NARRATION_CANDIDATE_REVIEW');
  if(entry.sentence_handoff?.target_date!==undefined&&entry.sentence_handoff.target_date!==date)issues.push('SENTENCE_HANDOFF_DATE_MISMATCH');
  for(const key of ['automatic_dispatch_authorized','tts_authorized','render_authorized','publication_authorized'])if(entry[key]!==false)issues.push('AUTHORIZATION_LOCK_INVALID:'+key);
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_ENTRY_INTEGRITY',target_date:date,status:issues.length?'REJECTED':'VERIFIED_RESEARCH_ONLY',issues,research_only:true,automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
