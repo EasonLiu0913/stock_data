@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {decide,fromD4}=require('../scripts/research_date_to_video_chatgpt_schedule_coordinator_v1');
+const {decide,fromD4,fromD4Directory}=require('../scripts/research_date_to_video_chatgpt_schedule_coordinator_v1');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const date='20261013';
 const base=()=>({date,verification:{target_date:date,status:'VERIFIED_RESEARCH_ONLY'},recovery:{date,mode:'PLAN_ONLY_NO_DISPATCH',actions:[]},analysisTask:{target_date:date,status:'READY_FOR_EVIDENCE_GROUNDED_DRAFT'}});
