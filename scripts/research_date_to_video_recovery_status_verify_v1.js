@@ -2,6 +2,7 @@
 // Research-only verifier for a single dated D4 output directory; no side effects.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
+const {advise:adviseAudio}=require('./research_date_to_video_audio_recovery_advice_v1');
 function verify(dir){
  const status=JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8'));
  const issues=[],date=status.target_date;
@@ -17,6 +18,16 @@ function verify(dir){
  check(status.audio_recovery_advice,'sentence-audio-review.json','source_review_sha256');
  if(fs.existsSync(path.join(dir,'sentence-audio-review.json'))&&!status.audio_recovery_advice)issues.push('AUDIO_RECOVERY_ADVICE_MISSING');
  if(status.audio_recovery_advice&&!fs.existsSync(path.join(dir,'sentence-audio-review.json')))issues.push('AUDIO_RECOVERY_SOURCE_MISSING');
+ if(status.audio_recovery_advice&&fs.existsSync(path.join(dir,'sentence-audio-review.json'))){
+  const review=JSON.parse(fs.readFileSync(path.join(dir,'sentence-audio-review.json'),'utf8'));
+  const expected=adviseAudio(review);
+  if(JSON.stringify(status.audio_recovery_advice.actions)!==JSON.stringify(expected.actions)||status.audio_recovery_advice.source_status!==expected.source_status)issues.push('AUDIO_RECOVERY_ADVICE_CONTENT_MISMATCH');
+ }
+ if(status.official_recovery_advice&&fs.existsSync(path.join(dir,'official-data-recovery-plan.json'))){
+  const plan=JSON.parse(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json'),'utf8'));
+  const expected=plan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed}));
+  if(status.official_recovery_advice.manifest_sha256!==plan.manifest_sha256||JSON.stringify(status.official_recovery_advice.sources)!==JSON.stringify(expected))issues.push('OFFICIAL_RECOVERY_ADVICE_CONTENT_MISMATCH');
+ }
  if(!status.official_recovery_advice)issues.push('OFFICIAL_RECOVERY_ADVICE_MISSING');
  for(const key of ['publication_authorized','render_authorized','ready_to_render'])if(status[key]!==false)issues.push('D4_AUTHORIZATION_LOCK_INVALID:'+key);
  return {contract:'DATE_TO_VIDEO_V1_RECOVERY_STATUS_VERIFICATION',target_date:date,research_only:true,status:issues.length?'REJECTED':'VERIFIED_RESEARCH_ONLY',issues,automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
