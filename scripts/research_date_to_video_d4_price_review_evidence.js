@@ -26,14 +26,14 @@ function inspect(root,date,codes){
   assert.ok(Math.abs((a.close/a.previous_close-1)*100-a.change_pct)<=0.011,'PRICE_PCT_ARITHMETIC_MISMATCH_'+code);
   const foreign=unique(flow.foreign.data,code,1),trust=unique(flow.trust.data,code,1),dealer=unique(flow.dealer.data,code,0);
   const margin=unique(csvRows.slice(1).filter(Boolean).map(csvCols),code,0);
-  assert.equal(num(foreign[10]),b.flow.foreign.net_shares,'FOREIGN_FACTS_MISMATCH_'+code);
+  assert.equal(num(foreign[11]),b.flow.foreign.net_shares,'FOREIGN_FACTS_MISMATCH_'+code);
   assert.equal(num(trust[5]),b.flow.investment_trust.net_shares,'TRUST_FACTS_MISMATCH_'+code);
   assert.equal(num(dealer[4]),b.flow.dealer.net_shares,'DEALER_PROPRIETARY_FACTS_MISMATCH_'+code);
   assert.equal(num(margin[5]),b.flow.margin.margin_prev,'MARGIN_PREV_FACTS_MISMATCH_'+code);
   assert.equal(num(margin[6]),b.flow.margin.margin_now,'MARGIN_NOW_FACTS_MISMATCH_'+code);
   const dealerProprietary=num(dealer[4]),dealerHedging=num(dealer[7]),dealerTotal=num(dealer[10]);
   assert.equal(dealerProprietary+dealerHedging,dealerTotal,'DEALER_TOTAL_MISMATCH_'+code);
-  return {dated_flow_crosscheck:{foreign_net_shares:num(foreign[10]),trust_net_shares:num(trust[5]),dealer_proprietary_net_shares:dealerProprietary,dealer_hedging_net_shares:dealerHedging,dealer_total_net_shares:dealerTotal,margin_previous_lots:num(margin[5]),margin_current_lots:num(margin[6]),margin_delta_lots:num(margin[6])-num(margin[5]),sources:sourceMeta,status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',independent_source_reviewed:false,editorial_certified:false},code,name:a.name,claim_id:date+':'+code+':PRICE_CHANGE',previous_close:a.previous_close,close:a.close,change_pct:a.change_pct,source_list_path:list.path,source_facts_path:facts.path,source_list_sha256:list.sha256,source_facts_sha256:facts.sha256,status:'DATED_LIST_FACTS_PRICE_CROSSCHECK_ONLY',independent_source_reviewed:false,causality_verified:false,editorial_certified:false,narration_authorized:false};
+  return {dated_flow_crosscheck:{foreign_net_shares:num(foreign[11]),trust_net_shares:num(trust[5]),dealer_proprietary_net_shares:dealerProprietary,dealer_hedging_net_shares:dealerHedging,dealer_total_net_shares:dealerTotal,margin_previous_lots:num(margin[5]),margin_current_lots:num(margin[6]),margin_delta_lots:num(margin[6])-num(margin[5]),sources:sourceMeta,status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',independent_source_reviewed:false,editorial_certified:false},code,name:a.name,claim_id:date+':'+code+':PRICE_CHANGE',previous_close:a.previous_close,close:a.close,change_pct:a.change_pct,source_list_path:list.path,source_facts_path:facts.path,source_list_sha256:list.sha256,source_facts_sha256:facts.sha256,status:'DATED_LIST_FACTS_PRICE_CROSSCHECK_ONLY',independent_source_reviewed:false,causality_verified:false,editorial_certified:false,narration_authorized:false};
  });
  return {contract:'DATE_TO_VIDEO_V1_D4_DATED_PRICE_REVIEW_EVIDENCE',target_date:date,stocks,review_decisions:[],status:'PRICE_CROSSCHECKED_INDEPENDENT_REVIEW_PENDING',editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
