@@ -28,6 +28,16 @@ function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,vid
  if(editorial?.candidate_sha256!==aiHandoff.candidate_sha256)return output('SCRIPT_REJECTED','REVIEW_CANDIDATE','EDITORIAL_CANDIDATE_SHA_MISMATCH');
  return output('READY_FOR_VIDEO','REVIEW_RESEARCH_VIDEO_TRIGGER','SEPARATE_MEDIA_PREFLIGHT_AND_DISPATCH_AUTHORIZATION_REQUIRED');
 }
+// Translate the existing D4 archive-first source advice without inventing dispatch allowlists.
+function fromD4(date,d4,analysisTask){
+ assert.equal(d4?.target_date,date,'D4_DATE_MISMATCH');
+ const advice=d4.official_recovery_advice;
+ assert.equal(advice?.target_date,date,'D4_RECOVERY_DATE_MISMATCH');
+ assert.ok(Array.isArray(advice.sources),'D4_RECOVERY_SOURCES_REQUIRED');
+ const missing=advice.sources.filter(s=>s.status!=='VERIFIED_RESEARCH_ONLY'||s.action_required!=='REUSE_VERIFIED_ARCHIVE');
+ const recovery={date,mode:'PLAN_ONLY_NO_DISPATCH',status:missing.length?'BLOCKED':'NO_GAPS_REQUIRES_EDITORIAL_GATE',actions:missing.map(s=>({decision:'BLOCKED',workflow_path:null,fields:[{id:s.id,status:s.status}],reason:s.action_required,automated_retrieval_allowed:s.automated_retrieval_allowed===true}))};
+ return decide({date,verification:{target_date:date,status:missing.length?'MISSING':'VERIFIED_RESEARCH_ONLY'},recovery,analysisTask});
+}
 // Date-scoped JSON handoff for a ChatGPT scheduled task; input is an existing, local evidence bundle.
 if(require.main===module){
  const [date,inputPath,outputPath,...extra]=process.argv.slice(2);
@@ -40,4 +50,4 @@ if(require.main===module){
   console.log(JSON.stringify({target_date:date,stage:decision.stage,action:decision.action,automatic_dispatch_authorized:false}));
  }catch(e){console.error(e.message);process.exitCode=1;}
 }
-module.exports={decide};
+module.exports={decide,fromD4};
