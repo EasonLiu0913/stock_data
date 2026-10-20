@@ -6,6 +6,11 @@ const {build}=require('./research_date_to_video_dated_media_input_v1');
 const {prepare}=require('./research_date_to_video_editorial_narration_worksheet_v1');
 const {inspect}=require('./research_date_to_video_planned_audio_review_v1');
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
+function checkAudioSet(audioDir,commands){
+ const stat=fs.lstatSync(audioDir);if(!stat.isDirectory()||stat.isSymbolicLink())throw Error('AUDIO_DIRECTORY_INVALID');
+ const expectedNames=new Set(commands.map(c=>c.output_file)),actualNames=fs.readdirSync(audioDir);
+ if(actualNames.length!==expectedNames.size||actualNames.some(name=>!expectedNames.has(name)))throw Error('AUDIO_FILE_SET_MISMATCH');
+}
 function collect(dir,probe=cp.spawnSync){
  const read=name=>JSON.parse(fs.readFileSync(path.join(dir,name),'utf8'));
  const inventory=read('sentence-audio-inventory.json'),commands=read('edge-tts-command-plan.json'),expected=plan(inventory);
@@ -13,9 +18,7 @@ function collect(dir,probe=cp.spawnSync){
  const dated=build(dir),worksheet=read('editorial-narration-worksheet.json');
  if(inventory.target_date!==dated.target_date||inventory.source_master_sha256!==dated.source_master_sha256||inventory.worksheet_sha256!==sha(JSON.stringify(worksheet))||sha(JSON.stringify(worksheet))!==sha(JSON.stringify(prepare(dir))))throw Error('DATED_AUDIO_D4_PROVENANCE_REJECTED');
  const audioDir=path.join(dir,'audio'),sentences=[];
- const audioStat=fs.lstatSync(audioDir);if(!audioStat.isDirectory()||audioStat.isSymbolicLink())throw Error('AUDIO_DIRECTORY_INVALID');
- const expectedNames=new Set(expected.commands.map(c=>c.output_file));
- const actualNames=fs.readdirSync(audioDir);if(actualNames.length!==expectedNames.size||actualNames.some(name=>!expectedNames.has(name)))throw Error('AUDIO_FILE_SET_MISMATCH');
+ checkAudioSet(audioDir,expected.commands);
  for(const c of expected.commands){
   const name=c.output_file;
   if(!/^\d{3}\.mp3$/.test(name))throw Error('UNSAFE_AUDIO_FILENAME');
@@ -34,4 +37,4 @@ function collect(dir,probe=cp.spawnSync){
  return {proof,review};
 }
 if(require.main===module){const dir=process.argv[2];if(!dir){console.error('Usage: node scripts/research_date_to_video_audio_proof_collect_v1.js D4-output-dir');process.exitCode=2;}else try{const result=collect(dir);const file=path.join(dir,'sentence-audio-proof.json');fs.writeFileSync(file,JSON.stringify(result.proof,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(result.review,null,2));}catch(e){console.error('AUDIO_PROOF_COLLECTION_ERROR: '+e.message);process.exitCode=1;}}
-module.exports={collect};
+module.exports={collect,checkAudioSet};
