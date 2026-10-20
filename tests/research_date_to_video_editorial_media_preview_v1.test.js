@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {build}=require('../scripts/research_date_to_video_editorial_media_preview_v1');
+const entry={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:'20261013',narration_candidate_review:{status:'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'},narration_candidate_source:{sha256:'a'},dated_media_input:{source_master_sha256:'b'}};
+const worksheet={target_date:'20261013',source_master_sha256:'b',sections:[{insight_id:'i1',section:'market',observation:'上漲',interpretation:'觀察',uncertainty:'風險',evidence:['source']}]};
+const candidate={target_date:'20261013',source_master_sha256:'b',sentences:[0,1,2,3].map(i=>({id:'opening'+i,narration:'固定開場',subtitle:'固定開場'})).concat([{id:'market1',insight_id:'i1',narration:'上漲五％',subtitle:'上漲5%',spoken_subtitle_mappings:[{spoken:'五％',display:'5%'}]}])};
+const result=build(entry,candidate,worksheet);
+assert.equal(result.status,'STRUCTURAL_PLANNING_PREVIEW_ONLY');
+assert.equal(result.narration_plan.length,result.subtitle_plan.length);
+assert.deepEqual(result.scene_plan[0].sentence_ids,['market1']);
+for(const key of ['editorial_certified','narration_authorized','tts_authorized','render_authorized','publication_authorized'])assert.equal(result[key],false);
+assert.equal(build(entry,{...candidate,target_date:'20261008'},worksheet).status,'REJECTED');
+assert.equal(build({...entry,narration_candidate_review:{status:'REJECTED'}},candidate,worksheet).status,'REJECTED');
+assert.equal(build(entry,{...candidate,sentences:candidate.sentences.slice(0,4)},worksheet).status,'REJECTED');
+console.log('D4_EDITORIAL_MEDIA_PLANNING_PREVIEW_FAIL_CLOSED_PASS');
