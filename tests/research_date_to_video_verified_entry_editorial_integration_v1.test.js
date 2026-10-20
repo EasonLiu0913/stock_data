@@ -25,7 +25,7 @@ try{
  const drafted=execute('.','20261008',dir),worksheet=read('editorial-narration-worksheet.json');
  const draftCheck=read('original-analysis-draft-check.json');
  assert.equal(draftCheck.status,'REJECTED');
- assert.match(draftCheck.reason,/^CLAIM_WHITELIST_NOT_VERIFIED(?:\\n|$)/);
+ assert.match(draftCheck.reason,/^CLAIM_WHITELIST_NOT_VERIFIED(?:\n|$)/);
  assert.ok(drafted.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
  assert.deepEqual(worksheet.sections,[]);
  assert.ok(worksheet.issues.includes('DRAFT_STRUCTURAL_EVIDENCE_REQUIRED'));
