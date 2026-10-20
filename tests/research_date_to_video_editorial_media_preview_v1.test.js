@@ -19,4 +19,11 @@ for(const key of ['editorial_certified','narration_authorized','tts_authorized',
 assert.equal(build(entry,{...candidate,target_date:'20261008'},worksheet).status,'REJECTED');
 assert.equal(build({...entry,narration_candidate_review:{status:'REJECTED'}},candidate,worksheet).status,'REJECTED');
 assert.equal(build(entry,{...candidate,sentences:candidate.sentences.slice(0,4)},worksheet).status,'REJECTED');
+const reviewed=(nextCandidate,nextWorksheet=worksheet)=>({...entry,narration_candidate_review:{...entry.narration_candidate_review,candidate_sha256:sha(nextCandidate),worksheet_sha256:sha(nextWorksheet)}});
+const orphan={...candidate,sentences:candidate.sentences.map((v,i)=>i===4?{...v,insight_id:'missing'}:v)};
+assert.ok(build(reviewed(orphan),orphan,worksheet).issues.includes('UNMAPPED_SCENE_SENTENCE:market1'));
+const duplicate={...candidate,sentences:[...candidate.sentences,{...candidate.sentences[4]}]};
+assert.ok(build(reviewed(duplicate),duplicate,worksheet).issues.includes('SENTENCE_IDS_UNIQUE'));
+const duplicateWorksheet={...worksheet,sections:[...worksheet.sections,{...worksheet.sections[0]}]};
+assert.ok(build(reviewed(candidate,duplicateWorksheet),candidate,duplicateWorksheet).issues.includes('INSIGHT_IDS_UNIQUE'));
 console.log('D4_EDITORIAL_MEDIA_PLANNING_PREVIEW_FAIL_CLOSED_PASS');
