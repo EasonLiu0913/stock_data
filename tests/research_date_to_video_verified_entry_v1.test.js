@@ -12,6 +12,11 @@ try{
   assert.equal(result.tts_authorized,false);assert.equal(result.render_authorized,false);assert.equal(result.publication_authorized,false);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))),result);
  }
+ const handoff=path.join(dir,'verified-research-entry.json');
+ assert.equal(JSON.parse(fs.readFileSync(handoff)).target_date,'20261013');
  assert.throws(()=>execute('.','2026108',dir),/INVALID_TARGET_DATE/);
+ assert.equal(JSON.parse(fs.readFileSync(handoff)).target_date,'20261013'); // invalid input does not mutate prior output
+ assert.throws(()=>execute('/nonexistent-date-to-video-root','20261008',dir));
+ assert.equal(fs.existsSync(handoff),false,'failed rerun must not retain stale success handoff');
  console.log('D4_VERIFIED_SINGLE_DATE_ENTRY_PASS');
 }finally{fs.rmSync(dir,{recursive:true,force:true});}
