@@ -78,7 +78,7 @@ try{
  fs.writeFileSync(candidatePath,'{invalid json');
  const badCandidate=execute('.','20261013',dir);
  assert.equal(badCandidate.next_action.stage,'REJECTED_NARRATION_CANDIDATE');
- assert.ok(badCandidate.next_action.actions.includes('NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'));
+ assert.ok(badCandidate.next_action.actions.includes('NARRATION_CANDIDATE_INVALID_JSON'));
  assert.equal(badCandidate.narration_candidate_review.status,'REJECTED');
  assert.equal(badCandidate.narration_candidate_review.narration_authorized,false);
  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
