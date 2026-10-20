@@ -9,12 +9,15 @@ function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,vid
  }
  const base={contract:'DATE_TO_VIDEO_V1_CHATGPT_SCHEDULE_COORDINATION_RESEARCH',target_date:date,research_only:true,automatic_dispatch_authorized:false,publication_authorized:false};
  const output=(stage,action,reason,details={})=>({...base,stage,action,reason,...details});
- if(video?.status==='ACCEPTED_RESEARCH_MP4'&&video?.acceptance_verified===true)return output('VIDEO_COMPLETE','NONE','ACCEPTED_ARTIFACT_EXISTS');
+ if(video?.status==='ACCEPTED_RESEARCH_MP4'&&video?.acceptance_verified===true&&video?.artifact_sha256&&video?.source_master_sha256&&analysisTask?.market_master_sha256===video.source_master_sha256)return output('VIDEO_COMPLETE','NONE','ACCEPTED_ARTIFACT_EXISTS');
  if(!recovery||recovery.mode!=='PLAN_ONLY_NO_DISPATCH')return output('WAITING_DATA','PREPARE_RECOVERY_PLAN','SAFE_RECOVERY_PLAN_REQUIRED');
- const gaps=recovery.actions||[];
+ if(!Array.isArray(recovery.actions))return output('WAITING_DATA','INSPECT_RECOVERY_PLAN','RECOVERY_ACTIONS_REQUIRED');
+ if(recovery.status==='BLOCKED'&&recovery.actions.length===0)return output('WAITING_DATA','INSPECT_RECOVERY_PLAN','BLOCKED_RECOVERY_PLAN');
+ const gaps=recovery.actions;
  if(gaps.length){
-  const safe=gaps.filter(a=>a.decision==='DRY_RUN_CANDIDATE_ONLY'&&typeof a.workflow_path==='string');
-  return output('RECOVERY_REVIEW_REQUIRED','REVIEW_RECOVERY_WORKFLOWS','GAPS_REQUIRE_SEPARATE_AUTHORIZATION',{suggested_workflows:safe.map(a=>a.workflow_path),blocked_gaps:gaps.filter(a=>a.decision!=='DRY_RUN_CANDIDATE_ONLY').map(a=>a.fields)});
+  const safe=gaps.filter(a=>a?.decision==='DRY_RUN_CANDIDATE_ONLY'&&typeof a.workflow_path==='string'&&a.workflow_path.startsWith('.github/workflows/'));
+  const blocked=gaps.filter(a=>!safe.includes(a));
+  return output('RECOVERY_REVIEW_REQUIRED','REVIEW_RECOVERY_WORKFLOWS','GAPS_REQUIRE_SEPARATE_AUTHORIZATION',{suggested_workflows:safe.map(a=>a.workflow_path),blocked_gaps:blocked.map(a=>a?.fields||[])});
  }
  if(verification?.status!=='VERIFIED_RESEARCH_ONLY')return output('WAITING_DATA','INSPECT_VERIFICATION','VERIFIED_DATED_INPUT_REQUIRED');
  if(analysisTask?.status!=='READY_FOR_EVIDENCE_GROUNDED_DRAFT')return output('WAITING_DATA','PREPARE_D4_ANALYSIS_TASK','D4_TASK_NOT_READY');
