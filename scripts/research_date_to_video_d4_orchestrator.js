@@ -17,6 +17,9 @@ const {inspect:inspectMiProvenance}=require('./research_official_mi_index_proven
 const {inspect:inspectFmtqikProvenance}=require('./research_official_fmtqik_provenance_v1');
 const {parse:parseBreadth}=require('./parse_twse_official_stock_aggregate');
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
+const AUDIO_INPUTS=Object.freeze(['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json','narration-candidate.json']);
+function missingAudioInputs(dir,exists=fs.existsSync){return AUDIO_INPUTS.filter(name=>!exists(path.join(dir,name)));}
+
 function run(root,date,out){
  const status=plan(root,date),result={contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,research_only:true,publication_authorized:false,render_authorized:false,ready_to_render:false,stages:status.stages,blockers:[...status.blockers],artifacts:[]};
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
@@ -150,9 +153,9 @@ function run(root,date,out){
   write('dated-media-input.json',buildDatedMediaInput(out));
   write('editorial-narration-worksheet.json',prepareEditorialNarration(out));
   // Optional external audio inputs are read-only and never imply editorial or rendering approval.
-  const audioInputs=['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json','narration-candidate.json'];
+  const audioInputs=AUDIO_INPUTS;
   if(audioInputs.some(name=>fs.existsSync(path.join(out,name)))){
-   try{const missingAudioInputs=audioInputs.filter(name=>!fs.existsSync(path.join(out,name)));if(missingAudioInputs.length){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:missingAudioInputs.map(name=>'D4_AUDIO_INPUT_MISSING:'+name),audio_verified:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}else{const {inspectDirectory}=require('./research_date_to_video_audio_review_cli_v1');const audioReview=inspectDirectory(out);
+   try{const missingInputs=missingAudioInputs(out);if(missingInputs.length){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:missingInputs.map(name=>'D4_AUDIO_INPUT_MISSING:'+name),audio_verified:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}else{const {inspectDirectory}=require('./research_date_to_video_audio_review_cli_v1');const audioReview=inspectDirectory(out);
     const suppliedInventory=JSON.parse(fs.readFileSync(path.join(out,'sentence-audio-inventory.json'),'utf8'));
     const datedMedia=JSON.parse(fs.readFileSync(path.join(out,'dated-media-input.json'),'utf8'));
     const worksheet=JSON.parse(fs.readFileSync(path.join(out,'editorial-narration-worksheet.json'),'utf8'));
@@ -178,4 +181,4 @@ if(require.main===module){
  if(!date||!out){console.error('Usage: node scripts/research_date_to_video_d4_orchestrator.js YYYYMMDD repo-root output-dir');process.exit(2)}
  try{const r=run(root,date,out);console.log('DATE_TO_VIDEO_D4_STATUS '+r.target_date+' '+r.stages[0].status+' '+r.artifacts.map(x=>x.name).join(','));if(r.stages[0].status==='WAITING_SOURCE'||r.stages[0].status==='PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING')process.exitCode=3}catch(e){console.error(e.message);process.exitCode=2}
 }
-module.exports={run};
+module.exports={run,missingAudioInputs,AUDIO_INPUTS};
