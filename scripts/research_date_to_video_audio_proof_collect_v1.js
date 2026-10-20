@@ -29,6 +29,7 @@ function collect(dir,probe=cp.spawnSync){
   const info=JSON.parse(result.stdout),duration=Number(info?.format?.duration);
   if(!info?.streams?.some(s=>s.codec_name==='mp3')||!Number.isFinite(duration)||duration<=0.1||duration>=120)throw Error('AUDIO_CODEC_OR_DURATION_INVALID_'+name);
   const source=inventory.sentences[c.order-1];
+  if(!source||source.id!==c.sentence_id||source.order!==c.order||source.spoken_text!==c.argv[6])throw Error('AUDIO_SENTENCE_PLAN_MISMATCH_'+name);
   sentences.push({id:source.id,order:source.order,spoken_text:source.spoken_text,caption_text:source.caption_text,audio_file:name,duration_seconds:duration,audio_sha256:sha(fs.readFileSync(file))});
  }
  const proof={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_AUDIO_PROOF',target_date:inventory.target_date,candidate_sha256:inventory.candidate_sha256,voice:inventory.voice,rate:inventory.rate,sentences,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
