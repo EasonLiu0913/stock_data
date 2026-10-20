@@ -28,12 +28,12 @@ assert.ok(build(reviewed(duplicate),duplicate,worksheet).issues.includes('SENTEN
 const duplicateWorksheet={...worksheet,sections:[...worksheet.sections,{...worksheet.sections[0]}]};
 assert.ok(build(reviewed(candidate,duplicateWorksheet),candidate,duplicateWorksheet).issues.includes('INSIGHT_IDS_UNIQUE'));
 // Positive handoff: the actual candidate reviewer must accept the same inputs used by the preview.
-const dated={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1',target_date:'20261013',source_master_sha256:'b'.repeat(64).repeat(64),fixed_opening_lines:require('../scripts/research_date_to_video_fixed_opening_v1').FIXED_OPENING_LINES};
+const dated={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1',target_date:'20261013',source_master_sha256:'b'.repeat(64),fixed_opening_lines:require('../scripts/research_date_to_video_fixed_opening_v1').FIXED_OPENING_LINES};
 const fullWorksheet={...worksheet,contract:'DATE_TO_VIDEO_V1_RESEARCH_EDITORIAL_NARRATION_WORKSHEET',draft_sha256:'c'.repeat(64),issues:['EDITORIAL_CERTIFICATION_REQUIRED']};
 const fixed=dated.fixed_opening_lines.map((line,i)=>({id:'opening'+i,narration:line,subtitle:line}));
 const fullCandidate={...candidate,worksheet_sha256:sha(fullWorksheet),draft_sha256:fullWorksheet.draft_sha256,sentences:[...fixed,{...candidate.sentences[4],narration:'市場觀察待審。',subtitle:'市場觀察待審。',spoken_subtitle_mappings:[]}]};
 const actualReview=reviewCandidate(fullWorksheet,dated,fullCandidate);
-assert.equal(actualReview.status,'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED',JSON.stringify(actualReview.issues));
+assert.equal(actualReview.status,'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED',JSON.stringify({issues:actualReview.issues,parity:actualReview.sentence_parity}));
 const planned=build({...entry,narration_candidate_review:actualReview},fullCandidate,fullWorksheet);
 assert.equal(planned.status,'STRUCTURAL_PLANNING_PREVIEW_ONLY',JSON.stringify(planned.issues));
 assert.deepEqual(planned.narration_plan.map(x=>x.text),fullCandidate.sentences.map(x=>x.narration));
