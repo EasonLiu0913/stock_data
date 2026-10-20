@@ -15,6 +15,8 @@ function build(root,date){
  if(!Array.isArray(registry.sources)||registry.sources.length!==ids.length||ids.some(id=>registry.sources.filter(s=>s.id===id).length!==1))throw Error('REGISTRY_SOURCE_SET_MISMATCH');
  const fmtqik=registry.sources.find(s=>s.id==='FMTQIK');
  if(!Array.isArray(fmtqik.candidate_evidence_dates)||fmtqik.candidate_evidence_dates.join(',')!=='20261008,20261013,20261014'||fmtqik.candidate_archiver!=='scripts/research_official_fmtqik_candidate_stage_v1.js'||fmtqik.candidate_validator!=='scripts/research_official_fmtqik_raw_candidate_v1.js'||fmtqik.endpoint_approved!==false||fmtqik.raw_http_provenance_certified!==false||fmtqik.master_authorized!==false||fmtqik.publication_authorized!==false)throw Error('FMTQIK_CANDIDATE_REGISTRY_UNAUTHORIZED_PROMOTION');
+ const bfiamu=registry.sources.find(s=>s.id==='BFIAMU');
+ if(bfiamu.status!=='CANDIDATE_UNAPPROVED'||bfiamu.endpoint_template!==null||bfiamu.date_query!=='TO_VERIFY'||bfiamu.schema!=='TO_VERIFY'||bfiamu.units!=='TO_VERIFY'||bfiamu.scope!=='TO_VERIFY')throw Error('BFIAMU_SOURCE_CONTRACT_UNAUTHORIZED_PROMOTION');
  const source=registry.sources.find(s=>s.id==='BFI82U');
  if(source.validator!=='scripts/research_date_to_video_bfi82u_v1.js')throw Error('BFI82U_VALIDATOR_NOT_REGISTERED');
  const prefix=path.join(root,'data_research/twse-market-opening/primary-archive',date,date+'-bfi82u');
