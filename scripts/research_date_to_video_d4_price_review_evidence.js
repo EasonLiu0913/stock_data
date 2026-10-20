@@ -26,10 +26,13 @@ function inspect(root,date,codes){
   assert.ok(a.previous_close>0&&a.low<=a.high&&a.close>=a.low&&a.close<=a.high,'INVALID_PRICE_RANGE_'+code);
   assert.ok(Math.abs((a.close/a.previous_close-1)*100-a.change_pct)<=0.011,'PRICE_PCT_ARITHMETIC_MISMATCH_'+code);
   if(missingFlowPaths.length)return {dated_flow_crosscheck:{status:'DATED_RAW_FLOW_ARCHIVE_MISSING',missing_source_paths:missingFlowPaths,independent_source_reviewed:false,editorial_certified:false},code,name:a.name,claim_id:date+':'+code+':PRICE_CHANGE',previous_close:a.previous_close,close:a.close,change_pct:a.change_pct,source_list_path:list.path,source_facts_path:facts.path,source_list_sha256:list.sha256,source_facts_sha256:facts.sha256,status:'DATED_LIST_FACTS_PRICE_CROSSCHECK_ONLY',independent_source_reviewed:false,causality_verified:false,editorial_certified:false,narration_authorized:false};
-  const foreign=unique(flow.foreign.data,code,1),trust=unique(flow.trust.data,code,1),dealer=unique(flow.dealer.data,code,0);
+  const foreign=unique(flow.foreign.data,code,1),trustRows=flow.trust.data.filter(a=>String(a[1]).trim()===code),dealer=unique(flow.dealer.data,code,0);
+  assert.ok(trustRows.length===1||(trustRows.length===0&&b.flow.investment_trust.record_status==='no_record'&&b.flow.investment_trust.net_shares===null),'TRUST_RECORD_STATUS_MISMATCH_'+code);
+  const trust=trustRows[0]??null;
   const margin=unique(csvRows.slice(1).filter(Boolean).map(csvCols),code,0);
   assert.equal(num(foreign[11]),b.flow.foreign.net_shares,'FOREIGN_FACTS_MISMATCH_'+code);
-  assert.equal(num(trust[5]),b.flow.investment_trust.net_shares,'TRUST_FACTS_MISMATCH_'+code);
+  if(trust)assert.equal(num(trust[5]),b.flow.investment_trust.net_shares,'TRUST_FACTS_MISMATCH_'+code);
+  else assert.equal(b.flow.investment_trust.record_status,'no_record','TRUST_NO_RECORD_STATUS_REQUIRED_'+code);
   const factsDealerNet=b.flow.dealer.net_shares;
   const dealerFactsMatches=['proprietary','hedging','total'].filter((_,i)=>[4,7,10][i]!==undefined&&num(dealer[[4,7,10][i]])===factsDealerNet);
   assert.ok(dealerFactsMatches.length>0,'DEALER_FACTS_NO_MATCHING_RAW_CATEGORY_'+code);
@@ -37,7 +40,7 @@ function inspect(root,date,codes){
   assert.equal(num(margin[6]),b.flow.margin.margin_now,'MARGIN_NOW_FACTS_MISMATCH_'+code);
   const dealerProprietary=num(dealer[4]),dealerHedging=num(dealer[7]),dealerTotal=num(dealer[10]);
   assert.equal(dealerProprietary+dealerHedging,dealerTotal,'DEALER_TOTAL_MISMATCH_'+code);
-  return {dated_flow_crosscheck:{foreign_net_shares:num(foreign[11]),trust_net_shares:num(trust[5]),dealer_proprietary_net_shares:dealerProprietary,dealer_hedging_net_shares:dealerHedging,dealer_total_net_shares:dealerTotal,facts_dealer_net_shares:factsDealerNet,facts_dealer_matching_categories:dealerFactsMatches,margin_previous_lots:num(margin[5]),margin_current_lots:num(margin[6]),margin_delta_lots:num(margin[6])-num(margin[5]),sources:sourceMeta,status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',independent_source_reviewed:false,editorial_certified:false},code,name:a.name,claim_id:date+':'+code+':PRICE_CHANGE',previous_close:a.previous_close,close:a.close,change_pct:a.change_pct,source_list_path:list.path,source_facts_path:facts.path,source_list_sha256:list.sha256,source_facts_sha256:facts.sha256,status:'DATED_LIST_FACTS_PRICE_CROSSCHECK_ONLY',independent_source_reviewed:false,causality_verified:false,editorial_certified:false,narration_authorized:false};
+  return {dated_flow_crosscheck:{foreign_net_shares:num(foreign[11]),trust_net_shares:trust?num(trust[5]):null,trust_record_status:trust?'reported':'no_record',dealer_proprietary_net_shares:dealerProprietary,dealer_hedging_net_shares:dealerHedging,dealer_total_net_shares:dealerTotal,facts_dealer_net_shares:factsDealerNet,facts_dealer_matching_categories:dealerFactsMatches,margin_previous_lots:num(margin[5]),margin_current_lots:num(margin[6]),margin_delta_lots:num(margin[6])-num(margin[5]),sources:sourceMeta,status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',independent_source_reviewed:false,editorial_certified:false},code,name:a.name,claim_id:date+':'+code+':PRICE_CHANGE',previous_close:a.previous_close,close:a.close,change_pct:a.change_pct,source_list_path:list.path,source_facts_path:facts.path,source_list_sha256:list.sha256,source_facts_sha256:facts.sha256,status:'DATED_LIST_FACTS_PRICE_CROSSCHECK_ONLY',independent_source_reviewed:false,causality_verified:false,editorial_certified:false,narration_authorized:false};
  });
  return {contract:'DATE_TO_VIDEO_V1_D4_DATED_PRICE_REVIEW_EVIDENCE',target_date:date,stocks,review_decisions:[],status:'PRICE_CROSSCHECKED_INDEPENDENT_REVIEW_PENDING',editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
