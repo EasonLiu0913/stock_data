@@ -166,7 +166,7 @@ function run(root,date,out){
     if(suppliedInventory.target_date!==date)provenanceIssues.push('D4_AUDIO_DATE_MISMATCH');
     if(suppliedInventory.source_master_sha256!==datedMedia.source_master_sha256)provenanceIssues.push('D4_AUDIO_MASTER_SHA_MISMATCH');
     if(suppliedInventory.worksheet_sha256!==hash(JSON.stringify(worksheet)))provenanceIssues.push('D4_AUDIO_WORKSHEET_SHA_MISMATCH');
-    if(provenanceIssues.length){audioReview.issues.push(...provenanceIssues);audioReview.status='REJECTED';audioReview.audio_verified=false;}
+    if(provenanceIssues.length){audioReview.issues=[...new Set([...(audioReview.issues||[]),...provenanceIssues])];audioReview.status='REJECTED';audioReview.audio_verified=false;}
     write('sentence-audio-review.json',audioReview);
     if(audioReview.status==='REJECTED')result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
    }catch(e){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:[e instanceof SyntaxError?'D4_AUDIO_INPUT_INVALID_JSON':'D4_AUDIO_REVIEW_ERROR'],reason:e.message,audio_verified:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
