@@ -4,6 +4,8 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const {inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
 const {inspectDirectory:inspectNarrationCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
 const {matches:matchesCandidateSentences}=require('./research_date_to_video_candidate_sentence_link_v1');
+const {build:buildEditorialMediaPreview}=require('./research_date_to_video_editorial_media_preview_v1');
+const {build:buildDatedMediaInput}=require('./research_date_to_video_dated_media_input_v1');
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 function verify(dir){
  const entry=JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'),'utf8'));
@@ -43,7 +45,12 @@ function verify(dir){
    }catch(e){issues.push('CANDIDATE_SENTENCE_COMPARISON_FAILED');}
   }
   if(JSON.stringify(expected)!==JSON.stringify(entry.narration_candidate_review))issues.push('NARRATION_CANDIDATE_REVALIDATION_MISMATCH');
- }else if(entry.narration_candidate_review!==null)issues.push('UNEXPECTED_NARRATION_CANDIDATE_REVIEW');
+  if(expected.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'){
+   const worksheet=JSON.parse(fs.readFileSync(path.join(dir,'editorial-narration-worksheet.json'),'utf8'));
+   const preview=buildEditorialMediaPreview({...entry,narration_candidate_review:expected,dated_media_input:buildDatedMediaInput(dir)},parsedCandidate,worksheet);
+   if(JSON.stringify(preview)!==JSON.stringify(entry.editorial_media_preview))issues.push('EDITORIAL_MEDIA_PREVIEW_REVALIDATION_MISMATCH');
+  }else if(entry.editorial_media_preview!==null)issues.push('UNEXPECTED_EDITORIAL_MEDIA_PREVIEW');
+ }else if(entry.narration_candidate_review!==null||entry.editorial_media_preview!==null)issues.push('UNEXPECTED_NARRATION_CANDIDATE_REVIEW_OR_PREVIEW');
  if(entry.sentence_handoff?.target_date!==undefined&&entry.sentence_handoff.target_date!==date)issues.push('SENTENCE_HANDOFF_DATE_MISMATCH');
  for(const key of ['automatic_dispatch_authorized','tts_authorized','render_authorized','publication_authorized'])if(entry[key]!==false)issues.push('AUTHORIZATION_LOCK_INVALID:'+key);
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_ENTRY_INTEGRITY',target_date:date,status:issues.length?'REJECTED':'VERIFIED_RESEARCH_ONLY',issues,research_only:true,automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
