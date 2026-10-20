@@ -1,10 +1,11 @@
 'use strict';
 // Advisory only. Never dispatches workflows or grants synthesis/publication.
-function advise(d4,verification,media){
+function advise(d4,verification,media,sentenceHandoff=null){
  const sources=d4.official_recovery_advice?.sources||[];
  const pending=sources.filter(s=>s.action_required!=='REUSE_VERIFIED_ARCHIVE'&&s.status!=='VERIFIED_RESEARCH_ONLY');
  let stage,actions;
  if(verification.status!=='VERIFIED_RESEARCH_ONLY'){stage='REJECTED_PROVENANCE';actions=['REVIEW_VERIFICATION_ISSUES'];}
+ else if(sentenceHandoff&&(sentenceHandoff.status==='REJECTED'||sentenceHandoff.sentence_parity?.status==='REJECTED')){stage='REJECTED_SENTENCE_PACKET';actions=sentenceHandoff.issues||sentenceHandoff.sentence_parity?.issues||['REVIEW_SENTENCE_PACKET'];}
  else if(pending.length){stage='WAITING_OFFICIAL_SOURCES';actions=pending.map(s=>({source:s.id,action_required:s.action_required,automated_retrieval_allowed:s.automated_retrieval_allowed===true}));}
  else if(media.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED')){stage='WAITING_INDEPENDENT_EDITORIAL_REVIEW';actions=['REVIEW_DATED_MASTER_AND_CLAIMS'];}
  else if(media.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED')){stage='WAITING_DATED_MEDIA_BRIDGE';actions=['IMPLEMENT_AND_REVIEW_DATED_MEDIA_BRIDGE'];}
