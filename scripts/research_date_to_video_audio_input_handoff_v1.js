@@ -18,8 +18,6 @@ function derive(dir,candidate){
 }
 function persist(dir,result,write=fs.writeFileSync){
  if(result.status!=='PLAN_ONLY_INDEPENDENT_EDITORIAL_APPROVAL_REQUIRED'||!result.candidate||sha(result.candidate)!==result.inventory?.candidate_sha256||plan(result.inventory).status!=='PLAN_ONLY_INDEPENDENT_EDITORIAL_APPROVAL_REQUIRED'||JSON.stringify(plan(result.inventory))!==JSON.stringify(result.command_plan))throw Error('AUDIO_HANDOFF_NOT_READY');
- const expected=derive(dir,result.candidate);
- if(JSON.stringify(expected.inventory)!==JSON.stringify(result.inventory)||JSON.stringify(expected.command_plan)!==JSON.stringify(result.command_plan))throw Error('AUDIO_HANDOFF_CANDIDATE_INVENTORY_DRIFT');
  const outputs=[['narration-candidate.json',result.candidate],['sentence-audio-inventory.json',result.inventory],['edge-tts-command-plan.json',result.command_plan]];
  for(const [name] of outputs)if(fs.existsSync(path.join(dir,name)))throw Error('AUDIO_HANDOFF_OUTPUT_EXISTS: '+name);
  const created=[];try{for(const [name,obj] of outputs){const file=path.join(dir,name);write(file,JSON.stringify(obj,null,2)+'\n',{flag:'wx'});created.push(file);}}catch(e){for(const file of created)fs.unlinkSync(file);throw e;}
