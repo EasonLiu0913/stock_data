@@ -21,8 +21,10 @@ function verify(dir){
  else if(record&&(record.name!=='sentence-packet-input.json'||sha(fs.readFileSync(packet))!==record.sha256))issues.push('SENTENCE_PACKET_CHANGED');
  if(fs.existsSync(packet)){
   let expected;
-  try{expected=inspectSentencePacket(dir,JSON.parse(fs.readFileSync(packet,'utf8')));}
+  let parsed;
+  try{parsed=JSON.parse(fs.readFileSync(packet,'utf8'));}
   catch(e){expected={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(expected===undefined)expected=inspectSentencePacket(dir,parsed);
   if(JSON.stringify(expected)!==JSON.stringify(entry.sentence_handoff))issues.push('SENTENCE_HANDOFF_REVALIDATION_MISMATCH');
  }else if(entry.sentence_handoff!==null)issues.push('UNEXPECTED_SENTENCE_HANDOFF');
  const candidatePath=path.join(dir,'narration-candidate-input.json'),candidateRecord=entry.narration_candidate_source;
