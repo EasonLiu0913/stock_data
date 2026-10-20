@@ -341,3 +341,7 @@ try{
  }
  assert.equal(JSON.parse(fs.readFileSync(path.join(crossDateDir,'market-master.json'))).status,'WAITING_SOURCE');
 }finally{fs.rmSync(crossDateDir,{recursive:true,force:true});}
+
+// Optional audio submissions are external inputs: preserve them, reject partial submissions, clean generated review on rerun.
+const audioDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-audio-'));
+try{const supplied=path.join(audioDir,'sentence-audio-inventory.json');fs.writeFileSync(supplied,JSON.stringify({contract:'INVALID'}));const first=run('.','20261008',audioDir);assert.ok(first.blockers.includes('DATED_SENTENCE_AUDIO_REVIEW_REJECTED'));assert.equal(JSON.parse(fs.readFileSync(path.join(audioDir,'sentence-audio-review.json')).toString()).status,'REJECTED');assert.equal(fs.existsSync(supplied),true);fs.unlinkSync(supplied);run('.','20261008',audioDir);assert.equal(fs.existsSync(path.join(audioDir,'sentence-audio-review.json')),false);console.log('D4_OPTIONAL_AUDIO_INPUT_FAIL_CLOSED_PASS');}finally{fs.rmSync(audioDir,{recursive:true,force:true});}
