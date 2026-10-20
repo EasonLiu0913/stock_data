@@ -13,6 +13,7 @@ const {inspect:inspectBfi82u}=require('./research_date_to_video_bfi82u_v1');
 const {build:buildOfficialManifest}=require('./research_official_data_manifest_v1');
 const {gate:gateOfficialManifest}=require('./research_official_manifest_master_gate_v1');
 const {planRecovery}=require('./research_official_data_recovery_v1');
+const {advise:adviseAudioRecovery}=require('./research_date_to_video_audio_recovery_advice_v1');
 const {inspect:inspectMiProvenance}=require('./research_official_mi_index_provenance_v1');
 const {inspect:inspectFmtqikProvenance}=require('./research_official_fmtqik_provenance_v1');
 const {parse:parseBreadth}=require('./parse_twse_official_stock_aggregate');
@@ -22,7 +23,7 @@ function missingAudioInputs(dir,exists=fs.existsSync){return AUDIO_INPUTS.filter
 
 function run(root,date,out){
  const status=plan(root,date),result={contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,research_only:true,publication_authorized:false,render_authorized:false,ready_to_render:false,stages:status.stages,blockers:[...status.blockers],artifacts:[]};
- const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
+ const write=(name,obj)=>{if(name==='sentence-audio-review.json')result.audio_recovery_advice=adviseAudioRecovery(obj);const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
  // A repeated run must not expose artifacts from an earlier date or earlier approval state.
  // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
  const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json','sentence-audio-review.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json'];
