@@ -3,6 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
 const {inspectDirectory:inspectNarrationCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
+const {matches:matchesCandidateSentences}=require('./research_date_to_video_candidate_sentence_link_v1');
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 function verify(dir){
  const entry=JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'),'utf8'));
@@ -34,7 +35,7 @@ function verify(dir){
   catch(e){expected={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
   if(expected.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'&&entry.sentence_handoff?.candidate_sentences){
    try{const packetInput=JSON.parse(fs.readFileSync(packet,'utf8')),candidateInput=JSON.parse(bytes.toString('utf8'));
-    if(JSON.stringify(packetInput.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]]))!==JSON.stringify(candidateInput.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]])))expected={...expected,status:'REJECTED',issues:[...expected.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
+    if(!matchesCandidateSentences(packetInput,candidateInput))expected={...expected,status:'REJECTED',issues:[...expected.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
    }catch(e){issues.push('CANDIDATE_SENTENCE_COMPARISON_FAILED');}
   }
   if(JSON.stringify(expected)!==JSON.stringify(entry.narration_candidate_review))issues.push('NARRATION_CANDIDATE_REVALIDATION_MISMATCH');
