@@ -25,8 +25,11 @@ function verify(dir){
  }
  if(status.official_recovery_advice&&fs.existsSync(path.join(dir,'official-data-recovery-plan.json'))){
   const plan=JSON.parse(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json'),'utf8'));
-  const expected=plan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed}));
-  if(status.official_recovery_advice.manifest_sha256!==plan.manifest_sha256||JSON.stringify(status.official_recovery_advice.sources)!==JSON.stringify(expected))issues.push('OFFICIAL_RECOVERY_ADVICE_CONTENT_MISMATCH');
+  if(!Array.isArray(plan.sources))issues.push('OFFICIAL_RECOVERY_PLAN_INVALID_SOURCES');
+  else {
+   const expected=plan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed}));
+   if(status.official_recovery_advice.manifest_sha256!==plan.manifest_sha256||JSON.stringify(status.official_recovery_advice.sources)!==JSON.stringify(expected))issues.push('OFFICIAL_RECOVERY_ADVICE_CONTENT_MISMATCH');
+  }
  }
  if(!status.official_recovery_advice)issues.push('OFFICIAL_RECOVERY_ADVICE_MISSING');
  for(const key of ['publication_authorized','render_authorized','ready_to_render'])if(status[key]!==false)issues.push('D4_AUTHORIZATION_LOCK_INVALID:'+key);
