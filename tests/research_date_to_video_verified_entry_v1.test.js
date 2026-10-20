@@ -14,6 +14,7 @@ try{
   for(const artifact of result.source_artifacts)assert.equal(artifact.sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(dir,artifact.name))).digest('hex'));
   assert.equal(result.sentence_packet_source,null);
   assert.equal(result.narration_candidate_review,null);
+  assert.equal(result.editorial_media_preview,null);
   assert.equal(result.narration_candidate_source,null);
   assert.equal(result.dated_media_input.preflight_status,result.media_preflight.status);
   assert.equal(result.dated_media_input.target_date,result.media_preflight.target_date);
@@ -80,6 +81,7 @@ try{
  assert.equal(badCandidate.next_action.stage,'REJECTED_NARRATION_CANDIDATE');
  assert.ok(badCandidate.next_action.actions.includes('NARRATION_CANDIDATE_INVALID_JSON'));
  assert.equal(badCandidate.narration_candidate_review.status,'REJECTED');
+ assert.equal(badCandidate.editorial_media_preview,null);
  assert.equal(badCandidate.narration_candidate_review.narration_authorized,false);
  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  fs.appendFileSync(candidatePath,' ');
