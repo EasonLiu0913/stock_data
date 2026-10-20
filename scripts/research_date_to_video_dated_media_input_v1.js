@@ -12,6 +12,7 @@ function build(dir){
 if(require.main===module){const dir=process.argv[2];if(!dir){console.error('Usage: node scripts/research_date_to_video_dated_media_input_v1.js D4-output-dir');process.exit(2)}try{console.log(JSON.stringify(build(dir),null,2))}catch(e){console.error(e.message);process.exitCode=2}}
 function inspectSentencePacket(dir,packet){
  const datedInput=build(dir),parity=validateSentences(packet,datedInput);
- return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:datedInput.target_date,preflight_status:datedInput.preflight_status,sentence_parity:parity,media_bridge_status:'BLOCKED_PENDING_EDITORIAL_AND_MEDIA_INPUTS',narration_script:null,subtitle_sentences:null,audio_manifest:null,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+ const candidate=parity.status==='STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED'?packet.sentences.map((s,i)=>({index:i,id:s.id,narration:s.narration,subtitle:s.subtitle,spoken_subtitle_mappings:s.spoken_subtitle_mappings||[]})):null;
+ return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:datedInput.target_date,preflight_status:datedInput.preflight_status,sentence_parity:parity,media_bridge_status:candidate?'STRUCTURAL_CANDIDATE_ONLY_EDITORIAL_REVIEW_REQUIRED':'BLOCKED_PENDING_EDITORIAL_AND_MEDIA_INPUTS',candidate_sentences:candidate,narration_script:null,subtitle_sentences:null,audio_manifest:null,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={build,inspectSentencePacket};
