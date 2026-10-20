@@ -2,14 +2,16 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {verify}=require('../scripts/research_date_to_video_recovery_status_verify_v1');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+const {advise}=require('../scripts/research_date_to_video_audio_recovery_advice_v1');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-recovery-status-'));
 try{
- const official='{"target_date":"20261008"}\n',audio='{"target_date":"20261008","status":"REJECTED"}\n';
+ const official=JSON.stringify({target_date:'20261008',manifest_sha256:'test-manifest',sources:[]})+'\n',audio='{"target_date":"20261008","status":"REJECTED"}\n';
  fs.writeFileSync(path.join(dir,'official-data-recovery-plan.json'),official);
  fs.writeFileSync(path.join(dir,'sentence-audio-review.json'),audio);
- const status={target_date:'20261008',publication_authorized:false,render_authorized:false,ready_to_render:false,official_recovery_advice:{target_date:'20261008',source_plan_sha256:sha(official)},audio_recovery_advice:{target_date:'20261008',source_review_sha256:sha(audio)}};
+ const status={target_date:'20261008',publication_authorized:false,render_authorized:false,ready_to_render:false,official_recovery_advice:{target_date:'20261008',source_plan_sha256:sha(official),manifest_sha256:'test-manifest',sources:[]},audio_recovery_advice:{...advise(JSON.parse(audio)),source_review_sha256:sha(audio)}};
  fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(status));
  assert.equal(verify(dir).status,'VERIFIED_RESEARCH_ONLY');
+ status.audio_recovery_advice.actions=[{issue:'FAKE',action:'DISPATCH'}];fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(status));assert.ok(verify(dir).issues.includes('AUDIO_RECOVERY_ADVICE_CONTENT_MISMATCH'));status.audio_recovery_advice={...advise(JSON.parse(audio)),source_review_sha256:sha(audio)};fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(status));
  const withoutAudio={...status};delete withoutAudio.audio_recovery_advice;fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(withoutAudio));assert.ok(verify(dir).issues.includes('AUDIO_RECOVERY_ADVICE_MISSING'));fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(status));
  fs.writeFileSync(path.join(dir,'sentence-audio-review.json'),audio+' ');
  assert.ok(verify(dir).issues.includes('RECOVERY_SOURCE_SHA_MISMATCH:sentence-audio-review.json'));
