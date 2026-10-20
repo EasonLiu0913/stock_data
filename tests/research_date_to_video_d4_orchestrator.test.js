@@ -12,6 +12,8 @@ for(const date of ['20261008','20261013']){
  assert.equal(officialGate.master_authorized,false);assert.equal(officialGate.publication_authorized,false);
  const recoveryPlan=JSON.parse(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json')));
  assert.equal(recoveryPlan.target_date,date);
+ assert.equal(officialManifest.target_date,recoveryPlan.target_date);
+ assert.ok(recoveryPlan.sources.every(source=>source.source_date===date));
  assert.equal(recoveryPlan.manifest_sha256,officialManifest.manifest_sha256);
  assert.equal(recoveryPlan.sources.length,4);
  assert.equal(r.official_recovery_advice.manifest_sha256,recoveryPlan.manifest_sha256);
