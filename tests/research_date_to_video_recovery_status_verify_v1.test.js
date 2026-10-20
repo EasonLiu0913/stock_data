@@ -10,6 +10,7 @@ try{
  const status={target_date:'20261008',publication_authorized:false,render_authorized:false,ready_to_render:false,official_recovery_advice:{target_date:'20261008',source_plan_sha256:sha(official)},audio_recovery_advice:{target_date:'20261008',source_review_sha256:sha(audio)}};
  fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(status));
  assert.equal(verify(dir).status,'VERIFIED_RESEARCH_ONLY');
+ const withoutAudio={...status};delete withoutAudio.audio_recovery_advice;fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(withoutAudio));assert.ok(verify(dir).issues.includes('AUDIO_RECOVERY_ADVICE_MISSING'));fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify(status));
  fs.writeFileSync(path.join(dir,'sentence-audio-review.json'),audio+' ');
  assert.ok(verify(dir).issues.includes('RECOVERY_SOURCE_SHA_MISMATCH:sentence-audio-review.json'));
  fs.writeFileSync(path.join(dir,'sentence-audio-review.json'),audio);
