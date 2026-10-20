@@ -18,6 +18,18 @@ try{
   assert.equal(result.tts_authorized,false);assert.equal(result.render_authorized,false);assert.equal(result.publication_authorized,false);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))),result);
  }
+ assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))).sentence_handoff,null);
+ const packetPath=path.join(dir,'sentence-packet-input.json');
+ fs.writeFileSync(packetPath,'{invalid json');
+ const malformed=execute('.','20261013',dir);
+ assert.equal(malformed.sentence_handoff.status,'REJECTED');
+ assert.deepEqual(malformed.sentence_handoff.issues,['SENTENCE_PACKET_INVALID_JSON']);
+ assert.equal(malformed.sentence_handoff.render_authorized,false);
+ fs.writeFileSync(packetPath,JSON.stringify({target_date:'20261008',sentences:[]}));
+ const mismatched=execute('.','20261013',dir);
+ assert.equal(mismatched.sentence_handoff.sentence_parity.status,'REJECTED');
+ assert.ok(mismatched.sentence_handoff.sentence_parity.issues.includes('DATE_MATCH'));
+ assert.equal(mismatched.sentence_handoff.narration_authorized,false);
  const handoff=path.join(dir,'verified-research-entry.json');
  assert.equal(JSON.parse(fs.readFileSync(handoff)).target_date,'20261013');
  assert.throws(()=>execute('.','2026108',dir),/INVALID_TARGET_DATE/);
