@@ -21,8 +21,10 @@ function execute(root,date,out){
  if(fs.existsSync(packetPath)){
   const packetBytes=fs.readFileSync(packetPath);
   sentencePacketSha256=crypto.createHash('sha256').update(packetBytes).digest('hex');
-  try{sentenceHandoff=inspectSentencePacket(out,JSON.parse(packetBytes.toString('utf8')));}
+  let parsed;
+  try{parsed=JSON.parse(packetBytes.toString('utf8'));}
   catch(e){sentenceHandoff={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(sentenceHandoff===null)sentenceHandoff=inspectSentencePacket(out,parsed);
  }
  const candidatePath=path.join(out,'narration-candidate-input.json');
  let narrationCandidateReview=null,narrationCandidateSha256=null;
