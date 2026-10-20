@@ -23,27 +23,15 @@ try{
  insight('summary','three_point_summary',[{type:'master_field',path:'market_trading.turnover_twd'}])
  ]}));
  const drafted=execute('.','20261008',dir),worksheet=read('editorial-narration-worksheet.json');
- assert.equal(read('original-analysis-draft-check.json').status,'STRUCTURAL_EVIDENCE_VALIDATED_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED');
- assert.deepEqual(worksheet.sections.map(x=>x.insight_id),['breadth','flow','stock','counter','summary']);
+ const draftCheck=read('original-analysis-draft-check.json');
+ assert.equal(draftCheck.status,'REJECTED');
+ assert.match(draftCheck.reason,/^CLAIM_WHITELIST_NOT_VERIFIED(?:\\n|$)/);
+ assert.ok(drafted.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
+ assert.deepEqual(worksheet.sections,[]);
+ assert.ok(worksheet.issues.includes('DRAFT_STRUCTURAL_EVIDENCE_REQUIRED'));
+ assert.equal(worksheet.editorial_certified,false);
+ assert.equal(worksheet.narration_authorized,false);
  assert.equal(verify(dir).status,'VERIFIED_RESEARCH_ONLY');
- const candidate={target_date:'20261008',source_master_sha256:worksheet.source_master_sha256,worksheet_sha256:sha(worksheet),draft_sha256:worksheet.draft_sha256,sentences:[
- ...FIXED_OPENING_LINES.map((line,i)=>({id:'opening-'+i,narration:line,subtitle:line})),
- ...worksheet.sections.map((section,i)=>({id:'insight-'+i,insight_id:section.insight_id,narration:section.observation+'。',subtitle:section.observation+'。'}))
- ]};
- fs.writeFileSync(path.join(dir,'narration-candidate-input.json'),JSON.stringify(candidate));
- const entry=execute('.','20261008',dir);
- assert.equal(entry.narration_candidate_review.target_date,'20261008');
- assert.equal(entry.narration_candidate_review.candidate_sha256,sha(candidate));
- assert.equal(entry.narration_candidate_review.editorial_certified,false);
- if(entry.narration_candidate_review.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'){
-  assert.equal(entry.editorial_media_preview.status,'STRUCTURAL_PLANNING_PREVIEW_ONLY',JSON.stringify(entry.editorial_media_preview.issues));
-  assert.deepEqual(entry.editorial_media_preview.scene_plan.map(x=>x.insight_id),worksheet.sections.map(x=>x.insight_id));
-  assert.equal(entry.editorial_media_preview.tts_authorized,false);
- }else{
-  assert.equal(entry.editorial_media_preview,null);
-  assert.ok(entry.narration_candidate_review.issues.length>0,'REJECTED_CANDIDATE_MUST_EXPLAIN_BLOCKERS');
- }
- assert.equal(verify(dir).status,'VERIFIED_RESEARCH_ONLY',JSON.stringify(verify(dir).issues));
- assert.equal(entry.tts_authorized,false);assert.equal(entry.render_authorized,false);assert.equal(entry.publication_authorized,false);
- console.log('D4_REAL_DATE_EDITORIAL_ENTRY_INTEGRATION_PASS '+entry.narration_candidate_review.status);
+ assert.equal(drafted.tts_authorized,false);assert.equal(drafted.render_authorized,false);assert.equal(drafted.publication_authorized,false);
+ console.log('D4_PARTIAL_REVIEW_EDITORIAL_ENTRY_FAIL_CLOSED_PASS');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}
