@@ -35,7 +35,14 @@ function build(root,date){
    if(evidence.chart_sha256)entry.provenance_diagnostic.derived_chart_sha256=evidence.chart_sha256;
    if(evidence.repository_payload_sha256)entry.provenance_diagnostic.repository_payload_sha256=evidence.repository_payload_sha256;
    if(evidence.reason)entry.provenance_diagnostic.reason=evidence.reason;
-   if(id==='FMTQIK'){const staged=inspectStagedCandidate(root,date);entry.provenance_diagnostic.staged_candidate_status=staged.status;entry.provenance_diagnostic.direct_fetch_receipt_status=staged.receipt_status||null;if(staged.reason)entry.provenance_diagnostic.staged_candidate_reason=staged.reason;entry.provenance_diagnostic.raw_http_provenance_certified=false;}
+   if(id==='BFIAMU'){
+   const base=path.join(root,'data_research/twse-market-opening/primary-archive',date,date+'-bfiamu');
+   try{const bytes=fs.readFileSync(base+'.json'),m=JSON.parse(fs.readFileSync(base+'.manifest.json','utf8')),j=JSON.parse(bytes);
+    if(m.source!=='bfiamu'||m.targetDate!==date||m.reportedDate!==date||j.date!==date||j.stat!=='OK'||m.sha256!==sha(bytes)||m.bytes!==bytes.length||m.httpStatus!==200||m.archiveType!=='original_http_response'||m.dateVerified!==true||m.scopeVerified!==false||m.publicationAuthorized!==false||!Array.isArray(j.fields)||j.fields.join('|')!=='分類指數名稱|成交股數|成交金額|成交筆數|漲跌指數'||!Array.isArray(j.data)||j.data.length!==34||j.total!==34||j.data.some(r=>!Array.isArray(r)||r.length!==5||!/^[0-9,]+$/.test(r[2])))throw Error('BFIAMU_ARCHIVE_CONTRACT_MISMATCH');
+    entry.provenance_diagnostic={status:'DATED_ARCHIVE_BYTES_AND_SCHEMA_MATCH_SCOPE_UNAPPROVED',raw_sha256:sha(bytes),categories:j.data.length,raw_http_provenance_certified:false};
+   }catch(e){entry.provenance_diagnostic={status:'WAITING_OR_INVALID_ARCHIVE',reason:e.code==='ENOENT'?'DATED_ARCHIVE_MISSING':e.message,raw_http_provenance_certified:false};}
+  }
+  if(id==='FMTQIK'){const staged=inspectStagedCandidate(root,date);entry.provenance_diagnostic.staged_candidate_status=staged.status;entry.provenance_diagnostic.direct_fetch_receipt_status=staged.receipt_status||null;if(staged.reason)entry.provenance_diagnostic.staged_candidate_reason=staged.reason;entry.provenance_diagnostic.raw_http_provenance_certified=false;}
   }
   return entry;
  });
