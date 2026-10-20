@@ -13,6 +13,8 @@ try{
   assert.deepEqual(result.source_artifacts.map(x=>x.name),['status.json','official-data-recovery-plan.json','official-data-manifest.json']);
   for(const artifact of result.source_artifacts)assert.equal(artifact.sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(dir,artifact.name))).digest('hex'));
   assert.equal(result.sentence_packet_source,null);
+  assert.equal(result.narration_candidate_review,null);
+  assert.equal(result.narration_candidate_source,null);
   assert.equal(result.dated_media_input.preflight_status,result.media_preflight.status);
   assert.equal(result.dated_media_input.target_date,result.media_preflight.target_date);
   assert.equal(result.dated_media_input.media_bridge_status,'NOT_IMPLEMENTED');
@@ -70,6 +72,16 @@ try{
  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  fs.appendFileSync(path.join(dir,'status.json'),' ');
  assert.ok(verifyEntry(dir).issues.includes('SOURCE_CHANGED:status.json'));
+ execute('.','20261013',dir);
+ const candidatePath=path.join(dir,'narration-candidate-input.json');
+ fs.writeFileSync(candidatePath,'{invalid json');
+ const badCandidate=execute('.','20261013',dir);
+ assert.equal(badCandidate.narration_candidate_review.status,'REJECTED');
+ assert.equal(badCandidate.narration_candidate_review.narration_authorized,false);
+ assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+ fs.appendFileSync(candidatePath,' ');
+ assert.ok(verifyEntry(dir).issues.includes('NARRATION_CANDIDATE_CHANGED'));
+ fs.rmSync(candidatePath);
  execute('.','20261013',dir);
  const handoff=path.join(dir,'verified-research-entry.json');
  assert.equal(JSON.parse(fs.readFileSync(handoff)).target_date,'20261013');
