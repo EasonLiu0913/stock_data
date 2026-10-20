@@ -7,6 +7,7 @@ const {inspect:inspectMedia}=require('./research_date_to_video_media_preflight_v
 const {advise}=require('./research_date_to_video_next_action_v1');
 const {verify:verifyEntry}=require('./research_date_to_video_verified_entry_verify_v1');
 const {inspectDirectory:inspectNarrationCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
+const {matches:matchesCandidateSentences}=require('./research_date_to_video_candidate_sentence_link_v1');
 const {build:buildDatedMediaInput,inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
 function execute(root,date,out){
  if(!/^20\d{6}$/.test(date||''))throw Error('INVALID_TARGET_DATE');
@@ -32,7 +33,7 @@ function execute(root,date,out){
  }
  if(sentenceHandoff?.candidate_sentences&&narrationCandidateReview?.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'){
   const packet=JSON.parse(fs.readFileSync(packetPath,'utf8')),candidate=JSON.parse(fs.readFileSync(candidatePath,'utf8'));
-  if(JSON.stringify(packet.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]]))!==JSON.stringify(candidate.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]]))){
+  if(!matchesCandidateSentences(packet,candidate)){
    narrationCandidateReview={...narrationCandidateReview,status:'REJECTED',issues:[...narrationCandidateReview.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
   }
  }
