@@ -14,6 +14,10 @@ for(const date of ['20261008','20261013']){
  assert.equal(recoveryPlan.target_date,date);
  assert.equal(recoveryPlan.manifest_sha256,officialManifest.manifest_sha256);
  assert.equal(recoveryPlan.sources.length,4);
+ assert.equal(r.official_recovery_advice.manifest_sha256,recoveryPlan.manifest_sha256);
+ assert.deepEqual(r.official_recovery_advice.sources,recoveryPlan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed})));
+ assert.equal(r.official_recovery_advice.render_authorized,false);
+ assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8')).official_recovery_advice,r.official_recovery_advice);
  assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,date==='20261013');
  assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').action_required,date==='20261008'?'REUSE_VERIFIED_ARCHIVE':'APPROVED_BOUNDED_RECOVERY_OR_WAIT');
  assert.ok(recoveryPlan.sources.filter(x=>x.id!=='BFI82U').every(x=>x.automated_retrieval_allowed===false));
