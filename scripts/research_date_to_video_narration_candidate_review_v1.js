@@ -7,7 +7,7 @@ const {validate:validateParity}=require('./research_date_to_video_sentence_parit
 function inspect(worksheet,datedInput,candidate){
  const issues=[];const check=(code,ok)=>{if(!ok)issues.push(code)};
  check('WORKSHEET_CONTRACT',worksheet?.contract==='DATE_TO_VIDEO_V1_RESEARCH_EDITORIAL_NARRATION_WORKSHEET');
- check('WORKSHEET_READY',Array.isArray(worksheet?.sections)&&worksheet.sections.length>0&&Array.isArray(worksheet.issues)&&!worksheet.issues.includes('DRAFT_STRUCTURAL_EVIDENCE_REQUIRED')&&!worksheet.issues.includes('DATED_MASTER_TASK_REQUIRED'));
+ check('WORKSHEET_READY',Array.isArray(worksheet?.sections)&&worksheet.sections.length>0&&Array.isArray(worksheet.issues)&&worksheet.issues.every(x=>x==='EDITORIAL_CERTIFICATION_REQUIRED'||x==='DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'));
  check('DATE_MATCH',typeof candidate?.target_date==='string'&&candidate.target_date===worksheet?.target_date&&candidate.target_date===datedInput?.target_date);
  check('MASTER_SHA_MATCH',typeof candidate?.source_master_sha256==='string'&&candidate.source_master_sha256===worksheet?.source_master_sha256&&candidate.source_master_sha256===datedInput?.source_master_sha256);
  check('WORKSHEET_SHA_MATCH',typeof candidate?.worksheet_sha256==='string'&&/^[a-f0-9]{64}$/.test(candidate.worksheet_sha256)&&candidate.worksheet_sha256===sha(worksheet));
