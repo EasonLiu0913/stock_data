@@ -27,3 +27,15 @@ assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,rationale:' 
 assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,decision:'PENDING'}]}),/INVALID_REVIEW_DECISION/);
 const rejectedDecision=review(inventory,{...base,decisions:[{claim_id:accepted.claim_id,decision:'REJECT',reviewer:'independent-editor',rationale:'Insufficient evidence'}]});assert.deepEqual(rejectedDecision.approved_claim_ids,[]);assert.equal(rejectedDecision.claim_whitelist_verified,false);assert.equal(rejectedDecision.editorial_certified,false);assert.equal(rejectedDecision.render_authorized,false);assert.equal(rejectedDecision.publication_authorized,false);
 assert.throws(()=>review(inventory,{...base,target_date:'20261013',decisions:[accepted]}),/REVIEW_DATE_MISMATCH/);
+
+// A dated candidate must never borrow a prior-date Master, inventory or review.
+for(const [name,changed] of Object.entries({master:{master:{...master,target_date:'20261013'}},inventory:{inventory:{...inventory,target_date:'20261013'}},review:{review:{...result,target_date:'20261013'}}})){
+ assert.throws(()=>preflight(candidate,changed.master||master,changed.inventory||inventory,changed.review||result),new RegExp('CANDIDATE_DATE_MISMATCH_'+name));
+}
+const unsourcedCandidate={...candidate,insights:[{id:'missing-master-evidence',evidence:[{type:'master_field',path:'taiex.unverified'}]}]};
+const unsourced=preflight(unsourcedCandidate,master,inventory,result);
+assert.equal(unsourced.status,'REVIEW_OR_EVIDENCE_PENDING');
+assert.equal(unsourced.invalid_master_fields.length,1);
+assert.equal(unsourced.render_authorized,false);
+assert.equal(unsourced.publication_authorized,false);
+console.log('D4_CANDIDATE_CROSS_DATE_AND_UNSOURCED_MASTER_FAIL_CLOSED_PASS');
