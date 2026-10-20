@@ -40,6 +40,12 @@ try{
  assert.equal(positive.sentence_handoff.narration_authorized,false);
  assert.equal(positive.render_authorized,false);
  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+ const previewTamperPath=path.join(dir,'verified-research-entry.json');
+ const previewTamper=JSON.parse(fs.readFileSync(previewTamperPath,'utf8'));
+ previewTamper.editorial_media_preview={status:'STRUCTURAL_PLANNING_PREVIEW_ONLY',render_authorized:true};
+ fs.writeFileSync(previewTamperPath,JSON.stringify(previewTamper));
+ assert.ok(verifyEntry(dir).issues.includes('UNEXPECTED_NARRATION_CANDIDATE_REVIEW_OR_PREVIEW'));
+ execute('.','20261013',dir);
  const packetPath=path.join(dir,'sentence-packet-input.json');
  fs.writeFileSync(packetPath,'{invalid json');
  const malformed=execute('.','20261013',dir);
