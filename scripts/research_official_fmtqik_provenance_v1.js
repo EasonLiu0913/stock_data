@@ -39,6 +39,7 @@ function inspectStagedCandidate(root,date){
    const receipt=JSON.parse(fs.readFileSync(receiptPath,'utf8'));
    const expected='https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date='+date+'&response=json';
    if(receipt.contract!=='FMTQIK_DIRECT_FETCH_RECEIPT_RESEARCH_V1'||receipt.target_date!==date||receipt.request_url!==expected||receipt.request_url!==m.source_url_unapproved||receipt.observed_at!==m.observed_at||receipt.http_status!==m.http_status||receipt.content_type!==m.content_type||receipt.response_sha256!==sha(bytes)||receipt.response_bytes!==bytes.length||receipt.capture_method!=='NODE_HTTPS_GET'||receipt.independently_attested!==false||receipt.source_contract_review_required!==true||['raw_http_provenance_certified','endpoint_approved','master_authorized','render_authorized','publication_authorized'].some(k=>receipt[k]!==false))throw Error('DIRECT_FETCH_RECEIPT_MISMATCH');
+   if(receipt.response_headers===undefined)throw Error('DIRECT_FETCH_RECEIPT_HEADERS_REQUIRED');
    if(receipt.response_headers!==undefined){const h=receipt.response_headers;if(!h||typeof h!=='object'||Array.isArray(h)||h['content-type']!==receipt.content_type||!Number.isFinite(Date.parse(receipt.request_started_at))||receipt.request_finished_at!==receipt.observed_at||Date.parse(receipt.request_started_at)>Date.parse(receipt.request_finished_at))throw Error('DIRECT_FETCH_RECEIPT_HEADERS_OR_TIMING_MISMATCH');}
    receiptStatus='DIRECT_FETCH_RECEIPT_MATCHES_STAGED_BYTES_UNATTESTED';
   }
