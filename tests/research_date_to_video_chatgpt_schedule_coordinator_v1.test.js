@@ -1,0 +1,12 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {decide}=require('../scripts/research_date_to_video_chatgpt_schedule_coordinator_v1');
+const date='20261013';
+const base=()=>({date,verification:{target_date:date,status:'VERIFIED_RESEARCH_ONLY'},recovery:{date,mode:'PLAN_ONLY_NO_DISPATCH',actions:[]},analysisTask:{target_date:date,status:'READY_FOR_EVIDENCE_GROUNDED_DRAFT'}});
+test('missing data suggests bounded recovery but never dispatches',()=>{const f=base();f.verification.status='MISSING';f.recovery.actions=[{decision:'DRY_RUN_CANDIDATE_ONLY',workflow_path:'.github/workflows/research.yml',fields:[{id:'BFI82U'}]}];const r=decide(f);assert.equal(r.stage,'RECOVERY_REVIEW_REQUIRED');assert.equal(r.automatic_dispatch_authorized,false);assert.equal(r.suggested_workflows.length,1)});
+test('verified sources yield ChatGPT analysis task',()=>{const r=decide(base());assert.equal(r.stage,'READY_FOR_SCRIPT');assert.equal(r.action,'GENERATE_ORIGINAL_ANALYSIS')});
+test('AI draft cannot self approve',()=>{const f=base();f.aiHandoff={target_date:date,status:'STRUCTURAL_PREFLIGHT_ONLY',candidate_sha256:'abc'};assert.equal(decide(f).stage,'SCRIPT_REVIEW_PENDING')});
+test('editorial mismatch rejects',()=>{const f=base();f.aiHandoff={target_date:date,status:'STRUCTURAL_PREFLIGHT_ONLY',candidate_sha256:'abc'};f.editorial={target_date:date,certified:true,narration_authorized:true,candidate_sha256:'other'};assert.equal(decide(f).stage,'SCRIPT_REJECTED')});
+test('editorial approval still requires separate video trigger review',()=>{const f=base();f.aiHandoff={target_date:date,status:'STRUCTURAL_PREFLIGHT_ONLY',candidate_sha256:'abc'};f.editorial={target_date:date,certified:true,narration_authorized:true,candidate_sha256:'abc'};const r=decide(f);assert.equal(r.stage,'READY_FOR_VIDEO');assert.equal(r.automatic_dispatch_authorized,false)});
+test('wrong date fails closed',()=>{const f=base();f.recovery.date='20261014';assert.throws(()=>decide(f),/DATE_MISMATCH_recovery/)});
+test('accepted video avoids duplicate work',()=>{const f=base();f.video={target_date:date,status:'ACCEPTED_RESEARCH_MP4',acceptance_verified:true};assert.equal(decide(f).stage,'VIDEO_COMPLETE')});
