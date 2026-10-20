@@ -23,3 +23,4 @@ const changed={...inventory,claims:[...inventory.claims,{claim_id:'20261008:1301
 console.log('D4_CANDIDATE_REVIEW_INVENTORY_BINDING_FAIL_CLOSED_PASS');
 
 assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,reviewer:' '}]}),/REVIEW_PROVENANCE_MISSING/);
+assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,rationale:' '}]}),/REVIEW_PROVENANCE_MISSING/);
