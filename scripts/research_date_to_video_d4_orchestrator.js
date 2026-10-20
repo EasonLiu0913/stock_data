@@ -152,7 +152,7 @@ function run(root,date,out){
   // Optional external audio inputs are read-only and never imply editorial or rendering approval.
   const audioInputs=['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json','narration-candidate.json'];
   if(audioInputs.some(name=>fs.existsSync(path.join(out,name)))){
-   try{const {inspectDirectory}=require('./research_date_to_video_audio_review_cli_v1');const audioReview=inspectDirectory(out);
+   try{const missingAudioInputs=audioInputs.filter(name=>!fs.existsSync(path.join(out,name)));if(missingAudioInputs.length){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:missingAudioInputs.map(name=>'D4_AUDIO_INPUT_MISSING:'+name),audio_verified:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}else{const {inspectDirectory}=require('./research_date_to_video_audio_review_cli_v1');const audioReview=inspectDirectory(out);
     const suppliedInventory=JSON.parse(fs.readFileSync(path.join(out,'sentence-audio-inventory.json'),'utf8'));
     const datedMedia=JSON.parse(fs.readFileSync(path.join(out,'dated-media-input.json'),'utf8'));
     const worksheet=JSON.parse(fs.readFileSync(path.join(out,'editorial-narration-worksheet.json'),'utf8'));
@@ -165,7 +165,7 @@ function run(root,date,out){
     if(suppliedInventory.worksheet_sha256!==hash(JSON.stringify(worksheet)))provenanceIssues.push('D4_AUDIO_WORKSHEET_SHA_MISMATCH');
     if(provenanceIssues.length){audioReview.issues.push(...provenanceIssues);audioReview.status='REJECTED';audioReview.audio_verified=false;}
     write('sentence-audio-review.json',audioReview);
-    if(audioReview.status==='REJECTED')result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');
+    if(audioReview.status==='REJECTED')result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
    }catch(e){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:['AUDIO_INPUT_INCOMPLETE_OR_INVALID'],reason:e.message,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
   }
  }catch(e){
