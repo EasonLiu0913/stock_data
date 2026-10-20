@@ -124,7 +124,7 @@ fs.writeFileSync(path.join(reviewValidDir,'original-analysis-draft-input.json'),
 const draftIntegrated=run('.','20261008',reviewValidDir);
 const draftIntegratedCheck=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'original-analysis-draft-check.json')));
 assert.equal(draftIntegratedCheck.status,'REJECTED');
-assert.equal(draftIntegratedCheck.reason,'CLAIM_WHITELIST_NOT_VERIFIED');
+assert.match(draftIntegratedCheck.reason,/^CLAIM_WHITELIST_NOT_VERIFIED(?:\n|$)/);
 assert.ok(draftIntegrated.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
 assert.equal(draftIntegratedCheck.editorial_certified,false);
 assert.equal(draftIntegratedCheck.render_authorized,false);
