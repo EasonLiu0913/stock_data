@@ -6,6 +6,7 @@ const {verify}=require('./research_date_to_video_recovery_status_verify_v1');
 const {inspect:inspectMedia}=require('./research_date_to_video_media_preflight_v1');
 const {advise}=require('./research_date_to_video_next_action_v1');
 const {verify:verifyEntry}=require('./research_date_to_video_verified_entry_verify_v1');
+const {inspectDirectory:inspectNarrationCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
 const {build:buildDatedMediaInput,inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
 function execute(root,date,out){
  if(!/^20\d{6}$/.test(date||''))throw Error('INVALID_TARGET_DATE');
@@ -22,9 +23,16 @@ function execute(root,date,out){
   try{sentenceHandoff=inspectSentencePacket(out,JSON.parse(packetBytes.toString('utf8')));}
   catch(e){sentenceHandoff={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
  }
+ const candidatePath=path.join(out,'narration-candidate-input.json');
+ let narrationCandidateReview=null,narrationCandidateSha256=null;
+ if(fs.existsSync(candidatePath)){
+  const bytes=fs.readFileSync(candidatePath);narrationCandidateSha256=crypto.createHash('sha256').update(bytes).digest('hex');
+  try{narrationCandidateReview=inspectNarrationCandidate(out,JSON.parse(bytes.toString('utf8')));}
+  catch(e){narrationCandidateReview={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+ }
  const source_files=['status.json','official-data-recovery-plan.json','official-data-manifest.json'];
  const source_artifacts=source_files.map(name=>({name,sha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(out,name))).digest('hex')}));
- const result={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:date,research_only:true,d4_status:d4.stages?.[0]?.status||'UNKNOWN',verification_status:verification.status,verification_issues:verification.issues,blockers:d4.blockers,source_artifacts,media_preflight:{status:media.status,issues:media.issues,target_date:media.target_date},sentence_handoff:sentenceHandoff,sentence_packet_source:sentencePacketSha256?{name:'sentence-packet-input.json',sha256:sentencePacketSha256}:null,dated_media_input:{target_date:datedMedia.target_date,media_bridge_status:datedMedia.media_bridge_status,preflight_status:datedMedia.preflight_status,source_master_sha256:datedMedia.source_master_sha256,analysis_task_sha256:datedMedia.analysis_task_sha256,blockers:datedMedia.blockers},next_action:advise(d4,verification,media,sentenceHandoff),automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
+ const result={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:date,research_only:true,d4_status:d4.stages?.[0]?.status||'UNKNOWN',verification_status:verification.status,verification_issues:verification.issues,blockers:d4.blockers,source_artifacts,media_preflight:{status:media.status,issues:media.issues,target_date:media.target_date},sentence_handoff:sentenceHandoff,sentence_packet_source:sentencePacketSha256?{name:'sentence-packet-input.json',sha256:sentencePacketSha256}:null,narration_candidate_review:narrationCandidateReview,narration_candidate_source:narrationCandidateSha256?{name:'narration-candidate-input.json',sha256:narrationCandidateSha256}:null,dated_media_input:{target_date:datedMedia.target_date,media_bridge_status:datedMedia.media_bridge_status,preflight_status:datedMedia.preflight_status,source_master_sha256:datedMedia.source_master_sha256,analysis_task_sha256:datedMedia.analysis_task_sha256,blockers:datedMedia.blockers},next_action:advise(d4,verification,media,sentenceHandoff),automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
  fs.writeFileSync(path.join(out,'verified-research-entry.json'),JSON.stringify(result,null,2)+'\n');
  const integrity=verifyEntry(out);
  if(integrity.status!=='VERIFIED_RESEARCH_ONLY'){
