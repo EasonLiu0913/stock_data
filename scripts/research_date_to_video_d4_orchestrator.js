@@ -22,7 +22,7 @@ function run(root,date,out){
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
  // A repeated run must not expose artifacts from an earlier date or earlier approval state.
  // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
- const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json'];
+ const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json','sentence-audio-review.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json'];
  for(const name of generated){const file=path.join(out,name);if(fs.existsSync(file))fs.unlinkSync(file)}
  const officialManifest=buildOfficialManifest(root,date);
  const officialGate=gateOfficialManifest(root,date,officialManifest);
@@ -149,6 +149,14 @@ function run(root,date,out){
   write('evidence-join.json',joined);write('claims.json',claims);write('institutional-evidence.json',institutional);write('breadth-evidence.json',breadth);write('editorial-review.json',gate);
   write('dated-media-input.json',buildDatedMediaInput(out));
   write('editorial-narration-worksheet.json',prepareEditorialNarration(out));
+  // Optional external audio inputs are read-only and never imply editorial or rendering approval.
+  const audioInputs=['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json'];
+  if(audioInputs.some(name=>fs.existsSync(path.join(out,name)))){
+   try{const {inspectDirectory}=require('./research_date_to_video_audio_review_cli_v1');const audioReview=inspectDirectory(out);
+    write('sentence-audio-review.json',audioReview);
+    if(audioReview.status==='REJECTED')result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');
+   }catch(e){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:['AUDIO_INPUT_INCOMPLETE_OR_INVALID'],reason:e.message,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
+  }
  }catch(e){
   result.stages[0].status='WAITING_SOURCE';result.blockers.push('D4_JOIN_REJECTED:'+e.message);
  }
