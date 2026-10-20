@@ -21,3 +21,5 @@ const current=preflight(candidate,master,inventory,result);assert.equal(current.
 assert.throws(()=>preflight(candidate,master,inventory,{...result,inventory_sha256:'stale'}),/CANDIDATE_REVIEW_INVENTORY_SHA_MISMATCH/);
 const changed={...inventory,claims:[...inventory.claims,{claim_id:'20261008:1301:PRICE_CHANGE',kind:'PRICE_CHANGE',evidence_sources:[]}]};assert.throws(()=>preflight(candidate,master,changed,result),/CANDIDATE_REVIEW_INVENTORY_SHA_MISMATCH/);
 console.log('D4_CANDIDATE_REVIEW_INVENTORY_BINDING_FAIL_CLOSED_PASS');
+
+assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,reviewer:' '}]}),/REVIEW_PROVENANCE_MISSING/);
