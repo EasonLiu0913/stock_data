@@ -14,14 +14,16 @@ function execute(root,date,out){
  const d4=run(root,date,out),verification=verify(out),media=inspectMedia(out),datedMedia=buildDatedMediaInput(out);
  if(datedMedia.target_date!==null&&datedMedia.target_date!==date)throw Error('DATED_MEDIA_INPUT_DATE_MISMATCH');
  const packetPath=path.join(out,'sentence-packet-input.json');
- let sentenceHandoff=null;
+ let sentenceHandoff=null,sentencePacketSha256=null;
  if(fs.existsSync(packetPath)){
-  try{sentenceHandoff=inspectSentencePacket(out,JSON.parse(fs.readFileSync(packetPath,'utf8')));}
+  const packetBytes=fs.readFileSync(packetPath);
+  sentencePacketSha256=crypto.createHash('sha256').update(packetBytes).digest('hex');
+  try{sentenceHandoff=inspectSentencePacket(out,JSON.parse(packetBytes.toString('utf8')));}
   catch(e){sentenceHandoff={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
  }
  const source_files=['status.json','official-data-recovery-plan.json','official-data-manifest.json'];
  const source_artifacts=source_files.map(name=>({name,sha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(out,name))).digest('hex')}));
- const result={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:date,research_only:true,d4_status:d4.stages?.[0]?.status||'UNKNOWN',verification_status:verification.status,verification_issues:verification.issues,blockers:d4.blockers,source_artifacts,media_preflight:{status:media.status,issues:media.issues,target_date:media.target_date},sentence_handoff:sentenceHandoff,dated_media_input:{target_date:datedMedia.target_date,media_bridge_status:datedMedia.media_bridge_status,preflight_status:datedMedia.preflight_status,source_master_sha256:datedMedia.source_master_sha256,analysis_task_sha256:datedMedia.analysis_task_sha256,blockers:datedMedia.blockers},next_action:advise(d4,verification,media,sentenceHandoff),automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
+ const result={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:date,research_only:true,d4_status:d4.stages?.[0]?.status||'UNKNOWN',verification_status:verification.status,verification_issues:verification.issues,blockers:d4.blockers,source_artifacts,media_preflight:{status:media.status,issues:media.issues,target_date:media.target_date},sentence_handoff:sentenceHandoff,sentence_packet_source:sentencePacketSha256?{name:'sentence-packet-input.json',sha256:sentencePacketSha256}:null,dated_media_input:{target_date:datedMedia.target_date,media_bridge_status:datedMedia.media_bridge_status,preflight_status:datedMedia.preflight_status,source_master_sha256:datedMedia.source_master_sha256,analysis_task_sha256:datedMedia.analysis_task_sha256,blockers:datedMedia.blockers},next_action:advise(d4,verification,media,sentenceHandoff),automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
  fs.writeFileSync(path.join(out,'verified-research-entry.json'),JSON.stringify(result,null,2)+'\n');
  return result;
 }
