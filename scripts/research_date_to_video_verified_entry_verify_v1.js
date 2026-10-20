@@ -1,6 +1,7 @@
 'use strict';
 // Independent research handoff integrity check. Never grants downstream authorization.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const {inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 function verify(dir){
  const entry=JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'),'utf8'));
@@ -16,6 +17,12 @@ function verify(dir){
  const packet=path.join(dir,'sentence-packet-input.json'),record=entry.sentence_packet_source;
  if(fs.existsSync(packet)!==!!record)issues.push('SENTENCE_PACKET_PRESENCE_CHANGED');
  else if(record&&(record.name!=='sentence-packet-input.json'||sha(fs.readFileSync(packet))!==record.sha256))issues.push('SENTENCE_PACKET_CHANGED');
+ if(fs.existsSync(packet)){
+  let expected;
+  try{expected=inspectSentencePacket(dir,JSON.parse(fs.readFileSync(packet,'utf8')));}
+  catch(e){expected={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(JSON.stringify(expected)!==JSON.stringify(entry.sentence_handoff))issues.push('SENTENCE_HANDOFF_REVALIDATION_MISMATCH');
+ }else if(entry.sentence_handoff!==null)issues.push('UNEXPECTED_SENTENCE_HANDOFF');
  if(entry.sentence_handoff?.target_date!==undefined&&entry.sentence_handoff.target_date!==date)issues.push('SENTENCE_HANDOFF_DATE_MISMATCH');
  for(const key of ['automatic_dispatch_authorized','tts_authorized','render_authorized','publication_authorized'])if(entry[key]!==false)issues.push('AUTHORIZATION_LOCK_INVALID:'+key);
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_ENTRY_INTEGRITY',target_date:date,status:issues.length?'REJECTED':'VERIFIED_RESEARCH_ONLY',issues,research_only:true,automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
