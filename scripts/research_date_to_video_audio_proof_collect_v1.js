@@ -11,6 +11,7 @@ function checkAudioSet(audioDir,commands){
  const expectedNames=new Set(commands.map(c=>c.output_file)),actualNames=fs.readdirSync(audioDir);
  if(actualNames.length!==expectedNames.size||actualNames.some(name=>!expectedNames.has(name)))throw Error('AUDIO_FILE_SET_MISMATCH');
 }
+function checkSentence(source,command){if(!source||source.id!==command.sentence_id||source.order!==command.order||source.spoken_text!==command.argv[6])throw Error('AUDIO_SENTENCE_PLAN_MISMATCH_'+command.output_file);}
 function collect(dir,probe=cp.spawnSync){
  const read=name=>JSON.parse(fs.readFileSync(path.join(dir,name),'utf8'));
  const inventory=read('sentence-audio-inventory.json'),commands=read('edge-tts-command-plan.json'),expected=plan(inventory);
@@ -29,7 +30,7 @@ function collect(dir,probe=cp.spawnSync){
   const info=JSON.parse(result.stdout),duration=Number(info?.format?.duration);
   if(!info?.streams?.some(s=>s.codec_name==='mp3')||!Number.isFinite(duration)||duration<=0.1||duration>=120)throw Error('AUDIO_CODEC_OR_DURATION_INVALID_'+name);
   const source=inventory.sentences[c.order-1];
-  if(!source||source.id!==c.sentence_id||source.order!==c.order||source.spoken_text!==c.argv[6])throw Error('AUDIO_SENTENCE_PLAN_MISMATCH_'+name);
+  checkSentence(source,c);
   sentences.push({id:source.id,order:source.order,spoken_text:source.spoken_text,caption_text:source.caption_text,audio_file:name,duration_seconds:duration,audio_sha256:sha(fs.readFileSync(file))});
  }
  const proof={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_AUDIO_PROOF',target_date:inventory.target_date,candidate_sha256:inventory.candidate_sha256,voice:inventory.voice,rate:inventory.rate,sentences,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
@@ -38,4 +39,4 @@ function collect(dir,probe=cp.spawnSync){
  return {proof,review};
 }
 if(require.main===module){const dir=process.argv[2];if(!dir){console.error('Usage: node scripts/research_date_to_video_audio_proof_collect_v1.js D4-output-dir');process.exitCode=2;}else try{const result=collect(dir);const file=path.join(dir,'sentence-audio-proof.json');fs.writeFileSync(file,JSON.stringify(result.proof,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(result.review,null,2));}catch(e){console.error('AUDIO_PROOF_COLLECTION_ERROR: '+e.message);process.exitCode=1;}}
-module.exports={collect,checkAudioSet};
+module.exports={collect,checkAudioSet,checkSentence};
