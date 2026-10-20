@@ -22,3 +22,5 @@ test('D4 verified sources permit original analysis but not dispatch',()=>{const 
 test('D4 recovery date mismatch rejects',()=>{const d4={target_date:date,official_recovery_advice:{target_date:'20261014',sources:[]}};assert.throws(()=>fromD4(date,d4,base().analysisTask),/D4_RECOVERY_DATE_MISMATCH/)});
 
 test('D4 directory rejects absent status',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-missing-'));try{assert.throws(()=>fromD4Directory(date,dir),/D4_STATUS_REQUIRED/)}finally{fs.rmSync(dir,{recursive:true,force:true})}});
+
+test('D4 directory blocks script without evidence files',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-evidence-'));try{fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify({contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,official_recovery_advice:{target_date:date,sources:[{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}]}}));fs.writeFileSync(path.join(dir,'original-analysis-task.json'),JSON.stringify(base().analysisTask));assert.equal(fromD4Directory(date,dir).reason,'D4_EVIDENCE_FILES_REQUIRED')}finally{fs.rmSync(dir,{recursive:true,force:true})}});
