@@ -34,6 +34,7 @@ function fromD4(date,d4,analysisTask){
  const advice=d4.official_recovery_advice;
  assert.equal(advice?.target_date,date,'D4_RECOVERY_DATE_MISMATCH');
  assert.ok(Array.isArray(advice.sources),'D4_RECOVERY_SOURCES_REQUIRED');
+ assert.deepEqual([...advice.sources.map(s=>s.id)].sort(),['BFI82U','BFIAMU','FMTQIK','MI_INDEX'].sort(),'D4_REQUIRED_SOURCE_SET_MISMATCH');
  const missing=advice.sources.filter(s=>s.status!=='VERIFIED_RESEARCH_ONLY'||s.action_required!=='REUSE_VERIFIED_ARCHIVE');
  const recovery={date,mode:'PLAN_ONLY_NO_DISPATCH',status:missing.length?'BLOCKED':'NO_GAPS_REQUIRES_EDITORIAL_GATE',actions:missing.map(s=>({decision:'BLOCKED',workflow_path:null,fields:[{id:s.id,status:s.status}],reason:s.action_required,automated_retrieval_allowed:s.automated_retrieval_allowed===true}))};
  return decide({date,verification:{target_date:date,status:missing.length?'MISSING':'VERIFIED_RESEARCH_ONLY'},recovery,analysisTask});
