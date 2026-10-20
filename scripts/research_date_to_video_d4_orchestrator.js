@@ -169,7 +169,7 @@ function run(root,date,out){
     if(provenanceIssues.length){audioReview.issues.push(...provenanceIssues);audioReview.status='REJECTED';audioReview.audio_verified=false;}
     write('sentence-audio-review.json',audioReview);
     if(audioReview.status==='REJECTED')result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
-   }catch(e){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:['AUDIO_INPUT_INCOMPLETE_OR_INVALID'],reason:e.message,audio_verified:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
+   }catch(e){write('sentence-audio-review.json',{contract:'DATE_TO_VIDEO_V1_RESEARCH_PLANNED_SENTENCE_AUDIO_REVIEW',target_date:date,status:'REJECTED',issues:['D4_AUDIO_INPUT_INVALID_JSON_OR_REVIEW_ERROR'],reason:e.message,audio_verified:false,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false});result.blockers.push('DATED_SENTENCE_AUDIO_REVIEW_REJECTED');}
   }
  }catch(e){
   result.stages[0].status='WAITING_SOURCE';result.blockers.push('D4_JOIN_REJECTED:'+e.message);
