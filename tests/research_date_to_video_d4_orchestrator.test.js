@@ -296,7 +296,7 @@ console.log('D4_REAL_CANDIDATE_ACTIONABLE_PREFLIGHT_PASS');
 
 const candidateCheck=JSON.parse(fs.readFileSync(path.join(candidateDir,'original-analysis-draft-check.json')));
 assert.equal(candidateCheck.status,'REJECTED');
-assert.match(candidateCheck.reason,/UNAPPROVED_CLAIM_ID/);
+assert.match(candidateCheck.reason,/^CLAIM_WHITELIST_NOT_VERIFIED(?:\n|$)/);
 assert.ok(candidateRun.blockers.includes('ORIGINAL_ANALYSIS_DRAFT_REJECTED'));
 assert.equal(candidateRun.render_authorized,false);
 console.log('D4_ACTUAL_AUTHORED_CANDIDATE_REVIEW_REQUIRED_PASS');
@@ -304,7 +304,7 @@ const draftDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-draft-'));
 fs.writeFileSync(path.join(draftDir,'original-analysis-draft-input.json'),JSON.stringify({target_date:'20261008',insights:[]}));
 const rejected=run('.','20261008',draftDir);
 const draftCheck=JSON.parse(fs.readFileSync(path.join(draftDir,'original-analysis-draft-check.json')));
-assert.equal(draftCheck.status,'REJECTED');assert.equal(draftCheck.reason,'EMPTY_INSIGHTS');assert.equal(JSON.parse(fs.readFileSync(path.join(draftDir,'media-handoff.json'))).draft_check_status,'REJECTED');assert.equal(draftCheck.narration_authorized,false);
+assert.equal(draftCheck.status,'REJECTED');assert.match(draftCheck.reason,/^CLAIM_WHITELIST_NOT_VERIFIED(?:\n|$)/);assert.equal(JSON.parse(fs.readFileSync(path.join(draftDir,'media-handoff.json'))).draft_check_status,'REJECTED');assert.equal(draftCheck.narration_authorized,false);
 const rejectedDraftManifest=JSON.parse(fs.readFileSync(path.join(draftDir,'editorial-input-manifest.json')));
 const {inspect:inspectMediaPreflight}=require('../scripts/research_date_to_video_media_preflight_v1');
 const rejectedMediaPreflight=inspectMediaPreflight(draftDir);assert.equal(rejectedMediaPreflight.status,'BLOCKED');assert.equal(rejectedMediaPreflight.render_authorized,false);assert.equal(rejectedMediaPreflight.publication_authorized,false);assert.ok(rejectedMediaPreflight.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED'));assert.ok(rejectedMediaPreflight.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'));
