@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {build}=require('../scripts/research_date_to_video_editorial_media_preview_v1');
+const {inspect:reviewCandidate}=require('../scripts/research_date_to_video_narration_candidate_review_v1');
 const crypto=require('node:crypto');const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const entry={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:'20261013',narration_candidate_review:{status:'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'},narration_candidate_source:{sha256:'a'.repeat(64)},dated_media_input:{source_master_sha256:'b'}};
 const worksheet={target_date:'20261013',source_master_sha256:'b',sections:[{insight_id:'i1',section:'market',observation:'上漲',interpretation:'觀察',uncertainty:'風險',evidence:['source']}]};
@@ -26,4 +27,17 @@ const duplicate={...candidate,sentences:[...candidate.sentences,{...candidate.se
 assert.ok(build(reviewed(duplicate),duplicate,worksheet).issues.includes('SENTENCE_IDS_UNIQUE'));
 const duplicateWorksheet={...worksheet,sections:[...worksheet.sections,{...worksheet.sections[0]}]};
 assert.ok(build(reviewed(candidate,duplicateWorksheet),candidate,duplicateWorksheet).issues.includes('INSIGHT_IDS_UNIQUE'));
+// Positive handoff: the actual candidate reviewer must accept the same inputs used by the preview.
+const dated={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_INPUT_V1',target_date:'20261013',source_master_sha256:'b',fixed_opening_lines:require('../scripts/research_date_to_video_fixed_opening_v1').FIXED_OPENING_LINES};
+const fullWorksheet={...worksheet,contract:'DATE_TO_VIDEO_V1_RESEARCH_EDITORIAL_NARRATION_WORKSHEET',draft_sha256:'c'.repeat(64),issues:['EDITORIAL_CERTIFICATION_REQUIRED']};
+const fixed=dated.fixed_opening_lines.map((line,i)=>({id:'opening'+i,narration:line,subtitle:line}));
+const fullCandidate={...candidate,worksheet_sha256:sha(fullWorksheet),draft_sha256:fullWorksheet.draft_sha256,sentences:[...fixed,candidate.sentences[4]]};
+const actualReview=reviewCandidate(fullWorksheet,dated,fullCandidate);
+assert.equal(actualReview.status,'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED',JSON.stringify(actualReview.issues));
+const planned=build({...entry,narration_candidate_review:actualReview},fullCandidate,fullWorksheet);
+assert.equal(planned.status,'STRUCTURAL_PLANNING_PREVIEW_ONLY',JSON.stringify(planned.issues));
+assert.deepEqual(planned.narration_plan.map(x=>x.text),fullCandidate.sentences.map(x=>x.narration));
+assert.deepEqual(planned.subtitle_plan.map(x=>x.text),fullCandidate.sentences.map(x=>x.subtitle));
+assert.deepEqual(planned.scene_plan[0].sentence_ids,['market1']);
+assert.equal(planned.editorial_certified,false);assert.equal(planned.tts_authorized,false);assert.equal(planned.render_authorized,false);
 console.log('D4_EDITORIAL_MEDIA_PLANNING_PREVIEW_FAIL_CLOSED_PASS');
