@@ -30,6 +30,7 @@ function inspectStagedCandidate(root,date){
   const bytes=fs.readFileSync(raw),m=JSON.parse(fs.readFileSync(file,'utf8')),candidate=inspectCandidate(bytes,date);
   if(m.contract!=='FMTQIK_STAGED_HTTP_CANDIDATE_V1'||m.target_date!==date||m.sha256!==sha(bytes)||m.bytes!==bytes.length)throw Error('CANDIDATE_MANIFEST_INTEGRITY_MISMATCH');
   if(candidate.status!=='CANDIDATE_TABLE_SHAPE_ONLY_CONTRACT_REVIEW_REQUIRED'||JSON.stringify(m.candidate_inspection)!==JSON.stringify(candidate))throw Error('CANDIDATE_INSPECTION_MISMATCH');
+  if(m.source_url_unapproved!=='https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date='+date+'&response=json')throw Error('CANDIDATE_DATED_SOURCE_URL_MISMATCH');
   if(m.http_status!==200||!/^application\/json\b/i.test(m.content_type||''))throw Error('CANDIDATE_HTTP_METADATA_MISMATCH');
   if(m.http_metadata_evidence!=='CALLER_SUPPLIED_UNVERIFIED'||m.endpoint_approved!==false||m.raw_http_provenance_certified!==false||m.master_authorized!==false||m.render_authorized!==false||m.publication_authorized!==false)throw Error('CANDIDATE_AUTHORIZATION_STATE_MISMATCH');
   const receiptPath=path.join(dir,'direct-fetch-receipt.json');
