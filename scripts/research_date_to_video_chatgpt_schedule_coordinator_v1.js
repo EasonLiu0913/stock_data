@@ -54,6 +54,8 @@ function fromD4Directory(date,dir){
   if(!task||!master||!claims)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_FILES_REQUIRED'};
   if(master.target_date!==date||claims.target_date!==date)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_DATE_MISMATCH'};
   if(!task.market_master_sha256||!task.claim_inventory_sha256)return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_SHA_REQUIRED'};
+  const digest=value=>require('node:crypto').createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  if(task.market_master_sha256!==digest(master)||task.claim_inventory_sha256!==digest(claims))return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_EVIDENCE_SHA_MISMATCH'};
  }
  return decision;
 }
