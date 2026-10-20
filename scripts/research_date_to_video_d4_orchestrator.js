@@ -150,13 +150,16 @@ function run(root,date,out){
   write('dated-media-input.json',buildDatedMediaInput(out));
   write('editorial-narration-worksheet.json',prepareEditorialNarration(out));
   // Optional external audio inputs are read-only and never imply editorial or rendering approval.
-  const audioInputs=['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json'];
+  const audioInputs=['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json','narration-candidate.json'];
   if(audioInputs.some(name=>fs.existsSync(path.join(out,name)))){
    try{const {inspectDirectory}=require('./research_date_to_video_audio_review_cli_v1');const audioReview=inspectDirectory(out);
     const suppliedInventory=JSON.parse(fs.readFileSync(path.join(out,'sentence-audio-inventory.json'),'utf8'));
     const datedMedia=JSON.parse(fs.readFileSync(path.join(out,'dated-media-input.json'),'utf8'));
     const worksheet=JSON.parse(fs.readFileSync(path.join(out,'editorial-narration-worksheet.json'),'utf8'));
     const provenanceIssues=[];
+    const candidatePath=path.join(out,'narration-candidate.json');
+    if(!fs.existsSync(candidatePath))provenanceIssues.push('D4_AUDIO_NARRATION_CANDIDATE_REQUIRED');
+    else{const candidate=JSON.parse(fs.readFileSync(candidatePath,'utf8'));const {inspectDirectory:inspectCandidate}=require('./research_date_to_video_narration_candidate_review_v1');const candidateReview=inspectCandidate(out,candidate);if(candidateReview.status!=='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED')provenanceIssues.push('D4_AUDIO_NARRATION_CANDIDATE_REJECTED');if(suppliedInventory.candidate_sha256!==hash(JSON.stringify(candidate)))provenanceIssues.push('D4_AUDIO_CANDIDATE_SHA_MISMATCH');}
     if(suppliedInventory.target_date!==date)provenanceIssues.push('D4_AUDIO_DATE_MISMATCH');
     if(suppliedInventory.source_master_sha256!==datedMedia.source_master_sha256)provenanceIssues.push('D4_AUDIO_MASTER_SHA_MISMATCH');
     if(suppliedInventory.worksheet_sha256!==hash(JSON.stringify(worksheet)))provenanceIssues.push('D4_AUDIO_WORKSHEET_SHA_MISMATCH');
