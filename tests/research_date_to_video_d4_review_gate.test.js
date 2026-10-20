@@ -25,3 +25,4 @@ console.log('D4_CANDIDATE_REVIEW_INVENTORY_BINDING_FAIL_CLOSED_PASS');
 assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,reviewer:' '}]}),/REVIEW_PROVENANCE_MISSING/);
 assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,rationale:' '}]}),/REVIEW_PROVENANCE_MISSING/);
 assert.throws(()=>review(inventory,{...base,decisions:[{...accepted,decision:'PENDING'}]}),/INVALID_REVIEW_DECISION/);
+const rejectedDecision=review(inventory,{...base,decisions:[{claim_id:accepted.claim_id,decision:'REJECT',reviewer:'independent-editor',rationale:'Insufficient evidence'}]});assert.deepEqual(rejectedDecision.approved_claim_ids,[]);assert.equal(rejectedDecision.claim_whitelist_verified,false);assert.equal(rejectedDecision.editorial_certified,false);assert.equal(rejectedDecision.render_authorized,false);assert.equal(rejectedDecision.publication_authorized,false);
