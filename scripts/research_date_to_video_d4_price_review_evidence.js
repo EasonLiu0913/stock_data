@@ -15,7 +15,7 @@ function inspect(root,date,codes){
  const flow=Object.fromEntries(['foreign','trust','dealer'].map(k=>{const j=JSON.parse(sourceBytes[k].bytes);assert.equal(j.date,date,'FLOW_DATE_MISMATCH_'+k);assert.equal(j.stat,'OK','FLOW_STATUS_INVALID_'+k);return [k,j]}));
  const num=x=>{const n=Number(String(x).replaceAll(',',''));assert.ok(Number.isFinite(n),'INVALID_FLOW_NUMBER');return n};
  const unique=(rows,code,k)=>{const matches=rows.filter(a=>String(a[k]).trim()===code);assert.equal(matches.length,1,'FLOW_STOCK_NOT_UNIQUE_'+code);return matches[0]};
- const csvRows=sourceBytes.margin.bytes.toString('utf8').split(/\\r?\\n/);
+ const csvRows=sourceBytes.margin.bytes.toString('utf8').split(/\r?\n/);
  const csvCols=line=>[...line.matchAll(/(?:^|,)(?:"([^"]*)"|([^,]*))/g)].map(m=>m[1]??m[2]);
  const sourceMeta=Object.fromEntries(Object.entries(sourceBytes).map(([k,v])=>[k,{path:v.path,sha256:sha(v.bytes)}]));
  const stocks=codes.map(code=>{
