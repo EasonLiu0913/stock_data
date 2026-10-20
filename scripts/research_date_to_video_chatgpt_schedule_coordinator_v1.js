@@ -36,7 +36,7 @@ if(require.main===module){
   const bundle=JSON.parse(fs.readFileSync(inputPath,'utf8'));
   assert.equal(bundle.date,date,'BUNDLE_DATE_MISMATCH');
   const decision=decide(bundle);
-  fs.writeFileSync(outputPath,JSON.stringify(decision,null,2)+'\\n',{flag:'wx'});
+  fs.writeFileSync(outputPath,JSON.stringify(decision,null,2)+'\n',{flag:'wx'});
   console.log(JSON.stringify({target_date:date,stage:decision.stage,action:decision.action,automatic_dispatch_authorized:false}));
  }catch(e){console.error(e.message);process.exitCode=1;}
 }
