@@ -30,6 +30,12 @@ function execute(root,date,out){
   try{narrationCandidateReview=inspectNarrationCandidate(out,JSON.parse(bytes.toString('utf8')));}
   catch(e){narrationCandidateReview={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
  }
+ if(sentenceHandoff?.candidate_sentences&&narrationCandidateReview?.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'){
+  const packet=JSON.parse(fs.readFileSync(packetPath,'utf8')),candidate=JSON.parse(fs.readFileSync(candidatePath,'utf8'));
+  if(JSON.stringify(packet.sentences)!==JSON.stringify(candidate.sentences)){
+   narrationCandidateReview={...narrationCandidateReview,status:'REJECTED',issues:[...narrationCandidateReview.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
+  }
+ }
  const source_files=['status.json','official-data-recovery-plan.json','official-data-manifest.json'];
  const source_artifacts=source_files.map(name=>({name,sha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(out,name))).digest('hex')}));
  const result={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:date,research_only:true,d4_status:d4.stages?.[0]?.status||'UNKNOWN',verification_status:verification.status,verification_issues:verification.issues,blockers:d4.blockers,source_artifacts,media_preflight:{status:media.status,issues:media.issues,target_date:media.target_date},sentence_handoff:sentenceHandoff,sentence_packet_source:sentencePacketSha256?{name:'sentence-packet-input.json',sha256:sentencePacketSha256}:null,narration_candidate_review:narrationCandidateReview,narration_candidate_source:narrationCandidateSha256?{name:'narration-candidate-input.json',sha256:narrationCandidateSha256}:null,dated_media_input:{target_date:datedMedia.target_date,media_bridge_status:datedMedia.media_bridge_status,preflight_status:datedMedia.preflight_status,source_master_sha256:datedMedia.source_master_sha256,analysis_task_sha256:datedMedia.analysis_task_sha256,blockers:datedMedia.blockers},next_action:advise(d4,verification,media,sentenceHandoff,narrationCandidateReview),automatic_dispatch_authorized:false,tts_authorized:false,render_authorized:false,publication_authorized:false};
