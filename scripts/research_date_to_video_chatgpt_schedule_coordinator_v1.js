@@ -1,6 +1,7 @@
 'use strict';
 // ChatGPT scheduled-task decision contract. Pure research planner; never dispatches or approves publication.
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
 function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,video}){
  assert.match(date||'',/^20\d{6}$/,'INVALID_DATE');
  for(const [name,item] of Object.entries({verification,recovery,analysisTask,aiHandoff,editorial,video})){
@@ -26,5 +27,17 @@ function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,vid
  if(editorial?.certified!==true||editorial?.narration_authorized!==true)return output('SCRIPT_REVIEW_PENDING','INDEPENDENT_EDITORIAL_REVIEW','AI_CANDIDATE_IS_NOT_APPROVAL');
  if(editorial?.candidate_sha256!==aiHandoff.candidate_sha256)return output('SCRIPT_REJECTED','REVIEW_CANDIDATE','EDITORIAL_CANDIDATE_SHA_MISMATCH');
  return output('READY_FOR_VIDEO','REVIEW_RESEARCH_VIDEO_TRIGGER','SEPARATE_MEDIA_PREFLIGHT_AND_DISPATCH_AUTHORIZATION_REQUIRED');
+}
+// Date-scoped JSON handoff for a ChatGPT scheduled task; input is an existing, local evidence bundle.
+if(require.main===module){
+ const [date,inputPath,outputPath,...extra]=process.argv.slice(2);
+ if(extra.length||!date||!inputPath||!outputPath){console.error('Usage: node scripts/research_date_to_video_chatgpt_schedule_coordinator_v1.js YYYYMMDD evidence-bundle.json decision.json');process.exitCode=2;}
+ else try{
+  const bundle=JSON.parse(fs.readFileSync(inputPath,'utf8'));
+  assert.equal(bundle.date,date,'BUNDLE_DATE_MISMATCH');
+  const decision=decide(bundle);
+  fs.writeFileSync(outputPath,JSON.stringify(decision,null,2)+'\\n',{flag:'wx'});
+  console.log(JSON.stringify({target_date:date,stage:decision.stage,action:decision.action,automatic_dispatch_authorized:false}));
+ }catch(e){console.error(e.message);process.exitCode=1;}
 }
 module.exports={decide};
