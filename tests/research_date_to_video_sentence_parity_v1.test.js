@@ -8,7 +8,7 @@ let result=validate(packet,input);assert.equal(result.status,'STRUCTURAL_PARITY_
 result=validate({...packet,target_date:'20261008'},input);assert.ok(result.issues.includes('DATE_MATCH'));
 result=validate({...packet,source_master_sha256:'other'},input);assert.ok(result.issues.includes('MASTER_SHA_MATCH'));
 result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===4?{...s,subtitle:'不同字幕'}:s)},input);assert.ok(result.issues.includes('PARITY_4'));
-result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===3?{...s,narration:'那麼我們開始囉。',subtitle:'那麼我們開始囉。'}:s)},input);assert.ok(result.issues.includes('OPENING_3'));
+result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===3?{...s,narration:'我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。',subtitle:'我們有提供中文 CC 字幕，記得打開觀賞，那我們開始囉。'}:s)},input);assert.ok(result.issues.includes('OPENING_3'));
 result=validate({...packet,sentences:packet.sentences.map((s,i)=>i===4?{...s,id:'s0'}:s)},input);assert.ok(result.issues.includes('SENTENCE_ID_4'));
 
 const mapped={...packet,sentences:packet.sentences.map((s,i)=>i===4?{...s,narration:'十月十三日上漲五％。',subtitle:'10/13上漲5%。',spoken_subtitle_mappings:[{spoken:'十月十三日',display:'10/13'},{spoken:'五％',display:'5%'}]}:s)};
