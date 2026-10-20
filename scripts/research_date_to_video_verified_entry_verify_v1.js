@@ -33,8 +33,10 @@ function verify(dir){
   const bytes=fs.readFileSync(candidatePath);
   if(candidateRecord.name!=='narration-candidate-input.json'||sha(bytes)!==candidateRecord.sha256)issues.push('NARRATION_CANDIDATE_CHANGED');
   let expected;
-  try{expected=inspectNarrationCandidate(dir,JSON.parse(bytes.toString('utf8')));}
-  catch(e){expected={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  let parsedCandidate;
+  try{parsedCandidate=JSON.parse(bytes.toString('utf8'));}
+  catch(e){expected={status:'REJECTED',issues:['NARRATION_CANDIDATE_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(expected===undefined)expected=inspectNarrationCandidate(dir,parsedCandidate);
   if(expected.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'&&entry.sentence_handoff?.candidate_sentences){
    try{const packetInput=JSON.parse(fs.readFileSync(packet,'utf8')),candidateInput=JSON.parse(bytes.toString('utf8'));
     if(!matchesCandidateSentences(packetInput,candidateInput))expected={...expected,status:'REJECTED',issues:[...expected.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
