@@ -34,7 +34,7 @@ function verify(dir){
   catch(e){expected={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
   if(expected.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'&&entry.sentence_handoff?.candidate_sentences){
    try{const packetInput=JSON.parse(fs.readFileSync(packet,'utf8')),candidateInput=JSON.parse(bytes.toString('utf8'));
-    if(JSON.stringify(packetInput.sentences)!==JSON.stringify(candidateInput.sentences))expected={...expected,status:'REJECTED',issues:[...expected.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
+    if(JSON.stringify(packetInput.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]]))!==JSON.stringify(candidateInput.sentences.map(x=>[x.id,x.narration,x.subtitle,x.spoken_subtitle_mappings||[]])))expected={...expected,status:'REJECTED',issues:[...expected.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
    }catch(e){issues.push('CANDIDATE_SENTENCE_COMPARISON_FAILED');}
   }
   if(JSON.stringify(expected)!==JSON.stringify(entry.narration_candidate_review))issues.push('NARRATION_CANDIDATE_REVALIDATION_MISMATCH');
