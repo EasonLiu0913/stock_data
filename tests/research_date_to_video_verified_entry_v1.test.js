@@ -74,6 +74,7 @@ try{
  assert.ok(verifyEntry(dir).issues.includes('SOURCE_CHANGED:status.json'));
  execute('.','20261013',dir);
  const candidatePath=path.join(dir,'narration-candidate-input.json');
+ fs.rmSync(packetPath);
  fs.writeFileSync(candidatePath,'{invalid json');
  const badCandidate=execute('.','20261013',dir);
  assert.equal(badCandidate.next_action.stage,'REJECTED_NARRATION_CANDIDATE');
