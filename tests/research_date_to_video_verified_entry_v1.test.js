@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {execute}=require('../scripts/research_date_to_video_verified_entry_v1');
 const {verify:verifyEntry}=require('../scripts/research_date_to_video_verified_entry_verify_v1');
+const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-verified-entry-'));
 try{
  for(const date of ['20261008','20261013']){
@@ -23,6 +24,19 @@ try{
   assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  }
  assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))).sentence_handoff,null);
+ const initial=JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json')));
+ const positivePacket={target_date:'20261013',source_master_sha256:initial.dated_media_input.source_master_sha256,sentences:[...FIXED_OPENING_LINES].map((line,i)=>({id:'opening-'+i,narration:line,subtitle:line}))};
+ positivePacket.sentences.push({id:'market-1',narration:'十月十三日上漲五％。',subtitle:'10/13上漲5%。',spoken_subtitle_mappings:[{spoken:'十月十三日',display:'10/13'},{spoken:'五％',display:'5%'}]});
+ const positivePacketPath=path.join(dir,'sentence-packet-input.json');
+ fs.writeFileSync(positivePacketPath,JSON.stringify(positivePacket));
+ const positive=execute('.','20261013',dir);
+ assert.equal(positive.sentence_handoff.sentence_parity.status,'STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED');
+ assert.equal(positive.sentence_handoff.candidate_sentences.length,5);
+ assert.deepEqual(positive.sentence_handoff.candidate_sentences[4],{index:4,id:'market-1',narration:'十月十三日上漲五％。',subtitle:'10/13上漲5%。',spoken_subtitle_mappings:[{spoken:'十月十三日',display:'10/13'},{spoken:'五％',display:'5%'}]});
+ assert.equal(positive.sentence_handoff.narration_script,null);
+ assert.equal(positive.sentence_handoff.narration_authorized,false);
+ assert.equal(positive.render_authorized,false);
+ assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  const packetPath=path.join(dir,'sentence-packet-input.json');
  fs.writeFileSync(packetPath,'{invalid json');
  const malformed=execute('.','20261013',dir);
