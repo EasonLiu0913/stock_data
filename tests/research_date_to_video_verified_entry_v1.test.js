@@ -42,6 +42,13 @@ try{
  assert.ok(mismatched.sentence_handoff.sentence_parity.issues.includes('DATE_MATCH'));
  assert.equal(mismatched.sentence_handoff.narration_authorized,false);
  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+ const entryPath=path.join(dir,'verified-research-entry.json');
+ const tampered=JSON.parse(fs.readFileSync(entryPath,'utf8'));
+ tampered.sentence_handoff.sentence_parity.issues=[];
+ fs.writeFileSync(entryPath,JSON.stringify(tampered));
+ assert.ok(verifyEntry(dir).issues.includes('SENTENCE_HANDOFF_REVALIDATION_MISMATCH'));
+ execute('.','20261013',dir);
+ assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  fs.appendFileSync(packetPath,' ');
  assert.ok(verifyEntry(dir).issues.includes('SENTENCE_PACKET_CHANGED'));
  execute('.','20261013',dir);
