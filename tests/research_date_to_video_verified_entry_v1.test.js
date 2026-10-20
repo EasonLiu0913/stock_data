@@ -22,11 +22,15 @@ try{
  const packetPath=path.join(dir,'sentence-packet-input.json');
  fs.writeFileSync(packetPath,'{invalid json');
  const malformed=execute('.','20261013',dir);
+ assert.equal(malformed.next_action.stage,'REJECTED_SENTENCE_PACKET');
+ assert.deepEqual(malformed.next_action.actions,['SENTENCE_PACKET_INVALID_JSON']);
  assert.equal(malformed.sentence_handoff.status,'REJECTED');
  assert.deepEqual(malformed.sentence_handoff.issues,['SENTENCE_PACKET_INVALID_JSON']);
  assert.equal(malformed.sentence_handoff.render_authorized,false);
  fs.writeFileSync(packetPath,JSON.stringify({target_date:'20261008',sentences:[]}));
  const mismatched=execute('.','20261013',dir);
+ assert.equal(mismatched.next_action.stage,'REJECTED_SENTENCE_PACKET');
+ assert.ok(mismatched.next_action.actions.includes('DATE_MATCH'));
  assert.equal(mismatched.sentence_handoff.sentence_parity.status,'REJECTED');
  assert.ok(mismatched.sentence_handoff.sentence_parity.issues.includes('DATE_MATCH'));
  assert.equal(mismatched.sentence_handoff.narration_authorized,false);
