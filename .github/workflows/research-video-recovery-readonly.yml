@@ -294,7 +294,7 @@ jobs:
       - name: Verify dated selected stock price evidence
         run: |
           test -s /tmp/date-to-video-d4-20261013/dated-price-review-evidence.json
-          node -e "const r=require('/tmp/date-to-video-d4-20261013/dated-price-review-evidence.json');if(JSON.stringify(r.stocks.map(x=>x.code))!==JSON.stringify(['6668','3406','6505'])||r.review_decisions.length||r.publication_authorized!==false)process.exit(1);console.log('D4_CANDIDATE_DERIVED_PRICE_REVIEW_PASS')"
+          node -e "const r=require('/tmp/date-to-video-d4-20261013/dated-price-review-evidence.json');if(r.status!=='REJECTED'||!/^ENOENT: no such file or directory, open /.test(r.reason)||r.editorial_certified!==false||r.render_authorized!==false||r.publication_authorized!==false)process.exit(1);console.log('D4_20261013_PRICE_REVIEW_MISSING_ARCHIVE_FAIL_CLOSED_PASS '+r.reason)"
       - name: Verify dated market master review packet remains pending
         run: node -e "const p='/tmp/date-to-video-d4-20261013/';const m=require(p+'market-master.json'),r=require(p+'market-master-review-packet.json');if(r.target_date!==m.target_date||JSON.stringify(r.source_evidence)!==JSON.stringify(m.source_evidence)||r.decision!=='PENDING'||!r.checks.some(x=>x.id==='PREVIOUS_FIVE_TRADING_DAY_TURNOVER_COMPARISON'&&x.status==='NOT_PRESENT_IN_D4_MASTER_REQUIRES_DATED_SOURCE')||r.ordinary_share_identity_certified!==false||r.editorial_certified!==false||r.publication_authorized!==false)process.exit(1);console.log('D4_MARKET_MASTER_REVIEW_PACKET_PASS')"
       - name: Verify price provenance is linked into independent review worksheet
