@@ -1,10 +1,17 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {build}=require('../scripts/research_date_to_video_editorial_media_preview_v1');
-const entry={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:'20261013',narration_candidate_review:{status:'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'},narration_candidate_source:{sha256:'a'},dated_media_input:{source_master_sha256:'b'}};
+const crypto=require('node:crypto');const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
+const entry={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:'20261013',narration_candidate_review:{status:'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'},narration_candidate_source:{sha256:'a'.repeat(64)},dated_media_input:{source_master_sha256:'b'}};
 const worksheet={target_date:'20261013',source_master_sha256:'b',sections:[{insight_id:'i1',section:'market',observation:'上漲',interpretation:'觀察',uncertainty:'風險',evidence:['source']}]};
 const candidate={target_date:'20261013',source_master_sha256:'b',sentences:[0,1,2,3].map(i=>({id:'opening'+i,narration:'固定開場',subtitle:'固定開場'})).concat([{id:'market1',insight_id:'i1',narration:'上漲五％',subtitle:'上漲5%',spoken_subtitle_mappings:[{spoken:'五％',display:'5%'}]}])};
+entry.narration_candidate_review.candidate_sha256=sha(candidate);
+entry.narration_candidate_review.worksheet_sha256=sha(worksheet);
 const result=build(entry,candidate,worksheet);
+assert.equal(result.candidate_sha256,sha(candidate));
+assert.equal(result.worksheet_sha256,sha(worksheet));
+assert.ok(build(entry,{...candidate,sentences:[...candidate.sentences,{id:'extra',insight_id:'i1',narration:'新增',subtitle:'新增'}]},worksheet).issues.includes('CANDIDATE_REVIEW_HASH'));
+assert.ok(build(entry,candidate,{...worksheet,sections:[{...worksheet.sections[0],observation:'竄改'}]}).issues.includes('WORKSHEET_REVIEW_HASH'));
 assert.equal(result.status,'STRUCTURAL_PLANNING_PREVIEW_ONLY');
 assert.equal(result.narration_plan.length,result.subtitle_plan.length);
 assert.deepEqual(result.scene_plan[0].sentence_ids,['market1']);
