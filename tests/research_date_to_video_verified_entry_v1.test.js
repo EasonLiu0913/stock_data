@@ -20,6 +20,7 @@ try{
   assert.equal(result.tts_authorized,false);assert.equal(result.render_authorized,false);assert.equal(result.publication_authorized,false);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))),result);
   assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  }
  assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))).sentence_handoff,null);
  const packetPath=path.join(dir,'sentence-packet-input.json');
