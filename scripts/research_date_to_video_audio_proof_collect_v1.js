@@ -5,6 +5,7 @@ const {plan}=require('./research_date_to_video_edge_tts_plan_v1');
 const {build}=require('./research_date_to_video_dated_media_input_v1');
 const {prepare}=require('./research_date_to_video_editorial_narration_worksheet_v1');
 const {inspect}=require('./research_date_to_video_planned_audio_review_v1');
+const {inspectDirectory:inspectCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
 function checkAudioSet(audioDir,commands){
  const stat=fs.lstatSync(audioDir);if(!stat.isDirectory()||stat.isSymbolicLink())throw Error('AUDIO_DIRECTORY_INVALID');
@@ -16,7 +17,9 @@ function collect(dir,probe=cp.spawnSync){
  const read=name=>JSON.parse(fs.readFileSync(path.join(dir,name),'utf8'));
  const inventory=read('sentence-audio-inventory.json'),commands=read('edge-tts-command-plan.json'),expected=plan(inventory);
  if(expected.status!=='PLAN_ONLY_INDEPENDENT_EDITORIAL_APPROVAL_REQUIRED'||JSON.stringify(commands)!==JSON.stringify(expected))throw Error('DATED_AUDIO_COMMAND_PLAN_REJECTED');
- const dated=build(dir),worksheet=read('editorial-narration-worksheet.json');
+ const dated=build(dir),worksheet=read('editorial-narration-worksheet.json'),candidate=read('narration-candidate.json');
+ const candidateReview=inspectCandidate(dir,candidate);
+ if(candidateReview.status!=='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'||inventory.candidate_sha256!==sha(JSON.stringify(candidate)))throw Error('DATED_AUDIO_CANDIDATE_PROVENANCE_REJECTED');
  if(inventory.target_date!==dated.target_date||inventory.source_master_sha256!==dated.source_master_sha256||inventory.worksheet_sha256!==sha(JSON.stringify(worksheet))||sha(JSON.stringify(worksheet))!==sha(JSON.stringify(prepare(dir))))throw Error('DATED_AUDIO_D4_PROVENANCE_REJECTED');
  const audioDir=path.join(dir,'audio'),sentences=[];
  checkAudioSet(audioDir,expected.commands);
