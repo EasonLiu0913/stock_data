@@ -32,6 +32,11 @@ function verify(dir){
   let expected;
   try{expected=inspectNarrationCandidate(dir,JSON.parse(bytes.toString('utf8')));}
   catch(e){expected={status:'REJECTED',issues:['NARRATION_CANDIDATE_INPUT_INVALID_OR_WORKSHEET_UNAVAILABLE'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+  if(expected.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED'&&entry.sentence_handoff?.candidate_sentences){
+   try{const packetInput=JSON.parse(fs.readFileSync(packet,'utf8')),candidateInput=JSON.parse(bytes.toString('utf8'));
+    if(JSON.stringify(packetInput.sentences)!==JSON.stringify(candidateInput.sentences))expected={...expected,status:'REJECTED',issues:[...expected.issues,'SENTENCE_CANDIDATE_CONTENT_MISMATCH']};
+   }catch(e){issues.push('CANDIDATE_SENTENCE_COMPARISON_FAILED');}
+  }
   if(JSON.stringify(expected)!==JSON.stringify(entry.narration_candidate_review))issues.push('NARRATION_CANDIDATE_REVALIDATION_MISMATCH');
  }else if(entry.narration_candidate_review!==null)issues.push('UNEXPECTED_NARRATION_CANDIDATE_REVIEW');
  if(entry.sentence_handoff?.target_date!==undefined&&entry.sentence_handoff.target_date!==date)issues.push('SENTENCE_HANDOFF_DATE_MISMATCH');
