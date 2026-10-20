@@ -9,4 +9,6 @@ assert.ok(inspect(worksheet,input,{...candidate,sentences:candidate.sentences.sl
 assert.ok(inspect(worksheet,input,{...candidate,sentences:candidate.sentences.map((s,i)=>i===4?{...s,insight_id:'unknown'}:s)}).issues.includes('INSIGHT_LINK_4'));
 assert.ok(inspect(worksheet,input,{...candidate,sentences:null}).issues.includes('SENTENCE_PARITY'));
 assert.ok(inspect({...worksheet,sections:[]},input,candidate).issues.includes('WORKSHEET_READY'));
+assert.ok(inspect({...worksheet,issues:['REVIEW_GATE_SHA_MATCH']},input,candidate).issues.includes('WORKSHEET_READY'));
+assert.ok(inspect({...worksheet,issues:['EDITORIAL_CERTIFICATION_REQUIRED','UNEXPECTED_BLOCKER']},input,candidate).issues.includes('WORKSHEET_READY'));
 console.log('D4_NARRATION_CANDIDATE_REVIEW_FAIL_CLOSED_PASS');
