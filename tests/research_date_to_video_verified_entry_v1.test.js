@@ -10,6 +10,7 @@ try{
   assert.equal(result.media_preflight.target_date,date);assert.equal(result.media_preflight.status,'BLOCKED');assert.ok(result.media_preflight.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED'));assert.ok(result.media_preflight.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'));
   assert.deepEqual(result.source_artifacts.map(x=>x.name),['status.json','official-data-recovery-plan.json','official-data-manifest.json']);
   for(const artifact of result.source_artifacts)assert.equal(artifact.sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(dir,artifact.name))).digest('hex'));
+  assert.equal(result.sentence_packet_source,null);
   assert.equal(result.dated_media_input.preflight_status,result.media_preflight.status);
   assert.equal(result.dated_media_input.target_date,result.media_preflight.target_date);
   assert.equal(result.dated_media_input.media_bridge_status,'NOT_IMPLEMENTED');
@@ -22,6 +23,7 @@ try{
  const packetPath=path.join(dir,'sentence-packet-input.json');
  fs.writeFileSync(packetPath,'{invalid json');
  const malformed=execute('.','20261013',dir);
+ assert.equal(malformed.sentence_packet_source.sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(packetPath)).digest('hex'));
  assert.equal(malformed.next_action.stage,'REJECTED_SENTENCE_PACKET');
  assert.deepEqual(malformed.next_action.actions,['SENTENCE_PACKET_INVALID_JSON']);
  assert.equal(malformed.sentence_handoff.status,'REJECTED');
@@ -29,6 +31,8 @@ try{
  assert.equal(malformed.sentence_handoff.render_authorized,false);
  fs.writeFileSync(packetPath,JSON.stringify({target_date:'20261008',sentences:[]}));
  const mismatched=execute('.','20261013',dir);
+ assert.equal(mismatched.sentence_packet_source.sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(packetPath)).digest('hex'));
+ assert.notEqual(mismatched.sentence_packet_source.sha256,malformed.sentence_packet_source.sha256);
  assert.equal(mismatched.next_action.stage,'REJECTED_SENTENCE_PACKET');
  assert.ok(mismatched.next_action.actions.includes('DATE_MATCH'));
  assert.equal(mismatched.sentence_handoff.sentence_parity.status,'REJECTED');
