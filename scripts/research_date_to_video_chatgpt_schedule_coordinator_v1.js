@@ -16,7 +16,7 @@ function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,vid
  if(recovery.status==='BLOCKED'&&recovery.actions.length===0)return output('WAITING_DATA','INSPECT_RECOVERY_PLAN','BLOCKED_RECOVERY_PLAN');
  const gaps=recovery.actions;
  if(gaps.length){
-  const safe=gaps.filter(a=>a?.decision==='DRY_RUN_CANDIDATE_ONLY'&&typeof a.workflow_path==='string'&&a.workflow_path.startsWith('.github/workflows/'));
+  const safe=gaps.filter(a=>a?.decision==='DRY_RUN_CANDIDATE_ONLY'&&typeof a.workflow_path==='string'&&/^\.github\/workflows\/[A-Za-z0-9_.-]+\.ya?ml$/.test(a.workflow_path));
   const blocked=gaps.filter(a=>!safe.includes(a));
   return output('RECOVERY_REVIEW_REQUIRED','REVIEW_RECOVERY_WORKFLOWS','GAPS_REQUIRE_SEPARATE_AUTHORIZATION',{suggested_workflows:safe.map(a=>a.workflow_path),blocked_gaps:blocked.map(a=>a?.fields||[])});
  }
