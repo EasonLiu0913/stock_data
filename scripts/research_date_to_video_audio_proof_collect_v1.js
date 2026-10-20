@@ -13,6 +13,9 @@ function collect(dir,probe=cp.spawnSync){
  const dated=build(dir),worksheet=read('editorial-narration-worksheet.json');
  if(inventory.target_date!==dated.target_date||inventory.source_master_sha256!==dated.source_master_sha256||inventory.worksheet_sha256!==sha(JSON.stringify(worksheet))||sha(JSON.stringify(worksheet))!==sha(JSON.stringify(prepare(dir))))throw Error('DATED_AUDIO_D4_PROVENANCE_REJECTED');
  const audioDir=path.join(dir,'audio'),sentences=[];
+ const audioStat=fs.lstatSync(audioDir);if(!audioStat.isDirectory()||audioStat.isSymbolicLink())throw Error('AUDIO_DIRECTORY_INVALID');
+ const expectedNames=new Set(expected.commands.map(c=>c.output_file));
+ const actualNames=fs.readdirSync(audioDir);if(actualNames.length!==expectedNames.size||actualNames.some(name=>!expectedNames.has(name)))throw Error('AUDIO_FILE_SET_MISMATCH');
  for(const c of expected.commands){
   const name=c.output_file;
   if(!/^\d{3}\.mp3$/.test(name))throw Error('UNSAFE_AUDIO_FILENAME');
