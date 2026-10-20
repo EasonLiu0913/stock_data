@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {execute}=require('../scripts/research_date_to_video_verified_entry_v1');
+const {verify:verifyEntry}=require('../scripts/research_date_to_video_verified_entry_verify_v1');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-verified-entry-'));
 try{
  for(const date of ['20261008','20261013']){
@@ -18,6 +19,7 @@ try{
   assert.equal(result.next_action.target_date,date);assert.equal(result.next_action.render_authorized,false);assert.equal(result.next_action.automatic_dispatch_authorized,false);assert.equal(result.next_action.stage,'WAITING_OFFICIAL_SOURCES');assert.ok(result.next_action.actions.length>0);
   assert.equal(result.tts_authorized,false);assert.equal(result.render_authorized,false);assert.equal(result.publication_authorized,false);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))),result);
+  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
  }
  assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))).sentence_handoff,null);
  const packetPath=path.join(dir,'sentence-packet-input.json');
@@ -38,6 +40,14 @@ try{
  assert.equal(mismatched.sentence_handoff.sentence_parity.status,'REJECTED');
  assert.ok(mismatched.sentence_handoff.sentence_parity.issues.includes('DATE_MATCH'));
  assert.equal(mismatched.sentence_handoff.narration_authorized,false);
+ assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+ fs.appendFileSync(packetPath,' ');
+ assert.ok(verifyEntry(dir).issues.includes('SENTENCE_PACKET_CHANGED'));
+ execute('.','20261013',dir);
+ assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+ fs.appendFileSync(path.join(dir,'status.json'),' ');
+ assert.ok(verifyEntry(dir).issues.includes('SOURCE_CHANGED:status.json'));
+ execute('.','20261013',dir);
  const handoff=path.join(dir,'verified-research-entry.json');
  assert.equal(JSON.parse(fs.readFileSync(handoff)).target_date,'20261013');
  assert.throws(()=>execute('.','2026108',dir),/INVALID_TARGET_DATE/);
