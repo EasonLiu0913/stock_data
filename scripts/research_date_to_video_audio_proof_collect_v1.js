@@ -2,12 +2,16 @@
 // Read-only MP3 evidence collection. Does not run TTS, approve narration, or authorize rendering.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),cp=require('node:child_process');
 const {plan}=require('./research_date_to_video_edge_tts_plan_v1');
+const {build}=require('./research_date_to_video_dated_media_input_v1');
+const {prepare}=require('./research_date_to_video_editorial_narration_worksheet_v1');
 const {inspect}=require('./research_date_to_video_planned_audio_review_v1');
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
 function collect(dir,probe=cp.spawnSync){
  const read=name=>JSON.parse(fs.readFileSync(path.join(dir,name),'utf8'));
  const inventory=read('sentence-audio-inventory.json'),commands=read('edge-tts-command-plan.json'),expected=plan(inventory);
  if(expected.status!=='PLAN_ONLY_INDEPENDENT_EDITORIAL_APPROVAL_REQUIRED'||JSON.stringify(commands)!==JSON.stringify(expected))throw Error('DATED_AUDIO_COMMAND_PLAN_REJECTED');
+ const dated=build(dir),worksheet=read('editorial-narration-worksheet.json');
+ if(inventory.target_date!==dated.target_date||inventory.source_master_sha256!==dated.source_master_sha256||inventory.worksheet_sha256!==sha(JSON.stringify(worksheet))||sha(JSON.stringify(worksheet))!==sha(JSON.stringify(prepare(dir))))throw Error('DATED_AUDIO_D4_PROVENANCE_REJECTED');
  const audioDir=path.join(dir,'audio'),sentences=[];
  for(const c of expected.commands){
   const name=c.output_file;
