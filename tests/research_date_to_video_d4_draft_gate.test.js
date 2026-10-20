@@ -4,7 +4,7 @@ const crypto=require('node:crypto'),sha=x=>crypto.createHash('sha256').update(JS
 const date='20261008',master={target_date:date,status:'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING',taiex:{change_points:12},market_trading:{turnover_twd:123},breadth:{advancers:5},institutional:{foreign:{net_twd:20}}};
 const inventory={target_date:date,claims:[{claim_id:date+':2330:PRICE_CHANGE'}]};
 const task={contract:'DATE_TO_VIDEO_V1_ORIGINAL_ANALYSIS_TASK',target_date:date,status:'READY_FOR_EVIDENCE_GROUNDED_DRAFT',market_master_sha256:sha(master),claim_inventory_sha256:sha(inventory),required_sections:['market_breadth_vs_index','selected_stock_evidence']};
-const review={target_date:date,inventory_sha256:sha(inventory),approved_claim_ids:[date+':2330:PRICE_CHANGE']};
+const review={contract:'DATE_TO_VIDEO_V1_D4_REVIEW_GATE',target_date:date,inventory_sha256:sha(inventory),approved_claim_ids:[date+':2330:PRICE_CHANGE'],claim_whitelist_verified:true,editorial_certified:false};
 const insight=(section,evidence)=>({id:section,section,observation:'可核對的觀察',interpretation:'待審核的獨立解讀',uncertainty:'資料不代表因果',evidence});
 const draft={target_date:date,insights:[insight('market_breadth_vs_index',[{type:'master_field',path:'breadth.advancers'}]),insight('selected_stock_evidence',[{type:'claim_id',id:date+':2330:PRICE_CHANGE'}])]};
 const ok=validate(task,master,inventory,review,draft);assert.equal(ok.editorial_certified,false);assert.equal(ok.render_authorized,false);
@@ -18,3 +18,8 @@ const numericFieldDraft={...draft,insights:[insight('market_breadth_vs_index',[{
 assert.equal(validate(numericFieldTask,numericFieldMaster,inventory,review,numericFieldDraft).render_authorized,false);
 assert.throws(()=>validate(numericFieldTask,numericFieldMaster,inventory,review,{...numericFieldDraft,insights:[insight('market_breadth_vs_index',[{type:'master_field',path:'market_trading.missing5'}]),draft.insights[1]]}),/MISSING_MASTER_FIELD/);
 console.log('D4_ORIGINAL_DRAFT_GATE_FAIL_CLOSED_PASS');
+
+assert.throws(()=>validate(task,master,inventory,{...review,claim_whitelist_verified:false},draft),/CLAIM_WHITELIST_NOT_VERIFIED/);
+assert.throws(()=>validate(task,master,inventory,{...review,contract:'REJECTED'},draft),/REVIEW_CONTRACT_MISMATCH/);
+assert.throws(()=>validate(task,master,inventory,{...review,editorial_certified:true},draft),/REVIEW_MUST_NOT_AUTO_CERTIFY/);
+console.log('D4_DRAFT_REQUIRES_VERIFIED_INDEPENDENT_REVIEW_PASS');
