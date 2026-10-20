@@ -5,6 +5,8 @@ const {execute}=require('../scripts/research_date_to_video_verified_entry_v1');
 const {verify}=require('../scripts/research_date_to_video_verified_entry_verify_v1');
 const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
 const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
+// Owner reconfirmed canonical V4 line four; do not silently restore the superseded CC line.
+assert.deepEqual(FIXED_OPENING_LINES,['大家好，歡迎來到 TAIWAN STOCK！','追蹤資金，解讀行情。','錢在哪，我們就在哪！','那麼我們開始囉。']);
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-editorial-integration-'));
 const read=n=>JSON.parse(fs.readFileSync(path.join(dir,n),'utf8'));
 try{
