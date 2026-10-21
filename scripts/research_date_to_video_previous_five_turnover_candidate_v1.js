@@ -9,7 +9,7 @@ function build(root,date){
  try{
   const bytes=fs.readFileSync(file),chart=JSON.parse(bytes);
   if(chart.sources?.volume!=='TWSE FMTQIK'||chart.units?.turnover!=='TWD'||!Array.isArray(chart.data))throw Error('CHART_SCOPE_OR_UNIT_MISMATCH');
-  const seen=new Set();for(const row of chart.data){if(!/^20\d{6}$/.test(row.date||'')||new Date(row.date.slice(0,4)+'-'+row.date.slice(4,6)+'-'+row.date.slice(6)+'T00:00:00Z').toISOString().slice(0,10)!==row.date||seen.has(row.date)||!Number.isSafeInteger(row.turnover)||row.turnover<=0)throw Error('INVALID_OR_DUPLICATE_CHART_ROW');seen.add(row.date)}
+  const seen=new Set();for(const row of chart.data){if(!/^20\d{6}$/.test(row.date||'')||new Date(row.date.slice(0,4)+'-'+row.date.slice(4,6)+'-'+row.date.slice(6)+'T00:00:00Z').toISOString().slice(0,10).replace(/-/g,'')!==row.date||seen.has(row.date)||!Number.isSafeInteger(row.turnover)||row.turnover<=0)throw Error('INVALID_OR_DUPLICATE_CHART_ROW');seen.add(row.date)}
   const rows=chart.data.filter(x=>x.date<=date).sort((a,b)=>a.date.localeCompare(b.date));
   if(rows.filter(x=>x.date===date).length!==1)return {...base,status:'WAITING_SOURCE',reason:'TARGET_DATE_ROW_MISSING',source_sha256:sha(bytes)};
   const prior=rows.filter(x=>x.date<date).slice(-5);if(prior.length!==5)return {...base,status:'WAITING_SOURCE',reason:'FIVE_PRIOR_SESSIONS_MISSING',source_sha256:sha(bytes)};
