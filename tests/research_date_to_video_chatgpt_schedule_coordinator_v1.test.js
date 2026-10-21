@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {decide,fromD4,fromD4Directory}=require('../scripts/research_date_to_video_chatgpt_schedule_coordinator_v1');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const date='20261013';
-const completeSources=sources=>[...sources,...['BFI82U','BFIAMU','FMTQIK','MI_INDEX'].filter(id=>!sources.some(s=>s.id===id)).map(id=>({id,status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}))];
+const completeSources=sources=>[...sources,...['BFI82U','BFIAMU','FMTQIK','MI_INDEX'].filter(id=>!sources.some(s=>s.id===id)).map(id=>id==='BFIAMU'?{id,status:'UNAPPROVED_OR_RAW_NOT_VALIDATED',action_required:'OPTIONAL_CONTEXT_NOT_REQUIRED'}:id==='BFI82U'?{id,status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}:{id,status:'WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE',action_required:'REUSE_DATED_WORKFLOW_OUTPUT'})];
 
 const base=()=>({date,verification:{target_date:date,status:'VERIFIED_RESEARCH_ONLY'},recovery:{date,mode:'PLAN_ONLY_NO_DISPATCH',actions:[]},analysisTask:{target_date:date,status:'READY_FOR_EVIDENCE_GROUNDED_DRAFT'}});
 test('missing data suggests bounded recovery but never dispatches',()=>{const f=base();f.verification.status='MISSING';f.recovery.actions=[{decision:'DRY_RUN_CANDIDATE_ONLY',workflow_path:'.github/workflows/research.yml',fields:[{id:'BFI82U'}]}];const r=decide(f);assert.equal(r.stage,'RECOVERY_REVIEW_REQUIRED');assert.equal(r.automatic_dispatch_authorized,false);assert.equal(r.suggested_workflows.length,1)});
@@ -81,3 +81,6 @@ test('next-action never treats missing, duplicate or incomplete source inventory
  const d4={target_date:date,official_recovery_advice:{target_date:date,sources:ready}};
  assert.equal(advise(d4,{status:'VERIFIED_RESEARCH_ONLY'},{status:'READY_FOR_SEPARATE_MEDIA_REVIEW',issues:[]}).stage,'READY_FOR_SEPARATE_MEDIA_REVIEW');
 });
+
+test('dated workflow source readiness does not require duplicate HTTP capture or optional industry context',()=>{const d4={target_date:date,official_recovery_advice:{target_date:date,sources:completeSources([])}};const r=fromD4(date,d4,base().analysisTask);assert.equal(r.stage,'READY_FOR_SCRIPT');assert.equal(r.automatic_dispatch_authorized,false);assert.equal(r.publication_authorized,false);});
+test('unvalidated mandatory dated workflow source still blocks research script',()=>{const sources=completeSources([]);const source=sources.find(x=>x.id==='MI_INDEX');source.status='REJECTED';source.action_required='REVIEW_INVALID_WORKFLOW_OUTPUT';const r=fromD4(date,{target_date:date,official_recovery_advice:{target_date:date,sources}},base().analysisTask);assert.equal(r.stage,'RECOVERY_REVIEW_REQUIRED');assert.equal(r.blocked_gaps[0][0].id,'MI_INDEX');assert.equal(r.automatic_dispatch_authorized,false);});
