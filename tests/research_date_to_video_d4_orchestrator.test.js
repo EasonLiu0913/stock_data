@@ -380,6 +380,8 @@ try{
  assert.equal(h.price_evidence_sha256,digest('dated-price-review-evidence.json'));
  assert.equal(h.market_master_review_sha256,digest('market-master-review-packet.json'));
  assert.equal(h.status,'PENDING_INDEPENDENT_REVIEW');
+ assert.equal(h.review_input_sha256,null);
+ assert.equal(h.review_gate_sha256,digest('editorial-review.json'));
  assert.deepEqual(h.review_decisions,[]);
  for(const flag of ['editorial_certified','narration_authorized','render_authorized','publication_authorized'])assert.equal(h[flag],false);
  assert.ok(first.artifacts.some(x=>x.name==='review-handoff-manifest.json'&&x.sha256===digest('review-handoff-manifest.json')));
