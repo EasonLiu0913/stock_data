@@ -11,6 +11,7 @@ const outputDir=fs.mkdtempSync(path.join(os.tmpdir(),'audio-output-rollback-'));
  const otherDate={...candidate,target_date:'20261013'};
  const otherHash=crypto.createHash('sha256').update(JSON.stringify(otherDate)).digest('hex');
  assert.throws(()=>persist(outputDir,{...ready,candidate:otherDate,inventory:{...inventory,candidate_sha256:otherHash}}),/AUDIO_HANDOFF_NOT_READY/);
+ assert.throws(()=>persist(outputDir,{...ready,inventory:{...inventory,sentences:inventory.sentences.map((s,i)=>i===4?{...s,spoken_text:'遭替換的講稿'}:s)},command_plan:plan({...inventory,sentences:inventory.sentences.map((s,i)=>i===4?{...s,spoken_text:'遭替換的講稿'}:s)})}),/AUDIO_HANDOFF_SENTENCE_MISMATCH/);
  let writes=0;assert.throws(()=>persist(outputDir,ready,(file,body,options)=>{writes++;if(writes===2)throw Error('SIMULATED_SECOND_WRITE_FAILURE');fs.writeFileSync(file,body,options)}),/SIMULATED_SECOND_WRITE_FAILURE/);
  for(const name of ['narration-candidate.json','sentence-audio-inventory.json','edge-tts-command-plan.json'])assert.equal(fs.existsSync(path.join(outputDir,name)),false);
  fs.writeFileSync(path.join(outputDir,'sentence-audio-inventory.json'),'USER_INPUT');
