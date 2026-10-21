@@ -178,7 +178,7 @@ for(const date of ['20261008','20261013']){
  assert.equal(r.render_authorized,false);assert.equal(r.publication_authorized,false);
  assert.ok(r.questions.some(q=>q.id==='FLOW_BREADTH_DIVERGENCE'));
  if(date==='20261013'){
-  assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_PENDING'));
+  assert.ok(!r.blockers.includes('FINAL_DATED_BFI82U_PENDING'));
   const a=r.claims.find(c=>c.id==='20261013:BREADTH_ASYMMETRY');
   assert.equal(a.fact.directional_count,999);
   assert.equal(a.fact.decliners_minus_advancers,461);
@@ -202,11 +202,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {inspect}=require('./scripts/research_date_to_video_d2_partial');
 const r=inspect('.','20261013');
 assert.equal(r.target_date,'20261013');assert.equal(r.partial_master.status,'partial');
-assert.equal(r.final_bfi82u.status,'WAITING_SOURCE');
-assert.equal(r.final_bfi82u_verified,false);
-assert.equal(r.source_complete,false);
-assert.equal(r.master_status,'PARTIAL_WAITING_SOURCE');
-assert.ok(r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));
+assert.equal(r.final_bfi82u.status,'VERIFIED');
+assert.equal(r.final_bfi82u_verified,true);
+assert.equal(r.source_complete,true);
+assert.equal(r.master_status,'SOURCE_EVIDENCE_PRESENT_EDITORIAL_PENDING');
+assert.ok(!r.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));
 const baseline=inspect('.','20261008');
 assert.equal(baseline.final_bfi82u.status,'VERIFIED');
 assert.equal(baseline.final_bfi82u_verified,true);
