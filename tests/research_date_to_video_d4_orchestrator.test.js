@@ -19,6 +19,15 @@ for(const date of ['20261008','20261013']){
  assert.equal(r.official_recovery_advice.manifest_sha256,recoveryPlan.manifest_sha256);
  assert.equal(r.official_recovery_advice.source_plan_sha256,crypto.createHash('sha256').update(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json'))).digest('hex'));
  assert.deepEqual(r.official_recovery_advice.sources,recoveryPlan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed})));
+ if(date==='20261013'){
+  assert.equal(r.market_base_recovery_advice.status,'DATED_PARTIAL_BASE_MISSING');
+  assert.equal(r.market_base_recovery_advice.mode,'PLAN_ONLY_NO_DISPATCH');
+  assert.equal(r.market_base_recovery_advice.candidate_builder,'scripts/build_daily_gainers_market_opening_phase1.js');
+  assert.equal(r.market_base_recovery_advice.candidate_command,'node scripts/build_daily_gainers_market_opening_phase1.js 20261013');
+  assert.equal(r.market_base_recovery_advice.automatic_dispatch_authorized,false);
+  assert.equal(r.market_base_recovery_advice.publication_authorized,false);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8')).market_base_recovery_advice,r.market_base_recovery_advice);
+ }
  assert.equal(r.official_recovery_advice.render_authorized,false);
  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8')).official_recovery_advice,r.official_recovery_advice);
  assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,false);
