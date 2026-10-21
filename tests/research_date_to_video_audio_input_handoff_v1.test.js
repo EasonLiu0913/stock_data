@@ -3,7 +3,7 @@
 const crypto=require('node:crypto'),{plan}=require('../scripts/research_date_to_video_edge_tts_plan_v1'),{FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
 const outputDir=fs.mkdtempSync(path.join(os.tmpdir(),'audio-output-rollback-'));try{
  const candidate={target_date:'20261008',sentences:[...FIXED_OPENING_LINES,'這是研究句子。'].map((narration,i)=>({id:'S'+(i+1),narration,subtitle:narration}))},candidateSha=crypto.createHash('sha256').update(JSON.stringify(candidate)).digest('hex');
- const sentences=[...FIXED_OPENING_LINES,'這是研究句子。'].map((spoken_text,i)=>({id:'S'+(i+1),order:i+1,spoken_text,caption_text:spoken_text}));
+ const sentences=[...FIXED_OPENING_LINES,'這是研究句子。'].map((spoken_text,i)=>({id:'S'+(i+1),order:i+1,spoken_text,caption_text:spoken_text,spoken_subtitle_mappings:[]}));
  const inventory={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_AUDIO_INPUT_INVENTORY',status:'CANDIDATE_INVENTORY_PENDING_INDEPENDENT_EDITORIAL_REVIEW',target_date:'20261008',candidate_sha256:candidateSha,voice:'zh-TW-YunJheNeural',rate:'+15%',sentences,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
  const ready={status:'PLAN_ONLY_INDEPENDENT_EDITORIAL_APPROVAL_REQUIRED',candidate,inventory,command_plan:plan(inventory)};
  assert.throws(()=>persist(outputDir,{...ready,command_plan:{...ready.command_plan,target_date:'20261013'}}),/AUDIO_HANDOFF_NOT_READY/);
