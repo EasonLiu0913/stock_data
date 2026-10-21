@@ -29,13 +29,16 @@ for(const date of ['20261008','20261013']){
  for(const [id,file] of [['MI_INDEX','mi-index-provenance.json'],['FMTQIK','fmtqik-provenance.json']]){
   const diagnostic=JSON.parse(fs.readFileSync(path.join(dir,file)));
   const manifestEntry=officialManifest.entries.find(e=>e.id===id);
-  const gateEntry=officialGate.unverified_sources.find(e=>e.id===id);
+  const gateEntry=officialGate.validated_workflow_sources.find(e=>e.id===id);
   assert.equal(manifestEntry.source_date,date);
+  assert.equal(manifestEntry.status,'WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE');
+  assert.equal(manifestEntry.action_required,'REUSE_DATED_WORKFLOW_OUTPUT');
   assert.equal(manifestEntry.provenance_diagnostic.status,diagnostic.status);
   assert.equal(manifestEntry.provenance_diagnostic.source_path,diagnostic.source_path);
-  assert.deepEqual(gateEntry.provenance_diagnostic,manifestEntry.provenance_diagnostic);
   assert.equal(gateEntry.source_date,date);
-  assert.equal(gateEntry.provenance_diagnostic.raw_http_provenance_certified,false);
+  assert.equal(gateEntry.source_sha256,manifestEntry.workflow_validation.source_sha256);
+  assert.equal(gateEntry.independent_original_http_certified,false);
+  assert.equal(manifestEntry.provenance_diagnostic.raw_http_provenance_certified,false);
  }
 
  for(const [name,source] of [['mi-index-provenance.json','MI_INDEX'],['fmtqik-provenance.json','FMTQIK']]){
