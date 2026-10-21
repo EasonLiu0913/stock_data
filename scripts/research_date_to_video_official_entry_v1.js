@@ -17,7 +17,8 @@ async function execute(root,date,out,options={}){
  if(datedManifest.target_date!==date||datedManifest.manifest_sha256!==recovery.manifest.manifest_sha256)throw Error('OFFICIAL_ENTRY_RECOVERY_D4_MANIFEST_MISMATCH');
  const recoveryPlan=JSON.parse(fs.readFileSync(path.join(out,'official-data-recovery-plan.json'),'utf8'));
  if(recoveryPlan.target_date!==date||recoveryPlan.manifest_sha256!==datedManifest.manifest_sha256)throw Error('OFFICIAL_ENTRY_RECOVERY_PLAN_MANIFEST_MISMATCH');
- const mandatorySources=datedManifest.entries.filter(e=>e.id!=='BFIAMU'&&e.status!=='VERIFIED_RESEARCH_ONLY'&&e.status!=='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE').map(e=>({id:e.id,status:e.status,action_required:e.action_required||null,provenance_diagnostic:e.provenance_diagnostic||null}));
+ const reusable=e=>(e.id==='BFI82U'&&e.status==='VERIFIED_RESEARCH_ONLY'&&e.action_required==='REUSE_VERIFIED_ARCHIVE')||(['FMTQIK','MI_INDEX'].includes(e.id)&&e.status==='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE'&&e.action_required==='REUSE_DATED_WORKFLOW_OUTPUT');
+ const mandatorySources=datedManifest.entries.filter(e=>e.id!=='BFIAMU'&&!reusable(e)).map(e=>({id:e.id,status:e.status,action_required:e.action_required||null,provenance_diagnostic:e.provenance_diagnostic||null}));
  const mediaPreflight=inspectMediaPreflight(out);
  if(mediaPreflight.target_date!==null&&mediaPreflight.target_date!==date)throw Error('OFFICIAL_ENTRY_MEDIA_PREFLIGHT_DATE_MISMATCH');
  const worksheetPath=path.join(out,'editorial-narration-worksheet.json');
