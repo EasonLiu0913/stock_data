@@ -4,6 +4,9 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,video}){
  assert.match(date||'',/^20\d{6}$/,'INVALID_DATE');
+ const iso=date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8);
+ const parsed=new Date(iso+'T00:00:00Z');
+ assert.ok(Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===iso,'INVALID_CALENDAR_DATE');
  for(const [name,item] of Object.entries({verification,recovery,analysisTask,aiHandoff,editorial,video})){
   if(item&&item.target_date!==undefined)assert.equal(item.target_date,date,'DATE_MISMATCH_'+name);
   if(item&&item.date!==undefined)assert.equal(item.date,date,'DATE_MISMATCH_'+name);
