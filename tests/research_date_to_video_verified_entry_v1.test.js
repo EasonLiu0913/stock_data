@@ -20,7 +20,7 @@ try{
   assert.equal(result.dated_media_input.target_date,result.media_preflight.target_date);
   assert.equal(result.dated_media_input.media_bridge_status,'NOT_IMPLEMENTED');
   assert.deepEqual(result.dated_media_input.blockers,result.media_preflight.issues);
-  assert.equal(result.next_action.target_date,date);assert.equal(result.next_action.render_authorized,false);assert.equal(result.next_action.automatic_dispatch_authorized,false);assert.equal(result.next_action.stage,'WAITING_OFFICIAL_SOURCES');assert.deepEqual(result.next_action.actions.map(x=>x.source),['FMTQIK','BFIAMU','MI_INDEX']);assert.ok(result.next_action.actions.every(x=>x.automated_retrieval_allowed===false));assert.equal(result.next_action.actions.some(x=>x.source==='BFI82U'),false);
+  assert.equal(result.next_action.target_date,date);assert.equal(result.next_action.render_authorized,false);assert.equal(result.next_action.automatic_dispatch_authorized,false);assert.equal(result.next_action.stage,'WAITING_INDEPENDENT_EDITORIAL_REVIEW');assert.deepEqual(result.next_action.actions,['REVIEW_DATED_MASTER_AND_CLAIMS']);assert.equal(result.next_action.automatic_dispatch_authorized,false);
   assert.equal(result.tts_authorized,false);assert.equal(result.render_authorized,false);assert.equal(result.publication_authorized,false);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'verified-research-entry.json'))),result);
   assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
