@@ -27,9 +27,9 @@ test('D4 recovery date mismatch rejects',()=>{const d4={target_date:date,officia
 
 test('D4 directory rejects absent status',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-missing-'));try{assert.throws(()=>fromD4Directory(date,dir),/D4_STATUS_REQUIRED/)}finally{fs.rmSync(dir,{recursive:true,force:true})}});
 
-test('D4 directory blocks script without evidence files',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-evidence-'));try{fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify({contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,official_recovery_advice:{target_date:date,sources:completeSources([{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}])}}));fs.writeFileSync(path.join(dir,'original-analysis-task.json'),JSON.stringify(base().analysisTask));assert.equal(fromD4Directory(date,dir).reason,'D4_EVIDENCE_FILES_REQUIRED')}finally{fs.rmSync(dir,{recursive:true,force:true})}});
+test('D4 directory blocks script without evidence files',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-evidence-'));try{fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify({contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,official_recovery_advice:{target_date:date,sources:completeSources([{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}])}}));fs.writeFileSync(path.join(dir,'original-analysis-task.json'),JSON.stringify(base().analysisTask));assert.equal(fromD4Directory(date,dir).reason,'D4_SOURCE_MANIFEST_BINDING_REQUIRED')}finally{fs.rmSync(dir,{recursive:true,force:true})}});
 
-test('D4 directory refuses evidence hash mismatch',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-hash-'));try{const put=(name,data)=>fs.writeFileSync(path.join(dir,name),JSON.stringify(data));put('status.json',{contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,official_recovery_advice:{target_date:date,sources:completeSources([{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}])}});put('original-analysis-task.json',{...base().analysisTask,market_master_sha256:'bad',claim_inventory_sha256:'bad'});put('market-master.json',{target_date:date});put('claims.json',{target_date:date});assert.equal(fromD4Directory(date,dir).reason,'D4_EVIDENCE_SHA_MISMATCH')}finally{fs.rmSync(dir,{recursive:true,force:true})}});
+test('D4 directory refuses evidence hash mismatch',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-hash-'));try{const put=(name,data)=>fs.writeFileSync(path.join(dir,name),JSON.stringify(data));put('status.json',{contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,official_recovery_advice:{target_date:date,sources:completeSources([{id:'BFI82U',status:'VERIFIED_RESEARCH_ONLY',action_required:'REUSE_VERIFIED_ARCHIVE'}])}});put('original-analysis-task.json',{...base().analysisTask,market_master_sha256:'bad',claim_inventory_sha256:'bad'});put('market-master.json',{target_date:date});put('claims.json',{target_date:date});assert.equal(fromD4Directory(date,dir).reason,'D4_SOURCE_MANIFEST_BINDING_REQUIRED')}finally{fs.rmSync(dir,{recursive:true,force:true})}});
 
 test('D4 incomplete source inventory fails closed',()=>{const d4={target_date:date,official_recovery_advice:{target_date:date,sources:[]}};assert.throws(()=>fromD4(date,d4,base().analysisTask),/D4_REQUIRED_SOURCE_SET_MISMATCH/)});
 
@@ -110,4 +110,18 @@ test('real persisted dated D4 evidence reaches schedule without repeated origina
    assert.equal(sources.find(s=>s.id==='BFIAMU').action_required,'OPTIONAL_CONTEXT_NOT_REQUIRED');
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
  }
+});
+
+test('ready status labels alone cannot bypass missing dated source manifest',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'schedule-manifest-binding-'));
+ try{
+  const sources=completeSources([]);
+  fs.writeFileSync(path.join(dir,'status.json'),JSON.stringify({contract:'DATE_TO_VIDEO_V1_D4_ORCHESTRATOR',target_date:date,official_recovery_advice:{target_date:date,manifest_sha256:'claimed',sources}}));
+  fs.writeFileSync(path.join(dir,'original-analysis-task.json'),JSON.stringify(base().analysisTask));
+  const result=fromD4Directory(date,dir);
+  assert.equal(result.stage,'WAITING_DATA');
+  assert.equal(result.reason,'D4_SOURCE_MANIFEST_BINDING_REQUIRED');
+  assert.equal(result.automatic_dispatch_authorized,false);
+  assert.equal(result.publication_authorized,false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
