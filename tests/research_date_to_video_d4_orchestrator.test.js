@@ -21,8 +21,8 @@ for(const date of ['20261008','20261013']){
  assert.deepEqual(r.official_recovery_advice.sources,recoveryPlan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed})));
  assert.equal(r.official_recovery_advice.render_authorized,false);
  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8')).official_recovery_advice,r.official_recovery_advice);
- assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,date==='20261013');
- assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').action_required,date==='20261008'?'REUSE_VERIFIED_ARCHIVE':'APPROVED_BOUNDED_RECOVERY_OR_WAIT');
+ assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,false);
+ assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').action_required,'REUSE_VERIFIED_ARCHIVE');
  assert.ok(recoveryPlan.sources.filter(x=>x.id!=='BFI82U').every(x=>x.automated_retrieval_allowed===false));
  assert.equal(recoveryPlan.render_authorized,false);
  assert.equal(recoveryPlan.publication_authorized,false);
@@ -44,14 +44,14 @@ for(const date of ['20261008','20261013']){
   else assert.equal(p.original_http_archive_verified,false);
  }
  if(date==='20261008'){assert.equal(officialGate.status,'PARTIAL_VERIFIED_INSTITUTIONAL_ONLY');assert.equal(officialGate.institutional.raw_sha256,officialManifest.entries[0].raw_sha256);}
- if(date==='20261013'){assert.equal(officialGate.status,'WAITING_SOURCE');assert.equal(officialGate.institutional,null);}
+ if(date==='20261013'){assert.equal(officialGate.status,'PARTIAL_VERIFIED_INSTITUTIONAL_ONLY');assert.equal(officialGate.institutional.raw_sha256,officialManifest.entries[0].raw_sha256);}
  if(['EVIDENCE_JOINED_NOT_CERTIFIED','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING'].includes(r.stages[0].status)){
   const claims=JSON.parse(fs.readFileSync(path.join(dir,'claims.json')));
   assert.equal(claims.target_date,date);assert.ok(claims.claim_count>0);
   const institutional=JSON.parse(fs.readFileSync(path.join(dir,'institutional-evidence.json')));
   assert.equal(institutional.target_date,date);
   if(date==='20261008'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.equal(r.stages[1].status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');}
-  if(date==='20261013'){assert.equal(institutional.status,'WAITING_SOURCE');assert.ok(r.blockers.includes('DATED_FINAL_BFI82U_RAW_MISSING'));assert.ok(r.blockers.includes('DATED_FINAL_BFI82U_MANIFEST_MISSING'));assert.equal(r.source_readiness.bfi82u_archive_status,'MISSING_OR_INCOMPLETE');}
+  if(date==='20261013'){assert.equal(institutional.status,'VERIFIED');assert.equal(institutional.final_six_rows_verified,true);assert.ok(!r.blockers.includes('DATED_FINAL_BFI82U_RAW_MISSING'));assert.ok(!r.blockers.includes('DATED_FINAL_BFI82U_MANIFEST_MISSING'));}
   const breadth=JSON.parse(fs.readFileSync(path.join(dir,'breadth-evidence.json')));
   assert.equal(breadth.target_date,date);assert.equal(breadth.publication_authorized,false);if(breadth.status==='OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED')assert.equal(breadth.source_sha256,officialManifest.entries.find(e=>e.id==='MI_INDEX').provenance_diagnostic.repository_payload_sha256);
   if(date==='20261008'){assert.equal(breadth.status,'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED');assert.equal(breadth.legal_identity_master_certified,false);assert.equal(r.stages[1].status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');}
