@@ -262,7 +262,7 @@ jobs:
           cp /tmp/date-to-video-bfi82u-20261013/data_research/twse-market-opening/primary-archive/20261013/* data_research/twse-market-opening/primary-archive/20261013/
           # Persisted dated base is immutable: validate its reproducible source computation instead of overwriting it.
           node tests/daily_gainers_market_opening_real_snapshot.test.js
-          node -e "const b=require('./data_daily_gain_over_5/market-opening/20261013.json');if(b.target_date!=='20261013'||b.taiex.close!==48341.31||b.taiex.change_points!==-960.65||b.market_trading.turnover_twd!==1201861264942||b.publication_authorized!==false)process.exit(1);console.log('DATED_MARKET_BASE_CROSSCHECK_PASS')"
+          node -e "const b=require('./data_daily_gain_over_5/market-opening/20261013.json');if(b.target_date!=='20261013'||b.taiex.close!==48341.31||b.taiex.change_points!==-960.65||b.market_trading.turnover_twd!==1201861264942||b.status!=='partial'||b.breadth!==null||b.preliminary_gainers?.verified_twse_common_stock_only!==false||!b.quality?.blocking_reasons?.includes('COMPLETE_PUBLICATION_NOT_AUTHORIZED')||b.publication_authorized===true)process.exit(1);console.log('DATED_MARKET_BASE_CROSSCHECK_PASS')"
       - name: Upload 20261013 research-only market base
         uses: actions/upload-artifact@v4
         with:
