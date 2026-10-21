@@ -2,11 +2,14 @@
 // Advisory only. Never dispatches workflows or grants synthesis/publication.
 function advise(d4,verification,media,sentenceHandoff=null,narrationCandidateReview=null){
  const sources=d4.official_recovery_advice?.sources||[];
- const pending=sources.filter(s=>s.action_required!=='REUSE_VERIFIED_ARCHIVE'||s.status!=='VERIFIED_RESEARCH_ONLY');
+ const required=['BFI82U','BFIAMU','FMTQIK','MI_INDEX'];
+ const validInventory=Array.isArray(d4.official_recovery_advice?.sources)&&sources.length===required.length&&required.every(id=>sources.filter(s=>s?.id===id).length===1);
+ const pending=validInventory?sources.filter(s=>s.action_required!=='REUSE_VERIFIED_ARCHIVE'||s.status!=='VERIFIED_RESEARCH_ONLY'):[];
  let stage,actions;
  if(verification.status!=='VERIFIED_RESEARCH_ONLY'){stage='REJECTED_PROVENANCE';actions=['REVIEW_VERIFICATION_ISSUES'];}
  else if(sentenceHandoff&&(sentenceHandoff.status==='REJECTED'||sentenceHandoff.sentence_parity?.status==='REJECTED')){stage='REJECTED_SENTENCE_PACKET';actions=sentenceHandoff.issues||sentenceHandoff.sentence_parity?.issues||['REVIEW_SENTENCE_PACKET'];}
  else if(narrationCandidateReview?.status==='REJECTED'){stage='REJECTED_NARRATION_CANDIDATE';actions=narrationCandidateReview.issues||['REVIEW_NARRATION_CANDIDATE'];}
+ else if(!validInventory){stage='WAITING_OFFICIAL_SOURCE_INVENTORY';actions=['REBUILD_DATE_SCOPED_SOURCE_INVENTORY'];}
  else if(pending.length){stage='WAITING_OFFICIAL_SOURCES';actions=pending.map(s=>({source:s.id,action_required:s.action_required,automated_retrieval_allowed:s.automated_retrieval_allowed===true}));}
  else if(media.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED')){stage='WAITING_INDEPENDENT_EDITORIAL_REVIEW';actions=['REVIEW_DATED_MASTER_AND_CLAIMS'];}
  else if(media.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED')){stage='WAITING_DATED_MEDIA_BRIDGE';actions=['IMPLEMENT_AND_REVIEW_DATED_MEDIA_BRIDGE'];}
