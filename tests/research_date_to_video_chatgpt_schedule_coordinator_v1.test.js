@@ -47,3 +47,20 @@ test('D4 schedule refuses duplicated source IDs even when inventory length is fo
 test('D4 schedule rejects an unapproved source masquerading as reusable verified archive',()=>{const sources=['BFI82U','BFIAMU','FMTQIK','MI_INDEX'].map(id=>({id,status:'WAITING_SOURCE',action_required:'REUSE_VERIFIED_ARCHIVE',automated_retrieval_allowed:false}));const r=fromD4(date,{target_date:date,official_recovery_advice:{target_date:date,sources}},base().analysisTask);assert.equal(r.stage,'RECOVERY_REVIEW_REQUIRED');assert.deepEqual(r.suggested_workflows,[]);assert.deepEqual(r.blocked_gaps.map(g=>g[0].id),['BFI82U','BFIAMU','FMTQIK','MI_INDEX']);assert.equal(r.automatic_dispatch_authorized,false);});
 
 test('D4 schedule never treats a verified label without reuse decision as complete',()=>{const sources=['BFI82U','BFIAMU','FMTQIK','MI_INDEX'].map(id=>({id,status:'VERIFIED_RESEARCH_ONLY',action_required:id==='FMTQIK'?'SOURCE_CONTRACT_REVIEW_REQUIRED':'REUSE_VERIFIED_ARCHIVE',automated_retrieval_allowed:false}));const r=fromD4(date,{target_date:date,official_recovery_advice:{target_date:date,sources}},{target_date:date,status:'READY_FOR_EVIDENCE_GROUNDED_DRAFT'});assert.equal(r.stage,'RECOVERY_REVIEW_REQUIRED');assert.deepEqual(r.blocked_gaps.map(g=>g[0].id),['FMTQIK']);assert.deepEqual(r.suggested_workflows,[]);assert.equal(r.automatic_dispatch_authorized,false);assert.equal(r.publication_authorized,false);});
+
+test('research next-action agrees with scheduler when either source readiness condition fails',()=>{
+ const {advise}=require('../scripts/research_date_to_video_next_action_v1');
+ for(const [status,action_required] of [['VERIFIED_RESEARCH_ONLY','SOURCE_CONTRACT_REVIEW_REQUIRED'],['WAITING_SOURCE','REUSE_VERIFIED_ARCHIVE']]){
+  const sources=completeSources([{id:'FMTQIK',status,action_required,automated_retrieval_allowed:false}]);
+  const d4={target_date:date,official_recovery_advice:{target_date:date,sources}};
+  const scheduled=fromD4(date,d4,base().analysisTask);
+  const next=advise(d4,{status:'VERIFIED_RESEARCH_ONLY'},{status:'BLOCKED',issues:['EDITORIAL_CERTIFICATION_REQUIRED']});
+  assert.equal(scheduled.stage,'RECOVERY_REVIEW_REQUIRED');
+  assert.deepEqual(scheduled.blocked_gaps.map(g=>g[0].id),['FMTQIK']);
+  assert.equal(next.stage,'WAITING_OFFICIAL_SOURCES');
+  assert.deepEqual(next.actions.map(a=>a.source),['FMTQIK']);
+  assert.equal(next.automatic_dispatch_authorized,false);
+  assert.equal(next.render_authorized,false);
+  assert.equal(next.publication_authorized,false);
+ }
+});
