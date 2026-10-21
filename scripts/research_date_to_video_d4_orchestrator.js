@@ -41,6 +41,11 @@ function run(root,date,out){
  write('mi-index-provenance.json',inspectMiProvenance(root,date));
  write('fmtqik-provenance.json',inspectFmtqikProvenance(root,date));
  const marketOnlyMissing=status.blockers.length===1&&status.blockers[0]==='MISSING:market-opening';
+ if(marketOnlyMissing){
+  // A missing dated partial base is a repository materialization gap, not evidence that the
+  // existing chart or official archives need to be fetched again. This is advice only.
+  result.market_base_recovery_advice={target_date:date,status:'DATED_PARTIAL_BASE_MISSING',mode:'PLAN_ONLY_NO_DISPATCH',candidate_builder:'scripts/build_daily_gainers_market_opening_phase1.js',candidate_command:'node scripts/build_daily_gainers_market_opening_phase1.js '+date,prerequisites:['DATED_REPOSITORY_MARKET_CHART','DATED_DAILY_GAINERS_RAW','SAME_DATE_OFFICIAL_MANIFEST_CROSSCHECK'],requires_independent_market_master_review:true,automatic_dispatch_authorized:false,publication_authorized:false};
+ }
  if(status.stages[0].status==='WAITING_SOURCE'&&!marketOnlyMissing){write('status.json',result);return result}
  const load=(part)=>JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5',part,date+'.json'),'utf8'));
  const inputs={list:load(''),facts:load('analysis-facts/'),news:load('analysis-news/'),ai:load('analysis-ai/')};
