@@ -55,6 +55,16 @@ function fromD4Directory(date,dir){
  const task=read('original-analysis-task.json');
  if(task)assert.equal(task.target_date,date,'D4_TASK_DATE_MISMATCH');
  const decision=fromD4(date,d4,task);
+ // A ready script decision must be bound to the persisted dated manifest, not just status.json labels.
+ if(decision.stage==='READY_FOR_SCRIPT'){
+  const manifest=read('official-data-manifest.json');
+  const sources=d4.official_recovery_advice.sources;
+  const reusable=e=>(e.id==='BFI82U'&&e.status==='VERIFIED_RESEARCH_ONLY'&&e.action_required==='REUSE_VERIFIED_ARCHIVE')||(['FMTQIK','MI_INDEX'].includes(e.id)&&e.status==='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE'&&e.action_required==='REUSE_DATED_WORKFLOW_OUTPUT');
+  if(!manifest||manifest.target_date!==date||manifest.manifest_sha256!==d4.official_recovery_advice.manifest_sha256||!Array.isArray(manifest.entries)||!['BFI82U','FMTQIK','MI_INDEX'].every(id=>{
+   const entry=manifest.entries.find(e=>e.id===id),source=sources.find(s=>s.id===id);
+   return entry&&source&&reusable(entry)&&entry.status===source.status&&entry.action_required===source.action_required;
+  }))return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_SOURCE_MANIFEST_BINDING_REQUIRED'};
+ }
  // D4 source verification alone is insufficient; require a ready task and its evidence files.
  if(decision.stage==='READY_FOR_SCRIPT'){
   const master=read('market-master.json'),claims=read('claims.json');
