@@ -22,6 +22,14 @@ for(const date of ['20261008','20261013']){
  if(date==='20261013'){
   assert.equal(r.market_base_recovery_advice,undefined);
   assert.ok(!r.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING'));
+  const base=JSON.parse(fs.readFileSync(path.join('data_daily_gain_over_5/market-opening',date+'.json'),'utf8'));
+  const finalBfi=base.source_manifest.find(e=>e.source_name==='TWSE BFI82U final dated official report');
+  const verified=JSON.parse(fs.readFileSync(path.join(dir,'market-master.json'),'utf8'));
+  const finalArchive=JSON.parse(fs.readFileSync(path.join('data_research/twse-market-opening/primary-archive',date,date+'-bfi82u.manifest.json'),'utf8'));
+  assert.equal(finalBfi.source_date,date);
+  assert.equal(finalBfi.source_sha256,finalArchive.sha256);
+  assert.equal(verified.source_evidence.bfi82u_sha256,finalArchive.sha256);
+  assert.equal(verified.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');
  }
 
  assert.equal(r.official_recovery_advice.render_authorized,false);
