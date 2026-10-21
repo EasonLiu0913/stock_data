@@ -84,3 +84,22 @@ test('next-action never treats missing, duplicate or incomplete source inventory
 
 test('dated workflow source readiness does not require duplicate HTTP capture or optional industry context',()=>{const d4={target_date:date,official_recovery_advice:{target_date:date,sources:completeSources([])}};const r=fromD4(date,d4,base().analysisTask);assert.equal(r.stage,'READY_FOR_SCRIPT');assert.equal(r.automatic_dispatch_authorized,false);assert.equal(r.publication_authorized,false);});
 test('unvalidated mandatory dated workflow source still blocks research script',()=>{const sources=completeSources([]);const source=sources.find(x=>x.id==='MI_INDEX');source.status='REJECTED';source.action_required='REVIEW_INVALID_WORKFLOW_OUTPUT';const r=fromD4(date,{target_date:date,official_recovery_advice:{target_date:date,sources}},base().analysisTask);assert.equal(r.stage,'RECOVERY_REVIEW_REQUIRED');assert.equal(r.blocked_gaps[0][0].id,'MI_INDEX');assert.equal(r.automatic_dispatch_authorized,false);});
+
+test('real persisted dated D4 evidence reaches schedule without repeated original HTTP capture',()=>{
+ const {run}=require('../scripts/research_date_to_video_d4_orchestrator');
+ for(const target of ['20261008','20261013']){
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'schedule-real-d4-'));
+  try{
+   const d4=run('.',target,dir);
+   const result=fromD4Directory(target,dir);
+   assert.equal(result.target_date,target);
+   assert.equal(result.stage,'READY_FOR_SCRIPT',JSON.stringify({stage:result.stage,reason:result.reason,blockers:d4.blockers}));
+   assert.equal(result.action,'GENERATE_ORIGINAL_ANALYSIS');
+   assert.equal(result.automatic_dispatch_authorized,false);
+   assert.equal(result.publication_authorized,false);
+   const sources=d4.official_recovery_advice.sources;
+   assert.deepEqual(sources.filter(s=>['FMTQIK','MI_INDEX'].includes(s.id)).map(s=>s.action_required),['REUSE_DATED_WORKFLOW_OUTPUT','REUSE_DATED_WORKFLOW_OUTPUT']);
+   assert.equal(sources.find(s=>s.id==='BFIAMU').action_required,'OPTIONAL_CONTEXT_NOT_REQUIRED');
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+ }
+});
