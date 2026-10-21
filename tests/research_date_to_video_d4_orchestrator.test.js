@@ -358,13 +358,14 @@ try{
  assert.ok(fs.existsSync(path.join(crossDateDir,'market-master-review-packet.json')));
  const second=run('.','20261013',crossDateDir);
  assert.equal(second.target_date,'20261013');
- assert.equal(fs.existsSync(path.join(crossDateDir,'market-master-review-packet.json')),false);
+ assert.equal(fs.existsSync(path.join(crossDateDir,'market-master-review-packet.json')),true);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(crossDateDir,'market-master-review-packet.json'),'utf8')).target_date,'20261013');
  for(const file of ['status.json','official-data-manifest.json','official-manifest-master-gate.json','market-master.json','media-handoff.json']){
   const output=JSON.parse(fs.readFileSync(path.join(crossDateDir,file),'utf8'));
   assert.equal(output.target_date,'20261013',file+' must not retain previous date');
   assert.equal(output.publication_authorized,false);
  }
- assert.equal(JSON.parse(fs.readFileSync(path.join(crossDateDir,'market-master.json'))).status,'WAITING_SOURCE');
+ assert.equal(JSON.parse(fs.readFileSync(path.join(crossDateDir,'market-master.json'))).status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');
 }finally{fs.rmSync(crossDateDir,{recursive:true,force:true});}
 
 // Optional audio submissions are external inputs: preserve them, reject partial submissions, clean generated review on rerun.
