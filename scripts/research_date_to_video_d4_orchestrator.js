@@ -55,8 +55,8 @@ function run(root,date,out){
   const breadthPath=path.join(root,'data_twse_mi_index',date+'_twse_mi_index.json');
   let breadth={target_date:date,status:'WAITING_SOURCE',missing:['DATED_MI_INDEX_STOCK_AGGREGATE'],publication_authorized:false};
   if(fs.existsSync(breadthPath)){
-   try{const bytes=fs.readFileSync(breadthPath),expected=officialManifest.entries.find(e=>e.id==='MI_INDEX')?.provenance_diagnostic;
-    if(expected?.status!=='DATED_REPOSITORY_PAYLOAD_SCHEMA_VERIFIED_RAW_HTTP_PROVENANCE_PENDING'||expected.repository_payload_sha256!==hash(bytes))throw Error('MI_INDEX_CHANGED_SINCE_OFFICIAL_MANIFEST');
+   try{const bytes=fs.readFileSync(breadthPath),miEntry=officialManifest.entries.find(e=>e.id==='MI_INDEX'),expected=miEntry?.provenance_diagnostic;
+    if(miEntry?.status!=='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE'||miEntry?.action_required!=='REUSE_DATED_WORKFLOW_OUTPUT'||expected?.status!=='DATED_REPOSITORY_PAYLOAD_SCHEMA_VERIFIED_RAW_HTTP_PROVENANCE_PENDING'||expected.repository_payload_sha256!==hash(bytes))throw Error('MI_INDEX_CHANGED_SINCE_OFFICIAL_MANIFEST');
     breadth={...parseBreadth(JSON.parse(bytes),date),status:'OFFICIAL_STOCK_COLUMN_VERIFIED_IDENTITY_UNCERTIFIED',source_sha256:hash(bytes)};}
    catch(e){breadth={target_date:date,status:'REJECTED',reason:e.message,publication_authorized:false};}
   }
@@ -65,11 +65,11 @@ function run(root,date,out){
    try{
     const base=load('market-opening/');
     if(base.target_date!==date||base.market!=='TWSE'||base.status!=='partial')throw Error('INVALID_DATED_MARKET_BASE');
-    const fmtqik=officialManifest.entries.find(e=>e.id==='FMTQIK')?.provenance_diagnostic;
+    const fmtqikEntry=officialManifest.entries.find(e=>e.id==='FMTQIK'),fmtqik=fmtqikEntry?.provenance_diagnostic;
     const chartEvidence=base.source_manifest?.find(s=>['TWSE FMTQIK','TWSE MI_5MINS_HIST + FMTQIK dated repository chart'].includes(s.source_name)&&s.source_path_or_endpoint==='data_twse_market_chart/market_chart.json');
     const chartBytes=fs.readFileSync(path.join(root,'data_twse_market_chart/market_chart.json'));
     const datedChart=JSON.parse(chartBytes).data?.filter(r=>r.date===date);
-    if(fmtqik?.status!=='DATED_DERIVED_CHART_ONLY_ORIGINAL_RAW_PENDING'||!fmtqik.derived_chart_sha256||hash(chartBytes)!==fmtqik.derived_chart_sha256||chartEvidence?.source_date!==date||(chartEvidence.source_sha256!==undefined&&chartEvidence.source_sha256!==fmtqik.derived_chart_sha256)||datedChart?.length!==1||base.market_trading?.turnover_twd!==datedChart[0].turnover||base.market_trading?.shares!==datedChart[0].volumeShares||base.market_trading?.transactions!==datedChart[0].transactions)throw Error('MARKET_BASE_DERIVED_CHART_MANIFEST_MISMATCH');
+    if(fmtqikEntry?.status!=='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE'||fmtqikEntry?.action_required!=='REUSE_DATED_WORKFLOW_OUTPUT'||fmtqik?.status!=='DATED_DERIVED_CHART_ONLY_ORIGINAL_RAW_PENDING'||!fmtqik.derived_chart_sha256||hash(chartBytes)!==fmtqik.derived_chart_sha256||chartEvidence?.source_date!==date||(chartEvidence.source_sha256!==undefined&&chartEvidence.source_sha256!==fmtqik.derived_chart_sha256)||datedChart?.length!==1||base.market_trading?.turnover_twd!==datedChart[0].turnover||base.market_trading?.shares!==datedChart[0].volumeShares||base.market_trading?.transactions!==datedChart[0].transactions)throw Error('MARKET_BASE_DERIVED_CHART_MANIFEST_MISMATCH');
     for(const name of ['foreign','investment_trust','dealers'])for(const key of ['buy_twd','sell_twd','net_twd'])if(base.institutional?.[name]?.[key]!==institutional.institutional[name][key])throw Error('MARKET_BASE_INSTITUTIONAL_MISMATCH_'+name+'_'+key);
     const trading=base.market_trading;if(!Number.isSafeInteger(trading?.turnover_twd)||trading.turnover_twd<=0)throw Error('INVALID_DATED_TURNOVER');
     marketMaster={target_date:date,status:'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING',market:'TWSE',taiex:base.taiex,market_trading:trading,breadth, institutional:institutional.institutional,source_evidence:{market_base_sha256:hash(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening',date+'.json'))),mi_index_sha256:breadth.source_sha256,bfi82u_sha256:institutional.raw_sha256},ordinary_share_identity_certified:false,editorial_complete:false,publication_authorized:false};
