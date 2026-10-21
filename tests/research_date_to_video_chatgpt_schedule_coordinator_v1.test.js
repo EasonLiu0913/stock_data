@@ -64,3 +64,20 @@ test('research next-action agrees with scheduler when either source readiness co
   assert.equal(next.publication_authorized,false);
  }
 });
+
+test('next-action never treats missing, duplicate or incomplete source inventory as complete',()=>{
+ const {advise}=require('../scripts/research_date_to_video_next_action_v1');
+ const ready=completeSources([]);
+ for(const sources of [undefined,[],ready.slice(0,3),[ready[0],ready[0],ready[2],ready[3]]]){
+  const d4={target_date:date,official_recovery_advice:sources===undefined?undefined:{target_date:date,sources}};
+  const r=advise(d4,{status:'VERIFIED_RESEARCH_ONLY'},{status:'READY_FOR_SEPARATE_MEDIA_REVIEW',issues:[]});
+  assert.equal(r.stage,'WAITING_OFFICIAL_SOURCE_INVENTORY');
+  assert.deepEqual(r.actions,['REBUILD_DATE_SCOPED_SOURCE_INVENTORY']);
+  assert.equal(r.automatic_dispatch_authorized,false);
+  assert.equal(r.tts_authorized,false);
+  assert.equal(r.render_authorized,false);
+  assert.equal(r.publication_authorized,false);
+ }
+ const d4={target_date:date,official_recovery_advice:{target_date:date,sources:ready}};
+ assert.equal(advise(d4,{status:'VERIFIED_RESEARCH_ONLY'},{status:'READY_FOR_SEPARATE_MEDIA_REVIEW',issues:[]}).stage,'READY_FOR_SEPARATE_MEDIA_REVIEW');
+});
