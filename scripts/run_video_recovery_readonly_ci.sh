@@ -215,7 +215,9 @@ assert.equal(baseline.master_status,'SOURCE_EVIDENCE_PRESENT_EDITORIAL_PENDING')
 assert.equal(baseline.ready_to_render,false);
 assert.equal(baseline.publication_authorized,false);
 assert.ok(!baseline.blockers.includes('FINAL_DATED_BFI82U_THREE_GROUPS_PENDING'));
-assert.equal(r.partial_master.institutional.investment_trust,undefined);
+assert.deepEqual(r.partial_master.institutional.investment_trust,r.final_bfi82u.institutional.investment_trust);
+assert.deepEqual(r.partial_master.institutional.dealers,r.final_bfi82u.institutional.dealers);
+assert.deepEqual(r.partial_master.institutional.foreign,r.final_bfi82u.institutional.foreign);
 assert.equal(r.ready_to_render,false);assert.equal(r.publication_authorized,false);
 assert.equal(Object.keys(r.source_hashes).length,3);
 assert.equal(r.official_stock_breadth.scope,'TWSE_OFFICIAL_STOCK_COLUMN');
