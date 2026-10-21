@@ -368,6 +368,26 @@ try{
  assert.equal(JSON.parse(fs.readFileSync(path.join(crossDateDir,'market-master.json'))).status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');
 }finally{fs.rmSync(crossDateDir,{recursive:true,force:true});}
 
+// Reviewer handoff is an exact-byte, dated evidence index, never an approval.
+const reviewHandoffDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-review-handoff-'));
+try{
+ const digest=name=>crypto.createHash('sha256').update(fs.readFileSync(path.join(reviewHandoffDir,name))).digest('hex');
+ const first=run('.','20261013',reviewHandoffDir);
+ const h=JSON.parse(fs.readFileSync(path.join(reviewHandoffDir,'review-handoff-manifest.json'),'utf8'));
+ assert.equal(h.target_date,'20261013');
+ assert.equal(h.inventory_sha256,crypto.createHash('sha256').update(JSON.stringify(JSON.parse(fs.readFileSync(path.join(reviewHandoffDir,'claims.json'),'utf8')))).digest('hex'));
+ assert.equal(h.worksheet_sha256,digest('independent-review-worksheet.json'));
+ assert.equal(h.price_evidence_sha256,digest('dated-price-review-evidence.json'));
+ assert.equal(h.market_master_review_sha256,digest('market-master-review-packet.json'));
+ assert.equal(h.status,'PENDING_INDEPENDENT_REVIEW');
+ assert.deepEqual(h.review_decisions,[]);
+ for(const flag of ['editorial_certified','narration_authorized','render_authorized','publication_authorized'])assert.equal(h[flag],false);
+ assert.ok(first.artifacts.some(x=>x.name==='review-handoff-manifest.json'&&x.sha256===digest('review-handoff-manifest.json')));
+ run('.','20261014',reviewHandoffDir);
+ assert.equal(fs.existsSync(path.join(reviewHandoffDir,'review-handoff-manifest.json')),false);
+ console.log('D4_REVIEW_HANDOFF_HASH_AND_STALE_DATE_FAIL_CLOSED_PASS');
+}finally{fs.rmSync(reviewHandoffDir,{recursive:true,force:true});}
+
 // Optional audio submissions are external inputs: preserve them, reject partial submissions, clean generated review on rerun.
 const audioDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-audio-'));
 try{const supplied=path.join(audioDir,'sentence-audio-inventory.json');fs.writeFileSync(supplied,JSON.stringify({contract:'INVALID'}));const first=run('.','20261008',audioDir);assert.ok(first.blockers.includes('DATED_SENTENCE_AUDIO_REVIEW_REJECTED'));assert.equal(JSON.parse(fs.readFileSync(path.join(audioDir,'sentence-audio-review.json')).toString()).status,'REJECTED');assert.deepEqual(JSON.parse(fs.readFileSync(path.join(audioDir,'sentence-audio-review.json'),'utf8')).issues,['D4_AUDIO_INPUT_MISSING:edge-tts-command-plan.json','D4_AUDIO_INPUT_MISSING:sentence-audio-proof.json','D4_AUDIO_INPUT_MISSING:narration-candidate.json']);assert.equal(first.audio_recovery_advice.actions.length,3);assert.equal(first.audio_recovery_advice.source_review_sha256,crypto.createHash('sha256').update(fs.readFileSync(path.join(audioDir,'sentence-audio-review.json'))).digest('hex'));assert.equal(first.audio_recovery_advice.actions[0].action,'SUPPLY_MISSING_RESEARCH_ARTIFACT');assert.equal(first.audio_recovery_advice.automatic_dispatch_authorized,false);assert.deepEqual(JSON.parse(fs.readFileSync(path.join(audioDir,'status.json'),'utf8')).audio_recovery_advice,first.audio_recovery_advice);assert.equal(fs.existsSync(supplied),true);fs.unlinkSync(supplied);run('.','20261008',audioDir);assert.equal(fs.existsSync(path.join(audioDir,'sentence-audio-review.json')),false);assert.equal(JSON.parse(fs.readFileSync(path.join(audioDir,'status.json'),'utf8')).blockers.includes('DATED_SENTENCE_AUDIO_REVIEW_REJECTED'),false);assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(path.join(audioDir,'status.json'),'utf8')),'audio_recovery_advice'),false);console.log('D4_OPTIONAL_AUDIO_INPUT_FAIL_CLOSED_PASS');}finally{fs.rmSync(audioDir,{recursive:true,force:true});}
