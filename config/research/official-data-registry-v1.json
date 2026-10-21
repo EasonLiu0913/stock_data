@@ -3,7 +3,7 @@
   "registry_id": "date-to-video-official-data-research",
   "research_only": true,
   "publication_authorized": false,
-  "approval_policy": "Candidate entries cannot be ingested as independently verified raw evidence. A source becomes approved only after source-specific date, schema, scope, unit and provenance checks are implemented and independently reviewed.",
+  "approval_policy": "WORKFLOW_TRUST_FIRST_V2: Reuse same-date outputs produced by existing authorized daily workflows after lightweight date, schema, required-field, unit, integrity and cross-source consistency checks. Independent raw HTTP recapture/attestation is optional deep audit for anomalies, not a universal daily video prerequisite. Distinguish workflow-validated evidence from independently certified raw HTTP; no cross-date fallback, invented source, scope conflation or automatic editorial/render/publication approval.",
   "sources": [
     {
       "id": "BFI82U",
@@ -18,7 +18,9 @@
       "validator": "scripts/research_date_to_video_bfi82u_v1.js",
       "archiver": "scripts/research_date_to_video_bfi82u_archive.js",
       "archive_pattern": "data_research/twse-market-opening/primary-archive/{YYYYMMDD}/{YYYYMMDD}-bfi82u.json",
-      "failure_policy": "WAITING_SOURCE or reject; no cross-date fallback"
+      "failure_policy": "WAITING_SOURCE or reject; no cross-date fallback",
+      "workflow_reuse_policy": "SAME_DATE_EXISTING_WORKFLOW_OUTPUT_LIGHTWEIGHT_VALIDATION",
+      "independent_raw_http_attestation_required_for_daily_reuse": false
     },
     {
       "id": "FMTQIK",
@@ -56,7 +58,10 @@
       "endpoint_approved": false,
       "raw_http_provenance_certified": false,
       "master_authorized": false,
-      "publication_authorized": false
+      "publication_authorized": false,
+      "workflow_reuse_policy": "SAME_DATE_EXISTING_WORKFLOW_OUTPUT_LIGHTWEIGHT_VALIDATION",
+      "independent_raw_http_attestation_required_for_daily_reuse": false,
+      "workflow_output_note": "Existing dated derived market chart may be reused for explicitly declared TWSE turnover scope after lightweight checks; do not call it independently certified original HTTP."
     },
     {
       "id": "BFIAMU",
@@ -68,7 +73,10 @@
       "units": "TO_VERIFY",
       "scope": "TO_VERIFY",
       "status": "CANDIDATE_UNAPPROVED",
-      "failure_policy": "Exclude from certified Master until dated raw proof and validator exist"
+      "failure_policy": "Exclude from certified Master until dated raw proof and validator exist",
+      "workflow_reuse_policy": "SAME_DATE_EXISTING_WORKFLOW_OUTPUT_LIGHTWEIGHT_VALIDATION",
+      "independent_raw_http_attestation_required_for_daily_reuse": false,
+      "workflow_output_note": "Optional industry context unless dated script actually uses it; absence cannot be silently filled by another date or a fabricated archive."
     },
     {
       "id": "MI_INDEX",
@@ -81,7 +89,34 @@
       "scope": "TWSE official 股票 column; ordinary-share identity uncertified",
       "status": "RESEARCH_PARSER_IMPLEMENTED_IDENTITY_PENDING",
       "existing_consumer": "scripts/research_market_opening_mi_index_breadth.js",
-      "failure_policy": "Fail closed on missing dated raw/column/schema; no cross-date fallback"
+      "failure_policy": "Fail closed on missing dated raw/column/schema; no cross-date fallback",
+      "workflow_reuse_policy": "SAME_DATE_EXISTING_WORKFLOW_OUTPUT_LIGHTWEIGHT_VALIDATION",
+      "independent_raw_http_attestation_required_for_daily_reuse": false,
+      "workflow_output_note": "Existing dated official 股票 aggregate may be reused as aggregate; ordinary common-stock identity remains a separate claim."
     }
-  ]
+  ],
+  "workflow_output_acceptance": {
+    "contract": "DATE_TO_VIDEO_WORKFLOW_TRUST_FIRST_V2",
+    "default": "REUSE_EXISTING_DATED_WORKFLOW_OUTPUT",
+    "required_checks": [
+      "WORKFLOW_IDENTITY_OR_PERSISTED_OUTPUT",
+      "EXACT_TARGET_DATE",
+      "REQUIRED_SCHEMA_AND_NUMERIC_UNITS",
+      "FILE_INTEGRITY",
+      "CROSS_SOURCE_CONSISTENCY",
+      "EXPLICIT_STATISTICAL_SCOPE"
+    ],
+    "deep_audit_triggers": [
+      "MISSING",
+      "WRONG_DATE",
+      "SCHEMA_OR_UNIT_CHANGE",
+      "TAMPER_OR_INTEGRITY_MISMATCH",
+      "SOURCE_CONFLICT",
+      "SUSPICIOUS_VALUE"
+    ],
+    "raw_http_independent_attestation_universally_required": false,
+    "editorial_approval_separate": true,
+    "render_authorized": false,
+    "publication_authorized": false
+  }
 }
