@@ -112,6 +112,29 @@ test('real persisted dated D4 evidence reaches schedule without repeated origina
  }
 });
 
+test('tampered persisted manifest digest cannot authorize script even when status repeats the claimed SHA',()=>{
+ const {run}=require('../scripts/research_date_to_video_d4_orchestrator');
+ const target='20261013',dir=fs.mkdtempSync(path.join(os.tmpdir(),'schedule-tampered-manifest-'));
+ try{
+  run('.',target,dir);
+  const manifestPath=path.join(dir,'official-data-manifest.json');
+  const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+  manifest.entries.find(e=>e.id==='FMTQIK').workflow_validation.source_sha256='tampered-source-sha';
+  fs.writeFileSync(manifestPath,JSON.stringify(manifest));
+  const task=JSON.parse(fs.readFileSync(path.join(dir,'original-analysis-task.json'),'utf8'));
+  const result=fromD4Directory(target,dir);
+  if(task.status==='READY_FOR_EVIDENCE_GROUNDED_DRAFT'){
+   assert.equal(result.stage,'WAITING_DATA');
+   assert.equal(result.reason,'D4_SOURCE_MANIFEST_BINDING_REQUIRED');
+  }else{
+   assert.equal(result.stage,'WAITING_DATA');
+   assert.equal(result.reason,'D4_TASK_NOT_READY');
+  }
+  assert.equal(result.automatic_dispatch_authorized,false);
+  assert.equal(result.publication_authorized,false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('ready status labels alone cannot bypass missing dated source manifest',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'schedule-manifest-binding-'));
  try{
