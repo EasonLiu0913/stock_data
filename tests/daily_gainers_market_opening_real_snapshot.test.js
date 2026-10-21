@@ -4,24 +4,37 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {buildPartialMarketOpening}=require('../scripts/build_daily_gainers_market_opening_phase1');
+const {inspect:inspectBfi82u}=require('../scripts/research_date_to_video_bfi82u_v1');
 const root=path.join(__dirname,'..');
-const day='20261008';
 const market=JSON.parse(fs.readFileSync(path.join(root,'data_twse_market_chart/market_chart.json'),'utf8'));
-const raw=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5',day+'.json'),'utf8'));
-const snapshot=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening',day+'.json'),'utf8'));
-test('20261008 repository snapshot matches its reproducible source computation',()=>{
- const computed=buildPartialMarketOpening({marketChart:market,raw,date:day});
- for(const key of ['taiex','market_trading','institutional','preliminary_gainers','source_manifest']){
-  assert.deepEqual(snapshot[key],computed[key],key+' stale or inconsistent with its source files');
- }
+const readRaw=date=>JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5',date+'.json'),'utf8'));
+test('20261008 historical persisted partial snapshot remains unmodified and explicitly uncertified',()=>{
+ const date='20261008',snapshot=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening',date+'.json'),'utf8'));
+ assert.equal(snapshot.target_date,date);
  assert.equal(snapshot.status,'partial');
  assert.equal(snapshot.market,'TWSE');
  assert.equal(snapshot.breadth,null);
- assert.ok(snapshot.quality.missing_fields.includes('breadth'));
+ assert.equal(snapshot.preliminary_gainers.count,readRaw(date).stocks.length);
+ assert.equal(snapshot.preliminary_gainers.verified_twse_common_stock_only,false);
  assert.ok(snapshot.quality.blocking_reasons.includes('COMPLETE_PUBLICATION_NOT_AUTHORIZED'));
 });
-test('20261008 raw 5% count is clearly preliminary, not certified common stock breadth',()=>{
- assert.equal(snapshot.preliminary_gainers.count,raw.stocks.length);
- assert.equal(snapshot.preliminary_gainers.verified_twse_common_stock_only,false);
- assert.equal(snapshot.breadth,null);
+test('20261013 missing partial base is reproducible from same-date persisted chart, gainers and verified final BFI82U',()=>{
+ const date='20261013',raw=readRaw(date),finalInstitutional=inspectBfi82u(root,date);
+ assert.equal(finalInstitutional.status,'VERIFIED');
+ const candidate=buildPartialMarketOpening({marketChart:market,raw,date,finalInstitutional});
+ assert.equal(candidate.target_date,date);
+ assert.equal(candidate.status,'partial');
+ assert.deepEqual(candidate.institutional.foreign,finalInstitutional.institutional.foreign);
+ assert.deepEqual(candidate.institutional.investment_trust,finalInstitutional.institutional.investment_trust);
+ assert.deepEqual(candidate.institutional.dealers,finalInstitutional.institutional.dealers);
+ assert.equal(candidate.source_manifest.find(s=>s.source_name==='TWSE BFI82U final dated official report').source_sha256,finalInstitutional.raw_sha256);
+ assert.equal(candidate.breadth,null);
+ assert.equal(candidate.preliminary_gainers.verified_twse_common_stock_only,false);
+ assert.ok(candidate.quality.blocking_reasons.includes('COMPLETE_PUBLICATION_NOT_AUTHORIZED'));
+});
+test('partial builder fails closed without matching verified final BFI82U',()=>{
+ const date='20261013',raw=readRaw(date),verified=inspectBfi82u(root,date);
+ assert.throws(()=>buildPartialMarketOpening({marketChart:market,raw,date}),/DATED_FINAL_BFI82U_REQUIRED/);
+ assert.throws(()=>buildPartialMarketOpening({marketChart:market,raw,date,finalInstitutional:{...verified,target_date:'20261008'}}),/DATED_FINAL_BFI82U_REQUIRED/);
+ assert.throws(()=>buildPartialMarketOpening({marketChart:market,raw,date,finalInstitutional:{...verified,status:'WAITING_SOURCE'}}),/DATED_FINAL_BFI82U_REQUIRED/);
 });
