@@ -8,7 +8,7 @@ function build(entry,candidate,worksheet){
  const check=(code,ok)=>{if(!ok)issues.push(code);};
  check('ENTRY_CONTRACT',entry?.contract==='DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY');
  check('CANDIDATE_REVIEW',entry?.narration_candidate_review?.status==='STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED');
- check('CANDIDATE_SOURCE',typeof entry?.narration_candidate_source?.sha256==='string'&&/^[a-f0-9]{64}$/.test(entry.narration_candidate_source.sha256));
+ check('CANDIDATE_SOURCE',!!candidate&&entry?.narration_candidate_source?.sha256===sha(candidate));
  check('CANDIDATE_REVIEW_HASH',!!candidate&&entry?.narration_candidate_review?.candidate_sha256===sha(candidate));
  check('WORKSHEET_REVIEW_HASH',!!worksheet&&entry?.narration_candidate_review?.worksheet_sha256===sha(worksheet));
  check('DATE_MATCH',!!candidate?.target_date&&candidate.target_date===entry?.target_date&&candidate.target_date===worksheet?.target_date);
