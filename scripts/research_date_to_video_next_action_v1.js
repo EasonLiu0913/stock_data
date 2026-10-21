@@ -4,7 +4,8 @@ function advise(d4,verification,media,sentenceHandoff=null,narrationCandidateRev
  const sources=d4.official_recovery_advice?.sources||[];
  const required=['BFI82U','BFIAMU','FMTQIK','MI_INDEX'];
  const validInventory=Array.isArray(d4.official_recovery_advice?.sources)&&sources.length===required.length&&required.every(id=>sources.filter(s=>s?.id===id).length===1);
- const pending=validInventory?sources.filter(s=>s.action_required!=='REUSE_VERIFIED_ARCHIVE'||s.status!=='VERIFIED_RESEARCH_ONLY'):[];
+ const ready=s=>(s.id==='BFI82U'&&s.status==='VERIFIED_RESEARCH_ONLY'&&s.action_required==='REUSE_VERIFIED_ARCHIVE')||(['FMTQIK','MI_INDEX'].includes(s.id)&&s.status==='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE'&&s.action_required==='REUSE_DATED_WORKFLOW_OUTPUT')||(s.id==='BFIAMU'&&s.action_required==='OPTIONAL_CONTEXT_NOT_REQUIRED');
+ const pending=validInventory?sources.filter(s=>s.id!=='BFIAMU'&&!ready(s)):[];
  let stage,actions;
  if(verification.status!=='VERIFIED_RESEARCH_ONLY'){stage='REJECTED_PROVENANCE';actions=['REVIEW_VERIFICATION_ISSUES'];}
  else if(sentenceHandoff&&(sentenceHandoff.status==='REJECTED'||sentenceHandoff.sentence_parity?.status==='REJECTED')){stage='REJECTED_SENTENCE_PACKET';actions=sentenceHandoff.issues||sentenceHandoff.sentence_parity?.issues||['REVIEW_SENTENCE_PACKET'];}
