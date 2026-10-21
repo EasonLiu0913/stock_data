@@ -62,7 +62,7 @@ function fromD4Directory(date,dir){
   const reusable=e=>(e.id==='BFI82U'&&e.status==='VERIFIED_RESEARCH_ONLY'&&e.action_required==='REUSE_VERIFIED_ARCHIVE')||(['FMTQIK','MI_INDEX'].includes(e.id)&&e.status==='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE'&&e.action_required==='REUSE_DATED_WORKFLOW_OUTPUT');
   if(!manifest||manifest.target_date!==date||manifest.manifest_sha256!==d4.official_recovery_advice.manifest_sha256||!Array.isArray(manifest.entries)||!['BFI82U','FMTQIK','MI_INDEX'].every(id=>{
    const entry=manifest.entries.find(e=>e.id===id),source=sources.find(s=>s.id===id);
-   return entry&&source&&reusable(entry)&&entry.status===source.status&&entry.action_required===source.action_required;
+   return entry&&source&&entry.status===source.status&&(id==='BFI82U'?(entry.status==='VERIFIED_RESEARCH_ONLY'&&source.action_required==='REUSE_VERIFIED_ARCHIVE'):(reusable(entry)&&entry.action_required===source.action_required&&entry.workflow_validation?.target_date===date&&!!entry.workflow_validation?.source_sha256));
   }))return {...decision,stage:'WAITING_DATA',action:'INSPECT_D4_ARTIFACTS',reason:'D4_SOURCE_MANIFEST_BINDING_REQUIRED'};
  }
  // D4 source verification alone is insufficient; require a ready task and its evidence files.
