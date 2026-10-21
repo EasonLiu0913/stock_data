@@ -10,7 +10,10 @@ function decide({date,verification,recovery,analysisTask,aiHandoff,editorial,vid
  }
  const base={contract:'DATE_TO_VIDEO_V1_CHATGPT_SCHEDULE_COORDINATION_RESEARCH',target_date:date,research_only:true,automatic_dispatch_authorized:false,publication_authorized:false};
  const output=(stage,action,reason,details={})=>({...base,stage,action,reason,...details});
- if(video?.status==='ACCEPTED_RESEARCH_MP4'&&video?.acceptance_verified===true&&video?.artifact_sha256&&video?.source_master_sha256&&analysisTask?.market_master_sha256===video.source_master_sha256)return output('VIDEO_COMPLETE','NONE','ACCEPTED_ARTIFACT_EXISTS');
+ // Never let a claimed MP4 bypass the current dated source/recovery gate.
+ const sourceSet=Array.isArray(recovery?.sources)?recovery.sources:null;
+ const recoveryReady=recovery?.mode==='PLAN_ONLY_NO_DISPATCH'&&Array.isArray(recovery.actions)&&recovery.actions.length===0&&recovery.status!=='BLOCKED'&&verification?.status==='VERIFIED_RESEARCH_ONLY';
+ if(recoveryReady&&analysisTask?.status==='READY_FOR_EVIDENCE_GROUNDED_DRAFT'&&video?.status==='ACCEPTED_RESEARCH_MP4'&&video?.acceptance_verified===true&&video?.artifact_sha256&&video?.source_master_sha256&&analysisTask?.market_master_sha256===video.source_master_sha256)return output('VIDEO_COMPLETE','NONE','ACCEPTED_ARTIFACT_EXISTS');
  if(!recovery||recovery.mode!=='PLAN_ONLY_NO_DISPATCH')return output('WAITING_DATA','PREPARE_RECOVERY_PLAN','SAFE_RECOVERY_PLAN_REQUIRED');
  if(!Array.isArray(recovery.actions))return output('WAITING_DATA','INSPECT_RECOVERY_PLAN','RECOVERY_ACTIONS_REQUIRED');
  if(recovery.status==='BLOCKED'&&recovery.actions.length===0)return output('WAITING_DATA','INSPECT_RECOVERY_PLAN','BLOCKED_RECOVERY_PLAN');
