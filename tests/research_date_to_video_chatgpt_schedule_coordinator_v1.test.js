@@ -134,7 +134,8 @@ test('tampered persisted manifest digest cannot authorize script even when statu
    assert.equal(result.reason,'D4_SOURCE_MANIFEST_BINDING_REQUIRED');
   }else{
    assert.equal(result.stage,'WAITING_DATA');
-   assert.equal(result.reason,'D4_TASK_NOT_READY');
+   assert.equal(result.reason,'DATED_PARTIAL_MARKET_BASE_MISSING');
+   assert.equal(result.action,'PREPARE_DATED_PARTIAL_MARKET_BASE');
   }
   assert.equal(result.automatic_dispatch_authorized,false);
   assert.equal(result.publication_authorized,false);
