@@ -22,6 +22,8 @@ test('20261013 missing partial base is reproducible from same-date persisted cha
  const date='20261013',raw=readRaw(date),finalInstitutional=inspectBfi82u(root,date);
  assert.equal(finalInstitutional.status,'VERIFIED');
  const candidate=buildPartialMarketOpening({marketChart:market,raw,date,finalInstitutional});
+ const persisted=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening',date+'.json'),'utf8'));
+ assert.deepEqual(persisted,candidate,'20261013 persisted partial base must match reproducible source computation');
  assert.equal(candidate.target_date,date);
  assert.equal(candidate.status,'partial');
  assert.deepEqual(candidate.institutional.foreign,finalInstitutional.institutional.foreign);
