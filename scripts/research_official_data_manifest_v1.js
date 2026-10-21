@@ -36,6 +36,16 @@ function build(root,date){
    if(evidence.repository_payload_sha256)entry.provenance_diagnostic.repository_payload_sha256=evidence.repository_payload_sha256;
    if(evidence.reason)entry.provenance_diagnostic.reason=evidence.reason;
   if(id==='FMTQIK'){const staged=inspectStagedCandidate(root,date);entry.provenance_diagnostic.staged_candidate_status=staged.status;entry.provenance_diagnostic.direct_fetch_receipt_status=staged.receipt_status||null;if(staged.reason)entry.provenance_diagnostic.staged_candidate_reason=staged.reason;entry.provenance_diagnostic.raw_http_provenance_certified=false;}
+   // Successor workflow-first contract: reuse validated same-date repository outputs.
+   // This is not independent original-HTTP certification or publication permission.
+   const accepted=id==='FMTQIK'&&evidence.status==='DATED_DERIVED_CHART_ONLY_ORIGINAL_RAW_PENDING'&&!!evidence.chart_sha256&&Number.isSafeInteger(evidence.observations?.turnover_twd)&&evidence.observations.turnover_twd>0||id==='MI_INDEX'&&evidence.status==='DATED_REPOSITORY_PAYLOAD_SCHEMA_VERIFIED_RAW_HTTP_PROVENANCE_PENDING'&&!!evidence.repository_payload_sha256;
+   if(accepted){
+    entry.status='WORKFLOW_OUTPUT_VALIDATED_FOR_RESEARCH_USE';
+    entry.action_required='REUSE_DATED_WORKFLOW_OUTPUT';
+    entry.workflow_validation={contract:'DATE_TO_VIDEO_WORKFLOW_TRUST_FIRST_V2',target_date:date,source_path:evidence.source_path,source_sha256:evidence.chart_sha256||evidence.repository_payload_sha256,independent_original_http_certified:false};
+   }else if(evidence.status==='REJECTED'){entry.action_required='REVIEW_INVALID_WORKFLOW_OUTPUT';}
+   else entry.action_required='CHECK_EXISTING_DATED_WORKFLOW_OUTPUT';
+
   }
    if(id==='BFIAMU'){
    const base=path.join(root,'data_research/twse-market-opening/primary-archive',date,date+'-bfiamu');
