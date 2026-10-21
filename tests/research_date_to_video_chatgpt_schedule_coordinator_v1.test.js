@@ -99,8 +99,14 @@ test('real persisted dated D4 evidence reaches schedule without repeated origina
     assert.equal(result.action,'GENERATE_ORIGINAL_ANALYSIS');
    }else{
     assert.equal(result.stage,'WAITING_DATA');
-    assert.equal(result.reason,'D4_TASK_NOT_READY');
-    assert.equal(result.action,'PREPARE_D4_ANALYSIS_TASK');
+    if(d4.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING')){
+     assert.equal(result.reason,'DATED_PARTIAL_MARKET_BASE_MISSING');
+     assert.equal(result.action,'PREPARE_DATED_PARTIAL_MARKET_BASE');
+     assert.equal(result.suggested_research_command,'node scripts/build_daily_gainers_market_opening_phase1.js '+target);
+    }else{
+     assert.equal(result.reason,'D4_TASK_NOT_READY');
+     assert.equal(result.action,'PREPARE_D4_ANALYSIS_TASK');
+    }
    }
    assert.notEqual(result.stage,'RECOVERY_REVIEW_REQUIRED');
    assert.equal(result.automatic_dispatch_authorized,false);
