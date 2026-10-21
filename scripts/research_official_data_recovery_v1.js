@@ -8,7 +8,7 @@ function approvedBfi82u(root){const registry=JSON.parse(fs.readFileSync(path.joi
 function planRecovery(root,date){
  const manifest=build(root,date);
  const approved=approvedBfi82u(root);
- const sources=manifest.entries.map(entry=>({id:entry.id,source_date:date,status:entry.status,action_required:entry.id==='BFI82U'&&!approved?'SOURCE_CONTRACT_APPROVAL_REQUIRED':entry.id==='BFI82U'?(entry.status==='VERIFIED_RESEARCH_ONLY'?'REUSE_VERIFIED_ARCHIVE':entry.status==='INVALID_ARCHIVE'?'MANUAL_ARCHIVE_REVIEW':entry.missing?.length===2?'APPROVED_BOUNDED_RECOVERY_OR_WAIT':'INCOMPLETE_ARCHIVE_MANUAL_REVIEW'):entry.action_required,automated_retrieval_allowed:approved&&entry.id==='BFI82U'&&entry.status==='WAITING_SOURCE'&&entry.missing?.length===2}));
+ const sources=manifest.entries.map(entry=>({id:entry.id,source_date:date,status:entry.status,action_required:entry.id==='BFI82U'&&!approved?'SOURCE_CONTRACT_APPROVAL_REQUIRED':entry.id==='BFI82U'?(entry.status==='VERIFIED_RESEARCH_ONLY'?'REUSE_VERIFIED_ARCHIVE':entry.status==='INVALID_ARCHIVE'?'MANUAL_ARCHIVE_REVIEW':entry.missing?.length===2?'APPROVED_BOUNDED_RECOVERY_OR_WAIT':'INCOMPLETE_ARCHIVE_MANUAL_REVIEW'):entry.id==='BFIAMU'?'OPTIONAL_CONTEXT_NOT_REQUIRED':entry.action_required,automated_retrieval_allowed:approved&&entry.id==='BFI82U'&&entry.status==='WAITING_SOURCE'&&entry.missing?.length===2}));
  return {contract:'OFFICIAL_DATA_RECOVERY_PLAN_RESEARCH_V1',target_date:date,manifest_sha256:manifest.manifest_sha256,sources,complete:false,master_authorized:false,render_authorized:false,publication_authorized:false};
 }
 async function recover(root,date,{fetcher=fetchOfficial,maxAttempts=2}={}){
