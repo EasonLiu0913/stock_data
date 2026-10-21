@@ -1,6 +1,7 @@
 'use strict';
 // Preview is an editorial planning artifact, never an approved script, SRT, scene render or TTS input.
 const crypto=require('node:crypto');
+const {FIXED_OPENING_LINES}=require('./research_date_to_video_fixed_opening_v1');
 const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 function build(entry,candidate,worksheet){
  const issues=[];
@@ -13,7 +14,8 @@ function build(entry,candidate,worksheet){
  check('DATE_MATCH',!!candidate?.target_date&&candidate.target_date===entry?.target_date&&candidate.target_date===worksheet?.target_date);
  check('MASTER_MATCH',!!candidate?.source_master_sha256&&candidate.source_master_sha256===entry?.dated_media_input?.source_master_sha256&&candidate.source_master_sha256===worksheet?.source_master_sha256);
  check('WORKSHEET_SECTIONS',Array.isArray(worksheet?.sections)&&worksheet.sections.length>0);
- check('SENTENCES',Array.isArray(candidate?.sentences)&&candidate.sentences.length>=5);
+ check('SENTENCES',Array.isArray(candidate?.sentences)&&candidate.sentences.length>=FIXED_OPENING_LINES.length+1);
+ check('CANONICAL_OPENING',Array.isArray(candidate?.sentences)&&FIXED_OPENING_LINES.every((line,i)=>candidate.sentences[i]?.narration===line&&candidate.sentences[i]?.subtitle===line));
  check('SENTENCE_IDS_UNIQUE',Array.isArray(candidate?.sentences)&&candidate.sentences.every(s=>typeof s?.id==='string'&&s.id.trim())&&new Set(candidate.sentences.map(s=>s.id)).size===candidate.sentences.length);
  check('INSIGHT_IDS_UNIQUE',Array.isArray(worksheet?.sections)&&worksheet.sections.every(s=>typeof s?.insight_id==='string'&&s.insight_id.trim())&&new Set(worksheet.sections.map(s=>s.insight_id)).size===worksheet.sections.length);
  check('REVIEW_ISSUES_EMPTY',Array.isArray(entry?.narration_candidate_review?.issues)&&entry.narration_candidate_review.issues.length===0);
