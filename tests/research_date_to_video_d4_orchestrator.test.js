@@ -20,14 +20,10 @@ for(const date of ['20261008','20261013']){
  assert.equal(r.official_recovery_advice.source_plan_sha256,crypto.createHash('sha256').update(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json'))).digest('hex'));
  assert.deepEqual(r.official_recovery_advice.sources,recoveryPlan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed})));
  if(date==='20261013'){
-  assert.equal(r.market_base_recovery_advice.status,'DATED_PARTIAL_BASE_MISSING');
-  assert.equal(r.market_base_recovery_advice.mode,'PLAN_ONLY_NO_DISPATCH');
-  assert.equal(r.market_base_recovery_advice.candidate_builder,'scripts/build_daily_gainers_market_opening_phase1.js');
-  assert.equal(r.market_base_recovery_advice.candidate_command,'node scripts/build_daily_gainers_market_opening_phase1.js 20261013');
-  assert.equal(r.market_base_recovery_advice.automatic_dispatch_authorized,false);
-  assert.equal(r.market_base_recovery_advice.publication_authorized,false);
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8')).market_base_recovery_advice,r.market_base_recovery_advice);
+  assert.equal(r.market_base_recovery_advice,undefined);
+  assert.ok(!r.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING'));
  }
+
  assert.equal(r.official_recovery_advice.render_authorized,false);
  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8')).official_recovery_advice,r.official_recovery_advice);
  assert.equal(recoveryPlan.sources.find(x=>x.id==='BFI82U').automated_retrieval_allowed,false);
@@ -71,15 +67,15 @@ for(const date of ['20261008','20261013']){
   const master=JSON.parse(fs.readFileSync(path.join(dir,'market-master.json')));
   assert.equal(master.target_date,date);assert.equal(master.publication_authorized,false);
   if(date==='20261008'){assert.equal(master.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');assert.ok(master.market_trading.turnover_twd>0);const datedBase=JSON.parse(fs.readFileSync('data_daily_gain_over_5/market-opening/'+date+'.json'));const chartBytes=fs.readFileSync('data_twse_market_chart/market_chart.json');assert.equal(crypto.createHash('sha256').update(chartBytes).digest('hex'),officialManifest.entries.find(e=>e.id==='FMTQIK').provenance_diagnostic.derived_chart_sha256);const datedRow=JSON.parse(chartBytes).data.find(r=>r.date===date);assert.equal(datedBase.market_trading.turnover_twd,datedRow.turnover);assert.equal(datedBase.market_trading.shares,datedRow.volumeShares);assert.equal(datedBase.market_trading.transactions,datedRow.transactions);assert.equal(master.ordinary_share_identity_certified,false);}
-  if(date==='20261013')assert.equal(master.status,'WAITING_SOURCE');
+  if(date==='20261013')assert.equal(master.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');
   const brief=JSON.parse(fs.readFileSync(path.join(dir,'editorial-research-brief.json')));
   assert.equal(brief.target_date,date);assert.equal(brief.editorial_certified,false);assert.equal(brief.narration_authorized,false);assert.equal(brief.render_authorized,false);assert.equal(brief.original_analysis,null);
   if(date==='20261008'){assert.equal(brief.status,'OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED');assert.equal(brief.observations.length,3);assert.equal(brief.derived_comparisons.breadth_net_count,master.breadth.advancers-master.breadth.decliners);assert.equal(brief.derived_comparisons.institutional_total_net_twd,['foreign','investment_trust','dealers'].reduce((sum,name)=>sum+master.institutional[name].net_twd,0));assert.equal(brief.derived_comparisons.interpretation_status,'OBSERVATION_ONLY_NO_CAUSAL_CLAIM');}
-  if(date==='20261013'){assert.equal(brief.status,'WAITING_MARKET_MASTER');assert.equal(brief.observations.length,0);assert.equal(brief.derived_comparisons,undefined);}
+  if(date==='20261013'){assert.equal(brief.status,'OBSERVATIONS_READY_INDEPENDENT_ANALYSIS_REQUIRED');assert.equal(brief.observations.length,3); }
   const task=JSON.parse(fs.readFileSync(path.join(dir,'original-analysis-task.json')));
   assert.equal(task.target_date,date);assert.equal(task.market_master_sha256,brief.source_master_sha256);assert.equal(task.draft,null);assert.equal(task.independent_review_required,true);assert.equal(task.narration_authorized,false);assert.equal(task.render_authorized,false);
   if(date==='20261008'){assert.equal(task.status,'READY_FOR_EVIDENCE_GROUNDED_DRAFT');assert.equal(task.required_sections.length,5);}
-  if(date==='20261013')assert.equal(task.status,'WAITING_MARKET_MASTER');
+  if(date==='20261013')assert.equal(task.status,'READY_FOR_EVIDENCE_GROUNDED_DRAFT');
   const media=JSON.parse(fs.readFileSync(path.join(dir,'media-handoff.json')));
   assert.equal(media.target_date,date);assert.equal(media.render_authorized,false);assert.equal(media.publication_authorized,false);assert.equal(media.fixed_opening_lines.length,4);assert.equal(media.fixed_opening_lines[3],'那麼我們開始囉。');assert.ok(!JSON.stringify(media.fixed_opening_lines).includes('我們有提供中文 CC 字幕'));assert.equal(media.date_parameterized_media_bridge_implemented,false);assert.equal(media.component_reuse_requires_dated_master_and_editorial_review,true);assert.equal(media.existing_media_components_research_only.length,3);assert.ok(media.existing_media_components_research_only.every(c=>c.date_locked==='20261008'&&c.path.startsWith('scripts/')));assert.equal(media.market_opening_seconds.min,30);assert.equal(media.market_opening_seconds.max,90);
   const noInputManifest=JSON.parse(fs.readFileSync(path.join(dir,'editorial-input-manifest.json')));
@@ -88,7 +84,7 @@ for(const date of ['20261008','20261013']){
   assert.equal(noInputManifest.editorial_certified,false);
   const review=JSON.parse(fs.readFileSync(path.join(dir,'editorial-review.json')));
   assert.equal(review.claim_whitelist_verified,false);assert.equal(review.render_authorized,false);
-  if(date==='20261013'){assert.equal(r.stages[0].status,'PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING');assert.ok(r.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING'));}
+  if(date==='20261013'){assert.equal(r.stages[0].status,'EVIDENCE_JOINED_NOT_CERTIFIED');assert.ok(!r.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING'));}
  }else assert.equal(r.stages[0].status,'WAITING_SOURCE');
  console.log('D4_ORCHESTRATOR_DATE_STATUS '+date+' '+r.stages[0].status);
 }
