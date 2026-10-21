@@ -7,6 +7,7 @@ const outputDir=fs.mkdtempSync(path.join(os.tmpdir(),'audio-output-rollback-'));
  const inventory={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_AUDIO_INPUT_INVENTORY',status:'CANDIDATE_INVENTORY_PENDING_INDEPENDENT_EDITORIAL_REVIEW',target_date:'20261008',candidate_sha256:candidateSha,voice:'zh-TW-YunJheNeural',rate:'+15%',sentences,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
  const ready={status:'PLAN_ONLY_INDEPENDENT_EDITORIAL_APPROVAL_REQUIRED',candidate,inventory,command_plan:plan(inventory)};
  assert.throws(()=>persist(outputDir,{...ready,command_plan:{...ready.command_plan,target_date:'20261013'}}),/AUDIO_HANDOFF_NOT_READY/);
+ assert.throws(()=>persist(outputDir,{...ready,command_plan:{...ready.command_plan,candidate_sha256:'f'.repeat(64)}}),/AUDIO_HANDOFF_NOT_READY/);
  let writes=0;assert.throws(()=>persist(outputDir,ready,(file,body,options)=>{writes++;if(writes===2)throw Error('SIMULATED_SECOND_WRITE_FAILURE');fs.writeFileSync(file,body,options)}),/SIMULATED_SECOND_WRITE_FAILURE/);
  for(const name of ['narration-candidate.json','sentence-audio-inventory.json','edge-tts-command-plan.json'])assert.equal(fs.existsSync(path.join(outputDir,name)),false);
  fs.writeFileSync(path.join(outputDir,'sentence-audio-inventory.json'),'USER_INPUT');
