@@ -2,7 +2,7 @@
 // Advisory only. Never dispatches workflows or grants synthesis/publication.
 function advise(d4,verification,media,sentenceHandoff=null,narrationCandidateReview=null){
  const sources=d4.official_recovery_advice?.sources||[];
- const pending=sources.filter(s=>s.action_required!=='REUSE_VERIFIED_ARCHIVE'&&s.status!=='VERIFIED_RESEARCH_ONLY');
+ const pending=sources.filter(s=>s.action_required!=='REUSE_VERIFIED_ARCHIVE'||s.status!=='VERIFIED_RESEARCH_ONLY');
  let stage,actions;
  if(verification.status!=='VERIFIED_RESEARCH_ONLY'){stage='REJECTED_PROVENANCE';actions=['REVIEW_VERIFICATION_ISSUES'];}
  else if(sentenceHandoff&&(sentenceHandoff.status==='REJECTED'||sentenceHandoff.sentence_parity?.status==='REJECTED')){stage='REJECTED_SENTENCE_PACKET';actions=sentenceHandoff.issues||sentenceHandoff.sentence_parity?.issues||['REVIEW_SENTENCE_PACKET'];}
