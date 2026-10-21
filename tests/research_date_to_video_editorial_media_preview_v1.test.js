@@ -5,7 +5,8 @@ const {inspect:reviewCandidate}=require('../scripts/research_date_to_video_narra
 const crypto=require('node:crypto');const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const entry={contract:'DATE_TO_VIDEO_V1_VERIFIED_RESEARCH_ENTRY',target_date:'20261013',narration_candidate_review:{status:'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED',issues:[],sentence_parity:{status:'STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED'}},narration_candidate_source:{sha256:'a'.repeat(64)},dated_media_input:{source_master_sha256:'b'.repeat(64)}};
 const worksheet={target_date:'20261013',source_master_sha256:'b'.repeat(64),sections:[{insight_id:'i1',section:'market',observation:'上漲',interpretation:'觀察',uncertainty:'風險',evidence:['source']}]};
-const candidate={target_date:'20261013',source_master_sha256:'b'.repeat(64),sentences:[0,1,2,3].map(i=>({id:'opening'+i,narration:'固定開場',subtitle:'固定開場'})).concat([{id:'market1',insight_id:'i1',narration:'上漲五％',subtitle:'上漲5%',spoken_subtitle_mappings:[{spoken:'五％',display:'5%'}]}])};
+const opening=require('../scripts/research_date_to_video_fixed_opening_v1').FIXED_OPENING_LINES;
+const candidate={target_date:'20261013',source_master_sha256:'b'.repeat(64),sentences:opening.map((line,i)=>({id:'opening'+i,narration:line,subtitle:line})).concat([{id:'market1',insight_id:'i1',narration:'上漲五％',subtitle:'上漲5%',spoken_subtitle_mappings:[{spoken:'五％',display:'5%'}]}])};
 entry.narration_candidate_review.candidate_sha256=sha(candidate);
 entry.narration_candidate_review.worksheet_sha256=sha(worksheet);
 const result=build(entry,candidate,worksheet);
@@ -14,6 +15,9 @@ assert.equal(result.worksheet_sha256,sha(worksheet));
 assert.ok(build(entry,{...candidate,sentences:[...candidate.sentences,{id:'extra',insight_id:'i1',narration:'新增',subtitle:'新增'}]},worksheet).issues.includes('CANDIDATE_REVIEW_HASH'));
 assert.ok(build(entry,candidate,{...worksheet,sections:[{...worksheet.sections[0],observation:'竄改'}]}).issues.includes('WORKSHEET_REVIEW_HASH'));
 assert.equal(result.status,'STRUCTURAL_PLANNING_PREVIEW_ONLY',JSON.stringify(result.issues));
+const alteredOpening={...candidate,sentences:candidate.sentences.map((v,i)=>i===3?{...v,narration:'我們開始囉。',subtitle:'我們開始囉。'}:v)};
+assert.ok(build(reviewedOpening(alteredOpening),alteredOpening,worksheet).issues.includes('CANONICAL_OPENING'));
+function reviewedOpening(c){return {...entry,narration_candidate_review:{...entry.narration_candidate_review,candidate_sha256:sha(c)}};}
 assert.ok(build({...entry,narration_candidate_review:{...entry.narration_candidate_review,issues:['FORGED']}},candidate,worksheet).issues.includes('REVIEW_ISSUES_EMPTY'));
 assert.ok(build({...entry,narration_candidate_review:{...entry.narration_candidate_review,sentence_parity:{status:'REJECTED'}}},candidate,worksheet).issues.includes('SENTENCE_PARITY_REVIEW'));
 assert.equal(result.narration_plan.length,result.subtitle_plan.length);
