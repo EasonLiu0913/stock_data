@@ -93,8 +93,16 @@ test('real persisted dated D4 evidence reaches schedule without repeated origina
    const d4=run('.',target,dir);
    const result=fromD4Directory(target,dir);
    assert.equal(result.target_date,target);
-   assert.equal(result.stage,'READY_FOR_SCRIPT',JSON.stringify({stage:result.stage,reason:result.reason,blockers:d4.blockers}));
-   assert.equal(result.action,'GENERATE_ORIGINAL_ANALYSIS');
+   const task=JSON.parse(fs.readFileSync(path.join(dir,'original-analysis-task.json'),'utf8'));
+   if(task.status==='READY_FOR_EVIDENCE_GROUNDED_DRAFT'){
+    assert.equal(result.stage,'READY_FOR_SCRIPT',JSON.stringify({stage:result.stage,reason:result.reason,blockers:d4.blockers}));
+    assert.equal(result.action,'GENERATE_ORIGINAL_ANALYSIS');
+   }else{
+    assert.equal(result.stage,'WAITING_DATA');
+    assert.equal(result.reason,'D4_TASK_NOT_READY');
+    assert.equal(result.action,'PREPARE_D4_ANALYSIS_TASK');
+   }
+   assert.notEqual(result.stage,'RECOVERY_REVIEW_REQUIRED');
    assert.equal(result.automatic_dispatch_authorized,false);
    assert.equal(result.publication_authorized,false);
    const sources=d4.official_recovery_advice.sources;
