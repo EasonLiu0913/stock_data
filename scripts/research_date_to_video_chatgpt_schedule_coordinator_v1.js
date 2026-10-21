@@ -55,6 +55,12 @@ function fromD4Directory(date,dir){
  const task=read('original-analysis-task.json');
  if(task)assert.equal(task.target_date,date,'D4_TASK_DATE_MISMATCH');
  const decision=fromD4(date,d4,task);
+ // Surface the existing bounded builder when the only remaining source gap is a dated
+ // partial market base. This is a suggested manual research action, never dispatch.
+ const advice=d4.market_base_recovery_advice;
+ if(decision.stage==='WAITING_DATA'&&decision.reason==='D4_TASK_NOT_READY'&&Array.isArray(d4.blockers)&&d4.blockers.includes('MARKET_OPENING_DATED_BASE_MISSING')&&advice?.target_date===date&&advice.status==='DATED_PARTIAL_BASE_MISSING'&&advice.mode==='PLAN_ONLY_NO_DISPATCH'&&advice.candidate_builder==='scripts/build_daily_gainers_market_opening_phase1.js'&&advice.candidate_command==='node scripts/build_daily_gainers_market_opening_phase1.js '+date&&advice.automatic_dispatch_authorized===false&&advice.publication_authorized===false){
+  return {...decision,action:'PREPARE_DATED_PARTIAL_MARKET_BASE',reason:'DATED_PARTIAL_MARKET_BASE_MISSING',suggested_research_command:advice.candidate_command,automatic_dispatch_authorized:false,publication_authorized:false};
+ }
  // A ready script decision must be bound to the persisted dated manifest, not just status.json labels.
  if(decision.stage==='READY_FOR_SCRIPT'){
   const manifest=read('official-data-manifest.json');
