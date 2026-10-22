@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
-const {run}=require('../scripts/research_date_to_video_d4_orchestrator');
+const {run,inspectSchedulerHandoff}=require('../scripts/research_date_to_video_d4_orchestrator');
 for(const date of ['20261008','20261013']){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-'));
  const r=run('.',date,dir);
@@ -464,6 +464,18 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  const changedManifest={...missingOfficialManifest,manifest_sha256:'wrong-version'};
  assert.notEqual(changedManifest.manifest_sha256,missingHandoff.official_recovery_advice.manifest_sha256);
  console.log('D4_SCHEDULER_RECOVERY_OFFICIAL_MANIFEST_VERSION_BINDING_PASS');
+ const validInspection=inspectSchedulerHandoff(dir,'20261014');
+ assert.equal(validInspection.status,'RESEARCH_HANDOFF_VALIDATED');
+ assert.equal(validInspection.automatic_dispatch_authorized,false);
+ const planFile=path.join(dir,'official-data-recovery-plan.json'),originalPlan=fs.readFileSync(planFile);
+ try{
+  fs.writeFileSync(planFile,Buffer.from(originalPlan.toString('utf8').replace('"complete": false','"complete": true')));
+  const tamperedInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(tamperedInspection.status,'REJECTED');
+  assert.ok(tamperedInspection.issues.includes('RECOVERY_PLAN_SHA_MISMATCH'));
+ }finally{fs.writeFileSync(planFile,originalPlan);}
+ assert.equal(inspectSchedulerHandoff(dir,'20261013').status,'REJECTED');
+ console.log('D4_READ_ONLY_SCHEDULER_HANDOFF_INSPECTION_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
