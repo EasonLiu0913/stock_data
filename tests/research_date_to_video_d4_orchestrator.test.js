@@ -489,6 +489,18 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
   assert.ok(invalidShapeInspection.issues.includes('HANDOFF_INPUT_INVALID_SHAPE'));
  }finally{fs.writeFileSync(handoffStatusFile,savedHandoffStatus);}
  console.log('D4_SCHEDULER_MALFORMED_HANDOFF_FAIL_CLOSED_PASS');
+ const manifestFile=path.join(dir,'official-data-manifest.json'),savedManifest=fs.readFileSync(manifestFile);
+ try{
+  const modifiedManifest=JSON.parse(savedManifest);
+  modifiedManifest.complete=true;
+  fs.writeFileSync(manifestFile,JSON.stringify(modifiedManifest));
+  const contentDriftInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(contentDriftInspection.status,'REJECTED');
+  assert.ok(contentDriftInspection.issues.includes('OFFICIAL_MANIFEST_CONTENT_SHA_MISMATCH'));
+  assert.equal(contentDriftInspection.automatic_dispatch_authorized,false);
+ }finally{fs.writeFileSync(manifestFile,savedManifest);}
+ assert.equal(inspectSchedulerHandoff(dir,'20261014').status,'RESEARCH_HANDOFF_VALIDATED');
+ console.log('D4_SCHEDULER_MANIFEST_CONTENT_SHA_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
