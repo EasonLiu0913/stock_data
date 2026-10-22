@@ -60,6 +60,9 @@ function buildFromDirectory(dir,probe){
   const objects=names.map(name=>{const file=path.join(dir,name),stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink())throw Error('INVALID_EVIDENCE_FILE');return JSON.parse(fs.readFileSync(file,'utf8'));});
   [inventory,commandPlan,proof]=objects;
  }catch(e){return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'REJECTED',issues:['DATED_AUDIO_EVIDENCE_MISSING_OR_INVALID'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+ const source=verifyD4Source(dir);
+ if(source.status!=='VERIFIED_BLOCKED_PENDING_INDEPENDENT_REVIEW')return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'REJECTED',issues:['D4_SOURCE_PROVENANCE_REJECTED',...source.issues],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+ if(inventory.target_date!==source.target_date)return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'REJECTED',issues:['D4_AUDIO_DATE_MISMATCH'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
  const result=build(inventory,commandPlan,proof,path.join(dir,'audio'),probe);
  if(result.status!=='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED')return result;
  return result;
