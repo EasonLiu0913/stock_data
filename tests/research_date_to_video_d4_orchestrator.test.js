@@ -1,5 +1,5 @@
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),{spawnSync}=require('node:child_process');
 const {run,inspectSchedulerHandoff}=require('../scripts/research_date_to_video_d4_orchestrator');
 for(const date of ['20261008','20261013']){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-'));
@@ -516,6 +516,17 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
   assert.ok(nullInspection.issues.includes('HANDOFF_INPUT_INVALID_SHAPE'));
  }finally{fs.writeFileSync(sourcePlanFile,savedSourcePlan);}
  console.log('D4_SCHEDULER_RECOVERY_SOURCE_SET_FAIL_CLOSED_PASS');
+ const cliPath=path.resolve('scripts/research_date_to_video_d4_orchestrator.js');
+ const cliOk=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20261014',dir],{encoding:'utf8'});
+ assert.equal(cliOk.status,0,cliOk.stderr);
+ assert.equal(JSON.parse(cliOk.stdout).status,'RESEARCH_HANDOFF_VALIDATED');
+ const cliWrongDate=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20261013',dir],{encoding:'utf8'});
+ assert.equal(cliWrongDate.status,3);
+ assert.equal(JSON.parse(cliWrongDate.stdout).status,'REJECTED');
+ const cliMissing=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20261014'],{encoding:'utf8'});
+ assert.equal(cliMissing.status,3);
+ assert.equal(JSON.parse(cliMissing.stdout).automatic_dispatch_authorized,false);
+ console.log('D4_READ_ONLY_SCHEDULER_HANDOFF_CLI_EXIT_CODES_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
