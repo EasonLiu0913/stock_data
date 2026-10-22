@@ -51,4 +51,17 @@ function persist(dir,result,write=fs.writeFileSync){
  const created=[];try{for(const [name,content] of files){const file=path.join(dir,name);write(file,content,{flag:'wx'});created.push(file);}}catch(e){for(const file of created)if(fs.existsSync(file))fs.unlinkSync(file);throw e;}
  return files.map(([name])=>name);
 }
-module.exports={build,wrap,clock,persist,verifyPersisted};
+
+// Research-only on-disk connection. Requires externally collected MP3 proof; never runs TTS.
+function buildFromDirectory(dir,probe){
+ const names=['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json'];
+ let inventory,commandPlan,proof;
+ try{
+  const objects=names.map(name=>{const file=path.join(dir,name),stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink())throw Error('INVALID_EVIDENCE_FILE');return JSON.parse(fs.readFileSync(file,'utf8'));});
+  [inventory,commandPlan,proof]=objects;
+ }catch(e){return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'REJECTED',issues:['DATED_AUDIO_EVIDENCE_MISSING_OR_INVALID'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
+ const result=build(inventory,commandPlan,proof,path.join(dir,'audio'),probe);
+ if(result.status!=='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED')return result;
+ return result;
+}
+module.exports={build,buildFromDirectory,wrap,clock,persist,verifyPersisted};
