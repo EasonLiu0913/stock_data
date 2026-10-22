@@ -206,4 +206,17 @@ if(require.main===module){
  if(!date||!out){console.error('Usage: node scripts/research_date_to_video_d4_orchestrator.js YYYYMMDD repo-root output-dir');process.exit(2)}
  try{const r=run(root,date,out);console.log('DATE_TO_VIDEO_D4_STATUS '+r.target_date+' '+r.stages[0].status+' '+r.artifacts.map(x=>x.name).join(','));if(r.stages[0].status==='WAITING_SOURCE'||r.stages[0].status==='PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING')process.exitCode=3}catch(e){console.error(e.message);process.exitCode=2}
 }
-module.exports={run,missingAudioInputs,AUDIO_INPUTS};
+// Read-only scheduler handoff check; never dispatches recovery or grants downstream authorization.
+function inspectSchedulerHandoff(out,date){
+ const read=name=>fs.readFileSync(path.join(out,name));
+ const status=JSON.parse(read('status.json')),plan=JSON.parse(read('official-data-recovery-plan.json')),manifest=JSON.parse(read('official-data-manifest.json'));
+ const issues=[];
+ if(status.target_date!==date||plan.target_date!==date||manifest.target_date!==date)issues.push('HANDOFF_DATE_MISMATCH');
+ if(status.official_recovery_advice?.source_plan_sha256!==hash(read('official-data-recovery-plan.json')))issues.push('RECOVERY_PLAN_SHA_MISMATCH');
+ if(plan.manifest_sha256!==manifest.manifest_sha256||status.official_recovery_advice?.manifest_sha256!==manifest.manifest_sha256)issues.push('OFFICIAL_MANIFEST_SHA_MISMATCH');
+ if(JSON.stringify(status.official_recovery_advice?.sources)!==JSON.stringify(plan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed}))))issues.push('RECOVERY_ACTION_DRIFT');
+ if([status,plan,manifest,status.official_recovery_advice].some(x=>!x||x.render_authorized!==false||x.publication_authorized!==false)||status.ready_to_render!==false||plan.master_authorized!==false||manifest.master_authorized!==false)issues.push('DOWNSTREAM_AUTHORIZATION_NOT_CLOSED');
+ if(plan.sources.some(x=>x.automated_retrieval_allowed===true&&x.id!=='BFI82U'))issues.push('UNAPPROVED_AUTOMATED_SOURCE');
+ return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date,status:issues.length?'REJECTED':'RESEARCH_HANDOFF_VALIDATED',issues,automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false};
+}
+module.exports={run,missingAudioInputs,AUDIO_INPUTS,inspectSchedulerHandoff};
