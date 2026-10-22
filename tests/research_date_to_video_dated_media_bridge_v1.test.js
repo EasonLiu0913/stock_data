@@ -50,6 +50,8 @@ test('persist rejects blocked output, existing files and rolls back partial writ
   let writes=0;
   assert.throws(()=>persist(dir,result,(file,content,opts)=>{if(++writes===2)throw Error('INJECTED_WRITE_FAILURE');fs.writeFileSync(file,content,opts);}),/INJECTED_WRITE_FAILURE/);
   assert.deepEqual(fs.readdirSync(dir),[]);
+  assert.throws(()=>persist(dir,{...result,sentences:[{...result.sentences[0],caption_text:'偽造。'}]}),/SRT_DRIFT/);
+  assert.deepEqual(fs.readdirSync(dir),[]);
   assert.deepEqual(persist(dir,result),['dated-media-bridge.json','dated-media-bridge.srt']);
   const manifest=JSON.parse(fs.readFileSync(path.join(dir,'dated-media-bridge.json'),'utf8'));
   assert.equal(manifest.srt_sha256,crypto.createHash('sha256').update(result.srt).digest('hex'));
