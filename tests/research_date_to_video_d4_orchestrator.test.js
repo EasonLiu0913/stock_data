@@ -342,6 +342,19 @@ assert.equal(rerunMissing.stages[0].status,'WAITING_SOURCE');
 assert.ok(fs.existsSync(path.join(staleDir,'status.json')));
 for(const name of ['featured-price-observations.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','independent-review-worksheet.json','authored-candidate-preflight.json','original-analysis-draft-check.json','market-master.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json'])assert.equal(fs.existsSync(path.join(staleDir,name)),false,'STALE_OUTPUT:'+name);
 console.log('D4_REUSED_OUTPUT_DIR_FAIL_CLOSED_PASS');
+// A scheduler reading a reused directory must see only the new date and its recovery state.
+const reusedHandoff=JSON.parse(fs.readFileSync(path.join(staleDir,'status.json'),'utf8'));
+assert.equal(reusedHandoff.target_date,'20261014');
+assert.equal(reusedHandoff.stages[0].status,'WAITING_SOURCE');
+assert.equal(reusedHandoff.stages[1].status,'NOT_RUN');
+assert.equal(reusedHandoff.stages[2].status,'NOT_RUN');
+assert.equal(reusedHandoff.official_recovery_advice.target_date,'20261014');
+assert.equal(Object.hasOwn(reusedHandoff,'source_readiness'),false);
+assert.equal(Object.hasOwn(reusedHandoff,'audio_recovery_advice'),false);
+assert.equal(reusedHandoff.render_authorized,false);
+assert.equal(reusedHandoff.publication_authorized,false);
+console.log('D4_CROSS_DATE_PERSISTED_SCHEDULER_HANDOFF_FAIL_CLOSED_PASS');
+
 const malformedDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-malformed-'));
 const originalRead=fs.readFileSync;
 try{
