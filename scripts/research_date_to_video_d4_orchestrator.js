@@ -217,6 +217,8 @@ function inspectSchedulerHandoff(out,date){
  if(status.target_date!==date||plan.target_date!==date||manifest.target_date!==date)issues.push('HANDOFF_DATE_MISMATCH');
  if(status.official_recovery_advice?.source_plan_sha256!==hash(read('official-data-recovery-plan.json')))issues.push('RECOVERY_PLAN_SHA_MISMATCH');
  if(plan.manifest_sha256!==manifest.manifest_sha256||status.official_recovery_advice?.manifest_sha256!==manifest.manifest_sha256)issues.push('OFFICIAL_MANIFEST_SHA_MISMATCH');
+ const {manifest_sha256:declaredManifestSha,...manifestPayload}=manifest;
+ if(declaredManifestSha!==hash(Buffer.from(JSON.stringify(manifestPayload))))issues.push('OFFICIAL_MANIFEST_CONTENT_SHA_MISMATCH');
  if(JSON.stringify(status.official_recovery_advice?.sources)!==JSON.stringify(plan.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed}))))issues.push('RECOVERY_ACTION_DRIFT');
  if([status,plan,manifest,status.official_recovery_advice].some(x=>!x||x.render_authorized!==false||x.publication_authorized!==false)||status.ready_to_render!==false||plan.master_authorized!==false||manifest.master_authorized!==false)issues.push('DOWNSTREAM_AUTHORIZATION_NOT_CLOSED');
  if(plan.sources.some(x=>x.automated_retrieval_allowed===true&&x.id!=='BFI82U'))issues.push('UNAPPROVED_AUTOMATED_SOURCE');
