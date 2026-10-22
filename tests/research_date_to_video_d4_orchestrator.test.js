@@ -586,6 +586,18 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
   assert.equal(inspectedContradiction.next_step,'REJECT_UNTRUSTED_HANDOFF');
  }finally{fs.writeFileSync(stageFile,stageSaved);}
  console.log('D4_SCHEDULER_STAGE_CONTRACT_AND_SEQUENCE_FAIL_CLOSED_PASS');
+ const unknownStageFile=path.join(dir,'status.json'),unknownStageSaved=fs.readFileSync(unknownStageFile);
+ try{
+  const unknown=JSON.parse(unknownStageSaved);
+  unknown.stages[1].status='EDITORIAL_APPROVED';
+  fs.writeFileSync(unknownStageFile,JSON.stringify(unknown));
+  const inspected=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(inspected.status,'REJECTED');
+  assert.ok(inspected.issues.includes('D4_STAGE_CONTRACT_INVALID'));
+  assert.equal(inspected.next_step,'REJECT_UNTRUSTED_HANDOFF');
+  assert.equal(inspected.automatic_dispatch_authorized,false);
+ }finally{fs.writeFileSync(unknownStageFile,unknownStageSaved);}
+ console.log('D4_SCHEDULER_UNKNOWN_MASTER_STAGE_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
