@@ -165,6 +165,7 @@ console.log('D4_EDITORIAL_INPUT_PROVENANCE_PASS');
 console.log('D4_PARTIAL_REVIEW_DRAFT_REJECTED_FAIL_CLOSED_PASS');
 console.log('D4_EXPLICIT_DATED_REVIEW_INPUT_PASS');
 // Revoking an external review must recompute the gate; no prior approved IDs or input hash may survive.
+const savedReviewInput=fs.readFileSync(path.join(reviewValidDir,'editorial-review-input.json'));
 fs.unlinkSync(path.join(reviewValidDir,'editorial-review-input.json'));
 const withdrawnRun=run('.','20261008',reviewValidDir);
 const withdrawnReview=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'editorial-review.json'),'utf8'));
@@ -178,6 +179,9 @@ assert.equal(JSON.parse(fs.readFileSync(path.join(reviewValidDir,'original-analy
 assert.equal(withdrawnRun.render_authorized,false);
 assert.equal(withdrawnRun.publication_authorized,false);
 console.log('D4_WITHDRAWN_REVIEW_RERUN_FAIL_CLOSED_PASS');
+// Restore the fixture for subsequent provenance tests, which compare reviewed vs unreviewed outlines.
+fs.writeFileSync(path.join(reviewValidDir,'editorial-review-input.json'),savedReviewInput);
+run('.','20261008',reviewValidDir);
 
 const actualCandidate=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-d4-original-analysis-candidate.json'));
 assert.equal(actualCandidate.target_date,'20261008');
