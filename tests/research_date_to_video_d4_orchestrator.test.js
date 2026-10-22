@@ -111,6 +111,18 @@ assert.equal(rejectedManifest.draft_input_sha256,null);
 assert.equal(rejectedManifest.editorial_certified,false);
 assert.equal(rejectedManifest.render_authorized,false);
 console.log('D4_INDEPENDENT_REVIEW_INPUT_FAIL_CLOSED_PASS');
+ // Removing a rejected cross-date input must clear old rejection and provenance on rerun.
+ fs.unlinkSync(path.join(reviewDir,'editorial-review-input.json'));
+ const reviewReset=run('.','20261008',reviewDir);
+ const resetGate=JSON.parse(fs.readFileSync(path.join(reviewDir,'editorial-review.json'),'utf8'));
+ const resetInputManifest=JSON.parse(fs.readFileSync(path.join(reviewDir,'editorial-input-manifest.json'),'utf8'));
+ assert.notEqual(resetGate.status,'REJECTED');
+ assert.deepEqual(resetGate.approved_claim_ids,[]);
+ assert.equal(resetInputManifest.review_input_sha256,null);
+ assert.equal(reviewReset.blockers.includes('INDEPENDENT_REVIEW_INPUT_REJECTED'),false);
+ assert.equal(reviewReset.render_authorized,false);
+ assert.equal(reviewReset.publication_authorized,false);
+ console.log('D4_REJECTED_REVIEW_WITHDRAWAL_RERUN_PASS');
 
 const reviewValidDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-reviewed-'));
 run('.','20261008',reviewValidDir);
