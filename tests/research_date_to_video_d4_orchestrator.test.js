@@ -547,6 +547,17 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
   assert.equal(forgedInspection.automatic_dispatch_authorized,false);
  }finally{fs.writeFileSync(boundedPlanFile,boundedSaved);}
  console.log('D4_SCHEDULER_BOUNDED_RECOVERY_PRECONDITION_FAIL_CLOSED_PASS');
+ assert.equal(inspectSchedulerHandoff(dir,'20261014').next_step,'WAIT_FOR_OFFICIAL_SOURCE');
+ assert.equal(inspectSchedulerHandoff(dir,'20261013').next_step,'REJECT_UNTRUSTED_HANDOFF');
+ const editorialDir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-scheduler-editorial-'));
+ try{
+  run('.', '20261013',editorialDir);
+  const editorialInspection=inspectSchedulerHandoff(editorialDir,'20261013');
+  assert.equal(editorialInspection.status,'RESEARCH_HANDOFF_VALIDATED');
+  assert.equal(editorialInspection.next_step,'WAIT_FOR_INDEPENDENT_EDITORIAL_REVIEW');
+  assert.equal(editorialInspection.automatic_dispatch_authorized,false);
+ }finally{fs.rmSync(editorialDir,{recursive:true,force:true});}
+ console.log('D4_SCHEDULER_NEXT_STEP_CLASSIFICATION_NO_DISPATCH_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
