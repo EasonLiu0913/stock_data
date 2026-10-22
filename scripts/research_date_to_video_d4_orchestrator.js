@@ -202,6 +202,11 @@ function run(root,date,out){
  write('status.json',result);return result;
 }
 if(require.main===module){
+ if(process.argv[2]==='--inspect-handoff'){
+  const date=process.argv[3],out=process.argv[4];
+  const result=date&&out?inspectSchedulerHandoff(out,date):{contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date||null,status:'REJECTED',issues:['USAGE_REQUIRES_DATE_AND_OUTPUT_DIR'],automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false};
+  console.log(JSON.stringify(result));process.exit(result.status==='RESEARCH_HANDOFF_VALIDATED'?0:3);
+ }
  const [date,root='.',out]=process.argv.slice(2);
  if(!date||!out){console.error('Usage: node scripts/research_date_to_video_d4_orchestrator.js YYYYMMDD repo-root output-dir');process.exit(2)}
  try{const r=run(root,date,out);console.log('DATE_TO_VIDEO_D4_STATUS '+r.target_date+' '+r.stages[0].status+' '+r.artifacts.map(x=>x.name).join(','));if(r.stages[0].status==='WAITING_SOURCE'||r.stages[0].status==='PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING')process.exitCode=3}catch(e){console.error(e.message);process.exitCode=2}
