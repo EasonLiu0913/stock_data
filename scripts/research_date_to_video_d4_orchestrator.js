@@ -209,7 +209,10 @@ if(require.main===module){
 // Read-only scheduler handoff check; never dispatches recovery or grants downstream authorization.
 function inspectSchedulerHandoff(out,date){
  const read=name=>fs.readFileSync(path.join(out,name));
- const status=JSON.parse(read('status.json')),plan=JSON.parse(read('official-data-recovery-plan.json')),manifest=JSON.parse(read('official-data-manifest.json'));
+ let status,plan,manifest;
+ try{status=JSON.parse(read('status.json'));plan=JSON.parse(read('official-data-recovery-plan.json'));manifest=JSON.parse(read('official-data-manifest.json'));}
+ catch(e){return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date,status:'REJECTED',issues:['HANDOFF_INPUT_UNREADABLE_OR_INVALID_JSON'],automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false};}
+ if(!status||!plan||!manifest||!Array.isArray(plan.sources))return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date,status:'REJECTED',issues:['HANDOFF_INPUT_INVALID_SHAPE'],automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false};
  const issues=[];
  if(status.target_date!==date||plan.target_date!==date||manifest.target_date!==date)issues.push('HANDOFF_DATE_MISMATCH');
  if(status.official_recovery_advice?.source_plan_sha256!==hash(read('official-data-recovery-plan.json')))issues.push('RECOVERY_PLAN_SHA_MISMATCH');
