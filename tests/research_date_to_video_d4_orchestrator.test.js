@@ -30,6 +30,17 @@ for(const date of ['20261008','20261013']){
   assert.equal(finalBfi.source_sha256,finalArchive.sha256);
   assert.equal(verified.source_evidence.bfi82u_sha256,finalArchive.sha256);
   assert.equal(verified.status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');
+  // A source-crosschecked dated master is editorial-pending, not a missing-source recovery trigger.
+  assert.equal(r.stages[0].status,'EVIDENCE_JOINED_NOT_CERTIFIED');
+  assert.equal(r.stages[1].status,'RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING');
+  assert.equal(r.stages[2].status,'REVIEW_REQUIRED');
+  assert.equal(r.official_recovery_advice.sources.find(x=>x.id==='BFI82U').action_required,'REUSE_VERIFIED_ARCHIVE');
+  assert.equal(r.official_recovery_advice.sources.some(x=>x.automated_retrieval_allowed),false);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'original-analysis-task.json'),'utf8')).status,'READY_FOR_EVIDENCE_GROUNDED_DRAFT');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'review-handoff-manifest.json'),'utf8')).status,'PENDING_INDEPENDENT_REVIEW');
+  assert.equal(r.render_authorized,false);
+  assert.equal(r.publication_authorized,false);
+  console.log('D4_DATED_SOURCE_READY_EDITORIAL_PENDING_NO_REDUNDANT_RECOVERY_PASS');
  }
 
  assert.equal(r.official_recovery_advice.render_authorized,false);
