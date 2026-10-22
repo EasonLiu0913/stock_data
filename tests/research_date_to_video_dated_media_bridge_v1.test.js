@@ -51,6 +51,7 @@ test('persist rejects blocked output, existing files and rolls back partial writ
   const manifest=JSON.parse(fs.readFileSync(path.join(dir,'dated-media-bridge.json'),'utf8'));
   assert.equal(manifest.srt_sha256,crypto.createHash('sha256').update(result.srt).digest('hex'));
   assert.equal(fs.readFileSync(path.join(dir,'dated-media-bridge.srt'),'utf8'),result.srt);
+  assert.deepEqual(verifyPersisted(dir).issues,[]);
   assert.equal(verifyPersisted(dir).status,'VERIFIED_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
   assert.throws(()=>persist(dir,result),/OUTPUT_EXISTS/);
   fs.appendFileSync(path.join(dir,'dated-media-bridge.srt'),'tamper');
