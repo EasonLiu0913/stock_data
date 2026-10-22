@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {plan}=require('../scripts/research_date_to_video_edge_tts_plan_v1');
 const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
-const {wrap,clock,build}=require('../scripts/research_date_to_video_dated_media_bridge_v1');
+const {wrap,clock,build,persist}=require('../scripts/research_date_to_video_dated_media_bridge_v1');
 test('dated media bridge caption formatting preserves characters and 30-char limit',()=>{
  assert.equal(wrap('今天上漲，明天觀察。'),'今天上漲，明天觀察。');
  assert.equal(wrap('甲'.repeat(31)),'甲'.repeat(30)+'\n甲');
@@ -36,5 +36,21 @@ test('synthetic date-scoped audio proof produces aligned SRT without granting ap
   assert.equal(build(inventory,commandPlan,altered,dir,probe).status,'REJECTED');
   const wrongDate={...proof,target_date:'20261008'};
   assert.equal(build(inventory,commandPlan,wrongDate,dir,probe).status,'REJECTED');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('persist rejects blocked output, existing files and rolls back partial write',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dated-bridge-persist-'));
+ const result={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',target_date:'20261013',srt:'1\\n00:00:00,000 --> 00:00:01,000\\n測試。\\n\\n',sentences:[{id:'test'}],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+ try{
+  assert.throws(()=>persist(dir,{...result,render_authorized:true}),/NOT_READY/);
+  let writes=0;
+  assert.throws(()=>persist(dir,result,(file,content,opts)=>{if(++writes===2)throw Error('INJECTED_WRITE_FAILURE');fs.writeFileSync(file,content,opts);}),/INJECTED_WRITE_FAILURE/);
+  assert.deepEqual(fs.readdirSync(dir),[]);
+  assert.deepEqual(persist(dir,result),['dated-media-bridge.json','dated-media-bridge.srt']);
+  const manifest=JSON.parse(fs.readFileSync(path.join(dir,'dated-media-bridge.json'),'utf8'));
+  assert.equal(manifest.srt_sha256,crypto.createHash('sha256').update(result.srt).digest('hex'));
+  assert.equal(fs.readFileSync(path.join(dir,'dated-media-bridge.srt'),'utf8'),result.srt);
+  assert.throws(()=>persist(dir,result),/OUTPUT_EXISTS/);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
