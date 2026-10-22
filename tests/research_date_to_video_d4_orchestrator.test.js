@@ -449,6 +449,13 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.equal(missingRecovery.render_authorized,false);
  assert.equal(missingRecovery.publication_authorized,false);
  console.log('D4_RECOVERY_PLAN_CANNOT_ELEVATE_DOWNSTREAM_AUTHORIZATION_PASS');
+ // A scheduler must bind persisted advice to the exact dated plan bytes before acting on it.
+ const missingPlanBytes=fs.readFileSync(path.join(dir,'official-data-recovery-plan.json'));
+ assert.equal(missingHandoff.official_recovery_advice.source_plan_sha256,crypto.createHash('sha256').update(missingPlanBytes).digest('hex'));
+ assert.equal(missingHandoff.official_recovery_advice.manifest_sha256,missingRecovery.manifest_sha256);
+ const changedPlan=Buffer.from(missingPlanBytes.toString('utf8').replace('"complete": false','"complete": true'));
+ assert.notEqual(crypto.createHash('sha256').update(changedPlan).digest('hex'),missingHandoff.official_recovery_advice.source_plan_sha256);
+ console.log('D4_SCHEDULER_ADVICE_EXACT_PLAN_BYTE_BINDING_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
