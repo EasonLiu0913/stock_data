@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
 const {execute}=require('../scripts/research_date_to_video_verified_entry_v1');
 // Run the date-scoped timeline negative fixture through the existing read-only CI listener.
 require('./research_date_to_video_dated_media_input_v1.test.js');
+require('./research_date_to_video_dated_media_bridge_v1.test.js');
 const {verify:verifyEntry}=require('../scripts/research_date_to_video_verified_entry_verify_v1');
 const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-verified-entry-'));
