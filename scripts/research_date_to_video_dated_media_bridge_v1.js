@@ -79,7 +79,7 @@ function verifyD4Source(dir){
  if(review?.inventory_sha256!==inventoryHash||worksheet?.inventory_sha256!==inventoryHash)issues.push('D4_INVENTORY_SHA_MISMATCH');
  const claimIds=new Set(entries.map(x=>x.claim_id));
  if(claimIds.size!==75||entries.some(x=>typeof x.claim_id!=='string'||!x.claim_id.startsWith(date+':')))issues.push('D4_CLAIM_IDENTITY');
- if(review?.total_claims!==75||review?.inventory_sha256!==worksheet?.inventory_sha256||review?.approved_claim_ids?.some(id=>!claimIds.has(id)))issues.push('D4_REVIEW_INVENTORY_PARITY');
+ if(review?.reviewed_count+review?.unreviewed_count!==entries.length||review?.inventory_sha256!==worksheet?.inventory_sha256||review?.approved_claim_ids?.some(id=>!claimIds.has(id)))issues.push('D4_REVIEW_INVENTORY_PARITY');
  if(review?.reviewed_count!==0||review?.unreviewed_count!==75||!Array.isArray(review?.approved_claim_ids)||review.approved_claim_ids.length!==0||review?.claim_whitelist_verified!==false)issues.push('D4_REVIEW_GATE');
  if(!Array.isArray(worksheet?.review_items)||worksheet.review_items.length!==3||new Set(worksheet.review_items.map(x=>x.claim_id)).size!==3||worksheet.review_items.some(x=>!claimIds.has(x.claim_id)||x.review_decision!=='PENDING_INDEPENDENT_REVIEW'||x.evidence_checked!==false))issues.push('D4_WORKSHEET_PENDING');
  if(dated?.preflight_status!=='BLOCKED'||dated?.audio_manifest!==null||!dated?.blockers?.includes('EDITORIAL_CERTIFICATION_REQUIRED'))issues.push('D4_MEDIA_PREFLIGHT');
