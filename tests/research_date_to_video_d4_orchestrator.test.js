@@ -40,6 +40,13 @@ for(const date of ['20261008','20261013']){
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir,'review-handoff-manifest.json'),'utf8')).status,'PENDING_INDEPENDENT_REVIEW');
   assert.equal(r.render_authorized,false);
   assert.equal(r.publication_authorized,false);
+  // Scheduler handoff must be readable from the persisted status, not only the in-memory result.
+  const readyHandoff=JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8'));
+  assert.deepEqual(readyHandoff.stages,r.stages);
+  assert.deepEqual(readyHandoff.official_recovery_advice,r.official_recovery_advice);
+  assert.equal(readyHandoff.official_recovery_advice.sources.some(x=>x.automated_retrieval_allowed),false);
+  assert.equal(readyHandoff.publication_authorized,false);
+  console.log('D4_PERSISTED_EDITORIAL_PENDING_SCHEDULER_HANDOFF_PASS');
   console.log('D4_DATED_SOURCE_READY_EDITORIAL_PENDING_NO_REDUNDANT_RECOVERY_PASS');
  }
 
@@ -399,6 +406,13 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.equal(fs.existsSync(path.join(dir,'review-handoff-manifest.json')),false);
  assert.equal(missing.official_recovery_advice.target_date,'20261014');
  assert.equal(missing.publication_authorized,false);
+ const missingHandoff=JSON.parse(fs.readFileSync(path.join(dir,'status.json'),'utf8'));
+ assert.deepEqual(missingHandoff.stages,missing.stages);
+ assert.deepEqual(missingHandoff.official_recovery_advice,missing.official_recovery_advice);
+ assert.equal(missingHandoff.target_date,'20261014');
+ assert.equal(missingHandoff.render_authorized,false);
+ assert.equal(missingHandoff.publication_authorized,false);
+ console.log('D4_PERSISTED_MISSING_SOURCE_SCHEDULER_HANDOFF_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
