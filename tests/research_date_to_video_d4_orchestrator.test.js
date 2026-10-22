@@ -476,6 +476,19 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  }finally{fs.writeFileSync(planFile,originalPlan);}
  assert.equal(inspectSchedulerHandoff(dir,'20261013').status,'REJECTED');
  console.log('D4_READ_ONLY_SCHEDULER_HANDOFF_INSPECTION_FAIL_CLOSED_PASS');
+ const handoffStatusFile=path.join(dir,'status.json'),savedHandoffStatus=fs.readFileSync(handoffStatusFile);
+ try{
+  fs.writeFileSync(handoffStatusFile,'{invalid');
+  const invalidJsonInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(invalidJsonInspection.status,'REJECTED');
+  assert.ok(invalidJsonInspection.issues.includes('HANDOFF_INPUT_UNREADABLE_OR_INVALID_JSON'));
+  assert.equal(invalidJsonInspection.automatic_dispatch_authorized,false);
+  fs.writeFileSync(handoffStatusFile,'null');
+  const invalidShapeInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(invalidShapeInspection.status,'REJECTED');
+  assert.ok(invalidShapeInspection.issues.includes('HANDOFF_INPUT_INVALID_SHAPE'));
+ }finally{fs.writeFileSync(handoffStatusFile,savedHandoffStatus);}
+ console.log('D4_SCHEDULER_MALFORMED_HANDOFF_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
