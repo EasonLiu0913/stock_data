@@ -213,6 +213,9 @@ if(require.main===module){
 }
 // Read-only scheduler handoff check; never dispatches recovery or grants downstream authorization.
 function inspectSchedulerHandoff(out,date){
+ const reject=issue=>({contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date||null,status:'REJECTED',issues:[issue],automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false});
+ if(typeof date!=='string'||!/^20\d{6}$/.test(date)||!Number.isFinite(Date.parse(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z'))||new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z').toISOString().slice(0,10)!==date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8))return reject('INVALID_TARGET_DATE');
+ if(typeof out!=='string'||!out.trim())return reject('INVALID_OUTPUT_DIR');
  const read=name=>fs.readFileSync(path.join(out,name));
  let status,plan,manifest;
  try{status=JSON.parse(read('status.json'));plan=JSON.parse(read('official-data-recovery-plan.json'));manifest=JSON.parse(read('official-data-manifest.json'));}
