@@ -29,7 +29,7 @@ function build(inventory,commandPlan,proof,audioDir,probe){
 }
 function persist(dir,result,write=fs.writeFileSync){
  if(result?.contract!=='DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE'||result.status!=='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED'||result.editorial_certified!==false||result.narration_authorized!==false||result.render_authorized!==false||result.publication_authorized!==false||typeof result.srt!=='string'||!result.srt.trim()||!Array.isArray(result.sentences)||!result.sentences.length)throw Error('DATED_MEDIA_BRIDGE_NOT_READY');
- const files=[['dated-media-bridge.json',JSON.stringify({...result,srt_sha256:sha(Buffer.from(result.srt,'utf8')),srt:undefined},null,2)+'\\n'],['dated-media-bridge.srt',result.srt]];
+ const files=[['dated-media-bridge.json',JSON.stringify({...result,srt_sha256:sha(Buffer.from(result.srt,'utf8')),srt:undefined},null,2)+'\n'],['dated-media-bridge.srt',result.srt]];
  for(const [name] of files)if(fs.existsSync(path.join(dir,name)))throw Error('DATED_MEDIA_BRIDGE_OUTPUT_EXISTS:'+name);
  const created=[];try{for(const [name,content] of files){const file=path.join(dir,name);write(file,content,{flag:'wx'});created.push(file);}}catch(e){for(const file of created)if(fs.existsSync(file))fs.unlinkSync(file);throw e;}
  return files.map(([name])=>name);
