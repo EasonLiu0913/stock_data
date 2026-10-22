@@ -15,4 +15,21 @@ function inspectSentencePacket(dir,packet){
  const candidate=parity.status==='STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED'?packet.sentences.map((s,i)=>({index:i,id:s.id,narration:s.narration,subtitle:s.subtitle,spoken_subtitle_mappings:s.spoken_subtitle_mappings||[]})):null;
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:datedInput.target_date,source_master_sha256:datedInput.source_master_sha256,preflight_status:datedInput.preflight_status,blockers:[...new Set([...datedInput.blockers,...parity.issues])],sentence_parity:parity,media_bridge_status:candidate?'STRUCTURAL_CANDIDATE_ONLY_EDITORIAL_REVIEW_REQUIRED':'BLOCKED_PENDING_EDITORIAL_AND_MEDIA_INPUTS',candidate_sentences:candidate,narration_script:null,subtitle_sentences:null,audio_manifest:null,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
 }
-module.exports={build,inspectSentencePacket};
+// Explicit dated sentence-to-media preparation. A structurally valid packet is not approved speech.
+function prepareDatedSentenceTimeline(dir,packet){
+ const handoff=inspectSentencePacket(dir,packet);
+ const ready=handoff.candidate_sentences!==null&&handoff.sentence_parity.issues.length===0;
+ const sentences=ready?handoff.candidate_sentences.map(s=>({
+  id:s.id,spoken_text:s.narration,caption_text:s.subtitle,
+  spoken_subtitle_mappings:s.spoken_subtitle_mappings,
+  audio_file:null,audio_sha256:null,duration_seconds:null,
+  editorial_decision:'PENDING'
+ })):[];
+ return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_SENTENCE_TIMELINE_PREPARATION',
+  target_date:handoff.target_date,source_master_sha256:handoff.source_master_sha256,
+  status:ready?'STRUCTURAL_INPUT_ONLY_AUDIO_AND_EDITORIAL_REVIEW_REQUIRED':'BLOCKED',
+  issues:handoff.blockers,sentences,
+  audio_generation_authorized:false,editorial_certified:false,narration_authorized:false,
+  render_authorized:false,publication_authorized:false};
+}
+module.exports={build,inspectSentencePacket,prepareDatedSentenceTimeline};
