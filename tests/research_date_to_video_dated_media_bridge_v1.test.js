@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {plan}=require('../scripts/research_date_to_video_edge_tts_plan_v1');
 const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
-const {wrap,clock,build,persist,verifyPersisted}=require('../scripts/research_date_to_video_dated_media_bridge_v1');
+const {wrap,clock,build,buildFromDirectory,persist,verifyPersisted}=require('../scripts/research_date_to_video_dated_media_bridge_v1');
 test('dated media bridge caption formatting preserves characters and 30-char limit',()=>{
  assert.equal(wrap('今天上漲，明天觀察。'),'今天上漲，明天觀察。');
  assert.equal(wrap('甲'.repeat(31)),'甲'.repeat(30)+'\n甲');
@@ -66,5 +66,19 @@ test('persist rejects blocked output, existing files and rolls back partial writ
   const altered={...manifest,sentences:[{...manifest.sentences[0],caption_text:'偽造。'}]};
   fs.writeFileSync(path.join(dir,'dated-media-bridge.json'),JSON.stringify(altered));
   assert.ok(verifyPersisted(dir).issues.includes('SRT_TIMELINE_DRIFT'));
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('20261013 real-date handoff without collected audio evidence fails closed and writes nothing',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dated-bridge-20261013-missing-audio-'));
+ try{
+  fs.writeFileSync(path.join(dir,'sentence-audio-inventory.json'),JSON.stringify({target_date:'20261013',status:'CANDIDATE_INVENTORY_PENDING_INDEPENDENT_EDITORIAL_REVIEW',sentences:[]}));
+  const result=buildFromDirectory(dir);
+  assert.equal(result.status,'REJECTED');
+  assert.deepEqual(result.issues,['DATED_AUDIO_EVIDENCE_MISSING_OR_INVALID']);
+  assert.equal(result.render_authorized,false);
+  assert.equal(result.publication_authorized,false);
+  assert.throws(()=>persist(dir,result),/NOT_READY/);
+  assert.deepEqual(fs.readdirSync(dir),['sentence-audio-inventory.json']);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
