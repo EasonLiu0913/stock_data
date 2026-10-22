@@ -57,7 +57,21 @@ function trimDataset(siteRoot, dataset, maxDates) {
     throw new Error(`${dataset}/files.json must be an array or an object with a files array`);
   }
 
-  const listed = originalList.map(normalizeListedFile);
+  // data_normalized/files.json can lag behind actual nested daily payloads.
+  // Reconcile only the disposable Pages copy; never mutate repository source data.
+  function actualNormalizedFiles(directory, prefix = '') {
+    const found = [];
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) found.push(...actualNormalizedFiles(absolute, relative));
+      else if (entry.isFile() && relative !== 'files.json') found.push(relative);
+      else if (entry.isSymbolicLink()) throw new Error(`Unexpected normalized symlink: ${relative}`);
+    }
+    return found;
+  }
+  const normalizedActual = dataset === 'data_normalized' ? actualNormalizedFiles(datasetDir) : null;
+  const listed = (normalizedActual || originalList).map(normalizeListedFile);
   const dated = listed.map(file => ({ file, date: extractDate(file) })).filter(item => item.date);
   const dates = [...new Set(dated.map(item => item.date))].sort();
   const keepDates = new Set(dates.slice(-maxDates));
@@ -77,6 +91,15 @@ function trimDataset(siteRoot, dataset, maxDates) {
     if (!stats.isFile() && !stats.isSymbolicLink()) continue;
     fs.rmSync(absolute, { force: true });
     removedFiles += 1;
+  }
+
+  if (normalizedActual) {
+    for (const relative of normalizedActual) {
+      const date = extractDate(relative);
+      if (!date || keepDates.has(date)) continue;
+      fs.rmSync(path.join(datasetDir, relative), { force: true });
+      removedFiles += 1;
+    }
   }
 
   for (const entry of fs.readdirSync(datasetDir, { withFileTypes: true })) {
@@ -380,6 +403,23 @@ function runSelfTest() {
   if (!published.includes('meta.json')) throw new Error('self-test dropped undated metadata');
   if (fs.existsSync(path.join(dataset, 'nested/sample_20260102_a.json'))) throw new Error('self-test retained nested expired file');
   if (!fs.existsSync(path.join(dataset, 'nested/sample_20260104_a.json'))) throw new Error('self-test dropped latest nested file');
+
+  const normalized = path.join(root, 'data_normalized');
+  for (const folder of ['broker_details', 'institutional_investors']) {
+    fs.mkdirSync(path.join(normalized, folder), { recursive: true });
+    for (const date of ['20260803', '20261019', '20261020', '20261021']) {
+      fs.writeFileSync(path.join(normalized, folder, `${date}.json`), date);
+    }
+  }
+  fs.writeFileSync(path.join(normalized, 'files.json'), JSON.stringify([
+    'broker_details/20260803.json', 'institutional_investors/20260803.json',
+  ]));
+  const normalizedResult = trimDataset(root, 'data_normalized', 2);
+  const normalizedList = readJson(path.join(normalized, 'files.json'));
+  if (normalizedResult.last_published_date !== '20261021') throw new Error('normalized stale index hid latest date');
+  if (normalizedList.length !== 4 || normalizedList.some(file => !/2026102[01]/.test(file))) throw new Error('normalized index reconciliation failed');
+  if (fs.existsSync(path.join(normalized, 'broker_details/20260803.json'))) throw new Error('normalized nested stale file retained');
+  for (const relative of normalizedList) if (!fs.existsSync(path.join(normalized, relative))) throw new Error(`normalized index missing file: ${relative}`);
 
   const objectDataset = path.join(root, 'data_object_manifest');
   fs.mkdirSync(objectDataset);
