@@ -1,7 +1,7 @@
 'use strict';
 // Independent research handoff integrity check. Never grants downstream authorization.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const {inspectSentencePacket}=require('./research_date_to_video_dated_media_input_v1');
+const {inspectSentencePacket,prepareDatedSentenceTimeline}=require('./research_date_to_video_dated_media_input_v1');
 const {inspectDirectory:inspectNarrationCandidate}=require('./research_date_to_video_narration_candidate_review_v1');
 const {matches:matchesCandidateSentences}=require('./research_date_to_video_candidate_sentence_link_v1');
 const {build:buildEditorialMediaPreview}=require('./research_date_to_video_editorial_media_preview_v1');
@@ -28,7 +28,9 @@ function verify(dir){
   catch(e){expected={contract:'DATE_TO_VIDEO_V1_RESEARCH_SENTENCE_MEDIA_HANDOFF',target_date:date,status:'REJECTED',issues:['SENTENCE_PACKET_INVALID_JSON'],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};}
   if(expected===undefined)expected=inspectSentencePacket(dir,parsed);
   if(JSON.stringify(expected)!==JSON.stringify(entry.sentence_handoff))issues.push('SENTENCE_HANDOFF_REVALIDATION_MISMATCH');
- }else if(entry.sentence_handoff!==null)issues.push('UNEXPECTED_SENTENCE_HANDOFF');
+  const expectedTimeline=parsed?prepareDatedSentenceTimeline(dir,parsed):null;
+  if(JSON.stringify(expectedTimeline)!==JSON.stringify(entry.sentence_timeline_preparation))issues.push('SENTENCE_TIMELINE_REVALIDATION_MISMATCH');
+ }else if(entry.sentence_handoff!==null||entry.sentence_timeline_preparation!==null)issues.push('UNEXPECTED_SENTENCE_HANDOFF_OR_TIMELINE');
  const candidatePath=path.join(dir,'narration-candidate-input.json'),candidateRecord=entry.narration_candidate_source;
  if(fs.existsSync(candidatePath)!==!!candidateRecord)issues.push('NARRATION_CANDIDATE_PRESENCE_CHANGED');
  else if(candidateRecord){
