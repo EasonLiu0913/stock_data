@@ -82,3 +82,24 @@ test('20261013 date-shaped incomplete handoff without collected audio evidence f
   assert.deepEqual(fs.readdirSync(dir),['sentence-audio-inventory.json']);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('archived D4 20261013 review metadata blocks media output without independently collected audio',()=>{
+ // Derived from D4 artifact 12366714758: editorial-review.json and dated-media-input.json.
+ const gate={target_date:'20261013',reviewed_count:0,unreviewed_count:75,approved_claim_ids:[],claim_whitelist_verified:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+ const dated={target_date:'20261013',preflight_status:'BLOCKED',blockers:['EDITORIAL_CERTIFICATION_REQUIRED','DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'],audio_manifest:null,editorial_certified:false,render_authorized:false,publication_authorized:false};
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-20261013-archive-negative-'));
+ try{
+  assert.equal(gate.reviewed_count+gate.unreviewed_count,75);
+  assert.equal(gate.approved_claim_ids.length,0);
+  assert.equal(gate.claim_whitelist_verified,false);
+  assert.equal(dated.preflight_status,'BLOCKED');
+  assert.equal(dated.audio_manifest,null);
+  const result=buildFromDirectory(dir);
+  assert.equal(result.status,'REJECTED');
+  assert.deepEqual(result.issues,['DATED_AUDIO_EVIDENCE_MISSING_OR_INVALID']);
+  assert.equal(result.render_authorized,false);
+  assert.equal(result.publication_authorized,false);
+  assert.throws(()=>persist(dir,result),/NOT_READY/);
+  assert.deepEqual(fs.readdirSync(dir),[]);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
