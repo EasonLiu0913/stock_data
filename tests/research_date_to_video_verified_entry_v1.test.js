@@ -13,6 +13,7 @@ try{
   assert.deepEqual(result.source_artifacts.map(x=>x.name),['status.json','official-data-recovery-plan.json','official-data-manifest.json']);
   for(const artifact of result.source_artifacts)assert.equal(artifact.sha256,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(dir,artifact.name))).digest('hex'));
   assert.equal(result.sentence_packet_source,null);
+  assert.equal(result.sentence_timeline_preparation,null);
   assert.equal(result.narration_candidate_review,null);
   assert.equal(result.editorial_media_preview,null);
   assert.equal(result.narration_candidate_source,null);
@@ -35,11 +36,20 @@ try{
  const positive=execute('.','20261013',dir);
  assert.equal(positive.sentence_handoff.sentence_parity.status,'STRUCTURAL_PARITY_ONLY_EDITORIAL_REVIEW_REQUIRED');
  assert.equal(positive.sentence_handoff.candidate_sentences.length,5);
+ assert.equal(positive.sentence_timeline_preparation.sentences.length,5);
+ assert.equal(positive.sentence_timeline_preparation.sentences[4].caption_text,'10/13上漲5%。');
+ assert.equal(positive.sentence_timeline_preparation.audio_generation_authorized,false);
  assert.deepEqual(positive.sentence_handoff.candidate_sentences[4],{index:4,id:'market-1',narration:'十月十三日上漲五％。',subtitle:'10/13上漲5%。',spoken_subtitle_mappings:[{spoken:'十月十三日',display:'10/13'},{spoken:'五％',display:'5%'}]});
  assert.equal(positive.sentence_handoff.narration_script,null);
  assert.equal(positive.sentence_handoff.narration_authorized,false);
  assert.equal(positive.render_authorized,false);
  assert.equal(verifyEntry(dir).status,'VERIFIED_RESEARCH_ONLY');
+ const timelineTamperPath=path.join(dir,'verified-research-entry.json');
+ const timelineTamper=JSON.parse(fs.readFileSync(timelineTamperPath,'utf8'));
+ timelineTamper.sentence_timeline_preparation.sentences[4].caption_text='tampered';
+ fs.writeFileSync(timelineTamperPath,JSON.stringify(timelineTamper));
+ assert.ok(verifyEntry(dir).issues.includes('SENTENCE_TIMELINE_REVALIDATION_MISMATCH'));
+ execute('.','20261013',dir);
  const previewTamperPath=path.join(dir,'verified-research-entry.json');
  const previewTamper=JSON.parse(fs.readFileSync(previewTamperPath,'utf8'));
  previewTamper.editorial_media_preview={status:'STRUCTURAL_PLANNING_PREVIEW_ONLY',render_authorized:true};
