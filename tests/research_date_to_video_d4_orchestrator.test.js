@@ -501,6 +501,21 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  }finally{fs.writeFileSync(manifestFile,savedManifest);}
  assert.equal(inspectSchedulerHandoff(dir,'20261014').status,'RESEARCH_HANDOFF_VALIDATED');
  console.log('D4_SCHEDULER_MANIFEST_CONTENT_SHA_FAIL_CLOSED_PASS');
+ const sourcePlanFile=path.join(dir,'official-data-recovery-plan.json'),savedSourcePlan=fs.readFileSync(sourcePlanFile);
+ try{
+  const duplicatedPlan=JSON.parse(savedSourcePlan);
+  duplicatedPlan.sources[1]={...duplicatedPlan.sources[0]};
+  fs.writeFileSync(sourcePlanFile,JSON.stringify(duplicatedPlan));
+  const duplicateInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(duplicateInspection.status,'REJECTED');
+  assert.ok(duplicateInspection.issues.includes('RECOVERY_SOURCE_CONTRACT_INVALID'));
+  duplicatedPlan.sources[1]=null;
+  fs.writeFileSync(sourcePlanFile,JSON.stringify(duplicatedPlan));
+  const nullInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(nullInspection.status,'REJECTED');
+  assert.ok(nullInspection.issues.includes('HANDOFF_INPUT_INVALID_SHAPE'));
+ }finally{fs.writeFileSync(sourcePlanFile,savedSourcePlan);}
+ console.log('D4_SCHEDULER_RECOVERY_SOURCE_SET_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
