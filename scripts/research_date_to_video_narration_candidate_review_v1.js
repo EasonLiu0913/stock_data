@@ -4,8 +4,26 @@ const fs=require('node:fs'),path=require('node:path');
 const {build:buildDatedInput}=require('./research_date_to_video_dated_media_input_v1');
 const crypto=require('node:crypto');const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const {validate:validateParity}=require('./research_date_to_video_sentence_parity_v1');
-function inspect(worksheet,datedInput,candidate){
- const issues=[];const check=(code,ok)=>{if(!ok)issues.push(code)};
+// Research-only structured flow assertions: raw absence is not zero, and dealer categories are not interchangeable.
+function inspectFlowAssertions(candidate,priceEvidence){
+ const issues=[];const assertions=candidate?.flow_assertions;
+ if(assertions===undefined)return issues;
+ if(!Array.isArray(assertions)||!priceEvidence||priceEvidence.target_date!==candidate.target_date||!Array.isArray(priceEvidence.stocks))return ['FLOW_EVIDENCE_REQUIRED'];
+ const stocks=new Map(priceEvidence.stocks.map(s=>[String(s.code),s]));
+ for(const a of assertions){
+  const stock=stocks.get(String(a?.code)),flow=stock?.dated_flow_crosscheck;
+  if(!flow||flow.status!=='DATED_RAW_FACTS_CROSSCHECK_ONLY'){issues.push('FLOW_SOURCE_UNAVAILABLE');continue;}
+  if(a.kind==='TRUST_NET_SHARES'){
+   if(flow.trust_record_status!=='reported'||flow.trust_net_shares===null||a.net_shares!==flow.trust_net_shares)issues.push('TRUST_UNREPORTED_OR_VALUE_MISMATCH');
+  }else if(a.kind==='DEALER_NET_SHARES'){
+   const keys={proprietary:'dealer_proprietary_net_shares',hedging:'dealer_hedging_net_shares',total:'dealer_total_net_shares'};
+   if(!Object.hasOwn(keys,a.category)||a.net_shares!==flow[keys[a.category]])issues.push('DEALER_CATEGORY_OR_VALUE_MISMATCH');
+  }else issues.push('UNKNOWN_FLOW_ASSERTION');
+ }
+ return issues;
+}
+function inspect(worksheet,datedInput,candidate,priceEvidence){
+ const issues=inspectFlowAssertions(candidate,priceEvidence);const check=(code,ok)=>{if(!ok)issues.push(code)};
  check('WORKSHEET_CONTRACT',worksheet?.contract==='DATE_TO_VIDEO_V1_RESEARCH_EDITORIAL_NARRATION_WORKSHEET');
  check('WORKSHEET_READY',Array.isArray(worksheet?.sections)&&worksheet.sections.length>0&&Array.isArray(worksheet.issues)&&worksheet.issues.every(x=>x==='EDITORIAL_CERTIFICATION_REQUIRED'||x==='DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'));
  check('DATE_MATCH',typeof candidate?.target_date==='string'&&candidate.target_date===worksheet?.target_date&&candidate.target_date===datedInput?.target_date);
@@ -28,4 +46,4 @@ function inspectDirectory(dir,candidate){
  return result;
 }
 if(require.main===module){const [dir,candidatePath]=process.argv.slice(2);if(!dir||!candidatePath){console.error('Usage: node scripts/research_date_to_video_narration_candidate_review_v1.js D4-output-dir candidate.json');process.exitCode=2;}else try{const result=inspectDirectory(dir,JSON.parse(fs.readFileSync(candidatePath,'utf8')));console.log(JSON.stringify(result,null,2));if(result.status==='REJECTED')process.exitCode=1;}catch(e){console.error(e.message);process.exitCode=2;}}
-module.exports={inspect,inspectDirectory};
+module.exports={inspect,inspectDirectory,inspectFlowAssertions};
