@@ -164,6 +164,21 @@ assert.equal(inputManifest.render_authorized,false);
 console.log('D4_EDITORIAL_INPUT_PROVENANCE_PASS');
 console.log('D4_PARTIAL_REVIEW_DRAFT_REJECTED_FAIL_CLOSED_PASS');
 console.log('D4_EXPLICIT_DATED_REVIEW_INPUT_PASS');
+// Revoking an external review must recompute the gate; no prior approved IDs or input hash may survive.
+fs.unlinkSync(path.join(reviewValidDir,'editorial-review-input.json'));
+const withdrawnRun=run('.','20261008',reviewValidDir);
+const withdrawnReview=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'editorial-review.json'),'utf8'));
+const withdrawnManifest=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'editorial-input-manifest.json'),'utf8'));
+const withdrawnHandoff=JSON.parse(fs.readFileSync(path.join(reviewValidDir,'review-handoff-manifest.json'),'utf8'));
+assert.deepEqual(withdrawnReview.approved_claim_ids,[]);
+assert.equal(withdrawnManifest.review_input_sha256,null);
+assert.equal(withdrawnHandoff.review_input_sha256,null);
+assert.equal(withdrawnHandoff.status,'PENDING_INDEPENDENT_REVIEW');
+assert.equal(JSON.parse(fs.readFileSync(path.join(reviewValidDir,'original-analysis-draft-check.json'),'utf8')).status,'REJECTED');
+assert.equal(withdrawnRun.render_authorized,false);
+assert.equal(withdrawnRun.publication_authorized,false);
+console.log('D4_WITHDRAWN_REVIEW_RERUN_FAIL_CLOSED_PASS');
+
 const actualCandidate=JSON.parse(fs.readFileSync('data_research/m5/ai-script-generation/20261008-d4-original-analysis-candidate.json'));
 assert.equal(actualCandidate.target_date,'20261008');
 assert.equal(actualCandidate.insights.length,5);
