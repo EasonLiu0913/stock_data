@@ -567,6 +567,25 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.equal(rejectedCli.status,3);
  assert.equal(JSON.parse(rejectedCli.stdout).next_step,'REJECT_UNTRUSTED_HANDOFF');
  console.log('D4_SCHEDULER_CLI_NEXT_STEP_MACHINE_READABLE_PASS');
+ const stageFile=path.join(dir,'status.json'),stageSaved=fs.readFileSync(stageFile);
+ try{
+  const malformed=JSON.parse(stageSaved);malformed.stages=[null];
+  fs.writeFileSync(stageFile,JSON.stringify(malformed));
+  const inspected=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(inspected.status,'REJECTED');
+  assert.ok(inspected.issues.includes('D4_STAGE_CONTRACT_INVALID'));
+  assert.equal(inspected.next_step,'REJECT_UNTRUSTED_HANDOFF');
+  assert.equal(inspected.automatic_dispatch_authorized,false);
+  const contradictory=JSON.parse(stageSaved);
+  contradictory.stages[0].status='WAITING_SOURCE';
+  contradictory.stages[1].status='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING';
+  fs.writeFileSync(stageFile,JSON.stringify(contradictory));
+  const inspectedContradiction=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(inspectedContradiction.status,'REJECTED');
+  assert.ok(inspectedContradiction.issues.includes('D4_STAGE_SEQUENCE_INVALID'));
+  assert.equal(inspectedContradiction.next_step,'REJECT_UNTRUSTED_HANDOFF');
+ }finally{fs.writeFileSync(stageFile,stageSaved);}
+ console.log('D4_SCHEDULER_STAGE_CONTRACT_AND_SEQUENCE_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
