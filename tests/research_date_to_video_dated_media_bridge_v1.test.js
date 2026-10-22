@@ -45,7 +45,7 @@ test('persist rejects blocked output, existing files and rolls back partial writ
  try{
   assert.throws(()=>persist(dir,{...result,render_authorized:true}),/NOT_READY/);
   assert.throws(()=>persist(dir,{...result,srt:result.srt.replace('測試。','偽造。')}),/SRT_DRIFT/);
-  assert.throws(()=>persist(dir,{...result,target_date:'20261008',total_seconds:2}),/SRT_DRIFT/);
+  assert.throws(()=>persist(dir,{...result,target_date:'20261008',total_seconds:2}),/TIMELINE_INVALID/);
   assert.deepEqual(fs.readdirSync(dir),[]);
   let writes=0;
   assert.throws(()=>persist(dir,result,(file,content,opts)=>{if(++writes===2)throw Error('INJECTED_WRITE_FAILURE');fs.writeFileSync(file,content,opts);}),/INJECTED_WRITE_FAILURE/);
