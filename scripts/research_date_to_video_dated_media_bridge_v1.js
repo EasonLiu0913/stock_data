@@ -77,8 +77,10 @@ function verifyD4Source(dir){
  if(claims?.claim_count!==75||entries.length!==75||entries.some(x=>x.target_date!==date||x.review_status!=='REVIEW_REQUIRED'||x.narration_authorized!==false)||claims?.claim_whitelist_verified!==false||!Array.isArray(claims?.whitelisted_claim_ids)||claims.whitelisted_claim_ids.length!==0)issues.push('D4_CLAIM_REVIEW_STATE');
  const inventoryHash=claims?sha(Buffer.from(JSON.stringify(claims),'utf8')):null;
  if(review?.inventory_sha256!==inventoryHash||worksheet?.inventory_sha256!==inventoryHash)issues.push('D4_INVENTORY_SHA_MISMATCH');
+ const claimIds=new Set(entries.map(x=>x.claim_id));
+ if(claimIds.size!==75||entries.some(x=>typeof x.claim_id!=='string'||!x.claim_id.startsWith(date+':')))issues.push('D4_CLAIM_IDENTITY');
  if(review?.reviewed_count!==0||review?.unreviewed_count!==75||!Array.isArray(review?.approved_claim_ids)||review.approved_claim_ids.length!==0||review?.claim_whitelist_verified!==false)issues.push('D4_REVIEW_GATE');
- if(!Array.isArray(worksheet?.review_items)||!worksheet.review_items.length||worksheet.review_items.some(x=>x.review_decision!=='PENDING_INDEPENDENT_REVIEW'||x.evidence_checked!==false))issues.push('D4_WORKSHEET_PENDING');
+ if(!Array.isArray(worksheet?.review_items)||worksheet.review_items.length!==3||new Set(worksheet.review_items.map(x=>x.claim_id)).size!==3||worksheet.review_items.some(x=>!claimIds.has(x.claim_id)||x.review_decision!=='PENDING_INDEPENDENT_REVIEW'||x.evidence_checked!==false))issues.push('D4_WORKSHEET_PENDING');
  if(dated?.preflight_status!=='BLOCKED'||dated?.audio_manifest!==null||!dated?.blockers?.includes('EDITORIAL_CERTIFICATION_REQUIRED'))issues.push('D4_MEDIA_PREFLIGHT');
  if([claims,review,worksheet,dated].some(x=>x?.editorial_certified!==false||x?.render_authorized!==false||x?.publication_authorized!==false&&x?.publication_authorized!==undefined)||worksheet?.narration_authorized!==false)issues.push('D4_AUTHORITY_LOCK');
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_D4_20261013_SOURCE_NEGATIVE_VERIFY',target_date:date,status:issues.length?'REJECTED':'VERIFIED_BLOCKED_PENDING_INDEPENDENT_REVIEW',issues,inventory_sha256:inventoryHash,render_authorized:false,publication_authorized:false};
