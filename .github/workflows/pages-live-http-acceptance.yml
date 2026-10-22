@@ -1,0 +1,46 @@
+name: Pages live HTTP acceptance (read-only)
+on:
+  push:
+    branches: [research/pages-normalized-trim-20261022]
+    paths: [.github/workflows/pages-live-http-acceptance.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check deployed HTTP indexes and every indexed payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request, time
+          base='https://easonliu0913.github.io/stock_data/'
+          for folder in ('data_twse_institutional_investors','data_normalized'):
+              url=base+folder+'/files.json'
+              response=None
+              for attempt in range(6):
+                  try:
+                      response=urllib.request.urlopen(urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'Pages-acceptance-check'}),timeout=15)
+                      if response.status==200: break
+                  except Exception as exc:
+                      print('retry',folder,attempt+1,repr(exc),flush=True)
+                      if attempt==5: raise
+                      time.sleep(10)
+              body=response.read()
+              manifest=json.loads(body)
+              entries=manifest if isinstance(manifest,list) else manifest['files']
+              assert isinstance(entries,list) and entries, (folder,'empty index')
+              dates=sorted({m.group(0) for item in entries if (m:=__import__('re').search(r'20\d{6}',item))})
+              latest=dates[-1] if dates else None
+              print('LIVE',folder,'HTTP',response.status,'bytes',len(body),'entries',len(entries),'latest',latest,flush=True)
+              assert latest=='20261021',(folder,'unexpected latest date',latest)
+              for item in entries:
+                  assert not item.startswith('/') and '..' not in item.split('/'),item
+                  with urllib.request.urlopen(base+folder+'/'+item,timeout=20) as payload:
+                      assert payload.status==200,(folder,item,payload.status)
+                      assert payload.read(1),(folder,item,'empty payload')
+              print('PASS',folder,'all indexed payloads HTTP 200',flush=True)
+          PY
