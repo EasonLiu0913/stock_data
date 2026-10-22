@@ -8,7 +8,7 @@ const {validate:validateParity}=require('./research_date_to_video_sentence_parit
 function inspectFlowAssertions(candidate,priceEvidence){
  const issues=[];const assertions=candidate?.flow_assertions;
  if(assertions===undefined)return issues;
- if(!Array.isArray(assertions)||!priceEvidence||priceEvidence.target_date!==candidate.target_date||!Array.isArray(priceEvidence.stocks))return ['FLOW_EVIDENCE_REQUIRED'];
+ if(!Array.isArray(assertions)||assertions.length===0||!priceEvidence||priceEvidence.contract!=='DATE_TO_VIDEO_V1_D4_DATED_PRICE_REVIEW_EVIDENCE'||priceEvidence.target_date!==candidate.target_date||!Array.isArray(priceEvidence.stocks))return ['FLOW_EVIDENCE_REQUIRED'];
  const stocks=new Map(priceEvidence.stocks.map(s=>[String(s.code),s]));
  for(const a of assertions){
   const stock=stocks.get(String(a?.code)),flow=stock?.dated_flow_crosscheck;
@@ -41,7 +41,8 @@ function inspect(worksheet,datedInput,candidate,priceEvidence){
 function inspectDirectory(dir,candidate){
  const read=name=>JSON.parse(fs.readFileSync(path.join(dir,name),'utf8'));
  const datedInput=buildDatedInput(dir),worksheet=read('editorial-narration-worksheet.json');
- const result=inspect(worksheet,datedInput,candidate);
+ const priceEvidence=candidate?.flow_assertions===undefined?undefined:read('dated-price-review-evidence.json');
+ const result=inspect(worksheet,datedInput,candidate,priceEvidence);
  if(sha(worksheet)!==sha(require('./research_date_to_video_editorial_narration_worksheet_v1').prepare(dir))){result.issues.push('WORKSHEET_ARTIFACT_STALE');result.status='REJECTED';}
  return result;
 }
