@@ -117,6 +117,9 @@ test('D4 20261013 source verifier checks inventory hash, review gate and date be
   assert.equal(verifyD4Source(dir).status,'VERIFIED_BLOCKED_PENDING_INDEPENDENT_REVIEW');
   put('editorial-review.json',{...review,inventory_sha256:'0'.repeat(64)});
   assert.ok(verifyD4Source(dir).issues.includes('D4_INVENTORY_SHA_MISMATCH'));
+  put('editorial-review.json',{...review,unreviewed_count:74});
+  assert.ok(verifyD4Source(dir).issues.includes('D4_REVIEW_INVENTORY_PARITY'));
+  put('editorial-review.json',review);
   put('editorial-review.json',review);put('independent-review-worksheet.json',{...worksheet,review_items:[{...worksheet.review_items[0],claim_id:'20261013:unknown:PRICE_CHANGE'},...worksheet.review_items.slice(1)]});
   assert.ok(verifyD4Source(dir).issues.includes('D4_WORKSHEET_PENDING'));
   put('independent-review-worksheet.json',worksheet);
