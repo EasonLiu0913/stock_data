@@ -44,6 +44,9 @@ test('persist rejects blocked output, existing files and rolls back partial writ
  const result={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',target_date:'20261013',srt:'1\n00:00:00,000 --> 00:00:01,000\n測試。\n\n',total_seconds:1,sentences:[{id:'test',order:1,start_seconds:0,end_seconds:1,caption_text:'測試。'}],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
  try{
   assert.throws(()=>persist(dir,{...result,render_authorized:true}),/NOT_READY/);
+  assert.throws(()=>persist(dir,{...result,srt:result.srt.replace('測試。','偽造。')}),/SRT_DRIFT/);
+  assert.throws(()=>persist(dir,{...result,target_date:'20261008',total_seconds:2}),/SRT_DRIFT/);
+  assert.deepEqual(fs.readdirSync(dir),[]);
   let writes=0;
   assert.throws(()=>persist(dir,result,(file,content,opts)=>{if(++writes===2)throw Error('INJECTED_WRITE_FAILURE');fs.writeFileSync(file,content,opts);}),/INJECTED_WRITE_FAILURE/);
   assert.deepEqual(fs.readdirSync(dir),[]);
