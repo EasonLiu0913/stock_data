@@ -534,6 +534,19 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.equal(cliMissingDir.status,3);
  assert.ok(JSON.parse(cliMissingDir.stdout).issues.includes('HANDOFF_INPUT_UNREADABLE_OR_INVALID_JSON'));
  console.log('D4_SCHEDULER_CLI_INVALID_DATE_AND_MISSING_DIR_FAIL_CLOSED_PASS');
+ const boundedPlanFile=path.join(dir,'official-data-recovery-plan.json'),boundedSaved=fs.readFileSync(boundedPlanFile);
+ try{
+  const forgedPlan=JSON.parse(boundedSaved);
+  const bfi=forgedPlan.sources.find(x=>x.id==='BFI82U');
+  bfi.automated_retrieval_allowed=true;
+  bfi.action_required='REUSE_VERIFIED_ARCHIVE';
+  fs.writeFileSync(boundedPlanFile,JSON.stringify(forgedPlan));
+  const forgedInspection=inspectSchedulerHandoff(dir,'20261014');
+  assert.equal(forgedInspection.status,'REJECTED');
+  assert.ok(forgedInspection.issues.includes('RECOVERY_AUTOMATION_PRECONDITION_INVALID'));
+  assert.equal(forgedInspection.automatic_dispatch_authorized,false);
+ }finally{fs.writeFileSync(boundedPlanFile,boundedSaved);}
+ console.log('D4_SCHEDULER_BOUNDED_RECOVERY_PRECONDITION_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
