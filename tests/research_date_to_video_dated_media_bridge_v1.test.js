@@ -122,3 +122,17 @@ test('D4 20261013 source verifier checks inventory hash, review gate and date be
   assert.deepEqual(fs.readdirSync(dir).sort(),['claims.json','dated-media-input.json','editorial-review.json','independent-review-worksheet.json']);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('dated on-disk bridge rejects unanchored audio manifests before any media output',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-unanchored-audio-'));
+ try{
+  for(const name of ['sentence-audio-inventory.json','edge-tts-command-plan.json','sentence-audio-proof.json'])fs.writeFileSync(path.join(dir,name),JSON.stringify({target_date:'20261013'}));
+  const result=buildFromDirectory(dir);
+  assert.equal(result.status,'REJECTED');
+  assert.ok(result.issues.includes('D4_SOURCE_PROVENANCE_REJECTED'));
+  assert.equal(result.render_authorized,false);
+  assert.equal(result.publication_authorized,false);
+  assert.throws(()=>persist(dir,result),/NOT_READY/);
+  assert.equal(fs.existsSync(path.join(dir,'dated-media-bridge.srt')),false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
