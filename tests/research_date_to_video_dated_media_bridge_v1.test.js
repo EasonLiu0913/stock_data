@@ -129,6 +129,15 @@ test('D4 20261013 source verifier checks inventory hash, review gate and date be
   put('editorial-review.json',review);put('independent-review-worksheet.json',{...worksheet,review_items:[{...worksheet.review_items[0],claim_id:'20261013:unknown:PRICE_CHANGE'},...worksheet.review_items.slice(1)]});
   assert.ok(verifyD4Source(dir).issues.includes('D4_WORKSHEET_PENDING'));
   put('independent-review-worksheet.json',worksheet);
+  put('claims.json',{...claims,claims:[claims.claims[0],...claims.claims.slice(0,74)]});
+  assert.ok(verifyD4Source(dir).issues.includes('D4_CLAIM_IDENTITY'));
+  put('claims.json',claims);
+  put('editorial-review.json',{...review,editorial_certified:true});
+  assert.ok(verifyD4Source(dir).issues.includes('D4_AUTHORITY_LOCK'));
+  put('editorial-review.json',review);
+  put('dated-media-input.json',{...dated,target_date:'20261014'});
+  assert.ok(verifyD4Source(dir).issues.includes('D4_DATE_MISMATCH'));
+  put('dated-media-input.json',dated);
   put('editorial-review.json',review);put('dated-media-input.json',{...dated,audio_manifest:{unverified:true}});
   assert.ok(verifyD4Source(dir).issues.includes('D4_MEDIA_PREFLIGHT'));
   assert.deepEqual(fs.readdirSync(dir).sort(),['claims.json','dated-media-input.json','editorial-review.json','independent-review-worksheet.json']);
