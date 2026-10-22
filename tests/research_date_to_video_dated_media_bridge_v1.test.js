@@ -41,7 +41,7 @@ test('synthetic date-scoped audio proof produces aligned SRT without granting ap
 
 test('persist rejects blocked output, existing files and rolls back partial write',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dated-bridge-persist-'));
- const result={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',target_date:'20261013',srt:'1\\n00:00:00,000 --> 00:00:01,000\\n測試。\\n\\n',total_seconds:1,sentences:[{id:'test',order:1,start_seconds:0,end_seconds:1,caption_text:'測試。'}],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+ const result={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',target_date:'20261013',srt:'1\n00:00:00,000 --> 00:00:01,000\n測試。\n\n',total_seconds:1,sentences:[{id:'test',order:1,start_seconds:0,end_seconds:1,caption_text:'測試。'}],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
  try{
   assert.throws(()=>persist(dir,{...result,render_authorized:true}),/NOT_READY/);
   let writes=0;
