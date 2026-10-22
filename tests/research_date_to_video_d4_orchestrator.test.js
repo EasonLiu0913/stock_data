@@ -558,6 +558,15 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
   assert.equal(editorialInspection.automatic_dispatch_authorized,false);
  }finally{fs.rmSync(editorialDir,{recursive:true,force:true});}
  console.log('D4_SCHEDULER_NEXT_STEP_CLASSIFICATION_NO_DISPATCH_PASS');
+ const classifiedCli=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20261014',dir],{encoding:'utf8'});
+ assert.equal(classifiedCli.status,0,classifiedCli.stderr);
+ const classifiedPayload=JSON.parse(classifiedCli.stdout);
+ assert.equal(classifiedPayload.next_step,'WAIT_FOR_OFFICIAL_SOURCE');
+ assert.equal(classifiedPayload.automatic_dispatch_authorized,false);
+ const rejectedCli=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20261013',dir],{encoding:'utf8'});
+ assert.equal(rejectedCli.status,3);
+ assert.equal(JSON.parse(rejectedCli.stdout).next_step,'REJECT_UNTRUSTED_HANDOFF');
+ console.log('D4_SCHEDULER_CLI_NEXT_STEP_MACHINE_READABLE_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
