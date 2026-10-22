@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
 const {plan}=require('../scripts/research_date_to_video_edge_tts_plan_v1');
 const {FIXED_OPENING_LINES}=require('../scripts/research_date_to_video_fixed_opening_v1');
-const {wrap,clock,build,buildFromDirectory,persist,verifyPersisted}=require('../scripts/research_date_to_video_dated_media_bridge_v1');
+const {wrap,clock,build,buildFromDirectory,verifyD4Source,persist,verifyPersisted}=require('../scripts/research_date_to_video_dated_media_bridge_v1');
 test('dated media bridge caption formatting preserves characters and 30-char limit',()=>{
  assert.equal(wrap('今天上漲，明天觀察。'),'今天上漲，明天觀察。');
  assert.equal(wrap('甲'.repeat(31)),'甲'.repeat(30)+'\n甲');
@@ -101,5 +101,24 @@ test('archived D4 20261013 review metadata blocks media output without independe
   assert.equal(result.publication_authorized,false);
   assert.throws(()=>persist(dir,result),/NOT_READY/);
   assert.deepEqual(fs.readdirSync(dir),[]);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('D4 20261013 source verifier checks inventory hash, review gate and date before media',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-source-negative-'));
+ const put=(name,value)=>fs.writeFileSync(path.join(dir,name),JSON.stringify(value));
+ try{
+  const claims={target_date:'20261013',claim_count:75,claims:Array.from({length:75},(_,i)=>({target_date:'20261013',claim_id:'c'+i,review_status:'REVIEW_REQUIRED',narration_authorized:false})),claim_whitelist_verified:false,whitelisted_claim_ids:[],editorial_certified:false,render_authorized:false,publication_authorized:false};
+  const inventoryHash=crypto.createHash('sha256').update(JSON.stringify(claims)).digest('hex');
+  const review={target_date:'20261013',inventory_sha256:inventoryHash,reviewed_count:0,unreviewed_count:75,approved_claim_ids:[],claim_whitelist_verified:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+  const worksheet={target_date:'20261013',inventory_sha256:inventoryHash,review_items:[{review_decision:'PENDING_INDEPENDENT_REVIEW',evidence_checked:false}],editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+  const dated={target_date:'20261013',preflight_status:'BLOCKED',audio_manifest:null,blockers:['EDITORIAL_CERTIFICATION_REQUIRED'],editorial_certified:false,render_authorized:false,publication_authorized:false};
+  put('claims.json',claims);put('editorial-review.json',review);put('independent-review-worksheet.json',worksheet);put('dated-media-input.json',dated);
+  assert.equal(verifyD4Source(dir).status,'VERIFIED_BLOCKED_PENDING_INDEPENDENT_REVIEW');
+  put('editorial-review.json',{...review,inventory_sha256:'0'.repeat(64)});
+  assert.ok(verifyD4Source(dir).issues.includes('D4_INVENTORY_SHA_MISMATCH'));
+  put('editorial-review.json',review);put('dated-media-input.json',{...dated,audio_manifest:{unverified:true}});
+  assert.ok(verifyD4Source(dir).issues.includes('D4_MEDIA_PREFLIGHT'));
+  assert.deepEqual(fs.readdirSync(dir).sort(),['claims.json','dated-media-input.json','editorial-review.json','independent-review-worksheet.json']);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
