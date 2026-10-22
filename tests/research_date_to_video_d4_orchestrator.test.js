@@ -527,6 +527,13 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.equal(cliMissing.status,3);
  assert.equal(JSON.parse(cliMissing.stdout).automatic_dispatch_authorized,false);
  console.log('D4_READ_ONLY_SCHEDULER_HANDOFF_CLI_EXIT_CODES_PASS');
+ const cliBadDate=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20260230',dir],{encoding:'utf8'});
+ assert.equal(cliBadDate.status,3);
+ assert.ok(JSON.parse(cliBadDate.stdout).issues.includes('INVALID_TARGET_DATE'));
+ const cliMissingDir=spawnSync(process.execPath,[cliPath,'--inspect-handoff','20261014',path.join(dir,'missing-directory')],{encoding:'utf8'});
+ assert.equal(cliMissingDir.status,3);
+ assert.ok(JSON.parse(cliMissingDir.stdout).issues.includes('HANDOFF_INPUT_UNREADABLE_OR_INVALID_JSON'));
+ console.log('D4_SCHEDULER_CLI_INVALID_DATE_AND_MISSING_DIR_FAIL_CLOSED_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
