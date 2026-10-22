@@ -30,7 +30,7 @@ test('synthetic date-scoped audio proof produces aligned SRT without granting ap
   const result=build(inventory,commandPlan,proof,dir,probe);
   assert.equal(result.status,'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
   assert.equal(result.sentences.length,5);assert.equal(result.total_seconds,6.25);
-  assert.ok(result.srt.includes('00:00:05,000 --> 00:00:06,250\\n10/13上漲5%。'));
+  assert.ok(result.srt.includes('00:00:05,000 --> 00:00:06,250\n10/13上漲5%。'));
   assert.equal(result.render_authorized,false);assert.equal(result.editorial_certified,false);
   const altered={...proof,sentences:proof.sentences.map((item,i)=>i===4?{...item,caption_text:'10/13上漲6%。'}:item)};
   assert.equal(build(inventory,commandPlan,altered,dir,probe).status,'REJECTED');
