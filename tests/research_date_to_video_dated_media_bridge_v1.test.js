@@ -69,7 +69,7 @@ test('persist rejects blocked output, existing files and rolls back partial writ
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
-test('20261013 real-date handoff without collected audio evidence fails closed and writes nothing',()=>{
+test('20261013 date-shaped incomplete handoff without collected audio evidence fails closed and writes nothing',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dated-bridge-20261013-missing-audio-'));
  try{
   fs.writeFileSync(path.join(dir,'sentence-audio-inventory.json'),JSON.stringify({target_date:'20261013',status:'CANDIDATE_INVENTORY_PENDING_INDEPENDENT_EDITORIAL_REVIEW',sentences:[]}));
