@@ -236,7 +236,9 @@ function inspectSchedulerHandoff(out,date){
  if(plan.sources.some(x=>x.automated_retrieval_allowed===true&&(x.id!=='BFI82U'||x.status!=='WAITING_SOURCE'||x.action_required!=='APPROVED_BOUNDED_RECOVERY_OR_WAIT'||x.source_date!==date)))issues.push('RECOVERY_AUTOMATION_PRECONDITION_INVALID');
  if(plan.sources.some(x=>x.source_date!==date))issues.push('RECOVERY_SOURCE_DATE_MISMATCH');
  const stage0=status.stages?.[0]?.status,stage1=status.stages?.[1]?.status;
- if(!Array.isArray(status.stages)||status.stages.length<3||status.stages.some(x=>!x||typeof x.status!=='string')||!['WAITING_SOURCE','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING','EVIDENCE_JOINED_NOT_CERTIFIED'].includes(stage0))issues.push('D4_STAGE_CONTRACT_INVALID');
+ const allowedStage0=['WAITING_SOURCE','PARTIAL_EVIDENCE_JOINED_MARKET_SOURCE_MISSING','EVIDENCE_JOINED_NOT_CERTIFIED'];
+ const allowedStage1=['WAITING_FINAL_MARKET_MASTER','MARKET_SOURCE_EVIDENCE_PRESENT_MASTER_UNCERTIFIED','RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'];
+ if(!Array.isArray(status.stages)||status.stages.length<3||status.stages.some(x=>!x||typeof x.status!=='string')||!allowedStage0.includes(stage0)||!allowedStage1.includes(stage1))issues.push('D4_STAGE_CONTRACT_INVALID');
  if(stage1==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'&&stage0!=='EVIDENCE_JOINED_NOT_CERTIFIED')issues.push('D4_STAGE_SEQUENCE_INVALID');
  const next_step=issues.length?'REJECT_UNTRUSTED_HANDOFF':stage0==='WAITING_SOURCE'?'WAIT_FOR_OFFICIAL_SOURCE':stage1==='RESEARCH_MARKET_MASTER_SOURCE_CROSSCHECKED_EDITORIAL_PENDING'?'WAIT_FOR_INDEPENDENT_EDITORIAL_REVIEW':'MANUAL_RESEARCH_REVIEW_REQUIRED';
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date,status:issues.length?'REJECTED':'RESEARCH_HANDOFF_VALIDATED',next_step,issues,automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false};
