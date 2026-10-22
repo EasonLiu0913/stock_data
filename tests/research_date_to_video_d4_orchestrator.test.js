@@ -456,6 +456,14 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  const changedPlan=Buffer.from(missingPlanBytes.toString('utf8').replace('"complete": false','"complete": true'));
  assert.notEqual(crypto.createHash('sha256').update(changedPlan).digest('hex'),missingHandoff.official_recovery_advice.source_plan_sha256);
  console.log('D4_SCHEDULER_ADVICE_EXACT_PLAN_BYTE_BINDING_PASS');
+ // Both persisted handoff and recovery plan must bind to the same dated official manifest.
+ const missingOfficialManifest=JSON.parse(fs.readFileSync(path.join(dir,'official-data-manifest.json'),'utf8'));
+ assert.equal(missingOfficialManifest.target_date,'20261014');
+ assert.equal(missingRecovery.manifest_sha256,missingOfficialManifest.manifest_sha256);
+ assert.equal(missingHandoff.official_recovery_advice.manifest_sha256,missingOfficialManifest.manifest_sha256);
+ const changedManifest={...missingOfficialManifest,manifest_sha256:'wrong-version'};
+ assert.notEqual(changedManifest.manifest_sha256,missingHandoff.official_recovery_advice.manifest_sha256);
+ console.log('D4_SCHEDULER_RECOVERY_OFFICIAL_MANIFEST_VERSION_BINDING_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
