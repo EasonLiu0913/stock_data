@@ -438,6 +438,17 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.ok(missingRecovery.sources.every(x=>!x.automated_retrieval_allowed||x.id==='BFI82U'));
  assert.ok(missingRecovery.sources.filter(x=>x.id!=='BFI82U').every(x=>x.automated_retrieval_allowed===false));
  console.log('D4_RECOVERY_ADVICE_IS_NOT_BLANKET_DISPATCH_AUTHORIZATION_PASS');
+ // A scheduler may consume recovery advice, but no nested advice may elevate master/media/publication gates.
+ assert.equal(missingHandoff.official_recovery_advice.master_authorized,false);
+ assert.equal(missingHandoff.official_recovery_advice.render_authorized,false);
+ assert.equal(missingHandoff.official_recovery_advice.publication_authorized,false);
+ assert.equal(missingHandoff.ready_to_render,false);
+ assert.equal(missingGate.master_authorized,false);
+ assert.equal(missingGate.publication_authorized,false);
+ assert.equal(missingRecovery.master_authorized,false);
+ assert.equal(missingRecovery.render_authorized,false);
+ assert.equal(missingRecovery.publication_authorized,false);
+ console.log('D4_RECOVERY_PLAN_CANNOT_ELEVATE_DOWNSTREAM_AUTHORIZATION_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
