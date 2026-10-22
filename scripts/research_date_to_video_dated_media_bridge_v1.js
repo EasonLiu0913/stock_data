@@ -42,6 +42,10 @@ function verifyPersisted(dir){
 }
 function persist(dir,result,write=fs.writeFileSync){
  if(result?.contract!=='DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE'||result.status!=='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED'||result.editorial_certified!==false||result.narration_authorized!==false||result.render_authorized!==false||result.publication_authorized!==false||typeof result.srt!=='string'||!result.srt.trim()||!Array.isArray(result.sentences)||!result.sentences.length)throw Error('DATED_MEDIA_BRIDGE_NOT_READY');
+ if(!/^\\d{8}$/.test(result.target_date)||!Number.isFinite(result.total_seconds)||result.total_seconds<=0)throw Error('DATED_MEDIA_BRIDGE_TIMELINE_INVALID');
+ let cursor=0,expectedSrt;
+ try{expectedSrt=result.sentences.map((sentence,i)=>{if(sentence.order!==i+1||!Number.isFinite(sentence.start_seconds)||!Number.isFinite(sentence.end_seconds)||sentence.end_seconds<=sentence.start_seconds||Math.abs(sentence.start_seconds-cursor)>0.001)throw Error('TIMELINE_DRIFT');cursor=sentence.end_seconds;return String(i+1)+'\\n'+clock(sentence.start_seconds)+' --> '+clock(sentence.end_seconds)+'\\n'+wrap(sentence.caption_text)+'\\n\\n';}).join('');}catch(e){throw Error('DATED_MEDIA_BRIDGE_TIMELINE_INVALID');}
+ if(expectedSrt!==result.srt||Math.abs(cursor-result.total_seconds)>0.001)throw Error('DATED_MEDIA_BRIDGE_SRT_DRIFT');
  const files=[['dated-media-bridge.json',JSON.stringify({...result,srt_sha256:sha(Buffer.from(result.srt,'utf8')),srt:undefined},null,2)+'\n'],['dated-media-bridge.srt',result.srt]];
  for(const [name] of files)if(fs.existsSync(path.join(dir,name)))throw Error('DATED_MEDIA_BRIDGE_OUTPUT_EXISTS:'+name);
  const created=[];try{for(const [name,content] of files){const file=path.join(dir,name);write(file,content,{flag:'wx'});created.push(file);}}catch(e){for(const file of created)if(fs.existsSync(file))fs.unlinkSync(file);throw e;}
