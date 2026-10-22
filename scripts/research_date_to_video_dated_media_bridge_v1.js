@@ -21,7 +21,7 @@ function build(inventory,commandPlan,proof,audioDir,probe){
  const review=inspect(inventory,commandPlan,proof,audioDir,probe);
  if(review.status!=='STRUCTURAL_AND_PLAYABLE_AUDIO_EVIDENCE_EDITORIAL_REVIEW_REQUIRED')return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'REJECTED',issues:review.issues,render_authorized:false,publication_authorized:false};
  const issues=[];
- if(!Array.isArray(proof.sentences)||proof.sentences.some(s=>typeof s.caption_text!=='string'||!s.caption_text.trim()||/[\\r\\n]/.test(s.caption_text)))issues.push('CAPTION_INVALID');
+ if(!Array.isArray(proof.sentences)||proof.sentences.some(s=>typeof s.caption_text!=='string'||!s.caption_text.trim()||/[\r\n]/.test(s.caption_text)))issues.push('CAPTION_INVALID');
  if(issues.length)return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',status:'REJECTED',issues,render_authorized:false,publication_authorized:false};
  let cursor=0;const sentences=proof.sentences.map(s=>{const start=cursor;cursor+=s.duration_seconds;return {id:s.id,order:s.order,spoken_text:s.spoken_text,caption_text:s.caption_text,audio_file:s.audio_file,audio_sha256:s.audio_sha256,start_seconds:Number(start.toFixed(3)),end_seconds:Number(cursor.toFixed(3))};});
  const srt=sentences.map((s,i)=>String(i+1)+'\n'+clock(s.start_seconds)+' --> '+clock(s.end_seconds)+'\n'+wrap(s.caption_text)+'\n\n').join('');
@@ -33,10 +33,10 @@ function verifyPersisted(dir){
  try{if(fs.lstatSync(jsonPath).isSymbolicLink()||fs.lstatSync(srtPath).isSymbolicLink())throw Error('SYMLINK');manifest=JSON.parse(fs.readFileSync(jsonPath,'utf8'));srt=fs.readFileSync(srtPath,'utf8');}catch(e){return {status:'REJECTED',issues:['DATED_MEDIA_OUTPUT_UNREADABLE'],render_authorized:false,publication_authorized:false};}
  if(manifest.contract!=='DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE'||manifest.status!=='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED')issues.push('MANIFEST_CONTRACT');
  if(manifest.srt_sha256!==sha(Buffer.from(srt,'utf8')))issues.push('SRT_SHA256_MISMATCH');
- if(!/^\\d{8}$/.test(manifest.target_date)||!Array.isArray(manifest.sentences)||!manifest.sentences.length||!Number.isFinite(manifest.total_seconds)||manifest.total_seconds<=0)issues.push('MANIFEST_TIMELINE');
+ if(!/^\d{8}$/.test(manifest.target_date)||!Array.isArray(manifest.sentences)||!manifest.sentences.length||!Number.isFinite(manifest.total_seconds)||manifest.total_seconds<=0)issues.push('MANIFEST_TIMELINE');
  if(['editorial_certified','narration_authorized','render_authorized','publication_authorized'].some(k=>manifest[k]!==false))issues.push('AUTHORITY_LOCK');
  if(!issues.length){
-  try{let cursor=0;const expected=manifest.sentences.map((sentence,i)=>{if(sentence.order!==i+1||!Number.isFinite(sentence.start_seconds)||!Number.isFinite(sentence.end_seconds)||sentence.end_seconds<=sentence.start_seconds||Math.abs(sentence.start_seconds-cursor)>0.001)throw Error('TIMELINE_DRIFT');cursor=sentence.end_seconds;return String(i+1)+'\\n'+clock(sentence.start_seconds)+' --> '+clock(sentence.end_seconds)+'\\n'+wrap(sentence.caption_text)+'\\n\\n';}).join('');if(expected!==srt||Math.abs(cursor-manifest.total_seconds)>0.001)issues.push('SRT_TIMELINE_DRIFT');}catch(e){issues.push('SRT_TIMELINE_DRIFT');}
+  try{let cursor=0;const expected=manifest.sentences.map((sentence,i)=>{if(sentence.order!==i+1||!Number.isFinite(sentence.start_seconds)||!Number.isFinite(sentence.end_seconds)||sentence.end_seconds<=sentence.start_seconds||Math.abs(sentence.start_seconds-cursor)>0.001)throw Error('TIMELINE_DRIFT');cursor=sentence.end_seconds;return String(i+1)+'\n'+clock(sentence.start_seconds)+' --> '+clock(sentence.end_seconds)+'\n'+wrap(sentence.caption_text)+'\n\n';}).join('');if(expected!==srt||Math.abs(cursor-manifest.total_seconds)>0.001)issues.push('SRT_TIMELINE_DRIFT');}catch(e){issues.push('SRT_TIMELINE_DRIFT');}
  }
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE_VERIFY',status:issues.length?'REJECTED':'VERIFIED_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',issues,target_date:manifest.target_date,render_authorized:false,publication_authorized:false};
 }
@@ -47,3 +47,4 @@ function persist(dir,result,write=fs.writeFileSync){
  const created=[];try{for(const [name,content] of files){const file=path.join(dir,name);write(file,content,{flag:'wx'});created.push(file);}}catch(e){for(const file of created)if(fs.existsSync(file))fs.unlinkSync(file);throw e;}
  return files.map(([name])=>name);
 }
+module.exports={build,wrap,clock,persist,verifyPersisted};
