@@ -1,0 +1,58 @@
+name: Pages normalized trim isolated validation
+on:
+  push:
+    branches:
+      - research/pages-normalized-trim-20261022
+    paths:
+      - scripts/trim_pages_artifact.js
+      - .github/workflows/pages-normalized-trim-validation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Run isolated regression and frontend audit
+        run: |
+          set -euo pipefail
+          node --check scripts/trim_pages_artifact.js
+          node scripts/trim_pages_artifact.js --self-test
+          node scripts/scan_pages_dependencies.js --self-test
+          bash scripts/prepare_pages_site.sh --self-test
+          node scripts/apply_pages_size_budget.js --self-test
+          node scripts/scan_pages_dependencies.js . | tee /tmp/pages-dependencies.txt
+      - name: Rebuild complete Pages publication copy and enforce budget
+        run: |
+          set -euo pipefail
+          bash scripts/prepare_pages_site.sh . _site
+          node scripts/prepare_eps_valuation_pages_payload.js --site _site
+          node scripts/trim_pages_artifact.js --site _site | tee /tmp/pages-trim-summary.json
+          node scripts/apply_pages_size_budget.js --site _site --target-mib 800 --trigger-mib 850 | tee /tmp/pages-size-budget-summary.json
+          while IFS= read -r dependency; do
+            test -e "_site/$dependency" || { echo "Missing dependency $dependency"; exit 1; }
+          done < /tmp/pages-dependencies.txt
+          node - <<'NODE'
+          const fs=require('fs'),path=require('path');
+          for (const dataset of ['data_normalized','data_twse_institutional_investors','data_fubon','data_twse_mi_index']) {
+            const root=path.join('_site',dataset);
+            const value=JSON.parse(fs.readFileSync(path.join(root,'files.json'),'utf8'));
+            const entries=Array.isArray(value)?value:value.files;
+            for(const f of entries) if(f!=='files.json'&&!fs.existsSync(path.join(root,f))) throw Error(dataset+' missing '+f);
+            console.log(dataset, 'published entries:', entries.length, 'last:',entries.at(-1));
+          }
+          const src=JSON.parse(fs.readFileSync('data_twse_institutional_investors/files.json','utf8'));
+          const dst=JSON.parse(fs.readFileSync('_site/data_twse_institutional_investors/files.json','utf8'));
+          const newest=a=>a.filter(x=>/20\d{6}/.test(x)).map(x=>x.match(/20\d{6}/)[0]).sort().at(-1);
+          if(newest(src)!==newest(dst)) throw Error('TWSE institutional newest date mismatch');
+          NODE
+          bytes=$(du -sb _site | cut -f1)
+          echo "Published bytes: $bytes"
+          echo "Published MiB: $((bytes / 1024 / 1024))"
+          du -sh _site/* | sort -hr | head -20
+          test "$bytes" -le "$((950 * 1024 * 1024))"
+          echo "PASS: full artifact below 950 MiB, dependencies and newest institutional date verified" >> "$GITHUB_STEP_SUMMARY"
