@@ -25,4 +25,7 @@ assert.ok(flow({code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares
 assert.ok(flow({code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:-167467}).status==='REJECTED');
 assert.equal(flow({code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:85783}).status,'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED');
 assert.ok(inspect(worksheet,input,{...candidate,flow_assertions:[{code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:85783}]}).issues.includes('FLOW_EVIDENCE_REQUIRED'));
+assert.ok(inspect(worksheet,input,{...candidate,flow_assertions:[{code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:85783}]},{...priceEvidence,target_date:'20261014'}).issues.includes('FLOW_EVIDENCE_REQUIRED'));
+assert.ok(inspect(worksheet,input,{...candidate,flow_assertions:[]},priceEvidence).issues.includes('FLOW_EVIDENCE_REQUIRED'));
+assert.ok(inspect(worksheet,input,{...candidate,flow_assertions:[{code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:85783}]},{...priceEvidence,contract:'UNTRUSTED'}).issues.includes('FLOW_EVIDENCE_REQUIRED'));
 console.log('D4_NARRATION_CANDIDATE_REVIEW_FAIL_CLOSED_PASS');
