@@ -86,7 +86,7 @@ test('20261013 date-shaped incomplete handoff without collected audio evidence f
 test('archived D4 20261013 review metadata blocks media output without independently collected audio',()=>{
  // Derived from D4 artifact 12366714758: editorial-review.json and dated-media-input.json.
  const gate={target_date:'20261013',reviewed_count:0,unreviewed_count:75,approved_claim_ids:[],claim_whitelist_verified:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
- const dated={target_date:'20261013',review_gate_sha256:crypto.createHash('sha256').update(JSON.stringify(review)).digest('hex'),preflight_status:'BLOCKED',blockers:['EDITORIAL_CERTIFICATION_REQUIRED','DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'],audio_manifest:null,editorial_certified:false,render_authorized:false,publication_authorized:false};
+ const dated={target_date:'20261013',review_gate_sha256:crypto.createHash('sha256').update(JSON.stringify(gate)).digest('hex'),preflight_status:'BLOCKED',blockers:['EDITORIAL_CERTIFICATION_REQUIRED','DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'],audio_manifest:null,editorial_certified:false,render_authorized:false,publication_authorized:false};
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'d4-20261013-archive-negative-'));
  try{
   assert.equal(gate.reviewed_count+gate.unreviewed_count,75);
@@ -112,7 +112,7 @@ test('D4 20261013 source verifier checks inventory hash, review gate and date be
   const inventoryHash=crypto.createHash('sha256').update(JSON.stringify(claims)).digest('hex');
   const review={target_date:'20261013',inventory_sha256:inventoryHash,reviewed_count:0,unreviewed_count:75,approved_claim_ids:[],claim_whitelist_verified:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
   const worksheet={target_date:'20261013',inventory_sha256:inventoryHash,review_items:Array.from({length:3},(_,i)=>({claim_id:'20261013:'+i+':PRICE_CHANGE',kind:'PRICE_CHANGE',origin:'facts.price.change_pct',statement:i,evidence_sources:[],review_decision:'PENDING_INDEPENDENT_REVIEW',evidence_checked:false})),editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
-  const dated={target_date:'20261013',preflight_status:'BLOCKED',audio_manifest:null,blockers:['EDITORIAL_CERTIFICATION_REQUIRED'],editorial_certified:false,render_authorized:false,publication_authorized:false};
+  const dated={target_date:'20261013',review_gate_sha256:crypto.createHash('sha256').update(JSON.stringify(review)).digest('hex'),preflight_status:'BLOCKED',audio_manifest:null,blockers:['EDITORIAL_CERTIFICATION_REQUIRED'],editorial_certified:false,render_authorized:false,publication_authorized:false};
   put('claims.json',claims);put('editorial-review.json',review);put('independent-review-worksheet.json',worksheet);put('dated-media-input.json',dated);
   assert.equal(verifyD4Source(dir).status,'VERIFIED_BLOCKED_PENDING_INDEPENDENT_REVIEW');
   put('editorial-review.json',{...review,inventory_sha256:'0'.repeat(64)});
