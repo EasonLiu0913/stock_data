@@ -233,6 +233,8 @@ function inspectSchedulerHandoff(out,date){
  const expectedIds=['BFI82U','FMTQIK','BFIAMU','MI_INDEX'];
  if(plan.sources.length!==expectedIds.length||expectedIds.some(id=>plan.sources.filter(x=>x&&x.id===id).length!==1)||plan.sources.some(x=>!x||typeof x.status!=='string'||typeof x.action_required!=='string'||typeof x.automated_retrieval_allowed!=='boolean'))issues.push('RECOVERY_SOURCE_CONTRACT_INVALID');
  if(plan.sources.some(x=>x&&x.automated_retrieval_allowed===true&&x.id!=='BFI82U'))issues.push('UNAPPROVED_AUTOMATED_SOURCE');
+ if(plan.sources.some(x=>x.automated_retrieval_allowed===true&&(x.id!=='BFI82U'||x.status!=='WAITING_SOURCE'||x.action_required!=='APPROVED_BOUNDED_RECOVERY_OR_WAIT'||x.source_date!==date)))issues.push('RECOVERY_AUTOMATION_PRECONDITION_INVALID');
+ if(plan.sources.some(x=>x.source_date!==date))issues.push('RECOVERY_SOURCE_DATE_MISMATCH');
  return {contract:'DATE_TO_VIDEO_V1_RESEARCH_SCHEDULER_HANDOFF_INSPECTION',target_date:date,status:issues.length?'REJECTED':'RESEARCH_HANDOFF_VALIDATED',issues,automatic_dispatch_authorized:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={run,missingAudioInputs,AUDIO_INPUTS,inspectSchedulerHandoff};
