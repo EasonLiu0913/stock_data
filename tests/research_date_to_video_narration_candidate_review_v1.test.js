@@ -11,4 +11,18 @@ assert.ok(inspect(worksheet,input,{...candidate,sentences:null}).issues.includes
 assert.ok(inspect({...worksheet,sections:[]},input,candidate).issues.includes('WORKSHEET_READY'));
 assert.ok(inspect({...worksheet,issues:['REVIEW_GATE_SHA_MATCH']},input,candidate).issues.includes('WORKSHEET_READY'));
 assert.ok(inspect({...worksheet,issues:['EDITORIAL_CERTIFICATION_REQUIRED','UNEXPECTED_BLOCKER']},input,candidate).issues.includes('WORKSHEET_READY'));
+
+// Dated 20261013 research fixture; no reviewer approval is implied.
+const priceEvidence={target_date:date,stocks:[
+ {code:'6668',dated_flow_crosscheck:{status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',trust_record_status:'no_record',trust_net_shares:null,dealer_proprietary_net_shares:-2000,dealer_hedging_net_shares:0,dealer_total_net_shares:-2000}},
+ {code:'3406',dated_flow_crosscheck:{status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',trust_record_status:'reported',trust_net_shares:472500,dealer_proprietary_net_shares:-282244,dealer_hedging_net_shares:-31169,dealer_total_net_shares:-313413}},
+ {code:'6505',dated_flow_crosscheck:{status:'DATED_RAW_FACTS_CROSSCHECK_ONLY',trust_record_status:'reported',trust_net_shares:15100000,dealer_proprietary_net_shares:-167467,dealer_hedging_net_shares:253250,dealer_total_net_shares:85783}}
+]};
+const flow=a=>inspect(worksheet,input,{...candidate,flow_assertions:[a]},priceEvidence);
+assert.ok(flow({code:'6668',kind:'TRUST_NET_SHARES',net_shares:0}).issues.includes('TRUST_UNREPORTED_OR_VALUE_MISMATCH'));
+assert.ok(flow({code:'3406',kind:'DEALER_NET_SHARES',category:'total',net_shares:-282244}).issues.includes('DEALER_CATEGORY_OR_VALUE_MISMATCH'));
+assert.ok(flow({code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:-167467}).issues.includes('DEALER_CATEGORY_OR_VALUE_MISMATCH'));
+assert.ok(flow({code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:-167467}).issues.includes('DEALER_CATEGORY_OR_VALUE_MISMATCH'));
+assert.equal(flow({code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:85783}).status,'STRUCTURAL_CANDIDATE_INDEPENDENT_EDITORIAL_REVIEW_REQUIRED');
+assert.ok(inspect(worksheet,input,{...candidate,flow_assertions:[{code:'6505',kind:'DEALER_NET_SHARES',category:'total',net_shares:85783}]}).issues.includes('FLOW_EVIDENCE_REQUIRED'));
 console.log('D4_NARRATION_CANDIDATE_REVIEW_FAIL_CLOSED_PASS');
