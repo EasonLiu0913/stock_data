@@ -426,6 +426,18 @@ console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
  assert.equal(missingHandoff.render_authorized,false);
  assert.equal(missingHandoff.publication_authorized,false);
  console.log('D4_PERSISTED_MISSING_SOURCE_SCHEDULER_HANDOFF_PASS');
+ // Recovery advice is per-source and must not be interpreted as blanket dispatch permission.
+ const missingRecovery=JSON.parse(fs.readFileSync(path.join(dir,'official-data-recovery-plan.json'),'utf8'));
+ assert.equal(missingRecovery.target_date,'20261014');
+ assert.equal(missingRecovery.complete,false);
+ assert.equal(missingRecovery.master_authorized,false);
+ assert.equal(missingRecovery.render_authorized,false);
+ assert.equal(missingRecovery.publication_authorized,false);
+ assert.deepEqual(missingHandoff.official_recovery_advice.sources,missingRecovery.sources.map(({id,status,action_required,automated_retrieval_allowed})=>({id,status,action_required,automated_retrieval_allowed})));
+ assert.ok(missingRecovery.sources.every(x=>typeof x.automated_retrieval_allowed==='boolean'));
+ assert.ok(missingRecovery.sources.every(x=>!x.automated_retrieval_allowed||x.id==='BFI82U'));
+ assert.ok(missingRecovery.sources.filter(x=>x.id!=='BFI82U').every(x=>x.automated_retrieval_allowed===false));
+ console.log('D4_RECOVERY_ADVICE_IS_NOT_BLANKET_DISPATCH_AUTHORIZATION_PASS');
  console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
