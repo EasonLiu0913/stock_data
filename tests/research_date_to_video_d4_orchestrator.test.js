@@ -391,6 +391,15 @@ const missing=run('.','20261014',dir);assert.equal(missing.stages[0].status,'WAI
 assert.equal(missing.render_authorized,false);assert.deepEqual(missing.artifacts.map(a=>a.name),['official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','status.json']);
 const missingGate=JSON.parse(fs.readFileSync(path.join(dir,'official-manifest-master-gate.json')));assert.equal(missingGate.target_date,'20261014');assert.equal(missingGate.master_authorized,false);assert.equal(missingGate.publication_authorized,false);
 console.log('D4_ORCHESTRATOR_FAIL_CLOSED_PASS');
+ // Missing dated sources must not be mistaken for an editorial-only wait.
+ assert.equal(missing.stages[1].status,'NOT_RUN');
+ assert.equal(missing.stages[2].status,'NOT_RUN');
+ assert.equal(fs.existsSync(path.join(dir,'original-analysis-task.json')),false);
+ assert.equal(fs.existsSync(path.join(dir,'editorial-narration-worksheet.json')),false);
+ assert.equal(fs.existsSync(path.join(dir,'review-handoff-manifest.json')),false);
+ assert.equal(missing.official_recovery_advice.target_date,'20261014');
+ assert.equal(missing.publication_authorized,false);
+ console.log('D4_MISSING_DATED_SOURCE_DOES_NOT_ENTER_EDITORIAL_PASS');
 
 // Reusing an output directory for another date must not leave an old certified-looking Master or review packet.
 const crossDateDir=fs.mkdtempSync(path.join(os.tmpdir(),'date-to-video-d4-cross-date-'));
