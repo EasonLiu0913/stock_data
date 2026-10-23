@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const original='video_scripts/daily-gainers/20261008.json';
+const derived='recovery-requests/video-date-selection-research/replay-input/20261008.json';
+const evidence='recovery-requests/video-date-selection-research/replay-input/20261008-provenance.json';
+const old='歡迎來到 TAIWANSTOCK。';
+const replacement='大家好，歡迎來到 TAIWAN STOCK！追蹤資金，解讀行情。錢在哪，我們就在哪！';
+const bytes=fs.readFileSync(original);
+const source=JSON.parse(bytes.toString('utf8'));
+assert.equal(source.target_date,'20261008');
+assert(source.scenes[0].narration.startsWith(old),'unexpected source prefix: fail closed');
+const candidate=JSON.parse(JSON.stringify(source));
+candidate.scenes[0].narration=replacement+candidate.scenes[0].narration.slice(old.length);
+const remainder=source.scenes[0].narration.slice(old.length);
+assert.equal(candidate.scenes[0].narration,replacement+remainder);
+const originalCheck=JSON.parse(JSON.stringify(candidate));
+originalCheck.scenes[0].narration=source.scenes[0].narration;
+assert.deepEqual(originalCheck,source,'unrelated source content changed');
+const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+const output=Buffer.from(JSON.stringify(candidate,null,2)+'\n');
+const record={schema:'historical-replay-derived-script-v1',source_path:original,derived_path:derived,source_sha256:sha(bytes),derived_sha256:sha(output),source_git_blob_sha:'486a16d68eea885a5e58162393e14596a79f6536',diff:[{json_path:'$.scenes[0].narration',operation:'replace-leading-prefix-only',before:old,after:replacement,remainder_unchanged:true}],all_other_fields_unchanged:true,production_source_modified:false};
+fs.mkdirSync(path.dirname(derived),{recursive:true});
+if(fs.existsSync(derived))assert.equal(sha(fs.readFileSync(derived)),record.derived_sha256,'derived replay input drift');
+fs.writeFileSync(derived,output);
+fs.writeFileSync(evidence,JSON.stringify(record,null,2)+'\n');
+console.log(JSON.stringify(record,null,2));

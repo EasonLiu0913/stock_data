@@ -1,0 +1,17 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const read=p=>fs.readFileSync(p,'utf8');
+const upstream=read('.github/workflows/daily-gainers-video-upload-orchestrator.yml');
+const combined=read('.github/workflows/generate-upload-daily-gainers-video.yml');
+const preview=read('.github/workflows/research-daily-gainers-render-preview-only.yml');
+const resolver=read('scripts/resolve_daily_gainers_video_target_date.js');
+assert(!upstream.includes('sort | tail -1')&&!combined.includes('sort | tail -1'));
+assert.equal((upstream.match(/if: \$\{\{ false \}\}/g)||[]).length,3,'artifact decision and two dispatches are frozen');
+assert(preview.includes("github.ref != 'refs/heads/main'"),'preview must be excluded on main');
+assert(preview.includes('workflow_dispatch:')&&!/^  schedule:|^  push:|^  pull_request:/m.test(preview),'manual-only preview');
+for(const s of ['secrets.','upload_youtube.js','upload_youtube_caption.js','upload_youtube_thumbnail.js','video_upload_receipts','gh workflow run'])assert(!preview.includes(s),'preview forbidden: '+s);
+assert(preview.includes('contents: read')&&!preview.includes('contents: write'));
+assert(/if \[ -z "\$date" \]; then\s*echo "Explicit date required/.test(combined),'downstream blank date must reject');
+assert(resolver.includes('HISTORICAL_DATE_REQUIRES_SEPARATE_AUTHORIZATION'));
+assert(!/^\s*gh workflow run/m.test(upstream.replace(/\n      - name: Dispatch[\s\S]*?(?=\n      - name: Summary)/,'\n')),'no dispatch from enabled steps');
+console.log('PASS merge acceptance static routes: no old fallback; three dispatch locks; manual branch-only preview; no upload or receipt capabilities');

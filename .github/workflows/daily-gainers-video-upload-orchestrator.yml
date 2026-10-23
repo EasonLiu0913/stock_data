@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: "YYYYMMDD; blank uses latest available ChatGPT script"
+        description: "YYYYMMDD; blank uses current Asia/Taipei target day and NEVER falls back to old scripts"
         required: false
         default: ""
   schedule:
@@ -38,39 +38,35 @@ jobs:
             data_daily_gain_over_5
             video_scripts
 
-      - name: Resolve latest complete-date script
+      - name: Resolve target date fail-closed
         id: date
         shell: bash
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
         run: |
           set -euo pipefail
-          date="${INPUT_DATE:-}"
-          if [ -z "$date" ]; then
-            date="$(find video_scripts/daily-gainers -maxdepth 1 -name '20??????.json' -type f -printf '%f\n' | sed 's/\.json$//' | sort | tail -1)"
-          fi
-          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "No valid ChatGPT video script" >&2; exit 1; }
-          test -s "video_scripts/daily-gainers/$date.json"
+          date="$(node scripts/resolve_daily_gainers_video_target_date.js "${INPUT_DATE:-}")"
           echo "date=$date" >> "$GITHUB_OUTPUT"
 
       - name: Validate approved script and target-day sources
         run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
 
       - name: Decide upload-only or full rendering
+        if: ${{ false }} # formal artifact API and upload routing locked during integration acceptance
         id: decision
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/decide_daily_gainers_video_upload.sh "${{ steps.date.outputs.date }}"
 
       - name: Dispatch upload-only retry
-        if: steps.decision.outputs.decision == 'retry'
+        if: ${{ false }} # upload dispatch locked pending separate formal release gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run retry-upload-daily-gainers-video.yml --ref main -f date="${{ steps.date.outputs.date }}" -f source_run_id="${{ steps.decision.outputs.source_run_id }}"
 
       - name: Dispatch complete render
-        if: steps.decision.outputs.decision == 'render'
+        if: ${{ false }} # combined render/upload must not be used for preview
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

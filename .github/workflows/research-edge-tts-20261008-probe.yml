@@ -1,0 +1,32 @@
+name: "[Research] 20261008 Edge TTS Compatibility Probe"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  one_shot_probe:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/fix/video-date-fail-closed-20261013' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts/research_edge_tts_20261008_probe.py
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Pin reproduced client
+        run: python -m pip install --disable-pip-version-check edge-tts==7.2.8
+      - name: Probe single opening with required WordBoundary
+        run: python scripts/research_edge_tts_20261008_probe.py
+      - name: Archive sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: research-edge-tts-20261008-${{ github.run_id }}
+          path: output/research-edge-tts-20261008/probe.json
+          if-no-files-found: error
+          retention-days: 30
