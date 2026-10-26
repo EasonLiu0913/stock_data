@@ -177,7 +177,7 @@ test('D4 M8VIS dated timeline inspector rejects mixed dates, master drift and pe
  const hash='a'.repeat(64);
  const scene={id:'market',market_master_sha256:hash,render_authorized:false,visual_asset:null,stock_claim_review_pending:false,excluded_pending_claim_ids:[]};
  const adapter={contract:'DATE_TO_VIDEO_V1_D4_M8VIS_DATED_SCENE_ADAPTER_RESEARCH',target_date:'20261014',market_master_sha256:hash,scenes:[scene],legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
- const bridge={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',target_date:'20261014',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',sentences:[{id:'one',start_seconds:0,end_seconds:1}],total_seconds:1,srt:'1\n00:00:00,000 --> 00:00:01,000\n測試。\n\n',editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+ const bridge={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',target_date:'20261014',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',sentences:[{id:'one',order:1,caption_text:'測試。',start_seconds:0,end_seconds:1}],total_seconds:1,srt:'1\n00:00:00,000 --> 00:00:01,000\n測試。\n\n',editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
  const accepted=inspectDatedTimeline(adapter,bridge);
  assert.equal(accepted.status,'STRUCTURAL_INPUTS_ONLY_SCENE_ALIGNMENT_PENDING');
  assert.equal(accepted.scene_alignment_verified,false);
@@ -192,4 +192,9 @@ test('D4 M8VIS dated timeline inspector rejects mixed dates, master drift and pe
  reject(adapter,{...bridge,render_authorized:true},'BRIDGE_LOCK');
  reject(adapter,{...bridge,srt:''},'SRT_PRESENT');
  reject(adapter,{...bridge,total_seconds:2},'TIMELINE_TOTAL');
+
+ reject(adapter,{...bridge,srt:bridge.srt.replace('測試。','偽造。')},'SRT_TIMELINE_PARITY');
+ reject(adapter,{...bridge,sentences:[{...bridge.sentences[0],start_seconds:0.25}]},'SRT_TIMELINE_PARITY');
+ reject(adapter,{...bridge,sentences:[{...bridge.sentences[0],caption_text:'偽造。'}]},'SRT_TIMELINE_PARITY');
+ reject(adapter,{...bridge,sentences:[{...bridge.sentences[0],order:2}]},'SRT_TIMELINE_PARITY');
 });
