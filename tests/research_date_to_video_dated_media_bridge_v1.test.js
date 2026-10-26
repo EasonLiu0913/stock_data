@@ -209,13 +209,13 @@ test('D4 M8VIS dated timeline inspector rejects mixed dates, master drift and pe
 
 test('M8VIS explicit scene alignment requires ordered complete sentence ownership',()=>{
  const {inspectSceneAlignment}=require('../scripts/research_date_to_video_d4_m8vis_adapter');
- const hash='a'.repeat(64),outlineHash='b'.repeat(64),makeScene=id=>({id,market_master_sha256:hash,render_authorized:false,visual_asset:null,stock_claim_review_pending:false,excluded_pending_claim_ids:[]});
+ const hash='a'.repeat(64),outlineHash='b'.repeat(64),makeScene=id=>({id,source_section_ids:[id+'_section'],market_master_sha256:hash,render_authorized:false,visual_asset:null,stock_claim_review_pending:false,excluded_pending_claim_ids:[]});
  const adapter={contract:'DATE_TO_VIDEO_V1_D4_M8VIS_DATED_SCENE_ADAPTER_RESEARCH',target_date:'20261014',source_outline_sha256:outlineHash,market_master_sha256:hash,scenes:[makeScene('opening'),makeScene('market')],legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
  const sentences=[{id:'a',order:1,caption_text:'第一句。',start_seconds:0,end_seconds:1},{id:'b',order:2,caption_text:'第二句。',start_seconds:1,end_seconds:2}];
  const srt='1\n00:00:00,000 --> 00:00:01,000\n第一句。\n\n2\n00:00:01,000 --> 00:00:02,000\n第二句。\n\n';
  const bridge={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',target_date:'20261014',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',sentences,srt,total_seconds:2,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
- const evidence={source_outline_sha256:outlineHash,market_master_sha256:hash,editorial_certified:false,render_authorized:false,publication_authorized:false};
- const assignments=[{...evidence,scene_id:'opening',sentence_ids:['a']},{...evidence,scene_id:'market',sentence_ids:['b']}];
+ const evidence={evidence_claim_ids:[],source_outline_sha256:outlineHash,market_master_sha256:hash,editorial_certified:false,render_authorized:false,publication_authorized:false};
+ const assignments=[{...evidence,source_section_ids:['opening_section'],scene_id:'opening',sentence_ids:['a']},{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:['b']}];
  const valid=inspectSceneAlignment(adapter,bridge,assignments);
  assert.equal(valid.status,'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
  assert.equal(valid.scene_alignment_verified,true);
@@ -223,17 +223,20 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  assert.equal(valid.render_authorized,false);assert.equal(valid.publication_authorized,false);assert.equal(valid.legacy_renderer_compatible,false);
  const reject=(a,b,m,code)=>{const result=inspectSceneAlignment(a,b,m);assert.equal(result.status,'REJECTED');assert.ok(result.issues.includes(code));assert.equal(result.scene_plan,null);};
  reject(adapter,bridge,[assignments[0]],'ASSIGNMENTS_REQUIRED');
- reject(adapter,bridge,[{...evidence,scene_id:'market',sentence_ids:['a']},assignments[1]],'SCENE_ORDER');
- reject(adapter,bridge,[assignments[0],{...evidence,scene_id:'market',sentence_ids:['a']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
- reject(adapter,bridge,[assignments[0],{...evidence,scene_id:'market',sentence_ids:['unknown']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
+ reject(adapter,bridge,[{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:['a']},assignments[1]],'SCENE_ORDER');
+ reject(adapter,bridge,[assignments[0],{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:['a']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
+ reject(adapter,bridge,[assignments[0],{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:['unknown']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
  reject(adapter,{...bridge,target_date:'20261013'},assignments,'DATE_MATCH');
- reject(adapter,bridge,[assignments[0],{...evidence,scene_id:'market',sentence_ids:[]}],'SCENE_SENTENCES');
+ reject(adapter,bridge,[assignments[0],{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:[]}],'SCENE_SENTENCES');
  reject(adapter,bridge,[{...assignments[0],source_outline_sha256:'c'.repeat(64)},assignments[1]],'ASSIGNMENT_SOURCE_HASH');
  reject({...adapter,source_outline_sha256:'invalid'},bridge,assignments,'ADAPTER_OUTLINE_HASH');
  reject(adapter,bridge,[{...assignments[0],market_master_sha256:'c'.repeat(64)},assignments[1]],'ASSIGNMENT_MASTER_HASH');
  reject(adapter,bridge,[{...assignments[0],editorial_certified:true},assignments[1]],'ASSIGNMENT_REVIEW_LOCK');
+ reject(adapter,bridge,[{...assignments[0],source_section_ids:['wrong_section']},assignments[1]],'SCENE_EVIDENCE_PARITY');
+ reject(adapter,bridge,[{...assignments[0],evidence_claim_ids:['20261013:2330:PRICE_CHANGE']},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
+ reject(adapter,bridge,[{...assignments[0],source_section_ids:[]},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
 
- reject(adapter,bridge,[{...evidence,scene_id:'opening',sentence_ids:['b']},{...evidence,scene_id:'market',sentence_ids:['a']}],'SCENE_TIMELINE_CONTINUITY');
+ reject(adapter,bridge,[{...evidence,source_section_ids:['opening_section'],scene_id:'opening',sentence_ids:['b']},{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:['a']}],'SCENE_TIMELINE_CONTINUITY');
  reject(adapter,{...bridge,publication_authorized:true},assignments,'BRIDGE_LOCK');
  reject({...adapter,scenes:[{...adapter.scenes[0],stock_claim_review_pending:true},adapter.scenes[1]]},bridge,assignments,'SCENES');
  reject({...adapter,scenes:[{...adapter.scenes[0],excluded_pending_claim_ids:['20261014:2330:PRICE_CHANGE']},adapter.scenes[1]]},bridge,assignments,'SCENES');
