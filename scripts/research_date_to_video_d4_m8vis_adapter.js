@@ -79,7 +79,7 @@ function inspectSceneAlignment(adapter,bridge,assignments){
  fail('PENDING_CLAIM_EXCLUSION',Array.isArray(assignments)&&assignments.every((a,i)=>{const scene=scenes[i];return !!scene&&Array.isArray(scene.excluded_pending_claim_ids)&&!a?.evidence_claim_ids?.some(id=>scene.excluded_pending_claim_ids.includes(id));}));
  fail('SCENE_EVIDENCE_PARITY',Array.isArray(assignments)&&assignments.every((a,i)=>{const scene=scenes[i];return !!scene&&Array.isArray(scene.source_section_ids)&&JSON.stringify(a?.source_section_ids)===JSON.stringify(scene.source_section_ids)&&(scene.stock_claim_id?(Array.isArray(a?.evidence_claim_ids)&&a.evidence_claim_ids.length===1&&a.evidence_claim_ids[0]===scene.stock_claim_id):(Array.isArray(a?.evidence_claim_ids)&&a.evidence_claim_ids.length===0));}));
  const byId=new Map(scenes.map(s=>[s?.id,s]));
- const sentenceIds=new Set(sentences.map(s=>s.id)),used=new Set(),plan=[];
+ const sentenceIds=new Set(sentences.filter(s=>s&&typeof s.id==='string').map(s=>s.id)),used=new Set(),plan=[];
  if(Array.isArray(assignments))for(const [i,a] of assignments.entries()){
   const scene=scenes[i];
   fail('SCENE_ORDER',!!scene&&a?.scene_id===scene.id&&byId.has(a.scene_id));
