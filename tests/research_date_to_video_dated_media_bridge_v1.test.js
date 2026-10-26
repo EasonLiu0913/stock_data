@@ -229,6 +229,7 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  reject(adapter,{...bridge,target_date:'20261013'},assignments,'DATE_MATCH');
  reject(adapter,bridge,[assignments[0],{...evidence,scene_id:'market',sentence_ids:[]}],'SCENE_SENTENCES');
  reject(adapter,bridge,[{...assignments[0],source_outline_sha256:'c'.repeat(64)},assignments[1]],'ASSIGNMENT_SOURCE_HASH');
+ reject({...adapter,source_outline_sha256:'invalid'},bridge,assignments,'ADAPTER_OUTLINE_HASH');
  reject(adapter,bridge,[{...assignments[0],market_master_sha256:'c'.repeat(64)},assignments[1]],'ASSIGNMENT_MASTER_HASH');
  reject(adapter,bridge,[{...assignments[0],editorial_certified:true},assignments[1]],'ASSIGNMENT_REVIEW_LOCK');
 
