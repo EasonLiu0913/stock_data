@@ -24,3 +24,39 @@ test('dated timeline prepares structurally valid sentences but never authorizes 
   assert.equal(drift.status,'BLOCKED');assert.equal(drift.sentences.length,0);
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
+
+test('date-generic preflight validates provenance for 20261013 and 20261014 and fails closed',()=>{
+ const crypto=require('node:crypto');
+ const {inspect}=require('../scripts/research_date_to_video_media_preflight_v1');
+ const digest=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
+ for(const date of ['20261013','20261014']){
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dated-preflight-'+date+'-'));
+  try{
+   const put=(name,value)=>fs.writeFileSync(path.join(dir,name),JSON.stringify(value));
+   const master={target_date:date,render_authorized:false,publication_authorized:false};
+   const masterHash=digest(master);
+   const task={target_date:date,market_master_sha256:masterHash,render_authorized:false,publication_authorized:false};
+   const review={target_date:date,editorial_certified:false,render_authorized:false,publication_authorized:false};
+   const input={target_date:date,review_gate_sha256:digest(review),draft_check_sha256:null,editorial_certified:false,render_authorized:false,publication_authorized:false};
+   const handoff={target_date:date,source_master_sha256:masterHash,analysis_task_sha256:digest(task),review_gate_sha256:digest(review),draft_check_sha256:null,fixed_opening_lines:FIXED_OPENING_LINES,date_parameterized_media_bridge_implemented:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+   for(const [name,value] of [['market-master.json',master],['original-analysis-task.json',task],['editorial-review.json',review],['editorial-input-manifest.json',input],['media-handoff.json',handoff]])put(name,value);
+   const baseline=inspect(dir);
+   assert.equal(baseline.target_date,date);
+   assert.equal(baseline.status,'BLOCKED');
+   assert.ok(baseline.issues.includes('EDITORIAL_CERTIFICATION_REQUIRED'));
+   assert.ok(baseline.issues.includes('DATED_MEDIA_BRIDGE_NOT_IMPLEMENTED'));
+   assert.ok(!baseline.issues.includes('MASTER_SHA_MATCH'));
+   assert.ok(!baseline.issues.includes('TASK_SHA_MATCH'));
+   assert.equal(baseline.render_authorized,false);
+   assert.equal(baseline.publication_authorized,false);
+   put('market-master.json',{...master,target_date:'20261008'});
+   assert.ok(inspect(dir).issues.includes('MASTER_DATE_MATCH'));
+   put('market-master.json',master);
+   put('editorial-review.json',{...review,editorial_certified:true});
+   assert.ok(inspect(dir).issues.includes('REVIEW_GATE_SHA_MATCH'));
+   put('editorial-review.json',review);
+   put('media-handoff.json',{...handoff,publication_authorized:true});
+   assert.ok(inspect(dir).issues.includes('NO_RENDER_OR_PUBLICATION_AUTHORIZATION'));
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+ }
+});
