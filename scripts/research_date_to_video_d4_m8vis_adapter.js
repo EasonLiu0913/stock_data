@@ -39,7 +39,7 @@ function inspectDatedTimeline(adapter,bridge){
  check('SCENES',Array.isArray(adapter?.scenes)&&adapter.scenes.length>0&&adapter.scenes.every(s=>s.market_master_sha256===adapter.market_master_sha256&&s.render_authorized===false&&s.visual_asset===null&&s.stock_claim_review_pending!==true&&Array.isArray(s.excluded_pending_claim_ids)&&s.excluded_pending_claim_ids.length===0));
  check('SENTENCES',Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&bridge.sentences.every(s=>typeof s.id==='string'&&Number.isFinite(s.start_seconds)&&Number.isFinite(s.end_seconds)&&s.end_seconds>s.start_seconds));
  check('SRT_PRESENT',typeof bridge?.srt==='string'&&bridge.srt.trim().length>0);
- check('TIMELINE_TOTAL',Number.isFinite(bridge?.total_seconds)&&bridge.total_seconds>0&&Math.abs(bridge.sentences?.at(-1)?.end_seconds-bridge.total_seconds)<0.001);
+ check('TIMELINE_TOTAL',Number.isFinite(bridge?.total_seconds)&&bridge.total_seconds>0&&Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&Math.abs(bridge.sentences.at(-1)?.end_seconds-bridge.total_seconds)<0.001);
 
  // Independently reconstruct the SRT to detect stale captions, gaps, duplicate IDs and altered timestamps.
  const timeline=bridge?.sentences;
