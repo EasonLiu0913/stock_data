@@ -27,7 +27,7 @@ function run(root,date,out){
  const write=(name,obj)=>{const body=JSON.stringify(obj,null,2)+'\n';if(name==='sentence-audio-review.json'){result.audio_recovery_advice={...adviseAudioRecovery(obj),source_review_sha256:hash(body)};}fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,name),body);result.artifacts.push({name,sha256:hash(body)});};
  // A repeated run must not expose artifacts from an earlier date or earlier approval state.
  // Preserve only explicit editorial inputs; clear exclusively known generated outputs.
- const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json','sentence-audio-review.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','previous-five-turnover-candidate.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','review-handoff-manifest.json'];
+ const generated=['status.json','evidence-join.json','claims.json','institutional-evidence.json','breadth-evidence.json','market-master.json','editorial-research-brief.json','original-analysis-task.json','editorial-review.json','editorial-input-manifest.json','media-handoff.json','dated-media-input.json','editorial-narration-worksheet.json','sentence-audio-review.json','original-analysis-draft-check.json','authored-candidate-preflight.json','independent-review-worksheet.json','candidate-semantic-outline.json','semantic-consumer-projection.json','projection-binding-evidence.json','m8vis-compatibility.json','m8vis-scene-adapter.json','featured-price-observations.json','dated-price-review-evidence.json','market-master-review-packet.json','previous-five-turnover-candidate.json','official-data-manifest.json','official-data-recovery-plan.json','official-manifest-master-gate.json','mi-index-provenance.json','fmtqik-provenance.json','review-handoff-manifest.json'];
  for(const name of generated){const file=path.join(out,name);if(fs.existsSync(file))fs.unlinkSync(file)}
  const officialManifest=buildOfficialManifest(root,date);
  const officialGate=gateOfficialManifest(root,date,officialManifest);
@@ -145,7 +145,20 @@ function run(root,date,out){
   }
   if(fs.existsSync(path.join(out,'candidate-semantic-outline.json'))){
    const {project}=require('./research_date_to_video_d4_semantic_projection');
-   try{const projection=project(JSON.parse(fs.readFileSync(path.join(out,'candidate-semantic-outline.json'),'utf8')),marketMaster,gate);write('semantic-consumer-projection.json',projection);write('m8vis-compatibility.json',require('./research_date_to_video_d4_m8vis_compatibility').inspect(projection));write('m8vis-scene-adapter.json',require('./research_date_to_video_d4_m8vis_adapter').adapt(projection));}
+   try{
+    const outline=JSON.parse(fs.readFileSync(path.join(out,'candidate-semantic-outline.json'),'utf8'));
+    const projection=project(outline,marketMaster,gate);
+    const adapterModule=require('./research_date_to_video_d4_m8vis_adapter');
+    const upstream=adapterModule.inspectProjectionUpstream(outline,marketMaster,gate,projection);
+    const adapter=adapterModule.adapt(projection);
+    const binding=adapterModule.inspectProjectionBinding(projection,adapter);
+    const evidence={contract:'DATE_TO_VIDEO_V1_D4_PROJECTION_BINDING_EVIDENCE_RESEARCH',target_date:date,official_manifest_sha256:officialManifest.manifest_sha256,official_gate_status:officialGate.status,upstream,binding,source_authentication_verified:false,render_authorized:false,publication_authorized:false};
+    write('projection-binding-evidence.json',evidence);
+    if(upstream.status!=='UPSTREAM_DERIVATION_PARITY_ONLY_SOURCE_AUTHENTICATION_REQUIRED'||binding.status!=='DERIVATION_PARITY_ONLY_UPSTREAM_EVIDENCE_UNVERIFIED')throw Error('PROJECTION_BINDING_REJECTED');
+    write('semantic-consumer-projection.json',projection);
+    write('m8vis-compatibility.json',require('./research_date_to_video_d4_m8vis_compatibility').inspect(projection));
+    write('m8vis-scene-adapter.json',adapter);
+   }
    catch(e){result.blockers.push('SEMANTIC_PROJECTION_REJECTED:'+e.message)}
   }
   // Produce a date-scoped, non-narratable factual stock-price snapshot without silently approving claims.
