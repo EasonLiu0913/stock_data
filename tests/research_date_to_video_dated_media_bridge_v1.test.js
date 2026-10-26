@@ -233,6 +233,13 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  reject(adapter,bridge,[{...assignments[0],market_master_sha256:'c'.repeat(64)},assignments[1]],'ASSIGNMENT_MASTER_HASH');
  reject(adapter,bridge,[{...assignments[0],editorial_certified:true},assignments[1]],'ASSIGNMENT_REVIEW_LOCK');
  reject(adapter,bridge,[{...assignments[0],source_section_ids:['wrong_section']},assignments[1]],'SCENE_EVIDENCE_PARITY');
+ reject(adapter,bridge,[{...assignments[0],evidence_claim_ids:['20261014:2330:PRICE_CHANGE']},assignments[1]],'SCENE_EVIDENCE_PARITY');
+ const stockClaim='20261014:2330:PRICE_CHANGE';
+ const stockAdapter={...adapter,scenes:[adapter.scenes[0],{...adapter.scenes[1],stock_claim_id:stockClaim}]};
+ reject(stockAdapter,bridge,assignments,'SCENE_EVIDENCE_PARITY');
+ const stockAssignments=[assignments[0],{...assignments[1],evidence_claim_ids:[stockClaim]}];
+ assert.equal(inspectSceneAlignment(stockAdapter,bridge,stockAssignments).status,'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
+ reject(stockAdapter,bridge,[assignments[0],{...stockAssignments[1],evidence_claim_ids:[stockClaim,'20261014:9999:PRICE_CHANGE']}],'SCENE_EVIDENCE_PARITY');
  reject(adapter,bridge,[{...assignments[0],evidence_claim_ids:['20261013:2330:PRICE_CHANGE']},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
  reject(adapter,bridge,[{...assignments[0],source_section_ids:[]},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
 
