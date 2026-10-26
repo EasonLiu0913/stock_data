@@ -61,5 +61,36 @@ function inspectDatedTimeline(adapter,bridge){
  check('SRT_TIMELINE_PARITY',valid&&expectedSrt===bridge?.srt&&Math.abs(cursor-bridge?.total_seconds)<0.001);
  return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_TIMELINE_INSPECTION_RESEARCH',target_date:adapter?.target_date||null,status:issues.length?'REJECTED':'STRUCTURAL_INPUTS_ONLY_SCENE_ALIGNMENT_PENDING',issues,scene_alignment_verified:false,legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
-module.exports={adapt,inspectDatedTimeline};
+
+// Explicit scene assignment from reviewed external evidence only; never guess sentence ownership.
+function inspectSceneAlignment(adapter,bridge,assignments){
+ const base=inspectDatedTimeline(adapter,bridge),issues=[...base.issues];
+ const fail=(code,ok)=>{if(!ok)issues.push(code);};
+ const scenes=adapter?.scenes||[],sentences=bridge?.sentences||[];
+ fail('ASSIGNMENTS_REQUIRED',Array.isArray(assignments)&&assignments.length===scenes.length);
+ const byId=new Map(scenes.map(s=>[s.id,s]));
+ const sentenceIds=new Set(sentences.map(s=>s.id)),used=new Set(),plan=[];
+ if(Array.isArray(assignments))for(const [i,a] of assignments.entries()){
+  const scene=scenes[i];
+  fail('SCENE_ORDER',!!scene&&a?.scene_id===scene.id&&byId.has(a.scene_id));
+  fail('SCENE_SENTENCES',Array.isArray(a?.sentence_ids)&&a.sentence_ids.length>0);
+  if(!Array.isArray(a?.sentence_ids))continue;
+  const slice=[];
+  for(const id of a.sentence_ids){
+   fail('UNKNOWN_OR_DUPLICATE_SENTENCE',sentenceIds.has(id)&&!used.has(id));
+   used.add(id);
+   const sentence=sentences.find(s=>s.id===id);
+   if(sentence)slice.push(sentence);
+  }
+  if(slice.length!==a.sentence_ids.length)continue;
+  const first=sentences.indexOf(slice[0]);
+  fail('NONCONTIGUOUS_SCENE',slice.every((s,j)=>sentences[first+j]===s));
+  if(slice.length)plan.push({scene_id:a.scene_id,sentence_ids:[...a.sentence_ids],start_seconds:slice[0].start_seconds,end_seconds:slice.at(-1).end_seconds,render_authorized:false});
+ }
+ fail('SENTENCE_COVERAGE',used.size===sentenceIds.size&&sentences.every(s=>used.has(s.id)));
+ fail('SCENE_TIMELINE_CONTINUITY',plan.length===scenes.length&&plan.every((p,i)=>i===0?p.start_seconds===0:Math.abs(p.start_seconds-plan[i-1].end_seconds)<0.001)&&Math.abs((plan.at(-1)?.end_seconds??0)-(bridge?.total_seconds??-1))<0.001);
+ return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_EXPLICIT_SCENE_ALIGNMENT_RESEARCH',target_date:adapter?.target_date||null,status:issues.length?'REJECTED':'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',issues,scene_plan:issues.length?null:plan,scene_alignment_verified:issues.length===0,legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+}
+module.exports={adapt,inspectDatedTimeline,inspectSceneAlignment};
+
 
