@@ -241,6 +241,8 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  const stockAssignments=[assignments[0],{...assignments[1],evidence_claim_ids:[stockClaim]}];
  assert.equal(inspectSceneAlignment(stockAdapter,bridge,stockAssignments).status,'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
  reject(stockAdapter,bridge,[assignments[0],{...stockAssignments[1],evidence_claim_ids:[stockClaim,'20261014:9999:PRICE_CHANGE']}],'SCENE_EVIDENCE_PARITY');
+ const pendingStockAdapter={...stockAdapter,scenes:[stockAdapter.scenes[0],{...stockAdapter.scenes[1],excluded_pending_claim_ids:[stockClaim]}]};
+ reject(pendingStockAdapter,bridge,stockAssignments,'PENDING_CLAIM_EXCLUSION');
  reject(adapter,bridge,[{...assignments[0],evidence_claim_ids:['20261013:2330:PRICE_CHANGE']},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
  reject(adapter,bridge,[assignments[0],{...assignments[1],source_section_ids:[]}],'ASSIGNMENT_EVIDENCE_REFS');
 
