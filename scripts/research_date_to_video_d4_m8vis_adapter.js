@@ -24,4 +24,21 @@ function adapt(p){
  });
  return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_DATED_SCENE_ADAPTER_RESEARCH',target_date:p.target_date,source_outline_sha256:p.source_outline_sha256,market_master_sha256:p.market_master_sha256,scene_ids:scenes.map(s=>s.id),scenes,status:'SCENE_MAPPING_ONLY_NARRATION_AND_TIMING_PENDING',legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
-module.exports={adapt};
+
+// Research-only structural join. Never infers scene timing or grants renderer authority.
+function inspectDatedTimeline(adapter,bridge){
+ const issues=[];
+ const check=(code,ok)=>{if(!ok)issues.push(code);};
+ check('ADAPTER_CONTRACT',adapter?.contract==='DATE_TO_VIDEO_V1_D4_M8VIS_DATED_SCENE_ADAPTER_RESEARCH');
+ check('BRIDGE_CONTRACT',bridge?.contract==='DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE');
+ check('DATE_MATCH',typeof adapter?.target_date==='string'&&/^20\d{6}$/.test(adapter.target_date)&&adapter.target_date===bridge?.target_date);
+ check('MASTER_HASH',typeof adapter?.market_master_sha256==='string'&&/^[a-f0-9]{64}$/.test(adapter.market_master_sha256));
+ check('ADAPTER_LOCK',adapter?.render_authorized===false&&adapter?.publication_authorized===false&&adapter?.editorial_certified===false&&adapter?.legacy_renderer_compatible===false);
+ check('BRIDGE_LOCK',bridge?.render_authorized===false&&bridge?.publication_authorized===false&&bridge?.editorial_certified===false&&bridge?.narration_authorized===false);
+ check('BRIDGE_STATUS',bridge?.status==='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
+ check('SCENES',Array.isArray(adapter?.scenes)&&adapter.scenes.length>0&&adapter.scenes.every(s=>s.market_master_sha256===adapter.market_master_sha256&&s.render_authorized===false&&s.visual_asset===null&&s.stock_claim_review_pending!==true&&Array.isArray(s.excluded_pending_claim_ids)&&s.excluded_pending_claim_ids.length===0));
+ check('SENTENCES',Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&bridge.sentences.every(s=>typeof s.id==='string'&&Number.isFinite(s.start_seconds)&&Number.isFinite(s.end_seconds)&&s.end_seconds>s.start_seconds));
+ return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_TIMELINE_INSPECTION_RESEARCH',target_date:adapter?.target_date||null,status:issues.length?'REJECTED':'STRUCTURAL_INPUTS_ONLY_SCENE_ALIGNMENT_PENDING',issues,scene_alignment_verified:false,legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+}
+module.exports={adapt,inspectDatedTimeline};
+
