@@ -115,6 +115,17 @@ function inspectProjectionBinding(projection,adapter){
  return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_PROJECTION_BINDING_RESEARCH',target_date:projection?.target_date||null,status:issues.length?'REJECTED':'DERIVATION_PARITY_ONLY_UPSTREAM_EVIDENCE_UNVERIFIED',issues,projection_derivation_verified:issues.length===0,upstream_evidence_authenticated:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
 
-module.exports={adapt,inspectDatedTimeline,inspectSceneAlignment,inspectProjectionBinding};
+// Reconstruct the semantic projection from the supplied upstream outline, Master and review gate.
+// Hashes and Claim approval are still only as trustworthy as these supplied inputs.
+function inspectProjectionUpstream(outline,master,review,projection){
+ const issues=[];
+ let expected;
+ try{expected=require('./research_date_to_video_d4_semantic_projection').project(outline,master,review);}
+ catch(_){issues.push('UPSTREAM_PROJECTION_INVALID');}
+ if(expected&&JSON.stringify(expected)!==JSON.stringify(projection))issues.push('UPSTREAM_PROJECTION_MISMATCH');
+ return {contract:'DATE_TO_VIDEO_V1_D4_PROJECTION_UPSTREAM_RESEARCH',target_date:outline?.target_date||null,status:issues.length?'REJECTED':'UPSTREAM_DERIVATION_PARITY_ONLY_SOURCE_AUTHENTICATION_REQUIRED',issues,upstream_derivation_verified:issues.length===0,source_authentication_verified:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+}
+
+module.exports={adapt,inspectDatedTimeline,inspectSceneAlignment,inspectProjectionBinding,inspectProjectionUpstream};
 
 
