@@ -40,6 +40,25 @@ function inspectDatedTimeline(adapter,bridge){
  check('SENTENCES',Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&bridge.sentences.every(s=>typeof s.id==='string'&&Number.isFinite(s.start_seconds)&&Number.isFinite(s.end_seconds)&&s.end_seconds>s.start_seconds));
  check('SRT_PRESENT',typeof bridge?.srt==='string'&&bridge.srt.trim().length>0);
  check('TIMELINE_TOTAL',Number.isFinite(bridge?.total_seconds)&&bridge.total_seconds>0&&Math.abs(bridge.sentences?.at(-1)?.end_seconds-bridge.total_seconds)<0.001);
+
+ // Independently reconstruct the SRT to detect stale captions, gaps, duplicate IDs and altered timestamps.
+ const timeline=bridge?.sentences;
+ let expectedSrt='',cursor=0,valid=Array.isArray(timeline)&&timeline.length>0;
+ const clock=seconds=>{const ms=Math.round(seconds*1000),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':')+','+String(ms%1000).padStart(3,'0');};
+ if(valid){
+  const ids=new Set();
+  for(const [i,s] of timeline.entries()){
+   if(!s||typeof s.id!=='string'||!s.id.trim()||ids.has(s.id)||s.order!==i+1||typeof s.caption_text!=='string'||!s.caption_text.trim()||/[\r\n]/.test(s.caption_text)||!Number.isFinite(s.start_seconds)||!Number.isFinite(s.end_seconds)||Math.abs(s.start_seconds-cursor)>0.001||s.end_seconds<=s.start_seconds){valid=false;break;}
+   ids.add(s.id);cursor=s.end_seconds;
+   const parts=s.caption_text.match(/[^。！？；，、]+[。！？；，、]?/g)||[];
+   if(parts.join('')!==s.caption_text){valid=false;break;}
+   let line='',lines=[];
+   for(let chunk of parts){if(line.length+chunk.length>30&&line){lines.push(line);line='';}while(chunk.length>30){lines.push(chunk.slice(0,30));chunk=chunk.slice(30);}line+=chunk;}
+   if(line)lines.push(line);
+   expectedSrt+=String(i+1)+'\n'+clock(s.start_seconds)+' --> '+clock(s.end_seconds)+'\n'+lines.join('\n')+'\n\n';
+  }
+ }
+ check('SRT_TIMELINE_PARITY',valid&&expectedSrt===bridge?.srt&&Math.abs(cursor-bridge?.total_seconds)<0.001);
  return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_TIMELINE_INSPECTION_RESEARCH',target_date:adapter?.target_date||null,status:issues.length?'REJECTED':'STRUCTURAL_INPUTS_ONLY_SCENE_ALIGNMENT_PENDING',issues,scene_alignment_verified:false,legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
 module.exports={adapt,inspectDatedTimeline};
