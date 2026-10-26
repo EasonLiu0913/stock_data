@@ -72,6 +72,9 @@ function inspectSceneAlignment(adapter,bridge,assignments){
  fail('ASSIGNMENT_SOURCE_HASH',Array.isArray(assignments)&&assignments.every(a=>typeof a?.source_outline_sha256==='string'&&a.source_outline_sha256===adapter?.source_outline_sha256&&/^[a-f0-9]{64}$/.test(a.source_outline_sha256)));
  fail('ASSIGNMENT_MASTER_HASH',Array.isArray(assignments)&&assignments.every(a=>a?.market_master_sha256===adapter?.market_master_sha256));
  fail('ASSIGNMENT_REVIEW_LOCK',Array.isArray(assignments)&&assignments.every(a=>a?.editorial_certified===false&&a?.render_authorized===false&&a?.publication_authorized===false));
+
+ fail('ASSIGNMENT_EVIDENCE_REFS',Array.isArray(assignments)&&assignments.every(a=>Array.isArray(a?.source_section_ids)&&a.source_section_ids.length>0&&a.source_section_ids.every(id=>typeof id==='string'&&id.length>0)&&Array.isArray(a?.evidence_claim_ids)&&a.evidence_claim_ids.every(id=>typeof id==='string'&&id.startsWith(adapter?.target_date+':'))));
+ fail('SCENE_EVIDENCE_PARITY',Array.isArray(assignments)&&assignments.every((a,i)=>{const scene=scenes[i];return !!scene&&Array.isArray(scene.source_section_ids)&&JSON.stringify(a?.source_section_ids)===JSON.stringify(scene.source_section_ids)&&(!scene.stock_claim_id||a?.evidence_claim_ids?.includes(scene.stock_claim_id));}));
  const byId=new Map(scenes.map(s=>[s.id,s]));
  const sentenceIds=new Set(sentences.map(s=>s.id)),used=new Set(),plan=[];
  if(Array.isArray(assignments))for(const [i,a] of assignments.entries()){
