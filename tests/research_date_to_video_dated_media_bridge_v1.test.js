@@ -242,7 +242,7 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  assert.equal(inspectSceneAlignment(stockAdapter,bridge,stockAssignments).status,'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
  reject(stockAdapter,bridge,[assignments[0],{...stockAssignments[1],evidence_claim_ids:[stockClaim,'20261014:9999:PRICE_CHANGE']}],'SCENE_EVIDENCE_PARITY');
  reject(adapter,bridge,[{...assignments[0],evidence_claim_ids:['20261013:2330:PRICE_CHANGE']},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
- reject(adapter,bridge,[{...assignments[0],source_section_ids:[]},assignments[1]],'ASSIGNMENT_EVIDENCE_REFS');
+ reject(adapter,bridge,[assignments[0],{...assignments[1],source_section_ids:[]}],'ASSIGNMENT_EVIDENCE_REFS');
 
  reject(adapter,bridge,[{...evidence,source_section_ids:[],scene_id:'opening',sentence_ids:['b']},{...evidence,source_section_ids:['market_section'],scene_id:'market',sentence_ids:['a']}],'SCENE_TIMELINE_CONTINUITY');
  reject(adapter,{...bridge,publication_authorized:true},assignments,'BRIDGE_LOCK');
