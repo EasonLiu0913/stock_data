@@ -273,3 +273,21 @@ test('M8VIS adapter derivation is bound to supplied D4 projection without granti
  assert.ok(rejected.issues.includes('PROJECTION_ADAPTER_MISMATCH:scenes'));
  assert.equal(inspectProjectionBinding({...projection,sections:[]},adapter).status,'REJECTED');
 });
+
+
+test('D4 projection upstream binding rejects tampered projection and stale master',()=>{
+ const {project}=require('../scripts/research_date_to_video_d4_semantic_projection');
+ const {inspectProjectionUpstream}=require('../scripts/research_date_to_video_d4_m8vis_adapter');
+ const sha=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
+ const master={target_date:'20261014',breadth:{up:1}};
+ const review={target_date:'20261014',approved_claim_ids:[]};
+ const outline={target_date:'20261014',market_master_sha256:sha(master),review_gate_sha256:sha(review),sections:[{id:'market-1',section:'market_breadth_vs_index',observation:'觀察',interpretation:'解讀',uncertainty:'待確認',evidence:[{type:'master_field',path:'breadth.up'}],claim_review_pending:false}]};
+ const projection=project(outline,master,review);
+ const valid=inspectProjectionUpstream(outline,master,review,projection);
+ assert.equal(valid.status,'UPSTREAM_DERIVATION_PARITY_ONLY_SOURCE_AUTHENTICATION_REQUIRED');
+ assert.equal(valid.source_authentication_verified,false);
+ assert.equal(valid.render_authorized,false);
+ const tampered={...projection,sections:[{...projection.sections[0],observation:'捏造'}]};
+ assert.ok(inspectProjectionUpstream(outline,master,review,tampered).issues.includes('UPSTREAM_PROJECTION_MISMATCH'));
+ assert.ok(inspectProjectionUpstream(outline,{...master,breadth:{up:2}},review,projection).issues.includes('UPSTREAM_PROJECTION_INVALID'));
+});
