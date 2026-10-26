@@ -197,4 +197,12 @@ test('D4 M8VIS dated timeline inspector rejects mixed dates, master drift and pe
  reject(adapter,{...bridge,sentences:[{...bridge.sentences[0],start_seconds:0.25}]},'SRT_TIMELINE_PARITY');
  reject(adapter,{...bridge,sentences:[{...bridge.sentences[0],caption_text:'偽造。'}]},'SRT_TIMELINE_PARITY');
  reject(adapter,{...bridge,sentences:[{...bridge.sentences[0],order:2}]},'SRT_TIMELINE_PARITY');
+
+ const second={id:'two',order:2,caption_text:'第二句。',start_seconds:1,end_seconds:2};
+ const twoSentenceSrt=bridge.srt+'2\n00:00:01,000 --> 00:00:02,000\n第二句。\n\n';
+ const two={...bridge,sentences:[...bridge.sentences,second],total_seconds:2,srt:twoSentenceSrt};
+ assert.equal(inspectDatedTimeline(adapter,two).status,'STRUCTURAL_INPUTS_ONLY_SCENE_ALIGNMENT_PENDING');
+ reject(adapter,{...two,sentences:[bridge.sentences[0],{...second,id:'one'}]},'SRT_TIMELINE_PARITY');
+ reject(adapter,{...two,sentences:[bridge.sentences[0],{...second,start_seconds:1.2}]},'SRT_TIMELINE_PARITY');
+ reject(adapter,{...two,sentences:[bridge.sentences[0],{...second,caption_text:'第三句。'}]},'SRT_TIMELINE_PARITY');
 });
