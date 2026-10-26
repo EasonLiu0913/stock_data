@@ -206,3 +206,25 @@ test('D4 M8VIS dated timeline inspector rejects mixed dates, master drift and pe
  reject(adapter,{...two,sentences:[bridge.sentences[0],{...second,start_seconds:1.2}]},'SRT_TIMELINE_PARITY');
  reject(adapter,{...two,sentences:[bridge.sentences[0],{...second,caption_text:'第三句。'}]},'SRT_TIMELINE_PARITY');
 });
+
+test('M8VIS explicit scene alignment requires ordered complete sentence ownership',()=>{
+ const {inspectSceneAlignment}=require('../scripts/research_date_to_video_d4_m8vis_adapter');
+ const hash='a'.repeat(64),makeScene=id=>({id,market_master_sha256:hash,render_authorized:false,visual_asset:null,stock_claim_review_pending:false,excluded_pending_claim_ids:[]});
+ const adapter={contract:'DATE_TO_VIDEO_V1_D4_M8VIS_DATED_SCENE_ADAPTER_RESEARCH',target_date:'20261014',market_master_sha256:hash,scenes:[makeScene('opening'),makeScene('market')],legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+ const sentences=[{id:'a',order:1,caption_text:'第一句。',start_seconds:0,end_seconds:1},{id:'b',order:2,caption_text:'第二句。',start_seconds:1,end_seconds:2}];
+ const srt='1\n00:00:00,000 --> 00:00:01,000\n第一句。\n\n2\n00:00:01,000 --> 00:00:02,000\n第二句。\n\n';
+ const bridge={contract:'DATE_TO_VIDEO_V1_RESEARCH_DATED_MEDIA_BRIDGE',target_date:'20261014',status:'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',sentences,srt,total_seconds:2,editorial_certified:false,narration_authorized:false,render_authorized:false,publication_authorized:false};
+ const assignments=[{scene_id:'opening',sentence_ids:['a']},{scene_id:'market',sentence_ids:['b']}];
+ const valid=inspectSceneAlignment(adapter,bridge,assignments);
+ assert.equal(valid.status,'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
+ assert.equal(valid.scene_alignment_verified,true);
+ assert.deepEqual(valid.scene_plan.map(s=>[s.start_seconds,s.end_seconds]),[[0,1],[1,2]]);
+ assert.equal(valid.render_authorized,false);assert.equal(valid.publication_authorized,false);assert.equal(valid.legacy_renderer_compatible,false);
+ const reject=(a,b,m,code)=>{const result=inspectSceneAlignment(a,b,m);assert.equal(result.status,'REJECTED');assert.ok(result.issues.includes(code));assert.equal(result.scene_plan,null);};
+ reject(adapter,bridge,[assignments[0]],'ASSIGNMENTS_REQUIRED');
+ reject(adapter,bridge,[{scene_id:'market',sentence_ids:['a']},assignments[1]],'SCENE_ORDER');
+ reject(adapter,bridge,[assignments[0],{scene_id:'market',sentence_ids:['a']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
+ reject(adapter,bridge,[assignments[0],{scene_id:'market',sentence_ids:['unknown']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
+ reject(adapter,{...bridge,target_date:'20261013'},assignments,'DATE_MATCH');
+ reject(adapter,bridge,[assignments[0],{scene_id:'market',sentence_ids:[]}],'SCENE_SENTENCES');
+});
