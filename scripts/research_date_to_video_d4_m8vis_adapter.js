@@ -102,6 +102,19 @@ function inspectSceneAlignment(adapter,bridge,assignments){
  fail('SCENE_TIMELINE_CONTINUITY',plan.length===scenes.length&&plan.every((p,i)=>i===0?p.start_seconds===0:Math.abs(p.start_seconds-plan[i-1].end_seconds)<0.001)&&Math.abs((plan.at(-1)?.end_seconds??0)-(bridge?.total_seconds??-1))<0.001);
  return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_EXPLICIT_SCENE_ALIGNMENT_RESEARCH',target_date:adapter?.target_date||null,status:issues.length?'REJECTED':'EXPLICIT_SCENE_MAPPING_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED',issues,scene_plan:issues.length?null:plan,scene_alignment_verified:issues.length===0,legacy_renderer_compatible:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
 }
-module.exports={adapt,inspectDatedTimeline,inspectSceneAlignment};
+// Bind a scene adapter back to the supplied dated D4 projection, not merely caller-copied hash fields.
+// This checks derivation consistency only; it cannot authenticate the projection's upstream evidence.
+function inspectProjectionBinding(projection,adapter){
+ const issues=[];
+ let expected;
+ try{expected=adapt(projection);}catch(_){issues.push('PROJECTION_INVALID');}
+ if(expected){
+  const fields=['contract','target_date','source_outline_sha256','market_master_sha256','scene_ids','scenes','status','legacy_renderer_compatible','editorial_certified','render_authorized','publication_authorized'];
+  for(const field of fields)if(JSON.stringify(adapter?.[field])!==JSON.stringify(expected[field]))issues.push('PROJECTION_ADAPTER_MISMATCH:'+field);
+ }
+ return {contract:'DATE_TO_VIDEO_V1_D4_M8VIS_PROJECTION_BINDING_RESEARCH',target_date:projection?.target_date||null,status:issues.length?'REJECTED':'DERIVATION_PARITY_ONLY_UPSTREAM_EVIDENCE_UNVERIFIED',issues,projection_derivation_verified:issues.length===0,upstream_evidence_authenticated:false,editorial_certified:false,render_authorized:false,publication_authorized:false};
+}
+
+module.exports={adapt,inspectDatedTimeline,inspectSceneAlignment,inspectProjectionBinding};
 
 
