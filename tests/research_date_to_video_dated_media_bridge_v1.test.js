@@ -227,4 +227,9 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  reject(adapter,bridge,[assignments[0],{scene_id:'market',sentence_ids:['unknown']}],'UNKNOWN_OR_DUPLICATE_SENTENCE');
  reject(adapter,{...bridge,target_date:'20261013'},assignments,'DATE_MATCH');
  reject(adapter,bridge,[assignments[0],{scene_id:'market',sentence_ids:[]}],'SCENE_SENTENCES');
+
+ reject(adapter,bridge,[{scene_id:'opening',sentence_ids:['b']},{scene_id:'market',sentence_ids:['a']}],'SCENE_TIMELINE_CONTINUITY');
+ reject(adapter,{...bridge,publication_authorized:true},assignments,'BRIDGE_LOCK');
+ reject({...adapter,scenes:[{...adapter.scenes[0],stock_claim_review_pending:true},adapter.scenes[1]]},bridge,assignments,'SCENES');
+ reject({...adapter,scenes:[{...adapter.scenes[0],excluded_pending_claim_ids:['20261014:2330:PRICE_CHANGE']},adapter.scenes[1]]},bridge,assignments,'SCENES');
 });
