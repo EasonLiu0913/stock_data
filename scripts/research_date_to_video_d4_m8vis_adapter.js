@@ -36,8 +36,8 @@ function inspectDatedTimeline(adapter,bridge){
  check('ADAPTER_LOCK',adapter?.render_authorized===false&&adapter?.publication_authorized===false&&adapter?.editorial_certified===false&&adapter?.legacy_renderer_compatible===false);
  check('BRIDGE_LOCK',bridge?.render_authorized===false&&bridge?.publication_authorized===false&&bridge?.editorial_certified===false&&bridge?.narration_authorized===false);
  check('BRIDGE_STATUS',bridge?.status==='PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
- check('SCENES',Array.isArray(adapter?.scenes)&&adapter.scenes.length>0&&adapter.scenes.every(s=>s.market_master_sha256===adapter.market_master_sha256&&s.render_authorized===false&&s.visual_asset===null&&s.stock_claim_review_pending!==true&&Array.isArray(s.excluded_pending_claim_ids)&&s.excluded_pending_claim_ids.length===0));
- check('SENTENCES',Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&bridge.sentences.every(s=>typeof s.id==='string'&&Number.isFinite(s.start_seconds)&&Number.isFinite(s.end_seconds)&&s.end_seconds>s.start_seconds));
+ check('SCENES',Array.isArray(adapter?.scenes)&&adapter.scenes.length>0&&adapter.scenes.every(s=>s?.market_master_sha256===adapter.market_master_sha256&&s.render_authorized===false&&s.visual_asset===null&&s.stock_claim_review_pending!==true&&Array.isArray(s.excluded_pending_claim_ids)&&s.excluded_pending_claim_ids.length===0));
+ check('SENTENCES',Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&bridge.sentences.every(s=>typeof s?.id==='string'&&Number.isFinite(s.start_seconds)&&Number.isFinite(s.end_seconds)&&s.end_seconds>s.start_seconds));
  check('SRT_PRESENT',typeof bridge?.srt==='string'&&bridge.srt.trim().length>0);
  check('TIMELINE_TOTAL',Number.isFinite(bridge?.total_seconds)&&bridge.total_seconds>0&&Array.isArray(bridge?.sentences)&&bridge.sentences.length>0&&Math.abs(bridge.sentences.at(-1)?.end_seconds-bridge.total_seconds)<0.001);
 
@@ -78,7 +78,7 @@ function inspectSceneAlignment(adapter,bridge,assignments){
  fail('ASSIGNMENT_EVIDENCE_REFS',Array.isArray(assignments)&&assignments.every(a=>Array.isArray(a?.source_section_ids)&&(a.scene_id==='opening'?a.source_section_ids.length===0:a.source_section_ids.length>0)&&a.source_section_ids.every(id=>typeof id==='string'&&id.length>0)&&Array.isArray(a?.evidence_claim_ids)&&a.evidence_claim_ids.every(id=>typeof id==='string'&&id.startsWith(adapter?.target_date+':'))));
  fail('PENDING_CLAIM_EXCLUSION',Array.isArray(assignments)&&assignments.every((a,i)=>{const scene=scenes[i];return !!scene&&Array.isArray(scene.excluded_pending_claim_ids)&&!a?.evidence_claim_ids?.some(id=>scene.excluded_pending_claim_ids.includes(id));}));
  fail('SCENE_EVIDENCE_PARITY',Array.isArray(assignments)&&assignments.every((a,i)=>{const scene=scenes[i];return !!scene&&Array.isArray(scene.source_section_ids)&&JSON.stringify(a?.source_section_ids)===JSON.stringify(scene.source_section_ids)&&(scene.stock_claim_id?(Array.isArray(a?.evidence_claim_ids)&&a.evidence_claim_ids.length===1&&a.evidence_claim_ids[0]===scene.stock_claim_id):(Array.isArray(a?.evidence_claim_ids)&&a.evidence_claim_ids.length===0));}));
- const byId=new Map(scenes.map(s=>[s.id,s]));
+ const byId=new Map(scenes.map(s=>[s?.id,s]));
  const sentenceIds=new Set(sentences.map(s=>s.id)),used=new Set(),plan=[];
  if(Array.isArray(assignments))for(const [i,a] of assignments.entries()){
   const scene=scenes[i];
