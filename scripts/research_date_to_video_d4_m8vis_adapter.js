@@ -68,6 +68,7 @@ function inspectSceneAlignment(adapter,bridge,assignments){
  const fail=(code,ok)=>{if(!ok)issues.push(code);};
  const scenes=adapter?.scenes||[],sentences=bridge?.sentences||[];
  fail('ASSIGNMENTS_REQUIRED',Array.isArray(assignments)&&assignments.length===scenes.length);
+ fail('ADAPTER_OUTLINE_HASH',typeof adapter?.source_outline_sha256==='string'&&/^[a-f0-9]{64}$/.test(adapter.source_outline_sha256));
  fail('ASSIGNMENT_SOURCE_HASH',Array.isArray(assignments)&&assignments.every(a=>typeof a?.source_outline_sha256==='string'&&a.source_outline_sha256===adapter?.source_outline_sha256&&/^[a-f0-9]{64}$/.test(a.source_outline_sha256)));
  fail('ASSIGNMENT_MASTER_HASH',Array.isArray(assignments)&&assignments.every(a=>a?.market_master_sha256===adapter?.market_master_sha256));
  fail('ASSIGNMENT_REVIEW_LOCK',Array.isArray(assignments)&&assignments.every(a=>a?.editorial_certified===false&&a?.render_authorized===false&&a?.publication_authorized===false));
