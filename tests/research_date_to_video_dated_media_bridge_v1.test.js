@@ -251,6 +251,8 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  reject({...adapter,scenes:{}},bridge,assignments,'SCENE_INPUT_ARRAY');
  reject(adapter,{...bridge,sentences:{}},assignments,'SENTENCE_INPUT_ARRAY');
  reject({...adapter,scenes:[null,adapter.scenes[1]]},bridge,assignments,'SCENES');
+ reject({...adapter,scene_ids:['tampered']},bridge,assignments,'SCENE_ID_INTEGRITY');
+ reject({...adapter,scenes:[adapter.scenes[0],{...adapter.scenes[1],id:adapter.scenes[0].id}]},bridge,assignments,'SCENE_ID_INTEGRITY');
  reject(adapter,{...bridge,sentences:[null,bridge.sentences[1]]},assignments,'SENTENCES');
  reject({...adapter,scenes:[{...adapter.scenes[0],stock_claim_review_pending:true},adapter.scenes[1]]},bridge,assignments,'SCENES');
  reject({...adapter,scenes:[{...adapter.scenes[0],excluded_pending_claim_ids:['20261014:2330:PRICE_CHANGE']},adapter.scenes[1]]},bridge,assignments,'SCENES');
