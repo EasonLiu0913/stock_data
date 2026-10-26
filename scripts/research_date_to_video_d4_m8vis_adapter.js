@@ -89,7 +89,7 @@ function inspectSceneAlignment(adapter,bridge,assignments){
   for(const id of a.sentence_ids){
    fail('UNKNOWN_OR_DUPLICATE_SENTENCE',sentenceIds.has(id)&&!used.has(id));
    used.add(id);
-   const sentence=sentences.find(s=>s.id===id);
+   const sentence=sentences.find(s=>s?.id===id);
    if(sentence)slice.push(sentence);
   }
   if(slice.length!==a.sentence_ids.length)continue;
