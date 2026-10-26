@@ -257,3 +257,19 @@ test('M8VIS explicit scene alignment requires ordered complete sentence ownershi
  reject({...adapter,scenes:[{...adapter.scenes[0],stock_claim_review_pending:true},adapter.scenes[1]]},bridge,assignments,'SCENES');
  reject({...adapter,scenes:[{...adapter.scenes[0],excluded_pending_claim_ids:['20261014:2330:PRICE_CHANGE']},adapter.scenes[1]]},bridge,assignments,'SCENES');
 });
+
+
+test('M8VIS adapter derivation is bound to supplied D4 projection without granting authority',()=>{
+ const {adapt,inspectProjectionBinding}=require('../scripts/research_date_to_video_d4_m8vis_adapter');
+ const names=['market_breadth_vs_index','institutional_flow_vs_breadth','selected_stock_evidence','counterarguments_and_uncertainty','three_point_summary'];
+ const projection={contract:'DATE_TO_VIDEO_V1_D4_SINGLE_MASTER_SEMANTIC_PROJECTION',target_date:'20261014',source_outline_sha256:'a'.repeat(64),market_master_sha256:'b'.repeat(64),render_authorized:false,publication_authorized:false,sections:names.map((section,i)=>({section,id:'section-'+i,evidence:i===2?[{type:'claim_id',id:'20261014:2330:PRICE_CHANGE'}]:[],resolved_master_observations:[],pending_claim_ids:[]}))};
+ const adapter=adapt(projection),valid=inspectProjectionBinding(projection,adapter);
+ assert.equal(valid.status,'DERIVATION_PARITY_ONLY_UPSTREAM_EVIDENCE_UNVERIFIED');
+ assert.equal(valid.upstream_evidence_authenticated,false);
+ assert.equal(valid.render_authorized,false);
+ const tampered={...adapter,scenes:adapter.scenes.map((scene,i)=>i===1?{...scene,source_section_ids:['fabricated']}:scene)};
+ const rejected=inspectProjectionBinding(projection,tampered);
+ assert.equal(rejected.status,'REJECTED');
+ assert.ok(rejected.issues.includes('PROJECTION_ADAPTER_MISMATCH:scenes'));
+ assert.equal(inspectProjectionBinding({...projection,sections:[]},adapter).status,'REJECTED');
+});
