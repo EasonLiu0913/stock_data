@@ -36,6 +36,20 @@ test('synthetic date-scoped audio proof produces aligned SRT without granting ap
   assert.equal(build(inventory,commandPlan,altered,dir,probe).status,'REJECTED');
   const wrongDate={...proof,target_date:'20261008'};
   assert.equal(build(inventory,commandPlan,wrongDate,dir,probe).status,'REJECTED');
+  // A second date must work structurally without inheriting the 20261013 provenance.
+  const otherDate='20261014';
+  const otherInventory={...inventory,target_date:otherDate,sentences:inventory.sentences.map((s,i)=>i===4?{...s,spoken_text:'十月十四日上漲五％。',caption_text:'10/14上漲5%。'}:s)};
+  const otherPlan=plan(otherInventory);
+  assert.equal(otherPlan.commands.length,5);
+  const otherProof={...proof,target_date:otherDate,sentences:proof.sentences.map((s,i)=>({...s,...otherInventory.sentences[i],audio_file:otherPlan.commands[i].output_file}))};
+  const otherResult=build(otherInventory,otherPlan,otherProof,dir,probe);
+  assert.equal(otherResult.status,'PLAYABLE_AUDIO_AND_SRT_STRUCTURAL_ONLY_EDITORIAL_REVIEW_REQUIRED');
+  assert.equal(otherResult.target_date,otherDate);
+  assert.ok(otherResult.srt.includes('10/14上漲5%。'));
+  assert.equal(otherResult.render_authorized,false);
+  assert.equal(otherResult.publication_authorized,false);
+  assert.equal(build(otherInventory,otherPlan,proof,dir,probe).status,'REJECTED');
+  assert.equal(build(inventory,commandPlan,otherProof,dir,probe).status,'REJECTED');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
