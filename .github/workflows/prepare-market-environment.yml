@@ -48,9 +48,23 @@ jobs:
       - name: Check Taiwan trading day
         id: market_day
         shell: bash
+        env:
+          INPUT_DATE: ${{ inputs.forecast_date || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
-          collection_date="$(TZ=Asia/Taipei date +%Y-%m-%d)"
+          if [ -n "$INPUT_DATE" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            occurrence_json="$(node scripts/resolve_scheduled_collection_date.js --event-name "$EVENT_NAME" --schedule "$EVENT_SCHEDULE" --policy same_calendar_date --json)"
+            scheduled_at="$(printf '%s' "$occurrence_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).scheduled_at_utc))')"
+            collection_date="$(TZ=Asia/Taipei date -d "$scheduled_at" +%Y-%m-%d)"
+          else
+            collection_date="$(TZ=Asia/Taipei date +%Y-%m-%d)"
+          fi
           if COLLECTION_DATE="$collection_date" node -e 'const m=require("./scripts/resolve_forecast_dates"); process.exit(m.shouldPrepareMarketEnvironment(process.env.COLLECTION_DATE)?0:1)'; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
