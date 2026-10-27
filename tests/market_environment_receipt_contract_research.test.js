@@ -109,3 +109,17 @@ test('research-only canonical receipt is order invariant and rejects ambiguous t
   assert.throws(()=>canonicalReceipt({...a,extra:NaN}),/unsupported receipt number/);
   assert.throws(()=>canonicalReceipt({...a,extra:1.5}),/unsupported receipt number/);
 });
+
+test('research-only canonical receipt Unicode and numeric boundary cases', () => {
+  const composed = {source:'臺灣',note:'é'};
+  const decomposed = {note:'e\u0301',source:'臺灣'};
+  assert.notEqual(canonicalReceipt(composed),canonicalReceipt(decomposed),
+    'Unicode normalization is not implicit and must be specified');
+  assert.equal(canonicalReceipt({a:'中文',b:'😀'}),canonicalReceipt({b:'😀',a:'中文'}));
+  assert.throws(()=>canonicalReceipt({n:Number.MAX_SAFE_INTEGER+1}),/unsupported receipt number/);
+  assert.throws(()=>canonicalReceipt({n:Infinity}),/unsupported receipt number/);
+  assert.notEqual(canonicalReceipt({n:0}),canonicalReceipt({n:'0'}));
+  const duplicateKeyJson = '{"sourceDate":"20260724","sourceDate":"20260723"}';
+  assert.equal(JSON.parse(duplicateKeyJson).sourceDate,'20260723');
+  assert.notEqual(canonicalReceipt(JSON.parse(duplicateKeyJson)),canonicalReceipt({sourceDate:'20260724'}));
+});
