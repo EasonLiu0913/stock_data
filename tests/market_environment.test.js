@@ -306,3 +306,13 @@ test('shadow evaluation joins prediction features and replay outcomes by stock c
 
 require('./market_environment_policy.test');
 require('./market_environment_oil_context.test');
+
+test('invalid calendar dates fail closed before TWSE trading-day evaluation', () => {
+  const dates = require('../scripts/resolve_forecast_dates');
+  for (const bad of ['20260230', '2026-02-29', '2026-13-01', '2026-00-10', '2026-04-31']) {
+    assert.equal(dates.normalizeIsoDate(bad), null, bad);
+    assert.throws(() => dates.shouldPrepareMarketEnvironment(bad), /Invalid market environment collection date/, bad);
+    assert.throws(() => dates.resolveExplicitForecastDate(bad), /Invalid --target-date value/, bad);
+  }
+  assert.equal(dates.normalizeIsoDate('2028-02-29'), '2028-02-29');
+});
