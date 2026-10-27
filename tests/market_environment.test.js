@@ -21,6 +21,20 @@ const {
   classifyEnvironment,
 } = require('../scripts/reconstruct_historical_market_environment');
 
+const { shouldPrepareMarketEnvironment, loadHolidaySet } = require('../scripts/resolve_forecast_dates');
+
+test('TWSE typhoon closure skips 2026-10-23 collection without changing US market calendar', () => {
+  assert.equal(shouldPrepareMarketEnvironment('2026-10-23', loadHolidaySet()), false);
+  assert.equal(isUsMarketTradingDay('20261023'), true);
+});
+
+test('TWSE reopening and ordinary trading days still require market environment preparation', () => {
+  assert.equal(shouldPrepareMarketEnvironment('2026-10-22', loadHolidaySet()), true);
+  assert.equal(shouldPrepareMarketEnvironment('2026-10-27', loadHolidaySet()), true);
+  assert.equal(shouldPrepareMarketEnvironment('2026-10-26', loadHolidaySet()), false);
+  assert.throws(() => shouldPrepareMarketEnvironment('bad-date'), /Invalid market environment collection date/);
+});
+
 function external(date = '20260727') {
   return {
     collection_date: date,
