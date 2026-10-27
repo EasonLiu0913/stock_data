@@ -69,7 +69,7 @@ function verifyArtifactBundle(receipt, bundle, expectedDate) {
   if (!bundle || !Buffer.isBuffer(bundle.raw) || !Buffer.isBuffer(bundle.normalized)) {
     throw Error('artifact payload missing');
   }
-  if (bundle.receipt !== receipt) throw Error('artifact receipt not bound');
+  if (!bundle.receipt || sha256(Buffer.from(JSON.stringify(bundle.receipt))) !== sha256(Buffer.from(JSON.stringify(receipt)))) throw Error('artifact receipt content mismatch');
   if (bundle.date !== expectedDate || receipt.sourceDate !== expectedDate) throw Error('artifact date mismatch');
   if (sha256(bundle.raw) !== receipt.rawResponseSha256) throw Error('artifact raw hash mismatch');
   if (sha256(bundle.normalized) !== receipt.normalizedFileSha256) throw Error('artifact normalized hash mismatch');
@@ -84,6 +84,7 @@ test('research-only artifact bundle binds receipt to exact source bytes and date
   assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,raw:Buffer.from('{}')},'20260724'),/raw hash mismatch/);
   assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,normalized:Buffer.from('{}')},'20260724'),/normalized hash mismatch/);
   assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,date:'20260723'},'20260724'),/date mismatch/);
-  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,receipt:{...receipt}},'20260724'),/receipt not bound/);
+  assert.equal(verifyArtifactBundle(receipt,{...bundle,receipt:JSON.parse(JSON.stringify(receipt))},'20260724'),true);
+  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,receipt:{...receipt,sourceDate:'20260723'}},'20260724'),/receipt content mismatch/);
   assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,raw:null},'20260724'),/payload missing/);
 });
