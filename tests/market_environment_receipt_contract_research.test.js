@@ -64,3 +64,26 @@ test('research-only independent GitHub run and artifact binding fails closed', (
   assert.throws(()=>verifyGitHubRun(receipt,run,[{...artifacts[0],expired:true}]),/artifact missing/);
   assert.throws(()=>verifyGitHubRun(receipt,run,[{...artifacts[0],workflow_run:{id:67890}}]),/artifact missing/);
 });
+
+function verifyArtifactBundle(receipt, bundle, expectedDate) {
+  if (!bundle || !Buffer.isBuffer(bundle.raw) || !Buffer.isBuffer(bundle.normalized)) {
+    throw Error('artifact payload missing');
+  }
+  if (bundle.receipt !== receipt) throw Error('artifact receipt not bound');
+  if (bundle.date !== expectedDate || receipt.sourceDate !== expectedDate) throw Error('artifact date mismatch');
+  if (sha256(bundle.raw) !== receipt.rawResponseSha256) throw Error('artifact raw hash mismatch');
+  if (sha256(bundle.normalized) !== receipt.normalizedFileSha256) throw Error('artifact normalized hash mismatch');
+  return true;
+}
+test('research-only artifact bundle binds receipt to exact source bytes and date', () => {
+  const raw = Buffer.from('{"date":"20260724","tables":[1]}');
+  const normalized = Buffer.from(JSON.stringify(JSON.parse(raw.toString()),null,2));
+  const receipt = {sourceDate:'20260724',rawResponseSha256:sha256(raw),normalizedFileSha256:sha256(normalized)};
+  const bundle = {date:'20260724',receipt,raw,normalized};
+  assert.equal(verifyArtifactBundle(receipt,bundle,'20260724'),true);
+  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,raw:Buffer.from('{}')},'20260724'),/raw hash mismatch/);
+  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,normalized:Buffer.from('{}')},'20260724'),/normalized hash mismatch/);
+  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,date:'20260723'},'20260724'),/date mismatch/);
+  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,receipt:{...receipt}},'20260724'),/receipt not bound/);
+  assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,raw:null},'20260724'),/payload missing/);
+});
