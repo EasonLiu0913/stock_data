@@ -15,6 +15,7 @@ on:
       - tests/market_environment_real_snapshot_negative.test.js
       - tests/market_environment_isolated_verifier.test.js
       - tests/market_environment_source_boundary_research.test.js
+      - tests/market_environment_receipt_contract_research.test.js
       - data_history_sma/non_trading_days.json
   workflow_dispatch:
 
@@ -77,6 +78,8 @@ jobs:
         run: node --test tests/market_environment_isolated_verifier.test.js
       - name: Characterize source traversal and symlink trust boundaries
         run: node --test tests/market_environment_source_boundary_research.test.js
+      - name: Research capture-time source receipt contract (synthetic evidence only)
+        run: node --test tests/market_environment_receipt_contract_research.test.js
       - name: Negative test missing snapshot must fail closed
         run: |
           if node scripts/verify_market_environment.js --forecast-date 20991231 --base-date 20991230 > /tmp/missing-snapshot.log 2>&1; then
