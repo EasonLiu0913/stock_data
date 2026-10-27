@@ -123,3 +123,17 @@ test('research-only canonical receipt Unicode and numeric boundary cases', () =>
   assert.equal(JSON.parse(duplicateKeyJson).sourceDate,'20260723');
   assert.notEqual(canonicalReceipt(JSON.parse(duplicateKeyJson)),canonicalReceipt({sourceDate:'20260724'}));
 });
+
+test('research-only duplicate JSON keys cannot be authenticated after ordinary parsing', () => {
+  const clean = '{"sourceDate":"20260723"}';
+  const ambiguous = '{"sourceDate":"20260724","sourceDate":"20260723"}';
+  assert.deepEqual(JSON.parse(clean),JSON.parse(ambiguous));
+  assert.equal(canonicalReceipt(JSON.parse(clean)),canonicalReceipt(JSON.parse(ambiguous)));
+  assert.notEqual(sha256(Buffer.from(clean)),sha256(Buffer.from(ambiguous)));
+  // Fail closed at the raw-byte trust boundary until a strict duplicate-key parser exists.
+  const authenticateRawReceipt = (bytes, strictDuplicateKeyParser) => {
+    if (typeof strictDuplicateKeyParser !== 'function') throw Error('strict raw JSON parser required');
+    return strictDuplicateKeyParser(bytes);
+  };
+  assert.throws(()=>authenticateRawReceipt(ambiguous,null),/strict raw JSON parser required/);
+});
