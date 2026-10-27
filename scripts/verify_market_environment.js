@@ -46,8 +46,27 @@ function assertObject(value, label) {
 
 function assertExistingNonEmptyFile(relativePath, label) {
   if (!relativePath || typeof relativePath !== 'string') throw new Error(`${label} source path is missing`);
-  const absolutePath = path.join(ROOT, relativePath);
+  const allowed = {
+    external_market: 'data_external_market',
+    market_risk: 'data_market_risk',
+    twse_index: 'data_twse_mi_index',
+    foreign_futures: 'data_taifex_major_institutional_traders_futures_contracts',
+    price_sma: 'data_fubon',
+  };
+  const directory = allowed[label];
+  if (!directory) throw new Error(`${label} source category is not allowed`);
+  const normalized = relativePath.replaceAll('\\\\', '/');
+  if (path.isAbsolute(relativePath) || normalized.split('/').includes('..') ||
+      normalized.split('/').includes('.') || !normalized.startsWith(directory + '/')) {
+    throw new Error(`${label} source path is outside allowed directory: ${relativePath}`);
+  }
+  const absolutePath = path.resolve(ROOT, relativePath);
+  const allowedRoot = fs.realpathSync(path.join(ROOT, directory));
   if (!fs.existsSync(absolutePath)) throw new Error(`${label} source file is missing: ${relativePath}`);
+  const actualPath = fs.realpathSync(absolutePath);
+  if (actualPath !== allowedRoot && !actualPath.startsWith(allowedRoot + path.sep)) {
+    throw new Error(`${label} source path resolves outside allowed directory: ${relativePath}`);
+  }
   if (fs.statSync(absolutePath).size === 0) throw new Error(`${label} source file is empty: ${relativePath}`);
   return absolutePath;
 }
