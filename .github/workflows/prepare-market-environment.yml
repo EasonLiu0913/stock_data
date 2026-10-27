@@ -200,9 +200,16 @@ jobs:
           {
             echo "## Prepare Market Environment"
             echo ""
-            echo "- Forecast date: \`$FORECAST_TARGET_DATE\`"
-            echo "- Base trade date: \`$FORECAST_BASE_DATE\`"
-            if [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
+            if [ "${{ steps.market_day.outputs.skip }}" = "true" ]; then
+              echo "- Result: Taiwan market closed; snapshot preparation skipped."
+              echo "- No forecast/base dates resolved; no TWSE snapshot generated."
+            else
+              echo "- Forecast date: \`$FORECAST_TARGET_DATE\`"
+              echo "- Base trade date: \`$FORECAST_BASE_DATE\`"
+            fi
+            if [ "${{ steps.market_day.outputs.skip }}" = "true" ]; then
+              :
+            elif [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
               echo "- Result: existing snapshot passed full integrity validation; generation skipped."
             else
               echo "- Result: existing snapshot was not reusable; regeneration path executed."
