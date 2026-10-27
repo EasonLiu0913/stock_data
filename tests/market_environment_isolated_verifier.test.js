@@ -61,19 +61,19 @@ test('complete verifier rejects isolated tampered real snapshot, without touchin
 
     // Characterize source-content substitution: unchanged path/date and snapshot hash.
     // Only the temporary TWSE directory is replaced; the repository file stays untouched.
-    const twseLink = path.join(dir, 'data_twse_mi_index');
+    const substitutionTwseLink = path.join(dir, 'data_twse_mi_index');
     const originalTwse = path.join(root, payload.source_files.twse_index);
     const isolatedTwse = path.join(dir, payload.source_files.twse_index);
-    fs.unlinkSync(twseLink);
-    fs.mkdirSync(twseLink);
+    fs.unlinkSync(substitutionTwseLink);
+    fs.mkdirSync(substitutionTwseLink);
     fs.copyFileSync(originalTwse, isolatedTwse);
     assert.equal(run().status, 0, 'isolated copied source must pass');
     fs.writeFileSync(isolatedTwse, '{}');
     const replaced = run();
     assert.equal(replaced.status, 0,
       'research characterization: verifier currently accepts substituted nonempty TWSE source: ' + replaced.stderr);
-    fs.rmSync(twseLink, { recursive: true, force: true });
-    fs.symlinkSync(path.join(root, 'data_twse_mi_index'), twseLink, 'dir');
+    fs.rmSync(substitutionTwseLink, { recursive: true, force: true });
+    fs.symlinkSync(path.join(root, 'data_twse_mi_index'), substitutionTwseLink, 'dir');
     payload.environment.label += ' (tampered)';
     fs.writeFileSync(destination, JSON.stringify(payload));
     const tampered = run();
