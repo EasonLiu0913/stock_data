@@ -64,6 +64,12 @@ function isTradingDate(iso, holidays) {
   return day !== 0 && day !== 6 && !isHoliday(iso, holidays);
 }
 
+function shouldPrepareMarketEnvironment(collectionIso, holidays = loadHolidaySet()) {
+  const date = normalizeIsoDate(collectionIso);
+  if (!date) throw new Error(`Invalid market environment collection date: ${collectionIso}`);
+  return isTradingDate(date, holidays);
+}
+
 function nextTradingDate(iso, holidays, inclusive = false) {
   let date = inclusive ? iso : addDays(iso, 1);
   while (!isTradingDate(date, holidays)) date = addDays(date, 1);
@@ -246,6 +252,7 @@ module.exports = {
   addDays,
   compactDate,
   isTradingDate,
+  shouldPrepareMarketEnvironment,
   loadHolidaySet,
   nextTradingDate,
   normalizeIsoDate,
