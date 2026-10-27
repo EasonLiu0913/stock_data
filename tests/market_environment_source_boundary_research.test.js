@@ -25,9 +25,9 @@ test('source path traversal and symlink trust boundaries: research characterizat
     assert.doesNotThrow(() => validateReferencedSources(payload, base), 'baseline references must validate');
     // Characterize current behavior without weakening or changing the verifier.
     payload.source_files.twse_index = relative;
-    assert.doesNotThrow(() => validateReferencedSources(payload, base), 'existing verifier follows a symlink to outside ROOT');
+    assert.throws(() => validateReferencedSources(payload, base), /outside allowed directory/, 'symlink outside allowlist must be rejected');
     payload.source_files.twse_index = traversal;
-    assert.doesNotThrow(() => validateReferencedSources(payload, base), 'existing verifier permits traversal outside ROOT');
+    assert.throws(() => validateReferencedSources(payload, base), /outside allowed directory/, 'traversal outside allowlist must be rejected');
   } finally {
     fs.rmSync(inside, { recursive: true, force: true });
     fs.rmSync(outside, { recursive: true, force: true });
