@@ -45,8 +45,22 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Check Taiwan trading day
+        id: market_day
+        shell: bash
+        run: |
+          set -euo pipefail
+          collection_date="$(TZ=Asia/Taipei date +%Y-%m-%d)"
+          if COLLECTION_DATE="$collection_date" node -e 'const m=require("./scripts/resolve_forecast_dates"); process.exit(m.shouldPrepareMarketEnvironment(process.env.COLLECTION_DATE)?0:1)'; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Taiwan market closed: $collection_date"
+          fi
+
       - name: Resolve forecast and base dates
         id: dates
+        if: steps.market_day.outputs.skip != 'true'
         shell: bash
         env:
           INPUT_DATE: ${{ inputs.forecast_date || '' }}
@@ -78,6 +92,7 @@ jobs:
 
       - name: Validate existing snapshot before retry
         id: existing
+        if: steps.market_day.outputs.skip != 'true'
         shell: bash
         env:
           FORCE: ${{ inputs.force || 'false' }}
@@ -104,7 +119,7 @@ jobs:
           fi
 
       - name: Refresh external market inputs from current main
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -113,7 +128,7 @@ jobs:
           echo "Refreshed external-market and market-risk inputs from current origin/main immediately before generation."
 
       - name: Generate immutable shadow environment snapshot
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         shell: bash
         env:
           STRICT: ${{ toJSON(inputs.strict) }}
@@ -126,7 +141,7 @@ jobs:
           node scripts/generate_market_environment.js "${args[@]}"
 
       - name: Verify regenerated environment integrity
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         run: |
           set -euo pipefail
           args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
@@ -136,15 +151,15 @@ jobs:
           node scripts/verify_market_environment.js "${args[@]}"
 
       - name: Install market environment banner
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         run: node scripts/install_market_environment_ui.js
 
       - name: Run market environment tests
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         run: node --test tests/market_environment.test.js
 
       - name: Commit and push snapshot and UI
-        if: steps.existing.outputs.skip != 'true'
+        if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
