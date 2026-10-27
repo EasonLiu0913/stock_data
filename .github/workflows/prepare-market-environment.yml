@@ -155,6 +155,7 @@ jobs:
           node scripts/generate_market_environment.js "${args[@]}"
 
       - name: Verify regenerated environment integrity
+        id: verify_regenerated
         if: steps.market_day.outputs.skip != 'true' && steps.existing.outputs.skip != 'true'
         run: |
           set -euo pipefail
@@ -211,8 +212,14 @@ jobs:
               :
             elif [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
               echo "- Result: existing snapshot passed full integrity validation; generation skipped."
+            elif [ "${{ steps.dates.outcome }}" != "success" ]; then
+              echo "- Result: forecast/base date resolution did not succeed; no successful snapshot generation verified."
+            elif [ "${{ steps.verify_regenerated.outcome }}" = "success" ]; then
+              echo "- Result: regenerated snapshot passed integrity verification."
+            elif [ "${{ steps.verify_regenerated.outcome }}" = "failure" ]; then
+              echo "- Result: regenerated snapshot FAILED integrity verification; not accepted."
             else
-              echo "- Result: existing snapshot was not reusable; regeneration path executed."
+              echo "- Result: regeneration was not verified as successful."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
       # schedule-timing-summary:v2
