@@ -33,6 +33,32 @@ test('complete verifier rejects isolated tampered real snapshot, without touchin
     fs.writeFileSync(destination, JSON.stringify(payload));
     const baseline = run();
     assert.equal(baseline.status, 0, 'Real snapshot baseline must pass complete verifier: ' + baseline.stderr);
+    const expectRejected = (expected, label) => {
+      const result = run();
+      assert.notEqual(result.status, 0, label + ': unexpectedly accepted');
+      assert.match(result.stderr, expected, label);
+    };
+    const wrongForecast = { ...payload, forecast_date_compact: '20260728' };
+    fs.writeFileSync(destination, JSON.stringify(wrongForecast));
+    expectRejected(/Market environment forecast date mismatch/, 'wrong forecast date');
+    const wrongBase = { ...payload, base_trade_date_compact: '20260723' };
+    fs.writeFileSync(destination, JSON.stringify(wrongBase));
+    expectRejected(/Market environment base date mismatch/, 'wrong base date');
+
+    // Replace only the isolated TWSE directory link with an isolated directory.
+    // No repository source files are removed or modified.
+    const twseLink = path.join(dir, 'data_twse_mi_index');
+    fs.unlinkSync(twseLink);
+    fs.mkdirSync(twseLink);
+    fs.writeFileSync(destination, JSON.stringify(payload));
+    expectRejected(/twse_index source file is missing/, 'missing TWSE source');
+    const twseFile = path.join(twseLink, '20260724_twse_mi_index.json');
+    fs.writeFileSync(twseFile, '');
+    expectRejected(/twse_index source file is empty/, 'empty TWSE source');
+    fs.unlinkSync(twseFile);
+    fs.rmdirSync(twseLink);
+    fs.symlinkSync(path.join(root, 'data_twse_mi_index'), twseLink, 'dir');
+
     payload.environment.label += ' (tampered)';
     fs.writeFileSync(destination, JSON.stringify(payload));
     const tampered = run();
