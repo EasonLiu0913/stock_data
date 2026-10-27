@@ -13,6 +13,7 @@ on:
       - tests/market_environment_step_guards.test.js
       - tests/market_environment_verify_shell.test.js
       - tests/market_environment_real_snapshot_negative.test.js
+      - tests/market_environment_isolated_verifier.test.js
       - data_history_sma/non_trading_days.json
   workflow_dispatch:
 
@@ -71,6 +72,8 @@ jobs:
         run: node --test tests/market_environment_verify_shell.test.js
       - name: Validate committed real snapshot source and hash negative cases
         run: node --test tests/market_environment_real_snapshot_negative.test.js
+      - name: Execute complete verifier on isolated real snapshot tampering
+        run: node --test tests/market_environment_isolated_verifier.test.js
       - name: Negative test missing snapshot must fail closed
         run: |
           if node scripts/verify_market_environment.js --forecast-date 20991231 --base-date 20991230 > /tmp/missing-snapshot.log 2>&1; then
