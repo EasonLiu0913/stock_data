@@ -88,3 +88,24 @@ test('research-only artifact bundle binds receipt to exact source bytes and date
   assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,receipt:{...receipt,sourceDate:'20260723'}},'20260724'),/receipt content mismatch/);
   assert.throws(()=>verifyArtifactBundle(receipt,{...bundle,raw:null},'20260724'),/payload missing/);
 });
+
+function canonicalReceipt(value) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value)) throw Error('unsupported receipt number');
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return '[' + value.map(canonicalReceipt).join(',') + ']';
+  if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) throw Error('unsupported receipt type');
+  const keys = Object.keys(value).sort();
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + canonicalReceipt(value[k])).join(',') + '}';
+}
+test('research-only canonical receipt is order invariant and rejects ambiguous types', () => {
+  const a = {schemaVersion:1,capture:{runId:12345,workflow:'crawl-twse-mi-index.yml'},sourceDate:'20260724'};
+  const b = {sourceDate:'20260724',capture:{workflow:'crawl-twse-mi-index.yml',runId:12345},schemaVersion:1};
+  assert.equal(sha256(Buffer.from(canonicalReceipt(a))),sha256(Buffer.from(canonicalReceipt(b))));
+  assert.notEqual(sha256(Buffer.from(canonicalReceipt(a))),sha256(Buffer.from(canonicalReceipt({...a,sourceDate:'20260723'}))));
+  assert.throws(()=>canonicalReceipt({...a,extra:undefined}),/unsupported receipt type/);
+  assert.throws(()=>canonicalReceipt({...a,extra:NaN}),/unsupported receipt number/);
+  assert.throws(()=>canonicalReceipt({...a,extra:1.5}),/unsupported receipt number/);
+});
