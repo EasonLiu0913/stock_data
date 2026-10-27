@@ -1,0 +1,66 @@
+name: "[Research Only] TWSE Closure Date Validation"
+
+on:
+  push:
+    branches:
+      - research/market-environment-typhoon-closure-20261023
+    paths:
+      - .github/workflows/research-market-environment-closure-ci.yml
+      - scripts/resolve_forecast_dates.js
+      - tests/market_environment.test.js
+      - data_history_sma/non_trading_days.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-date-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Assert research ref and no publication permissions
+        run: |
+          test "$GITHUB_REF_NAME" = "research/market-environment-typhoon-closure-20261023"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - name: Verify scheduled closure and forecast base date
+        run: |
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const d = require('./scripts/resolve_forecast_dates');
+          assert.equal(d.shouldPrepareMarketEnvironment('2026-10-23'), false);
+          assert.equal(d.shouldPrepareMarketEnvironment('2026-10-27'), true);
+          const x = d.resolveForecastDates(new Date('2026-10-26T23:55:00Z'));
+          assert.equal(x.forecast_target_date_compact, '20261027');
+          assert.equal(x.base_trade_date_compact, '20261022');
+          assert.throws(() => d.resolveExplicitForecastDate('20261023'), /not a trading day/);
+          NODE
+      - name: Validate workflow syntax and safety gates
+        run: |
+          ruby -e 'require "yaml"; %w[.github/workflows/prepare-market-environment.yml .github/workflows/research-market-environment-closure-ci.yml].each { |f| YAML.parse_file(f); puts "YAML parsed: #{f}" }'
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const w = fs.readFileSync('.github/workflows/prepare-market-environment.yml','utf8');
+          assert.match(w, /id: market_day/);
+          assert.match(w, /shouldPrepareMarketEnvironment/);
+          assert.match(w, /if: steps.market_day.outputs.skip != 'true'/);
+          assert.match(w, /Verify regenerated environment integrity/);
+          assert.match(w, /node scripts\/verify_market_environment.js/);
+          NODE
+      - name: Run existing market environment regression tests
+        run: node --test tests/market_environment.test.js
+      - name: Negative test missing snapshot must fail closed
+        run: |
+          if node scripts/verify_market_environment.js --forecast-date 20991231 --base-date 20991230 > /tmp/missing-snapshot.log 2>&1; then
+            echo "ERROR: missing snapshot unexpectedly passed"
+            exit 1
+          fi
+          grep -q "Missing market environment snapshot" /tmp/missing-snapshot.log
+          echo "Missing snapshot correctly rejected"
