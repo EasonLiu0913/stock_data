@@ -137,3 +137,19 @@ test('research-only duplicate JSON keys cannot be authenticated after ordinary p
   };
   assert.throws(()=>authenticateRawReceipt(ambiguous,null),/strict raw JSON parser required/);
 });
+
+test('research-only escaped and nested duplicate JSON keys require token-aware validation', () => {
+  const cases = [
+    ['{"sourceDate":"20260724","sourceDate":"20260723"}','{"sourceDate":"20260723"}'],
+    ['{"sourceDate":"20260724","\\u0073ourceDate":"20260723"}','{"sourceDate":"20260723"}'],
+    ['{"capture":{"runId":1,"runId":2}}','{"capture":{"runId":2}}'],
+    ['{"capture":{"runId":1,"\\u0072unId":2}}','{"capture":{"runId":2}}']
+  ];
+  for (const [ambiguous,clean] of cases) {
+    assert.deepEqual(JSON.parse(ambiguous),JSON.parse(clean));
+    assert.equal(canonicalReceipt(JSON.parse(ambiguous)),canonicalReceipt(JSON.parse(clean)));
+    assert.notEqual(sha256(Buffer.from(ambiguous)),sha256(Buffer.from(clean)));
+  }
+  const separateObjects = '{"a":{"id":1},"b":{"id":2}}';
+  assert.deepEqual(JSON.parse(separateObjects),{a:{id:1},b:{id:2}});
+});
