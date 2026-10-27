@@ -51,6 +51,31 @@ test('2026-10-23 scheduled collection is skipped while 2026-10-27 proceeds', () 
   assert.equal(shouldPrepareMarketEnvironment('2026-10-27'), true);
 });
 
+test('existing snapshot source references reject missing TWSE file and wrong base date', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { validateReferencedSources } = require('../scripts/verify_market_environment');
+  const root = path.resolve(__dirname, '..');
+  const temp = fs.mkdtempSync(path.join(root, '.research-twse-negative-'));
+  try {
+    const rel = path.relative(root, temp).replaceAll(path.sep, '/');
+    fs.writeFileSync(path.join(temp, 'twse_index_20261023.json'), '{}');
+    fs.writeFileSync(path.join(temp, 'foreign_futures_20261022.json'), '{}');
+    const payload = { source_files: {
+      twse_index: `${rel}/twse_index_20261023.json`,
+      foreign_futures: `${rel}/foreign_futures_20261022.json`,
+    }};
+    assert.throws(() => validateReferencedSources(payload, '20261022'), /twse_index source date mismatch: expected 20261022, got 20261023/);
+    payload.source_files.twse_index = `${rel}/twse_index_20261022_missing.json`;
+    assert.throws(() => validateReferencedSources(payload, '20261022'), /twse_index source file is missing/);
+    payload.source_files.twse_index = `${rel}/twse_index_20261023.json`;
+    assert.throws(() => validateReferencedSources(payload, '20261027'), /twse_index source date mismatch/);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
 function external(date = '20260727') {
   return {
     collection_date: date,
