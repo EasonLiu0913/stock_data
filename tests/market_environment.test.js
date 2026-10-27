@@ -35,6 +35,22 @@ test('TWSE reopening and ordinary trading days still require market environment 
   assert.throws(() => shouldPrepareMarketEnvironment('bad-date'), /Invalid market environment collection date/);
 });
 
+test('2026-10-27 forecast uses 2026-10-22 after typhoon and holiday', () => {
+  const { resolveForecastDates, resolveExplicitForecastDate } = require('../scripts/resolve_forecast_dates');
+  const holidays = loadHolidaySet();
+  const scheduled = resolveForecastDates(new Date('2026-10-26T23:55:00.000Z'), holidays);
+  assert.equal(scheduled.forecast_target_date_compact, '20261027');
+  assert.equal(scheduled.base_trade_date_compact, '20261022');
+  const explicit = resolveExplicitForecastDate('20261027', new Date('2026-10-26T23:55:00.000Z'), holidays);
+  assert.equal(explicit.base_trade_date_compact, '20261022');
+  assert.throws(() => resolveExplicitForecastDate('20261023', new Date('2026-10-22T23:55:00.000Z'), holidays), /not a trading day/);
+});
+
+test('2026-10-23 scheduled collection is skipped while 2026-10-27 proceeds', () => {
+  assert.equal(shouldPrepareMarketEnvironment('2026-10-23'), false);
+  assert.equal(shouldPrepareMarketEnvironment('2026-10-27'), true);
+});
+
 function external(date = '20260727') {
   return {
     collection_date: date,
