@@ -10,6 +10,7 @@ on:
       - scripts/resolve_forecast_dates.js
       - tests/market_environment.test.js
       - tests/market_environment_summary.test.js
+      - tests/market_environment_step_guards.test.js
       - data_history_sma/non_trading_days.json
   workflow_dispatch:
 
@@ -62,6 +63,8 @@ jobs:
         run: node --test tests/market_environment.test.js
       - name: Execute actual workflow summary script in isolated scenarios
         run: node --test tests/market_environment_summary.test.js
+      - name: Evaluate actual workflow step guards without executing production steps
+        run: node --test tests/market_environment_step_guards.test.js
       - name: Negative test missing snapshot must fail closed
         run: |
           if node scripts/verify_market_environment.js --forecast-date 20991231 --base-date 20991230 > /tmp/missing-snapshot.log 2>&1; then
