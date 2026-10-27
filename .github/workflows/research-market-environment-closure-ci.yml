@@ -6,6 +6,7 @@ on:
       - research/market-environment-typhoon-closure-20261023
     paths:
       - .github/workflows/research-market-environment-closure-ci.yml
+      - .github/workflows/prepare-market-environment.yml
       - scripts/resolve_forecast_dates.js
       - tests/market_environment.test.js
       - data_history_sma/non_trading_days.json
@@ -53,6 +54,8 @@ jobs:
           assert.match(w, /if: steps.market_day.outputs.skip != 'true'/);
           assert.match(w, /Verify regenerated environment integrity/);
           assert.match(w, /node scripts\/verify_market_environment.js/);
+          assert.match(w, /Taiwan market closed; snapshot preparation skipped/);
+          assert.match(w, /No forecast\/base dates resolved; no TWSE snapshot generated/);
           NODE
       - name: Run existing market environment regression tests
         run: node --test tests/market_environment.test.js
