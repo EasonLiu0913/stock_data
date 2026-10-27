@@ -34,10 +34,13 @@ function pad(value) {
 function normalizeIsoDate(value) {
   const text = String(value ?? '').trim();
   const compact = text.match(/^(20\d{2})(\d{2})(\d{2})$/);
-  if (compact) return `${compact[1]}-${compact[2]}-${compact[3]}`;
   const iso = text.match(/^(20\d{2})[-/](\d{2})[-/](\d{2})$/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  return null;
+  const parts = compact || iso;
+  if (!parts) return null;
+  const [year, month, day] = parts.slice(1).map(Number);
+  const actual = new Date(Date.UTC(year, month - 1, day));
+  if (actual.getUTCFullYear() !== year || actual.getUTCMonth() + 1 !== month || actual.getUTCDate() !== day) return null;
+  return `${parts[1]}-${parts[2]}-${parts[3]}`;
 }
 
 function compactDate(iso) {
