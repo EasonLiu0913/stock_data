@@ -34,3 +34,33 @@ test('research-only proposed receipt contract rejects missing and substituted ev
   assert.throws(()=>check({...receipt,sourceDate:'20260723'},raw,normalized,'20260724'),/date mismatch/);
   assert.throws(()=>check({...receipt,httpStatus:503},raw,normalized,'20260724'),/HTTP status/);
 });
+
+function verifyGitHubRun(receipt, run, artifacts) {
+  if (!run || run.id !== receipt.capture.runId ||
+      run.repository?.full_name !== receipt.capture.repository ||
+      run.head_sha !== receipt.capture.commitSha ||
+      run.path !== '.github/workflows/' + receipt.capture.workflow ||
+      run.status !== 'completed' || run.conclusion !== 'success') {
+    throw Error('GitHub run identity mismatch');
+  }
+  if (!Array.isArray(artifacts) || !artifacts.some(a =>
+      a.name === receipt.capture.artifactName &&
+      a.workflow_run?.id === run.id && a.expired === false)) {
+    throw Error('matching nonexpired source artifact missing');
+  }
+  return true;
+}
+test('research-only independent GitHub run and artifact binding fails closed', () => {
+  const run = {id:12345,repository:{full_name:'EasonLiu0913/stock_data'},
+    head_sha:'a'.repeat(40),path:'.github/workflows/crawl-twse-mi-index.yml',
+    status:'completed',conclusion:'success'};
+  const receipt = {capture:{repository:'EasonLiu0913/stock_data',runId:12345,
+    commitSha:'a'.repeat(40),workflow:'crawl-twse-mi-index.yml',artifactName:'twse-mi-index-source-20260724'}};
+  const artifacts = [{name:'twse-mi-index-source-20260724',expired:false,workflow_run:{id:12345}}];
+  assert.equal(verifyGitHubRun(receipt,run,artifacts),true);
+  assert.throws(()=>verifyGitHubRun(receipt,{...run,head_sha:'b'.repeat(40)},artifacts),/run identity mismatch/);
+  assert.throws(()=>verifyGitHubRun(receipt,{...run,conclusion:'failure'},artifacts),/run identity mismatch/);
+  assert.throws(()=>verifyGitHubRun(receipt,run,[]),/artifact missing/);
+  assert.throws(()=>verifyGitHubRun(receipt,run,[{...artifacts[0],expired:true}]),/artifact missing/);
+  assert.throws(()=>verifyGitHubRun(receipt,run,[{...artifacts[0],workflow_run:{id:67890}}]),/artifact missing/);
+});
