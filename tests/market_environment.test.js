@@ -72,25 +72,35 @@ test('existing snapshot source references reject untrusted paths before date and
       'untrusted source path must fail closed: ' + unsafe,
     );
   }
-  // A source symlink must not escape its approved real directory.
+  // Use an isolated copy of the verifier: never write to the checked-out repository.
   const fs = require('node:fs');
   const os = require('node:os');
   const path = require('node:path');
-  const root = path.resolve(__dirname, '..');
-  const allowed = path.join(root, 'data_twse_mi_index');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-source-link-'));
-  const link = path.join(allowed, 'snapshot_research_symlink_20261022.json');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-source-link-'));
   try {
-    fs.writeFileSync(path.join(tmp, 'snapshot_research_symlink_20261022.json'), '{}');
-    fs.symlinkSync(path.join(tmp, 'snapshot_research_symlink_20261022.json'), link);
-    payload.source_files.twse_index = 'data_twse_mi_index/snapshot_research_symlink_20261022.json';
+    const scripts = path.join(dir, 'scripts');
+    const allowed = path.join(dir, 'data_twse_mi_index');
+    const outside = path.join(dir, 'outside');
+    fs.mkdirSync(scripts);
+    fs.mkdirSync(allowed);
+    fs.mkdirSync(outside);
+    fs.copyFileSync(path.join(__dirname, '..', 'scripts', 'verify_market_environment.js'),
+      path.join(scripts, 'verify_market_environment.js'));
+    fs.copyFileSync(path.join(__dirname, '..', 'scripts', 'market_environment_lib.js'),
+      path.join(scripts, 'market_environment_lib.js'));
+    const target = path.join(outside, 'snapshot_research_symlink_20261022.json');
+    fs.writeFileSync(target, '{}');
+    fs.symlinkSync(target, path.join(allowed, 'snapshot_research_symlink_20261022.json'));
+    const isolated = require(path.join(scripts, 'verify_market_environment.js'));
+    const untrusted = { source_files: {
+      twse_index: 'data_twse_mi_index/snapshot_research_symlink_20261022.json',
+    }};
     assert.throws(
-      () => validateReferencedSources(payload, '20261022'),
+      () => isolated.validateReferencedSources(untrusted, '20261022'),
       /twse_index source path resolves outside allowed directory/,
     );
   } finally {
-    fs.rmSync(link, { force: true });
-    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
   }
   payload.source_files.twse_index = 'data_twse_mi_index/twse_index_20261022_missing.json';
   assert.throws(() => validateReferencedSources(payload, '20261022'), /twse_index source file is missing/);
