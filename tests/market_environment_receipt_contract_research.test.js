@@ -326,3 +326,27 @@ test('research-only receipt URL date and host require independent validation', (
   assert.throws(() => requireTwseEndpointDate('https://www.twse.com.tw.evil.invalid/rwd/zh/afterTrading/MI_INDEX?date=20260724', '20260724'),
     /TWSE endpoint or date mismatch/);
 });
+
+test('research-only capture receipt must bind to successful matching-date retry attempt', () => {
+  const attempts = [
+    {requestedDate: '20260724', responseDate: '20260723',
+      raw: Buffer.from('{"date":"20260723"}'), httpStatus: 200},
+    {requestedDate: '20260724', responseDate: '20260724',
+      raw: Buffer.from('{"date":"20260724"}'), httpStatus: 200},
+  ];
+  function selectCapturedAttempt(items, expectedDate) {
+    const matching = items.filter(a => a.requestedDate === expectedDate &&
+      a.responseDate === expectedDate && a.httpStatus === 200);
+    if (matching.length !== 1) throw Error('unique successful matching-date capture missing');
+    return {sourceDate: expectedDate, rawResponseSha256: sha256(matching[0].raw)};
+  }
+  const selected = selectCapturedAttempt(attempts, '20260724');
+  assert.equal(selected.rawResponseSha256, sha256(attempts[1].raw));
+  assert.notEqual(selected.rawResponseSha256, sha256(attempts[0].raw));
+  assert.throws(() => selectCapturedAttempt(attempts.slice(0, 1), '20260724'),
+    /unique successful matching-date capture missing/);
+  assert.throws(() => selectCapturedAttempt([...attempts, {...attempts[1]}], '20260724'),
+    /unique successful matching-date capture missing/);
+  assert.throws(() => selectCapturedAttempt([{...attempts[1], httpStatus: 503}], '20260724'),
+    /unique successful matching-date capture missing/);
+});
