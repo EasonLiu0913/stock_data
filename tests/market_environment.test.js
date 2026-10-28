@@ -72,6 +72,26 @@ test('existing snapshot source references reject untrusted paths before date and
       'untrusted source path must fail closed: ' + unsafe,
     );
   }
+  // A source symlink must not escape its approved real directory.
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const root = path.resolve(__dirname, '..');
+  const allowed = path.join(root, 'data_twse_mi_index');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'snapshot-source-link-'));
+  const link = path.join(allowed, 'snapshot_research_symlink_20261022.json');
+  try {
+    fs.writeFileSync(path.join(tmp, 'snapshot_research_symlink_20261022.json'), '{}');
+    fs.symlinkSync(path.join(tmp, 'snapshot_research_symlink_20261022.json'), link);
+    payload.source_files.twse_index = 'data_twse_mi_index/snapshot_research_symlink_20261022.json';
+    assert.throws(
+      () => validateReferencedSources(payload, '20261022'),
+      /twse_index source path resolves outside allowed directory/,
+    );
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
   payload.source_files.twse_index = 'data_twse_mi_index/twse_index_20261022_missing.json';
   assert.throws(() => validateReferencedSources(payload, '20261022'), /twse_index source file is missing/);
   payload.source_files.twse_index = 'data_twse_mi_index/twse_index_20261023_missing.json';
