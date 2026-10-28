@@ -153,3 +153,27 @@ test('research-only escaped and nested duplicate JSON keys require token-aware v
   const separateObjects = '{"a":{"id":1},"b":{"id":2}}';
   assert.deepEqual(JSON.parse(separateObjects),{a:{id:1},b:{id:2}});
 });
+
+test('research-only receipt rejects substituted bytes even when path, date and metadata remain unchanged', () => {
+  const original = Buffer.from('{"date":"20260724","close":100}');
+  const substituted = Buffer.from('{"date":"20260724","close":999}');
+  const raw = Buffer.from('{"date":"20260724","tables":[1]}');
+  const receipt = {
+    schemaVersion: 1, trust: 'capture_time',
+    capture: {repository: 'EasonLiu0913/stock_data', runId: 12345,
+      commitSha: 'a'.repeat(40), workflow: 'crawl-twse-mi-index.yml'},
+    url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+    httpStatus: 200, capturedAt: '2026-07-24T07:00:00Z', sourceDate: '20260724',
+    rawResponseSha256: sha256(raw), normalizedFileSha256: sha256(original),
+  };
+  assert.equal(check(receipt, raw, original, '20260724'), true);
+  assert.throws(() => check(receipt, raw, substituted, '20260724'),
+    /normalized SHA-256 mismatch/);
+  // Replacing both data and its local digest is not authenticated by a digest alone.
+  const forged = {...receipt, normalizedFileSha256: sha256(substituted)};
+  assert.equal(check(forged, raw, substituted, '20260724'), true,
+    'research finding: a forged local receipt can accompany substituted data');
+  assert.notEqual(sha256(Buffer.from(canonicalReceipt(receipt))),
+    sha256(Buffer.from(canonicalReceipt(forged))),
+    'independently trusted receipt identity must bind the original digest');
+});
