@@ -207,3 +207,28 @@ test('research-only GitHub run identity is not a cryptographic artifact-content 
     sha256(Buffer.from(canonicalReceipt(forged))),
     'independent artifact-byte authentication must bind the expected receipt digest');
 });
+
+function verifyIndependentlyPinnedArtifactBytes(artifactBytes, expectedSha256) {
+  if (!Buffer.isBuffer(artifactBytes)) throw Error('artifact bytes missing');
+  if (typeof expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(expectedSha256))
+    throw Error('independently trusted artifact digest missing');
+  if (sha256(artifactBytes) !== expectedSha256) throw Error('artifact digest mismatch');
+  return true;
+}
+
+test('research-only independent artifact digest pin rejects coherent bundle replacement', () => {
+  const original = Buffer.from('{"sourceDate":"20260724","close":100}');
+  const replacement = Buffer.from('{"sourceDate":"20260724","close":999}');
+  const pinnedDigest = sha256(original); // Model a digest obtained from a separate trusted channel.
+  assert.equal(verifyIndependentlyPinnedArtifactBytes(original, pinnedDigest), true);
+  assert.throws(() => verifyIndependentlyPinnedArtifactBytes(replacement, pinnedDigest),
+    /artifact digest mismatch/);
+  assert.throws(() => verifyIndependentlyPinnedArtifactBytes(replacement, undefined),
+    /independently trusted artifact digest missing/);
+  assert.throws(() => verifyIndependentlyPinnedArtifactBytes(replacement, sha256(replacement).toUpperCase()),
+    /independently trusted artifact digest missing/);
+  assert.throws(() => verifyIndependentlyPinnedArtifactBytes(null, pinnedDigest),
+    /artifact bytes missing/);
+  // A locally recomputed "expected" digest is not an independent pin.
+  assert.equal(verifyIndependentlyPinnedArtifactBytes(replacement, sha256(replacement)), true);
+});
