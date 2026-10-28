@@ -274,3 +274,23 @@ test('research-only Snapshot source gate fails closed on missing or substituted 
     normalizedFileSha256: undefined}, '20260724'),
     /independently trusted artifact digest missing/);
 });
+
+test('research-only raw HTTP bytes must be captured before JSON parsing', () => {
+  const raw = Buffer.from(' { "date" : "20260724", "tables" : [1] }\n');
+  const parsed = JSON.parse(raw.toString('utf8'));
+  const reserialized = Buffer.from(JSON.stringify(parsed));
+  assert.deepEqual(JSON.parse(raw.toString('utf8')), JSON.parse(reserialized.toString('utf8')));
+  assert.notEqual(sha256(raw), sha256(reserialized),
+    'semantic JSON equality cannot reproduce raw HTTP response SHA-256');
+  const receipt = {schemaVersion: 1, trust: 'capture_time',
+    capture: {repository: 'EasonLiu0913/stock_data', runId: 12345,
+      commitSha: 'a'.repeat(40), workflow: 'crawl-twse-mi-index.yml'},
+    url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+    httpStatus: 200, capturedAt: '2026-07-24T07:00:00Z',
+    sourceDate: '20260724', rawResponseSha256: sha256(raw),
+    normalizedFileSha256: sha256(reserialized)};
+  assert.equal(check(receipt, raw, reserialized, '20260724'), true);
+  assert.throws(() => check(receipt, reserialized, reserialized, '20260724'),
+    /raw SHA-256 mismatch/,
+    'post-parse serialization cannot stand in for authenticated raw response bytes');
+});
