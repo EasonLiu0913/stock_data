@@ -74,7 +74,16 @@ test('complete verifier rejects isolated tampered real snapshot, without touchin
     fs.mkdirSync(substitutionTwseLink);
     fs.copyFileSync(originalTwse, isolatedTwse);
     assert.equal(run().status, 0, 'isolated copied source must pass');
+    // Research-only independent source-byte pin: demonstrate the missing fail-closed gate
+    // alongside the unmodified production verifier. This is NOT a production fix.
+    const crypto = require('node:crypto');
+    const digest = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    const independentlyPinnedDigest = digest(originalTwse);
+    assert.equal(digest(isolatedTwse), independentlyPinnedDigest,
+      'untampered isolated source matches independently pinned repository source');
     fs.writeFileSync(isolatedTwse, '{}');
+    assert.notEqual(digest(isolatedTwse), independentlyPinnedDigest,
+      'research-only independent source pin rejects substituted bytes');
     const replaced = run();
     assert.equal(replaced.status, 0,
       'research characterization: verifier currently accepts substituted nonempty TWSE source: ' + replaced.stderr);
