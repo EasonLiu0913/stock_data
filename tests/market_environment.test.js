@@ -58,6 +58,20 @@ test('existing snapshot source references reject untrusted paths before date and
     foreign_futures: 'data_taifex_major_institutional_traders_futures_contracts/20261022_foreign_futures.json',
   }};
   assert.throws(() => validateReferencedSources(payload, '20261022'), /twse_index source path is outside allowed directory/);
+  for (const unsafe of [
+    '../data_twse_mi_index/twse_index_20261022.json',
+    'data_twse_mi_index/../data_twse_mi_index/twse_index_20261022.json',
+    'data_twse_mi_index/./twse_index_20261022.json',
+    '/tmp/twse_index_20261022.json',
+    'data_market_risk/twse_index_20261022.json',
+  ]) {
+    payload.source_files.twse_index = unsafe;
+    assert.throws(
+      () => validateReferencedSources(payload, '20261022'),
+      /twse_index source path is outside allowed directory/,
+      'untrusted source path must fail closed: ' + unsafe,
+    );
+  }
   payload.source_files.twse_index = 'data_twse_mi_index/twse_index_20261022_missing.json';
   assert.throws(() => validateReferencedSources(payload, '20261022'), /twse_index source file is missing/);
   payload.source_files.twse_index = 'data_twse_mi_index/twse_index_20261023_missing.json';
