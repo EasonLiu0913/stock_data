@@ -350,3 +350,40 @@ test('research-only capture receipt must bind to successful matching-date retry 
   assert.throws(() => selectCapturedAttempt([{...attempts[1], httpStatus: 503}], '20260724'),
     /unique successful matching-date capture missing/);
 });
+
+
+test('research-only retry receipt must bind the exact successful HTTP response bytes', () => {
+  const attempts = [
+    {requestedDate: '20260724', status: 200, url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+      bytes: Buffer.from('{"date":"20260723","tables":[]}')},
+    {requestedDate: '20260724', status: 503, url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+      bytes: Buffer.from('{"date":"20260724","tables":[]}')},
+    {requestedDate: '20260724', status: 200, url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+      bytes: Buffer.from(' { "date": "20260724", "tables": [] }\\n')},
+  ];
+  function bindAcceptedAttempt(items, expectedDate) {
+    const accepted = items.filter(a => {
+      if (a.status !== 200 || a.requestedDate !== expectedDate) return false;
+      const u = new URL(a.url);
+      if (u.protocol !== 'https:' || u.hostname !== 'www.twse.com.tw' ||
+          u.pathname !== '/rwd/zh/afterTrading/MI_INDEX' ||
+          u.searchParams.getAll('date').length !== 1 ||
+          u.searchParams.get('date') !== expectedDate) return false;
+      return JSON.parse(a.bytes.toString('utf8')).date === expectedDate;
+    });
+    if (accepted.length !== 1) throw Error('ambiguous or missing accepted HTTP attempt');
+    return {status: accepted[0].status, rawResponseSha256: sha256(accepted[0].bytes)};
+  }
+  const receipt = bindAcceptedAttempt(attempts, '20260724');
+  assert.equal(receipt.rawResponseSha256, sha256(attempts[2].bytes));
+  assert.notEqual(receipt.rawResponseSha256, sha256(attempts[0].bytes));
+  assert.notEqual(receipt.rawResponseSha256, sha256(attempts[1].bytes));
+  assert.throws(() => bindAcceptedAttempt(attempts.slice(0, 2), '20260724'),
+    /ambiguous or missing accepted HTTP attempt/);
+  assert.throws(() => bindAcceptedAttempt([...attempts, {...attempts[2]}], '20260724'),
+    /ambiguous or missing accepted HTTP attempt/);
+  assert.throws(() => bindAcceptedAttempt([{...attempts[2], url: 'https://example.invalid/?date=20260724'}], '20260724'),
+    /ambiguous or missing accepted HTTP attempt/);
+  assert.throws(() => bindAcceptedAttempt([{...attempts[2], bytes: Buffer.from('not json')}], '20260724'),
+    SyntaxError);
+});
