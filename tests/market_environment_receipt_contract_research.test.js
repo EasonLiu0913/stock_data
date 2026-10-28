@@ -294,3 +294,35 @@ test('research-only raw HTTP bytes must be captured before JSON parsing', () => 
     /raw SHA-256 mismatch/,
     'post-parse serialization cannot stand in for authenticated raw response bytes');
 });
+
+test('research-only receipt URL date and host require independent validation', () => {
+  const raw = Buffer.from('{"date":"20260724","tables":[1]}');
+  const normalized = Buffer.from(JSON.stringify(JSON.parse(raw.toString('utf8'))));
+  const receipt = {schemaVersion: 1, trust: 'capture_time',
+    capture: {repository: 'EasonLiu0913/stock_data', runId: 12345,
+      commitSha: 'a'.repeat(40), workflow: 'crawl-twse-mi-index.yml'},
+    url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+    httpStatus: 200, capturedAt: '2026-07-24T07:00:00Z',
+    sourceDate: '20260724', rawResponseSha256: sha256(raw),
+    normalizedFileSha256: sha256(normalized)};
+  const untrustedUrl = {...receipt, url: 'https://example.invalid/MI_INDEX?date=20260723'};
+  assert.equal(check(untrustedUrl, raw, normalized, '20260724'), true,
+    'characterization: generic HTTPS-only URL validation accepts wrong host/date');
+  function requireTwseEndpointDate(value, expectedDate) {
+    let url;
+    try { url = new URL(value); } catch { throw Error('TWSE endpoint invalid'); }
+    if (url.protocol !== 'https:' || url.hostname !== 'www.twse.com.tw' ||
+        url.pathname !== '/rwd/zh/afterTrading/MI_INDEX' ||
+        url.searchParams.getAll('date').length !== 1 ||
+        url.searchParams.get('date') !== expectedDate)
+      throw Error('TWSE endpoint or date mismatch');
+    return true;
+  }
+  assert.equal(requireTwseEndpointDate(receipt.url, '20260724'), true);
+  assert.throws(() => requireTwseEndpointDate(untrustedUrl.url, '20260724'),
+    /TWSE endpoint or date mismatch/);
+  assert.throws(() => requireTwseEndpointDate(receipt.url + '&date=20260723', '20260724'),
+    /TWSE endpoint or date mismatch/);
+  assert.throws(() => requireTwseEndpointDate('https://www.twse.com.tw.evil.invalid/rwd/zh/afterTrading/MI_INDEX?date=20260724', '20260724'),
+    /TWSE endpoint or date mismatch/);
+});
