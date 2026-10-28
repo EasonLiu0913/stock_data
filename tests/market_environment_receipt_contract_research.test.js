@@ -177,3 +177,33 @@ test('research-only receipt rejects substituted bytes even when path, date and m
     sha256(Buffer.from(canonicalReceipt(forged))),
     'independently trusted receipt identity must bind the original digest');
 });
+
+test('research-only GitHub run identity is not a cryptographic artifact-content attestation', () => {
+  const raw = Buffer.from('{"date":"20260724","tables":[1]}');
+  const original = Buffer.from('{"date":"20260724","close":100}');
+  const replacement = Buffer.from('{"date":"20260724","close":999}');
+  const base = {
+    schemaVersion: 1, trust: 'capture_time',
+    capture: {repository: 'EasonLiu0913/stock_data', runId: 12345,
+      commitSha: 'a'.repeat(40), workflow: 'crawl-twse-mi-index.yml',
+      artifactName: 'twse-mi-index-source-20260724'},
+    url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
+    httpStatus: 200, capturedAt: '2026-07-24T07:00:00Z',
+    sourceDate: '20260724', rawResponseSha256: sha256(raw),
+    normalizedFileSha256: sha256(original),
+  };
+  const run = {id: 12345, repository: {full_name: 'EasonLiu0913/stock_data'},
+    head_sha: 'a'.repeat(40), path: '.github/workflows/crawl-twse-mi-index.yml',
+    status: 'completed', conclusion: 'success'};
+  const artifacts = [{name: base.capture.artifactName, expired: false,
+    workflow_run: {id: run.id}}];
+  assert.equal(verifyGitHubRun(base, run, artifacts), true);
+  const forged = {...base, normalizedFileSha256: sha256(replacement)};
+  assert.equal(verifyGitHubRun(forged, run, artifacts), true,
+    'run identity and artifact name alone cannot authenticate receipt contents');
+  assert.equal(check(forged, raw, replacement, '20260724'), true,
+    'a self-consistent forged local receipt passes digest comparison');
+  assert.notEqual(sha256(Buffer.from(canonicalReceipt(base))),
+    sha256(Buffer.from(canonicalReceipt(forged))),
+    'independent artifact-byte authentication must bind the expected receipt digest');
+});
