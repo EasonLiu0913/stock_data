@@ -232,3 +232,45 @@ test('research-only independent artifact digest pin rejects coherent bundle repl
   // A locally recomputed "expected" digest is not an independent pin.
   assert.equal(verifyIndependentlyPinnedArtifactBytes(replacement, sha256(replacement)), true);
 });
+
+function verifyPinnedSnapshotSource(sourceBytes, receipt, trusted, expectedDate) {
+  if (!trusted || trusted.origin !== 'independent_capture_artifact')
+    throw Error('independent capture evidence missing');
+  if (!receipt || !receipt.capture || receipt.capture.runId !== trusted.runId ||
+      receipt.capture.commitSha !== trusted.commitSha ||
+      receipt.capture.artifactName !== trusted.artifactName)
+    throw Error('capture identity mismatch');
+  if (receipt.sourceDate !== expectedDate || trusted.sourceDate !== expectedDate)
+    throw Error('source date mismatch');
+  verifyIndependentlyPinnedArtifactBytes(sourceBytes, trusted.normalizedFileSha256);
+  if (receipt.normalizedFileSha256 !== trusted.normalizedFileSha256)
+    throw Error('receipt digest not bound to trusted evidence');
+  return true;
+}
+
+test('research-only Snapshot source gate fails closed on missing or substituted independent evidence', () => {
+  const source = Buffer.from('{"date":"20260724","close":100}');
+  const changed = Buffer.from('{"date":"20260724","close":999}');
+  const trusted = {origin: 'independent_capture_artifact', runId: 12345,
+    commitSha: 'a'.repeat(40), artifactName: 'twse-mi-index-source-20260724',
+    sourceDate: '20260724', normalizedFileSha256: sha256(source)};
+  const receipt = {capture: {runId: trusted.runId, commitSha: trusted.commitSha,
+    artifactName: trusted.artifactName}, sourceDate: trusted.sourceDate,
+    normalizedFileSha256: trusted.normalizedFileSha256};
+  assert.equal(verifyPinnedSnapshotSource(source, receipt, trusted, '20260724'), true);
+  assert.throws(() => verifyPinnedSnapshotSource(source, receipt, null, '20260724'),
+    /independent capture evidence missing/);
+  assert.throws(() => verifyPinnedSnapshotSource(changed, receipt, trusted, '20260724'),
+    /artifact digest mismatch/);
+  assert.throws(() => verifyPinnedSnapshotSource(source, {...receipt,
+    normalizedFileSha256: sha256(changed)}, trusted, '20260724'),
+    /receipt digest not bound/);
+  assert.throws(() => verifyPinnedSnapshotSource(source, {...receipt,
+    capture: {...receipt.capture, runId: 67890}}, trusted, '20260724'),
+    /capture identity mismatch/);
+  assert.throws(() => verifyPinnedSnapshotSource(source, receipt, trusted, '20260723'),
+    /source date mismatch/);
+  assert.throws(() => verifyPinnedSnapshotSource(source, receipt, {...trusted,
+    normalizedFileSha256: undefined}, '20260724'),
+    /independently trusted artifact digest missing/);
+});
