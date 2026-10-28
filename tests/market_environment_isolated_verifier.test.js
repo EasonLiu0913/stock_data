@@ -55,6 +55,12 @@ test('complete verifier rejects isolated tampered real snapshot, without touchin
     const twseFile = path.join(twseLink, '20260724_twse_mi_index.json');
     fs.writeFileSync(twseFile, '');
     expectRejected(/twse_index source file is empty/, 'empty TWSE source');
+    // Source-file symlink escaping the allowed real directory must fail closed.
+    const escapedSource = path.join(dir, 'escaped_twse_20260724.json');
+    fs.writeFileSync(escapedSource, '{}');
+    fs.unlinkSync(twseFile);
+    fs.symlinkSync(escapedSource, twseFile);
+    expectRejected(/twse_index source path resolves outside allowed directory/, 'TWSE symlink escape');
     fs.unlinkSync(twseFile);
     fs.rmdirSync(twseLink);
     fs.symlinkSync(path.join(root, 'data_twse_mi_index'), twseLink, 'dir');
