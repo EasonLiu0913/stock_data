@@ -3,9 +3,10 @@
 // Pure decision gate for research MVP. No network, secrets or side effects.
 // A missing receipt is NOT proof that YouTube did not create a video.
 // Only a separately verified absence may permit first upload.
-function decide({receipt, verifiedAbsence = false, authorized = false}) {
+function decide({receipt, verifiedAbsence = false, authorized = false, fixtureDryRun = false}) {
   if (!authorized) return {action:'blocked', reason:'owner_private_pilot_authorization_required'};
   if (receipt !== null && receipt !== undefined) {
+    if (receipt?.fixture_only === true && !fixtureDryRun) return {action:'blocked', reason:'synthetic_receipt_not_valid_for_upload'};
     if (typeof receipt !== 'object' || !/^[A-Za-z0-9_-]{8,}$/.test(receipt.youtube_video_id || '') ||
         receipt.privacy !== 'private') {
       return {action:'blocked', reason:'invalid_or_untrusted_receipt'};
