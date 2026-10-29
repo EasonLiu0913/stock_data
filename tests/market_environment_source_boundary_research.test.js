@@ -158,3 +158,30 @@ test('research-only pinned descriptor hash rejects substituted source bytes', ()
     fs.rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('research-only independent SHA pin rejects pre-open replacement', () => {
+  const crypto = require('node:crypto');
+  const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'market-preopen-pin-'));
+  let fd;
+  try {
+    const source = path.join(dir, '20260724_twse_mi_index.json');
+    const expectedBytes = Buffer.from('{"date":"20260724","value":1}');
+    const alteredBytes = Buffer.from('{"date":"20260724","value":9}');
+    const expectedSha = sha(expectedBytes);
+    fs.writeFileSync(source, expectedBytes);
+    // The source is replaced *before* opening it: a file descriptor alone is insufficient.
+    fs.writeFileSync(source, alteredBytes);
+    fd = fs.openSync(source, fs.constants.O_RDONLY);
+    const observed = fs.readFileSync(fd);
+    assert.notEqual(sha(observed), expectedSha);
+    assert.throws(() => {
+      if (sha(observed) !== expectedSha) throw Error('independent source SHA-256 mismatch');
+    }, /independent source SHA-256 mismatch/);
+    // A matching hash must be computed from the same captured bytes that consumers use.
+    assert.equal(sha(observed), sha(alteredBytes));
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+    fs.rmSync(dir, {recursive:true, force:true});
+  }
+});
