@@ -87,3 +87,9 @@ test('checkpoint prepared on disk can be recovered by a fresh route resolver', (
     assert.equal(resolveRoute({receiptPath:file,expectedDate:'20261013',authorized:true}).action,'already_uploaded');
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('synthetic receipt never authorizes real caption retry', () => {
+  const receipt={target_date:'20261013',youtube_video_id:'FixtureId123',privacy:'private',upload_status:'video_created',fixture_only:true};
+  assert.equal(decide({receipt,authorized:true}).action,'blocked');
+  assert.equal(decide({receipt,authorized:true,fixtureDryRun:true}).action,'captions_only');
+});
