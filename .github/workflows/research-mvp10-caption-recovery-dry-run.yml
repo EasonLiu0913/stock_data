@@ -33,7 +33,7 @@ jobs:
           path="video_upload_receipts/mvp-private/$TARGET_DATE.json"
           http_status="$(gh api -i "repos/$GITHUB_REPOSITORY/contents/$path?ref=research/daily-video-mvp10-a-20261029" 2>/dev/null | head -n 1 || true)"
           if [[ "$http_status" == *" 200 "* ]]; then
-            gh api "repos/$GITHUB_REPOSITORY/contents/$path?ref=research/daily-video-mvp10-a-20261029" --jq '.content' | tr -d '\\n' | base64 -d > receipt.json
+            gh api "repos/$GITHUB_REPOSITORY/contents/$path?ref=research/daily-video-mvp10-a-20261029" --jq '.content' | base64 -d > receipt.json
             export MVP_UPLOAD_RECEIPT_FILE="$PWD/receipt.json"
           elif [[ "$http_status" == *" 404 "* ]]; then
             echo "Receipt absent: upload state remains unknown; fail closed"
