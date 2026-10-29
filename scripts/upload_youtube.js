@@ -17,6 +17,13 @@ function normalizeSecret(name, raw) {
   return value.replace(/\\r|\\n/g, '').trim();
 }
 
+// Research MVP: a private upload is a separately approved external side effect.
+// Fail before accessing credentials or contacting Google unless deliberately enabled.
+if (process.env.YOUTUBE_UPLOAD_AUTHORIZED !== 'private-pilot') {
+  console.error('YouTube upload blocked: explicit private-pilot authorization required');
+  process.exit(1);
+}
+
 const YOUTUBE_CLIENT_ID = normalizeSecret('YOUTUBE_CLIENT_ID', process.env.YOUTUBE_CLIENT_ID);
 const YOUTUBE_CLIENT_SECRET = normalizeSecret('YOUTUBE_CLIENT_SECRET', process.env.YOUTUBE_CLIENT_SECRET);
 const YOUTUBE_REFRESH_TOKEN = normalizeSecret('YOUTUBE_REFRESH_TOKEN', process.env.YOUTUBE_REFRESH_TOKEN);
