@@ -1,5 +1,8 @@
 name: "[Research Only] MVP10 Caption Recovery Dry Run"
 on:
+  push:
+    branches: [research/daily-video-mvp10-a-20261029]
+    paths: [.github/workflows/research-mvp10-caption-recovery-dry-run.yml]
   workflow_dispatch:
     inputs:
       date:
@@ -24,8 +27,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_DATE: ${{ inputs.date }}
-          MVP_TARGET_DATE: ${{ inputs.date }}
+          TARGET_DATE: ${{ inputs.date || '20261013' }}
+          MVP_TARGET_DATE: ${{ inputs.date || '20261013' }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -41,6 +44,7 @@ jobs:
             echo "Receipt lookup unavailable or unauthorized: $http_status" >&2
             exit 1
           fi
+          # Authorization here only evaluates the pure decision; no upload credentials or action is available.
           export YOUTUBE_UPLOAD_AUTHORIZED=private-pilot
           set +e
           node scripts/daily_gainers_mvp_upload_route.js
