@@ -9,7 +9,11 @@ function resolveRoute({receiptPath, authorized = false, verifiedAbsence = false}
   let receipt = null;
   if (receiptPath) {
     if (!fs.existsSync(receiptPath)) return {action:'blocked',reason:'receipt_unavailable_or_unverified'};
-    receipt = JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+    try {
+      receipt = JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+    } catch {
+      return {action:'blocked',reason:'receipt_parse_failed'};
+    }
   }
   return decide({receipt,authorized,verifiedAbsence});
 }
