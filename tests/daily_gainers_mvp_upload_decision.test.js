@@ -49,3 +49,13 @@ test('corrupt persisted receipt blocks instead of retrying MP4', () => {
     assert.deepEqual(resolveRoute({receiptPath:file,authorized:true}),{action:'blocked',reason:'receipt_parse_failed'});
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('durable video-created receipt is date scoped and private', () => {
+  const {build}=require('../scripts/daily_gainers_mvp_upload_receipt');
+  const receipt=build({date:'20261013',videoId:id,sourceRun:'40832551413',privacy:'private'});
+  assert.equal(receipt.upload_status,'video_created');
+  assert.equal(receipt.target_date,'20261013');
+  assert.equal(decide({receipt,authorized:true}).action,'captions_only');
+  assert.throws(()=>build({date:'20261013',videoId:id,sourceRun:'40832551413',privacy:'public'}));
+  assert.throws(()=>build({date:'20261012',videoId:id,sourceRun:'x',privacy:'private'}));
+});
