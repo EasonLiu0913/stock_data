@@ -38,3 +38,14 @@ test('read-only route only resumes captions from a supplied valid receipt', () =
     assert.equal(resolveRoute({authorized:true}).action,'blocked');
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('corrupt persisted receipt blocks instead of retrying MP4', () => {
+  const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+  const {resolveRoute}=require('../scripts/daily_gainers_mvp_upload_route');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mvp-upload-corrupt-'));
+  try {
+    const file=path.join(dir,'receipt.json');
+    fs.writeFileSync(file,'{incomplete');
+    assert.deepEqual(resolveRoute({receiptPath:file,authorized:true}),{action:'blocked',reason:'receipt_parse_failed'});
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
