@@ -24,3 +24,17 @@ test('reject invalid/nonprivate receipt', () => {
 test('allow first upload only after separately verified absence', () => {
   assert.equal(decide({authorized:true,verifiedAbsence:true,receipt:null}).action,'first_upload');
 });
+
+test('read-only route only resumes captions from a supplied valid receipt', () => {
+  const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+  const {resolveRoute}=require('../scripts/daily_gainers_mvp_upload_route');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mvp-upload-route-'));
+  try {
+    const file=path.join(dir,'receipt.json');
+    assert.equal(resolveRoute({receiptPath:file,authorized:true}).action,'blocked');
+    fs.writeFileSync(file,JSON.stringify({youtube_video_id:id,privacy:'private',upload_status:'video_created'}));
+    assert.deepEqual(resolveRoute({receiptPath:file,authorized:true}),{action:'captions_only',videoId:id});
+    assert.equal(resolveRoute({receiptPath:file,authorized:false}).action,'blocked');
+    assert.equal(resolveRoute({authorized:true}).action,'blocked');
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
