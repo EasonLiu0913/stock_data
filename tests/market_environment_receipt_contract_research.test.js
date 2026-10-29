@@ -387,3 +387,37 @@ test('research-only retry receipt must bind the exact successful HTTP response b
   assert.throws(() => bindAcceptedAttempt([{...attempts[2], bytes: Buffer.from('not json')}], '20260724'),
     SyntaxError);
 });
+
+test('research-only receipt to Snapshot bytes requires independently pinned digest', () => {
+  const raw = Buffer.from('{"date":"20260724","tables":[{"value":1}]}');
+  const normalized = Buffer.from(JSON.stringify(JSON.parse(raw.toString('utf8'))));
+  const sourceHash = sha256(raw);
+  const normalizedHash = sha256(normalized);
+  const independentPin = {sourceDate:'20260724', rawResponseSha256:sourceHash,
+    normalizedFileSha256:normalizedHash};
+  const snapshot = {base_trade_date_compact:'20260724', source_receipt: {...independentPin}};
+  function requirePinnedEvidence(record, receipt, originalBytes, normalizedBytes, pin) {
+    if (!pin || record.base_trade_date_compact !== pin.sourceDate ||
+        receipt.sourceDate !== pin.sourceDate ||
+        receipt.rawResponseSha256 !== pin.rawResponseSha256 ||
+        receipt.normalizedFileSha256 !== pin.normalizedFileSha256 ||
+        sha256(originalBytes) !== pin.rawResponseSha256 ||
+        sha256(normalizedBytes) !== pin.normalizedFileSha256 ||
+        JSON.stringify(record.source_receipt) !== JSON.stringify(receipt)) {
+      throw Error('independent source evidence mismatch');
+    }
+    return true;
+  }
+  assert.equal(requirePinnedEvidence(snapshot, independentPin, raw, normalized, independentPin), true);
+  const alternate = Buffer.from('{"date":"20260724","tables":[{"value":9}]}');
+  const forged = {...independentPin, rawResponseSha256:sha256(alternate)};
+  assert.throws(() => requirePinnedEvidence(
+    {...snapshot, source_receipt:forged}, forged, alternate, normalized, independentPin),
+    /independent source evidence mismatch/,
+    'internally consistent substituted receipt must not replace independent source proof');
+  assert.throws(() => requirePinnedEvidence(snapshot, independentPin, raw, normalized, null),
+    /independent source evidence mismatch/);
+  assert.throws(() => requirePinnedEvidence(
+    {...snapshot,base_trade_date_compact:'20260723'}, independentPin,raw,normalized,independentPin),
+    /independent source evidence mismatch/);
+});
