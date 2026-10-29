@@ -3,6 +3,9 @@ on:
   push:
     branches: [research/daily-video-mvp10-a-20261029]
     paths:
+      - scripts/persist_daily_gainers_mvp_upload_receipt.sh
+      - scripts/daily_gainers_mvp_upload_receipt.js
+      - scripts/daily_gainers_mvp_upload_route.js
       - scripts/daily_gainers_mvp_upload_decision.js
       - tests/daily_gainers_mvp_upload_decision.test.js
       - .github/workflows/research-mvp10-upload-decision-ci.yml
@@ -19,5 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Syntax-check guarded receipt writer (no execution)
+        run: bash -n scripts/persist_daily_gainers_mvp_upload_receipt.sh
       - name: Verify pure upload decision logic
         run: node --test tests/daily_gainers_mvp_upload_decision.test.js
