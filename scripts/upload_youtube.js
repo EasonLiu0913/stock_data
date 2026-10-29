@@ -137,9 +137,12 @@ async function uploadBytes(uploadUrl) {
   console.log('Resumable session: PASS');
   const video = await uploadBytes(uploadUrl);
   if (!video.id) throw new Error(`Upload response missing video id: ${JSON.stringify(video)}`);
+  if (video.status?.privacyStatus !== 'private') {
+    throw new Error(`YouTube did not confirm private visibility: ${video.status?.privacyStatus || 'missing'}`);
+  }
   const result = {
     video_id: video.id,
-    privacy_status: video.status?.privacyStatus || 'private',
+    privacy_status: video.status.privacyStatus,
     watch_url: `https://www.youtube.com/watch?v=${video.id}`,
     studio_url: `https://studio.youtube.com/video/${video.id}/edit`,
   };
