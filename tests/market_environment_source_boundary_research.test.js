@@ -66,3 +66,35 @@ test('source symlink escaping approved directory fails closed in isolated fixtur
     fs.rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('source replacement with same-size bytes is not authenticated by path-only source gate', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'market-source-replacement-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'scripts'));
+    for (const file of ['verify_market_environment.js', 'market_environment_lib.js']) {
+      fs.copyFileSync(path.join(root, 'scripts', file), path.join(dir, 'scripts', file));
+    }
+    const twseDir = path.join(dir, 'data_twse_mi_index');
+    const futuresDir = path.join(dir, 'data_taifex_major_institutional_traders_futures_contracts');
+    fs.mkdirSync(twseDir);
+    fs.mkdirSync(futuresDir);
+    const twseFile = path.join(twseDir, '20260724_twse_mi_index.json');
+    const original = '{"date":"20260724","value":1}';
+    const replacement = '{"date":"20260724","value":9}';
+    assert.equal(Buffer.byteLength(original), Buffer.byteLength(replacement));
+    fs.writeFileSync(twseFile, original);
+    fs.writeFileSync(path.join(futuresDir, '20260724_taifex_major_institutional_traders_futures_contracts.json'), original);
+    const {validateReferencedSources} = require(path.join(dir, 'scripts', 'verify_market_environment.js'));
+    const payload = {source_files: {
+      twse_index: realTwse,
+      foreign_futures: realFutures,
+    }};
+    assert.doesNotThrow(() => validateReferencedSources(payload, base));
+    fs.writeFileSync(twseFile, replacement);
+    assert.notEqual(fs.readFileSync(twseFile, 'utf8'), original);
+    assert.doesNotThrow(() => validateReferencedSources(payload, base),
+      'characterization: the path/size/date gate does not authenticate file bytes');
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
