@@ -59,3 +59,15 @@ test('durable video-created receipt is date scoped and private', () => {
   assert.throws(()=>build({date:'20261013',videoId:id,sourceRun:'40832551413',privacy:'public'}));
   assert.throws(()=>build({date:'20261012',videoId:id,sourceRun:'x',privacy:'private'}));
 });
+
+test('cross-date persisted video receipt cannot resume another trading date', () => {
+  const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+  const {resolveRoute}=require('../scripts/daily_gainers_mvp_upload_route');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mvp-upload-date-'));
+  try {
+    const file=path.join(dir,'receipt.json');
+    fs.writeFileSync(file,JSON.stringify({target_date:'20261013',youtube_video_id:id,privacy:'private',upload_status:'video_created'}));
+    assert.deepEqual(resolveRoute({receiptPath:file,expectedDate:'20261014',authorized:true}),{action:'blocked',reason:'receipt_date_mismatch'});
+    assert.equal(resolveRoute({receiptPath:file,expectedDate:'20261013',authorized:true}).action,'captions_only');
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
