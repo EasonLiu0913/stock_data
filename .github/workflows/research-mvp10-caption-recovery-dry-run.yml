@@ -1,0 +1,45 @@
+name: "[Research Only] MVP10 Caption Recovery Dry Run"
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Trading date YYYYMMDD"
+        required: true
+permissions:
+  contents: read
+jobs:
+  route-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          sparse-checkout: |
+            scripts/daily_gainers_mvp_upload_decision.js
+            scripts/daily_gainers_mvp_upload_route.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Resolve durable receipt without uploading
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_DATE: ${{ inputs.date }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_DATE" =~ ^20[0-9]{6}$ ]] || exit 1
+          path="video_upload_receipts/mvp-private/$TARGET_DATE.json"
+          if gh api "repos/$GITHUB_REPOSITORY/contents/$path?ref=research/daily-video-mvp10-a-20261029" --jq '.content' > receipt.b64; then
+            base64 -d < receipt.b64 > receipt.json
+            export MVP_UPLOAD_RECEIPT_FILE="$PWD/receipt.json"
+          else
+            echo "No trusted durable receipt: fail closed"
+          fi
+          export YOUTUBE_UPLOAD_AUTHORIZED=private-pilot
+          set +e
+          node scripts/daily_gainers_mvp_upload_route.js
+          status=$?
+          set -e
+          echo "Dry run only; never dispatch YouTube or write a receipt"
+          test "$status" -eq 0 || test "$status" -eq 2
