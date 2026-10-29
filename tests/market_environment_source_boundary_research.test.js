@@ -98,3 +98,34 @@ test('source replacement with same-size bytes is not authenticated by path-only 
     fs.rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('post-check symlink swap demonstrates unpinned source-read race', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'market-postcheck-swap-'));
+  try {
+    const scriptDir = path.join(dir, 'scripts');
+    fs.mkdirSync(scriptDir);
+    for (const name of ['verify_market_environment.js', 'market_environment_lib.js']) {
+      fs.copyFileSync(path.join(root, 'scripts', name), path.join(scriptDir, name));
+    }
+    const twseDir = path.join(dir, 'data_twse_mi_index');
+    const futuresDir = path.join(dir, 'data_taifex_major_institutional_traders_futures_contracts');
+    fs.mkdirSync(twseDir);
+    fs.mkdirSync(futuresDir);
+    const source = path.join(twseDir, '20260724_twse_mi_index.json');
+    const outside = path.join(dir, 'external-payload.json');
+    fs.writeFileSync(source, '{"date":"20260724","value":"trusted"}');
+    fs.writeFileSync(outside, '{"date":"20260724","value":"replaced"}');
+    fs.writeFileSync(path.join(futuresDir, '20260724_taifex_major_institutional_traders_futures_contracts.json'), '{}');
+    const {validateReferencedSources} = require(path.join(scriptDir, 'verify_market_environment.js'));
+    const payload = {source_files: {twse_index: realTwse, foreign_futures: realFutures}};
+    assert.doesNotThrow(() => validateReferencedSources(payload, base));
+    fs.rmSync(source);
+    fs.symlinkSync(outside, source);
+    assert.equal(JSON.parse(fs.readFileSync(source, 'utf8')).value, 'replaced',
+      'a later path-based read can observe untrusted substituted bytes');
+    assert.throws(() => validateReferencedSources(payload, base), /resolves outside allowed directory/,
+      'rechecking after replacement rejects the symlink; previous validation is not a durable authorization');
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
