@@ -1,0 +1,180 @@
+name: "[Research] Daily 5% Historical Replay 20261008"
+on:
+  workflow_dispatch:
+    inputs:
+      research_confirmation:
+        description: "Type REPLAY_20261008 for isolated historical test"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: daily-gainers-historical-replay-20261008
+  cancel-in-progress: false
+jobs:
+  render_preview_only:
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/video-date-fail-closed-20261013' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/fix/video-date-fail-closed-20261013' && inputs.research_confirmation == 'REPLAY_20261008') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout video inputs only
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            tests/test_daily_gainers_spoken_text.py
+            tests/test_daily_gainers_subtitle_alignment.py
+            tests/daily_gainers_video_timestamps.test.js
+            tests/daily_gainers_video_date_gate.test.js
+            assets/daily-gainers-vtuber-sprite.webp
+            data_daily_gain_over_5
+            data_history_sma/non_trading_days.json
+            video_scripts
+            recovery-requests/video-date-selection-research/replay-input
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install media dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! command -v rsvg-convert >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
+            timeout 180s sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          fi
+          ffmpeg -version | head -1
+          rsvg-convert --version
+          timeout 180s python -m pip install --disable-pip-version-check --no-cache-dir --retries 4 --timeout 30 edge-tts gTTS mutagen pypinyin
+
+      - name: Prepare derived research input in ephemeral runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/research_create_20261008_replay_script.js
+          node scripts/research_preflight_20261008_replay.js
+          test -s recovery-requests/video-date-selection-research/replay-input/20261008-provenance.json
+          cp recovery-requests/video-date-selection-research/replay-input/20261008.json video_scripts/daily-gainers/20261008.json
+          echo 'Derived 20261008 replay staged only in disposable Actions checkout.'
+
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: '20261008'
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-}"
+          if [ -z "$date" ]; then
+            echo "Explicit date required; no historical-script fallback" >&2
+            exit 2
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          for file in             "data_daily_gain_over_5/${date}.json"             "data_daily_gain_over_5/analysis-ai/${date}.json"             "data_daily_gain_over_5/market-summary/${date}.json"; do
+            [ -s "$file" ] || { echo "Missing required file: $file" >&2; exit 1; }
+          done
+          [ -s "video_scripts/daily-gainers/${date}.json" ] || { echo "Missing ChatGPT video script for ${date}" >&2; exit 1; }
+          [ "$date" = "20261008" ] || { echo "Replay date must remain pinned" >&2; exit 2; }
+          node scripts/validate_daily_gainers_video_script.js "$date"
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate historical video date-gate regression
+        run: node tests/daily_gainers_video_date_gate.test.js
+
+      - name: Validate ChatGPT script against final analysis
+        run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
+
+      - name: Build video content package
+        run: node scripts/build_daily_gainers_video_package.js "${{ steps.date.outputs.date }}"
+
+      - name: Validate dynamic stock chapter timestamps
+        run: node tests/daily_gainers_video_timestamps.test.js
+
+      - name: Validate spoken date normalization
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
+
+      - name: Validate subtitle speech synchronization
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py'
+
+      - name: Synthesize Chinese narration
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: "+15%"
+        run: |
+          python scripts/synthesize_daily_gainers_tts.py             "output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json"
+
+      - name: Build text-aware VTuber lip sync
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          python scripts/build_daily_gainers_lipsync.py "output/daily-gainers-video/${date}/plan.json"
+
+      - name: Render MP4 with VTuber lip sync
+        env:
+          YOUTUBE_VTUBER_ENABLED: "1"
+        run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
+
+      - name: Build Traditional Chinese subtitles
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
+
+      - name: Video QA
+        id: qa
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          video="output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"
+          qa="output/daily-gainers-video/${date}/qa.json"
+          test -s "$video"
+          test -s "$qa"
+          duration="$(jq -r '.duration_seconds' "$qa")"
+          minutes="$(jq -r '.duration_minutes' "$qa")"
+          scenes="$(jq -r '.scene_count' "$qa")"
+          size="$(jq -r '.file_size_mib' "$qa")"
+          awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
+          echo "Video QA PASS: ${minutes} min, ${scenes} scenes, ${size} MiB"
+          echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
+          echo "scenes=$scenes" >> "$GITHUB_OUTPUT"
+          echo "size_mib=$size" >> "$GITHUB_OUTPUT"
+
+      - name: Build local chapter metadata (no upload)
+        run: node scripts/add_daily_gainers_video_timestamps.js "${{ steps.date.outputs.date }}"
+
+      - name: Generate branded YouTube thumbnail
+        run: node scripts/build_daily_gainers_thumbnail.js "${{ steps.date.outputs.date }}"
+
+      - name: Upload rendered package artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: "research-historical-replay-20261008-${{ github.run_id }}"
+          path: |
+            recovery-requests/video-date-selection-research/replay-input/20261008-provenance.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/metadata.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail.jpg
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail-background.svg
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail-prompt.txt
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/render-timings.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Preview-only summary
+        if: success()
+        run: |
+          echo "Preview artifact only. No YouTube credentials, upload steps or receipt writes." >> "$GITHUB_STEP_SUMMARY"
