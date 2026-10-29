@@ -71,3 +71,19 @@ test('cross-date persisted video receipt cannot resume another trading date', ()
     assert.equal(resolveRoute({receiptPath:file,expectedDate:'20261013',authorized:true}).action,'captions_only');
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('checkpoint prepared on disk can be recovered by a fresh route resolver', () => {
+  const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+  const {build}=require('../scripts/daily_gainers_mvp_upload_receipt');
+  const {resolveRoute}=require('../scripts/daily_gainers_mvp_upload_route');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mvp-checkpoint-recovery-'));
+  try {
+    const file=path.join(dir,'checkpoint.json');
+    const receipt=build({date:'20261013',videoId:id,sourceRun:'40832551413',privacy:'private'});
+    fs.writeFileSync(file,JSON.stringify(receipt));
+    assert.deepEqual(resolveRoute({receiptPath:file,expectedDate:'20261013',authorized:true}),{action:'captions_only',videoId:id});
+    assert.deepEqual(resolveRoute({receiptPath:file,expectedDate:'20261014',authorized:true}),{action:'blocked',reason:'receipt_date_mismatch'});
+    fs.writeFileSync(file,JSON.stringify({...receipt,upload_status:'complete'}));
+    assert.equal(resolveRoute({receiptPath:file,expectedDate:'20261013',authorized:true}).action,'already_uploaded');
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
