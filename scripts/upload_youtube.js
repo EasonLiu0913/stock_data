@@ -51,6 +51,11 @@ console.log(
   })
 );
 
+if (process.env.YOUTUBE_UPLOAD_CHECKPOINT_FILE && fs.existsSync(path.resolve(process.env.YOUTUBE_UPLOAD_CHECKPOINT_FILE))) {
+  console.error('Existing video upload checkpoint: do not upload another video; resume captions only');
+  process.exit(1);
+}
+
 const videoArg = process.argv[2];
 const metadataArg = process.argv[3];
 if (!videoArg || !metadataArg) {
