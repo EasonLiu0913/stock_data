@@ -359,7 +359,7 @@ test('research-only retry receipt must bind the exact successful HTTP response b
     {requestedDate: '20260724', status: 503, url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
       bytes: Buffer.from('{"date":"20260724","tables":[]}')},
     {requestedDate: '20260724', status: 200, url: 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260724',
-      bytes: Buffer.from(' { "date": "20260724", "tables": [] }\\n')},
+      bytes: Buffer.from(' { "date": "20260724", "tables": [] }\n')},
   ];
   function bindAcceptedAttempt(items, expectedDate) {
     const accepted = items.filter(a => {
