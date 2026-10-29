@@ -36,3 +36,33 @@ test('source path traversal and symlink trust boundaries: isolated research char
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('source symlink escaping approved directory fails closed in isolated fixture', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'market-symlink-boundary-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'scripts'));
+    for (const file of ['verify_market_environment.js', 'market_environment_lib.js']) {
+      fs.copyFileSync(path.join(root, 'scripts', file), path.join(dir, 'scripts', file));
+    }
+    const twseDir = path.join(dir, 'data_twse_mi_index');
+    const futuresDir = path.join(dir, 'data_taifex_major_institutional_traders_futures_contracts');
+    fs.mkdirSync(twseDir);
+    fs.mkdirSync(futuresDir);
+    const external = path.join(dir, 'outside.json');
+    fs.writeFileSync(external, '{"date":"20260724"}');
+    const twseName = '20260724_twse_mi_index.json';
+    fs.symlinkSync(external, path.join(twseDir, twseName));
+    fs.writeFileSync(path.join(futuresDir, '20260724_taifex_major_institutional_traders_futures_contracts.json'), '{"date":"20260724"}');
+    const {validateReferencedSources} = require(path.join(dir, 'scripts', 'verify_market_environment.js'));
+    const payload = {source_files: {
+      twse_index: 'data_twse_mi_index/' + twseName,
+      foreign_futures: realFutures,
+    }};
+    assert.throws(() => validateReferencedSources(payload, base), /resolves outside allowed directory/);
+    fs.rmSync(path.join(twseDir, twseName));
+    fs.writeFileSync(path.join(twseDir, twseName), '{"date":"20260724"}');
+    assert.doesNotThrow(() => validateReferencedSources(payload, base));
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
