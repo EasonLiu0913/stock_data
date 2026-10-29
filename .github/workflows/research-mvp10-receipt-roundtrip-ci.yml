@@ -1,0 +1,52 @@
+name: "[Research Only] MVP10 Durable Receipt Roundtrip"
+on:
+  push:
+    branches: [research/daily-video-mvp10-a-20261029]
+    paths: [.github/workflows/research-mvp10-receipt-roundtrip-ci.yml]
+permissions:
+  contents: write
+concurrency:
+  group: mvp10-receipt-roundtrip
+  cancel-in-progress: false
+jobs:
+  write-fixture:
+    runs-on: ubuntu-latest
+    outputs:
+      receipt_path: ${{ steps.fixture.outputs.receipt_path }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: fixture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          p="recovery-requests/mvp10-receipt-fixtures/${GITHUB_RUN_ID}.json"
+          echo "receipt_path=$p" >> "$GITHUB_OUTPUT"
+          content="$(node -e 'process.stdout.write(Buffer.from(JSON.stringify({target_date:"20261013",youtube_video_id:"FixtureId123",privacy:"private",upload_status:"video_created",fixture_only:true})).toString("base64"))')"
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/$p" -f branch=research/daily-video-mvp10-a-20261029 -f message="test(mvp): durable synthetic receipt fixture" -f content="$content" > /dev/null
+  read-fixture:
+    needs: write-fixture
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RECEIPT_PATH: ${{ needs.write-fixture.outputs.receipt_path }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/contents/$RECEIPT_PATH?ref=research/daily-video-mvp10-a-20261029" --jq '.content' | base64 -d > receipt.json
+          node -e 'const r=require("./receipt.json"); if(!r.fixture_only||r.target_date!=="20261013"||r.upload_status!=="video_created")process.exit(1)'
+          MVP_UPLOAD_RECEIPT_FILE="$PWD/receipt.json" MVP_TARGET_DATE=20261013 YOUTUBE_UPLOAD_AUTHORIZED=private-pilot node scripts/daily_gainers_mvp_upload_route.js | grep '"captions_only"'
+          echo "Two-runner receipt roundtrip PASS (synthetic fixture, no YouTube actions)"
