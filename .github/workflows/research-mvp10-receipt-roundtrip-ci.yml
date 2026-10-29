@@ -48,5 +48,5 @@ jobs:
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/contents/$RECEIPT_PATH?ref=research/daily-video-mvp10-a-20261029" --jq '.content' | base64 -d > receipt.json
           node -e 'const r=require("./receipt.json"); if(!r.fixture_only||r.target_date!=="20261013"||r.upload_status!=="video_created")process.exit(1)'
-          MVP_UPLOAD_RECEIPT_FILE="$PWD/receipt.json" MVP_TARGET_DATE=20261013 YOUTUBE_UPLOAD_AUTHORIZED=private-pilot node scripts/daily_gainers_mvp_upload_route.js | grep '"captions_only"'
+          MVP_FIXTURE_DRY_RUN=1 MVP_UPLOAD_RECEIPT_FILE="$PWD/receipt.json" MVP_TARGET_DATE=20261013 YOUTUBE_UPLOAD_AUTHORIZED=private-pilot node scripts/daily_gainers_mvp_upload_route.js | grep '"captions_only"'
           echo "Two-runner receipt roundtrip PASS (synthetic fixture, no YouTube actions)"
