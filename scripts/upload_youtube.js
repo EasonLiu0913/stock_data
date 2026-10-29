@@ -147,6 +147,17 @@ async function uploadBytes(uploadUrl) {
   if (video.status?.privacyStatus !== 'private') {
     throw new Error(`YouTube did not confirm private visibility: ${video.status?.privacyStatus || 'missing'}`);
   }
+  // Persist a resumable upload checkpoint immediately after the video is created.
+  // If this fails, stop before captions; never assume a retry may upload another MP4.
+  if (process.env.YOUTUBE_UPLOAD_CHECKPOINT_FILE) {
+    const checkpoint = path.resolve(process.env.YOUTUBE_UPLOAD_CHECKPOINT_FILE);
+    if (fs.existsSync(checkpoint)) throw new Error('Upload checkpoint already exists: ' + checkpoint);
+    fs.mkdirSync(path.dirname(checkpoint), {recursive:true});
+    const temp = checkpoint + '.tmp-' + process.pid;
+    fs.writeFileSync(temp, JSON.stringify({video_id:video.id, privacy:'private',
+      uploaded_at:new Date().toISOString()}, null, 2), {flag:'wx'});
+    fs.renameSync(temp, checkpoint);
+  }
   const result = {
     video_id: video.id,
     privacy_status: video.status.privacyStatus,
