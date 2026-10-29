@@ -129,3 +129,32 @@ test('post-check symlink swap demonstrates unpinned source-read race', () => {
     fs.rmSync(dir, {recursive: true, force: true});
   }
 });
+
+test('research-only pinned descriptor hash rejects substituted source bytes', () => {
+  const crypto = require('node:crypto');
+  const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'market-descriptor-pin-'));
+  let fd;
+  try {
+    const file = path.join(dir, '20260724_twse_mi_index.json');
+    const original = Buffer.from('{"date":"20260724","value":1}');
+    const replacement = Buffer.from('{"date":"20260724","value":9}');
+    fs.writeFileSync(file, original);
+    const expected = digest(original);
+    fd = fs.openSync(file, fs.constants.O_RDONLY);
+    const captured = fs.readFileSync(fd);
+    assert.equal(digest(captured), expected);
+    // Rename-based replacement changes the path target but not the opened descriptor.
+    const temp = path.join(dir, 'replacement.json');
+    fs.writeFileSync(temp, replacement);
+    fs.renameSync(temp, file);
+    assert.equal(digest(fs.readFileSync(file)), digest(replacement));
+    assert.notEqual(digest(fs.readFileSync(file)), expected,
+      'a later pathname-based read must reject an independently pinned SHA');
+    assert.equal(digest(captured), expected,
+      'previously captured descriptor bytes remain bound to the original evidence');
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
