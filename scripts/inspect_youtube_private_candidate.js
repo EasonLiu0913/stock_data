@@ -73,6 +73,7 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
       for (const v of page.items) {
       if (!v || !ids.includes(v.id) || v.snippet?.channelId !== result.channel_id ||
           !['private','unlisted','public'].includes(v.status?.privacyStatus)) { fail('invalid_video_readback'); continue; }
+      if (found.has(v.id)) fail('duplicate_video_readback_id');
       found.set(v.id, v);
       }
     }
