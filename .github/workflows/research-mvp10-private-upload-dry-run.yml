@@ -1,0 +1,52 @@
+name: "[Research Only] MVP10 Private Upload Lifecycle Dry Run"
+on:
+  push:
+    branches: [research/daily-video-mvp10-a-20261029]
+    paths: [.github/workflows/research-mvp10-private-upload-dry-run.yml]
+permissions:
+  contents: read
+jobs:
+  upload-lifecycle-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          sparse-checkout: |
+            scripts/daily_gainers_mvp_upload_receipt.js
+            scripts/daily_gainers_mvp_upload_decision.js
+            scripts/daily_gainers_mvp_upload_route.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify no-credential private upload lifecycle (simulation only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${YOUTUBE_CLIENT_ID:=}"
+          : "${YOUTUBE_CLIENT_SECRET:=}"
+          : "${YOUTUBE_REFRESH_TOKEN:=}"
+          test -z "$YOUTUBE_CLIENT_ID$YOUTUBE_CLIENT_SECRET$YOUTUBE_REFRESH_TOKEN"
+          mkdir -p "${RUNNER_TEMP}/mvp10-dry-run"
+          receipt="${RUNNER_TEMP}/mvp10-dry-run/receipt.json"
+          node - <<'NODE'
+          const {decide}=require('./scripts/daily_gainers_mvp_upload_decision');
+          const assert=require('node:assert/strict');
+          assert.deepEqual(decide({receipt:null,authorized:false}),{action:'blocked',reason:'owner_private_pilot_authorization_required'});
+          assert.deepEqual(decide({receipt:null,authorized:true,verifiedAbsence:false}),{action:'blocked',reason:'unknown_upload_state_reconcile_youtube_first'});
+          console.log('unapproved or unknown first upload: BLOCKED');
+          NODE
+          node scripts/daily_gainers_mvp_upload_receipt.js 20261008 SyntheticVideo123 "$GITHUB_RUN_ID" private "$receipt"
+          MVP_TARGET_DATE=20261008 MVP_UPLOAD_RECEIPT_FILE="$receipt" node scripts/daily_gainers_mvp_upload_route.js > "${RUNNER_TEMP}/blocked.json" && exit 1 || result=$?
+          test "$result" -eq 2
+          grep -q 'owner_private_pilot_authorization_required' "${RUNNER_TEMP}/blocked.json"
+          YOUTUBE_UPLOAD_AUTHORIZED=private-pilot MVP_TARGET_DATE=20261008 MVP_UPLOAD_RECEIPT_FILE="$receipt" node scripts/daily_gainers_mvp_upload_route.js | tee "${RUNNER_TEMP}/captions-only.json" | grep -q '"captions_only"'
+          node - "$receipt" <<'NODE'
+          const fs=require('node:fs');const file=process.argv[2];const r=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(r.upload_status!=='video_created'||r.privacy!=='private'||r.target_date!=='20261008')process.exit(1);
+          r.upload_status='complete';fs.writeFileSync(file,JSON.stringify(r));
+          NODE
+          YOUTUBE_UPLOAD_AUTHORIZED=private-pilot MVP_TARGET_DATE=20261008 MVP_UPLOAD_RECEIPT_FILE="$receipt" node scripts/daily_gainers_mvp_upload_route.js | grep -q '"already_uploaded"'
+          if YOUTUBE_UPLOAD_AUTHORIZED=private-pilot MVP_TARGET_DATE=20261013 MVP_UPLOAD_RECEIPT_FILE="$receipt" node scripts/daily_gainers_mvp_upload_route.js > "${RUNNER_TEMP}/wrong-date.json"; then exit 1; else test "$?" -eq 2; fi
+          grep -q 'receipt_date_mismatch' "${RUNNER_TEMP}/wrong-date.json"
+          echo "Dry run PASS: blocked->captions_only->already_uploaded; no Google API, no GitHub writes"
