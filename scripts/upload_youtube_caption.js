@@ -17,6 +17,11 @@ function normalizeSecret(name, raw) {
   return value.replace(/\\r|\\n/g, '').trim();
 }
 
+// Caption recovery is also an external write; forbid it without separate owner approval.
+if (process.env.YOUTUBE_UPLOAD_AUTHORIZED !== 'private-pilot') {
+  console.error('YouTube caption upload blocked: private pilot authorization required');
+  process.exit(1);
+}
 const YOUTUBE_CLIENT_ID = normalizeSecret('YOUTUBE_CLIENT_ID', process.env.YOUTUBE_CLIENT_ID);
 const YOUTUBE_CLIENT_SECRET = normalizeSecret('YOUTUBE_CLIENT_SECRET', process.env.YOUTUBE_CLIENT_SECRET);
 const YOUTUBE_REFRESH_TOKEN = normalizeSecret('YOUTUBE_REFRESH_TOKEN', process.env.YOUTUBE_REFRESH_TOKEN);
