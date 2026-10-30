@@ -1,0 +1,29 @@
+name: "[Research Only] MVP10 YouTube Offline Inspection Tests"
+on:
+  push:
+    branches: [research/daily-video-mvp10-a-20261029]
+    paths:
+      - scripts/inspect_youtube_private_candidate.js
+      - tests/inspect_youtube_private_candidate.test.js
+      - .github/workflows/research-mvp10-youtube-readonly-ci.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Offline negative tests (no YouTube access)
+        env:
+          YOUTUBE_CLIENT_ID: ""
+          YOUTUBE_CLIENT_SECRET: ""
+          YOUTUBE_REFRESH_TOKEN: ""
+          YOUTUBE_UPLOAD_AUTHORIZED: ""
+        run: node --test tests/inspect_youtube_private_candidate.test.js
