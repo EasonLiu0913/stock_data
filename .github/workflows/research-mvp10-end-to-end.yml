@@ -7,6 +7,7 @@ on:
       - research/daily-video-mvp10-a-20261029
     paths:
       - .github/workflows/research-mvp10-end-to-end.yml
+      - scripts/build_daily_gainers_srt.py
   workflow_dispatch:
     inputs:
       date:
@@ -208,6 +209,6 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
