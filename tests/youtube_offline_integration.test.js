@@ -25,6 +25,7 @@ test('complete offline pipeline produces redacted schema and NO_GO for existing 
  assert.equal(r.go_no_go,'NO_GO');
  assert.ok(r.blockers.includes('existing_candidate_do_not_upload'));
  assert.equal(r.channel_id,'channel-1');
+ assert.equal(r.channel_match_confirmed,false);
  assert.equal(r.inventory_paginated_to_end,true);
  assert.equal(r.captions_check.status,'not_authorized');
  assert.equal(Object.hasOwn(r,'upload_authorized'),false);
