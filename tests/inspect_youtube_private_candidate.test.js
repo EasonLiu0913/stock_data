@@ -44,7 +44,10 @@ test('candidate and result contain no credentials or upload permission', () => {
 test('source is entirely offline with no transport', () => {
  const fs=require('node:fs');
  const src=fs.readFileSync(require.resolve('../scripts/inspect_youtube_private_candidate'),'utf8');
- assert.doesNotMatch(src,/\\bfetch\\s*\\(|https?:\\/\\/|\\bPOST\\b|\\bPUT\\b|\\bPATCH\\b|\\bDELETE\\b/);
+ assert.equal(src.includes('fetch('), false);
+ assert.equal(src.includes('https:'), false);
+ assert.equal(src.includes('http:'), false);
+ for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) assert.equal(src.includes(method), false);
 });
 
 test('HTTP failures 403 429 500 refuse inspection', () => {
