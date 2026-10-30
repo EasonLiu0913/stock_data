@@ -20,6 +20,9 @@ async function run(adapter){
 test('complete offline pipeline produces redacted schema and NO_GO for existing video',async()=>{
  const r=await run(fixture());
  assert.equal(r.schema_version,'mvp10.youtube.inspection.v1');
+ assert.equal(r.evidence_source,'mock_only');
+ assert.ok(r.blockers.includes('no_owner_approved_read_access'));
+ assert.ok(r.blockers.includes('no_authenticated_channel_inventory'));
  assert.equal(r.artifact_id,'12953454424');
  assert.equal(r.render_run_id,'41002179152');
  assert.equal(r.go_no_go,'NO_GO');
