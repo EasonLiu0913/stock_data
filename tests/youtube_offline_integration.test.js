@@ -34,6 +34,7 @@ test('duplicate playlist video ID remains NO_GO',async()=>{
  const r=await run(fixture({duplicate:true}));
  assert.equal(r.go_no_go,'NO_GO');
  assert.equal(r.inventory_count,2);
+ assert.ok(r.blockers.includes('duplicate_inventory_video_id'));
  assert.ok(r.blockers.includes('existing_candidate_do_not_upload'));
 });
 test('mismatched channel fails closed',async()=>{
