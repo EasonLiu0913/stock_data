@@ -15,8 +15,9 @@ status="$(gh api -i "repos/$GITHUB_REPOSITORY/contents/$dest?ref=research/daily-
 [[ "$status" == *" 404 "* ]] || { echo "receipt exists or lookup failed; refuse MP4 upload: $status" >&2; exit 2; }
 # This uploader requires explicit privacy=private API confirmation. The local
 # checkpoint is only runner-local and MUST be committed before caption actions.
-checkpoint="$(mktemp -u)"
-trap 'rm -f "$checkpoint"' EXIT
+checkpoint_dir="$(mktemp -d)"
+checkpoint="$checkpoint_dir/video-created.json"
+trap 'rm -rf "$checkpoint_dir"' EXIT
 export YOUTUBE_UPLOAD_CHECKPOINT_FILE="$checkpoint"
 node scripts/upload_youtube.js "$dir/daily-gainers-${date}.mp4" "$dir/metadata.json"
 [[ -s "$checkpoint" ]] || { echo "video state unknown; manual reconciliation required" >&2; exit 2; }
