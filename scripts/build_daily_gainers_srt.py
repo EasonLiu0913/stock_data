@@ -25,7 +25,7 @@ tts_manifest = json.loads(tts_manifest_path.read_text(encoding="utf-8"))
 tts_scenes = {int(item["id"]): item for item in tts_manifest["scenes"]}
 
 
-def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
+def split_long_sentence(sentence, max_chars=30, min_fragment_chars=8):
     sentence = sentence.strip()
     if len(sentence) <= max_chars:
         return [sentence]
@@ -53,7 +53,7 @@ def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
         remaining = remaining[cut:].strip()
 
     if remaining:
-        if parts and len(remaining) < min_fragment_chars:
+        if parts and len(remaining) < min_fragment_chars and len(parts[-1]) + len(remaining) <= max_chars:
             parts[-1] = f"{parts[-1]}{remaining}"
         else:
             parts.append(remaining)
@@ -61,7 +61,7 @@ def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
     return [p for p in parts if p]
 
 
-def split_text(text, max_chars=38):
+def split_text(text, max_chars=30):
     normalized = re.sub(r"\s+", " ", str(text or "")).strip()
     if not normalized:
         return []
@@ -197,6 +197,8 @@ for scene in plan.get("scenes", []):
         timed_pairs = segment_pairs(pairs)
         chunks = [item["caption"] for item in timed_pairs]
         spoken_chunks = [item["speech"] for item in timed_pairs]
+    if any(len(str(chunk).replace("\\n", "")) > 30 for chunk in chunks):
+        raise RuntimeError(f"Scene {sid}: subtitle cue exceeds 30-character limit")
     if not chunks:
         cursor += rendered_duration
         continue
