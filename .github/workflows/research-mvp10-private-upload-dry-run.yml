@@ -65,7 +65,13 @@ jobs:
           bash -n scripts/mvp10_private_upload_first.sh
           bash -n scripts/mvp10_private_upload_complete.sh
           bash tests/mvp10_private_upload_failclosed.sh
+          echo "DIAG: checking unauthorized entrypoint first"
           if bash scripts/mvp10_private_upload_first.sh 20261008 /does-not-exist 41002179152; then exit 1; fi
+          echo "DIAG: unauthorized entrypoint rejected"
+          echo "DIAG: checking unauthorized entrypoint complete"
           if bash scripts/mvp10_private_upload_complete.sh 20261008 SyntheticVideo123; then exit 1; fi
+          echo "DIAG: unauthorized entrypoint rejected"
+          echo "DIAG: checking unauthorized entrypoint recovery"
           if bash scripts/mvp10_private_upload_recovery.sh 20261008 /does-not-exist 41002179152; then exit 1; fi
+          echo "DIAG: unauthorized entrypoint rejected"
           echo "Dry run PASS: blocked->captions_only->already_uploaded; fixtures blocked for real use; no Google API, no GitHub writes"
