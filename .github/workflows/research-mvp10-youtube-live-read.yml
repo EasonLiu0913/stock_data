@@ -1,0 +1,91 @@
+name: "[Research Only] MVP10 YouTube Existing OAuth Read Probe"
+on:
+  push:
+    branches: [research/daily-video-mvp10-a-20261029]
+    paths:
+      - .github/workflows/research-mvp10-youtube-live-read.yml
+permissions:
+  contents: read
+jobs:
+  read-only-youtube:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_UPLOAD_AUTHORIZED: ""
+    steps:
+      - name: Read channel and inventory only (no upload API)
+        shell: bash
+        run: |
+          node <<'JS'
+          (async () => {
+            const fail=(message)=>{throw new Error(message)};
+            const {YOUTUBE_CLIENT_ID:id,YOUTUBE_CLIENT_SECRET:secret,YOUTUBE_REFRESH_TOKEN:refresh}=process.env;
+            if(!id||!secret||!refresh)fail('missing_existing_oauth_secrets');
+            const tokenResponse=await fetch('https://oauth2.googleapis.com/token',{
+              method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'},
+              body:new URLSearchParams({client_id:id,client_secret:secret,refresh_token:refresh,grant_type:'refresh_token'}),
+            });
+            if(!tokenResponse.ok)fail('oauth_refresh_failed_http_'+tokenResponse.status);
+            const tokenData=await tokenResponse.json();
+            if(!tokenData.access_token)fail('oauth_missing_access_token');
+            const get=async(resource,params)=>{
+              const url=new URL('https://www.googleapis.com/youtube/v3/'+resource);
+              for(const [key,value] of Object.entries(params))url.searchParams.set(key,String(value));
+              const response=await fetch(url,{method:'GET',headers:{authorization:'Bearer '+tokenData.access_token}});
+              if(!response.ok)fail(resource+'_failed_http_'+response.status);
+              const data=await response.json();
+              if(!data||!Array.isArray(data.items))fail(resource+'_invalid_response');
+              return data;
+            };
+            const channel=await get('channels',{part:'id,snippet,contentDetails',mine:'true'});
+            if(channel.items.length!==1)fail('channel_count_not_one');
+            const c=channel.items[0],uploads=c.contentDetails?.relatedPlaylists?.uploads;
+            if(!c.id||!uploads)fail('missing_channel_or_uploads_playlist');
+            const ids=new Set();let pages=0,pageToken,complete=false;
+            do{
+              const params={part:'snippet,contentDetails',playlistId:uploads,maxResults:50};
+              if(pageToken)params.pageToken=pageToken;
+              const page=await get('playlistItems',params);
+              for(const item of page.items){
+                const videoId=item.contentDetails?.videoId;
+                if(!videoId)fail('missing_video_id');
+                if(ids.has(videoId))fail('duplicate_video_id');
+                ids.add(videoId);
+              }
+              pageToken=page.nextPageToken;
+              pages++;
+              if(!pageToken){complete=true;break;}
+            }while(pages<100);
+            if(!complete)fail('inventory_page_limit');
+            let readbackCount=0,privateCount=0,unlistedCount=0,publicCount=0,dateCandidateCount=0;
+            const all=[...ids];
+            for(let i=0;i<all.length;i+=50){
+              const page=await get('videos',{part:'id,snippet,status',id:all.slice(i,i+50).join(',')});
+              for(const v of page.items){
+                if(!ids.has(v.id)||v.snippet?.channelId!==c.id)fail('video_channel_mismatch');
+                const privacy=v.status?.privacyStatus;
+                if(!['private','unlisted','public'].includes(privacy))fail('unknown_privacy');
+                if(privacy==='private')privateCount++;
+                if(privacy==='unlisted')unlistedCount++;
+                if(privacy==='public')publicCount++;
+                if(String(v.snippet?.title||'').includes('20261008'))dateCandidateCount++;
+                readbackCount++;
+              }
+            }
+            if(readbackCount!==all.length)fail('incomplete_video_readback');
+            console.log(JSON.stringify({
+              probe:'research_existing_oauth_get_only', connected:true,
+              oauth_scope_reported:tokenData.scope||'not_returned',
+              channel_id:c.id, channel_title:c.snippet?.title||null,
+              inventory_pages:pages, inventory_count:all.length,
+              inventory_complete:complete, video_readbacks:readbackCount,
+              private_count:privateCount,unlisted_count:unlistedCount,
+              public_count:publicCount,date_20261008_title_matches:dateCandidateCount,
+              actual_privacy_check:'GET_only',upload_performed:false,
+              captions_checked:false,go_no_go:'NO_GO'
+            }));
+          })().catch(e=>{console.error('READ_PROBE_FAILED: '+String(e.message).replace(/https?:[^\s]+/g,'[redacted]'));process.exitCode=1;});
+          JS
