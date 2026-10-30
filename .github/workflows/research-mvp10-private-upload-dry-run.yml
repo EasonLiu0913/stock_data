@@ -2,7 +2,7 @@ name: "[Research Only] MVP10 Private Upload Lifecycle Dry Run"
 on:
   push:
     branches: [research/daily-video-mvp10-a-20261029]
-    paths: [.github/workflows/research-mvp10-private-upload-dry-run.yml, scripts/persist_daily_gainers_mvp_upload_receipt.sh, scripts/mvp10_private_upload_recovery.sh, scripts/mvp10_private_upload_first.sh, scripts/mvp10_private_upload_complete.sh, tests/mvp10_private_upload_failclosed.sh]
+    paths: [.github/workflows/research-mvp10-private-upload-dry-run.yml, scripts/persist_daily_gainers_mvp_upload_receipt.sh, scripts/mvp10_private_upload_recovery.sh, scripts/mvp10_private_upload_first.sh, scripts/mvp10_private_upload_complete.sh, tests/mvp10_private_upload_failclosed.sh, .github/workflows/retry-upload-daily-gainers-video.yml]
 permissions:
   contents: read
 jobs:
@@ -21,6 +21,7 @@ jobs:
             scripts/mvp10_private_upload_first.sh
             scripts/mvp10_private_upload_complete.sh
             tests/mvp10_private_upload_failclosed.sh
+            .github/workflows/retry-upload-daily-gainers-video.yml
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -65,6 +66,9 @@ jobs:
           bash -n scripts/mvp10_private_upload_first.sh
           bash -n scripts/mvp10_private_upload_complete.sh
           bash tests/mvp10_private_upload_failclosed.sh
+          grep -Fq 'if: ${{ false }}' .github/workflows/retry-upload-daily-gainers-video.yml
+          grep -Fq 'mvp10_private_upload_first.sh' .github/workflows/retry-upload-daily-gainers-video.yml
+          grep -Fq 'mvp10_private_upload_recovery.sh' .github/workflows/retry-upload-daily-gainers-video.yml
           echo "DIAG: checking unauthorized entrypoint first"
           if bash scripts/mvp10_private_upload_first.sh 20261008 /does-not-exist 41002179152; then exit 1; fi
           echo "DIAG: unauthorized entrypoint rejected"
