@@ -99,8 +99,23 @@ jobs:
           # check, private upload, durable video_created receipt, then caption recovery.
           # A subsequent retry goes ONLY through recovery.sh, never MP4 upload.
           # Completion requires independent YouTube privacy/caption evidence.
-          echo "Research upload lock is active; no external writes permitted"
-          exit 2
+          # The job-level lock prevents executing either branch in research.
+          # Once separately authorized, use durable GitHub receipt presence to
+          # route to captions-only; missing receipt NEVER implies safe reupload.
+          receipt="video_upload_receipts/mvp-private/$date.json"
+          http="$(gh api -i "repos/$GITHUB_REPOSITORY/contents/$receipt?ref=research/daily-video-mvp10-a-20261029" 2>/dev/null | head -n 1 || true)"
+          if [[ "$http" == *" 200 "* ]]; then
+            bash scripts/mvp10_private_upload_recovery.sh "$date" "$dir" "${{ steps.job.outputs.run_id }}"
+          elif [[ "$http" == *" 404 "* ]]; then
+            # First upload also requires independent verified YouTube absence.
+            # Never infer absence from HTTP 404 alone.
+            bash scripts/mvp10_private_upload_first.sh "$date" "$dir" "${{ steps.job.outputs.run_id }}"
+          else
+            echo "Receipt state unknown: refuse MP4 and captions" >&2
+            exit 2
+          fi
+          # No automatic complete transition: independent verification first.
+          echo "Receipt remains video_created pending YouTube confirmation"
 
       - name: Job summary
         if: success()
