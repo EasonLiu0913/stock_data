@@ -5,6 +5,7 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
   const blockers = [];
   const result = {
     schema_version: 'mvp10.youtube.inspection.v1',
+    evidence_source: 'mock_only',
     target_date: EXPECTED_DATE,
     artifact_id: '12953454424',
     render_run_id: '41002179152',
@@ -27,6 +28,8 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
     blockers
   };
   const fail = (code) => { if (!blockers.includes(code)) blockers.push(code); };
+  fail('no_owner_approved_read_access');
+  fail('no_authenticated_channel_inventory');
   if (!candidate || candidate.date !== EXPECTED_DATE || !/^[a-f0-9]{64}$/i.test(candidate.sha256 || '')) fail('invalid_candidate_identity');
   if (!observedAtUtc || !Number.isFinite(Date.parse(observedAtUtc))) fail('missing_observation_time');
   if (!channel || !Array.isArray(channel.items) || channel.items.length !== 1) fail('unverified_channel');
