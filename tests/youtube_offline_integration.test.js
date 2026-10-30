@@ -49,3 +49,15 @@ test('missing videos.list item fails closed',async()=>{
 test('upstream 403 never yields a positive evidence record',async()=>{
  await assert.rejects(run(async()=>({status:403,body:{}})),/read_failed/);
 });
+
+test('duplicate videos.list response ID fails closed even when privacy agrees',async()=>{
+ const base=fixture();
+ const adapter=async request=>{
+  const response=await base(request);
+  if(request.resource==='videos')response.body.items.push({...response.body.items[0]});
+  return response;
+ };
+ const r=await run(adapter);
+ assert.equal(r.go_no_go,'NO_GO');
+ assert.ok(r.blockers.includes('duplicate_video_readback_id'));
+});
