@@ -2,7 +2,7 @@ name: "[Research Only] MVP10 Private Upload Lifecycle Dry Run"
 on:
   push:
     branches: [research/daily-video-mvp10-a-20261029]
-    paths: [.github/workflows/research-mvp10-private-upload-dry-run.yml, scripts/persist_daily_gainers_mvp_upload_receipt.sh, scripts/mvp10_private_upload_recovery.sh]
+    paths: [.github/workflows/research-mvp10-private-upload-dry-run.yml, scripts/persist_daily_gainers_mvp_upload_receipt.sh, scripts/mvp10_private_upload_recovery.sh, scripts/mvp10_private_upload_first.sh, scripts/mvp10_private_upload_complete.sh]
 permissions:
   contents: read
 jobs:
@@ -18,6 +18,8 @@ jobs:
             scripts/daily_gainers_mvp_upload_route.js
             scripts/persist_daily_gainers_mvp_upload_receipt.sh
             scripts/mvp10_private_upload_recovery.sh
+            scripts/mvp10_private_upload_first.sh
+            scripts/mvp10_private_upload_complete.sh
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -59,5 +61,9 @@ jobs:
           grep -q 'synthetic_receipt_not_valid_for_upload' "${RUNNER_TEMP}/fixture-denied.json"
           bash -n scripts/persist_daily_gainers_mvp_upload_receipt.sh
           bash -n scripts/mvp10_private_upload_recovery.sh
+          bash -n scripts/mvp10_private_upload_first.sh
+          bash -n scripts/mvp10_private_upload_complete.sh
+          if bash scripts/mvp10_private_upload_first.sh 20261008 /does-not-exist 41002179152; then exit 1; fi
+          if bash scripts/mvp10_private_upload_complete.sh 20261008 SyntheticVideo123; then exit 1; fi
           if bash scripts/mvp10_private_upload_recovery.sh 20261008 /does-not-exist 41002179152; then exit 1; fi
           echo "Dry run PASS: blocked->captions_only->already_uploaded; fixtures blocked for real use; no Google API, no GitHub writes"
