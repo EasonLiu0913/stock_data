@@ -5,7 +5,7 @@ trap 'rm -rf "$root"' EXIT
 mkdir -p "$root/bin" "$root/artifact"
 cat > "$root/bin/gh" <<'SH'
 #!/usr/bin/env bash
-printf 'HTTP/2 %s\n' "${MOCK_HTTP_STATUS:-500}"
+printf 'HTTP/2 %s TEST\n' "${MOCK_HTTP_STATUS:-500}"
 SH
 chmod +x "$root/bin/gh"
 printf 'mp4' > "$root/artifact/daily-gainers-20261008.mp4"
@@ -34,7 +34,7 @@ echo "PASS: unauthorized, missing attestation, receipt exists, 403 and 500 all f
 cat > "$root/bin/gh" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
-  *"-i"*) printf 'HTTP/2 404\n' ;;
+  *"-i"*) printf 'HTTP/2 404 Not Found\n' ;;
   *"-X PUT"*) echo "simulated GitHub 503 during receipt write" >&2; exit 1 ;;
   *) echo "unexpected gh call" >&2; exit 1 ;;
 esac
