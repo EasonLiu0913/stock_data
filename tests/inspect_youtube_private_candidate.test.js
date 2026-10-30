@@ -46,3 +46,27 @@ test('source is entirely offline with no transport', () => {
  const src=fs.readFileSync(require.resolve('../scripts/inspect_youtube_private_candidate'),'utf8');
  assert.doesNotMatch(src,/\\bfetch\\s*\\(|https?:\\/\\/|\\bPOST\\b|\\bPUT\\b|\\bPATCH\\b|\\bDELETE\\b/);
 });
+
+test('HTTP failures 403 429 500 refuse inspection', () => {
+ for (const status of [403,429,500]) {
+  const x=valid();x.pages[0].httpStatus=status;
+  assert.ok(evaluateYouTubeInventory(x).blockers.includes('inventory_http_error'));
+  const y=valid();y.videoPages[0].httpStatus=status;
+  assert.ok(evaluateYouTubeInventory(y).blockers.includes('video_http_error'));
+ }
+});
+test('extraneous page after terminal page fails closed', () => {
+ const x=valid();x.pages.push({requestPageToken:null,items:[]});
+ assert.ok(evaluateYouTubeInventory(x).blockers.includes('unexpected_inventory_page'));
+});
+test('invalid API response schema fails closed', () => {
+ const x=valid();x.pages=[{items:null}];x.videoPages=[{items:null}];
+ const r=evaluateYouTubeInventory(x);
+ assert.ok(r.blockers.includes('pagination_incomplete'));
+ assert.ok(r.blockers.includes('invalid_video_page'));
+});
+test('repeated page tokens fail closed', () => {
+ const x=valid();
+ x.pages=[{requestPageToken:null,items:[],nextPageToken:'A'},{requestPageToken:'A',items:[],nextPageToken:'A'}];
+ assert.ok(evaluateYouTubeInventory(x).blockers.includes('pagination_loop'));
+});
