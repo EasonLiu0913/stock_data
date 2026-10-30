@@ -1,0 +1,212 @@
+name: "[Research Only] MVP10 End-to-End Render and Receipt Audit"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-end-to-end.yml
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYYMMDD; blank uses latest validated script"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-mvp10-end-to-end
+  cancel-in-progress: true
+
+jobs:
+  render-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Assert isolated research branch
+        shell: bash
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - name: Checkout video inputs only
+        uses: actions/checkout@v7
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            tests/test_daily_gainers_spoken_text.py
+            tests/test_daily_gainers_subtitle_alignment.py
+            tests/daily_gainers_video_timestamps.test.js
+            tests/daily_gainers_video_date_gate.test.js
+            assets/daily-gainers-vtuber-sprite.webp
+            data_daily_gain_over_5
+            video_scripts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install media dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! command -v rsvg-convert >/dev/null 2>&1 || ! command -v espeak-ng >/dev/null 2>&1; then
+            timeout 180s sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          fi
+          ffmpeg -version | head -1
+          rsvg-convert --version
+          timeout 180s python -m pip install --disable-pip-version-check --no-cache-dir --retries 4 --timeout 30 edge-tts gTTS mutagen pypinyin
+
+      - name: Resolve target date
+        id: date
+        shell: bash
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          set -euo pipefail
+          date="${INPUT_DATE:-20261013}"
+          if [ -z "$date" ]; then
+            date="$(find video_scripts/daily-gainers -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
+          for file in             "data_daily_gain_over_5/${date}.json"             "data_daily_gain_over_5/analysis-ai/${date}.json"             "data_daily_gain_over_5/market-summary/${date}.json"; do
+            [ -s "$file" ] || { echo "Missing required file: $file" >&2; exit 1; }
+          done
+          [ -s "video_scripts/daily-gainers/${date}.json" ] || { echo "Missing ChatGPT video script for ${date}" >&2; exit 1; }
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate historical video date-gate regression
+        run: node tests/daily_gainers_video_date_gate.test.js
+
+      - name: Validate ChatGPT script against final analysis
+        run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
+
+      - name: Build video content package
+        run: node scripts/build_daily_gainers_video_package.js "${{ steps.date.outputs.date }}"
+
+      - name: Validate dynamic stock chapter timestamps
+        run: node tests/daily_gainers_video_timestamps.test.js
+
+      - name: Validate spoken date normalization
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
+
+      - name: Validate subtitle speech synchronization
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py'
+
+      - name: Synthesize Chinese narration
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: "+15%"
+        run: |
+          python scripts/synthesize_daily_gainers_tts.py             "output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json"
+
+      - name: Build text-aware VTuber lip sync
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          python scripts/build_daily_gainers_lipsync.py "output/daily-gainers-video/${date}/plan.json"
+
+      - name: Render MP4 with VTuber lip sync
+        env:
+          YOUTUBE_VTUBER_ENABLED: "1"
+        run: node scripts/render_daily_gainers_video.js "${{ steps.date.outputs.date }}"
+
+      - name: Build Traditional Chinese subtitles
+        run: |
+          date="${{ steps.date.outputs.date }}"
+          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
+
+      - name: Video QA
+        id: qa
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          video="output/daily-gainers-video/${date}/daily-gainers-${date}.mp4"
+          qa="output/daily-gainers-video/${date}/qa.json"
+          test -s "$video"
+          test -s "$qa"
+          duration="$(jq -r '.duration_seconds' "$qa")"
+          minutes="$(jq -r '.duration_minutes' "$qa")"
+          scenes="$(jq -r '.scene_count' "$qa")"
+          size="$(jq -r '.file_size_mib' "$qa")"
+          awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
+          echo "Video QA PASS: ${minutes} min, ${scenes} scenes, ${size} MiB"
+          echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
+          echo "scenes=$scenes" >> "$GITHUB_OUTPUT"
+          echo "size_mib=$size" >> "$GITHUB_OUTPUT"
+
+      - name: Add stock timestamps to YouTube description
+        run: node scripts/add_daily_gainers_video_timestamps.js "${{ steps.date.outputs.date }}"
+
+      - name: Generate branded YouTube thumbnail
+        run: node scripts/build_daily_gainers_thumbnail.js "${{ steps.date.outputs.date }}"
+
+      - name: Save rendered package artifact (no YouTube or publication)
+        if: always()
+        run: |
+          echo "Research-only video artifact: YouTube upload is disabled" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Audit durable receipt and upload decision (read only, never upload)
+        id: receipt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          set -euo pipefail
+          dest="video_upload_receipts/mvp-private/${TARGET_DATE}.json"
+          http="$(gh api -i "repos/$GITHUB_REPOSITORY/contents/$dest?ref=research/daily-video-mvp10-a-20261029" 2>/dev/null | head -n 1 || true)"
+          if [[ "$http" == *" 200 "* ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/contents/$dest?ref=research/daily-video-mvp10-a-20261029" --jq '.content' | base64 -d > receipt.json
+            export MVP_UPLOAD_RECEIPT_FILE="$PWD/receipt.json"
+          elif [[ "$http" == *" 404 "* ]]; then
+            echo "No receipt; uploading remains forbidden" 
+          else
+            echo "Receipt lookup failed; fail closed: $http" >&2
+            exit 1
+          fi
+          export MVP_TARGET_DATE="$TARGET_DATE"
+          set +e
+          node scripts/daily_gainers_mvp_upload_route.js > receipt-decision.json
+          code=$?
+          set -e
+          cat receipt-decision.json
+          test "$code" -eq 0 || test "$code" -eq 2
+          mkdir -p "output/daily-gainers-video/$TARGET_DATE"
+          cp receipt-decision.json "output/daily-gainers-video/$TARGET_DATE/mvp10-receipt-decision.json"
+          printf '%s\n' "render_only=true" "upload_authorized=false" "target_date=$TARGET_DATE" > "output/daily-gainers-video/$TARGET_DATE/mvp10-delivery-status.txt"
+          echo "MVP10 E2E: rendered, verified, artifact ready; YouTube upload NOT invoked" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload rendered package artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "daily-gainers-video-${{ steps.date.outputs.date }}"
+          path: |
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/mvp10-receipt-decision.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/mvp10-delivery-status.txt
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/plan.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/metadata.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail.jpg
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail-background.svg
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/thumbnail-prompt.txt
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/qa.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/tts-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/render-timings.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
+          if-no-files-found: warn
+          retention-days: 30
+
