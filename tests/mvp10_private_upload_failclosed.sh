@@ -28,3 +28,25 @@ grep -q 'date-bound independent YouTube reconciliation required' "$root/result"
 if PATH="$root/bin:$PATH" GITHUB_REPOSITORY=EasonLiu0913/stock_data YOUTUBE_UPLOAD_AUTHORIZED=private-pilot MOCK_HTTP_STATUS=200 bash scripts/mvp10_private_upload_complete.sh 20261008 SyntheticVideo123 > "$root/result" 2>&1; then exit 1; fi
 grep -q 'independent privacy/caption verification required' "$root/result"
 echo "PASS: unauthorized, missing attestation, receipt exists, 403 and 500 all fail closed; no external calls"
+
+# Mock a confirmed video creation followed by remote checkpoint PUT failure.
+# Confirm no caption step is executed and no second MP4 upload follows on retry.
+cat > "$root/bin/gh" <<'SH'
+#!/usr/bin/env bash
+case "$*" in
+  *"-i"*) printf 'HTTP/2 404\n' ;;
+  *"-X PUT"*) echo "simulated GitHub 503 during receipt write" >&2; exit 1 ;;
+  *) echo "unexpected gh call" >&2; exit 1 ;;
+esac
+SH
+chmod +x "$root/bin/gh"
+if PATH="$root/bin:$PATH" GITHUB_REPOSITORY=EasonLiu0913/stock_data YOUTUBE_UPLOAD_AUTHORIZED=private-pilot bash scripts/persist_daily_gainers_mvp_upload_receipt.sh 20261008 SyntheticVideo123 41002179152 > "$root/result" 2>&1; then
+  echo "FAIL: remote receipt write unexpectedly succeeded" >&2; exit 1
+fi
+grep -q 'simulated GitHub 503' "$root/result"
+# A retry without a durable receipt stays blocked until separately verified YouTube reconciliation.
+if PATH="$root/bin:$PATH" GITHUB_REPOSITORY=EasonLiu0913/stock_data YOUTUBE_UPLOAD_AUTHORIZED=private-pilot bash scripts/mvp10_private_upload_recovery.sh 20261008 "$root/artifact" 41002179152 > "$root/result" 2>&1; then
+  echo "FAIL: resumed captions with absent receipt" >&2; exit 1
+fi
+grep -q 'No receipt: YouTube state unknown' "$root/result"
+echo "PASS: failed remote receipt PUT prevents caption recovery, retry fails closed"
