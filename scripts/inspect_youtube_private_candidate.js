@@ -43,7 +43,8 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
     let expected = null;
     let count = 0;
     const ids = new Set();
-    for (const page of pages) {
+    for (const [index,page] of pages.entries()) {
+      if (page?.httpStatus !== undefined && page.httpStatus !== 200) fail('inventory_http_error');
       if (!page || !Array.isArray(page.items) || (page.requestPageToken || null) !== expected) { fail('pagination_incomplete'); break; }
       for (const item of page.items) {
         const id = item?.contentDetails?.videoId;
@@ -51,7 +52,7 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
         ids.add(id); count++;
       }
       const next = page.nextPageToken || null;
-      if (!next) { expected = null; result.inventory_paginated_to_end = true; break; }
+      if (!next) { expected = null; result.inventory_paginated_to_end = true; if (index !== pages.length-1) fail('unexpected_inventory_page'); break; }
       if (seenTokens.has(next)) { fail('pagination_loop'); break; }
       seenTokens.add(next);
       expected = next;
@@ -65,10 +66,14 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
   if (!Array.isArray(videoPages)) fail('missing_video_readback');
   else {
     const found = new Map();
-    for (const v of videoPages.flatMap(p => Array.isArray(p?.items) ? p.items : [])) {
+    for (const page of videoPages) {
+      if (page?.httpStatus !== undefined && page.httpStatus !== 200) fail('video_http_error');
+      if (!Array.isArray(page?.items)) { fail('invalid_video_page'); continue; }
+      for (const v of page.items) {
       if (!v || !ids.includes(v.id) || v.snippet?.channelId !== result.channel_id ||
           !['private','unlisted','public'].includes(v.status?.privacyStatus)) { fail('invalid_video_readback'); continue; }
       found.set(v.id, v);
+      }
     }
     if (found.size !== ids.length) fail('incomplete_video_readback');
     for (const [id,v] of found) {
