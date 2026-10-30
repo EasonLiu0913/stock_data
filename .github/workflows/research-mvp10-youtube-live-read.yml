@@ -28,7 +28,12 @@ jobs:
               method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'},
               body:new URLSearchParams({client_id:id,client_secret:secret,refresh_token:refresh,grant_type:'refresh_token'}),
             });
-            if(!tokenResponse.ok)fail('oauth_refresh_failed_http_'+tokenResponse.status);
+            if(!tokenResponse.ok){
+              const body=await tokenResponse.json().catch(()=>({}));
+              const known=['invalid_grant','invalid_client','unauthorized_client','invalid_request','unsupported_grant_type'];
+              const code=known.includes(body.error)?body.error:'unclassified';
+              fail('oauth_refresh_failed_http_'+tokenResponse.status+'_code_'+code);
+            }
             const tokenData=await tokenResponse.json();
             if(!tokenData.access_token)fail('oauth_missing_access_token');
             const get=async(resource,params)=>{
