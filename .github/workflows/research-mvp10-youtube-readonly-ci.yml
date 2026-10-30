@@ -5,6 +5,8 @@ on:
     paths:
       - scripts/inspect_youtube_private_candidate.js
       - tests/inspect_youtube_private_candidate.test.js
+      - scripts/youtube_get_only_transport.js
+      - tests/youtube_get_only_transport.test.js
       - .github/workflows/research-mvp10-youtube-readonly-ci.yml
   workflow_dispatch:
 permissions:
@@ -20,6 +22,8 @@ jobs:
           sparse-checkout: |
             scripts/inspect_youtube_private_candidate.js
             tests/inspect_youtube_private_candidate.test.js
+            scripts/youtube_get_only_transport.js
+            tests/youtube_get_only_transport.test.js
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
@@ -30,4 +34,4 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ""
           YOUTUBE_REFRESH_TOKEN: ""
           YOUTUBE_UPLOAD_AUTHORIZED: ""
-        run: node --test tests/inspect_youtube_private_candidate.test.js
+        run: node --test tests/inspect_youtube_private_candidate.test.js tests/youtube_get_only_transport.test.js
