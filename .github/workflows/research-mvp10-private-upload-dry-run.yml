@@ -66,7 +66,7 @@ jobs:
           bash -n scripts/mvp10_private_upload_first.sh
           bash -n scripts/mvp10_private_upload_complete.sh
           bash tests/mvp10_private_upload_failclosed.sh
-          grep -Fq 'if: ${{ false }}' .github/workflows/retry-upload-daily-gainers-video.yml
+          grep -Eq '^[[:space:]]+if:.*false' .github/workflows/retry-upload-daily-gainers-video.yml
           grep -Fq 'mvp10_private_upload_first.sh' .github/workflows/retry-upload-daily-gainers-video.yml
           grep -Fq 'mvp10_private_upload_recovery.sh' .github/workflows/retry-upload-daily-gainers-video.yml
           echo "DIAG: checking unauthorized entrypoint first"
