@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   upload-only:
+    # RESEARCH LOCK: cannot execute until separately approved and reviewed.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -79,46 +81,26 @@ jobs:
           awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
           echo "Reusing QA-passed artifact: $(jq -r '.duration_minutes' "$dir/qa.json") min"
 
-      - name: Upload private video to YouTube
-        id: youtube
-        env:
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: |
-          date="${{ steps.job.outputs.date }}"
-          node scripts/upload_youtube.js             "output/daily-gainers-video/$date/daily-gainers-$date.mp4"             "output/daily-gainers-video/$date/metadata.json"
-
-      - name: Upload Traditional Chinese captions
-        id: captions
-        env:
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: |
-          date="${{ steps.job.outputs.date }}"
-          node scripts/upload_youtube_caption.js \
-            "${{ steps.youtube.outputs.video_id }}" \
-            "output/daily-gainers-video/$date/daily-gainers-$date.zh-TW.srt" \
-            "zh-TW" "繁體中文"
-
-      - name: Record completed YouTube upload
-        if: success()
+      # Existing successful MP4/SRT Artifact is reused; no rerender.
+      # Fail-closed: missing/unknown receipt cannot prove the video was never uploaded.
+      - name: Private receipt checkpoint and caption-only recovery (DISARMED)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VIDEO_ID: ${{ steps.youtube.outputs.video_id }}
-          DATE: ${{ steps.job.outputs.date }}
-          SOURCE_RUN: ${{ steps.job.outputs.run_id }}
+          YOUTUBE_UPLOAD_AUTHORIZED: ""
+          YOUTUBE_CLIENT_ID: ""
+          YOUTUBE_CLIENT_SECRET: ""
+          YOUTUBE_REFRESH_TOKEN: ""
+        shell: bash
         run: |
           set -euo pipefail
-          [ -n "$VIDEO_ID" ]
-          dest="video_upload_receipts/daily-gainers/$DATE.json"
-          json="$(jq -n --arg date "$DATE" --arg id "$VIDEO_ID" --arg run "$SOURCE_RUN" '{target_date:$date,youtube_video_id:$id,source_run_id:$run,upload_status:"complete",privacy:"private"}')"
-          if gh api "repos/$GITHUB_REPOSITORY/contents/$dest?ref=main" >/dev/null 2>&1; then
-            echo "Existing upload receipt: $dest"
-          else
-            gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/$dest" -f message="video: record YouTube upload $DATE" -f content="$(printf '%s' "$json" | base64 -w0)" -f branch=main >/dev/null
-          fi
+          date="${{ steps.job.outputs.date }}"
+          dir="output/daily-gainers-video/$date"
+          # Authorized pilot only: first.sh performs explicit date-bound absence
+          # check, private upload, durable video_created receipt, then caption recovery.
+          # A subsequent retry goes ONLY through recovery.sh, never MP4 upload.
+          # Completion requires independent YouTube privacy/caption evidence.
+          echo "Research upload lock is active; no external writes permitted"
+          exit 2
 
       - name: Job summary
         if: success()
