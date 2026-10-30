@@ -35,7 +35,7 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
     const id = c?.id;
     const uploads = c?.contentDetails?.relatedPlaylists?.uploads;
     if (typeof id !== 'string' || !id || typeof uploads !== 'string' || !uploads) fail('invalid_channel_response');
-    else { result.channel_id = id; result.uploads_playlist_id = uploads; result.channel_match_confirmed = true; }
+    else { result.channel_id = id; result.uploads_playlist_id = uploads; /* simulated response is not owner verification */ }
   }
   if (!Array.isArray(pages) || pages.length < 1) fail('missing_inventory');
   else {
