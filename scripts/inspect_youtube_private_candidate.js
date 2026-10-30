@@ -49,6 +49,7 @@ function evaluateYouTubeInventory({channel, pages, videoPages, receipt, candidat
       for (const item of page.items) {
         const id = item?.contentDetails?.videoId;
         if (typeof id !== 'string' || !id) { fail('invalid_inventory_item'); continue; }
+        if (ids.has(id)) fail('duplicate_inventory_video_id');
         ids.add(id); count++;
       }
       const next = page.nextPageToken || null;
