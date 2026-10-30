@@ -9,9 +9,13 @@ date="${1:?YYYYMMDD}" video_id="${2:?YouTube video ID}" source_run="${3:?render 
 # Never write to main; a durable separate receipt branch must be explicitly provisioned.
 receipt_branch="research/daily-video-mvp10-a-20261029"
 dest="video_upload_receipts/mvp-private/${date}.json"
-if gh api "repos/$GITHUB_REPOSITORY/contents/$dest?ref=$receipt_branch" >/dev/null 2>&1; then
+lookup_status="$(gh api -i "repos/$GITHUB_REPOSITORY/contents/$dest?ref=$receipt_branch" 2>/dev/null | head -n 1 || true)"
+if [[ "$lookup_status" == *" 200 "* ]]; then
   echo "Receipt exists: stop; reconcile video and captions before retry" >&2
   exit 2
+elif [[ "$lookup_status" != *" 404 "* ]]; then
+  echo "Receipt lookup unavailable or unauthorized: $lookup_status; fail closed" >&2
+  exit 1
 fi
 payload="$(node scripts/daily_gainers_mvp_upload_receipt.js "$date" "$video_id" "$source_run" private "/tmp/mvp-private-receipt-${date}-$$.json" | tail -1)"
 receipt_file="${payload##*: }"
