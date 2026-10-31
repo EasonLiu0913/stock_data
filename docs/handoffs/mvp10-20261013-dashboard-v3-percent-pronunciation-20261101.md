@@ -1,0 +1,15 @@
+# MVP10-A — Dashboard visual layout and spoken-percent correction (2026-11-01)
+
+Owner found two actual defects: the previous 20261013 Dashboard had poorly aligned crowded small cards obscuring the original subtitle, and source speech said 跌幅一點九五% which Edge TTS read as 百分號. The old layout is FAIL/SUPERSEDED.
+
+**Actual corrected complete artifact**: TAIWAN_STOCK_20261013_FULL_1080p_DASHBOARD_V3_CORRECTED_PERCENT_RESEARCH.mp4, SHA-256 440d6b24db2d282329de77b93bcb1cd3a755c7fa3a21c4e8380a19d05d04f974, 18,606,333 bytes; H.264 1920×1080 duration 311.167318s and AAC duration 311.167000s. Full-video FFmpeg decode completed with zero errors; six genuine frame samples at 8.4, 15.8, 20, 63.3, 135, 302s visually checked. The Dashboard now uses a nonoverlapping, uniformly spaced opaque 4+2+2 grid in x 126..1380 and y 276..787; original exact subtitle redrawn above grid. Preserves male presenter, existing progress, embedded Arabic-digit captions, original seven actual source scenes.
+
+**Spoken correction**: display caption still 跌幅1.95%, standard Mandarin speech now 跌幅百分之一點九五. Derived from the same original recorded YunJhe +15% audio by repositioning the genuine original word 百分之 from manifest interval 48.430416..48.767374s to follow original 跌幅 and precede the original 一點九五 at 16.321750..16.756541s; wrong sign word originally at 16.756541..17.397832s omitted. Surrounding original speech and timeline preserved, no substitute model/voice. The user described the English label 1.95 percent; the corrected recording is Mandarin 百分之一點九五, NOT a newly generated English pronunciation. Local listening clip supplied for human owner review.
+
+**Actual failed independent attempt**: isolated optional Edge TTS 7.3.1 English-word source Run 41220658690 Job 124594324065 FAILED NoAudioReceived; no synthesized English audio exists. Do not misrepresent as success.
+
+Final video made by rendering only first 62.541667s of revised Dashboard hard-caption original scene, copying later chapters from existing complete hard-caption file at real I-frame 62.541016s, and muxing corrected audio. A previous entire-film transcode exceeded execution limits; partial discarded. Research package ZIP SHA-256 a5f53f95d6dd42a0c7a28c2b95b9688149aa206ac0d43bcff3b8bdb315d360f4 includes complete MP4, six frames, actual voice listening clip, revised source-bound schema-v2 paired Master and plan, local scripts and receipt. Original historical media and raw facts unchanged.
+
+**Limits**: displayed historical chapter total 05:13 differs from real 05:11; generic daily source-to-render automation and frozen A/B acceptance not yet complete. Next minimal research integration: enforce no literal % in spoken TTS script while allowing % in displayed subtitles and port the aligned Dashboard to true daily generated slide; no further classification deep dive or precise phoneme research. This user-review candidate is NOT formal A/B pass.
+
+Goal goal-v3/MVP-10DAY-v1; research PROGRESS; A INCOMPLETE; B NOT_ELIGIBLE; plan_changed NO. No main, YouTube, production schedules, or publication locks changed.
