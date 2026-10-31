@@ -67,3 +67,9 @@ test('numeric semantics in free prose are rejected instead of guessing',()=>{
  try{assert.throws(()=>prepare(DATE,root),/Ambiguous numbers/);}
  finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('literal percent glyph is forbidden in TTS speech even when visible subtitle 1.95% is correct',()=>{
+ const root=fixture(({master})=>master.scenes[0].cues[0].push({type:'numeric_phrase',caption:'1.95%',speech:'一點九五%'}));
+ try{assert.throws(()=>prepare(DATE,root),/MVP10_TTS_LITERAL_PERCENT_SIGN_FORBIDDEN/);}
+ finally{fs.rmSync(root,{recursive:true,force:true});}
+});
