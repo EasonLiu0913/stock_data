@@ -23,4 +23,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate verified speech-segment timing contract
-        run: python -m unittest discover -s tests -p test_daily_gainers_tts_segments.py -v
+        run: |
+          python -m py_compile scripts/daily_gainers_tts_segments.py tests/test_daily_gainers_tts_segments.py
+          python -m unittest discover -s tests -p test_daily_gainers_tts_segments.py -v
