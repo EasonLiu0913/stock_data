@@ -1,0 +1,45 @@
+name: "[Research Only] MVP10 Current Version Contract CI"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-current-version-contract-ci.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-latest-v4-and-no-cc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Require exact research branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+      - name: Checkout research-only candidate
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests/daily_gainers_brand_opening.test.js
+            tests/daily_gainers_presentation_contract.test.js
+            tests/daily_gainers_presentation_builder_integration.test.js
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify V4 opening and no CC across actual package builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test \
+            tests/daily_gainers_brand_opening.test.js \
+            tests/daily_gainers_presentation_contract.test.js \
+            tests/daily_gainers_presentation_builder_integration.test.js
+          echo "Only isolated V4/no-CC research candidate checks passed; production and YouTube remain locked." >> "$GITHUB_STEP_SUMMARY"
