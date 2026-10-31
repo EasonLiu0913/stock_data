@@ -1,0 +1,40 @@
+name: "[Research Only] MVP10 Authentic V2 Master Multi-Cue Contract"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-authentic-v2-cues.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-authentic-v2-cue-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Strict research branch assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = research/daily-video-mvp10-a-20261029
+      - name: Checkout research-only typed source
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests/research_mvp10_multicue_v4_trillion.test.js
+            tests/research_mvp10_prepare_dual_track.test.js
+          sparse-checkout-cone-mode: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run V4, paired caption and numeric token regression
+        run: |
+          node --test tests/research_mvp10_multicue_v4_trillion.test.js tests/research_mvp10_prepare_dual_track.test.js
+          echo "Typed v2 source-aware multi-cue regression only. No TTS, video upload, publication, or production side effects." >> "$GITHUB_STEP_SUMMARY"
