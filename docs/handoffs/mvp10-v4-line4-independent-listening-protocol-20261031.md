@@ -37,3 +37,13 @@ The exact pack creation/reproduction script exists in isolated working environme
 Only once reviewer confirms exact words and the acoustic boundaries qualify under pre-approved tolerances: run a **single-scene isolated video/subtitle/presenter dry-run** with 20261008 fixed audio, 14-cue research SRT and actual overlay/player screenshots. Do not touch original production or complete 9-scene Render-only workflow without original paired Phase A/B checks and explicit authorization.
 
 Status: `PROGRESS` on evidence, **HUMAN_REVIEW_PENDING**, MVP10-A `INCOMPLETE`, B `NOT_ELIGIBLE`; plan_changed `NO`.
+
+## 2026-10-31 user listening feedback on context clips
+
+Recorded explicit **user feedback** on the already source-hash-bound review package (NOT a machine transcription or signed acoustic PASS):
+- User regards `01_original_1p850sec.wav` as likely the original version (`「這句應該是原本的版本？」`), **not** an unequivocal exact-sentence lexical approval.
+- User audibly confirms `02_whole_phrase_0p75x_REVIEW_ONLY` sounds slower, consistent with 0.75× listening aid. Slow version is **not source/replacement**.
+- User-provided audible word/phrase impression for clips with 120ms context: `word_01` → `那麼`; `word_02` → `那麼我們`; `word_03` → `我們開始`; `word_04` → `開始囉`.
+- **CRITICAL distinction**: immutable source metadata labels for the same clips are `那麼`, `我們`, `開始`, `囉` respectively; the user phrases are **heard content of overlapping context excerpts**, not overwrites to `source_metadata_word` or proof that Edge event timings are incorrect. The 120ms pre/post padding intentionally captures neighboring phonemes/words, so overlap is expected, but user observations warrant comparing exact-window clips before claiming per-word accuracy.
+- Status: **partial independent listening feedback available**, full-phrase exact words and no-adjacent-utterance explicit acceptance **PENDING**, 4 original **un-padded** event lexical/timing boundaries **PENDING**. Do not mark original frozen fourth line or per-word alignment PASS from this feedback alone. Do not amend audio/WordBoundary timestamps in production.
+- Next narrow action: compare the original exact-window four clips with this context feedback; request or derive independent hearing at unpadded edges. On discrepancies, hold audio acceptance and investigate documented sub-word drift rather than relabel metadata or invent timings. Publishing, main and B remain locked.
