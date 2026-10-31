@@ -30,7 +30,7 @@ test('real v2 builder emits paired oral Chinese numerals and display Arabic nume
   assert.ok(plan.scenes[0].speech_text.startsWith(OPENING_TEXT));
   assert.ok(plan.scenes[0].caption_text.startsWith(OPENING_TEXT));
   assert.match(plan.scenes[0].speech_text,/十月十三日/);
-  assert.match(plan.scenes[0].speech_text,/百分之五點六二/);
+  assert.match(plan.scenes[0].speech_text,/百分之5\.62/);
   assert.match(plan.scenes[0].speech_text,/二三三零/);
   assert.match(plan.scenes[0].speech_text,/三千六百九十八/);
   assert.match(plan.scenes[0].caption_text,/10\/13/);
