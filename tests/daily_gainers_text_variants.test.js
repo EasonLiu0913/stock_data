@@ -13,7 +13,7 @@ const doc={schema_version:2,target_date:'20261009',scenes:[{cues:[[
 const rules={version:'daily-gainers-text-presentation-v1'};
 const r=buildVariants(doc,raw,rules);
 assert.equal(r.captions[0].text,'10/9，台積電收盤上漲3.25%，外資買超12,500張。');
-assert.equal(r.speech[0].text,'十月九日，台積電收盤上漲百分之三點二五，外資買超一萬二千五百張。');
+assert.equal(r.speech[0].text,'十月九日，台積電收盤上漲百分之3.25，外資買超一萬二千五百張。');
 assert.ok(r.display[0].text.includes('台積電（2330）'));
 assert.equal(r.manifest.scene_count,1);
 assert.equal(r.cue_pairs[0].caption_cues[0].caption,r.captions[0].text);
