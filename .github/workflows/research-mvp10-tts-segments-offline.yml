@@ -1,0 +1,26 @@
+name: "[Research Only] MVP10 TTS Segment Timing Offline Tests"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-tts-segments-offline.yml
+permissions:
+  contents: read
+jobs:
+  test:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/daily_gainers_tts_segments.py
+            tests/test_daily_gainers_tts_segments.py
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Validate verified speech-segment timing contract
+        run: python -m unittest discover -s tests -p test_daily_gainers_tts_segments.py -v
