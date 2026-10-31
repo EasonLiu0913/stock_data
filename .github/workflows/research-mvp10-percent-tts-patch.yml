@@ -1,0 +1,42 @@
+name: "[Research Only] YunJhe Percent Pronunciation Repair"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-percent-tts-patch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthesize-one-word-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check isolated branch
+        run: test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Setup Edge TTS pinned stable version
+        run: |
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1
+      - name: Synthesize exact English spoken percent with same YunJhe voice and rate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p percent-audio
+          python -m edge_tts --voice zh-TW-YunJheNeural --rate '+15%' --text 'percent' --write-media percent-audio/YunJhe_plus15_percent.mp3
+          test -s percent-audio/YunJhe_plus15_percent.mp3
+          sha256sum percent-audio/YunJhe_plus15_percent.mp3 | tee percent-audio/sha256.txt
+          printf '%s\n' 'research_only=true' 'voice=zh-TW-YunJheNeural' 'rate=+15%' 'text=percent' 'publication_authorized=false' > percent-audio/source.txt
+      - name: Save pronunciation repair only to isolated GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YunJhe-15percent-one-word-research-only
+          path: percent-audio/
+          retention-days: 14
+          if-no-files-found: error
