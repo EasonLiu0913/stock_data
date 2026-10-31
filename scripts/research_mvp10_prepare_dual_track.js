@@ -22,6 +22,10 @@ function prepare(date,root=process.cwd()){
  const evidence=[];
  for(const scene of plan.scenes){
   verifySceneContent(scene,scene.id);
+  // TTS is *spoken* presentation: never feed percent glyphs to YunJhe.
+  // Display captions may retain literal % (e.g. 1.95%).
+  if (/[％%]/u.test(scene.speech_text) || scene.caption_cues?.some(c=>/[％%]/u.test(c.speech)))
+    throw Error('MVP10_TTS_LITERAL_PERCENT_SIGN_FORBIDDEN scene '+scene.id+'; use spoken 百分之 or owner-approved percent wording');
   if(!scene.speech_text || !scene.caption_text || !Array.isArray(scene.caption_cues)||!scene.caption_cues.length)
     throw Error('Missing paired scene text: '+scene.id);
   if(scene.caption_cues.map(x=>x.speech).join('')!==scene.speech_text||
