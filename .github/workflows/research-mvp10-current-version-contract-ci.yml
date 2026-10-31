@@ -34,6 +34,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+      # Fresh push run is required after the fail-closed fourth-line guard fix;
+      # rerunning the prior SHA would rerun the old code.
       - name: Verify V4 opening and no CC across actual package builder
         shell: bash
         run: |
