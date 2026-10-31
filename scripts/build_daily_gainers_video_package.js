@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { normalizeNarrationRepetition } = require('./daily_gainers_text_cleanup');
 const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
+const { verifyPresentationDocument, rejectObsoleteCC } = require('./daily_gainers_presentation_contract');
 
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) {
@@ -42,6 +43,7 @@ const scenes = videoScript.scenes.map((s, i) => ({
   footer: s.footer || ''
 }));
 assertOpening(scenes[0].narration);
+const presentationContract = verifyPresentationDocument({scenes});
 const outDir = path.join(root, 'output', 'daily-gainers-video', date);
 const slidesDir = path.join(outDir, 'slides');
 fs.mkdirSync(slidesDir, { recursive: true });
@@ -81,6 +83,7 @@ function renderSvg(scene) {
     y += h;
     return dot + txt;
   }).join('');
+  rejectObsoleteCC(scene.footer, 'rendered slide footer');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <rect width="1920" height="1080" fill="#07111f"/>
   <rect x="0" y="0" width="1920" height="18" fill="#38bdf8"/>
@@ -101,6 +104,7 @@ const narrationChars = scenes.reduce((n,s)=>n+[...s.narration].length,0);
 const plan = {
   schema_version: 1,
   methodology_version: 'daily-gainers-video-v1',
+  presentation_contract: presentationContract,
   target_date: date,
   generated_at: new Date().toISOString(),
   source_files: [rawPath.replace(root + path.sep,''), aiPath.replace(root + path.sep,''), summaryPath.replace(root + path.sep,''), videoScriptPath.replace(root + path.sep,'')],
