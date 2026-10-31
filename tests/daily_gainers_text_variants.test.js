@@ -22,4 +22,15 @@ assert.throws(()=>buildVariants({...doc,scenes:[{cues:[[{type:'text',value:'股�
 assert.throws(()=>buildVariants(doc,{...raw,stocks:[]},rules),/not in verified/);
 assert.throws(()=>buildVariants({...doc,target_date:'20261008'},raw,rules),/Date mismatch/);
 assert.throws(()=>buildVariants({...doc,scenes:[{cues:[[{type:'numeric_phrase',caption:'0',speech:'零'},{type:'text',value:'星個股'}]]}]},raw,rules),/Lexical zero/);
+// Owner-approved exact regression: no English, no '%' in spoken TTS, caption is Arabic.
+const exactPercentDoc={schema_version:2,target_date:'20261009',scenes:[{cues:[[
+  {type:'text',value:'跌幅'},{type:'percent',value:'1.95'}
+]]}]};
+const exactPercent=buildVariants(exactPercentDoc,raw,rules);
+assert.ok(exactPercent.speech[0].text.endsWith('跌幅百分之1.95'));
+assert.ok(exactPercent.captions[0].text.endsWith('跌幅1.95%'));
+assert.ok(!/percent|百分號|[%％]/i.test(exactPercent.speech[0].text));
+assert.equal(exactPercent.cue_pairs[0].caption_cues.at(-1).speech,'跌幅百分之1.95');
+assert.equal(exactPercent.cue_pairs[0].caption_cues.at(-1).caption,'跌幅1.95%');
+
 console.log('daily gainers text variants v2 tests PASS');
