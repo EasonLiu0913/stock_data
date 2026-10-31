@@ -1,0 +1,66 @@
+name: "[Research Only] MVP10 Golden Scene-1 Genuine Voice Pilot"
+# Real YunJhe audio probe in isolated branch; no video, credentials, publication, or YouTube.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-scene1-voice-pilot.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-mvp10-golden-scene1-voice-pilot
+  cancel-in-progress: true
+
+jobs:
+  golden-scene1:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/daily_gainers_spoken_text.py
+            scripts/daily_gainers_tts_segments.py
+            scripts/daily_gainers_tts_audio_join.py
+            scripts/daily_gainers_subtitle_alignment.py
+            scripts/research_mvp10_scene1_voice_pilot.py
+            video_scripts/daily-gainers/20261008.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install bounded research-only media dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            timeout 150s sudo apt-get update -qq
+            timeout 150s sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          timeout 120s python -m pip install --disable-pip-version-check --no-cache-dir 'edge-tts==7.3.1'
+      - name: Verify frozen Golden scene text and source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/daily_gainers_tts_segments.py scripts/daily_gainers_tts_audio_join.py scripts/daily_gainers_subtitle_alignment.py scripts/research_mvp10_scene1_voice_pilot.py
+          python - <<'PY'
+          import json, sys
+          sys.path.insert(0, "scripts")
+          from research_mvp10_scene1_voice_pilot import source_segments, BRAND
+          from pathlib import Path
+          script = json.loads(Path("video_scripts/daily-gainers/20261008.json").read_text(encoding="utf-8"))
+          chunks, entire = source_segments(script)
+          assert "".join(chunks) == entire
+          assert chunks[:4] == list(BRAND)
+          print("FROZEN_SCENE1_INPUT status=PASS segments=" + str(len(chunks)))
+          PY
+      - name: Synthesize genuine scene-1 voice and verify real WordBoundary
+        env:
+          PYTHONUNBUFFERED: "1"
+        shell: bash
+        run: |
+          python scripts/research_mvp10_scene1_voice_pilot.py video_scripts/daily-gainers/20261008.json
