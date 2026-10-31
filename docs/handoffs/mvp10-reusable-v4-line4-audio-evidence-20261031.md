@@ -19,6 +19,7 @@ Status: **CANDIDATE / NOT APPROVED FOR PRODUCTION**, research only. Goal `goal-v
 
 - Source: `daily-gainers-20261013.mp4` AAC mono 24 kHz. Using FFmpeg, extract audio starting at **7.60 seconds**, requested length **1.85 seconds**, encode as MP3 mono 24 kHz 128 kb/s. This includes silence padding around the reported fourth line.
 - Candidate output MP3: measured `ffprobe` duration **1.92 seconds** (includes codec padding), SHA-256 `b46c07dc7ec8bfa5c61c6efbb378a3af7de0acca3e9d43627d79c4120300fd14`. Independent recorded candidate lives only in the research working container; **it has not been uploaded to GitHub, published, or inserted into a video**.
+- Independent decoded MP3 waveform check: non-silent sound is present (mean volume **-24.9 dB**, peak **-8.8 dB**). FFmpeg `silencedetect=noise=-36dB:d=0.12` found leading silence **0–0.498s** and trailing silence **1.354–1.850s**. These measurements support isolation of the utterance but cannot by themselves establish the words audibly spoken; listening/text audit is still required.
 - Adjust event timestamps relative to 7.60 seconds by subtracting **76,000,000 ticks**. First genuine event begins at `3,304,160` ticks (0.330416s), last event ends at `14,391,240` ticks (1.439124s); all four events remain inside the measured 1.92s MP3.
 - Local JSON evidence record includes original + relative events, hashes and caveats. It is not a replacement for listening or independent audio-content verification.
 
