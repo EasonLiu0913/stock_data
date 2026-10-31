@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: "YYYYMMDD; blank uses latest validated script"
+        description: "YYYYMMDD; blank uses frozen research Golden date 20261008"
         required: false
         default: ""
 
@@ -77,7 +77,9 @@ jobs:
           set -euo pipefail
           date="${INPUT_DATE:-}"
           if [ -z "$date" ]; then
-            date="$(find video_scripts/daily-gainers -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+            # Research push has no workflow_dispatch input. Pin the frozen Golden date.
+            # This avoids silently selecting the latest script (20261013).
+            date="20261008"
           fi
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
           for file in             "data_daily_gain_over_5/${date}.json"             "data_daily_gain_over_5/analysis-ai/${date}.json"             "data_daily_gain_over_5/market-summary/${date}.json"; do
