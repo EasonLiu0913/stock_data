@@ -1,0 +1,66 @@
+name: "[Research Only] MVP10 Real-Date Ordinary Scope Gate"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-real-date-ordinary-gate.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-real-source-rejection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Strict branch check
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+      - name: Checkout actual dated sources and guarded producer
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests/daily_gainers_mvp10_ordinary_scope_gate.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/market-summary/20261008.json
+            video_scripts/daily-gainers/20261008.json
+          sparse-checkout-cone-mode: false
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test DR exclusion with honest classification limits
+        run: node --test tests/daily_gainers_mvp10_ordinary_scope_gate.test.js
+      - name: Confirm real dated script validator fails only for the genuine DR
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node scripts/validate_daily_gainers_video_script.js 20261008 > "$RUNNER_TEMP/script.log" 2>&1; then
+            echo "Unexpected: legacy date script accepted non-ordinary security" >&2
+            exit 1
+          fi
+          grep -Fq 'Non-ordinary DR security' "$RUNNER_TEMP/script.log"
+          grep -Fq '9103 美德醫療-DR' "$RUNNER_TEMP/script.log"
+          grep -Fq 'referenced_scene_numbers=2,3' "$RUNNER_TEMP/script.log"
+          echo 'PASS: real 20261008 legacy script rejected specifically for DR in scenes 2 and 3'
+      - name: Confirm real dated producer refuses to write plan and slides
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node scripts/build_daily_gainers_video_package.js 20261008 > "$RUNNER_TEMP/builder.log" 2>&1; then
+            echo "Unexpected: legacy date producer accepted non-ordinary security" >&2
+            exit 1
+          fi
+          grep -Fq 'Non-ordinary DR security' "$RUNNER_TEMP/builder.log"
+          grep -Fq '9103 美德醫療-DR' "$RUNNER_TEMP/builder.log"
+          test ! -e output/daily-gainers-video/20261008/plan.json
+          echo 'PASS: no real-date plan or slides promoted from invalid DR-inclusive universe'
+          echo 'MVP10-A remains INCOMPLETE; source repair mandatory, no automatic filter or YouTube action' >> "$GITHUB_STEP_SUMMARY"
