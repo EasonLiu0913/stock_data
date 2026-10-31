@@ -1,0 +1,70 @@
+name: "[Research Only] MVP10 Edge TTS Bounded Diagnosis"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-tts-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            video_scripts/daily-gainers/20261008.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install TTS-only dependency
+        run: python -m pip install --disable-pip-version-check --no-cache-dir 'edge-tts==7.3.1'
+      - name: Bounded no-upload Edge TTS probes
+        env:
+          TTS_VOICE: zh-TW-YunJheNeural
+          TTS_RATE: '+15%'
+        run: |
+          python - <<'PY'
+          import asyncio, json, os
+          import edge_tts
+          from pathlib import Path
+
+          script = json.loads(Path('video_scripts/daily-gainers/20261008.json').read_text(encoding='utf-8'))
+          opening = '大家好，歡迎來到 TAIWAN STOCK！追蹤資金，解讀行情。錢在哪，我們就在哪！那麼我們開始囉。'
+          samples = [
+            ('short', '大家好，歡迎來到 TAIWAN STOCK！'),
+            ('scene_01', opening + script['scenes'][0]['narration']),
+          ]
+          async def probe(label, text):
+            n_audio = 0
+            n_boundaries = 0
+            try:
+              stream = edge_tts.Communicate(text=text, voice=os.environ['TTS_VOICE'], rate=os.environ['TTS_RATE'], boundary='WordBoundary')
+              async def consume():
+                nonlocal n_audio, n_boundaries
+                async for chunk in stream.stream():
+                  if chunk['type'] == 'audio':
+                    n_audio += len(chunk['data'])
+                  elif chunk['type'] == 'WordBoundary':
+                    n_boundaries += 1
+              await asyncio.wait_for(consume(), timeout=25)
+              ok = n_audio > 1000 and n_boundaries > 0
+              print(f'PROBE {label}: audio_bytes={n_audio} word_boundaries={n_boundaries} status={"PASS" if ok else "FAIL"}', flush=True)
+              return ok
+            except Exception as exc:
+              print(f'PROBE {label}: error_type={type(exc).__name__} status=FAIL', flush=True)
+              return False
+          async def main():
+            results = []
+            for label, text in samples:
+              results.append(await probe(label, text))
+            if not all(results):
+              raise SystemExit(2)
+          asyncio.run(main())
+          PY
