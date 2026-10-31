@@ -37,7 +37,7 @@ test('real v2 builder emits paired oral Chinese numerals and display Arabic nume
   assert.match(plan.scenes[0].caption_text,/5\.62%/);
   assert.match(plan.scenes[0].caption_text,/2330/);
   assert.match(plan.scenes[0].caption_text,/3,698/);
-  assert.ok(!plan.scenes[0].caption_text.includes('百分之五點六二'));
+  assert.ok(!plan.scenes[0].caption_text.includes('百分之5.62'));
   assert.equal(result.receipt.tts_text_source,'scene.speech_text');
   assert.equal(result.receipt.srt_display_source,'scene.caption_cues[].caption');
   assert.equal(result.receipt.burned_in_zh_tw_captions_primary,true);
