@@ -21,7 +21,7 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 def normalized(value):
-    return re.sub(r"[\\s，。！？、；：,.!?;:（）()「」『』【】\\[\\]—-]", "", value).lower()
+    return re.sub(r"[\s，。！？、；：,.!?;:（）()「」『』【】\[\]—-]", "", value).lower()
 
 def verify(scene_folder, source_wav):
     root = Path(scene_folder)
@@ -64,7 +64,7 @@ def verify(scene_folder, source_wav):
     insist(43.562 <= measured <= 43.740, "unexpected MP3 padding")
     srt = root / "daily-gainers-20261008.zh-TW.srt"
     insist(digest(srt) == SRT_SHA == receipt["research_srt_sha256"], "audited SRT tampered")
-    cues = [x.splitlines() for x in re.split(r"\\n\\s*\\n", srt.read_text(encoding="utf-8").strip())]
+    cues = [x.splitlines() for x in re.split(r"\n\s*\n", srt.read_text(encoding="utf-8").strip())]
     insist(len(cues) == 14 and receipt.get("cue_count") == 14, "subtitle cue count mismatch")
     insist(normalized("".join("".join(c[2:]) for c in cues)) == normalized(speech), "subtitle/speech mismatch")
     insist(sum(LINE in "".join(c[2:]) for c in cues) == 1, "frozen line must be one cue")
@@ -72,7 +72,7 @@ def verify(scene_folder, source_wav):
     prev_end = None
     for i, cue in enumerate(cues, 1):
         insist(cue[0] == str(i) and len(cue) >= 3, "invalid SRT cue")
-        match = re.fullmatch(r"(\\d\\d):(\\d\\d):(\\d\\d),(\\d{3}) --> (\\d\\d):(\\d\\d):(\\d\\d),(\\d{3})", cue[1])
+        match = re.fullmatch(r"(\d\d):(\d\d):(\d\d),(\d{3}) --> (\d\d):(\d\d):(\d\d),(\d{3})", cue[1])
         insist(match is not None, "invalid SRT timestamp")
         v = list(map(int, match.groups()))
         start = v[0]*3600+v[1]*60+v[2]+v[3]/1000
