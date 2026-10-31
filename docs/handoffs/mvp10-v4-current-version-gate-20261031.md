@@ -1,0 +1,24 @@
+# MVP10-A | V4 version guard integration and no-CC content gate — 2026-10-31
+
+## Scope and real owner instructions
+Goal: `daily-gainers-market-opening-end-to-end`, `goal-v3/MVP-10DAY-v1`; research branch `research/daily-video-mvp10-a-20261029`. Owner explicitly requires every video stage to consume latest approved specifications and rejects any visual/spoken CC prompt. Preserve externally optional zh-TW SRT (do NOT ban subtitle functionality), immutable four sentences and YunJhe +15% audio, authentic same-date TWSE source claims and existing A/B. No main/workflow upload/YouTube/production changes.
+
+## Actual research-only version gate modifications
+1. `scripts/daily_gainers_presentation_contract.js` commit `2d7fcab21709a3d479673eff25f8e2b7e14383b7`: version label `TAIWAN-STOCK-MVP10-V4-20261031`, reject obsolete CC reminder in source title, subtitle, narration, footer, speech/caption/display text, bullets and cue pairs. Optional external SRT remains untouched. This is a bounded content gate, not a full video certification.
+2. `scripts/build_daily_gainers_video_package.js` commit `736c6ec373c4e32ab1e7a7efadb19777021d9b81`: call `verifyPresentationDocument({scenes})` before generating any slide/plan, inspect footer directly before SVG output, and stamp prospective `presentation_contract` into `plan.json`. Research branch only. Still legacy schema v1 and still not production main.
+3. `tests/daily_gainers_presentation_contract.test.js` commit `4ee272822bb113b0b7874f81211c6dde9c0875b0`: 8 unit tests for every scene field and late-scene CC variants and external SRT preservation.
+4. `tests/daily_gainers_presentation_builder_integration.test.js` commit `6cbf9f9b8a29b5e5a7bbdd26c13157acb495fb70`: invokes the **real package builder executable** with minimal fully dated synthetic fixture, asserts four fixed V4 opening lines + contract/slide output; negative tests assert no plan written for obsolete CC footer, late scene narration, bullet and title.
+5. `scripts/daily_gainers_brand_opening.js` commit `49b63fa13fff2221e91ea80d945707d1c17620d6`: expand early greeting conflict detection from `那麼我們開始囉` to `那麼我們`, catching AI-rewritten `那麼我們現在開始囉。`; no relaxed tests.
+6. `.github/workflows/research-mvp10-current-version-contract-ci.yml` created commit `f76aa5da4abcddd2f3cc6d1bf950ea22024657cd`, scoped to its own push path on research branch with **contents:read** only. Runs exact original V4 brand test, full-content unit and real builder integration test. Fresh run after actual failure repair commit `2f380c940e97ec51008e351d8766d54e178c9f5f`. No production CI or YouTube.
+
+## Actual GitHub CI results
+- Initial true `https://github.com/EasonLiu0913/stock_data/actions/runs/41211776384`, Job `124568096049`: **FAILURE** — 18 PASS / 1 FAIL, specifically negative test `rejects conflicting AI-rewritten opening` because original brand guard accepted `那麼我們現在開始囉。`. Full Job Log independently read; this is a legitimate found defect, not a CI infrastructure error. No tests weakened.
+- Repaired source, triggered fresh true `https://github.com/EasonLiu0913/stock_data/actions/runs/41211854081` from commit `2f380c940e97ec51008e351d8766d54e178c9f5f`. At initial audit time run `queued`, conclusion pending. Do not claim PASS before reading full Job Log.
+
+## Cross-stage limitations honestly retained
+- Actual `main` still has **three** opening lines, v1 package and subtitle builder, and a legacy scheduled upload orchestrator that dispatches main production workflow with live YouTube effects. None of those inherited this research-only gate. **Not safe to use legacy production upload workflow for V4 readiness testing**.
+- Research `20261008` historic v2 semantic Master and old audio/video artifacts are frozen evidence; no proof that they satisfy full updated four-line V4 + current ordinary TWSE common-stock scope (especially 9103 DR identity). Do not copy into new date without validation.
+- Only presentation-content negative gate implemented. The complete version chain also requires source date/classification/claims, voice-rate/manifest, TTS reuse, SRT text/timeline parity, dynamic progress, 1080p visual/player QA, checked uploader separation and immutable full original A/B conditions.
+- The owner-rejected previous footer with `歡迎打開 CC 中文字幕觀賞` stays **FAIL/SUPERSEDED**, not a latest screenshot PASS. Existing external SRT and source-only successful GitHub CI Run `41197655187` remain legitimate, but cannot certify this new version gate or complete video.
+
+Next highest-value step: obtain actual **Run #41211854081** Job Log (FAIL→bounded repair, PASS→record). Then apply the complete current version contract to one opt-in **isolated** full-date render candidate, without touching main or any scheduled/publication listeners and without restarting phoneme-level research. A **INCOMPLETE**, B **NOT_ELIGIBLE**, plan_changed **NO**, all publication locks closed.
