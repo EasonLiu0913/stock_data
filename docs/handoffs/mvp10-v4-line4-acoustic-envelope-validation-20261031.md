@@ -42,3 +42,16 @@ Local evidence reproducibility files (in current research working session, **not
 3. Only if both above pass may an isolated scene-1 audio/subtitle/video sync test be proposed. Do not import old MP4 assets into a new official final video or trigger full Render-only without independent scene/media acceptance.
 
 Research `PROGRESS`, MVP10-A **INCOMPLETE**, MVP10-B **NOT_ELIGIBLE**, plan_changed **NO**. The last live Edge TTS scene1 Pilot `41185747222` still FAILED on new line-4 synthesis; successful local source recovery does not rewrite that result. `main`, formal workflows, YouTube and all release locks untouched.
+
+## WordBoundary human audit pack (research-only)
+
+To facilitate **independent human hearing rather than claim an automated transcription**, the exact 1.850s 24-kHz/mono PCM source crop was divided into four *review-only* WAVs using the original **Edge WordBoundary window starts/ends** at nearest sample. Each clip is extracted from the unchanged WAV, without gain/word alteration, and named by event index, not by asserted audible content. The words and durations are metadata hypotheses, **not accepted acoustic word-level correctness**:
+
+| Event | Source word label | Time relative to 1.850s WAV | Exported samples | WAV SHA-256 |
+| --- | --- | --- | ---: | --- |
+| 1 | 那麼 | 0.330416–0.613041s | 6,783 | `a4a268703f03274b8799700127de46f9cf1a1610ebaff00d764b66fdb348151e` |
+| 2 | 我們 | 0.613041–0.808707s | 4,696 | `2ba41bef760b673fd12fb3fa4a6c7d5fffe897d3811047096720ccf93101a5d0` |
+| 3 | 開始 | 0.808708–1.080416s | 6,521 | `759962ca9b2c7849b3dd682638080e87c780c5faaad032c3a4529eb37463a150` |
+| 4 | 囉 | 1.080416–1.439124s | 8,609 | `732fdff76dabd9ee16eda5765243bc2d9e5af2577a719fc4426424ec2263ce1d` |
+
+Local research-only bundle `v4_line4_word_boundary_listening_pack_20261031.zip` SHA-256 `167037f2ce4379fa958136ed718319ef2f4d11c40025ef3a01e0475459f16a4c` contains four WAVs and metadata JSON. **Not uploaded to the GitHub repository or published.** A reviewer should first listen to the *whole original 1.85s WAV*, then each of the four exact-boundary clips, marking any clipped phoneme, missing syllable, inserted word or misassigned label; do not auto-mark PASS based on files existing. Any acceptance must preserve the frozen paired-A/B audio QA.
