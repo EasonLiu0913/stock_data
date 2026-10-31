@@ -25,6 +25,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - name: Install isolated media test prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            timeout 120s sudo apt-get update -qq
+            timeout 120s sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          command -v ffmpeg
+          command -v ffprobe
       - name: Validate speech segment and real MP3 join contracts
         run: |
           ffmpeg -version | head -1
