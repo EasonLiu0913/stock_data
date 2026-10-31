@@ -38,11 +38,12 @@ jobs:
 
           script = json.loads(Path('video_scripts/daily-gainers/20261008.json').read_text(encoding='utf-8'))
           opening = '大家好，歡迎來到 TAIWAN STOCK！追蹤資金，解讀行情。錢在哪，我們就在哪！那麼我們開始囉。'
+          brand = ['大家好，歡迎來到 TAIWAN STOCK！', '追蹤資金，解讀行情。', '錢在哪，我們就在哪！', '那麼我們開始囉。']
           samples = [
-            ('short', '大家好，歡迎來到 TAIWAN STOCK！', 25),
-            ('v4_opening', opening, 40),
-            ('narrative_lead', script['scenes'][0]['narration'][:90], 40),
-            ('scene_01_full', opening + script['scenes'][0]['narration'], 75),
+            ('line_4_only', brand[3], 25),
+            ('first_three_joined', ''.join(brand[:3]), 40),
+            ('all_four_joined', ''.join(brand), 40),
+            ('all_four_newlines', '\\n'.join(brand), 40),
           ]
           async def probe(label, text, timeout_s):
             n_audio = 0
