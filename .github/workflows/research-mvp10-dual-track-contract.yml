@@ -1,0 +1,41 @@
+name: "[Research Only] MVP10 Dual-Track TTS and Burned Subtitle Contract"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-dual-track-contract.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-two-text-tracks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Enforce isolated research branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+      - name: Checkout typed v2 source and contract tests
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests/research_mvp10_prepare_dual_track.test.js
+          sparse-checkout-cone-mode: false
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate actual plan adapter and the separate text formats
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/research_mvp10_prepare_dual_track.test.js
+          echo "Research v2 semantic source -> spoken Chinese + Arabic caption cue pairs PASS; no TTS, no render and no YouTube." >> "$GITHUB_STEP_SUMMARY"
