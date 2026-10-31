@@ -34,3 +34,12 @@ A *new explicit owner approval* must identify exactly: channel, candidate date `
 
 ## Shortest safe next checkpoint
 Owner grants **read-only YouTube inspection only** (no write permission). Inspect channel, duplicates, existing captions and collect evidence. Review the resulting go/no-go with owner; seek separate single-video private pilot consent. Until then: research-only, no YouTube credentials, no upload, no main or release lock changes.
+
+## 2026-10-31 MVP10-A V4 alignment checkpoint (research branch only)
+
+- YouTube read-only CI #41026509106 attempt 3 PASSED OAuth/channel and 7-video inventory GET; channel UCL9fFDhPlFZDTu2AeydDRBw. This is NOT a date-specific duplicate absence proof: previous check searched only literal title `20261008`, whereas actual candidate title begins `10/08`. The seven item identities/titles must be independently reconciled before first upload.
+- Render CI #41002179152 Artifact #12953454424 is a real 20261008 MP4/SRT/QA baseline, not final V4 editorial PASS. It used an obsolete 3-line opening and embedded obsolete CC prompt in the card generator.
+- Scoped branch-only changes: `scripts/daily_gainers_brand_opening.js` now enforces four approved V4 sentences, upgrades old three-line narration once, rejects conflicting/obsolete CC narration; `scripts/build_daily_gainers_video_package.js` removes obsolete CC visual; `tests/daily_gainers_video_date_gate.test.js` adds V4 positive and negative assertions. Last commit `8ca0bb94943c82540cc7f8515b80ccf478ebc078`.
+- GitHub remote readback confirms all three changes. **No post-change CI or regenerated MP4/SRT has been validated**, so A is INCOMPLETE and B is NOT ELIGIBLE. No upload authorization. Existing legacy artifact remains immutable and is not replaced by an unverified new render.
+- Next bounded step: run safe research-only date-gate and render verification at the new SHA, inspect actual resulting MP4/SRT/visual QA; compare research D4 and M8VIS source evidence without bypassing their review/authorization gates. Separately gather candidate-aware read-only YouTube duplicate evidence. Keep main, release and upload locks unchanged.
+- research_progress_status: PROGRESS; phase_status: MVP10-A INCOMPLETE; plan_changed: NO.
