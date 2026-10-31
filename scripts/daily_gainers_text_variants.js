@@ -94,7 +94,7 @@ function renderToken(token, mode, stocks) {
     case 'numeric_phrase': {
       const caption=String(token.caption||'');
       const speech=String(token.speech||'');
-      if(!/^\d[\d,]*(?:\.\d+)?(?:%|億|萬|張|元|檔|季|日)?$/.test(caption) || !/[零一二三四五六七八九十百千萬億兆兩]/.test(speech))
+      if(!/^\d[\d,]*(?:\.\d+)?(?:%|兆|億|萬|張|元|檔|季|日)?$/.test(caption) || !/[零一二三四五六七八九十百千萬億兆兩]/.test(speech))
         throw new Error('Invalid explicit numeric phrase');
       return mode==='speech'?speech:caption;
     }
@@ -123,9 +123,13 @@ function buildVariants(doc, raw, rules) {
     // Inject the same immutable sentences into both speech and caption tokens.
     // Do not mutate the date-specific master JSON.
     const firstText = scene.cues[0]?.[0]?.type === 'text' ? scene.cues[0][0].value : '';
-    if (i === 0 && /^(大家好|歡迎來到|追蹤資金|錢在哪)/.test(firstText) && !firstText.startsWith(OPENING_TEXT))
+    // A real word-boundary SRT may split the fixed V4 introduction across
+    // several cues. Accept it only when their concatenation is EXACT V4.
+    const prefix = scene.cues.slice(0, 4).map(tokens => tokens.map(t => t.type==='text' ? t.value : '').join('')).join('');
+    const hasV4 = i === 0 && (firstText.startsWith(OPENING_TEXT) || prefix.startsWith(OPENING_TEXT));
+    if (i === 0 && /^(大家好|歡迎來到|追蹤資金|錢在哪)/.test(firstText) && !hasV4)
       throw new Error('V2 first-scene opening conflicts with immutable brand opening');
-    const sceneCues = i === 0 && !firstText.startsWith(OPENING_TEXT)
+    const sceneCues = i === 0 && !hasV4
       ? [...OPENING_LINES.map(value => [{type:'text', value}]), ...scene.cues]
       : scene.cues;
     const cues = sceneCues.map((tokens, j) => {
