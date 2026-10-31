@@ -1,5 +1,5 @@
 name: "[Research Only] MVP10 TTS Segment Timing Offline Tests"
-# Research branch only: verify lossless V4 segment-size assertion fix; never connect to TTS or YouTube.
+# Research branch only: lossless segmentation and real MP3 join with synthetic tones; never connect to Edge TTS or YouTube.
 on:
   push:
     branches:
@@ -19,11 +19,15 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/daily_gainers_tts_segments.py
+            scripts/daily_gainers_tts_audio_join.py
             tests/test_daily_gainers_tts_segments.py
+            tests/test_daily_gainers_tts_audio_join.py
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Validate verified speech-segment timing contract
+      - name: Validate speech segment and real MP3 join contracts
         run: |
-          python -m py_compile scripts/daily_gainers_tts_segments.py tests/test_daily_gainers_tts_segments.py
-          python -m unittest discover -s tests -p test_daily_gainers_tts_segments.py -v
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+          python -m py_compile scripts/daily_gainers_tts_segments.py scripts/daily_gainers_tts_audio_join.py tests/test_daily_gainers_tts_segments.py tests/test_daily_gainers_tts_audio_join.py
+          python -m unittest discover -s tests -p 'test_daily_gainers_tts_*.py' -v
