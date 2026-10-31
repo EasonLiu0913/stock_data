@@ -83,8 +83,9 @@ function renderToken(token, mode, stocks) {
     }
     case 'percent': {
       const value = String(token.value);
-      const spoken = decimalSpoken(value);
-      return mode === 'speech' ? '百分之' + spoken : value + '%';
+      decimalSpoken(value); // Validate the numeric token; preserve digits for stable TTS input.
+      // Owner-approved Mandarin-only voice input: 百分之1.95, never 1.95% or English percent.
+      return mode === 'speech' ? '百分之' + value : value + '%';
     }
     case 'month': {
       const month=Number(token.value);
