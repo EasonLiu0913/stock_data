@@ -12,7 +12,8 @@ class SegmentContractTests(unittest.TestCase):
     def test_exact_v4_preserved(self):
         speech = "大家好，歡迎來到 TAIWAN STOCK！追蹤資金，解讀行情。錢在哪，我們就在哪！那麼我們開始囉。"
         parts = split_spoken_text(speech, 35)
-        self.assertGreaterEqual(len(parts), 3)
+        self.assertGreaterEqual(len(parts), 2)
+        self.assertTrue(all(len(part) <= 35 for part in parts))
         self.assertEqual("".join(parts), speech)
 
     def test_unsplittable_sentence_fails(self):
