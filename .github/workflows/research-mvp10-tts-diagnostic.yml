@@ -41,13 +41,14 @@ jobs:
           brand = ['大家好，歡迎來到 TAIWAN STOCK！', '追蹤資金，解讀行情。', '錢在哪，我們就在哪！', '那麼我們開始囉。']
           # Control requests bracket the target. If controls also fail, do not blame the V4 text.
           # Voice/text-only negative isolation; brand contract and script remain unchanged.
+          # Determine whether failures are unique to one phrase or affect other
+          # distinct normal Chinese text. No production narration changes.
           samples = [
             ('control_before', brand[0], 25),
-            ('fourth_original', brand[3], 25),
-            ('fourth_no_terminal_period', '那麼我們開始囉', 25),
-            ('fourth_comma', '那麼，我們開始囉。', 25),
-            ('fourth_exclamation', '那麼我們開始囉！', 25),
-            ('fourth_word_without_interjection', '那麼我們開始', 25),
+            ('second_line', brand[1], 25),
+            ('third_line', brand[2], 25),
+            ('fourth_line', brand[3], 25),
+            ('neutral_sentence', '今天開始分析市場行情。', 25),
             ('control_after', brand[0], 25),
           ]
           async def probe(label, text, timeout_s):
