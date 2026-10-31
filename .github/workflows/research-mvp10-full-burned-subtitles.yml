@@ -1,0 +1,86 @@
+name: "[Research Only] MVP10 Full 1080p Burned Subtitles Render"
+
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-full-burned-subtitles.yml
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: research-mvp10-full-burned-subtitles
+  cancel-in-progress: false
+
+jobs:
+  render-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Enforce research-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - name: Checkout isolated burned-subtitle entrypoint
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_burn_full_subtitles.py
+          sparse-checkout-cone-mode: false
+      - name: Install caption-rendering prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg python3-pil fonts-noto-cjk unzip curl
+          /usr/bin/python3 -c 'import PIL; print("Pillow ready")'
+          ffmpeg -version | head -1
+      - name: Download original approved 20261013 complete artifact read-only
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/source" "$RUNNER_TEMP/render"
+          curl --fail --silent --show-error --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/13036325288/zip" \
+            -o "$RUNNER_TEMP/source.zip"
+          echo "fabeb1ca1464163dd072d5a5089c2c345f9527905a75de282c144bab86ab5ea6  $RUNNER_TEMP/source.zip" | sha256sum --check --status
+          unzip -q "$RUNNER_TEMP/source.zip" -d "$RUNNER_TEMP/source"
+          test -s "$RUNNER_TEMP/source/daily-gainers-20261013.mp4"
+          test -s "$RUNNER_TEMP/source/daily-gainers-20261013.zh-TW.srt"
+      - name: Full 1080p burn Traditional Chinese subtitles into the MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 scripts/research_mvp10_burn_full_subtitles.py \
+            --video "$RUNNER_TEMP/source/daily-gainers-20261013.mp4" \
+            --srt "$RUNNER_TEMP/source/daily-gainers-20261013.zh-TW.srt" \
+            --plan "$RUNNER_TEMP/source/plan.json" \
+            --tts "$RUNNER_TEMP/source/tts-manifest.json" \
+            --output "$RUNNER_TEMP/render/TAIWAN_STOCK_20261013_FULL_1080p_V4_BURNED_SUBTITLES.mp4" \
+            --receipt "$RUNNER_TEMP/render/research_render_receipt.json"
+          cp "$RUNNER_TEMP/source/daily-gainers-20261013.zh-TW.srt" "$RUNNER_TEMP/render/source_optional_external.zh-TW.srt"
+          test -s "$RUNNER_TEMP/render/TAIWAN_STOCK_20261013_FULL_1080p_V4_BURNED_SUBTITLES.mp4"
+          echo 'Research complete 1080p burn-in: no YouTube actions, no publishing. Dashboard upgrade not implied.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload full burned-in review artifact to GitHub Actions only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261013-full-1080p-hard-subtitles-RESEARCH-ONLY
+          path: |
+            ${{ runner.temp }}/render/TAIWAN_STOCK_20261013_FULL_1080p_V4_BURNED_SUBTITLES.mp4
+            ${{ runner.temp }}/render/source_optional_external.zh-TW.srt
+            ${{ runner.temp }}/render/research_render_receipt.json
+          if-no-files-found: error
+          retention-days: 30
