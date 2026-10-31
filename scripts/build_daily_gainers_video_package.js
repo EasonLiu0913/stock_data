@@ -4,6 +4,7 @@ const path = require('node:path');
 const { normalizeNarrationRepetition } = require('./daily_gainers_text_cleanup');
 const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
 const { verifyPresentationDocument, rejectObsoleteCC } = require('./daily_gainers_presentation_contract');
+const { assertNoDepositaryReceipts } = require('./daily_gainers_mvp10_ordinary_scope_gate');
 
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) {
@@ -33,6 +34,7 @@ const videoScript = JSON.parse(fs.readFileSync(videoScriptPath, 'utf8'));
 if (videoScript.target_date !== date || videoScript.stock_count !== raw.stock_count || videoScript.privacy_status !== 'private') {
   throw new Error('Video script failed date, stock count, or privacy gate');
 }
+assertNoDepositaryReceipts(raw, videoScript);
 const scenes = videoScript.scenes.map((s, i) => ({
   id: i + 1,
   title: s.title,
