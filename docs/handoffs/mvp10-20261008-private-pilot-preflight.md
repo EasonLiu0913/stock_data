@@ -97,3 +97,10 @@ Owner grants **read-only YouTube inspection only** (no write permission). Inspec
 - Research-only TTS diagnosis workflow was changed in commit `041d547a03fb7966bfea88d6e214ddc4f911705f` to compare the known-good greeting, its concatenation with the fourth line, its concatenation with a neutral sentence, and the original greeting again, using unchanged YunJhe +15% WordBoundary. Remote readback confirms the change; no Push Run ID/result has yet been validated. No changes to original text, render, production voice or upload.
 - Next decision: read same-run prefix probes. If only prefixed requests fail, investigate synthesis text construction and WordBoundary-safe bounded segmentation in isolation; if even controls fail, classify service-level unreliability. Do not infer a root cause without log evidence or resume full render prematurely.
 - research_progress_status: PROGRESS; phase_status: MVP10-A INCOMPLETE; B NOT_ELIGIBLE; plan_changed: NO.
+
+## 2026-10-31 MVP10-A prefixed TTS control findings
+
+- Verified Run `41184906397`, Job `124489756482`, commit `041d547a03fb7966bfea88d6e214ddc4f911705f`: `control_before` PASS 17,280 bytes / 6 WordBoundary; first brand greeting prefixed to V4 fourth line `prefixed_fourth` FAIL `NoAudioReceived` 0 bytes; greeting prefixed to unrelated neutral sentence `prefixed_neutral` PASS 33,120 bytes / 11 WordBoundary; `control_after` PASS 17,280 bytes / 6 WordBoundary. Thus a fixed greeting prefix is NOT a reliable solution to fourth line, although it did rescue neutral text. Exact fourth V4 line preserved.
+- Last bounded phrase-isolation research-only diagnostic commit `a39fa193bef3c1d0ebf6ac0cb878468a75db5f04` tests `那麼`, `我們開始`, `開始囉。`, `我們開始囉。`, `那麼我們開始`, bracketed by known-good greeting. Actual Run ID/result not yet verified.
+- Stop exploring unbounded punctuation/text variants after this one. On repeated negative evidence design WordBoundary-safe short segment synthesis with faithful voice/line playback and merged offsets, validate offline/isolated before full 20261008 render. No YouTube, main changes, or release unlock.
+- Goal progress PROGRESS; MVP10-A INCOMPLETE, B NOT_ELIGIBLE; plan_changed NO.
