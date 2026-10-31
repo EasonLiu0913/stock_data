@@ -19,7 +19,7 @@ function addOpening(narration) {
     // Historical three-line scripts can be upgraded without altering their daily analysis.
     return OPENING_TEXT + trimmed.slice(LEGACY_OPENING_TEXT.length).trimStart();
   }
-  if (/^(大家好|歡迎來到|追蹤資金|錢在哪|那麼我們開始囉)/.test(trimmed)) {
+  if (/^(大家好|歡迎來到|追蹤資金|錢在哪|那麼我們)/.test(trimmed)) {
     throw new Error('First-scene opening conflicts with immutable TAIWAN STOCK V4 opening');
   }
   return OPENING_TEXT + '\n' + trimmed;
