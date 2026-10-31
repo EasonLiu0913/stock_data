@@ -115,3 +115,9 @@ Owner grants **read-only YouTube inspection only** (no write permission). Inspec
 - research_progress_status: PROGRESS; phase_status: MVP10-A INCOMPLETE, B NOT_ELIGIBLE; plan_changed NO.
 
 - Offline-segment contract follow-up: static negative-case fix at `851f9ced51f3c5a22cd5d8e3b13eef6a58a5ad7c` rejects punctuation-only speech; offline CI syntax/test workflow re-trigger at `023848e2d5d419ef766c0b8af9b3eaa742ffe41b` executes py_compile plus seven unit tests on isolation branch. The new actual run ID and PASS/FAIL remain UNVERIFIED. No media/audio production path changed.
+
+## 2026-10-31 MVP10-A offline segmentation CI failure correction
+
+- Actual offline CI #1 Run `41185183635`, Job `124490563920` and #2 Run `41185246364`, Job `124490743566` both FAILURE. Exact logs: 7 unit tests executed, 6 PASS, only `test_exact_v4_preserved` FAIL because test demanded >=3 segments but deterministic lossless segmenter validly returned 2 when `max_chars=35`; V4 concatenation was not reported incomplete. Negative event/duration checks PASS. No live Edge, MP3, YouTube, or full render in these workflows.
+- Test-only correction research commit `3f90d65dfbc64622b54011b0502dd15b720aa7c5` changes the arbitrary >=3 expectation to >=2, asserts each segment <=35 chars, retains exact `''.join(parts)==speech`. Workflow-only commit `e496713b009bea8dc2117d10f89f422f66105085` retriggers isolated py_compile + seven offline tests. Remote readback confirmed both changes. **New CI Run ID/result not yet independently verified.**
+- Explicit acceptance boundary: this helper has NO real Edge requests, audio joining, validated MP3 duration/timing, or independent transcription; even PASS of seven unit tests does NOT certify V4 fourth sentence or 20261008 complete video. Continue only after actual CI proof, then implement strictly verified audio concatenation or stop if phrase remains unsynthesizable. MVP10-A INCOMPLETE, B NOT_ELIGIBLE; PROGRESS; plan_changed NO.
