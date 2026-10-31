@@ -10,7 +10,7 @@ TICKS_PER_SECOND = 10_000_000
 
 def split_spoken_text(text, max_chars=100):
     """Split at natural punctuation, preserving exact input text and order."""
-    if not isinstance(text, str) or not text or max_chars < 2:
+    if not isinstance(text, str) or not text or max_chars < 2 or not any(ch.isalnum() for ch in text):
         raise ValueError("Invalid speech or segment size")
     chunks = re.findall(r"[^。！？!?；;\n]+[。！？!?；;\n]?", text)
     if "".join(chunks) != text:
