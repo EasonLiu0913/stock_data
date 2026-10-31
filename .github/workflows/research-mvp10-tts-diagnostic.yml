@@ -43,10 +43,14 @@ jobs:
           # Voice/text-only negative isolation; brand contract and script remain unchanged.
           # Determine whether failures are unique to one phrase or affect other
           # distinct normal Chinese text. No production narration changes.
+          # Last bounded character-group diagnosis; no script rewrites or video rendering.
           samples = [
             ('control_before', brand[0], 25),
-            ('prefixed_fourth', brand[0] + brand[3], 40),
-            ('prefixed_neutral', brand[0] + '今天開始分析市場行情。', 40),
+            ('then_only', '那麼', 25),
+            ('we_begin', '我們開始', 25),
+            ('begin_particle', '開始囉。', 25),
+            ('we_begin_particle', '我們開始囉。', 25),
+            ('then_we_begin', '那麼我們開始', 25),
             ('control_after', brand[0], 25),
           ]
           async def probe(label, text, timeout_s):
