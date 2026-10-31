@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { addOpening, assertOpening } = require('./daily_gainers_brand_opening');
+const { assertNoDepositaryReceipts } = require('./daily_gainers_mvp10_ordinary_scope_gate');
 const date = process.argv[2];
 if (!/^20\d{6}$/.test(date || '')) throw Error('Expected YYYYMMDD');
 const root = 'data_daily_gain_over_5';
@@ -14,6 +15,7 @@ function check(cond, msg) { if (!cond) throw Error(msg); }
 check(raw.target_date === date && ai.target_date === date && summary.target_date === date && script.target_date === date, 'date mismatch');
 check(summary.status === 'final' && summary.coverage?.overall === 'complete', 'summary not final/complete');
 check(raw.stock_count === raw.stocks.length && ai.stock_count === raw.stock_count && script.stock_count === raw.stock_count, 'stock count mismatch');
+assertNoDepositaryReceipts(raw, script);
 check(script.schema_version === 1 && script.methodology_version === 'chatgpt-video-script-v1', 'script schema mismatch');
 // The script is approved for a trading date, not for a volatile summary generation timestamp.
 // Keep the original source timestamp for provenance without invalidating historical videos.
