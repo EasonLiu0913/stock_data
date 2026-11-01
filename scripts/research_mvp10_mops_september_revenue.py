@@ -17,7 +17,7 @@ PERIOD = "115_9"
 BASE = "https://mopsov.twse.com.tw/nas/t21/sii/"
 TARGETS = {
     "2305": {"name": "全友", "revenue_thousand_ntd": 196565, "previous_year_thousand_ntd": 62840, "yoy_pct": 212.80},
-    "3416": {"name": "融程電", "revenue_thousand_ntd": 534569, "previous_year_thousand_ntd": 272871, "yoy_pct": 95.91},
+    "3416": {"name": "融程電", "revenue_thousand_ntd": 534569, "previous_year_thousand_ntd": 272871, "yoy_pct": 95.90},
     "6672": {"name": "騰輝電子-KY", "revenue_thousand_ntd": 1020897, "previous_year_thousand_ntd": 338399, "yoy_pct": 201.68},
 }
 
@@ -57,6 +57,27 @@ class RevenueRows(HTMLParser):
 def digits(s):
     raw = str(s).replace(",", "").replace("＋", "+").strip()
     return float(raw) if re.fullmatch(r"[+-]?\d+(?:\.\d+)?", raw) else None
+
+def verify_columns(code, cells, expected):
+    """MOPS t21sc03 table positions: code,name,current,prior,yearago,MoM,YoY,cumulative,yearago cumulative,cumulativeYoY,note."""
+    if len(cells) < 11:
+        return {"verified": False, "reason": "TOO_FEW_COLUMNS"}
+    code_matched = str(cells[0]).strip().lstrip("0") == code
+    name_matched = cells[1] == expected["name"]
+    current = digits(cells[2])
+    yearago = digits(cells[4])
+    yoy = digits(cells[6])
+    last = (digits(cells[5]), digits(cells[9]))
+    correct = (code_matched and name_matched and current == expected["revenue_thousand_ntd"] and
+               yearago == expected["previous_year_thousand_ntd"] and yoy is not None and
+               abs(yoy - expected["yoy_pct"]) < 0.005)
+    return {
+        "verified": bool(correct), "reason": "ALL_FIELD_POSITIONS_MATCH" if correct else "FIELD_POSITION_MISMATCH",
+        "company_name": cells[1], "revenue_thousand_ntd": current, "last_year_thousand_ntd": yearago,
+        "mom_pct": last[0], "official_yoy_pct": yoy, "cumulative_revenue_thousand_ntd": digits(cells[7]),
+        "cumulative_last_year_thousand_ntd": digits(cells[8]), "cumulative_yoy_pct": last[1],
+        "company_filing_note": cells[10], "column_indices_verified": [0,1,2,4,6,7,8,9,10],
+    }
 
 def retrieve(suffix, output):
     url = f"{BASE}t21sc03_{PERIOD}_{suffix}.html"
@@ -109,6 +130,7 @@ def run(output_dir):
         "expected_company_records": TARGETS,
         "pages": [retrieve(0, out), retrieve(1, out)],
         "official_revenue_claims_validated": [],
+        "official_column_proof": {},
         "not_validated_codes": [],
         "source_content_present": False,
         "company_event_caused_market_movement_verified": False,
@@ -124,22 +146,15 @@ def run(output_dir):
             result["not_validated_codes"].append({"code": code, "reason": "OFFICIAL_ROW_ABSENT_OR_DUPLICATE"})
             continue
         page, row = hits[0]
-        vals = [digits(cell) for cell in row]
-        values = [x for x in vals if x is not None]
-        seen = expected["revenue_thousand_ntd"] in values and expected["previous_year_thousand_ntd"] in values
-        pct = any(abs(x - expected["yoy_pct"]) <= 0.02 for x in values)
-        company_name = any(expected["name"] in cell for cell in row)
-        if seen and pct and company_name and page["http_status"] == 200:
+        proof = verify_columns(code, row, expected)
+        result["official_column_proof"][code] = proof
+        if proof["verified"] and page["http_status"] == 200:
             result["official_revenue_claims_validated"].append(code)
         else:
-            result["not_validated_codes"].append({
-                "code": code, "reason": "ROW_NUMBERS_NAME_OR_YOY_MISMATCH",
-                "found_revenue": expected["revenue_thousand_ntd"] in values,
-                "found_previous_year": expected["previous_year_thousand_ntd"] in values,
-                "found_yoy": pct, "found_company": company_name,
-            })
+            result["not_validated_codes"].append({"code": code, "reason": proof["reason"]})
     result["source_content_present"] = any(p["response_sha256"] and p["target_rows"] for p in result["pages"])
-    result["decision"] = ("OFFICIAL_HISTORICAL_ROWS_MATCHED_NEEDS_FIELD_SEMANTICS_REVIEW"
+    result["official_table_columns_verified"] = len(result["official_revenue_claims_validated"]) == 3
+    result["decision"] = ("OFFICIAL_HISTORICAL_REVENUE_FIELDS_MATCHED_NO_CAUSATION"
                           if len(result["official_revenue_claims_validated"]) == 3 else
                           "BLOCKED_INCOMPLETE_OFFICIAL_HISTORICAL_RECEIPTS")
     dest = out / "20261008-mops-revenue-original-receipt.json"
@@ -148,6 +163,8 @@ def run(output_dir):
         "decision": result["decision"],
         "codes_row_matched": result["official_revenue_claims_validated"],
         "not_validated_codes": result["not_validated_codes"],
+        "official_table_columns_verified": result["official_table_columns_verified"],
+        "official_column_proof": result["official_column_proof"],
         "pages": [{"http_status": p["http_status"], "response_length": p["response_length"],
                    "sha256": p["response_sha256"], "encoding": p["encoding"],
                    "codes_found": list(p["target_rows"]), "error": p["error"]} for p in result["pages"]],
